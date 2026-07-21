@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\Auth\PasswordResetConfirmRequest;
+use App\Dto\Auth\PasswordResetRequest;
 use App\Dto\Auth\RegisterRequest;
 use App\Dto\Auth\VerifyEmailRequest;
 use App\Exception\InvalidTokenException;
@@ -66,5 +68,28 @@ final class AuthController
         }
 
         return new JsonResponse(['status' => 'pending_approval']);
+    }
+
+    #[Route('/password-reset-request', name: 'api_auth_password_reset_request', methods: ['POST'])]
+    public function passwordResetRequest(#[MapRequestPayload] PasswordResetRequest $request): JsonResponse
+    {
+        if (!$this->altcha->verify($request->altcha)) {
+            throw new ValidationException(['altcha' => ['The anti-spam challenge was not solved correctly.']]);
+        }
+
+        $this->registration->requestPasswordReset($request->email);
+
+        // Unconditionally "sent": whether an account exists is not public.
+        return new JsonResponse(['status' => 'sent']);
+    }
+
+    #[Route('/password-reset', name: 'api_auth_password_reset', methods: ['POST'])]
+    public function passwordReset(#[MapRequestPayload] PasswordResetConfirmRequest $request): JsonResponse
+    {
+        if (!$this->registration->resetPassword($request->token, $request->password)) {
+            throw new InvalidTokenException();
+        }
+
+        return new JsonResponse(['status' => 'reset']);
     }
 }
