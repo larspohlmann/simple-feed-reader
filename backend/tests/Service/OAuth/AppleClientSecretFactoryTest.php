@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth;
 
+use App\Tests\Support\AppleTestKey;
 use App\Exception\OAuth\OAuthFailedException;
 use App\Service\OAuth\AppleClientSecretFactory;
 use Lcobucci\JWT\Encoding\JoseEncoder;
@@ -233,12 +234,12 @@ final class AppleClientSecretFactoryTest extends TestCase
 
     private static function privateKey(): string
     {
-        return (string) file_get_contents(__DIR__ . '/../../Fixtures/oauth/apple-test-key.p8');
+        return AppleTestKey::privateKey();
     }
 
     private static function publicKey(): string
     {
-        return (string) file_get_contents(__DIR__ . '/../../Fixtures/oauth/apple-test-key.pub.pem');
+        return AppleTestKey::publicKey();
     }
 
     private static function rsaKey(): string

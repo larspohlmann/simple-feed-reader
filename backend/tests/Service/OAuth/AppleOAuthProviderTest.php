@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth;
 
+use App\Tests\Support\AppleTestKey;
 use App\Service\OAuth\AbstractOidcProvider;
 use App\Service\OAuth\AppleClientSecretFactory;
 use App\Service\OAuth\AppleOAuthProvider;
@@ -116,7 +117,7 @@ final class AppleOAuthProviderTest extends TestCase
             self::SERVICES_ID,
             'TESTTEAMID',
             'TESTKEYID1',
-            (string) file_get_contents(__DIR__ . '/../../Fixtures/oauth/apple-test-key.p8'),
+            AppleTestKey::privateKey(),
         ));
     }
 

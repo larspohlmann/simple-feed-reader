@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth;
 
+use App\Tests\Support\AppleTestKey;
 use App\Service\OAuth\AppleOAuthProvider;
 use App\Service\OAuth\GoogleOAuthProvider;
 use App\Service\OAuth\OAuthProviderRegistry;
@@ -78,9 +79,7 @@ final class OAuthProviderWiringTest extends KernelTestCase
 
     public function testTheContainerCollectsBothProviders(): void
     {
-        $_ENV[self::APPLE_KEY_VAR] = (string) file_get_contents(
-            __DIR__ . '/../../Fixtures/oauth/apple-test-key.p8',
-        );
+        $_ENV[self::APPLE_KEY_VAR] = AppleTestKey::privateKey();
 
         $registry = $this->registry();
 
