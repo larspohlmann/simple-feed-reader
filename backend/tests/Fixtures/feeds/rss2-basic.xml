@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>Example Tech Blog</title>
+    <link>https://blog.example.com/</link>
+    <description>News from Example</description>
+    <item>
+      <title><![CDATA[Big <Announcement> & More]]></title>
+      <link>https://blog.example.com/announcement</link>
+      <guid isPermaLink="false">tag:blog.example.com,2026:announcement</guid>
+      <pubDate>Mon, 20 Jul 2026 08:30:00 +0200</pubDate>
+      <dc:creator>Jane Doe</dc:creator>
+      <description>Short teaser text.</description>
+      <content:encoded><![CDATA[<p>Full <strong>story</strong> with an <img src="https://blog.example.com/pic.jpg" alt="pic"> image.</p>]]></content:encoded>
+    </item>
+    <item>
+      <title>Second post</title>
+      <link>https://blog.example.com/second</link>
+      <guid>https://blog.example.com/second</guid>
+      <pubDate>Sun, 19 Jul 2026 10:00:00 +0200</pubDate>
+      <description><![CDATA[<p>Description-only body.</p>]]></description>
+    </item>
+  </channel>
+</rss>
