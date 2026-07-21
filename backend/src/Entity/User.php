@@ -8,11 +8,13 @@ use App\Enum\UserStatus;
 use App\Repository\UserRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: 'app_user')]
 #[ORM\UniqueConstraint(name: 'uniq_user_email', columns: ['email'])]
-class User
+class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -40,6 +42,10 @@ class User
 
     public function __construct(string $email, \DateTimeImmutable $createdAt)
     {
+        if ('' === $email) {
+            throw new \InvalidArgumentException('User email must not be empty.');
+        }
+
         $this->email = $email;
         $this->createdAt = $createdAt;
     }
@@ -102,5 +108,38 @@ class User
     public function setApprovedAt(?\DateTimeImmutable $approvedAt): void
     {
         $this->approvedAt = $approvedAt;
+    }
+
+    /**
+     * The constructor rejects an empty email, but Doctrine hydration bypasses
+     * the constructor, so the invariant is re-checked here where the security
+     * layer contract (a non-empty identifier) actually depends on it.
+     */
+    public function getUserIdentifier(): string
+    {
+        if ('' === $this->email) {
+            throw new \LogicException('User has an empty email; the stored row is corrupt.');
+        }
+
+        return $this->email;
+    }
+
+    public function getPassword(): ?string
+    {
+        return $this->passwordHash;
+    }
+
+    /**
+     * No transient credentials are held on the entity - the password only ever
+     * exists as a hash in $passwordHash - so there is nothing to erase.
+     *
+     * The #[\Deprecated] attribute is what stops Symfony's AuthenticatorManager
+     * from triggering a 7.3 deprecation (and from calling this at all).
+     *
+     * @deprecated since Symfony 7.3, nothing to erase
+     */
+    #[\Deprecated(since: 'symfony/security-core 7.3')]
+    public function eraseCredentials(): void
+    {
     }
 }
