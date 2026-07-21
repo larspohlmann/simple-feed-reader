@@ -103,3 +103,10 @@ services:
     test.cache.oauth_login_code:
         alias: oauth.login_code.cache
         public: true
+
+    # The flow tests read the code out of the callback's redirect and trade it
+    # for a JWT, and assert a second exchange fails. The plaintext code exists
+    # only in that redirect URL, so there is no other seam to reach it from.
+    App\Service\OAuth\LoginCodeStore:
+        autowire: true
+        public: true
