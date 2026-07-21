@@ -15,6 +15,23 @@ services:
             Psr\Cache\CacheItemPoolInterface $oauthStateCache: '@oauth.state.cache'
             Psr\Cache\CacheItemPoolInterface $loginCodeCache: '@oauth.login_code.cache'
 
+    # Tags every OAuth provider so OAuthProviderRegistry's #[AutowireIterator]
+    # can collect them.
+    #
+    # This is NOT redundant with `autoconfigure: true`. Autoconfiguration
+    # registers an interface-named tag only for interfaces some bundle has
+    # declared as an autoconfigured tag; a plain application interface gets
+    # nothing, so `#[AutowireIterator(OAuthProviderInterface::class)]` on its
+    # own resolves to an EMPTY iterator. It fails silently, too: the registry
+    # builds, every lookup throws UnknownProviderException, and the result is
+    # indistinguishable from a correctly wired deployment holding no
+    # credentials. Verified by booting the test kernel and reading the
+    # registry's collected providers — [] before this block, both providers
+    # after. OAuthProviderWiringTest keeps it that way.
+    _instanceof:
+        App\Service\OAuth\OAuthProviderInterface:
+            tags: ['app.oauth_provider']
+
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
     App\:

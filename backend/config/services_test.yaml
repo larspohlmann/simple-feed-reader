@@ -110,3 +110,16 @@ services:
     App\Service\OAuth\LoginCodeStore:
         autowire: true
         public: true
+
+    # The flow tests resolve a provider by URL segment, and OAuthProviderWiring
+    # Test fetches this to prove the container's tagged iterator actually finds
+    # the providers — an empty one would build a registry that offers nothing
+    # and looks exactly like a deployment with no credentials.
+    #
+    # Public also stops the compiler removing it: nothing references the
+    # registry until the controller arrives in task 12, so as a private unused
+    # service it would be deleted and the wiring test would fail on a fetch
+    # rather than on the assertion it exists to make.
+    App\Service\OAuth\OAuthProviderRegistry:
+        autowire: true
+        public: true
