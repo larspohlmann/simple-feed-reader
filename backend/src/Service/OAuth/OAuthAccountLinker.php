@@ -117,9 +117,30 @@ final readonly class OAuthAccountLinker
      * Whoever set that password never proved they can read mail at this
      * address — and the provider has just told us somebody else can. So the
      * address changes hands: the account is promoted out of the verification
-     * queue, and the unproven password is discarded. The rightful owner reaches
-     * a password through the normal reset flow, which mails the address they
-     * have now demonstrably got.
+     * queue, and the unproven password is discarded.
+     *
+     * HOW THE OWNER GETS BACK IN, stated accurately because an earlier version
+     * of this comment got it wrong and a false security argument is how the
+     * next person reasons wrongly. It said the rightful owner "reaches a
+     * password through the normal reset flow". They cannot, not immediately:
+     * this method leaves the account in `pending_approval`, and
+     * RegistrationService::requestPasswordReset() returns silently for anything
+     * that is not `Active` or `Suspended`. A reset becomes possible only AFTER
+     * an admin approves the account.
+     *
+     * The way back in is the identity that just claimed the row — the person
+     * who proved the address at the provider signs in with that provider, which
+     * is precisely the request being served here. The password reset is the
+     * second route, and it opens at approval. Nobody is stranded, but the order
+     * is approval first, reset second, and this comment used to imply
+     * otherwise.
+     *
+     * That correction does NOT weaken the case for the wipe; if anything it
+     * strengthens it. The password being discarded belongs to someone who never
+     * proved the address, and the account is not being left unreachable — the
+     * party who DID prove it is holding a working sign-in method the moment
+     * approval lands. Keeping the password to preserve a recovery path would
+     * preserve it for the wrong person.
      *
      * Without this, an attacker could park an unverified registration on any
      * address and wait for its real owner to sign in with Google, at which
