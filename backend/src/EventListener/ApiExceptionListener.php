@@ -68,13 +68,22 @@ final readonly class ApiExceptionListener
             // the firewall has already produced. The firewall's ExceptionListener
             // runs at priority 1, ahead of this listener's 0, and sets its
             // response with ExceptionEvent::setResponse(). ExceptionEvent
-            // extends RequestEvent, whose setResponse() calls stopPropagation(),
-            // so once the firewall answers, this listener is never reached.
-            // That is why Lexik's {"code":401,"message":"..."} shape is
-            // normalised by App\EventListener\JwtFailureResponseListener, which
-            // hooks Lexik's own events instead — see that class. This branch
-            // still matters for authentication exceptions that reach
+            // extends RequestEvent, whose setResponse() calls stopPropagation()
+            // unconditionally, so once the firewall answers, this listener is
+            // never reached. That is why Lexik's {"code":401,"message":"..."}
+            // shape is normalised by App\EventListener\JwtFailureResponseListener,
+            // which hooks Lexik's own events instead — see that class. This
+            // branch still matters for authentication exceptions that reach
             // kernel.exception with no response set.
+            //
+            // Verified rather than assumed: ApiExceptionListenerTest::
+            // testAnEarlierListenersResponseEndsTheChain dispatches through a
+            // real EventDispatcher and asserts this listener never runs. The
+            // test file used to claim the opposite — that we deliberately
+            // overwrite an already-set response — while asserting neither.
+            // A corollary of the real behaviour: an early-return guard here for
+            // an already-set response would be unreachable dead code, not a
+            // behaviour change. There is nothing to guard against.
             $problem = new ApiProblem(
                 'unauthorized',
                 'Unauthorized',

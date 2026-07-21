@@ -69,15 +69,27 @@ final class AdminUserController
      *
      * The "your account has been approved" mail means "you have been granted
      * access for the first time". Classify any new status against that
-     * sentence rather than against the list below.
+     * sentence rather than against the list below — and check the claim, since
+     * an earlier version of this comment got `rejected` wrong by grouping it
+     * with suspended on the strength of the grouping rather than the sentence.
      *
-     * Both pending states are first-time grants, so both mail: the user has
-     * never had access, and now does. Suspended and rejected are RESTORATIONS
-     * of access the user already had, so they stay silent — this route is
-     * deliberately the only way back, rather than an /unsuspend endpoint for
-     * something an admin does once a year, but telling someone who never sat in
-     * a queue that they were "approved" would only confuse. Already-active is a
-     * no-op, which is what makes a double-click safe.
+     * MAILS — the user has never had access, and now does:
+     *   - pending_approval: verified their address, waited in the queue.
+     *   - pending_verification: never confirmed their address; approving
+     *     overrides double opt-in (see below), but the grant is just as real.
+     *   - rejected: an admin declined them and has now changed their mind.
+     *     Rejection is only reachable FROM pending_approval, so a rejected user
+     *     has never once had access — this is a first-time grant, and the one
+     *     case where the user is certainly waiting to hear, having applied and
+     *     seen nothing happen. Silence here left them holding a working account
+     *     they had no reason to try.
+     *
+     * SILENT — nothing was granted that the user did not already have:
+     *   - suspended: a genuine RESTORATION of access they used to have. This
+     *     route is deliberately the only way back, rather than an /unsuspend
+     *     endpoint for something an admin does once a year, but telling a
+     *     returning user they were "approved" would only confuse.
+     *   - active: a no-op, which is what makes a double-click safe.
      *
      * Approving a pending_verification account overrides double opt-in: that
      * address was never confirmed, so the approval mail may go somewhere nobody
@@ -97,7 +109,7 @@ final class AdminUserController
         $user = $this->requireUser($id);
         $isFirstTimeGrant = \in_array(
             $user->getStatus(),
-            [UserStatus::PendingApproval, UserStatus::PendingVerification],
+            [UserStatus::PendingApproval, UserStatus::PendingVerification, UserStatus::Rejected],
             true,
         );
 

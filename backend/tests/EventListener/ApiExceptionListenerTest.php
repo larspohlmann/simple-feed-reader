@@ -9,6 +9,7 @@ use App\Exception\RateLimitedException;
 use App\Exception\ValidationException;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
@@ -207,10 +208,8 @@ final class ApiExceptionListenerTest extends TestCase
     }
 
     /**
-     * Deliberate: the firewall's ExceptionListener runs at priority 1 (ahead of
-     * our 0) and sets its own response without stopping propagation. We
-     * intentionally overwrite it so the API speaks one error dialect. If anyone
-     * adds an early-return guard for an already-set response, this fails.
+     * /maintenance is outside the firewall and hand-authenticates, but its
+     * errors must still be problem+json rather than Symfony's HTML page.
      */
     public function testMaintenancePathsAreAlsoHandled(): void
     {
@@ -218,5 +217,77 @@ final class ApiExceptionListenerTest extends TestCase
         $this->listener()->onKernelException($event);
 
         self::assertNotNull($event->getResponse());
+    }
+
+    /**
+     * Settles a contradiction this file used to contain.
+     *
+     * The docblock on testMaintenancePathsAreAlsoHandled claimed the firewall
+     * "sets its own response without stopping propagation", that we
+     * "intentionally overwrite it", and that adding an early-return guard for
+     * an already-set response would make the test fail. ApiExceptionListener's
+     * own comment claimed the exact opposite. Both could not be true, and
+     * neither was pinned: that test builds an event whose response is null and
+     * never calls setResponse(), so it exercised none of it — an early-return
+     * guard could be added to the production listener with all tests still
+     * green.
+     *
+     * The listener's comment is the correct one. ExceptionEvent extends
+     * RequestEvent, whose setResponse() calls stopPropagation() unconditionally
+     * (see Symfony\Component\HttpKernel\Event\RequestEvent). So a listener that
+     * answers first ENDS the chain, and ApiExceptionListener cannot overwrite
+     * anything — which is precisely why Lexik's 401 has to be normalised by
+     * App\EventListener\JwtFailureResponseListener hooking Lexik's own events
+     * instead of by fighting listener priorities here.
+     *
+     * Calling the listener directly, as every other test in this file does,
+     * could never show this: the short-circuit is the DISPATCHER's behaviour,
+     * not the listener's. So this one goes through a real EventDispatcher with
+     * a real higher-priority listener, which is the only place the guarantee
+     * actually lives.
+     */
+    public function testAnEarlierListenersResponseEndsTheChain(): void
+    {
+        $dispatcher = new EventDispatcher();
+
+        $firstResponse = new Response('first', 418);
+        $dispatcher->addListener(
+            ExceptionEvent::class,
+            static fn (ExceptionEvent $event) => $event->setResponse($firstResponse),
+            priority: 1,
+        );
+        $dispatcher->addListener(
+            ExceptionEvent::class,
+            $this->listener()->onKernelException(...),
+            priority: 0,
+        );
+
+        $event = $this->event('/api/thing', new NotFoundHttpException());
+        $dispatcher->dispatch($event, ExceptionEvent::class);
+
+        self::assertTrue($event->isPropagationStopped());
+        self::assertSame(
+            $firstResponse,
+            $event->getResponse(),
+            'ApiExceptionListener must never have run: setResponse() stopped propagation before it.',
+        );
+    }
+
+    /**
+     * The complement, and the case that actually ships: when nothing has
+     * answered, the chain reaches this listener and it does the work.
+     */
+    public function testTheListenerRunsWhenNoEarlierListenerAnswered(): void
+    {
+        $dispatcher = new EventDispatcher();
+        $dispatcher->addListener(ExceptionEvent::class, $this->listener()->onKernelException(...));
+
+        $event = $this->event('/api/thing', new NotFoundHttpException());
+        $dispatcher->dispatch($event, ExceptionEvent::class);
+
+        $response = $event->getResponse();
+        self::assertNotNull($response);
+        self::assertSame(404, $response->getStatusCode());
+        self::assertSame('not_found', $this->payloadOf($response)['type']);
     }
 }

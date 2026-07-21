@@ -241,30 +241,53 @@ final class AdminUserControllerTest extends WebTestCase
     }
 
     /**
-     * Reinstatement: approve is the only route back from suspended or rejected,
-     * so it must still work — but the reinstated user never sat in a queue, and
-     * telling them their account "has been approved" would be nonsense.
+     * Approving a REJECTED account is a first-time grant, not a reinstatement,
+     * and this used to be classified the wrong way.
      *
-     * @return iterable<string, array{UserStatus}>
+     * The rule is "the mail means you have been granted access for the first
+     * time". Rejection only ever happens from pending_approval — reject() is
+     * how an admin empties the queue — so a rejected user has NEVER had access.
+     * Reversing that decision hands them access for the first time, and it is
+     * the one case where the user is guaranteed to be waiting to hear: they
+     * applied, and as far as they know nothing happened. Staying silent left
+     * them with a working account they had no reason to try.
+     *
+     * Only suspended (access genuinely restored) and already-active (no-op)
+     * remain silent.
      */
-    public static function reinstatableStatuses(): iterable
-    {
-        yield 'suspended' => [UserStatus::Suspended];
-        yield 'rejected' => [UserStatus::Rejected];
-    }
-
-    #[\PHPUnit\Framework\Attributes\DataProvider('reinstatableStatuses')]
-    public function testReinstatingAUserActivatesThemWithoutMailing(UserStatus $status): void
+    public function testApprovingARejectedUserSendsTheApprovalMail(): void
     {
         $admin = $this->admin();
-        $target = $this->factory()->create('back@example.com', status: $status);
+        $target = $this->factory()->create('reconsidered@example.com', status: UserStatus::Rejected);
         $id = (int) $target->getId();
 
         $this->call('POST', self::LIST . '/' . $id . '/approve', $this->tokenFor($admin));
 
         self::assertResponseIsSuccessful();
         self::assertSame('active', $this->payload()['status']);
-        self::assertEmailCount(0, message: 'reinstatement is not an approval announcement');
+        self::assertEmailCount(1, message: 'a reversed rejection grants access for the first time');
+
+        $reloaded = $this->reload($id);
+        self::assertSame(UserStatus::Active, $reloaded->getStatus());
+        self::assertNotNull($reloaded->getApprovedAt());
+    }
+
+    /**
+     * Reinstatement: approve is the only route back from suspended, so it must
+     * still work — but a suspended user already had access, and telling them
+     * their account "has been approved" would be nonsense.
+     */
+    public function testReinstatingASuspendedUserActivatesThemWithoutMailing(): void
+    {
+        $admin = $this->admin();
+        $target = $this->factory()->create('back@example.com', status: UserStatus::Suspended);
+        $id = (int) $target->getId();
+
+        $this->call('POST', self::LIST . '/' . $id . '/approve', $this->tokenFor($admin));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('active', $this->payload()['status']);
+        self::assertEmailCount(0, message: 'restoring access the user already had is not an announcement');
 
         $reloaded = $this->reload($id);
         self::assertSame(UserStatus::Active, $reloaded->getStatus());
