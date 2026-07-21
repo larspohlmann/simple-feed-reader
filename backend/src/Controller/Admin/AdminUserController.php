@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\User;
+use App\Entity\UserIdentity;
 use App\Enum\UserStatus;
 use App\Exception\ValidationException;
 use App\Repository\UserRepository;
@@ -46,6 +47,9 @@ final class AdminUserController
             $statuses = [$status];
         }
 
+        $users = $this->users->findForAdminList($statuses);
+        $providersByUserId = $this->providersByUserId($users);
+
         return new JsonResponse([
             'users' => array_map(
                 // Hand-built, like GET /api/me: a column added later must not
@@ -57,10 +61,63 @@ final class AdminUserController
                     'roles' => $user->getRoles(),
                     'createdAt' => $user->getCreatedAt()->format(\DateTimeInterface::ATOM),
                     'approvedAt' => $user->getApprovedAt()?->format(\DateTimeInterface::ATOM),
+                    // How this person signed up. An OAuth account has no
+                    // verification mail for the admin to chase and may carry a
+                    // synthetic <provider>-<hash>@oauth.invalid address, and
+                    // both of those read as anomalies without this column.
+                    'identities' => $providersByUserId[$user->getId()] ?? [],
                 ],
-                $this->users->findForAdminList($statuses),
+                $users,
             ),
         ]);
+    }
+
+    /**
+     * The sign-in providers of every listed user, read in ONE query and indexed
+     * by user id.
+     *
+     * User holds no ORM association to UserIdentity — Plan 1 kept that
+     * relationship one-directional and lets the database FK cascade the deletes
+     * — so there is nothing to traverse, and the obvious per-row lookup would
+     * be an N+1 that no assertion on the response body could ever catch. It is
+     * pinned by a query count instead: see
+     * AdminUserControllerTest::testTheProviderColumnCostsOneQueryHoweverManyUsersAreListed.
+     *
+     * Only the provider NAME is selected. The row also holds the address the
+     * provider last reported, and that is deliberately left out: it is a second
+     * address for the same person, of no use in deciding an approval, and the
+     * hand-built row above exists precisely to keep columns from reaching an
+     * admin's browser merely because they exist.
+     *
+     * @param list<User> $users
+     *
+     * @return array<int, list<string>>
+     */
+    private function providersByUserId(array $users): array
+    {
+        // An empty IN () is a syntax error on both engines, and there is
+        // nothing to ask about anyway — a status filter matching nobody is an
+        // ordinary outcome, not an edge case.
+        if ([] === $users) {
+            return [];
+        }
+
+        /** @var list<array{userId: int|string, provider: string}> $rows */
+        $rows = $this->em->createQueryBuilder()
+            ->select('IDENTITY(i.user) AS userId', 'i.provider')
+            ->from(UserIdentity::class, 'i')
+            ->andWhere('i.user IN (:users)')
+            ->setParameter('users', $users)
+            ->orderBy('i.id', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+
+        $byUser = [];
+        foreach ($rows as $row) {
+            $byUser[(int) $row['userId']][] = $row['provider'];
+        }
+
+        return $byUser;
     }
 
     /**

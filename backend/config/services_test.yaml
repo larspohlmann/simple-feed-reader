@@ -88,6 +88,21 @@ services:
     # resource produced rather than amending it, and this file has no
     # _defaults to inherit from, so without it the service is built with zero
     # constructor arguments.
+    # Records the SQL each request actually executed, so "the admin list reads
+    # every user's providers in ONE query" is counted rather than eyeballed. An
+    # N+1 produces a byte-identical response, so nothing asserted on the body
+    # can ever fail when somebody replaces the batched lookup with a loop.
+    #
+    # Tagged explicitly rather than relying on autoconfiguration: `tests/` is
+    # not in the `App\` resource that services.yaml registers, so nothing here
+    # is autoconfigured. Priority is left at the default, which puts it inside
+    # dama/doctrine-test-bundle's StaticDriver — it therefore sees the real
+    # statements and not the wrapping transaction's bookkeeping.
+    App\Tests\Support\QueryRecorder:
+        public: true
+        tags:
+            - { name: doctrine.middleware }
+
     test.cache.oauth_state:
         alias: oauth.state.cache
         public: true
