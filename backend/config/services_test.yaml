@@ -10,3 +10,20 @@ services:
     Symfony\Component\Lock\LockFactory:
         alias: lock.default.factory
         public: true
+
+    # login_throttling counts attempts in a FILESYSTEM cache pool, which
+    # survives both the kernel reboot between requests and the end of the test
+    # run. Without clearing it, the per-IP global limiter (5 x max_attempts)
+    # fills up with every login test ever executed and the suite starts
+    # returning 429 for everything. Tests clear this between cases.
+    test.cache.rate_limiter:
+        alias: cache.rate_limiter
+        public: true
+
+    # UserFactory hashes passwords when seeding fixtures. No application code
+    # injects the hasher yet (registration arrives in a later task), so the
+    # compiler removes it entirely and the test container cannot fetch it.
+    # Test environment only.
+    Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface:
+        alias: security.user_password_hasher
+        public: true
