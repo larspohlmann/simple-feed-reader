@@ -35,7 +35,11 @@ security:
             pattern: ^/api/auth/login$
             stateless: true
             provider: app_users
-            user_checker: App\Security\UserChecker
+            # NOT the same checker as the api firewall below. This one checks
+            # status in checkPostAuth, i.e. only after the password has been
+            # verified, so a wrong password cannot reveal that an address is
+            # registered-but-suspended. See App\Security\LoginUserChecker.
+            user_checker: App\Security\LoginUserChecker
             json_login:
                 check_path: /api/auth/login
                 username_path: email

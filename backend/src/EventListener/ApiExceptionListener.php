@@ -64,12 +64,17 @@ final readonly class ApiExceptionListener
             // into "server broken". Covers subclasses such as
             // BadCredentialsException and InsufficientAuthenticationException.
             //
-            // Deliberate: the firewall's ExceptionListener runs at priority 1,
-            // ahead of this listener's 0, and sets its own response WITHOUT
-            // stopping propagation. We knowingly overwrite it — including
-            // Lexik's {"code":401,"message":"..."} — so the whole API speaks one
-            // error dialect. Do not "fix" this by returning early when a
-            // response is already set; that would reintroduce two error shapes.
+            // Note what this branch does NOT do: it cannot rewrite a response
+            // the firewall has already produced. The firewall's ExceptionListener
+            // runs at priority 1, ahead of this listener's 0, and sets its
+            // response with ExceptionEvent::setResponse(). ExceptionEvent
+            // extends RequestEvent, whose setResponse() calls stopPropagation(),
+            // so once the firewall answers, this listener is never reached.
+            // That is why Lexik's {"code":401,"message":"..."} shape is
+            // normalised by App\EventListener\JwtFailureResponseListener, which
+            // hooks Lexik's own events instead — see that class. This branch
+            // still matters for authentication exceptions that reach
+            // kernel.exception with no response set.
             $problem = new ApiProblem(
                 'unauthorized',
                 'Unauthorized',

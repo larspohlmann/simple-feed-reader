@@ -3,3 +3,19 @@ controllers:
         path: ../src/Controller/
         namespace: App\Controller
     type: attribute
+
+when@test:
+    controllers:
+        resource:
+            path: ../src/Controller/
+            namespace: App\Controller
+        type: attribute
+
+    # Routes the `api` firewall actually protects, so its rejection shapes and
+    # revocation behaviour can be asserted before the real endpoints exist.
+    # tests/ is autoload-dev and this block is test-only: unreachable in prod.
+    test_probe_controllers:
+        resource:
+            path: ../tests/Support/Http/
+            namespace: App\Tests\Support\Http
+        type: attribute

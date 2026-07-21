@@ -212,24 +212,6 @@ final class ApiExceptionListenerTest extends TestCase
      * intentionally overwrite it so the API speaks one error dialect. If anyone
      * adds an early-return guard for an already-set response, this fails.
      */
-    public function testOverwritesAResponseAlreadySetByTheFirewall(): void
-    {
-        $event = $this->event('/api/me', new AuthenticationException('Not authenticated.'));
-        $event->setResponse(new Response(
-            '{"code":401,"message":"JWT Token not found"}',
-            401,
-            ['Content-Type' => 'application/json'],
-        ));
-
-        $this->listener()->onKernelException($event);
-
-        $response = $event->getResponse();
-        self::assertNotNull($response);
-        self::assertSame('application/problem+json', $response->headers->get('Content-Type'));
-        self::assertStringNotContainsString('JWT Token not found', (string) $response->getContent());
-        self::assertSame('unauthorized', $this->payloadOf($response)['type']);
-    }
-
     public function testMaintenancePathsAreAlsoHandled(): void
     {
         $event = $this->event('/maintenance/refresh', new \LogicException('boom'));

@@ -23,8 +23,19 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationFailureHandlerI
  */
 final class LoginFailureHandler implements AuthenticationFailureHandlerInterface
 {
+    public function __construct(
+        private readonly LoginTimingEqualizer $timingEqualizer,
+    ) {
+    }
+
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): Response
     {
+        // Before building the response, not after: the whole point is that the
+        // client cannot time the difference between a missing user and a wrong
+        // password. AuthenticatorManager returns this response only once the
+        // handler has returned, so the delay lands inside the measured window.
+        $this->timingEqualizer->equalize($exception);
+
         $apiException = match (true) {
             $exception instanceof AccountStatusException
                 => new AccountNotActiveException($exception->accountStatus),

@@ -169,29 +169,45 @@ final class LoginTest extends WebTestCase
     }
 
     /**
-     * KNOWN ENUMERATION LEAK - this test documents current behaviour, it does
-     * not endorse it.
-     *
-     * UserCheckerListener::preCheckCredentials runs at priority 256 and
-     * CheckCredentialsListener at priority 0, so the status check happens
-     * BEFORE the password is verified. A non-active account therefore answers
-     * 403 with its status to anyone who guesses the address, no password
-     * required - an account-enumeration oracle.
-     *
-     * It cannot be fixed by moving the check to checkPostAuth: the `api`
-     * firewall registers only preCheckCredentials, so JWT-request revocation
-     * would stop working. A fix needs a login-firewall-specific check that runs
-     * after CheckCredentialsListener. Tracked separately; when it lands, this
-     * test should flip to expecting 401.
+     * The enumeration oracle this closes: while the status check ran in
+     * checkPreAuth it fired BEFORE the password was verified, so a suspended
+     * account answered 403-with-status to anyone who merely guessed the
+     * address. LoginUserChecker moved it to checkPostAuth. A wrong password
+     * must now be indistinguishable from any other bad login.
      */
-    public function testSuspendedWithWrongPasswordLeaksStatusBeforePasswordCheck(): void
+    public function testNonActiveAccountWithWrongPasswordIsIndistinguishableFrom401(): void
     {
         $client = self::createClient();
         $this->factory()->create('leaky@example.com', status: UserStatus::Suspended);
 
         $this->login($client, 'leaky@example.com', 'definitely-not-the-password');
 
-        self::assertResponseStatusCodeSame(403);
-        self::assertSame('account_not_active', $this->payload($client)['type']);
+        self::assertResponseStatusCodeSame(401);
+        self::assertResponseHeaderSame('content-type', 'application/problem+json');
+        $payload = $this->payload($client);
+        self::assertSame('invalid_credentials', $payload['type']);
+        self::assertArrayNotHasKey('accountStatus', $payload);
+    }
+
+    /**
+     * The other half of the guarantee: a wrong password against a suspended
+     * account must produce the SAME bytes as a wrong password against an active
+     * one, otherwise the status still leaks through a subtler channel.
+     */
+    public function testWrongPasswordResponseDoesNotVaryWithAccountStatus(): void
+    {
+        $client = self::createClient();
+        $this->factory()->create('act@example.com');
+        $this->factory()->create('susp@example.com', status: UserStatus::Suspended);
+        $this->factory()->create('pend@example.com', status: UserStatus::PendingApproval);
+
+        $bodies = [];
+        foreach (['act@example.com', 'susp@example.com', 'pend@example.com', 'ghost@example.com'] as $email) {
+            $this->login($client, $email, 'wrong-password');
+            self::assertResponseStatusCodeSame(401);
+            $bodies[] = (string) $client->getResponse()->getContent();
+        }
+
+        self::assertCount(1, array_unique($bodies), 'Wrong-password responses must not vary by account status.');
     }
 }
