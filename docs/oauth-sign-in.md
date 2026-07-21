@@ -504,3 +504,112 @@ address at any provider could claim any account here.
 
 **A user can hold several identities.** Google and Apple on one account is
 supported and expected; the admin list shows all of them.
+
+## 8. Developer: adding a third provider
+
+The design spec claims a third provider is "one class and one env block". This
+section is that claim walked rather than asserted — the steps below were
+performed against this branch with a scratch provider, and the failure modes
+described are ones that actually occurred.
+
+It works for any provider that speaks standard OpenID Connect authorization
+code + PKCE and returns an ID token from its token endpoint. A provider that
+does not (a plain OAuth 2 provider with a userinfo endpoint and no ID token,
+say) does not fit `AbstractOidcProvider` and needs its own implementation of
+`OAuthProviderInterface`.
+
+### 8.1 The class
+
+One file in `src/Service/OAuth/`, extending `AbstractOidcProvider`. Six methods,
+none of which contain a decision worth agonising over:
+
+| Method | What goes in it |
+| --- | --- |
+| `getName()` | The URL segment and the `user_identity.provider` value. Lowercase, stable forever — it is stored in the database. |
+| `isConfigured()` | `false` when the deployment has no credentials, so the provider 404s instead of redirecting to a broken consent screen. |
+| `getAuthorizationEndpoint()` | A **constant**, never configuration. |
+| `getScope()` | The narrowest scope that yields a verified email. |
+| `getTokenEndpoint()` | A **constant**. See below — this one is load-bearing. |
+| `getIssuers()` | Accepted `iss` values. A list, because Google mints two spellings. |
+| `getClientId()` / `getClientSecret()` | Usually constructor-injected env vars. Apple overrides the secret to mint a fresh ES256 JWT per exchange. |
+
+If the provider needs a parameter OIDC does not define, override
+`extraAuthorizationParams()` — Apple's `response_mode=form_post` is the only
+current instance. Everything else about the authorization request, PKCE
+included, is assembled by the `final` `getAuthorizationUrl()` on the parent and
+is not yours to change.
+
+**`getTokenEndpoint()` and `getAuthorizationEndpoint()` must be constants, and
+that is a security requirement, not a style preference.** This codebase does not
+verify the ID token's signature; it relies on the OIDC §3.1.3.7 carve-out that
+lets validated TLS to a *pinned* endpoint stand in for one. A token endpoint
+that a deployment — or worse, a request — could move would withdraw the premise
+the whole exchange rests on. `AbstractOidcProvider`'s class docblock spells out
+all three conditions. Read it before you touch that method.
+
+### 8.2 The registration you do *not* write
+
+There is none. `config/services.yaml` carries an `_instanceof` block that tags
+every `OAuthProviderInterface` with `app.oauth_provider`, and
+`OAuthProviderRegistry` collects that tag via `#[AutowireIterator]`. Dropping
+the file in is the whole registration: the new name appears in
+`GET /api/auth/oauth/providers`, the SPA renders a button for it, and
+`/api/auth/oauth/<name>` and `/api/auth/oauth/<name>/callback` both route.
+Confirmed by booting the container with a scratch provider and reading the
+registry back — `['google', 'scratch']`, with nothing else edited.
+
+Do not "helpfully" replace that `_instanceof` block with
+`#[AutowireIterator(OAuthProviderInterface::class)]`. `autoconfigure: true` does
+not register a tag named after a plain application interface, so the iterator
+comes back empty — and it fails *silently*: the registry builds, every lookup
+throws `UnknownProviderException`, and the deployment is indistinguishable from
+a correctly wired one that simply has no credentials.
+`OAuthProviderWiringTest` exists to catch exactly this.
+
+### 8.3 The env block
+
+Add the variables to `backend/.env` with empty defaults, next to the Google and
+Apple blocks, and document them the same way.
+
+Empty defaults are what make the provider *optional*: `isConfigured()` returns
+false, and a deployment that does not want it does nothing at all.
+
+**Declaring them is not optional, even though nothing complains.** A
+`#[Autowire('%env(NEW_OAUTH_CLIENT_ID)%')]` naming a variable that appears in no
+`.env` file passes `cache:clear` **and** passes `lint:container` — both stay
+green — and then throws `EnvNotFoundException: Environment variable not found`
+the first time anything touches the registry. Observed on this branch, not
+theorised. The blank line in `.env` is the fix.
+
+### 8.4 The redirect URI
+
+Register this at the provider's console, byte for byte:
+
+```
+<APP_BACKEND_URL>/api/auth/oauth/<name>/callback
+```
+
+`APP_BACKEND_URL` must be `https` and must match what is registered exactly —
+section 4 covers why, and covers the failure modes when it does not.
+
+### 8.5 The tests
+
+Mirror `GoogleOAuthProviderTest`: parse the authorization URL and pin every
+query parameter individually, including `code_challenge_method=S256`. That
+suite is what made the refactor extracting `getAuthorizationUrl()` safe, and it
+is what will catch an `extraAuthorizationParams()` override that stomps a
+standard parameter.
+
+You do **not** need a new flow test. `OAuthFlowTest` drives the whole
+redirect → callback → exchange path through `FakeOAuthProvider`, and everything
+it proves — the browser binding, the one-time code, the status gate — lives in
+the controller and the stores, which are provider-agnostic. Adding a
+near-duplicate flow test per provider would mean one cause failing in N files.
+
+### 8.6 What you do not have to touch
+
+No migration: `user_identity` stores the provider as a string and is already
+unique on `(provider, provider_user_id)`. No admin change: the queue reads
+whatever names are in that column. No account-linking change: linking is by
+provider-verified email address, and a provider that returns no address gets the
+same `<provider>-<hash>@oauth.invalid` placeholder Apple already gets.

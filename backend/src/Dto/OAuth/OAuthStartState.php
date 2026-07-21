@@ -20,6 +20,25 @@ namespace App\Dto\OAuth;
  * here would invite the assumption that the nonce check rests on cryptography
  * it does not rest on.
  *
+ * ## One DTO for both legs, and what that means for `$codeChallenge`
+ *
+ * `start()` and `consume()` return the same shape, and on the callback leg
+ * nothing reads `$codeChallenge` — the challenge went to the provider ten
+ * minutes ago and it is the VERIFIER the token exchange needs back. So
+ * `consume()` recomputing it from the stored verifier looks like dead work.
+ *
+ * It is kept, deliberately, because the alternative is worse. The field is a
+ * pure function of `$codeVerifier`, so recomputing it costs one SHA-256 and
+ * keeps the type's invariant total: `$codeChallenge` ALWAYS matches
+ * `$codeVerifier`, on every instance, whoever built it. Leaving it empty or
+ * making it nullable on one leg would introduce a field that is sometimes a
+ * lie, and a future caller that reasonably trusted it would be wrong in a way
+ * PKCE failures make very hard to read.
+ *
+ * `$browserToken` is the one field that genuinely is leg-specific, and it is
+ * nullable to say so. If a second field ever earns that treatment, split this
+ * into a start DTO and a resumption DTO rather than accumulating nullables.
+ *
  * `$browserToken` is the odd one out and travels in a third direction: it goes
  * to the BROWSER, in a cookie, and never to the provider at all. It is what
  * makes `state` mean "this browser started this flow" rather than merely "this
