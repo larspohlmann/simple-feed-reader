@@ -22,10 +22,38 @@ class UserIdentity
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private User $user;
 
+    /**
+     * Deliberately left on the table's default collation, unlike
+     * $providerUserId below.
+     *
+     * This column's values are a closed vocabulary written by our own code from
+     * a hard-coded OAuthProviderInterface::getName(). They are never
+     * provider-supplied and never user-supplied, so a case-insensitive
+     * comparison here cannot be attacked — the only string that ever reaches it
+     * is one of the literals we ship. Pinning a collation on a column whose
+     * every value we choose would be tidiness dressed up as security, and would
+     * blur the reason the column below genuinely needs one.
+     */
     #[ORM\Column(length: 30)]
     private string $provider;
 
-    #[ORM\Column(length: 191)]
+    /**
+     * `_bin` collation, pinned explicitly.
+     *
+     * Without it MySQL inherits the table default (utf8mb4_0900_ai_ci) and
+     * compares this column case-insensitively, while SQLite compares it
+     * case-sensitively — so the same lookup behaved differently in production
+     * and in dev. That was observed, not theorised: before this was pinned, a
+     * lookup for `sub-abc` returned a row stored as `Sub-ABC` on MySQL 8.4 and
+     * returned nothing on SQLite.
+     *
+     * A subject identifier is an opaque token minted by the provider; `a` and
+     * `A` are simply different identifiers, and treating them as equal would
+     * let one provider account resolve to another's local user. $email above is
+     * the deliberate opposite: addresses ARE case-insensitive, which is why
+     * they are normalised on write instead of compared loosely on read.
+     */
+    #[ORM\Column(length: 191, options: ['collation' => 'utf8mb4_bin'])]
     private string $providerUserId;
 
     #[ORM\Column(length: 180, nullable: true)]
