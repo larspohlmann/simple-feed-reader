@@ -356,6 +356,38 @@ final class RegistrationTest extends WebTestCase
     }
 
     /**
+     * The limiter keys on getClientIp(), which ignores X-Forwarded-For unless
+     * the sender is a configured trusted proxy - and nothing is trusted yet.
+     * If that ever stopped holding, a one-line header would buy an unlimited
+     * number of fresh budgets and the cap would be decorative.
+     *
+     * This pins the property rather than the configuration, so it fails loudly
+     * if trusted_proxies is ever widened carelessly during deployment.
+     */
+    public function testASpoofedForwardedForDoesNotBuyAFreshBudget(): void
+    {
+        for ($attempt = 1; $attempt <= 5; ++$attempt) {
+            $this->register();
+        }
+
+        $this->client->request(
+            'POST',
+            '/api/auth/register',
+            server: [
+                'CONTENT_TYPE' => 'application/json',
+                'HTTP_X_FORWARDED_FOR' => '203.0.113.7',
+            ],
+            content: (string) json_encode([
+                'email' => 'newcomer@example.com',
+                'password' => 'correct-horse-battery',
+                'altcha' => $this->altchaPayload(),
+            ]),
+        );
+
+        self::assertResponseStatusCodeSame(429);
+    }
+
+    /**
      * Separate budgets: a user who burned through registration attempts must
      * still be able to recover an account they already own.
      */
