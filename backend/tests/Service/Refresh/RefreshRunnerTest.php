@@ -300,6 +300,31 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(1, $report->total);
     }
 
+    /**
+     * A single-feed scope matches on id alone, so countDue would keep answering
+     * 1 even after a successful refresh. `remaining` must still reach 0 or a
+     * polling caller never stops.
+     */
+    public function testSingleFeedRunReportsNothingRemaining(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->em->flush();
+
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($feed->getUrl(), false, $this->rss('One', 'o-1'), null, null),
+        );
+
+        $feedId = $feed->getId();
+        self::assertNotNull($feedId);
+        $report = $this->runner()->run(RefreshRequest::forFeed($feedId, 60));
+
+        self::assertSame('completed', $report->status);
+        self::assertSame(1, $report->total);
+        self::assertSame(1, $report->fetched);
+        self::assertSame(0, $report->remaining);
+    }
+
     public function testAllDueRunPrunesOldEntries(): void
     {
         $feed = $this->dueFeed('https://a.example.com/feed');

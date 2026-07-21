@@ -117,13 +117,20 @@ final class RefreshRunner
             };
         }
 
-        $remaining = $this->feedRepository->countDue(
-            $this->clock->now(),
-            $request->userId,
-            $request->feedId,
-            $request->force,
-            $cooldownCutoff,
-        );
+        // A single-feed scope matches on id alone — countDue ignores the
+        // schedule and would keep answering 1 even after a successful refresh,
+        // so a polling caller would never see `remaining` reach 0. At most one
+        // feed is selected and the first is always attempted, so anything still
+        // pending is exactly what the budget skipped.
+        $remaining = $request->feedId !== null
+            ? $skippedForBudget
+            : $this->feedRepository->countDue(
+                $this->clock->now(),
+                $request->userId,
+                $request->feedId,
+                $request->force,
+                $cooldownCutoff,
+            );
 
         $pruned = $request->prune ? $this->pruner->prune() : 0;
 
