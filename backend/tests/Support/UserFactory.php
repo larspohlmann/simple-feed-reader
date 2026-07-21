@@ -17,17 +17,26 @@ final readonly class UserFactory
     ) {
     }
 
-    /** @param list<string> $roles */
+    /**
+     * $passwordChangedAt defaults to the fixed createdAt rather than to "now".
+     * Tokens minted during a test therefore always carry an `iat` well after
+     * it, so App\Security\PasswordChangeTokenInvalidator stays out of the way
+     * of fixtures that are not about password changes. Tests that DO exercise
+     * the boundary set the stamp explicitly.
+     *
+     * @param list<string> $roles
+     */
     public function create(
         string $email,
         string $password = 'correct-horse-battery',
         UserStatus $status = UserStatus::Active,
         array $roles = [],
     ): User {
-        $user = new User($email, new \DateTimeImmutable('2026-07-01 10:00:00'));
+        $createdAt = new \DateTimeImmutable('2026-07-01 10:00:00');
+        $user = new User($email, $createdAt);
         $user->setStatus($status);
         $user->setRoles($roles);
-        $user->setPasswordHash($this->hasher->hashPassword($user, $password));
+        $user->setPasswordHash($this->hasher->hashPassword($user, $password), $createdAt);
 
         $this->em->persist($user);
         $this->em->flush();

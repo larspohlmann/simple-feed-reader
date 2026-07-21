@@ -47,9 +47,10 @@ final readonly class RegistrationService
             return;
         }
 
-        $user = new User($email, $this->clock->now());
+        $now = $this->clock->now();
+        $user = new User($email, $now);
         $user->setStatus(UserStatus::PendingVerification);
-        $user->setPasswordHash($this->hasher->hashPassword($user, $plainPassword));
+        $user->setPasswordHash($this->hasher->hashPassword($user, $plainPassword), $now);
 
         $this->em->persist($user);
 
@@ -150,7 +151,11 @@ final readonly class RegistrationService
             return false;
         }
 
-        $user->setPasswordHash($this->hasher->hashPassword($user, $plainPassword));
+        // Stamping the change is what evicts tokens minted before it — see
+        // App\Security\PasswordChangeTokenInvalidator. Without it this method
+        // changes the password and leaves whoever stole a token still signed
+        // in, which is the opposite of what a reset is for.
+        $user->setPasswordHash($this->hasher->hashPassword($user, $plainPassword), $this->clock->now());
         $this->em->flush();
 
         return true;

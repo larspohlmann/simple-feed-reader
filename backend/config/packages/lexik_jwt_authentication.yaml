@@ -2,6 +2,21 @@ lexik_jwt_authentication:
     secret_key: '%env(resolve:JWT_SECRET_KEY)%'
     public_key: '%env(resolve:JWT_PUBLIC_KEY)%'
     pass_phrase: '%env(JWT_PASSPHRASE)%'
-    # 7 days. No refresh tokens: the Doctrine provider reloads the user on
-    # every request, so revocation is immediate regardless of token lifetime.
+    # 7 days, and no refresh tokens. Two separate mechanisms make that safe;
+    # this comment used to claim the first one covered both, which was wrong.
+    #
+    #  * STATUS changes revoke immediately, because the Doctrine provider
+    #    reloads the user on every request and App\Security\UserChecker reads
+    #    the reloaded status. Suspending an account kills its tokens at once.
+    #
+    #  * PASSWORD changes revoke immediately only because
+    #    App\Security\PasswordChangeTokenInvalidator compares the token's `iat`
+    #    against User::passwordChangedAt. Nothing about a JWT is derived from
+    #    the password hash, so without that listener a reset would change the
+    #    password and leave every previously issued token live for the full TTL
+    #    below — password reset would recover nothing from a phishing attack.
+    #
+    # Anything else (a role change, say) is NOT revoked mid-token beyond what
+    # the per-request reload happens to pick up. Before lengthening this TTL,
+    # check that the property you care about is actually one of the above.
     token_ttl: 604800

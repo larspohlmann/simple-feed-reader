@@ -12,6 +12,7 @@ use App\Service\Auth\AltchaService;
 use App\Tests\Support\AltchaSolver;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -369,6 +370,110 @@ final class PasswordResetTest extends WebTestCase
         $this->requestReset('ghost6@example.com');
 
         self::assertResponseStatusCodeSame(429);
+    }
+
+    private function jwtFor(string $email, string $password = 'correct-horse-battery'): string
+    {
+        $this->login($email, $password);
+        $payload = $this->payload();
+        self::assertIsString($payload['token'] ?? null, 'login should have produced a token');
+
+        return $payload['token'];
+    }
+
+    /**
+     * A token the attacker obtained $secondsAgo seconds ago. Minting it with an
+     * explicit `iat` rather than sleeping keeps the test deterministic AND
+     * meaningful: a token issued in the very same second as the reset is
+     * deliberately NOT revoked (see PasswordChangeTokenInvalidator), so a test
+     * that logs in and resets within one millisecond could never observe the
+     * revocation it claims to check. This is a real, signed, otherwise-valid
+     * token for the account — only its issue time is pinned.
+     */
+    private function stolenJwtFor(User $user, int $secondsAgo): string
+    {
+        /** @var JWTTokenManagerInterface $manager */
+        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
+
+        return $manager->createFromPayload($user, ['iat' => time() - $secondsAgo]);
+    }
+
+    private function getMeWith(string $jwt): void
+    {
+        $this->client->request('GET', '/api/me', server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $jwt]);
+    }
+
+    /**
+     * Password reset is the canonical compromise-recovery action: the user has
+     * been phished, and resetting is how they evict the attacker. Before this
+     * was enforced it evicted nobody — the JWT is a bearer token signed over
+     * the account identity, nothing binds it to the password, and the Doctrine
+     * provider only reloads STATUS. A stolen token stayed live for its full
+     * 7-day TTL while the victim believed they had recovered.
+     */
+    public function testResettingThePasswordRevokesTokensIssuedBeforeIt(): void
+    {
+        $user = $this->factory()->create('phished@example.com');
+
+        // The attacker lifted this token a minute ago, and it works.
+        $stolen = $this->stolenJwtFor($user, secondsAgo: 60);
+        $this->getMeWith($stolen);
+        self::assertResponseIsSuccessful('precondition: the stolen token works before the reset');
+
+        // The victim recovers.
+        $token = $this->tokens()->issue($user, TokenPurpose::ResetPassword);
+        $this->post('/api/auth/password-reset', ['token' => $token, 'password' => self::NEW_PASSWORD]);
+        self::assertResponseIsSuccessful();
+
+        // The attacker is out.
+        $this->getMeWith($stolen);
+
+        self::assertResponseStatusCodeSame(401);
+        self::assertResponseHeaderSame('content-type', 'application/problem+json');
+        $problem = $this->payload();
+        self::assertSame('unauthorized', $problem['type']);
+        // Opaque: the holder is not told WHY the token died.
+        self::assertStringNotContainsString('password', strtolower((string) json_encode($problem)));
+    }
+
+    /**
+     * Revocation must be scoped to the account that reset. One user resetting
+     * their password must not sign everybody else out.
+     */
+    public function testResettingOneAccountDoesNotRevokeAnother(): void
+    {
+        $victim = $this->factory()->create('victim@example.com');
+        $bystander = $this->factory()->create('bystander@example.com');
+
+        $bystanderToken = $this->stolenJwtFor($bystander, secondsAgo: 60);
+
+        $token = $this->tokens()->issue($victim, TokenPurpose::ResetPassword);
+        $this->post('/api/auth/password-reset', ['token' => $token, 'password' => self::NEW_PASSWORD]);
+        self::assertResponseIsSuccessful();
+
+        $this->getMeWith($bystanderToken);
+
+        self::assertResponseIsSuccessful();
+    }
+
+    /**
+     * The other half, and the reason the comparison must be strict. A user who
+     * resets and immediately signs back in gets a token whose `iat` can land in
+     * the very same second as passwordChangedAt. A `<=` comparison would log
+     * them straight back out and make reset look broken.
+     */
+    public function testTheUserCanUseTheApiImmediatelyAfterResetting(): void
+    {
+        $user = $this->factory()->create('recovering@example.com');
+        $token = $this->tokens()->issue($user, TokenPurpose::ResetPassword);
+
+        $this->post('/api/auth/password-reset', ['token' => $token, 'password' => self::NEW_PASSWORD]);
+        self::assertResponseIsSuccessful();
+
+        $fresh = $this->jwtFor('recovering@example.com', self::NEW_PASSWORD);
+        $this->getMeWith($fresh);
+
+        self::assertResponseIsSuccessful();
     }
 
     /** The reset must not quietly promote or demote the account's status. */

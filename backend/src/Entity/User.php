@@ -40,6 +40,27 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $approvedAt = null;
 
+    /**
+     * When the password hash last changed. This is what binds an issued JWT to
+     * a password, and it exists because nothing else did.
+     *
+     * JWTs here are stateless bearer tokens with a 7-day TTL and no refresh
+     * flow. The Doctrine provider reloads the user on every request, so a
+     * STATUS change (suspension) revokes immediately — but a password change
+     * touched nothing the token was checked against. A phished user who reset
+     * their password evicted nobody: the attacker's token stayed live for a
+     * week while the victim believed they had recovered. Password reset is the
+     * canonical compromise-recovery action, so that was the one thing it had to
+     * do and did not.
+     *
+     * App\Security\PasswordChangeTokenInvalidator rejects any token whose `iat`
+     * is strictly older than this. Nullable because it is additive: rows that
+     * predate the column have no recorded change, and a null here means "never
+     * changed since this was introduced", which correctly revokes nothing.
+     */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $passwordChangedAt = null;
+
     public function __construct(string $email, \DateTimeImmutable $createdAt)
     {
         $email = self::normalizeEmail($email);
@@ -91,9 +112,25 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->passwordHash;
     }
 
-    public function setPasswordHash(?string $passwordHash): void
+    /**
+     * $changedAt is mandatory on purpose, and injected rather than read from
+     * the system clock here (services never call `new \DateTimeImmutable`).
+     *
+     * The revocation guarantee is only as good as the stamp: a call site that
+     * rotates the hash without recording when would silently leave every
+     * previously issued token valid — exactly the bug this column was added to
+     * close, reintroduced quietly. Making the parameter required means that
+     * mistake does not compile.
+     */
+    public function setPasswordHash(?string $passwordHash, \DateTimeImmutable $changedAt): void
     {
         $this->passwordHash = $passwordHash;
+        $this->passwordChangedAt = $changedAt;
+    }
+
+    public function getPasswordChangedAt(): ?\DateTimeImmutable
+    {
+        return $this->passwordChangedAt;
     }
 
     /** @return list<string> */

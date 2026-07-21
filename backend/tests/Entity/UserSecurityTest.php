@@ -34,8 +34,24 @@ final class UserSecurityTest extends TestCase
         $user = $this->user();
         self::assertNull($user->getPassword());
 
-        $user->setPasswordHash('$2y$13$abcdefg');
+        $user->setPasswordHash('$2y$13$abcdefg', new \DateTimeImmutable('2026-07-02 09:00:00'));
         self::assertSame('$2y$13$abcdefg', $user->getPassword());
+    }
+
+    /**
+     * The stamp is what the JWT revocation check reads, so setting a hash
+     * without recording when is the failure mode that matters. The signature
+     * makes it impossible, and this pins that the value actually lands.
+     */
+    public function testSettingTheHashRecordsWhenItChanged(): void
+    {
+        $user = $this->user();
+        self::assertNull($user->getPasswordChangedAt());
+
+        $changedAt = new \DateTimeImmutable('2026-07-02 09:00:00');
+        $user->setPasswordHash('$2y$13$abcdefg', $changedAt);
+
+        self::assertEquals($changedAt, $user->getPasswordChangedAt());
     }
 
     public function testEveryUserCarriesRoleUser(): void
