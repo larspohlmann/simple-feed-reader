@@ -36,13 +36,27 @@ final class Version20260721150000 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        // Guard rather than assume: this is the repository's first migration,
-        // so on a database whose schema was built by doctrine:schema:create the
-        // table exists, while on a genuinely empty one it does not yet.
-        $this->skipIf(
-            !$schema->hasTable(self::TABLE),
-            'app_user does not exist yet; there is nothing to backfill.',
-        );
+        // Guard rather than assume: this migration is timestamped BEFORE the
+        // schema migration that creates app_user, because it was written for
+        // databases whose schema predates the chain. On a genuinely empty
+        // database it therefore runs first, with no table to backfill.
+        //
+        // `return`, NOT $this->skipIf(). Doctrine does not record a skipped
+        // migration as executed, so skipIf() left this version pending after a
+        // from-empty run: the chain reported success, and the NEXT invocation
+        // — the second production deploy — ran the UPDATE for real against a
+        // live table. Harmless in itself (it lowercases addresses that are
+        // already lowercase) but it meant the chain never converged in one
+        // pass, so "no migrations pending" was false on every fresh install
+        // until something ran it a second time. Returning early records the
+        // version with zero queries, which is what "there was nothing to do
+        // here" should mean.
+        //
+        // Verified: migrate from empty, then migrate again => "Already at the
+        // latest version". Previously the second run executed one query.
+        if (!$schema->hasTable(self::TABLE)) {
+            return;
+        }
 
         $this->abortOnCollisions();
 
