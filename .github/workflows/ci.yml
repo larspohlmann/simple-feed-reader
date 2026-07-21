@@ -33,7 +33,7 @@ jobs:
         working-directory: backend
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -54,11 +54,52 @@ jobs:
       - name: PHPStan
         run: composer stan
 
+      # Both DSNs are chosen here, in one place. MIGRATION_DATABASE_URL is
+      # deliberately a different database from the one PHPUnit uses, so the
+      # migration check below cannot disturb the suite: it also runs in dev,
+      # whereas doctrine.yaml's when@test dbname_suffix puts PHPUnit on
+      # feedreader_test_test (MySQL) and var/data_test.db (SQLite).
       - name: Select database DSN
         run: |
           if [ "${{ matrix.database }}" = "mysql" ]; then
             echo 'DATABASE_URL=mysql://root:root@127.0.0.1:3306/feedreader_test?serverVersion=8.4&charset=utf8mb4' >> "$GITHUB_ENV"
+            echo 'MIGRATION_DATABASE_URL=mysql://root:root@127.0.0.1:3306/feedreader_migrations?serverVersion=8.4&charset=utf8mb4' >> "$GITHUB_ENV"
+          else
+            echo 'MIGRATION_DATABASE_URL=sqlite:///%kernel.project_dir%/var/migration-check.db' >> "$GITHUB_ENV"
           fi
+
+      # Proves what the PHPUnit step structurally cannot. tests/bootstrap.php
+      # builds its schema with doctrine:schema:create, straight from ORM
+      # metadata, so no test ever executes a migration — a migration that is
+      # missing, broken, or written in the wrong SQL dialect passes the entire
+      # suite on both legs. That is not hypothetical: the initial schema
+      # migration was generated on SQLite and emitted SQLite-only DDL
+      # (AUTOINCREMENT, CLOB, NOT DEFERRABLE). Production is MySQL, deploys run
+      # migrations before flipping the `current` symlink, and the first deploy
+      # would have died on the first CREATE TABLE behind a green matrix.
+      #
+      # Runs on both legs, because the point is that each dialect is executable
+      # on the engine that will actually execute it.
+      - name: Verify the migration chain builds the schema from empty
+        env:
+          DATABASE_URL: ${{ env.MIGRATION_DATABASE_URL }}
+        run: |
+          if [ "${{ matrix.database }}" = "mysql" ]; then
+            php bin/console doctrine:database:drop --force --if-exists
+            php bin/console doctrine:database:create
+          else
+            # SQLite cannot enumerate databases, which --if-exists needs, and
+            # the file IS the database — so deleting it is the drop. Starting
+            # from a file that does not exist is the strictest form of "empty".
+            rm -f var/migration-check.db
+          fi
+
+          php bin/console doctrine:migrations:migrate --no-interaction
+
+          # The schema migrations build (production) must match the schema
+          # metadata builds (tests). Drift between the two is the class of bug
+          # that ships green, so it fails the build here.
+          php bin/console doctrine:schema:validate
 
       - name: PHPUnit
         run: php bin/phpunit
