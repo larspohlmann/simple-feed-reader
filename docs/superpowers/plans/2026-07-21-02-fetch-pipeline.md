@@ -3789,5 +3789,8 @@ git commit -m "Add token-protected maintenance refresh endpoint"
 
 - **Feed autodiscovery** (HTML `<link rel="alternate">` scan) — Plan 4, with `POST /subscriptions`.
 - **User refresh endpoint** `POST /api/refresh` + rate limiting — Plan 4 (needs JWT auth from Plan 3). `RefreshRequest::forUser` is ready for it.
+  **Carry these forward from Task 12's review:**
+  - Give the user slice a budget **well above** `SAFETY_MARGIN_SECONDS` (10 s). At a 10 s budget the runner completes exactly one feed per HTTP call, so a 50-feed user needs 50 round trips. ~30 s is the sensible floor; alternatively make the margin proportional to the budget.
+  - The client progress loop must treat `status: 'aborted'` as terminal (persistence is broken — stop and surface an error), distinct from `'partial'` (call again). Looping on `'aborted'` would spin forever.
 - **Scheduled GitHub Actions pinger** (`refresh.yml`) — Plan 6 (deployment).
 - **MaintenanceTokenAuthenticator** as a proper security authenticator — Plan 3, when security-bundle lands; the controller check moves there if it pulls its weight.
