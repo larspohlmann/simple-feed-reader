@@ -88,6 +88,13 @@ final class EntryIngestor
         }
     }
 
+    /**
+     * Produces PLAIN TEXT, not HTML. strip_tags removes real tags, then
+     * html_entity_decode turns "&lt;script&gt;" back into literal "<script>"
+     * characters — so the result may contain <, > and & and has NOT been
+     * through EntrySanitizer. Render it as text only; never with |raw,
+     * innerHTML, or dangerouslySetInnerHTML.
+     */
     private function summarize(?string $summary): ?string
     {
         if ($summary === null) {
