@@ -12,6 +12,8 @@ services:
         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
         bind:
             Psr\Cache\CacheItemPoolInterface $altchaReplayCache: '@altcha.replay.cache'
+            Psr\Cache\CacheItemPoolInterface $oauthStateCache: '@oauth.state.cache'
+            Psr\Cache\CacheItemPoolInterface $loginCodeCache: '@oauth.login_code.cache'
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name

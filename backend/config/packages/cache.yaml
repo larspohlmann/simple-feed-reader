@@ -23,3 +23,17 @@ framework:
             altcha.replay.cache:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 4200
+
+            # Flow state between our 302 to the provider and the provider's
+            # callback. Filesystem, not a session: the API is stateless and
+            # Apple's form_post callback is a cross-site POST that would not
+            # carry a SameSite=Lax session cookie anyway.
+            oauth.state.cache:
+                adapter: cache.adapter.filesystem
+                default_lifetime: 600
+
+            # One-time login codes. 30 s is the spec's TTL; the pool's default
+            # is a backstop for entries whose explicit expiry was somehow lost.
+            oauth.login_code.cache:
+                adapter: cache.adapter.filesystem
+                default_lifetime: 60

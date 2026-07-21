@@ -71,3 +71,27 @@ services:
     test.cache.altcha_replay:
         alias: altcha.replay.cache
         public: true
+
+    # The OAuth flow tests must mint and inspect state and login codes, whose
+    # plaintext values exist only inside a redirect URL, and must swap a real
+    # provider for a fake via `self::getContainer()->set(...)`, which the
+    # container only allows on public services.
+    #
+    # Each `App\Service\OAuth\*` entry is added by the task that creates the
+    # class, NOT here up front: naming a class whose file does not exist yet
+    # compiles (cache:clear stays green) but fails `lint:container` with
+    # "class does not exist", and fails confusingly on first fetch. The pool
+    # aliases below are safe now because both pools exist as of this task.
+    #
+    # When adding one, `autowire: true` is not redundant — same caveat as the
+    # entries above: naming a class here REPLACES the definition the App\
+    # resource produced rather than amending it, and this file has no
+    # _defaults to inherit from, so without it the service is built with zero
+    # constructor arguments.
+    test.cache.oauth_state:
+        alias: oauth.state.cache
+        public: true
+
+    test.cache.oauth_login_code:
+        alias: oauth.login_code.cache
+        public: true
