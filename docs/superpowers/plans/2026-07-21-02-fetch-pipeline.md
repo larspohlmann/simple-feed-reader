@@ -79,22 +79,25 @@ Expected: recipes add `config/packages/lock.yaml`, `config/packages/monolog.yaml
 
 - [ ] **Step 2: Point the lock store at Doctrine**
 
-In `backend/.env`, set (replace whatever the recipe wrote for `LOCK_DSN`):
-
-```dotenv
-###> symfony/lock ###
-LOCK_DSN=doctrine://default
-###< symfony/lock ###
-```
-
+Delete the `LOCK_DSN` block the recipe wrote to `backend/.env` — it is not used.
 `config/packages/lock.yaml` must read:
 
 ```yaml
 framework:
-    lock: '%env(LOCK_DSN)%'
+    lock: 'doctrine.dbal.default_connection'
 ```
 
-The Doctrine bridge's `LockStoreSchemaListener` adds the `lock_keys` table to `doctrine:schema:create`, so the test bootstrap keeps working unchanged.
+This is a **service reference**, not a DSN. `symfony/lock` has no `doctrine://`
+scheme (see `StoreFactory::createStore()`), and FrameworkBundle only converts a
+lock config value into a service `Reference` when the value contains no colon
+**and** no env placeholder was used (`FrameworkExtension.php`, lock section) —
+so a `%env(LOCK_DSN)%` value can never become a Doctrine store. Referencing the
+connection service directly yields a `DoctrineDbalStore` on the app's own
+connection.
+
+The Doctrine bundle registers `LockStoreSchemaListener`, which adds the
+`lock_keys` table to `doctrine:schema:create`, so the test bootstrap keeps
+working unchanged (verified: `lock_keys` is created in the test schema).
 
 - [ ] **Step 3: Production logging = rotating file, 7 days**
 
