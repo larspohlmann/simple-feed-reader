@@ -148,13 +148,37 @@ final class OAuthAccountLinkerTest extends DbTestCase
         self::assertSame(1, $this->countIdentities());
     }
 
-    public function testAnIdentityWithNoAddressStillCreatesAnAccount(): void
+    /**
+     * Apple can decline to send an address on repeat authorisations, so the
+     * linker mints a placeholder — and every property of that placeholder is
+     * load-bearing, which is why the address is pinned exactly rather than
+     * merely checked for an `@`.
+     *
+     * `.invalid` is reserved by RFC 2606 and can never resolve, so the
+     * account's notional address can never be delivered to a stranger. The
+     * provider prefix tells the admin reviewing the queue what they are looking
+     * at. The digest is of the SUBJECT, so the same identity reconstructs the
+     * same address instead of accumulating an account per sign-in — and the
+     * subject itself stays out of a column the admin UI displays.
+     *
+     * Recomputed here from the documented rule rather than copied from a run,
+     * so a change to the derivation has to be made deliberately in both places.
+     */
+    public function testAnIdentityWithNoAddressGetsADeterministicNonRoutablePlaceholder(): void
     {
-        // Apple can decline to send an address on repeat authorisations.
+        $expected = 'apple-' . substr(hash('sha256', 'sub-1'), 0, 32) . '@oauth.invalid';
+
         $resolved = $this->linker()->resolve(new OAuthIdentity('apple', 'sub-1', null, false));
 
+        self::assertSame($expected, $resolved->getEmail());
         self::assertSame(UserStatus::PendingApproval, $resolved->getStatus());
-        self::assertStringContainsString('@', $resolved->getEmail());
+        self::assertNull($resolved->getPasswordHash());
+
+        // Stable across sign-ins: the same identity must resolve to the same
+        // account, not mint a second one.
+        $again = $this->linker()->resolve(new OAuthIdentity('apple', 'sub-1', null, false));
+        self::assertSame($resolved->getId(), $again->getId());
+        self::assertSame(1, $this->countIdentities());
     }
 
     public function testTwoAddresslessIdentitiesDoNotCollide(): void

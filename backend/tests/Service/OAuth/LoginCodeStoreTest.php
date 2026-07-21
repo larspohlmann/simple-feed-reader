@@ -64,26 +64,36 @@ final class LoginCodeStoreTest extends TestCase
     }
 
     /**
-     * The 30 seconds run from issue, and nothing restarts them.
+     * The deadline is anchored to issue time, not to the store's last activity.
      *
-     * Worth pinning rather than assuming: a store that refreshed the TTL on
-     * read would let a code captured from a proxy log stay alive indefinitely
-     * as long as something kept touching it, which is precisely the exposure
-     * the short window exists to bound.
+     * The clock is advanced in two steps with unrelated traffic in between, so
+     * a store that reset the window whenever it was touched at all — rather
+     * than only when the code itself was read — would keep this code alive past
+     * T+30 and fail here.
+     *
+     * WHAT THIS DOES NOT PROVE, because the API cannot express it: that reading
+     * THIS code does not extend it. `consume()` is the only read, and it
+     * destroys what it reads, so there is no second look to take. That property
+     * is structural instead of tested — `expires_at` is written once, in
+     * `issue()`, and `expiresAfter()` is called nowhere else — and a rename of
+     * this method to claim otherwise would be claiming an assertion that cannot
+     * fail. The exposure being bounded is real either way: a store that
+     * refreshed on read would let a code captured from a proxy log live
+     * indefinitely so long as something kept touching it.
      */
-    public function testTheWindowRunsFromIssueAndIsNotExtendedByIntermediateReads(): void
+    public function testTheWindowIsAnchoredToIssueTimeNotToTheLastStoreActivity(): void
     {
         $code = $this->store->issue(42, self::TOKEN);
 
         $this->clock->modify('+20 seconds');
-        // Misses on other codes, and a miss on this one later, must not act as
-        // keep-alives.
+        // A miss on an unrelated key: traffic through the store, touching
+        // neither this entry nor its deadline.
         self::assertNull($this->store->consume('some-other-code', self::TOKEN));
 
         $this->clock->modify('+11 seconds');
         self::assertNull(
             $this->store->consume($code, self::TOKEN),
-            'the code outlived T+30 despite an intervening read',
+            'the code outlived T+30, so its deadline moved with the store rather than with its issue',
         );
     }
 

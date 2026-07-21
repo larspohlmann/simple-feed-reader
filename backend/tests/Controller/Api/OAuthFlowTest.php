@@ -322,19 +322,16 @@ final class OAuthFlowTest extends WebTestCase
         self::assertArrayNotHasKey('token', $this->payload());
     }
 
-    /**
-     * Expiry is NOT driven here, and deliberately so.
-     *
-     * The 30-second window is enforced against the injected ClockInterface,
-     * which in this environment is the real clock — nothing in the test
-     * container swaps a MockClock in, and introducing one for a single case
-     * would change the clock every other functional test runs on. The window is
-     * pinned instead in LoginCodeStoreTest, which drives a MockClock across the
-     * boundary from both sides (+29 s accepted, +31 s refused) and additionally
-     * proves a read does not extend it. There is no code path between that
-     * store and this endpoint that could honour the TTL differently: exchange()
-     * does nothing but call consume().
-     */
+    // Expiry is NOT driven in this file, and deliberately so. The 30-second
+    // window is enforced against the injected ClockInterface, which here is the
+    // real clock — nothing in the test container swaps a MockClock in, and
+    // introducing one for a single case would change the clock every other
+    // functional test runs on. The window is pinned instead in
+    // LoginCodeStoreTest, which drives a MockClock across the boundary from
+    // both sides (+29 s accepted, +31 s refused) and additionally pins the
+    // deadline to issue time rather than to the store's last activity. There is
+    // no code path between that store and this endpoint that could honour the
+    // TTL differently: exchange() does nothing but call consume().
 
     // -- The flow is bound to the browser that started it ------------------
 
