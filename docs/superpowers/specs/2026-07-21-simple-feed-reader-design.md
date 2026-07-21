@@ -62,7 +62,7 @@ need them, not for ceremony:
 
 ```
 simple-feed-reader/
-├── backend/                  # Symfony 7.x, PHP 8.3+
+├── backend/                  # Symfony 7.4 LTS, PHP 8.3+
 │   ├── src/
 │   │   ├── Controller/       #   Api/, Admin/ (JSON only, no Twig)
 │   │   ├── Entity/
@@ -448,3 +448,4 @@ remains a drop-in fallback if Actions scheduling proves too jittery.
 | DB | Doctrine, SQLite dev / MySQL prod, CI matrix proves portability | Requested abstraction, made testable |
 | Deploy | Tag → CI build → rsync over SSH to `releases/<tag>` → warmup+migrate via SSH → atomic `current` symlink flip | Zero-downtime; instant rollback; maintenance mode only for breaking migrations |
 | Scheduled refresh | GitHub Actions `schedule` → `POST /maintenance/refresh` | No crontab on server; pinger versioned with the code |
+| Framework version | Symfony 7.4 LTS (not 8.0) | 7.3 went EOL with 22 unpatched advisories across 11 packages (incl. firewall bypass CVE-2026-48489); 7.4 is maintained LTS and still needs only PHP 8.2+, so the PHP 8.3 runtime pin is unchanged. 8.0 would force PHP 8.4+ on Strato |

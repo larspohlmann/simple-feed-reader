@@ -27,6 +27,40 @@ final class UserTest extends DbTestCase
         self::assertSame(['ROLE_USER'], $reloaded->getRoles());
     }
 
+    /**
+     * Case and surrounding whitespace are normalised at construction, which is
+     * the single seam every other lookup relies on. Without it the unique index
+     * disagrees with itself across engines: SQLite compares case-sensitively
+     * and MySQL's utf8mb4 _ci collation does not, so `Bob@` and `bob@` are two
+     * accounts in dev and one collision in production.
+     */
+    public function testEmailIsNormalisedOnConstruction(): void
+    {
+        $user = new User('  Bob.Smith@Example.COM  ', new \DateTimeImmutable('2026-07-21 10:00:00'));
+
+        self::assertSame('bob.smith@example.com', $user->getEmail());
+        self::assertSame('bob.smith@example.com', $user->getUserIdentifier());
+    }
+
+    public function testAnEmailOfOnlyWhitespaceIsRejected(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        new User('   ', new \DateTimeImmutable('2026-07-21 10:00:00'));
+    }
+
+    public function testCaseVariantsCollideOnTheUniqueIndex(): void
+    {
+        $now = new \DateTimeImmutable();
+        $this->em->persist(new User('casefold@example.com', $now));
+        $this->em->flush();
+
+        $this->em->persist(new User('CaseFold@Example.com', $now));
+
+        $this->expectException(UniqueConstraintViolationException::class);
+        $this->em->flush();
+    }
+
     public function testEmailIsUnique(): void
     {
         $now = new \DateTimeImmutable();

@@ -10,6 +10,8 @@ services:
     _defaults:
         autowire: true      # Automatically injects dependencies in your services.
         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+        bind:
+            Psr\Cache\CacheItemPoolInterface $altchaReplayCache: '@altcha.replay.cache'
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
@@ -20,3 +22,35 @@ services:
     # please note that last definitions always *replace* previous ones
     App\Service\Fetch\DnsResolverInterface: '@App\Service\Fetch\NativeDnsResolver'
     App\Service\Fetch\FeedFetcherInterface: '@App\Service\Fetch\HttpFeedFetcher'
+
+    # Account mail is queued and sent on kernel.terminate, after the response
+    # has been flushed — see App\Service\Mail\DeferredMailer for why that is a
+    # security property and not just a latency win.
+    #
+    # Bound here rather than by decorating `mailer.mailer`, so the indirection
+    # is visible at the one call site it applies to and AccountMailer keeps
+    # depending on the plain MailerInterface (its unit test injects its own).
+    # DeferredMailer itself autowires the real mailer, so there is no cycle.
+    App\Service\Mail\AccountMailer:
+        arguments:
+            $mailer: '@App\Service\Mail\DeferredMailer'
+
+    # Wraps the throttle limiter the `login` firewall's login_throttling block
+    # generates, so the bucket key sees the same normalised address the user
+    # provider resolves. See App\Security\NormalizedLoginRateLimiter for the
+    # bypass this closes.
+    #
+    # DECORATION, not a `limiter:` service id in security.yaml. Naming a custom
+    # limiter there makes LoginThrottlingFactory skip registering the global and
+    # local RateLimiterFactory pair entirely, which would mean restating
+    # max_attempts, the interval, the 5x global multiplier and the cache pool by
+    # hand — four numbers to drift from the ones security.yaml already declares.
+    # Decorating leaves all of that where it belongs and replaces only the key.
+    #
+    # The service id is generated as `security.login_throttling.<firewall>.limiter`.
+    # If the firewall is ever renamed, the container fails at build time with an
+    # unknown-decoration-target error rather than silently dropping the fix.
+    App\Security\NormalizedLoginRateLimiter:
+        decorates: security.login_throttling.login.limiter
+        arguments:
+            $inner: '@.inner'

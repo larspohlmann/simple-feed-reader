@@ -1,0 +1,78 @@
+security:
+    # Default is `None`, which rewrites every AccountStatusException into a
+    # BadCredentialsException — the pending/suspended 403 would silently become
+    # a 401 and the spec's per-status message would be unreachable.
+    #
+    # `AccountStatus` exposes ONLY account-status errors. It deliberately does
+    # NOT expose UserNotFoundException, which stays masked as bad credentials —
+    # that masking is what keeps "unknown email" and "wrong password"
+    # indistinguishable. Never raise this to `All`: that would expose
+    # UserNotFoundException and turn login into an enumeration oracle.
+    expose_security_errors: !php/enum Symfony\Component\Security\Http\Authentication\ExposeSecurityLevel::AccountStatus
+
+    password_hashers:
+        App\Entity\User:
+            algorithm: auto
+
+    providers:
+        app_users:
+            entity:
+                class: App\Entity\User
+                # No `property: email` on purpose. That option makes
+                # EntityUserProvider query the submitted identifier verbatim,
+                # which would bypass the case normalisation every write and
+                # every other lookup goes through — so a user who registered as
+                # `bob@` and typed `Bob@` here would get an unexplained 401.
+                # Omitting it delegates to UserRepository::loadUserByIdentifier,
+                # keeping normalisation in exactly one place.
+
+    firewalls:
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
+
+        # Machine callers authenticate with a shared token inside the
+        # controller, not through the security layer.
+        maintenance:
+            pattern: ^/maintenance
+            security: false
+
+        login:
+            pattern: ^/api/auth/login$
+            stateless: true
+            provider: app_users
+            # NOT the same checker as the api firewall below. This one checks
+            # status in checkPostAuth, i.e. only after the password has been
+            # verified, so a wrong password cannot reveal that an address is
+            # registered-but-suspended. See App\Security\LoginUserChecker.
+            user_checker: App\Security\LoginUserChecker
+            json_login:
+                check_path: /api/auth/login
+                username_path: email
+                password_path: password
+                success_handler: lexik_jwt_authentication.handler.authentication_success
+                failure_handler: App\Security\LoginFailureHandler
+            login_throttling:
+                max_attempts: 5
+                interval: '15 minutes'
+
+        api:
+            pattern: ^/api
+            stateless: true
+            provider: app_users
+            user_checker: App\Security\UserChecker
+            jwt: ~
+            entry_point: jwt
+
+    access_control:
+        - { path: ^/api/health$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/auth/, roles: PUBLIC_ACCESS }
+        - { path: ^/api/admin/, roles: ROLE_ADMIN }
+        - { path: ^/api/, roles: IS_AUTHENTICATED_FULLY }
+
+when@test:
+    security:
+        password_hashers:
+            # Tests create many users; the real cost factor makes the suite crawl.
+            App\Entity\User:
+                algorithm: plaintext

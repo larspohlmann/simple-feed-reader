@@ -67,9 +67,25 @@ class UserIdentity
         return $this->email;
     }
 
+    /**
+     * Normalised through the same seam as User::$email, because Plan 3b's
+     * linking rule compares a provider-verified address against existing
+     * accounts. If Google hands back `Bob@example.com` for an account stored as
+     * `bob@example.com`, any direct comparison between the two would fail and
+     * OAuth would create a second, orphaned pending account instead of linking
+     * to the rightful owner.
+     *
+     * Note this is the setter, not the constructor: unlike User, the address
+     * here is not a constructor argument, so the setter is the only write seam.
+     *
+     * Deliberately NOT applied to $providerUserId — provider subject
+     * identifiers are opaque tokens that may be case-significant, and the
+     * uniq_identity_provider_uid index covers (provider, provider_user_id)
+     * only. That index is unaffected by this change.
+     */
     public function setEmail(?string $email): void
     {
-        $this->email = $email;
+        $this->email = null === $email ? null : User::normalizeEmail($email);
     }
 
     public function getCreatedAt(): \DateTimeImmutable

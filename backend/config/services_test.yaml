@@ -10,3 +10,64 @@ services:
     Symfony\Component\Lock\LockFactory:
         alias: lock.default.factory
         public: true
+
+    # login_throttling counts attempts in a FILESYSTEM cache pool, which
+    # survives both the kernel reboot between requests and the end of the test
+    # run. Without clearing it, the per-IP global limiter (5 x max_attempts)
+    # fills up with every login test ever executed and the suite starts
+    # returning 429 for everything. Tests clear this between cases.
+    test.cache.rate_limiter:
+        alias: cache.rate_limiter
+        public: true
+
+    # UserFactory hashes passwords when seeding fixtures. No application code
+    # injects the hasher yet (registration arrives in a later task), so the
+    # compiler removes it entirely and the test container cannot fetch it.
+    # Test environment only.
+    Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface:
+        alias: security.user_password_hasher
+        public: true
+
+    # Functional tests for registration, verification and password reset need to
+    # mint or inspect a real token, because the plaintext value only ever exists
+    # inside the email the service hands back. Test environment only.
+    #
+    # `autowire` is not redundant: naming the class here *replaces* the
+    # definition produced by the App\ resource in services.yaml rather than
+    # amending it, and this file has no _defaults to inherit from, so without it
+    # the service is built with zero constructor arguments and blows up on first
+    # fetch instead of at compile time.
+    App\Service\Auth\ActionTokenService:
+        autowire: true
+        public: true
+
+    # Registration and password-reset tests must build a *solved* ALTCHA payload,
+    # which means issuing a real challenge from the same service the controller
+    # verifies against. Same `autowire` caveat as above. Test environment only.
+    App\Service\Auth\AltchaService:
+        autowire: true
+        public: true
+
+    # Registration tests assert on rows and statuses the service wrote, and the
+    # concurrency test drives register() directly to reproduce a race the HTTP
+    # client cannot stage. Same `autowire` caveat as above. Test environment only.
+    App\Service\Auth\RegistrationService:
+        autowire: true
+        public: true
+
+    # The replay guard is a FILESYSTEM pool, so spent-solution markers outlive
+    # the test run. Entries are keyed by a signature derived from 12 random
+    # bytes, so a stale marker can never collide with a fresh challenge and the
+    # rate-limiter's cross-run bleed problem does not arise here. Exposed anyway
+    # so a test that wants a guaranteed-clean pool can clear it.
+    App\Security\PasswordWorkEqualizer:
+        autowire: true
+        public: true
+
+    App\Service\Mail\DeferredMailer:
+        autowire: true
+        public: true
+
+    test.cache.altcha_replay:
+        alias: altcha.replay.cache
+        public: true
