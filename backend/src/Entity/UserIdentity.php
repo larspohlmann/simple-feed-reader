@@ -49,7 +49,7 @@ class UserIdentity
      *
      * A subject identifier is an opaque token minted by the provider; `a` and
      * `A` are simply different identifiers, and treating them as equal would
-     * let one provider account resolve to another's local user. $email above is
+     * let one provider account resolve to another's local user. $email below is
      * the deliberate opposite: addresses ARE case-insensitive, which is why
      * they are normalised on write instead of compared loosely on read.
      */

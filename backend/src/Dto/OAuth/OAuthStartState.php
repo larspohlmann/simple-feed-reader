@@ -9,8 +9,16 @@ namespace App\Dto\OAuth;
  * provider calls back.
  *
  * Only `$state` and `$codeChallenge` ever leave the server towards the
- * PROVIDER; `$nonce` comes back inside the signed ID token and `$codeVerifier`
- * is sent to the token endpoint over TLS.
+ * PROVIDER; `$nonce` comes back inside the ID token and `$codeVerifier` is sent
+ * to the token endpoint over TLS.
+ *
+ * The ID token carries a signature, and this branch deliberately does NOT
+ * verify it — see AbstractOidcProvider, "Why the ID token's signature is not
+ * verified here". So what makes `$nonce` worth checking is not a signature: it
+ * is that the token was fetched by us, over validated TLS, from the provider's
+ * own token endpoint in direct response to our code. Calling the token "signed"
+ * here would invite the assumption that the nonce check rests on cryptography
+ * it does not rest on.
  *
  * `$browserToken` is the odd one out and travels in a third direction: it goes
  * to the BROWSER, in a cookie, and never to the provider at all. It is what

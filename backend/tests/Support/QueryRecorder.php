@@ -30,8 +30,13 @@ final class QueryRecorder implements Middleware
      * connection and appends the connection name, and it is the clone the
      * connection is built with. Fetching the plain class id hands you a
      * second, freshly constructed instance that is wired to nothing and
-     * reports zero queries forever, which looks exactly like a passing N+1
-     * guard. This cost an hour; it is a constant so it cannot cost another.
+     * reports zero queries forever.
+     *
+     * That fails loudly rather than silently — the guard asserts an exact count
+     * of one, so zero is red, not green — but it fails as "the batched read
+     * vanished" when the truth is "you fetched the wrong object", and those two
+     * send you to opposite ends of the codebase. This cost an hour; it is a
+     * constant so it cannot cost another.
      */
     public const SERVICE_ID = self::class . '.default';
 

@@ -8,7 +8,13 @@ use App\Dto\OAuth\OAuthIdentity;
 use App\Exception\OAuth\OAuthFailedException;
 
 /**
- * Everything the application needs from an identity provider, in two calls.
+ * Everything the application needs from an identity provider.
+ *
+ * Four methods, and they split in two: `getName()` and `isConfigured()` are
+ * static facts about the provider that the registry reads to route a URL and to
+ * decide whether the deployment can offer it at all, while
+ * `getAuthorizationUrl()` and `exchangeCode()` are the two legs of an actual
+ * sign-in.
  *
  * Deliberately narrow. Nothing here exposes access tokens, refresh tokens or
  * profile scopes: this application authenticates people and then never speaks

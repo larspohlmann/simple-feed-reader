@@ -77,17 +77,17 @@ services:
     # provider for a fake via `self::getContainer()->set(...)`, which the
     # container only allows on public services.
     #
-    # Each `App\Service\OAuth\*` entry is added by the task that creates the
-    # class, NOT here up front: naming a class whose file does not exist yet
-    # compiles (cache:clear stays green) but fails `lint:container` with
-    # "class does not exist", and fails confusingly on first fetch. The pool
-    # aliases below are safe now because both pools exist as of this task.
+    # Only list an `App\Service\OAuth\*` class here once its file exists. Naming
+    # a class that does not compiles fine (`cache:clear` stays green) and then
+    # fails `lint:container` with "class does not exist" — or, worse, fails
+    # confusingly on first fetch.
     #
-    # When adding one, `autowire: true` is not redundant — same caveat as the
-    # entries above: naming a class here REPLACES the definition the App\
-    # resource produced rather than amending it, and this file has no
-    # _defaults to inherit from, so without it the service is built with zero
-    # constructor arguments.
+    # `autowire: true` on each is not redundant — same caveat as the entries
+    # above: naming a class here REPLACES the definition the App\ resource
+    # produced rather than amending it, and this file has no _defaults to
+    # inherit from, so without it the service is built with zero constructor
+    # arguments.
+
     # Records the SQL each request actually executed, so "the admin list reads
     # every user's providers in ONE query" is counted rather than eyeballed. An
     # N+1 produces a byte-identical response, so nothing asserted on the body
@@ -138,10 +138,10 @@ services:
     # the providers — an empty one would build a registry that offers nothing
     # and looks exactly like a deployment with no credentials.
     #
-    # Public also stops the compiler removing it: nothing references the
-    # registry until the controller arrives in task 12, so as a private unused
-    # service it would be deleted and the wiring test would fail on a fetch
-    # rather than on the assertion it exists to make.
+    # Public is also what lets OAuthFlowTest replace the whole registry with one
+    # holding a fake provider, in a single `self::getContainer()->set()` — the
+    # seam that keeps the flow tests off the network without depending on
+    # whether the container's tagged iterator has collected anything yet.
     App\Service\OAuth\OAuthProviderRegistry:
         autowire: true
         public: true
