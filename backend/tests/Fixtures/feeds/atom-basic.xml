@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Atom Example</title>
+  <subtitle>An atom feed</subtitle>
+  <link href="https://atom.example.com/" rel="alternate"/>
+  <link href="https://atom.example.com/feed.atom" rel="self"/>
+  <id>urn:uuid:60a76c80-d399-11d9-b93C-0003939e0af6</id>
+  <updated>2026-07-20T10:00:00Z</updated>
+  <entry>
+    <title>Atom entry one</title>
+    <link rel="alternate" href="https://atom.example.com/one"/>
+    <id>urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a</id>
+    <published>2026-07-19T18:30:02Z</published>
+    <updated>2026-07-20T09:00:00Z</updated>
+    <author><name>Ada Lovelace</name></author>
+    <summary>Plain text teaser.</summary>
+    <content type="html">&lt;p&gt;Escaped &lt;em&gt;html&lt;/em&gt; body.&lt;/p&gt;</content>
+  </entry>
+  <entry>
+    <title>Atom entry two (xhtml)</title>
+    <link href="https://atom.example.com/two"/>
+    <id>urn:uuid:2225c695-cfb8-4ebb-aaaa-80da344efa6b</id>
+    <updated>2026-07-18T12:00:00Z</updated>
+    <content type="xhtml">
+      <div xmlns="http://www.w3.org/1999/xhtml"><p>Inline <strong>xhtml</strong> body.</p></div>
+    </content>
+  </entry>
+</feed>

@@ -101,4 +101,41 @@ final class FeedParserTest extends TestCase
         $this->expectException(FeedParseException::class);
         $this->parser()->parse('<?xml version="1.0"?><html><body>nope</body></html>');
     }
+
+    public function testParsesAtom(): void
+    {
+        $feed = $this->parser()->parse($this->fixture('atom-basic.xml'));
+
+        self::assertSame('Atom Example', $feed->title);
+        self::assertSame('https://atom.example.com/', $feed->siteUrl);
+        self::assertSame('An atom feed', $feed->description);
+        self::assertCount(2, $feed->entries);
+
+        $first = $feed->entries[0];
+        self::assertSame('urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a', $first->guid);
+        self::assertSame('https://atom.example.com/one', $first->url);
+        self::assertSame('Ada Lovelace', $first->author);
+        self::assertSame('Plain text teaser.', $first->summary);
+        self::assertSame('<p>Escaped <em>html</em> body.</p>', $first->contentHtml);
+        self::assertSame('2026-07-19T18:30:02+00:00', $first->publishedAt?->format(DATE_ATOM));
+
+        $second = $feed->entries[1];
+        self::assertSame('https://atom.example.com/two', $second->url);
+        self::assertStringContainsString('<strong>xhtml</strong>', (string) $second->contentHtml);
+        self::assertSame('2026-07-18T12:00:00+00:00', $second->publishedAt?->format(DATE_ATOM));
+    }
+
+    public function testParsesRss1(): void
+    {
+        $feed = $this->parser()->parse($this->fixture('rss1-basic.xml'));
+
+        self::assertSame('RSS 1.0 Example', $feed->title);
+        self::assertCount(1, $feed->entries);
+
+        $item = $feed->entries[0];
+        self::assertSame('https://rss1.example.com/item-1', $item->guid);
+        self::assertSame('Grace Hopper', $item->author);
+        self::assertStringContainsString('First RDF body', (string) $item->contentHtml);
+        self::assertSame('2026-07-17T08:00:00+00:00', $item->publishedAt?->format(DATE_ATOM));
+    }
 }
