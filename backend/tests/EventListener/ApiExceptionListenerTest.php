@@ -17,6 +17,9 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Symfony\Component\Security\Core\Exception\AuthenticationException;
+use Symfony\Component\Security\Core\Exception\BadCredentialsException;
 use Symfony\Component\Validator\ConstraintViolation;
 use Symfony\Component\Validator\ConstraintViolationList;
 use Symfony\Component\Validator\Exception\ValidationFailedException;
@@ -152,6 +155,78 @@ final class ApiExceptionListenerTest extends TestCase
         self::assertNotNull($response);
         self::assertSame('application/problem+json', $response->headers->get('Content-Type'));
         self::assertSame('Bearer', $response->headers->get('WWW-Authenticate'));
+        self::assertSame('unauthorized', $this->payloadOf($response)['type']);
+    }
+
+    /**
+     * The firewall raises Security\Core\Exception\AuthenticationException, which
+     * does NOT implement HttpExceptionInterface — without explicit handling it
+     * would fall through to the opaque 500 branch. Task 8 needs anonymous
+     * GET /api/me to answer 401.
+     */
+    public function testAuthenticationExceptionBecomes401(): void
+    {
+        $event = $this->event('/api/me', new AuthenticationException('Not authenticated.'));
+        $this->listener()->onKernelException($event);
+
+        $response = $event->getResponse();
+        self::assertNotNull($response);
+        self::assertSame(401, $response->getStatusCode());
+        self::assertSame('unauthorized', $this->payloadOf($response)['type']);
+    }
+
+    /**
+     * Subclasses (BadCredentialsException, InsufficientAuthenticationException)
+     * must map the same way, since the firewall raises those in practice.
+     */
+    public function testAuthenticationExceptionSubclassesAlsoBecome401(): void
+    {
+        $event = $this->event('/api/me', new BadCredentialsException());
+        $this->listener()->onKernelException($event);
+
+        $response = $event->getResponse();
+        self::assertNotNull($response);
+        self::assertSame(401, $response->getStatusCode());
+        self::assertSame('unauthorized', $this->payloadOf($response)['type']);
+    }
+
+    /**
+     * Security\Core\Exception\AccessDeniedException — distinct from
+     * HttpKernel's AccessDeniedHttpException, which already flows through the
+     * HttpExceptionInterface branch. Task 14 needs 403 for a non-admin.
+     */
+    public function testAccessDeniedExceptionBecomes403(): void
+    {
+        $event = $this->event('/api/admin/users', new AccessDeniedException());
+        $this->listener()->onKernelException($event);
+
+        $response = $event->getResponse();
+        self::assertNotNull($response);
+        self::assertSame(403, $response->getStatusCode());
+        self::assertSame('forbidden', $this->payloadOf($response)['type']);
+    }
+
+    /**
+     * Deliberate: the firewall's ExceptionListener runs at priority 1 (ahead of
+     * our 0) and sets its own response without stopping propagation. We
+     * intentionally overwrite it so the API speaks one error dialect. If anyone
+     * adds an early-return guard for an already-set response, this fails.
+     */
+    public function testOverwritesAResponseAlreadySetByTheFirewall(): void
+    {
+        $event = $this->event('/api/me', new AuthenticationException('Not authenticated.'));
+        $event->setResponse(new Response(
+            '{"code":401,"message":"JWT Token not found"}',
+            401,
+            ['Content-Type' => 'application/json'],
+        ));
+
+        $this->listener()->onKernelException($event);
+
+        $response = $event->getResponse();
+        self::assertNotNull($response);
+        self::assertSame('application/problem+json', $response->headers->get('Content-Type'));
+        self::assertStringNotContainsString('JWT Token not found', (string) $response->getContent());
         self::assertSame('unauthorized', $this->payloadOf($response)['type']);
     }
 

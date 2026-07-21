@@ -14,6 +14,8 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Validator\Exception\ValidationFailedException;
 
 /**
@@ -55,6 +57,35 @@ final readonly class ApiExceptionListener
         } elseif ($exception instanceof HttpExceptionInterface) {
             $problem = $this->fromHttpException($exception);
             $headers = $exception->getHeaders();
+        } elseif ($exception instanceof AuthenticationException) {
+            // The firewall's own exceptions do NOT implement
+            // HttpExceptionInterface, so without these two branches they would
+            // fall through to the opaque 500 below — turning "not logged in"
+            // into "server broken". Covers subclasses such as
+            // BadCredentialsException and InsufficientAuthenticationException.
+            //
+            // Deliberate: the firewall's ExceptionListener runs at priority 1,
+            // ahead of this listener's 0, and sets its own response WITHOUT
+            // stopping propagation. We knowingly overwrite it — including
+            // Lexik's {"code":401,"message":"..."} — so the whole API speaks one
+            // error dialect. Do not "fix" this by returning early when a
+            // response is already set; that would reintroduce two error shapes.
+            $problem = new ApiProblem(
+                'unauthorized',
+                'Unauthorized',
+                Response::HTTP_UNAUTHORIZED,
+                'Authentication is required to access this resource.',
+            );
+        } elseif ($exception instanceof AccessDeniedException) {
+            // Security\Core\Exception\AccessDeniedException — distinct from
+            // HttpKernel's AccessDeniedHttpException, which the
+            // HttpExceptionInterface branch above already covers.
+            $problem = new ApiProblem(
+                'forbidden',
+                'Forbidden',
+                Response::HTTP_FORBIDDEN,
+                'You do not have permission to access this resource.',
+            );
         } else {
             // Unexpected: the message may contain connection strings, tokens or
             // row data, so it goes to the log and never to the client.
