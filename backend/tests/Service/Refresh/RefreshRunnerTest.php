@@ -264,6 +264,62 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame('https://new.example.com/feed', $feed->getUrl());
     }
 
+    public function testOversizedRemoteHeadersAreTruncatedToColumnLimits(): void
+    {
+        $feed = $this->dueFeed('https://verbose.example.com/feed');
+        $this->em->flush();
+
+        $this->fetcher->willReturn($feed->getUrl(), FetchResponse::fetched(
+            $feed->getUrl(),
+            false,
+            $this->rss('Verbose', 'v-1'),
+            '"' . str_repeat('e', 900) . '"',
+            str_repeat('m', 600),
+        ));
+
+        $report = $this->runner()->run(RefreshRequest::allDue(300));
+
+        // Without truncation MySQL's strict mode rejects the row, the flush
+        // throws, and the whole run aborts.
+        self::assertSame('completed', $report->status);
+        self::assertSame(1, $report->fetched);
+        self::assertSame(512, mb_strlen((string) $feed->getEtag()));
+        self::assertSame(255, mb_strlen((string) $feed->getLastModified()));
+    }
+
+    public function testOverlongRedirectTargetIsNotAdopted(): void
+    {
+        $feed = $this->dueFeed('https://old.example.com/feed');
+        $this->em->flush();
+
+        $tooLong = 'https://new.example.com/' . str_repeat('p', 800);
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($tooLong, true, $this->rss('Moved', 'm-1'), null, null),
+        );
+
+        $report = $this->runner()->run(RefreshRequest::allDue(300));
+
+        self::assertSame(1, $report->fetched);
+        self::assertSame('https://old.example.com/feed', $feed->getUrl());
+    }
+
+    public function testPermanentRedirectIsAdoptedOnNotModifiedResponses(): void
+    {
+        $feed = $this->dueFeed('https://old.example.com/feed');
+        $this->em->flush();
+
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::notModified('https://new.example.com/feed', true, null, null),
+        );
+
+        $report = $this->runner()->run(RefreshRequest::allDue(300));
+
+        self::assertSame(1, $report->notModified);
+        self::assertSame('https://new.example.com/feed', $feed->getUrl());
+    }
+
     public function testPermanentRedirectToAnAlreadyKnownUrlIsIgnored(): void
     {
         $existing = $this->dueFeed('https://new.example.com/feed');

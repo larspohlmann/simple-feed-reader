@@ -36,7 +36,6 @@ final class UrlGuard
         }
 
         $host = strtolower(trim($parts['host'], '[]'));
-        $port = $parts['port'] ?? ($scheme === 'https' ? 443 : 80);
 
         $ips = filter_var($host, FILTER_VALIDATE_IP) !== false
             ? [$host]
@@ -52,6 +51,7 @@ final class UrlGuard
             }
         }
 
-        return new GuardedUrl($url, $scheme, $host, $port, $ips[0]);
+        // Every record was validated above, so pinning the first is safe.
+        return new GuardedUrl($host, $ips[0]);
     }
 }

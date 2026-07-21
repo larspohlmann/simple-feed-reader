@@ -34,6 +34,9 @@ final class RefreshRunner
     private const BATCH_LIMIT = 50;
     private const SAFETY_MARGIN_SECONDS = 10;
     private const COOLDOWN_MINUTES = 5;
+    private const ETAG_MAX = 512;
+    private const LAST_MODIFIED_MAX = 255;
+    private const URL_MAX = 750;
 
     public function __construct(
         private readonly FeedRepository $feedRepository,
@@ -168,6 +171,10 @@ final class RefreshRunner
             $response = $this->fetcher->fetch($feed->getUrl(), $feed->getEtag(), $feed->getLastModified());
 
             if ($response->notModified) {
+                // A feed can be permanently moved AND answer 304 at the new
+                // location; without this the redirect chain is re-walked on
+                // every single refresh, forever.
+                $this->applyPermanentRedirect($feed, $response);
                 $this->scheduler->recordSuccess($feed, 0);
                 $this->em->flush();
 
@@ -184,8 +191,8 @@ final class RefreshRunner
             $parsed = $this->parser->parse($body);
             $created = $this->ingestor->ingest($feed, $parsed);
 
-            $feed->setEtag($response->etag);
-            $feed->setLastModified($response->lastModified);
+            $feed->setEtag($this->truncate($response->etag, self::ETAG_MAX));
+            $feed->setLastModified($this->truncate($response->lastModified, self::LAST_MODIFIED_MAX));
             $this->applyPermanentRedirect($feed, $response);
             $this->scheduler->recordSuccess($feed, $created);
             $this->em->flush();
@@ -211,10 +218,25 @@ final class RefreshRunner
         if (!$response->permanentRedirect || $response->finalUrl === $feed->getUrl()) {
             return;
         }
+        // A truncated URL is a broken URL, so an over-long target is declined
+        // rather than shortened; the feed keeps working at its current address.
+        if (mb_strlen($response->finalUrl) > self::URL_MAX) {
+            return;
+        }
         // Only adopt the new URL if no other feed already claims it (unique index).
         if ($this->feedRepository->findOneBy(['url' => $response->finalUrl]) !== null) {
             return;
         }
         $feed->setUrl($response->finalUrl);
+    }
+
+    /**
+     * ETag and Last-Modified are remote-controlled and go into length-limited
+     * columns. SQLite ignores the limit, MySQL in strict mode rejects the row —
+     * which would fail the flush, abort the run, and skip every queued feed.
+     */
+    private function truncate(?string $value, int $max): ?string
+    {
+        return $value === null ? null : mb_substr($value, 0, $max);
     }
 }
