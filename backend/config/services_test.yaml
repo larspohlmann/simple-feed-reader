@@ -27,3 +27,16 @@ services:
     Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface:
         alias: security.user_password_hasher
         public: true
+
+    # Functional tests for registration, verification and password reset need to
+    # mint or inspect a real token, because the plaintext value only ever exists
+    # inside the email the service hands back. Test environment only.
+    #
+    # `autowire` is not redundant: naming the class here *replaces* the
+    # definition produced by the App\ resource in services.yaml rather than
+    # amending it, and this file has no _defaults to inherit from, so without it
+    # the service is built with zero constructor arguments and blows up on first
+    # fetch instead of at compile time.
+    App\Service\Auth\ActionTokenService:
+        autowire: true
+        public: true
