@@ -52,6 +52,19 @@ final class FeedSchedulerTest extends TestCase
         self::assertSame(1440, $feed->getFetchIntervalMinutes());
     }
 
+    public function testCorruptedIntervalCannotScheduleInThePast(): void
+    {
+        foreach ([0, -120] as $corrupted) {
+            $feed = new Feed('https://example.com/feed');
+            $feed->setFetchIntervalMinutes($corrupted);
+
+            $this->scheduler->recordSuccess($feed, 0);
+
+            self::assertSame(30, $feed->getFetchIntervalMinutes());
+            self::assertGreaterThan($this->clock->now(), $feed->getNextFetchAt());
+        }
+    }
+
     public function testSuccessClearsPreviousFailureState(): void
     {
         $feed = new Feed('https://example.com/feed');

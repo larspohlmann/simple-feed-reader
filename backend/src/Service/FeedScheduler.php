@@ -27,9 +27,15 @@ final class FeedScheduler
 
     public function recordSuccess(Feed $feed, int $newEntryCount): void
     {
+        // The floor applies to both branches: without it a stored interval of
+        // <= 0 (corruption, manual edit) would survive the *1.5 growth and set
+        // nextFetchAt <= now, refetching the feed on every single run.
         $interval = $newEntryCount > 0
             ? max(self::FLOOR_MINUTES, intdiv($feed->getFetchIntervalMinutes(), 2))
-            : min(self::CEILING_MINUTES, (int) round($feed->getFetchIntervalMinutes() * 1.5));
+            : max(
+                self::FLOOR_MINUTES,
+                min(self::CEILING_MINUTES, (int) round($feed->getFetchIntervalMinutes() * 1.5)),
+            );
 
         $now = $this->clock->now();
         $feed->setFetchIntervalMinutes($interval);
