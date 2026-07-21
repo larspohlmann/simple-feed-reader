@@ -63,16 +63,41 @@ final class AdminUserController
         ]);
     }
 
+    /**
+     * Activates an account. The rule for the mail — do not "fix" the cases that
+     * stay silent, they are deliberate:
+     *
+     * The "your account has been approved" mail is sent ONLY on the
+     * pending_approval -> active transition, because that is the one transition
+     * the mail describes: you waited in a queue, you are now in.
+     *
+     * Everything else that lands on active stays silent. Approving an already
+     * active user is then idempotent, so a double-click cannot mail twice. And
+     * approving a suspended or rejected user reinstates them — this route is
+     * deliberately the only way back, rather than an /unsuspend endpoint for
+     * something an admin does once a year — but a reinstated user never sat in
+     * a queue, so telling them they were "approved" would only confuse.
+     *
+     * approvedAt is stamped on every successful activation, reinstatement
+     * included: it is the audit trail for when access was last granted, which
+     * is more useful than preserving the date of the first one.
+     *
+     * There is intentionally no self-guard here, unlike reject and suspend.
+     * Activating an account cannot lock anybody out.
+     */
     #[Route('/{id}/approve', name: 'api_admin_users_approve', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function approve(int $id): JsonResponse
     {
         $user = $this->requireUser($id);
+        $wasWaitingForApproval = UserStatus::PendingApproval === $user->getStatus();
 
         $user->setStatus(UserStatus::Active);
         $user->setApprovedAt($this->clock->now());
         $this->em->flush();
 
-        $this->mailer->sendApproved($user);
+        if ($wasWaitingForApproval) {
+            $this->mailer->sendApproved($user);
+        }
 
         return new JsonResponse(['status' => $user->getStatus()->value]);
     }
@@ -108,8 +133,7 @@ final class AdminUserController
      * Guards against an admin removing their own access. The admin UI is the
      * only way back in, so this is not recoverable without database access.
      *
-     * approve() deliberately has no such guard: approving yourself cannot lock
-     * anyone out, and the only cost is a redundant "you're in" mail.
+     * approve() deliberately has no such guard — see the note there.
      */
     private function requireNotSelf(int $id, User $admin): User
     {

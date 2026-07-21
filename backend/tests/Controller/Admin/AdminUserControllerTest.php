@@ -202,25 +202,79 @@ final class AdminUserControllerTest extends WebTestCase
     }
 
     /**
-     * Documents current behaviour rather than blessing it: approve carries no
-     * idempotence guard, so a second click re-sends the "you're in" mail. See
-     * the review notes on this task.
+     * A second click is a no-op, not a second mail: the mail rides the
+     * pending_approval -> active transition, and an already-active user is not
+     * making that transition.
      */
-    public function testApprovingAnAlreadyActiveUserMailsAgain(): void
+    public function testApprovingAnAlreadyActiveUserIsIdempotentAndSilent(): void
     {
         $admin = $this->admin();
         $target = $this->factory()->create('already@example.com', status: UserStatus::Active);
         $uri = self::LIST . '/' . (int) $target->getId() . '/approve';
 
         $this->call('POST', $uri, $this->tokenFor($admin));
-        self::assertEmailCount(1);
 
-        $this->call('POST', $uri, $this->tokenFor($admin));
         self::assertResponseIsSuccessful();
-        self::assertEmailCount(
-            1,
-            message: 'the kernel reboots between requests, so this counts the second call alone',
+        self::assertSame('active', $this->payload()['status']);
+        self::assertEmailCount(0, message: 'no queue was left, so there is nothing to announce');
+    }
+
+    /**
+     * Reinstatement: approve is the only route back from suspended or rejected,
+     * so it must still work — but the reinstated user never sat in a queue, and
+     * telling them their account "has been approved" would be nonsense.
+     *
+     * @return iterable<string, array{UserStatus}>
+     */
+    public static function reinstatableStatuses(): iterable
+    {
+        yield 'suspended' => [UserStatus::Suspended];
+        yield 'rejected' => [UserStatus::Rejected];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('reinstatableStatuses')]
+    public function testReinstatingAUserActivatesThemWithoutMailing(UserStatus $status): void
+    {
+        $admin = $this->admin();
+        $target = $this->factory()->create('back@example.com', status: $status);
+        $id = (int) $target->getId();
+
+        $this->call('POST', self::LIST . '/' . $id . '/approve', $this->tokenFor($admin));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('active', $this->payload()['status']);
+        self::assertEmailCount(0, message: 'reinstatement is not an approval announcement');
+
+        $reloaded = $this->reload($id);
+        self::assertSame(UserStatus::Active, $reloaded->getStatus());
+        self::assertNotNull(
+            $reloaded->getApprovedAt(),
+            'approvedAt is the audit trail for when access was granted, reinstatement included',
         );
+    }
+
+    /**
+     * approvedAt answers "when was this account last granted access", not "when
+     * did it first clear the queue" — so reinstatement overwrites it.
+     */
+    public function testReinstatementOverwritesTheEarlierApprovedAt(): void
+    {
+        $admin = $this->admin();
+        $target = $this->factory()->create('back@example.com', status: UserStatus::Suspended);
+        $original = new \DateTimeImmutable('2020-01-01 00:00:00');
+        $target->setApprovedAt($original);
+
+        /** @var EntityManagerInterface $em */
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        $em->flush();
+        $id = (int) $target->getId();
+
+        $this->call('POST', self::LIST . '/' . $id . '/approve', $this->tokenFor($admin));
+
+        self::assertResponseIsSuccessful();
+        $approvedAt = $this->reload($id)->getApprovedAt();
+        self::assertNotNull($approvedAt);
+        self::assertGreaterThan($original, $approvedAt);
     }
 
     public function testRejectSetsTheStatusAndSendsNoMail(): void
