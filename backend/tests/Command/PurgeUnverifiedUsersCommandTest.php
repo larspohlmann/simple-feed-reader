@@ -7,6 +7,7 @@ namespace App\Tests\Command;
 use App\Command\PurgeUnverifiedUsersCommand;
 use App\Entity\ActionToken;
 use App\Entity\User;
+use App\Entity\UserIdentity;
 use App\Enum\TokenPurpose;
 use App\Enum\UserStatus;
 use App\Repository\UserRepository;
@@ -143,6 +144,34 @@ final class PurgeUnverifiedUsersCommandTest extends DbTestCase
         self::assertSame(Command::SUCCESS, $tester->execute([]));
 
         self::assertStringContainsString('Purged 0 unverified account(s).', $tester->getDisplay());
+    }
+
+    /**
+     * OAuth accounts are created in pending_approval and may legitimately sit
+     * there for weeks waiting for an admin — there is no verification mail
+     * whose absence would ever make them "abandoned". If the purge query
+     * widens to cover pending_approval, this goes red.
+     *
+     * Narrower than the pending_approval row of survivingStatuses() above, and
+     * kept separate on purpose: that case would still pass if somebody excluded
+     * only *password* accounts from a widened purge. This one names the OAuth
+     * shape — an identity row, and no password at all — which is the account
+     * whose deletion would be silent and unrecoverable, since the user has no
+     * password reset to fall back on and no mail was ever sent about it.
+     */
+    public function testItNeverDeletesAnOAuthAccountAwaitingApproval(): void
+    {
+        $user = $this->seed('oauth@example.com', UserStatus::PendingApproval, '-30 days');
+        $this->em->persist(new UserIdentity($user, 'google', 'sub-1', new \DateTimeImmutable('-30 days')));
+        $this->em->flush();
+
+        $this->tester()->execute([]);
+
+        $this->em->clear();
+        self::assertNotNull(
+            $this->em->getRepository(User::class)->findOneBy(['email' => 'oauth@example.com']),
+            'an oauth account waiting for approval is not litter',
+        );
     }
 
     /**
