@@ -342,6 +342,27 @@ final class JwtAccessTest extends WebTestCase
         self::assertResponseIsSuccessful();
     }
 
+    /**
+     * The OAuth routes sit under `^/api/auth/`, which security.yaml grants
+     * PUBLIC_ACCESS above the `^/api/` catch-all — so they are reachable
+     * without a token. That has to be true: this endpoint tells the login page
+     * which sign-in buttons to render, and it is read before anybody has a
+     * token to present.
+     *
+     * Asserted here rather than in OAuthFlowTest because the property being
+     * pinned belongs to the firewall's access_control ordering, which is what
+     * this file exists to guard. A rule inserted above the auth line would
+     * break sign-in for everyone and would otherwise fail in a distant file.
+     */
+    public function testOAuthProviderListingIsReachableWithoutAToken(): void
+    {
+        $client = self::createClient();
+
+        $client->request('GET', '/api/auth/oauth/providers');
+
+        self::assertResponseIsSuccessful();
+    }
+
     public function testAdminRouteRejectsAnonymousWithProblemJson(): void
     {
         $client = self::createClient();
