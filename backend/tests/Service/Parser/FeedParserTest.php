@@ -67,6 +67,35 @@ final class FeedParserTest extends TestCase
         $this->parser()->parse('this is { not xml');
     }
 
+    public function testRejectsDocumentsDeclaringADtd(): void
+    {
+        $this->expectException(FeedParseException::class);
+        $this->parser()->parse(
+            '<?xml version="1.0"?><!DOCTYPE rss [<!ENTITY z "zz">]>'
+            . '<rss version="2.0"><channel><title>&z;</title><link>x</link></channel></rss>',
+        );
+    }
+
+    public function testRejectsEntityExpansionBomb(): void
+    {
+        $bomb = '<?xml version="1.0"?><!DOCTYPE rss ['
+            . '<!ENTITY a "AAAAAAAAAA"><!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">'
+            . '<!ENTITY c "&b;&b;&b;&b;&b;&b;&b;&b;&b;&b;"><!ENTITY d "&c;&c;&c;&c;&c;&c;&c;&c;&c;&c;">'
+            . ']><rss version="2.0"><channel><title>&d;</title><link>x</link></channel></rss>';
+
+        $this->expectException(FeedParseException::class);
+        $this->parser()->parse($bomb);
+    }
+
+    public function testDoesNotResolveExternalEntities(): void
+    {
+        $this->expectException(FeedParseException::class);
+        $this->parser()->parse(
+            '<?xml version="1.0"?><!DOCTYPE r [<!ENTITY x SYSTEM "file:///etc/passwd">]>'
+            . '<rss version="2.0"><channel><title>&x;</title><link>y</link></channel></rss>',
+        );
+    }
+
     public function testRejectsUnknownRootElement(): void
     {
         $this->expectException(FeedParseException::class);

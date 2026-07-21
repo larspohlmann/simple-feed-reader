@@ -31,6 +31,15 @@ final class FeedParser
             throw new FeedParseException('Document is not well-formed XML');
         }
 
+        // Feeds never need a DTD, and internal entities ARE expanded by libxml
+        // (external ones are not, so XXE is already out). Rejecting doctypes
+        // outright makes entity-expansion DoS impossible here instead of
+        // relying on libxml's built-in amplification limit, which varies by
+        // version.
+        if ($document->doctype !== null) {
+            throw new FeedParseException('Feed documents must not declare a DTD');
+        }
+
         return match ($root->localName) {
             'rss' => $this->rss2Parser->parse($document),
             'feed' => $this->atomParser->parse($document),
