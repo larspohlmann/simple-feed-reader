@@ -34,3 +34,23 @@ services:
     App\Service\Mail\AccountMailer:
         arguments:
             $mailer: '@App\Service\Mail\DeferredMailer'
+
+    # Wraps the throttle limiter the `login` firewall's login_throttling block
+    # generates, so the bucket key sees the same normalised address the user
+    # provider resolves. See App\Security\NormalizedLoginRateLimiter for the
+    # bypass this closes.
+    #
+    # DECORATION, not a `limiter:` service id in security.yaml. Naming a custom
+    # limiter there makes LoginThrottlingFactory skip registering the global and
+    # local RateLimiterFactory pair entirely, which would mean restating
+    # max_attempts, the interval, the 5x global multiplier and the cache pool by
+    # hand — four numbers to drift from the ones security.yaml already declares.
+    # Decorating leaves all of that where it belongs and replaces only the key.
+    #
+    # The service id is generated as `security.login_throttling.<firewall>.limiter`.
+    # If the firewall is ever renamed, the container fails at build time with an
+    # unknown-decoration-target error rather than silently dropping the fix.
+    App\Security\NormalizedLoginRateLimiter:
+        decorates: security.login_throttling.login.limiter
+        arguments:
+            $inner: '@.inner'

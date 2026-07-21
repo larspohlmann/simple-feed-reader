@@ -196,6 +196,88 @@ final class LoginTest extends WebTestCase
     }
 
     /**
+     * Padding variants an attacker can mint indefinitely. trim() strips six
+     * bytes, so the supply of "different" spellings of one address is
+     * unbounded; five distinct ones are enough to prove the bucket is shared.
+     *
+     * @return list<string>
+     */
+    private static function paddedVariants(string $email): array
+    {
+        return [
+            ' ' . $email,
+            $email . ' ',
+            "\t" . $email,
+            "\n" . $email,
+            "  \t" . $email . " \n",
+        ];
+    }
+
+    /**
+     * The bypass this closes. User::normalizeEmail() trims, so " bob@x" and
+     * "bob@x" authenticate as one account — but Symfony's
+     * DefaultLoginRateLimiter keys the bucket on mb_strtolower() of the RAW
+     * submitted identifier and never trims. Every fresh padding gets a fresh
+     * budget of five, and the per-identifier throttle stops existing.
+     *
+     * Five failures spread across five distinct paddings must exhaust the ONE
+     * bucket that the unpadded address also draws from.
+     */
+    public function testPaddedIdentifiersShareOneThrottleBucket(): void
+    {
+        $client = self::createClient();
+        $this->factory()->create('padded@example.com');
+
+        foreach (self::paddedVariants('padded@example.com') as $index => $variant) {
+            $this->login($client, $variant, 'wrong-password');
+            self::assertResponseStatusCodeSame(401, sprintf('padded attempt %d should still be 401', $index + 1));
+        }
+
+        // Sixth attempt, unpadded: the budget was spent by the padded ones.
+        $this->login($client, 'padded@example.com', 'wrong-password');
+
+        self::assertResponseStatusCodeSame(429);
+        self::assertSame('rate_limited', $this->payload($client)['type']);
+    }
+
+    /**
+     * The mirror image: the unpadded address spends the budget, and a padded
+     * spelling must not buy a fresh one.
+     */
+    public function testPaddedIdentifierCannotEscapeAnExhaustedBucket(): void
+    {
+        $client = self::createClient();
+        $this->factory()->create('escape@example.com');
+
+        for ($attempt = 1; $attempt <= 5; ++$attempt) {
+            $this->login($client, 'escape@example.com', 'wrong-password');
+            self::assertResponseStatusCodeSame(401);
+        }
+
+        $this->login($client, "\t escape@example.com \n", 'wrong-password');
+
+        self::assertResponseStatusCodeSame(429);
+    }
+
+    /**
+     * Normalising the throttle key must not break authentication itself. A
+     * padded identifier resolves to a real account (the user provider trims
+     * too), so a padded submission with the CORRECT password still logs in —
+     * this is what stops the fix from becoming a lockout for anyone whose
+     * client appends a stray space.
+     */
+    public function testPaddedIdentifierWithTheCorrectPasswordStillLogsIn(): void
+    {
+        $client = self::createClient();
+        $this->factory()->create('spacey@example.com');
+
+        $this->login($client, "  spacey@example.com \t", 'correct-horse-battery');
+
+        self::assertResponseIsSuccessful();
+        self::assertArrayHasKey('token', $this->payload($client));
+    }
+
+    /**
      * The enumeration oracle this closes: while the status check ran in
      * checkPreAuth it fired BEFORE the password was verified, so a suspended
      * account answered 403-with-status to anyone who merely guessed the
