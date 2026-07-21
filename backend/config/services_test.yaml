@@ -92,6 +92,14 @@ services:
         alias: oauth.state.cache
         public: true
 
+    # The flow tests drive start() to obtain a state they can replay into the
+    # callback, and consume() to assert the callback burned it. Neither value
+    # exists anywhere a test could otherwise reach: the state lives only in a
+    # redirect URL and the verifier never leaves the server at all.
+    App\Service\OAuth\OAuthStateStore:
+        autowire: true
+        public: true
+
     test.cache.oauth_login_code:
         alias: oauth.login_code.cache
         public: true
