@@ -465,8 +465,11 @@ final class OAuthFlowTest extends WebTestCase
         self::assertSame('/', $cookie->getPath());
         self::assertNull($cookie->getDomain());
 
-        // Bound to the flow's ten minutes, not to a browser session.
-        self::assertEqualsWithDelta(600, $cookie->getExpiresTime() - time(), 5);
+        // Bound to the flow's ten minutes PLUS the login code's thirty seconds,
+        // not to a browser session. The extra half-minute is what lets a
+        // callback arriving in the final second of the state's life still hand
+        // the SPA a code the browser can actually exchange.
+        self::assertEqualsWithDelta(630, $cookie->getExpiresTime() - time(), 5);
     }
 
     /**
@@ -478,10 +481,10 @@ final class OAuthFlowTest extends WebTestCase
      * This one is opaque random bytes and means nothing without the server-side
      * entry it is hashed against.
      */
-    public function testTheFlowCookieRevealsNothingAndIsClearedWhenTheFlowEnds(): void
+    public function testTheFlowCookieRevealsNothingAndIsClearedWhenTheFlowFails(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
-        $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
 
         $this->startFlow();
 
@@ -493,12 +496,114 @@ final class OAuthFlowTest extends WebTestCase
         $this->startFlow();
         self::assertNotSame($value, $this->flowCookieValue());
 
-        // And it does not outlive the flow: the callback clears it, whatever
-        // the outcome, so nothing durable is left in the browser.
-        $this->requestCallback(['state' => (string) $provider->lastState, 'code' => 'c']);
+        // A failing callback ends the flow then and there, so the binding goes
+        // with it. The SUCCESS exit deliberately does not clear — the code it
+        // just minted is bound to this same cookie, and the exchange needs it
+        // back. See testTheBindingOutlivesTheCallbackAndDiesAtTheExchange.
+        $this->requestCallback(['state' => 'not-a-state', 'code' => 'c']);
         self::assertNull(
             $this->client->getCookieJar()->get(OAuthController::FLOW_COOKIE, '/', 'localhost'),
-            'the binding must not outlive the flow it binds',
+            'a failed flow must not leave its binding in the browser',
+        );
+    }
+
+    // -- The login code is bound to the same browser -----------------------
+
+    /**
+     * THE SECOND HALF OF THE LOGIN CSRF, and the reason binding the callback
+     * was not on its own enough.
+     *
+     * Binding the flow forces the attacker to complete it in their OWN browser.
+     * That is not a dead end for them, because the login code that falls out of
+     * it was, until this fix, a pure bearer value: whoever POSTs it to
+     * `/exchange` gets the JWT. So the attacker runs a genuine sign-in end to
+     * end, does NOT redeem the code, and inside its 30-second life points a
+     * victim at `<frontend>/auth/callback?code=X`. Per section 7.3 the SPA
+     * exchanges on landing with no gesture, and the victim holds the attacker's
+     * token — the same outcome as before, narrowed to 30 seconds and fully
+     * scriptable.
+     *
+     * Clearing the jar is that victim: the code is genuine, unspent and inside
+     * its window, and the only thing missing is the browser that earned it.
+     */
+    public function testALoginCodeCannotBeExchangedByADifferentBrowser(): void
+    {
+        $this->persistUser('bob@example.com', UserStatus::Active);
+        $code = $this->completeCallback(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+
+        // Everything the attacker cannot carry across to the victim's browser.
+        $this->client->getCookieJar()->clear();
+
+        $this->postJson('/api/auth/oauth/exchange', ['code' => $code]);
+
+        $this->assertIndistinguishableFromABadCode();
+    }
+
+    /**
+     * The other way to arrive without the binding, and the one that decides
+     * whether the fix is real: a cookie that is present and well formed but
+     * belongs to a different flow. This reaches the hash_equals comparison
+     * rather than short-circuiting on an absent cookie, so it proves the check
+     * is a comparison and not merely an isset().
+     */
+    public function testALoginCodeCannotBeExchangedWithSomebodyElsesBinding(): void
+    {
+        $this->persistUser('bob@example.com', UserStatus::Active);
+        $code = $this->completeCallback(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+
+        $this->replaceFlowCookie(str_repeat('b', 64));
+
+        $this->postJson('/api/auth/oauth/exchange', ['code' => $code]);
+
+        $this->assertIndistinguishableFromABadCode();
+    }
+
+    /**
+     * A failed binding check must BURN the code, so a mismatch cannot be
+     * retried with a different guess against the same live code. The store
+     * deletes before it validates; this is the endpoint-level proof.
+     */
+    public function testAFailedBindingCheckBurnsTheLoginCode(): void
+    {
+        $this->persistUser('bob@example.com', UserStatus::Active);
+        $code = $this->completeCallback(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $genuine = $this->flowCookieValue();
+
+        $this->replaceFlowCookie(str_repeat('b', 64));
+        $this->postJson('/api/auth/oauth/exchange', ['code' => $code]);
+        self::assertResponseStatusCodeSame(400);
+
+        // Now retry with the RIGHT binding. The code is gone regardless.
+        $this->replaceFlowCookie($genuine);
+        $this->postJson('/api/auth/oauth/exchange', ['code' => $code]);
+
+        $this->assertIndistinguishableFromABadCode();
+    }
+
+    /**
+     * The lifetime, from both ends: the binding must survive the callback —
+     * which is where it used to be cleared — and must not survive the exchange.
+     *
+     * Both halves break silently in opposite directions. Clear too early and
+     * every sign-in fails with what looks like a bad code; clear never, and an
+     * unauthenticated endpoint has left a durable value in the browser for no
+     * reason, which is the shape of a tracking cookie even when the contents
+     * are meaningless.
+     */
+    public function testTheBindingOutlivesTheCallbackAndDiesAtTheExchange(): void
+    {
+        $this->persistUser('bob@example.com', UserStatus::Active);
+        $code = $this->completeCallback(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+
+        // Survived the callback, or the happy path below could not work.
+        self::assertNotSame('', $this->flowCookieValue());
+
+        $this->postJson('/api/auth/oauth/exchange', ['code' => $code]);
+        self::assertResponseIsSuccessful();
+
+        self::assertNull(
+            $this->client->getCookieJar()->get(OAuthController::FLOW_COOKIE, '/', 'localhost'),
+            'the binding has no purpose once the code it binds has been spent',
         );
     }
 
@@ -889,6 +994,37 @@ final class OAuthFlowTest extends WebTestCase
             $location,
             'a JWT in a Location header lands in browser history and every proxy log',
         );
+    }
+
+    /**
+     * Asserts the response just received is not merely a 400, but the SAME 400
+     * an unknown code gets — status, content type and body alike.
+     *
+     * "Indistinguishable" is the actual requirement, so it is compared against
+     * a real unknown-code response rather than against a hard-coded shape. A
+     * distinct error type, a different `detail`, even a different casing would
+     * let a prober tell "this code is live but not yours" from "no such code",
+     * and that distinction is exactly what confirms a captured code is worth
+     * replaying.
+     *
+     * Fires a second request, so it must be the last thing a test does.
+     */
+    private function assertIndistinguishableFromABadCode(): void
+    {
+        $response = $this->client->getResponse();
+        $status = $response->getStatusCode();
+        $contentType = $response->headers->get('content-type');
+        $payload = $this->payload();
+
+        self::assertSame(400, $status);
+        self::assertArrayNotHasKey('token', $payload);
+
+        $this->postJson('/api/auth/oauth/exchange', ['code' => str_repeat('f', 64)]);
+
+        $unknown = $this->client->getResponse();
+        self::assertSame($status, $unknown->getStatusCode());
+        self::assertSame($contentType, $unknown->headers->get('content-type'));
+        self::assertSame($payload, $this->payload());
     }
 
     /** @return array<mixed> */

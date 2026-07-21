@@ -25,6 +25,7 @@ use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -82,11 +83,19 @@ final class OAuthController
     public const FLOW_COOKIE = '__Host-oauth_flow';
 
     /**
-     * Matches OAuthStateStore's state lifetime. The cookie is worthless the
-     * moment the flow it names expires, and a session cookie would outlive it
-     * for as long as the browser stayed open.
+     * The state's life plus the login code's, because the cookie now has to
+     * survive both legs — and a session cookie would outlive them for as long
+     * as the browser stayed open.
+     *
+     * The sum is not padding. A callback may legitimately arrive in the final
+     * second of the state's ten minutes, and the code it mints then lives a
+     * further thirty; a cookie expiring with the state alone would leave that
+     * sign-in unable to exchange, failing with what looks exactly like a bad
+     * code. Computed from the two stores rather than written as a number, so
+     * changing either lifetime cannot silently reopen that gap.
      */
-    private const FLOW_COOKIE_LIFETIME = 600;
+    private const FLOW_COOKIE_LIFETIME = OAuthStateStore::LIFETIME_SECONDS
+        + LoginCodeStore::LIFETIME_SECONDS;
 
     /**
      * Bounds the `{provider}` segment to something that could plausibly name a
@@ -135,12 +144,32 @@ final class OAuthController
      * docblock. The methods differ (POST vs GET), so today a misordering would
      * not actually mis-resolve; relying on that would make the correctness of
      * this URL depend on start() never gaining a POST.
+     *
+     * THIS IS A CREDENTIALED CROSS-ORIGIN REQUEST. The SPA must send it with
+     * `credentials: 'include'`, because the login code is only half of what is
+     * needed — the flow cookie is the other half. A caller that forgets gets a
+     * 400 identical to a bad code, which is the single most confusing failure
+     * this design has; docs/oauth-sign-in.md section 7.3 says so in as many
+     * words. CorsListener is what allows the cookie to ride along.
      */
     #[Route('/exchange', name: 'api_auth_oauth_exchange', methods: ['POST'])]
-    public function exchange(#[MapRequestPayload] OAuthExchangeRequest $request): JsonResponse
-    {
-        $userId = $this->loginCodes->consume($request->code);
+    public function exchange(
+        Request $httpRequest,
+        #[MapRequestPayload] OAuthExchangeRequest $request,
+    ): JsonResponse {
+        // The binding, read straight off the request. `null` when the browser
+        // sent none — which the store treats as a failure, not as a reason to
+        // skip the check.
+        $browserToken = $httpRequest->cookies->get(self::FLOW_COOKIE);
+        $userId = $this->loginCodes->consume(
+            $request->code,
+            \is_string($browserToken) ? $browserToken : null,
+        );
 
+        // Unknown, already spent, expired, or — the case a bearer code could
+        // never catch — presented by a browser that did not complete the flow.
+        // All four are one answer on purpose: a caller who could tell them
+        // apart could confirm that a captured code was still live.
         if (null === $userId) {
             throw new InvalidTokenException();
         }
@@ -156,7 +185,13 @@ final class OAuthController
 
         $this->assertMayLogIn($user);
 
-        return new JsonResponse(['token' => $this->jwtManager->create($user)]);
+        // The code is spent and the session has begun, so the binding has
+        // nothing left to bind. Not cleared on the 403 path above: that throws,
+        // so the response is the exception listener's rather than ours — and
+        // the cookie expires with the flow's ten minutes regardless.
+        return $this->clearFlowCookie(
+            new JsonResponse(['token' => $this->jwtManager->create($user)]),
+        );
     }
 
     /**
@@ -195,11 +230,9 @@ final class OAuthController
         // The binding cookie, read straight off the request. `null` when the
         // browser sent none — which the store treats as a failure, not as a
         // reason to skip the check.
-        $browserToken = $request->cookies->get(self::FLOW_COOKIE);
-        $started = $this->stateStore->consume(
-            $state,
-            \is_string($browserToken) ? $browserToken : null,
-        );
+        $cookie = $request->cookies->get(self::FLOW_COOKIE);
+        $browserToken = \is_string($cookie) ? $cookie : null;
+        $started = $this->stateStore->consume($state, $browserToken);
 
         // No valid state means this callback was not started by this server,
         // was already used, is older than ten minutes, or — the case `state`
@@ -252,12 +285,21 @@ final class OAuthController
         $userId = $user->getId();
         \assert(null !== $userId);
 
-        // The flow is over and its state is spent, so the binding goes with it.
-        return $this->clearFlowCookie(new RedirectResponse(\sprintf(
+        // consume() above refuses a null token outright, so reaching this line
+        // proves the cookie was present and matched. Restated for the type
+        // checker, and because the next line depends on it being a string.
+        \assert(null !== $browserToken);
+
+        // NOT cleared here, unlike every failure exit. The code minted below is
+        // bound to this same value and the exchange needs it back one hop
+        // later; clearing here would make every sign-in fail with what looks
+        // exactly like a bad code. exchange() clears it instead, once the code
+        // has been spent and the binding has nothing left to bind.
+        return new RedirectResponse(\sprintf(
             '%s/auth/callback?code=%s',
             $this->frontendBaseUrl(),
-            urlencode($this->loginCodes->issue($userId)),
-        )));
+            urlencode($this->loginCodes->issue($userId, $browserToken)),
+        ));
     }
 
     /**
@@ -339,18 +381,28 @@ final class OAuthController
     }
 
     /**
-     * Removes the binding once the flow it belongs to is over — on EVERY exit
-     * from the callback, success or failure alike.
+     * Removes the binding once it has nothing left to bind.
      *
-     * The state is single-use, so the cookie is worthless the moment the
-     * callback returns; leaving it in the browser would be a durable value set
-     * by an unauthenticated endpoint and serving no purpose, which is the shape
-     * of a tracking cookie even when the contents are meaningless.
+     * That is every FAILURE exit from the callback, and the SUCCESS exit from
+     * the exchange — not the callback's success exit, which has just issued a
+     * login code bound to this very value. Leaving the cookie in the browser
+     * beyond that would be a durable value set by an unauthenticated endpoint
+     * and serving no purpose, which is the shape of a tracking cookie even when
+     * the contents are meaningless.
      *
      * The attributes must match the ones it was set with, or the browser treats
-     * this as a different cookie and clears nothing.
+     * this as a different cookie and clears nothing. That is the reason there
+     * is one flowCookie() and one clearFlowCookie() rather than a second
+     * binding minted at code-issue time: two set-cookie sites are two places
+     * for these six attributes to drift apart, and the drift fails silently.
+     *
+     * @template T of Response
+     *
+     * @param T $response
+     *
+     * @return T
      */
-    private function clearFlowCookie(RedirectResponse $response): RedirectResponse
+    private function clearFlowCookie(Response $response): Response
     {
         $response->headers->clearCookie(
             self::FLOW_COOKIE,

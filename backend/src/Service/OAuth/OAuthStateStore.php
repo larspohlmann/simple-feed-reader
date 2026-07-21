@@ -93,7 +93,8 @@ use Psr\Clock\ClockInterface;
  */
 final readonly class OAuthStateStore
 {
-    private const LIFETIME_SECONDS = 600;
+    /** Public so OAuthController can size the flow cookie to outlive it. */
+    public const LIFETIME_SECONDS = 600;
     private const KEY_PREFIX = 'oauth_state_';
 
     public function __construct(
