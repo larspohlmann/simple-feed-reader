@@ -30,7 +30,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * callback takes only the `code`; the ID token we trust is the one the token
  * endpoint hands back. See AbstractOidcProvider's class docblock.
  */
-final class AppleOAuthProvider extends AbstractOidcProvider
+final readonly class AppleOAuthProvider extends AbstractOidcProvider
 {
     private const AUTHORIZATION_ENDPOINT = 'https://appleid.apple.com/auth/authorize';
 
@@ -46,8 +46,8 @@ final class AppleOAuthProvider extends AbstractOidcProvider
         HttpClientInterface $httpClient,
         ClockInterface $clock,
         #[Autowire('%env(APP_BACKEND_URL)%')] string $backendBaseUrl,
-        private readonly AppleClientSecretFactory $clientSecretFactory,
-        #[Autowire('%env(APPLE_OAUTH_CLIENT_ID)%')] private readonly string $servicesId,
+        private AppleClientSecretFactory $clientSecretFactory,
+        #[Autowire('%env(APPLE_OAUTH_CLIENT_ID)%')] private string $servicesId,
     ) {
         parent::__construct($httpClient, $clock, $backendBaseUrl);
     }
@@ -68,30 +68,36 @@ final class AppleOAuthProvider extends AbstractOidcProvider
         return $this->clientSecretFactory->isConfigured();
     }
 
-    public function getAuthorizationUrl(string $state, string $nonce, string $codeChallenge): string
+    protected function getAuthorizationEndpoint(): string
     {
-        return self::AUTHORIZATION_ENDPOINT . '?' . http_build_query([
-            'client_id' => $this->servicesId,
-            'redirect_uri' => $this->getRedirectUri(),
-            'response_type' => 'code',
-            // `email` only. Apple's documented scopes are `name` and `email`,
-            // and it returns an ID token from the token endpoint regardless, so
-            // unlike Google there is no `openid` to add. The application shows
-            // an email and stores an email; `name` would widen the consent
-            // screen for data nothing reads.
-            'scope' => 'email',
-            // Requesting any scope at all makes Apple deliver the callback as a
-            // POST with a form body instead of a GET with a query string, and
-            // Apple rejects the authorization request outright if the mode is
-            // not declared. This is why OAuthController's callback route
-            // accepts both methods, and why flow state cannot live in a
-            // SameSite=Lax session cookie: a cross-site POST does not carry it.
-            'response_mode' => 'form_post',
-            'state' => $state,
-            'nonce' => $nonce,
-            'code_challenge' => $codeChallenge,
-            'code_challenge_method' => 'S256',
-        ], '', '&', \PHP_QUERY_RFC3986);
+        return self::AUTHORIZATION_ENDPOINT;
+    }
+
+    /**
+     * `email` only. Apple's documented scopes are `name` and `email`, and it
+     * returns an ID token from the token endpoint regardless, so unlike Google
+     * there is no `openid` to add. The application shows an email and stores an
+     * email; `name` would widen the consent screen for data nothing reads.
+     */
+    protected function getScope(): string
+    {
+        return 'email';
+    }
+
+    /**
+     * The one parameter Apple needs that OIDC does not define, and the reason
+     * this hook exists on the parent at all.
+     *
+     * Requesting any scope at all makes Apple deliver the callback as a POST
+     * with a form body instead of a GET with a query string, and Apple rejects
+     * the authorization request outright if the mode is not declared. This is
+     * why OAuthController's callback route accepts both methods, and why the
+     * flow-binding cookie cannot be `SameSite=Lax`: a cross-site POST does not
+     * carry one.
+     */
+    protected function extraAuthorizationParams(): array
+    {
+        return ['response_mode' => 'form_post'];
     }
 
     protected function getTokenEndpoint(): string

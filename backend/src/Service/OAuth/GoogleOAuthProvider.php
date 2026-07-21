@@ -14,7 +14,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * class is deliberately nothing but configuration, which is what makes "a third
  * provider is one class and one env block" true.
  */
-final class GoogleOAuthProvider extends AbstractOidcProvider
+final readonly class GoogleOAuthProvider extends AbstractOidcProvider
 {
     private const AUTHORIZATION_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 
@@ -29,8 +29,8 @@ final class GoogleOAuthProvider extends AbstractOidcProvider
         HttpClientInterface $httpClient,
         ClockInterface $clock,
         #[Autowire('%env(APP_BACKEND_URL)%')] string $backendBaseUrl,
-        #[Autowire('%env(GOOGLE_OAUTH_CLIENT_ID)%')] private readonly string $clientId,
-        #[Autowire('%env(GOOGLE_OAUTH_CLIENT_SECRET)%')] private readonly string $clientSecret,
+        #[Autowire('%env(GOOGLE_OAUTH_CLIENT_ID)%')] private string $clientId,
+        #[Autowire('%env(GOOGLE_OAUTH_CLIENT_SECRET)%')] private string $clientSecret,
     ) {
         parent::__construct($httpClient, $clock, $backendBaseUrl);
     }
@@ -45,21 +45,19 @@ final class GoogleOAuthProvider extends AbstractOidcProvider
         return '' !== $this->clientId && '' !== $this->clientSecret;
     }
 
-    public function getAuthorizationUrl(string $state, string $nonce, string $codeChallenge): string
+    protected function getAuthorizationEndpoint(): string
     {
-        return self::AUTHORIZATION_ENDPOINT . '?' . http_build_query([
-            'client_id' => $this->clientId,
-            'redirect_uri' => $this->getRedirectUri(),
-            'response_type' => 'code',
-            // `openid` for the ID token, `email` for the address. Nothing else:
-            // the application shows an email and stores an email, so a wider
-            // scope would only enlarge the consent screen and the blast radius.
-            'scope' => 'openid email',
-            'state' => $state,
-            'nonce' => $nonce,
-            'code_challenge' => $codeChallenge,
-            'code_challenge_method' => 'S256',
-        ], '', '&', \PHP_QUERY_RFC3986);
+        return self::AUTHORIZATION_ENDPOINT;
+    }
+
+    /**
+     * `openid` for the ID token, `email` for the address. Nothing else: the
+     * application shows an email and stores an email, so a wider scope would
+     * only enlarge the consent screen and the blast radius.
+     */
+    protected function getScope(): string
+    {
+        return 'openid email';
     }
 
     protected function getTokenEndpoint(): string

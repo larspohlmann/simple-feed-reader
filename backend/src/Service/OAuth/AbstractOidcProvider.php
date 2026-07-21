@@ -61,7 +61,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * expected issuer), `exp` (it is current), and `nonce` (it belongs to the flow
  * this browser started).
  */
-abstract class AbstractOidcProvider implements OAuthProviderInterface
+abstract readonly class AbstractOidcProvider implements OAuthProviderInterface
 {
     /**
      * A token whose `exp` has just passed is not evidence of an attack — it is
@@ -80,9 +80,9 @@ abstract class AbstractOidcProvider implements OAuthProviderInterface
     private const REQUEST_MAX_DURATION_SECONDS = 15;
 
     public function __construct(
-        protected readonly HttpClientInterface $httpClient,
-        private readonly ClockInterface $clock,
-        private readonly string $backendBaseUrl,
+        protected HttpClientInterface $httpClient,
+        private ClockInterface $clock,
+        private string $backendBaseUrl,
     ) {
     }
 
@@ -103,6 +103,78 @@ abstract class AbstractOidcProvider implements OAuthProviderInterface
     abstract protected function getClientId(): string;
 
     abstract protected function getClientSecret(): string;
+
+    /**
+     * Where the browser is sent to consent. A constant in each subclass, for
+     * the same reason getTokenEndpoint() is.
+     */
+    abstract protected function getAuthorizationEndpoint(): string;
+
+    /**
+     * What this application asks the user to consent to.
+     *
+     * Kept abstract rather than defaulted, because there is no scope string
+     * that is right for an unknown provider and a wrong default here would be
+     * a silently over-broad consent screen. Google needs `openid email`; Apple
+     * needs `email` and mints an ID token regardless.
+     */
+    abstract protected function getScope(): string;
+
+    /**
+     * Anything this provider needs in the authorization request that OIDC does
+     * not define — Apple's `response_mode=form_post` is the only instance so
+     * far, and most providers will override nothing.
+     *
+     * Merged AFTER the standard parameters and therefore able to overwrite
+     * them. That is deliberate: a provider that genuinely needs a different
+     * `response_type` should be able to say so in one line rather than fork the
+     * whole method. It also means a careless override can weaken the request —
+     * dropping `code_challenge_method` back to `plain`, say — so treat an
+     * override that touches a standard key as needing the same justification
+     * the parameter itself had.
+     *
+     * @return array<string, string>
+     */
+    protected function extraAuthorizationParams(): array
+    {
+        return [];
+    }
+
+    /**
+     * The authorization request, assembled from the four things a provider
+     * actually differs by: endpoint, client id, scope, and whatever
+     * extraAuthorizationParams() adds.
+     *
+     * `final`, so the standard parameters cannot be quietly dropped by a
+     * subclass that meant only to add one. PKCE in particular is not optional
+     * here — `code_challenge_method` is `S256` and the plain method is not
+     * offered anywhere in this codebase (see OAuthStateStore::challengeFor).
+     *
+     * PHP_QUERY_RFC3986 rather than the default RFC1738, so a space encodes as
+     * `%20` and not `+`. Both are accepted in a query string by every provider
+     * involved, but `+` is the one that goes wrong when a value is later read
+     * out of a path or a header, and the scope strings here contain spaces.
+     */
+    final public function getAuthorizationUrl(string $state, string $nonce, string $codeChallenge): string
+    {
+        $params = [
+            'client_id' => $this->getClientId(),
+            'redirect_uri' => $this->getRedirectUri(),
+            'response_type' => 'code',
+            'scope' => $this->getScope(),
+            'state' => $state,
+            'nonce' => $nonce,
+            'code_challenge' => $codeChallenge,
+            'code_challenge_method' => 'S256',
+        ];
+
+        return $this->getAuthorizationEndpoint() . '?' . http_build_query(
+            array_merge($params, $this->extraAuthorizationParams()),
+            '',
+            '&',
+            \PHP_QUERY_RFC3986,
+        );
+    }
 
     /**
      * The redirect URI, built from configuration rather than from the incoming

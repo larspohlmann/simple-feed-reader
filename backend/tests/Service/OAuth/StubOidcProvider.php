@@ -17,12 +17,12 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * that guard is the precondition of the whole signature-verification exemption,
  * so it needs a test that can actually violate it.
  */
-final class StubOidcProvider extends AbstractOidcProvider
+final readonly class StubOidcProvider extends AbstractOidcProvider
 {
     public function __construct(
         HttpClientInterface $httpClient,
         ClockInterface $clock,
-        private readonly string $tokenEndpoint = 'https://issuer.test/token',
+        private string $tokenEndpoint = 'https://issuer.test/token',
     ) {
         parent::__construct($httpClient, $clock, 'https://app.test');
     }
@@ -37,9 +37,14 @@ final class StubOidcProvider extends AbstractOidcProvider
         return true;
     }
 
-    public function getAuthorizationUrl(string $state, string $nonce, string $codeChallenge): string
+    protected function getAuthorizationEndpoint(): string
     {
         return 'https://issuer.test/authorize';
+    }
+
+    protected function getScope(): string
+    {
+        return 'openid email';
     }
 
     protected function getTokenEndpoint(): string
