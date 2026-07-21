@@ -361,6 +361,14 @@ final class IpValidatorTest extends TestCase
         yield 'v6 link-local' => ['fe80::1'];
         yield 'v6 multicast' => ['ff02::1'];
         yield 'v4-mapped private' => ['::ffff:192.168.1.1'];
+        yield 'v4-mapped loopback' => ['::ffff:127.0.0.1'];
+        yield 'v4-compatible loopback' => ['::7f00:1'];
+        yield 'v4-compatible loopback dotted' => ['::127.0.0.1'];
+        yield 'nat64 private' => ['64:ff9b::a00:1'];
+        yield 'nat64 loopback' => ['64:ff9b::7f00:1'];
+        yield 'nat64 local-use' => ['64:ff9b:1::7f00:1'];
+        yield '6to4 loopback' => ['2002:7f00:1::'];
+        yield 'v6 site-local' => ['fec0::1'];
         yield 'garbage' => ['not-an-ip'];
     }
 
@@ -422,12 +430,19 @@ final class IpValidator
         '203.0.113.0/24',
         '224.0.0.0/4',
         '240.0.0.0/4',
-        '::/128',
-        '::1/128',
+        // ::/96 covers the unspecified address, ::1 loopback, and the
+        // deprecated IPv4-compatible format (::127.0.0.1 reaching loopback).
+        '::/96',
+        '64:ff9b::/96',
+        '64:ff9b:1::/48',
         '100::/64',
         '2001:db8::/32',
+        // 6to4: 2002:7f00:1:: encapsulates 127.0.0.1.
+        '2002::/16',
         'fc00::/7',
         'fe80::/10',
+        // Deprecated site-local, still routable on some networks.
+        'fec0::/10',
         'ff00::/8',
     ];
 
