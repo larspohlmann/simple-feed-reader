@@ -21,6 +21,7 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -64,6 +65,29 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/auth/oauth')]
 final class OAuthController
 {
+    /**
+     * The cookie that binds a flow to the browser that started it.
+     *
+     * `__Host-` is a browser-enforced prefix: a browser rejects the cookie
+     * outright unless it is `Secure`, `Path=/` and carries NO `Domain`
+     * attribute. The last of those is the security-relevant one here — with no
+     * `Domain`, no other host in the registrable domain can write this cookie
+     * into the backend's origin, so a compromised sibling cannot pin the
+     * binding to a value it knows.
+     *
+     * Public because OAuthFlowTest asserts against it. A test that hard-coded
+     * the string would keep passing if this were renamed and the cookie
+     * silently stopped being set.
+     */
+    public const FLOW_COOKIE = '__Host-oauth_flow';
+
+    /**
+     * Matches OAuthStateStore's state lifetime. The cookie is worthless the
+     * moment the flow it names expires, and a session cookie would outlive it
+     * for as long as the browser stayed open.
+     */
+    private const FLOW_COOKIE_LIFETIME = 600;
+
     /**
      * Bounds the `{provider}` segment to something that could plausibly name a
      * provider. See the class docblock for what this does and does not fix.
@@ -168,12 +192,27 @@ final class OAuthController
             return $this->failure('invalid_request');
         }
 
-        $started = $this->stateStore->consume($state);
+        // The binding cookie, read straight off the request. `null` when the
+        // browser sent none — which the store treats as a failure, not as a
+        // reason to skip the check.
+        $browserToken = $request->cookies->get(self::FLOW_COOKIE);
+        $started = $this->stateStore->consume(
+            $state,
+            \is_string($browserToken) ? $browserToken : null,
+        );
 
         // No valid state means this callback was not started by this server,
-        // was already used, or is older than ten minutes. All three are
-        // discarded without touching the provider — this check is what stops a
-        // stranger's authorization code being fed into somebody's browser.
+        // was already used, is older than ten minutes, or — the case `state`
+        // alone could never catch — was started by a DIFFERENT BROWSER. All
+        // four are discarded without touching the provider.
+        //
+        // That fourth case is login CSRF, and it is the reason the binding
+        // exists. An attacker who legitimately obtains a state and a code from
+        // their own account, and gets a victim to open this URL, would
+        // otherwise sign the victim's browser in as themselves — silently,
+        // because the SPA exchanges the code with no user gesture. It is one
+        // reason code for all four on purpose: a caller who could tell them
+        // apart could probe for live states.
         //
         // The provider comparison is not decoration. A state issued for Google
         // replayed at Apple's callback would otherwise spend a Google
@@ -213,11 +252,12 @@ final class OAuthController
         $userId = $user->getId();
         \assert(null !== $userId);
 
-        return new RedirectResponse(\sprintf(
+        // The flow is over and its state is spent, so the binding goes with it.
+        return $this->clearFlowCookie(new RedirectResponse(\sprintf(
             '%s/auth/callback?code=%s',
             $this->frontendBaseUrl(),
             urlencode($this->loginCodes->issue($userId)),
-        ));
+        )));
     }
 
     /**
@@ -243,11 +283,85 @@ final class OAuthController
 
         $state = $this->stateStore->start($provider);
 
-        return new RedirectResponse($oauthProvider->getAuthorizationUrl(
+        $response = new RedirectResponse($oauthProvider->getAuthorizationUrl(
             $state->state,
             $state->nonce,
             $state->codeChallenge,
         ));
+
+        // The browser binding rides out with the redirect. Without it `state`
+        // would prove only that THIS SERVER started some flow, and anyone
+        // holding a state and a code — including the attacker who obtained both
+        // legitimately from their own account — could spend them in somebody
+        // else's browser. See OAuthStateStore's docblock for the full attack.
+        \assert(null !== $state->browserToken);
+        $response->headers->setCookie($this->flowCookie($state->browserToken));
+
+        return $response;
+    }
+
+    /**
+     * The flow-binding cookie, and every attribute is load-bearing.
+     *
+     * `SameSite=None` is REQUIRED, not a relaxation. Apple returns its callback
+     * as a cross-site POST (`response_mode=form_post`), and a `Lax` cookie is
+     * not sent on a cross-site POST — so `Lax` here would leave Google signing
+     * in perfectly while every Apple sign-in failed with `invalid_state`. That
+     * is the worst kind of bug to diagnose, because the code looks stricter and
+     * only half the users are affected. `None` in turn requires `Secure`.
+     *
+     * Nothing is lost by not having `SameSite` protect this cookie: it carries
+     * no authority on its own. It names no user, grants nothing, and is useful
+     * only to whoever also holds the matching unspent `state`.
+     *
+     * `Secure` on a deployment served over plain HTTP would mean the cookie is
+     * never sent and OAuth never completes — which is the correct failure, and
+     * the reason there is no flag to turn it off. Local development on
+     * `http://localhost:8000` is unaffected: browsers treat `localhost` as a
+     * trustworthy origin and accept `Secure` (and `__Host-`) cookies there.
+     * Verified in Chromium against this exact attribute string rather than
+     * assumed; Firefox has done the same since 75.
+     *
+     * `httpOnly` because no script has any reason to read it, and `raw: false`
+     * so the value is URL-encoded — belt and braces for a value that is already
+     * hex.
+     */
+    private function flowCookie(string $browserToken): Cookie
+    {
+        return Cookie::create(self::FLOW_COOKIE)
+            ->withValue($browserToken)
+            ->withExpires($this->clock->now()->getTimestamp() + self::FLOW_COOKIE_LIFETIME)
+            ->withPath('/')
+            ->withDomain(null)
+            ->withSecure(true)
+            ->withHttpOnly(true)
+            ->withSameSite(Cookie::SAMESITE_NONE);
+    }
+
+    /**
+     * Removes the binding once the flow it belongs to is over — on EVERY exit
+     * from the callback, success or failure alike.
+     *
+     * The state is single-use, so the cookie is worthless the moment the
+     * callback returns; leaving it in the browser would be a durable value set
+     * by an unauthenticated endpoint and serving no purpose, which is the shape
+     * of a tracking cookie even when the contents are meaningless.
+     *
+     * The attributes must match the ones it was set with, or the browser treats
+     * this as a different cookie and clears nothing.
+     */
+    private function clearFlowCookie(RedirectResponse $response): RedirectResponse
+    {
+        $response->headers->clearCookie(
+            self::FLOW_COOKIE,
+            '/',
+            null,
+            secure: true,
+            httpOnly: true,
+            sameSite: Cookie::SAMESITE_NONE,
+        );
+
+        return $response;
     }
 
     /**
@@ -295,14 +409,18 @@ final class OAuthController
      * the host comes from APP_FRONTEND_URL — a deployment-time value nobody can
      * influence over HTTP. That is what keeps this from being an open redirect
      * that hands the attacker's page a fresh login code.
+     *
+     * Called only from callback(), which is why clearing the flow cookie
+     * belongs here: it puts the clear on all four failure exits at once, so a
+     * fifth added later cannot forget it.
      */
     private function failure(string $reason): RedirectResponse
     {
-        return new RedirectResponse(\sprintf(
+        return $this->clearFlowCookie(new RedirectResponse(\sprintf(
             '%s/auth/callback?error=%s',
             $this->frontendBaseUrl(),
             urlencode($reason),
-        ));
+        )));
     }
 
     private function frontendBaseUrl(): string

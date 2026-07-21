@@ -137,6 +137,53 @@ and therefore the authorization code — somewhere else.
 the callback sends the browser at step 3, and it is likewise a deployment-time
 value that no request can influence.
 
+### 4.1 It must be `https`, and that is not merely advice
+
+Starting a sign-in sets a cookie named `__Host-oauth_flow`. It binds the flow to
+the browser that started it (section 4.2), and it is `Secure` — so on a
+deployment served over plain HTTP the browser never sends it back and **every
+sign-in fails with `invalid_state`**.
+
+That is the intended failure. There is no setting to turn it off, because a
+switch that downgrades the cookie is a switch an attacker benefits from.
+
+Local development on `http://localhost:8000` is unaffected: browsers treat
+`localhost` as a trustworthy origin and accept `Secure` — and `__Host-` —
+cookies there. Verified in Chromium against the exact attributes the backend
+sends; Firefox has behaved the same since version 75.
+
+### 4.2 Why there is a cookie at all: login CSRF
+
+`state` proves a callback belongs to a flow *this server* started. On its own it
+does **not** prove the callback belongs to the browser that started it, and
+those are different properties.
+
+Without the second one, this attack works. An attacker with a real account
+scripts `GET /api/auth/oauth/google`, keeps the `state`, approves at the
+provider, and captures the `code` from the provider's final redirect *without
+following it* — so the state is never spent. They then get a victim to open the
+callback URL. Since the SPA exchanges the code automatically on landing
+(section 7.3), no click is required, and the victim's browser ends up signed in
+**as the attacker**: every feed they add and every article they read lands in
+the attacker's account.
+
+The `__Host-oauth_flow` cookie closes it. The backend stores only a digest of
+its value beside the flow and requires the matching cookie back at the callback;
+a callback that cannot produce it is refused as `invalid_state`, indistinguish-
+able from an unknown or expired state. The cookie carries nothing identifying,
+is different for every flow, and is cleared when the flow ends.
+
+It is `SameSite=None`, which looks like a weakening and is the opposite. Apple
+returns its callback as a **cross-site POST** (`response_mode=form_post`), and a
+`Lax` cookie is not sent on a cross-site POST — so `Lax` would leave Google
+working perfectly while every Apple sign-in failed. The cookie needs no help
+from `SameSite`: it grants nothing by itself and is useless without the matching
+unspent `state`.
+
+**One sign-in at a time per browser.** There is one cookie, so starting a second
+sign-in replaces the first flow's binding and the abandoned tab will fail with
+`invalid_state`. Starting again works.
+
 ---
 
 ## 5. Operator: disabling a provider
@@ -245,7 +292,7 @@ exchanged.
 |---|---|---|
 | `access_denied` | The visitor declined at the provider's consent screen. | Nothing alarming. Return them to the login page. This is the most common non-success outcome and is not a fault. |
 | `invalid_request` | The callback arrived without the parameters it needs. | "Sign-in could not be completed. Please try again." |
-| `invalid_state` | The flow was not started by this server, was already completed, or is older than 10 minutes. | Same message. In practice: a bookmarked callback URL, a back-button replay, or a consent screen left open too long. Offer to start again. |
+| `invalid_state` | The flow was not started by this server, was already completed, is older than 10 minutes, or was started by a **different browser** (section 4.2). | Same message. In practice: a bookmarked callback URL, a back-button replay, a consent screen left open too long, a second sign-in started in another tab, or a deployment serving plain HTTP (section 4.1). Offer to start again. |
 | `exchange_failed` | The conversation with the provider did not produce a usable identity. | Same message. The specific cause is in the server log and deliberately not in the response. |
 
 Treat any other value as `exchange_failed`. The list is closed today, but a

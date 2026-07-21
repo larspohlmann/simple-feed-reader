@@ -12,10 +12,13 @@ use App\Repository\UserRepository;
 use App\Service\OAuth\OAuthProviderRegistry;
 use App\Tests\Support\FakeOAuthProvider;
 use App\Tests\Support\UserFactory;
+use App\Controller\Api\OAuthController;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\BrowserKit\Cookie as BrowserKitCookie;
+use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
@@ -55,9 +58,25 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  * that answered it too would fail in two files for one cause. Both variants
  * must still run before the first request, because a service the container has
  * already built cannot be replaced either way.
+ *
+ * **Every request here is made over `https://`,** which is not cosmetic. The
+ * flow-binding cookie is `Secure`, and BrowserKit's CookieJar enforces that
+ * attribute exactly as a browser does — it will not return a `Secure` cookie to
+ * an `http://` URI. Driven over `http://` this suite would still pass its error
+ * cases while every happy path lost its cookie, so the binding would look
+ * enforced and be untested. Real browsers make `http://localhost` the one
+ * exception (verified in Chromium against the exact attribute string this
+ * controller sends); BrowserKit does not model that exception, and asking it to
+ * would be testing the harness rather than the app.
  */
 final class OAuthFlowTest extends WebTestCase
 {
+    /**
+     * Requests are absolute rather than relative so the scheme is explicit at
+     * every call site — see the class docblock for why `https` is load-bearing.
+     */
+    private const ORIGIN = 'https://localhost';
+
     private KernelBrowser $client;
 
     protected function setUp(): void
@@ -91,12 +110,18 @@ final class OAuthFlowTest extends WebTestCase
         $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
 
         // 1. Start: we redirect to the provider, carrying a state we minted.
-        $this->client->request('GET', '/api/auth/oauth/google');
+        $this->startFlow();
         self::assertResponseStatusCodeSame(302);
         self::assertStringStartsWith('https://provider.test/authorize', $this->location());
 
         $state = $provider->lastState;
         self::assertIsString($state);
+
+        // The browser binding rode out with the redirect. Asserted here because
+        // "the cookie is never actually stored" is the way this fix breaks
+        // silently — every negative test above would still pass, and only the
+        // happy path would stop working.
+        self::assertNotSame('', $this->flowCookieValue());
 
         // 2. Callback: we redirect to the SPA with a code, never a token.
         $this->requestCallback(['state' => $state, 'code' => 'provider-code']);
@@ -123,7 +148,11 @@ final class OAuthFlowTest extends WebTestCase
 
         // 4. The token actually works, on the same route the password login's
         // token is proved against.
-        $this->client->request('GET', '/api/me', server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $this->client->request(
+            'GET',
+            self::ORIGIN . '/api/me',
+            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token],
+        );
         self::assertResponseIsSuccessful();
         self::assertSame('bob@example.com', $this->payload()['email']);
     }
@@ -262,7 +291,7 @@ final class OAuthFlowTest extends WebTestCase
         $this->persistUser('bob@example.com', UserStatus::Active);
         $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
 
-        $this->client->request('GET', '/api/auth/oauth/google');
+        $this->startFlow();
         $state = (string) $provider->lastState;
 
         $this->postJson('/api/auth/oauth/exchange', ['code' => $state]);
@@ -307,6 +336,172 @@ final class OAuthFlowTest extends WebTestCase
      * does nothing but call consume().
      */
 
+    // -- The flow is bound to the browser that started it ------------------
+
+    /**
+     * THE LOGIN-CSRF REGRESSION TEST. This is the one that was missing.
+     *
+     * `state` alone proves "this server started some flow". It does not prove
+     * "this browser started this flow", and without the second property the
+     * callback accepts a state and code from anyone holding them.
+     *
+     * The attack that exploits the gap: an attacker with a real account scripts
+     * the start endpoint, keeps `state`, completes the consent screen at the
+     * provider, and captures `code` from the provider's final 302 WITHOUT
+     * following it — so the state is never burned. They then get a victim to
+     * open the callback URL. Per the SPA contract the exchange fires with no
+     * user gesture, and the victim's browser is now signed in AS THE ATTACKER:
+     * every feed they add and every article they read lands in the attacker's
+     * account.
+     *
+     * Clearing the cookie jar is exactly that attacker — the state and code are
+     * genuine and unspent, and the only thing missing is the browser that
+     * started the flow.
+     */
+    public function testACallbackFromABrowserThatDidNotStartTheFlowIsRefused(): void
+    {
+        $this->persistUser('bob@example.com', UserStatus::Active);
+        $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+
+        $this->startFlow();
+        $state = (string) $provider->lastState;
+
+        // Everything the attacker cannot carry across to the victim's browser.
+        $this->client->getCookieJar()->clear();
+
+        $this->requestCallback(['state' => $state, 'code' => 'provider-code']);
+
+        self::assertResponseStatusCodeSame(302);
+        self::assertStringContainsString('error=invalid_state', $this->location());
+
+        // The two assertions that make this a security test rather than a
+        // string comparison: no login code was minted, and the provider was
+        // never spoken to — so the attacker's authorization code was not spent
+        // against the victim's browser.
+        self::assertStringNotContainsString('code=', $this->location());
+        self::assertSame([], $provider->exchanges);
+    }
+
+    /**
+     * The same refusal for a cookie that is present and well formed but wrong —
+     * the path that reaches the hash_equals comparison rather than short-
+     * circuiting on an absent cookie. A guessing attacker gets exactly this.
+     */
+    public function testACallbackWithAWrongFlowCookieIsRefused(): void
+    {
+        $this->persistUser('bob@example.com', UserStatus::Active);
+        $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+
+        $this->startFlow();
+        $state = (string) $provider->lastState;
+
+        $this->replaceFlowCookie(str_repeat('a', 64));
+
+        $this->requestCallback(['state' => $state, 'code' => 'provider-code']);
+
+        self::assertStringContainsString('error=invalid_state', $this->location());
+        self::assertStringNotContainsString('code=', $this->location());
+        self::assertSame([], $provider->exchanges);
+    }
+
+    /**
+     * A wrong cookie must not merely fail — it must BURN the state, so the
+     * comparison cannot be brute-forced by retrying the same live state with a
+     * different guess each time. The store deletes before it validates, and
+     * this is the endpoint-level proof of that ordering.
+     *
+     * Without it, a 64-hex-character binding would still be unguessable, but
+     * the property would rest on the search space alone rather than on the flow
+     * being single-use.
+     */
+    public function testAFailedBindingCheckBurnsTheStateSoItCannotBeRetried(): void
+    {
+        $this->persistUser('bob@example.com', UserStatus::Active);
+        $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+
+        $this->startFlow();
+        $state = (string) $provider->lastState;
+        $genuine = $this->flowCookieValue();
+
+        $this->replaceFlowCookie(str_repeat('a', 64));
+        $this->requestCallback(['state' => $state, 'code' => 'c']);
+        self::assertStringContainsString('error=invalid_state', $this->location());
+
+        // Now retry with the RIGHT cookie. The state is gone regardless.
+        $this->replaceFlowCookie($genuine);
+        $this->requestCallback(['state' => $state, 'code' => 'c']);
+
+        self::assertStringContainsString('error=invalid_state', $this->location());
+        self::assertSame([], $provider->exchanges);
+    }
+
+    /**
+     * The attributes, asserted on the wire rather than read off the source.
+     *
+     * `SameSite=None` is the one that looks wrong and is not. Apple returns its
+     * callback as a CROSS-SITE POST (`response_mode=form_post`), and a `Lax`
+     * cookie is not sent on a cross-site POST — so `Lax` would leave Google
+     * working perfectly and Apple failing every sign-in with `invalid_state`,
+     * which is the worst kind of bug to diagnose. `None` requires `Secure`.
+     *
+     * `__Host-` is what stops the binding being pinned: the prefix forbids a
+     * `Domain` attribute, so a sibling or parent host cannot write this cookie
+     * into the backend's origin even if one of them is compromised.
+     */
+    public function testTheFlowCookieCarriesTheAttributesTheCrossSitePostNeeds(): void
+    {
+        $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+
+        $this->startFlow();
+
+        $cookie = $this->responseCookie(OAuthController::FLOW_COOKIE);
+
+        self::assertTrue($cookie->isSecure(), 'SameSite=None is only honoured on a Secure cookie');
+        self::assertTrue($cookie->isHttpOnly(), 'no script needs to read the flow binding');
+        self::assertSame('none', $cookie->getSameSite(), "Apple's cross-site POST would not carry a Lax cookie");
+
+        // The two the __Host- prefix mandates, and which browsers enforce by
+        // rejecting the cookie outright if they are wrong.
+        self::assertSame('/', $cookie->getPath());
+        self::assertNull($cookie->getDomain());
+
+        // Bound to the flow's ten minutes, not to a browser session.
+        self::assertEqualsWithDelta(600, $cookie->getExpiresTime() - time(), 5);
+    }
+
+    /**
+     * The binding carries nothing about the user, because it is set before
+     * anyone is authenticated and on an endpoint a stranger can hit.
+     *
+     * A value derived from an address, an id or an IP would turn an
+     * unauthenticated endpoint into a tracking beacon that outlives the flow.
+     * This one is opaque random bytes and means nothing without the server-side
+     * entry it is hashed against.
+     */
+    public function testTheFlowCookieRevealsNothingAndIsClearedWhenTheFlowEnds(): void
+    {
+        $this->persistUser('bob@example.com', UserStatus::Active);
+        $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+
+        $this->startFlow();
+
+        $value = $this->flowCookieValue();
+        self::assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $value);
+        self::assertStringNotContainsString('bob', $value);
+
+        // Two flows never share a binding, so it cannot correlate visits.
+        $this->startFlow();
+        self::assertNotSame($value, $this->flowCookieValue());
+
+        // And it does not outlive the flow: the callback clears it, whatever
+        // the outcome, so nothing durable is left in the browser.
+        $this->requestCallback(['state' => (string) $provider->lastState, 'code' => 'c']);
+        self::assertNull(
+            $this->client->getCookieJar()->get(OAuthController::FLOW_COOKIE, '/', 'localhost'),
+            'the binding must not outlive the flow it binds',
+        );
+    }
+
     // -- The callback -----------------------------------------------------
 
     public function testAStateValueCannotBeReplayed(): void
@@ -314,7 +509,7 @@ final class OAuthFlowTest extends WebTestCase
         $this->persistUser('bob@example.com', UserStatus::Active);
         $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
 
-        $this->client->request('GET', '/api/auth/oauth/google');
+        $this->startFlow();
         $state = (string) $provider->lastState;
 
         $this->requestCallback(['state' => $state, 'code' => 'c']);
@@ -341,10 +536,14 @@ final class OAuthFlowTest extends WebTestCase
         $this->persistUser('bob@example.com', UserStatus::Active);
         $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
 
-        $this->client->request('GET', '/api/auth/oauth/google');
+        $this->startFlow();
         $state = (string) $provider->lastState;
 
-        $this->client->request('GET', '/api/auth/oauth/apple/callback', ['state' => $state, 'code' => 'c']);
+        $this->client->request(
+            'GET',
+            self::ORIGIN . '/api/auth/oauth/apple/callback',
+            ['state' => $state, 'code' => 'c'],
+        );
 
         self::assertResponseStatusCodeSame(302);
         self::assertStringContainsString('error=invalid_state', $this->location());
@@ -403,7 +602,7 @@ final class OAuthFlowTest extends WebTestCase
     {
         $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
 
-        $this->client->request('GET', '/api/auth/oauth/google');
+        $this->startFlow();
         $state = (string) $provider->lastState;
 
         $this->requestCallback(['state' => $state]);
@@ -461,10 +660,10 @@ final class OAuthFlowTest extends WebTestCase
         $this->persistUser('bob@example.com', UserStatus::Active);
         $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
 
-        $this->client->request('GET', '/api/auth/oauth/google');
+        $this->startFlow();
         $state = (string) $provider->lastState;
 
-        $this->client->request('POST', '/api/auth/oauth/google/callback', [
+        $this->client->request('POST', self::ORIGIN . '/api/auth/oauth/google/callback', [
             'state' => $state,
             'code' => 'provider-code',
         ]);
@@ -486,7 +685,7 @@ final class OAuthFlowTest extends WebTestCase
             failExchange: true,
         );
 
-        $this->client->request('GET', '/api/auth/oauth/google');
+        $this->startFlow();
         $state = (string) $provider->lastState;
 
         $this->requestCallback(['state' => $state, 'code' => 'c']);
@@ -501,7 +700,7 @@ final class OAuthFlowTest extends WebTestCase
 
     public function testAnUnconfiguredProviderIs404(): void
     {
-        $this->client->request('GET', '/api/auth/oauth/facebook');
+        $this->client->request('GET', self::ORIGIN . '/api/auth/oauth/facebook');
 
         self::assertResponseStatusCodeSame(404);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
@@ -515,7 +714,7 @@ final class OAuthFlowTest extends WebTestCase
      */
     public function testTheProvidersEndpointIsPublicAndListsGoogle(): void
     {
-        $this->client->request('GET', '/api/auth/oauth/providers');
+        $this->client->request('GET', self::ORIGIN . '/api/auth/oauth/providers');
 
         self::assertResponseIsSuccessful();
         self::assertSame(['providers' => ['google']], $this->payload());
@@ -540,11 +739,11 @@ final class OAuthFlowTest extends WebTestCase
         $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
 
         for ($i = 1; $i <= 20; ++$i) {
-            $this->client->request('GET', '/api/auth/oauth/google');
+            $this->startFlow();
             self::assertResponseStatusCodeSame(302, "start attempt {$i} should be within budget");
         }
 
-        $this->client->request('GET', '/api/auth/oauth/google');
+        $this->startFlow();
 
         self::assertResponseStatusCodeSame(429);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
@@ -571,12 +770,64 @@ final class OAuthFlowTest extends WebTestCase
         return $provider;
     }
 
+    // -- The flow cookie --------------------------------------------------
+
+    /**
+     * The binding value the browser is currently holding.
+     *
+     * Read from the JAR, not from the response, so it asserts what a browser
+     * would actually send back — a cookie the jar rejected (wrong scheme, wrong
+     * path) would be invisible here, which is the failure worth catching.
+     */
+    private function flowCookieValue(): string
+    {
+        $cookie = $this->client->getCookieJar()->get(OAuthController::FLOW_COOKIE, '/', 'localhost');
+        self::assertNotNull($cookie, 'the flow never set a binding cookie');
+
+        return $cookie->getValue();
+    }
+
+    /**
+     * Puts a binding of our choosing in the jar.
+     *
+     * The attributes are restated rather than copied off whatever is currently
+     * stored, because the callback CLEARS the cookie — so after one failed
+     * attempt there is nothing left to copy from. They must match what the
+     * controller sends, or the jar withholds the cookie for an unrelated reason
+     * and the test would pass without ever reaching the comparison.
+     */
+    private function replaceFlowCookie(string $value): void
+    {
+        $this->client->getCookieJar()->set(new BrowserKitCookie(
+            OAuthController::FLOW_COOKIE,
+            $value,
+            null,
+            '/',
+            'localhost',
+            secure: true,
+            httponly: true,
+            samesite: Cookie::SAMESITE_NONE,
+        ));
+    }
+
+    /** The cookie as the response set it, attributes intact. */
+    private function responseCookie(string $name): Cookie
+    {
+        foreach ($this->client->getResponse()->headers->getCookies() as $cookie) {
+            if ($cookie->getName() === $name) {
+                return $cookie;
+            }
+        }
+
+        self::fail("the response set no {$name} cookie");
+    }
+
     /** Runs start + callback and returns the one-time login code. */
     private function completeCallback(OAuthIdentity $identity): string
     {
         $provider = $this->fakeProvider($identity);
 
-        $this->client->request('GET', '/api/auth/oauth/google');
+        $this->startFlow();
         $state = (string) $provider->lastState;
 
         $this->requestCallback(['state' => $state, 'code' => 'c']);
@@ -584,17 +835,23 @@ final class OAuthFlowTest extends WebTestCase
         return $this->codeFromLocation();
     }
 
+    /** Step 1, over the scheme the flow cookie requires. */
+    private function startFlow(): void
+    {
+        $this->client->request('GET', self::ORIGIN . '/api/auth/oauth/google');
+    }
+
     /** @param array<string, string> $query */
     private function requestCallback(array $query): void
     {
-        $this->client->request('GET', '/api/auth/oauth/google/callback', $query);
+        $this->client->request('GET', self::ORIGIN . '/api/auth/oauth/google/callback', $query);
     }
 
     private function postJson(string $uri, mixed $payload): void
     {
         $this->client->request(
             'POST',
-            $uri,
+            self::ORIGIN . $uri,
             server: ['CONTENT_TYPE' => 'application/json'],
             content: (string) json_encode($payload),
         );

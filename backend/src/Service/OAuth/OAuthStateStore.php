@@ -12,18 +12,60 @@ use Psr\Clock\ClockInterface;
  * Holds the per-flow secrets between the redirect to the provider and the
  * provider's callback.
  *
- * Server-side, and not in a session, for two reasons. The API is stateless and
- * issues no session cookie at all; and Apple's callback is a cross-site POST
- * (`response_mode=form_post`), which a SameSite=Lax cookie would not accompany
- * — so a session-backed store would work for Google and mysteriously fail for
- * Apple.
+ * Server-side, and not in a session, because the API is stateless and issues no
+ * session cookie at all.
  *
- * What `state` buys us, given there is no session to bind to: it is an
- * unguessable value that must have been issued by this server, is destroyed on
- * first use, and expires in ten minutes. A callback carrying a code but no
- * valid state is discarded, which is what stops an attacker from feeding their
- * own authorization code into a victim's browser and silently linking the
- * victim's session to the attacker's provider account.
+ * ## `state` alone is not enough, and this class used to claim otherwise
+ *
+ * On its own, `state` is an unguessable value that must have been issued by
+ * this server, is destroyed on first use, and expires in ten minutes. Note what
+ * that proves: *this server started some flow*. It does NOT prove *this browser
+ * started this flow* — and the second property is the one that stops login
+ * CSRF.
+ *
+ * An earlier version of this docblock asserted that `state` alone "stops an
+ * attacker from feeding their own authorization code into a victim's browser".
+ * It does not, and cannot. The attack it fails to stop: an attacker with a real
+ * account scripts the start endpoint, keeps `state`, approves at the provider,
+ * and captures `code` from the provider's final redirect WITHOUT following it,
+ * so the state is never burned. They then get a victim to open the callback
+ * URL. Both values are genuine and unspent, so every check above passes, and
+ * the victim's browser ends up authenticated AS THE ATTACKER — every feed they
+ * add and every article they read landing in the attacker's account. It was
+ * proved by driving the endpoints with an empty cookie jar before it was fixed.
+ *
+ * ## The binding
+ *
+ * So `start()` also mints a `browserToken`, which the controller sets as a
+ * cookie, and stores only its DIGEST beside the flow. `consume()` requires the
+ * matching token back. A callback that cannot produce it is refused as though
+ * the state were unknown.
+ *
+ * Only a digest is stored, and compared with hash_equals, for the same reason
+ * the state itself is only ever a hashed cache key: for the ten minutes a flow
+ * is live the token is a bearer credential, and a readable cache directory must
+ * not be a list of usable ones.
+ *
+ * The token is minted here rather than accepted from the caller. Taking a
+ * caller-supplied value would let an attacker pin the binding to something they
+ * already know, which is the whole property being bought.
+ *
+ * **The cookie must be `SameSite=None`, and that is not a weakening.** Apple's
+ * callback is a cross-site POST (`response_mode=form_post`); a `Lax` cookie is
+ * not sent on a cross-site POST, so `Lax` would leave Google working perfectly
+ * and Apple failing every sign-in with `invalid_state`. `None` requires
+ * `Secure`. The confidentiality the `SameSite` attribute would have provided is
+ * supplied instead by the value being unguessable and single-use, and by the
+ * `__Host-` prefix, which forbids a `Domain` attribute and so keeps any other
+ * host — including a compromised sibling — from writing this cookie into the
+ * backend's origin. See OAuthController for the attributes as sent.
+ *
+ * ONE FLOW PER BROWSER AT A TIME. There is one cookie name, so starting a
+ * second sign-in overwrites the first flow's binding and the abandoned tab
+ * fails with `invalid_state`. That is the correct trade: the alternative is
+ * keeping a set of live bindings, which means an unauthenticated endpoint a
+ * stranger can call writes unboundedly to the browser. Somebody who opened two
+ * consent screens starts again; nobody is signed into the wrong account.
  *
  * SINGLE USE IS BEST-EFFORT UNDER CONCURRENCY — read this before relying on it.
  * consume() deletes the entry before validating it, which means a state that
@@ -70,21 +112,30 @@ final readonly class OAuthStateStore
         // free of any character needing escaping in a form-encoded body.
         $codeVerifier = self::randomToken();
 
+        // Goes to the browser in a cookie, never to the provider. See the class
+        // docblock: this is what makes `state` mean "this browser".
+        $browserToken = self::randomToken();
+
         $started = new OAuthStartState(
             $provider,
             $state,
             $nonce,
             $codeVerifier,
             self::challengeFor($codeVerifier),
+            $browserToken,
         );
 
         $item = $this->oauthStateCache->getItem(self::keyFor($state));
-        // Note what is absent: the state itself. It is the lookup key (hashed)
-        // and nothing more, so a readable cache file yields no usable state.
+        // Note what is absent: the state itself, and the browser token. Both
+        // are bearer credentials while the flow is live; the state is the
+        // lookup key (hashed) and the token is stored only as a digest, so a
+        // readable cache file yields neither a usable state nor a usable
+        // binding.
         $item->set([
             'provider' => $provider,
             'nonce' => $nonce,
             'code_verifier' => $codeVerifier,
+            'browser_digest' => self::digest($browserToken),
             'expires_at' => $this->clock->now()->getTimestamp() + self::LIFETIME_SECONDS,
         ]);
         $item->expiresAfter(self::LIFETIME_SECONDS);
@@ -95,13 +146,22 @@ final readonly class OAuthStateStore
 
     /**
      * Redeems a state value, destroying it. Returns null for every failure —
-     * unknown, already used, expired — because the callback must not report
-     * which.
+     * unknown, already used, expired, or presented by a browser that did not
+     * start this flow — because the callback must not report which.
+     *
+     * The binding failure is deliberately NOT distinguishable from the others.
+     * Collapsing them into one null is the whole point: a caller who could tell
+     * "wrong cookie" from "no such state" could probe for live states, and the
+     * controller has no error code for it either.
+     *
+     * @param string|null $browserToken the flow cookie the callback arrived
+     *                                  with, or null if it arrived with none —
+     *                                  which is itself a failure, not a bypass
      *
      * See the class docblock for what "single use" does and does not promise
      * when two callbacks arrive at once.
      */
-    public function consume(string $state): ?OAuthStartState
+    public function consume(string $state, ?string $browserToken): ?OAuthStartState
     {
         $key = self::keyFor($state);
         $item = $this->oauthStateCache->getItem($key);
@@ -120,8 +180,23 @@ final readonly class OAuthStateStore
             || !\is_string($stored['provider'] ?? null)
             || !\is_string($stored['nonce'] ?? null)
             || !\is_string($stored['code_verifier'] ?? null)
+            || !\is_string($stored['browser_digest'] ?? null)
             || !\is_int($stored['expires_at'] ?? null)
         ) {
+            return null;
+        }
+
+        // The browser binding. A callback that cannot produce the token this
+        // flow was started with is refused here — that refusal is what makes
+        // this class's promise "this browser started this flow" rather than
+        // "this server started some flow". See the class docblock for the login
+        // CSRF this closes.
+        //
+        // Note the position: AFTER the deleteItem() above, so a wrong token
+        // burns the state rather than leaving it live to be guessed against
+        // again. hash_equals because the stored value is a secret-derived
+        // digest and a byte-at-a-time comparison leaks its prefix.
+        if (null === $browserToken || !hash_equals($stored['browser_digest'], self::digest($browserToken))) {
             return null;
         }
 
@@ -166,7 +241,17 @@ final readonly class OAuthStateStore
      */
     private static function keyFor(string $state): string
     {
-        return self::KEY_PREFIX . hash('sha256', $state);
+        return self::KEY_PREFIX . self::digest($state);
+    }
+
+    /**
+     * The one hash used for both the cache key and the browser binding, so the
+     * two cannot drift apart. Unsalted SHA-256 for the reason given above: every
+     * input is 32 bytes from random_bytes().
+     */
+    private static function digest(string $value): string
+    {
+        return hash('sha256', $value);
     }
 
     private static function randomToken(): string
