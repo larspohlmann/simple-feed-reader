@@ -11,3 +11,8 @@
 
 # Application repo: composer.lock must be committed (overrides user-global ignore)
 !/composer.lock
+
+###> phpunit/phpunit ###
+/phpunit.xml
+/.phpunit.cache/
+###< phpunit/phpunit ###

@@ -18,7 +18,10 @@
         "phpstan/phpstan": "^2.1",
         "phpstan/phpstan-doctrine": "^2.0",
         "phpstan/phpstan-symfony": "^2.0",
-        "squizlabs/php_codesniffer": "^3.10"
+        "phpunit/phpunit": "^12.5",
+        "squizlabs/php_codesniffer": "^3.10",
+        "symfony/browser-kit": "7.3.*",
+        "symfony/css-selector": "7.3.*"
     },
     "config": {
         "allow-plugins": {
