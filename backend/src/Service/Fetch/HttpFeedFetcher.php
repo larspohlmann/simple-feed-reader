@@ -109,6 +109,8 @@ final class HttpFeedFetcher implements FeedFetcherInterface
                 },
             ]);
         } catch (ExceptionInterface $e) {
+            $this->rethrowTooLarge($e);
+
             throw new FeedUnreachableException(sprintf('%s: %s', $url, $e->getMessage()), previous: $e);
         }
     }
