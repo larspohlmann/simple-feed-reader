@@ -196,6 +196,33 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertCount(2, $this->fetcher->fetchedUrls);
     }
 
+    /**
+     * The user endpoint polls until `remaining` reaches 0. A run that processes
+     * nothing leaves `remaining` unchanged, so a budget at or below the safety
+     * margin would spin the client forever. Guarantee one feed of progress.
+     */
+    public function testBudgetSmallerThanTheSafetyMarginStillProcessesOneFeed(): void
+    {
+        $first = $this->dueFeed('https://one.example.com/feed');
+        $second = $this->dueFeed('https://two.example.com/feed');
+        $this->em->flush();
+
+        foreach ([$first, $second] as $feed) {
+            $this->fetcher->willReturn(
+                $feed->getUrl(),
+                FetchResponse::notModified($feed->getUrl(), false, null, null),
+            );
+        }
+
+        $report = $this->runner()->run(RefreshRequest::allDue(3));
+
+        self::assertSame(1, $report->notModified);
+        self::assertSame(1, $report->skippedForBudget);
+        self::assertSame([$first->getUrl()], $this->fetcher->fetchedUrls);
+        // Progress was made, so a polling caller converges instead of looping.
+        self::assertSame(1, $report->remaining);
+    }
+
     public function testBusyWhenLockIsHeld(): void
     {
         $lock = $this->lockFactory->createLock('feed-refresh');

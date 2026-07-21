@@ -86,7 +86,12 @@ final class RefreshRunner
         $skippedForBudget = 0;
 
         foreach ($feeds as $index => $feed) {
-            if ($deadline - $this->clock->now()->getTimestamp() < self::SAFETY_MARGIN_SECONDS) {
+            // The first feed is always attempted. A run that returns without
+            // touching anything leaves `remaining` unchanged, and the user
+            // endpoint polls until `remaining` hits 0 — so a budget at or below
+            // the safety margin would spin the client forever. One feed per
+            // call is slow; zero feeds per call never terminates.
+            if ($index > 0 && $deadline - $this->clock->now()->getTimestamp() < self::SAFETY_MARGIN_SECONDS) {
                 $skippedForBudget = \count($feeds) - $index;
                 break;
             }
