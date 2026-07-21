@@ -12,6 +12,10 @@
 # Application repo: composer.lock must be committed (overrides user-global ignore)
 !/composer.lock
 
+# Symfony 7.4 auto-generates this config reference on every cache warmup.
+# Build artifact, depends on installed bundles - not source.
+/config/reference.php
+
 ###> phpunit/phpunit ###
 /phpunit.xml
 /.phpunit.cache/
