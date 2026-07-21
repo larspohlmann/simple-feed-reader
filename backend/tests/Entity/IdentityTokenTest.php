@@ -43,6 +43,39 @@ final class IdentityTokenTest extends DbTestCase
         $this->addToAssertionCount(1);
     }
 
+    /**
+     * Plan 3b links an OAuth identity to an existing account by matching the
+     * provider-verified address. If a provider returns `Bob@example.com` for an
+     * account stored as `bob@example.com`, an unnormalised copy here would make
+     * that comparison fail and OAuth would create a second orphaned account
+     * instead of linking to the rightful owner.
+     *
+     * The identity's provider_user_id is deliberately left untouched — it is an
+     * opaque token that may be case-significant, and it is the half of
+     * uniq_identity_provider_uid that actually matters.
+     */
+    public function testIdentityEmailIsNormalisedButProviderIdIsNot(): void
+    {
+        $user = new User('owner@example.com', new \DateTimeImmutable('2026-07-21 10:00:00'));
+        $this->em->persist($user);
+
+        $identity = new UserIdentity($user, 'google', 'AbC123XyZ', new \DateTimeImmutable('2026-07-21 10:00:00'));
+        $identity->setEmail('  Bob.Smith@Example.COM ');
+
+        self::assertSame('bob.smith@example.com', $identity->getEmail());
+        self::assertSame('AbC123XyZ', $identity->getProviderUserId());
+    }
+
+    public function testIdentityEmailStaysNullWhenTheProviderGivesNone(): void
+    {
+        $user = new User('owner2@example.com', new \DateTimeImmutable('2026-07-21 10:00:00'));
+        $identity = new UserIdentity($user, 'google', 'uid-2', new \DateTimeImmutable('2026-07-21 10:00:00'));
+
+        $identity->setEmail(null);
+
+        self::assertNull($identity->getEmail());
+    }
+
     public function testActionTokenLifecycle(): void
     {
         $now = new \DateTimeImmutable('2026-07-21 12:00:00');

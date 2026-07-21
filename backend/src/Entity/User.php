@@ -42,12 +42,38 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function __construct(string $email, \DateTimeImmutable $createdAt)
     {
+        $email = self::normalizeEmail($email);
+
         if ('' === $email) {
             throw new \InvalidArgumentException('User email must not be empty.');
         }
 
         $this->email = $email;
         $this->createdAt = $createdAt;
+    }
+
+    /**
+     * The single definition of what makes two addresses the same account.
+     *
+     * This exists because the storage layer does not agree with itself: SQLite
+     * (dev and test) compares VARCHAR case-sensitively, while MySQL production
+     * runs a utf8mb4 _ci collation that does not — and that collation also
+     * governs the uniq_user_email index. Left alone, `Bob@example.com` opens a
+     * second account on SQLite and collides on MySQL, so CI can be green while
+     * production silently refuses a signup.
+     *
+     * Normalising to lowercase on the way in makes the two engines agree, and
+     * doing it here — rather than at each call site — is what keeps the entity,
+     * the repository and the security provider from drifting apart. Every
+     * lookup path must run input through this before comparing.
+     *
+     * strtolower, not mb_strtolower: Assert\Email in html5 mode already refuses
+     * non-ASCII addresses, and strtolower is locale-independent in PHP 8, so
+     * there is no Turkish-dotless-i hazard to inherit.
+     */
+    public static function normalizeEmail(string $email): string
+    {
+        return strtolower(trim($email));
     }
 
     public function getId(): ?int

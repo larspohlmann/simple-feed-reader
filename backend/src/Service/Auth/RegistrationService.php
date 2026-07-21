@@ -77,12 +77,23 @@ final readonly class RegistrationService
         );
     }
 
-    /** @return bool false when the token is unknown, used, or expired */
-    public function verifyEmail(string $plainToken): bool
+    /**
+     * Returns the account's status *after* verification, so the caller can
+     * report what is actually true rather than what is usually true.
+     *
+     * The distinction matters: an admin may have approved the account between
+     * the mail being sent and the link being clicked, in which case the user is
+     * already Active. Answering a blanket "pending_approval" there would tell
+     * someone who can sign in right now to sit and wait for an approval that
+     * already happened.
+     *
+     * @return UserStatus|null null when the token is unknown, used, or expired
+     */
+    public function verifyEmail(string $plainToken): ?UserStatus
     {
         $user = $this->tokens->consume($plainToken, TokenPurpose::VerifyEmail);
         if (null === $user) {
-            return false;
+            return null;
         }
 
         // Re-verifying an already-approved account must not demote it back to
@@ -92,7 +103,7 @@ final readonly class RegistrationService
             $this->em->flush();
         }
 
-        return true;
+        return $user->getStatus();
     }
 
     /**

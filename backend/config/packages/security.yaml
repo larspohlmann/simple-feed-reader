@@ -18,7 +18,13 @@ security:
         app_users:
             entity:
                 class: App\Entity\User
-                property: email
+                # No `property: email` on purpose. That option makes
+                # EntityUserProvider query the submitted identifier verbatim,
+                # which would bypass the case normalisation every write and
+                # every other lookup goes through — so a user who registered as
+                # `bob@` and typed `Bob@` here would get an unexplained 401.
+                # Omitting it delegates to UserRepository::loadUserByIdentifier,
+                # keeping normalisation in exactly one place.
 
     firewalls:
         dev:

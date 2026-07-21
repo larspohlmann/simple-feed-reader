@@ -241,6 +241,25 @@ final class RegistrationTest extends WebTestCase
         self::assertEmailCount(0, message: 'the duplicate registration must mail nothing');
     }
 
+    /**
+     * Case-variant addresses are the same account. On SQLite an unnormalised
+     * lookup would create a second row here; on MySQL the _ci unique index
+     * would reject the insert and - since the race handler swallows that - the
+     * user would get a 202, no account and no mail, with nothing to explain it.
+     * Same assertion, both engines, which is the point.
+     */
+    public function testACaseVariantOfAnExistingAddressIsTreatedAsADuplicate(): void
+    {
+        $this->register();
+        self::assertResponseStatusCodeSame(202);
+
+        $this->register(['email' => 'NewComer@Example.COM']);
+
+        self::assertResponseStatusCodeSame(202);
+        self::assertEmailCount(0, message: 'a case variant must not trigger a second verification mail');
+        self::assertCount(1, $this->users()->findAll());
+    }
+
     public function testVerificationMovesTheUserToPendingApproval(): void
     {
         $this->register();
@@ -422,5 +441,8 @@ final class RegistrationTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(UserStatus::Active, $user->getStatus());
+        // Must report what is true, not the usual case: this user can sign in
+        // now, and telling them to wait for an admin would be a lie.
+        self::assertSame(['status' => 'active'], $this->payload());
     }
 }

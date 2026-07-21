@@ -79,6 +79,33 @@ final class LoginTest extends WebTestCase
         self::assertCount(3, explode('.', $payload['token']));
     }
 
+    /**
+     * The trap that comes with normalising on write: addresses are stored
+     * lowercase, so if the security provider queried the raw submission a user
+     * whose client capitalises the first letter would get a bare 401 forever,
+     * with the password they typed being correct. Both directions are checked -
+     * registering mixed and typing lower, and the reverse.
+     *
+     * @return iterable<string, array{string, string}>
+     */
+    public static function casingProvider(): iterable
+    {
+        yield 'registered mixed, typed lower' => ['MixedCase@Example.com', 'mixedcase@example.com'];
+        yield 'registered lower, typed upper' => ['plain@example.com', 'PLAIN@EXAMPLE.COM'];
+        yield 'registered lower, typed mixed' => ['plain2@example.com', 'Plain2@Example.Com'];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('casingProvider')]
+    public function testLoginIsCaseInsensitiveOnTheEmail(string $registered, string $typed): void
+    {
+        $client = self::createClient();
+        $this->factory()->create($registered);
+
+        $this->login($client, $typed, 'correct-horse-battery');
+
+        self::assertResponseIsSuccessful();
+    }
+
     public function testWrongPasswordIs401ProblemJson(): void
     {
         $client = self::createClient();

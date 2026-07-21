@@ -204,6 +204,21 @@ final class PasswordResetTest extends WebTestCase
         self::assertEmailCount(0);
     }
 
+    /**
+     * Recovery must not depend on reproducing the exact casing used at signup -
+     * the one thing a user who has lost their password is least likely to
+     * remember.
+     */
+    public function testResetRequestFindsTheAccountRegardlessOfCasing(): void
+    {
+        $this->factory()->create('casey@example.com');
+
+        $this->requestReset('CaseY@Example.COM');
+
+        self::assertResponseIsSuccessful();
+        self::assertEmailCount(1);
+    }
+
     public function testResetChangesThePasswordEndToEnd(): void
     {
         $this->factory()->create('resetme@example.com');

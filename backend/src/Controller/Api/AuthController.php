@@ -110,11 +110,16 @@ final class AuthController
     #[Route('/verify-email', name: 'api_auth_verify_email', methods: ['POST'])]
     public function verifyEmail(#[MapRequestPayload] VerifyEmailRequest $request): JsonResponse
     {
-        if (!$this->registration->verifyEmail($request->token)) {
+        $status = $this->registration->verifyEmail($request->token);
+
+        if (null === $status) {
             throw new InvalidTokenException();
         }
 
-        return new JsonResponse(['status' => 'pending_approval']);
+        // The real status, not a hardcoded one: an account approved between the
+        // mail going out and the link being clicked is already active, and
+        // telling that user to wait would be simply false.
+        return new JsonResponse(['status' => $status->value]);
     }
 
     #[Route('/password-reset-request', name: 'api_auth_password_reset_request', methods: ['POST'])]
