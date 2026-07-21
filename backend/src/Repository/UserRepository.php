@@ -72,4 +72,25 @@ class UserRepository extends ServiceEntityRepository implements UserLoaderInterf
 
         return $users;
     }
+
+    /**
+     * Feeds the purge command: accounts that never confirmed their address and
+     * are past the grace period, so the address can be released for its real
+     * owner to register.
+     *
+     * @return list<User>
+     */
+    public function findUnverifiedCreatedBefore(\DateTimeImmutable $cutoff): array
+    {
+        /** @var list<User> $users */
+        $users = $this->createQueryBuilder('u')
+            ->andWhere('u.status = :status')
+            ->andWhere('u.createdAt < :cutoff')
+            ->setParameter('status', UserStatus::PendingVerification)
+            ->setParameter('cutoff', $cutoff)
+            ->getQuery()
+            ->getResult();
+
+        return $users;
+    }
 }
