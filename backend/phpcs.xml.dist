@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<ruleset name="simple-feed-reader">
+    <description>PSR-12 for the backend.</description>
+    <arg name="extensions" value="php"/>
+    <arg name="colors"/>
+    <arg value="p"/>
+    <rule ref="PSR12"/>
+    <file>src</file>
+    <file>tests</file>
+</ruleset>

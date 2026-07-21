@@ -15,6 +15,10 @@
         "symfony/yaml": "7.3.*"
     },
     "require-dev": {
+        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan-doctrine": "^2.0",
+        "phpstan/phpstan-symfony": "^2.0",
+        "squizlabs/php_codesniffer": "^3.10"
     },
     "config": {
         "allow-plugins": {
@@ -58,7 +62,11 @@
         ],
         "post-update-cmd": [
             "@auto-scripts"
-        ]
+        ],
+        "cs": "phpcs",
+        "cs:fix": "phpcbf",
+        "stan": "phpstan analyse --memory-limit=512M",
+        "check": ["@cs", "@stan"]
     },
     "conflict": {
         "symfony/symfony": "*"
