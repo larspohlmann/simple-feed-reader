@@ -21,7 +21,8 @@ A visitor clicks "Sign in with Google". Five things then happen:
    code. The backend trades that code for a verified identity, finds or creates
    the local account, and redirects the browser to
    `<APP_FRONTEND_URL>/auth/callback?code=…`.
-4. The SPA reads that `code` and `POST`s it to `/api/auth/oauth/exchange`.
+4. The SPA reads that `code` and `POST`s it to `/api/auth/oauth/exchange`,
+   **with credentials** (section 7.3 — this trips people up).
 5. It gets back a normal JWT — the same token `POST /api/auth/login` issues.
 
 **Why the extra hop in steps 3–4.** The `code` in the redirect is *not* the JWT
@@ -30,6 +31,11 @@ and is not the provider's authorization code. It is a one-time value that lives
 written into browser history, forwarded in `Referer` headers, and logged
 verbatim by every proxy and access log on the way. The JWT never appears in a
 URL anywhere in this system.
+
+**Steps 1, 3 and 4 are tied to one browser.** A cookie set at step 1 is required
+again at step 3 and at step 4. Neither the `state` nor the login code is a
+bearer value that works from anywhere — see section 4.2 for the login CSRF that
+buys, and section 7.3 for what the SPA must do about it.
 
 ---
 
@@ -135,7 +141,8 @@ and therefore the authorization code — somewhere else.
 
 `APP_FRONTEND_URL` (already used by the mailer) is the other half: it is where
 the callback sends the browser at step 3, and it is likewise a deployment-time
-value that no request can influence.
+value that no request can influence. It is **also the CORS origin** — see
+section 4.3, which matters more than it used to.
 
 ### 4.1 It must be `https`, and that is not merely advice
 
@@ -173,6 +180,32 @@ a callback that cannot produce it is refused as `invalid_state`, indistinguish-
 able from an unknown or expired state. The cookie carries nothing identifying,
 is different for every flow, and is cleared when the flow ends.
 
+**The same cookie is required again at the exchange, and that is the other
+half.** Binding only the callback forces the attacker to complete the flow in
+their own browser — it does not stop them walking away with the login code that
+falls out of it. If the code were a pure bearer value, they would run a genuine
+sign-in, *not* redeem the code, and inside its 30 seconds point a victim at
+`<APP_FRONTEND_URL>/auth/callback?code=…`. The SPA exchanges it and the victim
+holds the attacker's session: the same outcome as above, narrowed to a
+30-second window and entirely scriptable.
+
+So the login code is bound to the same browser as the flow that earned it. The
+backend stores a digest of the flow cookie alongside the user id and requires
+the matching cookie back at `POST /api/auth/oauth/exchange`. A missing or
+mismatched cookie is a `400 invalid_token` — deliberately the *same* answer as
+an unknown, spent or expired code, because a caller who could tell those apart
+could confirm that a captured code was still live.
+
+**This is why the SPA must send the exchange with `credentials: 'include'`**
+(section 7.3). It is a hard requirement, not a hardening step, and forgetting it
+produces the most confusing failure this design has.
+
+The cookie therefore lives slightly longer than the flow's ten minutes — ten
+minutes and thirty seconds, the state's life plus the code's — so that a
+callback arriving in the final second of a state's life still hands the browser
+a code it can actually exchange. It is cleared on every failed callback, and on
+a successful exchange.
+
 It is `SameSite=None`, which looks like a weakening and is the opposite. Apple
 returns its callback as a **cross-site POST** (`response_mode=form_post`), and a
 `Lax` cookie is not sent on a cross-site POST — so `Lax` would leave Google
@@ -182,7 +215,74 @@ unspent `state`.
 
 **One sign-in at a time per browser.** There is one cookie, so starting a second
 sign-in replaces the first flow's binding and the abandoned tab will fail with
-`invalid_state`. Starting again works.
+`invalid_state`. Starting again works. The same applies for the ~30 seconds
+between a callback and its exchange: starting a fresh sign-in in that gap
+replaces the binding the pending code needs, and the pending exchange fails with
+`invalid_token`. Starting again works.
+
+### 4.3 `APP_FRONTEND_URL` is the CORS origin
+
+The SPA's exchange call is a **credentialed cross-origin request** whenever the
+frontend and the backend are served from different origins. The backend answers
+it with:
+
+```http
+Access-Control-Allow-Origin: <APP_FRONTEND_URL's origin>
+Access-Control-Allow-Credentials: true
+```
+
+The allowed origin is that one exact value — scheme, host and port, with any
+path or trailing slash stripped. It is never `*`, and cannot be configured to
+be: browsers reject `*` on a credentialed request outright, so a wildcard would
+break every OAuth sign-in as well as being wrong. There is no allow-list and no
+pattern syntax; if you need a second origin, that is a code change, on purpose.
+
+Two consequences worth knowing:
+
+- **Get `APP_FRONTEND_URL` wrong and the SPA's exchange fails as a browser CORS
+  error**, not as an API error — so it will not show up in your problem+json
+  handling. Check the browser console before checking the server log.
+- **A same-origin deployment needs none of this and is unaffected.** If the SPA
+  and the API share an origin the browser applies no CORS at all; the headers
+  are emitted and ignored.
+
+**Different port is a different origin but the same site.** Local development
+runs the SPA on `http://localhost:4200` and the API on `http://localhost:8000`.
+Those are different *origins*, so CORS applies and the configuration above is
+required. They are the same *site*, because ports play no part in a site — so
+the flow cookie is not a third-party cookie locally, and `SameSite` is not what
+makes local development work. See section 4.4.
+
+### 4.4 Third-party cookie restrictions: the honest position
+
+The flow cookie is `SameSite=None`, which is the class of cookie browsers
+restrict most aggressively. Whether that affects a given deployment depends
+entirely on one question: **are the frontend and the backend on the same
+site** — that is, the same registrable domain?
+
+| Deployment | Exchange cookie is | Affected? |
+|---|---|---|
+| One origin (`example.com` serves both) | first-party | No. No CORS, no cross-site request. |
+| `example.com` + `api.example.com` | first-party (same site) | No. |
+| `localhost:4200` + `localhost:8000` | first-party (same site) | No. |
+| `example.com` + `api.some-other-host.net` | **third-party** | **Yes.** |
+
+Only the last row is at risk, and there it is a real risk, not a theoretical
+one. Safari's ITP blocks third-party cookies by default today, and the exchange
+XHR would silently carry no cookie — producing a `400` that looks exactly like a
+bad code, for every Safari user, permanently. Chrome's third-party cookie
+phase-out would do the same for Chrome.
+
+Note what is *not* affected even there: the provider callback itself. That is a
+top-level navigation to the backend's own origin — Apple's `form_post` is a
+cross-site POST, but the destination is first-party to the cookie — so ITP does
+not touch it. It is specifically the exchange XHR that would break.
+
+**Recommendation: deploy the frontend and backend on the same site.** That is
+the shape this application expects, it is the shape the default configuration
+describes, and it makes the entire question moot. A cross-site split is
+supportable only for as long as third-party cookies are, which is not a
+foundation worth building on.
 
 ---
 
@@ -250,7 +350,7 @@ GET  /api/auth/oauth/{provider}         → 302 to the provider's consent screen
      or
      <APP_FRONTEND_URL>/auth/callback?error=<code>
 
-POST /api/auth/oauth/exchange  { "code": "…" }
+POST /api/auth/oauth/exchange  { "code": "…" }   ← MUST send credentials
                                         → 200 { "token": "<jwt>" }
                                         → 400 problem+json  invalid_token
                                         → 403 problem+json  account_not_active
@@ -280,11 +380,82 @@ parameters.
 `POST /api/auth/login`. From that point on there is nothing OAuth-specific about
 the session.
 
-Do this **immediately** on route activation. The code expires 30 seconds after
-it was issued and is destroyed on first use, which also means: do not retry a
-failed exchange with the same code, and expect a page reload of
-`/auth/callback?code=…` to fail. Strip the query string from the URL once
+#### The exchange must send credentials. Read this before you debug anything.
+
+```js
+const res = await fetch(`${API}/api/auth/oauth/exchange`, {
+  method: 'POST',
+  credentials: 'include',            // ← REQUIRED. Not optional. Not a nicety.
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ code }),
+});
+```
+
+`credentials: 'include'` is not a default in `fetch` for cross-origin requests,
+and omitting it is the single most likely mistake to make on this endpoint.
+
+The code alone is **not** enough to sign in. It is bound to the browser that
+completed the sign-in, and the proof of that is the `__Host-oauth_flow` cookie
+the backend set at step 1 (section 4.2). Without the cookie the backend cannot
+tell your legitimate exchange from an attacker replaying a code they captured,
+so it refuses.
+
+**Here is the failure mode, and it is a nasty one.** If you forget
+`credentials: 'include'`, you get:
+
+```
+400  { "type": "invalid_token", "title": "…" }
+```
+
+That is *byte for byte* the response an unknown, expired or already-used code
+gets. It is identical on purpose — telling the two apart would let an attacker
+confirm a captured code was live — but it means the error text will send you
+looking for an expired code, a double-submit, a clock problem or a caching bug,
+none of which are the problem. **A `400 invalid_token` on an exchange you are
+certain just happened is almost always a missing `credentials: 'include'`.**
+Check that first. Confirm it by looking for a `Cookie:` header on the exchange
+request in the network tab — if it is absent, that is your bug.
+
+Two related things that will produce the same 400:
+
+- `APP_FRONTEND_URL` not matching the origin the SPA is actually served from,
+  so the browser strips the credentials (section 4.3). This one usually also
+  logs a CORS error to the console.
+- A cross-site frontend/backend split with third-party cookies blocked, which
+  affects Safari today (section 4.4). This one produces *no* console error,
+  which makes it the worst of the three to diagnose.
+
+#### When to exchange
+
+The code expires 30 seconds after it was issued and is destroyed on first use.
+So: do not retry a failed exchange with the same code, and expect a page reload
+of `/auth/callback?code=…` to fail. Strip the query string from the URL once
 exchanged.
+
+**On whether to exchange automatically on landing — a change of advice.** This
+document previously said to do it *immediately* on route activation. That is
+still workable and is no longer a vulnerability, but the recommendation is now:
+
+> Render a brief **"Continue as …"** confirmation and exchange on the click.
+
+The reasoning, stated plainly so you can overrule it: the gesture-free
+auto-POST is what made *both* halves of the login-CSRF attack in section 4.2
+work end to end. An attacker only had to get a victim's browser to *load* a URL,
+which is a link, an image tag or a redirect — no interaction at all. Both halves
+are now closed by the browser binding, and the binding is what the security
+rests on; the gesture is defence in depth, not the control.
+
+But it is cheap defence in depth. It costs one click on a page the user reached
+by deliberately signing in, and it converts any future hole in the binding from
+"attacker sends a link" into "attacker must convince the victim to click a
+button that says the wrong name" — which is exactly the moment a user notices
+something is wrong, because the name on the button is not theirs.
+
+The cost is real and you may weigh it differently: a click on a page that
+appears mid-redirect feels like an interruption, and the 30-second code window
+means a user who wanders off returns to a dead page and must start over. If you
+auto-POST anyway, nothing here breaks — the binding still holds. Just know that
+you are spending the defence in depth, not the defence.
 
 **`?error=…`** — one of exactly four values:
 
@@ -303,9 +474,11 @@ whatever ends up there tomorrow.
 
 **`200`** — `{ "token": "<jwt>" }`. Done.
 
-**`400`**, `"type": "invalid_token"` — the code was unknown, already spent, or
-expired. Indistinguishable from each other on purpose. Send the user back to the
-login page to start over.
+**`400`**, `"type": "invalid_token"` — the code was unknown, already spent,
+expired, **or arrived without the flow cookie that binds it to this browser**.
+Indistinguishable from each other on purpose (section 4.2). Send the user back
+to the login page to start over — but if you are seeing this during development
+on a code you know is fresh, read the credentials warning in section 7.3 first.
 
 **`403`**, `"type": "account_not_active"` — the sign-in worked and the account
 may not log in yet. The problem payload carries an `accountStatus` extension
