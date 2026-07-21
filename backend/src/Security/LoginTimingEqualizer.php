@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Security;
 
-use App\Entity\User;
-use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactoryInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Security\Core\Exception\UserNotFoundException;
 
@@ -20,9 +18,9 @@ use Symfony\Component\Security\Core\Exception\UserNotFoundException;
  * though the two responses are byte-for-byte identical.
  *
  * Performing one throwaway hash on the not-found path costs the same order of
- * work as the verify it stands in for. This is deliberately NOT an attempt at
- * constant time — unreachable in PHP, and not the bar. The bar is removing the
- * bcrypt-shaped step that makes enumeration trivially scriptable.
+ * work as the verify it stands in for. That hash now lives in
+ * PasswordWorkEqualizer, which registration shares — this class is only the
+ * login-specific decision of *when* to spend it.
  *
  * Invoked from LoginFailureHandler rather than a LoginFailureEvent subscriber
  * on purpose: SecurityBundle copies globally registered security listeners onto
@@ -33,14 +31,8 @@ use Symfony\Component\Security\Core\Exception\UserNotFoundException;
  */
 final readonly class LoginTimingEqualizer
 {
-    /**
-     * Never a real credential — only the hasher's workload matters, and for
-     * bcrypt/argon2 that is set by the cost parameters, not by the input.
-     */
-    private const DUMMY_PASSWORD = 'timing-equalisation-placeholder';
-
     public function __construct(
-        private PasswordHasherFactoryInterface $hasherFactory,
+        private PasswordWorkEqualizer $work,
     ) {
     }
 
@@ -50,10 +42,7 @@ final readonly class LoginTimingEqualizer
             return;
         }
 
-        // hash(), not verify(): one bcrypt/argon2 computation either way, and
-        // it stays correct if the configured algorithm or cost ever changes —
-        // a hard-coded dummy hash would silently drift out of calibration.
-        $this->hasherFactory->getPasswordHasher(User::class)->hash(self::DUMMY_PASSWORD);
+        $this->work->spendOneHash();
     }
 
     /**

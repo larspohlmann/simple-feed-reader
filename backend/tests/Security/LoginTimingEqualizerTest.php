@@ -7,6 +7,7 @@ namespace App\Tests\Security;
 use App\Entity\User;
 use App\Security\AccountStatusException;
 use App\Security\LoginTimingEqualizer;
+use App\Security\PasswordWorkEqualizer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactoryInterface;
 use Symfony\Component\PasswordHasher\PasswordHasherInterface;
@@ -23,7 +24,7 @@ final class LoginTimingEqualizerTest extends TestCase
 {
     private function equalizer(PasswordHasherFactoryInterface $factory): LoginTimingEqualizer
     {
-        return new LoginTimingEqualizer($factory);
+        return new LoginTimingEqualizer(new PasswordWorkEqualizer($factory));
     }
 
     private function factoryExpectingHashes(int $times): PasswordHasherFactoryInterface

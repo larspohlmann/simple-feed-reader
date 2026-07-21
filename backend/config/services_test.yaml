@@ -60,6 +60,14 @@ services:
     # bytes, so a stale marker can never collide with a fresh challenge and the
     # rate-limiter's cross-run bleed problem does not arise here. Exposed anyway
     # so a test that wants a guaranteed-clean pool can clear it.
+    App\Security\PasswordWorkEqualizer:
+        autowire: true
+        public: true
+
+    App\Service\Mail\DeferredMailer:
+        autowire: true
+        public: true
+
     test.cache.altcha_replay:
         alias: altcha.replay.cache
         public: true

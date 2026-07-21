@@ -22,3 +22,15 @@ services:
     # please note that last definitions always *replace* previous ones
     App\Service\Fetch\DnsResolverInterface: '@App\Service\Fetch\NativeDnsResolver'
     App\Service\Fetch\FeedFetcherInterface: '@App\Service\Fetch\HttpFeedFetcher'
+
+    # Account mail is queued and sent on kernel.terminate, after the response
+    # has been flushed — see App\Service\Mail\DeferredMailer for why that is a
+    # security property and not just a latency win.
+    #
+    # Bound here rather than by decorating `mailer.mailer`, so the indirection
+    # is visible at the one call site it applies to and AccountMailer keeps
+    # depending on the plain MailerInterface (its unit test injects its own).
+    # DeferredMailer itself autowires the real mailer, so there is no cycle.
+    App\Service\Mail\AccountMailer:
+        arguments:
+            $mailer: '@App\Service\Mail\DeferredMailer'

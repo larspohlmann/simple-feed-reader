@@ -6,6 +6,7 @@ namespace App\Tests\Service\Auth;
 
 use App\Repository\UserRepository;
 use App\Service\Auth\ActionTokenService;
+use App\Security\PasswordWorkEqualizer;
 use App\Service\Auth\RegistrationService;
 use App\Service\Mail\AccountMailer;
 use App\Tests\DbTestCase;
@@ -39,8 +40,18 @@ final class RegistrationServiceTest extends DbTestCase
         $mailer = $container->get(AccountMailer::class);
         /** @var ClockInterface $clock */
         $clock = $container->get(ClockInterface::class);
+        /** @var PasswordWorkEqualizer $work */
+        $work = $container->get(PasswordWorkEqualizer::class);
 
-        return new RegistrationService($this->em, $blindRepository, $hasher, $tokens, $mailer, $clock);
+        return new RegistrationService(
+            $this->em,
+            $blindRepository,
+            $hasher,
+            $tokens,
+            $mailer,
+            $clock,
+            $work,
+        );
     }
 
     /**
