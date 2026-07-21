@@ -26,7 +26,7 @@ use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactoryInterface;
  * The bar is removing the argon2-shaped cliff that makes enumeration a matter
  * of timing one request instead of many.
  */
-final readonly class PasswordWorkEqualizer
+final readonly class PasswordWorkEqualizer implements PasswordWorkEqualizerInterface
 {
     /**
      * Never a real credential — only the hasher's workload matters, and for
