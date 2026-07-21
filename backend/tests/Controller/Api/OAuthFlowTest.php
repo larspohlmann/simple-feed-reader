@@ -144,6 +144,34 @@ final class OAuthFlowTest extends WebTestCase
         self::assertCount(1, $this->em()->getRepository(UserIdentity::class)->findAll());
     }
 
+    /**
+     * The other first sign-in: an identity that arrives with no address at all.
+     *
+     * Apple returns a user's address only on the FIRST authorisation, so
+     * somebody who revokes access and comes back has a subject identifier and
+     * nothing else — while User::$email is non-nullable and unique. The linker
+     * mints a deterministic `<provider>-<hash>@oauth.invalid` placeholder.
+     *
+     * Asserted through the endpoint on purpose. RegisterRequest refuses the
+     * whole reserved `.invalid` TLD, and putting that constraint on the ENTITY
+     * instead of on the registration DTO would break exactly this path — every
+     * addressless Apple signup — while every unit test of the linker kept
+     * passing, because the linker never validates. This is the case that goes
+     * red if somebody "tidies" the constraint onto User.
+     */
+    public function testAnAddresslessIdentityStillGetsAnAccountWithAPlaceholderAddress(): void
+    {
+        $this->completeCallback(new OAuthIdentity('apple', 'sub-addressless', null, false));
+
+        $identities = $this->em()->getRepository(UserIdentity::class)->findAll();
+        self::assertCount(1, $identities);
+
+        $user = $identities[0]->getUser();
+        self::assertStringEndsWith('@oauth.invalid', $user->getEmail());
+        self::assertSame(UserStatus::PendingApproval, $user->getStatus());
+        self::assertNull($user->getPasswordHash());
+    }
+
     // -- The status gate --------------------------------------------------
 
     /**
