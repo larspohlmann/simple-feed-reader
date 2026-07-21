@@ -311,6 +311,51 @@ final class PasswordResetTest extends WebTestCase
         self::assertResponseIsSuccessful();
     }
 
+    /**
+     * The reset-request endpoint mails a live account-takeover link. Without a
+     * cap, ALTCHA alone lets an attacker mail-bomb a known address at ~60 ms a
+     * message until the recipient stops trusting the sender - or the relay
+     * stops trusting us.
+     */
+    public function testSixthResetRequestFromOneIpIsThrottled(): void
+    {
+        $this->factory()->create('flooded@example.com');
+
+        for ($attempt = 1; $attempt <= 5; ++$attempt) {
+            $this->requestReset('flooded@example.com');
+            self::assertResponseIsSuccessful(sprintf('attempt %d should still be accepted', $attempt));
+        }
+
+        $this->requestReset('flooded@example.com');
+
+        self::assertResponseStatusCodeSame(429);
+        self::assertResponseHeaderSame('content-type', 'application/problem+json');
+        self::assertSame('rate_limited', $this->payload()['type']);
+        self::assertEmailCount(0, message: 'a throttled request must not mail');
+
+        $retryAfter = $this->client->getResponse()->headers->get('Retry-After');
+        self::assertNotNull($retryAfter);
+        self::assertGreaterThan(0, (int) $retryAfter);
+        self::assertLessThanOrEqual(900, (int) $retryAfter);
+    }
+
+    /**
+     * The limit is a cap on requests, not on successes. An unknown address must
+     * consume budget too, otherwise enumeration by brute force stays free and
+     * the endpoint's cost profile leaks which addresses exist.
+     */
+    public function testUnknownAddressesConsumeTheSameBudget(): void
+    {
+        for ($attempt = 1; $attempt <= 5; ++$attempt) {
+            $this->requestReset(sprintf('ghost%d@example.com', $attempt));
+            self::assertResponseIsSuccessful();
+        }
+
+        $this->requestReset('ghost6@example.com');
+
+        self::assertResponseStatusCodeSame(429);
+    }
+
     /** The reset must not quietly promote or demote the account's status. */
     public function testResetLeavesTheAccountStatusAlone(): void
     {

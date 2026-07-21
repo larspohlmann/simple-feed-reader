@@ -331,6 +331,53 @@ final class RegistrationTest extends WebTestCase
     }
 
     /**
+     * ALTCHA sizes the cost of abuse; it does not cap it. At the measured
+     * ~60 ms per solved challenge an unlimited endpoint is tens of thousands of
+     * outbound mails a day from a single host. This pins that the cap exists,
+     * and that the client is told when to come back.
+     */
+    public function testSixthRegistrationFromOneIpIsThrottled(): void
+    {
+        for ($attempt = 1; $attempt <= 5; ++$attempt) {
+            $this->register();
+            self::assertResponseStatusCodeSame(202, sprintf('attempt %d should still be accepted', $attempt));
+        }
+
+        $this->register();
+
+        self::assertResponseStatusCodeSame(429);
+        self::assertResponseHeaderSame('content-type', 'application/problem+json');
+        self::assertSame('rate_limited', $this->payload()['type']);
+
+        $retryAfter = $this->client->getResponse()->headers->get('Retry-After');
+        self::assertNotNull($retryAfter);
+        self::assertGreaterThan(0, (int) $retryAfter);
+        self::assertLessThanOrEqual(900, (int) $retryAfter);
+    }
+
+    /**
+     * Separate budgets: a user who burned through registration attempts must
+     * still be able to recover an account they already own.
+     */
+    public function testRegistrationAndPasswordResetHaveIndependentBudgets(): void
+    {
+        $this->factory()->create('recoverme@example.com');
+
+        for ($attempt = 1; $attempt <= 5; ++$attempt) {
+            $this->register();
+        }
+        $this->register();
+        self::assertResponseStatusCodeSame(429, 'registration budget should now be spent');
+
+        $this->post('/api/auth/password-reset-request', [
+            'email' => 'recoverme@example.com',
+            'altcha' => $this->altchaPayload(),
+        ]);
+
+        self::assertResponseIsSuccessful();
+    }
+
+    /**
      * Re-verifying must not demote an account an admin has already approved
      * back into the approval queue.
      */

@@ -1,0 +1,41 @@
+framework:
+    rate_limiter:
+        # Both endpoints are anonymous and both send email, so the only key
+        # available is the client IP and the only budget worth capping is
+        # "messages we hand to the SMTP relay". ALTCHA already sizes the *cost*
+        # of abuse — measured at ~40-60 ms per accepted solution for an
+        # optimised native attacker — but a proof-of-work never caps a total.
+        # At 60 ms a solve, an unlimited endpoint is roughly 60k mails a day
+        # from one host, which is how a shared-hosting SMTP reputation dies.
+        #
+        # Policy: sliding_window, not fixed_window. A fixed window lets an
+        # attacker send `limit` requests just before the boundary and `limit`
+        # again just after, so the real short-term ceiling is 2x the configured
+        # one. For a burst of outbound mail that doubling is precisely the
+        # behaviour being defended against, and the sliding window's extra cost
+        # is one additional cache key.
+        #
+        # 5 per 15 minutes matches the firewall's login_throttling, so the
+        # operational story is uniform ("five tries a quarter hour, per IP")
+        # and there is one number to tune rather than three. It is generous for
+        # a human — nobody registers twice, let alone five times — while
+        # leaving a NATed office or household enough room not to notice.
+        #
+        # Storage is cache.rate_limiter, a FilesystemAdapter. Strato shared
+        # hosting has no Redis, and an in-memory pool would reset every request
+        # under PHP-FPM, silently disabling the limit. Following the pool
+        # login_throttling already uses keeps that decision in one place.
+        registration:
+            policy: 'sliding_window'
+            limit: 5
+            interval: '15 minutes'
+            cache_pool: cache.rate_limiter
+
+        # A separate budget on purpose: exhausting one flow must not lock a
+        # legitimate user out of the other. Someone who cannot get past
+        # registration should still be able to recover an existing account.
+        password_reset_request:
+            policy: 'sliding_window'
+            limit: 5
+            interval: '15 minutes'
+            cache_pool: cache.rate_limiter
