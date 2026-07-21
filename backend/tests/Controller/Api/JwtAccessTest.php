@@ -15,12 +15,14 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * The `api` firewall's behaviour, asserted through the test-only routes in
- * App\Tests\Support\Http\ProtectedProbeController.
+ * The `api` firewall's behaviour, asserted through GET /api/me — a real
+ * protected route, so these guarantees are pinned against something that
+ * actually ships. The ROLE_ADMIN rule has no real endpoint yet and is still
+ * asserted through App\Tests\Support\Http\ProtectedProbeController.
  */
 final class JwtAccessTest extends WebTestCase
 {
-    private const PROTECTED = '/api/_probe/protected';
+    private const PROTECTED = '/api/me';
 
     protected function setUp(): void
     {
@@ -79,10 +81,9 @@ final class JwtAccessTest extends WebTestCase
         $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
 
         self::assertResponseIsSuccessful();
-        self::assertJsonStringEqualsJsonString(
-            (string) json_encode(['email' => 'holder@example.com']),
-            (string) $client->getResponse()->getContent(),
-        );
+        $payload = json_decode((string) $client->getResponse()->getContent(), true);
+        self::assertIsArray($payload);
+        self::assertSame('holder@example.com', $payload['email']);
     }
 
     public function testMissingTokenIsProblemJson(): void
