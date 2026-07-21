@@ -9,14 +9,26 @@ a showcase for the backend code.
 
 ## Constraints (fixed)
 
-- **Hosting:** Strato shared hosting. No SSH, no Docker, no long-running
-  processes, no Redis. SFTP-only deploy. PHP version selectable in the panel.
-  `max_execution_time` applies to every request.
-- **No `bin/console` in production, ever.** Every operational action needs a
-  web-reachable path.
-- **Refresh triggering:** must work via cron (if available), via an external
-  HTTP pinger (e.g. cron-job.org), and manually from the UI — same code path,
-  different time budgets.
+- **Hosting:** Strato shared hosting **with SSH access** (verified
+  2026-07-21). No Docker, no long-running processes, no Redis. PHP version
+  selectable in the panel. `max_execution_time` applies to every request.
+- **Server facts** (analyzed 2026-07-21, host `59606538.ssh.w1.strato.hosting`,
+  SSH alias `strato-feedreader`, deploy key in GitHub Secrets):
+  - git 2.51, rsync 3.4.1, curl, mysql client available; **no composer, no
+    crontab, no node** — build everything in CI, ship artifacts.
+  - PHP 8.0–8.5 as `php80`…`php85` binaries — all **cgi-fcgi SAPI, no true
+    CLI**. Console commands run as `php83 -q -f bin/console <command> <args>`
+    (argv works; `-q` suppresses CGI headers). `memory_limit` 512M,
+    `max_execution_time` 240 — SSH-run console commands get ~3 min budget.
+  - Home = htdocs root `/mnt/web319/b2/38/59606538/htdocs/`, app lives in
+    `simplefeedreader/`. Symlinks work → atomic releases possible.
+  - Outbound HTTPS works (git can reach GitHub).
+- **`bin/console` runs only over SSH** (deploys, manual ops). Anything that
+  must run *unattended* still needs a web-reachable path, because there is no
+  crontab on the server.
+- **Refresh triggering:** must work via an external scheduler hitting an HTTP
+  endpoint (GitHub Actions `schedule` is the default pinger; cron-job.org as
+  fallback) and manually from the UI — same code path, different time budgets.
 - **Database:** MySQL in production, SQLite for local dev and tests. Doctrine
   abstraction; no vendor-specific SQL without a portability check.
 - **Code style:** PSR-12, enforced by PHPCS. PHPStan at max level. During
@@ -71,12 +83,24 @@ two jobs.
 
 ### Production layout (Strato)
 
-Everything on one domain. The Strato docroot is mapped to
-`/feedreader/public`, so `vendor/`, `var/`, and config are never
-web-reachable. The Angular production build is copied into `public/app/` at
-deploy time. Symfony serves `/api/*` and `/maintenance/*`; an `.htaccess`
-fallback hands everything else to the Angular `index.html`. Same origin →
-no CORS.
+Capistrano-style releases under `simplefeedreader/`:
+
+```
+simplefeedreader/
+├── releases/
+│   ├── v1.0.0/               # full artifact: backend + built frontend + vendor
+│   └── v1.0.1/
+├── shared/
+│   └── var/log/              # symlinked into each release (survives deploys)
+└── current -> releases/v1.0.1   # atomic switch via ln -sfn
+```
+
+Everything on one domain. The Strato docroot is mapped (one-time, in the
+panel) to `simplefeedreader/current/public`, so `vendor/`, `var/`, and config
+are never web-reachable. The Angular production build is copied into
+`public/app/` at build time. Symfony serves `/api/*` and `/maintenance/*`; an
+`.htaccess` fallback hands everything else to the Angular `index.html`. Same
+origin → no CORS.
 
 ### Frontend
 
@@ -206,10 +230,11 @@ Key decisions:
 
 ## Fetch pipeline
 
-One service, `RefreshRunner`, three callers (cron command, maintenance
+One service, `RefreshRunner`, three callers (CLI command via SSH, maintenance
 endpoint, user refresh endpoint). Callers differ only in **scope**
 (all due / one user's feeds / one feed), **force** flag, and **time budget**
-(~5 min CLI, ~20 s maintenance HTTP, ~10 s user slice).
+(~3 min CLI — server caps execution at 240 s, ~20 s maintenance HTTP,
+~10 s user slice).
 
 Loop:
 
@@ -306,8 +331,11 @@ GET    /health                   (public — used by the deploy health check)
 `POST /maintenance/{action}?token=…` — long random token from env,
 constant-time comparison, fixed action allowlist:
 
-- `refresh` — budgeted RefreshRunner slice (for cron-job.org / panel cron)
-- `post-deploy` — migrate → cache:clear → cache:warmup, plain-text report
+- `refresh` — budgeted RefreshRunner slice, called by the scheduled GitHub
+  Actions pinger (or any external cron service)
+
+Deploy-time operations (migrations, cache warmup) run over SSH — no
+`post-deploy` HTTP endpoint needed.
 
 ### Error contract
 
@@ -351,25 +379,37 @@ Backend-focused pyramid, PHPUnit:
 SQLite + MySQL; frontend job — lint, tests, production build. Branch
 protection requires green CI; README carries the badges.
 
-**`deploy.yml`** (on tag):
+**`deploy.yml`** (on tag) — rsync-over-SSH with atomic symlink switch.
+Credentials live in GitHub Secrets (`STRATO_SSH_KEY` — dedicated deploy
+keypair, `STRATO_SSH_HOST`, `STRATO_SSH_USER`, `STRATO_DEPLOY_PATH`,
+`STRATO_KNOWN_HOSTS` — pinned host key; the repo is public, so host/user/path
+never appear in the workflow file):
 
 1. Build backend: `composer install --no-dev --optimize-autoloader`; PHP
    minor version pinned in workflow **and** `composer.json` `config.platform`
-   to match Strato.
+   to match Strato (8.3).
 2. Build frontend into `backend/public/app/`.
 3. Inject config from GitHub Secrets → `composer dump-env prod` →
    `.env.local.php`. JWT keypair generated once, stored in Secrets — never
    regenerated per deploy.
-4. **Enter maintenance mode:** lftp `put` of `var/maintenance.flag`.
-5. SFTP mirror (`lftp mirror --reverse --delete`), with `var/` excluded from
-   deletion (logs, runtime cache, flag file — and keeps SQLite-in-prod
-   reversible).
-6. `curl` `POST /maintenance/post-deploy` — migrate, cache:clear,
-   cache:warmup. Non-2xx fails the workflow.
-7. **Leave maintenance mode:** lftp delete of the flag — only on success.
-8. Health check: `curl /api/health`.
+4. **Upload release:** `rsync -az --delete` the artifact to
+   `releases/<tag>/` (`--link-dest=../current` hard-links unchanged files —
+   fast and cheap on quota). The live release is untouched.
+5. **Link shared paths** via SSH: `shared/var/log` → `releases/<tag>/var/log`.
+6. **Warm up on the server** via SSH: `php83 -q -f bin/console
+   cache:clear` + `cache:warmup` inside the new release dir (absolute
+   container paths must be baked on the server, not in CI), then
+   `doctrine:migrations:migrate --no-interaction`. Migrations are
+   additive-first, so the still-live old release keeps working on the new
+   schema. Non-zero exit fails the workflow — the live site never switched.
+7. **Atomic switch:** `ln -sfn releases/<tag> current`. No stale-container
+   race (each release has its own `var/cache`), no maintenance window in the
+   normal case.
+8. Health check: `curl /api/health`. On failure, flip the symlink back.
+9. **Prune:** keep the last 3 releases.
 
-**Maintenance mode** is a flag file + rewrite rule in `public/.htaccess`:
+**Maintenance mode** (for the exceptional breaking-migration deploy, flagged
+manually) is a flag file + rewrite rule in `public/.htaccess`:
 
 ```apache
 RewriteCond %{DOCUMENT_ROOT}/../var/maintenance.flag -f
@@ -378,21 +418,24 @@ RewriteRule .* - [R=503,L]
 ErrorDocument 503 /maintenance.html
 ```
 
-Static `maintenance.html` ships with the artifact; `/maintenance/*` stays
-reachable so the post-deploy call can end the outage; API 503s are mapped by
-the Angular interceptor to a "back in a minute" banner (`Retry-After: 60`).
-On failure the site **stays in maintenance** — better than a half-migrated
-app. Manual escape hatch: delete the flag via SFTP (documented in README).
+Toggled over SSH (`touch` / `rm` of the flag). Static `maintenance.html`
+ships with the artifact; API 503s are mapped by the Angular interceptor to a
+"back in a minute" banner (`Retry-After: 60`).
 
-**Rollback:** deploy the previous tag. Migrations are written additive-first
-(add column → deploy → drop old column next release) so the previous release
-always runs on the current schema.
+**Rollback:** `ln -sfn releases/<previous> current` — instant, over SSH.
+Migrations are written additive-first (add column → deploy → drop old column
+next release) so the previous release always runs on the current schema.
+
+**Scheduled refresh:** a separate tiny workflow (`refresh.yml`, `schedule:`
+every 30 min) curls `POST /maintenance/refresh?token=…` (token from Secrets).
+Free, versioned with the code, no external cron service needed; cron-job.org
+remains a drop-in fallback if Actions scheduling proves too jittery.
 
 ## Decisions log (short form)
 
 | Decision | Choice | Why |
 |---|---|---|
-| Hosting | Strato shared (SFTP, no SSH) | Given; mirrors homepage setup |
+| Hosting | Strato shared, SSH verified (git, rsync, php83 cgi-fcgi, symlinks) | Given; analyzed 2026-07-21 |
 | Backend shape | Pragmatic Symfony, no API Platform | Hand-written API is the showcase; no layer ceremony |
 | Frontend | Angular (+ admin as lazy module) | Batteries included; frontend is not the showcase |
 | Auth | Lexik JWT 7d in localStorage; DB user check per request = instant revocation | Symfony loads the user per request anyway |
@@ -403,4 +446,5 @@ always runs on the current schema.
 | Flags | favorite (curation) + keep (retention), both prune-proof | Distinct intents |
 | Refresh | One budgeted, lock-guarded, resumable runner; 3 entry points | HTTP time limits; no daemons |
 | DB | Doctrine, SQLite dev / MySQL prod, CI matrix proves portability | Requested abstraction, made testable |
-| Deploy | Tag → CI build → SFTP mirror → maintenance-mode window → post-deploy endpoint | No SSH; no stale-container race |
+| Deploy | Tag → CI build → rsync over SSH to `releases/<tag>` → warmup+migrate via SSH → atomic `current` symlink flip | Zero-downtime; instant rollback; maintenance mode only for breaking migrations |
+| Scheduled refresh | GitHub Actions `schedule` → `POST /maintenance/refresh` | No crontab on server; pinger versioned with the code |
