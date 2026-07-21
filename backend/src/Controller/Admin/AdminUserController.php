@@ -67,16 +67,22 @@ final class AdminUserController
      * Activates an account. The rule for the mail — do not "fix" the cases that
      * stay silent, they are deliberate:
      *
-     * The "your account has been approved" mail is sent ONLY on the
-     * pending_approval -> active transition, because that is the one transition
-     * the mail describes: you waited in a queue, you are now in.
+     * The "your account has been approved" mail means "you have been granted
+     * access for the first time". Classify any new status against that
+     * sentence rather than against the list below.
      *
-     * Everything else that lands on active stays silent. Approving an already
-     * active user is then idempotent, so a double-click cannot mail twice. And
-     * approving a suspended or rejected user reinstates them — this route is
+     * Both pending states are first-time grants, so both mail: the user has
+     * never had access, and now does. Suspended and rejected are RESTORATIONS
+     * of access the user already had, so they stay silent — this route is
      * deliberately the only way back, rather than an /unsuspend endpoint for
-     * something an admin does once a year — but a reinstated user never sat in
-     * a queue, so telling them they were "approved" would only confuse.
+     * something an admin does once a year, but telling someone who never sat in
+     * a queue that they were "approved" would only confuse. Already-active is a
+     * no-op, which is what makes a double-click safe.
+     *
+     * Approving a pending_verification account overrides double opt-in: that
+     * address was never confirmed, so the approval mail may go somewhere nobody
+     * proved they control. That is a real admin decision, made deliberately —
+     * the queue lists every status — and the mail itself is harmless.
      *
      * approvedAt is stamped on every successful activation, reinstatement
      * included: it is the audit trail for when access was last granted, which
@@ -89,13 +95,17 @@ final class AdminUserController
     public function approve(int $id): JsonResponse
     {
         $user = $this->requireUser($id);
-        $wasWaitingForApproval = UserStatus::PendingApproval === $user->getStatus();
+        $isFirstTimeGrant = \in_array(
+            $user->getStatus(),
+            [UserStatus::PendingApproval, UserStatus::PendingVerification],
+            true,
+        );
 
         $user->setStatus(UserStatus::Active);
         $user->setApprovedAt($this->clock->now());
         $this->em->flush();
 
-        if ($wasWaitingForApproval) {
+        if ($isFirstTimeGrant) {
             $this->mailer->sendApproved($user);
         }
 

@@ -202,6 +202,27 @@ final class AdminUserControllerTest extends WebTestCase
     }
 
     /**
+     * The other first-time grant. An admin approving someone who never clicked
+     * their verification link is overriding double opt-in — deliberate, since
+     * the queue lists every status — so the grant is as real as the queued one
+     * and the mail says the same true thing.
+     */
+    public function testApprovingAnUnverifiedUserAlsoSendsTheApprovalMail(): void
+    {
+        $admin = $this->admin();
+        $target = $this->factory()->create('unverified@example.com', status: UserStatus::PendingVerification);
+        $id = (int) $target->getId();
+
+        $this->call('POST', self::LIST . '/' . $id . '/approve', $this->tokenFor($admin));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('active', $this->payload()['status']);
+        self::assertEmailCount(1, message: 'a first-time grant is announced whichever queue it came from');
+
+        self::assertSame(UserStatus::Active, $this->reload($id)->getStatus());
+    }
+
+    /**
      * A second click is a no-op, not a second mail: the mail rides the
      * pending_approval -> active transition, and an already-active user is not
      * making that transition.
