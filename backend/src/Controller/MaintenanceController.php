@@ -47,13 +47,20 @@ final class MaintenanceController
         return new JsonResponse($report->toArray(), $status);
     }
 
+    /**
+     * Prefer the header: a query-string token ends up in Apache access logs,
+     * proxy logs, and Referer headers. The query parameter stays supported for
+     * callers that cannot set headers, but the scheduled pinger should use the
+     * header form.
+     */
     private function isAuthorized(Request $request): bool
     {
         if ($this->maintenanceToken === '') {
             return false;
         }
 
-        $provided = $request->query->get('token');
+        $provided = $request->headers->get('X-Maintenance-Token')
+            ?? $request->query->get('token');
 
         return \is_string($provided) && hash_equals($this->maintenanceToken, $provided);
     }

@@ -62,6 +62,32 @@ final class MaintenanceControllerTest extends WebTestCase
         self::assertSame(1, $payload['notModified']);
     }
 
+    public function testAcceptsTokenViaHeader(): void
+    {
+        $client = self::createClient();
+        $feed = $this->feedFor($client, 'https://maint.example.com/feed');
+
+        $stub = new StubFeedFetcher();
+        $stub->willReturn($feed->getUrl(), FetchResponse::notModified($feed->getUrl(), false, null, null));
+        self::getContainer()->set(FeedFetcherInterface::class, $stub);
+
+        $client->request('POST', '/maintenance/refresh', server: [
+            'HTTP_X_MAINTENANCE_TOKEN' => 'test-maintenance-token',
+        ]);
+
+        self::assertResponseIsSuccessful();
+    }
+
+    public function testRejectsWrongTokenInHeader(): void
+    {
+        $client = self::createClient();
+        $client->request('POST', '/maintenance/refresh', server: [
+            'HTTP_X_MAINTENANCE_TOKEN' => 'nope',
+        ]);
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
     public function testGetMethodIsNotAllowed(): void
     {
         $client = self::createClient();
