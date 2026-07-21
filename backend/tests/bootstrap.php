@@ -10,6 +10,28 @@ if ($_SERVER['APP_DEBUG']) {
     umask(0000);
 }
 
+// The JWT keypair is gitignored, so CI and fresh checkouts have none. Tests
+// need a real keypair (Lexik signs with RS256), so generate one on demand.
+// The passphrase comes from .env — deliberately a throwaway in dev/test.
+$jwtDir = dirname(__DIR__) . '/config/jwt';
+if (!is_dir($jwtDir)) {
+    mkdir($jwtDir, 0o777, true);
+}
+// Regenerate when *either* file is missing, and overwrite unconditionally: a
+// half-present pair would otherwise make the command refuse to write and wedge
+// the suite until config/jwt was cleared by hand.
+if (!file_exists($jwtDir . '/private.pem') || !file_exists($jwtDir . '/public.pem')) {
+    passthru(sprintf(
+        'php "%s/bin/console" lexik:jwt:generate-keypair --env=test --overwrite --quiet',
+        dirname(__DIR__),
+    ), $keypairExit);
+
+    if (0 !== $keypairExit) {
+        fwrite(STDERR, "\nJWT keypair generation failed; aborting before tests run.\n");
+        exit(1);
+    }
+}
+
 // Rebuild the test database once per process, before DAMA transaction wrapping
 // starts. Recreating the database (not just the schema) ensures a half-built
 // database from an interrupted run cannot wedge the bootstrap. SQLite cannot
