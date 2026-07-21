@@ -40,3 +40,19 @@ services:
     App\Service\Auth\ActionTokenService:
         autowire: true
         public: true
+
+    # Registration and password-reset tests must build a *solved* ALTCHA payload,
+    # which means issuing a real challenge from the same service the controller
+    # verifies against. Same `autowire` caveat as above. Test environment only.
+    App\Service\Auth\AltchaService:
+        autowire: true
+        public: true
+
+    # The replay guard is a FILESYSTEM pool, so spent-solution markers outlive
+    # the test run. Entries are keyed by a signature derived from 12 random
+    # bytes, so a stale marker can never collide with a fresh challenge and the
+    # rate-limiter's cross-run bleed problem does not arise here. Exposed anyway
+    # so a test that wants a guaranteed-clean pool can clear it.
+    test.cache.altcha_replay:
+        alias: altcha.replay.cache
+        public: true

@@ -15,5 +15,11 @@ framework:
         #app: cache.adapter.apcu
 
         # Namespaced pools use the above "app" backend by default
-        #pools:
-            #my.dedicated.cache: null
+        pools:
+            # Remembers spent ALTCHA solutions so one proof-of-work cannot
+            # authorise more than one request. Lifetime deliberately exceeds the
+            # challenge's own validity window so an entry never expires while
+            # the challenge it guards is still acceptable.
+            altcha.replay.cache:
+                adapter: cache.adapter.filesystem
+                default_lifetime: 4200
