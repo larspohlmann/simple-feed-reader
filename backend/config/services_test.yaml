@@ -48,6 +48,13 @@ services:
         autowire: true
         public: true
 
+    # Registration tests assert on rows and statuses the service wrote, and the
+    # concurrency test drives register() directly to reproduce a race the HTTP
+    # client cannot stage. Same `autowire` caveat as above. Test environment only.
+    App\Service\Auth\RegistrationService:
+        autowire: true
+        public: true
+
     # The replay guard is a FILESYSTEM pool, so spent-solution markers outlive
     # the test run. Entries are keyed by a signature derived from 12 random
     # bytes, so a stale marker can never collide with a fresh challenge and the
