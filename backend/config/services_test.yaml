@@ -1,0 +1,12 @@
+services:
+    # Functional tests swap the real fetcher for a stub via
+    # `self::getContainer()->set(...)`, which the container only allows on
+    # public services. Test environment only — production keeps them private.
+    App\Service\Fetch\FeedFetcherInterface:
+        alias: App\Service\Fetch\HttpFeedFetcher
+        public: true
+
+    # Tests acquire the refresh lock up front to assert the "busy" path.
+    Symfony\Component\Lock\LockFactory:
+        alias: lock.default.factory
+        public: true

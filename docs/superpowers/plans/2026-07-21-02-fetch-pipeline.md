@@ -79,22 +79,25 @@ Expected: recipes add `config/packages/lock.yaml`, `config/packages/monolog.yaml
 
 - [ ] **Step 2: Point the lock store at Doctrine**
 
-In `backend/.env`, set (replace whatever the recipe wrote for `LOCK_DSN`):
-
-```dotenv
-###> symfony/lock ###
-LOCK_DSN=doctrine://default
-###< symfony/lock ###
-```
-
+Delete the `LOCK_DSN` block the recipe wrote to `backend/.env` — it is not used.
 `config/packages/lock.yaml` must read:
 
 ```yaml
 framework:
-    lock: '%env(LOCK_DSN)%'
+    lock: 'doctrine.dbal.default_connection'
 ```
 
-The Doctrine bridge's `LockStoreSchemaListener` adds the `lock_keys` table to `doctrine:schema:create`, so the test bootstrap keeps working unchanged.
+This is a **service reference**, not a DSN. `symfony/lock` has no `doctrine://`
+scheme (see `StoreFactory::createStore()`), and FrameworkBundle only converts a
+lock config value into a service `Reference` when the value contains no colon
+**and** no env placeholder was used (`FrameworkExtension.php`, lock section) —
+so a `%env(LOCK_DSN)%` value can never become a Doctrine store. Referencing the
+connection service directly yields a `DoctrineDbalStore` on the app's own
+connection.
+
+The Doctrine bundle registers `LockStoreSchemaListener`, which adds the
+`lock_keys` table to `doctrine:schema:create`, so the test bootstrap keeps
+working unchanged (verified: `lock_keys` is created in the test schema).
 
 - [ ] **Step 3: Production logging = rotating file, 7 days**
 
@@ -358,6 +361,14 @@ final class IpValidatorTest extends TestCase
         yield 'v6 link-local' => ['fe80::1'];
         yield 'v6 multicast' => ['ff02::1'];
         yield 'v4-mapped private' => ['::ffff:192.168.1.1'];
+        yield 'v4-mapped loopback' => ['::ffff:127.0.0.1'];
+        yield 'v4-compatible loopback' => ['::7f00:1'];
+        yield 'v4-compatible loopback dotted' => ['::127.0.0.1'];
+        yield 'nat64 private' => ['64:ff9b::a00:1'];
+        yield 'nat64 loopback' => ['64:ff9b::7f00:1'];
+        yield 'nat64 local-use' => ['64:ff9b:1::7f00:1'];
+        yield '6to4 loopback' => ['2002:7f00:1::'];
+        yield 'v6 site-local' => ['fec0::1'];
         yield 'garbage' => ['not-an-ip'];
     }
 
@@ -419,12 +430,19 @@ final class IpValidator
         '203.0.113.0/24',
         '224.0.0.0/4',
         '240.0.0.0/4',
-        '::/128',
-        '::1/128',
+        // ::/96 covers the unspecified address, ::1 loopback, and the
+        // deprecated IPv4-compatible format (::127.0.0.1 reaching loopback).
+        '::/96',
+        '64:ff9b::/96',
+        '64:ff9b:1::/48',
         '100::/64',
         '2001:db8::/32',
+        // 6to4: 2002:7f00:1:: encapsulates 127.0.0.1.
+        '2002::/16',
         'fc00::/7',
         'fe80::/10',
+        // Deprecated site-local, still routable on some networks.
+        'fec0::/10',
         'ff00::/8',
     ];
 
@@ -3771,5 +3789,8 @@ git commit -m "Add token-protected maintenance refresh endpoint"
 
 - **Feed autodiscovery** (HTML `<link rel="alternate">` scan) — Plan 4, with `POST /subscriptions`.
 - **User refresh endpoint** `POST /api/refresh` + rate limiting — Plan 4 (needs JWT auth from Plan 3). `RefreshRequest::forUser` is ready for it.
+  **Carry these forward from Task 12's review:**
+  - Give the user slice a budget **well above** `SAFETY_MARGIN_SECONDS` (10 s). At a 10 s budget the runner completes exactly one feed per HTTP call, so a 50-feed user needs 50 round trips. ~30 s is the sensible floor; alternatively make the margin proportional to the budget.
+  - The client progress loop must treat `status: 'aborted'` as terminal (persistence is broken — stop and surface an error), distinct from `'partial'` (call again). Looping on `'aborted'` would spin forever.
 - **Scheduled GitHub Actions pinger** (`refresh.yml`) — Plan 6 (deployment).
 - **MaintenanceTokenAuthenticator** as a proper security authenticator — Plan 3, when security-bundle lands; the controller check moves there if it pulls its weight.

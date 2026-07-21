@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>No-GUID Feed</title>
+    <link>https://noguid.example.com/</link>
+    <description>Items without guid elements</description>
+    <item>
+      <title>Post without guid</title>
+      <link>https://noguid.example.com/post-1</link>
+      <pubDate>this is not a date</pubDate>
+      <description>Body one.</description>
+    </item>
+    <item>
+      <title>Another guidless post</title>
+      <link>https://noguid.example.com/post-2</link>
+      <description>Body two.</description>
+    </item>
+  </channel>
+</rss>
