@@ -17,8 +17,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 /**
  * The `api` firewall's behaviour, asserted through GET /api/me — a real
  * protected route, so these guarantees are pinned against something that
- * actually ships. The ROLE_ADMIN rule has no real endpoint yet and is still
- * asserted through App\Tests\Support\Http\ProtectedProbeController.
+ * actually ships. The ROLE_ADMIN rule is asserted through GET /api/admin/users,
+ * which replaced the test-only probe route once the admin queue existed.
  */
 final class JwtAccessTest extends WebTestCase
 {
@@ -181,7 +181,7 @@ final class JwtAccessTest extends WebTestCase
         $this->factory()->create('plain@example.com');
         $token = $this->tokenFor($client, 'plain@example.com');
 
-        $client->request('GET', '/api/admin/_probe', server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $client->request('GET', '/api/admin/users', server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
 
         self::assertResponseStatusCodeSame(403);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
@@ -193,7 +193,7 @@ final class JwtAccessTest extends WebTestCase
         $this->factory()->create('boss@example.com', roles: ['ROLE_ADMIN']);
         $token = $this->tokenFor($client, 'boss@example.com');
 
-        $client->request('GET', '/api/admin/_probe', server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $client->request('GET', '/api/admin/users', server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
 
         self::assertResponseIsSuccessful();
     }
@@ -202,7 +202,7 @@ final class JwtAccessTest extends WebTestCase
     {
         $client = self::createClient();
 
-        $client->request('GET', '/api/admin/_probe');
+        $client->request('GET', '/api/admin/users');
 
         $this->assertUnauthorizedProblem($client);
     }

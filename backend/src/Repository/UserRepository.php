@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\User;
+use App\Enum\UserStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Bridge\Doctrine\Security\User\UserLoaderInterface;
@@ -44,5 +45,31 @@ class UserRepository extends ServiceEntityRepository implements UserLoaderInterf
     public function loadUserByIdentifier(string $identifier): ?UserInterface
     {
         return $this->findOneByEmail($identifier);
+    }
+
+    /**
+     * The admin queue's listing. Oldest first, because the queue is worked
+     * front to back and the person who has waited longest should be on top.
+     *
+     * Unpaginated on purpose: the instance has no user cap but also no growth
+     * engine — every account passes through a human. If this ever returns more
+     * rows than an admin can scroll, pagination is the fix, not a LIMIT here.
+     *
+     * @param list<UserStatus>|null $statuses
+     *
+     * @return list<User>
+     */
+    public function findForAdminList(?array $statuses = null): array
+    {
+        $qb = $this->createQueryBuilder('u')->orderBy('u.createdAt', 'ASC');
+
+        if (null !== $statuses && [] !== $statuses) {
+            $qb->andWhere('u.status IN (:statuses)')->setParameter('statuses', $statuses);
+        }
+
+        /** @var list<User> $users */
+        $users = $qb->getQuery()->getResult();
+
+        return $users;
     }
 }
