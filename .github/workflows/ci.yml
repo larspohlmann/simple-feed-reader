@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (${{ matrix.database }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [sqlite, mysql]
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: feedreader_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -proot"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: intl, pdo_sqlite, pdo_mysql
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: PHPCS (PSR-12)
+        run: composer cs
+
+      - name: Warm cache for PHPStan
+        run: php bin/console cache:warmup
+
+      - name: PHPStan
+        run: composer stan
+
+      - name: Select database DSN
+        run: |
+          if [ "${{ matrix.database }}" = "mysql" ]; then
+            echo 'DATABASE_URL=mysql://root:root@127.0.0.1:3306/feedreader_test?serverVersion=8.4&charset=utf8mb4' >> "$GITHUB_ENV"
+          fi
+
+      - name: PHPUnit
+        run: php bin/phpunit
