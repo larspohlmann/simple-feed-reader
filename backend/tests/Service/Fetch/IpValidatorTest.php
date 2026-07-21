@@ -28,6 +28,14 @@ final class IpValidatorTest extends TestCase
         yield 'v6 link-local' => ['fe80::1'];
         yield 'v6 multicast' => ['ff02::1'];
         yield 'v4-mapped private' => ['::ffff:192.168.1.1'];
+        yield 'v4-mapped loopback' => ['::ffff:127.0.0.1'];
+        yield 'v4-compatible loopback' => ['::7f00:1'];
+        yield 'v4-compatible loopback dotted' => ['::127.0.0.1'];
+        yield 'nat64 private' => ['64:ff9b::a00:1'];
+        yield 'nat64 loopback' => ['64:ff9b::7f00:1'];
+        yield 'nat64 local-use' => ['64:ff9b:1::7f00:1'];
+        yield '6to4 loopback' => ['2002:7f00:1::'];
+        yield 'v6 site-local' => ['fec0::1'];
         yield 'garbage' => ['not-an-ip'];
     }
 

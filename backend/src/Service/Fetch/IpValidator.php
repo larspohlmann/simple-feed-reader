@@ -25,12 +25,19 @@ final class IpValidator
         '203.0.113.0/24',
         '224.0.0.0/4',
         '240.0.0.0/4',
-        '::/128',
-        '::1/128',
+        // ::/96 covers the unspecified address, ::1 loopback, and the
+        // deprecated IPv4-compatible format (::127.0.0.1 reaching loopback).
+        '::/96',
+        '64:ff9b::/96',
+        '64:ff9b:1::/48',
         '100::/64',
         '2001:db8::/32',
+        // 6to4: 2002:7f00:1:: encapsulates 127.0.0.1.
+        '2002::/16',
         'fc00::/7',
         'fe80::/10',
+        // Deprecated site-local, still routable on some networks.
+        'fec0::/10',
         'ff00::/8',
     ];
 
