@@ -9,6 +9,15 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 
+/**
+ * Note on runtime: the tests here that call solve() brute-force a *real*
+ * proof-of-work rather than stubbing one, because a payload the service will
+ * accept can only be produced by actually solving. At the configured difficulty
+ * that is ~60 ms of hashing per solved payload, so this file — and the
+ * registration and password-reset functional tests, which build payloads the
+ * same way — run visibly slower than the rest of the suite. That is the PoW
+ * doing its job, not a hung test.
+ */
 final class AltchaServiceTest extends TestCase
 {
     private const HMAC_KEY = 'test-hmac-key';
@@ -64,6 +73,20 @@ final class AltchaServiceTest extends TestCase
             hash_hmac('sha256', $challenge->challenge, self::HMAC_KEY),
             $challenge->signature,
         );
+    }
+
+    /**
+     * The floor only defeats batch-and-discard if it is applied when the
+     * challenge is *issued*. `number` is not observable without solving, so
+     * solve and check where it landed.
+     */
+    public function testIssuedChallengesRespectTheDifficultyFloor(): void
+    {
+        $challenge = $this->service->createChallenge();
+        $number = $this->solve($challenge->salt, $challenge->maxNumber, $challenge->challenge);
+
+        self::assertGreaterThanOrEqual(100_000, $number);
+        self::assertLessThanOrEqual(200_000, $number);
     }
 
     public function testAcceptsACorrectSolution(): void
@@ -122,8 +145,12 @@ final class AltchaServiceTest extends TestCase
 
     /**
      * `number` arrives from the client and is concatenated into a hash input.
-     * A number outside the advertised range cannot have come from solving the
+     * A number outside the difficulty window cannot have come from solving a
      * challenge we issued, so it is refused before it is hashed at all.
+     *
+     * The below-floor cases are the ones that matter: without them an attacker
+     * could mint and solve a trivially cheap challenge, and the difficulty
+     * floor would constrain only honest clients.
      *
      * @return iterable<string, array{int}>
      */
@@ -131,12 +158,14 @@ final class AltchaServiceTest extends TestCase
     {
         yield 'negative' => [-1];
         yield 'far negative' => [\PHP_INT_MIN];
-        yield 'above maxnumber' => [50_001];
+        yield 'zero' => [0];
+        yield 'just below the floor' => [99_999];
+        yield 'just above the ceiling' => [200_001];
         yield 'enormous' => [\PHP_INT_MAX];
     }
 
     #[\PHPUnit\Framework\Attributes\DataProvider('outOfRangeNumberProvider')]
-    public function testRejectsANumberOutsideTheAdvertisedRange(int $number): void
+    public function testRejectsANumberOutsideTheDifficultyWindow(int $number): void
     {
         $challenge = $this->service->createChallenge();
 
