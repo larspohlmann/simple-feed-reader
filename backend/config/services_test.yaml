@@ -111,6 +111,13 @@ services:
         autowire: true
         public: true
 
+    # The flow tests assert which account a callback landed on — linked, claimed
+    # or freshly created — and the linking rules are easier to drive directly
+    # than through a full provider round trip. Same `autowire` caveat as above.
+    App\Service\OAuth\OAuthAccountLinker:
+        autowire: true
+        public: true
+
     # The flow tests resolve a provider by URL segment, and OAuthProviderWiring
     # Test fetches this to prove the container's tagged iterator actually finds
     # the providers — an empty one would build a registry that offers nothing
