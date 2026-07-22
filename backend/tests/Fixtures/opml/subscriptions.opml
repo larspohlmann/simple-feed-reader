@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head><title>Export</title></head>
+  <body>
+    <outline text="News" title="News">
+      <outline type="rss" text="Heise" xmlUrl="https://www.heise.de/rss/heise.rdf" htmlUrl="https://www.heise.de/"/>
+      <outline type="rss" text="Tagesschau" xmlUrl="https://www.tagesschau.de/index~rss2.xml"/>
+    </outline>
+    <outline type="rss" text="Rootfeed" xmlUrl="https://blog.example.com/feed.xml"/>
+    <outline text="Empty folder" title="Empty folder"/>
+    <outline text="No url outline"/>
+  </body>
+</opml>

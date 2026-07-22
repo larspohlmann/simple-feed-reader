@@ -54,4 +54,32 @@ final class OpmlControllerTest extends WebTestCase
         $body = (string) $client->getResponse()->getContent();
         self::assertStringContainsString('xmlUrl="https://example.com/feed.xml"', $body);
     }
+
+    public function testImportCreatesSubscriptions(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('opml-import@example.com');
+        $opml = (string) file_get_contents(__DIR__ . '/../../Fixtures/opml/subscriptions.opml');
+
+        $server = $headers + ['CONTENT_TYPE' => 'text/x-opml'];
+        $client->request('POST', '/api/opml/import', server: $server, content: $opml);
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame(3, $body['imported']);
+
+        $client->request('GET', '/api/subscriptions', server: $headers);
+        $list = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($list);
+        self::assertIsArray($list['subscriptions']);
+        self::assertCount(3, $list['subscriptions']);
+    }
+
+    public function testImportRejectsEmptyBody(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('opml-empty@example.com');
+        $client->request('POST', '/api/opml/import', server: $headers + ['CONTENT_TYPE' => 'text/x-opml'], content: '');
+        self::assertResponseStatusCodeSame(422);
+    }
 }
