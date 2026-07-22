@@ -29,6 +29,21 @@ backend running there over TLS. The dev build reloads on source changes.
 In production the API base URL is empty (`src/environments/environment.ts`): the
 SPA is served same-origin with the backend, so requests are relative.
 
+## Run in Docker
+
+You don't need Node on the host at all — the [Docker stack](../docs/local-docker.md)
+runs the frontend too. `docker compose up -d` (from the repo root) starts the
+Angular dev server at http://localhost:4200 with live reload alongside the backend.
+A `prod` profile previews the production bundle served same-origin on
+`https://localhost:8444`:
+
+```bash
+docker compose --profile prod up -d --build frontend-prod
+```
+
+See [§9 of the Docker guide](../docs/local-docker.md#9-frontend-in-docker) for the
+node_modules-volume refresh, the npm-11 pin, and the OAuth caveat on the preview.
+
 ## The gate
 
 ```bash
@@ -39,10 +54,11 @@ Runs the full quality gate, the same one CI runs:
 
 - **ESLint** (`npm run lint`) — TypeScript + Angular template rules.
 - **Prettier** (`npm run format:check`) — formatting. `npm run format` rewrites.
-- **Stylelint** (`npm run stylelint`) — SCSS. `color-no-hex` is on: **hex colours
-  are forbidden outside `src/app/theme/`**. Components consume tokens
-  (`var(--…)`), never literal colours. The `theme/` layer is the only place a hex
-  value may appear.
+- **Stylelint** (`npm run stylelint`) — the `.scss` files. `color-no-hex` is on:
+  **hex colours are forbidden in `.scss` outside `src/app/theme/`**, the one place
+  literal colours may appear. Component styles are inline in their `.ts` files
+  (outside Stylelint's `.scss` glob) and are kept token-only (`var(--…)`) by
+  convention, not by the linter.
 - **Jest** (`npm test`) — unit tests (jest-preset-angular, jsdom).
 
 ## Build
@@ -90,7 +106,7 @@ dark, and system modes:
 
 **Adding a theme** is additive and touches no component: create a new SCSS file
 under `src/app/theme/themes/` and add one entry to `registry.ts`. Because
-components only ever read tokens (Stylelint enforces this), the new palette
+components only ever read tokens (token-only by convention), the new palette
 applies everywhere with no component changes.
 
 ## Auth model

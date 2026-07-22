@@ -63,5 +63,47 @@ services:
     ports:
       - "127.0.0.1:8025:8025"   # web inbox; SMTP (1025) stays internal to the compose network
 
+  # Default dev frontend: the Angular CLI dev server with live reload. The
+  # browser (on the host) fetches the bundle from here on :4200 and calls the
+  # API at https://localhost:8443 directly — cross-origin, which the backend
+  # CORS already allows (APP_FRONTEND_URL). So this container never talks to the
+  # backend containers; it only serves the app. http://localhost is a secure
+  # context, so crypto.subtle (ALTCHA) works without TLS here.
+  frontend:
+    image: node:22-slim
+    working_dir: /app
+    # First run installs Linux deps into the named volume — the host's macOS
+    # node_modules can't be reused (esbuild ships a platform-specific binary).
+    # Subsequent ups find node_modules already there and boot straight into the
+    # dev server. --poll makes file-watching work across the bind mount on macOS.
+    # npm is pinned to 11 (node:22 ships 10.9.8) because the lockfile was authored
+    # by npm 11; npm 10 mis-resolves a transitive dep (chokidar) and rejects it.
+    command:
+      - sh
+      - -c
+      - '[ -x node_modules/.bin/ng ] || { npm i -g npm@11 --silent && npm ci --no-audit --no-fund; }; exec node_modules/.bin/ng serve --host 0.0.0.0 --port 4200 --poll 2000'
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+    ports:
+      - "127.0.0.1:4200:4200"
+
+  # Opt-in prod preview (`docker compose --profile prod up`): the production
+  # bundle served same-origin behind nginx, with /api proxied to Symfony. No
+  # CORS (apiBaseUrl is '' in the prod build). OAuth end-to-end still redirects
+  # to APP_FRONTEND_URL (:4200) — override that env if you need OAuth on :8444.
+  frontend-prod:
+    profiles: ["prod"]
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    volumes:
+      - ./docker/certs:/etc/nginx/certs:ro
+    ports:
+      - "127.0.0.1:8444:443"
+    depends_on:
+      - php
+
 volumes:
   mysql-data:
+  frontend-node-modules:
