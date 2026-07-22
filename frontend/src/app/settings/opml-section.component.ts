@@ -34,7 +34,7 @@ import { OpmlImportResult } from '../reader/models';
         ></textarea>
         <button
           class="btn primary"
-          [disabled]="importing() || !text().trim()"
+          [disabled]="importing() || reading() || !text().trim()"
           (click)="importText()"
         >
           {{ importing() ? 'Importing…' : 'Import' }}
@@ -113,6 +113,7 @@ export class OpmlSectionComponent {
   private readonly subs = inject(SubscriptionsStore);
 
   readonly text = signal('');
+  readonly reading = signal(false);
   readonly exporting = signal(false);
   readonly importing = signal(false);
   readonly result = signal<OpmlImportResult | null>(null);
@@ -141,7 +142,13 @@ export class OpmlSectionComponent {
   onFile(e: Event): void {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
-    file.text().then((t) => this.text.set(t));
+    // Block Import until the async read resolves, so a quick click cannot send
+    // stale pasted text instead of the chosen file.
+    this.reading.set(true);
+    file.text().then((t) => {
+      this.text.set(t);
+      this.reading.set(false);
+    });
   }
 
   importText(): void {
@@ -168,7 +175,13 @@ export class OpmlSectionComponent {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'feeds.opml';
+    a.style.display = 'none';
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    // Revoke on the next tick: Firefox/Safari queue the download asynchronously
+    // and read the blob after click() returns, so revoking synchronously can
+    // yield an empty file.
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 }

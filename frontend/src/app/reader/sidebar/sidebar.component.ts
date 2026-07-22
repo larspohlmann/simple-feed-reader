@@ -112,11 +112,11 @@ import { SubscriptionDto, TagDto } from '../models';
                     class="dots"
                     type="button"
                     [attr.aria-label]="'Manage ' + s.title"
-                    (click)="toggleMenu('sub-' + s.id, $event)"
+                    (click)="toggleMenu('sub-' + node.tag.id + '-' + s.id, $event)"
                   >
                     <app-icon name="more_horiz" [size]="18" />
                   </button>
-                  @if (menuFor() === 'sub-' + s.id) {
+                  @if (menuFor() === 'sub-' + node.tag.id + '-' + s.id) {
                     <div class="pop" role="menu">
                       <button role="menuitem" (click)="editFeed.emit(s); closeMenu()">
                         Edit feed

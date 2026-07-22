@@ -31,6 +31,13 @@ interface Filter {
       }
     </div>
 
+    @if (actionError()) {
+      <div class="banner" role="alert">
+        {{ actionError()!.detail || actionError()!.title }}
+        <button (click)="actionError.set(null)">Dismiss</button>
+      </div>
+    }
+
     @if (loading()) {
       <div class="pad"><app-spinner /></div>
     } @else if (error()) {
@@ -225,6 +232,10 @@ export class AdminUsersComponent implements OnInit {
   readonly users = signal<AdminUserDto[]>([]);
   readonly loading = signal(false);
   readonly error = signal<Problem | null>(null);
+  // A failed row action (e.g. a race with another admin) is shown inline without
+  // wiping the loaded list — unlike a list-load error, which legitimately has no
+  // rows to show.
+  readonly actionError = signal<Problem | null>(null);
   readonly filter = signal<AdminUserStatus | null>(null);
 
   private readonly selfId = computed(() => this.auth.user()?.id ?? -1);
@@ -241,6 +252,7 @@ export class AdminUsersComponent implements OnInit {
   load(): void {
     this.loading.set(true);
     this.error.set(null);
+    this.actionError.set(null);
     this.api.listUsers(this.filter()).subscribe({
       next: (r) => {
         this.users.set(r.users);
@@ -254,9 +266,10 @@ export class AdminUsersComponent implements OnInit {
   }
 
   act(u: AdminUserDto, action: AdminAction): void {
+    this.actionError.set(null);
     this.api.act(u.id, action).subscribe({
       next: () => this.load(),
-      error: (e: HttpErrorResponse) => this.error.set(parseProblem(e)),
+      error: (e: HttpErrorResponse) => this.actionError.set(parseProblem(e)),
     });
   }
 

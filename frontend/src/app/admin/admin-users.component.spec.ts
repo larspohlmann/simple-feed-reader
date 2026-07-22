@@ -62,6 +62,27 @@ describe('AdminUsersComponent', () => {
     ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [] });
   });
 
+  it('keeps the loaded list and shows an inline error when an action fails', () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [user(1)] });
+    f.detectChanges();
+    const c = f.componentInstance;
+
+    c.act(user(1), 'approve');
+    ctrl
+      .expectOne('https://api.test/api/admin/users/1/approve')
+      .flush(
+        { type: 'about:blank', title: 'Gone', status: 422 },
+        { status: 422, statusText: 'Unprocessable' },
+      );
+
+    // The failure surfaces on actionError (inline), NOT on error (which would
+    // replace the whole list), and the rows survive.
+    expect(c.actionError()?.title).toBe('Gone');
+    expect(c.error()).toBeNull();
+    expect(c.users().length).toBe(1);
+  });
+
   it('offers only Suspend for an active user', () => {
     const c = mount().componentInstance;
     ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [] });

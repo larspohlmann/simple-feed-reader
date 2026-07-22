@@ -88,6 +88,35 @@ describe('SidebarComponent', () => {
     expect(deleteTag).toHaveBeenCalledWith(node.tag);
   });
 
+  it('opens only one menu when the same feed appears under two expanded tags', () => {
+    const shared = sub(1, 0);
+    const f = mount({
+      tagTree: [
+        {
+          tag: { id: 20, name: 'Tech', color: null, icon: null },
+          subscriptions: [shared],
+          unreadCount: 0,
+        },
+        {
+          tag: { id: 21, name: 'News', color: null, icon: null },
+          subscriptions: [shared],
+          unreadCount: 0,
+        },
+      ],
+    });
+    const el = f.nativeElement as HTMLElement;
+    el.querySelectorAll<HTMLButtonElement>('.tag .expand').forEach((b) => b.click());
+    f.detectChanges();
+
+    const dots = el.querySelectorAll<HTMLButtonElement>('.feedrow .dots');
+    expect(dots.length).toBe(2); // the feed is rendered under both tags
+    dots[0].click();
+    f.detectChanges();
+
+    // Distinct per-(tag,feed) keys mean only the clicked row's menu opens.
+    expect(el.querySelectorAll('.pop').length).toBe(1);
+  });
+
   it('emits editFeed / unsubscribe for an untagged feed row', () => {
     const s = sub(1, 0);
     const f = mount({ untagged: [s] });
