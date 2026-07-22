@@ -322,10 +322,16 @@ Expected: all versions execute.
 Run it AGAIN: `docker compose exec php bin/console doctrine:migrations:migrate --no-interaction`
 Expected: `Already at the latest version` — the chain must converge in one pass (this is the regression the `Version20260721150000` early-return fix guards; a second run executing anything is a bug, report it).
 
-- [ ] **Step 3: Verify the healthy endpoint over TLS**
+- [ ] **Step 3: Verify the endpoint over TLS AND prove DB reachability separately**
 
 Run: `curl -sS https://localhost:8443/api/health`
-Expected: HTTP 200 with the health JSON reporting the database reachable.
+Expected: HTTP 200, `{"status":"ok"}`. NOTE: this endpoint does NOT touch the database (verified in Task 3, before any schema existed), so DB reachability must be proven explicitly:
+
+Run: `docker compose exec php bin/console dbal:run-sql "SELECT COUNT(*) FROM doctrine_migration_versions"`
+Expected: a count equal to the number of migrations just executed in Step 2.
+
+Run: `docker compose exec php bin/console doctrine:schema:validate`
+Expected: mapping and database in sync — the migration chain must produce exactly what the ORM expects on MySQL. If it reports drift, capture the full output and report BLOCKED; do not "fix" schema drift ad hoc.
 
 - [ ] **Step 4: Verify Symfony sees an HTTPS request**
 
@@ -334,7 +340,7 @@ The `__Host-` cookie can only be set on a request PHP believes is secure, so `HT
 Run: `docker compose exec php php -r '$c=stream_context_create(["ssl"=>["verify_peer"=>false,"verify_peer_name"=>false]]); echo file_get_contents("https://nginx/api/health",false,$c) !== false ? "reachable\n" : "fail\n";'`
 Expected: `reachable` (in-network TLS sanity; the cert only names localhost, hence the in-container verify opt-out — host-side curl in Step 3 already proved trust).
 
-Run: `curl -sSi https://localhost:8443/api/oauth/providers | head -n 20`
+Run: `curl -sSi https://localhost:8443/api/auth/oauth/providers | head -n 20`
 Expected: HTTP 200 and a JSON provider list (empty or configured — either proves routing + TLS + FPM wiring end to end).
 
 - [ ] **Step 5: Commit**
