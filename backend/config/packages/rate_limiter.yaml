@@ -59,3 +59,18 @@ framework:
             limit: 20
             interval: '15 minutes'
             cache_pool: cache.rate_limiter
+
+        # Per-user cap on the progress-loop refresh endpoint. A full loop makes
+        # several POSTs (the client re-polls while `remaining` > 0), so this is
+        # keyed on the user id, not the IP, and sized generously: 90 in 5 minutes
+        # covers a long loop without ever gating an honest client. The real
+        # throttle is elsewhere — the shared refresh lock serialises runs and the
+        # 5-minute per-feed cooldown bounds actual outbound fetches — so this
+        # limiter only guards against a scripted user hammering the endpoint.
+        # Sliding window and the same pool as its neighbours, for the reasons
+        # documented above.
+        refresh:
+            policy: 'sliding_window'
+            limit: 90
+            interval: '5 minutes'
+            cache_pool: cache.rate_limiter
