@@ -36,6 +36,9 @@ import { FeedCandidate, SubscriptionDto } from '../models';
             }
           </ul>
         }
+        @if (searched() && candidates().length === 0) {
+          <p class="hint">No feeds found at that address.</p>
+        }
         <div class="row">
           <button type="button" (click)="ref.close()">Cancel</button>
           <button type="submit" class="primary" [disabled]="loading()">
@@ -119,6 +122,7 @@ export class AddFeedDialogComponent {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly candidates = signal<FeedCandidate[]>([]);
+  readonly searched = signal(false);
 
   submit(): void {
     if (this.form.invalid) return;
@@ -132,11 +136,15 @@ export class AddFeedDialogComponent {
   private subscribe(url: string): void {
     this.loading.set(true);
     this.error.set(null);
+    this.searched.set(false);
     this.api.subscribe(url).subscribe({
       next: (res) => {
         this.loading.set(false);
         if ('subscription' in res) this.ref.close(res.subscription);
-        else this.candidates.set(res.candidates);
+        else {
+          this.candidates.set(res.candidates);
+          this.searched.set(true);
+        }
       },
       error: (e: HttpErrorResponse) => {
         this.loading.set(false);

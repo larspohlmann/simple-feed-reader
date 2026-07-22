@@ -54,6 +54,18 @@ describe('AddFeedDialogComponent', () => {
     expect(close).toHaveBeenCalledWith({ id: 3 });
   });
 
+  it('shows an empty state when no candidates are found', () => {
+    const f = create();
+    f.componentInstance.form.setValue({ url: 'https://example.com' });
+    f.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({ candidates: [] });
+    f.detectChanges();
+    expect((f.nativeElement as HTMLElement).querySelector('.hint')!.textContent).toContain(
+      'No feeds found',
+    );
+    expect(close).not.toHaveBeenCalled();
+  });
+
   it('shows a field error on 422', () => {
     const f = create();
     f.componentInstance.form.setValue({ url: 'not-a-url' });

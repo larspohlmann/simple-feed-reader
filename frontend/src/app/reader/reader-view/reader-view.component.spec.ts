@@ -41,6 +41,15 @@ describe('ReaderViewComponent', () => {
     expect(a.rel).toContain('noopener');
   });
 
+  it('leaves in-page fragment anchors undecorated', () => {
+    const el = mount(
+      entry({ contentHtml: '<a href="#footnote">jump</a><a href="https://ext.test/z">ext</a>' }),
+    ).nativeElement as HTMLElement;
+    const anchors = el.querySelectorAll('.content a');
+    expect((anchors[0] as HTMLAnchorElement).target).toBe(''); // fragment link untouched
+    expect((anchors[1] as HTMLAnchorElement).target).toBe('_blank'); // external decorated
+  });
+
   it('emits favorite/keep/read/prev/next/close', () => {
     const f = mount(entry());
     const c = { favorite: 0, keep: 0, read: 0, prev: 0, next: 0, close: 0 };

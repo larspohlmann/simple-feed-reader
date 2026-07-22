@@ -167,19 +167,26 @@ export class ReaderViewComponent implements AfterViewChecked {
   readonly close = output<void>();
 
   private readonly content = viewChild<ElementRef<HTMLElement>>('content');
+  private decoratedFor: number | null = null;
 
   when(e: EntryDto): string {
     return relativeTime(e.publishedAt ?? e.createdAt);
   }
 
   ngAfterViewChecked(): void {
+    // Decorate each entry's links exactly once — not on every change detection.
+    const id = this.entry()?.id ?? null;
+    if (id === this.decoratedFor) return;
     const host = this.content()?.nativeElement;
     if (!host) return;
     for (const a of Array.from(host.querySelectorAll('a'))) {
+      // Leave in-page fragment anchors alone; only external links open in a new tab.
+      if ((a.getAttribute('href') ?? '').startsWith('#')) continue;
       if (a.target !== '_blank') {
         a.target = '_blank';
         a.rel = 'noopener noreferrer';
       }
     }
+    this.decoratedFor = id;
   }
 }

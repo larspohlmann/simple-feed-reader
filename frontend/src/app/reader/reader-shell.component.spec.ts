@@ -93,6 +93,19 @@ describe('ReaderShellComponent', () => {
     expect(f.nativeElement.querySelector('app-reader-view')).not.toBeNull();
   });
 
+  it('marks the opened entry read only once even when the PATCH fails', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ entry: '1' }));
+    f.detectChanges();
+    const req = ctrl.expectOne('https://api.test/api/entries/1/state');
+    expect(req.request.body).toEqual({ isRead: true });
+    req.flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+    f.detectChanges();
+    // The entry is still unread (rollback), but the effect must NOT re-fire a PATCH.
+    ctrl.expectNone((r) => r.url.endsWith('/entries/1/state'));
+    ctrl.verify();
+  });
+
   it('reloads entries when the selection changes', () => {
     const f = boot();
     qp.next(convertToParamMap({ subscription: '5' }));

@@ -189,6 +189,8 @@ export class ReaderShellComponent implements OnInit {
     return this.subs.subscriptions().find((x) => x.id === s.id)?.title ?? 'Feed';
   });
 
+  private readonly markedOnOpen = new Set<number>();
+
   private readonly index = computed(() =>
     this.entries.entries().findIndex((e) => e.id === this.entryId()),
   );
@@ -204,10 +206,14 @@ export class ReaderShellComponent implements OnInit {
       const q = queryFromSelection(this.selection());
       untracked(() => this.entries.load(q));
     });
-    // Mark the opened entry read exactly once when it becomes available unread.
+    // Mark the opened entry read exactly once per session — even if the PATCH
+    // fails and the entry rolls back to unread, we never re-fire the request.
     effect(() => {
       const e = this.openEntry();
-      if (e && !e.isRead) untracked(() => this.setRead(e, true));
+      if (e && !e.isRead && !this.markedOnOpen.has(e.id)) {
+        this.markedOnOpen.add(e.id);
+        untracked(() => this.setRead(e, true));
+      }
     });
   }
 
@@ -227,9 +233,14 @@ export class ReaderShellComponent implements OnInit {
   }
 
   private setRead(e: EntryDto, read: boolean): void {
-    this.entries.setState(e.id, { isRead: read });
+    // Apply the unread-count change optimistically and revert it if the PATCH
+    // fails, so the sidebar count never desyncs from the entry's rolled-back flag.
     if (read) this.subs.decrementUnread(e.subscriptionId);
     else this.subs.incrementUnread(e.subscriptionId);
+    this.entries.setState(e.id, { isRead: read }, () => {
+      if (read) this.subs.incrementUnread(e.subscriptionId);
+      else this.subs.decrementUnread(e.subscriptionId);
+    });
   }
 
   onOpen(e: EntryDto): void {

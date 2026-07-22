@@ -55,13 +55,19 @@ export class EntriesStore {
     });
   }
 
-  /** Optimistic patch of one entry's flags; rolls the list back if the PATCH fails. */
-  setState(entryId: number, patch: EntryStatePatch): void {
-    const before = this.entries();
-    if (!before.some((e) => e.id === entryId)) return;
+  /** Optimistic patch of one entry's flags; reverts only that entry if the PATCH
+   *  fails (never clobbering pages appended in the meantime) and surfaces the error. */
+  setState(entryId: number, patch: EntryStatePatch, onError?: () => void): void {
+    const before = this.entries().find((e) => e.id === entryId);
+    if (!before) return;
+    this.error.set(null);
     this.entries.update((cur) => cur.map((e) => (e.id === entryId ? { ...e, ...patch } : e)));
     this.api.updateState(entryId, patch).subscribe({
-      error: () => this.entries.set(before),
+      error: (err: HttpErrorResponse) => {
+        this.entries.update((cur) => cur.map((e) => (e.id === entryId ? before : e)));
+        this.error.set(parseProblem(err));
+        onError?.();
+      },
     });
   }
 }

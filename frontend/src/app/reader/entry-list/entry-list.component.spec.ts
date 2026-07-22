@@ -73,6 +73,12 @@ describe('EntryListComponent', () => {
     expect([more, mar]).toEqual([1, 1]);
   });
 
+  it('keeps the sentinel foot inside the scroll container', () => {
+    const el = mount({ hasMore: true }).nativeElement as HTMLElement;
+    // The observer root is .rows, so the sentinel must be a descendant of it.
+    expect(el.querySelector('.rows .load-more')).not.toBeNull();
+  });
+
   it('hides mark-all-read when not applicable', () => {
     const el = mount({ canMarkAllRead: false }).nativeElement as HTMLElement;
     expect(el.querySelector('.mark-all')).toBeNull();

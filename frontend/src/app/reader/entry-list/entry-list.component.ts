@@ -57,7 +57,7 @@ import { Problem } from '../../core/problem';
     } @else if (entries().length === 0) {
       <p class="empty">{{ selection().unread ? "You're all caught up." : 'Nothing here yet.' }}</p>
     } @else {
-      <div class="rows">
+      <div class="rows" #rows>
         @for (e of entries(); track e.id) {
           <app-entry-row
             [entry]="e"
@@ -68,19 +68,19 @@ import { Problem } from '../../core/problem';
             (open)="open.emit($event)"
           />
         }
+        @if (hasMore()) {
+          <div class="foot" #sentinel>
+            <button
+              class="load-more"
+              type="button"
+              [disabled]="loadingMore()"
+              (click)="loadMore.emit()"
+            >
+              {{ loadingMore() ? 'Loading…' : 'Load more' }}
+            </button>
+          </div>
+        }
       </div>
-      @if (hasMore()) {
-        <div class="foot" #sentinel>
-          <button
-            class="load-more"
-            type="button"
-            [disabled]="loadingMore()"
-            (click)="loadMore.emit()"
-          >
-            {{ loadingMore() ? 'Loading…' : 'Load more' }}
-          </button>
-        </div>
-      }
     }
   `,
   styles: [
@@ -136,6 +136,8 @@ import { Problem } from '../../core/problem';
         font-size: var(--fs-sm);
       }
       .rows {
+        flex: 1;
+        min-height: 0;
         overflow: auto;
       }
       .empty {
@@ -195,18 +197,23 @@ export class EntryListComponent implements OnDestroy {
   readonly read = output<EntryDto>();
   readonly open = output<EntryDto>();
 
+  private readonly rows = viewChild<ElementRef<HTMLElement>>('rows');
   private readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
   private observer?: IntersectionObserver;
 
   // Re-observe whenever the sentinel appears/disappears (hasMore toggles it).
   private readonly _wire = effect(() => {
     const node = this.sentinel()?.nativeElement;
+    const root = this.rows()?.nativeElement ?? null;
     this.observer?.disconnect();
     if (node && typeof IntersectionObserver !== 'undefined') {
-      this.observer = new IntersectionObserver((es) => {
-        if (es.some((e) => e.isIntersecting) && this.hasMore() && !this.loadingMore())
-          this.loadMore.emit();
-      });
+      this.observer = new IntersectionObserver(
+        (es) => {
+          if (es.some((e) => e.isIntersecting) && this.hasMore() && !this.loadingMore())
+            this.loadMore.emit();
+        },
+        { root, rootMargin: '300px' },
+      );
       this.observer.observe(node);
     }
   });

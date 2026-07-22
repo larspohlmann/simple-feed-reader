@@ -87,4 +87,55 @@ describe('EntriesStore', () => {
       .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
     expect(store.entries()[0].isFavorite).toBe(false); // rolled back
   });
+
+  it('reverts only the target entry on error, preserving an appended page', () => {
+    store.load({ view: 'all' });
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [entry(1)], nextCursor: 'C1' });
+    store.loadMore();
+    ctrl
+      .expectOne((r) => r.params.get('cursor') === 'C1')
+      .flush({ entries: [entry(2)], nextCursor: null });
+    expect(store.entries().map((e) => e.id)).toEqual([1, 2]);
+
+    store.setState(2, { isFavorite: true });
+    expect(store.entries()[1].isFavorite).toBe(true);
+    ctrl
+      .expectOne('https://api.test/api/entries/2/state')
+      .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+
+    // The appended page survived the rollback; only entry 2 reverted.
+    expect(store.entries().map((e) => e.id)).toEqual([1, 2]);
+    expect(store.entries()[1].isFavorite).toBe(false);
+  });
+
+  it('sets the error signal when a state PATCH fails', () => {
+    store.load({ view: 'all' });
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [entry(1)], nextCursor: null });
+
+    store.setState(1, { isFavorite: true });
+    expect(store.error()).toBeNull(); // cleared at the start of the optimistic update
+    ctrl
+      .expectOne('https://api.test/api/entries/1/state')
+      .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+    expect(store.error()).not.toBeNull();
+  });
+
+  it('invokes the onError callback on a failed state PATCH', () => {
+    store.load({ view: 'all' });
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [entry(1)], nextCursor: null });
+
+    let called = 0;
+    store.setState(1, { isRead: true }, () => called++);
+    expect(called).toBe(0);
+    ctrl
+      .expectOne('https://api.test/api/entries/1/state')
+      .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+    expect(called).toBe(1);
+  });
 });
