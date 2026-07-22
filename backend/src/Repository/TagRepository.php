@@ -17,4 +17,28 @@ class TagRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Tag::class);
     }
+
+    /**
+     * The user's tags matching the given ids. Fewer results than ids means one
+     * or more ids were invalid or belonged to another user.
+     *
+     * @param list<int> $ids
+     *
+     * @return list<Tag>
+     */
+    public function findAllByIdsForUser(array $ids, int $userId): array
+    {
+        if ([] === $ids) {
+            return [];
+        }
+
+        /** @var list<Tag> $rows */
+        $rows = $this->createQueryBuilder('t')
+            ->andWhere('t.id IN (:ids)')->setParameter('ids', $ids)
+            ->andWhere('t.user = :userId')->setParameter('userId', $userId)
+            ->getQuery()
+            ->getResult();
+
+        return $rows;
+    }
 }
