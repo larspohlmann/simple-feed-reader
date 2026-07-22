@@ -88,4 +88,21 @@ class TagRepository extends ServiceEntityRepository
 
         return $row;
     }
+
+    /**
+     * The user's tag with this name (case-insensitive), or null. Consumed by
+     * OPML import to reuse an existing tag rather than creating a duplicate.
+     */
+    public function findOneByNameForUser(int $userId, string $name): ?Tag
+    {
+        /** @var Tag|null $tag */
+        $tag = $this->createQueryBuilder('t')
+            ->andWhere('t.user = :user')->setParameter('user', $userId)
+            ->andWhere('LOWER(t.name) = LOWER(:name)')->setParameter('name', $name)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $tag;
+    }
 }
