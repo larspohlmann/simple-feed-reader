@@ -79,7 +79,11 @@ designed to be run repeatedly without ever resetting it:
   e2e run hits them from the same machine, so `bin/e2e.sh` clears the
   `cache.rate_limiter` and `altcha.replay.cache` pools before running —
   otherwise a second run in the same window would fail on 429s that have
-  nothing to do with the code under test.
+  nothing to do with the code under test. That clear happens once per run, so
+  the **whole suite must stay under the registration cap within a single run**
+  (currently 5 requests per IP / 15 min; the suite makes 4). When you add a
+  test that registers, keep the total under the cap — the pool reset saves you
+  between runs, not mid-run.
 - **TLS trust for PHP CLI.** Homebrew PHP on macOS pins its own static CA
   bundle and ignores the system keychain, so `mkcert -install` trusting the
   root at the OS level isn't enough for PHP's HTTP client. `bin/e2e.sh` builds

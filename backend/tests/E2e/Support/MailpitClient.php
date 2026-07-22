@@ -46,6 +46,12 @@ final class MailpitClient
         $this->http->request('DELETE', $this->baseUrl . '/api/v1/messages');
     }
 
+    /** Whether Mailpit currently holds any message addressed to $recipient. */
+    public function hasMessageTo(string $recipient): bool
+    {
+        return null !== $this->newestMessageIdTo($recipient);
+    }
+
     private function newestMessageIdTo(string $recipient): ?string
     {
         $search = $this->http->request('GET', $this->baseUrl . '/api/v1/search', [

@@ -36,9 +36,26 @@ final class ErrorContractE2eTest extends E2eTestCase
         self::assertIsArray($body['errors']);
         self::assertArrayHasKey('altcha', $body['errors']);
 
-        // And it created no USABLE account: a solved registration for the same
-        // address still reaches 202 rather than being rejected.
-        self::assertSame(202, $this->register($email, 'valid-enough-password')->getStatusCode());
+        // And it created no account. Asserting "a later registration for the same
+        // address still 202s" would prove nothing — /api/auth/register returns 202
+        // for an already-existing address too, by enumeration-safe design. So prove
+        // it through the one observable side effect of real creation: the
+        // verification email. Registration only mails on genuine creation, and this
+        // request was refused at the ALTCHA gate before that path.
+        //
+        // The mailer flushes on kernel.terminate (after the response), so a bare
+        // "no mail yet" check could pass simply because a hypothetical mail had not
+        // flushed. Register a *control* account and block until ITS mail lands —
+        // that proves the mailer has since flushed — then assert the rejected
+        // address still has no mail at all.
+        $control = $this->uniqueEmail();
+        self::assertSame(202, $this->register($control, 'valid-enough-password')->getStatusCode());
+        $this->mailpit->latestBodyTo($control);
+
+        self::assertFalse(
+            $this->mailpit->hasMessageTo($email),
+            'A registration rejected for a bad ALTCHA must create no account and send no verification mail.',
+        );
     }
 
     public function testUnauthenticatedMeIsProblemJson401(): void

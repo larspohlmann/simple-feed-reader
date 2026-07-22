@@ -51,6 +51,12 @@ fi
 
 echo "==> Running e2e suite ..."
 cd "$BACKEND_DIR"
+# Run (not exec) so the EXIT trap above still fires and removes the temp CA
+# bundle — `exec` would replace this shell and the trap would never run.
 # ${PHP_TLS_OPTS[@]+"…"} guards the empty-array case under `set -u` on bash 3.2
 # (the default /bin/bash on macOS), where a bare "${PHP_TLS_OPTS[@]}" would abort.
-exec php ${PHP_TLS_OPTS[@]+"${PHP_TLS_OPTS[@]}"} vendor/bin/phpunit -c phpunit-e2e.xml.dist "$@"
+# `|| status=$?` keeps `set -e` from aborting before we can propagate phpunit's
+# real exit code (the trap cleans up regardless of pass/fail).
+status=0
+php ${PHP_TLS_OPTS[@]+"${PHP_TLS_OPTS[@]}"} vendor/bin/phpunit -c phpunit-e2e.xml.dist "$@" || status=$?
+exit "$status"
