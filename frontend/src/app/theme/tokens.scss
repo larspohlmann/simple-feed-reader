@@ -1,0 +1,30 @@
+// src/app/theme/tokens.scss
+@use './themes/graphite';
+
+// Light is the fallback when no attribute is set yet (before the no-flash
+// script or ThemeService runs).
+:root,
+:root[data-theme='light'] {
+  @include graphite.light;
+}
+
+:root[data-theme='dark'] {
+  @include graphite.dark;
+}
+
+// Mode-invariant tokens (same in every theme).
+:root {
+  --radius: 8px;
+  --control-h: 40px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', roboto, sans-serif;
+  --fs-sm: 13px;
+  --fs-base: 15px;
+  --fs-lg: 18px;
+  --fs-xl: 24px;
+}

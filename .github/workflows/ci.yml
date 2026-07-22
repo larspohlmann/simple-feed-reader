@@ -103,3 +103,39 @@ jobs:
 
       - name: PHPUnit
         run: php bin/phpunit
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # node 22 ships npm 10.9.8, but the lockfile was authored by npm 11; npm 10
+      # mis-resolves a transitive dep (chokidar) and rejects the lock. Pin npm 11.
+      - name: Pin npm 11 (matches the lockfile author)
+        run: npm i -g npm@11
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ESLint + Prettier + Stylelint + Jest. Stylelint's color-no-hex covers the
+      # .scss files (theme excepted); component styles are inline TS and kept
+      # token-only by convention. The Playwright smoke needs the Docker stack and
+      # is deliberately not part of this gate.
+      - name: Gate (lint, format, stylelint, unit)
+        run: npm run check
+
+      - name: Build
+        run: npm run build

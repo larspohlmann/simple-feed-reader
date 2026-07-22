@@ -1,0 +1,15 @@
+{
+  "extends": ["stylelint-config-standard-scss"],
+  "rules": {
+    "color-no-hex": true,
+    "scss/dollar-variable-pattern": null,
+    "selector-class-pattern": null,
+    "no-empty-source": null
+  },
+  "overrides": [
+    {
+      "files": ["src/app/theme/**/*.scss"],
+      "rules": { "color-no-hex": null }
+    }
+  ]
+}

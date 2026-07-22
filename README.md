@@ -1,10 +1,12 @@
 # simple-feed-reader
 
 A multi-user RSS/Atom feed reader. Symfony 7.4 LTS JSON API in `backend/`, with
-an Angular SPA to follow.
+the Angular 20 SPA that delivers the reader UI and auth in `frontend/`.
 
 ## Documentation
 
+- [Frontend workspace](frontend/README.md) — the Angular 20 SPA: dev server, the
+  quality gate, theming, and the bearer-token auth model.
 - [Architecture: client contract and native-client readiness](docs/architecture.md)
   — the cross-cutting rules for how clients talk to the backend, and the standing
   constraint that keeps a future native iOS app viable.

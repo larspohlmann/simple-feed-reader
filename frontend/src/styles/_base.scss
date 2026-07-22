@@ -1,0 +1,48 @@
+// src/styles/_base.scss
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  background: var(--surface-0);
+  color: var(--text-primary);
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+// Shared form field: <label class="field"><span>Label</span><input /></label>.
+// Global (unencapsulated) so every auth form reuses it without repeating CSS.
+.field {
+  display: block;
+  margin-bottom: var(--space-4);
+}
+
+.field span {
+  display: block;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.field input {
+  width: 100%;
+  height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+
+.field input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
