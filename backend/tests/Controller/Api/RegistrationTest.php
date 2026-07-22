@@ -182,6 +182,77 @@ final class RegistrationTest extends WebTestCase
         self::assertEmailCount(0);
     }
 
+    /**
+     * The address space OAuthAccountLinker mints for itself is not registrable.
+     *
+     * The linker gives an addressless identity a DETERMINISTIC placeholder,
+     * `<provider>-<sha256 prefix of sub>@oauth.invalid`, so the same identity
+     * reconstructs the same address instead of accumulating an account per
+     * sign-in. Deterministic also means predictable: `Assert\Email` is perfectly
+     * happy with `google-abc…@oauth.invalid`, so somebody who knew a victim's
+     * provider `sub` could register that address here first and make the
+     * victim's very first sign-in die on uniq_user_email.
+     *
+     * Low severity — a provider `sub` is not public and the payoff is denying
+     * one person one login — but the door costs three lines to close.
+     */
+    public function testTheReservedOAuthPlaceholderDomainCannotBeRegistered(): void
+    {
+        $this->register(['email' => 'google-abc123@oauth.invalid', 'altcha' => 'unused']);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertResponseHeaderSame('content-type', 'application/problem+json');
+        $payload = $this->payload();
+        self::assertSame('validation_error', $payload['type']);
+        self::assertIsArray($payload['errors']);
+        self::assertArrayHasKey('email', $payload['errors']);
+
+        self::assertNull($this->users()->findOneByEmail('google-abc123@oauth.invalid'));
+        self::assertEmailCount(0);
+    }
+
+    /**
+     * The whole reserved TLD, not just the one host the linker uses today: RFC
+     * 2606 reserves `.invalid` precisely so it can never resolve, so no address
+     * under it is ever a real one somebody should be able to sign up with.
+     */
+    public function testAnyInvalidTldAddressIsRefused(): void
+    {
+        $this->register(['email' => 'someone@whatever.invalid', 'altcha' => 'unused']);
+
+        self::assertResponseStatusCodeSame(422);
+        $payload = $this->payload();
+        self::assertIsArray($payload['errors']);
+        self::assertArrayHasKey('email', $payload['errors']);
+    }
+
+    /**
+     * The other half of the constraint, and the one that would break OAuth
+     * signup if it were put on the entity instead of on this DTO: an ordinary
+     * address must still register normally.
+     */
+    public function testAnOrdinaryAddressStillRegisters(): void
+    {
+        $this->register(['email' => 'ordinary@example.com']);
+
+        self::assertResponseStatusCodeSame(202);
+        self::assertNotNull($this->users()->findOneByEmail('ordinary@example.com'));
+    }
+
+    /**
+     * `invalid` as a LABEL is not the reserved TLD, and must not be swept up:
+     * `invalid.example.com` is a domain somebody can really own. The check is
+     * anchored to the end of the address for the same reason
+     * OAuthIdentity::isPrivateRelay() is.
+     */
+    public function testADomainMerelyContainingInvalidStillRegisters(): void
+    {
+        $this->register(['email' => 'someone@invalid.example.com']);
+
+        self::assertResponseStatusCodeSame(202);
+        self::assertNotNull($this->users()->findOneByEmail('someone@invalid.example.com'));
+    }
+
     public function testInvalidEmailAndShortPasswordAreBothReported(): void
     {
         $this->register(['email' => 'not-an-email', 'password' => 'short', 'altcha' => 'unused']);

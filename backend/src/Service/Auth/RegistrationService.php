@@ -8,7 +8,7 @@ use App\Entity\User;
 use App\Enum\TokenPurpose;
 use App\Enum\UserStatus;
 use App\Repository\UserRepository;
-use App\Security\PasswordWorkEqualizer;
+use App\Security\PasswordWorkEqualizerInterface;
 use App\Service\Mail\AccountMailer;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
@@ -24,7 +24,7 @@ final readonly class RegistrationService
         private ActionTokenService $tokens,
         private AccountMailer $mailer,
         private ClockInterface $clock,
-        private PasswordWorkEqualizer $work,
+        private PasswordWorkEqualizerInterface $work,
     ) {
     }
 

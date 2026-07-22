@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
+use App\Exception\AccountNotActiveException;
 use App\Exception\ApiException;
 use App\Exception\RateLimitedException;
 use App\Http\ApiProblem;
@@ -42,6 +43,15 @@ final readonly class ApiExceptionListener
         $exception = $event->getThrowable();
         $headers = [];
 
+        /**
+         * RFC 7807 extension members — keys added ALONGSIDE the standard
+         * problem fields. Kept separate from ApiProblem, which models the
+         * standard document and nothing else.
+         *
+         * @var array<string, mixed>
+         */
+        $extensions = [];
+
         if ($exception instanceof ApiException) {
             $problem = new ApiProblem(
                 $exception->type,
@@ -53,6 +63,16 @@ final readonly class ApiExceptionListener
 
             if ($exception instanceof RateLimitedException) {
                 $headers['Retry-After'] = (string) $exception->retryAfterSeconds;
+            }
+
+            if ($exception instanceof AccountNotActiveException) {
+                // The client shows a different message per status, so the
+                // status travels in the payload rather than only in $detail's
+                // prose. LoginFailureHandler adds the identical key for the
+                // password login — it cannot use this listener, because the
+                // firewall short-circuits before kernel.exception — so the two
+                // sign-in paths report a blocked account in one shape.
+                $extensions['accountStatus'] = $exception->accountStatus;
             }
         } elseif ($exception instanceof HttpExceptionInterface) {
             $problem = $this->fromHttpException($exception);
@@ -123,7 +143,7 @@ final readonly class ApiExceptionListener
         // survive. Placing ours last also beats case-variant keys, because
         // HeaderBag lowercases names and the later entry wins.
         $event->setResponse(new JsonResponse(
-            $problem->toArray(),
+            array_merge($problem->toArray(), $extensions),
             $problem->status,
             array_merge($headers, ['Content-Type' => 'application/problem+json']),
         ));

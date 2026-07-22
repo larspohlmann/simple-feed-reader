@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\User;
 use App\Enum\UserStatus;
+use App\Security\PasswordWorkEqualizer;
+use App\Tests\Support\HashCountingWork;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
@@ -318,5 +321,86 @@ final class LoginTest extends WebTestCase
         }
 
         self::assertCount(1, array_unique($bodies), 'Wrong-password responses must not vary by account status.');
+    }
+
+    /**
+     * An account that exists only through a provider has no password hash at
+     * all. Symfony's CheckCredentialsListener returns before it reaches the
+     * hasher for those, so this request skips the argon2 every other login
+     * pays for — see App\Security\LoginTimingEqualizer, which buys it back.
+     *
+     * Asserted here as byte equality with an unknown address rather than as a
+     * duration: the response is the part a functional test can pin down, and
+     * the hash decision is covered by LoginTimingEqualizerTest.
+     */
+    public function testAPasswordLoginAgainstAnOAuthOnlyAccountIsIndistinguishableFromAnUnknownAddress(): void
+    {
+        $client = self::createClient();
+        /** @var EntityManagerInterface $em */
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+
+        $user = new User('oauth-only@example.com', new \DateTimeImmutable('2026-07-01 10:00:00'));
+        $user->setStatus(UserStatus::Active);
+        // No password hash: this account exists only through a provider.
+        $em->persist($user);
+        $em->flush();
+
+        $bodies = [];
+        foreach (['oauth-only@example.com', 'ghost@example.com'] as $email) {
+            $this->login($client, $email, 'anything');
+            self::assertResponseStatusCodeSame(401);
+            self::assertResponseHeaderSame('content-type', 'application/problem+json');
+            $bodies[] = (string) $client->getResponse()->getContent();
+        }
+
+        self::assertCount(1, array_unique($bodies));
+    }
+
+    /**
+     * The response bytes above would look identical even if the equalizer never
+     * fired, so this counts the work the real, wired-up stack actually spends.
+     *
+     * It is a functional test rather than a call to equalize(): the whole
+     * mechanism depends on LoginFailureHandler recovering the submitted address
+     * from a request body the authenticator has already consumed, and a test
+     * that invokes the equalizer directly asserts that away — it would stay
+     * green with a handler that passed null every time, which would silently
+     * hash on every failure and lose the wrong-password case entirely.
+     */
+    public function testEveryCredentialFailureCostsTheSameOneHash(): void
+    {
+        $client = self::createClient();
+        // Without this the browser rebuilds the container after every request,
+        // which would quietly restore the real equalizer and leave this test
+        // measuring the first request only.
+        $client->disableReboot();
+        $hashes = new HashCountingWork();
+        self::getContainer()->set(PasswordWorkEqualizer::class, $hashes);
+
+        $this->factory()->create('has-password@example.com');
+
+        /** @var EntityManagerInterface $em */
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        $oauthOnly = new User('no-password@example.com', new \DateTimeImmutable('2026-07-01 10:00:00'));
+        $oauthOnly->setStatus(UserStatus::Active);
+        $em->persist($oauthOnly);
+        $em->flush();
+
+        $spent = [];
+        foreach (['unknown@example.com', 'no-password@example.com', 'has-password@example.com'] as $email) {
+            $before = $hashes->calls;
+            $this->login($client, $email, 'wrong-password');
+            self::assertResponseStatusCodeSame(401);
+            $spent[$email] = $hashes->calls - $before;
+        }
+
+        // Unknown and OAuth-only skipped the hasher inside the security layer,
+        // so the equalizer buys one hash back for each. The password account
+        // already paid for a real verify, so it buys none — one hash of work
+        // on all three paths, which is the whole point.
+        self::assertSame(
+            ['unknown@example.com' => 1, 'no-password@example.com' => 1, 'has-password@example.com' => 0],
+            $spent,
+        );
     }
 }

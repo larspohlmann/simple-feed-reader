@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Admin;
 
 use App\Entity\User;
+use App\Entity\UserIdentity;
 use App\Enum\UserStatus;
+use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -71,6 +73,36 @@ final class AdminUserControllerTest extends WebTestCase
 
         /** @var array<string, mixed> $decoded */
         return $decoded;
+    }
+
+    /**
+     * The row for one address, from a decoded list payload.
+     *
+     * @return array<string, mixed>
+     */
+    private function rowFor(string $email): array
+    {
+        $users = $this->payload()['users'];
+        self::assertIsArray($users);
+
+        foreach ($users as $row) {
+            self::assertIsArray($row);
+            if (($row['email'] ?? null) === $email) {
+                /** @var array<string, mixed> $row */
+                return $row;
+            }
+        }
+
+        self::fail(sprintf('no row for %s in the admin list', $email));
+    }
+
+    /** Links a provider identity to an already-persisted user. */
+    private function link(User $user, string $provider, string $providerUserId): void
+    {
+        /** @var EntityManagerInterface $em */
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        $em->persist(new UserIdentity($user, $provider, $providerUserId, new \DateTimeImmutable()));
+        $em->flush();
     }
 
     /** Re-reads through the CURRENT kernel: the seeding EM belongs to a rebooted one. */
@@ -154,7 +186,7 @@ final class AdminUserControllerTest extends WebTestCase
         foreach ($payload['users'] as $entry) {
             self::assertIsArray($entry);
             self::assertSame(
-                ['id', 'email', 'status', 'roles', 'createdAt', 'approvedAt'],
+                ['id', 'email', 'status', 'roles', 'createdAt', 'approvedAt', 'identities'],
                 array_keys($entry),
             );
         }
@@ -388,6 +420,111 @@ final class AdminUserControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(422);
         self::assertSame('validation_error', $this->payload()['type']);
+    }
+
+    /**
+     * The reason this column exists. An OAuth account has no verification mail
+     * for an admin to chase and may carry a synthetic `@oauth.invalid` address,
+     * so without this the queue shows two anomalies and no explanation.
+     */
+    public function testTheAdminListShowsWhichProvidersAnAccountSignedUpWith(): void
+    {
+        $admin = $this->admin();
+        $user = $this->factory()->create('oauth@example.com', status: UserStatus::PendingApproval);
+        $this->link($user, 'google', 'sub-1');
+
+        $this->call('GET', self::LIST, $this->tokenFor($admin));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['google'], $this->rowFor('oauth@example.com')['identities']);
+    }
+
+    public function testAPasswordOnlyAccountListsNoIdentities(): void
+    {
+        $admin = $this->admin();
+        $this->factory()->create('bob@example.com', status: UserStatus::PendingApproval);
+
+        $this->call('GET', self::LIST, $this->tokenFor($admin));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame([], $this->rowFor('bob@example.com')['identities']);
+    }
+
+    /**
+     * The spec allows one user to hold several identities, so the column is a
+     * list and not a single value.
+     */
+    public function testAnAccountWithTwoProvidersListsBoth(): void
+    {
+        $admin = $this->admin();
+        $user = $this->factory()->create('both@example.com', status: UserStatus::PendingApproval);
+        $this->link($user, 'google', 'sub-1');
+        $this->link($user, 'apple', 'sub-2');
+
+        $this->call('GET', self::LIST, $this->tokenFor($admin));
+
+        self::assertResponseIsSuccessful();
+        $providers = $this->rowFor('both@example.com')['identities'];
+        self::assertIsArray($providers);
+        sort($providers);
+        self::assertSame(['apple', 'google'], $providers);
+    }
+
+    /**
+     * The N+1 guard, and the only assertion here that can fail: the response
+     * body is byte-identical whether the providers are read in one query or in
+     * one per row, so nothing above notices a loop.
+     *
+     * User holds no ORM association to UserIdentity — Plan 1 kept that
+     * relationship one-directional and lets the database FK cascade the deletes
+     * — so the batched read is hand-written and a future edit could easily
+     * "simplify" it into a per-user lookup.
+     */
+    public function testTheProviderColumnCostsOneQueryHoweverManyUsersAreListed(): void
+    {
+        $admin = $this->admin();
+        for ($i = 0; $i < 7; ++$i) {
+            $user = $this->factory()->create("user{$i}@example.com", status: UserStatus::PendingApproval);
+            $this->link($user, 'google', "sub-{$i}");
+        }
+
+        $token = $this->tokenFor($admin);
+
+        // Cleared after seeding, so the INSERTs above are not counted. The
+        // recorder outlives the kernel reboot the request triggers, because
+        // dama/doctrine-test-bundle keeps one connection for the whole process
+        // and the middleware is bound to it, not to the container.
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+
+        $this->call('GET', self::LIST, $token);
+
+        self::assertResponseIsSuccessful();
+        $listed = $this->payload()['users'];
+        self::assertIsArray($listed);
+        self::assertCount(8, $listed);
+
+        $reads = $recorder->queriesMatching('from user_identity');
+        self::assertCount(
+            1,
+            $reads,
+            "the provider column must be one batched read, got:\n" . implode("\n", $reads),
+        );
+    }
+
+    /**
+     * The empty case, which the batched read has to special-case: an `IN ()`
+     * with no values is a SQL syntax error on both engines.
+     */
+    public function testAFilterMatchingNobodyDoesNotBreakTheProviderLookup(): void
+    {
+        $admin = $this->admin();
+
+        $this->call('GET', self::LIST . '?status=suspended', $this->tokenFor($admin));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame([], $this->payload()['users']);
     }
 
     public function testAdminCannotRejectThemselves(): void

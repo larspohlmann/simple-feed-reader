@@ -39,3 +39,23 @@ framework:
             limit: 5
             interval: '15 minutes'
             cache_pool: cache.rate_limiter
+
+        # Starting an OAuth login sends no mail and writes no row — it costs us
+        # one cache entry and a 302 — so the budget guards against a redirect
+        # loop or a scripted probe rather than against outbound abuse.
+        #
+        # Deliberately looser than registration's 5: abandoning a provider's
+        # consent screen and coming back is ordinary human behaviour, not a
+        # signal of attack, and a NATed household sharing one IP would hit a
+        # tighter cap on a perfectly honest afternoon. Sliding window for the
+        # same reason as its neighbours — a fixed window's boundary lets an
+        # attacker spend 2x the configured limit in a short burst.
+        #
+        # Same cache_pool as the others, stated explicitly rather than relying
+        # on the framework default, so all three limiters name the one pool the
+        # test suite clears between cases.
+        oauth_start:
+            policy: 'sliding_window'
+            limit: 20
+            interval: '15 minutes'
+            cache_pool: cache.rate_limiter

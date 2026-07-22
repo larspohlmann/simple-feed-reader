@@ -71,3 +71,77 @@ services:
     test.cache.altcha_replay:
         alias: altcha.replay.cache
         public: true
+
+    # The OAuth flow tests must mint and inspect state and login codes, whose
+    # plaintext values exist only inside a redirect URL, and must swap a real
+    # provider for a fake via `self::getContainer()->set(...)`, which the
+    # container only allows on public services.
+    #
+    # Only list an `App\Service\OAuth\*` class here once its file exists. Naming
+    # a class that does not compiles fine (`cache:clear` stays green) and then
+    # fails `lint:container` with "class does not exist" — or, worse, fails
+    # confusingly on first fetch.
+    #
+    # `autowire: true` on each is not redundant — same caveat as the entries
+    # above: naming a class here REPLACES the definition the App\ resource
+    # produced rather than amending it, and this file has no _defaults to
+    # inherit from, so without it the service is built with zero constructor
+    # arguments.
+
+    # Records the SQL each request actually executed, so "the admin list reads
+    # every user's providers in ONE query" is counted rather than eyeballed. An
+    # N+1 produces a byte-identical response, so nothing asserted on the body
+    # can ever fail when somebody replaces the batched lookup with a loop.
+    #
+    # Tagged explicitly rather than relying on autoconfiguration: `tests/` is
+    # not in the `App\` resource that services.yaml registers, so nothing here
+    # is autoconfigured. Priority is left at the default, which puts it inside
+    # dama/doctrine-test-bundle's StaticDriver — it therefore sees the real
+    # statements and not the wrapping transaction's bookkeeping.
+    App\Tests\Support\QueryRecorder:
+        public: true
+        tags:
+            - { name: doctrine.middleware }
+
+    test.cache.oauth_state:
+        alias: oauth.state.cache
+        public: true
+
+    # The flow tests drive start() to obtain a state they can replay into the
+    # callback, and consume() to assert the callback burned it. Neither value
+    # exists anywhere a test could otherwise reach: the state lives only in a
+    # redirect URL and the verifier never leaves the server at all.
+    App\Service\OAuth\OAuthStateStore:
+        autowire: true
+        public: true
+
+    test.cache.oauth_login_code:
+        alias: oauth.login_code.cache
+        public: true
+
+    # The flow tests read the code out of the callback's redirect and trade it
+    # for a JWT, and assert a second exchange fails. The plaintext code exists
+    # only in that redirect URL, so there is no other seam to reach it from.
+    App\Service\OAuth\LoginCodeStore:
+        autowire: true
+        public: true
+
+    # The flow tests assert which account a callback landed on — linked, claimed
+    # or freshly created — and the linking rules are easier to drive directly
+    # than through a full provider round trip. Same `autowire` caveat as above.
+    App\Service\OAuth\OAuthAccountLinker:
+        autowire: true
+        public: true
+
+    # The flow tests resolve a provider by URL segment, and OAuthProviderWiring
+    # Test fetches this to prove the container's tagged iterator actually finds
+    # the providers — an empty one would build a registry that offers nothing
+    # and looks exactly like a deployment with no credentials.
+    #
+    # Public is also what lets OAuthFlowTest replace the whole registry with one
+    # holding a fake provider, in a single `self::getContainer()->set()` — the
+    # seam that keeps the flow tests off the network without depending on
+    # whether the container's tagged iterator has collected anything yet.
+    App\Service\OAuth\OAuthProviderRegistry:
+        autowire: true
+        public: true

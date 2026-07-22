@@ -12,6 +12,12 @@ namespace App\Exception;
 abstract class ApiException extends \RuntimeException
 {
     /**
+     * $previous is accepted purely so subclasses can keep the underlying cause
+     * attached for the log. It is never read when building the problem
+     * document — see ApiExceptionListener, which reads only the five public
+     * properties above — so chaining a driver or HTTP-client exception here
+     * cannot leak its message to a client.
+     *
      * @param array<string, list<string>> $errors
      */
     public function __construct(
@@ -20,7 +26,8 @@ abstract class ApiException extends \RuntimeException
         public readonly string $title,
         public readonly ?string $detail = null,
         public readonly array $errors = [],
+        ?\Throwable $previous = null,
     ) {
-        parent::__construct($detail ?? $title);
+        parent::__construct($detail ?? $title, 0, $previous);
     }
 }
