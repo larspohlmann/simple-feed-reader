@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
 import { API_BASE_URL } from '../../core/api';
 import { RefreshService } from '../refresh.service';
 import { ReadingLayoutService } from '../reading-layout.service';
@@ -9,7 +10,7 @@ import { ReaderHeaderComponent } from './reader-header.component';
 import { signal } from '@angular/core';
 
 describe('ReaderHeaderComponent', () => {
-  const auth = { user: signal({ email: 'a@b.c' }), logout: jest.fn() };
+  const auth = { user: signal({ email: 'a@b.c' }), logout: jest.fn(), isAdmin: () => false };
   beforeEach(() => {
     localStorage.clear();
     TestBed.configureTestingModule({
@@ -17,6 +18,7 @@ describe('ReaderHeaderComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideRouter([]),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
         { provide: AuthService, useValue: auth },
       ],
@@ -56,5 +58,25 @@ describe('ReaderHeaderComponent', () => {
     expect(
       (f.nativeElement.querySelector('[aria-label="Refresh"]') as HTMLButtonElement).disabled,
     ).toBe(true);
+  });
+
+  it('shows a Settings link, and Admin only for admins', () => {
+    const f = create();
+    const el = f.nativeElement as HTMLElement;
+    (el.querySelector('[aria-haspopup="menu"]') as HTMLButtonElement).click();
+    f.detectChanges();
+    expect(el.querySelector('a[routerLink="/settings"]')).not.toBeNull();
+    expect(el.querySelector('a[routerLink="/admin/users"]')).toBeNull();
+  });
+
+  it('shows Admin when the user is an admin', () => {
+    TestBed.overrideProvider(AuthService, {
+      useValue: { user: signal({ email: 'a@b.c' }), logout: jest.fn(), isAdmin: () => true },
+    });
+    const f = create();
+    const el = f.nativeElement as HTMLElement;
+    (el.querySelector('[aria-haspopup="menu"]') as HTMLButtonElement).click();
+    f.detectChanges();
+    expect(el.querySelector('a[routerLink="/admin/users"]')).not.toBeNull();
   });
 });
