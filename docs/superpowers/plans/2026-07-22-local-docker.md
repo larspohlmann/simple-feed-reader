@@ -325,7 +325,7 @@ Expected: `Already at the latest version` — the chain must converge in one pas
 - [ ] **Step 3: Verify the endpoint over TLS AND prove DB reachability separately**
 
 Run: `curl -sS https://localhost:8443/api/health`
-Expected: HTTP 200, `{"status":"ok"}`. NOTE: this endpoint does NOT touch the database (verified in Task 3, before any schema existed), so DB reachability must be proven explicitly:
+Expected: HTTP 200, `{"status":"ok"}`. NOTE: this endpoint only proves DB connectivity — HealthController runs `SELECT 1` and returns 503 `{"status":"error","database":"unreachable"}` on failure. That is why it already passed in Task 3 before any schema existed: `SELECT 1` needs no schema. It proves nothing about schema/migration correctness, so that must be proven explicitly:
 
 Run: `docker compose exec php bin/console dbal:run-sql "SELECT COUNT(*) FROM doctrine_migration_versions"`
 Expected: a count equal to the number of migrations just executed in Step 2.
