@@ -1,0 +1,33 @@
+# Local development stack. Additive to the native workflow: nothing in here
+# modifies committed .env files — container-only environment variables override
+# them via Symfony's env precedence. Spec:
+# docs/superpowers/specs/2026-07-22-local-docker-design.md
+name: simple-feed-reader
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: feedreader
+      MYSQL_USER: feedreader
+      MYSQL_PASSWORD: feedreader
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      # Non-standard host port so a natively installed MySQL never collides.
+      - "33306:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"   # web inbox; SMTP (1025) stays internal to the compose network
+
+volumes:
+  mysql-data:

@@ -45,6 +45,11 @@ FLUSH PRIVILEGES;
 # modifies committed .env files — container-only environment variables override
 # them via Symfony's env precedence. Spec:
 # docs/superpowers/specs/2026-07-22-local-docker-design.md
+
+# Pin the project name so container/volume identity does not depend on the
+# checkout location (a worktree directory would otherwise derive e.g. "docker").
+name: simple-feed-reader
+
 services:
   mysql:
     image: mysql:8.4
