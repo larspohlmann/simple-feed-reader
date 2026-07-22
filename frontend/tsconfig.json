@@ -12,8 +12,15 @@
     "isolatedModules": true,
     "experimentalDecorators": true,
     "importHelpers": true,
+    "esModuleInterop": true,
     "target": "ES2022",
     "module": "preserve"
+  },
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs",
+      "esModuleInterop": true
+    }
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
