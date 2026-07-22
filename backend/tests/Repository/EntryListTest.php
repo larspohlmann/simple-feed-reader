@@ -199,4 +199,27 @@ final class EntryListTest extends DbTestCase
             self::assertNotSame('orphan', $r->entry->getGuid());
         }
     }
+
+    public function testStateIsScopedToTheCaller(): void
+    {
+        // A second subscriber to the SAME feed/entry. Their read + favorite
+        // state must never bleed into our view — the LEFT JOIN is keyed on
+        // es.user, so we see only our own (absent) state.
+        $entry = $this->entry('shared', '2026-07-05T00:00:00Z');
+
+        $stranger = new User('stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($stranger);
+        $this->em->persist(new Subscription($stranger, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $strangerState = new EntryState($stranger, $entry);
+        $strangerState->setIsRead(true);
+        $strangerState->setIsFavorite(true);
+        $this->em->persist($strangerState);
+        $this->em->flush();
+
+        $rows = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0));
+        self::assertCount(1, $rows);
+        self::assertSame('shared', $rows[0]->entry->getGuid());
+        self::assertFalse($rows[0]->isRead, 'must not inherit the stranger\'s read flag');
+        self::assertFalse($rows[0]->isFavorite, 'must not inherit the stranger\'s favorite flag');
+    }
 }
