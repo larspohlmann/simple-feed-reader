@@ -64,8 +64,8 @@ class EntryRepository extends ServiceEntityRepository
             ->leftJoin('e.feed', 'f')->addSelect('f')
             // Unrelated-entity joins: the caller's subscription to this entry's
             // feed, and the caller's optional per-entry state row.
-            ->join(Subscription::class, 's', 'WITH', 's.feed = e.feed AND s.user = :user')
-            ->leftJoin(EntryState::class, 'es', 'WITH', 'es.entry = e AND es.user = :user')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
             ->addSelect('s.id AS subscriptionId')
             ->addSelect('s.customTitle AS customTitle')
             ->addSelect('f.title AS feedTitle')
@@ -108,7 +108,7 @@ class EntryRepository extends ServiceEntityRepository
     {
         /** @var Entry|null $entry */
         $entry = $this->createQueryBuilder('e')
-            ->join(Subscription::class, 's', 'WITH', 's.feed = e.feed AND s.user = :user')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
             ->andWhere('e.id = :id')
             ->setParameter('id', $entryId)
             ->setParameter('user', $userId)
