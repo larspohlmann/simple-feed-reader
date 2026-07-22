@@ -1,0 +1,40 @@
+// src/app/theme/themes/_graphite.scss
+// Graphite: muted greyscale with a muted teal accent. Two mixins, one per mode,
+// so the token values live once and are applied to the [data-theme] selectors
+// in tokens.scss.
+
+@mixin light {
+  --surface-0: #f5f5f4; // page canvas
+  --surface-1: #fff; // panel / sidebar
+  --surface-2: #fff; // raised card
+  --border: #e4e4e2;
+  --border-strong: #d4d4d1;
+  --text-primary: #2a2a2a;
+  --text-secondary: #5f5f5c;
+  --text-muted: #8f8f8b;
+  --accent: #3f8676;
+  --accent-soft: #e9f1ef;
+  --on-accent: #fff;
+  --danger: #b3403a;
+  --bg-danger: #f7e9e8;
+  --success: #3f7a52;
+  --bg-success: #e9f1ec;
+}
+
+@mixin dark {
+  --surface-0: #161616;
+  --surface-1: #1c1c1c;
+  --surface-2: #242424;
+  --border: #2a2a2a;
+  --border-strong: #383836;
+  --text-primary: #d8d8d6;
+  --text-secondary: #9a9a97;
+  --text-muted: #6a6a67;
+  --accent: #5aa694;
+  --accent-soft: #20302c;
+  --on-accent: #0f1a17;
+  --danger: #d98a86;
+  --bg-danger: #2a1e1d;
+  --success: #7faf8c;
+  --bg-success: #1c2620;
+}
