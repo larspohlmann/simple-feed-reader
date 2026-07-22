@@ -11,9 +11,9 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * widget does. There is no shortcut: the server checks an HMAC signature and a
  * hash preimage, so only a genuinely solved payload passes verification.
  */
-final class HttpAltchaSolver
+final readonly class HttpAltchaSolver
 {
-    public function __construct(private readonly HttpClientInterface $http, private readonly string $baseUrl)
+    public function __construct(private HttpClientInterface $http, private string $baseUrl)
     {
     }
 

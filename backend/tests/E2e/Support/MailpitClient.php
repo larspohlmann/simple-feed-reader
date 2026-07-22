@@ -12,11 +12,11 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * or reset token any other way — the token exists only in the email body, which
  * is exactly the property real users depend on.
  */
-final class MailpitClient
+final readonly class MailpitClient
 {
-    private readonly HttpClientInterface $http;
+    private HttpClientInterface $http;
 
-    public function __construct(private readonly string $baseUrl)
+    public function __construct(private string $baseUrl)
     {
         $this->http = HttpClient::create();
     }
