@@ -18,7 +18,8 @@ use App\Service\FeedScheduler;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FetchResponse;
-use App\Service\Parser\AtomParser;
+use App\Service\Parser\Atom03Parser;
+use App\Service\Parser\Atom10Parser;
 use App\Service\Parser\FeedParser;
 use App\Service\Parser\Rss1Parser;
 use App\Service\Parser\Rss2Parser;
@@ -59,7 +60,7 @@ final class RefreshRunnerTest extends DbTestCase
             $feedRepository,
             $runnerEm ?? $this->em,
             $this->fetcher,
-            new FeedParser(new Rss2Parser(), new AtomParser(), new Rss1Parser()),
+            new FeedParser(new Rss2Parser(), new Atom10Parser(), new Atom03Parser(), new Rss1Parser()),
             new EntryIngestor($this->em, $entryRepository, new EntrySanitizer(), $this->clock),
             new FeedScheduler($this->clock),
             new EntryPruner($this->em, $this->clock),

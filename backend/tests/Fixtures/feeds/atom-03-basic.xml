@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://purl.org/atom/ns#" version="0.3">
+  <title>Atom 0.3 Example</title>
+  <tagline>An old-school atom feed</tagline>
+  <link rel="alternate" type="text/html" href="https://atom03.example.com/"/>
+  <modified>2026-07-16T10:00:00Z</modified>
+  <entry>
+    <title>First 0.3 Entry</title>
+    <link rel="alternate" type="text/html" href="https://atom03.example.com/first"/>
+    <id>tag:atom03.example.com,2026:first</id>
+    <issued>2026-07-16T09:30:00Z</issued>
+    <modified>2026-07-16T09:45:00Z</modified>
+    <author><name>Old Timer</name></author>
+    <summary>A teaser from the 0.3 dialect.</summary>
+    <content type="text/html" mode="escaped">&lt;p&gt;Body &lt;em&gt;html&lt;/em&gt;.&lt;/p&gt;</content>
+  </entry>
+</feed>
