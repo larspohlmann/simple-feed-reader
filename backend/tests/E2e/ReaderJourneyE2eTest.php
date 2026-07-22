@@ -8,6 +8,7 @@ use App\Tests\E2e\Support\E2eTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
  * The reader API against the real internet: feed autodiscovery, subscribing to a
@@ -154,6 +155,156 @@ final class ReaderJourneyE2eTest extends E2eTestCase
         self::markTestSkipped('No discovered feed resolved a title (' . implode('; ', $unresolved) . ')');
     }
 
+    /**
+     * The reader surface against a live, ingested feed: list its entries, flip an
+     * entry's read/favorite state, prove the view filters follow, read the
+     * per-subscription unread count, watermark everything read, then round-trip
+     * the whole subscription through OPML export → re-import.
+     *
+     * Every external hop degrades gracefully: a candidate that fails to subscribe
+     * between discovery and here, or a feed that ingested nothing this run (empty,
+     * or an Atom 0.3 feed the parser leaves itemless), is not a stack fault — the
+     * loop moves to the next candidate, and the whole test skips if none yield
+     * entries. All assertions are structural or behavioural; never on entry
+     * counts, titles, or article text, which change minute to minute.
+     */
+    public function testReaderSurfaceEntriesStateMarkReadAndOpml(): void
+    {
+        $token = $this->adminJwt();
+
+        $candidates = $this->discoverFeedCandidates($token);
+        if ([] === $candidates) {
+            self::markTestSkipped('No reachable news homepage offered a feed candidate');
+        }
+
+        $notes = [];
+
+        foreach ($candidates as [$label, $candidateUrl]) {
+            // Clean slate so the admin holds exactly the one feed under test.
+            $this->deleteAllSubscriptions($token);
+
+            $created = $this->postJson('/api/subscriptions', ['url' => $candidateUrl], $token);
+            if (201 !== $created->getStatusCode()) {
+                // The feed became unreachable between discovery and subscribe —
+                // an external hiccup, not a stack fault. Try the next candidate.
+                $notes[] = $label . ' subscribe ' . $created->getStatusCode();
+                continue;
+            }
+
+            $subscription = $created->toArray()['subscription'] ?? null;
+            self::assertIsArray($subscription, 'a 201 must carry the created subscription');
+
+            $subId = $subscription['id'] ?? null;
+            self::assertIsInt($subId, 'the subscription needs an integer id');
+
+            $report = $this->driveRefreshToCompletion($token);
+            self::assertNotSame(
+                'aborted',
+                $report['status'] ?? null,
+                'refresh aborted: ' . (string) json_encode($report),
+            );
+
+            // A feed that ingested nothing this run (empty, or Atom 0.3 which the
+            // parser fetches but leaves without usable items) is not a stack
+            // fault — move on to the next candidate.
+            $entries = $this->getJson('/api/entries?subscription=' . $subId, $token)->toArray()['entries'] ?? null;
+            if (!is_array($entries) || [] === $entries) {
+                $notes[] = $label . ' no entries';
+                continue;
+            }
+
+            // ---- Reader surface: structural / behavioural assertions only ----
+            // The entry list carries the reader read-model shape for each row.
+            $first = $entries[0];
+            self::assertIsArray($first);
+            self::assertArrayHasKey('id', $first);
+            self::assertArrayHasKey('isRead', $first);
+            self::assertArrayHasKey('source', $first);
+
+            $entryId = $first['id'];
+            self::assertIsInt($entryId);
+
+            $unreadPath = '/api/entries?subscription=' . $subId . '&view=unread';
+
+            // (a) Force the entry UNREAD → it appears in the unread view. Driving
+            // the flag explicitly (rather than assuming a fresh ingest starts
+            // unread) keeps this robust to re-runs: EntryState rows outlive the
+            // subscription, so a prior run may have left this entry read.
+            $unreadResp = $this->patchState($token, $entryId, ['isRead' => false]);
+            self::assertSame(200, $unreadResp->getStatusCode());
+            $unreadState = $unreadResp->toArray()['state'] ?? null;
+            self::assertIsArray($unreadState);
+            self::assertFalse($unreadState['isRead'] ?? null, 'PATCH isRead=false clears the read flag');
+            self::assertContains(
+                $entryId,
+                $this->entryIds($token, $unreadPath),
+                'an unread entry appears in the unread view',
+            );
+
+            // (b) Mark it READ → it drops out of the unread view.
+            $readResp = $this->patchState($token, $entryId, ['isRead' => true]);
+            self::assertSame(200, $readResp->getStatusCode());
+            $readState = $readResp->toArray()['state'] ?? null;
+            self::assertIsArray($readState);
+            self::assertTrue($readState['isRead'] ?? null, 'PATCH isRead=true sets the read flag');
+            self::assertNotContains(
+                $entryId,
+                $this->entryIds($token, $unreadPath),
+                'a read entry must not appear in the unread view',
+            );
+
+            // (c) Favorite it → it appears in the favorites view.
+            $this->patchState($token, $entryId, ['isFavorite' => true]);
+            $favIds = $this->entryIds($token, '/api/entries?view=favorites');
+            self::assertContains($entryId, $favIds, 'the favorited entry should appear in the favorites view');
+
+            // (d) The per-subscription unread count is surfaced on the list.
+            $mine = $this->findSubscription($token, $subId);
+            self::assertNotNull($mine, 'the new subscription should appear in the list');
+            self::assertArrayHasKey('unreadCount', $mine);
+
+            // (e) mark-read all → the unread view empties.
+            $markRead = $this->postJson('/api/entries/mark-read', [
+                'scope' => 'all',
+                'until' => (new \DateTimeImmutable('+1 day'))->format(DATE_ATOM),
+            ], $token);
+            self::assertSame(204, $markRead->getStatusCode());
+            self::assertSame(
+                [],
+                $this->entryIds($token, '/api/entries?view=unread'),
+                'after mark-read all, nothing is unread',
+            );
+
+            // (f) OPML export lists the feed, and re-importing that export is a
+            // no-op the importer recognises as already subscribed.
+            $export = $this->http->request('GET', '/api/opml/export', [
+                'headers' => ['Authorization' => 'Bearer ' . $token],
+            ]);
+            self::assertSame(200, $export->getStatusCode());
+
+            $opml = $export->getContent();
+            self::assertStringContainsString('xmlUrl=', $opml, 'export should list the subscribed feed');
+
+            $reimport = $this->http->request('POST', '/api/opml/import', [
+                'headers' => ['Authorization' => 'Bearer ' . $token, 'Content-Type' => 'text/x-opml'],
+                'body' => $opml,
+            ]);
+            self::assertSame(200, $reimport->getStatusCode());
+            self::assertGreaterThanOrEqual(
+                1,
+                $reimport->toArray()['alreadySubscribed'] ?? 0,
+                're-importing the export must recognise the feed as already subscribed',
+            );
+
+            $this->deleteAllSubscriptions($token); // one full journey is enough
+            return;
+        }
+
+        self::markTestSkipped(
+            'No reachable feed yielded entries to exercise the reader surface (' . implode('; ', $notes) . ')',
+        );
+    }
+
     /** @return iterable<string, array{string, string}> */
     public static function provideDomains(): iterable
     {
@@ -274,6 +425,37 @@ final class ReaderJourneyE2eTest extends E2eTestCase
         ]);
 
         self::assertSame(204, $response->getStatusCode(), 'deleting a subscription should return 204');
+    }
+
+    /**
+     * PATCH an entry's reader state (there is no `patchJson` helper on the base
+     * case), returning the raw response so callers can assert on it.
+     *
+     * @param array<string, bool> $changes
+     */
+    private function patchState(string $token, int $entryId, array $changes): ResponseInterface
+    {
+        return $this->http->request('PATCH', '/api/entries/' . $entryId . '/state', [
+            'headers' => ['Authorization' => 'Bearer ' . $token, 'Content-Type' => 'application/json'],
+            'body' => json_encode($changes, JSON_THROW_ON_ERROR),
+        ]);
+    }
+
+    /**
+     * The `id` of every entry an `/api/entries` list path returns, for order-
+     * independent membership checks against a view.
+     *
+     * @return array<mixed>
+     */
+    private function entryIds(string $token, string $path): array
+    {
+        $entries = $this->getJson($path, $token)->toArray()['entries'] ?? null;
+        self::assertIsArray($entries);
+
+        return array_map(
+            static fn ($e) => is_array($e) ? ($e['id'] ?? null) : null,
+            $entries,
+        );
     }
 
     private function skipUnlessReachable(string $label, string $url): void
