@@ -36,7 +36,7 @@ final class EntryControllerTest extends WebTestCase
         $em = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $em);
 
-        $feed = new Feed('https://example.com/feed-' . uniqid() . '.xml');
+        $feed = new Feed('https://example.com/feed-' . uniqid('', true) . '.xml');
         $feed->setTitle('Seeded');
         $em->persist($feed);
         $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));

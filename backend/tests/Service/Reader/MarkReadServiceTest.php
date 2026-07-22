@@ -12,6 +12,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Reader\MarkReadService;
 use App\Tests\DbTestCase;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class MarkReadServiceTest extends DbTestCase
@@ -112,5 +113,53 @@ final class MarkReadServiceTest extends DbTestCase
             '2026-07-25T00:00:00+00:00',
             $reloaded->getMarkedReadUntil()?->format(\DateTimeInterface::ATOM),
         );
+    }
+
+    public function testFlippingAFavoritedRowKeepsItFavoriteAndKept(): void
+    {
+        // Requirement: mark-read flips isRead on an existing row but must never
+        // disturb the favorite/kept flags that protect an entry from pruning.
+        [$user, , $old] = $this->seed();
+        $state = new EntryState($user, $old);
+        $state->setIsRead(false);
+        $state->setIsFavorite(true);
+        $state->setIsKept(true);
+        $this->em->persist($state);
+        $this->em->flush();
+
+        $this->service()->mark($user, 'all', null, new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+        $this->em->clear();
+
+        $reloaded = $this->em->getRepository(EntryState::class)
+            ->findOneForUserEntry((int) $user->getId(), (int) $old->getId());
+        self::assertNotNull($reloaded);
+        self::assertTrue($reloaded->isRead());
+        self::assertTrue($reloaded->isFavorite(), 'favorite must survive mark-read');
+        self::assertTrue($reloaded->isKept(), 'kept must survive mark-read');
+    }
+
+    public function testTagScopeRejectsAnotherUsersTag(): void
+    {
+        [$user] = $this->seed();
+        $stranger = new User('stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($stranger);
+        $strangerTag = new Tag($stranger, 'secret');
+        $this->em->persist($strangerTag);
+        $this->em->flush();
+
+        $this->expectException(NotFoundHttpException::class);
+        $this->service()->mark(
+            $user,
+            'tag',
+            (int) $strangerTag->getId(),
+            new \DateTimeImmutable('2026-07-10T00:00:00Z'),
+        );
+    }
+
+    public function testFeedScopeWithoutIdIsRejected(): void
+    {
+        [$user] = $this->seed();
+        $this->expectException(BadRequestHttpException::class);
+        $this->service()->mark($user, 'feed', null, new \DateTimeImmutable('2026-07-10T00:00:00Z'));
     }
 }

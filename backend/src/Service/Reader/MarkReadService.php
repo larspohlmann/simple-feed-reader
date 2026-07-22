@@ -49,25 +49,31 @@ final readonly class MarkReadService
             }
         }
 
-        $this->em->createQuery(sprintf(
-            'UPDATE %s es SET es.isRead = :true, es.readAt = :now
-             WHERE es.user = :user AND es.isRead = :false
-             AND es.entry IN (
-                 SELECT e.id FROM %s e
-                 WHERE e.feed IN (:feeds) AND COALESCE(e.publishedAt, e.createdAt) <= :until
-             )',
-            EntryState::class,
-            Entry::class,
-        ))
-            ->setParameter('true', true, Types::BOOLEAN)
-            ->setParameter('false', false, Types::BOOLEAN)
-            ->setParameter('now', $this->clock->now(), Types::DATETIME_IMMUTABLE)
-            ->setParameter('user', $user->getId())
-            ->setParameter('feeds', $feedIds)
-            ->setParameter('until', $until, Types::DATETIME_IMMUTABLE)
-            ->execute();
-
-        $this->em->flush();
+        // Atomic: the bulk read-flip and the watermark advance commit together,
+        // so a crash between them can't leave entries half-marked (explicit rows
+        // flipped but the watermark not yet advanced, or vice versa). Inside the
+        // transaction the DQL UPDATE participates rather than auto-committing,
+        // and wrapInTransaction() flushes the managed watermark changes before
+        // committing.
+        $this->em->wrapInTransaction(function () use ($user, $feedIds, $until): void {
+            $this->em->createQuery(sprintf(
+                'UPDATE %s es SET es.isRead = :true, es.readAt = :now
+                 WHERE es.user = :user AND es.isRead = :false
+                 AND es.entry IN (
+                     SELECT e.id FROM %s e
+                     WHERE e.feed IN (:feeds) AND COALESCE(e.publishedAt, e.createdAt) <= :until
+                 )',
+                EntryState::class,
+                Entry::class,
+            ))
+                ->setParameter('true', true, Types::BOOLEAN)
+                ->setParameter('false', false, Types::BOOLEAN)
+                ->setParameter('now', $this->clock->now(), Types::DATETIME_IMMUTABLE)
+                ->setParameter('user', $user->getId())
+                ->setParameter('feeds', $feedIds)
+                ->setParameter('until', $until, Types::DATETIME_IMMUTABLE)
+                ->execute();
+        });
     }
 
     /**
