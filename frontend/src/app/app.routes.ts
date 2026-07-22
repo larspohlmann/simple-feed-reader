@@ -42,7 +42,8 @@ export const routes: Routes = [
   {
     path: '',
     canActivate: [authGuard],
-    loadComponent: () => import('./shell/shell.component').then((m) => m.ShellComponent),
+    loadComponent: () =>
+      import('./reader/reader-shell.component').then((m) => m.ReaderShellComponent),
   },
   { path: '**', redirectTo: '' },
 ];
