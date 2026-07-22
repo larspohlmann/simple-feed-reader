@@ -75,19 +75,21 @@ class FeedRepository extends ServiceEntityRepository
         $qb = $this->createQueryBuilder('f');
 
         if ($feedId !== null) {
-            return $qb->andWhere('f.id = :feedId')->setParameter('feedId', $feedId);
-        }
-
-        $qb->andWhere('f.status != :gone')->setParameter('gone', FeedStatus::Gone);
-
-        if ($force) {
-            if ($cooldownCutoff !== null) {
-                $qb->andWhere('(f.lastFetchedAt IS NULL OR f.lastFetchedAt <= :cooldownCutoff)')
-                    ->setParameter('cooldownCutoff', $cooldownCutoff);
-            }
+            // Manual per-feed retry: exactly this feed, "gone" included, schedule
+            // ignored — but the user scope below still applies.
+            $qb->andWhere('f.id = :feedId')->setParameter('feedId', $feedId);
         } else {
-            $qb->andWhere('(f.nextFetchAt IS NULL OR f.nextFetchAt <= :now)')
-                ->setParameter('now', $now);
+            $qb->andWhere('f.status != :gone')->setParameter('gone', FeedStatus::Gone);
+
+            if ($force) {
+                if ($cooldownCutoff !== null) {
+                    $qb->andWhere('(f.lastFetchedAt IS NULL OR f.lastFetchedAt <= :cooldownCutoff)')
+                        ->setParameter('cooldownCutoff', $cooldownCutoff);
+                }
+            } else {
+                $qb->andWhere('(f.nextFetchAt IS NULL OR f.nextFetchAt <= :now)')
+                    ->setParameter('now', $now);
+            }
         }
 
         if ($userId !== null) {

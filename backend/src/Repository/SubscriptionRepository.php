@@ -17,4 +17,16 @@ class SubscriptionRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Subscription::class);
     }
+
+    public function existsForUserAndFeed(int $userId, int $feedId): bool
+    {
+        $count = (int) $this->createQueryBuilder('s')
+            ->select('COUNT(s.id)')
+            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
+            ->andWhere('s.feed = :feedId')->setParameter('feedId', $feedId)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return $count > 0;
+    }
 }

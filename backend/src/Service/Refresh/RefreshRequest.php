@@ -29,4 +29,9 @@ final readonly class RefreshRequest
     {
         return new self(null, $feedId, true, $budgetSeconds, false);
     }
+
+    public static function forUserFeed(int $userId, int $feedId, int $budgetSeconds): self
+    {
+        return new self($userId, $feedId, true, $budgetSeconds, false);
+    }
 }
