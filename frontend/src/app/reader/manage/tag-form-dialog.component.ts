@@ -216,9 +216,7 @@ export class TagFormDialogComponent {
     };
     this.loading.set(true);
     this.error.set(null);
-    const req = this.isEdit
-      ? this.api.updateTag(this.data!.id, body)
-      : this.api.createTag(body);
+    const req = this.isEdit ? this.api.updateTag(this.data!.id, body) : this.api.createTag(body);
     req.subscribe({
       next: (r) => this.ref.close(r.tag),
       error: (e: HttpErrorResponse) => {

@@ -61,10 +61,12 @@ describe('TagFormDialogComponent', () => {
     const c = f.componentInstance;
     c.form.controls.name.setValue('Dup');
     c.submit();
-    ctrl.expectOne('https://api.test/api/tags').flush(
-      { type: 'about:blank', title: 'Tag name already in use', status: 409 },
-      { status: 409, statusText: 'Conflict' },
-    );
+    ctrl
+      .expectOne('https://api.test/api/tags')
+      .flush(
+        { type: 'about:blank', title: 'Tag name already in use', status: 409 },
+        { status: 409, statusText: 'Conflict' },
+      );
     expect(c.error()).toBe('Tag name already in use');
     expect(close).not.toHaveBeenCalled();
   });

@@ -10,8 +10,15 @@ import { TagsStore } from '../tags.store';
 import { SubscriptionDto, TagDto } from '../models';
 
 const sub: SubscriptionDto = {
-  id: 5, title: 'Heise', customTitle: null, feedUrl: 'u', siteUrl: null,
-  status: 'active', createdAt: 'x', tags: [], unreadCount: 0,
+  id: 5,
+  title: 'Heise',
+  customTitle: null,
+  feedUrl: 'u',
+  siteUrl: null,
+  status: 'active',
+  createdAt: 'x',
+  tags: [],
+  unreadCount: 0,
 };
 const tag: TagDto = { id: 3, name: 'Tech', color: null, icon: null };
 
@@ -38,14 +45,18 @@ describe('ManageActions', () => {
 
   it('reloads subscriptions after a successful edit', () => {
     closed = sub; // dialog closed with an updated subscription
-    const spy = jest.spyOn(TestBed.inject(SubscriptionsStore), 'load').mockImplementation(() => undefined);
+    const spy = jest
+      .spyOn(TestBed.inject(SubscriptionsStore), 'load')
+      .mockImplementation(() => undefined);
     svc.editSubscription(sub);
     expect(spy).toHaveBeenCalled();
   });
 
   it('unsubscribe: on confirm, DELETEs then reloads', () => {
     closed = true; // confirm dialog returned true
-    const spy = jest.spyOn(TestBed.inject(SubscriptionsStore), 'load').mockImplementation(() => undefined);
+    const spy = jest
+      .spyOn(TestBed.inject(SubscriptionsStore), 'load')
+      .mockImplementation(() => undefined);
     svc.unsubscribe(sub);
     ctrl.expectOne('https://api.test/api/subscriptions/5').flush(null);
     expect(spy).toHaveBeenCalled();
@@ -59,8 +70,12 @@ describe('ManageActions', () => {
 
   it('deleteTag: on confirm, DELETEs then reloads tags + subs', () => {
     closed = true;
-    const tagSpy = jest.spyOn(TestBed.inject(TagsStore), 'load').mockImplementation(() => undefined);
-    const subSpy = jest.spyOn(TestBed.inject(SubscriptionsStore), 'load').mockImplementation(() => undefined);
+    const tagSpy = jest
+      .spyOn(TestBed.inject(TagsStore), 'load')
+      .mockImplementation(() => undefined);
+    const subSpy = jest
+      .spyOn(TestBed.inject(SubscriptionsStore), 'load')
+      .mockImplementation(() => undefined);
     svc.deleteTag(tag);
     ctrl.expectOne('https://api.test/api/tags/3').flush(null);
     expect(tagSpy).toHaveBeenCalled();
@@ -69,7 +84,9 @@ describe('ManageActions', () => {
 
   it('createTag: reloads tags when the dialog returns a tag', () => {
     closed = tag;
-    const tagSpy = jest.spyOn(TestBed.inject(TagsStore), 'load').mockImplementation(() => undefined);
+    const tagSpy = jest
+      .spyOn(TestBed.inject(TagsStore), 'load')
+      .mockImplementation(() => undefined);
     svc.createTag();
     expect(tagSpy).toHaveBeenCalled();
   });

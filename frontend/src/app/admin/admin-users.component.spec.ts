@@ -8,8 +8,14 @@ import { AdminUsersComponent } from './admin-users.component';
 import { AdminUserDto } from './admin.models';
 
 const user = (id: number, over: Partial<AdminUserDto> = {}): AdminUserDto => ({
-  id, email: `u${id}@x`, status: 'pending_approval', roles: ['ROLE_USER'],
-  createdAt: 'x', approvedAt: null, identities: [], ...over,
+  id,
+  email: `u${id}@x`,
+  status: 'pending_approval',
+  roles: ['ROLE_USER'],
+  createdAt: 'x',
+  approvedAt: null,
+  identities: [],
+  ...over,
 });
 
 describe('AdminUsersComponent', () => {
@@ -77,8 +83,11 @@ describe('AdminUsersComponent', () => {
     const c = mount().componentInstance;
     ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [] });
     c.setFilter('suspended');
-    ctrl.expectOne(
-      (r) => r.url === 'https://api.test/api/admin/users' && r.params.get('status') === 'suspended',
-    ).flush({ users: [] });
+    ctrl
+      .expectOne(
+        (r) =>
+          r.url === 'https://api.test/api/admin/users' && r.params.get('status') === 'suspended',
+      )
+      .flush({ users: [] });
   });
 });

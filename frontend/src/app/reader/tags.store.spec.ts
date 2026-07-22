@@ -33,10 +33,12 @@ describe('TagsStore', () => {
 
   it('records a Problem on error', () => {
     store.load();
-    ctrl.expectOne('https://api.test/api/tags').flush(
-      { type: 'about:blank', title: 'Nope', status: 500 },
-      { status: 500, statusText: 'Server Error' },
-    );
+    ctrl
+      .expectOne('https://api.test/api/tags')
+      .flush(
+        { type: 'about:blank', title: 'Nope', status: 500 },
+        { status: 500, statusText: 'Server Error' },
+      );
     expect(store.error()?.title).toBe('Nope');
     expect(store.loading()).toBe(false);
   });

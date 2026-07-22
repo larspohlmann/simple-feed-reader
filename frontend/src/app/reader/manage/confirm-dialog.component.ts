@@ -14,7 +14,13 @@ export interface ConfirmData {
   selector: 'app-confirm-dialog',
   imports: [A11yModule],
   template: `
-    <div class="dialog" role="alertdialog" aria-modal="true" [attr.aria-label]="data.title" cdkTrapFocus>
+    <div
+      class="dialog"
+      role="alertdialog"
+      aria-modal="true"
+      [attr.aria-label]="data.title"
+      cdkTrapFocus
+    >
       <h2>{{ data.title }}</h2>
       <p class="msg">{{ data.message }}</p>
       <div class="row">

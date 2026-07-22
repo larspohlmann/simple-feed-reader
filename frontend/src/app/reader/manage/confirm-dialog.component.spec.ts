@@ -4,7 +4,12 @@ import { ConfirmDialogComponent, ConfirmData } from './confirm-dialog.component'
 
 describe('ConfirmDialogComponent', () => {
   const close = jest.fn();
-  const data: ConfirmData = { title: 'Delete tag', message: 'Sure?', confirmLabel: 'Delete', danger: true };
+  const data: ConfirmData = {
+    title: 'Delete tag',
+    message: 'Sure?',
+    confirmLabel: 'Delete',
+    danger: true,
+  };
 
   function mount() {
     TestBed.configureTestingModule({

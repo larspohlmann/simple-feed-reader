@@ -1,10 +1,6 @@
 // src/app/admin/admin.models.ts
 export type AdminUserStatus =
-  | 'pending_verification'
-  | 'pending_approval'
-  | 'active'
-  | 'rejected'
-  | 'suspended';
+  'pending_verification' | 'pending_approval' | 'active' | 'rejected' | 'suspended';
 
 export interface AdminUserDto {
   id: number;

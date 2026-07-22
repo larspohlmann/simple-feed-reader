@@ -30,7 +30,9 @@ describe('AdminApi', () => {
   it('lists users filtered by status', () => {
     api.listUsers('pending_approval').subscribe();
     const req = ctrl.expectOne(
-      (r) => r.url === 'https://api.test/api/admin/users' && r.params.get('status') === 'pending_approval',
+      (r) =>
+        r.url === 'https://api.test/api/admin/users' &&
+        r.params.get('status') === 'pending_approval',
     );
     req.flush({ users: [] });
   });

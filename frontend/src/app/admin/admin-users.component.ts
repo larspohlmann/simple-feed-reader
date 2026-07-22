@@ -268,7 +268,9 @@ export class AdminUsersComponent implements OnInit {
     return u.status !== 'active';
   }
   canReject(u: AdminUserDto): boolean {
-    return !this.isSelf(u) && (u.status === 'pending_approval' || u.status === 'pending_verification');
+    return (
+      !this.isSelf(u) && (u.status === 'pending_approval' || u.status === 'pending_verification')
+    );
   }
   canSuspend(u: AdminUserDto): boolean {
     return !this.isSelf(u) && u.status === 'active';

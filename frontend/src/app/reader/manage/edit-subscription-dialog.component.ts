@@ -34,11 +34,7 @@ import { SubscriptionDto } from '../models';
           @for (t of tagsStore.tags(); track t.id) {
             <li>
               <label>
-                <input
-                  type="checkbox"
-                  [checked]="checked().has(t.id)"
-                  (change)="toggle(t.id)"
-                />
+                <input type="checkbox" [checked]="checked().has(t.id)" (change)="toggle(t.id)" />
                 <span class="dot" [style.background]="t.color || 'var(--text-muted)'"></span>
                 {{ t.name }}
               </label>
