@@ -27,6 +27,25 @@ services:
       timeout: 3s
       retries: 20
 
+  php:
+    build: ./docker/php
+    volumes:
+      - ./backend:/app
+    environment:
+      # Real env vars beat .env/.env.test file values (Symfony precedence), so
+      # committed files stay untouched and the native SQLite workflow is
+      # unaffected. In the test env Doctrine's dbname_suffix appends '_test',
+      # so this one URL also points phpunit at feedreader_test.
+      DATABASE_URL: "mysql://feedreader:feedreader@mysql:3306/feedreader?serverVersion=8.4&charset=utf8mb4"
+      MAILER_DSN: "smtp://mailpit:1025"
+    extra_hosts:
+      # Makes host.docker.internal work on Docker Engine variants where it is
+      # not built in; harmless on Docker Desktop.
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
   mailpit:
     image: axllent/mailpit:latest
     ports:
