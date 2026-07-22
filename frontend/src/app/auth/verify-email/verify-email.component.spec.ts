@@ -29,7 +29,9 @@ describe('VerifyEmailComponent', () => {
   it('posts the token and reports success', () => {
     const { f, ctrl } = setup('tok-123');
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/auth/verify-email' && r.body.token === 'tok-123')
+      .expectOne(
+        (r) => r.url === 'https://api.test/api/auth/verify-email' && r.body.token === 'tok-123',
+      )
       .flush({});
     expect(f.componentInstance.state()).toBe('ok');
   });

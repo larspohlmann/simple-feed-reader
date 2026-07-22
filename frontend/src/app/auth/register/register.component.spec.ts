@@ -51,17 +51,15 @@ describe('RegisterComponent', () => {
       .expectOne('https://api.test/api/auth/altcha-challenge')
       .flush({ algorithm: 'SHA-256', challenge: 'c', salt: 's', signature: 'x', maxnumber: 5 });
     await new Promise((r) => setTimeout(r)); // drain the challenge→solve→post microtask chain
-    ctrl
-      .expectOne('https://api.test/api/auth/register')
-      .flush(
-        {
-          type: 'validation_error',
-          title: 'x',
-          status: 422,
-          errors: { email: ['Already registered'] },
-        },
-        { status: 422, statusText: 'Unprocessable Entity' },
-      );
+    ctrl.expectOne('https://api.test/api/auth/register').flush(
+      {
+        type: 'validation_error',
+        title: 'x',
+        status: 422,
+        errors: { email: ['Already registered'] },
+      },
+      { status: 422, statusText: 'Unprocessable Entity' },
+    );
     await done;
     expect(c.error()).toContain('Already registered');
   });

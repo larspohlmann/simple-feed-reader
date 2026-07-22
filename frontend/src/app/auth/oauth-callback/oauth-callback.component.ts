@@ -53,7 +53,11 @@ export class OAuthCallbackComponent implements OnInit {
       // CREDENTIALED: the one-time code is only half — the flow cookie is the
       // other half. Omitting withCredentials yields a 400 identical to a bad code.
       this.http
-        .post<{ token: string }>(`${this.base}/api/auth/oauth/exchange`, { code }, { withCredentials: true })
+        .post<{ token: string }>(
+          `${this.base}/api/auth/oauth/exchange`,
+          { code },
+          { withCredentials: true },
+        )
         .subscribe({
           next: (res) => {
             this.tokens.set(res.token);

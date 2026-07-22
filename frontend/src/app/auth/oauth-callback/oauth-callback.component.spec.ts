@@ -17,7 +17,10 @@ function setup(params: Record<string, string | null>) {
       provideHttpClientTesting(),
       { provide: API_BASE_URL, useValue: 'https://api.test' },
       { provide: Router, useValue: { navigate } },
-      { provide: ActivatedRoute, useValue: { queryParamMap: of({ get: (k: string) => params[k] ?? null }) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { queryParamMap: of({ get: (k: string) => params[k] ?? null }) },
+      },
     ],
   });
   localStorage.clear();
@@ -27,7 +30,12 @@ function setup(params: Record<string, string | null>) {
   // spec deliberately stubs with only { navigate }. Assertions target the
   // state() signal and the navigate spy only.
   f.componentInstance.ngOnInit();
-  return { f, ctrl: TestBed.inject(HttpTestingController), navigate, tokens: TestBed.inject(TokenStore) };
+  return {
+    f,
+    ctrl: TestBed.inject(HttpTestingController),
+    navigate,
+    tokens: TestBed.inject(TokenStore),
+  };
 }
 
 describe('OAuthCallbackComponent', () => {

@@ -11,7 +11,13 @@ import { FormErrorComponent } from '../../shared/form-error/form-error.component
 
 @Component({
   selector: 'app-reset-password',
-  imports: [ReactiveFormsModule, RouterLink, AuthShellComponent, ButtonComponent, FormErrorComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    AuthShellComponent,
+    ButtonComponent,
+    FormErrorComponent,
+  ],
   template: `
     <app-auth-shell title="Set a new password">
       @if (token()) {
@@ -21,7 +27,9 @@ import { FormErrorComponent } from '../../shared/form-error/form-error.component
             <input type="password" formControlName="password" autocomplete="new-password" />
           </label>
           <app-form-error [message]="error()" />
-          <app-button type="submit" variant="primary" [loading]="loading()">Save password</app-button>
+          <app-button type="submit" variant="primary" [loading]="loading()"
+            >Save password</app-button
+          >
         </form>
       } @else {
         <p class="err">This reset link is invalid or has expired.</p>
@@ -46,7 +54,9 @@ export class ResetPasswordComponent implements OnInit {
   private readonly router = inject(Router);
 
   readonly token = signal<string | null>(null);
-  readonly form = this.fb.group({ password: ['', [Validators.required, Validators.minLength(12)]] });
+  readonly form = this.fb.group({
+    password: ['', [Validators.required, Validators.minLength(12)]],
+  });
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
@@ -60,11 +70,16 @@ export class ResetPasswordComponent implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     this.http
-      .post(`${this.base}/api/auth/password-reset`, { token, password: this.form.getRawValue().password })
+      .post(`${this.base}/api/auth/password-reset`, {
+        token,
+        password: this.form.getRawValue().password,
+      })
       .subscribe({
         next: () => void this.router.navigate(['/login'], { queryParams: { reset: '1' } }),
         error: (e: HttpErrorResponse) => {
-          this.error.set(parseProblem(e).detail ?? 'Could not reset the password. Request a new link.');
+          this.error.set(
+            parseProblem(e).detail ?? 'Could not reset the password. Request a new link.',
+          );
           this.loading.set(false);
         },
       });

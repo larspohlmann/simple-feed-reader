@@ -16,7 +16,10 @@ import { ButtonComponent } from '../../shared/button/button.component';
   template: `
     <app-auth-shell title="Reset password" subtitle="We’ll email you a reset link.">
       @if (done()) {
-        <p class="ok">If that address has an account, a reset link is on its way. The link is valid for 24 hours.</p>
+        <p class="ok">
+          If that address has an account, a reset link is on its way. The link is valid for 24
+          hours.
+        </p>
         <a routerLink="/login">Back to sign in</a>
       } @else {
         <form (ngSubmit)="submit()" [formGroup]="form">
@@ -24,7 +27,9 @@ import { ButtonComponent } from '../../shared/button/button.component';
             <span>Email</span>
             <input type="email" formControlName="email" autocomplete="email" />
           </label>
-          <app-button type="submit" variant="primary" [loading]="loading()">Send reset link</app-button>
+          <app-button type="submit" variant="primary" [loading]="loading()"
+            >Send reset link</app-button
+          >
         </form>
         <p class="links"><a routerLink="/login">Back to sign in</a></p>
       }

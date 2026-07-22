@@ -16,7 +16,10 @@ import { SpinnerComponent } from '../../shared/spinner/spinner.component';
           <app-spinner />
         }
         @case ('ok') {
-          <p>Your email is confirmed. An administrator will review your account before you can sign in.</p>
+          <p>
+            Your email is confirmed. An administrator will review your account before you can sign
+            in.
+          </p>
           <a routerLink="/login">Back to sign in</a>
         }
         @case ('error') {
