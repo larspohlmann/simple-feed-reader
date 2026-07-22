@@ -63,7 +63,7 @@ services:
       - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       # Non-standard host port so a natively installed MySQL never collides.
-      - "33306:3306"
+      - "127.0.0.1:33306:3306"
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
       interval: 5s
@@ -73,7 +73,7 @@ services:
   mailpit:
     image: axllent/mailpit:latest
     ports:
-      - "8025:8025"   # web inbox; SMTP (1025) stays internal to the compose network
+      - "127.0.0.1:8025:8025"   # web inbox; SMTP (1025) stays internal to the compose network
 
 volumes:
   mysql-data:
