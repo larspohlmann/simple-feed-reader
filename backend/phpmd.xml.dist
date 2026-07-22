@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<ruleset name="simple-feed-reader"
+         xmlns="http://pmd.sf.net/ruleset/1.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sf.net/ruleset/1.0.0 http://pmd.sf.net/ruleset_xml_schema.xsd"
+         xsi:noNamespaceSchemaLocation="http://pmd.sf.net/ruleset_xml_schema.xsd">
+
+    <description>
+        Complexity-only PHPMD ruleset for the backend. Deliberately just the
+        `codesize` rules — cyclomatic/NPath complexity, method/class length, and
+        parameter/field/method counts — because those metrics are the one thing
+        PHPStan (level max) and PHP_CodeSniffer (PSR-12) do NOT already cover.
+
+        The noisier rulesets (cleancode, naming, controversial) are intentionally
+        left out: they clash with idioms this project uses on purpose — enum
+        access (UserStatus::Active), static factories, $_ENV in the e2e harness,
+        and short names like $e/$id/$io. Re-add them below if you want them.
+
+        Tune this in PhpStorm (Settings > PHP > Quality Tools > Mess Detector, and
+        Editor > Inspections > PHP > Quality Tools > PHP Mess Detector validation)
+        or by editing this file.
+
+        To add another whole ruleset:  <rule ref="rulesets/design.xml" />
+        To add a single rule:          <rule ref="rulesets/design.xml/CouplingBetweenObjects" />
+    </description>
+
+    <!--
+        The full codesize ruleset at its default thresholds. To relax one metric,
+        re-declare the rule AFTER this line with a <properties> block, e.g.:
+
+        <rule ref="rulesets/codesize.xml/CyclomaticComplexity">
+            <properties>
+                <property name="reportLevel" value="12" />
+            </properties>
+        </rule>
+    -->
+    <rule ref="rulesets/codesize.xml" />
+</ruleset>

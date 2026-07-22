@@ -32,6 +32,7 @@
     },
     "require-dev": {
         "dama/doctrine-test-bundle": "^8.6",
+        "phpmd/phpmd": "^2.15",
         "phpstan/phpstan": "^2.1",
         "phpstan/phpstan-doctrine": "^2.0",
         "phpstan/phpstan-symfony": "^2.0",
@@ -86,6 +87,7 @@
         "cs": "phpcs",
         "cs:fix": "phpcbf",
         "stan": "phpstan analyse --memory-limit=512M",
+        "md": "phpmd src text phpmd.xml.dist",
         "check": ["@cs", "@stan"],
         "e2e": "bin/e2e.sh"
     },

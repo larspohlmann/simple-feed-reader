@@ -28,6 +28,9 @@
 # The e2e config is committed as a .dist template, mirroring phpunit.dist.xml.
 /phpunit-e2e.xml
 
+# PHPMD ruleset is committed as phpmd.xml.dist; a local override is ignored.
+/phpmd.xml
+
 ###> lexik/jwt-authentication-bundle ###
 /config/jwt/*.pem
 ###< lexik/jwt-authentication-bundle ###
