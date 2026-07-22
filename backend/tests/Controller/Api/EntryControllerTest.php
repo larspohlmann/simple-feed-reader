@@ -248,4 +248,24 @@ final class EntryControllerTest extends WebTestCase
         );
         self::assertResponseStatusCodeSame(422);
     }
+
+    public function testMarkReadFeedScopeWithoutIdIsUniformValidationError(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('e-marknoid@example.com');
+        $client->request(
+            'POST',
+            '/api/entries/mark-read',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['scope' => 'feed', 'until' => '2026-08-01T00:00:00Z'], \JSON_THROW_ON_ERROR),
+        );
+        // A missing required id reports the same validation_error the client
+        // switches on for every other bad field — not a bare 400 request_error.
+        self::assertResponseStatusCodeSame(422);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('validation_error', $body['type']);
+        self::assertIsArray($body['errors']);
+        self::assertArrayHasKey('id', $body['errors']);
+    }
 }

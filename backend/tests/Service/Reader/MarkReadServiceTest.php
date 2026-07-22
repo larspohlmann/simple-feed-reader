@@ -11,8 +11,8 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Reader\MarkReadService;
+use App\Exception\ValidationException;
 use App\Tests\DbTestCase;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class MarkReadServiceTest extends DbTestCase
@@ -159,7 +159,7 @@ final class MarkReadServiceTest extends DbTestCase
     public function testFeedScopeWithoutIdIsRejected(): void
     {
         [$user] = $this->seed();
-        $this->expectException(BadRequestHttpException::class);
+        $this->expectException(ValidationException::class);
         $this->service()->mark($user, 'feed', null, new \DateTimeImmutable('2026-07-10T00:00:00Z'));
     }
 }

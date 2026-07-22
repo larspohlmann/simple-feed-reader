@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Exception\ValidationException;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use Doctrine\DBAL\Types\Types;
@@ -94,7 +95,9 @@ final readonly class MarkReadService
     private function requireSubscription(?int $id, int $userId): Subscription
     {
         if ($id === null) {
-            throw new BadRequestHttpException('scope "feed" requires an id.');
+            // Same validation_error contract as every other bad field, so the
+            // client's type-switch handles a missing id uniformly.
+            throw new ValidationException(['id' => ['An id is required when scope is "feed".']]);
         }
 
         return $this->subscriptions->findOneOwnedBy($id, $userId)
@@ -104,7 +107,7 @@ final readonly class MarkReadService
     private function requireTag(?int $id, int $userId): int
     {
         if ($id === null) {
-            throw new BadRequestHttpException('scope "tag" requires an id.');
+            throw new ValidationException(['id' => ['An id is required when scope is "tag".']]);
         }
 
         $tag = $this->tags->findOneOwnedBy($id, $userId)
