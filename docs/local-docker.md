@@ -99,7 +99,9 @@ flow mails out.
 **`docker compose down` is safe; `docker compose down -v` DELETES the MySQL
 data volume.** Plain `down` stops and removes the containers but keeps your
 databases. Adding `-v` wipes them; the next `up` starts from an empty server
-and re-runs `docker/mysql/init.sql`, after which you migrate again.
+and re-runs `docker/mysql/init.sql`, after which you migrate again. One
+exception to "plain `down` keeps everything": Mailpit's inbox is in-memory,
+so it starts empty after any `down`.
 
 ---
 
