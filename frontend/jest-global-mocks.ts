@@ -20,3 +20,16 @@ if (!globalThis.crypto?.subtle) {
   const { webcrypto } = require('node:crypto');
   Object.defineProperty(globalThis, 'crypto', { value: webcrypto });
 }
+
+// Minimal IntersectionObserver stub — jsdom has none. Components only need it
+// to construct without throwing; tests exercise the Load-more button directly.
+class IntersectionObserverStub {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+  takeRecords(): [] {
+    return [];
+  }
+}
+(globalThis as unknown as { IntersectionObserver: unknown }).IntersectionObserver =
+  IntersectionObserverStub;
