@@ -102,7 +102,10 @@ final class SubscriptionControllerTest extends WebTestCase
         $first = $list['subscriptions'][0];
         self::assertIsArray($first);
         self::assertSame('https://example.com/feed.xml', $first['feedUrl']);
-        self::assertArrayNotHasKey('unreadCount', $first); // 4b adds it
+        self::assertArrayHasKey('unreadCount', $first);
+        // Subscribe defers ingestion to the refresh pipeline, so a freshly
+        // subscribed feed carries no entries yet — deterministically 0 unread.
+        self::assertSame(0, $first['unreadCount']);
     }
 
     public function testSubscribeToHtmlReturnsCandidates(): void

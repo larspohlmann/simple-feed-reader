@@ -34,9 +34,13 @@ final class SubscriptionController
     public function list(#[CurrentUser] User $user): JsonResponse
     {
         $rows = $this->subscriptionRepo->findForUserWithTags((int) $user->getId());
+        $counts = $this->subscriptionRepo->unreadCountsForUser((int) $user->getId());
 
         return new JsonResponse([
-            'subscriptions' => array_map(static fn ($s) => SubscriptionJson::one($s), $rows),
+            'subscriptions' => array_map(
+                static fn ($s) => SubscriptionJson::one($s, $counts[(int) $s->getId()] ?? 0),
+                $rows,
+            ),
         ]);
     }
 

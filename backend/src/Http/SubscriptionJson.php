@@ -12,10 +12,11 @@ final class SubscriptionJson
      * @return array{
      *   id: int|null, title: string, customTitle: string|null, feedUrl: string,
      *   siteUrl: string|null, status: string, createdAt: string,
-     *   tags: list<array{id: int|null, name: string, color: string|null, icon: string|null}>
+     *   tags: list<array{id: int|null, name: string, color: string|null, icon: string|null}>,
+     *   unreadCount: int
      * }
      */
-    public static function one(Subscription $sub): array
+    public static function one(Subscription $sub, int $unreadCount = 0): array
     {
         $feed = $sub->getFeed();
         $title = $sub->getCustomTitle() ?? $feed->getTitle() ?? $feed->getUrl();
@@ -34,6 +35,7 @@ final class SubscriptionJson
             'status' => $feed->getStatus()->value,
             'createdAt' => $sub->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'tags' => $tags,
+            'unreadCount' => $unreadCount,
         ];
     }
 }
