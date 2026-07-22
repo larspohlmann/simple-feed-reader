@@ -121,6 +121,9 @@ final class EntryControllerTest extends WebTestCase
 
         $client->request('GET', '/api/entries?view=bogus', server: $headers);
         self::assertResponseStatusCodeSame(422);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('validation_error', $body['type']); // uniform with every other invalid field
     }
 
     public function testInvalidCursorIsRejected(): void
@@ -130,5 +133,10 @@ final class EntryControllerTest extends WebTestCase
 
         $client->request('GET', '/api/entries?cursor=not-a-cursor', server: $headers);
         self::assertResponseStatusCodeSame(422);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('validation_error', $body['type']);
+        self::assertIsArray($body['errors']);
+        self::assertArrayHasKey('cursor', $body['errors']);
     }
 }

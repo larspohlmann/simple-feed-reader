@@ -11,7 +11,6 @@ use App\Http\EntryJson;
 use App\Repository\EntryQuery;
 use App\Repository\EntryRepository;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -27,21 +26,27 @@ final class EntryController
     #[Route('', name: 'api_entries_list', methods: ['GET'])]
     public function list(
         #[CurrentUser] User $user,
-        // The regexp guard is the whole validation for `view`. Its default
-        // rejection status is 404 (HTTP_NOT_FOUND); we force 422 so a bad view
-        // reads as the same "invalid input" the rest of the API reports, rather
-        // than as a missing resource.
-        #[MapQueryParameter(
-            filter: \FILTER_VALIDATE_REGEXP,
-            options: ['regexp' => '/^(all|unread|favorites|kept)$/'],
-            validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY,
-        )]
-        string $view = 'all',
+        #[MapQueryParameter] ?string $view = null,
         #[MapQueryParameter] ?int $subscription = null,
         #[MapQueryParameter] ?int $tag = null,
         #[MapQueryParameter] ?string $cursor = null,
         #[MapQueryParameter] int $limit = EntryQuery::DEFAULT_LIMIT,
     ): JsonResponse {
+        // Validate `view` in-controller (rather than via a MapQueryParameter
+        // regexp filter) so a bad value reports the SAME `validation_error`
+        // problem type as every other invalid field — the client switches on
+        // that type. The match also narrows the plain string to EntryQuery's
+        // literal-union view type for static analysis.
+        $view = match ($view) {
+            null, 'all' => 'all',
+            'unread' => 'unread',
+            'favorites' => 'favorites',
+            'kept' => 'kept',
+            default => throw new ValidationException(
+                ['view' => ['Unknown view. Use one of: all, unread, favorites, kept.']],
+            ),
+        };
+
         $decodedCursor = null;
         if ($cursor !== null && $cursor !== '') {
             $decodedCursor = EntryCursor::decode($cursor);
@@ -49,14 +54,6 @@ final class EntryController
                 throw new ValidationException(['cursor' => ['The cursor is malformed.']]);
             }
         }
-
-        // The regexp guard already rejects anything else, but that is opaque to
-        // static analysis; this match re-states the domain type EntryQuery wants
-        // and keeps the query valid should the guard ever drift.
-        $view = match ($view) {
-            'unread', 'favorites', 'kept' => $view,
-            default => 'all',
-        };
 
         $rows = $this->entries->listForUser(new EntryQuery(
             userId: (int) $user->getId(),
