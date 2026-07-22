@@ -4,6 +4,16 @@ doctrine_migrations:
         # as migrations classes should NOT be autoloaded
         'DoctrineMigrations': '%kernel.project_dir%/migrations'
     enable_profiler: false
+    # Don't wrap each migration in a transaction. On MySQL — our production and
+    # CI target — DDL (CREATE/ALTER/DROP) auto-commits, so the wrapper never
+    # actually protected a schema change; migrations only silenced the resulting
+    # "transaction already committed" mismatch, which doctrine/migrations now
+    # deprecates. Making it explicit removes that per-run dev.log deprecation and
+    # matches how the schema really behaves. The only place a wrapper did work is
+    # SQLite (dev/test), where a mid-migration failure will no longer auto-roll
+    # back already-applied statements — acceptable for forward-only migrations
+    # that are proven green in CI before they ever run for real.
+    transactional: false
     # Override migrations' lazy schema-diff provider with its eager one so
     # LazySchema (which extends the @final DBAL Schema and uses Symfony's
     # deprecated LazyProxyTrait) is never built. Full rationale on the

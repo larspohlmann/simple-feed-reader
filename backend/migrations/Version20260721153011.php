@@ -59,6 +59,16 @@ final class Version20260721153011 extends AbstractMigration
         return 'Initial schema: users, identities, action tokens, feeds, entries, subscriptions, tags, entry state, lock keys.';
     }
 
+    // Non-transactional, matching the global doctrine_migrations.transactional:
+    // false policy — see that config for why (MySQL auto-commits DDL, so the
+    // per-migration transaction was a no-op the ORM now deprecates). The
+    // generator emits this for new migrations; existing ones are retrofitted to
+    // keep the whole set uniform.
+    public function isTransactional(): bool
+    {
+        return false;
+    }
+
     public function up(Schema $schema): void
     {
         // A database that already has app_user was built by

@@ -83,6 +83,16 @@ final class Version20260721181500 extends AbstractMigration
         return 'Compare user_identity.provider_user_id case-sensitively on MySQL by pinning utf8mb4_bin.';
     }
 
+    // Non-transactional, matching the global doctrine_migrations.transactional:
+    // false policy — see that config for why (MySQL auto-commits DDL, so the
+    // per-migration transaction was a no-op the ORM now deprecates). The
+    // generator emits this for new migrations; existing ones are retrofitted to
+    // keep the whole set uniform.
+    public function isTransactional(): bool
+    {
+        return false;
+    }
+
     public function up(Schema $schema): void
     {
         $platform = $this->connection->getDatabasePlatform();
