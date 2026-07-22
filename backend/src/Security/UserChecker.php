@@ -6,6 +6,7 @@ namespace App\Security;
 
 use App\Entity\User;
 use App\Enum\UserStatus;
+use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\User\UserCheckerInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
@@ -27,7 +28,10 @@ final class UserChecker implements UserCheckerInterface
         }
     }
 
-    public function checkPostAuth(UserInterface $user): void
+    // Empty, but the signature carries $token because UserCheckerInterface is
+    // adding `?TokenInterface $token` to checkPostAuth in its next major, and
+    // Symfony's DebugClassLoader deprecates implementations that omit it.
+    public function checkPostAuth(UserInterface $user, ?TokenInterface $token = null): void
     {
     }
 }
