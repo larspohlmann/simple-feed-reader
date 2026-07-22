@@ -139,4 +139,79 @@ final class EntryControllerTest extends WebTestCase
         self::assertIsArray($body['errors']);
         self::assertArrayHasKey('cursor', $body['errors']);
     }
+
+    public function testPatchStateLazilyCreatesAndReturnsState(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-patch@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
+        self::assertNotNull($entryId);
+
+        $client->request(
+            'PATCH',
+            "/api/entries/$entryId/state",
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['isRead' => true, 'isFavorite' => true], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['state']);
+        self::assertTrue($body['state']['isRead']);
+        self::assertTrue($body['state']['isFavorite']);
+        self::assertFalse($body['state']['isKept']);
+        self::assertNotNull($body['state']['readAt']);
+    }
+
+    public function testPatchStateUnreadClearsReadAt(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-unread@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
+        self::assertNotNull($entryId);
+
+        $client->request(
+            'PATCH',
+            "/api/entries/$entryId/state",
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['isRead' => true], \JSON_THROW_ON_ERROR),
+        );
+        $client->request(
+            'PATCH',
+            "/api/entries/$entryId/state",
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['isRead' => false], \JSON_THROW_ON_ERROR),
+        );
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['state']);
+        self::assertFalse($body['state']['isRead']);
+        self::assertNull($body['state']['readAt']);
+    }
+
+    public function testCannotPatchEntryOfUnsubscribedFeed(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('e-idor@example.com');
+        [, $stranger] = $this->auth('e-owner@example.com');
+        $strangerSub = $this->seedFeedWithEntries($stranger, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $strangerSub->getFeed()])?->getId();
+        self::assertNotNull($entryId);
+
+        $client->request(
+            'PATCH',
+            "/api/entries/$entryId/state",
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['isRead' => true], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(404);
+    }
 }

@@ -17,4 +17,16 @@ class EntryStateRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, EntryState::class);
     }
+
+    public function findOneForUserEntry(int $userId, int $entryId): ?EntryState
+    {
+        /** @var EntryState|null $row */
+        $row = $this->createQueryBuilder('es')
+            ->andWhere('IDENTITY(es.user) = :user')->setParameter('user', $userId)
+            ->andWhere('IDENTITY(es.entry) = :entry')->setParameter('entry', $entryId)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $row;
+    }
 }

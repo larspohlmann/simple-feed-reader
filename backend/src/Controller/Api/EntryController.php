@@ -4,14 +4,21 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\Entry\UpdateEntryStateRequest;
+use App\Entity\EntryState;
 use App\Entity\User;
 use App\Exception\ValidationException;
 use App\Http\EntryCursor;
 use App\Http\EntryJson;
 use App\Repository\EntryQuery;
 use App\Repository\EntryRepository;
+use App\Repository\EntryStateRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -20,6 +27,9 @@ final class EntryController
 {
     public function __construct(
         private readonly EntryRepository $entries,
+        private readonly EntryStateRepository $states,
+        private readonly EntityManagerInterface $em,
+        private readonly ClockInterface $clock,
     ) {
     }
 
@@ -80,5 +90,42 @@ final class EntryController
             'entries' => array_map(static fn ($r) => EntryJson::one($r), $rows),
             'nextCursor' => $nextCursor,
         ]);
+    }
+
+    #[Route('/{id}/state', name: 'api_entries_state', methods: ['PATCH'], requirements: ['id' => '\d+'])]
+    public function updateState(
+        int $id,
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] UpdateEntryStateRequest $request,
+    ): JsonResponse {
+        $entry = $this->entries->findOneSubscribedByUser($id, (int) $user->getId())
+            ?? throw new NotFoundHttpException('No such entry.');
+
+        $state = $this->states->findOneForUserEntry((int) $user->getId(), $id);
+        if ($state === null) {
+            $state = new EntryState($user, $entry);
+            $this->em->persist($state);
+        }
+
+        if ($request->isRead !== null) {
+            $state->setIsRead($request->isRead);
+            $state->setReadAt($request->isRead ? $this->clock->now() : null);
+        }
+        if ($request->isFavorite !== null) {
+            $state->setIsFavorite($request->isFavorite);
+        }
+        if ($request->isKept !== null) {
+            $state->setIsKept($request->isKept);
+        }
+
+        $this->em->flush();
+
+        return new JsonResponse(['state' => [
+            'entryId' => $id,
+            'isRead' => $state->isRead(),
+            'isFavorite' => $state->isFavorite(),
+            'isKept' => $state->isKept(),
+            'readAt' => $state->getReadAt()?->format(\DateTimeInterface::ATOM),
+        ]]);
     }
 }
