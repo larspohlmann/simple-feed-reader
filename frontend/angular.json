@@ -36,6 +36,7 @@
               }
             ],
             "styles": [
+              "node_modules/material-symbols/outlined.css",
               "src/styles.scss"
             ]
           },
