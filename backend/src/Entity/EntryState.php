@@ -12,14 +12,18 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'entry_state')]
 class EntryState
 {
+    // No `nullable: false` on these two join columns: they are part of the
+    // composite identifier, and Doctrine forces identifier join columns to
+    // NOT NULL regardless. Stating it is a no-op the ORM deprecates (and warns
+    // about in dev.log), so only onDelete — which is a real choice — remains.
     #[ORM\Id]
     #[ORM\ManyToOne(targetEntity: User::class)]
-    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(onDelete: 'CASCADE')]
     private User $user;
 
     #[ORM\Id]
     #[ORM\ManyToOne(targetEntity: Entry::class)]
-    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(onDelete: 'CASCADE')]
     private Entry $entry;
 
     #[ORM\Column]
