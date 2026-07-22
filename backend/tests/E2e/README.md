@@ -56,6 +56,38 @@ deployment, for instance — without editing anything:
 - **`ErrorContractE2eTest`** — the API's failure contract holds through nginx:
   an unsolved ALTCHA is a 422 `problem+json`, and an unauthenticated
   `/api/me` is a 401 `problem+json`.
+- **`ReaderJourneyE2eTest`** — the reader API against the **real internet**
+  (see "External sites" below): feed autodiscovery from a live homepage, then
+  the full subscribe → refresh → verify-title flow, plus subscription cleanup.
+  It authenticates as the seeded admin (no registration), so it costs nothing
+  against the registration budget.
+
+## External sites (`ReaderJourneyE2eTest` only)
+
+`ReaderJourneyE2eTest` is the one suite that reaches the public internet — the
+app's SSRF-guarded fetcher really fetches feeds from three news sites:
+`www.heise.de`, `www.tagesschau.de`, and `www.spiegel.de`. That makes it the
+only suite whose result depends on something outside the stack, so it is
+written to **degrade gracefully, never flake**:
+
+- Before touching a domain it runs a **host-side reachability probe** (a fresh
+  `HttpClient`, short timeout, straight to the site). If the site is down, slow,
+  or blocking us, that domain is **skipped**, not failed.
+- Autodiscovery is asserted only where a homepage actually advertises
+  `<link rel="alternate">` feeds. A homepage that offers none is a real,
+  uncontrollable property of the site — heise's, as of writing, offers none and
+  the API answers 422 `feed_unreachable` — so that case is **skipped** too.
+- The subscribe → refresh → verify flow runs against the **first** reachable
+  domain that offers a feed, and skips entirely only if none of the three do.
+- Assertions are on structure and end-to-end behaviour (a resolved feed title,
+  a subscription that lists and deletes), never on article content, counts, or
+  exact titles — all of which change minute to minute. The title check is
+  robust to the 5-minute refresh cooldown a rapid re-run hits: a prior run's
+  fetch leaves the real title in place, so it proves ingestion either way.
+
+Because it depends on the outside world, a clean run may legitimately report
+**skips** here (e.g. `OK, but incomplete, skipped, or risky tests!`). That is
+expected when a news site is unreachable; it is not a failure.
 
 **Every new feature or endpoint gets an e2e test added here.** When you add a
 flow, add its happy path and at least one guard (a rejection, an
@@ -83,7 +115,9 @@ designed to be run repeatedly without ever resetting it:
   the **whole suite must stay under the registration cap within a single run**
   (currently 5 requests per IP / 15 min; the suite makes 4). When you add a
   test that registers, keep the total under the cap — the pool reset saves you
-  between runs, not mid-run.
+  between runs, not mid-run. `ReaderJourneyE2eTest` deliberately authenticates
+  as the seeded admin instead of registering, precisely so it adds **zero** to
+  this budget; keep it that way.
 - **TLS trust for PHP CLI.** Homebrew PHP on macOS pins its own static CA
   bundle and ignores the system keychain, so `mkcert -install` trusting the
   root at the OS level isn't enough for PHP's HTTP client. `bin/e2e.sh` builds
