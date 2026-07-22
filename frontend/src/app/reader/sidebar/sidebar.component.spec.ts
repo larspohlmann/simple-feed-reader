@@ -59,4 +59,54 @@ describe('SidebarComponent', () => {
     f.detectChanges();
     expect(el.querySelectorAll('.tag-sub').length).toBe(2);
   });
+
+  it('emits editTag / deleteTag when a tag row menu action is used', () => {
+    const node: TagNode = {
+      tag: { id: 20, name: 'Tech', color: null, icon: null },
+      subscriptions: [],
+      unreadCount: 0,
+    };
+    const f = mount({ tagTree: [node] });
+    const el = f.nativeElement as HTMLElement;
+    const editTag = jest.fn();
+    const deleteTag = jest.fn();
+    f.componentInstance.editTag.subscribe(editTag);
+    f.componentInstance.deleteTag.subscribe(deleteTag);
+
+    (el.querySelector('.tag .dots') as HTMLButtonElement).click();
+    f.detectChanges();
+    const buttons = el.querySelectorAll('.tag .pop [role="menuitem"]');
+    (buttons[0] as HTMLButtonElement).click();
+    f.detectChanges();
+    expect(editTag).toHaveBeenCalledWith(node.tag);
+    expect(el.querySelector('.tag .pop')).toBeNull();
+
+    (el.querySelector('.tag .dots') as HTMLButtonElement).click();
+    f.detectChanges();
+    const buttons2 = el.querySelectorAll('.tag .pop [role="menuitem"]');
+    (buttons2[1] as HTMLButtonElement).click();
+    expect(deleteTag).toHaveBeenCalledWith(node.tag);
+  });
+
+  it('emits editFeed / unsubscribe for an untagged feed row', () => {
+    const s = sub(1, 0);
+    const f = mount({ untagged: [s] });
+    const el = f.nativeElement as HTMLElement;
+    const editFeed = jest.fn();
+    const unsub = jest.fn();
+    f.componentInstance.editFeed.subscribe(editFeed);
+    f.componentInstance.unsubscribe.subscribe(unsub);
+
+    (el.querySelector('.feedrow .dots') as HTMLButtonElement).click();
+    f.detectChanges();
+    const buttons = el.querySelectorAll('.feedrow .pop [role="menuitem"]');
+    (buttons[0] as HTMLButtonElement).click();
+    expect(editFeed).toHaveBeenCalledWith(s);
+
+    (el.querySelector('.feedrow .dots') as HTMLButtonElement).click();
+    f.detectChanges();
+    const buttons2 = el.querySelectorAll('.feedrow .pop [role="menuitem"]');
+    (buttons2[1] as HTMLButtonElement).click();
+    expect(unsub).toHaveBeenCalledWith(s);
+  });
 });

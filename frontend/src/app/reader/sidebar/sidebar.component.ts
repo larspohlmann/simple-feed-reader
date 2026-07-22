@@ -1,10 +1,10 @@
 // src/app/reader/sidebar/sidebar.component.ts
-import { Component, input, signal } from '@angular/core';
+import { Component, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
-import { SubscriptionDto } from '../models';
+import { SubscriptionDto, TagDto } from '../models';
 
 @Component({
   selector: 'app-sidebar',
@@ -71,21 +71,63 @@ import { SubscriptionDto } from '../models';
                 <span class="count">{{ node.unreadCount }}</span>
               }
             </a>
+            <div class="rowmenu">
+              <button
+                class="dots"
+                type="button"
+                [attr.aria-label]="'Manage ' + node.tag.name"
+                (click)="toggleMenu('tag-' + node.tag.id, $event)"
+              >
+                <app-icon name="more_horiz" [size]="18" />
+              </button>
+              @if (menuFor() === 'tag-' + node.tag.id) {
+                <div class="pop" role="menu">
+                  <button role="menuitem" (click)="editTag.emit(node.tag); closeMenu()">
+                    Edit tag
+                  </button>
+                  <button role="menuitem" (click)="deleteTag.emit(node.tag); closeMenu()">
+                    Delete tag
+                  </button>
+                </div>
+              }
+            </div>
           </div>
           @if (expanded().has(node.tag.id)) {
             @for (s of node.subscriptions; track s.id) {
-              <a
-                class="nav tag-sub"
-                [class.active]="selection().kind === 'subscription' && selection().id === s.id"
-                [routerLink]="[]"
-                [queryParams]="{ subscription: s.id, view: null, tag: null, entry: null }"
-                queryParamsHandling="merge"
-              >
-                <span>{{ s.title }}</span>
-                @if (s.unreadCount > 0) {
-                  <span class="count">{{ s.unreadCount }}</span>
-                }
-              </a>
+              <div class="feedrow">
+                <a
+                  class="nav tag-sub"
+                  [class.active]="selection().kind === 'subscription' && selection().id === s.id"
+                  [routerLink]="[]"
+                  [queryParams]="{ subscription: s.id, view: null, tag: null, entry: null }"
+                  queryParamsHandling="merge"
+                >
+                  <span>{{ s.title }}</span>
+                  @if (s.unreadCount > 0) {
+                    <span class="count">{{ s.unreadCount }}</span>
+                  }
+                </a>
+                <div class="rowmenu">
+                  <button
+                    class="dots"
+                    type="button"
+                    [attr.aria-label]="'Manage ' + s.title"
+                    (click)="toggleMenu('sub-' + s.id, $event)"
+                  >
+                    <app-icon name="more_horiz" [size]="18" />
+                  </button>
+                  @if (menuFor() === 'sub-' + s.id) {
+                    <div class="pop" role="menu">
+                      <button role="menuitem" (click)="editFeed.emit(s); closeMenu()">
+                        Edit feed
+                      </button>
+                      <button role="menuitem" (click)="unsubscribe.emit(s); closeMenu()">
+                        Unsubscribe
+                      </button>
+                    </div>
+                  }
+                </div>
+              </div>
             }
           }
         }
@@ -94,18 +136,38 @@ import { SubscriptionDto } from '../models';
       @if (untagged().length) {
         <p class="label">Feeds</p>
         @for (s of untagged(); track s.id) {
-          <a
-            class="nav"
-            [class.active]="selection().kind === 'subscription' && selection().id === s.id"
-            [routerLink]="[]"
-            [queryParams]="{ subscription: s.id, view: null, tag: null, entry: null }"
-            queryParamsHandling="merge"
-          >
-            <app-icon name="rss_feed" [size]="16" /><span>{{ s.title }}</span>
-            @if (s.unreadCount > 0) {
-              <span class="count">{{ s.unreadCount }}</span>
-            }
-          </a>
+          <div class="feedrow">
+            <a
+              class="nav"
+              [class.active]="selection().kind === 'subscription' && selection().id === s.id"
+              [routerLink]="[]"
+              [queryParams]="{ subscription: s.id, view: null, tag: null, entry: null }"
+              queryParamsHandling="merge"
+            >
+              <app-icon name="rss_feed" [size]="16" /><span>{{ s.title }}</span>
+              @if (s.unreadCount > 0) {
+                <span class="count">{{ s.unreadCount }}</span>
+              }
+            </a>
+            <div class="rowmenu">
+              <button
+                class="dots"
+                type="button"
+                [attr.aria-label]="'Manage ' + s.title"
+                (click)="toggleMenu('sub-' + s.id, $event)"
+              >
+                <app-icon name="more_horiz" [size]="18" />
+              </button>
+              @if (menuFor() === 'sub-' + s.id) {
+                <div class="pop" role="menu">
+                  <button role="menuitem" (click)="editFeed.emit(s); closeMenu()">Edit feed</button>
+                  <button role="menuitem" (click)="unsubscribe.emit(s); closeMenu()">
+                    Unsubscribe
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
         }
       }
     </nav>
@@ -174,6 +236,54 @@ import { SubscriptionDto } from '../models';
         border-radius: 50%;
         flex: 0 0 auto;
       }
+      .feedrow {
+        display: flex;
+        align-items: center;
+      }
+      .feedrow .nav {
+        flex: 1;
+        min-width: 0;
+      }
+      .rowmenu {
+        position: relative;
+        flex: 0 0 auto;
+      }
+      .dots {
+        display: inline-flex;
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: var(--space-1);
+        opacity: 0.55;
+      }
+      .dots:hover,
+      .dots:focus-visible {
+        opacity: 1;
+      }
+      .pop {
+        position: absolute;
+        right: 0;
+        top: 28px;
+        z-index: 2;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        min-width: 140px;
+      }
+      .pop button {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: var(--space-2) var(--space-3);
+        background: none;
+        border: none;
+        color: var(--text-primary);
+        cursor: pointer;
+      }
+      .pop button:hover {
+        background: var(--surface-0);
+      }
     `,
   ],
 })
@@ -184,7 +294,13 @@ export class SidebarComponent {
   readonly selection = input.required<Selection>();
   readonly loading = input(false);
 
+  readonly editTag = output<TagDto>();
+  readonly deleteTag = output<TagDto>();
+  readonly editFeed = output<SubscriptionDto>();
+  readonly unsubscribe = output<SubscriptionDto>();
+
   readonly expanded = signal<Set<number>>(new Set());
+  readonly menuFor = signal<string | null>(null);
 
   toggle(tagId: number): void {
     this.expanded.update((set) => {
@@ -196,5 +312,15 @@ export class SidebarComponent {
       }
       return next;
     });
+  }
+
+  toggleMenu(key: string, ev: Event): void {
+    ev.preventDefault();
+    ev.stopPropagation();
+    this.menuFor.update((k) => (k === key ? null : key));
+  }
+
+  closeMenu(): void {
+    this.menuFor.set(null);
   }
 }
