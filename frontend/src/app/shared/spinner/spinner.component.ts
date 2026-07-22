@@ -1,0 +1,31 @@
+import { Component, Input } from '@angular/core';
+
+@Component({
+  selector: 'app-spinner',
+  template: `<span
+    class="spin"
+    [style.width.px]="size"
+    [style.height.px]="size"
+    role="status"
+    aria-label="Loading"
+  ></span>`,
+  styles: [
+    `
+      .spin {
+        display: inline-block;
+        border: 2px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: r 0.7s linear infinite;
+      }
+      @keyframes r {
+        to {
+          transform: rotate(1turn);
+        }
+      }
+    `,
+  ],
+})
+export class SpinnerComponent {
+  @Input() size = 18;
+}
