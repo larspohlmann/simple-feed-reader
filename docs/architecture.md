@@ -10,6 +10,15 @@ the [design spec](superpowers/specs/2026-07-21-simple-feed-reader-design.md).
 Its job is to make one decision durable: **keep a native iOS client viable**, and
 say precisely what that costs and what it forbids.
 
+**The SPA today, in brief.** The client that exists now lives in `frontend/` (see
+[../frontend/README.md](../frontend/README.md)): Angular 20 with standalone
+components and signals, bespoke SCSS over Angular CDK, and CSS-custom-property
+theming (Graphite, in light/dark/system). It honours the contract below — its
+transport is the bearer JWT, attached by a functional HTTP interceptor and
+cleared on `401` — and its **sole credentialed call** is the OAuth code→token
+exchange (§4.1). Every other request is a plain bearer call, which is exactly what
+keeps the native-client door open.
+
 ---
 
 ## 1. The standing constraint

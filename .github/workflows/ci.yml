@@ -103,3 +103,33 @@ jobs:
 
       - name: PHPUnit
         run: php bin/phpunit
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ESLint + Prettier + Stylelint + Jest. Stylelint's color-no-hex proves no
+      # component hard-codes a colour outside the theme layer. The Playwright
+      # smoke needs the Docker stack and is deliberately not part of this gate.
+      - name: Gate (lint, format, stylelint, unit)
+        run: npm run check
+
+      - name: Build
+        run: npm run build
