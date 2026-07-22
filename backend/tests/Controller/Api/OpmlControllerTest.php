@@ -82,4 +82,13 @@ final class OpmlControllerTest extends WebTestCase
         $client->request('POST', '/api/opml/import', server: $headers + ['CONTENT_TYPE' => 'text/x-opml'], content: '');
         self::assertResponseStatusCodeSame(422);
     }
+
+    public function testImportRejectsOversizedBody(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('opml-big@example.com');
+        $server = $headers + ['CONTENT_TYPE' => 'text/x-opml'];
+        $client->request('POST', '/api/opml/import', server: $server, content: str_repeat('a', 1_048_577));
+        self::assertResponseStatusCodeSame(422);
+    }
 }

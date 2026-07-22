@@ -26,6 +26,14 @@ final readonly class OpmlImporter
 {
     private const MAX_TAG_NAME = 100;
 
+    /**
+     * Feed.url is VARCHAR(750); a longer URL would pass a naive scheme/host
+     * check yet blow up the deferred flush with "data too long" on MySQL
+     * (strict mode), losing the whole import. Bound it here so an over-long URL
+     * is merely counted invalid and the rest still imports.
+     */
+    private const MAX_FEED_URL = 750;
+
     public function __construct(
         private EntityManagerInterface $em,
         private FeedRepository $feeds,
@@ -39,18 +47,23 @@ final readonly class OpmlImporter
     {
         $body = $this->parseBody($opml);
 
-        $existing = $this->subscriptions->countForUser((int) $user->getId());
+        $userId = (int) $user->getId();
+        $existing = $this->subscriptions->countForUser($userId);
         $result = new OpmlImportResult();
 
-        // Feeds and tags are persisted but not flushed until the very end, so a
-        // repository lookup cannot see rows created earlier in THIS import. These
-        // batch-local identity maps stand in for that: a group naming two feeds
-        // must reuse one Tag row, and a URL repeated in the file one Feed row —
-        // otherwise the deferred flush trips the unique constraints.
-        /** @var array<string, Feed> $feedCache keyed by url */
-        $feedCache = [];
+        // Nothing is flushed until the very end, so a repository lookup cannot
+        // see rows created earlier in THIS import. Two batch-local maps stand in
+        // for that, guarding the three unique constraints the deferred flush
+        // would otherwise trip:
+        //  - $tagCache (uniq_tag_user_name): a group naming several feeds reuses
+        //    one Tag row instead of persisting a duplicate.
+        //  - $seen (uniq_subscription_user_feed): a URL listed under several
+        //    folders — common in real exports — subscribes once; repeats count
+        //    as alreadySubscribed rather than persisting a second Subscription.
         /** @var array<string, Tag> $tagCache keyed by lowercased name */
         $tagCache = [];
+        /** @var array<string, true> $seen feed URLs subscribed during this import */
+        $seen = [];
 
         // Depth-first: each feed outline inherits the nearest ancestor group's
         // title as its tag. `null` tag = body root (untagged).
@@ -60,10 +73,15 @@ final readonly class OpmlImporter
                 continue;
             }
 
-            $feed = $this->findOrCreateFeed($xmlUrl, $feedCache);
+            if (isset($seen[$xmlUrl])) {
+                $result = $result->with(alreadySubscribed: 1);
+                continue;
+            }
 
-            $feedId = $feed->getId();
-            if ($feedId !== null && $this->subscriptions->existsForUserAndFeed((int) $user->getId(), $feedId)) {
+            // Look up but do NOT create yet: an over-limit import must not leave
+            // orphan Feed rows behind for feeds it never subscribes.
+            $feed = $this->feeds->findOneBy(['url' => $xmlUrl]);
+            if ($feed !== null && $this->subscriptions->existsForUserAndFeed($userId, (int) $feed->getId())) {
                 $result = $result->with(alreadySubscribed: 1);
                 continue;
             }
@@ -73,12 +91,19 @@ final readonly class OpmlImporter
                 continue;
             }
 
+            if ($feed === null) {
+                $feed = new Feed($xmlUrl);
+                $feed->setNextFetchAt($this->clock->now()); // due now → next refresh populates it
+                $this->em->persist($feed);
+            }
+
             $sub = new Subscription($user, $feed, $this->clock->now());
             $tag = $this->resolveTag($user, $tagName, $tagCache);
             if ($tag !== null) {
                 $sub->addTag($tag);
             }
             $this->em->persist($sub);
+            $seen[$xmlUrl] = true;
             $existing++;
             $result = $result->with(imported: 1);
         }
@@ -145,32 +170,13 @@ final readonly class OpmlImporter
 
     private function isImportableUrl(string $url): bool
     {
-        if (mb_strlen($url) > 2048) {
+        if (mb_strlen($url) > self::MAX_FEED_URL) {
             return false;
         }
         $scheme = parse_url($url, \PHP_URL_SCHEME);
         $host = parse_url($url, \PHP_URL_HOST);
 
         return \in_array($scheme, ['http', 'https'], true) && \is_string($host) && $host !== '';
-    }
-
-    /**
-     * @param array<string, Feed> $cache batch-local identity map, keyed by url
-     */
-    private function findOrCreateFeed(string $xmlUrl, array &$cache): Feed
-    {
-        if (isset($cache[$xmlUrl])) {
-            return $cache[$xmlUrl];
-        }
-
-        $feed = $this->feeds->findOneBy(['url' => $xmlUrl]);
-        if ($feed === null) {
-            $feed = new Feed($xmlUrl);
-            $feed->setNextFetchAt($this->clock->now()); // due now → next refresh populates it
-            $this->em->persist($feed);
-        }
-
-        return $cache[$xmlUrl] = $feed;
     }
 
     /**
