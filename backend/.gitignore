@@ -21,6 +21,13 @@
 /.phpunit.cache/
 ###< phpunit/phpunit ###
 
+# Legacy PHPUnit result cache (written when no cacheDirectory is configured, as
+# with phpunit.dist.xml and phpunit-e2e.xml.dist). A build artifact, not source.
+/.phpunit.result.cache
+
+# The e2e config is committed as a .dist template, mirroring phpunit.dist.xml.
+/phpunit-e2e.xml
+
 ###> lexik/jwt-authentication-bundle ###
 /config/jwt/*.pem
 ###< lexik/jwt-authentication-bundle ###
