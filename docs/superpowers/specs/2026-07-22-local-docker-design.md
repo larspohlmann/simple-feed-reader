@@ -94,6 +94,8 @@ future prod-stage/frontend extension points.
 
 1. `docker compose up` from a clean checkout (after documented one-time steps) serves
    **https://localhost:8443/api/health** as healthy against MySQL.
-2. A registration mail lands in the Mailpit inbox.
+2. A mail sent through the app's real mailer transport (`bin/console mailer:test`)
+   lands in the Mailpit inbox. (Registration itself requires solving an ALTCHA
+   proof-of-work, so the transport is verified directly instead.)
 3. The full PHPUnit suite passes **inside the container on the MySQL leg**.
 4. Native workflow untouched: host-side SQLite tests still pass with no config edits.
