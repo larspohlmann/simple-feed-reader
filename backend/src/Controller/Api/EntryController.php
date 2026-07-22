@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\Entry\MarkReadRequest;
 use App\Dto\Entry\UpdateEntryStateRequest;
 use App\Entity\EntryState;
 use App\Entity\User;
@@ -13,9 +14,11 @@ use App\Http\EntryJson;
 use App\Repository\EntryQuery;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
+use App\Service\Reader\MarkReadService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -30,6 +33,7 @@ final class EntryController
         private readonly EntryStateRepository $states,
         private readonly EntityManagerInterface $em,
         private readonly ClockInterface $clock,
+        private readonly MarkReadService $markRead,
     ) {
     }
 
@@ -90,6 +94,16 @@ final class EntryController
             'entries' => array_map(static fn ($r) => EntryJson::one($r), $rows),
             'nextCursor' => $nextCursor,
         ]);
+    }
+
+    #[Route('/mark-read', name: 'api_entries_mark_read', methods: ['POST'])]
+    public function markRead(
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] MarkReadRequest $request,
+    ): JsonResponse {
+        $this->markRead->mark($user, $request->scope, $request->id, $request->until);
+
+        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
     #[Route('/{id}/state', name: 'api_entries_state', methods: ['PATCH'], requirements: ['id' => '\d+'])]

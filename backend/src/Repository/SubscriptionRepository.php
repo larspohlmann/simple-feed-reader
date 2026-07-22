@@ -76,6 +76,25 @@ class SubscriptionRepository extends ServiceEntityRepository
     }
 
     /**
+     * The user's subscriptions carrying a given tag (feed eager-loaded).
+     *
+     * @return list<Subscription>
+     */
+    public function findForUserByTagId(int $userId, int $tagId): array
+    {
+        /** @var list<Subscription> $rows */
+        $rows = $this->createQueryBuilder('s')
+            ->leftJoin('s.feed', 'f')->addSelect('f')
+            ->innerJoin('s.tags', 't')
+            ->andWhere('s.user = :user')->setParameter('user', $userId)
+            ->andWhere('t.id = :tagId')->setParameter('tagId', $tagId)
+            ->getQuery()
+            ->getResult();
+
+        return $rows;
+    }
+
+    /**
      * Subscriptions carrying a given tag — used to detach the tag before it is
      * deleted (portable: does not rely on join-table FK cascade behaviour).
      *

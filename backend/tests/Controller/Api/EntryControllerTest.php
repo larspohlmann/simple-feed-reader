@@ -214,4 +214,38 @@ final class EntryControllerTest extends WebTestCase
         );
         self::assertResponseStatusCodeSame(404);
     }
+
+    public function testMarkReadAllThenListUnreadIsEmpty(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-markread@example.com');
+        $this->seedFeedWithEntries($user, 3);
+
+        $client->request(
+            'POST',
+            '/api/entries/mark-read',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['scope' => 'all', 'until' => '2026-08-01T00:00:00Z'], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(204);
+
+        $client->request('GET', '/api/entries?view=unread', server: $headers);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entries']);
+        self::assertCount(0, $body['entries']);
+    }
+
+    public function testMarkReadRejectsBadTimestamp(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('e-markbad@example.com');
+        $client->request(
+            'POST',
+            '/api/entries/mark-read',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['scope' => 'all', 'until' => 'nonsense'], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(422);
+    }
 }
