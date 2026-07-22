@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- https://phpunit.readthedocs.io/en/latest/configuration.html -->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         colors="true"
+         failOnDeprecation="true"
+         failOnWarning="true"
+         bootstrap="vendor/autoload.php"
+>
+    <php>
+        <!-- Where the running stack lives. Override to point at staging later. -->
+        <env name="E2E_BASE_URL" value="https://localhost:8443" />
+        <env name="E2E_MAILPIT_URL" value="http://localhost:8025" />
+    </php>
+
+    <testsuites>
+        <testsuite name="E2E">
+            <directory>tests/E2e</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>

@@ -86,7 +86,8 @@
         "cs": "phpcs",
         "cs:fix": "phpcbf",
         "stan": "phpstan analyse --memory-limit=512M",
-        "check": ["@cs", "@stan"]
+        "check": ["@cs", "@stan"],
+        "e2e": "bin/e2e.sh"
     },
     "conflict": {
         "symfony/symfony": "*"
