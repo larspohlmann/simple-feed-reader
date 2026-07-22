@@ -30,8 +30,12 @@ One `docker-compose.yml` at the repo root; container build/config files under
 - Built from `docker/php/Dockerfile`, base image `php:8.3-fpm-alpine`.
   8.3 matches `composer config.platform` — code that only parses on 8.4 must fail
   here, exactly as it would in CI and on Strato.
-- Extensions: `pdo_mysql`, `intl`, `opcache`, `zip`. Composer binary copied from the
-  official `composer` image.
+- Extensions: `pdo_mysql`, `intl`, `opcache`, `zip`, plus **Xdebug** (installed via
+  pecl). Xdebug runs in `mode=debug` with `start_with_request=trigger`, so requests
+  are only intercepted when the IDE/browser sends the trigger — no per-request
+  slowdown otherwise. `client_host=host.docker.internal` reaches the IDE on the Mac
+  host; the standard port 9003 stays inside the Docker network (nothing published).
+- Composer binary copied from the official `composer` image.
 - `backend/` bind-mounted to `/app` — host edits are live, no rebuild per change.
 - Tests, `composer cs` / `composer stan`, and console commands run via
   `docker compose exec php …`.
@@ -74,7 +78,7 @@ step must create both databases and grant the user rights on both.
 - **No prod image stage yet.** The Dockerfile is written so a multi-stage `prod`
   target can be added when plan 6 revisits deployment.
 - **No worker/cron container** for feed refresh — arrives with plans 4/6.
-- **No Xdebug**, no Adminer, no Angular frontend service (plan 5 will add the
+- No Adminer, no Angular frontend service (plan 5 will add the
   frontend; nginx or a dedicated service can then split paths on the same origin,
   which is the same-site layout the OAuth cookie needs).
 
@@ -82,7 +86,9 @@ step must create both databases and grant the user rights on both.
 
 `docs/local-docker.md`: prerequisites (Docker Desktop, mkcert), one-time cert
 generation, first-run steps (`composer install`, `doctrine:migrations:migrate`),
-command cheat-sheet, and a note on the future prod-stage/frontend extension points.
+command cheat-sheet, IDE step-debugging setup (path mapping `backend/` ↔ `/app`,
+trigger via browser extension or `XDEBUG_TRIGGER=1` for CLI/tests), and a note on the
+future prod-stage/frontend extension points.
 
 ## Definition of done
 
