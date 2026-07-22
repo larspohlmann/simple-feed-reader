@@ -16,7 +16,7 @@ use App\Service\Parser\FeedParser;
  * candidate feeds discovered from an HTML page. Every fetch goes through the
  * SSRF-guarded fetcher, so discovery inherits the same protection as refresh.
  */
-final readonly class FeedDiscovery
+final readonly class FeedDiscovery implements FeedDiscoveryInterface
 {
     private const FEED_LINK_TYPES = ['application/rss+xml', 'application/atom+xml'];
 
