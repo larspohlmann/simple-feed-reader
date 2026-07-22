@@ -74,3 +74,26 @@ services:
         decorates: security.login_throttling.login.limiter
         arguments:
             $inner: '@.inner'
+
+    # Replaces doctrine/migrations' lazy schema-diff provider with its own eager
+    # one, so LazySchema is never constructed.
+    #
+    # WHY. doctrine/migrations 3.9 (3.9.7 is the latest release) still ships
+    # Doctrine\Migrations\Provider\LazySchema, which extends the now-@final
+    # Doctrine\DBAL\Schema\Schema and mixes in Symfony's LazyProxyTrait
+    # (deprecated since Symfony 7.3). Its LazySchemaDiffProvider constructs that
+    # proxy inside DbalExecutor on EVERY `migrations:migrate`, so both User
+    # Deprecated notices land in var/log/dev.log on each run. There is no fixed
+    # release to upgrade to, and the native replacement (PHP 8.4 lazy objects)
+    # is off-limits under our 8.3 platform pin.
+    #
+    # DBALSchemaDiffProvider is migrations' own eager implementation of the same
+    # SchemaDiffProvider interface; the executor uses it identically. The only
+    # difference is that it introspects the from-schema immediately instead of
+    # behind a proxy — negligible at our migration count, and it produces the
+    # exact same SQL. This removes the deprecation at the source rather than
+    # filtering it out of the log. Wired in config/packages/doctrine_migrations.yaml.
+    app.doctrine.eager_schema_diff_provider:
+        class: Doctrine\Migrations\Provider\DBALSchemaDiffProvider
+        factory: [App\Doctrine\EagerSchemaDiffProviderFactory, 'create']
+        arguments: ['@doctrine.dbal.default_connection']

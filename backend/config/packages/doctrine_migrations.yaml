@@ -4,3 +4,9 @@ doctrine_migrations:
         # as migrations classes should NOT be autoloaded
         'DoctrineMigrations': '%kernel.project_dir%/migrations'
     enable_profiler: false
+    # Override migrations' lazy schema-diff provider with its eager one so
+    # LazySchema (which extends the @final DBAL Schema and uses Symfony's
+    # deprecated LazyProxyTrait) is never built. Full rationale on the
+    # app.doctrine.eager_schema_diff_provider definition in config/services.yaml.
+    services:
+        Doctrine\Migrations\Provider\SchemaDiffProvider: app.doctrine.eager_schema_diff_provider
