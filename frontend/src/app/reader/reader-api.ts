@@ -8,10 +8,14 @@ import {
   EntryQuery,
   EntryStatePatch,
   MarkReadScope,
+  OpmlImportResult,
   RefreshReport,
   SubscribeResult,
   SubscriptionDto,
+  SubscriptionUpdate,
   EntryStateDto,
+  TagDto,
+  TagInput,
 } from './models';
 
 @Injectable({ providedIn: 'root' })
@@ -47,5 +51,45 @@ export class ReaderApi {
 
   refresh(): Observable<RefreshReport> {
     return this.http.post<RefreshReport>(`${this.base}/api/refresh`, {});
+  }
+
+  updateSubscription(
+    id: number,
+    body: SubscriptionUpdate,
+  ): Observable<{ subscription: SubscriptionDto }> {
+    return this.http.patch<{ subscription: SubscriptionDto }>(
+      `${this.base}/api/subscriptions/${id}`,
+      body,
+    );
+  }
+
+  deleteSubscription(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/api/subscriptions/${id}`);
+  }
+
+  tags(): Observable<{ tags: TagDto[] }> {
+    return this.http.get<{ tags: TagDto[] }>(`${this.base}/api/tags`);
+  }
+
+  createTag(body: TagInput): Observable<{ tag: TagDto }> {
+    return this.http.post<{ tag: TagDto }>(`${this.base}/api/tags`, body);
+  }
+
+  updateTag(id: number, body: TagInput): Observable<{ tag: TagDto }> {
+    return this.http.patch<{ tag: TagDto }>(`${this.base}/api/tags/${id}`, body);
+  }
+
+  deleteTag(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/api/tags/${id}`);
+  }
+
+  exportOpml(): Observable<string> {
+    return this.http.get(`${this.base}/api/opml/export`, { responseType: 'text' });
+  }
+
+  importOpml(xml: string): Observable<OpmlImportResult> {
+    return this.http.post<OpmlImportResult>(`${this.base}/api/opml/import`, xml, {
+      headers: { 'Content-Type': 'text/xml' },
+    });
   }
 }

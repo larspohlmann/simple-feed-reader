@@ -83,3 +83,23 @@ export interface EntryStatePatch {
   isFavorite?: boolean;
   isKept?: boolean;
 }
+
+export interface OpmlImportResult {
+  imported: number;
+  alreadySubscribed: number;
+  invalid: number;
+  skippedOverLimit: number;
+}
+
+/** Body for POST /api/tags and PATCH /api/tags/{id}. */
+export interface TagInput {
+  name: string;
+  color: string | null;
+  icon: string | null;
+}
+
+/** Body for PATCH /api/subscriptions/{id}. Replaces the whole tag set. */
+export interface SubscriptionUpdate {
+  customTitle: string | null;
+  tagIds: number[];
+}

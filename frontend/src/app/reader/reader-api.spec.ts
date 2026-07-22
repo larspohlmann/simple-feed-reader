@@ -80,4 +80,66 @@ describe('ReaderApi', () => {
       pruned: 0,
     });
   });
+
+  describe('ReaderApi management methods', () => {
+    it('PATCHes a subscription update', () => {
+      api.updateSubscription(7, { customTitle: 'My name', tagIds: [1, 2] }).subscribe();
+      const req = ctrl.expectOne('https://api.test/api/subscriptions/7');
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ customTitle: 'My name', tagIds: [1, 2] });
+      req.flush({ subscription: {} });
+    });
+
+    it('DELETEs a subscription', () => {
+      api.deleteSubscription(7).subscribe();
+      const req = ctrl.expectOne('https://api.test/api/subscriptions/7');
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null);
+    });
+
+    it('GETs all tags', () => {
+      api.tags().subscribe();
+      const req = ctrl.expectOne('https://api.test/api/tags');
+      expect(req.request.method).toBe('GET');
+      req.flush({ tags: [] });
+    });
+
+    it('POSTs a new tag', () => {
+      api.createTag({ name: 'Tech', color: '#3f8676', icon: 'code' }).subscribe();
+      const req = ctrl.expectOne('https://api.test/api/tags');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ name: 'Tech', color: '#3f8676', icon: 'code' });
+      req.flush({ tag: {} });
+    });
+
+    it('PATCHes a tag', () => {
+      api.updateTag(3, { name: 'Tech', color: null, icon: null }).subscribe();
+      const req = ctrl.expectOne('https://api.test/api/tags/3');
+      expect(req.request.method).toBe('PATCH');
+      req.flush({ tag: {} });
+    });
+
+    it('DELETEs a tag', () => {
+      api.deleteTag(3).subscribe();
+      const req = ctrl.expectOne('https://api.test/api/tags/3');
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null);
+    });
+
+    it('GETs OPML export as text', () => {
+      api.exportOpml().subscribe();
+      const req = ctrl.expectOne('https://api.test/api/opml/export');
+      expect(req.request.method).toBe('GET');
+      expect(req.request.responseType).toBe('text');
+      req.flush('<opml/>');
+    });
+
+    it('POSTs OPML import as a raw body', () => {
+      api.importOpml('<opml/>').subscribe();
+      const req = ctrl.expectOne('https://api.test/api/opml/import');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toBe('<opml/>');
+      req.flush({ imported: 1, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0 });
+    });
+  });
 });
