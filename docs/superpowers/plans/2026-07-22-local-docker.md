@@ -245,13 +245,16 @@ server {
 
     root /app/public;
 
+    # nginx's 1m default would answer real-world OPML imports with a raw 413
+    # before Symfony ever sees the request.
+    client_max_body_size 10m;
+
     location / {
         try_files $uri /index.php$is_args$args;
     }
 
     location ~ ^/index\.php(/|$) {
         fastcgi_pass php:9000;
-        fastcgi_split_path_info ^(.+\.php)(/.*)$;
         include fastcgi_params;
         # $realpath_root works because php and nginx mount ./backend at the
         # same path (/app), so resolved script paths agree between containers.
