@@ -84,13 +84,14 @@ configuration wires the copy in 5a.
 npm run e2e
 ```
 
-Playwright smokes over the auth journey (`e2e/auth-smoke.spec.ts`) and the
-reader shell (`e2e/reader-smoke.spec.ts`). They need the **Docker stack up**
-(they drive the real backend), so they are **not** part of `npm run check` or
-the CI unit-gate job — run them locally against Docker, or in a dedicated
-integration job later. The reader smoke signs in as the seeded
+Playwright smokes over the auth journey (`e2e/auth-smoke.spec.ts`), the reader
+shell (`e2e/reader-smoke.spec.ts`), and settings + admin
+(`e2e/settings-admin-smoke.spec.ts`). They need the **Docker stack up** (they
+drive the real backend), so they are **not** part of `npm run check` or the CI
+unit-gate job — run them locally against Docker, or in a dedicated integration
+job later. Both the reader and the settings/admin smoke sign in as the seeded
 `app:e2e:seed-admin` account (`e2e-admin@example.com`), the same fixture the
-backend e2e suite authenticates as, and skips cleanly when that account or the
+backend e2e suite authenticates as, and skip cleanly when that account or the
 stack is absent.
 
 ## Reader
@@ -140,12 +141,58 @@ The reader adds one dependency, **`@angular/cdk`** (`^20.2`): its `Dialog` and
 `A11yModule` focus-trap back the Add-feed dialog, and `BreakpointObserver`
 drives the wide-screen Pane layout.
 
-### Out of scope (5c)
+### Out of the reader's scope
 
 Tag and subscription **management** (renaming, retagging, unsubscribing),
-**OPML** import/export, the **admin** approval queue, and the full **settings**
-page are **5c** — not part of this reader. The reader consumes the read-model
-and the subscribe / refresh / entry-state endpoints only.
+**OPML** import/export, and the **admin** approval queue are not part of this
+shell — the reader consumes the read-model and the subscribe / refresh /
+entry-state endpoints only. See "Management & admin (5c)" below for where
+those live.
+
+## Management & admin (5c)
+
+Everything that changes a feed, a tag, or another user's account lives outside
+the reader shell, over the same frozen JSON API plus its `/api/tags`,
+`/api/opml/*`, and `/api/admin/users*` endpoints:
+
+- **`/settings`** (`src/app/settings/`) — a single page, four sections, each
+  its own component composed by `SettingsComponent`:
+  - **Feeds** — rename a subscription (`customTitle`), retag it, or
+    unsubscribe, via the shared `EditSubscriptionDialogComponent` /
+    `ConfirmDialogComponent`.
+  - **Tags** — full CRUD: name, an optional colour (`#rrggbb`, curated swatches
+    plus a native colour picker) and an optional Material Symbol icon, via
+    `TagFormDialogComponent`. Deleting a tag removes it from every feed that
+    used it.
+  - **Import & export** — download all subscriptions as an OPML file, or
+    import one (file picker or pasted XML); the result reports imported /
+    already-subscribed / invalid / over-limit counts, and new feeds fill in on
+    the next refresh.
+  - **Account** — email, member-since date, sign out, and (for admins) a link
+    into the user queue.
+- **Sidebar manage menus** — each tag and feed row in the reader sidebar
+  carries a hover/tap "⋮" menu (Edit / Delete, Edit feed / Unsubscribe) that
+  opens the same dialogs settings uses, so an action taken from the sidebar
+  and one taken from Settings behave identically.
+- **`ManageActions`** (`src/app/reader/manage/manage-actions.service.ts`) is
+  the one place a management dialog is opened and its result applied — both
+  the settings sections and the sidebar call it, so a dialog's own API write
+  and the store refresh afterward happen exactly once, in exactly one place.
+- **`/admin/users`** (`src/app/admin/`, lazy-loaded) — the user-approval
+  queue: filter by status, then approve / reject / suspend. Route-gated by
+  `adminGuard`, a UX-only check (it fetches the current user if not already
+  loaded, then requires `ROLE_ADMIN`); the real enforcement is the backend's
+  `ROLE_ADMIN` requirement on `^/api/admin/`. An admin can never reject or
+  suspend themselves — those actions are hidden for their own row.
+
+### The one deferral
+
+A per-feed "retry this dead feed" action was on the roadmap. The backend
+supports it (`POST /api/refresh?feedId=`), but keys on the **Feed** id, which
+`SubscriptionJson` doesn't expose (only `feedUrl` and `status`). Erroring feeds
+surface a tooltip explaining that the next global refresh will retry them;
+targeted per-feed retry is deferred to a small follow-up plan that adds a
+`feedId` to `SubscriptionJson`.
 
 ## Theming
 
