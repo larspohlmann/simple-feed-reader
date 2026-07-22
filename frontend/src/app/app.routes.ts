@@ -1,5 +1,6 @@
 // src/app/app.routes.ts
 import { Routes } from '@angular/router';
+import { adminGuard } from './core/admin.guard';
 import { authGuard, guestGuard } from './core/auth.guard';
 
 export const routes: Routes = [
@@ -38,6 +39,16 @@ export const routes: Routes = [
       import('./auth/oauth-callback/oauth-callback.component').then(
         (m) => m.OAuthCallbackComponent,
       ),
+  },
+  {
+    path: 'settings',
+    canActivate: [authGuard],
+    loadComponent: () => import('./settings/settings.component').then((m) => m.SettingsComponent),
+  },
+  {
+    path: 'admin/users',
+    canActivate: [authGuard, adminGuard],
+    loadComponent: () => import('./admin/admin-users.component').then((m) => m.AdminUsersComponent),
   },
   {
     path: '',

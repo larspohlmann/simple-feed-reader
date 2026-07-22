@@ -17,6 +17,7 @@ import { SidebarComponent } from './sidebar/sidebar.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
 import { ReaderViewComponent } from './reader-view/reader-view.component';
 import { AddFeedDialogComponent } from './add-feed/add-feed-dialog.component';
+import { ManageActions } from './manage/manage-actions.service';
 
 @Component({
   selector: 'app-reader-shell',
@@ -31,6 +32,10 @@ import { AddFeedDialogComponent } from './add-feed/add-feed-dialog.component';
           [totalUnread]="subs.totalUnread()"
           [selection]="selection()"
           [loading]="subs.loading()"
+          (editTag)="manage.editTag($event)"
+          (deleteTag)="manage.deleteTag($event)"
+          (editFeed)="manage.editSubscription($event)"
+          (unsubscribe)="manage.unsubscribe($event)"
         />
       </aside>
       <main class="main" [class.split]="paneMode()">
@@ -154,6 +159,7 @@ export class ReaderShellComponent implements OnInit {
   private readonly api = inject(ReaderApi);
   private readonly auth = inject(AuthService);
 
+  readonly manage = inject(ManageActions);
   readonly subs = inject(SubscriptionsStore);
   readonly entries = inject(EntriesStore);
   readonly refreshSvc = inject(RefreshService);

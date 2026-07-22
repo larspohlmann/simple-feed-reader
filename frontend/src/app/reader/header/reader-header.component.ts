@@ -1,5 +1,6 @@
 // src/app/reader/header/reader-header.component.ts
 import { Component, inject, input, output, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { AuthService } from '../../core/auth.service';
 import { ThemeService } from '../../theme/theme.service';
@@ -9,7 +10,7 @@ import { RefreshService } from '../refresh.service';
 
 @Component({
   selector: 'app-reader-header',
-  imports: [IconComponent],
+  imports: [IconComponent, RouterLink],
   template: `
     <header>
       <span class="brand">{{ title() }}</span>
@@ -66,6 +67,10 @@ import { RefreshService } from '../refresh.service';
           </button>
           @if (menuOpen()) {
             <div class="menu" role="menu">
+              <a role="menuitem" routerLink="/settings" (click)="menuOpen.set(false)">Settings</a>
+              @if (auth.isAdmin()) {
+                <a role="menuitem" routerLink="/admin/users" (click)="menuOpen.set(false)">Admin</a>
+              }
               <button role="menuitem" (click)="auth.logout()">Sign out</button>
             </div>
           }
@@ -157,6 +162,15 @@ import { RefreshService } from '../refresh.service';
         border: none;
         color: var(--text-primary);
         cursor: pointer;
+      }
+      .menu a {
+        display: block;
+        padding: var(--space-3);
+        color: var(--text-primary);
+        text-decoration: none;
+      }
+      .menu a:hover {
+        background: var(--surface-0);
       }
     `,
   ],
