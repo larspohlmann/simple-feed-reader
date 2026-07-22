@@ -84,10 +84,68 @@ configuration wires the copy in 5a.
 npm run e2e
 ```
 
-A Playwright smoke over the auth journey. It needs the **Docker stack up** (it
-drives the real backend), so it is **not** part of `npm run check` or the CI
-unit-gate job — run it locally against Docker, or in a dedicated integration job
-later.
+Playwright smokes over the auth journey (`e2e/auth-smoke.spec.ts`) and the
+reader shell (`e2e/reader-smoke.spec.ts`). They need the **Docker stack up**
+(they drive the real backend), so they are **not** part of `npm run check` or
+the CI unit-gate job — run them locally against Docker, or in a dedicated
+integration job later. The reader smoke signs in as the seeded
+`app:e2e:seed-admin` account (`e2e-admin@example.com`), the same fixture the
+backend e2e suite authenticates as, and skips cleanly when that account or the
+stack is absent.
+
+## Reader
+
+The reader is the app's home screen (`src/app/reader/`) — a three-region shell
+composed by `ReaderShellComponent`, over the frozen 4a/4b read-model API:
+
+- **Sidebar** — the navigation tree: All items, Favorites, and Kept, then your
+  tags (each expandable to the subscriptions under it) and untagged feeds, every
+  row carrying its unread count. The selection lives in the URL query
+  (`view` / `tag` / `subscription` / `unread` / `entry`), so any view is
+  linkable and survives a reload.
+- **Entry list** — the selected view's entries, cursor-paginated with infinite
+  scroll (an `IntersectionObserver` sentinel), an unread-only toggle, and
+  mark-all-read. Opening an entry marks it read and decrements the counts
+  optimistically, rolling back if the server rejects it.
+- **Article reader** — the shared reader view for a single entry, with
+  read / favorite / keep and prev/next navigation.
+
+Subscribing is by URL: the **Add feed** dialog takes a feed or site address and,
+when the address is an HTML page, lists the discovered feed candidates to pick
+from. A header refresh control drives the backend refresh loop and shows its
+progress inline.
+
+### Reading layout (List / Pane)
+
+A **List / Pane** preference sits beside the theme toggle in the header, backed
+by `ReadingLayoutService` and persisted **on-device** in `localStorage`
+(`sfr.layout`) exactly like the theme choice — it is never sent to the server.
+**List** is the default: the article opens over the list. **Pane** places the
+list and article side by side, but only on a wide viewport (a CDK
+`BreakpointObserver` query); it falls back to List on narrow screens.
+
+### Preview images
+
+Row preview images are derived **client-side** from the entry content the API
+already returns — there is **no backend change**. `firstPreviewImage()` parses
+the content (falling back to the summary) inertly with `DOMParser` and takes the
+first absolute `https://` image `src`; `http`, relative, and `data:` sources are
+rejected — the app is served over https, so `http` images are mixed-content
+blocked and relative ones have no base to resolve against. Images render with
+`referrerpolicy="no-referrer"`.
+
+### Dependency
+
+The reader adds one dependency, **`@angular/cdk`** (`^20.2`): its `Dialog` and
+`A11yModule` focus-trap back the Add-feed dialog, and `BreakpointObserver`
+drives the wide-screen Pane layout.
+
+### Out of scope (5c)
+
+Tag and subscription **management** (renaming, retagging, unsubscribing),
+**OPML** import/export, the **admin** approval queue, and the full **settings**
+page are **5c** — not part of this reader. The reader consumes the read-model
+and the subscribe / refresh / entry-state endpoints only.
 
 ## Theming
 
