@@ -277,8 +277,8 @@ server {
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./docker/certs:/etc/nginx/certs:ro
     ports:
-      - "8080:80"
-      - "8443:443"
+      - "127.0.0.1:8080:80"
+      - "127.0.0.1:8443:443"
     depends_on:
       - php
 ```
