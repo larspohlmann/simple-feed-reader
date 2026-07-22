@@ -85,6 +85,7 @@ it).
 | Follow logs | `docker compose logs -f php nginx` |
 | Stop the stack | `docker compose down` |
 | MySQL from a host GUI tool | connect to `127.0.0.1:33306` |
+| Black-box e2e suite (from `backend/`) | `composer e2e` — see [`backend/tests/E2e/README.md`](../backend/tests/E2e/README.md) |
 
 **The suite in the container is the MySQL leg.** The same suite that runs
 against SQLite natively runs here against MySQL — in seconds, not minutes. It
