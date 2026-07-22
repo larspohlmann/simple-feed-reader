@@ -157,7 +157,9 @@ switch that downgrades the cookie is a switch an attacker benefits from.
 Local development on `http://localhost:8000` is unaffected: browsers treat
 `localhost` as a trustworthy origin and accept `Secure` — and `__Host-` —
 cookies there. Verified in Chromium against the exact attributes the backend
-sends; Firefox has behaved the same since version 75.
+sends; Firefox has behaved the same since version 75. Safari, however, does
+not extend that leniency to `Secure` cookies on `http://localhost` — which is
+exactly why the [local Docker stack](local-docker.md) terminates TLS.
 
 ### 4.2 Why there is a cookie at all: login CSRF
 

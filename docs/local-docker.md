@@ -2,8 +2,8 @@
 
 A full local stack — MySQL, PHP-FPM, nginx with real TLS, and a mail catcher —
 for anyone who wants to run the backend without installing PHP or MySQL
-natively. It is strictly additive: the native SQLite workflow described in the
-backend keeps working unchanged.
+natively. It is strictly additive: the native SQLite workflow (plain
+`vendor/bin/phpunit` in `backend/`) keeps working unchanged.
 
 ---
 
@@ -32,7 +32,10 @@ host are live immediately; no rebuild, no sync step.
 
 ## 2. Prerequisites
 
-- **Docker Desktop** (or a compatible Docker Engine with the compose plugin).
+- **Docker Desktop** (or a compatible Docker Engine with the compose plugin),
+  running before you start the First run steps.
+- Free host ports **8080**, **8443**, and **8025** (MySQL's 33306 is
+  non-standard precisely to avoid collisions).
 - **mkcert**, for a locally trusted TLS certificate:
 
   ```bash
@@ -43,7 +46,9 @@ host are live immediately; no rebuild, no sync step.
   system trust store — that is what makes the browser show a clean padlock
   instead of a warning. If Firefox matters to you, run `brew install nss`
   *before* `mkcert -install`; Firefox keeps its own trust store and mkcert
-  needs `certutil` from nss to reach it.
+  needs `certutil` from nss to reach it. On Linux, install `mkcert` from your
+  package manager (e.g. `apt install mkcert`; Firefox needs `libnss3-tools`)
+  or see [mkcert's install docs](https://github.com/FiloSottile/mkcert#installation).
 
 ---
 
@@ -62,8 +67,10 @@ Then open https://localhost:8443/api/health — it answers `{"status":"ok"}`.
 
 The certificate lands in `docker/certs/`, which is git-ignored: TLS keys never
 enter the repository, and each developer's cert is signed by their own local
-CA. The first `up` also creates the two databases (`feedreader` for dev,
-`feedreader_test` for the suite) via `docker/mysql/init.sql`.
+CA. The first `up` also creates both databases: `feedreader` for dev (via the
+image's `MYSQL_DATABASE` variable) and `feedreader_test` for the suite (via
+`docker/mysql/init.sql`, which also grants the `feedreader` user access to
+it).
 
 ---
 
@@ -79,8 +86,9 @@ CA. The first `up` also creates the two databases (`feedreader` for dev,
 | Stop the stack | `docker compose down` |
 | MySQL from a host GUI tool | connect to `127.0.0.1:33306` |
 
-**The suite in the container is the MySQL leg.** The same 542 tests that run
-against SQLite natively run here against MySQL, in about 12 seconds. They use
+**The suite in the container is the MySQL leg.** The same suite that runs
+against SQLite natively runs here against MySQL — in seconds, not minutes. It
+uses
 `feedreader_test`, not `feedreader` — Doctrine's `when@test` `dbname_suffix`
 appends `_test` to whatever `DATABASE_URL` points at — so a test run never
 touches your dev data. Double-opt-in mails sent during the run appear in the
