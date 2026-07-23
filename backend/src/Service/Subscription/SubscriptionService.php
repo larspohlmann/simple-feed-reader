@@ -7,6 +7,7 @@ namespace App\Service\Subscription;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\SourceFormat;
 use App\Exception\AlreadySubscribedException;
 use App\Exception\SubscriptionLimitReachedException;
 use App\Repository\FeedRepository;
@@ -38,8 +39,10 @@ final readonly class SubscriptionService
         // candidates round-trip the canonical URL discovery just emitted, and
         // a hand-typed variant merely becomes its own row that counts against
         // this user's cap and converges via applyPermanentRedirect on refresh.
-        if ('scraped' === $format) {
-            return SubscribeOutcome::subscribed($this->createSubscription($user, $url, 'scraped'));
+        if (SourceFormat::SCRAPED === $format) {
+            return SubscribeOutcome::subscribed(
+                $this->createSubscription($user, $url, SourceFormat::SCRAPED),
+            );
         }
 
         $result = $this->discovery->discover($url);
@@ -49,7 +52,7 @@ final readonly class SubscriptionService
         }
 
         return SubscribeOutcome::subscribed(
-            $this->createSubscription($user, (string) $result->feedUrl, 'xml'),
+            $this->createSubscription($user, (string) $result->feedUrl, SourceFormat::XML),
         );
     }
 
@@ -75,7 +78,7 @@ final readonly class SubscriptionService
             $feed->setSourceFormat($sourceFormat);
             $this->em->persist($feed);
             $this->em->flush(); // assign an id so the duplicate check is meaningful
-        } elseif ('xml' === $sourceFormat && 'scraped' === $feed->getSourceFormat()) {
+        } elseif (SourceFormat::XML === $sourceFormat && SourceFormat::SCRAPED === $feed->getSourceFormat()) {
             // One-way heal for a poisoned shared row: 'xml' arrivals come from
             // discovery PARSING the URL as a real feed document — a stronger
             // fact than the 'scraped' assertion of whoever created the row
@@ -83,7 +86,7 @@ final readonly class SubscriptionService
             // every refresh to run the HTML extractor over RSS and error out).
             // Never the reverse: a 'scraped' arrival is user-asserted and must
             // not downgrade a format discovery or the creator established.
-            $feed->setSourceFormat('xml');
+            $feed->setSourceFormat(SourceFormat::XML);
         }
 
         if ($this->subscriptions->existsForUserAndFeed($userId, (int) $feed->getId())) {

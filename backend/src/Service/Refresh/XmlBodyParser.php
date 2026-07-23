@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Refresh;
 
 use App\Entity\Feed;
+use App\Enum\SourceFormat;
 use App\Service\Parser\FeedParser;
 use App\Service\Parser\ParsedFeed;
 
@@ -22,7 +23,7 @@ final readonly class XmlBodyParser implements FeedBodyParserInterface
 
     public static function format(): string
     {
-        return 'xml';
+        return SourceFormat::XML;
     }
 
     public function parse(string $body, Feed $feed): ParsedFeed

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Discovery;
 
+use App\Enum\SourceFormat;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcherInterface;
@@ -87,7 +88,9 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
             return FeedDiscoveryResult::scrapeFailed('not_scrapable');
         }
 
-        return FeedDiscoveryResult::candidates([new FeedCandidate($finalUrl, $parsed->title, 'scraped')]);
+        return FeedDiscoveryResult::candidates([
+            new FeedCandidate($finalUrl, $parsed->title, SourceFormat::SCRAPED),
+        ]);
     }
 
     /** @return list<FeedCandidate> */

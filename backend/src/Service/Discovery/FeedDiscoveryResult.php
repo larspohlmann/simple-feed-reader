@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Service\Discovery;
 
+/**
+ * @phpstan-type ScrapeFailureReason 'blocked'|'unreachable'|'not_scrapable'
+ */
 final readonly class FeedDiscoveryResult
 {
     /**
      * @param list<FeedCandidate> $candidates
-     * @param 'blocked'|'unreachable'|'not_scrapable'|null $scrapeFailureReason
+     * @param ScrapeFailureReason|null $scrapeFailureReason
      */
     private function __construct(
         public bool $isDirectFeed,
@@ -37,7 +40,7 @@ final readonly class FeedDiscoveryResult
      * every one of these is an expected outcome the subscribe UI must render,
      * not an error condition.
      *
-     * @param 'blocked'|'unreachable'|'not_scrapable' $reason
+     * @param ScrapeFailureReason $reason
      */
     public static function scrapeFailed(string $reason): self
     {

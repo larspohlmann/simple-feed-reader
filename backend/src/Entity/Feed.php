@@ -38,9 +38,11 @@ class Feed
     private FeedStatus $status = FeedStatus::Active;
 
     /**
-     * How this feed's body is turned into entries: 'xml' (RSS/Atom via FeedParser)
-     * or 'scraped' (HTML listing via HtmlItemExtractor). Open string, matching
-     * FeedCandidate::$format.
+     * How this feed's body is turned into entries: SourceFormat::XML (RSS/Atom
+     * via FeedParser) or SourceFormat::SCRAPED (HTML listing via
+     * HtmlItemExtractor). Open string matching FeedCandidate::$format — see
+     * App\Enum\SourceFormat for why this is not a backed enum. The default
+     * stays a literal so the ORM attribute and column stay self-describing.
      */
     #[ORM\Column(length: 20, options: ['default' => 'xml'])]
     private string $sourceFormat = 'xml';

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Refresh;
 
 use App\Entity\Feed;
+use App\Enum\SourceFormat;
 use App\Service\Parser\ParsedFeed;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
@@ -32,7 +33,7 @@ final readonly class FeedBodyParser
             // strategy. 'xml' is what every row meant before the seam existed,
             // and its parse failure lands in the runner's normal error
             // handling instead of a locator NotFoundException escaping it.
-            $format = XmlBodyParser::format();
+            $format = SourceFormat::XML;
         }
 
         $parser = $this->parsers->get($format);

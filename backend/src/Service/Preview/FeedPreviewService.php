@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Preview;
 
+use App\Enum\SourceFormat;
 use App\Exception\FeedPreviewException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcherInterface;
@@ -51,7 +52,7 @@ final readonly class FeedPreviewService
             // synthesis the refresh pipeline will run — so the dialog shows
             // what subscribing to the page actually buys. One catch covers
             // both branches: HtmlExtractionException IS a FeedParseException.
-            $feed = $format === 'scraped'
+            $feed = $format === SourceFormat::SCRAPED
                 ? $this->extractor->extract($body, $response->finalUrl)
                 : $this->parser->parse($body);
         } catch (FeedParseException $e) {
