@@ -204,6 +204,30 @@ final class ReorderTest extends WebTestCase
         self::assertSame(2, $perTag[(int) $s2->getId()]);
     }
 
+    public function testClearingTheLastTagAppendsTheFeedToTheUntaggedList(): void
+    {
+        $client = self::createClient();
+        $user = $this->user('untag-append@example.com');
+        $tag = $this->makeTag($user, 'Tech', 0);
+        $this->makeSub($user, 'https://f/1', 0); // untagged, position 0
+        $this->makeSub($user, 'https://f/2', 1); // untagged, position 1
+        $tagged = $this->makeSub($user, 'https://f/3', 0, $tag, 0); // tagged, position 0
+        $this->em()->flush();
+
+        // Remove its only tag: it joins the untagged list and must append (2),
+        // not keep its stale position (0) and float to the top.
+        $this->patch($client, $user, '/api/subscriptions/' . $tagged->getId(), [
+            'customTitle' => null,
+            'tagIds' => [],
+        ]);
+        self::assertResponseIsSuccessful();
+
+        $this->em()->clear();
+        $reloaded = $this->em()->find(Subscription::class, (int) $tagged->getId());
+        self::assertInstanceOf(Subscription::class, $reloaded);
+        self::assertSame(2, $reloaded->getPosition());
+    }
+
     public function testFeedOrderRejectsFeedNotInTag(): void
     {
         $client = self::createClient();

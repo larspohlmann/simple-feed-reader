@@ -79,65 +79,79 @@ final class Version20260723120000 extends AbstractMigration
 
     public function postUp(Schema $schema): void
     {
+        // Backfill is ONE-SHOT: it rewrites every row's position. `up()` is
+        // idempotent but `postUp` is not, and `migrations:execute` re-runs it
+        // without consulting migration_versions — so guard EACH table and skip
+        // any that already carries a custom order (a non-zero position), which a
+        // replay would otherwise clobber back to the initial display order.
+
         // Tags: per user, alphabetical.
-        $rows = $this->connection->fetchAllAssociative(
-            'SELECT id, user_id FROM tag ORDER BY user_id ASC, name ASC',
-        );
-        $position = 0;
-        $partition = null;
-        foreach ($rows as $row) {
-            if ($row['user_id'] !== $partition) {
-                $partition = $row['user_id'];
-                $position = 0;
-            }
-            $this->connection->executeStatement(
+        if (!$this->alreadyOrdered('tag')) {
+            $this->assignPositions(
+                'SELECT id, user_id FROM tag ORDER BY user_id ASC, name ASC',
+                'user_id',
                 'UPDATE tag SET position = :position WHERE id = :id',
-                ['position' => $position, 'id' => (int) $row['id']],
+                static fn (array $row): array => ['id' => (int) $row['id']],
             );
-            ++$position;
         }
 
         // Untagged "Feeds" order: per user, oldest first.
-        $rows = $this->connection->fetchAllAssociative(
-            'SELECT id, user_id FROM subscription ORDER BY user_id ASC, created_at ASC, id ASC',
-        );
-        $position = 0;
-        $partition = null;
-        foreach ($rows as $row) {
-            if ($row['user_id'] !== $partition) {
-                $partition = $row['user_id'];
-                $position = 0;
-            }
-            $this->connection->executeStatement(
+        if (!$this->alreadyOrdered('subscription')) {
+            $this->assignPositions(
+                'SELECT id, user_id FROM subscription ORDER BY user_id ASC, created_at ASC, id ASC',
+                'user_id',
                 'UPDATE subscription SET position = :position WHERE id = :id',
-                ['position' => $position, 'id' => (int) $row['id']],
+                static fn (array $row): array => ['id' => (int) $row['id']],
             );
-            ++$position;
         }
 
         // Feeds within each tag: by the subscription's age.
-        $rows = $this->connection->fetchAllAssociative(
-            'SELECT st.subscription_id, st.tag_id
-             FROM subscription_tag st
-             JOIN subscription s ON s.id = st.subscription_id
-             ORDER BY st.tag_id ASC, s.created_at ASC, s.id ASC',
-        );
-        $position = 0;
-        $partition = null;
-        foreach ($rows as $row) {
-            if ($row['tag_id'] !== $partition) {
-                $partition = $row['tag_id'];
-                $position = 0;
-            }
-            $this->connection->executeStatement(
+        if (!$this->alreadyOrdered('subscription_tag')) {
+            $this->assignPositions(
+                'SELECT st.subscription_id, st.tag_id
+                 FROM subscription_tag st
+                 JOIN subscription s ON s.id = st.subscription_id
+                 ORDER BY st.tag_id ASC, s.created_at ASC, s.id ASC',
+                'tag_id',
                 'UPDATE subscription_tag SET position = :position
                  WHERE subscription_id = :subscription_id AND tag_id = :tag_id',
-                [
-                    'position' => $position,
+                static fn (array $row): array => [
                     'subscription_id' => (int) $row['subscription_id'],
                     'tag_id' => (int) $row['tag_id'],
                 ],
             );
+        }
+    }
+
+    /** True if the table already carries a custom order (any non-zero position). */
+    private function alreadyOrdered(string $table): bool
+    {
+        return (int) $this->connection->fetchOne(
+            \sprintf('SELECT COUNT(*) FROM %s WHERE position <> 0', $table),
+        ) > 0;
+    }
+
+    /**
+     * Walk $orderedSql once, assigning position 0..n and resetting to 0 whenever
+     * $partitionColumn changes. $keyOf maps a row to the UPDATE's identifying
+     * bind params.
+     *
+     * @param callable(array<string, mixed>): array<string, int> $keyOf
+     */
+    private function assignPositions(
+        string $orderedSql,
+        string $partitionColumn,
+        string $updateSql,
+        callable $keyOf,
+    ): void {
+        $position = 0;
+        $partition = null;
+        foreach ($this->connection->fetchAllAssociative($orderedSql) as $row) {
+            if ($row[$partitionColumn] !== $partition) {
+                $partition = $row[$partitionColumn];
+                $position = 0;
+            }
+            $this->connection->executeStatement($updateSql, ['position' => $position] + $keyOf($row));
             ++$position;
         }
     }
