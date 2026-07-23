@@ -17,7 +17,7 @@ use fivefilters\Readability\Readability;
  * `failed` ExtractionResult with a machine reason so the endpoint stays 200 and
  * the client can fall back to feed content.
  */
-final class ArticleExtractor
+final class ArticleExtractor implements ArticleExtractorInterface
 {
     /** Below this many characters of extracted text, treat as not an article. */
     private const int MIN_CONTENT_LENGTH = 200;

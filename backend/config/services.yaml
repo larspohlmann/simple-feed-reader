@@ -43,6 +43,7 @@ services:
     App\Service\Fetch\DnsResolverInterface: '@App\Service\Fetch\NativeDnsResolver'
     App\Service\Fetch\FeedFetcherInterface: '@App\Service\Fetch\HttpFeedFetcher'
     App\Service\Discovery\FeedDiscoveryInterface: '@App\Service\Discovery\FeedDiscovery'
+    App\Service\Reader\ArticleExtractorInterface: '@App\Service\Reader\ArticleExtractor'
 
     # Account mail is queued and sent on kernel.terminate, after the response
     # has been flushed — see App\Service\Mail\DeferredMailer for why that is a

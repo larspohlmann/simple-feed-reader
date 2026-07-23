@@ -6,6 +6,13 @@ services:
         alias: App\Service\Fetch\HttpFeedFetcher
         public: true
 
+    # The reader-endpoint test swaps a fake extractor via
+    # `self::getContainer()->set(...)` so no outbound page fetch happens; the
+    # container only permits that on a public service. Test environment only.
+    App\Service\Reader\ArticleExtractorInterface:
+        alias: App\Service\Reader\ArticleExtractor
+        public: true
+
     # Tests acquire the refresh lock up front to assert the "busy" path.
     Symfony\Component\Lock\LockFactory:
         alias: lock.default.factory
