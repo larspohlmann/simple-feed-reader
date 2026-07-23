@@ -36,34 +36,36 @@ final class ArticleExtractor
             return ExtractionResult::failed($url, 'fetch');
         }
 
-        $config = new Configuration();
-        $config->setFixRelativeURLs(true);
-        $config->setOriginalURL($page->finalUrl);
+        $readability = new Readability(new Configuration(
+            fixRelativeURLs: true,
+            originalURL: $page->finalUrl,
+        ));
 
-        $readability = new Readability($config);
         try {
-            $readability->parse($page->html);
+            $article = $readability->parse($page->html);
         } catch (ParseException) {
             return ExtractionResult::failed($url, 'unextractable');
         }
 
-        $rawContent = $readability->getContent();
-        if ($rawContent === null || mb_strlen(strip_tags($rawContent)) < self::MIN_CONTENT_LENGTH) {
+        if (!$article->hasContent() || $article->content === null) {
+            return ExtractionResult::failed($url, 'empty');
+        }
+        if (mb_strlen(trim((string) $article->textContent)) < self::MIN_CONTENT_LENGTH) {
             return ExtractionResult::failed($url, 'empty');
         }
 
-        $clean = $this->sanitizer->sanitize($rawContent);
+        $clean = $this->sanitizer->sanitize($article->content);
         if ($clean === null) {
             return ExtractionResult::failed($url, 'empty');
         }
 
         return ExtractionResult::ok(
             url: $page->finalUrl,
-            title: $readability->getTitle() ?? '',
-            byline: $readability->getAuthor(),
-            siteName: $readability->getSiteName(),
+            title: $article->title,
+            byline: $article->byline,
+            siteName: $article->siteName,
             contentHtml: $clean,
-            excerpt: $readability->getExcerpt(),
+            excerpt: $article->excerpt,
         );
     }
 }

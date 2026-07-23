@@ -58,7 +58,7 @@ final class ArticleExtractorTest extends TestCase
     public function testStripsDangerousMarkup(): void
     {
         $body = '<html lang="en"><body><article><h1>Hi</h1>'
-            . str_repeat('<p>Real readable body content that scores well enough. </p>', 5)
+            . str_repeat('<p>Real readable body content that scores well past the character threshold. </p>', 12)
             . '<script>alert(1)</script></article></body></html>';
         $extractor = $this->extractor([new MockResponse($body, ['http_code' => 200])]);
 
