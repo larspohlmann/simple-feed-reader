@@ -14,20 +14,17 @@ use PHPUnit\Framework\TestCase;
 
 final class HtmlItemExtractorTest extends TestCase
 {
+    use ScrapedFixtures;
+
     private function extractor(): HtmlItemExtractor
     {
         return new HtmlItemExtractor([new JsonLdLayer(), new SemanticLayer(), new ClusterLayer()]);
     }
 
-    private function fixture(string $name): string
-    {
-        return (string) file_get_contents(__DIR__ . '/../../Fixtures/scraped/' . $name);
-    }
-
     public function testTagesschauFullExtraction(): void
     {
         $parsed = $this->extractor()->extract(
-            $this->fixture('tagesschau-2026-07-23.html'),
+            $this->scrapedFixture('tagesschau-2026-07-23.html'),
             'https://www.tagesschau.de/'
         );
         self::assertNotNull($parsed->title);
@@ -45,7 +42,7 @@ final class HtmlItemExtractorTest extends TestCase
     public function testTreehuggerTitlesAndAttributeTeasers(): void
     {
         $parsed = $this->extractor()->extract(
-            $this->fixture('treehugger-rendered-2026-07-23.html'),
+            $this->scrapedFixture('treehugger-rendered-2026-07-23.html'),
             'https://www.treehugger.com/'
         );
         self::assertGreaterThanOrEqual(10, \count($parsed->entries));
@@ -60,7 +57,7 @@ final class HtmlItemExtractorTest extends TestCase
 
     public function testHeiseJsonLdExtractionWithAbstractTeasersAndCap(): void
     {
-        $parsed = $this->extractor()->extract($this->fixture('heise-2026-07-23.html'), 'https://www.heise.de/');
+        $parsed = $this->extractor()->extract($this->scrapedFixture('heise-2026-07-23.html'), 'https://www.heise.de/');
         self::assertCount(50, $parsed->entries); // 141 unique urls, capped at 50
         foreach ($parsed->entries as $e) {
             self::assertMatchesRegularExpression('#^https://www\.heise\.de/#', (string) $e->url);
@@ -75,7 +72,7 @@ final class HtmlItemExtractorTest extends TestCase
     {
         // jsonld-list.html carries exactly 4 JSON-LD items; if clustering ran
         // instead, the count would differ (the fixture also contains link markup).
-        $parsed = $this->extractor()->extract($this->fixture('jsonld-list.html'), 'https://news.test/section/');
+        $parsed = $this->extractor()->extract($this->scrapedFixture('jsonld-list.html'), 'https://news.test/section/');
         self::assertCount(4, $parsed->entries);
     }
 
@@ -108,7 +105,7 @@ final class HtmlItemExtractorTest extends TestCase
     {
         $this->expectException(HtmlExtractionException::class);
         $this->expectExceptionMessage('No article list');
-        $this->extractor()->extract($this->fixture('nav-only.html'), 'https://nav.test/');
+        $this->extractor()->extract($this->scrapedFixture('nav-only.html'), 'https://nav.test/');
     }
 
     /** Empty input has its own message, distinguishable from a no-list page. */

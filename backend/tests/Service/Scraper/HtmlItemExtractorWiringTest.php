@@ -21,6 +21,8 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  */
 final class HtmlItemExtractorWiringTest extends KernelTestCase
 {
+    use ScrapedFixtures;
+
     public function testTheContainerCollectsTheLayersInPriorityOrder(): void
     {
         self::bootKernel();
@@ -28,24 +30,22 @@ final class HtmlItemExtractorWiringTest extends KernelTestCase
         self::assertInstanceOf(HtmlItemExtractor::class, $extractor);
 
         // Reaches the last-priority cluster layer: fails on an empty iterator.
-        $parsed = $extractor->extract($this->fixture('tagesschau-2026-07-23.html'), 'https://www.tagesschau.de/');
+        $parsed = $extractor->extract(
+            $this->scrapedFixture('tagesschau-2026-07-23.html'),
+            'https://www.tagesschau.de/'
+        );
         self::assertGreaterThanOrEqual(20, \count($parsed->entries));
 
         // Stops at the highest-priority JSON-LD layer: fails on a wrong order.
-        $parsed = $extractor->extract($this->fixture('jsonld-list.html'), 'https://news.test/section/');
+        $parsed = $extractor->extract($this->scrapedFixture('jsonld-list.html'), 'https://news.test/section/');
         self::assertCount(4, $parsed->entries);
 
         // Stops at the semantic layer before clustering: a cluster win would
         // return the six /promo/ links instead of the five /posts/ articles.
-        $parsed = $extractor->extract($this->fixture('articles-blog.html'), 'https://blog.test/');
+        $parsed = $extractor->extract($this->scrapedFixture('articles-blog.html'), 'https://blog.test/');
         self::assertCount(5, $parsed->entries);
         foreach ($parsed->entries as $entry) {
             self::assertStringContainsString('/posts/', (string) $entry->url);
         }
-    }
-
-    private function fixture(string $name): string
-    {
-        return (string) file_get_contents(__DIR__ . '/../../Fixtures/scraped/' . $name);
     }
 }

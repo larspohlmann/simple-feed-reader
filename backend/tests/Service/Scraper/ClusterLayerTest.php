@@ -10,11 +10,12 @@ use PHPUnit\Framework\TestCase;
 
 final class ClusterLayerTest extends TestCase
 {
+    use ScrapedFixtures;
+
     /** @return list<\App\Service\Scraper\ScrapedItem> */
     private function extract(string $fixture, string $baseUrl): array
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/scraped/' . $fixture);
-        $doc = HTMLDocument::createFromString($html, \LIBXML_NOERROR);
+        $doc = HTMLDocument::createFromString($this->scrapedFixture($fixture), \LIBXML_NOERROR);
 
         return new ClusterLayer()->extract($doc, $baseUrl);
     }

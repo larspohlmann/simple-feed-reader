@@ -10,11 +10,12 @@ use PHPUnit\Framework\TestCase;
 
 final class JsonLdLayerTest extends TestCase
 {
+    use ScrapedFixtures;
+
     /** @return list<\App\Service\Scraper\ScrapedItem> */
     private function extract(string $fixture): array
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/scraped/' . $fixture);
-        $doc = HTMLDocument::createFromString($html, \LIBXML_NOERROR);
+        $doc = HTMLDocument::createFromString($this->scrapedFixture($fixture), \LIBXML_NOERROR);
 
         return new JsonLdLayer()->extract($doc, 'https://news.test/section/');
     }
