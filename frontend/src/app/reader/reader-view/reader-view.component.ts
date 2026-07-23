@@ -171,16 +171,92 @@ const READER_LOAD_TIMEOUT_MS = 30_000;
       .actions button.on {
         color: var(--accent);
       }
+      /* Article typography. The body is [innerHTML]-injected, so its child
+         elements carry no view-encapsulation attribute — the descendant rules
+         must use ::ng-deep (kept scoped under .content). The sanitizer also
+         strips default margins, so h2/p/li/blockquote need an explicit vertical
+         rhythm or the article reads as one dense block. */
       .content {
         color: var(--text-primary);
-        line-height: 1.7;
+        font-size: 16px;
+        line-height: 1.75;
       }
-      .content :is(img, video, iframe) {
+      .content ::ng-deep p {
+        margin: 0 0 var(--space-4);
+      }
+      .content ::ng-deep :is(h1, h2, h3, h4, h5, h6) {
+        margin: var(--space-6) 0 var(--space-3);
+        line-height: 1.3;
+        font-weight: 650;
+        color: var(--text-primary);
+      }
+      .content ::ng-deep h1 {
+        font-size: 22px;
+      }
+      .content ::ng-deep h2 {
+        font-size: 20px;
+      }
+      .content ::ng-deep h3 {
+        font-size: 17px;
+      }
+      .content ::ng-deep :is(h4, h5, h6) {
+        font-size: 16px;
+      }
+      .content ::ng-deep :is(ul, ol) {
+        margin: 0 0 var(--space-4);
+        padding-left: 1.5em;
+      }
+      .content ::ng-deep li {
+        margin: var(--space-1) 0;
+      }
+      .content ::ng-deep li::marker {
+        color: var(--text-muted);
+      }
+      .content ::ng-deep blockquote {
+        margin: var(--space-5) 0;
+        padding: var(--space-1) 0 var(--space-1) var(--space-4);
+        border-left: 3px solid var(--border-strong);
+        color: var(--text-secondary);
+      }
+      .content ::ng-deep figure {
+        margin: var(--space-5) 0;
+      }
+      .content ::ng-deep figcaption {
+        margin-top: var(--space-2);
+        font-size: var(--fs-sm);
+        color: var(--text-muted);
+        text-align: center;
+      }
+      .content ::ng-deep :is(img, video, iframe) {
         max-width: 100%;
         height: auto;
         border-radius: var(--radius);
       }
-      .content a {
+      .content ::ng-deep :not(pre) > code {
+        padding: 0.1em 0.35em;
+        background: var(--surface-1);
+        border-radius: var(--radius);
+        font-size: 0.9em;
+      }
+      .content ::ng-deep pre {
+        margin: 0 0 var(--space-4);
+        padding: var(--space-3);
+        background: var(--surface-1);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow-x: auto;
+        line-height: 1.5;
+      }
+      .content ::ng-deep pre code {
+        padding: 0;
+        background: none;
+      }
+      .content ::ng-deep hr {
+        margin: var(--space-5) 0;
+        border: 0;
+        border-top: 1px solid var(--border);
+      }
+      .content ::ng-deep a {
         color: var(--accent);
       }
       .placeholder {
