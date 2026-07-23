@@ -14,15 +14,43 @@ final class ItemImageExtractor
 {
     private const MEDIA_NS = 'http://search.yahoo.com/mrss/';
 
-    /** Media RSS image: <media:thumbnail> preferred, else an image <media:content>. */
+    /**
+     * Media RSS image: <media:thumbnail> preferred, else an image
+     * <media:content>. Feeds often wrap these in a <media:group>, so that
+     * container is searched too when nothing is attached directly.
+     */
     public static function fromMedia(\DOMElement $item): ?string
     {
-        $thumb = self::mediaUrl($item, 'thumbnail');
+        $direct = self::mediaImageIn($item);
+        if ($direct !== null) {
+            return $direct;
+        }
+
+        foreach ($item->childNodes as $child) {
+            if (
+                $child instanceof \DOMElement
+                && $child->localName === 'group'
+                && $child->namespaceURI === self::MEDIA_NS
+            ) {
+                $grouped = self::mediaImageIn($child);
+                if ($grouped !== null) {
+                    return $grouped;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /** The first Media RSS image directly under $parent, or null. */
+    private static function mediaImageIn(\DOMElement $parent): ?string
+    {
+        $thumb = self::mediaUrl($parent, 'thumbnail');
         if ($thumb !== null) {
             return $thumb;
         }
 
-        foreach ($item->childNodes as $child) {
+        foreach ($parent->childNodes as $child) {
             if (
                 !$child instanceof \DOMElement
                 || $child->localName !== 'content'

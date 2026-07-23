@@ -55,7 +55,7 @@ type PreviewState =
                   </div>
                   @if (p.items.length) {
                     <ul class="samples">
-                      @for (it of p.items.slice(0, 3); track it.title) {
+                      @for (it of p.items.slice(0, 3); track $index) {
                         <li>{{ it.title }}</li>
                       }
                     </ul>

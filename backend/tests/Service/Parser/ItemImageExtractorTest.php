@@ -48,6 +48,23 @@ final class ItemImageExtractorTest extends TestCase
         self::assertNull(ItemImageExtractor::fromMedia($item));
     }
 
+    public function testMediaGroupThumbnailWins(): void
+    {
+        $item = $this->item(
+            '<media:group><media:thumbnail url="https://x/grp.jpg"/>'
+            . '<media:content url="https://x/grp-big.jpg" medium="image"/></media:group>',
+        );
+        self::assertSame('https://x/grp.jpg', ItemImageExtractor::fromMedia($item));
+    }
+
+    public function testMediaGroupContentImage(): void
+    {
+        $item = $this->item(
+            '<media:group><media:content url="https://x/g.png" type="image/png"/></media:group>',
+        );
+        self::assertSame('https://x/g.png', ItemImageExtractor::fromMedia($item));
+    }
+
     public function testRssImageEnclosure(): void
     {
         $item = $this->item('<enclosure url="https://x/a.jpg" type="image/jpeg" length="1"/>');
