@@ -73,14 +73,20 @@ abstract class AbstractAtomParser
             return null;
         }
 
+        $contentHtml = $this->contentHtml($entry, $ns);
+        $image = ItemImageExtractor::fromMedia($entry)
+            ?? ItemImageExtractor::fromAtomEnclosure($entry, $ns)
+            ?? ItemImageExtractor::fromHtml($contentHtml);
+
         return new ParsedEntry(
             guid: GuidFallback::for(XmlHelper::childText($entry, 'id', $ns), $link, $title),
             url: $link,
             title: $title ?? '(untitled)',
             author: $this->authorName($entry, $ns),
             summary: XmlHelper::childText($entry, 'summary', $ns),
-            contentHtml: $this->contentHtml($entry, $ns),
+            contentHtml: $contentHtml,
             publishedAt: DateParser::parse($this->firstDate($entry, $ns)),
+            imageUrl: $image,
         );
     }
 
