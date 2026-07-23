@@ -113,8 +113,10 @@ first success wins:
 1. **Structured data.** JSON-LD `ItemList`, or arrays of
    `NewsArticle`/`BlogPosting`/`Article` objects: extract url/headline/
    description/image/datePublished directly.
-2. **Semantic markup.** Repeated `<article>` elements, or repeated
-   `h1`–`h4 > a` patterns inside `<main>`.
+2. **Semantic markup.** Repeated `<article>` elements. (Repeated
+   heading-anchor patterns without `<article>` wrappers are handled by
+   layer 3 — the anchors share a DOM-path signature, so clustering finds
+   them without a dedicated rule.)
 3. **Pattern clustering.** Group anchors by DOM-path signature (tag/class
    chain from body); score clusters by size, headline-like link text, URL
    shape similarity, and penalize `nav`/`header`/`footer`/`aside` ancestry;
@@ -245,9 +247,11 @@ distinguishable later.
   `scrapeFailureReason` (`blocked` / `unreachable` / `not_scrapable`) for
   403 responses, network failures, and article-free pages respectively.
 - **Migration:** covered by the dedicated migrations CI leg.
-- **E2E (Docker):** add a feedless page URL → scraped candidate with badge →
-  preview shows extracted items → subscribe → entries appear; reader mode
-  opens a scraped entry's article.
+- **E2E (Docker):** the warning path — add an unreachable URL → warning
+  shown, no subscribe action. The scrape-*success* path cannot run over
+  live HTTP in e2e because `UrlGuard` (SSRF protection) rightly refuses
+  locally served fixture pages; it is covered end-to-end at the functional
+  layer instead (stubbed fetcher through the real dispatcher/pipeline).
 - **Quality gates:** phpcs, phpstan, phpmd (touched files clean), PhpStorm
   inspections, backend tests in the Docker php container; watch `dev.log`.
 
