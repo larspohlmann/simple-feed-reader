@@ -132,4 +132,40 @@ describe('ReaderViewComponent', () => {
     expect(el.querySelector('.loading')).not.toBeNull();
     expect(el.querySelector('.content')).toBeNull();
   });
+
+  it('does not reload or reset the toggle when the same entry changes by reference', () => {
+    loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+    const f = mount(entry());
+    const el = f.nativeElement as HTMLElement;
+    expect(loadMock).toHaveBeenCalledTimes(1);
+
+    // Switch to Original, then simulate an optimistic flag update: a NEW entry
+    // object with the SAME id (what entries.store produces on favorite/keep/read).
+    (el.querySelector('.mode') as HTMLButtonElement).click();
+    f.detectChanges();
+    f.componentRef.setInput('entry', entry({ isFavorite: true }));
+    f.detectChanges();
+
+    expect(loadMock).toHaveBeenCalledTimes(1); // no redundant re-fetch
+    expect(el.querySelector('.content')!.innerHTML).toContain('Body'); // still Original
+  });
+
+  it('reloads when a different entry (new id) is shown', () => {
+    loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+    const f = mount(entry({ id: 1 }));
+    expect(loadMock).toHaveBeenCalledTimes(1);
+
+    f.componentRef.setInput('entry', entry({ id: 2 }));
+    f.detectChanges();
+
+    expect(loadMock).toHaveBeenCalledTimes(2);
+    expect(loadMock).toHaveBeenLastCalledWith(2);
+  });
+
+  it('falls back to the feed summary when contentHtml is null on failure', () => {
+    loadMock.mockReturnValue(of<ReaderContent>({ status: 'failed', reason: 'fetch', url: null }));
+    const el = mount(entry({ contentHtml: null, summary: 'Just a summary' }))
+      .nativeElement as HTMLElement;
+    expect(el.querySelector('.content')!.innerHTML).toContain('Just a summary');
+  });
 });

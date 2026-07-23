@@ -1,6 +1,7 @@
 // src/app/reader/reader-view/reader-view.component.ts
 import {
   Component,
+  DestroyRef,
   ElementRef,
   computed,
   effect,
@@ -10,10 +11,15 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { Subscription, timeout } from 'rxjs';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { EntryDto, ReaderArticle } from '../models';
 import { ReaderContentService } from '../reader-content.service';
 import { relativeTime } from '../format';
+
+/** Give up on a hung extraction and fall back to feed content (backend caps a
+ *  fetch at ~20s; this is the client-side backstop for a stalled connection). */
+const READER_LOAD_TIMEOUT_MS = 30_000;
 
 @Component({
   selector: 'app-reader-view',
@@ -220,6 +226,14 @@ export class ReaderViewComponent {
 
   private readonly content = viewChild<ElementRef<HTMLElement>>('content');
   private readonly reader = inject(ReaderContentService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  // The open entry's object reference changes on every optimistic flag update
+  // (favorite/keep/read), but its id does not. Tracking the loaded id lets the
+  // load effect ignore those churns: no redundant re-fetch, and the Reader/
+  // Original toggle survives an in-reader action instead of snapping back.
+  private loadedId: number | null = null;
+  private loadSub: Subscription | null = null;
 
   readonly mode = signal<'reader' | 'original'>('reader');
   private readonly state = signal<
@@ -238,34 +252,47 @@ export class ReaderViewComponent {
     const e = this.entry();
     if (!e) return '';
     const a = this.article();
-    return this.mode() === 'reader' && a ? a.contentHtml : (e.contentHtml ?? '');
+    // Original mode falls back through summary: many feeds populate only one of
+    // contentHtml/summary, so preferring contentHtml then summary avoids a blank
+    // pane under the "showing the feed's summary" note.
+    return this.mode() === 'reader' && a ? a.contentHtml : (e.contentHtml ?? e.summary ?? '');
   });
 
   constructor() {
-    effect((onCleanup) => {
+    effect(() => {
       const e = this.entry();
+      const id = e?.id ?? null;
+      // Only react to a genuine entry change — not to a same-entry reference
+      // churn from an optimistic flag update (which must not cancel an in-flight
+      // load, re-fetch, or reset the mode toggle).
+      if (id === this.loadedId) return;
+      this.loadedId = id;
+      this.loadSub?.unsubscribe();
       this.mode.set('reader');
       if (!e) {
         this.state.set({ status: 'idle' });
         return;
       }
       this.state.set({ status: 'loading' });
-      const sub = this.reader.load(e.id).subscribe({
-        next: (c) => {
-          if (c.status === 'ok') {
-            this.state.set({ status: 'ok', article: c });
-          } else {
+      this.loadSub = this.reader
+        .load(e.id)
+        .pipe(timeout({ first: READER_LOAD_TIMEOUT_MS }))
+        .subscribe({
+          next: (c) => {
+            if (c.status === 'ok') {
+              this.state.set({ status: 'ok', article: c });
+            } else {
+              this.state.set({ status: 'failed' });
+              this.mode.set('original');
+            }
+          },
+          error: () => {
             this.state.set({ status: 'failed' });
             this.mode.set('original');
-          }
-        },
-        error: () => {
-          this.state.set({ status: 'failed' });
-          this.mode.set('original');
-        },
-      });
-      onCleanup(() => sub.unsubscribe());
+          },
+        });
     });
+    this.destroyRef.onDestroy(() => this.loadSub?.unsubscribe());
 
     // Re-decorate external links whenever the rendered HTML changes.
     effect(() => {
