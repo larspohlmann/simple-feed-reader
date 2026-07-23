@@ -38,6 +38,12 @@ final class ClusterLayer implements ScrapeLayerInterface
         /** @var \SplObjectStorage<Element, int> $counts */
         $counts = new \SplObjectStorage();
 
+        // Built items memoized per anchor, same one-pass lifetime: an anchor
+        // with k class tokens joins k groups, and without the memo every
+        // group would re-run the whole CardFields walk over the same card.
+        /** @var \SplObjectStorage<Element, ScrapedItem|null> $built */
+        $built = new \SplObjectStorage();
+
         $groups = [];
         foreach ($doc->querySelectorAll('a[href]') as $anchor) {
             if (!$this->isEligible($anchor)) {
@@ -53,7 +59,7 @@ final class ClusterLayer implements ScrapeLayerInterface
             if (\count($anchors) < self::MIN_CLUSTER_SIZE) {
                 continue;
             }
-            $items = $this->items($anchors, $baseUrl, $counts);
+            $items = $this->items($anchors, $baseUrl, $counts, $built);
             if (\count($items) >= self::MIN_CLUSTER_SIZE && $this->beats($items, $best)) {
                 $best = $items;
             }
@@ -96,13 +102,17 @@ final class ClusterLayer implements ScrapeLayerInterface
      *
      * @param list<Element> $anchors
      * @param \SplObjectStorage<Element, int> $counts
+     * @param \SplObjectStorage<Element, ScrapedItem|null> $built
      * @return list<ScrapedItem>
      */
-    private function items(array $anchors, string $baseUrl, \SplObjectStorage $counts): array
+    private function items(array $anchors, string $baseUrl, \SplObjectStorage $counts, \SplObjectStorage $built): array
     {
         $items = [];
         foreach ($anchors as $anchor) {
-            $item = CardFields::item($this->container($anchor, $counts), $anchor, $baseUrl);
+            if (!$built->contains($anchor)) {
+                $built[$anchor] = CardFields::item($this->container($anchor, $counts), $anchor, $baseUrl);
+            }
+            $item = $built[$anchor];
             if ($item !== null && !isset($items[$item->url])) {
                 $items[$item->url] = $item;
             }
