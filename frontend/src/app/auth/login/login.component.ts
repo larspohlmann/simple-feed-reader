@@ -21,17 +21,17 @@ import { FormErrorComponent } from '../../shared/form-error/form-error.component
   ],
   template: `
     <app-auth-shell title="Sign in" subtitle="Welcome back to your reader.">
-      <form (ngSubmit)="submit()" [formGroup]="form">
+      <form [formGroup]="form">
         <label class="field">
           <span>Email</span>
-          <input type="email" formControlName="email" autocomplete="email" />
+          <input type="email" formControlName="email" name="email" autocomplete="email" />
         </label>
         <label class="field">
           <span>Password</span>
-          <input type="password" formControlName="password" autocomplete="current-password" />
+          <input type="password" formControlName="password" name="password" autocomplete="current-password" />
         </label>
         <app-form-error [message]="error()" />
-        <app-button type="submit" variant="primary" [loading]="loading()">Sign in</app-button>
+        <app-button variant="primary" [loading]="loading()" (click)="submit()">Sign in</app-button>
       </form>
 
       @if (providers().length) {
@@ -99,7 +99,20 @@ export class LoginComponent implements OnInit {
   }
 
   submit(): void {
-    if (this.form.invalid || this.loading()) return;
+    if (this.loading()) return;
+
+    // iOS autofill: DOM value may not be synced to the form control.
+    for (const name of ['email', 'password'] as const) {
+      const el = document.querySelector<HTMLInputElement>(`[name="${name}"]`);
+      if (el && el.value !== this.form.get(name)?.value) {
+        this.form.get(name)?.setValue(el.value);
+      }
+    }
+
+    if (this.form.invalid) {
+      this.error.set('Please enter a valid email and password.');
+      return;
+    }
     this.loading.set(true);
     this.error.set(null);
     const { email, password } = this.form.getRawValue();

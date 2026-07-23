@@ -41,4 +41,29 @@ final class ClusterLayerTest extends TestCase
         self::assertCount(3, $items);
         self::assertStringContainsString('/posts/', $items[0]->url);
     }
+
+    /**
+     * Regression guard for the container-ascent memoization: thousands of
+     * sibling anchors under one parent used to trigger an O(N^2) rescan of
+     * that parent (about 10s at 2,000 anchors). No timing assertion — the
+     * suite duration itself is the tell — but the extraction must stay
+     * correct on this degenerate shape.
+     */
+    public function testFlatPageWithThousandsOfSiblingAnchorsStillExtracts(): void
+    {
+        $links = '';
+        for ($i = 0; $i < 2000; $i++) {
+            $links .= sprintf('<a href="/p/%d">Story number %d headline</a>', $i, $i);
+        }
+        $doc = HTMLDocument::createFromString(
+            '<html lang="en"><body><main>' . $links . '</main></body></html>',
+            \LIBXML_NOERROR
+        );
+
+        $items = new ClusterLayer()->extract($doc, 'https://flat.test/');
+
+        self::assertCount(2000, $items);
+        self::assertSame('https://flat.test/p/0', $items[0]->url);
+        self::assertSame('Story number 0 headline', $items[0]->title);
+    }
 }

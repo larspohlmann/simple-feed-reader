@@ -81,12 +81,12 @@ services:
     command:
       - sh
       - -c
-      - '[ -x node_modules/.bin/ng ] || { npm i -g npm@11 --silent && npm ci --no-audit --no-fund; }; exec node_modules/.bin/ng serve --host 0.0.0.0 --port 4200 --poll 2000'
+      - '[ -x node_modules/.bin/ng ] || { npm i -g npm@11 --silent && npm ci --no-audit --no-fund; }; exec node_modules/.bin/ng serve --host 0.0.0.0 --port 4200 --poll 2000 --allowed-hosts --proxy-config proxy.conf.json'
     volumes:
       - ./frontend:/app
       - frontend-node-modules:/app/node_modules
     ports:
-      - "127.0.0.1:4200:4200"
+      - "4200:4200"
 
   # Opt-in prod preview (`docker compose --profile prod up`): the production
   # bundle served same-origin behind nginx, with /api proxied to Symfony. No
