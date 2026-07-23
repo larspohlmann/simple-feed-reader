@@ -4,7 +4,6 @@ import { RouterLink } from '@angular/router';
 import {
   CdkDrag,
   CdkDragDrop,
-  CdkDragHandle,
   CdkDropList,
   CdkDropListGroup,
   moveItemInArray,
@@ -20,7 +19,7 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
 
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, IconComponent, CdkDropListGroup, CdkDropList, CdkDrag, CdkDragHandle],
+  imports: [RouterLink, IconComponent, CdkDropListGroup, CdkDropList, CdkDrag],
   template: `
     <nav class="sidebar" aria-label="Feeds" cdkDropListGroup>
       <div class="actions">
@@ -87,20 +86,20 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
               [cdkDropListData]="tagDrop(node.tag)"
               [cdkDropListEnterPredicate]="acceptOnTagHead"
               [cdkDropListSortingDisabled]="true"
-              [class.drophover]="dropHover() === 'tag-' + node.tag.id"
+              [class.drop-line]="dropHover() === 'tag-' + node.tag.id && dragKind() === 'tag'"
+              [class.drop-active]="dropHover() === 'tag-' + node.tag.id && dragKind() === 'feed'"
               (cdkDropListDropped)="onTagHeadDrop($event)"
               (cdkDropListEntered)="dropHover.set('tag-' + node.tag.id)"
               (cdkDropListExited)="dropHover.set(null)"
             >
-              <div class="tag" cdkDrag [cdkDragData]="node.tag" [cdkDragStartDelay]="dragDelay">
-                <button
-                  class="grip"
-                  type="button"
-                  cdkDragHandle
-                  [attr.aria-label]="'Reorder ' + node.tag.name"
-                >
-                  <app-icon name="drag_indicator" [size]="18" />
-                </button>
+              <div
+                class="tag"
+                cdkDrag
+                [cdkDragData]="node.tag"
+                [cdkDragStartDelay]="dragDelay"
+                (cdkDragStarted)="onDragStart('tag')"
+                (cdkDragEnded)="onDragEnd()"
+              >
                 <button
                   class="expand"
                   type="button"
@@ -157,10 +156,7 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
                 cdkDropList
                 [cdkDropListData]="tagDrop(node.tag)"
                 [cdkDropListEnterPredicate]="isFeedDrag"
-                [class.drophover]="dropHover() === 'tagfeeds-' + node.tag.id"
                 (cdkDropListDropped)="onDrop($event)"
-                (cdkDropListEntered)="dropHover.set('tagfeeds-' + node.tag.id)"
-                (cdkDropListExited)="dropHover.set(null)"
               >
                 @for (s of node.subscriptions; track s.id) {
                   <div
@@ -168,7 +164,7 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
                     cdkDrag
                     [cdkDragData]="s"
                     [cdkDragStartDelay]="dragDelay"
-                    (cdkDragStarted)="dragging.set(true)"
+                    (cdkDragStarted)="onDragStart('feed')"
                     (cdkDragEnded)="onDragEnd()"
                   >
                     <a
@@ -221,10 +217,7 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
         cdkDropList
         [cdkDropListData]="untaggedDrop"
         [cdkDropListEnterPredicate]="isFeedDrag"
-        [class.drophover]="dropHover() === 'untagged'"
         (cdkDropListDropped)="onDrop($event)"
-        (cdkDropListEntered)="dropHover.set('untagged')"
-        (cdkDropListExited)="dropHover.set(null)"
       >
         @for (s of untagged(); track s.id) {
           <div
@@ -232,7 +225,7 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
             cdkDrag
             [cdkDragData]="s"
             [cdkDragStartDelay]="dragDelay"
-            (cdkDragStarted)="dragging.set(true)"
+            (cdkDragStarted)="onDragStart('feed')"
             (cdkDragEnded)="onDragEnd()"
           >
             <a
@@ -392,7 +385,8 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
         flex: 1;
         min-width: 0;
       }
-      .feedrow.cdk-drag {
+      .feedrow.cdk-drag,
+      .tag.cdk-drag {
         cursor: grab;
       }
       /* Drop targets */
@@ -401,8 +395,14 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
       .feedlist {
         border-radius: var(--radius);
       }
-      .drophover {
-        outline: 2px dashed var(--accent);
+      /* A tag dragged over another tag header: a thin signal-coloured insertion
+         line at the top edge (inset shadow, so no layout shift). */
+      .drop-line {
+        box-shadow: inset 0 3px 0 -1px var(--accent);
+      }
+      /* A feed dragged over a tag header: highlight the whole target container. */
+      .drop-active {
+        outline: 2px solid var(--accent);
         outline-offset: -2px;
         background: var(--accent-soft);
       }
@@ -426,8 +426,20 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
       .cdk-drag-preview .rowmenu {
         display: none;
       }
+      /* Reorder insertion point: a thin signal-coloured line marking where the
+         dragged row will land (it takes the row's slot while dragging). */
       .cdk-drag-placeholder {
-        opacity: 0.4;
+        height: 3px;
+        min-height: 3px;
+        box-sizing: border-box;
+        margin: 1px 0;
+        padding: 0;
+        background: var(--accent);
+        border-radius: 2px;
+        opacity: 1;
+      }
+      .cdk-drag-placeholder > * {
+        display: none;
       }
       .cdk-drag-animating {
         transition: transform 0.2s cubic-bezier(0, 0, 0.2, 1);
@@ -435,19 +447,6 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
       .rowmenu {
         position: relative;
         flex: 0 0 auto;
-      }
-      .grip {
-        display: inline-flex;
-        background: none;
-        border: none;
-        color: var(--text-muted);
-        cursor: grab;
-        padding: var(--space-2) 0 var(--space-2) var(--space-1);
-        opacity: 0.35;
-      }
-      .grip:hover,
-      .grip:focus-visible {
-        opacity: 1;
       }
       .dots {
         display: inline-flex;
@@ -525,6 +524,9 @@ export class SidebarComponent {
 
   /** True while a feed row is being dragged (reveals the empty Feeds drop zone). */
   readonly dragging = signal(false);
+  /** What is being dragged, so a tag-reorder hover shows an insertion line while
+   *  a feed-onto-tag hover shows a container highlight. */
+  readonly dragKind = signal<'tag' | 'feed' | null>(null);
   /** Key of the drop target currently under the pointer, for the hover outline. */
   readonly dropHover = signal<string | null>(null);
   /** Hold-to-drag on touch so a normal swipe still scrolls the sidebar. */
@@ -536,8 +538,14 @@ export class SidebarComponent {
     return { kind: 'tag', tag };
   }
 
+  onDragStart(kind: 'tag' | 'feed'): void {
+    this.dragKind.set(kind);
+    if (kind === 'feed') this.dragging.set(true);
+  }
+
   onDragEnd(): void {
     this.dragging.set(false);
+    this.dragKind.set(null);
     this.dropHover.set(null);
   }
 
