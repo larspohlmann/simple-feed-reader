@@ -86,7 +86,7 @@ final class HttpFeedFetcher implements FeedFetcherInterface
         if ($status < 200 || $status >= 300) {
             $response->cancel();
 
-            throw new FeedUnreachableException(sprintf('%s: HTTP %d', $currentUrl, $status));
+            throw new FeedUnreachableException(sprintf('%s: HTTP %d', $currentUrl, $status), $status);
         }
 
         $body = $this->content($response, $currentUrl);
@@ -138,7 +138,7 @@ final class HttpFeedFetcher implements FeedFetcherInterface
         } catch (ExceptionInterface $e) {
             $this->rethrowTooLarge($e);
 
-            throw new FeedUnreachableException(sprintf('%s: %s', $url, $e->getMessage()), previous: $e);
+            throw new FeedUnreachableException(sprintf('%s: %s', $url, $e->getMessage()), null, $e);
         }
     }
 
@@ -149,7 +149,7 @@ final class HttpFeedFetcher implements FeedFetcherInterface
         } catch (ExceptionInterface $e) {
             $this->rethrowTooLarge($e);
 
-            throw new FeedUnreachableException(sprintf('%s: %s', $url, $e->getMessage()), previous: $e);
+            throw new FeedUnreachableException(sprintf('%s: %s', $url, $e->getMessage()), null, $e);
         }
     }
 
@@ -160,7 +160,7 @@ final class HttpFeedFetcher implements FeedFetcherInterface
         } catch (ExceptionInterface $e) {
             $this->rethrowTooLarge($e);
 
-            throw new FeedUnreachableException(sprintf('%s: %s', $url, $e->getMessage()), previous: $e);
+            throw new FeedUnreachableException(sprintf('%s: %s', $url, $e->getMessage()), null, $e);
         }
     }
 
