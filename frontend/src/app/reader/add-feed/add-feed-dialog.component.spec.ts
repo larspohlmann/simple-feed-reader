@@ -57,6 +57,8 @@ describe('AddFeedDialogComponent', () => {
     const atomReq = ctrl.expectOne(
       (r) => r.url.endsWith('/api/feeds/preview') && r.body.url === 'https://f/atom',
     );
+    // XML candidates preview with the bare URL — only scraped ones carry a format.
+    expect(rssReq.request.body).toEqual({ url: 'https://f/rss' });
 
     rssReq.flush({
       feed: {
@@ -107,6 +109,64 @@ describe('AddFeedDialogComponent', () => {
     expect(subReq.request.body).toEqual({ url: 'https://f/rss' });
     subReq.flush({ subscription: { id: 3 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 3 });
+  });
+
+  it('labels a scraped candidate and subscribes/previews with the scraped format', () => {
+    const f = create();
+    f.componentInstance.form.setValue({ url: 'https://page.example/' });
+    f.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      candidates: [{ url: 'https://page.example/', title: 'Page', format: 'scraped' }],
+    });
+    f.detectChanges();
+
+    const previewReq = ctrl.expectOne((r) => r.url.endsWith('/api/feeds/preview'));
+    expect(previewReq.request.body).toEqual({ url: 'https://page.example/', format: 'scraped' });
+    previewReq.flush('x', { status: 500, statusText: 'err' });
+    f.detectChanges();
+
+    const card = (f.nativeElement as HTMLElement).querySelector('.card')!;
+    expect(card.querySelector('.badge.format')?.textContent?.trim()).toBe('Scraped');
+    expect(card.querySelector('.scraped-hint')?.textContent).toContain('article list');
+
+    (card.querySelector('.subscribe') as HTMLButtonElement).click();
+    const subReq = ctrl.expectOne('https://api.test/api/subscriptions');
+    expect(subReq.request.body).toEqual({ url: 'https://page.example/', format: 'scraped' });
+    subReq.flush({ subscription: { id: 7 } }, { status: 201, statusText: 'Created' });
+    expect(close).toHaveBeenCalledWith({ id: 7 });
+  });
+
+  it('warns when the site blocks scraping and hides the footer submit', () => {
+    const f = create();
+    f.componentInstance.form.setValue({ url: 'https://blocked.example' });
+    f.componentInstance.submit();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ candidates: [], scrapeFailureReason: 'blocked' });
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.warn')?.textContent).toContain('blocks automated access');
+    expect(el.querySelector('button.subscribe')).toBeNull();
+    // Nothing can be subscribed here, so the footer "Add" would be a dead end.
+    expect(el.querySelector('button[type="submit"]')).toBeNull();
+    expect(close).not.toHaveBeenCalled();
+  });
+
+  it('clears the scrape-failure warning once the URL is edited', () => {
+    const f = create();
+    f.componentInstance.form.setValue({ url: 'https://blocked.example' });
+    f.componentInstance.submit();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ candidates: [], scrapeFailureReason: 'blocked' });
+    f.detectChanges();
+    expect((f.nativeElement as HTMLElement).querySelector('.warn')).toBeTruthy();
+
+    f.componentInstance.form.setValue({ url: 'https://other.example' });
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.warn')).toBeNull();
+    expect(el.querySelector('button[type="submit"]')).toBeTruthy();
   });
 
   it('shows an empty state when no candidates are found', () => {

@@ -30,8 +30,11 @@ export class ReaderApi {
     return this.http.get<{ subscriptions: SubscriptionDto[] }>(`${this.base}/api/subscriptions`);
   }
 
-  subscribe(url: string): Observable<SubscribeResult> {
-    return this.http.post<SubscribeResult>(`${this.base}/api/subscriptions`, { url });
+  subscribe(url: string, format?: string): Observable<SubscribeResult> {
+    return this.http.post<SubscribeResult>(
+      `${this.base}/api/subscriptions`,
+      format ? { url, format } : { url },
+    );
   }
 
   /** A single entry by id — lets a deep link open an entry not in the loaded page. */
@@ -121,7 +124,10 @@ export class ReaderApi {
   }
 
   /** Preview a candidate feed's contents before subscribing. */
-  previewFeed(url: string): Observable<{ feed: FeedPreview }> {
-    return this.http.post<{ feed: FeedPreview }>(`${this.base}/api/feeds/preview`, { url });
+  previewFeed(url: string, format?: string): Observable<{ feed: FeedPreview }> {
+    return this.http.post<{ feed: FeedPreview }>(
+      `${this.base}/api/feeds/preview`,
+      format ? { url, format } : { url },
+    );
   }
 }

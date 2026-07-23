@@ -17,6 +17,7 @@ const sub = (
   feedUrl: `https://f/${id}`,
   siteUrl: null,
   status: 'active',
+  sourceFormat: 'xml',
   createdAt: 'x',
   position: 0,
   tags,

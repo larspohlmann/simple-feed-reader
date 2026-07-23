@@ -26,6 +26,9 @@ export interface SubscriptionDto {
   feedUrl: string;
   siteUrl: string | null;
   status: 'active' | 'erroring' | 'gone';
+  /** Where entries come from: 'xml' (a real RSS/Atom feed) or 'scraped'
+   *  (generated from the page's article list) today; stays an open string. */
+  sourceFormat: string;
   createdAt: string;
   /** The feed's order in the untagged "Feeds" list (ascending). */
   position: number;
@@ -100,8 +103,14 @@ export interface FeedPreview {
   items: FeedPreviewItem[];
 }
 
-/** POST /subscriptions returns either the created subscription or a candidate list. */
-export type SubscribeResult = { subscription: SubscriptionDto } | { candidates: FeedCandidate[] };
+/** Why the scraper fallback could not turn an HTML page into a feed. */
+export type ScrapeFailureReason = 'blocked' | 'unreachable' | 'not_scrapable';
+
+/** POST /subscriptions returns either the created subscription or a candidate
+ *  list; an empty list may carry the reason the scraper fallback gave up. */
+export type SubscribeResult =
+  | { subscription: SubscriptionDto }
+  | { candidates: FeedCandidate[]; scrapeFailureReason?: ScrapeFailureReason };
 
 export type EntryView = 'all' | 'unread' | 'favorites' | 'kept';
 

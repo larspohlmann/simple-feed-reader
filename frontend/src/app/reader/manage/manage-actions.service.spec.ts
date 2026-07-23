@@ -16,6 +16,7 @@ const sub: SubscriptionDto = {
   feedUrl: 'u',
   siteUrl: null,
   status: 'active',
+  sourceFormat: 'xml',
   createdAt: 'x',
   position: 0,
   tags: [],

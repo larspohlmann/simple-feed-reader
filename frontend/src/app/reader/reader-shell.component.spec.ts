@@ -22,6 +22,7 @@ describe('ReaderShellComponent', () => {
         feedUrl: 'https://f/5',
         siteUrl: null,
         status: 'active',
+        sourceFormat: 'xml',
         createdAt: 'x',
         tags: [],
         unreadCount: 2,

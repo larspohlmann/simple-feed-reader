@@ -13,6 +13,7 @@ const sub: SubscriptionDto = {
   feedUrl: 'https://heise.de/rss',
   siteUrl: 'https://heise.de',
   status: 'active',
+  sourceFormat: 'xml',
   createdAt: 'x',
   position: 0,
   tags: [{ id: 1, name: 'Tech', color: null, icon: null, position: 0 }],

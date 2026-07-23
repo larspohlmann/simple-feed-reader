@@ -14,6 +14,7 @@ const sub = (id: number, over: Partial<SubscriptionDto> = {}): SubscriptionDto =
   feedUrl: 'https://x/rss',
   siteUrl: 'https://x',
   status: 'active',
+  sourceFormat: 'xml',
   createdAt: 'x',
   position: 0,
   tags: [],

@@ -1,17 +1,16 @@
 // src/app/reader/add-feed/add-feed-dialog.component.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef } from '@angular/cdk/dialog';
 import { parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
-import { FeedCandidate, FeedPreview, SubscriptionDto } from '../models';
+import { FeedCandidate, FeedPreview, ScrapeFailureReason, SubscriptionDto } from '../models';
 
 type PreviewState =
-  | { status: 'loading' }
-  | { status: 'error' }
-  | { status: 'ok'; preview: FeedPreview };
+  { status: 'loading' } | { status: 'error' } | { status: 'ok'; preview: FeedPreview };
 
 @Component({
   selector: 'app-add-feed-dialog',
@@ -51,6 +50,11 @@ type PreviewState =
                     <span class="badge">{{ p.hasImages ? 'With images' : 'No images' }}</span>
                   }
                 </div>
+                @if (c.format === 'scraped') {
+                  <p class="muted scraped-hint">
+                    No feed found — generated from the page's article list.
+                  </p>
+                }
                 @if (state?.status === 'loading') {
                   <p class="muted">Loading preview…</p>
                 } @else if (state?.status === 'error') {
@@ -66,9 +70,7 @@ type PreviewState =
                     <p class="muted">No recent items</p>
                   }
                 }
-                <button type="button" class="subscribe primary" (click)="pick(c.url)">
-                  Subscribe
-                </button>
+                <button type="button" class="subscribe primary" (click)="pick(c)">Subscribe</button>
               </li>
             }
           </ul>
@@ -76,13 +78,17 @@ type PreviewState =
         @if (searched() && candidates().length === 0) {
           <p class="hint">No feeds found at that address.</p>
         }
+        @if (failureReason(); as r) {
+          <div class="warn" role="alert">{{ failureText(r) }}</div>
+        }
         <div class="row">
           <button type="button" (click)="ref.close()">Cancel</button>
           <!-- Once candidates are shown, each card carries its own Subscribe
                button, so the footer submit would be a confusing third action.
                It only makes sense before a search (and to retry when none were
-               found). -->
-          @if (!candidates().length) {
+               found). A scrape failure means this URL cannot be subscribed at
+               all, so hide it until the URL changes. -->
+          @if (!candidates().length && !failureReason()) {
             <button type="submit" class="primary" [disabled]="loading()">
               {{ loading() ? 'Adding…' : 'Add' }}
             </button>
@@ -111,6 +117,13 @@ type PreviewState =
         color: var(--danger);
         font-size: var(--fs-sm);
         margin: 0;
+      }
+      .warn {
+        color: var(--danger);
+        background: var(--bg-danger);
+        border-radius: var(--radius);
+        padding: var(--space-2) var(--space-3);
+        font-size: var(--fs-sm);
       }
       .hint {
         color: var(--text-secondary);
@@ -226,13 +239,25 @@ export class AddFeedDialogComponent {
   readonly candidates = signal<FeedCandidate[]>([]);
   readonly searched = signal(false);
   readonly previews = signal<Record<string, PreviewState>>({});
+  readonly failureReason = signal<ScrapeFailureReason | null>(null);
+
+  constructor() {
+    // A scrape failure is about the URL as typed; editing it starts over.
+    this.form.controls.url.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.failureReason.set(null));
+  }
 
   okPreview(state: PreviewState | undefined): FeedPreview | null {
     return state?.status === 'ok' ? state.preview : null;
   }
 
   contentLabel(content: FeedPreview['content']): string {
-    return content === 'full' ? 'Full text' : content === 'summary' ? 'Summary only' : 'Titles only';
+    return content === 'full'
+      ? 'Full text'
+      : content === 'summary'
+        ? 'Summary only'
+        : 'Titles only';
   }
 
   /** Human label for a candidate's feed syntax; capitalizes any future value
@@ -243,24 +268,40 @@ export class AddFeedDialogComponent {
     return format ? format.charAt(0).toUpperCase() + format.slice(1) : 'Feed';
   }
 
+  /** Why a scrape-fallback failure means this URL is a dead end, in words. */
+  failureText(reason: ScrapeFailureReason): string {
+    switch (reason) {
+      case 'blocked':
+        return "This site blocks automated access — it can't be subscribed.";
+      case 'unreachable':
+        return "The site couldn't be reached — check the address or try again later.";
+      case 'not_scrapable':
+        return "This page offers no feed and no article list could be detected — it can't be subscribed.";
+    }
+  }
+
   submit(): void {
     if (this.form.invalid) return;
     this.subscribe(this.form.getRawValue().url);
   }
 
-  pick(url: string): void {
-    this.subscribe(url);
+  pick(c: FeedCandidate): void {
+    this.subscribe(c.url, c.format === 'scraped' ? 'scraped' : undefined);
   }
 
-  private subscribe(url: string): void {
+  private subscribe(url: string, format?: string): void {
     this.loading.set(true);
     this.error.set(null);
     this.searched.set(false);
-    this.api.subscribe(url).subscribe({
+    this.failureReason.set(null);
+    this.api.subscribe(url, format).subscribe({
       next: (res) => {
         this.loading.set(false);
         if ('subscription' in res) this.ref.close(res.subscription);
-        else {
+        else if (res.scrapeFailureReason) {
+          this.failureReason.set(res.scrapeFailureReason);
+          this.searched.set(false);
+        } else {
           this.candidates.set(res.candidates);
           this.searched.set(true);
           this.loadPreviews(res.candidates);
@@ -277,8 +318,9 @@ export class AddFeedDialogComponent {
   private loadPreviews(candidates: FeedCandidate[]): void {
     this.previews.set(Object.fromEntries(candidates.map((c) => [c.url, { status: 'loading' }])));
     for (const c of candidates) {
-      this.api.previewFeed(c.url).subscribe({
-        next: (r) => this.previews.update((m) => ({ ...m, [c.url]: { status: 'ok', preview: r.feed } })),
+      this.api.previewFeed(c.url, c.format === 'scraped' ? 'scraped' : undefined).subscribe({
+        next: (r) =>
+          this.previews.update((m) => ({ ...m, [c.url]: { status: 'ok', preview: r.feed } })),
         error: () => this.previews.update((m) => ({ ...m, [c.url]: { status: 'error' } })),
       });
     }
