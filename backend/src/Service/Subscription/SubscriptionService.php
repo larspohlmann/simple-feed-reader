@@ -33,7 +33,11 @@ final readonly class SubscriptionService
         // A 'scraped' subscribe re-posts a candidate URL discovery itself just
         // produced: the page IS the feed. Running discovery again would
         // re-fetch and re-extract for nothing — or, worse, fail this time and
-        // block a subscribe the user was already offered.
+        // block a subscribe the user was already offered. The URL is stored
+        // VERBATIM (no finalUrl canonicalization, unlike the discovery path):
+        // candidates round-trip the canonical URL discovery just emitted, and
+        // a hand-typed variant merely becomes its own row that counts against
+        // this user's cap and converges via applyPermanentRedirect on refresh.
         if ('scraped' === $format) {
             return SubscribeOutcome::subscribed($this->createSubscription($user, $url, 'scraped'));
         }
@@ -66,13 +70,20 @@ final readonly class SubscriptionService
         if (null === $feed) {
             // New shared feed: nextFetchAt null => due immediately; the first
             // refresh fills in title/entries. Metadata is the refresh pipeline's
-            // job, not the subscribe path's. The source format is set at
-            // creation ONLY — a feed other users already share keeps the format
-            // it was created with, no matter how a later subscriber arrived.
+            // job, not the subscribe path's.
             $feed = new Feed($feedUrl);
             $feed->setSourceFormat($sourceFormat);
             $this->em->persist($feed);
             $this->em->flush(); // assign an id so the duplicate check is meaningful
+        } elseif ('xml' === $sourceFormat && 'scraped' === $feed->getSourceFormat()) {
+            // One-way heal for a poisoned shared row: 'xml' arrivals come from
+            // discovery PARSING the URL as a real feed document — a stronger
+            // fact than the 'scraped' assertion of whoever created the row
+            // (who may have posted format 'scraped' for an XML feed, leaving
+            // every refresh to run the HTML extractor over RSS and error out).
+            // Never the reverse: a 'scraped' arrival is user-asserted and must
+            // not downgrade a format discovery or the creator established.
+            $feed->setSourceFormat('xml');
         }
 
         if ($this->subscriptions->existsForUserAndFeed($userId, (int) $feed->getId())) {

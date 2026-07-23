@@ -81,6 +81,53 @@ final class SubscriptionServiceTest extends DbTestCase
         $service->subscribe($user, 'https://example.com/feed');
     }
 
+    /**
+     * A user can assert format 'scraped' for a URL that really serves an XML
+     * feed, poisoning the SHARED row: refresh then runs the HTML extractor
+     * over RSS forever. When discovery later PROVES the URL is a direct feed
+     * (a stronger fact than the first subscriber's assertion), the row heals
+     * to 'xml' instead of chaining new subscribers to the broken format.
+     */
+    public function testDiscoveryVerifiedSubscribeHealsAScrapedPoisonedFeed(): void
+    {
+        $user = $this->factory()->create('healer@example.com');
+        $feed = new Feed('https://example.com/feed.xml');
+        $feed->setSourceFormat('scraped');
+        $this->em->persist($feed);
+        $this->em->flush();
+
+        $service = $this->service(
+            $this->discoveryReturning(FeedDiscoveryResult::directFeed('https://example.com/feed.xml')),
+        );
+
+        $outcome = $service->subscribe($user, 'https://example.com/feed.xml');
+
+        self::assertNotNull($outcome->subscription);
+        self::assertSame('xml', $feed->getSourceFormat());
+    }
+
+    /**
+     * The reverse direction must never flip: a 'scraped' arrival is only the
+     * USER's assertion, so it cannot downgrade a row that discovery (or the
+     * row's creator) established as a real feed document.
+     */
+    public function testScrapedSubscribeNeverDowngradesAnXmlFeed(): void
+    {
+        $user = $this->factory()->create('downgrader@example.com');
+        $feed = new Feed('https://example.com/feed.xml'); // sourceFormat defaults to 'xml'
+        $this->em->persist($feed);
+        $this->em->flush();
+
+        $service = $this->service(
+            $this->discoveryReturning(FeedDiscoveryResult::directFeed('https://example.com/feed.xml')),
+        );
+
+        $outcome = $service->subscribe($user, 'https://example.com/feed.xml', 'scraped');
+
+        self::assertNotNull($outcome->subscription);
+        self::assertSame('xml', $feed->getSourceFormat());
+    }
+
     public function testHtmlPageReturnsCandidatesWithoutSubscribing(): void
     {
         $user = $this->factory()->create('cand@example.com');
