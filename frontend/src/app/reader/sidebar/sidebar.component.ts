@@ -119,10 +119,20 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
                   [queryParams]="{ tag: node.tag.id, view: null, subscription: null, entry: null }"
                   queryParamsHandling="merge"
                 >
-                  <span
-                    class="dot"
-                    [style.background]="node.tag.color || 'var(--text-muted)'"
-                  ></span>
+                  <span class="lead">
+                    @if (node.tag.icon) {
+                      <app-icon
+                        [name]="node.tag.icon"
+                        [size]="18"
+                        [style.color]="node.tag.color || 'var(--text-muted)'"
+                      />
+                    } @else {
+                      <span
+                        class="dot"
+                        [style.background]="node.tag.color || 'var(--text-muted)'"
+                      ></span>
+                    }
+                  </span>
                   <span>{{ node.tag.name }}</span>
                   @if (node.unreadCount > 0) {
                     <span class="count">{{ node.unreadCount }}</span>
@@ -325,7 +335,7 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
         color: var(--text-primary);
         text-decoration: none;
       }
-      .nav > span:not(.count):not(.dot) {
+      .nav > span:not(.count):not(.dot):not(.lead) {
         flex: 1;
         min-width: 0;
         white-space: nowrap;
@@ -359,6 +369,8 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
         align-items: center;
       }
       .tag .expand {
+        display: inline-flex;
+        align-items: center;
         background: none;
         border: none;
         color: var(--text-secondary);
@@ -370,6 +382,14 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
       }
       .tag-sub {
         padding-left: var(--space-6);
+      }
+      /* A fixed leading slot so tag names share one left edge whether the tag
+         shows a 9px colour dot or an 18px icon. */
+      .tag .lead {
+        flex: 0 0 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
       }
       .dot {
         width: 9px;

@@ -10,4 +10,8 @@ describe('tag choices', () => {
     expect(TAG_ICONS.length).toBeGreaterThan(0);
     for (const i of TAG_ICONS) expect(i).toMatch(/^[a-z0-9_]+$/);
   });
+
+  it('has no duplicate icons', () => {
+    expect(new Set(TAG_ICONS).size).toBe(TAG_ICONS.length);
+  });
 });
