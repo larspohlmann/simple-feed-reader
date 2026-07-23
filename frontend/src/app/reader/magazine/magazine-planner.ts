@@ -6,7 +6,13 @@ export type MagazineBlock =
   | { kind: 'hero'; entry: EntryDto }
   | { kind: 'feature'; entry: EntryDto; imageSide: 'left' | 'right' }
   | { kind: 'compact'; entry: EntryDto }
-  | { kind: 'group'; subscriptionId: number; source: string; entries: EntryDto[]; moreCount: number };
+  | {
+      kind: 'group';
+      subscriptionId: number;
+      source: string;
+      entries: EntryDto[];
+      moreCount: number;
+    };
 
 const LONG_TEXT = 120;
 const TEXT_HERO = 180;
