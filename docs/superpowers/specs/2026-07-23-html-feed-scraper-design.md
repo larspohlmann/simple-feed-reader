@@ -168,12 +168,31 @@ direct-feed check) finds nothing, run `HtmlItemExtractor` on the already-
 fetched page. ≥3 items ⇒ one `FeedCandidate` with `format: 'scraped'` (the
 open-string design in `FeedCandidate` anticipated exactly this value).
 
-Frontend add-feed flow: nearly nothing new. The candidate card shows a
-"Scraped" format badge where RSS/Atom badges show today, plus a one-line hint
-("No feed found — generated from the page's article list"). The existing
-preview cards then show exactly which items extraction found — headlines,
-teasers, images — so the user judges quality before subscribing. Subscribe
-persists the feed with `sourceFormat: 'scraped'`.
+**Subscribe is offered only when scraping demonstrably works (confirmed).**
+Discovery returns either a usable candidate or a machine-readable failure
+reason — never a bare empty list for a scrape-attempted page. When the page
+has no native feed, `FeedDiscoveryResult` carries a nullable
+`scrapeFailureReason`:
+
+- `null` — extraction succeeded; one `scraped` candidate is present and the
+  user may subscribe.
+- `'blocked'` — the page fetch was refused (HTTP 401/403/429, the
+  bot-protection signature): UI warns "This site blocks automated access —
+  it can't be subscribed."
+- `'unreachable'` — network/DNS/timeout/5xx/4xx fetch failure: UI warns the
+  site couldn't be reached.
+- `'not_scrapable'` — page fetched fine but no article list was detected
+  (<3 items): UI warns "This page offers no feed and no article list could
+  be detected — it can't be subscribed."
+
+Frontend add-feed flow: the candidate card shows a "Scraped" format badge
+where RSS/Atom badges show today, plus a one-line hint ("No feed found —
+generated from the page's article list"). The existing preview cards then
+show exactly which items extraction found — headlines, teasers, images — so
+the user judges quality before subscribing. On failure reasons the dialog
+shows the warning above instead of the generic "no feed found" text, and no
+subscribe/add action is rendered. Subscribe persists the feed with
+`sourceFormat: 'scraped'`.
 
 The feed-detail/management UI shows the same badge so scraped feeds are
 distinguishable later.
@@ -189,8 +208,10 @@ distinguishable later.
 - **Extraction drift** (site redesign changes the winning cluster): entries
   keyed by article URL, so a changed cluster yields new-but-valid entries or
   an extraction failure — never duplicate GUIDs.
-- **Discovery fallback never throws:** any extractor error during discovery
-  degrades to "no feeds found", as today.
+- **Discovery fallback never throws:** any unexpected extractor error during
+  discovery degrades to the `'not_scrapable'` failure reason — the user
+  always gets a definite answer (candidate or warning), never a blank
+  result or a 500.
 
 ### Security
 
@@ -217,7 +238,9 @@ distinguishable later.
   direct-invocation-tests rule): refresh a `scraped` feed end-to-end into
   `Entry` rows; second refresh with identical HTML creates no duplicates;
   discovery endpoint returns a `scraped` candidate for a feedless fixture
-  page and none when a native feed exists.
+  page, none when a native feed exists, and the correct
+  `scrapeFailureReason` (`blocked` / `unreachable` / `not_scrapable`) for
+  403 responses, network failures, and article-free pages respectively.
 - **Migration:** covered by the dedicated migrations CI leg.
 - **E2E (Docker):** add a feedless page URL → scraped candidate with badge →
   preview shows extracted items → subscribe → entries appear; reader mode
