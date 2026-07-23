@@ -10,6 +10,10 @@ import { Component, Input } from '@angular/core';
   >`,
   styles: [
     `
+      :host {
+        display: inline-flex;
+        align-items: center;
+      }
       span {
         display: inline-flex;
         align-items: center;
