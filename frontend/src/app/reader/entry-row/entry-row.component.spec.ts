@@ -43,6 +43,14 @@ describe('EntryRowComponent', () => {
     expect(el.querySelector('img.thumb')).toBeNull();
   });
 
+  it('moves the thumbnail to the left when imageSide is left', () => {
+    const f = mount(entry());
+    f.componentRef.setInput('imageSide', 'left');
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.row')!.classList).toContain('img-left');
+  });
+
   it('emits actions and open', () => {
     const f = mount(entry());
     const out = { favorite: 0, keep: 0, read: 0, open: 0 };

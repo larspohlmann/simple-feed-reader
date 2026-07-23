@@ -14,6 +14,7 @@ import { relativeTime } from '../format';
       role="button"
       tabindex="0"
       [class.read]="entry().isRead"
+      [class.img-left]="imageSide() === 'left'"
       (click)="open.emit(entry())"
       (keydown.enter)="open.emit(entry())"
       (keydown.space)="$event.preventDefault(); open.emit(entry())"
@@ -141,11 +142,15 @@ import { relativeTime } from '../format';
         border-radius: var(--radius);
         flex: 0 0 auto;
       }
+      .row.img-left .thumb {
+        order: -1;
+      }
     `,
   ],
 })
 export class EntryRowComponent {
   readonly entry = input.required<EntryDto>();
+  readonly imageSide = input<'left' | 'right'>('right');
   readonly favorite = output<EntryDto>();
   readonly keep = output<EntryDto>();
   readonly read = output<EntryDto>();
