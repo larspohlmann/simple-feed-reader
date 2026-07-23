@@ -23,7 +23,7 @@ import { ReadingLayoutService } from '../reading-layout.service';
           queryParamsHandling="merge"
         >
           <app-icon name="rss_feed" [size]="20" />
-          <span>simple feed reader</span>
+          <span class="name">simple feed reader</span>
         </a>
       </div>
       <div class="right">
@@ -70,7 +70,9 @@ import { ReadingLayoutService } from '../reading-layout.service';
             [attr.aria-expanded]="menuOpen()"
             (click)="menuOpen.set(!menuOpen())"
           >
-            {{ auth.user()?.email ?? '…' }} <app-icon name="expand_more" [size]="18" />
+            <app-icon class="acct-ico" name="account_circle" [size]="20" />
+            <span class="acct-email">{{ auth.user()?.email ?? '…' }}</span>
+            <app-icon name="expand_more" [size]="18" />
           </button>
           @if (menuOpen()) {
             <div class="menu" role="menu">
@@ -109,8 +111,20 @@ import { ReadingLayoutService } from '../reading-layout.service';
         color: var(--text-primary);
         text-decoration: none;
       }
+      .brand .name {
+        white-space: nowrap;
+      }
       .brand app-icon {
         color: var(--accent);
+      }
+      .acct-ico {
+        display: none;
+      }
+      .acct-email {
+        max-width: 220px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .menu-btn {
         display: none;
@@ -136,8 +150,28 @@ import { ReadingLayoutService } from '../reading-layout.service';
         cursor: pointer;
       }
       @media (max-width: 720px) {
+        header {
+          padding: 0 var(--space-3);
+        }
         .menu-btn {
           display: inline-flex;
+        }
+        .right {
+          gap: var(--space-2);
+        }
+        /* Drop the wordmark and the long email; keep icon-only affordances. */
+        .brand .name {
+          display: none;
+        }
+        .acct-email {
+          display: none;
+        }
+        .acct-ico {
+          display: inline-flex;
+        }
+        /* Pane layout needs a wide viewport, so it is useless here. */
+        .seg [aria-label='Pane layout'] {
+          display: none;
         }
       }
       .seg {
