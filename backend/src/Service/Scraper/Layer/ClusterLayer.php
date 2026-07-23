@@ -29,6 +29,15 @@ final class ClusterLayer implements ScrapeLayerInterface
 
     public function extract(HTMLDocument $doc, string $baseUrl): array
     {
+        // Eligible-anchor counts memoized per element, scoped to this one
+        // pass (never static — documents differ between calls): container()
+        // asks for the parent's count once per anchor, so N anchors sharing
+        // one parent used to rescan that parent's whole subtree N times —
+        // O(N²), about 10s for 2,000 flat sibling links, worse within the
+        // 5MB fetch cap. The memo makes it one scan plus O(1) lookups.
+        /** @var \SplObjectStorage<Element, int> $counts */
+        $counts = new \SplObjectStorage();
+
         $groups = [];
         foreach ($doc->querySelectorAll('a[href]') as $anchor) {
             if (!$this->isEligible($anchor)) {
@@ -44,7 +53,7 @@ final class ClusterLayer implements ScrapeLayerInterface
             if (\count($anchors) < self::MIN_CLUSTER_SIZE) {
                 continue;
             }
-            $items = $this->items($anchors, $baseUrl);
+            $items = $this->items($anchors, $baseUrl, $counts);
             if (\count($items) >= self::MIN_CLUSTER_SIZE && $this->beats($items, $best)) {
                 $best = $items;
             }
@@ -86,13 +95,14 @@ final class ClusterLayer implements ScrapeLayerInterface
      * same-URL links cannot inflate a group.
      *
      * @param list<Element> $anchors
+     * @param \SplObjectStorage<Element, int> $counts
      * @return list<ScrapedItem>
      */
-    private function items(array $anchors, string $baseUrl): array
+    private function items(array $anchors, string $baseUrl, \SplObjectStorage $counts): array
     {
         $items = [];
         foreach ($anchors as $anchor) {
-            $item = CardFields::item($this->container($anchor), $anchor, $baseUrl);
+            $item = CardFields::item($this->container($anchor, $counts), $anchor, $baseUrl);
             if ($item !== null && !isset($items[$item->url])) {
                 $items[$item->url] = $item;
             }
@@ -105,13 +115,18 @@ final class ClusterLayer implements ScrapeLayerInterface
      * Ascends from the anchor to the card wrapper: up to a few hops while the
      * parent still contains exactly one eligible anchor, so sibling cards are
      * never swallowed.
+     *
+     * @param \SplObjectStorage<Element, int> $counts
      */
-    private function container(Element $anchor): Element
+    private function container(Element $anchor, \SplObjectStorage $counts): Element
     {
         $container = $anchor;
         for ($hop = 0; $hop < self::MAX_CONTAINER_HOPS; $hop++) {
             $parent = $container->parentElement;
-            if ($parent === null || $parent->tagName === 'BODY' || $this->eligibleAnchorCount($parent) !== 1) {
+            if (
+                $parent === null || $parent->tagName === 'BODY'
+                || $this->eligibleAnchorCount($parent, $counts) !== 1
+            ) {
                 break;
             }
             $container = $parent;
@@ -120,14 +135,20 @@ final class ClusterLayer implements ScrapeLayerInterface
         return $container;
     }
 
-    private function eligibleAnchorCount(Element $element): int
+    /** @param \SplObjectStorage<Element, int> $counts */
+    private function eligibleAnchorCount(Element $element, \SplObjectStorage $counts): int
     {
+        if ($counts->contains($element)) {
+            return $counts[$element];
+        }
+
         $count = 0;
         foreach ($element->querySelectorAll('a[href]') as $anchor) {
             if ($this->isEligible($anchor)) {
                 $count++;
             }
         }
+        $counts[$element] = $count;
 
         return $count;
     }
