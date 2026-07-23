@@ -98,6 +98,30 @@ describe('SidebarComponent', () => {
     expect(el.querySelectorAll('.tag-sub').length).toBe(2);
   });
 
+  it('renders the tag icon (tinted with its colour) when set, else the colour dot', () => {
+    const withIcon: TagNode = {
+      tag: { id: 20, name: 'World', color: '#c08a3e', icon: 'public', position: 0 },
+      subscriptions: [],
+      unreadCount: 0,
+    };
+    const withoutIcon: TagNode = {
+      tag: { id: 21, name: 'Plain', color: null, icon: null, position: 1 },
+      subscriptions: [],
+      unreadCount: 0,
+    };
+    const f = mount({ tagTree: [withIcon, withoutIcon] });
+    const leads = (f.nativeElement as HTMLElement).querySelectorAll('.tag .lead');
+
+    const icon = leads[0].querySelector('.material-symbols-outlined') as HTMLElement;
+    expect(icon.textContent).toBe('public');
+    expect(leads[0].querySelector('.dot')).toBeNull();
+    // The colour tints the icon rather than a dot (jsdom normalises the hex).
+    expect((leads[0].querySelector('app-icon') as HTMLElement).style.color).toBeTruthy();
+
+    expect(leads[1].querySelector('.material-symbols-outlined')).toBeNull();
+    expect(leads[1].querySelector('.dot')).not.toBeNull();
+  });
+
   it('emits editTag / deleteTag when a tag row menu action is used', () => {
     const node: TagNode = {
       tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
