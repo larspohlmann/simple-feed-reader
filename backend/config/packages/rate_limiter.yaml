@@ -85,3 +85,12 @@ framework:
             limit: 60
             interval: '5 minutes'
             cache_pool: cache.rate_limiter
+
+        # Per-user cap on feed preview fetches. Each preview triggers at most
+        # one outbound feed fetch, mirroring reader's shape; same limit, same
+        # reasoning, same pool.
+        feed_preview:
+            policy: 'sliding_window'
+            limit: 60
+            interval: '5 minutes'
+            cache_pool: cache.rate_limiter
