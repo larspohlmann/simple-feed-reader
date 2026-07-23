@@ -78,7 +78,9 @@ describe('ReaderShellComponent', () => {
     const el = boot().nativeElement as HTMLElement;
     expect(el.querySelector('app-reader-header')).not.toBeNull();
     expect(el.querySelector('app-sidebar')!.textContent).toContain('heise');
-    expect(el.querySelectorAll('app-entry-row').length).toBe(1);
+    // The shell's default layout is now 'magazine' (ReadingLayoutService); a
+    // short, image-less entry plans as a compact block rather than a row.
+    expect(el.querySelector('app-entry-compact')).not.toBeNull();
   });
 
   it('marks the opened entry read', () => {

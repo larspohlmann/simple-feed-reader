@@ -29,6 +29,13 @@ import { RefreshService } from '../refresh.service';
 
         <div class="seg" role="group" aria-label="Reading layout">
           <button
+            aria-label="Magazine layout"
+            [class.active]="layout.mode() === 'magazine'"
+            (click)="layout.set('magazine')"
+          >
+            <app-icon name="view_quilt" [size]="18" />
+          </button>
+          <button
             aria-label="List layout"
             [class.active]="layout.mode() === 'list'"
             (click)="layout.set('list')"

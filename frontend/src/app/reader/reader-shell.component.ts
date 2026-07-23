@@ -42,6 +42,7 @@ import { ManageActions } from './manage/manage-actions.service';
         @if (paneMode()) {
           <section class="list">
             <app-entry-list
+              [layout]="layout.mode()"
               [title]="title()"
               [entries]="entries.entries()"
               [loading]="entries.loading()"
@@ -86,6 +87,7 @@ import { ManageActions } from './manage/manage-actions.service';
           />
         } @else {
           <app-entry-list
+            [layout]="layout.mode()"
             [title]="title()"
             [entries]="entries.entries()"
             [loading]="entries.loading()"

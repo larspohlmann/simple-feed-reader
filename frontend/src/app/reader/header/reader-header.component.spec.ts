@@ -51,6 +51,23 @@ describe('ReaderHeaderComponent', () => {
     expect(layout.mode()).toBe('pane');
   });
 
+  it('shows a Magazine layout button first, and switches to it', () => {
+    const f = create();
+    const layout = TestBed.inject(ReadingLayoutService);
+    const group = f.nativeElement.querySelector('[aria-label="Reading layout"]') as HTMLElement;
+    const buttons = group.querySelectorAll('button');
+    expect(buttons[0].getAttribute('aria-label')).toBe('Magazine layout');
+
+    layout.set('list');
+    f.detectChanges();
+    expect(group.querySelector('[aria-label="Magazine layout"]')!.classList).not.toContain(
+      'active',
+    );
+
+    (group.querySelector('[aria-label="Magazine layout"]') as HTMLButtonElement).click();
+    expect(layout.mode()).toBe('magazine');
+  });
+
   it('shows the busy state while refreshing', () => {
     const f = create();
     TestBed.inject(RefreshService).running.set(true);
