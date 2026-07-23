@@ -14,6 +14,7 @@ final readonly class ParsedEntry
         public ?string $summary,
         public ?string $contentHtml,
         public ?\DateTimeImmutable $publishedAt,
+        public ?string $imageUrl = null,
     ) {
     }
 }
