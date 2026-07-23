@@ -11,6 +11,7 @@ use App\Entity\User;
 use App\Exception\InvalidOpmlException;
 use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
+use App\Repository\SubscriptionTagRepository;
 use App\Repository\TagRepository;
 use App\Service\Subscription\SubscriptionService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -38,6 +39,7 @@ final readonly class OpmlImporter
         private EntityManagerInterface $em,
         private FeedRepository $feeds,
         private SubscriptionRepository $subscriptions,
+        private SubscriptionTagRepository $subscriptionTags,
         private TagRepository $tags,
         private ClockInterface $clock,
     ) {
@@ -64,6 +66,14 @@ final readonly class OpmlImporter
         $tagCache = [];
         /** @var array<string, true> $seen feed URLs subscribed during this import */
         $seen = [];
+
+        // Nothing flushes until the end, so DB MAX(position) can't see rows made
+        // in this batch — seed once from the committed max and count in memory so
+        // imported tags/feeds get distinct, appended positions.
+        $nextSubPosition = $this->subscriptions->nextPositionForUser($userId);
+        $nextTagPosition = $this->tags->nextPositionForUser($userId);
+        /** @var array<int, int> $nextFeedPositionInTag keyed by spl_object_id(tag) */
+        $nextFeedPositionInTag = [];
 
         // Depth-first: each feed outline inherits the nearest ancestor group's
         // title as its tag. `null` tag = body root (untagged).
@@ -98,10 +108,9 @@ final readonly class OpmlImporter
             }
 
             $sub = new Subscription($user, $feed, $this->clock->now());
-            $tag = $this->resolveTag($user, $tagName, $tagCache);
-            if ($tag !== null) {
-                $sub->addTag($tag);
-            }
+            $sub->setPosition($nextSubPosition++);
+            $tag = $this->resolveTag($user, $tagName, $tagCache, $nextTagPosition);
+            $this->attachTag($sub, $tag, $nextFeedPositionInTag);
             $this->em->persist($sub);
             $seen[$xmlUrl] = true;
             $existing++;
@@ -182,7 +191,30 @@ final readonly class OpmlImporter
     /**
      * @param array<string, Tag> $cache batch-local identity map, keyed by lowercased name
      */
-    private function resolveTag(User $user, ?string $name, array &$cache): ?Tag
+    /**
+     * Attach the resolved tag (if any) at the next position within that tag,
+     * counting in memory since nothing is flushed yet. A tag created in this
+     * batch has no id and no committed feeds, so its order starts at 0; an
+     * existing tag appends past its current feeds.
+     *
+     * @param array<int, int> $nextFeedPositionInTag keyed by spl_object_id(tag)
+     */
+    private function attachTag(Subscription $sub, ?Tag $tag, array &$nextFeedPositionInTag): void
+    {
+        if (null === $tag) {
+            return;
+        }
+        $oid = spl_object_id($tag);
+        $nextFeedPositionInTag[$oid] ??= null === $tag->getId()
+            ? 0
+            : $this->subscriptionTags->nextPositionForTag($tag);
+        $sub->addTag($tag, $nextFeedPositionInTag[$oid]++);
+    }
+
+    /**
+     * @param array<string, Tag> $cache
+     */
+    private function resolveTag(User $user, ?string $name, array &$cache, int &$nextTagPosition): ?Tag
     {
         if ($name === null) {
             return null;
@@ -197,6 +229,7 @@ final readonly class OpmlImporter
         $tag = $this->tags->findOneByNameForUser((int) $user->getId(), $name);
         if ($tag === null) {
             $tag = new Tag($user, $name);
+            $tag->setPosition($nextTagPosition++);
             $this->em->persist($tag);
         }
 

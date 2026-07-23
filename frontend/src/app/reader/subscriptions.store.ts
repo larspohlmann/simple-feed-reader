@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Problem, parseProblem } from '../core/problem';
 import { ReaderApi } from './reader-api';
+import { TagsStore } from './tags.store';
 import { SubscriptionDto, TagDto } from './models';
 
 export interface TagNode {
@@ -11,24 +12,59 @@ export interface TagNode {
   unreadCount: number;
 }
 
-export function buildTagTree(subs: SubscriptionDto[]): TagNode[] {
-  const byId = new Map<number, TagNode>();
-  for (const s of subs) {
-    for (const t of s.tags) {
-      let node = byId.get(t.id);
-      if (!node) {
-        node = { tag: t, subscriptions: [], unreadCount: 0 };
-        byId.set(t.id, node);
+/**
+ * Build the sidebar tag tree. Tag NODES and their order come from `orderedTags`
+ * (the full tag list, already in `tag.position` order) so every tag shows —
+ * including empty ones, which you can drop feeds onto and reorder. Each node's
+ * feeds come from `subs` that carry the tag, ordered by their per-tag position.
+ *
+ * With no `orderedTags` (before the tag list has loaded), fall back to the tags
+ * embedded on subscriptions, name-ordered — so tagged feeds never briefly vanish.
+ */
+export function buildTagTree(subs: SubscriptionDto[], orderedTags: TagDto[] = []): TagNode[] {
+  const tags = orderedTags.length > 0 ? orderedTags : embeddedTagsByName(subs);
+
+  // One pass over subscriptions buckets each feed under every tag it carries,
+  // capturing the per-tag position up front so the sort reads it once.
+  const byTagId = new Map<number, { sub: SubscriptionDto; pos: number }[]>();
+  for (const sub of subs) {
+    for (const t of sub.tags) {
+      let bucket = byTagId.get(t.id);
+      if (!bucket) {
+        bucket = [];
+        byTagId.set(t.id, bucket);
       }
-      node.subscriptions.push(s);
-      node.unreadCount += s.unreadCount;
+      bucket.push({ sub, pos: t.position });
     }
   }
-  return [...byId.values()].sort((a, b) => a.tag.name.localeCompare(b.tag.name));
+
+  return tags.map((tag) => {
+    const feeds = (byTagId.get(tag.id) ?? [])
+      .sort((a, b) => a.pos - b.pos || a.sub.title.localeCompare(b.sub.title))
+      .map((e) => e.sub);
+    return {
+      tag,
+      subscriptions: feeds,
+      unreadCount: feeds.reduce((n, s) => n + s.unreadCount, 0),
+    };
+  });
+}
+
+/** Fallback tag set derived from subscriptions (only non-empty tags), by name. */
+function embeddedTagsByName(subs: SubscriptionDto[]): TagDto[] {
+  const byId = new Map<number, TagDto>();
+  for (const s of subs) {
+    for (const t of s.tags) {
+      if (!byId.has(t.id)) {
+        byId.set(t.id, { id: t.id, name: t.name, color: t.color, icon: t.icon, position: 0 });
+      }
+    }
+  }
+  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function untaggedSubs(subs: SubscriptionDto[]): SubscriptionDto[] {
-  return subs.filter((s) => s.tags.length === 0);
+  return subs.filter((s) => s.tags.length === 0).sort((a, b) => a.position - b.position);
 }
 
 export function sumUnread(subs: SubscriptionDto[]): number {
@@ -40,12 +76,13 @@ type ZeroTarget = 'all' | { tag: number } | { subscription: number };
 @Injectable({ providedIn: 'root' })
 export class SubscriptionsStore {
   private readonly api = inject(ReaderApi);
+  private readonly tags = inject(TagsStore);
 
   readonly subscriptions = signal<SubscriptionDto[]>([]);
   readonly loading = signal(false);
   readonly error = signal<Problem | null>(null);
 
-  readonly tagTree = computed(() => buildTagTree(this.subscriptions()));
+  readonly tagTree = computed(() => buildTagTree(this.subscriptions(), this.tags.tags()));
   readonly untagged = computed(() => untaggedSubs(this.subscriptions()));
   readonly totalUnread = computed(() => sumUnread(this.subscriptions()));
 

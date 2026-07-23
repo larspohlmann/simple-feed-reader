@@ -5,7 +5,7 @@ import { API_BASE_URL } from '../core/api';
 import { SubscriptionsStore, buildTagTree, sumUnread, untaggedSubs } from './subscriptions.store';
 import { SubscriptionDto } from './models';
 
-const tag = (id: number, name: string) => ({ id, name, color: null, icon: null });
+const tag = (id: number, name: string) => ({ id, name, color: null, icon: null, position: 0 });
 const sub = (
   id: number,
   unread: number,
@@ -18,6 +18,7 @@ const sub = (
   siteUrl: null,
   status: 'active',
   createdAt: 'x',
+  position: 0,
   tags,
   unreadCount: unread,
 });
@@ -39,6 +40,32 @@ describe('subscription derivations', () => {
   it('lists untagged subs and totals each sub once', () => {
     expect(untaggedSubs(subs).map((s) => s.id)).toEqual([3]);
     expect(sumUnread(subs)).toBe(9);
+  });
+
+  it('orders untagged feeds by their position', () => {
+    const at = (id: number, position: number): SubscriptionDto => ({ ...sub(id, 0), position });
+    expect(untaggedSubs([at(1, 2), at(2, 0), at(3, 1)]).map((s) => s.id)).toEqual([2, 3, 1]);
+  });
+});
+
+describe('buildTagTree with an explicit tag order', () => {
+  const orderedTags = [
+    { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
+    { id: 10, name: 'News', color: null, icon: null, position: 1 },
+    { id: 30, name: 'Empty', color: null, icon: null, position: 2 },
+  ];
+  // A sub carrying one tag, with an explicit per-tag (feed) position.
+  const inTag = (id: number, tagId: number, feedPos: number): SubscriptionDto =>
+    sub(id, 1, [{ id: tagId, name: 'x', color: null, icon: null, position: feedPos }]);
+
+  it('orders nodes by tag.position, includes empty tags, and orders feeds per-tag', () => {
+    const subs = [inTag(1, 20, 1), inTag(2, 20, 0), inTag(3, 10, 0)];
+    const tree = buildTagTree(subs, orderedTags);
+    // Nodes follow the tag order, and the empty tag still appears.
+    expect(tree.map((n) => n.tag.name)).toEqual(['Tech', 'News', 'Empty']);
+    // Feeds within Tech follow their per-tag position: sub 2 (0) before sub 1 (1).
+    expect(tree[0].subscriptions.map((s) => s.id)).toEqual([2, 1]);
+    expect(tree[2].subscriptions).toEqual([]);
   });
 });
 

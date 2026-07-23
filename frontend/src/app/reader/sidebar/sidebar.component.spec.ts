@@ -4,10 +4,11 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../../core/api';
 import { RefreshService } from '../refresh.service';
-import { SidebarComponent } from './sidebar.component';
+import { CdkDragDrop } from '@angular/cdk/drag-drop';
+import { DropData, SidebarComponent } from './sidebar.component';
 import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
-import { SubscriptionDto } from '../models';
+import { SubscriptionDto, TagDto } from '../models';
 
 const sub = (id: number, unread = 0): SubscriptionDto => ({
   id,
@@ -17,6 +18,7 @@ const sub = (id: number, unread = 0): SubscriptionDto => ({
   siteUrl: null,
   status: 'active',
   createdAt: 'x',
+  position: 0,
   tags: [],
   unreadCount: unread,
 });
@@ -82,7 +84,7 @@ describe('SidebarComponent', () => {
 
   it('renders tags with summed counts and reveals subs when expanded', () => {
     const node: TagNode = {
-      tag: { id: 20, name: 'Tech', color: null, icon: null },
+      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
       subscriptions: [sub(1, 3), sub(2, 6)],
       unreadCount: 9,
     };
@@ -98,7 +100,7 @@ describe('SidebarComponent', () => {
 
   it('emits editTag / deleteTag when a tag row menu action is used', () => {
     const node: TagNode = {
-      tag: { id: 20, name: 'Tech', color: null, icon: null },
+      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
       subscriptions: [],
       unreadCount: 0,
     };
@@ -129,12 +131,12 @@ describe('SidebarComponent', () => {
     const f = mount({
       tagTree: [
         {
-          tag: { id: 20, name: 'Tech', color: null, icon: null },
+          tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
           subscriptions: [shared],
           unreadCount: 0,
         },
         {
-          tag: { id: 21, name: 'News', color: null, icon: null },
+          tag: { id: 21, name: 'News', color: null, icon: null, position: 0 },
           subscriptions: [shared],
           unreadCount: 0,
         },
@@ -151,6 +153,132 @@ describe('SidebarComponent', () => {
 
     // Distinct per-(tag,feed) keys mean only the clicked row's menu opens.
     expect(el.querySelectorAll('.pop').length).toBe(1);
+  });
+
+  describe('drag-and-drop retagging', () => {
+    const tag = (id: number): TagDto => ({
+      id,
+      name: `t${id}`,
+      color: null,
+      icon: null,
+      position: 0,
+    });
+    const withTags = (s: SubscriptionDto, tags: TagDto[]): SubscriptionDto => ({ ...s, tags });
+
+    function drop(
+      item: SubscriptionDto,
+      target: DropData,
+      sameContainer = false,
+    ): CdkDragDrop<DropData> {
+      const container = { data: target };
+      const previousContainer = sameContainer
+        ? container
+        : { data: { kind: 'untagged' } as DropData };
+      return {
+        previousContainer,
+        container,
+        item: { data: item },
+      } as unknown as CdkDragDrop<DropData>;
+    }
+
+    function retagOf(ev: CdkDragDrop<DropData>) {
+      const f = mount();
+      const spy = jest.fn();
+      f.componentInstance.retag.subscribe(spy);
+      f.componentInstance.onDrop(ev);
+      return spy;
+    }
+
+    it('assigns the tag when an untagged feed is dropped on it', () => {
+      const spy = retagOf(drop(sub(1), { kind: 'tag', tag: tag(3) }));
+      expect(spy).toHaveBeenCalledWith({ sub: sub(1), tagIds: [3] });
+    });
+
+    it('adds the tag to a feed that already has other tags', () => {
+      const s = withTags(sub(1), [tag(3)]);
+      const spy = retagOf(drop(s, { kind: 'tag', tag: tag(7) }));
+      expect(spy).toHaveBeenCalledWith({ sub: s, tagIds: [3, 7] });
+    });
+
+    it('does nothing when the feed already has the target tag', () => {
+      const s = withTags(sub(1), [tag(3)]);
+      const spy = retagOf(drop(s, { kind: 'tag', tag: tag(3) }));
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('clears all tags when a tagged feed is dropped on Feeds', () => {
+      const s = withTags(sub(1), [tag(3), tag(7)]);
+      const spy = retagOf(drop(s, { kind: 'untagged' }));
+      expect(spy).toHaveBeenCalledWith({ sub: s, tagIds: [] });
+    });
+
+    it('does nothing when dropped back on its own container', () => {
+      const spy = retagOf(drop(sub(1), { kind: 'untagged' }, true));
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when an already-untagged feed is dropped on Feeds', () => {
+      const spy = retagOf(drop(sub(1), { kind: 'untagged' }));
+      expect(spy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('drag-and-drop reordering', () => {
+    const tagNode = (id: number, subs: SubscriptionDto[] = []): TagNode => ({
+      tag: { id, name: `t${id}`, color: null, icon: null, position: 0 },
+      subscriptions: subs,
+      unreadCount: 0,
+    });
+
+    function reorder(
+      target: DropData,
+      previousIndex: number,
+      currentIndex: number,
+    ): CdkDragDrop<DropData> {
+      const container = { data: target };
+      return {
+        previousContainer: container,
+        container,
+        previousIndex,
+        currentIndex,
+        item: { data: null },
+      } as unknown as CdkDragDrop<DropData>;
+    }
+
+    it('emits reorderTags with the moved tag order', () => {
+      const f = mount({ tagTree: [tagNode(10), tagNode(20), tagNode(30)] });
+      const spy = jest.fn();
+      f.componentInstance.reorderTags.subscribe(spy);
+      // Move the last tag (30) to the front.
+      f.componentInstance.onTagDrop({ previousIndex: 2, currentIndex: 0 } as CdkDragDrop<unknown>);
+      expect(spy).toHaveBeenCalledWith([30, 10, 20]);
+    });
+
+    it('emits reorderTagFeeds when a feed is reordered within its tag', () => {
+      const feeds = [sub(1), sub(2), sub(3)];
+      const f = mount({ tagTree: [tagNode(10, feeds)] });
+      const spy = jest.fn();
+      f.componentInstance.reorderTagFeeds.subscribe(spy);
+      // Within tag 10, move feed at index 0 to index 2.
+      f.componentInstance.onDrop(reorder({ kind: 'tag', tag: tagNode(10).tag }, 0, 2));
+      expect(spy).toHaveBeenCalledWith({ tagId: 10, subscriptionIds: [2, 3, 1] });
+    });
+
+    it('emits reorderUntagged when an untagged feed is reordered', () => {
+      const f = mount({ untagged: [sub(1), sub(2), sub(3)] });
+      const spy = jest.fn();
+      f.componentInstance.reorderUntagged.subscribe(spy);
+      f.componentInstance.onDrop(reorder({ kind: 'untagged' }, 2, 0));
+      expect(spy).toHaveBeenCalledWith([3, 1, 2]);
+    });
+
+    it('does not emit when an item is dropped back at its own index', () => {
+      const f = mount({ untagged: [sub(1), sub(2)] });
+      const spy = jest.fn();
+      f.componentInstance.reorderUntagged.subscribe(spy);
+      f.componentInstance.onDrop(reorder({ kind: 'untagged' }, 1, 1));
+      expect(spy).not.toHaveBeenCalled();
+    });
   });
 
   it('emits editFeed / unsubscribe for an untagged feed row', () => {

@@ -33,8 +33,15 @@ final class SubscriptionJsonTest extends TestCase
         self::assertSame('https://example.com', $shape['siteUrl']);
         self::assertSame('active', $shape['status']);
         self::assertSame('2026-02-03T04:05:06+00:00', $shape['createdAt']);
+        self::assertSame(0, $shape['position']);
         self::assertSame(
-            [['id' => $tag->getId(), 'name' => 'news', 'color' => '#ff8800', 'icon' => null]],
+            [[
+                'id' => $tag->getId(),
+                'name' => 'news',
+                'color' => '#ff8800',
+                'icon' => null,
+                'position' => 0,
+            ]],
             $shape['tags'],
         );
     }

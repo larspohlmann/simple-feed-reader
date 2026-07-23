@@ -67,6 +67,11 @@ export class ReaderApi {
     return this.http.delete<void>(`${this.base}/api/subscriptions/${id}`);
   }
 
+  /** Persist the untagged "Feeds" order. */
+  reorderSubscriptions(subscriptionIds: number[]): Observable<void> {
+    return this.http.patch<void>(`${this.base}/api/subscriptions/reorder`, { subscriptionIds });
+  }
+
   tags(): Observable<{ tags: TagDto[] }> {
     return this.http.get<{ tags: TagDto[] }>(`${this.base}/api/tags`);
   }
@@ -81,6 +86,16 @@ export class ReaderApi {
 
   deleteTag(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/api/tags/${id}`);
+  }
+
+  /** Persist the sidebar tag order (the full tag id list, in order). */
+  reorderTags(tagIds: number[]): Observable<{ tags: TagDto[] }> {
+    return this.http.patch<{ tags: TagDto[] }>(`${this.base}/api/tags/reorder`, { tagIds });
+  }
+
+  /** Persist the order of feeds within one tag. */
+  setTagFeedOrder(tagId: number, subscriptionIds: number[]): Observable<void> {
+    return this.http.patch<void>(`${this.base}/api/tags/${tagId}/feed-order`, { subscriptionIds });
   }
 
   exportOpml(): Observable<string> {

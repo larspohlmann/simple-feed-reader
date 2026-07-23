@@ -38,18 +38,26 @@ class Subscription
     private \DateTimeImmutable $createdAt;
 
     /**
-     * @var Collection<int, Tag>
+     * @var Collection<int, SubscriptionTag>
      */
-    #[ORM\ManyToMany(targetEntity: Tag::class)]
-    #[ORM\JoinTable(name: 'subscription_tag')]
-    private Collection $tags;
+    #[ORM\OneToMany(
+        targetEntity: SubscriptionTag::class,
+        mappedBy: 'subscription',
+        cascade: ['persist', 'remove'],
+        orphanRemoval: true,
+    )]
+    private Collection $subscriptionTags;
+
+    /** Order in the untagged "Feeds" list (ascending). */
+    #[ORM\Column(options: ['default' => 0])]
+    private int $position = 0;
 
     public function __construct(User $user, Feed $feed, \DateTimeImmutable $createdAt)
     {
         $this->user = $user;
         $this->feed = $feed;
         $this->createdAt = $createdAt;
-        $this->tags = new ArrayCollection();
+        $this->subscriptionTags = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -92,23 +100,88 @@ class Subscription
         return $this->createdAt;
     }
 
+    public function getPosition(): int
+    {
+        return $this->position;
+    }
+
+    public function setPosition(int $position): void
+    {
+        $this->position = $position;
+    }
+
     /**
+     * The tags on this subscription, ordered by their per-tag position. Kept as
+     * the public read shape so callers that only need tags are unaffected by the
+     * join being an entity now.
+     *
      * @return Collection<int, Tag>
      */
     public function getTags(): Collection
     {
-        return $this->tags;
+        return new ArrayCollection(
+            array_map(
+                static fn (SubscriptionTag $st): Tag => $st->getTag(),
+                $this->orderedSubscriptionTags(),
+            ),
+        );
     }
 
-    public function addTag(Tag $tag): void
+    /**
+     * The join rows, ordered by position — for serialization that needs the
+     * per-tag order.
+     *
+     * @return list<SubscriptionTag>
+     */
+    public function getSubscriptionTags(): array
     {
-        if (!$this->tags->contains($tag)) {
-            $this->tags->add($tag);
+        return $this->orderedSubscriptionTags();
+    }
+
+    /**
+     * Attach a tag at the given position within that tag. No-op if already
+     * attached (so re-adding a retained tag preserves its existing position).
+     */
+    public function addTag(Tag $tag, int $position = 0): void
+    {
+        if (null !== $this->findJoin($tag)) {
+            return;
         }
+        $this->subscriptionTags->add(new SubscriptionTag($this, $tag, $position));
     }
 
     public function removeTag(Tag $tag): void
     {
-        $this->tags->removeElement($tag);
+        $join = $this->findJoin($tag);
+        if (null !== $join) {
+            $this->subscriptionTags->removeElement($join);
+        }
+    }
+
+    private function findJoin(Tag $tag): ?SubscriptionTag
+    {
+        foreach ($this->subscriptionTags as $st) {
+            // Identity, not id: unpersisted tags share a null id, and within one
+            // unit of work the same tag is always the same instance.
+            if ($st->getTag() === $tag) {
+                return $st;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return list<SubscriptionTag>
+     */
+    private function orderedSubscriptionTags(): array
+    {
+        $rows = array_values($this->subscriptionTags->toArray());
+        usort(
+            $rows,
+            static fn (SubscriptionTag $a, SubscriptionTag $b): int => $a->getPosition() <=> $b->getPosition(),
+        );
+
+        return $rows;
     }
 }

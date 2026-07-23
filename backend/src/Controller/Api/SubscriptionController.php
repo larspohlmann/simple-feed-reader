@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\Subscription\ReorderSubscriptionsRequest;
 use App\Dto\Subscription\SubscribeRequest;
 use App\Dto\Subscription\UpdateSubscriptionRequest;
+use App\Entity\Subscription;
+use App\Entity\Tag;
 use App\Entity\User;
 use App\Http\SubscriptionJson;
 use App\Repository\SubscriptionRepository;
+use App\Repository\SubscriptionTagRepository;
 use App\Repository\TagRepository;
 use App\Service\Subscription\SubscriptionService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -16,6 +20,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -25,6 +30,7 @@ final class SubscriptionController
     public function __construct(
         private readonly SubscriptionService $subscriptions,
         private readonly SubscriptionRepository $subscriptionRepo,
+        private readonly SubscriptionTagRepository $subscriptionTags,
         private readonly TagRepository $tags,
         private readonly EntityManagerInterface $em,
     ) {
@@ -75,18 +81,63 @@ final class SubscriptionController
 
         $sub->setCustomTitle('' === (string) $request->customTitle ? null : $request->customTitle);
 
-        // Replace the tag set with the requested (user-owned) tags.
+        $wasTagged = !$sub->getTags()->isEmpty();
+
+        // Sync the tag set to the requested (user-owned) tags by DIFF, not
+        // clear-and-re-add: a tag the feed keeps must retain its per-tag
+        // position, and a newly added tag appends to the end of that tag's list.
         $resolved = $this->tags->findAllByIdsForUser($request->tagIds, (int) $user->getId());
-        foreach ($sub->getTags()->toArray() as $existing) {
-            $sub->removeTag($existing);
+        $resolvedIds = array_map(static fn (Tag $t): int => (int) $t->getId(), $resolved);
+
+        foreach ($sub->getTags() as $existing) {
+            if (!\in_array((int) $existing->getId(), $resolvedIds, true)) {
+                $sub->removeTag($existing);
+            }
         }
+        $currentIds = array_map(static fn (Tag $t): int => (int) $t->getId(), $sub->getTags()->toArray());
         foreach ($resolved as $tag) {
-            $sub->addTag($tag);
+            if (!\in_array((int) $tag->getId(), $currentIds, true)) {
+                $sub->addTag($tag, $this->subscriptionTags->nextPositionForTag($tag));
+            }
+        }
+
+        // A feed that just lost its last tag joins the untagged "Feeds" list;
+        // append it so its stale position doesn't float it to the top.
+        if ($wasTagged && $sub->getTags()->isEmpty()) {
+            $sub->setPosition($this->subscriptionRepo->nextPositionForUser((int) $user->getId()));
         }
 
         $this->em->flush();
 
         return new JsonResponse(['subscription' => SubscriptionJson::one($sub)]);
+    }
+
+    /**
+     * Persist the order of the untagged "Feeds" list. The body lists the feeds
+     * in their new order; each feed's position becomes its index. Ids must be
+     * owned by the user.
+     */
+    #[Route('/reorder', name: 'api_subscriptions_reorder', methods: ['PATCH'])]
+    public function reorder(
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] ReorderSubscriptionsRequest $request,
+    ): JsonResponse {
+        $owned = $this->subscriptionRepo->findAllByIdsForUser($request->subscriptionIds, (int) $user->getId());
+        if (\count($owned) !== \count(array_unique($request->subscriptionIds))) {
+            throw new UnprocessableEntityHttpException('subscriptionIds must all be your feeds, without duplicates.');
+        }
+
+        /** @var array<int, Subscription> $byId */
+        $byId = [];
+        foreach ($owned as $sub) {
+            $byId[(int) $sub->getId()] = $sub;
+        }
+        foreach ($request->subscriptionIds as $index => $subscriptionId) {
+            $byId[$subscriptionId]->setPosition($index);
+        }
+        $this->em->flush();
+
+        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
     #[Route('/{id}', name: 'api_subscriptions_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]

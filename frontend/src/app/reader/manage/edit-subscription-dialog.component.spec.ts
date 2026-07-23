@@ -14,7 +14,8 @@ const sub: SubscriptionDto = {
   siteUrl: 'https://heise.de',
   status: 'active',
   createdAt: 'x',
-  tags: [{ id: 1, name: 'Tech', color: null, icon: null }],
+  position: 0,
+  tags: [{ id: 1, name: 'Tech', color: null, icon: null, position: 0 }],
   unreadCount: 3,
 };
 

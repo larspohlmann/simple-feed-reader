@@ -85,9 +85,10 @@ class EntryRepository extends ServiceEntityRepository
         }
 
         if ($query->tagId !== null) {
-            // A tag id matches at most one row of s.tags, so this inner join
-            // never duplicates an entry.
-            $qb->innerJoin('s.tags', 't', 'WITH', 't.id = :tagId')
+            // A tag matches at most one join row per subscription, so this inner
+            // join never duplicates an entry. IDENTITY() reads the tag_id FK
+            // without a second join to the tag table.
+            $qb->innerJoin('s.subscriptionTags', 'st', 'WITH', 'IDENTITY(st.tag) = :tagId')
                 ->setParameter('tagId', $query->tagId);
         }
 

@@ -21,7 +21,9 @@ export class TagsStore {
     this.error.set(null);
     this.api.tags().subscribe({
       next: (r) => {
-        this.tags.set([...r.tags].sort((a, b) => a.name.localeCompare(b.name)));
+        this.tags.set(
+          [...r.tags].sort((a, b) => a.position - b.position || a.name.localeCompare(b.name)),
+        );
         this.loading.set(false);
       },
       error: (e: HttpErrorResponse) => {

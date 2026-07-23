@@ -57,6 +57,7 @@ final readonly class SubscriptionService
         }
 
         $subscription = new Subscription($user, $feed, $this->clock->now());
+        $subscription->setPosition($this->subscriptions->nextPositionForUser($userId));
         $this->em->persist($subscription);
         $this->em->flush();
 

@@ -45,7 +45,8 @@ class SubscriptionRepository extends ServiceEntityRepository
         /** @var list<Subscription> $rows */
         $rows = $this->createQueryBuilder('s')
             ->leftJoin('s.feed', 'f')->addSelect('f')
-            ->leftJoin('s.tags', 't')->addSelect('t')
+            ->leftJoin('s.subscriptionTags', 'st')->addSelect('st')
+            ->leftJoin('st.tag', 't')->addSelect('t')
             ->andWhere('s.user = :userId')->setParameter('userId', $userId)
             ->orderBy('s.createdAt', 'ASC')
             ->addOrderBy('s.id', 'ASC')
@@ -64,12 +65,52 @@ class SubscriptionRepository extends ServiceEntityRepository
             ->getSingleScalarResult();
     }
 
+    /**
+     * The user's subscriptions matching the given ids. Fewer results than ids
+     * means one or more ids were invalid or belonged to another user.
+     *
+     * @param list<int> $ids
+     *
+     * @return list<Subscription>
+     */
+    public function findAllByIdsForUser(array $ids, int $userId): array
+    {
+        if ([] === $ids) {
+            return [];
+        }
+
+        /** @var list<Subscription> $rows */
+        $rows = $this->createQueryBuilder('s')
+            ->andWhere('s.id IN (:ids)')->setParameter('ids', $ids)
+            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
+            ->getQuery()
+            ->getResult();
+
+        return $rows;
+    }
+
+    /**
+     * The next append position in the untagged "Feeds" list: one past the user's
+     * current max (0 when they have none).
+     */
+    public function nextPositionForUser(int $userId): int
+    {
+        $max = $this->createQueryBuilder('s')
+            ->select('MAX(s.position)')
+            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return null === $max ? 0 : (int) $max + 1;
+    }
+
     public function findOneOwnedBy(int $id, int $userId): ?Subscription
     {
         /** @var Subscription|null $row */
         $row = $this->createQueryBuilder('s')
             ->leftJoin('s.feed', 'f')->addSelect('f')
-            ->leftJoin('s.tags', 't')->addSelect('t')
+            ->leftJoin('s.subscriptionTags', 'st')->addSelect('st')
+            ->leftJoin('st.tag', 't')->addSelect('t')
             ->andWhere('s.id = :id')->setParameter('id', $id)
             ->andWhere('s.user = :userId')->setParameter('userId', $userId)
             ->getQuery()
@@ -88,7 +129,7 @@ class SubscriptionRepository extends ServiceEntityRepository
         /** @var list<Subscription> $rows */
         $rows = $this->createQueryBuilder('s')
             ->leftJoin('s.feed', 'f')->addSelect('f')
-            ->innerJoin('s.tags', 't')
+            ->innerJoin('s.subscriptionTags', 'st')->innerJoin('st.tag', 't')
             ->andWhere('s.user = :user')->setParameter('user', $userId)
             ->andWhere('t.id = :tagId')->setParameter('tagId', $tagId)
             ->getQuery()
@@ -145,7 +186,7 @@ class SubscriptionRepository extends ServiceEntityRepository
     {
         /** @var list<Subscription> $rows */
         $rows = $this->createQueryBuilder('s')
-            ->innerJoin('s.tags', 't')
+            ->innerJoin('s.subscriptionTags', 'st')->innerJoin('st.tag', 't')
             ->andWhere('t = :tag')->setParameter('tag', $tag)
             ->getQuery()
             ->getResult();

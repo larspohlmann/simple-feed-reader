@@ -8,7 +8,9 @@ use App\Entity\Tag;
 
 final class TagJson
 {
-    /** @return array{id: int|null, name: string, color: string|null, icon: string|null} */
+    /**
+     * @return array{id: int|null, name: string, color: string|null, icon: string|null, position: int}
+     */
     public static function one(Tag $tag): array
     {
         return [
@@ -16,6 +18,7 @@ final class TagJson
             'name' => $tag->getName(),
             'color' => $tag->getColor(),
             'icon' => $tag->getIcon(),
+            'position' => $tag->getPosition(),
         ];
     }
 }

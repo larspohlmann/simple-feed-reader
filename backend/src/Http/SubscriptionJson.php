@@ -9,10 +9,15 @@ use App\Entity\Subscription;
 final class SubscriptionJson
 {
     /**
+     * The embedded tag's `position` is this feed's order WITHIN that tag (the
+     * join position) — not the tag's own sidebar order, which the tag-list
+     * endpoint carries. `position` at the top level is the feed's order in the
+     * untagged "Feeds" list.
+     *
      * @return array{
      *   id: int|null, title: string, customTitle: string|null, feedUrl: string,
-     *   siteUrl: string|null, status: string, createdAt: string,
-     *   tags: list<array{id: int|null, name: string, color: string|null, icon: string|null}>,
+     *   siteUrl: string|null, status: string, createdAt: string, position: int,
+     *   tags: list<array{id: int|null, name: string, color: string|null, icon: string|null, position: int}>,
      *   unreadCount: int
      * }
      */
@@ -22,8 +27,10 @@ final class SubscriptionJson
         $title = $sub->getCustomTitle() ?? $feed->getTitle() ?? $feed->getUrl();
 
         $tags = [];
-        foreach ($sub->getTags() as $tag) {
-            $tags[] = TagJson::one($tag);
+        foreach ($sub->getSubscriptionTags() as $subscriptionTag) {
+            // Canonical tag shape, but with the JOIN position (this feed's order
+            // within the tag) in place of the tag's own sidebar position.
+            $tags[] = [...TagJson::one($subscriptionTag->getTag()), 'position' => $subscriptionTag->getPosition()];
         }
 
         return [
@@ -34,6 +41,7 @@ final class SubscriptionJson
             'siteUrl' => $feed->getSiteUrl(),
             'status' => $feed->getStatus()->value,
             'createdAt' => $sub->getCreatedAt()->format(\DateTimeInterface::ATOM),
+            'position' => $sub->getPosition(),
             'tags' => $tags,
             'unreadCount' => $unreadCount,
         ];

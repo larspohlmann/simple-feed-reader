@@ -6,6 +6,7 @@ import { Dialog } from '@angular/cdk/dialog';
 import { AuthService } from '../core/auth.service';
 import { ReaderApi } from './reader-api';
 import { SubscriptionsStore } from './subscriptions.store';
+import { TagsStore } from './tags.store';
 import { EntriesStore } from './entries.store';
 import { RefreshService } from './refresh.service';
 import { ReadingLayoutService } from './reading-layout.service';
@@ -44,6 +45,10 @@ import { ManageActions } from './manage/manage-actions.service';
           (deleteTag)="manage.deleteTag($event)"
           (editFeed)="manage.editSubscription($event)"
           (unsubscribe)="manage.unsubscribe($event)"
+          (retag)="manage.retag($event.sub, $event.tagIds)"
+          (reorderTags)="manage.reorderTags($event)"
+          (reorderUntagged)="manage.reorderUntagged($event)"
+          (reorderTagFeeds)="manage.reorderTagFeeds($event.tagId, $event.subscriptionIds)"
           (refresh)="onRefresh()"
           (addFeed)="onAddFeed()"
         />
@@ -196,6 +201,7 @@ export class ReaderShellComponent implements OnInit {
 
   readonly manage = inject(ManageActions);
   readonly subs = inject(SubscriptionsStore);
+  readonly tags = inject(TagsStore);
   readonly entries = inject(EntriesStore);
   readonly refreshSvc = inject(RefreshService);
   readonly layout = inject(ReadingLayoutService);
@@ -267,6 +273,7 @@ export class ReaderShellComponent implements OnInit {
 
   ngOnInit(): void {
     this.subs.load();
+    this.tags.load(); // the sidebar tag tree (order, empty tags) reads TagsStore
     if (!this.auth.user()) this.auth.loadMe().subscribe({ error: () => undefined });
   }
 
@@ -331,6 +338,7 @@ export class ReaderShellComponent implements OnInit {
   onRefresh(): void {
     this.refreshSvc.run(() => {
       this.subs.load();
+      this.tags.load();
       this.entries.load(queryFromSelection(this.selection()));
     });
   }

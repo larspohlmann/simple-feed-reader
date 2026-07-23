@@ -30,6 +30,10 @@ class Tag
     #[ORM\Column(length: 64, nullable: true)]
     private ?string $icon = null;
 
+    /** Order of the tag in the sidebar list (ascending). */
+    #[ORM\Column(options: ['default' => 0])]
+    private int $position = 0;
+
     public function __construct(User $user, string $name)
     {
         $this->user = $user;
@@ -74,5 +78,15 @@ class Tag
     public function setIcon(?string $icon): void
     {
         $this->icon = $icon;
+    }
+
+    public function getPosition(): int
+    {
+        return $this->position;
+    }
+
+    public function setPosition(int $position): void
+    {
+        $this->position = $position;
     }
 }
