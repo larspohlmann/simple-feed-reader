@@ -47,6 +47,8 @@ final class Rss1Parser
         $about = trim($item->getAttributeNS(self::RDF_NS, 'about'));
         $description = XmlHelper::childText($item, 'description', self::RSS1_NS);
         $contentEncoded = XmlHelper::childText($item, 'encoded', self::CONTENT_NS);
+        $image = ItemImageExtractor::fromMedia($item)
+            ?? ItemImageExtractor::fromHtml($contentEncoded ?? $description);
 
         return new ParsedEntry(
             guid: GuidFallback::for($about === '' ? null : $about, $link, $title),
@@ -56,6 +58,7 @@ final class Rss1Parser
             summary: $contentEncoded !== null ? $description : null,
             contentHtml: $contentEncoded ?? $description,
             publishedAt: DateParser::parse(XmlHelper::childText($item, 'date', self::DC_NS)),
+            imageUrl: $image,
         );
     }
 }
