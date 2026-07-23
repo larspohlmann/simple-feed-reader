@@ -45,6 +45,10 @@ final class Rss2Parser
         $description = XmlHelper::childText($item, 'description');
         $contentEncoded = XmlHelper::childText($item, 'encoded', self::CONTENT_NS);
 
+        $image = ItemImageExtractor::fromMedia($item)
+            ?? ItemImageExtractor::fromRssEnclosure($item)
+            ?? ItemImageExtractor::fromHtml($contentEncoded ?? $description);
+
         return new ParsedEntry(
             guid: GuidFallback::for(XmlHelper::childText($item, 'guid'), $link, $title),
             url: $link,
@@ -55,6 +59,7 @@ final class Rss2Parser
             publishedAt: DateParser::parse(
                 XmlHelper::childText($item, 'pubDate') ?? XmlHelper::childText($item, 'date', self::DC_NS),
             ),
+            imageUrl: $image,
         );
     }
 }

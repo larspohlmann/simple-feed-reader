@@ -76,7 +76,28 @@ export interface RefreshReport {
 /** A candidate feed returned by POST /subscriptions when the URL was an HTML page. */
 export interface FeedCandidate {
   url: string;
+  title: string | null;
+  /** The feed's syntax: 'rss' or 'atom' today; a future HTML-scraper source
+   *  will add its own value, so this stays an open string. */
+  format: string;
+}
+
+export interface FeedPreviewItem {
   title: string;
+  publishedAt: string | null;
+  author: string | null;
+  hasImage: boolean;
+  textLength: number;
+  snippet: string;
+}
+
+/** A pre-subscribe preview of a candidate feed's content shape. */
+export interface FeedPreview {
+  title: string | null;
+  itemCount: number;
+  content: 'full' | 'summary' | 'title-only';
+  hasImages: boolean;
+  items: FeedPreviewItem[];
 }
 
 /** POST /subscriptions returns either the created subscription or a candidate list. */

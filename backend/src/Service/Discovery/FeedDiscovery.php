@@ -71,9 +71,13 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
             if ('alternate' !== strtolower(trim($link->getAttribute('rel')))) {
                 continue;
             }
-            if (!\in_array(strtolower(trim($link->getAttribute('type'))), self::FEED_LINK_TYPES, true)) {
+            $type = strtolower(trim($link->getAttribute('type')));
+            if (!\in_array($type, self::FEED_LINK_TYPES, true)) {
                 continue;
             }
+            // Only the two feed types above reach here, so anything not Atom is
+            // RSS. A future HTML-scraper path would introduce its own format.
+            $format = 'application/atom+xml' === $type ? 'atom' : 'rss';
             $href = trim($link->getAttribute('href'));
             if ('' === $href) {
                 continue;
@@ -86,7 +90,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
             $seen[$resolved] = true;
 
             $title = trim($link->getAttribute('title'));
-            $candidates[] = new FeedCandidate($resolved, '' === $title ? null : $title);
+            $candidates[] = new FeedCandidate($resolved, '' === $title ? null : $title, $format);
         }
 
         return $candidates;

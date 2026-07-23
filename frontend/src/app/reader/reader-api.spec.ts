@@ -161,4 +161,20 @@ describe('ReaderApi', () => {
 
     expect(received?.status).toBe('failed');
   });
+
+  it('POSTs a feed preview request', () => {
+    api.previewFeed('https://f').subscribe();
+    const req = ctrl.expectOne('https://api.test/api/feeds/preview');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ url: 'https://f' });
+    req.flush({
+      feed: {
+        title: null,
+        itemCount: 0,
+        content: 'title-only',
+        hasImages: false,
+        items: [],
+      },
+    });
+  });
 });

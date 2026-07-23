@@ -8,6 +8,7 @@ import {
   EntryDto,
   EntryQuery,
   EntryStatePatch,
+  FeedPreview,
   MarkReadScope,
   OpmlImportResult,
   ReaderContent,
@@ -117,5 +118,10 @@ export class ReaderApi {
     return this.http.post<OpmlImportResult>(`${this.base}/api/opml/import`, xml, {
       headers: { 'Content-Type': 'text/xml' },
     });
+  }
+
+  /** Preview a candidate feed's contents before subscribing. */
+  previewFeed(url: string): Observable<{ feed: FeedPreview }> {
+    return this.http.post<{ feed: FeedPreview }>(`${this.base}/api/feeds/preview`, { url });
   }
 }
