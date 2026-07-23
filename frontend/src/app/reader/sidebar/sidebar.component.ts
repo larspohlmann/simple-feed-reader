@@ -395,10 +395,21 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
       .feedlist {
         border-radius: var(--radius);
       }
-      /* A tag dragged over another tag header: a thin signal-coloured insertion
-         line at the top edge (inset shadow, so no layout shift). */
-      .drop-line {
-        box-shadow: inset 0 3px 0 -1px var(--accent);
+      .taghead {
+        position: relative;
+      }
+      /* A tag dragged over another tag header: a straight signal-coloured
+         insertion line spanning the top edge. A pseudo-element (not an inset
+         shadow) keeps the line square — the header's rounded corners must not
+         bend it — and it sits in the gap above the row, so no layout shift. */
+      .drop-line::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: -2px;
+        height: 2px;
+        background: var(--accent);
       }
       /* A feed dragged over a tag header: highlight the whole target container. */
       .drop-active {
@@ -426,19 +437,27 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
       .cdk-drag-preview .rowmenu {
         display: none;
       }
-      /* Reorder insertion point: a thin signal-coloured line marking where the
-         dragged row will land (it takes the row's slot while dragging). */
-      .cdk-drag-placeholder {
-        height: 3px;
-        min-height: 3px;
+      /* Feed reorder insertion point: a straight signal-coloured line where the
+         dragged feed will land (it takes the row's slot). Square edges — a
+         rounded pill read as stray corners. */
+      .feedrow.cdk-drag-placeholder {
+        height: 2px;
+        min-height: 2px;
         box-sizing: border-box;
         margin: 1px 0;
         padding: 0;
         background: var(--accent);
-        border-radius: 2px;
+        border-radius: 0;
         opacity: 1;
+        overflow: hidden;
       }
-      .cdk-drag-placeholder > * {
+      .feedrow.cdk-drag-placeholder > * {
+        display: none;
+      }
+      /* A dragged tag transfers between single-item header lists, so its
+         placeholder hops into whichever header is hovered and reads as a second
+         stray line. Hide it — the .drop-line on the target is the only cue. */
+      .tag.cdk-drag-placeholder {
         display: none;
       }
       .cdk-drag-animating {
