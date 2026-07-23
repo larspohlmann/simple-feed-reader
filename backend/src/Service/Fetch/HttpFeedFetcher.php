@@ -32,60 +32,87 @@ final class HttpFeedFetcher implements FeedFetcherInterface
         for ($hop = 0; $hop <= self::MAX_REDIRECTS; $hop++) {
             $guarded = $this->urlGuard->assertSafe($currentUrl);
             $response = $this->request($currentUrl, $guarded, $etag, $lastModified);
-            $status = $this->statusCode($response, $currentUrl);
 
-            if (\in_array($status, [301, 302, 303, 307, 308], true)) {
-                $location = $this->header($response, 'location');
-                $response->cancel();
-                if ($location === null) {
-                    throw new FeedUnreachableException(sprintf('%s: redirect without Location header', $currentUrl));
-                }
-                $permanentRedirect = $permanentRedirect || \in_array($status, [301, 308], true);
-                $currentUrl = UrlResolver::resolve($currentUrl, $location);
-                continue;
+            // A terminal FetchResponse ends the loop; a string is the next hop's URL.
+            $result = $this->classify($response, $currentUrl, $permanentRedirect, $etag, $lastModified);
+            if ($result instanceof FetchResponse) {
+                return $result;
             }
-
-            if ($status === 304) {
-                $response->cancel();
-
-                return FetchResponse::notModified($currentUrl, $permanentRedirect, $etag, $lastModified);
-            }
-
-            if ($status === 410) {
-                $response->cancel();
-
-                throw new FeedGoneException(sprintf('%s: HTTP 410 Gone', $currentUrl));
-            }
-
-            if ($status < 200 || $status >= 300) {
-                $response->cancel();
-
-                throw new FeedUnreachableException(sprintf('%s: HTTP %d', $currentUrl, $status));
-            }
-
-            $body = $this->content($response, $currentUrl);
-            if (\strlen($body) > self::MAX_BYTES) {
-                throw new ResponseTooLargeException(
-                    sprintf('%s: response exceeds %d bytes', $currentUrl, self::MAX_BYTES),
-                );
-            }
-
-            return FetchResponse::fetched(
-                $currentUrl,
-                $permanentRedirect,
-                $body,
-                $this->header($response, 'etag'),
-                $this->header($response, 'last-modified'),
-            );
+            $currentUrl = $result;
         }
 
         throw new FeedUnreachableException(sprintf('%s: more than %d redirects', $url, self::MAX_REDIRECTS));
+    }
+
+    /**
+     * Turns one HTTP response into either a terminal FetchResponse or the next
+     * URL to follow (a redirect). `$permanentRedirect` is updated by reference so
+     * a 301/308 anywhere in the chain is reported on the final response.
+     *
+     * @return FetchResponse|string
+     */
+    private function classify(
+        ResponseInterface $response,
+        string $currentUrl,
+        bool &$permanentRedirect,
+        ?string $etag,
+        ?string $lastModified,
+    ): FetchResponse|string {
+        $status = $this->statusCode($response, $currentUrl);
+
+        if (\in_array($status, [301, 302, 303, 307, 308], true)) {
+            $location = $this->header($response, 'location');
+            $response->cancel();
+            if ($location === null) {
+                throw new FeedUnreachableException(sprintf('%s: redirect without Location header', $currentUrl));
+            }
+            $permanentRedirect = $permanentRedirect || \in_array($status, [301, 308], true);
+
+            return UrlResolver::resolve($currentUrl, $location);
+        }
+
+        if ($status === 304) {
+            $response->cancel();
+
+            return FetchResponse::notModified($currentUrl, $permanentRedirect, $etag, $lastModified);
+        }
+
+        if ($status === 410) {
+            $response->cancel();
+
+            throw new FeedGoneException(sprintf('%s: HTTP 410 Gone', $currentUrl));
+        }
+
+        if ($status < 200 || $status >= 300) {
+            $response->cancel();
+
+            throw new FeedUnreachableException(sprintf('%s: HTTP %d', $currentUrl, $status));
+        }
+
+        $body = $this->content($response, $currentUrl);
+        if (\strlen($body) > self::MAX_BYTES) {
+            throw new ResponseTooLargeException(
+                sprintf('%s: response exceeds %d bytes', $currentUrl, self::MAX_BYTES),
+            );
+        }
+
+        return FetchResponse::fetched(
+            $currentUrl,
+            $permanentRedirect,
+            $body,
+            $this->header($response, 'etag'),
+            $this->header($response, 'last-modified'),
+        );
     }
 
     private function request(string $url, GuardedUrl $guarded, ?string $etag, ?string $lastModified): ResponseInterface
     {
         $headers = [
             'Accept' => 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.1',
+            // Refuse transparent compression so the MAX_BYTES cap (counted on the
+            // wire in on_progress) also bounds the buffered body — a compressed
+            // response would otherwise decompress unbounded before the size check.
+            'Accept-Encoding' => 'identity',
             'User-Agent' => self::USER_AGENT,
         ];
         if ($etag !== null) {
