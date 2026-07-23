@@ -456,9 +456,23 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
       }
       /* A dragged tag transfers between single-item header lists, so its
          placeholder hops into whichever header is hovered and reads as a second
-         stray line. Hide it — the .drop-line on the target is the only cue. */
+         stray line. Hide it — the .drop-line on the target is the only cue.
+         Zero height (not display:none) keeps it in flow with a real position:
+         a display:none placeholder reports a 0,0 rect, and CDK then flies the
+         dropped tag to the top-left of the window on release. */
       .tag.cdk-drag-placeholder {
-        display: none;
+        height: 0;
+        min-height: 0;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        overflow: hidden;
+      }
+      /* A tag reorder reloads from the server on drop, so skip CDK's settle
+         animation for tags — otherwise the row slides across for no reason.
+         (Feed reordering keeps its animation.) */
+      .tag.cdk-drag-animating {
+        transition: none;
       }
       .cdk-drag-animating {
         transition: transform 0.2s cubic-bezier(0, 0, 0.2, 1);
