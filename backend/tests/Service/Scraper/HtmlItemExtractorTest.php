@@ -57,6 +57,19 @@ final class HtmlItemExtractorTest extends TestCase
         self::assertNotEmpty($teasers);
     }
 
+    public function testHeiseJsonLdExtractionWithAbstractTeasersAndCap(): void
+    {
+        $parsed = $this->extractor()->extract($this->fixture('heise-2026-07-23.html'), 'https://www.heise.de/');
+        self::assertCount(50, $parsed->entries); // 141 unique urls, capped at 50
+        foreach ($parsed->entries as $e) {
+            self::assertMatchesRegularExpression('#^https://www\.heise\.de/#', (string) $e->url);
+        }
+        $teasers = array_filter($parsed->entries, static fn ($e) => $e->summary !== null);
+        self::assertGreaterThanOrEqual(20, \count($teasers)); // abstracts arrived
+        $images = array_filter($parsed->entries, static fn ($e) => $e->imageUrl !== null);
+        self::assertGreaterThanOrEqual(20, \count($images));
+    }
+
     public function testJsonLdWinsOverClustering(): void
     {
         // jsonld-list.html carries exactly 4 JSON-LD items; if clustering ran

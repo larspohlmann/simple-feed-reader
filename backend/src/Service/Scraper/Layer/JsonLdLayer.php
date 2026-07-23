@@ -81,7 +81,9 @@ final class JsonLdLayer implements ScrapeLayerInterface
 
     /**
      * A ListItem either wraps a full article node in "item" or carries bare
-     * url/name fields itself; both shapes map through article().
+     * url/name fields itself; both shapes map through article(). Entries that
+     * are not arrays (heise mixes bare URL strings into itemListElement) and
+     * "item" references that are not article nodes are skipped silently.
      *
      * @param array<mixed> $elements
      * @return list<ScrapedItem>
@@ -93,8 +95,11 @@ final class JsonLdLayer implements ScrapeLayerInterface
             if (!\is_array($element)) {
                 continue;
             }
-            $article = $element['item'] ?? null;
-            $item = $this->article(\is_array($article) ? $article : $element, $baseUrl);
+            $article = $element['item'] ?? $element;
+            if (!\is_array($article)) {
+                continue;
+            }
+            $item = $this->article($article, $baseUrl);
             if ($item !== null) {
                 $items[] = $item;
             }
@@ -170,13 +175,18 @@ final class JsonLdLayer implements ScrapeLayerInterface
     /** @param array<mixed> $node */
     private function teaser(array $node): ?string
     {
-        $description = $node['description'] ?? null;
-        if (!\is_string($description)) {
-            return null;
+        // Most sites use "description"; heise ships its teasers as "abstract".
+        foreach ([$node['description'] ?? null, $node['abstract'] ?? null] as $candidate) {
+            if (!\is_string($candidate)) {
+                continue;
+            }
+            $teaser = TextNormalizer::normalize($candidate);
+            if (mb_strlen($teaser) >= CardFields::MIN_TEASER_LENGTH) {
+                return $teaser;
+            }
         }
-        $teaser = TextNormalizer::normalize($description);
 
-        return mb_strlen($teaser) >= CardFields::MIN_TEASER_LENGTH ? $teaser : null;
+        return null;
     }
 
     /**
