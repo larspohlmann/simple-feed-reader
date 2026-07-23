@@ -74,27 +74,25 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
 
       @if (tagTree().length) {
         <p class="label">Tags</p>
-        <div
-          class="tags"
-          cdkDropList
-          [cdkDropListEnterPredicate]="isTagDrag"
-          (cdkDropListDropped)="onTagDrop($event)"
-        >
+        <!-- Each tag contributes two TOP-LEVEL drop lists (never nested): a
+             header list that reorders tags and accepts a feed to add the tag,
+             and — when expanded — a feed list that reorders/receives feeds.
+             CDK does not connect drop lists nested inside one another, so a
+             wrapping list here would silently break every cross-list drop. -->
+        <div class="tags">
           @for (node of tagTree(); track node.tag.id) {
             <div
-              class="tagnode"
-              cdkDrag
-              [cdkDragData]="node.tag"
-              [cdkDragStartDelay]="dragDelay"
+              class="taghead"
               cdkDropList
               [cdkDropListData]="tagDrop(node.tag)"
-              [cdkDropListEnterPredicate]="isFeedDrag"
+              [cdkDropListEnterPredicate]="acceptOnTagHead"
+              [cdkDropListSortingDisabled]="true"
               [class.drophover]="dropHover() === 'tag-' + node.tag.id"
-              (cdkDropListDropped)="onDrop($event)"
+              (cdkDropListDropped)="onTagHeadDrop($event)"
               (cdkDropListEntered)="dropHover.set('tag-' + node.tag.id)"
               (cdkDropListExited)="dropHover.set(null)"
             >
-              <div class="tag">
+              <div class="tag" cdkDrag [cdkDragData]="node.tag" [cdkDragStartDelay]="dragDelay">
                 <button
                   class="grip"
                   type="button"
@@ -152,7 +150,18 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
                   }
                 </div>
               </div>
-              @if (expanded().has(node.tag.id)) {
+            </div>
+            @if (expanded().has(node.tag.id)) {
+              <div
+                class="tagfeeds"
+                cdkDropList
+                [cdkDropListData]="tagDrop(node.tag)"
+                [cdkDropListEnterPredicate]="isFeedDrag"
+                [class.drophover]="dropHover() === 'tagfeeds-' + node.tag.id"
+                (cdkDropListDropped)="onDrop($event)"
+                (cdkDropListEntered)="dropHover.set('tagfeeds-' + node.tag.id)"
+                (cdkDropListExited)="dropHover.set(null)"
+              >
                 @for (s of node.subscriptions; track s.id) {
                   <div
                     class="feedrow"
@@ -198,8 +207,8 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
                     </div>
                   </div>
                 }
-              }
-            </div>
+              </div>
+            }
           }
         </div>
       }
@@ -387,7 +396,8 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
         cursor: grab;
       }
       /* Drop targets */
-      .tagnode,
+      .taghead,
+      .tagfeeds,
       .feedlist {
         border-radius: var(--radius);
       }
@@ -438,12 +448,6 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
       .grip:hover,
       .grip:focus-visible {
         opacity: 1;
-      }
-      .tagnode.cdk-drag-preview {
-        background: var(--surface-2);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        box-shadow: 0 6px 20px rgb(0 0 0 / 35%);
       }
       .dots {
         display: inline-flex;
@@ -506,9 +510,14 @@ export class SidebarComponent {
   /** Feeds within one tag were reordered. */
   readonly reorderTagFeeds = output<{ tagId: number; subscriptionIds: number[] }>();
 
-  /** Type-gate the two drag kinds so they can't drop into each other's lists. */
-  readonly isFeedDrag = (drag: CdkDrag): boolean => 'feedUrl' in (drag.data as object);
-  readonly isTagDrag = (drag: CdkDrag): boolean => !this.isFeedDrag(drag);
+  /** True when the drag is a feed row (its data is a SubscriptionDto). */
+  private isFeedData(data: unknown): data is SubscriptionDto {
+    return !!data && typeof data === 'object' && 'feedUrl' in data;
+  }
+  /** Feed lists accept only feed drags. */
+  readonly isFeedDrag = (drag: CdkDrag): boolean => this.isFeedData(drag.data);
+  /** A tag header accepts a tag (to reorder) and a feed (to add the tag). */
+  readonly acceptOnTagHead = (): boolean => true;
 
   readonly refreshSvc = inject(RefreshService);
   readonly expanded = signal<Set<number>>(new Set());
@@ -532,19 +541,34 @@ export class SidebarComponent {
     this.dropHover.set(null);
   }
 
-  /** Reorder the tag list (a tag was dragged by its grip within the tags list). */
-  onTagDrop(event: CdkDragDrop<unknown>): void {
-    if (event.previousIndex === event.currentIndex) return;
+  /** A drop on a tag's header: reorder the tags (tag drag) or add the tag to a
+   *  feed (feed drag). Header lists are single-item, so a tag reorder is a
+   *  transfer between two header lists rather than an in-list sort. */
+  onTagHeadDrop(event: CdkDragDrop<DropData>): void {
+    this.dropHover.set(null);
+    const target = event.container.data;
+
+    if (this.isFeedData(event.item.data)) {
+      this.assignOrClear(event.item.data, target);
+      return;
+    }
+    if (target.kind !== 'tag') return;
+
+    const dragged = event.item.data as TagDto;
     const ids = this.tagTree().map((n) => n.tag.id);
-    moveItemInArray(ids, event.previousIndex, event.currentIndex);
+    const from = ids.indexOf(dragged.id);
+    const to = ids.indexOf(target.tag.id);
+    if (from < 0 || to < 0 || from === to) return;
+    moveItemInArray(ids, from, to);
     this.reorderTags.emit(ids);
   }
 
+  /** A drop on a feed list: reorder within it (same list) or move the feed's
+   *  tags (from another list). */
   onDrop(event: CdkDragDrop<DropData>): void {
     this.dropHover.set(null);
     const target = event.container.data;
 
-    // Same list → reorder the feeds in it; different list → assign/clear tags.
     if (event.previousContainer === event.container) {
       if (event.previousIndex === event.currentIndex) return;
       if (target.kind === 'tag') {
@@ -561,7 +585,13 @@ export class SidebarComponent {
       return;
     }
 
-    const sub = event.item.data as SubscriptionDto;
+    if (this.isFeedData(event.item.data)) {
+      this.assignOrClear(event.item.data, target);
+    }
+  }
+
+  /** Add the target tag to a feed, or clear all its tags when dropped on Feeds. */
+  private assignOrClear(sub: SubscriptionDto, target: DropData): void {
     const current = sub.tags.map((t) => t.id);
     let tagIds: number[];
     if (target.kind === 'tag') {

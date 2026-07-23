@@ -245,13 +245,46 @@ describe('SidebarComponent', () => {
       } as unknown as CdkDragDrop<DropData>;
     }
 
-    it('emits reorderTags with the moved tag order', () => {
+    function tagHeadDrop(dragged: TagDto, target: DropData): CdkDragDrop<DropData> {
+      return {
+        previousContainer: { data: { kind: 'tag', tag: dragged } },
+        container: { data: target },
+        item: { data: dragged },
+      } as unknown as CdkDragDrop<DropData>;
+    }
+
+    it('emits reorderTags when a tag is dropped on another tag header', () => {
       const f = mount({ tagTree: [tagNode(10), tagNode(20), tagNode(30)] });
       const spy = jest.fn();
       f.componentInstance.reorderTags.subscribe(spy);
-      // Move the last tag (30) to the front.
-      f.componentInstance.onTagDrop({ previousIndex: 2, currentIndex: 0 } as CdkDragDrop<unknown>);
+      // Drop the last tag (30) onto the first tag's header → 30 moves to front.
+      f.componentInstance.onTagHeadDrop(
+        tagHeadDrop(tagNode(30).tag, { kind: 'tag', tag: tagNode(10).tag }),
+      );
       expect(spy).toHaveBeenCalledWith([30, 10, 20]);
+    });
+
+    it('does not emit when a tag is dropped back on its own header', () => {
+      const f = mount({ tagTree: [tagNode(10), tagNode(20)] });
+      const spy = jest.fn();
+      f.componentInstance.reorderTags.subscribe(spy);
+      f.componentInstance.onTagHeadDrop(
+        tagHeadDrop(tagNode(10).tag, { kind: 'tag', tag: tagNode(10).tag }),
+      );
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('assigns the tag when a feed is dropped on the tag header', () => {
+      const f = mount({ tagTree: [tagNode(10)] });
+      const spy = jest.fn();
+      f.componentInstance.retag.subscribe(spy);
+      const s = sub(1);
+      f.componentInstance.onTagHeadDrop({
+        previousContainer: { data: { kind: 'untagged' } },
+        container: { data: { kind: 'tag', tag: tagNode(10).tag } },
+        item: { data: s },
+      } as unknown as CdkDragDrop<DropData>);
+      expect(spy).toHaveBeenCalledWith({ sub: s, tagIds: [10] });
     });
 
     it('emits reorderTagFeeds when a feed is reordered within its tag', () => {
