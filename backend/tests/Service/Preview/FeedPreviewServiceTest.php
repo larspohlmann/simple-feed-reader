@@ -9,6 +9,7 @@ use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Parser\FeedParser;
 use App\Service\Preview\FeedPreviewService;
+use App\Service\Scraper\HtmlItemExtractor;
 use App\Tests\Support\StubFeedFetcher;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -20,8 +21,10 @@ final class FeedPreviewServiceTest extends KernelTestCase
     {
         $parser = self::getContainer()->get(FeedParser::class);
         self::assertInstanceOf(FeedParser::class, $parser);
+        $extractor = self::getContainer()->get(HtmlItemExtractor::class);
+        self::assertInstanceOf(HtmlItemExtractor::class, $extractor);
 
-        return new FeedPreviewService($fetcher, $parser);
+        return new FeedPreviewService($fetcher, $parser, $extractor);
     }
 
     private function fetcherWithBody(string $xml): StubFeedFetcher

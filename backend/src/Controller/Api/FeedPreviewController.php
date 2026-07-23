@@ -36,7 +36,7 @@ final class FeedPreviewController
         $this->enforceLimit($user);
 
         try {
-            $preview = $this->previews->preview($request->url);
+            $preview = $this->previews->preview($request->url, $request->format);
         } catch (FeedPreviewException $e) {
             throw new UnprocessableEntityHttpException($e->getMessage(), $e);
         }

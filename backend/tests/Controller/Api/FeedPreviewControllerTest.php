@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
+use App\Tests\Service\Scraper\ScrapedFixtures;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -18,7 +19,10 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class FeedPreviewControllerTest extends WebTestCase
 {
+    use ScrapedFixtures;
+
     private const URL = 'https://example.com/feed.xml';
+    private const PAGE_URL = 'https://www.tagesschau.de/';
 
     protected function setUp(): void
     {
@@ -130,6 +134,77 @@ final class FeedPreviewControllerTest extends WebTestCase
         self::assertArrayHasKey('textLength', $item);
         self::assertArrayHasKey('snippet', $item);
         self::assertArrayHasKey('publishedAt', $item);
+    }
+
+    public function testScrapedFormatPreviewsTheHtmlPageAsAFeed(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('preview-scraped@example.com');
+
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn(
+            self::PAGE_URL,
+            FetchResponse::fetched(
+                self::PAGE_URL,
+                permanentRedirect: false,
+                body: $this->scrapedFixture('tagesschau-2026-07-23.html'),
+                etag: null,
+                lastModified: null,
+            ),
+        );
+        $this->installFetcher($fetcher);
+
+        $client->request(
+            'POST',
+            '/api/feeds/preview',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['url' => self::PAGE_URL, 'format' => 'scraped'], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        $feed = $body['feed'];
+        self::assertIsArray($feed);
+        self::assertIsInt($feed['itemCount']);
+        self::assertGreaterThanOrEqual(20, $feed['itemCount']);
+        // Scraped entries carry the card teasers, so the preview verdict is
+        // 'summary' — the dialog can tell the user what subscribing buys.
+        self::assertSame('summary', $feed['content']);
+        self::assertIsArray($feed['items']);
+        $item = $feed['items'][0];
+        self::assertIsArray($item);
+        self::assertIsString($item['title']);
+        self::assertNotSame('', $item['title']);
+    }
+
+    public function testScrapedFormatOnAnArticleFreePageReturns422(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('preview-navonly@example.com');
+
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn(
+            self::PAGE_URL,
+            FetchResponse::fetched(
+                self::PAGE_URL,
+                permanentRedirect: false,
+                body: $this->scrapedFixture('nav-only.html'),
+                etag: null,
+                lastModified: null,
+            ),
+        );
+        $this->installFetcher($fetcher);
+
+        $client->request(
+            'POST',
+            '/api/feeds/preview',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['url' => self::PAGE_URL, 'format' => 'scraped'], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertResponseHeaderSame('content-type', 'application/problem+json');
     }
 
     public function testFetchFailureReturns422(): void
