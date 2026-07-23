@@ -282,12 +282,22 @@ export class ReaderShellComponent implements OnInit {
     effect(() => {
       const id = this.entryId();
       untracked(() => {
-        if (id == null) return;
+        if (id == null) {
+          this.fetchedEntry.set(null); // reader closed — drop the stale fetch
+          return;
+        }
         if (this.entries.entries().some((e) => e.id === id)) return;
         if (this.fetchedEntry()?.id === id) return;
+        // Id-guard the async writes: a slow response for a since-abandoned deep
+        // link (e.g. Back/Forward between two cold entries) must not clobber the
+        // entry now open.
         this.api.entry(id).subscribe({
-          next: (r) => this.fetchedEntry.set(r.entry),
-          error: () => this.fetchedEntry.set(null),
+          next: (r) => {
+            if (this.entryId() === id) this.fetchedEntry.set(r.entry);
+          },
+          error: () => {
+            if (this.entryId() === id) this.fetchedEntry.set(null);
+          },
         });
       });
     });
@@ -332,7 +342,9 @@ export class ReaderShellComponent implements OnInit {
     this.fetchedEntry.update((cur) => (cur && cur.id === e.id ? { ...cur, ...patch } : cur));
     this.api.updateState(e.id, patch).subscribe({
       error: () => {
-        this.fetchedEntry.set(before);
+        // Only revert if the same cold entry is still open — a Back/Forward to
+        // another cold entry while the PATCH was in flight must not be clobbered.
+        this.fetchedEntry.update((cur) => (cur && cur.id === e.id ? before : cur));
         onError?.();
       },
     });

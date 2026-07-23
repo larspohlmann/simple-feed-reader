@@ -30,5 +30,5 @@ export function entryIdFromParam(v: string | null): number | null {
   const m = /^(\d+)(?:-|$)/.exec(v);
   if (m == null) return null;
   const n = Number(m[1]);
-  return Number.isInteger(n) && n > 0 ? n : null;
+  return Number.isInteger(n) && n > 0 && n <= Number.MAX_SAFE_INTEGER ? n : null;
 }
