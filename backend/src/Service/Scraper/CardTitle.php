@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Scraper;
 
 use Dom\Element;
+use Dom\Node;
 use Dom\Text;
 
 /**
@@ -114,19 +115,32 @@ final class CardTitle
      * block elements contribute no newline to textContent, so title, byline,
      * and teaser mash into one "line". The DOM keeps them as separate text
      * nodes regardless of source formatting.
+     *
+     * Iterative on purpose: \Dom\HTMLDocument parses adversarially deep
+     * nesting without a depth cap, and PHP 8.3+ turns a recursive walk's
+     * stack exhaustion into an \Error that would escape the
+     * FeedParseException failure channel the scrape pipeline reports through.
      */
     private static function firstAnchorText(Element $anchor): ?string
     {
-        foreach ($anchor->childNodes as $child) {
-            if ($child instanceof Text) {
-                $text = TextNormalizer::normalize($child->data);
-            } elseif ($child instanceof Element) {
-                $text = self::firstAnchorText($child) ?? '';
-            } else {
+        /** @var list<Node> $stack */
+        $stack = [$anchor];
+        while ($stack !== []) {
+            $node = array_pop($stack);
+            if ($node instanceof Text) {
+                $text = TextNormalizer::normalize($node->data);
+                if ($text !== '') {
+                    return $text;
+                }
                 continue;
             }
-            if ($text !== '') {
-                return $text;
+            if (!$node instanceof Element) {
+                continue;
+            }
+            // Push children in reverse so the leftmost child pops first —
+            // the same document-order traversal the recursive version had.
+            for ($child = $node->lastChild; $child !== null; $child = $child->previousSibling) {
+                $stack[] = $child;
             }
         }
 
