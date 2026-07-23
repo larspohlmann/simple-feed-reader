@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../core/api';
 import { ReaderApi } from './reader-api';
+import { ReaderContent } from './models';
 
 describe('ReaderApi', () => {
   let api: ReaderApi;
@@ -141,5 +142,16 @@ describe('ReaderApi', () => {
       expect(req.request.body).toBe('<opml/>');
       req.flush({ imported: 1, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0 });
     });
+  });
+
+  it('GETs reader content for an entry', () => {
+    let received: ReaderContent | undefined;
+    api.readerContent(42).subscribe((c) => (received = c));
+
+    const req = ctrl.expectOne((r) => r.url.endsWith('/api/entries/42/reader'));
+    expect(req.request.method).toBe('GET');
+    req.flush({ status: 'failed', url: null, reason: 'no_url' } satisfies ReaderContent);
+
+    expect(received?.status).toBe('failed');
   });
 });

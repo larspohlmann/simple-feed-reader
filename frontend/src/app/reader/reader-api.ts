@@ -9,6 +9,7 @@ import {
   EntryStatePatch,
   MarkReadScope,
   OpmlImportResult,
+  ReaderContent,
   RefreshReport,
   SubscribeResult,
   SubscriptionDto,
@@ -47,6 +48,10 @@ export class ReaderApi {
     const body: Record<string, unknown> = { scope, until };
     if (id != null) body['id'] = id;
     return this.http.post<void>(`${this.base}/api/entries/mark-read`, body);
+  }
+
+  readerContent(entryId: number): Observable<ReaderContent> {
+    return this.http.get<ReaderContent>(`${this.base}/api/entries/${entryId}/reader`);
   }
 
   refresh(): Observable<RefreshReport> {

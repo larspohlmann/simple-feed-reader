@@ -118,3 +118,24 @@ export interface SubscriptionUpdate {
   customTitle: string | null;
   tagIds: number[];
 }
+
+/** A successfully extracted reader-mode article (GET /api/entries/{id}/reader). */
+export interface ReaderArticle {
+  status: 'ok';
+  url: string;
+  title: string;
+  byline: string | null;
+  siteName: string | null;
+  contentHtml: string;
+  excerpt: string | null;
+  extractedAt: string;
+}
+
+/** Extraction could not produce an article; the client falls back to feed content. */
+export interface ReaderFailure {
+  status: 'failed';
+  url: string | null;
+  reason: 'no_url' | 'fetch' | 'unextractable' | 'empty';
+}
+
+export type ReaderContent = ReaderArticle | ReaderFailure;
