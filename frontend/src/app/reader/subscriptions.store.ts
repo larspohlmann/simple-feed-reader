@@ -12,13 +12,6 @@ export interface TagNode {
   unreadCount: number;
 }
 
-/** This feed's order within a given tag (the embedded join position); a large
- *  fallback keeps feeds the tag doesn't list after the ones it does. */
-function feedPositionInTag(sub: SubscriptionDto, tagId: number): number {
-  const t = sub.tags.find((x) => x.id === tagId);
-  return t ? t.position : Number.MAX_SAFE_INTEGER;
-}
-
 /**
  * Build the sidebar tag tree. Tag NODES and their order come from `orderedTags`
  * (the full tag list, already in `tag.position` order) so every tag shows —
@@ -30,14 +23,25 @@ function feedPositionInTag(sub: SubscriptionDto, tagId: number): number {
  */
 export function buildTagTree(subs: SubscriptionDto[], orderedTags: TagDto[] = []): TagNode[] {
   const tags = orderedTags.length > 0 ? orderedTags : embeddedTagsByName(subs);
+
+  // One pass over subscriptions buckets each feed under every tag it carries,
+  // capturing the per-tag position up front so the sort reads it once.
+  const byTagId = new Map<number, { sub: SubscriptionDto; pos: number }[]>();
+  for (const sub of subs) {
+    for (const t of sub.tags) {
+      let bucket = byTagId.get(t.id);
+      if (!bucket) {
+        bucket = [];
+        byTagId.set(t.id, bucket);
+      }
+      bucket.push({ sub, pos: t.position });
+    }
+  }
+
   return tags.map((tag) => {
-    const feeds = subs
-      .filter((s) => s.tags.some((t) => t.id === tag.id))
-      .sort(
-        (a, b) =>
-          feedPositionInTag(a, tag.id) - feedPositionInTag(b, tag.id) ||
-          a.title.localeCompare(b.title),
-      );
+    const feeds = (byTagId.get(tag.id) ?? [])
+      .sort((a, b) => a.pos - b.pos || a.sub.title.localeCompare(b.sub.title))
+      .map((e) => e.sub);
     return {
       tag,
       subscriptions: feeds,

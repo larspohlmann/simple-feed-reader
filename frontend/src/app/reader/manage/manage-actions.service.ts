@@ -1,5 +1,6 @@
 // src/app/reader/manage/manage-actions.service.ts
 import { Injectable, inject } from '@angular/core';
+import { Observable } from 'rxjs';
 import { Dialog } from '@angular/cdk/dialog';
 import { ReaderApi } from '../reader-api';
 import { SubscriptionsStore } from '../subscriptions.store';
@@ -28,35 +29,35 @@ export class ManageActions {
     });
   }
 
+  /** Fire a drag-and-drop write, then re-sync the affected store whether it
+   *  succeeds OR fails: there is no optimistic store mutation, so a rejected
+   *  write (e.g. a concurrent change) is corrected from the server. */
+  private reloadAfter(write$: Observable<unknown>, reload: () => void): void {
+    write$.subscribe({ next: reload, error: reload });
+  }
+
   /** Replace a subscription's whole tag set (used by sidebar drag-and-drop).
-   *  The PATCH endpoint replaces tags, so callers pass the final id list.
-   *  Reloads on success AND on error: there is no optimistic store mutation, so
-   *  a rejected write (e.g. a concurrent change) is re-synced from the server. */
+   *  The PATCH endpoint replaces tags, so callers pass the final id list. */
   retag(sub: SubscriptionDto, tagIds: number[]): void {
-    this.api
-      .updateSubscription(sub.id, { customTitle: sub.customTitle, tagIds })
-      .subscribe({ next: () => this.subs.load(), error: () => this.subs.load() });
+    this.reloadAfter(
+      this.api.updateSubscription(sub.id, { customTitle: sub.customTitle, tagIds }),
+      () => this.subs.load(),
+    );
   }
 
   /** Persist a new sidebar tag order (drag-and-drop); tag order lives in TagsStore. */
   reorderTags(tagIds: number[]): void {
-    this.api
-      .reorderTags(tagIds)
-      .subscribe({ next: () => this.tags.load(), error: () => this.tags.load() });
+    this.reloadAfter(this.api.reorderTags(tagIds), () => this.tags.load());
   }
 
   /** Persist a new order for the untagged "Feeds" list. */
   reorderUntagged(subscriptionIds: number[]): void {
-    this.api
-      .reorderSubscriptions(subscriptionIds)
-      .subscribe({ next: () => this.subs.load(), error: () => this.subs.load() });
+    this.reloadAfter(this.api.reorderSubscriptions(subscriptionIds), () => this.subs.load());
   }
 
   /** Persist a new order for the feeds within one tag. */
   reorderTagFeeds(tagId: number, subscriptionIds: number[]): void {
-    this.api
-      .setTagFeedOrder(tagId, subscriptionIds)
-      .subscribe({ next: () => this.subs.load(), error: () => this.subs.load() });
+    this.reloadAfter(this.api.setTagFeedOrder(tagId, subscriptionIds), () => this.subs.load());
   }
 
   unsubscribe(sub: SubscriptionDto): void {

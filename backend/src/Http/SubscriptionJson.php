@@ -28,14 +28,9 @@ final class SubscriptionJson
 
         $tags = [];
         foreach ($sub->getSubscriptionTags() as $subscriptionTag) {
-            $tag = $subscriptionTag->getTag();
-            $tags[] = [
-                'id' => $tag->getId(),
-                'name' => $tag->getName(),
-                'color' => $tag->getColor(),
-                'icon' => $tag->getIcon(),
-                'position' => $subscriptionTag->getPosition(),
-            ];
+            // Canonical tag shape, but with the JOIN position (this feed's order
+            // within the tag) in place of the tag's own sidebar position.
+            $tags[] = [...TagJson::one($subscriptionTag->getTag()), 'position' => $subscriptionTag->getPosition()];
         }
 
         return [

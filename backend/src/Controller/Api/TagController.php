@@ -165,12 +165,14 @@ final class TagController
      */
     private function assertExactSet(array $requested, array $owned, string $message): void
     {
+        // $owned comes from map keys (unique), so once both are sorted a plain
+        // equality rejects missing ids, extras, AND duplicates in $requested.
         $req = array_map('intval', $requested);
         sort($req);
         $own = array_map('intval', $owned);
         sort($own);
 
-        if (array_values(array_unique($req)) !== array_values(array_unique($own)) || \count($req) !== \count($own)) {
+        if ($req !== $own) {
             throw new UnprocessableEntityHttpException($message);
         }
     }
