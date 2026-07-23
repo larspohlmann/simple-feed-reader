@@ -38,19 +38,68 @@ describe('AddFeedDialogComponent', () => {
     expect(close).toHaveBeenCalledWith({ id: 9 });
   });
 
-  it('lists candidates and subscribes to a pick', () => {
+  it('lists candidates as cards with previews and subscribes via the Subscribe button', () => {
     const f = create();
     f.componentInstance.form.setValue({ url: 'https://example.com' });
     f.componentInstance.submit();
-    ctrl
-      .expectOne('https://api.test/api/subscriptions')
-      .flush({ candidates: [{ url: 'https://example.com/rss', title: 'RSS' }] });
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      candidates: [
+        { url: 'https://f/rss', title: 'RSS' },
+        { url: 'https://f/atom', title: 'ATOM' },
+      ],
+    });
     f.detectChanges();
-    expect(f.componentInstance.candidates().length).toBe(1);
-    f.componentInstance.pick('https://example.com/rss');
-    ctrl
-      .expectOne('https://api.test/api/subscriptions')
-      .flush({ subscription: { id: 3 } }, { status: 201, statusText: 'Created' });
+    expect(f.componentInstance.candidates().length).toBe(2);
+
+    const rssReq = ctrl.expectOne(
+      (r) => r.url.endsWith('/api/feeds/preview') && r.body.url === 'https://f/rss',
+    );
+    const atomReq = ctrl.expectOne(
+      (r) => r.url.endsWith('/api/feeds/preview') && r.body.url === 'https://f/atom',
+    );
+
+    rssReq.flush({
+      feed: {
+        title: 'RSS Feed',
+        itemCount: 2,
+        content: 'full',
+        hasImages: true,
+        items: [
+          {
+            title: 'First headline',
+            publishedAt: null,
+            author: null,
+            hasImage: true,
+            textLength: 500,
+            snippet: 'snip',
+          },
+          {
+            title: 'Second headline',
+            publishedAt: null,
+            author: null,
+            hasImage: false,
+            textLength: 300,
+            snippet: 'snip2',
+          },
+        ],
+      },
+    });
+    atomReq.flush('x', { status: 500, statusText: 'err' });
+    f.detectChanges();
+
+    const cards = (f.nativeElement as HTMLElement).querySelectorAll('.card');
+    expect(cards.length).toBe(2);
+    const [rssCard, atomCard] = Array.from(cards);
+    expect(rssCard.textContent).toContain('Full text');
+    expect(rssCard.textContent).toContain('With images');
+    expect(rssCard.textContent).toContain('First headline');
+    expect(atomCard.textContent).toContain('Preview unavailable');
+    expect(atomCard.querySelector('.subscribe')).toBeTruthy();
+
+    (rssCard.querySelector('.subscribe') as HTMLButtonElement).click();
+    const subReq = ctrl.expectOne('https://api.test/api/subscriptions');
+    expect(subReq.request.body).toEqual({ url: 'https://f/rss' });
+    subReq.flush({ subscription: { id: 3 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 3 });
   });
 

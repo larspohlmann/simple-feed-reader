@@ -6,7 +6,12 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef } from '@angular/cdk/dialog';
 import { parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
-import { FeedCandidate, SubscriptionDto } from '../models';
+import { FeedCandidate, FeedPreview, SubscriptionDto } from '../models';
+
+type PreviewState =
+  | { status: 'loading' }
+  | { status: 'error' }
+  | { status: 'ok'; preview: FeedPreview };
 
 @Component({
   selector: 'app-add-feed-dialog',
@@ -30,8 +35,37 @@ import { FeedCandidate, SubscriptionDto } from '../models';
           <p class="hint">We found these feeds — pick one:</p>
           <ul class="candidates">
             @for (c of candidates(); track c.url) {
-              <li>
-                <button type="button" (click)="pick(c.url)">{{ c.title || c.url }}</button>
+              @let state = previews()[c.url];
+              @let p = okPreview(state);
+              <li class="card">
+                <div class="card-head">
+                  <span class="card-title">{{ p?.title || c.title || c.url }}</span>
+                  @if (p) {
+                    <span class="count">{{ p.itemCount }} items</span>
+                  }
+                </div>
+                @if (state?.status === 'loading') {
+                  <p class="muted">Loading preview…</p>
+                } @else if (state?.status === 'error') {
+                  <p class="muted">Preview unavailable</p>
+                } @else if (p) {
+                  <div class="badges">
+                    <span class="badge">{{ contentLabel(p.content) }}</span>
+                    <span class="badge">{{ p.hasImages ? 'With images' : 'No images' }}</span>
+                  </div>
+                  @if (p.items.length) {
+                    <ul class="samples">
+                      @for (it of p.items.slice(0, 3); track it.title) {
+                        <li>{{ it.title }}</li>
+                      }
+                    </ul>
+                  } @else {
+                    <p class="muted">No recent items</p>
+                  }
+                }
+                <button type="button" class="subscribe primary" (click)="pick(c.url)">
+                  Subscribe
+                </button>
               </li>
             }
           </ul>
@@ -82,14 +116,66 @@ import { FeedCandidate, SubscriptionDto } from '../models';
         flex-direction: column;
         gap: var(--space-1);
       }
-      .candidates button {
-        width: 100%;
-        text-align: left;
-        padding: var(--space-2);
+      .card {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+        padding: var(--space-3);
         background: var(--surface-1);
         border: 1px solid var(--border);
         border-radius: var(--radius);
+      }
+      .card-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: var(--space-2);
+      }
+      .card-title {
+        font-weight: 600;
         color: var(--text-primary);
+        overflow-wrap: anywhere;
+      }
+      .count {
+        flex: none;
+        font-size: var(--fs-sm);
+        color: var(--text-secondary);
+        white-space: nowrap;
+      }
+      .badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-1);
+      }
+      .badge {
+        font-size: var(--fs-sm);
+        padding: 0 var(--space-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--text-secondary);
+      }
+      .samples {
+        list-style: disc;
+        margin: 0;
+        padding-left: var(--space-4);
+        font-size: var(--fs-sm);
+        color: var(--text-secondary);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+      }
+      .muted {
+        color: var(--text-secondary);
+        font-size: var(--fs-sm);
+        margin: 0;
+      }
+      .subscribe {
+        align-self: flex-start;
+        padding: var(--space-2) var(--space-4);
+        border: 1px solid var(--accent);
+        border-radius: var(--radius);
+        background: var(--accent);
+        color: var(--on-accent);
         cursor: pointer;
       }
       .row {
@@ -123,6 +209,15 @@ export class AddFeedDialogComponent {
   readonly error = signal<string | null>(null);
   readonly candidates = signal<FeedCandidate[]>([]);
   readonly searched = signal(false);
+  readonly previews = signal<Record<string, PreviewState>>({});
+
+  okPreview(state: PreviewState | undefined): FeedPreview | null {
+    return state?.status === 'ok' ? state.preview : null;
+  }
+
+  contentLabel(content: FeedPreview['content']): string {
+    return content === 'full' ? 'Full text' : content === 'summary' ? 'Summary only' : 'Titles only';
+  }
 
   submit(): void {
     if (this.form.invalid) return;
@@ -144,6 +239,7 @@ export class AddFeedDialogComponent {
         else {
           this.candidates.set(res.candidates);
           this.searched.set(true);
+          this.loadPreviews(res.candidates);
         }
       },
       error: (e: HttpErrorResponse) => {
@@ -152,5 +248,15 @@ export class AddFeedDialogComponent {
         this.error.set(p.errors?.['url']?.[0] ?? p.detail ?? p.title);
       },
     });
+  }
+
+  private loadPreviews(candidates: FeedCandidate[]): void {
+    this.previews.set(Object.fromEntries(candidates.map((c) => [c.url, { status: 'loading' }])));
+    for (const c of candidates) {
+      this.api.previewFeed(c.url).subscribe({
+        next: (r) => this.previews.update((m) => ({ ...m, [c.url]: { status: 'ok', preview: r.feed } })),
+        error: () => this.previews.update((m) => ({ ...m, [c.url]: { status: 'error' } })),
+      });
+    }
   }
 }
