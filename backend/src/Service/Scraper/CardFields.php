@@ -170,12 +170,14 @@ final class CardFields
      * text ships in a data attribute: treehugger puts data-card-description
      * on a div nested inside the card link, so the container itself and every
      * descendant element are scanned, first match in document order wins.
+     * Only data-* names qualify: ARIA attributes (aria-describedby) carry ID
+     * references, not prose, and would surface as a teaser of element ids.
      */
     private static function attributeTeaser(Element $container): ?string
     {
         foreach ([$container, ...$container->querySelectorAll('*')] as $element) {
             foreach ($element->attributes as $attribute) {
-                if (stripos($attribute->name, 'descri') === false) {
+                if (!str_starts_with($attribute->name, 'data-') || stripos($attribute->name, 'descri') === false) {
                     continue;
                 }
                 $value = TextNormalizer::normalize($attribute->value);

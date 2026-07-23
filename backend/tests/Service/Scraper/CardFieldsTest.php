@@ -68,6 +68,18 @@ final class CardFieldsTest extends TestCase
         self::assertStringContainsString('Attribute description', (string) $item?->teaser);
     }
 
+    public function testAriaDescribedbyIsNeverATeaser(): void
+    {
+        [$c, $a] = $this->card(<<<HTML
+            <a data-card href="/a/8"
+                aria-describedby="teaser-node-one teaser-node-two teaser-node-three teaser-node-four">
+            <span class="card__title">Aria-described card</span></a>
+            HTML);
+        $item = CardFields::item($c, $a, 'https://site.test/');
+        self::assertNotNull($item);
+        self::assertNull($item->teaser);
+    }
+
     public function testImageAndTimeAndRejectsNonHttpLinks(): void
     {
         [$c, $a] = $this->card(<<<HTML
