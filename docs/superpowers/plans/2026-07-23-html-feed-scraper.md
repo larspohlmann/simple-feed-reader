@@ -1068,23 +1068,44 @@ use App\Service\Parser\FeedParser;
 use App\Service\Parser\ParsedFeed;
 use App\Service\Scraper\HtmlItemExtractor;
 
-/** Turns a fetched feed body into ParsedFeed according to the feed's sourceFormat. */
+// OPEN ARCHITECTURE (user requirement, second application): the format seam is
+// tagged + keyed, mirroring the scrape-layer pattern. A future sourceFormat
+// (JSON Feed, a site-specific parser, …) is ONE new tagged class.
+
+#[AutoconfigureTag('app.feed_body_parser')]
+interface FeedBodyParserInterface
+{
+    /** The Feed.sourceFormat value this parser handles (service-locator key). */
+    public static function format(): string;
+
+    public function parse(string $body, Feed $feed): ParsedFeed;
+}
+
+/** 'xml' — wraps the existing FeedParser (RSS/Atom). */
+final readonly class XmlBodyParser implements FeedBodyParserInterface { /* format(): 'xml'; parse → $this->parser->parse($body) */ }
+
+/** 'scraped' — wraps HtmlItemExtractor; base URL = the feed's page URL. */
+final readonly class ScrapedBodyParser implements FeedBodyParserInterface { /* format(): 'scraped'; parse → $this->extractor->extract($body, $feed->getUrl()) */ }
+
+/** Dispatcher used by RefreshRunner: picks the parser for the feed's format. */
 final readonly class FeedBodyParser
 {
     public function __construct(
-        private FeedParser $parser,
-        private HtmlItemExtractor $extractor,
+        #[AutowireLocator('app.feed_body_parser', defaultIndexMethod: 'format')]
+        private ContainerInterface $parsers,
     ) {
     }
 
     public function parse(Feed $feed, string $body): ParsedFeed
     {
-        return $feed->getSourceFormat() === 'scraped'
-            ? $this->extractor->extract($body, $feed->getUrl())
-            : $this->parser->parse($body);
+        $format = $this->parsers->has($feed->getSourceFormat()) ? $feed->getSourceFormat() : 'xml';
+
+        return $this->parsers->get($format)->parse($body, $feed);
     }
 }
 ```
+
+(Files: `backend/src/Service/Refresh/FeedBodyParserInterface.php`, `XmlBodyParser.php`, `ScrapedBodyParser.php`, `FeedBodyParser.php`. Unknown formats fall back to 'xml' — defensive for legacy rows. Add a small wiring test alongside the refresh tests proving the locator resolves both formats through the real container, plus a unit test for the fallback. Verify `AutowireLocator`'s `defaultIndexMethod` idiom against this Symfony version; if it needs `AsTaggedItem(index: …)` on the classes instead, use that — the openness property is what matters, not the exact attribute.)
 
 `RefreshRunner`: replace the `FeedParser` constructor param with `FeedBodyParser $bodyParser`; `fetchParseAndPersist()` calls `$parsed = $this->bodyParser->parse($feed, $body);`. Fix `RefreshRunner` construction sites in tests (grep for `new RefreshRunner(`).
 

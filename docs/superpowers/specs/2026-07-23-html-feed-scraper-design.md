@@ -124,9 +124,13 @@ auto-tagged via `#[AutoconfigureTag('app.scrape_layer')]` on the interface,
 ordered by `#[AsTaggedItem(priority: …)]`, and injected as a tagged iterator.
 A further case — a microformats layer, a site-specific extractor, a smarter
 cluster scorer — is one new class with a priority; the facade never changes.
-The same openness applies downstream: `Feed.sourceFormat` is an open string
-and `FeedBodyParser` is the single seam where a future format (e.g. JSON
-Feed) adds its branch.
+The same openness applies downstream: `Feed.sourceFormat` is an open string,
+and the refresh-side format seam is itself tagged + keyed
+(`FeedBodyParserInterface`, tag `app.feed_body_parser`, keyed by `format()`;
+dispatcher falls back to `'xml'` for unknown values) — a future format (e.g.
+JSON Feed) is one new tagged class, with no dispatcher change. *(Amended
+2026-07-23 on repeated user emphasis; originally a hard-coded two-way
+branch.)*
 
 Three layers ship initially, first success (≥3 items) wins, ordered by
 priority (JsonLd 30 > Semantic 20 > Cluster 10):
