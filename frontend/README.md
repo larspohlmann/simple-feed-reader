@@ -85,14 +85,15 @@ npm run e2e
 ```
 
 Playwright smokes over the auth journey (`e2e/auth-smoke.spec.ts`), the reader
-shell (`e2e/reader-smoke.spec.ts`), and settings + admin
+shell (`e2e/reader-smoke.spec.ts`), the magazine reading layout
+(`e2e/magazine-smoke.spec.ts`), and settings + admin
 (`e2e/settings-admin-smoke.spec.ts`). They need the **Docker stack up** (they
 drive the real backend), so they are **not** part of `npm run check` or the CI
 unit-gate job — run them locally against Docker, or in a dedicated integration
-job later. Both the reader and the settings/admin smoke sign in as the seeded
-`app:e2e:seed-admin` account (`e2e-admin@example.com`), the same fixture the
-backend e2e suite authenticates as, and skip cleanly when that account or the
-stack is absent.
+job later. The reader, magazine, and settings/admin smokes all sign in as the
+seeded `app:e2e:seed-admin` account (`e2e-admin@example.com`), the same
+fixture the backend e2e suite authenticates as, and skip cleanly when that
+account or the stack is absent.
 
 ## Reader
 
@@ -116,14 +117,43 @@ when the address is an HTML page, lists the discovered feed candidates to pick
 from. A header refresh control drives the backend refresh loop and shows its
 progress inline.
 
-### Reading layout (List / Pane)
+### Reading layout (Magazine / List / Pane)
 
-A **List / Pane** preference sits beside the theme toggle in the header, backed
-by `ReadingLayoutService` and persisted **on-device** in `localStorage`
-(`sfr.layout`) exactly like the theme choice — it is never sent to the server.
-**List** is the default: the article opens over the list. **Pane** places the
-list and article side by side, but only on a wide viewport (a CDK
-`BreakpointObserver` query); it falls back to List on narrow screens.
+A **Magazine / List / Pane** preference sits beside the theme toggle in the
+header, backed by `ReadingLayoutService` and persisted **on-device** in
+`localStorage` (`sfr.layout`) exactly like the theme choice — it is never sent
+to the server. **Magazine** is the default. **List** opens the article over
+the list. **Pane** places the list and article side by side, but only on a
+wide viewport (a CDK `BreakpointObserver` query); it falls back to List on
+narrow screens.
+
+#### Magazine layout (5d)
+
+Magazine renders the same ordered entries as a single varied column instead of
+uniform rows. A pure planner, `planMagazine(entries, grouping)`
+(`reader/magazine/magazine-planner.ts`), turns the entry list into a sequence
+of typed blocks — it never touches the DOM or the network, so it's plain unit
+tested:
+
+- **Hero** — a large image-and-dek card for an eligible entry, spaced apart so
+  two never land back to back.
+- **Feature** — an entry row with its preview image alongside the text,
+  alternating which side the image sits on.
+- **Compact** — a dense, image-less single line for short or image-less
+  entries.
+- **Source group** — a run of 3+ consecutive entries from the same feed
+  collapses into one card showing the first 3 plus a "N more from …" link;
+  grouping is disabled entirely in a single-feed view, where every entry
+  already shares a source.
+
+The planner is a stable prefix: appending a page of newer entries only adds
+blocks after what's already planned, it never re-plans earlier ones — so
+infinite scroll doesn't reshuffle content already on screen. Its thresholds
+(hero text/image length gates, the group size, how often a hero can recur) are
+named constants at the top of the file, tunable without touching the
+algorithm. `EntryHeroComponent` also gates on the loaded image's natural size,
+demoting a hero to its text-only form if the "image" turns out to be a tiny
+tracking pixel.
 
 ### Preview images
 

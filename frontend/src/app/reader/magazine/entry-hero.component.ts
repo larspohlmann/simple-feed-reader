@@ -1,4 +1,4 @@
-// src/app/reader/entry-row/entry-row.component.ts
+// src/app/reader/magazine/entry-hero.component.ts
 import { Component, computed, effect, input, output, signal } from '@angular/core';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { EntryDto } from '../models';
@@ -6,24 +6,39 @@ import { firstPreviewImage, textSnippet } from '../preview-image';
 import { relativeTime } from '../format';
 
 @Component({
-  selector: 'app-entry-row',
+  selector: 'app-entry-hero',
   imports: [IconComponent],
   template: `
     <article
-      class="row"
+      class="hero"
       role="button"
       tabindex="0"
       [class.read]="entry().isRead"
-      [class.img-left]="imageSide() === 'left'"
       (click)="open.emit(entry())"
       (keydown.enter)="open.emit(entry())"
       (keydown.space)="$event.preventDefault(); open.emit(entry())"
     >
-      <span class="dot" [class.on]="!entry().isRead" aria-hidden="true"></span>
+      @if (showImage()) {
+        <img
+          class="img"
+          [src]="image()!"
+          alt=""
+          loading="lazy"
+          decoding="async"
+          referrerpolicy="no-referrer"
+          (load)="onLoad($event)"
+          (error)="imgError.set(true)"
+        />
+      }
       <div class="body">
+        <p class="kicker">
+          <span class="dot" [class.on]="!entry().isRead" aria-hidden="true"></span>
+          {{ entry().source }} · {{ when() }}
+        </p>
         <h3 class="title">{{ entry().title }}</h3>
-        <p class="meta">{{ entry().source }} · {{ when() }}</p>
-        <p class="snippet">{{ snippet() }}</p>
+        @if (snippet()) {
+          <p class="dek">{{ snippet() }}</p>
+        }
         <div class="actions">
           <button
             type="button"
@@ -53,71 +68,69 @@ import { relativeTime } from '../format';
           </button>
         </div>
       </div>
-      @if (image() && !imgError()) {
-        <img
-          class="thumb"
-          [src]="image()!"
-          alt=""
-          loading="lazy"
-          decoding="async"
-          referrerpolicy="no-referrer"
-          (error)="imgError.set(true)"
-        />
-      }
     </article>
   `,
   styles: [
     `
-      .row {
-        display: flex;
-        gap: var(--space-3);
-        padding: var(--space-3) var(--space-4);
-        border-bottom: 1px solid var(--border);
+      :host {
+        display: block;
+      }
+      .hero {
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
         cursor: pointer;
       }
-      .row:hover {
-        background: var(--surface-0);
+      .hero:hover {
+        border-color: var(--border-strong);
+      }
+      .img {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        object-fit: cover;
+        display: block;
+      }
+      .body {
+        padding: var(--space-3) var(--space-4);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+      .kicker {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: var(--space-1);
+        font-size: var(--fs-sm);
+        color: var(--text-muted);
       }
       .dot {
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        margin-top: 6px;
-        flex: 0 0 auto;
         border: 1px solid var(--border-strong);
       }
       .dot.on {
         background: var(--accent);
         border-color: var(--accent);
       }
-      .body {
-        flex: 1;
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-1);
-      }
       .title {
         margin: 0;
-        font-size: var(--fs-base);
+        font-size: var(--fs-xl);
         font-weight: 500;
+        line-height: 1.3;
         color: var(--text-primary);
       }
-      .row.read .title {
-        font-weight: 400;
+      .hero.read .title {
         color: var(--text-secondary);
+        font-weight: 400;
       }
-      .meta {
+      .dek {
         margin: 0;
-        font-size: var(--fs-sm);
-        color: var(--text-muted);
-      }
-      .snippet {
-        margin: 0;
-        font-size: var(--fs-sm);
         color: var(--text-secondary);
         display: -webkit-box;
-        -webkit-line-clamp: 2;
+        -webkit-line-clamp: 3;
         -webkit-box-orient: vertical;
         overflow: hidden;
       }
@@ -135,41 +148,34 @@ import { relativeTime } from '../format';
       .actions button.on {
         color: var(--accent);
       }
-      .thumb {
-        width: 88px;
-        height: 66px;
-        object-fit: cover;
-        border-radius: var(--radius);
-        flex: 0 0 auto;
-      }
-      .row.img-left .thumb {
-        order: -1;
-      }
     `,
   ],
 })
-export class EntryRowComponent {
+export class EntryHeroComponent {
   readonly entry = input.required<EntryDto>();
-  readonly imageSide = input<'left' | 'right'>('right');
   readonly favorite = output<EntryDto>();
   readonly keep = output<EntryDto>();
   readonly read = output<EntryDto>();
   readonly open = output<EntryDto>();
 
   readonly imgError = signal(false);
+  readonly tooSmall = signal(false);
   readonly image = computed(() =>
     firstPreviewImage(this.entry().contentHtml, this.entry().summary),
   );
-  readonly snippet = computed(() =>
-    this.entry().summary
-      ? textSnippet(this.entry().summary)
-      : textSnippet(this.entry().contentHtml),
-  );
+  readonly showImage = computed(() => !!this.image() && !this.imgError() && !this.tooSmall());
+  readonly snippet = computed(() => textSnippet(this.entry().summary || this.entry().contentHtml));
   readonly when = computed(() => relativeTime(this.entry().publishedAt ?? this.entry().createdAt));
 
-  // Reset the failed-image flag whenever the row is reused for a different entry.
-  private readonly _resetOnEntryChange = effect(() => {
+  onLoad(ev: Event): void {
+    const img = ev.target as HTMLImageElement;
+    if (img.naturalWidth && img.naturalWidth < 200) this.tooSmall.set(true);
+  }
+
+  // Reset the gates when the host reuses this component for a different entry.
+  private readonly _reset = effect(() => {
     this.entry();
     this.imgError.set(false);
+    this.tooSmall.set(false);
   });
 }

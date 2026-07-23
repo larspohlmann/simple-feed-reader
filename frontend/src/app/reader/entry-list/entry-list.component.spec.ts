@@ -3,7 +3,7 @@ import { provideRouter } from '@angular/router';
 import { EntryListComponent } from './entry-list.component';
 import { EntryDto } from '../models';
 
-const entry = (id: number): EntryDto => ({
+const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   id,
   title: `e${id}`,
   url: null,
@@ -17,6 +17,7 @@ const entry = (id: number): EntryDto => ({
   isRead: false,
   isFavorite: false,
   isKept: false,
+  ...over,
 });
 
 function mount(over: Record<string, unknown> = {}) {
@@ -82,5 +83,22 @@ describe('EntryListComponent', () => {
   it('hides mark-all-read when not applicable', () => {
     const el = mount({ canMarkAllRead: false }).nativeElement as HTMLElement;
     expect(el.querySelector('.mark-all')).toBeNull();
+  });
+
+  it('renders planned magazine blocks when layout is magazine', () => {
+    const grouped = [1, 2, 3].map((id) => entry(id));
+    const diverse = entry(4, { subscriptionId: 4, source: 'diverse' });
+    const el = mount({
+      layout: 'magazine',
+      entries: [...grouped, diverse],
+    }).nativeElement as HTMLElement;
+    expect(el.querySelector('app-source-group')).not.toBeNull();
+    expect(el.querySelector('.rows.magazine')).not.toBeNull();
+  });
+
+  it('renders flat rows when layout is list', () => {
+    const el = mount({ layout: 'list' }).nativeElement as HTMLElement;
+    expect(el.querySelectorAll('app-entry-row').length).toBe(2);
+    expect(el.querySelector('app-source-group')).toBeNull();
   });
 });
