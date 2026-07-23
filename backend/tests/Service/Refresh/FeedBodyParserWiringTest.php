@@ -61,16 +61,19 @@ final class FeedBodyParserWiringTest extends KernelTestCase
     /**
      * A sourceFormat the locator does not know (a row written by a future
      * version, or a format since removed) falls back to 'xml'. For a non-XML
-     * body that surfaces as FeedParseException — which IS the proof the xml
-     * parser handled it: the dispatcher neither matched 'jsonfeed' nor threw
-     * a locator NotFoundException.
+     * body that surfaces as FeedParseException — proof the xml parser handled
+     * it: the dispatcher neither matched 'jsonfeed' nor threw a locator
+     * NotFoundException — and the message names the missing format, so a
+     * stale row is distinguishable from a genuinely broken feed in
+     * lastErrorMessage.
      */
-    public function testUnknownFormatFallsBackToTheXmlParser(): void
+    public function testUnknownFormatFallsBackToTheXmlParserAndNamesTheGap(): void
     {
         $feed = new Feed('https://example.com/feed.json');
         $feed->setSourceFormat('jsonfeed');
 
         $this->expectException(FeedParseException::class);
+        $this->expectExceptionMessageMatches('/^No parser for source format "jsonfeed"; tried xml: ./');
         $this->parser()->parse($feed, '{"version": "https://jsonfeed.org/version/1", "items": []}');
     }
 }
