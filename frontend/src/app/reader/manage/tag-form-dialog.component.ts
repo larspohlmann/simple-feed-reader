@@ -142,6 +142,9 @@ import { TAG_COLORS, TAG_ICONS } from './icon-choices';
         display: flex;
         flex-wrap: wrap;
         gap: var(--space-1);
+        max-height: 216px;
+        overflow-y: auto;
+        padding: 2px;
       }
       .icon {
         display: inline-flex;
