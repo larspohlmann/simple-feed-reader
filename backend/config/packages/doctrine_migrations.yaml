@@ -14,9 +14,3 @@ doctrine_migrations:
     # back already-applied statements — acceptable for forward-only migrations
     # that are proven green in CI before they ever run for real.
     transactional: false
-    # Override migrations' lazy schema-diff provider with its eager one so
-    # LazySchema (which extends the @final DBAL Schema and uses Symfony's
-    # deprecated LazyProxyTrait) is never built. Full rationale on the
-    # app.doctrine.eager_schema_diff_provider definition in config/services.yaml.
-    services:
-        Doctrine\Migrations\Provider\SchemaDiffProvider: app.doctrine.eager_schema_diff_provider

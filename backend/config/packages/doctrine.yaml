@@ -10,7 +10,10 @@ doctrine:
         use_savepoints: true
     orm:
         auto_generate_proxy_classes: true
-        enable_lazy_ghost_objects: true
+        # PHP 8.4 native lazy objects instead of generated proxies: drops the
+        # deprecated Doctrine\ORM\Proxy\Autoloader (doctrine-bundle skips it when
+        # this is on) and needs no proxy_dir. Unblocked by the 8.3→8.4 platform bump.
+        enable_native_lazy_objects: true
         report_fields_where_declared: true
         validate_xml_mapping: true
         naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
