@@ -37,6 +37,14 @@ class Feed
     #[ORM\Column(length: 20, enumType: FeedStatus::class)]
     private FeedStatus $status = FeedStatus::Active;
 
+    /**
+     * How this feed's body is turned into entries: 'xml' (RSS/Atom via FeedParser)
+     * or 'scraped' (HTML listing via HtmlItemExtractor). Open string, matching
+     * FeedCandidate::$format.
+     */
+    #[ORM\Column(length: 20, options: ['default' => 'xml'])]
+    private string $sourceFormat = 'xml';
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $lastFetchedAt = null;
 
@@ -126,6 +134,16 @@ class Feed
     public function setStatus(FeedStatus $status): void
     {
         $this->status = $status;
+    }
+
+    public function getSourceFormat(): string
+    {
+        return $this->sourceFormat;
+    }
+
+    public function setSourceFormat(string $sourceFormat): void
+    {
+        $this->sourceFormat = $sourceFormat;
     }
 
     public function getLastFetchedAt(): ?\DateTimeImmutable
