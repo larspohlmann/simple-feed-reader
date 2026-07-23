@@ -89,6 +89,8 @@ describe('AddFeedDialogComponent', () => {
 
     const cards = (f.nativeElement as HTMLElement).querySelectorAll('.card');
     expect(cards.length).toBe(2);
+    // The footer "Add" submit is hidden once cards (each with Subscribe) show.
+    expect((f.nativeElement as HTMLElement).querySelector('button[type="submit"]')).toBeNull();
     const [rssCard, atomCard] = Array.from(cards);
     expect(rssCard.textContent).toContain('Full text');
     expect(rssCard.textContent).toContain('With images');

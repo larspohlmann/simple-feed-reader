@@ -75,9 +75,15 @@ type PreviewState =
         }
         <div class="row">
           <button type="button" (click)="ref.close()">Cancel</button>
-          <button type="submit" class="primary" [disabled]="loading()">
-            {{ loading() ? 'Adding…' : 'Add' }}
-          </button>
+          <!-- Once candidates are shown, each card carries its own Subscribe
+               button, so the footer submit would be a confusing third action.
+               It only makes sense before a search (and to retry when none were
+               found). -->
+          @if (!candidates().length) {
+            <button type="submit" class="primary" [disabled]="loading()">
+              {{ loading() ? 'Adding…' : 'Add' }}
+            </button>
+          }
         </div>
       </form>
     </div>
