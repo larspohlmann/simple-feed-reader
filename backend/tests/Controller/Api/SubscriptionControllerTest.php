@@ -184,14 +184,15 @@ final class SubscriptionControllerTest extends WebTestCase
         );
         self::assertResponseStatusCodeSame(200);
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
-        self::assertIsArray($body['candidates']);
-        self::assertCount(1, $body['candidates']);
-        $candidate = $body['candidates'][0];
-        self::assertIsArray($candidate);
-        self::assertSame('https://www.heise.de/', $candidate['url']);
-        self::assertSame('scraped', $candidate['format']);
-        self::assertArrayNotHasKey('scrapeFailureReason', $body);
+        // Full-shape pin (like the blocked test): exactly one candidate with
+        // exactly these keys, the page's og:site_name as title, and no
+        // scrapeFailureReason key on success.
+        self::assertSame(
+            ['candidates' => [
+                ['url' => 'https://www.heise.de/', 'title' => 'heise online', 'format' => 'scraped'],
+            ]],
+            $body,
+        );
     }
 
     public function testBlockedSiteReportsReasonWithEmptyCandidates(): void
