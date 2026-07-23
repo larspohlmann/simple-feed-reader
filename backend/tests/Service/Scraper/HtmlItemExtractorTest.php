@@ -107,12 +107,34 @@ final class HtmlItemExtractorTest extends TestCase
     public function testHostilePagesThrow(): void
     {
         $this->expectException(HtmlExtractionException::class);
+        $this->expectExceptionMessage('No article list');
         $this->extractor()->extract($this->fixture('nav-only.html'), 'https://nav.test/');
     }
 
+    /** Empty input has its own message, distinguishable from a no-list page. */
     public function testUnparseableInputThrows(): void
     {
         $this->expectException(HtmlExtractionException::class);
+        $this->expectExceptionMessage('The page is empty.');
         $this->extractor()->extract('', 'https://empty.test/');
+    }
+
+    /**
+     * MIN_ITEMS boundary at the facade: the best cluster has three anchors,
+     * but one is a self-link the facade guard drops — the two surviving
+     * items sit right below the minimum of three and must not become a feed.
+     */
+    public function testTwoItemsAfterTheFacadeGuardsAreBelowTheMinimum(): void
+    {
+        $html = <<<HTML
+            <html lang="en"><body><main>
+            <a class="card" href="https://mini.test/">Link back to this very page</a>
+            <a class="card" href="/one">First real story headline</a>
+            <a class="card" href="/two">Second real story headline</a>
+            </main></body></html>
+            HTML;
+        $this->expectException(HtmlExtractionException::class);
+        $this->expectExceptionMessage('No article list');
+        $this->extractor()->extract($html, 'https://mini.test/');
     }
 }
