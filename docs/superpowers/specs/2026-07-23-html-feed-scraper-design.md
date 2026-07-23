@@ -116,8 +116,20 @@ refresh:  HttpFeedFetcher ──► sourceFormat?
 ### HtmlItemExtractor
 
 Parses with PHP 8.4's `\Dom\HTMLDocument` — the spec-compliant HTML5 parser
-readability.php v4 already rides on; no new parsing dependency. Three layers,
-first success wins:
+readability.php v4 already rides on; no new parsing dependency.
+
+**Open architecture (user requirement 2026-07-23):** the extractor does not
+hard-code its strategies. Layers implement `ScrapeLayerInterface`, are
+auto-tagged via `#[AutoconfigureTag('app.scrape_layer')]` on the interface,
+ordered by `#[AsTaggedItem(priority: …)]`, and injected as a tagged iterator.
+A further case — a microformats layer, a site-specific extractor, a smarter
+cluster scorer — is one new class with a priority; the facade never changes.
+The same openness applies downstream: `Feed.sourceFormat` is an open string
+and `FeedBodyParser` is the single seam where a future format (e.g. JSON
+Feed) adds its branch.
+
+Three layers ship initially, first success (≥3 items) wins, ordered by
+priority (JsonLd 30 > Semantic 20 > Cluster 10):
 
 1. **Structured data.** JSON-LD `ItemList`, or arrays of
    `NewsArticle`/`BlogPosting`/`Article` objects: extract url/headline/

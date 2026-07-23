@@ -690,7 +690,7 @@ final class HtmlItemExtractorTest extends TestCase
 {
     private function extractor(): HtmlItemExtractor
     {
-        return new HtmlItemExtractor(new JsonLdLayer(), new SemanticLayer(), new ClusterLayer());
+        return new HtmlItemExtractor([new JsonLdLayer(), new SemanticLayer(), new ClusterLayer()]);
     }
 
     private function fixture(string $name): string
@@ -776,10 +776,19 @@ final readonly class HtmlItemExtractor
     private const int MIN_ITEMS = 3;
     private const int MAX_ITEMS = 50;
 
+    /**
+     * OPEN ARCHITECTURE (user requirement): layers arrive as a tagged iterator.
+     * ScrapeLayerInterface carries #[AutoconfigureTag('app.scrape_layer')]; each
+     * layer declares #[AsTaggedItem(priority: N)] (JsonLd 30, Semantic 20,
+     * Cluster 10; higher first). Adding a future case = one new tagged class.
+     * Unit tests pass a plain array; one KernelTestCase test asserts the
+     * container wiring extracts the tagesschau fixture.
+     *
+     * @param iterable<ScrapeLayerInterface> $layers
+     */
     public function __construct(
-        private JsonLdLayer $jsonLd,
-        private SemanticLayer $semantic,
-        private ClusterLayer $cluster,
+        #[AutowireIterator('app.scrape_layer')]
+        private iterable $layers,
     ) {
     }
 
