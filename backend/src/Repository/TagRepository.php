@@ -43,7 +43,7 @@ class TagRepository extends ServiceEntityRepository
     }
 
     /**
-     * The user's tags, ordered by name for a stable list.
+     * The user's tags, in their custom order (name as a stable tiebreak).
      *
      * @return list<Tag>
      */
@@ -52,11 +52,27 @@ class TagRepository extends ServiceEntityRepository
         /** @var list<Tag> $rows */
         $rows = $this->createQueryBuilder('t')
             ->andWhere('t.user = :userId')->setParameter('userId', $userId)
-            ->orderBy('t.name', 'ASC')
+            ->orderBy('t.position', 'ASC')
+            ->addOrderBy('t.name', 'ASC')
             ->getQuery()
             ->getResult();
 
         return $rows;
+    }
+
+    /**
+     * The next append position for a new tag: one past the user's current max
+     * (0 when they have none).
+     */
+    public function nextPositionForUser(int $userId): int
+    {
+        $max = $this->createQueryBuilder('t')
+            ->select('MAX(t.position)')
+            ->andWhere('t.user = :userId')->setParameter('userId', $userId)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return null === $max ? 0 : (int) $max + 1;
     }
 
     /**
