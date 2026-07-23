@@ -51,7 +51,7 @@ final class Version20260723200000 extends AbstractMigration
 
         // Per-column idempotence for a database baselined from
         // doctrine:schema:create, where ORM metadata already produced the column.
-        if ($schema->getTable('feed')->hasColumn('source_format')) {
+        if (!$schema->hasTable('feed') || $schema->getTable('feed')->hasColumn('source_format')) {
             return;
         }
 
@@ -66,7 +66,7 @@ final class Version20260723200000 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
-        if ($schema->getTable('feed')->hasColumn('source_format')) {
+        if ($schema->hasTable('feed') && $schema->getTable('feed')->hasColumn('source_format')) {
             $this->addSql('ALTER TABLE feed DROP COLUMN source_format');
         }
     }

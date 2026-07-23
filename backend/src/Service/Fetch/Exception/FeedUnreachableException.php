@@ -8,6 +8,7 @@ final class FeedUnreachableException extends FetchException
 {
     public function __construct(string $message, public readonly ?int $statusCode = null, ?\Throwable $previous = null)
     {
+        \assert($statusCode === null || ($statusCode >= 100 && $statusCode <= 599));
         parent::__construct($message, 0, $previous);
     }
 }

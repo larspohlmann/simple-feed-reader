@@ -217,6 +217,7 @@ final class HttpFeedFetcherTest extends TestCase
             self::fail('Expected FeedUnreachableException');
         } catch (FeedUnreachableException $e) {
             self::assertNull($e->statusCode);
+            self::assertNotNull($e->getPrevious());
         }
     }
 }
