@@ -1,0 +1,217 @@
+# HTML Feed Scraper — Design
+
+**Date:** 2026-07-23
+**Branch:** `feature/html-feed-scraper`
+
+## Problem
+
+Some sites the user wants to follow offer no RSS/Atom feed at all (or hide it
+so well that discovery finds nothing). Today the Add-a-feed dialog dead-ends:
+"no feeds found". Services like Feedspot solve this by fetching the HTML page
+and synthesizing a feed from its article listing. We want the same, built in:
+if a page has no native feed, scrape its listing and treat the result as a
+feed — fetched, refreshed, read, and tagged like any other subscription.
+
+Reference examples:
+
+- `https://www.tagesschau.de/` — repeated teaser cards, each with headline
+  **and a short description**; both must survive extraction (verified against
+  the live page 2026-07-23: 38 `teaser__link` blocks with `h3` headline +
+  `teaser__shorttext` paragraph).
+- `https://www.reuters.com/business/environment/` — the user's original
+  example, but Reuters sits behind aggressive bot protection; it is explicitly
+  *best-effort only* (see Non-goals).
+
+## Goal
+
+A `scraped` feed type inside the existing pipeline (Approach A, confirmed):
+
+- **Discovery fallback:** when a page advertises no native feeds, run the
+  extractor; if it finds a plausible article listing, offer one candidate with
+  `format: 'scraped'` in the existing add-feed / preview flow.
+- **Refresh:** the normal scheduler refetches the HTML page and re-extracts;
+  new articles become new entries via the unchanged ingest pipeline.
+- **Entries:** title + link, plus teaser text and image when the listing card
+  has them. Full text stays on-demand via the existing reader mode
+  (`ArticleExtractor`, readability.php v4).
+
+## Non-goals
+
+- **No headless browser, no anti-bot measures.** Server-rendered pages that
+  answer a plain HTTP GET are the target (blogs, magazines, institutional
+  news). Bot-protected sites (Reuters/Datadome) fail as ordinary fetch errors,
+  honestly surfaced in the UI.
+- **No manual selector configuration.** Automatic heuristics only (confirmed).
+  If extraction misjudges a page, the preview shows it and the user simply
+  doesn't subscribe.
+- **No auto-fetching of full article bodies during refresh** (confirmed).
+  Reader mode already covers full text on demand; refresh stays one request
+  per feed.
+- **No scraped candidate when native feeds exist.** Native always wins;
+  scraping is a fallback, never an alternative offer.
+- **No new schema for entries.** Scraped entries are ordinary `Entry` rows.
+
+## Decisions (confirmed)
+
+1. **Approach A** — a fetch/parse branch inside the pipeline, not an internal
+   feed-proxy endpoint (B) or a separate microservice (C). `HttpFeedFetcher`,
+   `UrlGuard`, conditional GET, `EntryIngestor`, `EntrySanitizer`, preview,
+   reader API, and the frontend all stay untouched or nearly so. This also
+   keeps the core API native-iOS-ready (server-side only, no new web coupling).
+2. **Best-effort site coverage** — no headless browser sidecar.
+3. **Automatic heuristics only** — no per-site rules, no user-supplied
+   selectors.
+4. **Teasers are first-class** — when a listing card carries a short
+   description (tagesschau pattern), it becomes the entry's content.
+
+---
+
+## Architecture
+
+### Data model
+
+`Feed` gains a `sourceFormat` string column: `'xml'` (default; covers RSS and
+Atom, which `FeedParser` already distinguishes internally) or `'scraped'`.
+One migration, existing rows backfilled to `'xml'`. Nothing else changes:
+scheduler, pruner, subscriptions, tags, and the reader API all operate on
+feeds/entries as before.
+
+### Pipeline branch
+
+```
+refresh:  HttpFeedFetcher ──► sourceFormat?
+                                ├─ 'xml'     ─► FeedParser        ─► ParsedFeed
+                                └─ 'scraped' ─► HtmlItemExtractor ─► ParsedFeed
+                                                          │
+                              EntryIngestor ◄─────────────┘  (unchanged)
+```
+
+- The fetch step is byte-identical to today: SSRF guards (`UrlGuard` /
+  `IpValidator`), redirect resolution, conditional GET (ETag/Last-Modified
+  work fine on HTML pages), size/time limits.
+- `HtmlItemExtractor` returns the same `ParsedFeed` / `ParsedEntry` value
+  objects `FeedParser` returns, so everything downstream — ingest, sanitize,
+  prune, preview, magazine layout — is unchanged.
+- `FeedPreviewService` branches the same way. Pre-subscribe there is no `Feed`
+  row yet, so the preview request carries the candidate's `format` (the
+  frontend already has it on the candidate); `'scraped'` routes the fetched
+  page to `HtmlItemExtractor`. The preview of a scraped candidate is thus the
+  real extraction result, not a simulation.
+
+### HtmlItemExtractor
+
+Parses with PHP 8.4's `\Dom\HTMLDocument` — the spec-compliant HTML5 parser
+readability.php v4 already rides on; no new parsing dependency. Three layers,
+first success wins:
+
+1. **Structured data.** JSON-LD `ItemList`, or arrays of
+   `NewsArticle`/`BlogPosting`/`Article` objects: extract url/headline/
+   description/image/datePublished directly.
+2. **Semantic markup.** Repeated `<article>` elements, or repeated
+   `h1`–`h4 > a` patterns inside `<main>`.
+3. **Pattern clustering.** Group anchors by DOM-path signature (tag/class
+   chain from body); score clusters by size, headline-like link text, URL
+   shape similarity, and penalize `nav`/`header`/`footer`/`aside` ancestry;
+   take the best-scoring cluster. This is the layer that handles tagesschau
+   (div-based teaser cards, no `<article>`, no JSON-LD list).
+
+**Per-item extraction happens on the card container, not the anchor.** From
+each clustered anchor, walk up to the repeating container element, then within
+it:
+
+- **link** — anchor `href`, resolved absolute against the final (post-
+  redirect) URL; http(s) only.
+- **title** — nearest heading (`h1`–`h4`) text; fallback: the anchor's text.
+- **teaser** — the longest non-headline paragraph in the container, minimum
+  40 characters (so "Read more" labels never qualify). Becomes the entry's
+  content HTML (as a plain `<p>`), sanitized by `EntrySanitizer` like all
+  feed content.
+- **image** — first `<img>` in the container (`src`/`srcset`/`data-src`),
+  http(s) only, feeding the existing item-image plumbing.
+- **date** — `<time datetime>` if present; otherwise the entry is undated and
+  gets first-seen dating from the existing ingest behavior.
+
+**Normalization:** strip soft hyphens (U+00AD — tagesschau wraps words in
+`hyphenate` spans), collapse whitespace, decode entities (the HTML5 parser
+does this), trim.
+
+**Guards:**
+
+- Fewer than **3** extracted items ⇒ extraction *fails* (prevents garbage
+  feeds from menus/footers).
+- Dedupe by resolved URL (tagesschau repeats stories across page sections);
+  first occurrence wins.
+- Cap at **50** items.
+- Drop self-links (link equal to the page URL) and non-http(s) schemes.
+- **GUID** = article URL, via the existing `GuidFallback` logic — stable
+  across refreshes, so re-extraction doesn't duplicate entries.
+
+**Feed-level metadata:** title from `og:site_name`, else `<title>`; site link
+= final page URL; description from `meta[name=description]` when present.
+
+### Discovery & UX
+
+`FeedDiscovery`: after the existing `<link rel=alternate>` scan (and the
+direct-feed check) finds nothing, run `HtmlItemExtractor` on the already-
+fetched page. ≥3 items ⇒ one `FeedCandidate` with `format: 'scraped'` (the
+open-string design in `FeedCandidate` anticipated exactly this value).
+
+Frontend add-feed flow: nearly nothing new. The candidate card shows a
+"Scraped" format badge where RSS/Atom badges show today, plus a one-line hint
+("No feed found — generated from the page's article list"). The existing
+preview cards then show exactly which items extraction found — headlines,
+teasers, images — so the user judges quality before subscribing. Subscribe
+persists the feed with `sourceFormat: 'scraped'`.
+
+The feed-detail/management UI shows the same badge so scraped feeds are
+distinguishable later.
+
+### Error handling
+
+- **Fetch errors** (403 from bot protection, timeouts, DNS): identical to
+  today's fetch-error path; the feed's error state and UI messaging apply
+  unchanged.
+- **Extraction failure on refresh** (<3 items, e.g. after a site redesign):
+  treated exactly like an XML parse failure — feed enters its error state,
+  existing entries are kept, pruner rules unchanged.
+- **Extraction drift** (site redesign changes the winning cluster): entries
+  keyed by article URL, so a changed cluster yields new-but-valid entries or
+  an extraction failure — never duplicate GUIDs.
+- **Discovery fallback never throws:** any extractor error during discovery
+  degrades to "no feeds found", as today.
+
+### Security
+
+- Same SSRF surface as today: the page fetch goes through `UrlGuard`; item
+  links/images are data, not fetched during refresh.
+- Teaser HTML is generated by us (plain `<p>` + text), then still passed
+  through `EntrySanitizer` — defense in depth, and identical treatment to
+  feed-shipped content.
+- Extracted URLs restricted to http(s) before they reach the DB or client.
+
+## Testing
+
+- **Unit — extractor:** saved real-page fixtures: `tagesschau.html` (already
+  fetched; exercises clustering, teasers, images, umlauts, soft hyphens),
+  a JSON-LD site, a semantic-`<article>` blog, and hostile fixtures
+  (nav-heavy page with no articles ⇒ must fail with <3 items; page whose
+  biggest cluster is a footer link list ⇒ must not win).
+- **Unit — layer precedence:** structured data beats semantics beats
+  clustering; dedupe, cap, normalization, guard behavior.
+- **Functional — through the dispatcher/pipeline** (per our
+  direct-invocation-tests rule): refresh a `scraped` feed end-to-end into
+  `Entry` rows; second refresh with identical HTML creates no duplicates;
+  discovery endpoint returns a `scraped` candidate for a feedless fixture
+  page and none when a native feed exists.
+- **Migration:** covered by the dedicated migrations CI leg.
+- **E2E (Docker):** add a feedless page URL → scraped candidate with badge →
+  preview shows extracted items → subscribe → entries appear; reader mode
+  opens a scraped entry's article.
+- **Quality gates:** phpcs, phpstan, phpmd (touched files clean), PhpStorm
+  inspections, backend tests in the Docker php container; watch `dev.log`.
+
+## Rollout
+
+Single feature branch `feature/html-feed-scraper` off `develop`; no flag —
+the feature is inert unless discovery finds no native feed. Deployment plan
+(plan 6) is unaffected.
