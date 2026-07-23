@@ -142,11 +142,21 @@ services:
 
     # HtmlItemExtractorWiringTest fetches this to prove the app.scrape_layer
     # tagged iterator actually collects the extraction layers in priority
-    # order — an empty iterator builds fine and only fails on first use. No
-    # application code injects the extractor yet (the refresh pipeline picks
-    # it up in a later task), so the compiler would remove it entirely and the
-    # test container could not fetch it. Same `autowire` caveat as above.
+    # order — an empty iterator builds fine and only fails on first use.
+    # Several service tests also borrow the container-built extractor instead
+    # of assembling the layer stack by hand. Same `autowire` caveat as above.
     App\Service\Scraper\HtmlItemExtractor:
+        autowire: true
+        public: true
+
+    # FeedBodyParserWiringTest fetches this to prove the app.feed_body_parser
+    # keyed locator actually collects both format parsers — an empty locator
+    # builds fine and every refresh would then take the xml fallback, which
+    # looks exactly like a working deployment until a scraped feed errors.
+    # RefreshRunner is its only injection point, so without this entry the
+    # compiler would inline it away and the test container could not fetch
+    # it. Same `autowire` caveat as above.
+    App\Service\Refresh\FeedBodyParser:
         autowire: true
         public: true
 
