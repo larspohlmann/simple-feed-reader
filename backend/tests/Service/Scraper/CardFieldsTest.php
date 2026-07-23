@@ -57,6 +57,16 @@ final class CardFieldsTest extends TestCase
         self::assertSame('First line of the card', $item?->title);
     }
 
+    public function testTitleFallbackSurvivesMinifiedHtmlWithoutNewlines(): void
+    {
+        [$c, $a] = $this->card(
+            '<a data-card href="/a/9">Actual Title<div>By Jane Doe</div>'
+            . '<div>A long teaser sentence well over forty characters for this test.</div></a>'
+        );
+        $item = CardFields::item($c, $a, 'https://site.test/');
+        self::assertSame('Actual Title', $item?->title);
+    }
+
     public function testTeaserFromDataAttributeFallback(): void
     {
         [$c, $a] = $this->card(<<<HTML

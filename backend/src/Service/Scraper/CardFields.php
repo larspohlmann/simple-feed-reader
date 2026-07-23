@@ -8,13 +8,14 @@ use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\UrlResolver;
 use App\Service\Parser\DateParser;
 use Dom\Element;
+use Dom\Text;
 
 /**
  * Extracts ScrapedItem fields from one card container + its anchor.
  *
  * Field rules (per the scraper design spec):
  * - title: first heading (h1-h4) in the container; else the innermost element
- *   whose class matches title|headline; else the anchor's FIRST text line —
+ *   whose class matches title|headline; else the anchor's FIRST text node —
  *   never the anchor's full text, which on heading-less cards would mash
  *   title, byline, and description together.
  * - teaser: longest leaf-ish text block that is at least 40 chars and does
@@ -83,7 +84,7 @@ final class CardFields
     {
         $title = self::headingTitle($container)
             ?? self::classHintedTitle($container)
-            ?? self::firstAnchorLine($anchor);
+            ?? self::firstAnchorText($anchor);
         if ($title === null || mb_strlen($title) < self::MIN_TITLE_LENGTH) {
             return null;
         }
@@ -123,12 +124,25 @@ final class CardFields
         return $title;
     }
 
-    private static function firstAnchorLine(Element $anchor): ?string
+    /**
+     * First non-empty text node under the anchor, depth-first in document
+     * order. Splitting textContent on newlines breaks on minified HTML —
+     * block elements contribute no newline to textContent, so title, byline,
+     * and teaser mash into one "line". The DOM keeps them as separate text
+     * nodes regardless of source formatting.
+     */
+    private static function firstAnchorText(Element $anchor): ?string
     {
-        foreach (explode("\n", $anchor->textContent ?? '') as $line) {
-            $line = TextNormalizer::normalize($line);
-            if ($line !== '') {
-                return $line;
+        foreach ($anchor->childNodes as $child) {
+            if ($child instanceof Text) {
+                $text = TextNormalizer::normalize($child->data);
+            } elseif ($child instanceof Element) {
+                $text = self::firstAnchorText($child) ?? '';
+            } else {
+                continue;
+            }
+            if ($text !== '') {
+                return $text;
             }
         }
 
