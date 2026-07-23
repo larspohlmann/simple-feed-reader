@@ -119,15 +119,22 @@ final readonly class HtmlItemExtractor
 
     private function toEntry(ScrapedItem $item): ParsedEntry
     {
+        // The teaser cap is applied once here, at the funnel every layer's
+        // output passes through — a clamp inside one layer (CardFields) let
+        // JSON-LD descriptions of arbitrary length walk straight past it.
+        $teaser = $item->teaser === null
+            ? null
+            : mb_substr($item->teaser, 0, CardFields::MAX_TEASER_LENGTH);
+
         return new ParsedEntry(
             guid: GuidFallback::for($item->url, $item->url, $item->title),
             url: $item->url,
             title: $item->title,
             author: null,
-            summary: $item->teaser,
-            contentHtml: $item->teaser === null
+            summary: $teaser,
+            contentHtml: $teaser === null
                 ? null
-                : '<p>' . htmlspecialchars($item->teaser, \ENT_QUOTES) . '</p>',
+                : '<p>' . htmlspecialchars($teaser, \ENT_QUOTES) . '</p>',
             publishedAt: $item->publishedAt,
             imageUrl: $item->imageUrl,
         );

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Scraper;
 
+use App\Service\Scraper\CardFields;
 use App\Service\Scraper\Exception\HtmlExtractionException;
 use App\Service\Scraper\HtmlItemExtractor;
 use App\Service\Scraper\Layer\ClusterLayer;
@@ -76,6 +77,31 @@ final class HtmlItemExtractorTest extends TestCase
         // instead, the count would differ (the fixture also contains link markup).
         $parsed = $this->extractor()->extract($this->fixture('jsonld-list.html'), 'https://news.test/section/');
         self::assertCount(4, $parsed->entries);
+    }
+
+    /**
+     * The teaser length cap must hold at the funnel for every layer: JSON-LD
+     * descriptions never pass through CardFields, so a clamp living only
+     * there would let a 5,000-char description straight into the feed.
+     */
+    public function testTeaserCapAppliesToJsonLdDescriptionsAtTheFunnel(): void
+    {
+        $articles = [];
+        for ($i = 1; $i <= 3; $i++) {
+            $articles[] = [
+                '@type' => 'NewsArticle',
+                'url' => "/story-{$i}",
+                'headline' => "Synthetic story number {$i}",
+                'description' => str_repeat('x', 5000),
+            ];
+        }
+        $json = json_encode(['@context' => 'https://schema.org', '@graph' => $articles], \JSON_THROW_ON_ERROR);
+        $html = '<html lang="en"><body><script type="application/ld+json">' . $json . '</script></body></html>';
+
+        $parsed = $this->extractor()->extract($html, 'https://long.test/');
+
+        self::assertCount(3, $parsed->entries);
+        self::assertSame(CardFields::MAX_TEASER_LENGTH, mb_strlen((string) $parsed->entries[0]->summary));
     }
 
     public function testHostilePagesThrow(): void

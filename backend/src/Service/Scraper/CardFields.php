@@ -28,7 +28,8 @@ final class CardFields
     public const int MIN_TITLE_LENGTH = 5;
     public const int MAX_TITLE_LENGTH = 300;
     public const int MIN_TEASER_LENGTH = 40;
-    private const int MAX_TEASER_LENGTH = 1000;
+    /** Applied once at the HtmlItemExtractor funnel — one cap for every layer's teasers. */
+    public const int MAX_TEASER_LENGTH = 1000;
 
     /** Child tags that make an element a wrapper rather than a text block. */
     private const array NON_LEAF_CHILDREN = ['P', 'DIV', 'UL', 'OL', 'H1', 'H2', 'H3', 'H4', 'ARTICLE', 'SECTION'];
@@ -149,9 +150,7 @@ final class CardFields
                 $teaser = $text;
             }
         }
-        $teaser ??= self::attributeTeaser($container);
-
-        return $teaser === null ? null : mb_substr($teaser, 0, self::MAX_TEASER_LENGTH);
+        return $teaser ?? self::attributeTeaser($container);
     }
 
     private static function isLeafish(Element $element): bool
