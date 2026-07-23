@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
+import { of, Subject } from 'rxjs';
 import { ReaderViewComponent } from './reader-view.component';
-import { EntryDto } from '../models';
+import { ReaderContentService } from '../reader-content.service';
+import { EntryDto, ReaderContent } from '../models';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -19,6 +21,8 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   ...over,
 });
 
+let loadMock: jest.Mock;
+
 function mount(e: EntryDto | null, hasPrev = true, hasNext = true) {
   const f = TestBed.createComponent(ReaderViewComponent);
   f.componentRef.setInput('entry', e);
@@ -28,23 +32,45 @@ function mount(e: EntryDto | null, hasPrev = true, hasNext = true) {
   return f;
 }
 
-describe('ReaderViewComponent', () => {
-  beforeEach(() => TestBed.configureTestingModule({ imports: [ReaderViewComponent] }));
+const okContent = (over: Partial<ReaderContent> = {}): ReaderContent => ({
+  status: 'ok',
+  contentHtml: '<p>READER</p>',
+  url: '',
+  title: '',
+  byline: null,
+  siteName: null,
+  excerpt: null,
+  extractedAt: '',
+  ...over,
+});
 
-  it('renders title, meta, content and decorates external links', () => {
+describe('ReaderViewComponent', () => {
+  beforeEach(() => {
+    // Default: extraction fails so the existing presentational tests keep
+    // asserting against the feed's own content. Reader-specific tests override.
+    loadMock = jest.fn(() => of<ReaderContent>({ status: 'failed', reason: 'fetch', url: null }));
+    TestBed.configureTestingModule({
+      imports: [ReaderViewComponent],
+      providers: [{ provide: ReaderContentService, useValue: { load: loadMock } }],
+    });
+  });
+
+  it('renders title, meta, content and decorates external links', async () => {
     const el = mount(entry()).nativeElement as HTMLElement;
     expect(el.querySelector('.title')!.textContent).toContain('Deep dive');
     expect(el.querySelector('.meta')!.textContent).toContain('Ars');
     expect(el.querySelector('.content')!.textContent).toContain('Body');
+    await Promise.resolve(); // link decoration runs in a microtask
     const a = el.querySelector('.content a') as HTMLAnchorElement;
     expect(a.target).toBe('_blank');
     expect(a.rel).toContain('noopener');
   });
 
-  it('leaves in-page fragment anchors undecorated', () => {
+  it('leaves in-page fragment anchors undecorated', async () => {
     const el = mount(
       entry({ contentHtml: '<a href="#footnote">jump</a><a href="https://ext.test/z">ext</a>' }),
     ).nativeElement as HTMLElement;
+    await Promise.resolve(); // link decoration runs in a microtask
     const anchors = el.querySelectorAll('.content a');
     expect((anchors[0] as HTMLAnchorElement).target).toBe(''); // fragment link untouched
     expect((anchors[1] as HTMLAnchorElement).target).toBe('_blank'); // external decorated
@@ -70,5 +96,40 @@ describe('ReaderViewComponent', () => {
     const el = mount(entry(), false, false).nativeElement as HTMLElement;
     expect((el.querySelector('.prev') as HTMLButtonElement).disabled).toBe(true);
     expect((el.querySelector('.next') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('renders extracted reader content when extraction succeeds', () => {
+    loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+    const el = mount(entry()).nativeElement as HTMLElement;
+    expect(el.querySelector('.content')!.innerHTML).toContain('READER');
+  });
+
+  it('falls back to feed content and shows a note when extraction fails', () => {
+    loadMock.mockReturnValue(of<ReaderContent>({ status: 'failed', reason: 'fetch', url: null }));
+    const el = mount(entry()).nativeElement as HTMLElement;
+    expect(el.querySelector('.content')!.innerHTML).toContain('Body');
+    expect(el.querySelector('.reader-note')).not.toBeNull();
+  });
+
+  it('toggles between reader and original', () => {
+    loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+    const f = mount(entry());
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.content')!.innerHTML).toContain('READER');
+
+    (el.querySelector('.mode') as HTMLButtonElement).click();
+    f.detectChanges();
+    expect(el.querySelector('.content')!.innerHTML).toContain('Body');
+
+    (el.querySelector('.mode') as HTMLButtonElement).click();
+    f.detectChanges();
+    expect(el.querySelector('.content')!.innerHTML).toContain('READER');
+  });
+
+  it('shows a loading indicator while extraction is pending', () => {
+    loadMock.mockReturnValue(new Subject<ReaderContent>());
+    const el = mount(entry()).nativeElement as HTMLElement;
+    expect(el.querySelector('.loading')).not.toBeNull();
+    expect(el.querySelector('.content')).toBeNull();
   });
 });

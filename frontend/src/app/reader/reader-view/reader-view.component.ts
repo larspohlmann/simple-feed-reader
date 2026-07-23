@@ -1,7 +1,18 @@
 // src/app/reader/reader-view/reader-view.component.ts
-import { AfterViewChecked, Component, ElementRef, input, output, viewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { IconComponent } from '../../shared/icon/icon.component';
-import { EntryDto } from '../models';
+import { EntryDto, ReaderArticle } from '../models';
+import { ReaderContentService } from '../reader-content.service';
 import { relativeTime } from '../format';
 
 @Component({
@@ -15,6 +26,20 @@ import { relativeTime } from '../format';
             <app-icon name="arrow_back" [size]="20" />
           </button>
           <div class="nav">
+            @if (canToggle()) {
+              <button
+                class="mode"
+                type="button"
+                [attr.aria-pressed]="mode() === 'reader'"
+                [attr.aria-label]="
+                  mode() === 'reader' ? 'Show original feed content' : 'Show reader view'
+                "
+                (click)="toggleMode()"
+              >
+                <app-icon [name]="mode() === 'reader' ? 'article' : 'feed'" [size]="18" />
+                {{ mode() === 'reader' ? 'Reader' : 'Original' }}
+              </button>
+            }
             <button
               class="prev"
               type="button"
@@ -66,7 +91,16 @@ import { relativeTime } from '../format';
               <app-icon [name]="e.isRead ? 'mark_email_unread' : 'check'" [size]="20" />
             </button>
           </div>
-          <div #content class="content" [innerHTML]="e.contentHtml"></div>
+          @if (loading()) {
+            <div class="loading" role="status">Loading reader view…</div>
+          } @else {
+            @if (failed() && mode() === 'original') {
+              <p class="reader-note">
+                Couldn't load the full article — showing the feed's summary.
+              </p>
+            }
+            <div #content class="content" [innerHTML]="displayHtml()"></div>
+          }
         </article>
       </div>
     } @else {
@@ -149,10 +183,28 @@ import { relativeTime } from '../format';
         height: 100%;
         color: var(--text-muted);
       }
+      .mode {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: var(--fs-sm);
+      }
+      .mode[aria-pressed='true'] {
+        color: var(--accent);
+      }
+      .loading {
+        padding: var(--space-5) var(--space-4);
+        color: var(--text-muted);
+      }
+      .reader-note {
+        font-size: var(--fs-sm);
+        color: var(--text-muted);
+        margin: 0 0 var(--space-3);
+      }
     `,
   ],
 })
-export class ReaderViewComponent implements AfterViewChecked {
+export class ReaderViewComponent {
   readonly entry = input.required<EntryDto | null>();
   readonly hasPrev = input(false);
   readonly hasNext = input(false);
@@ -167,26 +219,77 @@ export class ReaderViewComponent implements AfterViewChecked {
   readonly close = output<void>();
 
   private readonly content = viewChild<ElementRef<HTMLElement>>('content');
-  private decoratedFor: number | null = null;
+  private readonly reader = inject(ReaderContentService);
+
+  readonly mode = signal<'reader' | 'original'>('reader');
+  private readonly state = signal<
+    { status: 'idle' | 'loading' } | { status: 'ok'; article: ReaderArticle } | { status: 'failed' }
+  >({ status: 'idle' });
+
+  readonly loading = computed(() => this.state().status === 'loading');
+  readonly failed = computed(() => this.state().status === 'failed');
+  private readonly article = computed(() => {
+    const s = this.state();
+    return s.status === 'ok' ? s.article : null;
+  });
+  readonly canToggle = computed(() => this.article() !== null);
+
+  readonly displayHtml = computed(() => {
+    const e = this.entry();
+    if (!e) return '';
+    const a = this.article();
+    return this.mode() === 'reader' && a ? a.contentHtml : (e.contentHtml ?? '');
+  });
+
+  constructor() {
+    effect((onCleanup) => {
+      const e = this.entry();
+      this.mode.set('reader');
+      if (!e) {
+        this.state.set({ status: 'idle' });
+        return;
+      }
+      this.state.set({ status: 'loading' });
+      const sub = this.reader.load(e.id).subscribe({
+        next: (c) => {
+          if (c.status === 'ok') {
+            this.state.set({ status: 'ok', article: c });
+          } else {
+            this.state.set({ status: 'failed' });
+            this.mode.set('original');
+          }
+        },
+        error: () => {
+          this.state.set({ status: 'failed' });
+          this.mode.set('original');
+        },
+      });
+      onCleanup(() => sub.unsubscribe());
+    });
+
+    // Re-decorate external links whenever the rendered HTML changes.
+    effect(() => {
+      this.displayHtml();
+      queueMicrotask(() => {
+        const host = this.content()?.nativeElement;
+        if (!host) return;
+        for (const a of Array.from(host.querySelectorAll('a'))) {
+          // Leave in-page fragment anchors alone; only external links open in a new tab.
+          if ((a.getAttribute('href') ?? '').startsWith('#')) continue;
+          if (a.target !== '_blank') {
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+          }
+        }
+      });
+    });
+  }
+
+  toggleMode(): void {
+    this.mode.set(this.mode() === 'reader' ? 'original' : 'reader');
+  }
 
   when(e: EntryDto): string {
     return relativeTime(e.publishedAt ?? e.createdAt);
-  }
-
-  ngAfterViewChecked(): void {
-    // Decorate each entry's links exactly once — not on every change detection.
-    const id = this.entry()?.id ?? null;
-    if (id === this.decoratedFor) return;
-    const host = this.content()?.nativeElement;
-    if (!host) return;
-    for (const a of Array.from(host.querySelectorAll('a'))) {
-      // Leave in-page fragment anchors alone; only external links open in a new tab.
-      if ((a.getAttribute('href') ?? '').startsWith('#')) continue;
-      if (a.target !== '_blank') {
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-      }
-    }
-    this.decoratedFor = id;
   }
 }
