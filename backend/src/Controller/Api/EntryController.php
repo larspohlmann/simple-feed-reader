@@ -8,12 +8,16 @@ use App\Dto\Entry\MarkReadRequest;
 use App\Dto\Entry\UpdateEntryStateRequest;
 use App\Entity\EntryState;
 use App\Entity\User;
+use App\Exception\RateLimitedException;
 use App\Exception\ValidationException;
 use App\Http\EntryCursor;
 use App\Http\EntryJson;
+use App\Http\ReaderJson;
 use App\Repository\EntryQuery;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
+use App\Service\Reader\ArticleExtractorInterface;
+use App\Service\Reader\ExtractionResult;
 use App\Service\Reader\MarkReadService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -22,6 +26,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -34,6 +39,8 @@ final class EntryController
         private readonly EntityManagerInterface $em,
         private readonly ClockInterface $clock,
         private readonly MarkReadService $markRead,
+        private readonly ArticleExtractorInterface $extractor,
+        private readonly RateLimiterFactoryInterface $readerLimiter,
     ) {
     }
 
@@ -141,5 +148,37 @@ final class EntryController
             'isKept' => $state->isKept(),
             'readAt' => $state->getReadAt()?->format(\DateTimeInterface::ATOM),
         ]]);
+    }
+
+    #[Route('/{id}/reader', name: 'api_entries_reader', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function reader(
+        int $id,
+        #[CurrentUser] User $user,
+    ): JsonResponse {
+        // Ownership is checked BEFORE the limiter so an unowned id 404s without
+        // spending the caller's reader budget.
+        $entry = $this->entries->findOneSubscribedByUser($id, (int) $user->getId())
+            ?? throw new NotFoundHttpException('No such entry.');
+
+        $this->enforceReaderLimit($user);
+
+        $url = $entry->getUrl();
+        $result = $url === null || $url === ''
+            ? ExtractionResult::failed(null, 'no_url')
+            : $this->extractor->extract($url);
+
+        return new JsonResponse(ReaderJson::one($result, $this->clock->now()));
+    }
+
+    private function enforceReaderLimit(User $user): void
+    {
+        $limit = $this->readerLimiter->create('user-' . $user->getId())->consume();
+        if ($limit->isAccepted()) {
+            return;
+        }
+
+        throw new RateLimitedException(
+            max(1, $limit->getRetryAfter()->getTimestamp() - $this->clock->now()->getTimestamp()),
+        );
     }
 }

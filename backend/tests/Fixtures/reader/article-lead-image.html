@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <title>Text Only Story — Site</title>
+  <meta property="og:image" content="https://site.test/hero.jpg">
+</head>
+<body>
+  <nav><a href="/">Home</a></nav>
+  <article>
+    <h1>Text Only Story</h1>
+    <p>This article deliberately carries no inline image in its body, only prose,
+       so the extraction keeps plenty of readable text and clears the character
+       threshold comfortably while the lead picture lives outside the scored
+       content — exactly the case where readability drops the hero image and the
+       reader would otherwise show nothing but text with no picture at all.</p>
+    <p>A second paragraph continues with more ordinary sentences and clauses,
+       adding enough length that the body is unambiguously the main content of the
+       document and the extractor returns it as the article while the og:image
+       remains the only picture the story has to offer the reader.</p>
+  </article>
+</body></html>

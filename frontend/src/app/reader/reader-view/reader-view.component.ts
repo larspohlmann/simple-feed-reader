@@ -1,8 +1,25 @@
 // src/app/reader/reader-view/reader-view.component.ts
-import { AfterViewChecked, Component, ElementRef, input, output, viewChild } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { Subscription, timeout } from 'rxjs';
 import { IconComponent } from '../../shared/icon/icon.component';
-import { EntryDto } from '../models';
+import { EntryDto, ReaderArticle } from '../models';
+import { ReaderContentService } from '../reader-content.service';
 import { relativeTime } from '../format';
+
+/** Give up on a hung extraction and fall back to feed content (backend caps a
+ *  fetch at ~20s; this is the client-side backstop for a stalled connection). */
+const READER_LOAD_TIMEOUT_MS = 30_000;
 
 @Component({
   selector: 'app-reader-view',
@@ -15,6 +32,20 @@ import { relativeTime } from '../format';
             <app-icon name="arrow_back" [size]="20" />
           </button>
           <div class="nav">
+            @if (canToggle()) {
+              <button
+                class="mode"
+                type="button"
+                [attr.aria-pressed]="mode() === 'reader'"
+                [attr.aria-label]="
+                  mode() === 'reader' ? 'Show original feed content' : 'Show reader view'
+                "
+                (click)="toggleMode()"
+              >
+                <app-icon [name]="mode() === 'reader' ? 'article' : 'feed'" [size]="18" />
+                {{ mode() === 'reader' ? 'Reader' : 'Original' }}
+              </button>
+            }
             <button
               class="prev"
               type="button"
@@ -66,7 +97,19 @@ import { relativeTime } from '../format';
               <app-icon [name]="e.isRead ? 'mark_email_unread' : 'check'" [size]="20" />
             </button>
           </div>
-          <div #content class="content" [innerHTML]="e.contentHtml"></div>
+          @if (loading()) {
+            <div class="loading" role="status">Loading reader view…</div>
+          } @else {
+            @if (failed() && mode() === 'original') {
+              <p class="reader-note">
+                Couldn't load the full article — showing the feed's summary.
+              </p>
+            }
+            @if (leadImage(); as img) {
+              <img class="lead-image" [src]="img" alt="" />
+            }
+            <div #content class="content" [innerHTML]="displayHtml()"></div>
+          }
         </article>
       </div>
     } @else {
@@ -131,16 +174,99 @@ import { relativeTime } from '../format';
       .actions button.on {
         color: var(--accent);
       }
+      .lead-image {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: var(--radius);
+        margin-bottom: var(--space-5);
+      }
+      /* Article typography. The body is [innerHTML]-injected, so its child
+         elements carry no view-encapsulation attribute — the descendant rules
+         must use ::ng-deep (kept scoped under .content). The sanitizer also
+         strips default margins, so h2/p/li/blockquote need an explicit vertical
+         rhythm or the article reads as one dense block. */
       .content {
         color: var(--text-primary);
-        line-height: 1.7;
+        font-size: 16px;
+        line-height: 1.75;
       }
-      .content :is(img, video, iframe) {
+      .content ::ng-deep p {
+        margin: 0 0 var(--space-4);
+      }
+      .content ::ng-deep :is(h1, h2, h3, h4, h5, h6) {
+        margin: var(--space-6) 0 var(--space-3);
+        line-height: 1.3;
+        font-weight: 650;
+        color: var(--text-primary);
+      }
+      .content ::ng-deep h1 {
+        font-size: 22px;
+      }
+      .content ::ng-deep h2 {
+        font-size: 20px;
+      }
+      .content ::ng-deep h3 {
+        font-size: 17px;
+      }
+      .content ::ng-deep :is(h4, h5, h6) {
+        font-size: 16px;
+      }
+      .content ::ng-deep :is(ul, ol) {
+        margin: 0 0 var(--space-4);
+        padding-left: 1.5em;
+      }
+      .content ::ng-deep li {
+        margin: var(--space-1) 0;
+      }
+      .content ::ng-deep li::marker {
+        color: var(--text-muted);
+      }
+      .content ::ng-deep blockquote {
+        margin: var(--space-5) 0;
+        padding: var(--space-1) 0 var(--space-1) var(--space-4);
+        border-left: 3px solid var(--border-strong);
+        color: var(--text-secondary);
+      }
+      .content ::ng-deep figure {
+        margin: var(--space-5) 0;
+      }
+      .content ::ng-deep figcaption {
+        margin-top: var(--space-2);
+        font-size: var(--fs-sm);
+        color: var(--text-muted);
+        text-align: center;
+      }
+      .content ::ng-deep :is(img, video, iframe) {
         max-width: 100%;
         height: auto;
         border-radius: var(--radius);
       }
-      .content a {
+      .content ::ng-deep :not(pre) > code {
+        padding: 0.1em 0.35em;
+        background: var(--surface-1);
+        border-radius: var(--radius);
+        font-size: 0.9em;
+      }
+      .content ::ng-deep pre {
+        margin: 0 0 var(--space-4);
+        padding: var(--space-3);
+        background: var(--surface-1);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow-x: auto;
+        line-height: 1.5;
+      }
+      .content ::ng-deep pre code {
+        padding: 0;
+        background: none;
+      }
+      .content ::ng-deep hr {
+        margin: var(--space-5) 0;
+        border: 0;
+        border-top: 1px solid var(--border);
+      }
+      .content ::ng-deep a {
         color: var(--accent);
       }
       .placeholder {
@@ -149,10 +275,28 @@ import { relativeTime } from '../format';
         height: 100%;
         color: var(--text-muted);
       }
+      .mode {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: var(--fs-sm);
+      }
+      .mode[aria-pressed='true'] {
+        color: var(--accent);
+      }
+      .loading {
+        padding: var(--space-5) var(--space-4);
+        color: var(--text-muted);
+      }
+      .reader-note {
+        font-size: var(--fs-sm);
+        color: var(--text-muted);
+        margin: 0 0 var(--space-3);
+      }
     `,
   ],
 })
-export class ReaderViewComponent implements AfterViewChecked {
+export class ReaderViewComponent {
   readonly entry = input.required<EntryDto | null>();
   readonly hasPrev = input(false);
   readonly hasNext = input(false);
@@ -167,26 +311,103 @@ export class ReaderViewComponent implements AfterViewChecked {
   readonly close = output<void>();
 
   private readonly content = viewChild<ElementRef<HTMLElement>>('content');
-  private decoratedFor: number | null = null;
+  private readonly reader = inject(ReaderContentService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  // The open entry's object reference changes on every optimistic flag update
+  // (favorite/keep/read), but its id does not. Tracking the loaded id lets the
+  // load effect ignore those churns: no redundant re-fetch, and the Reader/
+  // Original toggle survives an in-reader action instead of snapping back.
+  private loadedId: number | null = null;
+  private loadSub: Subscription | null = null;
+
+  readonly mode = signal<'reader' | 'original'>('reader');
+  private readonly state = signal<
+    { status: 'idle' | 'loading' } | { status: 'ok'; article: ReaderArticle } | { status: 'failed' }
+  >({ status: 'idle' });
+
+  readonly loading = computed(() => this.state().status === 'loading');
+  readonly failed = computed(() => this.state().status === 'failed');
+  private readonly article = computed(() => {
+    const s = this.state();
+    return s.status === 'ok' ? s.article : null;
+  });
+  readonly canToggle = computed(() => this.article() !== null);
+  // A hero image for articles whose extracted body has none (only in reader mode;
+  // the original-content view keeps its own inline images).
+  readonly leadImage = computed(() =>
+    this.mode() === 'reader' ? (this.article()?.leadImage ?? null) : null,
+  );
+
+  readonly displayHtml = computed(() => {
+    const e = this.entry();
+    if (!e) return '';
+    const a = this.article();
+    // Original mode falls back through summary: many feeds populate only one of
+    // contentHtml/summary, so preferring contentHtml then summary avoids a blank
+    // pane under the "showing the feed's summary" note.
+    return this.mode() === 'reader' && a ? a.contentHtml : (e.contentHtml ?? e.summary ?? '');
+  });
+
+  constructor() {
+    effect(() => {
+      const e = this.entry();
+      const id = e?.id ?? null;
+      // Only react to a genuine entry change — not to a same-entry reference
+      // churn from an optimistic flag update (which must not cancel an in-flight
+      // load, re-fetch, or reset the mode toggle).
+      if (id === this.loadedId) return;
+      this.loadedId = id;
+      this.loadSub?.unsubscribe();
+      this.mode.set('reader');
+      if (!e) {
+        this.state.set({ status: 'idle' });
+        return;
+      }
+      this.state.set({ status: 'loading' });
+      this.loadSub = this.reader
+        .load(e.id)
+        .pipe(timeout({ first: READER_LOAD_TIMEOUT_MS }))
+        .subscribe({
+          next: (c) => {
+            if (c.status === 'ok') {
+              this.state.set({ status: 'ok', article: c });
+            } else {
+              this.state.set({ status: 'failed' });
+              this.mode.set('original');
+            }
+          },
+          error: () => {
+            this.state.set({ status: 'failed' });
+            this.mode.set('original');
+          },
+        });
+    });
+    this.destroyRef.onDestroy(() => this.loadSub?.unsubscribe());
+
+    // Re-decorate external links whenever the rendered HTML changes.
+    effect(() => {
+      this.displayHtml();
+      queueMicrotask(() => {
+        const host = this.content()?.nativeElement;
+        if (!host) return;
+        for (const a of Array.from(host.querySelectorAll('a'))) {
+          // Leave in-page fragment anchors alone; only external links open in a new tab.
+          if ((a.getAttribute('href') ?? '').startsWith('#')) continue;
+          if (a.target !== '_blank') {
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+          }
+        }
+      });
+    });
+  }
+
+  toggleMode(): void {
+    this.mode.set(this.mode() === 'reader' ? 'original' : 'reader');
+  }
 
   when(e: EntryDto): string {
     return relativeTime(e.publishedAt ?? e.createdAt);
-  }
-
-  ngAfterViewChecked(): void {
-    // Decorate each entry's links exactly once — not on every change detection.
-    const id = this.entry()?.id ?? null;
-    if (id === this.decoratedFor) return;
-    const host = this.content()?.nativeElement;
-    if (!host) return;
-    for (const a of Array.from(host.querySelectorAll('a'))) {
-      // Leave in-page fragment anchors alone; only external links open in a new tab.
-      if ((a.getAttribute('href') ?? '').startsWith('#')) continue;
-      if (a.target !== '_blank') {
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-      }
-    }
-    this.decoratedFor = id;
   }
 }

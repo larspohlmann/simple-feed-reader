@@ -74,3 +74,14 @@ framework:
             limit: 90
             interval: '5 minutes'
             cache_pool: cache.rate_limiter
+
+        # Per-user cap on reader-mode extraction. Each open triggers at most one
+        # outbound page fetch, and the frontend caches successes, so honest usage
+        # is low; this only guards against a scripted user driving outbound
+        # fetches. Keyed on the user id. Sliding window and the same pool as its
+        # neighbours, for the reasons documented above.
+        reader:
+            policy: 'sliding_window'
+            limit: 60
+            interval: '5 minutes'
+            cache_pool: cache.rate_limiter
