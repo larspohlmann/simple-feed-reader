@@ -79,6 +79,11 @@ final class HtmlPageFetcher
             return $this->httpClient->request('GET', $url, [
                 'headers' => [
                     'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    // Refuse transparent compression: otherwise curl counts the
+                    // COMPRESSED bytes against MAX_BYTES in on_progress but buffers
+                    // the DECOMPRESSED body whole before the post-read size check —
+                    // a small gzip bomb could inflate to GB and OOM the worker.
+                    'Accept-Encoding' => 'identity',
                     'User-Agent' => self::USER_AGENT,
                 ],
                 'max_redirects' => 0,

@@ -66,4 +66,26 @@ final class HtmlPageFetcherTest extends TestCase
         $this->expectException(PageFetchException::class);
         $fetcher->fetch('https://example.com/missing');
     }
+
+    public function testDisablesTransparentCompression(): void
+    {
+        /** @var list<string> $seenHeaders */
+        $seenHeaders = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seenHeaders): MockResponse {
+                /** @var list<string> $headers */
+                $headers = $options['headers'];
+                $seenHeaders = $headers;
+
+                return new MockResponse('<html lang="en"><body>ok</body></html>', ['http_code' => 200]);
+            },
+        );
+
+        $fetcher->fetch('https://example.com/post');
+
+        // Without this, curl would negotiate gzip and the on_progress byte cap
+        // would count compressed bytes while the decompressed body is buffered
+        // whole — a decompression-bomb amplification.
+        self::assertContains('Accept-Encoding: identity', $seenHeaders);
+    }
 }
