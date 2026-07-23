@@ -43,13 +43,13 @@ final class ReaderJourneyE2eTest extends E2eTestCase
 
     /**
      * Feed autodiscovery from a real homepage: posting the site root returns a
-     * 200 with a non-empty, well-formed `candidates` list when that homepage
-     * advertises `<link rel="alternate">` feeds.
-     *
-     * A domain is skipped when it is unreachable, or when its homepage carries
-     * no feed autodiscovery links at all — the latter is a real, uncontrollable
-     * property of the site (heise's homepage, for one, offers none), so the API
-     * answers 422 `feed_unreachable` and the case is skipped rather than failed.
+     * 200 with a non-empty, well-formed `candidates` list — native rss/atom
+     * candidates when the homepage advertises `<link rel="alternate">` feeds,
+     * or the synthetic 'scraped' fallback candidate when it does not (heise's
+     * homepage, for one, offers none). Discovery no longer answers 422 for a
+     * feedless page; only a homepage the scraper cannot handle either comes
+     * back with an empty list plus a `scrapeFailureReason`, and that being a
+     * real, uncontrollable property of the site, the case is skipped.
      */
     #[DataProvider('provideDomains')]
     public function testHomepageFeedDiscovery(string $label, string $homepage): void
@@ -59,12 +59,13 @@ final class ReaderJourneyE2eTest extends E2eTestCase
         $response = $this->postJson('/api/subscriptions', ['url' => $homepage], $this->adminJwt());
         $status = $response->getStatusCode();
 
-        if (422 === $status) {
-            self::assertSame('feed_unreachable', $response->toArray(false)['type'] ?? null);
-            self::markTestSkipped($label . ' homepage advertises no feed autodiscovery links');
-        }
-
         self::assertSame(200, $status, $label . ' homepage discovery should return 200 candidates');
+
+        if ([] === ($response->toArray()['candidates'] ?? [])) {
+            $reason = $response->toArray()['scrapeFailureReason'] ?? null;
+            self::assertIsString($reason, $label . ' an empty candidate list must carry a scrapeFailureReason');
+            self::markTestSkipped(sprintf('%s homepage offered no candidates (%s)', $label, $reason));
+        }
 
         $candidates = $response->toArray()['candidates'] ?? null;
         self::assertIsArray($candidates, $label . ' response must carry a candidates array');

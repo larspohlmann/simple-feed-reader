@@ -32,6 +32,7 @@ final class SubscriptionJsonTest extends TestCase
         self::assertSame('https://example.com/feed.xml', $shape['feedUrl']);
         self::assertSame('https://example.com', $shape['siteUrl']);
         self::assertSame('active', $shape['status']);
+        self::assertSame('xml', $shape['sourceFormat']);
         self::assertSame('2026-02-03T04:05:06+00:00', $shape['createdAt']);
         self::assertSame(0, $shape['position']);
         self::assertSame(

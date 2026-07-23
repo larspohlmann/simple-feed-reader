@@ -16,7 +16,7 @@ final class SubscriptionJson
      *
      * @return array{
      *   id: int|null, title: string, customTitle: string|null, feedUrl: string,
-     *   siteUrl: string|null, status: string, createdAt: string, position: int,
+     *   siteUrl: string|null, status: string, sourceFormat: string, createdAt: string, position: int,
      *   tags: list<array{id: int|null, name: string, color: string|null, icon: string|null, position: int}>,
      *   unreadCount: int
      * }
@@ -40,6 +40,9 @@ final class SubscriptionJson
             'feedUrl' => $feed->getUrl(),
             'siteUrl' => $feed->getSiteUrl(),
             'status' => $feed->getStatus()->value,
+            // 'xml' or 'scraped' — lets the UI mark synthesized feeds, whose
+            // entries are teasers rather than the feed author's own content.
+            'sourceFormat' => $feed->getSourceFormat(),
             'createdAt' => $sub->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'position' => $sub->getPosition(),
             'tags' => $tags,
