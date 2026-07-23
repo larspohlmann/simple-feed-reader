@@ -58,6 +58,19 @@ describe('FeedsSectionComponent', () => {
     expect(el.textContent).toContain('gone');
   });
 
+  it('marks scraped feeds with a badge explaining the source', () => {
+    const el: HTMLElement = mount([
+      sub(1, { title: 'Alpha', sourceFormat: 'scraped' }),
+      sub(2, { title: 'Zed' }),
+    ]).nativeElement;
+    const rows = el.querySelectorAll('.feed');
+    const badge = rows[0].querySelector('.badge.scraped');
+    expect(badge?.textContent?.trim()).toBe('scraped');
+    expect(badge?.getAttribute('title')).toContain('article list');
+    // A real XML feed carries no scraped badge.
+    expect(rows[1].querySelector('.badge.scraped')).toBeNull();
+  });
+
   it('shows an empty state when there are no feeds', () => {
     const el: HTMLElement = mount([]).nativeElement;
     expect(el.textContent).toContain('No feeds yet');
