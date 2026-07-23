@@ -135,9 +135,12 @@ it:
 - **teaser** — the longest text block in the container that isn't the title,
   minimum 40 characters (so "Read more" labels never qualify). A "text block"
   is a `<p>` or a leaf-ish `<div>`/`<span>` whose own text qualifies —
-  tagesschau uses `<p class="teaser__shorttext">`, treehugger uses
-  `<div class="card__description">`. Becomes the entry's content HTML (as a
-  plain `<p>`), sanitized by `EntrySanitizer` like all feed content.
+  tagesschau uses `<p class="teaser__shorttext">`. Fallback (verified needed
+  for treehugger, where `card__description` divs are *empty* and the text
+  lives in `data-card-description` attributes): a `data-*` attribute on the
+  container (or a direct child) whose name matches `/descri/i` and whose
+  value is ≥40 characters. Becomes the entry's content HTML (as a plain
+  `<p>`), sanitized by `EntrySanitizer` like all feed content.
 - **image** — first `<img>` in the container (`src`/`srcset`/`data-src`),
   http(s) only, feeding the existing item-image plumbing.
 - **date** — `<time datetime>` if present; otherwise the entry is undated and
