@@ -1,7 +1,7 @@
 # Dev image only. A future containerized production would add a multi-stage
 # `prod` target here (composer install --no-dev, baked-in source, tuned opcache)
 # — see the spec's "Deliberately out of scope" section.
-FROM php:8.3-fpm-alpine
+FROM php:8.4-fpm-alpine
 
 # install-php-extensions resolves each extension's build- and runtime-deps on
 # alpine (icu for intl, libzip for zip, phpize toolchain for the xdebug pecl

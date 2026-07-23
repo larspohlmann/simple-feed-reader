@@ -4,7 +4,7 @@
     "minimum-stability": "stable",
     "prefer-stable": true,
     "require": {
-        "php": ">=8.3",
+        "php": ">=8.4",
         "ext-ctype": "*",
         "ext-dom": "*",
         "ext-iconv": "*",
@@ -12,7 +12,7 @@
         "doctrine/doctrine-bundle": "^2.18.3",
         "doctrine/doctrine-migrations-bundle": "^3.7",
         "doctrine/orm": "^3.6.7",
-        "fivefilters/readability.php": "^3.3",
+        "fivefilters/readability.php": "^4.0",
         "lcobucci/jwt": "^5.6",
         "lexik/jwt-authentication-bundle": "^3.2",
         "symfony/clock": "7.4.*",
@@ -53,7 +53,7 @@
         "bump-after-update": true,
         "sort-packages": true,
         "platform": {
-            "php": "8.3.0"
+            "php": "8.4.0"
         }
     },
     "autoload": {
