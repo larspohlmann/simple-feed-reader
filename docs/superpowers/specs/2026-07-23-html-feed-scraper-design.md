@@ -24,6 +24,15 @@ Reference examples:
   so it cannot be *subscribed* under this design — but its rendered DOM
   (captured via browser 2026-07-23) is a fixture that hardens the extraction
   heuristics against heading-less, div-based cards.
+- `https://www.heise.de/` — added as a reference 2026-07-23: the homepage
+  serves plain HTTP clients fine and advertises **no** feed `<link>` tags, so
+  it is a genuine production target for the scraper. It embeds 61 JSON-LD
+  `ItemList` blocks (190 list items, 141 unique URLs — exercising layer 1,
+  cross-list dedupe, and the 50-item cap on a real page). Its teaser text
+  lives in the schema.org **`abstract`** property (143 items), not
+  `description` — so layer 1 reads `description` with `abstract` as
+  fallback. Some `itemListElement.item` values are bare strings; the layer
+  must tolerate those without crashing.
 - `https://www.reuters.com/business/environment/` — the user's original
   example, but Reuters sits behind aggressive bot protection; it is explicitly
   *best-effort only* (see Non-goals).
@@ -112,7 +121,9 @@ first success wins:
 
 1. **Structured data.** JSON-LD `ItemList`, or arrays of
    `NewsArticle`/`BlogPosting`/`Article` objects: extract url/headline/
-   description/image/datePublished directly.
+   description/image/datePublished directly. Teaser reads `description`
+   with `abstract` as fallback (heise ships teasers as `abstract`); bare
+   string entries in `itemListElement` are tolerated and skipped.
 2. **Semantic markup.** Repeated `<article>` elements. (Repeated
    heading-anchor patterns without `<article>` wrappers are handled by
    layer 3 — the anchors share a DOM-path signature, so clustering finds
