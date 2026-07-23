@@ -140,11 +140,17 @@ priority (JsonLd 30 > Semantic 20 > Cluster 10):
    heading-anchor patterns without `<article>` wrappers are handled by
    layer 3 — the anchors share a DOM-path signature, so clustering finds
    them without a dedicated rule.)
-3. **Pattern clustering.** Group anchors by DOM-path signature (tag/class
-   chain from body); score clusters by size, headline-like link text, URL
-   shape similarity, and penalize `nav`/`header`/`footer`/`aside` ancestry;
-   take the best-scoring cluster. This is the layer that handles tagesschau
-   (div-based teaser cards, no `<article>`, no JSON-LD list).
+3. **Pattern clustering.** Group anchors by their own class tokens (BEM
+   `--modifier` suffixes stripped; one group per token; classless anchors
+   share a group), after excluding anchors with `nav`/`header`/`footer`/
+   `aside` ancestry; score groups by item count (mean title length as
+   tiebreak); take the best group with ≥3 extracted items. *Amended
+   in-branch 2026-07-23: the original body-down DOM-path signature
+   fragmented identical cards across section wrappers (treehugger's 45
+   `mntl-card`s split 24/15/6), stranding items and teasers; anchor-class
+   clustering keys on what card systems actually share.* This is the layer
+   that handles tagesschau (div-based teaser cards, no `<article>`, no
+   JSON-LD list) and treehugger.
 
 **Per-item extraction happens on the card container, not the anchor.** From
 each clustered anchor, walk up to the repeating container element, then within
