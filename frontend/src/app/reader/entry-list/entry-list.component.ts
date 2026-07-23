@@ -1,15 +1,36 @@
 // src/app/reader/entry-list/entry-list.component.ts
-import { Component, ElementRef, OnDestroy, effect, input, output, viewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  OnDestroy,
+  computed,
+  effect,
+  input,
+  output,
+  viewChild,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
+import { EntryHeroComponent } from '../magazine/entry-hero.component';
+import { EntryCompactComponent } from '../magazine/entry-compact.component';
+import { SourceGroupComponent } from '../magazine/source-group.component';
+import { MagazineBlock, planMagazine } from '../magazine/magazine-planner';
+import { ReadingLayout } from '../reading-layout.service';
 import { EntryDto } from '../models';
 import { Selection } from '../query';
 import { Problem } from '../../core/problem';
 
 @Component({
   selector: 'app-entry-list',
-  imports: [RouterLink, IconComponent, EntryRowComponent],
+  imports: [
+    RouterLink,
+    IconComponent,
+    EntryRowComponent,
+    EntryHeroComponent,
+    EntryCompactComponent,
+    SourceGroupComponent,
+  ],
   template: `
     <header class="list-header">
       <h2>{{ title() }}</h2>
@@ -56,6 +77,57 @@ import { Problem } from '../../core/problem';
       </div>
     } @else if (entries().length === 0) {
       <p class="empty">{{ selection().unread ? "You're all caught up." : 'Nothing here yet.' }}</p>
+    } @else if (layout() === 'magazine') {
+      <div class="rows magazine" #rows>
+        @for (b of blocks(); track blockKey(b)) {
+          @switch (b.kind) {
+            @case ('hero') {
+              <app-entry-hero
+                [entry]="hero(b).entry"
+                (favorite)="favorite.emit($event)"
+                (keep)="keep.emit($event)"
+                (read)="read.emit($event)"
+                (open)="open.emit($event)"
+              />
+            }
+            @case ('feature') {
+              <app-entry-row
+                [entry]="feat(b).entry"
+                [imageSide]="feat(b).imageSide"
+                [class.open]="openEntryId() === feat(b).entry.id"
+                (favorite)="favorite.emit($event)"
+                (keep)="keep.emit($event)"
+                (read)="read.emit($event)"
+                (open)="open.emit($event)"
+              />
+            }
+            @case ('compact') {
+              <app-entry-compact [entry]="compact(b).entry" (open)="open.emit($event)" />
+            }
+            @case ('group') {
+              <app-source-group
+                [source]="grp(b).source"
+                [subscriptionId]="grp(b).subscriptionId"
+                [entries]="grp(b).entries"
+                [moreCount]="grp(b).moreCount"
+                (open)="open.emit($event)"
+              />
+            }
+          }
+        }
+        @if (hasMore()) {
+          <div class="foot" #sentinel>
+            <button
+              class="load-more"
+              type="button"
+              [disabled]="loadingMore()"
+              (click)="loadMore.emit()"
+            >
+              {{ loadingMore() ? 'Loading…' : 'Load more' }}
+            </button>
+          </div>
+        }
+      </div>
     } @else {
       <div class="rows" #rows>
         @for (e of entries(); track e.id) {
@@ -140,6 +212,17 @@ import { Problem } from '../../core/problem';
         min-height: 0;
         overflow: auto;
       }
+      .rows.magazine {
+        padding: var(--space-3);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-3);
+      }
+      .rows.magazine > * {
+        width: 100%;
+        max-width: 680px;
+      }
       .empty {
         color: var(--text-muted);
         padding: var(--space-6);
@@ -189,6 +272,7 @@ export class EntryListComponent implements OnDestroy {
   readonly canMarkAllRead = input.required<boolean>();
   readonly selection = input.required<Selection>();
   readonly openEntryId = input.required<number | null>();
+  readonly layout = input<ReadingLayout>('list');
 
   readonly loadMore = output<void>();
   readonly markAllRead = output<void>();
@@ -196,6 +280,28 @@ export class EntryListComponent implements OnDestroy {
   readonly keep = output<EntryDto>();
   readonly read = output<EntryDto>();
   readonly open = output<EntryDto>();
+
+  readonly blocks = computed<MagazineBlock[]>(() =>
+    planMagazine(this.entries(), this.selection().kind !== 'subscription'),
+  );
+
+  blockKey(b: MagazineBlock): string {
+    return b.kind === 'group'
+      ? `group-${b.subscriptionId}-${b.entries[0].id}`
+      : `${b.kind}-${b.entry.id}`;
+  }
+  hero(b: MagazineBlock) {
+    return b as Extract<MagazineBlock, { kind: 'hero' }>;
+  }
+  feat(b: MagazineBlock) {
+    return b as Extract<MagazineBlock, { kind: 'feature' }>;
+  }
+  compact(b: MagazineBlock) {
+    return b as Extract<MagazineBlock, { kind: 'compact' }>;
+  }
+  grp(b: MagazineBlock) {
+    return b as Extract<MagazineBlock, { kind: 'group' }>;
+  }
 
   private readonly rows = viewChild<ElementRef<HTMLElement>>('rows');
   private readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
