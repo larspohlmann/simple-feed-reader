@@ -112,6 +112,21 @@ describe('ReaderShellComponent', () => {
     ctrl.verify();
   });
 
+  it('fetches a deep-linked entry that is not in the loaded list', () => {
+    const f = boot(); // initial list holds only entry id 1
+    qp.next(convertToParamMap({ entry: '514-deep-linked-story' }));
+    f.detectChanges();
+
+    // Not in the list → the shell fetches it by the id parsed from the slug.
+    const req = ctrl.expectOne('https://api.test/api/entries/514');
+    expect(req.request.method).toBe('GET');
+    // isRead:true so the mark-on-open effect fires no extra state PATCH.
+    req.flush({ entry: { ...entry, id: 514, title: 'Deep linked story', isRead: true } });
+    f.detectChanges();
+
+    expect(f.nativeElement.querySelector('app-reader-view')).not.toBeNull();
+  });
+
   it('reloads entries when the selection changes', () => {
     const f = boot();
     qp.next(convertToParamMap({ subscription: '5' }));

@@ -215,6 +215,54 @@ final class EntryControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(404);
     }
 
+    public function testGetReturnsOwnedEntry(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-get@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
+        self::assertNotNull($entryId);
+
+        $client->request('GET', "/api/entries/$entryId", server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entry']);
+        self::assertSame($entryId, $body['entry']['id']);
+        self::assertSame('Post 1', $body['entry']['title']);
+        self::assertSame('Seeded', $body['entry']['source']);
+        self::assertFalse($body['entry']['isRead']);
+    }
+
+    public function testGetUnsubscribedEntryIs404(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('e-get-idor@example.com');
+        [, $stranger] = $this->auth('e-get-owner@example.com');
+        $strangerSub = $this->seedFeedWithEntries($stranger, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $strangerSub->getFeed()])?->getId();
+        self::assertNotNull($entryId);
+
+        $client->request('GET', "/api/entries/$entryId", server: $headers);
+
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testGetMissingEntryIs404(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('e-get-missing@example.com');
+
+        $client->request('GET', '/api/entries/99999999', server: $headers);
+
+        self::assertResponseStatusCodeSame(404);
+    }
+
     public function testMarkReadAllThenListUnreadIsEmpty(): void
     {
         $client = self::createClient();

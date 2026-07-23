@@ -38,6 +38,13 @@ describe('ReaderApi', () => {
     req.flush({ subscription: {} });
   });
 
+  it('GETs a single entry by id', () => {
+    api.entry(514).subscribe();
+    const req = ctrl.expectOne('https://api.test/api/entries/514');
+    expect(req.request.method).toBe('GET');
+    req.flush({ entry: {} });
+  });
+
   it('GETs entries with only the set filters, cursor last', () => {
     api.entries({ view: 'unread', subscription: 7 }, 'CUR').subscribe();
     const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');

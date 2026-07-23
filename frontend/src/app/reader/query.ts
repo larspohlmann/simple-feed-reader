@@ -1,6 +1,7 @@
 // src/app/reader/query.ts
 import { ParamMap } from '@angular/router';
 import { EntryQuery, MarkReadScope } from './models';
+import { entryIdFromParam } from './slug';
 
 export interface Selection {
   kind: 'all' | 'tag' | 'subscription' | 'favorites' | 'kept';
@@ -16,7 +17,8 @@ export function selectionFromParams(p: ParamMap): {
   const tag = posInt(p.get('tag'));
   const subscription = posInt(p.get('subscription'));
   const unread = p.get('unread') !== '0';
-  const entryId = posInt(p.get('entry'));
+  // The entry param is an id or an id-prefixed slug ("514-some-title").
+  const entryId = entryIdFromParam(p.get('entry'));
 
   let selection: Selection;
   if (view === 'favorites' || view === 'kept') {
