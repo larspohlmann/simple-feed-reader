@@ -5,7 +5,13 @@ import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { ManageActions } from '../reader/manage/manage-actions.service';
 import { TagDto, SubscriptionDto } from '../reader/models';
 
-const tag = (id: number, name: string): TagDto => ({ id, name, color: '#3f8676', icon: 'label' });
+const tag = (id: number, name: string): TagDto => ({
+  id,
+  name,
+  color: '#3f8676',
+  icon: 'label',
+  position: 0,
+});
 
 describe('TagsSectionComponent', () => {
   const createTag = jest.fn();
@@ -44,6 +50,7 @@ describe('TagsSectionComponent', () => {
         siteUrl: null,
         status: 'active',
         createdAt: 'x',
+        position: 0,
         tags: [tag(1, 'Tech')],
         unreadCount: 0,
       },

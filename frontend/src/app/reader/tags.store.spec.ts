@@ -5,7 +5,13 @@ import { API_BASE_URL } from '../core/api';
 import { TagsStore } from './tags.store';
 import { TagDto } from './models';
 
-const tag = (id: number, name: string): TagDto => ({ id, name, color: null, icon: null });
+const tag = (id: number, name: string): TagDto => ({
+  id,
+  name,
+  color: null,
+  icon: null,
+  position: 0,
+});
 
 describe('TagsStore', () => {
   let store: TagsStore;

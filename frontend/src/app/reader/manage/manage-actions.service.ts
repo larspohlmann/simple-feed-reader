@@ -36,6 +36,21 @@ export class ManageActions {
       .subscribe({ next: () => this.subs.load() });
   }
 
+  /** Persist a new sidebar tag order (drag-and-drop); tag order lives in TagsStore. */
+  reorderTags(tagIds: number[]): void {
+    this.api.reorderTags(tagIds).subscribe({ next: () => this.tags.load() });
+  }
+
+  /** Persist a new order for the untagged "Feeds" list. */
+  reorderUntagged(subscriptionIds: number[]): void {
+    this.api.reorderSubscriptions(subscriptionIds).subscribe({ next: () => this.subs.load() });
+  }
+
+  /** Persist a new order for the feeds within one tag. */
+  reorderTagFeeds(tagId: number, subscriptionIds: number[]): void {
+    this.api.setTagFeedOrder(tagId, subscriptionIds).subscribe({ next: () => this.subs.load() });
+  }
+
   unsubscribe(sub: SubscriptionDto): void {
     const data: ConfirmData = {
       title: 'Unsubscribe',

@@ -44,7 +44,7 @@ describe('TagFormDialogComponent', () => {
   });
 
   it('edits a tag (PATCH) prefilled from data', () => {
-    const f = mount({ id: 4, name: 'Old', color: '#4f7cac', icon: 'label' });
+    const f = mount({ id: 4, name: 'Old', color: '#4f7cac', icon: 'label', position: 0 });
     const c = f.componentInstance;
     expect(c.form.getRawValue().name).toBe('Old');
     expect(c.color()).toBe('#4f7cac');

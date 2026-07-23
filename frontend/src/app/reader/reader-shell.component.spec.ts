@@ -64,6 +64,7 @@ describe('ReaderShellComponent', () => {
     const f = TestBed.createComponent(ReaderShellComponent);
     f.detectChanges(); // ngOnInit + initial effects
     ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+    ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl
       .expectOne((r) => r.url === 'https://api.test/api/entries')
       .flush({

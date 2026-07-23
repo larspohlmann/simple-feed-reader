@@ -15,6 +15,7 @@ const sub = (id: number, over: Partial<SubscriptionDto> = {}): SubscriptionDto =
   siteUrl: 'https://x',
   status: 'active',
   createdAt: 'x',
+  position: 0,
   tags: [],
   unreadCount: 0,
   ...over,

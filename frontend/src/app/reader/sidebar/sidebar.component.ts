@@ -1,7 +1,14 @@
 // src/app/reader/sidebar/sidebar.component.ts
 import { Component, inject, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CdkDrag, CdkDragDrop, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
+import {
+  CdkDrag,
+  CdkDragDrop,
+  CdkDragHandle,
+  CdkDropList,
+  CdkDropListGroup,
+  moveItemInArray,
+} from '@angular/cdk/drag-drop';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
@@ -13,7 +20,7 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
 
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, IconComponent, CdkDropListGroup, CdkDropList, CdkDrag],
+  imports: [RouterLink, IconComponent, CdkDropListGroup, CdkDropList, CdkDrag, CdkDragHandle],
   template: `
     <nav class="sidebar" aria-label="Feeds" cdkDropListGroup>
       <div class="actions">
@@ -67,111 +74,134 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
 
       @if (tagTree().length) {
         <p class="label">Tags</p>
-        @for (node of tagTree(); track node.tag.id) {
-          <div
-            class="tagnode"
-            cdkDropList
-            [cdkDropListData]="tagDrop(node.tag)"
-            [cdkDropListSortingDisabled]="true"
-            [class.drophover]="dropHover() === 'tag-' + node.tag.id"
-            (cdkDropListDropped)="onDrop($event)"
-            (cdkDropListEntered)="dropHover.set('tag-' + node.tag.id)"
-            (cdkDropListExited)="dropHover.set(null)"
-          >
-            <div class="tag">
-              <button
-                class="expand"
-                type="button"
-                [attr.aria-expanded]="expanded().has(node.tag.id)"
-                [attr.aria-label]="'Toggle ' + node.tag.name"
-                (click)="toggle(node.tag.id)"
-              >
-                <app-icon
-                  [name]="expanded().has(node.tag.id) ? 'expand_more' : 'chevron_right'"
-                  [size]="18"
-                />
-              </button>
-              <a
-                class="nav grow"
-                [class.active]="selection().kind === 'tag' && selection().id === node.tag.id"
-                [routerLink]="[]"
-                [queryParams]="{ tag: node.tag.id, view: null, subscription: null, entry: null }"
-                queryParamsHandling="merge"
-              >
-                <span class="dot" [style.background]="node.tag.color || 'var(--text-muted)'"></span>
-                <span>{{ node.tag.name }}</span>
-                @if (node.unreadCount > 0) {
-                  <span class="count">{{ node.unreadCount }}</span>
-                }
-              </a>
-              <div class="rowmenu">
+        <div
+          class="tags"
+          cdkDropList
+          [cdkDropListEnterPredicate]="isTagDrag"
+          (cdkDropListDropped)="onTagDrop($event)"
+        >
+          @for (node of tagTree(); track node.tag.id) {
+            <div
+              class="tagnode"
+              cdkDrag
+              [cdkDragData]="node.tag"
+              [cdkDragStartDelay]="dragDelay"
+              cdkDropList
+              [cdkDropListData]="tagDrop(node.tag)"
+              [cdkDropListEnterPredicate]="isFeedDrag"
+              [class.drophover]="dropHover() === 'tag-' + node.tag.id"
+              (cdkDropListDropped)="onDrop($event)"
+              (cdkDropListEntered)="dropHover.set('tag-' + node.tag.id)"
+              (cdkDropListExited)="dropHover.set(null)"
+            >
+              <div class="tag">
                 <button
-                  class="dots"
+                  class="grip"
                   type="button"
-                  [attr.aria-label]="'Manage ' + node.tag.name"
-                  (click)="toggleMenu('tag-' + node.tag.id, $event)"
+                  cdkDragHandle
+                  [attr.aria-label]="'Reorder ' + node.tag.name"
                 >
-                  <app-icon name="more_horiz" [size]="18" />
+                  <app-icon name="drag_indicator" [size]="18" />
                 </button>
-                @if (menuFor() === 'tag-' + node.tag.id) {
-                  <div class="pop" role="menu">
-                    <button role="menuitem" (click)="editTag.emit(node.tag); closeMenu()">
-                      Edit tag
-                    </button>
-                    <button role="menuitem" (click)="deleteTag.emit(node.tag); closeMenu()">
-                      Delete tag
-                    </button>
+                <button
+                  class="expand"
+                  type="button"
+                  [attr.aria-expanded]="expanded().has(node.tag.id)"
+                  [attr.aria-label]="'Toggle ' + node.tag.name"
+                  (click)="toggle(node.tag.id)"
+                >
+                  <app-icon
+                    [name]="expanded().has(node.tag.id) ? 'expand_more' : 'chevron_right'"
+                    [size]="18"
+                  />
+                </button>
+                <a
+                  class="nav grow"
+                  [class.active]="selection().kind === 'tag' && selection().id === node.tag.id"
+                  [routerLink]="[]"
+                  [queryParams]="{ tag: node.tag.id, view: null, subscription: null, entry: null }"
+                  queryParamsHandling="merge"
+                >
+                  <span
+                    class="dot"
+                    [style.background]="node.tag.color || 'var(--text-muted)'"
+                  ></span>
+                  <span>{{ node.tag.name }}</span>
+                  @if (node.unreadCount > 0) {
+                    <span class="count">{{ node.unreadCount }}</span>
+                  }
+                </a>
+                <div class="rowmenu">
+                  <button
+                    class="dots"
+                    type="button"
+                    [attr.aria-label]="'Manage ' + node.tag.name"
+                    (click)="toggleMenu('tag-' + node.tag.id, $event)"
+                  >
+                    <app-icon name="more_horiz" [size]="18" />
+                  </button>
+                  @if (menuFor() === 'tag-' + node.tag.id) {
+                    <div class="pop" role="menu">
+                      <button role="menuitem" (click)="editTag.emit(node.tag); closeMenu()">
+                        Edit tag
+                      </button>
+                      <button role="menuitem" (click)="deleteTag.emit(node.tag); closeMenu()">
+                        Delete tag
+                      </button>
+                    </div>
+                  }
+                </div>
+              </div>
+              @if (expanded().has(node.tag.id)) {
+                @for (s of node.subscriptions; track s.id) {
+                  <div
+                    class="feedrow"
+                    cdkDrag
+                    [cdkDragData]="s"
+                    [cdkDragStartDelay]="dragDelay"
+                    (cdkDragStarted)="dragging.set(true)"
+                    (cdkDragEnded)="onDragEnd()"
+                  >
+                    <a
+                      class="nav tag-sub"
+                      [class.active]="
+                        selection().kind === 'subscription' && selection().id === s.id
+                      "
+                      [routerLink]="[]"
+                      [queryParams]="{ subscription: s.id, view: null, tag: null, entry: null }"
+                      queryParamsHandling="merge"
+                    >
+                      <span>{{ s.title }}</span>
+                      @if (s.unreadCount > 0) {
+                        <span class="count">{{ s.unreadCount }}</span>
+                      }
+                    </a>
+                    <div class="rowmenu">
+                      <button
+                        class="dots"
+                        type="button"
+                        [attr.aria-label]="'Manage ' + s.title"
+                        (click)="toggleMenu('sub-' + node.tag.id + '-' + s.id, $event)"
+                      >
+                        <app-icon name="more_horiz" [size]="18" />
+                      </button>
+                      @if (menuFor() === 'sub-' + node.tag.id + '-' + s.id) {
+                        <div class="pop" role="menu">
+                          <button role="menuitem" (click)="editFeed.emit(s); closeMenu()">
+                            Edit feed
+                          </button>
+                          <button role="menuitem" (click)="unsubscribe.emit(s); closeMenu()">
+                            Unsubscribe
+                          </button>
+                        </div>
+                      }
+                    </div>
                   </div>
                 }
-              </div>
-            </div>
-            @if (expanded().has(node.tag.id)) {
-              @for (s of node.subscriptions; track s.id) {
-                <div
-                  class="feedrow"
-                  cdkDrag
-                  [cdkDragData]="s"
-                  [cdkDragStartDelay]="dragDelay"
-                  (cdkDragStarted)="dragging.set(true)"
-                  (cdkDragEnded)="onDragEnd()"
-                >
-                  <a
-                    class="nav tag-sub"
-                    [class.active]="selection().kind === 'subscription' && selection().id === s.id"
-                    [routerLink]="[]"
-                    [queryParams]="{ subscription: s.id, view: null, tag: null, entry: null }"
-                    queryParamsHandling="merge"
-                  >
-                    <span>{{ s.title }}</span>
-                    @if (s.unreadCount > 0) {
-                      <span class="count">{{ s.unreadCount }}</span>
-                    }
-                  </a>
-                  <div class="rowmenu">
-                    <button
-                      class="dots"
-                      type="button"
-                      [attr.aria-label]="'Manage ' + s.title"
-                      (click)="toggleMenu('sub-' + node.tag.id + '-' + s.id, $event)"
-                    >
-                      <app-icon name="more_horiz" [size]="18" />
-                    </button>
-                    @if (menuFor() === 'sub-' + node.tag.id + '-' + s.id) {
-                      <div class="pop" role="menu">
-                        <button role="menuitem" (click)="editFeed.emit(s); closeMenu()">
-                          Edit feed
-                        </button>
-                        <button role="menuitem" (click)="unsubscribe.emit(s); closeMenu()">
-                          Unsubscribe
-                        </button>
-                      </div>
-                    }
-                  </div>
-                </div>
               }
-            }
-          </div>
-        }
+            </div>
+          }
+        </div>
       }
 
       @if (untagged().length || dragging()) {
@@ -181,7 +211,7 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
         class="feedlist"
         cdkDropList
         [cdkDropListData]="untaggedDrop"
-        [cdkDropListSortingDisabled]="true"
+        [cdkDropListEnterPredicate]="isFeedDrag"
         [class.drophover]="dropHover() === 'untagged'"
         (cdkDropListDropped)="onDrop($event)"
         (cdkDropListEntered)="dropHover.set('untagged')"
@@ -396,6 +426,25 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
         position: relative;
         flex: 0 0 auto;
       }
+      .grip {
+        display: inline-flex;
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: grab;
+        padding: var(--space-2) 0 var(--space-2) var(--space-1);
+        opacity: 0.35;
+      }
+      .grip:hover,
+      .grip:focus-visible {
+        opacity: 1;
+      }
+      .tagnode.cdk-drag-preview {
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: 0 6px 20px rgb(0 0 0 / 35%);
+      }
       .dots {
         display: inline-flex;
         background: none;
@@ -450,6 +499,16 @@ export class SidebarComponent {
   readonly addFeed = output<void>();
   /** A feed was dropped onto a tag (add) or onto Feeds (clear). */
   readonly retag = output<{ sub: SubscriptionDto; tagIds: number[] }>();
+  /** Tags were reordered — the full tag id list in its new order. */
+  readonly reorderTags = output<number[]>();
+  /** The untagged "Feeds" list was reordered. */
+  readonly reorderUntagged = output<number[]>();
+  /** Feeds within one tag were reordered. */
+  readonly reorderTagFeeds = output<{ tagId: number; subscriptionIds: number[] }>();
+
+  /** Type-gate the two drag kinds so they can't drop into each other's lists. */
+  readonly isFeedDrag = (drag: CdkDrag): boolean => 'feedUrl' in (drag.data as object);
+  readonly isTagDrag = (drag: CdkDrag): boolean => !this.isFeedDrag(drag);
 
   readonly refreshSvc = inject(RefreshService);
   readonly expanded = signal<Set<number>>(new Set());
@@ -473,11 +532,36 @@ export class SidebarComponent {
     this.dropHover.set(null);
   }
 
+  /** Reorder the tag list (a tag was dragged by its grip within the tags list). */
+  onTagDrop(event: CdkDragDrop<unknown>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const ids = this.tagTree().map((n) => n.tag.id);
+    moveItemInArray(ids, event.previousIndex, event.currentIndex);
+    this.reorderTags.emit(ids);
+  }
+
   onDrop(event: CdkDragDrop<DropData>): void {
     this.dropHover.set(null);
-    if (event.previousContainer === event.container) return;
-    const sub = event.item.data as SubscriptionDto;
     const target = event.container.data;
+
+    // Same list → reorder the feeds in it; different list → assign/clear tags.
+    if (event.previousContainer === event.container) {
+      if (event.previousIndex === event.currentIndex) return;
+      if (target.kind === 'tag') {
+        const ids = (
+          this.tagTree().find((n) => n.tag.id === target.tag.id)?.subscriptions ?? []
+        ).map((s) => s.id);
+        moveItemInArray(ids, event.previousIndex, event.currentIndex);
+        this.reorderTagFeeds.emit({ tagId: target.tag.id, subscriptionIds: ids });
+      } else {
+        const ids = this.untagged().map((s) => s.id);
+        moveItemInArray(ids, event.previousIndex, event.currentIndex);
+        this.reorderUntagged.emit(ids);
+      }
+      return;
+    }
+
+    const sub = event.item.data as SubscriptionDto;
     const current = sub.tags.map((t) => t.id);
     let tagIds: number[];
     if (target.kind === 'tag') {

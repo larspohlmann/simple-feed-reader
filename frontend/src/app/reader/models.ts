@@ -4,6 +4,19 @@ export interface TagDto {
   name: string;
   color: string | null;
   icon: string | null;
+  /** The tag's order in the sidebar list (ascending). */
+  position: number;
+}
+
+/** A tag as embedded on a subscription: same shape as TagDto, but `position` is
+ *  THIS feed's order within that tag (the join position), not the tag's own
+ *  sidebar order. */
+export interface SubscriptionTagDto {
+  id: number;
+  name: string;
+  color: string | null;
+  icon: string | null;
+  position: number;
 }
 
 export interface SubscriptionDto {
@@ -14,7 +27,9 @@ export interface SubscriptionDto {
   siteUrl: string | null;
   status: 'active' | 'erroring' | 'gone';
   createdAt: string;
-  tags: TagDto[];
+  /** The feed's order in the untagged "Feeds" list (ascending). */
+  position: number;
+  tags: SubscriptionTagDto[];
   unreadCount: number;
 }
 
