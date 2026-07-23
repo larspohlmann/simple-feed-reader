@@ -87,7 +87,7 @@ final class SubscriptionServiceTest extends DbTestCase
 
         $service = $this->service(
             $this->discoveryReturning(FeedDiscoveryResult::candidates([
-                new FeedCandidate('https://example.com/rss.xml', 'Main'),
+                new FeedCandidate('https://example.com/rss.xml', 'Main', 'rss'),
             ])),
         );
 

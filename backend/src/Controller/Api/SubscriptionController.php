@@ -58,7 +58,7 @@ final class SubscriptionController
         if (null === $outcome->subscription) {
             return new JsonResponse([
                 'candidates' => array_map(
-                    static fn ($c) => ['url' => $c->url, 'title' => $c->title],
+                    static fn ($c) => ['url' => $c->url, 'title' => $c->title, 'format' => $c->format],
                     $outcome->candidates,
                 ),
             ]);

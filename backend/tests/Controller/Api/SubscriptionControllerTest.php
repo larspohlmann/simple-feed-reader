@@ -145,6 +145,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $candidate = $body['candidates'][0];
         self::assertIsArray($candidate);
         self::assertSame('https://example.com/rss.xml', $candidate['url']);
+        self::assertSame('rss', $candidate['format']);
     }
 
     public function testCannotUpdateAnotherUsersSubscription(): void

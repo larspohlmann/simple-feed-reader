@@ -44,15 +44,18 @@ type PreviewState =
                     <span class="count">{{ p.itemCount }} items</span>
                   }
                 </div>
+                <div class="badges">
+                  <span class="badge format">{{ formatLabel(c.format) }}</span>
+                  @if (p) {
+                    <span class="badge">{{ contentLabel(p.content) }}</span>
+                    <span class="badge">{{ p.hasImages ? 'With images' : 'No images' }}</span>
+                  }
+                </div>
                 @if (state?.status === 'loading') {
                   <p class="muted">Loading preview…</p>
                 } @else if (state?.status === 'error') {
                   <p class="muted">Preview unavailable</p>
                 } @else if (p) {
-                  <div class="badges">
-                    <span class="badge">{{ contentLabel(p.content) }}</span>
-                    <span class="badge">{{ p.hasImages ? 'With images' : 'No images' }}</span>
-                  </div>
                   @if (p.items.length) {
                     <ul class="samples">
                       @for (it of p.items.slice(0, 3); track $index) {
@@ -160,6 +163,13 @@ type PreviewState =
         border-radius: var(--radius);
         color: var(--text-secondary);
       }
+      .badge.format {
+        border-color: var(--accent);
+        color: var(--accent);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
       .samples {
         list-style: disc;
         margin: 0;
@@ -223,6 +233,14 @@ export class AddFeedDialogComponent {
 
   contentLabel(content: FeedPreview['content']): string {
     return content === 'full' ? 'Full text' : content === 'summary' ? 'Summary only' : 'Titles only';
+  }
+
+  /** Human label for a candidate's feed syntax; capitalizes any future value
+   *  (e.g. a scraped/generated feed) rather than assuming only RSS/Atom. */
+  formatLabel(format: string): string {
+    if (format === 'rss') return 'RSS';
+    if (format === 'atom') return 'Atom';
+    return format ? format.charAt(0).toUpperCase() + format.slice(1) : 'Feed';
   }
 
   submit(): void {

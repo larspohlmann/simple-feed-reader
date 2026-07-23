@@ -77,6 +77,9 @@ export interface RefreshReport {
 export interface FeedCandidate {
   url: string;
   title: string | null;
+  /** The feed's syntax: 'rss' or 'atom' today; a future HTML-scraper source
+   *  will add its own value, so this stays an open string. */
+  format: string;
 }
 
 export interface FeedPreviewItem {

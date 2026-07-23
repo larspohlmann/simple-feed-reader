@@ -73,8 +73,10 @@ final class FeedDiscoveryTest extends KernelTestCase
         self::assertCount(2, $result->candidates);
         self::assertSame('https://example.com/rss.xml', $result->candidates[0]->url);
         self::assertSame('Main', $result->candidates[0]->title);
+        self::assertSame('rss', $result->candidates[0]->format);
         self::assertSame('https://cdn.example.com/atom', $result->candidates[1]->url);
         self::assertNull($result->candidates[1]->title);
+        self::assertSame('atom', $result->candidates[1]->format);
     }
 
     public function testHtmlWithoutFeedLinksThrowsDiscoveryException(): void

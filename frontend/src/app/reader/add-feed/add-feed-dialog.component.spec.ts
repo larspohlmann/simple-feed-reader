@@ -44,8 +44,8 @@ describe('AddFeedDialogComponent', () => {
     f.componentInstance.submit();
     ctrl.expectOne('https://api.test/api/subscriptions').flush({
       candidates: [
-        { url: 'https://f/rss', title: 'RSS' },
-        { url: 'https://f/atom', title: 'ATOM' },
+        { url: 'https://f/rss', title: 'RSS', format: 'rss' },
+        { url: 'https://f/atom', title: 'ATOM', format: 'atom' },
       ],
     });
     f.detectChanges();
@@ -97,6 +97,10 @@ describe('AddFeedDialogComponent', () => {
     expect(rssCard.textContent).toContain('First headline');
     expect(atomCard.textContent).toContain('Preview unavailable');
     expect(atomCard.querySelector('.subscribe')).toBeTruthy();
+    // The format label shows on every card regardless of preview state —
+    // it comes from discovery, so a failed preview still tells you the type.
+    expect(rssCard.querySelector('.badge.format')?.textContent?.trim()).toBe('RSS');
+    expect(atomCard.querySelector('.badge.format')?.textContent?.trim()).toBe('Atom');
 
     (rssCard.querySelector('.subscribe') as HTMLButtonElement).click();
     const subReq = ctrl.expectOne('https://api.test/api/subscriptions');
