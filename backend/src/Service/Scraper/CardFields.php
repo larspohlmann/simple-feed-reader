@@ -8,16 +8,13 @@ use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\UrlResolver;
 use App\Service\Parser\DateParser;
 use Dom\Element;
-use Dom\Text;
 
 /**
  * Extracts ScrapedItem fields from one card container + its anchor.
  *
  * Field rules (per the scraper design spec):
- * - title: first heading (h1-h4) in the container; else the innermost element
- *   whose class matches title|headline; else the anchor's FIRST text node —
- *   never the anchor's full text, which on heading-less cards would mash
- *   title, byline, and description together.
+ * - title: candidate order lives in CardTitle; length rules (min 5,
+ *   truncate 300) are applied here.
  * - teaser: longest leaf-ish text block that is at least 40 chars and does
  *   not repeat the title; else a data-*description* attribute value on the
  *   container or a direct child.
@@ -82,71 +79,12 @@ final class CardFields
 
     private static function title(Element $container, Element $anchor): ?string
     {
-        $title = self::headingTitle($container)
-            ?? self::classHintedTitle($container)
-            ?? self::firstAnchorText($anchor);
+        $title = CardTitle::of($container, $anchor);
         if ($title === null || mb_strlen($title) < self::MIN_TITLE_LENGTH) {
             return null;
         }
 
         return mb_substr($title, 0, self::MAX_TITLE_LENGTH);
-    }
-
-    private static function headingTitle(Element $container): ?string
-    {
-        $heading = $container->querySelector('h1, h2, h3, h4');
-        if (!$heading instanceof Element) {
-            return null;
-        }
-        $text = TextNormalizer::normalize($heading->textContent ?? '');
-
-        return $text === '' ? null : $text;
-    }
-
-    /**
-     * Last matching element in document order wins: for nested wrappers like
-     * card__title > card__title-text that is the innermost, most precise text.
-     */
-    private static function classHintedTitle(Element $container): ?string
-    {
-        $title = null;
-        foreach ($container->querySelectorAll('*') as $element) {
-            $class = $element->getAttribute('class');
-            if ($class === null || preg_match('/(title|headline)/i', $class) !== 1) {
-                continue;
-            }
-            $text = TextNormalizer::normalize($element->textContent ?? '');
-            if ($text !== '') {
-                $title = $text;
-            }
-        }
-
-        return $title;
-    }
-
-    /**
-     * First non-empty text node under the anchor, depth-first in document
-     * order. Splitting textContent on newlines breaks on minified HTML —
-     * block elements contribute no newline to textContent, so title, byline,
-     * and teaser mash into one "line". The DOM keeps them as separate text
-     * nodes regardless of source formatting.
-     */
-    private static function firstAnchorText(Element $anchor): ?string
-    {
-        foreach ($anchor->childNodes as $child) {
-            if ($child instanceof Text) {
-                $text = TextNormalizer::normalize($child->data);
-            } elseif ($child instanceof Element) {
-                $text = self::firstAnchorText($child) ?? '';
-            } else {
-                continue;
-            }
-            if ($text !== '') {
-                return $text;
-            }
-        }
-
-        return null;
     }
 
     private static function teaser(Element $container, string $title): ?string

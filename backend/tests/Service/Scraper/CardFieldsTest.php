@@ -47,6 +47,16 @@ final class CardFieldsTest extends TestCase
         self::assertSame('Span-only title text', $item?->title);
     }
 
+    public function testSiblingSubtitleClassDoesNotBeatTheTitleClass(): void
+    {
+        [$c, $a] = $this->card(<<<HTML
+            <a data-card href="/a/10"><span class="card__title">Real card title</span>
+            <span class="card__subtitle">Extra subtitle line that must never win</span></a>
+            HTML);
+        $item = CardFields::item($c, $a, 'https://site.test/');
+        self::assertSame('Real card title', $item?->title);
+    }
+
     public function testTitleFallsBackToFirstAnchorTextLineNeverFullText(): void
     {
         [$c, $a] = $this->card(<<<HTML
