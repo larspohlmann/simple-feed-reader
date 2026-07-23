@@ -18,6 +18,12 @@ Reference examples:
   **and a short description**; both must survive extraction (verified against
   the live page 2026-07-23: 38 `teaser__link` blocks with `h3` headline +
   `teaser__shorttext` paragraph).
+- `https://www.treehugger.com/` — card links with **no headings at all**
+  (title is a `<span class="card__title-text">`) and descriptions in `<div>`s,
+  not `<p>`s. Note: the site 403s plain HTTP clients (Cloudflare challenge),
+  so it cannot be *subscribed* under this design — but its rendered DOM
+  (captured via browser 2026-07-23) is a fixture that hardens the extraction
+  heuristics against heading-less, div-based cards.
 - `https://www.reuters.com/business/environment/` — the user's original
   example, but Reuters sits behind aggressive bot protection; it is explicitly
   *best-effort only* (see Non-goals).
@@ -121,11 +127,17 @@ it:
 
 - **link** — anchor `href`, resolved absolute against the final (post-
   redirect) URL; http(s) only.
-- **title** — nearest heading (`h1`–`h4`) text; fallback: the anchor's text.
-- **teaser** — the longest non-headline paragraph in the container, minimum
-  40 characters (so "Read more" labels never qualify). Becomes the entry's
-  content HTML (as a plain `<p>`), sanitized by `EntrySanitizer` like all
-  feed content.
+- **title** — resolved by a fallback chain, because not every card uses
+  headings (treehugger uses spans): (1) nearest heading (`h1`–`h4`) in the
+  container; (2) an element whose class matches `/title|headline/i`;
+  (3) the anchor's first text line. Never the anchor's *full* text — on
+  heading-less cards that would mash title, byline, and description together.
+- **teaser** — the longest text block in the container that isn't the title,
+  minimum 40 characters (so "Read more" labels never qualify). A "text block"
+  is a `<p>` or a leaf-ish `<div>`/`<span>` whose own text qualifies —
+  tagesschau uses `<p class="teaser__shorttext">`, treehugger uses
+  `<div class="card__description">`. Becomes the entry's content HTML (as a
+  plain `<p>`), sanitized by `EntrySanitizer` like all feed content.
 - **image** — first `<img>` in the container (`src`/`srcset`/`data-src`),
   http(s) only, feeding the existing item-image plumbing.
 - **date** — `<time datetime>` if present; otherwise the entry is undated and
@@ -191,8 +203,11 @@ distinguishable later.
 
 ## Testing
 
-- **Unit — extractor:** saved real-page fixtures: `tagesschau.html` (already
-  fetched; exercises clustering, teasers, images, umlauts, soft hyphens),
+- **Unit — extractor:** saved real-page fixtures in
+  `backend/tests/Fixtures/scraped/`: `tagesschau-2026-07-23.html`
+  (clustering, `<p>` teasers, images, umlauts, soft hyphens),
+  `treehugger-rendered-2026-07-23.html` (heading-less cards, class-hint
+  titles, `<div>` teasers; rendered-DOM capture since the live site 403s),
   a JSON-LD site, a semantic-`<article>` blog, and hostile fixtures
   (nav-heavy page with no articles ⇒ must fail with <3 items; page whose
   biggest cluster is a footer link list ⇒ must not win).
