@@ -22,13 +22,28 @@ const withImg = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
 const kinds = (bs: MagazineBlock[]) => bs.map((b) => b.kind);
 
 describe('planMagazine', () => {
-  it('collapses a run of >=3 same-source entries into a group of 3 + moreCount', () => {
+  it('leads a same-source run with a hero and groups the rest', () => {
     const bs = planMagazine([e(1), e(2), e(3), e(4), e(5)], true);
-    expect(bs).toHaveLength(1);
-    expect(bs[0]).toMatchObject({ kind: 'group', subscriptionId: 1, source: 'S', moreCount: 2 });
-    expect((bs[0] as Extract<MagazineBlock, { kind: 'group' }>).entries.map((x) => x.id)).toEqual([
-      1, 2, 3,
+    expect(bs).toHaveLength(2);
+    expect(bs[0].kind).toBe('hero');
+    expect((bs[0] as Extract<MagazineBlock, { kind: 'hero' }>).entry.id).toBe(1);
+    expect(bs[1]).toMatchObject({ kind: 'group', subscriptionId: 1, source: 'S', moreCount: 1 });
+    expect((bs[1] as Extract<MagazineBlock, { kind: 'group' }>).entries.map((x) => x.id)).toEqual([
+      2, 3, 4,
     ]);
+  });
+
+  it('groups a run without a second, adjacent hero right after an ungrouped hero', () => {
+    const bs = planMagazine(
+      [e(1, { subscriptionId: 9, source: 'Z', title: 'x'.repeat(200) }), e(2), e(3), e(4)],
+      true,
+    );
+    expect(bs[0].kind).toBe('hero');
+    expect(bs[1].kind).toBe('group');
+    expect((bs[1] as Extract<MagazineBlock, { kind: 'group' }>).entries.map((x) => x.id)).toEqual([
+      2, 3, 4,
+    ]);
+    expect((bs[1] as Extract<MagazineBlock, { kind: 'group' }>).moreCount).toBe(0);
   });
 
   it('does not group a run of 2', () => {
@@ -58,7 +73,7 @@ describe('planMagazine', () => {
     const bs = planMagazine(many, true);
     const heroAt = bs.map((b, i) => (b.kind === 'hero' ? i : -1)).filter((i) => i >= 0);
     expect(heroAt[0]).toBe(0);
-    expect(heroAt[1]).toBe(6);
+    expect(heroAt[1]).toBe(4);
     for (let i = 1; i < heroAt.length; i++) expect(heroAt[i] - heroAt[i - 1]).toBeGreaterThan(1);
   });
 

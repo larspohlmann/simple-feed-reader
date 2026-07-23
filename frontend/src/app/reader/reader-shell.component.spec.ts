@@ -78,9 +78,12 @@ describe('ReaderShellComponent', () => {
     const el = boot().nativeElement as HTMLElement;
     expect(el.querySelector('app-reader-header')).not.toBeNull();
     expect(el.querySelector('app-sidebar')!.textContent).toContain('heise');
-    // The shell's default layout is now 'magazine' (ReadingLayoutService); a
-    // short, image-less entry plans as a compact block rather than a row.
-    expect(el.querySelector('app-entry-compact')).not.toBeNull();
+    // The shell's default layout is 'magazine'; the single loaded entry renders
+    // as some magazine block (the first entry leads as a hero). Assert the list
+    // mounted and rendered a block rather than pinning the exact tier, which is
+    // planner-tuning-dependent.
+    expect(el.querySelector('app-entry-list')).not.toBeNull();
+    expect(el.querySelector('app-entry-hero, app-entry-compact, app-entry-row')).not.toBeNull();
   });
 
   it('marks the opened entry read', () => {

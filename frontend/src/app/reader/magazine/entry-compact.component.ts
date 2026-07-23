@@ -17,7 +17,7 @@ import { relativeTime } from '../format';
     >
       <span class="dot" [class.on]="!entry().isRead" aria-hidden="true"></span>
       <div class="body">
-        <p class="kicker">{{ entry().source }} · {{ when() }}</p>
+        <p class="kicker">{{ showSource() ? entry().source + ' · ' + when() : when() }}</p>
         <p class="title">{{ entry().title }}</p>
       </div>
     </article>
@@ -71,6 +71,8 @@ import { relativeTime } from '../format';
 })
 export class EntryCompactComponent {
   readonly entry = input.required<EntryDto>();
+  /** Hidden inside a source group, where the header already names the source. */
+  readonly showSource = input(true);
   readonly open = output<EntryDto>();
   readonly when = computed(() => relativeTime(this.entry().publishedAt ?? this.entry().createdAt));
 }

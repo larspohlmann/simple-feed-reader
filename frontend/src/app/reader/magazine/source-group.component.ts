@@ -10,11 +10,11 @@ import { EntryDto } from '../models';
   imports: [RouterLink, IconComponent, EntryCompactComponent],
   template: `
     <div class="group">
-      <p class="ghead"><span class="dot" aria-hidden="true"></span>{{ source() }}</p>
+      <p class="ghead">{{ source() }}</p>
       <div class="items">
         @for (item of entries(); track item.id) {
           <div class="item">
-            <app-entry-compact [entry]="item" (open)="open.emit($event)" />
+            <app-entry-compact [entry]="item" [showSource]="false" (open)="open.emit($event)" />
           </div>
         }
       </div>
@@ -47,21 +47,12 @@ import { EntryDto } from '../models';
         overflow: hidden;
       }
       .ghead {
-        display: flex;
-        align-items: center;
-        gap: var(--space-2);
         margin: 0;
         padding: var(--space-3) var(--space-4);
-        font-size: var(--fs-sm);
+        font-size: var(--fs-lg);
         font-weight: 500;
-        color: var(--text-secondary);
+        color: var(--text-primary);
         border-bottom: 1px solid var(--border);
-      }
-      .dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: var(--accent);
       }
       .item:not(:last-child) {
         border-bottom: 1px solid var(--border);

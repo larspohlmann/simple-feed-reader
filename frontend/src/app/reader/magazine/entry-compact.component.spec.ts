@@ -33,6 +33,17 @@ describe('EntryCompactComponent', () => {
     expect(el.textContent).toContain('Golem');
   });
 
+  it('hides the source when showSource is false', () => {
+    TestBed.configureTestingModule({ imports: [EntryCompactComponent] });
+    const f = TestBed.createComponent(EntryCompactComponent);
+    f.componentRef.setInput('entry', entry);
+    f.componentRef.setInput('showSource', false);
+    f.detectChanges();
+    expect((f.nativeElement as HTMLElement).querySelector('.kicker')!.textContent).not.toContain(
+      'Golem',
+    );
+  });
+
   it('emits open on click and on Enter', () => {
     const f = mount();
     const open = jest.fn();
