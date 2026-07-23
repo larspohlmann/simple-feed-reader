@@ -1,32 +1,32 @@
 // src/app/reader/header/reader-header.component.ts
-import { Component, inject, input, output, signal } from '@angular/core';
+import { Component, inject, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { AuthService } from '../../core/auth.service';
 import { ThemeService } from '../../theme/theme.service';
 import { ThemeMode } from '../../theme/themes/registry';
 import { ReadingLayoutService } from '../reading-layout.service';
-import { RefreshService } from '../refresh.service';
 
 @Component({
   selector: 'app-reader-header',
   imports: [IconComponent, RouterLink],
   template: `
     <header>
-      <span class="brand">{{ title() }}</span>
-      <div class="right">
-        <div class="progress" [class.on]="refreshSvc.running()">
-          <button aria-label="Refresh" [disabled]="refreshSvc.running()" (click)="refresh.emit()">
-            <app-icon name="refresh" [size]="18" />
-          </button>
-          @if (refreshSvc.running()) {
-            <span class="bar"><i [style.width.%]="refreshSvc.progress() * 100"></i></span>
-          }
-        </div>
-        <button aria-label="Add feed" (click)="addFeed.emit()">
-          <app-icon name="add" [size]="18" />
+      <div class="left">
+        <button class="menu-btn" aria-label="Toggle sidebar" (click)="toggleSidebar.emit()">
+          <app-icon name="menu" [size]="20" />
         </button>
-
+        <a
+          class="brand"
+          [routerLink]="[]"
+          [queryParams]="{ view: null, tag: null, subscription: null, entry: null }"
+          queryParamsHandling="merge"
+        >
+          <app-icon name="rss_feed" [size]="20" />
+          <span>simple feed reader</span>
+        </a>
+      </div>
+      <div class="right">
         <div class="seg" role="group" aria-label="Reading layout">
           <button
             aria-label="Magazine layout"
@@ -96,15 +96,36 @@ import { RefreshService } from '../refresh.service';
         border-bottom: 1px solid var(--border);
         background: var(--surface-1);
       }
+      .left {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
       .brand {
-        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        font-weight: 700;
+        color: var(--text-primary);
+        text-decoration: none;
+      }
+      .brand app-icon {
+        color: var(--accent);
+      }
+      .menu-btn {
+        display: none;
+        align-items: center;
+        background: none;
+        border: none;
+        color: var(--text-primary);
+        cursor: pointer;
+        padding: var(--space-1);
       }
       .right {
         display: flex;
         align-items: center;
         gap: var(--space-3);
       }
-      .right > button,
       .account > button {
         display: inline-flex;
         align-items: center;
@@ -113,6 +134,11 @@ import { RefreshService } from '../refresh.service';
         border: none;
         color: var(--text-primary);
         cursor: pointer;
+      }
+      @media (max-width: 720px) {
+        .menu-btn {
+          display: inline-flex;
+        }
       }
       .seg {
         display: inline-flex;
@@ -130,24 +156,6 @@ import { RefreshService } from '../refresh.service';
       .seg button.active {
         background: var(--accent-soft);
         color: var(--accent);
-      }
-      .progress {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--space-1);
-      }
-      .progress .bar {
-        width: 48px;
-        height: 4px;
-        border-radius: 2px;
-        background: var(--border);
-        overflow: hidden;
-      }
-      .progress .bar i {
-        display: block;
-        height: 100%;
-        background: var(--accent);
-        transition: width 0.2s;
       }
       .account {
         position: relative;
@@ -183,14 +191,11 @@ import { RefreshService } from '../refresh.service';
   ],
 })
 export class ReaderHeaderComponent {
-  readonly title = input.required<string>();
-  readonly refresh = output<void>();
-  readonly addFeed = output<void>();
+  readonly toggleSidebar = output<void>();
 
   readonly auth = inject(AuthService);
   readonly theme = inject(ThemeService);
   readonly layout = inject(ReadingLayoutService);
-  readonly refreshSvc = inject(RefreshService);
   readonly menuOpen = signal(false);
 
   readonly modes: { id: ThemeMode; label: string; icon: string }[] = [

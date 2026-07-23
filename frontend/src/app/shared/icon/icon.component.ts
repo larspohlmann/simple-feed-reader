@@ -11,6 +11,11 @@ import { Component, Input } from '@angular/core';
   styles: [
     `
       span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1em;
+        height: 1em;
         line-height: 1;
         user-select: none;
         font-variation-settings: 'opsz' 20;

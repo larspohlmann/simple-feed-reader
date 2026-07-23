@@ -3,7 +3,6 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { API_BASE_URL } from '../../core/api';
-import { RefreshService } from '../refresh.service';
 import { ReadingLayoutService } from '../reading-layout.service';
 import { AuthService } from '../../core/auth.service';
 import { ReaderHeaderComponent } from './reader-header.component';
@@ -27,21 +26,18 @@ describe('ReaderHeaderComponent', () => {
 
   function create() {
     const f = TestBed.createComponent(ReaderHeaderComponent);
-    f.componentRef.setInput('title', 'All items');
     f.detectChanges();
     return f;
   }
 
-  it('emits refresh and addFeed', () => {
+  it('shows the app brand linking to all items and emits toggleSidebar', () => {
     const f = create();
-    let refresh = 0,
-      add = 0;
-    f.componentInstance.refresh.subscribe(() => refresh++);
-    f.componentInstance.addFeed.subscribe(() => add++);
     const el = f.nativeElement as HTMLElement;
-    (el.querySelector('[aria-label="Refresh"]') as HTMLButtonElement).click();
-    (el.querySelector('[aria-label="Add feed"]') as HTMLButtonElement).click();
-    expect([refresh, add]).toEqual([1, 1]);
+    expect(el.querySelector('.brand')!.textContent).toContain('simple feed reader');
+    const toggle = jest.fn();
+    f.componentInstance.toggleSidebar.subscribe(toggle);
+    (el.querySelector('[aria-label="Toggle sidebar"]') as HTMLButtonElement).click();
+    expect(toggle).toHaveBeenCalledTimes(1);
   });
 
   it('toggles the reading layout', () => {
@@ -66,15 +62,6 @@ describe('ReaderHeaderComponent', () => {
 
     (group.querySelector('[aria-label="Magazine layout"]') as HTMLButtonElement).click();
     expect(layout.mode()).toBe('magazine');
-  });
-
-  it('shows the busy state while refreshing', () => {
-    const f = create();
-    TestBed.inject(RefreshService).running.set(true);
-    f.detectChanges();
-    expect(
-      (f.nativeElement.querySelector('[aria-label="Refresh"]') as HTMLButtonElement).disabled,
-    ).toBe(true);
   });
 
   it('shows a Settings link, and Admin only for admins', () => {

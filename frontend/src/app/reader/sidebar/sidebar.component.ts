@@ -1,16 +1,35 @@
 // src/app/reader/sidebar/sidebar.component.ts
-import { Component, input, output, signal } from '@angular/core';
+import { Component, inject, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
 import { SubscriptionDto, TagDto } from '../models';
+import { RefreshService } from '../refresh.service';
 
 @Component({
   selector: 'app-sidebar',
   imports: [RouterLink, IconComponent],
   template: `
     <nav class="sidebar" aria-label="Feeds">
+      <div class="actions">
+        <button
+          class="act"
+          type="button"
+          aria-label="Refresh"
+          [disabled]="refreshSvc.running()"
+          (click)="refresh.emit()"
+        >
+          <app-icon name="refresh" [size]="18" /><span>Refresh</span>
+        </button>
+        <button class="act" type="button" aria-label="Add feed" (click)="addFeed.emit()">
+          <app-icon name="add" [size]="18" /><span>Add feed</span>
+        </button>
+      </div>
+      @if (refreshSvc.running()) {
+        <span class="prog"><i [style.width.%]="refreshSvc.progress() * 100"></i></span>
+      }
+
       <a
         class="nav all"
         [class.active]="selection().kind === 'all'"
@@ -182,6 +201,46 @@ import { SubscriptionDto, TagDto } from '../models';
         overflow: auto;
         height: 100%;
       }
+      .actions {
+        display: flex;
+        gap: var(--space-2);
+        margin-bottom: var(--space-1);
+      }
+      .act {
+        flex: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-1);
+        padding: var(--space-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface-2);
+        color: var(--text-primary);
+        cursor: pointer;
+        font-size: var(--fs-sm);
+      }
+      .act:hover:not(:disabled) {
+        background: var(--surface-0);
+      }
+      .act:disabled {
+        color: var(--text-muted);
+        cursor: default;
+      }
+      .prog {
+        display: block;
+        height: 3px;
+        border-radius: 2px;
+        background: var(--border);
+        overflow: hidden;
+        margin: 0 var(--space-1) var(--space-1);
+      }
+      .prog i {
+        display: block;
+        height: 100%;
+        background: var(--accent);
+        transition: width 0.2s;
+      }
       .nav {
         display: flex;
         align-items: center;
@@ -190,6 +249,13 @@ import { SubscriptionDto, TagDto } from '../models';
         border-radius: var(--radius);
         color: var(--text-primary);
         text-decoration: none;
+      }
+      .nav > span:not(.count):not(.dot) {
+        flex: 1;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       .nav:hover {
         background: var(--surface-0);
@@ -298,7 +364,10 @@ export class SidebarComponent {
   readonly deleteTag = output<TagDto>();
   readonly editFeed = output<SubscriptionDto>();
   readonly unsubscribe = output<SubscriptionDto>();
+  readonly refresh = output<void>();
+  readonly addFeed = output<void>();
 
+  readonly refreshSvc = inject(RefreshService);
   readonly expanded = signal<Set<number>>(new Set());
   readonly menuFor = signal<string | null>(null);
 

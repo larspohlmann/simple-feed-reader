@@ -1,5 +1,5 @@
 // src/app/reader/reader-shell.component.ts
-import { Component, OnInit, computed, effect, inject, untracked } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Dialog } from '@angular/cdk/dialog';
@@ -23,9 +23,17 @@ import { ManageActions } from './manage/manage-actions.service';
   selector: 'app-reader-shell',
   imports: [ReaderHeaderComponent, SidebarComponent, EntryListComponent, ReaderViewComponent],
   template: `
-    <app-reader-header [title]="title()" (refresh)="onRefresh()" (addFeed)="onAddFeed()" />
+    <app-reader-header (toggleSidebar)="sidebarOpen.set(!sidebarOpen())" />
     <div class="body">
-      <aside class="sidebar">
+      @if (sidebarOpen()) {
+        <button
+          class="backdrop"
+          type="button"
+          aria-label="Close menu"
+          (click)="sidebarOpen.set(false)"
+        ></button>
+      }
+      <aside class="sidebar" [class.open]="sidebarOpen()">
         <app-sidebar
           [tagTree]="subs.tagTree()"
           [untagged]="subs.untagged()"
@@ -36,6 +44,8 @@ import { ManageActions } from './manage/manage-actions.service';
           (deleteTag)="manage.deleteTag($event)"
           (editFeed)="manage.editSubscription($event)"
           (unsubscribe)="manage.unsubscribe($event)"
+          (refresh)="onRefresh()"
+          (addFeed)="onAddFeed()"
         />
       </aside>
       <main class="main" [class.split]="paneMode()">
@@ -146,9 +156,32 @@ import { ManageActions } from './manage/manage-actions.service';
         flex: 1;
         min-width: 0;
       }
+      .backdrop {
+        display: none;
+        border: 0;
+        padding: 0;
+      }
       @media (max-width: 720px) {
         .sidebar {
-          display: none;
+          position: fixed;
+          top: 56px;
+          bottom: 0;
+          left: 0;
+          z-index: 20;
+          width: 260px;
+          max-width: 82vw;
+          transform: translateX(-100%);
+          transition: transform 0.2s ease;
+        }
+        .sidebar.open {
+          transform: translateX(0);
+        }
+        .backdrop {
+          display: block;
+          position: fixed;
+          inset: 56px 0 0 0;
+          z-index: 15;
+          background: rgba(0, 0, 0, 0.4);
         }
       }
     `,
@@ -186,6 +219,8 @@ export class ReaderShellComponent implements OnInit {
   readonly hasMore = computed(() => this.entries.nextCursor() !== null);
   readonly canMarkAllRead = computed(() => markReadTarget(this.selection()) !== null);
   readonly paneMode = computed(() => this.layout.mode() === 'pane' && this.screen.isWide());
+  /** Mobile drawer state; the sidebar is a fixed overlay below 720px. */
+  readonly sidebarOpen = signal(false);
 
   readonly title = computed(() => {
     const s = this.selection();
@@ -213,6 +248,11 @@ export class ReaderShellComponent implements OnInit {
     effect(() => {
       const q = queryFromSelection(this.selection());
       untracked(() => this.entries.load(q));
+    });
+    // Dismiss the mobile drawer once a new selection is chosen from it.
+    effect(() => {
+      this.selection();
+      untracked(() => this.sidebarOpen.set(false));
     });
     // Mark the opened entry read exactly once per session — even if the PATCH
     // fails and the entry rolls back to unread, we never re-fire the request.

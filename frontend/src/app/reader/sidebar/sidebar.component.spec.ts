@@ -1,5 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { API_BASE_URL } from '../../core/api';
+import { RefreshService } from '../refresh.service';
 import { SidebarComponent } from './sidebar.component';
 import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
@@ -25,7 +29,15 @@ function mount(
     selection: Selection;
   }> = {},
 ) {
-  TestBed.configureTestingModule({ imports: [SidebarComponent], providers: [provideRouter([])] });
+  TestBed.configureTestingModule({
+    imports: [SidebarComponent],
+    providers: [
+      provideRouter([]),
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      { provide: API_BASE_URL, useValue: 'https://api.test' },
+    ],
+  });
   const f = TestBed.createComponent(SidebarComponent);
   f.componentRef.setInput('tagTree', over.tagTree ?? []);
   f.componentRef.setInput('untagged', over.untagged ?? []);
@@ -42,6 +54,30 @@ describe('SidebarComponent', () => {
     const all = el.querySelector('.nav.all')!;
     expect(all.textContent).toContain('24');
     expect(all.classList).toContain('active');
+  });
+
+  it('emits refresh and addFeed from the action buttons', () => {
+    const f = mount();
+    const el = f.nativeElement as HTMLElement;
+    const refresh = jest.fn();
+    const addFeed = jest.fn();
+    f.componentInstance.refresh.subscribe(refresh);
+    f.componentInstance.addFeed.subscribe(addFeed);
+    (el.querySelector('.act[aria-label="Refresh"]') as HTMLButtonElement).click();
+    (el.querySelector('.act[aria-label="Add feed"]') as HTMLButtonElement).click();
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(addFeed).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables Refresh and shows a progress bar while refreshing', () => {
+    const f = mount();
+    TestBed.inject(RefreshService).running.set(true);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect((el.querySelector('.act[aria-label="Refresh"]') as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    expect(el.querySelector('.prog')).not.toBeNull();
   });
 
   it('renders tags with summed counts and reveals subs when expanded', () => {

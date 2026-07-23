@@ -5,10 +5,14 @@
 // script or ThemeService runs).
 :root,
 :root[data-theme='light'] {
+  color-scheme: light;
+
   @include graphite.light;
 }
 
 :root[data-theme='dark'] {
+  color-scheme: dark;
+
   @include graphite.dark;
 }
 
