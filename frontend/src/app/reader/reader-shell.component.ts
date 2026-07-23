@@ -12,7 +12,8 @@ import { RefreshService } from './refresh.service';
 import { ReadingLayoutService } from './reading-layout.service';
 import { LayoutService } from './layout.service';
 import { markReadTarget, queryFromSelection, selectionFromParams } from './query';
-import { EntryDto, SubscriptionDto } from './models';
+import { entryParam } from './slug';
+import { EntryDto, EntryStatePatch, SubscriptionDto } from './models';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
@@ -219,9 +220,16 @@ export class ReaderShellComponent implements OnInit {
   });
   readonly entryId = computed(() => this.parsed().entryId);
 
-  readonly openEntry = computed(
-    () => this.entries.entries().find((e) => e.id === this.entryId()) ?? null,
-  );
+  // A deep-linked entry the current list page doesn't contain, fetched by id.
+  private readonly fetchedEntry = signal<EntryDto | null>(null);
+  readonly openEntry = computed(() => {
+    const id = this.entryId();
+    if (id == null) return null;
+    const inList = this.entries.entries().find((e) => e.id === id);
+    if (inList) return inList; // the live list copy wins (freshest state)
+    const fetched = this.fetchedEntry();
+    return fetched && fetched.id === id ? fetched : null;
+  });
   readonly hasMore = computed(() => this.entries.nextCursor() !== null);
   readonly canMarkAllRead = computed(() => markReadTarget(this.selection()) !== null);
   readonly paneMode = computed(() => this.layout.mode() === 'pane' && this.screen.isWide());
@@ -269,6 +277,30 @@ export class ReaderShellComponent implements OnInit {
         untracked(() => this.setRead(e, true));
       }
     });
+    // Deep link to an entry the current list page doesn't hold: fetch it by id so
+    // it still opens. Tracks only entryId; the list copy takes over once loaded.
+    effect(() => {
+      const id = this.entryId();
+      untracked(() => {
+        if (id == null) {
+          this.fetchedEntry.set(null); // reader closed — drop the stale fetch
+          return;
+        }
+        if (this.entries.entries().some((e) => e.id === id)) return;
+        if (this.fetchedEntry()?.id === id) return;
+        // Id-guard the async writes: a slow response for a since-abandoned deep
+        // link (e.g. Back/Forward between two cold entries) must not clobber the
+        // entry now open.
+        this.api.entry(id).subscribe({
+          next: (r) => {
+            if (this.entryId() === id) this.fetchedEntry.set(r.entry);
+          },
+          error: () => {
+            if (this.entryId() === id) this.fetchedEntry.set(null);
+          },
+        });
+      });
+    });
   }
 
   ngOnInit(): void {
@@ -277,8 +309,8 @@ export class ReaderShellComponent implements OnInit {
     if (!this.auth.user()) this.auth.loadMe().subscribe({ error: () => undefined });
   }
 
-  onFavorite = (e: EntryDto): void => this.entries.setState(e.id, { isFavorite: !e.isFavorite });
-  onKeep = (e: EntryDto): void => this.entries.setState(e.id, { isKept: !e.isKept });
+  onFavorite = (e: EntryDto): void => this.patchOpen(e, { isFavorite: !e.isFavorite });
+  onKeep = (e: EntryDto): void => this.patchOpen(e, { isKept: !e.isKept });
   onToggleRead = (e: EntryDto): void => this.setRead(e, !e.isRead);
 
   /** Reader-view outputs are payload-less; apply them to the currently open entry. */
@@ -292,16 +324,36 @@ export class ReaderShellComponent implements OnInit {
     // fails, so the sidebar count never desyncs from the entry's rolled-back flag.
     if (read) this.subs.decrementUnread(e.subscriptionId);
     else this.subs.incrementUnread(e.subscriptionId);
-    this.entries.setState(e.id, { isRead: read }, () => {
+    this.patchOpen(e, { isRead: read }, () => {
       if (read) this.subs.incrementUnread(e.subscriptionId);
       else this.subs.decrementUnread(e.subscriptionId);
+    });
+  }
+
+  /** Apply an entry-state change. Entries in the loaded list go through the
+   *  store's optimistic path; a cold-opened deep-link entry (in no list) is
+   *  patched on its fetched copy and persisted directly, reverting on failure. */
+  private patchOpen(e: EntryDto, patch: EntryStatePatch, onError?: () => void): void {
+    if (this.entries.entries().some((x) => x.id === e.id)) {
+      this.entries.setState(e.id, patch, onError);
+      return;
+    }
+    const before = this.fetchedEntry();
+    this.fetchedEntry.update((cur) => (cur && cur.id === e.id ? { ...cur, ...patch } : cur));
+    this.api.updateState(e.id, patch).subscribe({
+      error: () => {
+        // Only revert if the same cold entry is still open — a Back/Forward to
+        // another cold entry while the PATCH was in flight must not be clobbered.
+        this.fetchedEntry.update((cur) => (cur && cur.id === e.id ? before : cur));
+        onError?.();
+      },
     });
   }
 
   onOpen(e: EntryDto): void {
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { entry: e.id },
+      queryParams: { entry: entryParam(e.id, e.title) },
       queryParamsHandling: 'merge',
     });
   }

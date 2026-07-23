@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
 import {
   EntriesPage,
+  EntryDto,
   EntryQuery,
   EntryStatePatch,
   MarkReadScope,
@@ -30,6 +31,11 @@ export class ReaderApi {
 
   subscribe(url: string): Observable<SubscribeResult> {
     return this.http.post<SubscribeResult>(`${this.base}/api/subscriptions`, { url });
+  }
+
+  /** A single entry by id — lets a deep link open an entry not in the loaded page. */
+  entry(id: number): Observable<{ entry: EntryDto }> {
+    return this.http.get<{ entry: EntryDto }>(`${this.base}/api/entries/${id}`);
   }
 
   entries(query: EntryQuery, cursor?: string | null): Observable<EntriesPage> {

@@ -95,6 +95,27 @@ final class HttpFeedFetcherTest extends TestCase
         self::assertSame(0, $seenOptions['max_redirects'] ?? null);
     }
 
+    public function testDisablesTransparentCompression(): void
+    {
+        $seenOptions = [];
+        $factory = static function (string $method, string $url, array $options) use (&$seenOptions): MockResponse {
+            $seenOptions = $options;
+
+            return new MockResponse('<rss/>', ['http_code' => 200]);
+        };
+
+        $this->fetcher($factory)->fetch('https://example.com/feed');
+
+        $headers = [];
+        foreach ((array) ($seenOptions['headers'] ?? []) as $header) {
+            if (\is_string($header)) {
+                $headers[] = strtolower($header);
+            }
+        }
+        // Without this, a gzip bomb could decompress past MAX_BYTES before the check.
+        self::assertContains('accept-encoding: identity', $headers);
+    }
+
     public function testFollowsRedirectAndReportsPermanentMove(): void
     {
         $responses = [

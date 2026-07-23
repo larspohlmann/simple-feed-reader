@@ -112,6 +112,40 @@ describe('ReaderShellComponent', () => {
     ctrl.verify();
   });
 
+  it('fetches a deep-linked entry that is not in the loaded list', () => {
+    const f = boot(); // initial list holds only entry id 1
+    qp.next(convertToParamMap({ entry: '514-deep-linked-story' }));
+    f.detectChanges();
+
+    // Not in the list → the shell fetches it by the id parsed from the slug.
+    const req = ctrl.expectOne('https://api.test/api/entries/514');
+    expect(req.request.method).toBe('GET');
+    // isRead:true so the mark-on-open effect fires no extra state PATCH.
+    req.flush({ entry: { ...entry, id: 514, title: 'Deep linked story', isRead: true } });
+    f.detectChanges();
+
+    expect(f.nativeElement.querySelector('app-reader-view')).not.toBeNull();
+  });
+
+  it('ignores a stale cold-entry fetch that resolves after navigating to another', () => {
+    const f = boot();
+    // Open cold entry A (not in the list), then jump to cold entry B before A resolves.
+    qp.next(convertToParamMap({ entry: '514-a' }));
+    f.detectChanges();
+    const reqA = ctrl.expectOne('https://api.test/api/entries/514');
+    qp.next(convertToParamMap({ entry: '600-b' }));
+    f.detectChanges();
+    const reqB = ctrl.expectOne('https://api.test/api/entries/600');
+
+    // B resolves first (now open), then A resolves LATE — A must not clobber B.
+    reqB.flush({ entry: { ...entry, id: 600, title: 'Entry B', isRead: true } });
+    f.detectChanges();
+    reqA.flush({ entry: { ...entry, id: 514, title: 'Entry A', isRead: true } });
+    f.detectChanges();
+
+    expect(f.nativeElement.querySelector('.title')?.textContent).toContain('Entry B');
+  });
+
   it('reloads entries when the selection changes', () => {
     const f = boot();
     qp.next(convertToParamMap({ subscription: '5' }));

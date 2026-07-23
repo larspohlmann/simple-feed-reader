@@ -60,22 +60,8 @@ class EntryRepository extends ServiceEntityRepository
     {
         $limit = max(1, min($query->limit, EntryQuery::MAX_LIMIT));
 
-        $qb = $this->createQueryBuilder('e')
-            ->leftJoin('e.feed', 'f')->addSelect('f')
-            // Unrelated-entity joins: the caller's subscription to this entry's
-            // feed, and the caller's optional per-entry state row.
-            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
-            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
-            ->addSelect('s.id AS subscriptionId')
-            ->addSelect('s.customTitle AS customTitle')
-            ->addSelect('f.title AS feedTitle')
-            ->addSelect('f.url AS feedUrl')
-            ->addSelect('es.isRead AS esRead')
-            ->addSelect('es.isFavorite AS esFavorite')
-            ->addSelect('es.isKept AS esKept')
-            ->addSelect('s.markedReadUntil AS markedReadUntil')
+        $qb = $this->rowQueryBuilder($query->userId)
             ->addSelect('COALESCE(e.publishedAt, e.createdAt) AS HIDDEN effectiveDate')
-            ->setParameter('user', $query->userId)
             ->orderBy('effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($limit);
@@ -99,6 +85,47 @@ class EntryRepository extends ServiceEntityRepository
         $rows = $qb->getQuery()->getResult();
 
         return array_map(fn (array $row): EntryListRow => $this->hydrateRow($row), $rows);
+    }
+
+    /**
+     * The shared "entry list row" projection: the entry plus the caller's
+     * subscription, feed, and optional per-entry state. listForUser adds
+     * ordering/paging/filters; oneRowForUser adds an id filter.
+     */
+    private function rowQueryBuilder(int $userId): QueryBuilder
+    {
+        return $this->createQueryBuilder('e')
+            ->leftJoin('e.feed', 'f')->addSelect('f')
+            // Unrelated-entity joins: the caller's subscription to this entry's
+            // feed, and the caller's optional per-entry state row.
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
+            ->addSelect('s.id AS subscriptionId')
+            ->addSelect('s.customTitle AS customTitle')
+            ->addSelect('f.title AS feedTitle')
+            ->addSelect('f.url AS feedUrl')
+            ->addSelect('es.isRead AS esRead')
+            ->addSelect('es.isFavorite AS esFavorite')
+            ->addSelect('es.isKept AS esKept')
+            ->addSelect('s.markedReadUntil AS markedReadUntil')
+            ->setParameter('user', $userId);
+    }
+
+    /**
+     * One entry as a list row (entry + subscription + folded state), or null if
+     * the caller does not subscribe to its feed — the same IDOR gate as the list.
+     * Lets a deep link open an entry the current list page does not contain.
+     */
+    public function oneRowForUser(int $entryId, int $userId): ?EntryListRow
+    {
+        /** @var array<array-key, mixed>|null $row */
+        $row = $this->rowQueryBuilder($userId)
+            ->andWhere('e.id = :id')
+            ->setParameter('id', $entryId)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $row === null ? null : $this->hydrateRow($row);
     }
 
     /**

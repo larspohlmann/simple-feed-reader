@@ -103,6 +103,17 @@ final class EntryController
         ]);
     }
 
+    #[Route('/{id}', name: 'api_entries_get', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function get(
+        int $id,
+        #[CurrentUser] User $user,
+    ): JsonResponse {
+        $row = $this->entries->oneRowForUser($id, (int) $user->getId())
+            ?? throw new NotFoundHttpException('No such entry.');
+
+        return new JsonResponse(['entry' => EntryJson::one($row)]);
+    }
+
     #[Route('/mark-read', name: 'api_entries_mark_read', methods: ['POST'])]
     public function markRead(
         #[CurrentUser] User $user,
