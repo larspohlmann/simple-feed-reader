@@ -5,18 +5,20 @@ declare(strict_types=1);
 namespace App\Tests\Service\Scraper;
 
 use App\Service\Scraper\CardFields;
+use Dom\Element;
+use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class CardFieldsTest extends TestCase
 {
-    /** @return array{\Dom\Element, \Dom\Element} container + anchor from a snippet */
+    /** @return array{Element, Element} container + anchor from a snippet */
     private function card(string $html): array
     {
-        $doc = \Dom\HTMLDocument::createFromString("<html><body>{$html}</body></html>", \LIBXML_NOERROR);
+        $doc = HTMLDocument::createFromString("<html lang=\"en\"><body>{$html}</body></html>", \LIBXML_NOERROR);
         $container = $doc->querySelector('[data-card]');
-        \assert($container instanceof \Dom\Element);
+        \assert($container instanceof Element);
         $anchor = $container->tagName === 'A' ? $container : $container->querySelector('a');
-        \assert($anchor instanceof \Dom\Element);
+        \assert($anchor instanceof Element);
 
         return [$container, $anchor];
     }
@@ -70,7 +72,7 @@ final class CardFieldsTest extends TestCase
     {
         [$c, $a] = $this->card(<<<HTML
             <div data-card><a href="/a/5"><h2>With media data</h2></a>
-            <img data-src="/img/pic.jpg"><time datetime="2026-07-20T10:00:00+02:00">yesterday</time></div>
+            <img data-src="/img/pic.jpg" alt=""><time datetime="2026-07-20T10:00:00+02:00">yesterday</time></div>
             HTML);
         $item = CardFields::item($c, $a, 'https://site.test/');
         self::assertSame('https://site.test/img/pic.jpg', $item?->imageUrl);

@@ -6,26 +6,36 @@ namespace App\Service\Scraper\Layer;
 
 use App\Service\Scraper\CardFields;
 use App\Service\Scraper\ScrapedItem;
+use Dom\Element;
+use Dom\HTMLDocument;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
  * Last-resort layer for pages without JSON-LD or article markup: clusters
- * anchors by their DOM path signature (tag + first class token per ancestor),
- * assuming a listing repeats one card structure many times. Navigation,
- * header, footer, and aside subtrees are excluded so menus and footer link
- * lists can never win. The biggest cluster (mean title length breaks ties)
- * becomes the item list, in document order.
+ * anchors by their own class tokens (BEM modifiers stripped), assuming a
+ * listing repeats one card component many times. An anchor joins one group
+ * per token, so card variants that share a component class (featured vs.
+ * plain mntl-card) still land in one cluster even when their wrapper depth
+ * differs per page section — an ancestor-path signature fragmented exactly
+ * there. Navigation, header, footer, and aside subtrees are excluded so
+ * menus and footer link lists can never win. The biggest cluster (mean
+ * title length breaks ties) becomes the item list, in document order.
  */
+#[AsTaggedItem(priority: 10)]
 final class ClusterLayer implements ScrapeLayerInterface
 {
     private const int MIN_CLUSTER_SIZE = 3;
     private const int MAX_CONTAINER_HOPS = 3;
 
-    public function extract(\Dom\HTMLDocument $doc, string $baseUrl): array
+    public function extract(HTMLDocument $doc, string $baseUrl): array
     {
         $groups = [];
         foreach ($doc->querySelectorAll('a[href]') as $anchor) {
-            if ($this->isEligible($anchor)) {
-                $groups[$this->signature($anchor)][] = $anchor;
+            if (!$this->isEligible($anchor)) {
+                continue;
+            }
+            foreach ($this->groupKeys($anchor) as $key) {
+                $groups[$key][] = $anchor;
             }
         }
 
@@ -44,7 +54,7 @@ final class ClusterLayer implements ScrapeLayerInterface
     }
 
     /** Page chrome never carries the article list; fragment links never lead to one. */
-    private function isEligible(\Dom\Element $anchor): bool
+    private function isEligible(Element $anchor): bool
     {
         if (str_starts_with($anchor->getAttribute('href') ?? '', '#')) {
             return false;
@@ -53,29 +63,29 @@ final class ClusterLayer implements ScrapeLayerInterface
         return $anchor->closest('nav, header, footer, aside') === null;
     }
 
-    /** DOM path from body down to the anchor, one tag.firstClassToken segment per level. */
-    private function signature(\Dom\Element $anchor): string
+    /**
+     * One group key per class token, with BEM modifier suffixes stripped so
+     * card--featured and card--no-image variants share the card group.
+     * Classless anchors all share the bare "a." group.
+     *
+     * @return list<string>
+     */
+    private function groupKeys(Element $anchor): array
     {
-        $segments = [];
-        for ($element = $anchor; $element !== null && $element->tagName !== 'BODY'; $element = $element->parentElement) {
-            $segments[] = $this->segment($element);
+        preg_match_all('/\S+/', $anchor->getAttribute('class') ?? '', $matches);
+        $keys = [];
+        foreach ($matches[0] as $token) {
+            $keys[] = 'a.' . strtolower((string) preg_replace('/--.*$/', '', $token));
         }
 
-        return implode('>', array_reverse($segments));
-    }
-
-    private function segment(\Dom\Element $element): string
-    {
-        preg_match('/\S+/', $element->getAttribute('class') ?? '', $matches);
-
-        return strtolower($element->tagName) . '.' . ($matches[0] ?? '');
+        return $keys === [] ? ['a.'] : array_values(array_unique($keys));
     }
 
     /**
      * Dedupes by URL (first occurrence wins) before scoring, so repeated
      * same-URL links cannot inflate a group.
      *
-     * @param list<\Dom\Element> $anchors
+     * @param list<Element> $anchors
      * @return list<ScrapedItem>
      */
     private function items(array $anchors, string $baseUrl): array
@@ -96,7 +106,7 @@ final class ClusterLayer implements ScrapeLayerInterface
      * parent still contains exactly one eligible anchor, so sibling cards are
      * never swallowed.
      */
-    private function container(\Dom\Element $anchor): \Dom\Element
+    private function container(Element $anchor): Element
     {
         $container = $anchor;
         for ($hop = 0; $hop < self::MAX_CONTAINER_HOPS; $hop++) {
@@ -110,7 +120,7 @@ final class ClusterLayer implements ScrapeLayerInterface
         return $container;
     }
 
-    private function eligibleAnchorCount(\Dom\Element $element): int
+    private function eligibleAnchorCount(Element $element): int
     {
         $count = 0;
         foreach ($element->querySelectorAll('a[href]') as $anchor) {

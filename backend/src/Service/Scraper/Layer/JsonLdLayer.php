@@ -8,6 +8,8 @@ use App\Service\Parser\DateParser;
 use App\Service\Scraper\CardFields;
 use App\Service\Scraper\ScrapedItem;
 use App\Service\Scraper\TextNormalizer;
+use Dom\HTMLDocument;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
  * Extracts items from JSON-LD blocks: ItemList structures (with ListItems
@@ -15,11 +17,12 @@ use App\Service\Scraper\TextNormalizer;
  * (NewsArticle, BlogPosting, Article), and @graph wrappers around either.
  * Non-article structured data (Organization, BreadcrumbList, …) is ignored.
  */
+#[AsTaggedItem(priority: 30)]
 final class JsonLdLayer implements ScrapeLayerInterface
 {
     private const array ARTICLE_TYPES = ['NewsArticle', 'BlogPosting', 'Article'];
 
-    public function extract(\Dom\HTMLDocument $doc, string $baseUrl): array
+    public function extract(HTMLDocument $doc, string $baseUrl): array
     {
         $items = [];
         foreach ($doc->querySelectorAll('script[type="application/ld+json"]') as $script) {

@@ -7,6 +7,7 @@ namespace App\Service\Scraper;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\UrlResolver;
 use App\Service\Parser\DateParser;
+use Dom\Element;
 
 /**
  * Extracts ScrapedItem fields from one card container + its anchor.
@@ -32,7 +33,7 @@ final class CardFields
     /** Child tags that make an element a wrapper rather than a text block. */
     private const array NON_LEAF_CHILDREN = ['P', 'DIV', 'UL', 'OL', 'H1', 'H2', 'H3', 'H4', 'ARTICLE', 'SECTION'];
 
-    public static function item(\Dom\Element $container, \Dom\Element $anchor, string $baseUrl): ?ScrapedItem
+    public static function item(Element $container, Element $anchor, string $baseUrl): ?ScrapedItem
     {
         $url = self::httpUrl($anchor->getAttribute('href'), $baseUrl);
         if ($url === null) {
@@ -77,7 +78,7 @@ final class CardFields
         return preg_match('#^https?://#i', $resolved) === 1 ? $resolved : null;
     }
 
-    private static function title(\Dom\Element $container, \Dom\Element $anchor): ?string
+    private static function title(Element $container, Element $anchor): ?string
     {
         $title = self::headingTitle($container)
             ?? self::classHintedTitle($container)
@@ -89,10 +90,10 @@ final class CardFields
         return mb_substr($title, 0, self::MAX_TITLE_LENGTH);
     }
 
-    private static function headingTitle(\Dom\Element $container): ?string
+    private static function headingTitle(Element $container): ?string
     {
         $heading = $container->querySelector('h1, h2, h3, h4');
-        if (!$heading instanceof \Dom\Element) {
+        if (!$heading instanceof Element) {
             return null;
         }
         $text = TextNormalizer::normalize($heading->textContent ?? '');
@@ -104,7 +105,7 @@ final class CardFields
      * Last matching element in document order wins: for nested wrappers like
      * card__title > card__title-text that is the innermost, most precise text.
      */
-    private static function classHintedTitle(\Dom\Element $container): ?string
+    private static function classHintedTitle(Element $container): ?string
     {
         $title = null;
         foreach ($container->querySelectorAll('*') as $element) {
@@ -121,7 +122,7 @@ final class CardFields
         return $title;
     }
 
-    private static function firstAnchorLine(\Dom\Element $anchor): ?string
+    private static function firstAnchorLine(Element $anchor): ?string
     {
         foreach (explode("\n", $anchor->textContent ?? '') as $line) {
             $line = TextNormalizer::normalize($line);
@@ -133,7 +134,7 @@ final class CardFields
         return null;
     }
 
-    private static function teaser(\Dom\Element $container, string $title): ?string
+    private static function teaser(Element $container, string $title): ?string
     {
         $teaser = null;
         foreach ($container->querySelectorAll('p, div, span') as $element) {
@@ -153,7 +154,7 @@ final class CardFields
         return $teaser === null ? null : mb_substr($teaser, 0, self::MAX_TEASER_LENGTH);
     }
 
-    private static function isLeafish(\Dom\Element $element): bool
+    private static function isLeafish(Element $element): bool
     {
         for ($child = $element->firstElementChild; $child !== null; $child = $child->nextElementSibling) {
             if (\in_array($child->tagName, self::NON_LEAF_CHILDREN, true)) {
@@ -166,17 +167,15 @@ final class CardFields
 
     /**
      * Fallback for cards whose visible description element is empty and the
-     * text ships in a data attribute (data-card-description on treehugger).
+     * text ships in a data attribute: treehugger puts data-card-description
+     * on a div nested inside the card link, so the container itself and every
+     * descendant element are scanned, first match in document order wins.
      */
-    private static function attributeTeaser(\Dom\Element $container): ?string
+    private static function attributeTeaser(Element $container): ?string
     {
-        $elements = [$container];
-        for ($child = $container->firstElementChild; $child !== null; $child = $child->nextElementSibling) {
-            $elements[] = $child;
-        }
-        foreach ($elements as $element) {
+        foreach ([$container, ...$container->querySelectorAll('*')] as $element) {
             foreach ($element->attributes as $attribute) {
-                if (preg_match('/descri/i', $attribute->name) !== 1) {
+                if (stripos($attribute->name, 'descri') === false) {
                     continue;
                 }
                 $value = TextNormalizer::normalize($attribute->value);
@@ -189,10 +188,10 @@ final class CardFields
         return null;
     }
 
-    private static function image(\Dom\Element $container, string $baseUrl): ?string
+    private static function image(Element $container, string $baseUrl): ?string
     {
         $img = $container->querySelector('img');
-        if (!$img instanceof \Dom\Element) {
+        if (!$img instanceof Element) {
             return null;
         }
         $candidate = self::nonEmpty($img->getAttribute('src'))
@@ -219,10 +218,10 @@ final class CardFields
         return self::nonEmpty($matches[0] ?? null);
     }
 
-    private static function publishedAt(\Dom\Element $container): ?\DateTimeImmutable
+    private static function publishedAt(Element $container): ?\DateTimeImmutable
     {
         $time = $container->querySelector('time[datetime]');
-        if (!$time instanceof \Dom\Element) {
+        if (!$time instanceof Element) {
             return null;
         }
 

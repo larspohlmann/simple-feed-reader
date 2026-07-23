@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Scraper;
 
 use App\Service\Scraper\Layer\ClusterLayer;
+use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class ClusterLayerTest extends TestCase
@@ -13,7 +14,7 @@ final class ClusterLayerTest extends TestCase
     private function extract(string $fixture, string $baseUrl): array
     {
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/scraped/' . $fixture);
-        $doc = \Dom\HTMLDocument::createFromString($html, \LIBXML_NOERROR);
+        $doc = HTMLDocument::createFromString($html, \LIBXML_NOERROR);
 
         return new ClusterLayer()->extract($doc, $baseUrl);
     }

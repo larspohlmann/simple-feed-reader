@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Scraper;
 
 use App\Service\Scraper\Layer\JsonLdLayer;
+use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class JsonLdLayerTest extends TestCase
@@ -13,7 +14,7 @@ final class JsonLdLayerTest extends TestCase
     private function extract(string $fixture): array
     {
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/scraped/' . $fixture);
-        $doc = \Dom\HTMLDocument::createFromString($html, \LIBXML_NOERROR);
+        $doc = HTMLDocument::createFromString($html, \LIBXML_NOERROR);
 
         return new JsonLdLayer()->extract($doc, 'https://news.test/section/');
     }
@@ -30,8 +31,8 @@ final class JsonLdLayerTest extends TestCase
 
     public function testIgnoresPagesWithoutArticleStructures(): void
     {
-        $doc = \Dom\HTMLDocument::createFromString(
-            '<html><body><script type="application/ld+json">{"@type":"Organization","name":"X"}</script>'
+        $doc = HTMLDocument::createFromString(
+            '<html lang="en"><body><script type="application/ld+json">{"@type":"Organization","name":"X"}</script>'
             . '</body></html>',
             \LIBXML_NOERROR
         );

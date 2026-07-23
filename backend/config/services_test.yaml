@@ -140,6 +140,16 @@ services:
         autowire: true
         public: true
 
+    # HtmlItemExtractorWiringTest fetches this to prove the app.scrape_layer
+    # tagged iterator actually collects the extraction layers in priority
+    # order — an empty iterator builds fine and only fails on first use. No
+    # application code injects the extractor yet (the refresh pipeline picks
+    # it up in a later task), so the compiler would remove it entirely and the
+    # test container could not fetch it. Same `autowire` caveat as above.
+    App\Service\Scraper\HtmlItemExtractor:
+        autowire: true
+        public: true
+
     # The flow tests resolve a provider by URL segment, and OAuthProviderWiring
     # Test fetches this to prove the container's tagged iterator actually finds
     # the providers — an empty one would build a registry that offers nothing

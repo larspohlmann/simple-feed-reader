@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Scraper;
 
 use App\Service\Scraper\Layer\SemanticLayer;
+use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class SemanticLayerTest extends TestCase
@@ -13,7 +14,7 @@ final class SemanticLayerTest extends TestCase
     private function extract(string $fixture, string $baseUrl): array
     {
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/scraped/' . $fixture);
-        $doc = \Dom\HTMLDocument::createFromString($html, \LIBXML_NOERROR);
+        $doc = HTMLDocument::createFromString($html, \LIBXML_NOERROR);
 
         return new SemanticLayer()->extract($doc, $baseUrl);
     }
@@ -28,8 +29,9 @@ final class SemanticLayerTest extends TestCase
 
     public function testFewerThanThreeArticlesYieldsNothing(): void
     {
-        $doc = \Dom\HTMLDocument::createFromString(
-            '<html><body><article><h2><a href="/one">Single article headline</a></h2></article></body></html>',
+        $doc = HTMLDocument::createFromString(
+            '<html lang="en"><body><article><h2><a href="/one">Single article headline</a></h2></article>'
+            . '</body></html>',
             \LIBXML_NOERROR
         );
         self::assertSame([], new SemanticLayer()->extract($doc, 'https://blog.test/'));
