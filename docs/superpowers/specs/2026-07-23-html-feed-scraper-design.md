@@ -169,8 +169,9 @@ it:
   tagesschau uses `<p class="teaser__shorttext">`. Fallback (verified needed
   for treehugger, where `card__description` divs are *empty* and the text
   lives in `data-card-description` attributes): a `data-*` attribute on the
-  container (or a direct child) whose name matches `/descri/i` and whose
-  value is ≥40 characters. Becomes the entry's content HTML (as a plain
+  container or any descendant whose name matches `/descri/i` and whose
+  value is ≥40 characters (descendant scan — treehugger nests the attribute
+  inside the card link). Becomes the entry's content HTML (as a plain
   `<p>`), sanitized by `EntrySanitizer` like all feed content.
 - **image** — first `<img>` in the container (`src`/`srcset`/`data-src`),
   http(s) only, feeding the existing item-image plumbing.
