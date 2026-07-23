@@ -10,11 +10,14 @@ use App\Service\Fetch\FetchResponse;
 use App\Service\Parser\FeedParser;
 use App\Service\Preview\FeedPreviewService;
 use App\Service\Scraper\HtmlItemExtractor;
+use App\Tests\Service\Scraper\ScrapedFixtures;
 use App\Tests\Support\StubFeedFetcher;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class FeedPreviewServiceTest extends KernelTestCase
 {
+    use ScrapedFixtures;
+
     private const URL = 'https://example.com/feed';
 
     private function service(StubFeedFetcher $fetcher): FeedPreviewService
@@ -223,5 +226,20 @@ final class FeedPreviewServiceTest extends KernelTestCase
 
         $this->expectException(FeedPreviewException::class);
         $this->service($fetcher)->preview(self::URL);
+    }
+
+    /**
+     * "That address is not a readable feed." fits a feed-document mismatch;
+     * for a scraped preview the extractor already words the actual problem
+     * for the user, so its message must survive into the exception instead
+     * of being flattened to the generic one.
+     */
+    public function testScrapedPreviewFailureKeepsTheExtractorsMessage(): void
+    {
+        $fetcher = $this->fetcherWithBody($this->scrapedFixture('nav-only.html'));
+
+        $this->expectException(FeedPreviewException::class);
+        $this->expectExceptionMessage('No article list was detected on the page.');
+        $this->service($fetcher)->preview(self::URL, 'scraped');
     }
 }
