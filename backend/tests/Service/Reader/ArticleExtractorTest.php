@@ -53,6 +53,23 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('substantial paragraph', (string) $result->contentHtml);
         self::assertStringContainsString('https://site.test/img/photo.jpg', (string) $result->contentHtml);
         self::assertStringNotContainsString('About', (string) $result->contentHtml);
+        // The body already carries its own image, so no separate lead image is
+        // emitted (it would duplicate the inline figure).
+        self::assertNull($result->image);
+    }
+
+    public function testEmitsLeadImageWhenBodyHasNoImage(): void
+    {
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-lead-image.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post');
+
+        self::assertTrue($result->ok);
+        self::assertStringNotContainsString('<img', (string) $result->contentHtml);
+        // readability finds the og:image even though it is outside the body; the
+        // reader renders it as a hero so the article is not imageless.
+        self::assertSame('https://site.test/hero.jpg', $result->image);
     }
 
     public function testStripsDangerousMarkup(): void

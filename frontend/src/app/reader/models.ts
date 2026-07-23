@@ -128,6 +128,8 @@ export interface ReaderArticle {
   siteName: string | null;
   contentHtml: string;
   excerpt: string | null;
+  /** Lead image to show as a hero when the body has none of its own; else null. */
+  leadImage: string | null;
   extractedAt: string;
 }
 

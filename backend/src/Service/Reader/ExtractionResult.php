@@ -23,6 +23,10 @@ final readonly class ExtractionResult
         public ?string $siteName,
         public ?string $contentHtml,
         public ?string $excerpt,
+        // Lead image the article body lacks — readability finds it (og:image /
+        // main image) even when it sits outside the extracted content. Null when
+        // the content already contains its own images, to avoid duplication.
+        public ?string $image,
     ) {
     }
 
@@ -33,12 +37,13 @@ final readonly class ExtractionResult
         ?string $siteName,
         string $contentHtml,
         ?string $excerpt,
+        ?string $image,
     ): self {
-        return new self(true, $url, null, $title, $byline, $siteName, $contentHtml, $excerpt);
+        return new self(true, $url, null, $title, $byline, $siteName, $contentHtml, $excerpt, $image);
     }
 
     public static function failed(?string $url, string $reason): self
     {
-        return new self(false, $url, $reason, null, null, null, null, null);
+        return new self(false, $url, $reason, null, null, null, null, null, null);
     }
 }

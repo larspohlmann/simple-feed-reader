@@ -18,7 +18,8 @@ export class ReaderCacheService {
   static readonly MAX_ENTRIES = 100;
   private static readonly DB = 'sfr-reader';
   private static readonly STORE = 'articles';
-  private static readonly VERSION = 1;
+  // v2: ReaderArticle gained leadImage — bump to drop v1 records that lack it.
+  private static readonly VERSION = 2;
 
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */

@@ -105,6 +105,9 @@ const READER_LOAD_TIMEOUT_MS = 30_000;
                 Couldn't load the full article — showing the feed's summary.
               </p>
             }
+            @if (leadImage(); as img) {
+              <img class="lead-image" [src]="img" alt="" />
+            }
             <div #content class="content" [innerHTML]="displayHtml()"></div>
           }
         </article>
@@ -170,6 +173,13 @@ const READER_LOAD_TIMEOUT_MS = 30_000;
       }
       .actions button.on {
         color: var(--accent);
+      }
+      .lead-image {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: var(--radius);
+        margin-bottom: var(--space-5);
       }
       /* Article typography. The body is [innerHTML]-injected, so its child
          elements carry no view-encapsulation attribute — the descendant rules
@@ -323,6 +333,11 @@ export class ReaderViewComponent {
     return s.status === 'ok' ? s.article : null;
   });
   readonly canToggle = computed(() => this.article() !== null);
+  // A hero image for articles whose extracted body has none (only in reader mode;
+  // the original-content view keeps its own inline images).
+  readonly leadImage = computed(() =>
+    this.mode() === 'reader' ? (this.article()?.leadImage ?? null) : null,
+  );
 
   readonly displayHtml = computed(() => {
     const e = this.entry();

@@ -89,6 +89,7 @@ final class EntryReaderControllerTest extends WebTestCase
             siteName: 'Example',
             contentHtml: '<p>Body</p>',
             excerpt: 'An excerpt.',
+            image: 'https://example.com/lead.jpg',
         ));
         $entry = $this->seedEntry($user, 'https://example.com/article');
 
@@ -103,6 +104,7 @@ final class EntryReaderControllerTest extends WebTestCase
         self::assertSame('A. Writer', $body['byline']);
         self::assertSame('Example', $body['siteName']);
         self::assertSame('An excerpt.', $body['excerpt']);
+        self::assertSame('https://example.com/lead.jpg', $body['leadImage']);
         self::assertSame('https://example.com/article', $body['url']);
         self::assertArrayHasKey('extractedAt', $body);
         self::assertSame(['https://example.com/article'], $fake->calls);

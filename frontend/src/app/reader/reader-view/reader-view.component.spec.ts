@@ -40,6 +40,7 @@ const okContent = (over: Partial<ReaderContent> = {}): ReaderContent => ({
   byline: null,
   siteName: null,
   excerpt: null,
+  leadImage: null,
   extractedAt: '',
   ...over,
 });
@@ -160,6 +161,17 @@ describe('ReaderViewComponent', () => {
 
     expect(loadMock).toHaveBeenCalledTimes(2);
     expect(loadMock).toHaveBeenLastCalledWith(2);
+  });
+
+  it('renders the lead image as a hero when the extracted body has none', () => {
+    loadMock.mockReturnValue(
+      of<ReaderContent>(okContent({ leadImage: 'https://img.test/hero.jpg' })),
+    );
+    const img = (mount(entry()).nativeElement as HTMLElement).querySelector(
+      '.lead-image',
+    ) as HTMLImageElement | null;
+    expect(img).not.toBeNull();
+    expect(img!.getAttribute('src')).toBe('https://img.test/hero.jpg');
   });
 
   it('falls back to the feed summary when contentHtml is null on failure', () => {

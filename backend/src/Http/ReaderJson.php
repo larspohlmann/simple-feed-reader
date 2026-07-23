@@ -10,7 +10,8 @@ final class ReaderJson
 {
     /**
      * @return array{status: 'ok', url: string, title: string, byline: string|null,
-     *   siteName: string|null, contentHtml: string, excerpt: string|null, extractedAt: string}
+     *   siteName: string|null, contentHtml: string, excerpt: string|null,
+     *   leadImage: string|null, extractedAt: string}
      *  |array{status: 'failed', url: string|null, reason: string}
      */
     public static function one(ExtractionResult $r, \DateTimeImmutable $now): array
@@ -27,6 +28,7 @@ final class ReaderJson
             'siteName' => $r->siteName,
             'contentHtml' => (string) $r->contentHtml,
             'excerpt' => $r->excerpt,
+            'leadImage' => $r->image,
             'extractedAt' => $now->format(\DateTimeInterface::ATOM),
         ];
     }

@@ -66,6 +66,22 @@ final class ArticleExtractor implements ArticleExtractorInterface
             siteName: $article->siteName,
             contentHtml: $clean,
             excerpt: $article->excerpt,
+            image: $this->leadImage($article->image, $clean),
         );
+    }
+
+    /**
+     * The article's main image, to render as a hero — but only when the extracted
+     * body has none of its own (readability often drops a hero that sits outside
+     * the scored content). Guarded to http(s) so a javascript:/data: URL from the
+     * page can never reach the client's <img src>.
+     */
+    private function leadImage(?string $image, string $content): ?string
+    {
+        if ($image === null || preg_match('#^https?://#i', $image) !== 1) {
+            return null;
+        }
+
+        return str_contains($content, '<img') ? null : $image;
     }
 }
