@@ -282,7 +282,7 @@ export class EntryListComponent implements OnDestroy {
   readonly open = output<EntryDto>();
 
   readonly blocks = computed<MagazineBlock[]>(() =>
-    planMagazine(this.entries(), this.selection().kind !== 'subscription'),
+    planMagazine(this.entries(), this.selection().kind !== 'subscription', !this.hasMore()),
   );
 
   blockKey(b: MagazineBlock): string {

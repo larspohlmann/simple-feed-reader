@@ -97,4 +97,35 @@ describe('planMagazine', () => {
     const planAB = planMagazine(a.concat(b), true);
     expect(planAB.slice(0, planA.length)).toEqual(planA);
   });
+
+  it('holds a short trailing same-source run while more pages can load, keeping the prefix stable', () => {
+    // Page 1 ends with a run of 2 from source X (sub 7); more pages to come.
+    const page1 = [
+      e(1, { subscriptionId: 1, source: 'A' }),
+      e(2, { subscriptionId: 2, source: 'B' }),
+      e(3, { subscriptionId: 7, source: 'X' }),
+      e(4, { subscriptionId: 7, source: 'X' }),
+    ];
+    const planned1 = planMagazine(page1, true, false); // complete=false → hold the X tail
+    expect(planned1).toHaveLength(2); // only A and B emitted; the two X's are held
+    expect(planned1.map((b) => b.kind)).not.toContain('group');
+
+    // Page 2 extends the X run to 3 — it must now group WITHOUT rewriting A/B.
+    const page2 = [e(5, { subscriptionId: 7, source: 'X' })];
+    const planned2 = planMagazine(page1.concat(page2), true, false);
+    expect(planned2.slice(0, planned1.length)).toEqual(planned1); // prefix stable
+    expect(planned2.some((b) => b.kind === 'group')).toBe(true);
+  });
+
+  it('emits a held trailing run once the list is complete (last page)', () => {
+    const entries = [
+      e(1, { subscriptionId: 1, source: 'A' }),
+      e(2, { subscriptionId: 7, source: 'X' }),
+      e(3, { subscriptionId: 7, source: 'X' }),
+    ];
+    // complete=true → nothing held; the run of 2 X's renders as individual blocks.
+    const planned = planMagazine(entries, true, true);
+    expect(planned).toHaveLength(3);
+    expect(planned.map((b) => b.kind)).not.toContain('group');
+  });
 });

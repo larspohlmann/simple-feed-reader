@@ -22,9 +22,21 @@ const HERO_PERIOD = 6;
 
 /** Turn the ordered entry list into a varied block sequence. `grouping` is true
  *  in aggregated views (All / tag / favorites / kept) and false in a single-feed
- *  view, where every entry shares a source. Pure and deterministic: appending a
- *  page never rewrites earlier blocks (the pass reads only entries seen so far). */
-export function planMagazine(entries: EntryDto[], grouping: boolean): MagazineBlock[] {
+ *  view, where every entry shares a source. `complete` is false while more pages
+ *  can still load (i.e. `hasMore`); it defaults to true.
+ *
+ *  Prefix-stable: re-running over a longer list never rewrites an already-emitted
+ *  block. The one case that could — a short trailing same-source run (1–2 entries)
+ *  that a later page grows into a group — is HELD back while `!complete`, so those
+ *  entries stay unplanned until the page that completes the run arrives and they
+ *  are emitted once. A trailing run that is already a group (≥3) only ever gains
+ *  `moreCount` on growth (same key, same first-3 entries), which is a label update,
+ *  not a reshuffle. */
+export function planMagazine(
+  entries: EntryDto[],
+  grouping: boolean,
+  complete = true,
+): MagazineBlock[] {
   const blocks: MagazineBlock[] = [];
   let sinceHero = HERO_PERIOD; // let an eligible entry near the top lead
   let lastWasHero = false;
@@ -34,6 +46,10 @@ export function planMagazine(entries: EntryDto[], grouping: boolean): MagazineBl
   while (i < entries.length) {
     if (grouping) {
       const run = sameSourceRun(entries, i);
+      // Hold a short trailing run: a later page could extend it past GROUP_MIN
+      // and turn these individual blocks into a group, rewriting what the user
+      // is already looking at mid-scroll.
+      if (!complete && i + run === entries.length && run < GROUP_MIN) break;
       if (run >= GROUP_MIN) {
         const slice = entries.slice(i, i + run);
         blocks.push({
