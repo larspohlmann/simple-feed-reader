@@ -114,17 +114,22 @@ final class FeedPreviewControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
-        self::assertSame('Example Feed', $body['feed']['title']);
-        self::assertSame(1, $body['feed']['itemCount']);
-        self::assertArrayHasKey('content', $body['feed']);
-        self::assertTrue($body['feed']['hasImages']);
-        self::assertCount(1, $body['feed']['items']);
-        self::assertSame('First post', $body['feed']['items'][0]['title']);
-        self::assertSame('A. Writer', $body['feed']['items'][0]['author']);
-        self::assertTrue($body['feed']['items'][0]['hasImage']);
-        self::assertArrayHasKey('textLength', $body['feed']['items'][0]);
-        self::assertArrayHasKey('snippet', $body['feed']['items'][0]);
-        self::assertArrayHasKey('publishedAt', $body['feed']['items'][0]);
+        $feed = $body['feed'];
+        self::assertIsArray($feed);
+        self::assertSame('Example Feed', $feed['title']);
+        self::assertSame(1, $feed['itemCount']);
+        self::assertArrayHasKey('content', $feed);
+        self::assertTrue($feed['hasImages']);
+        self::assertIsArray($feed['items']);
+        self::assertCount(1, $feed['items']);
+        $item = $feed['items'][0];
+        self::assertIsArray($item);
+        self::assertSame('First post', $item['title']);
+        self::assertSame('A. Writer', $item['author']);
+        self::assertTrue($item['hasImage']);
+        self::assertArrayHasKey('textLength', $item);
+        self::assertArrayHasKey('snippet', $item);
+        self::assertArrayHasKey('publishedAt', $item);
     }
 
     public function testFetchFailureReturns422(): void

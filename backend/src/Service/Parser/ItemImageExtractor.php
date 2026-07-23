@@ -84,7 +84,7 @@ final class ItemImageExtractor
         if ($html === null || $html === '') {
             return null;
         }
-        if (preg_match('/<img\b[^>]*?\bsrc\s*=\s*("|\')(.*?)\1/i', $html, $m) !== 1) {
+        if (preg_match('/<img\b[^>]*?\bsrc\s*=\s*(["\'])(.*?)\1/i', $html, $m) !== 1) {
             return null;
         }
         $src = trim(html_entity_decode($m[2], ENT_QUOTES | ENT_HTML5));

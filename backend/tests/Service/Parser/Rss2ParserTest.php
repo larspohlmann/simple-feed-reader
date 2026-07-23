@@ -35,7 +35,7 @@ final class Rss2ParserTest extends TestCase
                     <item>
                         <title>Inline image item</title>
                         <link>https://example.com/inline</link>
-                        <description>&lt;p&gt;Body with &lt;img src="https://e/b.jpg"&gt; inline.&lt;/p&gt;</description>
+                        <description>&lt;p&gt;&lt;img src="https://e/b.jpg"&gt;&lt;/p&gt;</description>
                     </item>
                     <item>
                         <title>Plain item</title>

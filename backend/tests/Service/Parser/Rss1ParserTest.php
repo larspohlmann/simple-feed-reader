@@ -35,7 +35,7 @@ final class Rss1ParserTest extends TestCase
                 <title>Content Item</title>
                 <link>https://e/content</link>
                 <description>desc content</description>
-                <content:encoded>&lt;p&gt;Hello &lt;img src="https://e/c.jpg" alt="x"&gt; world&lt;/p&gt;</content:encoded>
+                <content:encoded>&lt;p&gt;&lt;img src="https://e/c.jpg"&gt;&lt;/p&gt;</content:encoded>
                 <dc:creator>Grace Hopper</dc:creator>
               </item>
               <item rdf:about="https://e/media">
