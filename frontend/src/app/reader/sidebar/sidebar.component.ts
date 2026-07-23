@@ -369,6 +369,8 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
         align-items: center;
       }
       .tag .expand {
+        display: inline-flex;
+        align-items: center;
         background: none;
         border: none;
         color: var(--text-secondary);
