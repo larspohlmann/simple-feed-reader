@@ -82,6 +82,19 @@ describe('ManageActions', () => {
     expect(subSpy).toHaveBeenCalled();
   });
 
+  it('retag: PATCHes the whole tag set (preserving customTitle) then reloads', () => {
+    const named: SubscriptionDto = { ...sub, customTitle: 'My feed' };
+    const spy = jest
+      .spyOn(TestBed.inject(SubscriptionsStore), 'load')
+      .mockImplementation(() => undefined);
+    svc.retag(named, [3, 7]);
+    const req = ctrl.expectOne('https://api.test/api/subscriptions/5');
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ customTitle: 'My feed', tagIds: [3, 7] });
+    req.flush({ subscription: { ...named, tags: [tag] } });
+    expect(spy).toHaveBeenCalled();
+  });
+
   it('createTag: reloads tags when the dialog returns a tag', () => {
     closed = tag;
     const tagSpy = jest

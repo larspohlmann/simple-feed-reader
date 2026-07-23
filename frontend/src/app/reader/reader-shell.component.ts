@@ -44,6 +44,7 @@ import { ManageActions } from './manage/manage-actions.service';
           (deleteTag)="manage.deleteTag($event)"
           (editFeed)="manage.editSubscription($event)"
           (unsubscribe)="manage.unsubscribe($event)"
+          (retag)="manage.retag($event.sub, $event.tagIds)"
           (refresh)="onRefresh()"
           (addFeed)="onAddFeed()"
         />

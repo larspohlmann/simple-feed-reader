@@ -4,10 +4,11 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../../core/api';
 import { RefreshService } from '../refresh.service';
-import { SidebarComponent } from './sidebar.component';
+import { CdkDragDrop } from '@angular/cdk/drag-drop';
+import { DropData, SidebarComponent } from './sidebar.component';
 import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
-import { SubscriptionDto } from '../models';
+import { SubscriptionDto, TagDto } from '../models';
 
 const sub = (id: number, unread = 0): SubscriptionDto => ({
   id,
@@ -151,6 +152,68 @@ describe('SidebarComponent', () => {
 
     // Distinct per-(tag,feed) keys mean only the clicked row's menu opens.
     expect(el.querySelectorAll('.pop').length).toBe(1);
+  });
+
+  describe('drag-and-drop retagging', () => {
+    const tag = (id: number): TagDto => ({ id, name: `t${id}`, color: null, icon: null });
+    const withTags = (s: SubscriptionDto, tags: TagDto[]): SubscriptionDto => ({ ...s, tags });
+
+    function drop(
+      item: SubscriptionDto,
+      target: DropData,
+      sameContainer = false,
+    ): CdkDragDrop<DropData> {
+      const container = { data: target };
+      const previousContainer = sameContainer
+        ? container
+        : { data: { kind: 'untagged' } as DropData };
+      return {
+        previousContainer,
+        container,
+        item: { data: item },
+      } as unknown as CdkDragDrop<DropData>;
+    }
+
+    function retagOf(ev: CdkDragDrop<DropData>) {
+      const f = mount();
+      const spy = jest.fn();
+      f.componentInstance.retag.subscribe(spy);
+      f.componentInstance.onDrop(ev);
+      return spy;
+    }
+
+    it('assigns the tag when an untagged feed is dropped on it', () => {
+      const spy = retagOf(drop(sub(1), { kind: 'tag', tag: tag(3) }));
+      expect(spy).toHaveBeenCalledWith({ sub: sub(1), tagIds: [3] });
+    });
+
+    it('adds the tag to a feed that already has other tags', () => {
+      const s = withTags(sub(1), [tag(3)]);
+      const spy = retagOf(drop(s, { kind: 'tag', tag: tag(7) }));
+      expect(spy).toHaveBeenCalledWith({ sub: s, tagIds: [3, 7] });
+    });
+
+    it('does nothing when the feed already has the target tag', () => {
+      const s = withTags(sub(1), [tag(3)]);
+      const spy = retagOf(drop(s, { kind: 'tag', tag: tag(3) }));
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('clears all tags when a tagged feed is dropped on Feeds', () => {
+      const s = withTags(sub(1), [tag(3), tag(7)]);
+      const spy = retagOf(drop(s, { kind: 'untagged' }));
+      expect(spy).toHaveBeenCalledWith({ sub: s, tagIds: [] });
+    });
+
+    it('does nothing when dropped back on its own container', () => {
+      const spy = retagOf(drop(sub(1), { kind: 'untagged' }, true));
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when an already-untagged feed is dropped on Feeds', () => {
+      const spy = retagOf(drop(sub(1), { kind: 'untagged' }));
+      expect(spy).not.toHaveBeenCalled();
+    });
   });
 
   it('emits editFeed / unsubscribe for an untagged feed row', () => {

@@ -28,6 +28,14 @@ export class ManageActions {
     });
   }
 
+  /** Replace a subscription's whole tag set (used by sidebar drag-and-drop).
+   *  The PATCH endpoint replaces tags, so callers pass the final id list. */
+  retag(sub: SubscriptionDto, tagIds: number[]): void {
+    this.api
+      .updateSubscription(sub.id, { customTitle: sub.customTitle, tagIds })
+      .subscribe({ next: () => this.subs.load() });
+  }
+
   unsubscribe(sub: SubscriptionDto): void {
     const data: ConfirmData = {
       title: 'Unsubscribe',
