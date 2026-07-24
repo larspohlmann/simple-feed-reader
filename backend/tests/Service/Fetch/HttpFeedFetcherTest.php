@@ -182,6 +182,18 @@ final class HttpFeedFetcherTest extends TestCase
         $this->fetcher([new MockResponse('oops', ['http_code' => 500])])->fetch('https://example.com/feed');
     }
 
+    public function testHttpErrorCarriesStatusCode(): void
+    {
+        $fetcher = $this->fetcher([new MockResponse('denied', ['http_code' => 403])]);
+
+        try {
+            $fetcher->fetch('https://example.com/feed');
+            self::fail('Expected FeedUnreachableException');
+        } catch (FeedUnreachableException $e) {
+            self::assertSame(403, $e->statusCode);
+        }
+    }
+
     public function testOversizedResponseThrows(): void
     {
         $body = str_repeat('a', 5_000_001);
@@ -194,5 +206,18 @@ final class HttpFeedFetcherTest extends TestCase
     {
         $this->expectException(FeedUnreachableException::class);
         $this->fetcher([new MockResponse('', ['error' => 'connection refused'])])->fetch('https://example.com/feed');
+    }
+
+    public function testTransportErrorHasNullStatusCode(): void
+    {
+        $fetcher = $this->fetcher([new MockResponse('', ['error' => 'DNS failure'])]);
+
+        try {
+            $fetcher->fetch('https://example.com/feed');
+            self::fail('Expected FeedUnreachableException');
+        } catch (FeedUnreachableException $e) {
+            self::assertNull($e->statusCode);
+            self::assertNotNull($e->getPrevious());
+        }
     }
 }

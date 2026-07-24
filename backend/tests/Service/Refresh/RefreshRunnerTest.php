@@ -23,20 +23,28 @@ use App\Service\Parser\Atom10Parser;
 use App\Service\Parser\FeedParser;
 use App\Service\Parser\Rss1Parser;
 use App\Service\Parser\Rss2Parser;
+use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\RefreshRequest;
 use App\Service\Refresh\RefreshRunner;
+use App\Service\Refresh\ScrapedBodyParser;
+use App\Service\Refresh\XmlBodyParser;
+use App\Service\Scraper\HtmlItemExtractor;
 use App\Tests\DbTestCase;
+use App\Tests\Service\Scraper\ScrapedFixtures;
 use App\Tests\Support\StubFeedFetcher;
 use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\Store\InMemoryStore;
 
 final class RefreshRunnerTest extends DbTestCase
 {
+    use ScrapedFixtures;
+
     private MockClock $clock;
     private StubFeedFetcher $fetcher;
     private LockFactory $lockFactory;
@@ -60,7 +68,7 @@ final class RefreshRunnerTest extends DbTestCase
             $feedRepository,
             $runnerEm ?? $this->em,
             $this->fetcher,
-            new FeedParser(new Rss2Parser(), new Atom10Parser(), new Atom03Parser(), new Rss1Parser()),
+            $this->bodyParser(),
             new EntryIngestor($this->em, $entryRepository, new EntrySanitizer(), $this->clock),
             new FeedScheduler($this->clock),
             new EntryPruner($this->em, $this->clock),
@@ -68,6 +76,31 @@ final class RefreshRunnerTest extends DbTestCase
             $this->clock,
             new NullLogger(),
         );
+    }
+
+    /**
+     * Hand-built locator with the same keys the container's tagged one carries
+     * — FeedBodyParserWiringTest proves the real container routes identically.
+     */
+    private function bodyParser(): FeedBodyParser
+    {
+        $extractor = self::getContainer()->get(HtmlItemExtractor::class);
+        self::assertInstanceOf(HtmlItemExtractor::class, $extractor);
+
+        return new FeedBodyParser(new ServiceLocator([
+            XmlBodyParser::format() => static fn (): XmlBodyParser => new XmlBodyParser(
+                new FeedParser(new Rss2Parser(), new Atom10Parser(), new Atom03Parser(), new Rss1Parser()),
+            ),
+            ScrapedBodyParser::format() => static fn (): ScrapedBodyParser => new ScrapedBodyParser($extractor),
+        ]));
+    }
+
+    private function scrapedDueFeed(string $url): Feed
+    {
+        $feed = $this->dueFeed($url);
+        $feed->setSourceFormat('scraped');
+
+        return $feed;
     }
 
     private function dueFeed(string $url): Feed
@@ -416,6 +449,84 @@ final class RefreshRunnerTest extends DbTestCase
 
         self::assertSame(0, $report->pruned);
         self::assertCount(1, $this->em->getRepository(Entry::class)->findAll());
+    }
+
+    public function testScrapedFeedSynthesizesEntriesFromTheListingPage(): void
+    {
+        $feed = $this->scrapedDueFeed('https://www.tagesschau.de/');
+        $this->em->flush();
+
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched(
+                $feed->getUrl(),
+                false,
+                $this->scrapedFixture('tagesschau-2026-07-23.html'),
+                null,
+                null,
+            ),
+        );
+
+        $report = $this->runner()->run(RefreshRequest::allDue(300));
+
+        self::assertSame(1, $report->fetched);
+        self::assertSame(0, $report->failed);
+        /** @var list<Entry> $entries */
+        $entries = $this->em->getRepository(Entry::class)->findAll();
+        self::assertGreaterThanOrEqual(20, \count($entries));
+        foreach ($entries as $entry) {
+            // A scraped page has no publisher guids: the article URL is the
+            // stable identity that re-fetches dedupe on.
+            self::assertMatchesRegularExpression('#^https?://#', $entry->getGuid());
+            self::assertSame($entry->getUrl(), $entry->getGuid());
+        }
+        $teasered = array_values(array_filter(
+            $entries,
+            static fn (Entry $entry): bool => $entry->getContentHtml() !== null,
+        ));
+        self::assertNotSame([], $teasered, 'the tagesschau snapshot carries card teasers');
+        self::assertStringStartsWith('<p>', (string) $teasered[0]->getContentHtml());
+    }
+
+    public function testSecondScrapedRefreshOfTheSameBodyCreatesNoDuplicates(): void
+    {
+        $feed = $this->scrapedDueFeed('https://www.tagesschau.de/');
+        $this->em->flush();
+
+        $body = $this->scrapedFixture('tagesschau-2026-07-23.html');
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($feed->getUrl(), false, $body, null, null),
+        );
+
+        $this->runner()->run(RefreshRequest::allDue(300));
+        $countAfterFirst = \count($this->em->getRepository(Entry::class)->findAll());
+
+        $feed->setNextFetchAt($this->clock->now()->modify('-1 hour')); // due again
+        $this->em->flush();
+        $report = $this->runner()->run(RefreshRequest::allDue(300));
+
+        self::assertSame(1, $report->fetched);
+        self::assertCount($countAfterFirst, $this->em->getRepository(Entry::class)->findAll());
+    }
+
+    public function testScrapedFeedWithAnArticleFreePageIsRecordedAsFailure(): void
+    {
+        $feed = $this->scrapedDueFeed('https://nav.example.com/');
+        $this->em->flush();
+
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($feed->getUrl(), false, $this->scrapedFixture('nav-only.html'), null, null),
+        );
+
+        $report = $this->runner()->run(RefreshRequest::allDue(300));
+
+        // HtmlExtractionException extends FeedParseException, so the scraped
+        // path reports through the exact failure channel xml feeds use.
+        self::assertSame(1, $report->failed);
+        self::assertSame(FeedStatus::Erroring, $feed->getStatus());
+        self::assertStringContainsString('article list', (string) $feed->getLastErrorMessage());
     }
 
     /**

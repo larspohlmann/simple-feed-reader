@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>News section — jsonld-list fixture</title>
+<meta property="og:site_name" content="JSON-LD News">
+<meta name="description" content="Section page carrying its article list as JSON-LD.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "JSON-LD News GmbH",
+  "url": "https://news.test/"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "ItemList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "item": {
+            "@type": "NewsArticle",
+            "url": "/story-1",
+            "headline": "First story: relative URL resolved against the section base",
+            "description": "The opening story ships a relative url, a string image, and a publication date to exercise every field mapping.",
+            "image": "/img/story-1.jpg",
+            "datePublished": "2026-07-20T09:15:00+02:00"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "item": {
+            "@type": "NewsArticle",
+            "mainEntityOfPage": {"@id": "https://news.test/story-2"},
+            "headline": "Second story: mainEntityOfPage id and object image",
+            "description": "The second story resolves its url from mainEntityOfPage and its image from an ImageObject wrapper.",
+            "image": {"@type": "ImageObject", "url": "https://cdn.news.test/img/story-2.jpg"},
+            "datePublished": "2026-07-19T18:00:00+02:00"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "url": "https://news.test/story-3",
+          "name": "Third story: bare ListItem with url and name only"
+        },
+        {
+          "@type": "ListItem",
+          "position": 4,
+          "url": "https://news.test/story-4",
+          "name": "Fourth story: another bare ListItem entry"
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<main>
+  <h1>Latest from the section</h1>
+  <!-- Repeated plain link markup: a decoy cluster (5 items) that must lose to the 4-item JSON-LD list. -->
+  <div class="promo"><a href="/promo/one"><h3>Promo teaser one about local politics</h3></a></div>
+  <div class="promo"><a href="/promo/two"><h3>Promo teaser two about the economy</h3></a></div>
+  <div class="promo"><a href="/promo/three"><h3>Promo teaser three about culture</h3></a></div>
+  <div class="promo"><a href="/promo/four"><h3>Promo teaser four about sports</h3></a></div>
+  <div class="promo"><a href="/promo/five"><h3>Promo teaser five about weather</h3></a></div>
+</main>
+</body>
+</html>

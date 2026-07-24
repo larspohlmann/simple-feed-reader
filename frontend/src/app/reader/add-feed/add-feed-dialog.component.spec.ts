@@ -57,6 +57,8 @@ describe('AddFeedDialogComponent', () => {
     const atomReq = ctrl.expectOne(
       (r) => r.url.endsWith('/api/feeds/preview') && r.body.url === 'https://f/atom',
     );
+    // XML candidates preview with the bare URL — only scraped ones carry a format.
+    expect(rssReq.request.body).toEqual({ url: 'https://f/rss' });
 
     rssReq.flush({
       feed: {
@@ -107,6 +109,160 @@ describe('AddFeedDialogComponent', () => {
     expect(subReq.request.body).toEqual({ url: 'https://f/rss' });
     subReq.flush({ subscription: { id: 3 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 3 });
+  });
+
+  it('labels a scraped candidate and subscribes/previews with the scraped format', () => {
+    const f = create();
+    f.componentInstance.form.setValue({ url: 'https://page.example/' });
+    f.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      candidates: [{ url: 'https://page.example/', title: 'Page', format: 'scraped' }],
+    });
+    f.detectChanges();
+
+    const previewReq = ctrl.expectOne((r) => r.url.endsWith('/api/feeds/preview'));
+    expect(previewReq.request.body).toEqual({ url: 'https://page.example/', format: 'scraped' });
+    previewReq.flush('x', { status: 500, statusText: 'err' });
+    f.detectChanges();
+
+    const card = (f.nativeElement as HTMLElement).querySelector('.card')!;
+    expect(card.querySelector('.badge.format')?.textContent?.trim()).toBe('Scraped');
+    expect(card.querySelector('.scraped-hint')?.textContent).toContain('article list');
+
+    (card.querySelector('.subscribe') as HTMLButtonElement).click();
+    const subReq = ctrl.expectOne('https://api.test/api/subscriptions');
+    expect(subReq.request.body).toEqual({ url: 'https://page.example/', format: 'scraped' });
+    subReq.flush({ subscription: { id: 7 } }, { status: 201, statusText: 'Created' });
+    expect(close).toHaveBeenCalledWith({ id: 7 });
+  });
+
+  it('warns when the site blocks scraping and hides the footer submit', () => {
+    const f = create();
+    f.componentInstance.form.setValue({ url: 'https://blocked.example' });
+    f.componentInstance.submit();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ candidates: [], scrapeFailureReason: 'blocked' });
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.warn')?.textContent).toContain('blocks automated access');
+    expect(el.querySelector('button.subscribe')).toBeNull();
+    // Nothing can be subscribed here, so the footer "Add" would be a dead end.
+    expect(el.querySelector('button[type="submit"]')).toBeNull();
+    expect(close).not.toHaveBeenCalled();
+  });
+
+  it('shows a generic warning for a scrape-failure reason it does not recognise', () => {
+    // The backend reason set is open, so a newer server may send a reason this
+    // build has never heard of; it must still warn, not render an empty box.
+    const f = create();
+    f.componentInstance.form.setValue({ url: 'https://weird.example' });
+    f.componentInstance.submit();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ candidates: [], scrapeFailureReason: 'quantum_flux' });
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    const warn = el.querySelector('.warn');
+    expect(warn?.textContent?.trim()).toBe("This page can't be subscribed.");
+    expect(el.querySelector('button.subscribe')).toBeNull();
+    expect(el.querySelector('button[type="submit"]')).toBeNull();
+  });
+
+  it('clears the scrape-failure warning once the URL is edited', () => {
+    const f = create();
+    f.componentInstance.form.setValue({ url: 'https://blocked.example' });
+    f.componentInstance.submit();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ candidates: [], scrapeFailureReason: 'blocked' });
+    f.detectChanges();
+    expect((f.nativeElement as HTMLElement).querySelector('.warn')).toBeTruthy();
+
+    f.componentInstance.form.setValue({ url: 'https://other.example' });
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.warn')).toBeNull();
+    expect(el.querySelector('button[type="submit"]')).toBeTruthy();
+  });
+
+  it('drops stale candidate cards when a re-search then fails to scrape', () => {
+    const f = create();
+    // First search finds feeds — candidate cards with Subscribe buttons render.
+    f.componentInstance.form.setValue({ url: 'https://has-feeds.example' });
+    f.componentInstance.submit();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss' }] });
+    ctrl
+      .expectOne((r) => r.url.endsWith('/api/feeds/preview'))
+      .flush({
+        feed: { title: 'RSS', itemCount: 3, content: 'summary', hasImages: false, items: [] },
+      });
+    f.detectChanges();
+    expect((f.nativeElement as HTMLElement).querySelector('button.subscribe')).toBeTruthy();
+
+    // Re-search a different URL that cannot be scraped: the old cards (and their
+    // Subscribe buttons) must be gone, leaving only the warning.
+    f.componentInstance.form.setValue({ url: 'https://blocked.example' });
+    f.componentInstance.submit();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ candidates: [], scrapeFailureReason: 'blocked' });
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('button.subscribe')).toBeNull();
+    expect(el.querySelector('.card')).toBeNull();
+    expect(el.querySelector('.warn')?.textContent).toContain('blocks automated access');
+  });
+
+  it("shows the backend's problem detail when a preview fails", () => {
+    const f = create();
+    f.componentInstance.form.setValue({ url: 'https://page.example/' });
+    f.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      candidates: [{ url: 'https://page.example/', title: 'Page', format: 'scraped' }],
+    });
+    f.detectChanges();
+
+    ctrl
+      .expectOne((r) => r.url.endsWith('/api/feeds/preview'))
+      .flush(
+        {
+          type: 'feed_preview_failed',
+          title: 'Feed preview failed',
+          status: 422,
+          detail: 'No article list was detected on the page.',
+        },
+        { status: 422, statusText: 'Unprocessable' },
+      );
+    f.detectChanges();
+
+    const card = (f.nativeElement as HTMLElement).querySelector('.card')!;
+    expect(card.textContent).toContain('No article list was detected on the page.');
+    expect(card.textContent).not.toContain('Preview unavailable');
+  });
+
+  it('falls back to a generic line when a failed preview carries no detail', () => {
+    const f = create();
+    f.componentInstance.form.setValue({ url: 'https://f.example/' });
+    f.componentInstance.submit();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss' }] });
+    f.detectChanges();
+
+    ctrl
+      .expectOne((r) => r.url.endsWith('/api/feeds/preview'))
+      .flush('x', {
+        status: 500,
+        statusText: 'err',
+      });
+    f.detectChanges();
+
+    expect((f.nativeElement as HTMLElement).querySelector('.card')!.textContent).toContain(
+      'Preview unavailable',
+    );
   });
 
   it('shows an empty state when no candidates are found', () => {

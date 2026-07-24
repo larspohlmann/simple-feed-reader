@@ -81,6 +81,90 @@ final class SubscriptionServiceTest extends DbTestCase
         $service->subscribe($user, 'https://example.com/feed');
     }
 
+    /**
+     * A user can assert format 'scraped' for a URL that really serves an XML
+     * feed, poisoning the SHARED row: refresh then runs the HTML extractor
+     * over RSS forever. When discovery later PROVES the URL is a direct feed
+     * (a stronger fact than the first subscriber's assertion), the row heals
+     * to 'xml' instead of chaining new subscribers to the broken format.
+     */
+    public function testDiscoveryVerifiedSubscribeHealsAScrapedPoisonedFeed(): void
+    {
+        $user = $this->factory()->create('healer@example.com');
+        $feed = new Feed('https://example.com/feed.xml');
+        $feed->setSourceFormat('scraped');
+        $this->em->persist($feed);
+        $this->em->flush();
+
+        $service = $this->service(
+            $this->discoveryReturning(FeedDiscoveryResult::directFeed('https://example.com/feed.xml')),
+        );
+
+        $outcome = $service->subscribe($user, 'https://example.com/feed.xml');
+
+        self::assertNotNull($outcome->subscription);
+        self::assertSame('xml', $feed->getSourceFormat());
+    }
+
+    /**
+     * The natural "re-add it to fix it" move by an EXISTING victim: the user is
+     * already subscribed to the poisoned row, so the duplicate check aborts the
+     * subscribe with AlreadySubscribedException — but the heal it triggered on
+     * the way must still stick. The format change is flushed in its own step
+     * before the throw, so re-reading the row from the database (after clearing
+     * the identity map) shows 'xml', not the un-persisted 'scraped'.
+     */
+    public function testHealPersistsEvenWhenTheUserIsAlreadySubscribed(): void
+    {
+        $user = $this->factory()->create('reheal@example.com');
+        $feed = new Feed('https://example.com/feed.xml');
+        $feed->setSourceFormat('scraped');
+        $this->em->persist($feed);
+        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-06-01T00:00:00Z')));
+        $this->em->flush();
+        $feedId = (int) $feed->getId();
+
+        $service = $this->service(
+            $this->discoveryReturning(FeedDiscoveryResult::directFeed('https://example.com/feed.xml')),
+        );
+
+        try {
+            $service->subscribe($user, 'https://example.com/feed.xml');
+            self::fail('Expected AlreadySubscribedException');
+        } catch (AlreadySubscribedException) {
+            // expected: the user already holds this subscription
+        }
+
+        // Re-read from the database, not the identity map: without the in-step
+        // flush the heal would be discarded here and the row would read 'scraped'.
+        $this->em->clear();
+        $reloaded = $this->em->getRepository(Feed::class)->find($feedId);
+        self::assertNotNull($reloaded);
+        self::assertSame('xml', $reloaded->getSourceFormat());
+    }
+
+    /**
+     * The reverse direction must never flip: a 'scraped' arrival is only the
+     * USER's assertion, so it cannot downgrade a row that discovery (or the
+     * row's creator) established as a real feed document.
+     */
+    public function testScrapedSubscribeNeverDowngradesAnXmlFeed(): void
+    {
+        $user = $this->factory()->create('downgrader@example.com');
+        $feed = new Feed('https://example.com/feed.xml'); // sourceFormat defaults to 'xml'
+        $this->em->persist($feed);
+        $this->em->flush();
+
+        $service = $this->service(
+            $this->discoveryReturning(FeedDiscoveryResult::directFeed('https://example.com/feed.xml')),
+        );
+
+        $outcome = $service->subscribe($user, 'https://example.com/feed.xml', 'scraped');
+
+        self::assertNotNull($outcome->subscription);
+        self::assertSame('xml', $feed->getSourceFormat());
+    }
+
     public function testHtmlPageReturnsCandidatesWithoutSubscribing(): void
     {
         $user = $this->factory()->create('cand@example.com');

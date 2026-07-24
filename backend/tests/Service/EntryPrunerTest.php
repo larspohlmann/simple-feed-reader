@@ -140,4 +140,73 @@ final class EntryPrunerTest extends DbTestCase
     {
         self::assertSame(0, $this->pruner->prune());
     }
+
+    public function testCapsEntriesPerFeedKeepingNewestAndProtected(): void
+    {
+        // A small cap so the test stays readable; production default is 2000.
+        $pruner = new EntryPruner($this->em, $this->clock, maxEntriesPerFeed: 3);
+
+        $feed = new Feed('https://example.com/feed');
+        $user = new User('reader@example.com', $this->clock->now());
+        $this->em->persist($feed);
+        $this->em->persist($user);
+
+        // Five RECENT entries (age pass leaves them all), oldest → newest.
+        $e1 = $this->entry($feed, 'e1-oldest', $this->clock->now()->modify('-5 days'));
+        $this->entry($feed, 'e2', $this->clock->now()->modify('-4 days'));
+        $this->entry($feed, 'e3', $this->clock->now()->modify('-3 days'));
+        $this->entry($feed, 'e4', $this->clock->now()->modify('-2 days'));
+        $this->entry($feed, 'e5-newest', $this->clock->now()->modify('-1 days'));
+
+        // The oldest is kept, so it survives despite being beyond the cap.
+        $keptState = new EntryState($user, $e1);
+        $keptState->setIsKept(true);
+        $this->em->persist($keptState);
+        $this->em->flush();
+        $this->em->clear();
+
+        // Non-protected newest-first: e5,e4,e3,e2 → cap 3 keeps e5,e4,e3, drops e2.
+        self::assertSame(1, $pruner->prune());
+        $remaining = array_map(
+            static fn (Entry $entry): string => $entry->getGuid(),
+            $this->em->getRepository(Entry::class)->findAll(),
+        );
+        sort($remaining);
+        self::assertSame(['e1-oldest', 'e3', 'e4', 'e5-newest'], $remaining);
+    }
+
+    public function testFeedAtOrUnderCapIsUntouched(): void
+    {
+        $pruner = new EntryPruner($this->em, $this->clock, maxEntriesPerFeed: 3);
+
+        $feed = new Feed('https://example.com/feed');
+        $this->em->persist($feed);
+        for ($i = 0; $i < 3; ++$i) {
+            $this->entry($feed, 'entry-' . $i, $this->clock->now()->modify(sprintf('-%d days', $i + 1)));
+        }
+        $this->em->flush();
+        $this->em->clear();
+
+        self::assertSame(0, $pruner->prune());
+        self::assertCount(3, $this->em->getRepository(Entry::class)->findAll());
+    }
+
+    public function testCapIsPerFeedNotGlobal(): void
+    {
+        $pruner = new EntryPruner($this->em, $this->clock, maxEntriesPerFeed: 3);
+
+        // Two feeds, each at the cap — globally 4 entries, but per-feed nothing
+        // exceeds the cap, so a global cap would wrongly delete here.
+        foreach (['https://a.example/feed', 'https://b.example/feed'] as $n => $url) {
+            $feed = new Feed($url);
+            $this->em->persist($feed);
+            $this->entry($feed, "feed{$n}-a", $this->clock->now()->modify('-2 days'));
+            $this->entry($feed, "feed{$n}-b", $this->clock->now()->modify('-1 days'));
+        }
+        $this->em->flush();
+        $this->em->clear();
+
+        self::assertSame(0, $pruner->prune());
+        self::assertCount(4, $this->em->getRepository(Entry::class)->findAll());
+    }
 }

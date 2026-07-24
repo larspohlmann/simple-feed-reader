@@ -14,6 +14,7 @@ const sub = (id: number, over: Partial<SubscriptionDto> = {}): SubscriptionDto =
   feedUrl: 'https://x/rss',
   siteUrl: 'https://x',
   status: 'active',
+  sourceFormat: 'xml',
   createdAt: 'x',
   position: 0,
   tags: [],
@@ -55,6 +56,19 @@ describe('FeedsSectionComponent', () => {
     expect(rows.length).toBe(2);
     expect(rows[0].textContent).toContain('Alpha');
     expect(el.textContent).toContain('gone');
+  });
+
+  it('marks scraped feeds with a badge explaining the source', () => {
+    const el: HTMLElement = mount([
+      sub(1, { title: 'Alpha', sourceFormat: 'scraped' }),
+      sub(2, { title: 'Zed' }),
+    ]).nativeElement;
+    const rows = el.querySelectorAll('.feed');
+    const badge = rows[0].querySelector('.badge.scraped');
+    expect(badge?.textContent?.trim()).toBe('scraped');
+    expect(badge?.getAttribute('title')).toContain('article list');
+    // A real XML feed carries no scraped badge.
+    expect(rows[1].querySelector('.badge.scraped')).toBeNull();
   });
 
   it('shows an empty state when there are no feeds', () => {

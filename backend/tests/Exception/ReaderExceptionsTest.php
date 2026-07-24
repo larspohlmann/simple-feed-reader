@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Exception;
 
 use App\Exception\AlreadySubscribedException;
-use App\Exception\FeedDiscoveryException;
 use App\Exception\SubscriptionLimitReachedException;
 use App\Exception\TagNameTakenException;
 use PHPUnit\Framework\TestCase;
@@ -23,8 +22,5 @@ final class ReaderExceptionsTest extends TestCase
 
         self::assertSame('tag_name_taken', (new TagNameTakenException())->type);
         self::assertSame(Response::HTTP_CONFLICT, (new TagNameTakenException())->status);
-
-        self::assertSame('feed_unreachable', (new FeedDiscoveryException())->type);
-        self::assertSame(Response::HTTP_UNPROCESSABLE_ENTITY, (new FeedDiscoveryException())->status);
     }
 }

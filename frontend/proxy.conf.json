@@ -1,0 +1,9 @@
+{
+  "/api": {
+    "target": "https://nginx",
+    "secure": false,
+    "headers": {
+      "Host": "localhost"
+    }
+  }
+}

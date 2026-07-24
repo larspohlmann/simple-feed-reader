@@ -53,15 +53,22 @@ final class SubscriptionController
     #[Route('', name: 'api_subscriptions_create', methods: ['POST'])]
     public function create(#[CurrentUser] User $user, #[MapRequestPayload] SubscribeRequest $request): JsonResponse
     {
-        $outcome = $this->subscriptions->subscribe($user, $request->url);
+        $outcome = $this->subscriptions->subscribe($user, $request->url, $request->format);
 
         if (null === $outcome->subscription) {
-            return new JsonResponse([
+            $payload = [
                 'candidates' => array_map(
                     static fn ($c) => ['url' => $c->url, 'title' => $c->title, 'format' => $c->format],
                     $outcome->candidates,
                 ),
-            ]);
+            ];
+            // Key present only on failure: successful candidate lists stay
+            // byte-compatible with what pre-scraper clients already parse.
+            if (null !== $outcome->scrapeFailureReason) {
+                $payload['scrapeFailureReason'] = $outcome->scrapeFailureReason;
+            }
+
+            return new JsonResponse($payload);
         }
 
         return new JsonResponse(

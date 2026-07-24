@@ -49,6 +49,7 @@ describe('TagsSectionComponent', () => {
         feedUrl: 'u',
         siteUrl: null,
         status: 'active',
+        sourceFormat: 'xml',
         createdAt: 'x',
         position: 0,
         tags: [tag(1, 'Tech')],

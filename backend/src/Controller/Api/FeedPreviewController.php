@@ -6,6 +6,7 @@ namespace App\Controller\Api;
 
 use App\Dto\Feed\PreviewFeedRequest;
 use App\Entity\User;
+use App\Exception\FeedPreviewApiException;
 use App\Exception\FeedPreviewException;
 use App\Exception\RateLimitedException;
 use App\Http\FeedPreviewJson;
@@ -13,7 +14,6 @@ use App\Service\Preview\FeedPreviewService;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
-use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -36,9 +36,13 @@ final class FeedPreviewController
         $this->enforceLimit($user);
 
         try {
-            $preview = $this->previews->preview($request->url);
+            $preview = $this->previews->preview($request->url, $request->format);
         } catch (FeedPreviewException $e) {
-            throw new UnprocessableEntityHttpException($e->getMessage(), $e);
+            // Rethrow as an ApiException so the listener keeps the message: a
+            // scraped failure carries the extractor's own diagnosis, an xml
+            // failure "That address is not a readable feed." — both reach the
+            // client as the problem document's `detail`.
+            throw new FeedPreviewApiException($e->getMessage(), $e);
         }
 
         return new JsonResponse(FeedPreviewJson::one($preview));

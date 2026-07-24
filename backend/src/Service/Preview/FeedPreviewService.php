@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Service\Preview;
 
+use App\Enum\SourceFormat;
 use App\Exception\FeedPreviewException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcherInterface;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
 use App\Service\Parser\ParsedEntry;
+use App\Service\Scraper\HtmlItemExtractor;
 
 /**
  * Fetches a feed URL and summarizes its content shape — how many items it has,
@@ -28,10 +30,11 @@ final readonly class FeedPreviewService
     public function __construct(
         private FeedFetcherInterface $fetcher,
         private FeedParser $parser,
+        private HtmlItemExtractor $extractor,
     ) {
     }
 
-    public function preview(string $url): FeedPreview
+    public function preview(string $url, ?string $format = null): FeedPreview
     {
         try {
             $response = $this->fetcher->fetch($url);
@@ -45,9 +48,24 @@ final readonly class FeedPreviewService
         }
 
         try {
-            $feed = $this->parser->parse($body);
+            // A 'scraped' preview extracts the page's article list — same
+            // synthesis the refresh pipeline will run — so the dialog shows
+            // what subscribing to the page actually buys. One catch covers
+            // both branches: HtmlExtractionException IS a FeedParseException.
+            $feed = $format === SourceFormat::SCRAPED
+                ? $this->extractor->extract($body, $response->finalUrl)
+                : $this->parser->parse($body);
         } catch (FeedParseException $e) {
-            throw new FeedPreviewException('That address is not a readable feed.', 0, $e);
+            // The generic wording fits a feed-document mismatch; a scraped
+            // preview keeps the extractor's own message ("No article list was
+            // detected on the page.") — it already names the actual problem
+            // in user-appropriate words, so flattening it would only lose
+            // information.
+            throw new FeedPreviewException(
+                $format === SourceFormat::SCRAPED ? $e->getMessage() : 'That address is not a readable feed.',
+                0,
+                $e,
+            );
         }
 
         $sample = \array_slice($feed->entries, 0, self::SAMPLE_SIZE);

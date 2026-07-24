@@ -14,7 +14,6 @@ use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\FeedParser;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
@@ -26,6 +25,13 @@ use Symfony\Component\Lock\LockFactory;
  * The one refresh implementation behind all three callers (CLI, maintenance
  * endpoint, user endpoint). Globally lock-guarded, budget-bound, flushes per
  * feed so a budget exit never loses committed work.
+ *
+ * The ten constructor collaborators are deliberate: the runner is the refresh
+ * pipeline's composition root, and each one is a seam the tests swap
+ * independently (fetcher, body parser, ingestor, scheduler, …). Bagging them
+ * into a parameter object would hide that coupling, not reduce it.
+ *
+ * @SuppressWarnings("PHPMD.ExcessiveParameterList")
  */
 final class RefreshRunner
 {
@@ -42,7 +48,7 @@ final class RefreshRunner
         private readonly FeedRepository $feedRepository,
         private readonly EntityManagerInterface $em,
         private readonly FeedFetcherInterface $fetcher,
-        private readonly FeedParser $parser,
+        private readonly FeedBodyParser $bodyParser,
         private readonly EntryIngestor $ingestor,
         private readonly FeedScheduler $scheduler,
         private readonly EntryPruner $pruner,
@@ -188,7 +194,7 @@ final class RefreshRunner
                 throw new FeedParseException('Fetcher returned a modified response without a body.');
             }
 
-            $parsed = $this->parser->parse($body);
+            $parsed = $this->bodyParser->parse($feed, $body);
             $created = $this->ingestor->ingest($feed, $parsed);
 
             $feed->setEtag($this->truncate($response->etag, self::ETAG_MAX));

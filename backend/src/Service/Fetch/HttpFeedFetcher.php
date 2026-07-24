@@ -64,7 +64,10 @@ final class HttpFeedFetcher implements FeedFetcherInterface
             $location = $this->header($response, 'location');
             $response->cancel();
             if ($location === null) {
-                throw new FeedUnreachableException(sprintf('%s: redirect without Location header', $currentUrl));
+                throw new FeedUnreachableException(
+                    sprintf('%s: redirect without Location header', $currentUrl),
+                    statusCode: $status,
+                );
             }
             $permanentRedirect = $permanentRedirect || \in_array($status, [301, 308], true);
 
@@ -86,7 +89,7 @@ final class HttpFeedFetcher implements FeedFetcherInterface
         if ($status < 200 || $status >= 300) {
             $response->cancel();
 
-            throw new FeedUnreachableException(sprintf('%s: HTTP %d', $currentUrl, $status));
+            throw new FeedUnreachableException(sprintf('%s: HTTP %d', $currentUrl, $status), statusCode: $status);
         }
 
         $body = $this->content($response, $currentUrl);

@@ -23,6 +23,13 @@ import { SubscriptionDto } from '../reader/models';
                   <span class="badge" [attr.data-s]="s.status" [title]="statusHint(s.status)">{{
                     s.status
                   }}</span>
+                  @if (s.sourceFormat === 'scraped') {
+                    <span
+                      class="badge scraped"
+                      title="Generated from the page's article list — the site offers no feed"
+                      >scraped</span
+                    >
+                  }
                   @for (t of s.tags; track t.id) {
                     <span class="chip">
                       <span class="dot" [style.background]="t.color || 'var(--text-muted)'"></span>
@@ -102,6 +109,10 @@ import { SubscriptionDto } from '../reader/models';
       .badge[data-s='erroring'] {
         background: var(--bg-danger);
         color: var(--danger);
+      }
+      /* Not a health status — a subtle accent border sets it apart. */
+      .badge.scraped {
+        border: 1px solid var(--accent);
       }
       .badge[data-s='gone'] {
         background: var(--bg-danger);
