@@ -47,7 +47,9 @@ final class RefreshFeedsCommandTest extends DbTestCase
         $display = $tester->getDisplay();
         self::assertStringContainsString('completed', $display);
         self::assertStringContainsString('notModified', $display);
-        self::assertSame([$feed->getUrl()], $stub->fetchedUrls);
+        // The feed was fetched; a best-effort favicon lookup may also fetch the
+        // site homepage through the same client, so assert membership not equality.
+        self::assertContains($feed->getUrl(), $stub->fetchedUrls);
     }
 
     public function testReportsBusyWithoutFailing(): void

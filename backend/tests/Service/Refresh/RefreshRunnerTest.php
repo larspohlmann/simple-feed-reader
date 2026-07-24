@@ -17,6 +17,7 @@ use App\Service\EntrySanitizer;
 use App\Service\FeedScheduler;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
+use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Parser\Atom03Parser;
 use App\Service\Parser\Atom10Parser;
@@ -47,6 +48,7 @@ final class RefreshRunnerTest extends DbTestCase
 
     private MockClock $clock;
     private StubFeedFetcher $fetcher;
+    private StubFeedFetcher $faviconFetcher;
     private LockFactory $lockFactory;
 
     protected function setUp(): void
@@ -54,6 +56,9 @@ final class RefreshRunnerTest extends DbTestCase
         parent::setUp();
         $this->clock = new MockClock('2026-07-21 12:00:00', 'UTC');
         $this->fetcher = new StubFeedFetcher($this->clock);
+        // Favicon resolution has its own fetcher so homepage fetches never
+        // pollute assertions on which FEEDS the runner fetched.
+        $this->faviconFetcher = new StubFeedFetcher();
         $this->lockFactory = new LockFactory(new InMemoryStore());
     }
 
@@ -70,6 +75,7 @@ final class RefreshRunnerTest extends DbTestCase
             $this->fetcher,
             $this->bodyParser(),
             new EntryIngestor($this->em, $entryRepository, new EntrySanitizer(), $this->clock),
+            new FaviconResolver($this->faviconFetcher, new NullLogger()),
             new FeedScheduler($this->clock),
             new EntryPruner($this->em, $this->clock),
             $this->lockFactory,
@@ -219,6 +225,54 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(FeedStatus::Erroring, $empty->getStatus());
         // The good feed queued after the empty one still ingested its entry.
         self::assertCount(1, $this->em->getRepository(Entry::class)->findAll());
+    }
+
+    public function testRefreshResolvesAndStoresTheFeedFavicon(): void
+    {
+        $feed = $this->dueFeed('https://blog.example.com/feed');
+        $this->em->flush();
+
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($feed->getUrl(), false, $this->rss('Blog', 'b-1'), null, null),
+        );
+        // The site homepage (origin) advertises an icon; the favicon fetcher —
+        // not the feed fetcher — serves it.
+        $this->faviconFetcher->willReturn('https://blog.example.com', FetchResponse::fetched(
+            'https://blog.example.com/',
+            false,
+            '<!doctype html><html><head><link rel="icon" href="/icon.png"></head><body>x</body></html>',
+            null,
+            null,
+        ));
+
+        $this->runner()->run(RefreshRequest::allDue(300));
+
+        self::assertSame('https://blog.example.com/icon.png', $feed->getFaviconUrl());
+    }
+
+    public function testNotModifiedRefreshStillResolvesAMissingFavicon(): void
+    {
+        $feed = $this->dueFeed('https://blog.example.com/feed');
+        $this->em->flush();
+
+        // The feed answers 304 (its entries are unchanged) but has no favicon
+        // yet — resolution must not be gated on a full-body fetch.
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::notModified($feed->getUrl(), false, null, null),
+        );
+        $this->faviconFetcher->willReturn('https://blog.example.com', FetchResponse::fetched(
+            'https://blog.example.com/',
+            false,
+            '<!doctype html><html><head><link rel="icon" href="/icon.png"></head><body>x</body></html>',
+            null,
+            null,
+        ));
+
+        $this->runner()->run(RefreshRequest::allDue(300));
+
+        self::assertSame('https://blog.example.com/icon.png', $feed->getFaviconUrl());
     }
 
     public function testGoneFeedIsMarkedGone(): void

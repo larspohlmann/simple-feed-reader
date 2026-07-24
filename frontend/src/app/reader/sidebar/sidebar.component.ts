@@ -9,6 +9,7 @@ import {
   moveItemInArray,
 } from '@angular/cdk/drag-drop';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
 import { SubscriptionDto, TagDto } from '../models';
@@ -19,7 +20,7 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
 
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, IconComponent, CdkDropListGroup, CdkDropList, CdkDrag],
+  imports: [RouterLink, IconComponent, FaviconComponent, CdkDropListGroup, CdkDropList, CdkDrag],
   template: `
     <nav class="sidebar" aria-label="Feeds" cdkDropListGroup>
       <div class="actions">
@@ -186,7 +187,7 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
                       [queryParams]="{ subscription: s.id, view: null, tag: null, entry: null }"
                       queryParamsHandling="merge"
                     >
-                      <span>{{ s.title }}</span>
+                      <app-favicon [url]="s.faviconUrl" /><span>{{ s.title }}</span>
                       @if (s.unreadCount > 0) {
                         <span class="count">{{ s.unreadCount }}</span>
                       }
@@ -245,7 +246,7 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
               [queryParams]="{ subscription: s.id, view: null, tag: null, entry: null }"
               queryParamsHandling="merge"
             >
-              <app-icon name="rss_feed" [size]="16" /><span>{{ s.title }}</span>
+              <app-favicon [url]="s.faviconUrl" /><span>{{ s.title }}</span>
               @if (s.unreadCount > 0) {
                 <span class="count">{{ s.unreadCount }}</span>
               }
@@ -325,6 +326,9 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
         height: 100%;
         background: var(--accent);
         transition: width 0.2s;
+      }
+      .nav app-favicon {
+        margin-inline-end: 0;
       }
       .nav {
         display: flex;

@@ -38,6 +38,7 @@ final class EntryControllerTest extends WebTestCase
 
         $feed = new Feed('https://example.com/feed-' . uniqid('', true) . '.xml');
         $feed->setTitle('Seeded');
+        $feed->setFaviconUrl('https://icon.example.com/f.png');
         $em->persist($feed);
         $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $em->persist($sub);
@@ -82,6 +83,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertSame('Post 3', $first['title']);
         self::assertFalse($first['isRead']);
         self::assertSame('Seeded', $first['source']);
+        self::assertSame('https://icon.example.com/f.png', $first['faviconUrl']);
         self::assertArrayHasKey('nextCursor', $body);
         self::assertNull($body['nextCursor']);
     }

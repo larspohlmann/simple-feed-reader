@@ -13,6 +13,7 @@ import {
 } from '@angular/core';
 import { Subscription, timeout } from 'rxjs';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { EntryDto, ReaderArticle } from '../models';
 import { ReaderContentService } from '../reader-content.service';
 import { relativeTime } from '../format';
@@ -23,7 +24,7 @@ const READER_LOAD_TIMEOUT_MS = 30_000;
 
 @Component({
   selector: 'app-reader-view',
-  imports: [IconComponent],
+  imports: [IconComponent, FaviconComponent],
   template: `
     @if (entry(); as e) {
       <div class="reader">
@@ -69,7 +70,7 @@ const READER_LOAD_TIMEOUT_MS = 30_000;
         <article>
           <h1 class="title">{{ e.title }}</h1>
           <p class="meta">
-            {{ e.source }}
+            <app-favicon [url]="e.faviconUrl" [size]="16" />{{ e.source }}
             @if (e.author) {
               · {{ e.author }}
             }
