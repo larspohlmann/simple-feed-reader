@@ -3,6 +3,7 @@ import {
   Component,
   DestroyRef,
   ElementRef,
+  HostListener,
   computed,
   effect,
   inject,
@@ -18,6 +19,7 @@ import { SourceTagsComponent } from '../source-tags/source-tags.component';
 import { EntryDto, ReaderArticle, SubscriptionTagDto } from '../models';
 import { ReaderContentService } from '../reader-content.service';
 import { ReaderModeService } from '../reader-mode.service';
+import { focusOpacity, readingBlocks } from '../reading-focus';
 import { relativeTime } from '../format';
 
 /** Give up on a hung extraction and fall back to feed content (backend caps a
@@ -50,9 +52,17 @@ export class ReaderViewComponent {
   readonly close = output<void>();
 
   private readonly content = viewChild<ElementRef<HTMLElement>>('content');
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly reader = inject(ReaderContentService);
   protected readonly readerMode = inject(ReaderModeService);
   private readonly destroyRef = inject(DestroyRef);
+
+  // Reading-focus effect: the paragraph nearest the reading centre stays fully
+  // opaque while the rest dims, refreshed on scroll. Skipped entirely when the
+  // reader prefers reduced motion.
+  private readonly reduceMotion =
+    typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  private focusRaf = 0;
 
   // The open entry's object reference changes on every optimistic flag update
   // (favorite/keep/read), but its id does not. Tracking the loaded id lets the
@@ -127,7 +137,8 @@ export class ReaderViewComponent {
     });
     this.destroyRef.onDestroy(() => this.loadSub?.unsubscribe());
 
-    // Re-decorate external links whenever the rendered HTML changes.
+    // Re-decorate external links and re-seat the reading focus whenever the
+    // rendered HTML changes (new article, or Reader/Original toggle).
     effect(() => {
       this.displayHtml();
       queueMicrotask(() => {
@@ -141,8 +152,46 @@ export class ReaderViewComponent {
             a.rel = 'noopener noreferrer';
           }
         }
+        this.scheduleFocus();
       });
     });
+
+    if (!this.reduceMotion) {
+      const onResize = () => this.scheduleFocus();
+      window.addEventListener('resize', onResize, { passive: true });
+      this.destroyRef.onDestroy(() => {
+        window.removeEventListener('resize', onResize);
+        if (this.focusRaf) cancelAnimationFrame(this.focusRaf);
+      });
+    }
+  }
+
+  @HostListener('scroll')
+  protected onScroll(): void {
+    this.scheduleFocus();
+  }
+
+  /** Coalesce focus recomputes to one per animation frame. */
+  private scheduleFocus(): void {
+    if (this.reduceMotion || this.focusRaf) return;
+    this.focusRaf = requestAnimationFrame(() => {
+      this.focusRaf = 0;
+      this.applyFocus();
+    });
+  }
+
+  /** Dim each article block by its distance from the scroll viewport's centre. */
+  private applyFocus(): void {
+    const content = this.content()?.nativeElement;
+    if (!content) return;
+    const scroller = this.host.nativeElement;
+    const viewport = scroller.clientHeight;
+    const hostTop = scroller.getBoundingClientRect().top;
+    for (const block of readingBlocks(content)) {
+      const rect = block.getBoundingClientRect();
+      const center = rect.top - hostTop + rect.height / 2;
+      block.style.opacity = String(focusOpacity(center, viewport));
+    }
   }
 
   toggleMode(): void {
