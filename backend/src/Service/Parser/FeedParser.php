@@ -18,6 +18,15 @@ final readonly class FeedParser
 
     public function parse(string $xml): ParsedFeed
     {
+        // loadXML() throws a raw ValueError on an empty string rather than
+        // returning false, so guard it here — mirroring HtmlItemExtractor's
+        // empty-page check. An empty 200 body (misconfigured feed, edge CDN) is
+        // a per-feed parse failure the refresh runner already handles, not an
+        // uncaught error that 500s the whole run and stalls every feed after it.
+        if (trim($xml) === '') {
+            throw new FeedParseException('Document is not well-formed XML');
+        }
+
         $document = new \DOMDocument();
         $previousErrorMode = libxml_use_internal_errors(true);
         try {

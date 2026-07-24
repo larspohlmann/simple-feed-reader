@@ -190,6 +190,37 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(FeedStatus::Erroring, $feed->getStatus());
     }
 
+    /**
+     * An empty 200 body must degrade to a per-feed failure, not an uncaught
+     * ValueError from loadXML() that 500s the whole run and stops every feed
+     * queued after it — the exact defect that left OPML-imported feeds empty no
+     * matter how often refresh was clicked.
+     */
+    public function testEmptyBodyIsRecordedAsFailureAndOthersContinue(): void
+    {
+        $empty = $this->dueFeed('https://empty.example.com/feed');
+        $good = $this->dueFeed('https://good.example.com/feed');
+        $this->em->flush();
+
+        $this->fetcher->willReturn(
+            $empty->getUrl(),
+            FetchResponse::fetched($empty->getUrl(), false, '', null, null),
+        );
+        $this->fetcher->willReturn(
+            $good->getUrl(),
+            FetchResponse::fetched($good->getUrl(), false, $this->rss('G', 'g-1'), null, null),
+        );
+
+        $report = $this->runner()->run(RefreshRequest::allDue(300));
+
+        self::assertSame('completed', $report->status);
+        self::assertSame(1, $report->fetched);
+        self::assertSame(1, $report->failed);
+        self::assertSame(FeedStatus::Erroring, $empty->getStatus());
+        // The good feed queued after the empty one still ingested its entry.
+        self::assertCount(1, $this->em->getRepository(Entry::class)->findAll());
+    }
+
     public function testGoneFeedIsMarkedGone(): void
     {
         $feed = $this->dueFeed('https://dead.example.com/feed');
