@@ -13,7 +13,12 @@
       [queryParams]="{ view: null, tag: null, subscription: null, entry: null }"
       queryParamsHandling="merge"
     >
-      <app-icon name="rss_feed" [size]="20" />
+      <app-spinner
+        class="brand-mark"
+        [size]="22"
+        [decorative]="true"
+        [animate]="refreshSvc.running()"
+      />
       <span class="name">simple feed reader</span>
     </a>
   </div>
@@ -67,6 +72,12 @@
       </button>
       @if (menuOpen()) {
         <div class="menu" role="menu">
+          @if (auth.user(); as u) {
+            <div class="who">
+              <app-user-avatar [email]="u.email" [size]="32" />
+              <span class="who-email">{{ u.email }}</span>
+            </div>
+          }
           <a role="menuitem" routerLink="/settings" (click)="menuOpen.set(false)">{{
             'reader.settings' | transloco
           }}</a>

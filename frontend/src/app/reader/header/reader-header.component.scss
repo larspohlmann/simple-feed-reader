@@ -86,10 +86,6 @@ header {
   white-space: nowrap;
 }
 
-.brand app-icon {
-  color: var(--accent);
-}
-
 .menu-btn {
   display: none;
   align-items: center;
@@ -178,8 +174,29 @@ header {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  min-width: 140px;
+  min-width: 180px;
+  max-width: 260px;
   box-shadow: 0 6px 20px rgb(0 0 0 / 18%);
+}
+
+/* Signed-in user as the menu header. */
+.menu .who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+
+.menu .who-email {
+  min-width: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .menu button {

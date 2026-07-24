@@ -1,7 +1,30 @@
-<span
-  class="spin"
-  [style.width.px]="size"
-  [style.height.px]="size"
-  role="status"
-  aria-label="Loading"
-></span>
+<!-- The RSS mark as three independent parts (dot + two arcs). The "non-signal"
+     colour wanders from one part to the next so it reads as an active feed
+     transmitting. Parts paint with currentColor, so each animates its own hue
+     between --spin-sig and --spin-dim. -->
+<svg
+  class="rss"
+  [class.animate]="animate"
+  viewBox="0 -960 960 960"
+  [attr.width]="size"
+  [attr.height]="size"
+  [attr.role]="decorative ? null : 'status'"
+  [attr.aria-label]="decorative ? null : 'Loading'"
+  [attr.aria-hidden]="decorative ? true : null"
+>
+  <path
+    class="p p1"
+    d="M200-120q-33 0-56.5-23.5T120-200q0-33 23.5-56.5T200-280q33 0 56.5 23.5T280-200q0 33-23.5 56.5T200-120Z"
+    fill="currentColor"
+  />
+  <path
+    class="p p2"
+    d="M440-120q0-67-25-124.5T346-346q-44-44-101.5-69T120-440v-120q92 0 171.5 34.5T431-431q60 60 94.5 139.5T560-120H440Z"
+    fill="currentColor"
+  />
+  <path
+    class="p p3"
+    d="M680-120q0-117-44-218.5T516-516q-76-76-177.5-120T120-680v-120q142 0 265 53t216 146q93 93 146 216t53 265H680Z"
+    fill="currentColor"
+  />
+</svg>
