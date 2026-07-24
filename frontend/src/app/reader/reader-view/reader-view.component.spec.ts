@@ -78,6 +78,45 @@ describe('ReaderViewComponent', () => {
     expect((anchors[1] as HTMLAnchorElement).target).toBe('_blank'); // external decorated
   });
 
+  describe('table of contents', () => {
+    const threeHeadings = '<h2>Alpha</h2><p>a</p><h2>Beta</h2><p>b</p><h3>Gamma</h3>';
+
+    it('shows a table of contents, collapsed by default, for articles with several headings', async () => {
+      const f = mount(entry({ contentHtml: threeHeadings }));
+      await Promise.resolve(); // content-processing microtask builds the TOC
+      f.detectChanges();
+      const el = f.nativeElement as HTMLElement;
+      const toggle = el.querySelector('.toc-toggle') as HTMLButtonElement;
+      expect(toggle).not.toBeNull();
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(el.querySelectorAll('.toc-list li').length).toBe(0); // collapsed
+
+      toggle.click();
+      f.detectChanges();
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      const items = [...el.querySelectorAll('.toc-list button')].map((b) => b.textContent?.trim());
+      expect(items).toEqual(['Alpha', 'Beta', 'Gamma']);
+    });
+
+    it('gives the headings unique ids so the TOC can jump to them', async () => {
+      const f = mount(entry({ contentHtml: '<h2>Same</h2><h2>Same</h2><h2>Same</h2>' }));
+      await Promise.resolve();
+      f.detectChanges();
+      const ids = [...(f.nativeElement as HTMLElement).querySelectorAll('.content h2')].map(
+        (h) => (h as HTMLElement).id,
+      );
+      expect(ids.every((id) => id.length > 0)).toBe(true);
+      expect(new Set(ids).size).toBe(3); // deduped
+    });
+
+    it('omits the TOC for short articles', async () => {
+      const f = mount(entry({ contentHtml: '<h2>Only one</h2><p>x</p>' }));
+      await Promise.resolve();
+      f.detectChanges();
+      expect((f.nativeElement as HTMLElement).querySelector('.toc')).toBeNull();
+    });
+  });
+
   it('emits favorite/keep/read/prev/next/close', () => {
     const f = mount(entry());
     const c = { favorite: 0, keep: 0, read: 0, prev: 0, next: 0, close: 0 };

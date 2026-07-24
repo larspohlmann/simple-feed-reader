@@ -46,6 +46,27 @@ const LEAVE_ANIM_MS = 220;
 const ARTICLE_SETTLE_FRAMES = 60;
 const ARTICLE_SETTLE_STABLE = 4;
 
+/** Below this many headings an article is too short to warrant a contents list. */
+const TOC_MIN_HEADINGS = 3;
+
+/** One heading in the article's table of contents. */
+interface TocEntry {
+  id: string;
+  text: string;
+  /** Heading level (2–4) — drives the TOC indentation. */
+  level: number;
+}
+
+/** A stable, DOM-id-safe slug for a heading's anchor. */
+function slugify(text: string): string {
+  return (
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'section'
+  );
+}
+
 @Component({
   selector: 'app-reader-view',
   imports: [IconComponent, FaviconComponent, SpinnerComponent, SourceTagsComponent, TranslocoPipe],
@@ -131,6 +152,12 @@ export class ReaderViewComponent {
     { status: 'idle' | 'loading' } | { status: 'ok'; article: ReaderArticle } | { status: 'failed' }
   >({ status: 'idle' });
 
+  // Table of contents, built from the rendered article headings. Collapsed by
+  // default (tocOpen); only shown once an article has enough headings.
+  readonly toc = signal<TocEntry[]>([]);
+  readonly showToc = computed(() => this.toc().length >= TOC_MIN_HEADINGS);
+  readonly tocOpen = signal(false);
+
   readonly loading = computed(() => this.state().status === 'loading');
   readonly failed = computed(() => this.state().status === 'failed');
   private readonly article = computed(() => {
@@ -165,6 +192,9 @@ export class ReaderViewComponent {
       this.loadSub?.unsubscribe();
       this.readerMode.reset();
       this.cancelRestore();
+      // A new article starts with a fresh, collapsed contents list.
+      this.toc.set([]);
+      this.tocOpen.set(false);
       if (!e) {
         this.pendingRestore = null;
         this.state.set({ status: 'idle' });
@@ -210,6 +240,7 @@ export class ReaderViewComponent {
             a.rel = 'noopener noreferrer';
           }
         }
+        this.buildToc(host);
         this.scheduleFocus();
         // Content just (re-)rendered — re-seat a pending scroll restore. Runs on
         // the original render and again when the reader content swaps in.
@@ -396,6 +427,37 @@ export class ReaderViewComponent {
       const center = rect.top - hostTop + rect.height / 2;
       block.style.opacity = String(focusOpacity(center, viewport));
     }
+  }
+
+  /** Extract the article's headings into a contents list, giving each a unique
+   *  id to anchor the jump. */
+  private buildToc(host: HTMLElement): void {
+    const used = new Set<string>();
+    const entries: TocEntry[] = [];
+    for (const h of Array.from(host.querySelectorAll<HTMLElement>('h2, h3, h4'))) {
+      const text = (h.textContent ?? '').trim();
+      if (text === '') continue;
+      let id = h.id || slugify(text);
+      for (let n = 2; used.has(id); n++) id = `${slugify(text)}-${n}`;
+      used.add(id);
+      h.id = id;
+      entries.push({ id, text, level: Number(h.tagName[1]) });
+    }
+    this.toc.set(entries);
+  }
+
+  /** Scroll the reading pane to a heading, clearing the sticky bar (split-pane). */
+  scrollToHeading(id: string): void {
+    const el = this.content()?.nativeElement.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
+    if (!el) return;
+    this.pendingRestore = null; // a jump takes over from any in-flight restore
+    const host = this.host.nativeElement;
+    const offset = this.showToolbar() ? 52 : 8;
+    const top = el.getBoundingClientRect().top - host.getBoundingClientRect().top + host.scrollTop;
+    host.scrollTo({
+      top: Math.max(0, top - offset),
+      behavior: this.reduceMotion ? 'auto' : 'smooth',
+    });
   }
 
   toggleMode(): void {

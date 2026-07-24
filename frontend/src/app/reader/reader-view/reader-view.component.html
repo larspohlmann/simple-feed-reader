@@ -104,6 +104,28 @@
           <app-icon [name]="e.isRead ? 'mark_email_unread' : 'check'" [size]="20" />
         </button>
       </div>
+      @if (showToc()) {
+        <nav class="toc" [attr.aria-label]="'reader.contents' | transloco">
+          <button
+            class="toc-toggle"
+            type="button"
+            [attr.aria-expanded]="tocOpen()"
+            (click)="tocOpen.set(!tocOpen())"
+          >
+            <app-icon [name]="tocOpen() ? 'expand_more' : 'chevron_right'" [size]="18" />
+            {{ 'reader.contents' | transloco }}
+          </button>
+          @if (tocOpen()) {
+            <ul class="toc-list">
+              @for (item of toc(); track item.id) {
+                <li [class]="'lvl-' + item.level">
+                  <button type="button" (click)="scrollToHeading(item.id)">{{ item.text }}</button>
+                </li>
+              }
+            </ul>
+          }
+        </nav>
+      }
       @if (loading()) {
         <div class="loading" role="status">{{ 'reader.loadingReader' | transloco }}</div>
       } @else {
