@@ -11,7 +11,9 @@ import { EntryDto } from '../models';
   imports: [RouterLink, IconComponent, FaviconComponent, EntryCompactComponent],
   template: `
     <div class="group">
-      <p class="ghead"><app-favicon [url]="entries()[0]?.faviconUrl ?? null" [size]="14" />{{ source() }}</p>
+      <p class="ghead">
+        <app-favicon [url]="entries()[0]?.faviconUrl ?? null" [size]="14" />{{ source() }}
+      </p>
       <div class="items">
         @for (item of entries(); track item.id) {
           <div class="item">
