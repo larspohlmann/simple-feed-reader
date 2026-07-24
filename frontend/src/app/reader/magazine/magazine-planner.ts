@@ -55,8 +55,14 @@ export function planMagazine(
       if (run >= GROUP_MIN) {
         // Lead the group with a hero unless that would sit two heroes adjacent.
         if (!lastWasHero) {
-          blocks.push({ kind: 'hero', entry: entries[i] });
-          blocks.push(groupBlock(entries.slice(i + 1, i + run)));
+          const runEntries = entries.slice(i, i + run);
+          // Prefer an image-bearing story for the big hero slot. The search is
+          // bounded to the first GROUP_MIN entries — those exist the moment a
+          // group forms and never shift as later pages extend the run, so the
+          // chosen lead stays prefix-stable.
+          const heroIdx = preferredGroupHero(runEntries);
+          blocks.push({ kind: 'hero', entry: runEntries[heroIdx] });
+          blocks.push(groupBlock(runEntries.filter((_, k) => k !== heroIdx)));
           sinceHero = 1;
         } else {
           blocks.push(groupBlock(entries.slice(i, i + run)));
@@ -91,6 +97,17 @@ export function planMagazine(
     i += 1;
   }
   return blocks;
+}
+
+/** Index of the group's hero: the first image-bearing entry among the leading
+ *  GROUP_MIN entries, or 0 when none of them carries an image. Bounded to the
+ *  always-present leading entries so the choice never changes as the run grows. */
+function preferredGroupHero(runEntries: EntryDto[]): number {
+  const window = Math.min(runEntries.length, GROUP_MIN);
+  for (let k = 0; k < window; k++) {
+    if (firstPreviewImage(runEntries[k].contentHtml, runEntries[k].summary) !== null) return k;
+  }
+  return 0;
 }
 
 function groupBlock(items: EntryDto[]): MagazineBlock {

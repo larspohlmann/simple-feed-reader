@@ -66,6 +66,33 @@ describe('planMagazine', () => {
     expect(bs[1].kind).toBe('compact');
   });
 
+  it('leads a source group with its first image-bearing entry', () => {
+    // Run of 4 from one source; only the 2nd entry has an image. The big hero
+    // slot should prefer that image entry, and the cluster keeps the rest in order.
+    const bs = planMagazine(
+      [
+        e(1, { subscriptionId: 1, source: 'S' }),
+        withImg(2, { subscriptionId: 1, source: 'S' }),
+        e(3, { subscriptionId: 1, source: 'S' }),
+        e(4, { subscriptionId: 1, source: 'S' }),
+      ],
+      true,
+    );
+    expect(bs[0].kind).toBe('hero');
+    expect((bs[0] as Extract<MagazineBlock, { kind: 'hero' }>).entry.id).toBe(2);
+    expect((bs[1] as Extract<MagazineBlock, { kind: 'group' }>).entries.map((x) => x.id)).toEqual([
+      1, 3, 4,
+    ]);
+  });
+
+  it('leads a source group with the first entry when none early have an image', () => {
+    const bs = planMagazine([e(1), e(2), e(3), e(4)], true);
+    expect((bs[0] as Extract<MagazineBlock, { kind: 'hero' }>).entry.id).toBe(1);
+    expect((bs[1] as Extract<MagazineBlock, { kind: 'group' }>).entries.map((x) => x.id)).toEqual([
+      2, 3, 4,
+    ]);
+  });
+
   it('spaces heroes by HERO_PERIOD and never places two adjacent', () => {
     const many = Array.from({ length: 8 }, (_, i) =>
       withImg(i + 1, { subscriptionId: i + 1, source: `S${i}` }),
