@@ -122,7 +122,8 @@ import { relativeTime } from '../format';
         font-size: var(--fs-sm);
         color: var(--text-secondary);
         display: -webkit-box;
-        -webkit-line-clamp: 2;
+        /* Medium tile: show a fuller excerpt than the old two-line teaser. */
+        -webkit-line-clamp: 4;
         -webkit-box-orient: vertical;
         overflow: hidden;
       }

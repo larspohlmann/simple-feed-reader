@@ -70,9 +70,8 @@ import { SourceTagsComponent } from '../source-tags/source-tags.component';
       .title {
         margin: 0;
         color: var(--text-primary);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        /* Never truncate the title, even in this small tile — let it wrap in full. */
+        overflow-wrap: anywhere;
       }
       .compact.read .title {
         color: var(--text-secondary);
