@@ -114,6 +114,9 @@ final class SubscriptionControllerTest extends WebTestCase
         // Subscribe defers ingestion to the refresh pipeline, so a freshly
         // subscribed feed carries no entries yet — deterministically 0 unread.
         self::assertSame(0, $first['unreadCount']);
+        // Sidebar favourite/kept badge totals travel on the same payload.
+        self::assertSame(0, $list['favoritesCount']);
+        self::assertSame(0, $list['keptCount']);
     }
 
     public function testSubscribeToHtmlReturnsCandidates(): void

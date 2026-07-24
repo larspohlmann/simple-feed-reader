@@ -87,19 +87,38 @@ describe('SubscriptionsStore', () => {
 
   it('loads and exposes derived signals', () => {
     store.load();
-    ctrl
-      .expectOne('https://api.test/api/subscriptions')
-      .flush({ subscriptions: [sub(1, 3, [tag(20, 'Tech')]), sub(2, 6, [tag(20, 'Tech')])] });
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      subscriptions: [sub(1, 3, [tag(20, 'Tech')]), sub(2, 6, [tag(20, 'Tech')])],
+      favoritesCount: 4,
+      keptCount: 2,
+    });
     expect(store.totalUnread()).toBe(9);
     expect(store.tagTree()[0].unreadCount).toBe(9);
+    expect(store.favoritesCount()).toBe(4);
+    expect(store.keptCount()).toBe(2);
     expect(store.loading()).toBe(false);
+  });
+
+  it('optimistically bumps favourite/kept totals, clamped at zero', () => {
+    store.load();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ subscriptions: [sub(1, 3)], favoritesCount: 1, keptCount: 0 });
+    store.bumpFavorites(1);
+    expect(store.favoritesCount()).toBe(2);
+    store.bumpFavorites(-5);
+    expect(store.favoritesCount()).toBe(0); // never negative
+    store.bumpKept(1);
+    expect(store.keptCount()).toBe(1);
   });
 
   it('optimistically decrements and zeroes unread', () => {
     store.load();
-    ctrl
-      .expectOne('https://api.test/api/subscriptions')
-      .flush({ subscriptions: [sub(1, 3, [tag(20, 'Tech')]), sub(2, 6)] });
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      subscriptions: [sub(1, 3, [tag(20, 'Tech')]), sub(2, 6)],
+      favoritesCount: 0,
+      keptCount: 0,
+    });
     store.decrementUnread(1);
     expect(store.subscriptions().find((s) => s.id === 1)!.unreadCount).toBe(2);
     store.decrementUnread(1, 99);

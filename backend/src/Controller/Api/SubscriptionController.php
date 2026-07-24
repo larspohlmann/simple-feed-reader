@@ -11,6 +11,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Http\SubscriptionJson;
+use App\Repository\EntryStateRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionTagRepository;
 use App\Repository\TagRepository;
@@ -32,6 +33,7 @@ final class SubscriptionController
         private readonly SubscriptionRepository $subscriptionRepo,
         private readonly SubscriptionTagRepository $subscriptionTags,
         private readonly TagRepository $tags,
+        private readonly EntryStateRepository $entryStates,
         private readonly EntityManagerInterface $em,
     ) {
     }
@@ -41,12 +43,15 @@ final class SubscriptionController
     {
         $rows = $this->subscriptionRepo->findForUserWithTags((int) $user->getId());
         $counts = $this->subscriptionRepo->unreadCountsForUser((int) $user->getId());
+        $flags = $this->entryStates->favoriteAndKeptCountsForUser((int) $user->getId());
 
         return new JsonResponse([
             'subscriptions' => array_map(
                 static fn ($s) => SubscriptionJson::one($s, $counts[(int) $s->getId()] ?? 0),
                 $rows,
             ),
+            'favoritesCount' => $flags['favorites'],
+            'keptCount' => $flags['kept'],
         ]);
     }
 

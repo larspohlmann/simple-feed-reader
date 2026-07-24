@@ -39,6 +39,8 @@ export class SidebarComponent {
   readonly tagTree = input.required<TagNode[]>();
   readonly untagged = input.required<SubscriptionDto[]>();
   readonly totalUnread = input.required<number>();
+  readonly favoritesCount = input(0);
+  readonly keptCount = input(0);
   readonly selection = input.required<Selection>();
   readonly loading = input(false);
 

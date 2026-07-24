@@ -15,6 +15,7 @@ import {
   RefreshReport,
   SubscribeResult,
   SubscriptionDto,
+  SubscriptionsResponse,
   SubscriptionUpdate,
   EntryStateDto,
   TagDto,
@@ -26,8 +27,8 @@ export class ReaderApi {
   private readonly http = inject(HttpClient);
   private readonly base = inject(API_BASE_URL);
 
-  subscriptions(): Observable<{ subscriptions: SubscriptionDto[] }> {
-    return this.http.get<{ subscriptions: SubscriptionDto[] }>(`${this.base}/api/subscriptions`);
+  subscriptions(): Observable<SubscriptionsResponse> {
+    return this.http.get<SubscriptionsResponse>(`${this.base}/api/subscriptions`);
   }
 
   subscribe(url: string, format?: string): Observable<SubscribeResult> {

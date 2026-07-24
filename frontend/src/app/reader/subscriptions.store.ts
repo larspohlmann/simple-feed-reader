@@ -79,6 +79,8 @@ export class SubscriptionsStore {
   private readonly tags = inject(TagsStore);
 
   readonly subscriptions = signal<SubscriptionDto[]>([]);
+  readonly favoritesCount = signal(0);
+  readonly keptCount = signal(0);
   readonly loading = signal(false);
   readonly error = signal<Problem | null>(null);
 
@@ -92,6 +94,8 @@ export class SubscriptionsStore {
     this.api.subscriptions().subscribe({
       next: (r) => {
         this.subscriptions.set(r.subscriptions);
+        this.favoritesCount.set(r.favoritesCount);
+        this.keptCount.set(r.keptCount);
         this.loading.set(false);
       },
       error: (e: HttpErrorResponse) => {
@@ -99,6 +103,16 @@ export class SubscriptionsStore {
         this.loading.set(false);
       },
     });
+  }
+
+  /** Keep the sidebar favourite/kept badges live after a toggle without a reload;
+   *  the next load() reconciles with the server. Clamped so it never goes negative. */
+  bumpFavorites(by: number): void {
+    this.favoritesCount.update((n) => Math.max(0, n + by));
+  }
+
+  bumpKept(by: number): void {
+    this.keptCount.update((n) => Math.max(0, n + by));
   }
 
   decrementUnread(subscriptionId: number, by = 1): void {
