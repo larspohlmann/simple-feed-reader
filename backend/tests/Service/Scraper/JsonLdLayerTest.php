@@ -82,4 +82,38 @@ final class JsonLdLayerTest extends TestCase
         self::assertSame('https://news.test/abstract-story', $items[0]->url);
         self::assertStringContainsString('abstract property', (string) $items[0]->teaser);
     }
+
+    /**
+     * A pathological @graph of many valid Article nodes must not force
+     * unbounded work: collection stops at MAX_COLLECT (200), yielding the
+     * first 200 nodes in document order. The facade caps the final output at
+     * 50 downstream, so real pages are unaffected. Completes near-instantly.
+     */
+    public function testGraphCollectionIsBoundedAtMaxCollect(): void
+    {
+        $nodes = [];
+        for ($i = 0; $i < 500; ++$i) {
+            $nodes[] = [
+                '@type' => 'Article',
+                'url' => '/a/' . $i,
+                'headline' => 'Headline number ' . $i,
+                'description' => 'A description for article number ' . $i
+                    . ' that is comfortably over forty characters long.',
+            ];
+        }
+        $json = json_encode([
+            '@context' => 'https://schema.org',
+            '@graph' => $nodes,
+        ], \JSON_THROW_ON_ERROR);
+        $doc = HTMLDocument::createFromString(
+            '<html lang="en"><body><script type="application/ld+json">' . $json . '</script></body></html>',
+            \LIBXML_NOERROR
+        );
+
+        $items = new JsonLdLayer()->extract($doc, 'https://x.test/');
+
+        self::assertCount(200, $items);
+        self::assertSame('https://x.test/a/0', $items[0]->url);
+        self::assertSame('https://x.test/a/199', $items[199]->url);
+    }
 }

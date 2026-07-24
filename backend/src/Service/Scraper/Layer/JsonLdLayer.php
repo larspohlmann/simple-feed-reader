@@ -22,6 +22,16 @@ final class JsonLdLayer implements ScrapeLayerInterface
 {
     private const array ARTICLE_TYPES = ['NewsArticle', 'BlogPosting', 'Article'];
 
+    /**
+     * Hard ceiling on JSON-LD items collected from a single document. A
+     * pathological @graph (or top-level list) of tens of thousands of Article
+     * nodes would otherwise force the extractor to walk every node; stopping
+     * early bounds the work at O(MAX_COLLECT). The facade caps final output at
+     * 50 (well below this), and 200 comfortably exceeds real pages (heise
+     * ships 190 ItemList entries), so genuine extraction is never truncated.
+     */
+    private const int MAX_COLLECT = 200;
+
     public function extract(HTMLDocument $doc, string $baseUrl): array
     {
         $items = [];
@@ -30,53 +40,66 @@ final class JsonLdLayer implements ScrapeLayerInterface
             if (!\is_array($decoded)) {
                 continue;
             }
-            $items = [...$items, ...$this->collect($decoded, $baseUrl)];
-        }
-
-        return $items;
-    }
-
-    /**
-     * @param array<mixed> $node
-     * @return list<ScrapedItem>
-     */
-    private function collect(array $node, string $baseUrl): array
-    {
-        if (array_is_list($node)) {
-            return $this->collectAll($node, $baseUrl);
-        }
-        $graph = $node['@graph'] ?? null;
-        if (\is_array($graph)) {
-            return $this->collectAll($graph, $baseUrl);
-        }
-        if ($this->hasType($node, 'ItemList')) {
-            $elements = $node['itemListElement'] ?? null;
-
-            return $this->listItems(\is_array($elements) ? $elements : [], $baseUrl);
-        }
-        if ($this->hasType($node, ...self::ARTICLE_TYPES)) {
-            $item = $this->article($node, $baseUrl);
-
-            return $item === null ? [] : [$item];
-        }
-
-        return [];
-    }
-
-    /**
-     * @param array<mixed> $nodes
-     * @return list<ScrapedItem>
-     */
-    private function collectAll(array $nodes, string $baseUrl): array
-    {
-        $items = [];
-        foreach ($nodes as $node) {
-            if (\is_array($node)) {
-                $items = [...$items, ...$this->collect($node, $baseUrl)];
+            $this->collectInto($decoded, $baseUrl, $items);
+            if (\count($items) >= self::MAX_COLLECT) {
+                break;
             }
         }
 
         return $items;
+    }
+
+    /**
+     * Appends into $items by reference (never spreads a growing array), so
+     * collection stays O(N); each entry point bails once the cap is reached.
+     *
+     * @param array<mixed> $node
+     * @param list<ScrapedItem> $items
+     */
+    private function collectInto(array $node, string $baseUrl, array &$items): void
+    {
+        if (\count($items) >= self::MAX_COLLECT) {
+            return;
+        }
+        if (array_is_list($node)) {
+            $this->collectAllInto($node, $baseUrl, $items);
+
+            return;
+        }
+        $graph = $node['@graph'] ?? null;
+        if (\is_array($graph)) {
+            $this->collectAllInto($graph, $baseUrl, $items);
+
+            return;
+        }
+        if ($this->hasType($node, 'ItemList')) {
+            $elements = $node['itemListElement'] ?? null;
+            $this->listItemsInto(\is_array($elements) ? $elements : [], $baseUrl, $items);
+
+            return;
+        }
+        if ($this->hasType($node, ...self::ARTICLE_TYPES)) {
+            $item = $this->article($node, $baseUrl);
+            if ($item !== null) {
+                $items[] = $item;
+            }
+        }
+    }
+
+    /**
+     * @param array<mixed> $nodes
+     * @param list<ScrapedItem> $items
+     */
+    private function collectAllInto(array $nodes, string $baseUrl, array &$items): void
+    {
+        foreach ($nodes as $node) {
+            if (\count($items) >= self::MAX_COLLECT) {
+                return;
+            }
+            if (\is_array($node)) {
+                $this->collectInto($node, $baseUrl, $items);
+            }
+        }
     }
 
     /**
@@ -86,12 +109,14 @@ final class JsonLdLayer implements ScrapeLayerInterface
      * "item" references that are not article nodes are skipped silently.
      *
      * @param array<mixed> $elements
-     * @return list<ScrapedItem>
+     * @param list<ScrapedItem> $items
      */
-    private function listItems(array $elements, string $baseUrl): array
+    private function listItemsInto(array $elements, string $baseUrl, array &$items): void
     {
-        $items = [];
         foreach ($elements as $element) {
+            if (\count($items) >= self::MAX_COLLECT) {
+                return;
+            }
             if (!\is_array($element)) {
                 continue;
             }
@@ -104,8 +129,6 @@ final class JsonLdLayer implements ScrapeLayerInterface
                 $items[] = $item;
             }
         }
-
-        return $items;
     }
 
     /** @param array<mixed> $node */
