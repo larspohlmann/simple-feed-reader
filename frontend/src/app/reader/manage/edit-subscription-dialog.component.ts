@@ -4,6 +4,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
+import { IconComponent } from '../../shared/icon/icon.component';
 import { parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
 import { TagsStore } from '../tags.store';
@@ -11,7 +12,7 @@ import { SubscriptionDto } from '../models';
 
 @Component({
   selector: 'app-edit-subscription-dialog',
-  imports: [ReactiveFormsModule, A11yModule],
+  imports: [ReactiveFormsModule, A11yModule, IconComponent],
   template: `
     <div class="dialog" role="dialog" aria-modal="true" aria-label="Edit feed" cdkTrapFocus>
       <h2>Edit feed</h2>
@@ -30,17 +31,35 @@ import { SubscriptionDto } from '../models';
         @if (tagsStore.tags().length === 0) {
           <p class="hint">No tags yet — create one from Settings › Tags.</p>
         }
-        <ul class="tags">
+        <div class="tags">
           @for (t of tagsStore.tags(); track t.id) {
-            <li>
-              <label>
-                <input type="checkbox" [checked]="checked().has(t.id)" (change)="toggle(t.id)" />
-                <span class="dot" [style.background]="t.color || 'var(--text-muted)'"></span>
-                {{ t.name }}
-              </label>
-            </li>
+            <button
+              type="button"
+              class="tag-pill"
+              [class.on]="checked().has(t.id)"
+              [attr.aria-pressed]="checked().has(t.id)"
+              (click)="toggle(t.id)"
+            >
+              @if (t.icon) {
+                <app-icon
+                  [name]="t.icon"
+                  [size]="14"
+                  [style.color]="
+                    checked().has(t.id) ? 'var(--on-accent)' : t.color || 'var(--text-muted)'
+                  "
+                />
+              } @else {
+                <span
+                  class="dot"
+                  [style.background]="
+                    checked().has(t.id) ? 'var(--on-accent)' : t.color || 'var(--text-muted)'
+                  "
+                ></span>
+              }
+              {{ t.name }}
+            </button>
           }
-        </ul>
+        </div>
 
         @if (error()) {
           <p class="error" role="alert">{{ error() }}</p>
@@ -86,20 +105,33 @@ import { SubscriptionDto } from '../models';
         color: var(--text-muted);
       }
       .tags {
-        list-style: none;
         margin: 0;
         padding: 0;
         max-height: 220px;
         overflow: auto;
         display: flex;
-        flex-direction: column;
-        gap: var(--space-1);
+        flex-wrap: wrap;
+        gap: var(--space-2);
       }
-      .tags label {
-        display: flex;
+      .tag-pill {
+        display: inline-flex;
         align-items: center;
         gap: var(--space-2);
+        padding: var(--space-1) var(--space-3);
+        border: 1px solid var(--border-strong);
+        border-radius: 999px;
+        background: var(--surface-1);
+        color: var(--text-secondary);
+        font-size: var(--fs-sm);
         cursor: pointer;
+      }
+      .tag-pill:hover {
+        border-color: var(--accent);
+      }
+      .tag-pill.on {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--on-accent);
       }
       .dot {
         width: 9px;
