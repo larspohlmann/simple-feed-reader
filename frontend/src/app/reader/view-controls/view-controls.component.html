@@ -1,13 +1,13 @@
-<div class="seg" role="group" aria-label="Reading layout">
+<div class="seg" role="group" [attr.aria-label]="'reader.layout.aria' | transloco">
   <button
-    aria-label="Magazine layout"
+    [attr.aria-label]="'reader.layout.magazine' | transloco"
     [class.active]="layout.mode() === 'magazine'"
     (click)="layout.set('magazine')"
   >
     <app-icon name="view_quilt" [size]="18" />
   </button>
   <button
-    aria-label="List layout"
+    [attr.aria-label]="'reader.layout.list' | transloco"
     [class.active]="layout.mode() === 'list'"
     (click)="layout.set('list')"
   >
@@ -15,7 +15,7 @@
   </button>
   <button
     class="pane"
-    aria-label="Pane layout"
+    [attr.aria-label]="'reader.layout.pane' | transloco"
     [class.active]="layout.mode() === 'pane'"
     (click)="layout.set('pane')"
   >
@@ -23,12 +23,12 @@
   </button>
 </div>
 
-<div class="seg" role="group" aria-label="Theme">
+<div class="seg" role="group" [attr.aria-label]="'reader.theme.aria' | transloco">
   @for (m of modes; track m.id) {
     <button
       [class.active]="theme.mode() === m.id"
       [attr.aria-pressed]="theme.mode() === m.id"
-      [title]="m.label"
+      [title]="'reader.theme.' + m.id | transloco"
       (click)="theme.setMode(m.id)"
     >
       <app-icon [name]="m.icon" [size]="18" />

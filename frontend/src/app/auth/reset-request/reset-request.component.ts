@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { API_BASE_URL } from '../../core/api';
 import { AltchaService } from '../altcha.service';
 import { solveAltcha } from '../altcha';
@@ -12,7 +13,7 @@ import { ButtonComponent } from '../../shared/button/button.component';
 
 @Component({
   selector: 'app-reset-request',
-  imports: [ReactiveFormsModule, RouterLink, AuthShellComponent, ButtonComponent],
+  imports: [ReactiveFormsModule, RouterLink, TranslocoPipe, AuthShellComponent, ButtonComponent],
   templateUrl: './reset-request.component.html',
   styleUrl: './reset-request.component.scss',
 })

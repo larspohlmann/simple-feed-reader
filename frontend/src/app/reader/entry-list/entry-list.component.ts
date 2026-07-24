@@ -12,6 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { EntryHeroComponent } from '../magazine/entry-hero.component';
@@ -35,6 +36,7 @@ const SETTLE_STABLE_FRAMES = 3;
   selector: 'app-entry-list',
   imports: [
     RouterLink,
+    TranslocoPipe,
     IconComponent,
     EntryRowComponent,
     EntryHeroComponent,

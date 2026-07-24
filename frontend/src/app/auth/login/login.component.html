@@ -1,11 +1,14 @@
-<app-auth-shell title="Sign in" subtitle="Welcome back to your reader.">
+<app-auth-shell
+  [title]="'auth.login.title' | transloco"
+  [subtitle]="'auth.login.subtitle' | transloco"
+>
   <form [formGroup]="form">
     <label class="field">
-      <span>Email</span>
+      <span>{{ 'auth.email' | transloco }}</span>
       <input type="email" formControlName="email" name="email" autocomplete="email" />
     </label>
     <label class="field">
-      <span>Password</span>
+      <span>{{ 'auth.password' | transloco }}</span>
       <input
         type="password"
         formControlName="password"
@@ -14,20 +17,24 @@
       />
     </label>
     <app-form-error [message]="error()" />
-    <app-button variant="primary" [loading]="loading()" (click)="submit()">Sign in</app-button>
+    <app-button variant="primary" [loading]="loading()" (click)="submit()">{{
+      'auth.login.submit' | transloco
+    }}</app-button>
   </form>
 
   @if (providers().length) {
-    <div class="divider"><span>or</span></div>
+    <div class="divider">
+      <span>{{ 'auth.login.or' | transloco }}</span>
+    </div>
     @for (p of providers(); track p) {
       <button class="oauth" type="button" (click)="startOAuth(p)">
-        Continue with {{ label(p) }}
+        {{ 'auth.login.continueWith' | transloco: { provider: label(p) } }}
       </button>
     }
   }
 
   <p class="links">
-    <a routerLink="/register">Create account</a>
-    <a routerLink="/reset-password-request">Forgot password?</a>
+    <a routerLink="/register">{{ 'auth.login.createAccount' | transloco }}</a>
+    <a routerLink="/reset-password-request">{{ 'auth.login.forgotPassword' | transloco }}</a>
   </p>
 </app-auth-shell>

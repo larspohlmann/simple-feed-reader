@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { of, Subject } from 'rxjs';
 import { ReaderViewComponent } from './reader-view.component';
 import { ReaderContentService } from '../reader-content.service';
@@ -51,7 +52,7 @@ describe('ReaderViewComponent', () => {
     // asserting against the feed's own content. Reader-specific tests override.
     loadMock = jest.fn(() => of<ReaderContent>({ status: 'failed', reason: 'fetch', url: null }));
     TestBed.configureTestingModule({
-      imports: [ReaderViewComponent],
+      imports: [ReaderViewComponent, provideTranslocoTesting()],
       providers: [{ provide: ReaderContentService, useValue: { load: loadMock } }],
     });
   });

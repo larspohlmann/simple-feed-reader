@@ -6,26 +6,26 @@
       selection().kind === 'tag' ||
       selection().kind === 'subscription'
     ) {
-      <div class="toggle" role="group" aria-label="Filter">
+      <div class="toggle" role="group" [attr.aria-label]="'reader.filter' | transloco">
         <a
           [class.on]="selection().unread"
           [routerLink]="[]"
           [queryParams]="{ unread: null }"
           queryParamsHandling="merge"
-          >Unread</a
+          >{{ 'reader.unread' | transloco }}</a
         >
         <a
           [class.on]="!selection().unread"
           [routerLink]="[]"
           [queryParams]="{ unread: '0' }"
           queryParamsHandling="merge"
-          >All</a
+          >{{ 'reader.all' | transloco }}</a
         >
       </div>
     }
     @if (canMarkAllRead()) {
       <button class="mark-all" type="button" (click)="markAllRead.emit()">
-        <app-icon name="done_all" [size]="18" /> Mark all read
+        <app-icon name="done_all" [size]="18" /> {{ 'reader.markAllRead' | transloco }}
       </button>
     }
   </div>
@@ -42,7 +42,9 @@
     }
   </div>
 } @else if (entries().length === 0) {
-  <p class="empty">{{ selection().unread ? "You're all caught up." : 'Nothing here yet.' }}</p>
+  <p class="empty">
+    {{ (selection().unread ? 'reader.allCaughtUp' : 'reader.nothingHere') | transloco }}
+  </p>
 } @else if (layout() === 'magazine') {
   <div class="rows magazine" #rows (scroll)="onRowsScroll($event)">
     @for (b of blocks(); track blockKey(b)) {
@@ -96,7 +98,7 @@
           [disabled]="loadingMore()"
           (click)="loadMore.emit()"
         >
-          {{ loadingMore() ? 'Loading…' : 'Load more' }}
+          {{ loadingMore() ? ('common.loading' | transloco) : ('reader.loadMore' | transloco) }}
         </button>
       </div>
     }
@@ -122,7 +124,7 @@
           [disabled]="loadingMore()"
           (click)="loadMore.emit()"
         >
-          {{ loadingMore() ? 'Loading…' : 'Load more' }}
+          {{ loadingMore() ? ('common.loading' | transloco) : ('reader.loadMore' | transloco) }}
         </button>
       </div>
     }

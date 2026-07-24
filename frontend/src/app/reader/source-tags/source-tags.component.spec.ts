@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { provideRouter } from '@angular/router';
 import { SourceTagsComponent } from './source-tags.component';
 import { SubscriptionTagDto } from '../models';
@@ -12,7 +13,7 @@ const tag = (
 describe('SourceTagsComponent', () => {
   function mount(tags: SubscriptionTagDto[]) {
     TestBed.configureTestingModule({
-      imports: [SourceTagsComponent],
+      imports: [SourceTagsComponent, provideTranslocoTesting()],
       providers: [provideRouter([])],
     });
     const f = TestBed.createComponent(SourceTagsComponent);

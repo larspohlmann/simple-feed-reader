@@ -2,13 +2,14 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { API_BASE_URL } from '../../core/api';
 import { AuthShellComponent } from '../auth-shell/auth-shell.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 
 @Component({
   selector: 'app-verify-email',
-  imports: [RouterLink, AuthShellComponent, SpinnerComponent],
+  imports: [RouterLink, TranslocoPipe, AuthShellComponent, SpinnerComponent],
   templateUrl: './verify-email.component.html',
   styleUrl: './verify-email.component.scss',
 })

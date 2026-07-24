@@ -1,0 +1,15 @@
+h2 {
+  font-size: var(--fs-lg);
+  margin: 0 0 var(--space-3);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.row span {
+  color: var(--text-muted);
+}

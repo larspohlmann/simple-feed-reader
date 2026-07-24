@@ -7,13 +7,14 @@ import { AuthService } from '../../core/auth.service';
 import { ReaderModeService } from '../reader-mode.service';
 import { ReaderHeaderComponent } from './reader-header.component';
 import { signal } from '@angular/core';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 
 describe('ReaderHeaderComponent', () => {
   const auth = { user: signal({ email: 'a@b.c' }), logout: jest.fn(), isAdmin: () => false };
   beforeEach(() => {
     localStorage.clear();
     TestBed.configureTestingModule({
-      imports: [ReaderHeaderComponent],
+      imports: [ReaderHeaderComponent, provideTranslocoTesting()],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),

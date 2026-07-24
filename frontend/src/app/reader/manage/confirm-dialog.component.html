@@ -8,7 +8,7 @@
   <h2>{{ data.title }}</h2>
   <p class="msg">{{ data.message }}</p>
   <div class="row">
-    <button type="button" (click)="ref.close(false)">Cancel</button>
+    <button type="button" (click)="ref.close(false)">{{ 'dialog.cancel' | transloco }}</button>
     <button
       type="button"
       [class.primary]="!data.danger"

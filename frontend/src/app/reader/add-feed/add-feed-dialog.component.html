@@ -1,19 +1,25 @@
-<div class="dialog" role="dialog" aria-modal="true" aria-label="Add a feed" cdkTrapFocus>
-  <h2>Add a feed</h2>
+<div
+  class="dialog"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-label]="'dialog.addFeed.title' | transloco"
+  cdkTrapFocus
+>
+  <h2>{{ 'dialog.addFeed.title' | transloco }}</h2>
   <form [formGroup]="form" (ngSubmit)="submit()">
     <input
       class="field"
       formControlName="url"
       type="url"
       placeholder="https://example.com"
-      aria-label="Feed or site URL"
+      [attr.aria-label]="'dialog.addFeed.urlLabel' | transloco"
       cdkFocusInitial
     />
     @if (error()) {
       <p class="error" role="alert">{{ error() }}</p>
     }
     @if (candidates().length) {
-      <p class="hint">We found these feeds — pick one:</p>
+      <p class="hint">{{ 'dialog.addFeed.foundPick' | transloco }}</p>
       <ul class="candidates">
         @for (c of candidates(); track c.url) {
           @let state = previews()[c.url];
@@ -22,23 +28,26 @@
             <div class="card-head">
               <span class="card-title">{{ p?.title || c.title || c.url }}</span>
               @if (p) {
-                <span class="count">{{ p.itemCount }} items</span>
+                <span class="count">{{
+                  'dialog.addFeed.items' | transloco: { count: p.itemCount }
+                }}</span>
               }
             </div>
             <div class="badges">
               <span class="badge format">{{ formatLabel(c.format) }}</span>
               @if (p) {
                 <span class="badge">{{ contentLabel(p.content) }}</span>
-                <span class="badge">{{ p.hasImages ? 'With images' : 'No images' }}</span>
+                <span class="badge">{{
+                  (p.hasImages ? 'dialog.addFeed.withImages' : 'dialog.addFeed.noImages')
+                    | transloco
+                }}</span>
               }
             </div>
             @if (c.format === 'scraped') {
-              <p class="muted scraped-hint">
-                No feed found — generated from the page's article list.
-              </p>
+              <p class="muted scraped-hint">{{ 'dialog.addFeed.scrapedHint' | transloco }}</p>
             }
             @if (state?.status === 'loading') {
-              <p class="muted">Loading preview…</p>
+              <p class="muted">{{ 'dialog.addFeed.loadingPreview' | transloco }}</p>
             } @else if (state?.status === 'error') {
               <p class="muted">{{ errorMessage(state) }}</p>
             } @else if (p) {
@@ -49,22 +58,24 @@
                   }
                 </ul>
               } @else {
-                <p class="muted">No recent items</p>
+                <p class="muted">{{ 'dialog.addFeed.noRecentItems' | transloco }}</p>
               }
             }
-            <button type="button" class="subscribe primary" (click)="pick(c)">Subscribe</button>
+            <button type="button" class="subscribe primary" (click)="pick(c)">
+              {{ 'dialog.addFeed.subscribe' | transloco }}
+            </button>
           </li>
         }
       </ul>
     }
     @if (searched() && candidates().length === 0) {
-      <p class="hint">No feeds found at that address.</p>
+      <p class="hint">{{ 'dialog.addFeed.noneFound' | transloco }}</p>
     }
     @if (failureReason(); as r) {
       <div class="warn" role="alert">{{ failureText(r) }}</div>
     }
     <div class="row">
-      <button type="button" (click)="ref.close()">Cancel</button>
+      <button type="button" (click)="ref.close()">{{ 'dialog.cancel' | transloco }}</button>
       <!-- Once candidates are shown, each card carries its own Subscribe
                button, so the footer submit would be a confusing third action.
                It only makes sense before a search (and to retry when none were
@@ -72,7 +83,7 @@
                all, so hide it until the URL changes. -->
       @if (!candidates().length && !failureReason()) {
         <button type="submit" class="primary" [disabled]="loading()">
-          {{ loading() ? 'Adding…' : 'Add' }}
+          {{ (loading() ? 'dialog.addFeed.adding' : 'common.add') | transloco }}
         </button>
       }
     </div>

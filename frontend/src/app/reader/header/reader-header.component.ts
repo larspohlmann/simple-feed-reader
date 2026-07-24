@@ -1,6 +1,7 @@
 // src/app/reader/header/reader-header.component.ts
 import { Component, inject, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { AuthService } from '../../core/auth.service';
 import { ReaderModeService } from '../reader-mode.service';
@@ -8,7 +9,7 @@ import { TagDto } from '../models';
 
 @Component({
   selector: 'app-reader-header',
-  imports: [IconComponent, RouterLink],
+  imports: [IconComponent, RouterLink, TranslocoPipe],
   templateUrl: './reader-header.component.html',
   styleUrl: './reader-header.component.scss',
 })

@@ -5,6 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef } from '@angular/cdk/dialog';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
 import { FeedCandidate, FeedPreview, ScrapeFailureReason, SubscriptionDto } from '../models';
@@ -16,7 +17,7 @@ type PreviewState =
 
 @Component({
   selector: 'app-add-feed-dialog',
-  imports: [ReactiveFormsModule, A11yModule],
+  imports: [ReactiveFormsModule, A11yModule, TranslocoPipe],
   templateUrl: './add-feed-dialog.component.html',
   styleUrl: './add-feed-dialog.component.scss',
 })
@@ -24,6 +25,7 @@ export class AddFeedDialogComponent {
   readonly ref = inject<DialogRef<SubscriptionDto>>(DialogRef);
   private readonly api = inject(ReaderApi);
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly i18n = inject(TranslocoService);
 
   readonly form = this.fb.group({ url: ['', [Validators.required]] });
   readonly loading = signal(false);
@@ -48,15 +50,20 @@ export class AddFeedDialogComponent {
    *  list was detected on the page."), falling back to a generic line when the
    *  error carried no message (network error, non-problem body). */
   errorMessage(state: PreviewState | undefined): string {
-    return (state?.status === 'error' ? state.message : undefined) ?? 'Preview unavailable';
+    return (
+      (state?.status === 'error' ? state.message : undefined) ??
+      this.i18n.translate('dialog.addFeed.previewUnavailable')
+    );
   }
 
   contentLabel(content: FeedPreview['content']): string {
-    return content === 'full'
-      ? 'Full text'
-      : content === 'summary'
-        ? 'Summary only'
-        : 'Titles only';
+    const key =
+      content === 'full'
+        ? 'contentFull'
+        : content === 'summary'
+          ? 'contentSummary'
+          : 'contentTitles';
+    return this.i18n.translate(`dialog.addFeed.${key}`);
   }
 
   /** Human label for a candidate's feed syntax; capitalizes any future value
@@ -73,16 +80,15 @@ export class AddFeedDialogComponent {
    * box — the backend's reason set is open, so this build may not know them all.
    */
   failureText(reason: ScrapeFailureReason): string {
-    switch (reason) {
-      case 'blocked':
-        return "This site blocks automated access — it can't be subscribed.";
-      case 'unreachable':
-        return "The site couldn't be reached — check the address or try again later.";
-      case 'not_scrapable':
-        return "This page offers no feed and no article list could be detected — it can't be subscribed.";
-      default:
-        return "This page can't be subscribed.";
-    }
+    const key =
+      reason === 'blocked'
+        ? 'failBlocked'
+        : reason === 'unreachable'
+          ? 'failUnreachable'
+          : reason === 'not_scrapable'
+            ? 'failNotScrapable'
+            : 'failGeneric';
+    return this.i18n.translate(`dialog.addFeed.${key}`);
   }
 
   submit(): void {

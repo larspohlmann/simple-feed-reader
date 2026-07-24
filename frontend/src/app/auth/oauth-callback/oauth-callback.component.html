@@ -1,11 +1,11 @@
-<app-auth-shell title="Signing you in">
+<app-auth-shell [title]="'auth.oauth.title' | transloco">
   @switch (state()) {
     @case ('loading') {
       <app-spinner />
     }
     @case ('error') {
-      <p class="err">Sign-in did not complete. Please try again.</p>
-      <a routerLink="/login">Back to sign in</a>
+      <p class="err">{{ 'auth.oauth.error' | transloco }}</p>
+      <a routerLink="/login">{{ 'auth.backToSignIn' | transloco }}</a>
     }
   }
 </app-auth-shell>

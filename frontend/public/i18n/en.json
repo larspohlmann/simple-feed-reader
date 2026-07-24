@@ -1,0 +1,238 @@
+{
+  "lang": {
+    "label": "Language",
+    "en": "English",
+    "de": "German"
+  },
+  "settings": {
+    "title": "Settings",
+    "backReader": "Reader",
+    "preferences": "Preferences",
+    "feeds": {
+      "title": "Feeds",
+      "none": "No feeds yet — add one from the reader.",
+      "st_active": "active",
+      "st_erroring": "erroring",
+      "st_gone": "gone",
+      "scraped": "scraped",
+      "scrapedHint": "Generated from the page's article list — the site offers no feed",
+      "unread": "{{count}} unread",
+      "rename": "Rename & tags",
+      "unsubscribe": "Unsubscribe",
+      "statusHealthy": "This feed is healthy.",
+      "statusErroring": "This feed last failed to fetch. A refresh will retry it.",
+      "statusGone": "This feed appears gone. A refresh will retry it."
+    },
+    "tags": {
+      "title": "Tags",
+      "new": "New tag",
+      "none": "No tags yet — create one to group your feeds.",
+      "feedCountOne": "{{count}} feed",
+      "feedCountOther": "{{count}} feeds",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "opml": {
+      "title": "Import & export",
+      "exportLead": "Download all your feeds as an OPML file.",
+      "export": "Export OPML",
+      "preparing": "Preparing…",
+      "importLead": "Import an OPML file, or paste its contents.",
+      "pastePlaceholder": "…or paste OPML here",
+      "import": "Import",
+      "importing": "Importing…",
+      "result": "Imported {{imported}}, already subscribed {{already}}, invalid {{invalid}}, skipped over limit {{skipped}}. New feeds fill in on the next refresh."
+    },
+    "account": {
+      "title": "Account",
+      "email": "Email",
+      "memberSince": "Member since",
+      "adminQueue": "Admin — user queue",
+      "signOut": "Sign out"
+    }
+  },
+  "dialog": {
+    "cancel": "Cancel",
+    "addFeed": {
+      "title": "Add a feed",
+      "urlLabel": "Feed or site URL",
+      "foundPick": "We found these feeds — pick one:",
+      "items": "{{count}} items",
+      "withImages": "With images",
+      "noImages": "No images",
+      "scrapedHint": "No feed found — generated from the page's article list.",
+      "loadingPreview": "Loading preview…",
+      "noRecentItems": "No recent items",
+      "subscribe": "Subscribe",
+      "noneFound": "No feeds found at that address.",
+      "adding": "Adding…",
+      "previewUnavailable": "Preview unavailable",
+      "contentFull": "Full text",
+      "contentSummary": "Summary only",
+      "contentTitles": "Titles only",
+      "formatFeed": "Feed",
+      "failBlocked": "This site blocks automated access — it can't be subscribed.",
+      "failUnreachable": "The site couldn't be reached — check the address or try again later.",
+      "failNotScrapable": "This page offers no feed and no article list could be detected — it can't be subscribed.",
+      "failGeneric": "This page can't be subscribed."
+    },
+    "tagForm": {
+      "newTitle": "New tag",
+      "editTitle": "Edit tag",
+      "name": "Name",
+      "colour": "Colour",
+      "colourAria": "Colour {{colour}}",
+      "customColour": "Custom colour",
+      "none": "None",
+      "icon": "Icon",
+      "noIcon": "No icon",
+      "saving": "Saving…",
+      "save": "Save"
+    },
+    "editFeed": {
+      "title": "Edit feed",
+      "customTitle": "Custom title",
+      "tags": "Tags",
+      "noTags": "No tags yet — create one from Settings › Tags.",
+      "saving": "Saving…",
+      "save": "Save"
+    }
+  },
+  "manage": {
+    "unsubscribeTitle": "Unsubscribe",
+    "unsubscribeMessage": "Remove “{{title}}” and its entries from your feeds?",
+    "unsubscribeConfirm": "Unsubscribe",
+    "deleteTagTitle": "Delete tag",
+    "deleteTagMessage": "Delete “{{name}}”? It will be removed from every feed that uses it.",
+    "deleteConfirm": "Delete"
+  },
+  "admin": {
+    "title": "Users",
+    "filterByStatus": "Filter by status",
+    "dismiss": "Dismiss",
+    "retry": "Retry",
+    "noMatch": "No users match this filter.",
+    "approve": "Approve",
+    "reject": "Reject",
+    "suspend": "Suspend",
+    "status": {
+      "all": "All",
+      "pending_approval": "Pending approval",
+      "pending_verification": "Unverified",
+      "active": "Active",
+      "rejected": "Rejected",
+      "suspended": "Suspended"
+    }
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "backToSignIn": "Back to sign in",
+    "login": {
+      "title": "Sign in",
+      "subtitle": "Welcome back to your reader.",
+      "submit": "Sign in",
+      "or": "or",
+      "continueWith": "Continue with {{provider}}",
+      "createAccount": "Create account",
+      "forgotPassword": "Forgot password?",
+      "invalidInput": "Please enter a valid email and password.",
+      "failed": "Sign in failed."
+    },
+    "register": {
+      "title": "Create account",
+      "subtitle": "Register, then confirm your email.",
+      "done": "Check your email for a confirmation link. After you confirm, an administrator reviews your account before you can sign in.",
+      "passwordLabel": "Password (at least 12 characters)",
+      "submit": "Create account",
+      "haveAccount": "Already have an account?",
+      "failed": "Registration failed. Try again."
+    },
+    "reset": {
+      "requestTitle": "Reset password",
+      "requestSubtitle": "We’ll email you a reset link.",
+      "requestDone": "If that address has an account, a reset link is on its way. The link is valid for 24 hours.",
+      "sendLink": "Send reset link",
+      "newTitle": "Set a new password",
+      "newPasswordLabel": "New password (at least 12 characters)",
+      "savePassword": "Save password",
+      "linkInvalid": "This reset link is invalid or has expired.",
+      "requestNew": "Request a new link",
+      "failed": "Could not reset the password. Request a new link."
+    },
+    "verify": {
+      "title": "Confirm email",
+      "ok": "Your email is confirmed. An administrator will review your account before you can sign in.",
+      "invalid": "This confirmation link is invalid or has expired."
+    },
+    "oauth": {
+      "title": "Signing you in",
+      "error": "Sign-in did not complete. Please try again."
+    }
+  },
+  "reader": {
+    "toggleSidebar": "Toggle sidebar",
+    "refresh": "Refresh",
+    "addFeed": "Add feed",
+    "allItems": "All items",
+    "favorites": "Favorites",
+    "kept": "Kept",
+    "tags": "Tags",
+    "feeds": "Feeds",
+    "settings": "Settings",
+    "admin": "Admin",
+    "signOut": "Sign out",
+    "previous": "Previous",
+    "next": "Next",
+    "readerView": "Reader",
+    "original": "Original",
+    "showOriginal": "Show original feed content",
+    "showReader": "Show reader view",
+    "toggleTag": "Toggle {{name}}",
+    "manage": "Manage {{name}}",
+    "editTag": "Edit tag",
+    "deleteTag": "Delete tag",
+    "editFeed": "Edit feed",
+    "unsubscribe": "Unsubscribe",
+    "dropToRemoveTags": "Drop here to remove tags",
+    "filter": "Filter",
+    "unread": "Unread",
+    "all": "All",
+    "markAllRead": "Mark all read",
+    "allCaughtUp": "You're all caught up.",
+    "nothingHere": "Nothing here yet.",
+    "loadMore": "Load more",
+    "favorite": "Favorite",
+    "keep": "Keep",
+    "toggleRead": "Toggle read",
+    "filterByTag": "Filter by {{name}}",
+    "moreFrom": "More from {{source}}",
+    "moreFromCount": "{{count}} more from {{source}}",
+    "backToList": "Back to list",
+    "openOriginal": "Open original",
+    "loadingReader": "Loading reader view…",
+    "readerFallback": "Couldn't load the full article — showing the feed's summary.",
+    "selectArticle": "Select an article to read.",
+    "layout": {
+      "aria": "Reading layout",
+      "magazine": "Magazine layout",
+      "list": "List layout",
+      "pane": "Pane layout"
+    },
+    "theme": {
+      "aria": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    }
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "close": "Close",
+    "add": "Add",
+    "loading": "Loading…",
+    "retry": "Retry"
+  }
+}

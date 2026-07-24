@@ -13,6 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { Subscription, timeout } from 'rxjs';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
@@ -20,6 +21,7 @@ import { SourceTagsComponent } from '../source-tags/source-tags.component';
 import { EntryDto, ReaderArticle, SubscriptionTagDto } from '../models';
 import { ReaderContentService } from '../reader-content.service';
 import { ReaderModeService } from '../reader-mode.service';
+import { LanguageService } from '../../core/language.service';
 import { focusOpacity, readingBlocks } from '../reading-focus';
 import {
   AXIS_LOCK_MIN,
@@ -40,7 +42,7 @@ const LEAVE_ANIM_MS = 220;
 
 @Component({
   selector: 'app-reader-view',
-  imports: [IconComponent, FaviconComponent, SpinnerComponent, SourceTagsComponent],
+  imports: [IconComponent, FaviconComponent, SpinnerComponent, SourceTagsComponent, TranslocoPipe],
   templateUrl: './reader-view.component.html',
   styleUrl: './reader-view.component.scss',
 })
@@ -67,6 +69,7 @@ export class ReaderViewComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly reader = inject(ReaderContentService);
   protected readonly readerMode = inject(ReaderModeService);
+  private readonly language = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
 
   // Reading-focus effect: the paragraph nearest the reading centre stays fully
@@ -314,6 +317,6 @@ export class ReaderViewComponent {
   }
 
   when(e: EntryDto): string {
-    return relativeTime(e.publishedAt ?? e.createdAt);
+    return relativeTime(e.publishedAt ?? e.createdAt, this.language.lang());
   }
 }

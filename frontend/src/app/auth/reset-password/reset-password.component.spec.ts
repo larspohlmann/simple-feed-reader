@@ -6,12 +6,13 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { API_BASE_URL } from '../../core/api';
 import { ResetPasswordComponent } from './reset-password.component';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 
 describe('ResetPasswordComponent', () => {
   const navigate = jest.fn();
   function setup(token: string) {
     TestBed.configureTestingModule({
-      imports: [ResetPasswordComponent],
+      imports: [ResetPasswordComponent, provideTranslocoTesting()],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),

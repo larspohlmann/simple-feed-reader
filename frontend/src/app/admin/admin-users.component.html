@@ -1,12 +1,14 @@
 <header class="bar">
-  <a class="back" routerLink="/"><app-icon name="arrow_back" [size]="18" /> Reader</a>
-  <h1>Users</h1>
+  <a class="back" routerLink="/">
+    <app-icon name="arrow_back" [size]="18" /> {{ 'settings.backReader' | transloco }}
+  </a>
+  <h1>{{ 'admin.title' | transloco }}</h1>
 </header>
 
-<div class="filters" role="group" aria-label="Filter by status">
-  @for (f of filters; track f.label) {
+<div class="filters" role="group" [attr.aria-label]="'admin.filterByStatus' | transloco">
+  @for (f of filters; track f.status) {
     <button [class.active]="filter() === f.status" (click)="setFilter(f.status)">
-      {{ f.label }}
+      {{ 'admin.status.' + (f.status ?? 'all') | transloco }}
     </button>
   }
 </div>
@@ -14,7 +16,7 @@
 @if (actionError()) {
   <div class="banner" role="alert">
     {{ actionError()!.detail || actionError()!.title }}
-    <button (click)="actionError.set(null)">Dismiss</button>
+    <button (click)="actionError.set(null)">{{ 'admin.dismiss' | transloco }}</button>
   </div>
 }
 
@@ -23,10 +25,10 @@
 } @else if (error()) {
   <div class="banner" role="alert">
     {{ error()!.detail || error()!.title }}
-    <button (click)="load()">Retry</button>
+    <button (click)="load()">{{ 'admin.retry' | transloco }}</button>
   </div>
 } @else if (users().length === 0) {
-  <p class="pad muted">No users match this filter.</p>
+  <p class="pad muted">{{ 'admin.noMatch' | transloco }}</p>
 } @else {
   <ul class="users">
     @for (u of users(); track u.id) {
@@ -34,7 +36,9 @@
         <div class="who">
           <span class="email">{{ u.email }}</span>
           <span class="meta">
-            <span class="badge" [attr.data-s]="u.status">{{ label(u.status) }}</span>
+            <span class="badge" [attr.data-s]="u.status">{{
+              'admin.status.' + u.status | transloco
+            }}</span>
             @if (u.identities.length) {
               <span class="prov">{{ u.identities.join(', ') }}</span>
             }
@@ -42,13 +46,19 @@
         </div>
         <div class="acts">
           @if (canApprove(u)) {
-            <button class="ok" (click)="act(u, 'approve')">Approve</button>
+            <button class="ok" (click)="act(u, 'approve')">
+              {{ 'admin.approve' | transloco }}
+            </button>
           }
           @if (canReject(u)) {
-            <button class="warn" (click)="act(u, 'reject')">Reject</button>
+            <button class="warn" (click)="act(u, 'reject')">
+              {{ 'admin.reject' | transloco }}
+            </button>
           }
           @if (canSuspend(u)) {
-            <button class="warn" (click)="act(u, 'suspend')">Suspend</button>
+            <button class="warn" (click)="act(u, 'suspend')">
+              {{ 'admin.suspend' | transloco }}
+            </button>
           }
         </div>
       </li>

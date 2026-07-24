@@ -6,10 +6,11 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 import { API_BASE_URL } from '../../core/api';
 import { VerifyEmailComponent } from './verify-email.component';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 
 function setup(token: string | null) {
   TestBed.configureTestingModule({
-    imports: [VerifyEmailComponent],
+    imports: [VerifyEmailComponent, provideTranslocoTesting()],
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),

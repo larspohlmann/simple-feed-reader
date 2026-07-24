@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { provideRouter } from '@angular/router';
 import { EntryListComponent } from './entry-list.component';
 import { ListScrollMemory } from '../list-scroll-memory';
@@ -28,7 +29,7 @@ function mount(over: Record<string, unknown> = {}) {
   memory.read.mockClear().mockReturnValue(0);
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
-    imports: [EntryListComponent],
+    imports: [EntryListComponent, provideTranslocoTesting()],
     providers: [provideRouter([]), { provide: ListScrollMemory, useValue: memory }],
   });
   const f = TestBed.createComponent(EntryListComponent);

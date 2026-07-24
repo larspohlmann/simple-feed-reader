@@ -1,0 +1,11 @@
+# Konto-E-Mails. Fließtext als einzeilige Strings mit \n, damit der gerenderte
+# Text linksbündig bleibt (der Link steht auf einer eigenen, nicht eingerückten Zeile).
+verify:
+    subject: 'Bestätige deine E-Mail-Adresse'
+    body: "Willkommen bei Simple Feed Reader.\n\nBestätige deine E-Mail-Adresse, indem du diesen Link öffnest:\n\n%link%\n\nDer Link ist 24 Stunden gültig. Nach der Bestätigung prüft ein\nAdministrator dein Konto, bevor du dich anmelden kannst.\n\nFalls du dich nicht registriert hast, ignoriere diese Nachricht — das\nKonto wird innerhalb von 48 Stunden automatisch gelöscht."
+approved:
+    subject: 'Dein Konto wurde freigeschaltet'
+    body: "Dein Simple-Feed-Reader-Konto wurde freigeschaltet.\n\nDu kannst dich jetzt unter %url% anmelden."
+reset:
+    subject: 'Setze dein Passwort zurück'
+    body: "Für dein Simple-Feed-Reader-Konto wurde ein Zurücksetzen des\nPassworts angefordert.\n\nWähle hier ein neues Passwort:\n\n%link%\n\nDer Link ist 24 Stunden gültig und kann einmal verwendet werden. Falls du\ndies nicht angefordert hast, ignoriere diese Nachricht — dein Passwort bleibt unverändert."

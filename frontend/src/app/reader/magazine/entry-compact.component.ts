@@ -1,7 +1,8 @@
 // src/app/reader/magazine/entry-compact.component.ts
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import { EntryDto, SubscriptionTagDto } from '../models';
 import { relativeTime } from '../format';
+import { LanguageService } from '../../core/language.service';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
 
@@ -18,5 +19,8 @@ export class EntryCompactComponent {
   readonly showSource = input(true);
   readonly tags = input<SubscriptionTagDto[]>([]);
   readonly open = output<EntryDto>();
-  readonly when = computed(() => relativeTime(this.entry().publishedAt ?? this.entry().createdAt));
+  private readonly language = inject(LanguageService);
+  readonly when = computed(() =>
+    relativeTime(this.entry().publishedAt ?? this.entry().createdAt, this.language.lang()),
+  );
 }

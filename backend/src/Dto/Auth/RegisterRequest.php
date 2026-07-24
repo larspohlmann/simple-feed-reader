@@ -47,6 +47,10 @@ final readonly class RegisterRequest
         public string $password = '',
         #[Assert\NotBlank(message: 'Complete the anti-spam challenge.')]
         public string $altcha = '',
+        // The UI language, used only to localise this account's emails. Left
+        // unvalidated on purpose: the service normalises it to a supported
+        // locale (falling back to English), so a bad value never blocks a signup.
+        public string $locale = 'en',
     ) {
     }
 }

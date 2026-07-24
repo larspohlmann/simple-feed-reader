@@ -19,7 +19,7 @@
     <div class="actions">
       <button
         type="button"
-        aria-label="Favorite"
+        [attr.aria-label]="'reader.favorite' | transloco"
         [class.on]="entry().isFavorite"
         [attr.aria-pressed]="entry().isFavorite"
         (click)="$event.stopPropagation(); favorite.emit(entry())"
@@ -28,7 +28,7 @@
       </button>
       <button
         type="button"
-        aria-label="Keep"
+        [attr.aria-label]="'reader.keep' | transloco"
         [class.on]="entry().isKept"
         [attr.aria-pressed]="entry().isKept"
         (click)="$event.stopPropagation(); keep.emit(entry())"
@@ -37,7 +37,7 @@
       </button>
       <button
         type="button"
-        aria-label="Toggle read"
+        [attr.aria-label]="'reader.toggleRead' | transloco"
         [attr.aria-pressed]="entry().isRead"
         (click)="$event.stopPropagation(); read.emit(entry())"
       >

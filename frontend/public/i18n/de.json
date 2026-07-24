@@ -1,0 +1,238 @@
+{
+  "lang": {
+    "label": "Sprache",
+    "en": "Englisch",
+    "de": "Deutsch"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "backReader": "Reader",
+    "preferences": "Voreinstellungen",
+    "feeds": {
+      "title": "Feeds",
+      "none": "Noch keine Feeds – füge einen im Reader hinzu.",
+      "st_active": "aktiv",
+      "st_erroring": "Fehler",
+      "st_gone": "nicht erreichbar",
+      "scraped": "generiert",
+      "scrapedHint": "Aus der Artikelliste der Seite generiert – die Seite bietet keinen Feed",
+      "unread": "{{count}} ungelesen",
+      "rename": "Umbenennen & Tags",
+      "unsubscribe": "Abbestellen",
+      "statusHealthy": "Dieser Feed ist in Ordnung.",
+      "statusErroring": "Dieser Feed konnte zuletzt nicht abgerufen werden. Eine Aktualisierung versucht es erneut.",
+      "statusGone": "Dieser Feed scheint nicht mehr zu existieren. Eine Aktualisierung versucht es erneut."
+    },
+    "tags": {
+      "title": "Tags",
+      "new": "Neuer Tag",
+      "none": "Noch keine Tags – erstelle einen, um deine Feeds zu gruppieren.",
+      "feedCountOne": "{{count}} Feed",
+      "feedCountOther": "{{count}} Feeds",
+      "edit": "Bearbeiten",
+      "delete": "Löschen"
+    },
+    "opml": {
+      "title": "Import & Export",
+      "exportLead": "Lade alle deine Feeds als OPML-Datei herunter.",
+      "export": "OPML exportieren",
+      "preparing": "Wird vorbereitet…",
+      "importLead": "Importiere eine OPML-Datei oder füge ihren Inhalt ein.",
+      "pastePlaceholder": "…oder OPML hier einfügen",
+      "import": "Importieren",
+      "importing": "Wird importiert…",
+      "result": "{{imported}} importiert, {{already}} bereits abonniert, {{invalid}} ungültig, {{skipped}} wegen Limit übersprungen. Neue Feeds werden bei der nächsten Aktualisierung gefüllt."
+    },
+    "account": {
+      "title": "Konto",
+      "email": "E-Mail",
+      "memberSince": "Mitglied seit",
+      "adminQueue": "Admin – Benutzerliste",
+      "signOut": "Abmelden"
+    }
+  },
+  "dialog": {
+    "cancel": "Abbrechen",
+    "addFeed": {
+      "title": "Feed hinzufügen",
+      "urlLabel": "Feed- oder Seiten-URL",
+      "foundPick": "Wir haben diese Feeds gefunden – wähle einen aus:",
+      "items": "{{count}} Einträge",
+      "withImages": "Mit Bildern",
+      "noImages": "Ohne Bilder",
+      "scrapedHint": "Kein Feed gefunden – aus der Artikelliste der Seite generiert.",
+      "loadingPreview": "Vorschau wird geladen…",
+      "noRecentItems": "Keine aktuellen Einträge",
+      "subscribe": "Abonnieren",
+      "noneFound": "Unter dieser Adresse wurden keine Feeds gefunden.",
+      "adding": "Wird hinzugefügt…",
+      "previewUnavailable": "Vorschau nicht verfügbar",
+      "contentFull": "Volltext",
+      "contentSummary": "Nur Zusammenfassung",
+      "contentTitles": "Nur Titel",
+      "formatFeed": "Feed",
+      "failBlocked": "Diese Seite blockiert automatisierten Zugriff – sie kann nicht abonniert werden.",
+      "failUnreachable": "Die Seite konnte nicht erreicht werden – prüfe die Adresse oder versuche es später erneut.",
+      "failNotScrapable": "Diese Seite bietet keinen Feed und es konnte keine Artikelliste erkannt werden – sie kann nicht abonniert werden.",
+      "failGeneric": "Diese Seite kann nicht abonniert werden."
+    },
+    "tagForm": {
+      "newTitle": "Neuer Tag",
+      "editTitle": "Tag bearbeiten",
+      "name": "Name",
+      "colour": "Farbe",
+      "colourAria": "Farbe {{colour}}",
+      "customColour": "Eigene Farbe",
+      "none": "Keine",
+      "icon": "Symbol",
+      "noIcon": "Kein Symbol",
+      "saving": "Wird gespeichert…",
+      "save": "Speichern"
+    },
+    "editFeed": {
+      "title": "Feed bearbeiten",
+      "customTitle": "Eigener Titel",
+      "tags": "Tags",
+      "noTags": "Noch keine Tags – erstelle einen unter Einstellungen › Tags.",
+      "saving": "Wird gespeichert…",
+      "save": "Speichern"
+    }
+  },
+  "manage": {
+    "unsubscribeTitle": "Abbestellen",
+    "unsubscribeMessage": "„{{title}}“ und seine Einträge aus deinen Feeds entfernen?",
+    "unsubscribeConfirm": "Abbestellen",
+    "deleteTagTitle": "Tag löschen",
+    "deleteTagMessage": "„{{name}}“ löschen? Er wird von jedem Feed entfernt, der ihn verwendet.",
+    "deleteConfirm": "Löschen"
+  },
+  "admin": {
+    "title": "Benutzer",
+    "filterByStatus": "Nach Status filtern",
+    "dismiss": "Schließen",
+    "retry": "Erneut versuchen",
+    "noMatch": "Keine Benutzer entsprechen diesem Filter.",
+    "approve": "Genehmigen",
+    "reject": "Ablehnen",
+    "suspend": "Sperren",
+    "status": {
+      "all": "Alle",
+      "pending_approval": "Warten auf Genehmigung",
+      "pending_verification": "Nicht bestätigt",
+      "active": "Aktiv",
+      "rejected": "Abgelehnt",
+      "suspended": "Gesperrt"
+    }
+  },
+  "auth": {
+    "email": "E-Mail",
+    "password": "Passwort",
+    "backToSignIn": "Zurück zur Anmeldung",
+    "login": {
+      "title": "Anmelden",
+      "subtitle": "Willkommen zurück bei deinem Reader.",
+      "submit": "Anmelden",
+      "or": "oder",
+      "continueWith": "Weiter mit {{provider}}",
+      "createAccount": "Konto erstellen",
+      "forgotPassword": "Passwort vergessen?",
+      "invalidInput": "Bitte gib eine gültige E-Mail-Adresse und ein Passwort ein.",
+      "failed": "Anmeldung fehlgeschlagen."
+    },
+    "register": {
+      "title": "Konto erstellen",
+      "subtitle": "Registrieren und anschließend die E-Mail bestätigen.",
+      "done": "Prüfe deine E-Mails auf einen Bestätigungslink. Nach der Bestätigung prüft ein Administrator dein Konto, bevor du dich anmelden kannst.",
+      "passwordLabel": "Passwort (mindestens 12 Zeichen)",
+      "submit": "Konto erstellen",
+      "haveAccount": "Schon ein Konto?",
+      "failed": "Registrierung fehlgeschlagen. Bitte erneut versuchen."
+    },
+    "reset": {
+      "requestTitle": "Passwort zurücksetzen",
+      "requestSubtitle": "Wir senden dir einen Link zum Zurücksetzen.",
+      "requestDone": "Falls zu dieser Adresse ein Konto existiert, ist ein Link zum Zurücksetzen unterwegs. Der Link ist 24 Stunden gültig.",
+      "sendLink": "Link senden",
+      "newTitle": "Neues Passwort festlegen",
+      "newPasswordLabel": "Neues Passwort (mindestens 12 Zeichen)",
+      "savePassword": "Passwort speichern",
+      "linkInvalid": "Dieser Link zum Zurücksetzen ist ungültig oder abgelaufen.",
+      "requestNew": "Neuen Link anfordern",
+      "failed": "Passwort konnte nicht zurückgesetzt werden. Fordere einen neuen Link an."
+    },
+    "verify": {
+      "title": "E-Mail bestätigen",
+      "ok": "Deine E-Mail ist bestätigt. Ein Administrator prüft dein Konto, bevor du dich anmelden kannst.",
+      "invalid": "Dieser Bestätigungslink ist ungültig oder abgelaufen."
+    },
+    "oauth": {
+      "title": "Anmeldung läuft",
+      "error": "Die Anmeldung wurde nicht abgeschlossen. Bitte versuche es erneut."
+    }
+  },
+  "reader": {
+    "toggleSidebar": "Seitenleiste umschalten",
+    "refresh": "Aktualisieren",
+    "addFeed": "Feed hinzufügen",
+    "allItems": "Alle Einträge",
+    "favorites": "Favoriten",
+    "kept": "Gemerkt",
+    "tags": "Tags",
+    "feeds": "Feeds",
+    "settings": "Einstellungen",
+    "admin": "Admin",
+    "signOut": "Abmelden",
+    "previous": "Vorheriger",
+    "next": "Nächster",
+    "readerView": "Leseansicht",
+    "original": "Original",
+    "showOriginal": "Originalinhalt des Feeds anzeigen",
+    "showReader": "Leseansicht anzeigen",
+    "toggleTag": "{{name}} umschalten",
+    "manage": "{{name}} verwalten",
+    "editTag": "Tag bearbeiten",
+    "deleteTag": "Tag löschen",
+    "editFeed": "Feed bearbeiten",
+    "unsubscribe": "Abbestellen",
+    "dropToRemoveTags": "Hier ablegen, um Tags zu entfernen",
+    "filter": "Filter",
+    "unread": "Ungelesen",
+    "all": "Alle",
+    "markAllRead": "Alle als gelesen markieren",
+    "allCaughtUp": "Alles gelesen.",
+    "nothingHere": "Noch nichts vorhanden.",
+    "loadMore": "Mehr laden",
+    "favorite": "Favorit",
+    "keep": "Merken",
+    "toggleRead": "Gelesen umschalten",
+    "filterByTag": "Nach {{name}} filtern",
+    "moreFrom": "Mehr von {{source}}",
+    "moreFromCount": "{{count}} weitere von {{source}}",
+    "backToList": "Zurück zur Liste",
+    "openOriginal": "Original öffnen",
+    "loadingReader": "Leseansicht wird geladen…",
+    "readerFallback": "Der vollständige Artikel konnte nicht geladen werden – es wird die Zusammenfassung des Feeds angezeigt.",
+    "selectArticle": "Wähle einen Artikel zum Lesen aus.",
+    "layout": {
+      "aria": "Layout",
+      "magazine": "Magazin-Layout",
+      "list": "Listen-Layout",
+      "pane": "Spalten-Layout"
+    },
+    "theme": {
+      "aria": "Design",
+      "light": "Hell",
+      "dark": "Dunkel",
+      "system": "System"
+    }
+  },
+  "common": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "close": "Schließen",
+    "add": "Hinzufügen",
+    "loading": "Wird geladen…",
+    "retry": "Erneut versuchen"
+  }
+}

@@ -1,0 +1,8 @@
+framework:
+    default_locale: en
+    # The app is a bearer API with no request locale of its own; only the
+    # transactional emails vary by language (per recipient, User::$locale).
+    enabled_locales: ['en', 'de']
+    translator:
+        default_path: '%kernel.project_dir%/translations'
+        providers:

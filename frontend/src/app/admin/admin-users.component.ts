@@ -2,6 +2,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
 import { AuthService } from '../core/auth.service';
 import { IconComponent } from '../shared/icon/icon.component';
@@ -9,14 +10,9 @@ import { SpinnerComponent } from '../shared/spinner/spinner.component';
 import { AdminApi } from './admin-api';
 import { AdminAction, AdminUserDto, AdminUserStatus } from './admin.models';
 
-interface Filter {
-  label: string;
-  status: AdminUserStatus | null;
-}
-
 @Component({
   selector: 'app-admin-users',
-  imports: [RouterLink, IconComponent, SpinnerComponent],
+  imports: [RouterLink, IconComponent, SpinnerComponent, TranslocoPipe],
   templateUrl: './admin-users.component.html',
   styleUrl: './admin-users.component.scss',
 })
@@ -24,13 +20,15 @@ export class AdminUsersComponent implements OnInit {
   private readonly api = inject(AdminApi);
   private readonly auth = inject(AuthService);
 
-  readonly filters: Filter[] = [
-    { label: 'All', status: null },
-    { label: 'Pending approval', status: 'pending_approval' },
-    { label: 'Unverified', status: 'pending_verification' },
-    { label: 'Active', status: 'active' },
-    { label: 'Rejected', status: 'rejected' },
-    { label: 'Suspended', status: 'suspended' },
+  // The label for each entry comes from the `admin.status.<key>` translation key
+  // ('all' for the no-filter option).
+  readonly filters: { status: AdminUserStatus | null }[] = [
+    { status: null },
+    { status: 'pending_approval' },
+    { status: 'pending_verification' },
+    { status: 'active' },
+    { status: 'rejected' },
+    { status: 'suspended' },
   ];
 
   readonly users = signal<AdminUserDto[]>([]);
@@ -91,9 +89,5 @@ export class AdminUsersComponent implements OnInit {
   }
   canSuspend(u: AdminUserDto): boolean {
     return !this.isSelf(u) && u.status === 'active';
-  }
-
-  label(status: AdminUserStatus): string {
-    return this.filters.find((f) => f.status === status)?.label ?? status;
   }
 }

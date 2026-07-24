@@ -97,7 +97,7 @@ final class AuthController
             throw new ValidationException(['altcha' => ['The anti-spam challenge was not solved correctly.']]);
         }
 
-        $this->registration->register($request->email, $request->password);
+        $this->registration->register($request->email, $request->password, $request->locale);
 
         // 202, not 201: the account exists but is not usable until verified
         // and approved. The body is identical for a duplicate address.

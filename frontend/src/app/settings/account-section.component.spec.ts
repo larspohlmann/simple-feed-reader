@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { provideRouter } from '@angular/router';
 import { AccountSectionComponent } from './account-section.component';
 import { AuthService, CurrentUser } from '../core/auth.service';
@@ -17,6 +18,7 @@ describe('AccountSectionComponent', () => {
   function mount(u: CurrentUser | null, admin = false) {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         provideRouter([]),
         { provide: AuthService, useValue: { user: () => u, isAdmin: () => admin, logout } },

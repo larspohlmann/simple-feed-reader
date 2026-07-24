@@ -1,7 +1,7 @@
 <section>
-  <h2>Feeds</h2>
+  <h2>{{ 'settings.feeds.title' | transloco }}</h2>
   @if (feeds().length === 0) {
-    <p class="muted">No feeds yet — add one from the reader.</p>
+    <p class="muted">{{ 'settings.feeds.none' | transloco }}</p>
   } @else {
     <ul class="list">
       @for (s of feeds(); track s.id) {
@@ -10,14 +10,12 @@
             <span class="title">{{ s.title }}</span>
             <span class="sub">
               <span class="badge" [attr.data-s]="s.status" [title]="statusHint(s.status)">{{
-                s.status
+                'settings.feeds.st_' + s.status | transloco
               }}</span>
               @if (s.sourceFormat === 'scraped') {
-                <span
-                  class="badge scraped"
-                  title="Generated from the page's article list — the site offers no feed"
-                  >scraped</span
-                >
+                <span class="badge scraped" [title]="'settings.feeds.scrapedHint' | transloco">{{
+                  'settings.feeds.scraped' | transloco
+                }}</span>
               }
               @for (t of s.tags; track t.id) {
                 <span class="chip">
@@ -26,16 +24,18 @@
                 </span>
               }
               @if (s.unreadCount > 0) {
-                <span class="count">{{ s.unreadCount }} unread</span>
+                <span class="count">{{
+                  'settings.feeds.unread' | transloco: { count: s.unreadCount }
+                }}</span>
               }
             </span>
           </div>
           <div class="acts">
             <button (click)="manage.editSubscription(s)">
-              <app-icon name="edit" [size]="16" /> Rename &amp; tags
+              <app-icon name="edit" [size]="16" /> {{ 'settings.feeds.rename' | transloco }}
             </button>
             <button class="danger" (click)="manage.unsubscribe(s)">
-              <app-icon name="delete" [size]="16" /> Unsubscribe
+              <app-icon name="delete" [size]="16" /> {{ 'settings.feeds.unsubscribe' | transloco }}
             </button>
           </div>
         </li>

@@ -1,10 +1,13 @@
 <header class="bar">
-  <a class="back" routerLink="/"><app-icon name="arrow_back" [size]="18" /> Reader</a>
-  <h1>Settings</h1>
+  <a class="back" routerLink="/">
+    <app-icon name="arrow_back" [size]="18" /> {{ 'settings.backReader' | transloco }}
+  </a>
+  <h1>{{ 'settings.title' | transloco }}</h1>
 </header>
 <div class="page">
   <app-feeds-section />
   <app-tags-section />
   <app-opml-section />
+  <app-preferences-section />
   <app-account-section />
 </div>

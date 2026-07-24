@@ -1,0 +1,24 @@
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.seg button {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--fs-sm);
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.seg button + button {
+  border-left: 1px solid var(--border-strong);
+}
+
+.seg button.on {
+  background: var(--surface-0);
+  color: var(--text-primary);
+}

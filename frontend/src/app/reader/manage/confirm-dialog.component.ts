@@ -2,6 +2,7 @@
 import { Component, inject } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 export interface ConfirmData {
   title: string;
@@ -12,7 +13,7 @@ export interface ConfirmData {
 
 @Component({
   selector: 'app-confirm-dialog',
-  imports: [A11yModule],
+  imports: [A11yModule, TranslocoPipe],
   templateUrl: './confirm-dialog.component.html',
   styleUrl: './confirm-dialog.component.scss',
 })

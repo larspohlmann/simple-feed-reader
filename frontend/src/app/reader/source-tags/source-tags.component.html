@@ -6,7 +6,7 @@
         [routerLink]="[]"
         [queryParams]="{ tag: t.id, view: null, subscription: null, entry: null }"
         queryParamsHandling="merge"
-        [attr.title]="'Filter by ' + t.name"
+        [attr.title]="'reader.filterByTag' | transloco: { name: t.name }"
         (click)="$event.stopPropagation()"
       >
         @if (t.icon) {

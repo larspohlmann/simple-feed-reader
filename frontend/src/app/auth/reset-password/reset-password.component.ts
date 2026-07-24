@@ -3,6 +3,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { API_BASE_URL } from '../../core/api';
 import { parseProblem } from '../../core/problem';
 import { AuthShellComponent } from '../auth-shell/auth-shell.component';
@@ -14,6 +15,7 @@ import { FormErrorComponent } from '../../shared/form-error/form-error.component
   imports: [
     ReactiveFormsModule,
     RouterLink,
+    TranslocoPipe,
     AuthShellComponent,
     ButtonComponent,
     FormErrorComponent,
@@ -27,6 +29,7 @@ export class ResetPasswordComponent implements OnInit {
   private readonly base = inject(API_BASE_URL);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly i18n = inject(TranslocoService);
 
   readonly token = signal<string | null>(null);
   readonly form = this.fb.group({
@@ -52,9 +55,7 @@ export class ResetPasswordComponent implements OnInit {
       .subscribe({
         next: () => void this.router.navigate(['/login'], { queryParams: { reset: '1' } }),
         error: (e: HttpErrorResponse) => {
-          this.error.set(
-            parseProblem(e).detail ?? 'Could not reset the password. Request a new link.',
-          );
+          this.error.set(parseProblem(e).detail ?? this.i18n.translate('auth.reset.failed'));
           this.loading.set(false);
         },
       });

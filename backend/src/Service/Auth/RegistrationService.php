@@ -33,7 +33,10 @@ final readonly class RegistrationService
      * returns the same 202 either way — a different response here would let
      * anyone test which addresses hold accounts.
      */
-    public function register(string $email, string $plainPassword): void
+    /** Languages we ship email translations for; anything else falls back to English. */
+    private const array SUPPORTED_LOCALES = ['en', 'de'];
+
+    public function register(string $email, string $plainPassword, string $locale = 'en'): void
     {
         if (null !== $this->users->findOneByEmail($email)) {
             // Identical bytes are not enough. A fresh signup pays for an
@@ -50,6 +53,7 @@ final readonly class RegistrationService
         $now = $this->clock->now();
         $user = new User($email, $now);
         $user->setStatus(UserStatus::PendingVerification);
+        $user->setLocale(\in_array($locale, self::SUPPORTED_LOCALES, true) ? $locale : 'en');
         $user->setPasswordHash($this->hasher->hashPassword($user, $plainPassword), $now);
 
         $this->em->persist($user);

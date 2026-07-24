@@ -7,11 +7,12 @@ import { of } from 'rxjs';
 import { API_BASE_URL } from '../../core/api';
 import { TokenStore } from '../../core/token.store';
 import { OAuthCallbackComponent } from './oauth-callback.component';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 
 function setup(params: Record<string, string | null>) {
   const navigate = jest.fn();
   TestBed.configureTestingModule({
-    imports: [OAuthCallbackComponent],
+    imports: [OAuthCallbackComponent, provideTranslocoTesting()],
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),

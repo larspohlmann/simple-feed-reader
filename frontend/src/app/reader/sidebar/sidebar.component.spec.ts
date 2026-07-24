@@ -9,6 +9,7 @@ import { DropData, SidebarComponent } from './sidebar.component';
 import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
 import { SubscriptionDto, TagDto } from '../models';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 
 const sub = (id: number, unread = 0): SubscriptionDto => ({
   id,
@@ -33,7 +34,7 @@ function mount(
   }> = {},
 ) {
   TestBed.configureTestingModule({
-    imports: [SidebarComponent],
+    imports: [SidebarComponent, provideTranslocoTesting()],
     providers: [
       provideRouter([]),
       provideHttpClient(),

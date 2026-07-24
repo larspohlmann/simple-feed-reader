@@ -9,6 +9,8 @@ use App\Service\Mail\AccountMailer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
+use Symfony\Component\Translation\Loader\YamlFileLoader;
+use Symfony\Component\Translation\Translator;
 
 final class AccountMailerTest extends TestCase
 {
@@ -29,17 +31,29 @@ final class AccountMailerTest extends TestCase
             $this->sent[] = $email;
         });
 
+        // The real shipped translation files, so the test exercises the actual
+        // localised bodies rather than a fixture that could drift from them.
+        $translator = new Translator('en');
+        $translator->addLoader('yaml', new YamlFileLoader());
+        $dir = \dirname(__DIR__, 3) . '/translations';
+        $translator->addResource('yaml', "{$dir}/emails.en.yaml", 'en', 'emails');
+        $translator->addResource('yaml', "{$dir}/emails.de.yaml", 'de', 'emails');
+
         $this->mailer = new AccountMailer(
             $transport,
+            $translator,
             'noreply@feeds.example.com',
             'Simple Feed Reader',
             'https://feeds.example.com',
         );
     }
 
-    private function user(): User
+    private function user(string $locale = 'en'): User
     {
-        return new User('new@example.com', new \DateTimeImmutable('2026-07-21 12:00:00'));
+        $user = new User('new@example.com', new \DateTimeImmutable('2026-07-21 12:00:00'));
+        $user->setLocale($locale);
+
+        return $user;
     }
 
     public function testVerificationMailCarriesTheLink(): void
@@ -77,6 +91,27 @@ final class AccountMailerTest extends TestCase
 
         self::assertStringContainsString('https://feeds.example.com', $body);
         self::assertStringNotContainsString('token=', $body);
+    }
+
+    public function testMailsAreLocalisedToTheRecipientLanguage(): void
+    {
+        $this->mailer->sendVerification($this->user('de'), 'tok');
+
+        $email = $this->sent[0];
+        self::assertSame('Bestätige deine E-Mail-Adresse', $email->getSubject());
+        self::assertStringContainsString('Willkommen bei Simple Feed Reader.', (string) $email->getTextBody());
+        // The link still lands on the same frontend route regardless of language.
+        self::assertStringContainsString(
+            'https://feeds.example.com/verify-email?token=tok',
+            (string) $email->getTextBody(),
+        );
+    }
+
+    public function testEnglishIsTheDefaultLanguage(): void
+    {
+        $this->mailer->sendVerification($this->user(), 'tok');
+
+        self::assertSame('Confirm your email address', $this->sent[0]->getSubject());
     }
 
     public function testTokensAreUrlEncodedInLinks(): void

@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { provideRouter } from '@angular/router';
 import { EntryCompactComponent } from './entry-compact.component';
 import { EntryDto, SubscriptionTagDto } from '../models';
@@ -29,7 +30,7 @@ const entry: EntryDto = {
 
 describe('EntryCompactComponent', () => {
   function mount() {
-    TestBed.configureTestingModule({ imports: [EntryCompactComponent] });
+    TestBed.configureTestingModule({ imports: [EntryCompactComponent, provideTranslocoTesting()] });
     const f = TestBed.createComponent(EntryCompactComponent);
     f.componentRef.setInput('entry', entry);
     f.detectChanges();
@@ -43,7 +44,7 @@ describe('EntryCompactComponent', () => {
   });
 
   it('hides the source when showSource is false', () => {
-    TestBed.configureTestingModule({ imports: [EntryCompactComponent] });
+    TestBed.configureTestingModule({ imports: [EntryCompactComponent, provideTranslocoTesting()] });
     const f = TestBed.createComponent(EntryCompactComponent);
     f.componentRef.setInput('entry', entry);
     f.componentRef.setInput('showSource', false);
@@ -55,7 +56,7 @@ describe('EntryCompactComponent', () => {
 
   it('shows tag pills when standalone', () => {
     TestBed.configureTestingModule({
-      imports: [EntryCompactComponent],
+      imports: [EntryCompactComponent, provideTranslocoTesting()],
       providers: [provideRouter([])],
     });
     const f = TestBed.createComponent(EntryCompactComponent);
@@ -67,7 +68,7 @@ describe('EntryCompactComponent', () => {
 
   it('hides tag pills inside a source group (showSource=false)', () => {
     TestBed.configureTestingModule({
-      imports: [EntryCompactComponent],
+      imports: [EntryCompactComponent, provideTranslocoTesting()],
       providers: [provideRouter([])],
     });
     const f = TestBed.createComponent(EntryCompactComponent);

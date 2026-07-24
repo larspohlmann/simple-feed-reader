@@ -2,11 +2,14 @@ import { TestBed } from '@angular/core/testing';
 import { ReadingLayoutService } from '../reading-layout.service';
 import { ThemeService } from '../../theme/theme.service';
 import { ViewControlsComponent } from './view-controls.component';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 
 describe('ViewControlsComponent', () => {
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({ imports: [ViewControlsComponent] });
+    TestBed.configureTestingModule({
+      imports: [ViewControlsComponent, provideTranslocoTesting()],
+    });
   });
 
   function create() {

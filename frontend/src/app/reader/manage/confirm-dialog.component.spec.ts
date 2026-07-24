@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { ConfirmDialogComponent, ConfirmData } from './confirm-dialog.component';
 
@@ -13,6 +14,7 @@ describe('ConfirmDialogComponent', () => {
 
   function mount() {
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         { provide: DialogRef, useValue: { close } },
         { provide: DIALOG_DATA, useValue: data },
