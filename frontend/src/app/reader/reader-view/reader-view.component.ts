@@ -306,6 +306,16 @@ export class ReaderViewComponent {
     }
   }
 
+  /** Full-screen back button: play the same slide-out-to-the-right as a
+   *  back-swipe (rather than cutting straight to the list), then return. */
+  slideBack(): void {
+    if (this.leaving()) return;
+    this.snapping.set(true);
+    this.pull.set(0);
+    this.dragX.set(typeof window !== 'undefined' ? window.innerWidth : 999);
+    this.leave();
+  }
+
   /** Commit to returning to the list once the leave animation has played. */
   private leave(): void {
     this.leaving.set(true);
