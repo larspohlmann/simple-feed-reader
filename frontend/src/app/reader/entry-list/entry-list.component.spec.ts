@@ -1,8 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { EntryListComponent } from './entry-list.component';
+import { ListScrollMemory } from '../list-scroll-memory';
 import { EntryDto } from '../models';
-import { ListScrollStore, listScrollKey } from '../list-scroll.store';
+
+const memory = { save: jest.fn(), read: jest.fn().mockReturnValue(0) };
 
 const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   id,
@@ -22,10 +24,12 @@ const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
 });
 
 function mount(over: Record<string, unknown> = {}) {
+  memory.save.mockClear();
+  memory.read.mockClear().mockReturnValue(0);
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     imports: [EntryListComponent],
-    providers: [provideRouter([])],
+    providers: [provideRouter([]), { provide: ListScrollMemory, useValue: memory }],
   });
   const f = TestBed.createComponent(EntryListComponent);
   const inputs = {
@@ -117,14 +121,6 @@ describe('EntryListComponent', () => {
     );
   });
 
-  it('saves the scroll position under the selection key while scrolling', () => {
-    const selection = { kind: 'tag' as const, id: 7, unread: true };
-    const f = mount({ selection });
-    const store = TestBed.inject(ListScrollStore);
-    f.componentInstance.onRowsScroll({ target: { scrollTop: 333 } } as unknown as Event);
-    expect(store.restore(listScrollKey(selection))).toBe(333);
-  });
-
   it('re-expands the list header when the selection changes', () => {
     const f = mount();
     f.componentInstance.collapsed.set(true);
@@ -132,5 +128,40 @@ describe('EntryListComponent', () => {
     f.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
     f.detectChanges();
     expect(f.componentInstance.collapsed()).toBe(false);
+  });
+
+  it('remembers the scroll offset per selection as the list is scrolled', () => {
+    const f = mount();
+    f.componentInstance.onRowsScroll({ target: { scrollTop: 480 } } as unknown as Event);
+    expect(memory.save).toHaveBeenCalledWith({ kind: 'all', id: null, unread: true }, 480);
+  });
+
+  it('restores the saved offset once a fresh load completes (return after a resume-reload)', () => {
+    // Mount mid-load (skeletons, no scroll container yet) as on a fresh page boot.
+    const f = mount({ loading: true, entries: [] });
+    memory.read.mockReturnValue(420);
+    const apply = jest.spyOn(
+      f.componentInstance as unknown as { applyScroll: () => void },
+      'applyScroll',
+    );
+
+    // The first page lands: loading clears and the rows render.
+    f.componentRef.setInput('loading', false);
+    f.componentRef.setInput('entries', [entry(1), entry(2)]);
+    f.detectChanges();
+
+    expect(memory.read).toHaveBeenCalledWith({ kind: 'all', id: null, unread: true });
+    expect(apply).toHaveBeenCalledWith(expect.anything(), 420);
+  });
+
+  it('does not restore scroll while the list is still loading', () => {
+    memory.read.mockReturnValue(420);
+    const f = mount({ loading: true, entries: [] });
+    const apply = jest.spyOn(
+      f.componentInstance as unknown as { applyScroll: () => void },
+      'applyScroll',
+    );
+    f.detectChanges();
+    expect(apply).not.toHaveBeenCalled();
   });
 });

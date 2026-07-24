@@ -15,20 +15,32 @@ import {
 import { Subscription, timeout } from 'rxjs';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
+import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
 import { EntryDto, ReaderArticle, SubscriptionTagDto } from '../models';
 import { ReaderContentService } from '../reader-content.service';
 import { ReaderModeService } from '../reader-mode.service';
 import { focusOpacity, readingBlocks } from '../reading-focus';
+import {
+  AXIS_LOCK_MIN,
+  atBottom,
+  isBackSwipe,
+  overscrollTriggersBack,
+  rubberBand,
+} from '../reader-gestures';
 import { relativeTime } from '../format';
 
 /** Give up on a hung extraction and fall back to feed content (backend caps a
  *  fetch at ~20s; this is the client-side backstop for a stalled connection). */
 const READER_LOAD_TIMEOUT_MS = 30_000;
+/** How far the rubber-banded overscroll pull may travel. */
+const MAX_PULL = 160;
+/** Slide-out/return animation before the list takes over. */
+const LEAVE_ANIM_MS = 220;
 
 @Component({
   selector: 'app-reader-view',
-  imports: [IconComponent, FaviconComponent, SourceTagsComponent],
+  imports: [IconComponent, FaviconComponent, SpinnerComponent, SourceTagsComponent],
   templateUrl: './reader-view.component.html',
   styleUrl: './reader-view.component.scss',
 })
@@ -63,6 +75,30 @@ export class ReaderViewComponent {
   private readonly reduceMotion =
     typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   private focusRaf = 0;
+
+  // Touch gestures (full-screen only): a rightward swipe or a pull past the end
+  // returns to the list. dragX follows a horizontal swipe; pull follows an
+  // at-the-end overscroll (rubber-banded). `leaving` commits to going back.
+  private readonly dragX = signal(0);
+  private readonly pull = signal(0);
+  private readonly snapping = signal(false);
+  readonly leaving = signal(false);
+  private touchStartX = 0;
+  private touchStartY = 0;
+  private touchDx = 0;
+  private touchDy = 0;
+  private axis: 'none' | 'h' | 'v' = 'none';
+  private atBottomOnStart = false;
+  private leaveTimer = 0;
+
+  protected readonly readerTransform = computed(
+    () => `translate3d(${this.dragX()}px, ${-this.pull()}px, 0)`,
+  );
+  protected readonly readerTransition = computed(() =>
+    !this.reduceMotion && this.snapping() ? `transform ${LEAVE_ANIM_MS}ms ease-out` : 'none',
+  );
+  protected readonly pulling = computed(() => this.pull() > 0);
+  protected readonly pullArmed = computed(() => overscrollTriggersBack(this.pull()));
 
   // The open entry's object reference changes on every optimistic flag update
   // (favorite/keep/read), but its id does not. Tracking the loaded id lets the
@@ -164,6 +200,85 @@ export class ReaderViewComponent {
         if (this.focusRaf) cancelAnimationFrame(this.focusRaf);
       });
     }
+
+    // Touch listeners live on the scroll host. touchmove is non-passive so a
+    // committed horizontal swipe / at-end pull can preventDefault the scroll.
+    const el = this.host.nativeElement;
+    const start = (e: TouchEvent) => this.onTouchStart(e);
+    const move = (e: TouchEvent) => this.onTouchMove(e);
+    const end = () => this.onTouchEnd();
+    el.addEventListener('touchstart', start, { passive: true });
+    el.addEventListener('touchmove', move, { passive: false });
+    el.addEventListener('touchend', end);
+    el.addEventListener('touchcancel', end);
+    this.destroyRef.onDestroy(() => {
+      el.removeEventListener('touchstart', start);
+      el.removeEventListener('touchmove', move);
+      el.removeEventListener('touchend', end);
+      el.removeEventListener('touchcancel', end);
+      if (this.leaveTimer) clearTimeout(this.leaveTimer);
+    });
+  }
+
+  onTouchStart(e: TouchEvent): void {
+    if (this.showToolbar() || this.leaving() || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    this.touchStartX = t.clientX;
+    this.touchStartY = t.clientY;
+    this.touchDx = 0;
+    this.touchDy = 0;
+    this.axis = 'none';
+    const el = this.host.nativeElement;
+    this.atBottomOnStart = atBottom(el.scrollTop, el.clientHeight, el.scrollHeight);
+    this.snapping.set(false);
+  }
+
+  onTouchMove(e: TouchEvent): void {
+    if (this.showToolbar() || this.leaving() || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const dx = t.clientX - this.touchStartX;
+    const dy = t.clientY - this.touchStartY;
+    this.touchDx = dx;
+    this.touchDy = dy;
+    if (this.axis === 'none') {
+      if (Math.abs(dx) < AXIS_LOCK_MIN && Math.abs(dy) < AXIS_LOCK_MIN) return;
+      this.axis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+    }
+    if (this.axis === 'h') {
+      const x = Math.max(0, dx); // rightward-only "back" swipe
+      this.dragX.set(x);
+      if (x > 0) e.preventDefault();
+    } else if (this.atBottomOnStart && dy < 0) {
+      // Pulling up past the article's end.
+      this.pull.set(rubberBand(-dy, MAX_PULL));
+      e.preventDefault();
+    }
+  }
+
+  onTouchEnd(): void {
+    if (this.showToolbar() || this.leaving()) return;
+    const axis = this.axis;
+    this.axis = 'none';
+    this.snapping.set(true);
+    if (axis === 'h' && isBackSwipe(this.touchDx, this.touchDy)) {
+      this.dragX.set(typeof window !== 'undefined' ? window.innerWidth : 999);
+      this.pull.set(0);
+      this.leave();
+    } else if (axis === 'v' && overscrollTriggersBack(this.pull())) {
+      this.leave(); // hold the pull spinner while we go back
+    } else {
+      this.dragX.set(0);
+      this.pull.set(0);
+    }
+  }
+
+  /** Commit to returning to the list once the leave animation has played. */
+  private leave(): void {
+    this.leaving.set(true);
+    this.leaveTimer = window.setTimeout(
+      () => this.close.emit(),
+      this.reduceMotion ? 0 : LEAVE_ANIM_MS,
+    );
   }
 
   @HostListener('scroll')

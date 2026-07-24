@@ -1,6 +1,5 @@
 // src/app/reader/entry-list/entry-list.component.ts
 import {
-  AfterViewInit,
   Component,
   ElementRef,
   OnDestroy,
@@ -24,8 +23,13 @@ import { EntryDto, SubscriptionTagDto } from '../models';
 import { Selection } from '../query';
 import { Problem } from '../../core/problem';
 import { LayoutService } from '../layout.service';
+import { ListScrollMemory } from '../list-scroll-memory';
 import { nextHeaderHidden } from '../header-scroll';
-import { ListScrollStore, listScrollKey } from '../list-scroll.store';
+
+// Scroll-restore settle window: re-assert the target for at most this many frames,
+// stopping early once the content height has held steady for this many in a row.
+const MAX_SETTLE_FRAMES = 30;
+const SETTLE_STABLE_FRAMES = 3;
 
 @Component({
   selector: 'app-entry-list',
@@ -40,7 +44,7 @@ import { ListScrollStore, listScrollKey } from '../list-scroll.store';
   templateUrl: './entry-list.component.html',
   styleUrl: './entry-list.component.scss',
 })
-export class EntryListComponent implements AfterViewInit, OnDestroy {
+export class EntryListComponent implements OnDestroy {
   readonly title = input.required<string>();
   readonly entries = input.required<EntryDto[]>();
   readonly loading = input.required<boolean>();
@@ -66,9 +70,16 @@ export class EntryListComponent implements AfterViewInit, OnDestroy {
   );
 
   private readonly screen = inject(LayoutService);
-  private readonly scrollStore = inject(ListScrollStore);
-  /** Identity of the current list, used to remember its scroll offset. */
-  private readonly scrollKey = computed(() => listScrollKey(this.selection()));
+  private readonly scroll = inject(ListScrollMemory);
+  private readonly host = inject(ElementRef<HTMLElement>);
+
+  constructor() {
+    // Capture so we hear the gesture even though scroll events fire on inner .rows;
+    // passive so we never block scrolling. Both cancel an in-flight scroll restore.
+    const host = this.host.nativeElement;
+    host.addEventListener('wheel', this.onUserScrollIntent, { passive: true, capture: true });
+    host.addEventListener('touchmove', this.onUserScrollIntent, { passive: true, capture: true });
+  }
   // On a narrow layout the list header collapses to a slim tag-name-only bar as
   // you scroll down the list, expanding again on scroll up (same direction logic
   // as the app header's hide-on-scroll). Always expanded on wide screens.
@@ -92,25 +103,9 @@ export class EntryListComponent implements AfterViewInit, OnDestroy {
       nextHeaderHidden(this.collapsed(), this.lastScrollTop, top, this.screen.isWide()),
     );
     this.lastScrollTop = top;
-    // Remember where we are so returning from an article lands here again.
-    this.scrollStore.save(this.scrollKey(), top);
-  }
-
-  ngAfterViewInit(): void {
-    // The full-screen article destroys this list; on the way back it remounts
-    // with the entries still cached, so restore the offset we left off at.
-    const top = this.scrollStore.restore(this.scrollKey());
-    if (top <= 0) return;
-    this.applyScroll(top);
-    // Re-apply next frame in case late layout (e.g. images) shifted things.
-    requestAnimationFrame(() => this.applyScroll(top));
-  }
-
-  private applyScroll(top: number): void {
-    const el = this.rows()?.nativeElement;
-    if (!el) return;
-    el.scrollTop = top;
-    this.lastScrollTop = top;
+    // Remember where the user is so a browser resume-reload (iOS/Brave discard the
+    // tab and reload it) can drop them back here rather than at the top.
+    this.scroll.save(this.selection(), top);
   }
 
   tagsFor(subscriptionId: number): SubscriptionTagDto[] {
@@ -156,7 +151,85 @@ export class EntryListComponent implements AfterViewInit, OnDestroy {
     }
   });
 
+  // Restore the remembered scroll offset when a fresh load finishes. Gated on the
+  // loading edge (true -> false) so it fires once per genuine reload/selection —
+  // never on "load more" (which toggles loadingMore, not loading) and never on
+  // opening/closing an article (the list stays mounted beneath the overlay, so no
+  // remount and no reload). That gating is what keeps the return-from-article
+  // position exactly native, avoiding the earlier restore-glitch.
+  private wasLoading = false;
+  private readonly _restoreScroll = effect(() => {
+    const loading = this.loading();
+    const el = this.rows()?.nativeElement;
+    if (loading) {
+      this.wasLoading = true;
+      return;
+    }
+    // Wait for the scroll container to render (it only exists once entries show),
+    // then land the user back where they were before the page was reloaded.
+    if (this.wasLoading && el) {
+      this.wasLoading = false;
+      this.applyScroll(el, this.scroll.read(this.selection()));
+    }
+  });
+
+  private applyScroll(el: HTMLElement, top: number): void {
+    this.cancelSettle();
+    // Seed the hide-on-scroll baseline so the very next scroll compares against
+    // the restored position, not 0.
+    if (top <= 0) {
+      this.lastScrollTop = el.scrollTop;
+      return;
+    }
+    el.scrollTop = top; // immediate rough landing so the list never flashes at the top
+    this.lastScrollTop = el.scrollTop;
+    this.settleTo(el, top);
+  }
+
+  // A resume-reload re-renders the whole list from scratch, and block heights firm
+  // up over the next few frames (fonts, images, magazine planning). A single early
+  // scrollTop set gets nudged off by the browser's scroll-anchoring as that happens,
+  // so re-assert the target each frame until the content height stops changing —
+  // then the final landing is exact. Aborts the moment the user scrolls (see the
+  // wheel/touch listeners) so it never fights a real gesture.
+  private settleRaf = 0;
+  private settleAbort = false;
+  private settleTo(el: HTMLElement, target: number): void {
+    if (typeof requestAnimationFrame === 'undefined') return;
+    this.settleAbort = false;
+    let frames = 0;
+    let stableFrames = 0;
+    let lastHeight = -1;
+    const step = (): void => {
+      if (this.settleAbort) return;
+      el.scrollTop = target;
+      this.lastScrollTop = el.scrollTop;
+      const height = el.scrollHeight;
+      stableFrames = height === lastHeight ? stableFrames + 1 : 0;
+      lastHeight = height;
+      if (++frames < MAX_SETTLE_FRAMES && stableFrames < SETTLE_STABLE_FRAMES) {
+        this.settleRaf = requestAnimationFrame(step);
+      }
+    };
+    this.settleRaf = requestAnimationFrame(step);
+  }
+
+  private cancelSettle(): void {
+    this.settleAbort = true;
+    if (this.settleRaf && typeof cancelAnimationFrame !== 'undefined') {
+      cancelAnimationFrame(this.settleRaf);
+    }
+    this.settleRaf = 0;
+  }
+
+  /** A real scroll gesture during the settle window wins over the restore. */
+  private readonly onUserScrollIntent = (): void => this.cancelSettle();
+
   ngOnDestroy(): void {
     this.observer?.disconnect();
+    this.cancelSettle();
+    const host = this.host.nativeElement;
+    host.removeEventListener('wheel', this.onUserScrollIntent, { capture: true });
+    host.removeEventListener('touchmove', this.onUserScrollIntent, { capture: true });
   }
 }

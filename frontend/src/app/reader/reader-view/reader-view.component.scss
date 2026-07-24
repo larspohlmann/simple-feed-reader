@@ -5,11 +5,34 @@
 }
 
 /* A query container so the back button can react to the reading pane's
-         own width (which differs from the window in split-pane mode). */
+         own width (which differs from the window in split-pane mode).
+         Opaque and at least full-height so, as a full-screen overlay over the
+         still-mounted list, it hides the list until a swipe slides it aside
+         (the host itself is transparent). */
 .reader {
   position: relative;
+  min-height: 100%;
+  background: var(--surface-0);
   container-type: inline-size;
   container-name: reader;
+}
+
+/* Overscroll-to-return affordance: anchored just below the article's end, so a
+         pull past the bottom (which translates .reader up) slides it into view.
+         .armed marks that releasing now will return to the list. */
+.pull-back {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  padding: var(--space-4);
+  color: var(--text-muted);
+}
+
+.pull-back.armed {
+  color: var(--accent);
 }
 
 .bar {

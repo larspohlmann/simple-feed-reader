@@ -144,7 +144,10 @@ describe('ReaderShellComponent', () => {
     reqA.flush({ entry: { ...entry, id: 514, title: 'Entry A', isRead: true } });
     f.detectChanges();
 
-    expect(f.nativeElement.querySelector('.title')?.textContent).toContain('Entry B');
+    // The list stays mounted beneath the article overlay, so scope to the reader.
+    expect(f.nativeElement.querySelector('app-reader-view .title')?.textContent).toContain(
+      'Entry B',
+    );
   });
 
   it('reloads entries when the selection changes', () => {

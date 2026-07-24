@@ -75,17 +75,9 @@
           (close)="onCloseReader()"
         />
       </section>
-    } @else if (openEntry()) {
-      <app-reader-view
-        [entry]="openEntry()"
-        [tags]="openEntryTags()"
-        [showToolbar]="false"
-        (favorite)="withOpen(onFavorite)"
-        (keep)="withOpen(onKeep)"
-        (read)="withOpen(onToggleRead)"
-        (close)="onCloseReader()"
-      />
     } @else {
+      <!-- The list stays mounted; a full-screen article overlays it, so swiping
+           the article away reveals the list (and its scroll) underneath. -->
       <app-entry-list
         [layout]="layout.mode()"
         [title]="title()"
@@ -105,6 +97,18 @@
         (read)="onToggleRead($event)"
         (open)="onOpen($event)"
       />
+      @if (openEntry()) {
+        <app-reader-view
+          class="article-overlay"
+          [entry]="openEntry()"
+          [tags]="openEntryTags()"
+          [showToolbar]="false"
+          (favorite)="withOpen(onFavorite)"
+          (keep)="withOpen(onKeep)"
+          (read)="withOpen(onToggleRead)"
+          (close)="onCloseReader()"
+        />
+      }
     }
   </main>
 </div>
