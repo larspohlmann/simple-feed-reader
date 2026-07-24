@@ -17,7 +17,7 @@ import { EntryCompactComponent } from '../magazine/entry-compact.component';
 import { SourceGroupComponent } from '../magazine/source-group.component';
 import { MagazineBlock, planMagazine } from '../magazine/magazine-planner';
 import { ReadingLayout } from '../reading-layout.service';
-import { EntryDto } from '../models';
+import { EntryDto, SubscriptionTagDto } from '../models';
 import { Selection } from '../query';
 import { Problem } from '../../core/problem';
 
@@ -84,6 +84,7 @@ import { Problem } from '../../core/problem';
             @case ('hero') {
               <app-entry-hero
                 [entry]="hero(b).entry"
+                [tags]="tagsFor(hero(b).entry.subscriptionId)"
                 (favorite)="favorite.emit($event)"
                 (keep)="keep.emit($event)"
                 (read)="read.emit($event)"
@@ -94,6 +95,7 @@ import { Problem } from '../../core/problem';
               <app-entry-row
                 [entry]="feat(b).entry"
                 [imageSide]="feat(b).imageSide"
+                [tags]="tagsFor(feat(b).entry.subscriptionId)"
                 [class.open]="openEntryId() === feat(b).entry.id"
                 (favorite)="favorite.emit($event)"
                 (keep)="keep.emit($event)"
@@ -102,7 +104,11 @@ import { Problem } from '../../core/problem';
               />
             }
             @case ('compact') {
-              <app-entry-compact [entry]="compact(b).entry" (open)="open.emit($event)" />
+              <app-entry-compact
+                [entry]="compact(b).entry"
+                [tags]="tagsFor(compact(b).entry.subscriptionId)"
+                (open)="open.emit($event)"
+              />
             }
             @case ('group') {
               <app-source-group
@@ -110,6 +116,7 @@ import { Problem } from '../../core/problem';
                 [subscriptionId]="grp(b).subscriptionId"
                 [entries]="grp(b).entries"
                 [moreCount]="grp(b).moreCount"
+                [tags]="tagsFor(grp(b).subscriptionId)"
                 (open)="open.emit($event)"
               />
             }
@@ -133,6 +140,7 @@ import { Problem } from '../../core/problem';
         @for (e of entries(); track e.id) {
           <app-entry-row
             [entry]="e"
+            [tags]="tagsFor(e.subscriptionId)"
             [class.open]="openEntryId() === e.id"
             (favorite)="favorite.emit($event)"
             (keep)="keep.emit($event)"
@@ -273,6 +281,8 @@ export class EntryListComponent implements OnDestroy {
   readonly selection = input.required<Selection>();
   readonly openEntryId = input.required<number | null>();
   readonly layout = input<ReadingLayout>('list');
+  /** Feed tags keyed by subscription id, used to render each entry's tag pills. */
+  readonly feedTags = input<Map<number, SubscriptionTagDto[]>>(new Map());
 
   readonly loadMore = output<void>();
   readonly markAllRead = output<void>();
@@ -284,6 +294,10 @@ export class EntryListComponent implements OnDestroy {
   readonly blocks = computed<MagazineBlock[]>(() =>
     planMagazine(this.entries(), this.selection().kind !== 'subscription', !this.hasMore()),
   );
+
+  tagsFor(subscriptionId: number): SubscriptionTagDto[] {
+    return this.feedTags().get(subscriptionId) ?? [];
+  }
 
   blockKey(b: MagazineBlock): string {
     return b.kind === 'group'

@@ -1,12 +1,13 @@
 // src/app/reader/magazine/entry-compact.component.ts
 import { Component, computed, input, output } from '@angular/core';
-import { EntryDto } from '../models';
+import { EntryDto, SubscriptionTagDto } from '../models';
 import { relativeTime } from '../format';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
+import { SourceTagsComponent } from '../source-tags/source-tags.component';
 
 @Component({
   selector: 'app-entry-compact',
-  imports: [FaviconComponent],
+  imports: [FaviconComponent, SourceTagsComponent],
   template: `
     <article
       class="compact"
@@ -26,6 +27,9 @@ import { FaviconComponent } from '../../shared/favicon/favicon.component';
           {{ when() }}
         </p>
         <p class="title">{{ entry().title }}</p>
+        @if (showSource()) {
+          <app-source-tags [tags]="tags()" />
+        }
       </div>
     </article>
   `,
@@ -78,8 +82,10 @@ import { FaviconComponent } from '../../shared/favicon/favicon.component';
 })
 export class EntryCompactComponent {
   readonly entry = input.required<EntryDto>();
-  /** Hidden inside a source group, where the header already names the source. */
+  /** Hidden inside a source group, where the header already names the source
+   *  and carries the tag pills — so the per-item pills are suppressed too. */
   readonly showSource = input(true);
+  readonly tags = input<SubscriptionTagDto[]>([]);
   readonly open = output<EntryDto>();
   readonly when = computed(() => relativeTime(this.entry().publishedAt ?? this.entry().createdAt));
 }

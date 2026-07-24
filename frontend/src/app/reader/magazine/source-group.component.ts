@@ -4,16 +4,26 @@ import { RouterLink } from '@angular/router';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { EntryCompactComponent } from './entry-compact.component';
-import { EntryDto } from '../models';
+import { SourceTagsComponent } from '../source-tags/source-tags.component';
+import { EntryDto, SubscriptionTagDto } from '../models';
 
 @Component({
   selector: 'app-source-group',
-  imports: [RouterLink, IconComponent, FaviconComponent, EntryCompactComponent],
+  imports: [
+    RouterLink,
+    IconComponent,
+    FaviconComponent,
+    EntryCompactComponent,
+    SourceTagsComponent,
+  ],
   template: `
     <div class="group">
-      <p class="ghead">
-        <app-favicon [url]="entries()[0]?.faviconUrl ?? null" [size]="14" />{{ source() }}
-      </p>
+      <div class="ghead">
+        <p class="gname">
+          <app-favicon [url]="entries()[0]?.faviconUrl ?? null" [size]="14" />{{ source() }}
+        </p>
+        <app-source-tags [tags]="tags()" />
+      </div>
       <div class="items">
         @for (item of entries(); track item.id) {
           <div class="item">
@@ -50,12 +60,18 @@ import { EntryDto } from '../models';
         overflow: hidden;
       }
       .ghead {
-        margin: 0;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-2);
         padding: var(--space-3) var(--space-4);
+        border-bottom: 1px solid var(--border);
+      }
+      .gname {
+        margin: 0;
         font-size: var(--fs-lg);
         font-weight: 500;
         color: var(--text-primary);
-        border-bottom: 1px solid var(--border);
       }
       .item:not(:last-child) {
         border-bottom: 1px solid var(--border);
@@ -81,5 +97,6 @@ export class SourceGroupComponent {
   readonly subscriptionId = input.required<number>();
   readonly entries = input.required<EntryDto[]>();
   readonly moreCount = input.required<number>();
+  readonly tags = input<SubscriptionTagDto[]>([]);
   readonly open = output<EntryDto>();
 }
