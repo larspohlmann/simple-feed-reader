@@ -117,6 +117,41 @@ describe('ReaderViewComponent', () => {
     });
   });
 
+  describe('back-to-top button', () => {
+    function scrollHostTo(host: HTMLElement, top: number): void {
+      Object.defineProperty(host, 'scrollTop', { configurable: true, value: top });
+      host.dispatchEvent(new Event('scroll'));
+    }
+
+    it('appears only after scrolling down and jumps back to the top on click', () => {
+      const f = mount(entry());
+      const host = f.nativeElement as HTMLElement;
+      expect(host.querySelector('.to-top')).toBeNull(); // hidden at the top
+
+      scrollHostTo(host, 900);
+      f.detectChanges();
+      const btn = host.querySelector('.to-top') as HTMLButtonElement;
+      expect(btn).not.toBeNull();
+
+      const scrollTo = jest.fn();
+      host.scrollTo = scrollTo as unknown as typeof host.scrollTo;
+      btn.click();
+      expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }));
+    });
+
+    it('hides again when scrolled back near the top', () => {
+      const f = mount(entry());
+      const host = f.nativeElement as HTMLElement;
+      scrollHostTo(host, 900);
+      f.detectChanges();
+      expect(host.querySelector('.to-top')).not.toBeNull();
+
+      scrollHostTo(host, 20);
+      f.detectChanges();
+      expect(host.querySelector('.to-top')).toBeNull();
+    });
+  });
+
   it('emits favorite/keep/read/prev/next/close', () => {
     const f = mount(entry());
     const c = { favorite: 0, keep: 0, read: 0, prev: 0, next: 0, close: 0 };

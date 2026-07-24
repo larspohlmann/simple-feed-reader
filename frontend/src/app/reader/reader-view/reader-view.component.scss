@@ -35,6 +35,40 @@
   color: var(--accent);
 }
 
+/* Back-to-top affordance, pinned to the viewport corner (fixed, so it sits
+         above the transformed .reader rather than scrolling with the article). */
+.to-top {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 25%);
+  animation: to-top-in 0.15s ease-out;
+}
+
+@keyframes to-top-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .to-top {
+    animation: none;
+  }
+}
+
 .bar {
   position: sticky;
   top: 0;

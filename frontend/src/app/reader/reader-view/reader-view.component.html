@@ -144,6 +144,16 @@
       </div>
     }
   </div>
+  @if (showToTop()) {
+    <button
+      class="to-top"
+      type="button"
+      [attr.aria-label]="'reader.backToTop' | transloco"
+      (click)="scrollToTop()"
+    >
+      <app-icon name="arrow_upward" [size]="20" />
+    </button>
+  }
 } @else {
   <div class="placeholder">
     <p>{{ 'reader.selectArticle' | transloco }}</p>

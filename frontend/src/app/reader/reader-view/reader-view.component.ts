@@ -46,6 +46,9 @@ const LEAVE_ANIM_MS = 220;
 const ARTICLE_SETTLE_FRAMES = 60;
 const ARTICLE_SETTLE_STABLE = 4;
 
+/** How far the reader must scroll before the back-to-top button appears. */
+const BACK_TO_TOP_AFTER_PX = 500;
+
 /** Below this many headings an article is too short to warrant a contents list. */
 const TOC_MIN_HEADINGS = 3;
 
@@ -158,6 +161,9 @@ export class ReaderViewComponent {
   readonly showToc = computed(() => this.toc().length >= TOC_MIN_HEADINGS);
   readonly tocOpen = signal(false);
 
+  /** Back-to-top affordance: revealed once the reader has scrolled past a screen. */
+  readonly showToTop = signal(false);
+
   readonly loading = computed(() => this.state().status === 'loading');
   readonly failed = computed(() => this.state().status === 'failed');
   private readonly article = computed(() => {
@@ -192,9 +198,10 @@ export class ReaderViewComponent {
       this.loadSub?.unsubscribe();
       this.readerMode.reset();
       this.cancelRestore();
-      // A new article starts with a fresh, collapsed contents list.
+      // A new article starts at the top, with a fresh, collapsed contents list.
       this.toc.set([]);
       this.tocOpen.set(false);
+      this.showToTop.set(false);
       if (!e) {
         this.pendingRestore = null;
         this.state.set({ status: 'idle' });
@@ -359,13 +366,21 @@ export class ReaderViewComponent {
   @HostListener('scroll')
   protected onScroll(): void {
     this.scheduleFocus();
+    const scrollTop = this.host.nativeElement.scrollTop;
+    this.showToTop.set(scrollTop > BACK_TO_TOP_AFTER_PX);
     // Remember the reading position so a resume-reload can restore it. Skip while
     // a restore is in flight: the content may still be short and its clamped
     // scrollTop would overwrite the good target.
     const id = this.entry()?.id;
     if (id != null && !this.pendingRestore && !this.leaving()) {
-      this.scroll.saveEntry(id, this.host.nativeElement.scrollTop);
+      this.scroll.saveEntry(id, scrollTop);
     }
+  }
+
+  /** Jump the reading pane back to the top of the article. */
+  scrollToTop(): void {
+    this.pendingRestore = null; // don't let a restore fight the jump
+    this.host.nativeElement.scrollTo({ top: 0, behavior: this.reduceMotion ? 'auto' : 'smooth' });
   }
 
   /**
