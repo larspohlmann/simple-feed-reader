@@ -169,6 +169,34 @@ describe('AddFeedDialogComponent', () => {
     expect(el.querySelector('button[type="submit"]')).toBeTruthy();
   });
 
+  it('drops stale candidate cards when a re-search then fails to scrape', () => {
+    const f = create();
+    // First search finds feeds — candidate cards with Subscribe buttons render.
+    f.componentInstance.form.setValue({ url: 'https://has-feeds.example' });
+    f.componentInstance.submit();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss' }] });
+    ctrl
+      .expectOne((r) => r.url.endsWith('/api/feeds/preview'))
+      .flush({ feed: { title: 'RSS', itemCount: 3, content: 'summary', hasImages: false, items: [] } });
+    f.detectChanges();
+    expect((f.nativeElement as HTMLElement).querySelector('button.subscribe')).toBeTruthy();
+
+    // Re-search a different URL that cannot be scraped: the old cards (and their
+    // Subscribe buttons) must be gone, leaving only the warning.
+    f.componentInstance.form.setValue({ url: 'https://blocked.example' });
+    f.componentInstance.submit();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ candidates: [], scrapeFailureReason: 'blocked' });
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('button.subscribe')).toBeNull();
+    expect(el.querySelector('.card')).toBeNull();
+    expect(el.querySelector('.warn')?.textContent).toContain('blocks automated access');
+  });
+
   it('shows an empty state when no candidates are found', () => {
     const f = create();
     f.componentInstance.form.setValue({ url: 'https://example.com' });

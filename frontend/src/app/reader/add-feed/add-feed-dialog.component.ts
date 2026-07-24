@@ -268,7 +268,11 @@ export class AddFeedDialogComponent {
     return format ? format.charAt(0).toUpperCase() + format.slice(1) : 'Feed';
   }
 
-  /** Why a scrape-fallback failure means this URL is a dead end, in words. */
+  /**
+   * Why a scrape-fallback failure means this URL is a dead end, in words. The
+   * default keeps an unrecognized future reason from rendering an empty warning
+   * box — the backend's reason set is open, so this build may not know them all.
+   */
   failureText(reason: ScrapeFailureReason): string {
     switch (reason) {
       case 'blocked':
@@ -277,6 +281,8 @@ export class AddFeedDialogComponent {
         return "The site couldn't be reached — check the address or try again later.";
       case 'not_scrapable':
         return "This page offers no feed and no article list could be detected — it can't be subscribed.";
+      default:
+        return "This page can't be subscribed.";
     }
   }
 
@@ -294,6 +300,12 @@ export class AddFeedDialogComponent {
     this.error.set(null);
     this.searched.set(false);
     this.failureReason.set(null);
+    // Start every attempt visually clean: a previous search's candidate cards
+    // (and their Subscribe buttons) must not linger above a new result — least
+    // of all above a scrape-failure warning, where offering subscribe would
+    // contradict the warning.
+    this.candidates.set([]);
+    this.previews.set({});
     this.api.subscribe(url, format).subscribe({
       next: (res) => {
         this.loading.set(false);
