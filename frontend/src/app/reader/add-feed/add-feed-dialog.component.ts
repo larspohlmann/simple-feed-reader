@@ -10,7 +10,9 @@ import { ReaderApi } from '../reader-api';
 import { FeedCandidate, FeedPreview, ScrapeFailureReason, SubscriptionDto } from '../models';
 
 type PreviewState =
-  { status: 'loading' } | { status: 'error' } | { status: 'ok'; preview: FeedPreview };
+  | { status: 'loading' }
+  | { status: 'error'; message?: string }
+  | { status: 'ok'; preview: FeedPreview };
 
 @Component({
   selector: 'app-add-feed-dialog',
@@ -58,7 +60,7 @@ type PreviewState =
                 @if (state?.status === 'loading') {
                   <p class="muted">Loading preview…</p>
                 } @else if (state?.status === 'error') {
-                  <p class="muted">Preview unavailable</p>
+                  <p class="muted">{{ errorMessage(state) }}</p>
                 } @else if (p) {
                   @if (p.items.length) {
                     <ul class="samples">
@@ -252,6 +254,13 @@ export class AddFeedDialogComponent {
     return state?.status === 'ok' ? state.preview : null;
   }
 
+  /** The backend's problem `detail` when the preview failed (e.g. "No article
+   *  list was detected on the page."), falling back to a generic line when the
+   *  error carried no message (network error, non-problem body). */
+  errorMessage(state: PreviewState | undefined): string {
+    return (state?.status === 'error' ? state.message : undefined) ?? 'Preview unavailable';
+  }
+
   contentLabel(content: FeedPreview['content']): string {
     return content === 'full'
       ? 'Full text'
@@ -333,7 +342,11 @@ export class AddFeedDialogComponent {
       this.api.previewFeed(c.url, c.format === 'scraped' ? 'scraped' : undefined).subscribe({
         next: (r) =>
           this.previews.update((m) => ({ ...m, [c.url]: { status: 'ok', preview: r.feed } })),
-        error: () => this.previews.update((m) => ({ ...m, [c.url]: { status: 'error' } })),
+        error: (e: HttpErrorResponse) =>
+          this.previews.update((m) => ({
+            ...m,
+            [c.url]: { status: 'error', message: parseProblem(e).detail },
+          })),
       });
     }
   }

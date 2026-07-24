@@ -205,6 +205,35 @@ final class FeedPreviewControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(422);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        // The extractor's own message survives to the client, not a generic
+        // "Preview unavailable", and it carries the machine-readable slug the
+        // Angular client switches on.
+        self::assertSame('feed_preview_failed', $body['type']);
+        self::assertIsString($body['detail']);
+        self::assertStringContainsString('No article list', $body['detail']);
+    }
+
+    public function testUnreadableXmlPreviewReturns422WithFeedMessage(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('preview-notfeed@example.com');
+        $this->installFetcher($this->fetcherWithBody('<html><body>Not a feed at all.</body></html>'));
+
+        $client->request(
+            'POST',
+            '/api/feeds/preview',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['url' => self::URL], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertResponseHeaderSame('content-type', 'application/problem+json');
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('feed_preview_failed', $body['type']);
+        self::assertSame('That address is not a readable feed.', $body['detail']);
     }
 
     public function testFetchFailureReturns422(): void

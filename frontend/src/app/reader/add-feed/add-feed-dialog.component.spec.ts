@@ -197,6 +197,51 @@ describe('AddFeedDialogComponent', () => {
     expect(el.querySelector('.warn')?.textContent).toContain('blocks automated access');
   });
 
+  it("shows the backend's problem detail when a preview fails", () => {
+    const f = create();
+    f.componentInstance.form.setValue({ url: 'https://page.example/' });
+    f.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      candidates: [{ url: 'https://page.example/', title: 'Page', format: 'scraped' }],
+    });
+    f.detectChanges();
+
+    ctrl.expectOne((r) => r.url.endsWith('/api/feeds/preview')).flush(
+      {
+        type: 'feed_preview_failed',
+        title: 'Feed preview failed',
+        status: 422,
+        detail: 'No article list was detected on the page.',
+      },
+      { status: 422, statusText: 'Unprocessable' },
+    );
+    f.detectChanges();
+
+    const card = (f.nativeElement as HTMLElement).querySelector('.card')!;
+    expect(card.textContent).toContain('No article list was detected on the page.');
+    expect(card.textContent).not.toContain('Preview unavailable');
+  });
+
+  it('falls back to a generic line when a failed preview carries no detail', () => {
+    const f = create();
+    f.componentInstance.form.setValue({ url: 'https://f.example/' });
+    f.componentInstance.submit();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss' }] });
+    f.detectChanges();
+
+    ctrl.expectOne((r) => r.url.endsWith('/api/feeds/preview')).flush('x', {
+      status: 500,
+      statusText: 'err',
+    });
+    f.detectChanges();
+
+    expect((f.nativeElement as HTMLElement).querySelector('.card')!.textContent).toContain(
+      'Preview unavailable',
+    );
+  });
+
   it('shows an empty state when no candidates are found', () => {
     const f = create();
     f.componentInstance.form.setValue({ url: 'https://example.com' });
