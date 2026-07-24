@@ -1,6 +1,15 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { EntryCompactComponent } from './entry-compact.component';
-import { EntryDto } from '../models';
+import { EntryDto, SubscriptionTagDto } from '../models';
+
+const tag = (id: number, name: string): SubscriptionTagDto => ({
+  id,
+  name,
+  color: null,
+  icon: null,
+  position: 0,
+});
 
 const entry: EntryDto = {
   id: 3,
@@ -42,6 +51,31 @@ describe('EntryCompactComponent', () => {
     expect((f.nativeElement as HTMLElement).querySelector('.kicker')!.textContent).not.toContain(
       'Golem',
     );
+  });
+
+  it('shows tag pills when standalone', () => {
+    TestBed.configureTestingModule({
+      imports: [EntryCompactComponent],
+      providers: [provideRouter([])],
+    });
+    const f = TestBed.createComponent(EntryCompactComponent);
+    f.componentRef.setInput('entry', entry);
+    f.componentRef.setInput('tags', [tag(2, 'Tech')]);
+    f.detectChanges();
+    expect((f.nativeElement as HTMLElement).querySelector('a.pill')!.textContent).toContain('Tech');
+  });
+
+  it('hides tag pills inside a source group (showSource=false)', () => {
+    TestBed.configureTestingModule({
+      imports: [EntryCompactComponent],
+      providers: [provideRouter([])],
+    });
+    const f = TestBed.createComponent(EntryCompactComponent);
+    f.componentRef.setInput('entry', entry);
+    f.componentRef.setInput('tags', [tag(2, 'Tech')]);
+    f.componentRef.setInput('showSource', false);
+    f.detectChanges();
+    expect((f.nativeElement as HTMLElement).querySelector('a.pill')).toBeNull();
   });
 
   it('emits open on click and on Enter', () => {

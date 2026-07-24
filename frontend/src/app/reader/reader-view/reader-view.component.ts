@@ -14,7 +14,8 @@ import {
 import { Subscription, timeout } from 'rxjs';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
-import { EntryDto, ReaderArticle } from '../models';
+import { SourceTagsComponent } from '../source-tags/source-tags.component';
+import { EntryDto, ReaderArticle, SubscriptionTagDto } from '../models';
 import { ReaderContentService } from '../reader-content.service';
 import { relativeTime } from '../format';
 
@@ -24,7 +25,7 @@ const READER_LOAD_TIMEOUT_MS = 30_000;
 
 @Component({
   selector: 'app-reader-view',
-  imports: [IconComponent, FaviconComponent],
+  imports: [IconComponent, FaviconComponent, SourceTagsComponent],
   template: `
     @if (entry(); as e) {
       <div class="reader">
@@ -82,6 +83,7 @@ const READER_LOAD_TIMEOUT_MS = 30_000;
               /></a>
             }
           </p>
+          <app-source-tags class="tags" [tags]="tags()" />
           <div class="actions">
             <button
               type="button"
@@ -164,6 +166,10 @@ const READER_LOAD_TIMEOUT_MS = 30_000;
       .meta a {
         color: var(--accent);
         text-decoration: none;
+      }
+      .tags {
+        display: block;
+        margin: 0 0 var(--space-3);
       }
       .actions {
         display: flex;
@@ -299,6 +305,7 @@ const READER_LOAD_TIMEOUT_MS = 30_000;
 })
 export class ReaderViewComponent {
   readonly entry = input.required<EntryDto | null>();
+  readonly tags = input<SubscriptionTagDto[]>([]);
   readonly hasPrev = input(false);
   readonly hasNext = input(false);
 

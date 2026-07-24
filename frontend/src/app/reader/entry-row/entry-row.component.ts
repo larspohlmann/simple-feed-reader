@@ -2,13 +2,14 @@
 import { Component, computed, effect, input, output, signal } from '@angular/core';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
-import { EntryDto } from '../models';
+import { SourceTagsComponent } from '../source-tags/source-tags.component';
+import { EntryDto, SubscriptionTagDto } from '../models';
 import { firstPreviewImage, textSnippet } from '../preview-image';
 import { relativeTime } from '../format';
 
 @Component({
   selector: 'app-entry-row',
-  imports: [IconComponent, FaviconComponent],
+  imports: [IconComponent, FaviconComponent, SourceTagsComponent],
   template: `
     <article
       class="row"
@@ -27,6 +28,7 @@ import { relativeTime } from '../format';
           <app-favicon [url]="entry().faviconUrl" [size]="14" />{{ entry().source }} · {{ when() }}
         </p>
         <p class="snippet">{{ snippet() }}</p>
+        <app-source-tags [tags]="tags()" />
         <div class="actions">
           <button
             type="button"
@@ -154,6 +156,7 @@ import { relativeTime } from '../format';
 export class EntryRowComponent {
   readonly entry = input.required<EntryDto>();
   readonly imageSide = input<'left' | 'right'>('right');
+  readonly tags = input<SubscriptionTagDto[]>([]);
   readonly favorite = output<EntryDto>();
   readonly keep = output<EntryDto>();
   readonly read = output<EntryDto>();

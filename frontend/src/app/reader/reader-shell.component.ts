@@ -13,7 +13,7 @@ import { ReadingLayoutService } from './reading-layout.service';
 import { LayoutService } from './layout.service';
 import { markReadTarget, queryFromSelection, selectionFromParams } from './query';
 import { entryParam } from './slug';
-import { EntryDto, EntryStatePatch, SubscriptionDto } from './models';
+import { EntryDto, EntryStatePatch, SubscriptionDto, SubscriptionTagDto } from './models';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
@@ -68,6 +68,7 @@ import { ManageActions } from './manage/manage-actions.service';
               [canMarkAllRead]="canMarkAllRead()"
               [selection]="selection()"
               [openEntryId]="entryId()"
+              [feedTags]="feedTags()"
               (loadMore)="entries.loadMore()"
               (markAllRead)="onMarkAllRead()"
               (favorite)="onFavorite($event)"
@@ -79,6 +80,7 @@ import { ManageActions } from './manage/manage-actions.service';
           <section class="reader">
             <app-reader-view
               [entry]="openEntry()"
+              [tags]="openEntryTags()"
               [hasPrev]="hasPrev()"
               [hasNext]="hasNext()"
               (favorite)="withOpen(onFavorite)"
@@ -92,6 +94,7 @@ import { ManageActions } from './manage/manage-actions.service';
         } @else if (openEntry()) {
           <app-reader-view
             [entry]="openEntry()"
+            [tags]="openEntryTags()"
             [hasPrev]="hasPrev()"
             [hasNext]="hasNext()"
             (favorite)="withOpen(onFavorite)"
@@ -113,6 +116,7 @@ import { ManageActions } from './manage/manage-actions.service';
             [canMarkAllRead]="canMarkAllRead()"
             [selection]="selection()"
             [openEntryId]="entryId()"
+            [feedTags]="feedTags()"
             (loadMore)="entries.loadMore()"
             (markAllRead)="onMarkAllRead()"
             (favorite)="onFavorite($event)"
@@ -229,6 +233,17 @@ export class ReaderShellComponent implements OnInit {
     if (inList) return inList; // the live list copy wins (freshest state)
     const fetched = this.fetchedEntry();
     return fetched && fetched.id === id ? fetched : null;
+  });
+  /** Feed tags keyed by subscription id — feeds the tag pills on entries and the
+   *  article view without threading tags through each entry DTO. */
+  readonly feedTags = computed(() => {
+    const m = new Map<number, SubscriptionTagDto[]>();
+    for (const s of this.subs.subscriptions()) m.set(s.id, s.tags);
+    return m;
+  });
+  readonly openEntryTags = computed(() => {
+    const e = this.openEntry();
+    return e ? (this.feedTags().get(e.subscriptionId) ?? []) : [];
   });
   readonly hasMore = computed(() => this.entries.nextCursor() !== null);
   readonly canMarkAllRead = computed(() => markReadTarget(this.selection()) !== null);
