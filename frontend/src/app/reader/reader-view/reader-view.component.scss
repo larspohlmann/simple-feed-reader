@@ -133,6 +133,20 @@ article {
   line-height: 1.75;
 }
 
+/* Reading-focus: the component sets opacity per-scroll on the article's block
+         elements (which can sit under a wrapper), so the transition covers all
+         descendants — only the blocks whose opacity changes actually animate.
+         Disabled under reduced motion, where opacity is left untouched anyway. */
+.content ::ng-deep * {
+  transition: opacity 0.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content ::ng-deep * {
+    transition: none;
+  }
+}
+
 .content ::ng-deep p {
   margin: 0 0 var(--space-4);
 }
