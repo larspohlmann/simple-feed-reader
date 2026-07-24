@@ -93,6 +93,27 @@ describe('ReaderViewComponent', () => {
     expect(c).toEqual({ favorite: 1, keep: 1, read: 1, prev: 1, next: 1, close: 1 });
   });
 
+  it('in full-screen (no toolbar) hides the bar and shows a content back button', () => {
+    const f = TestBed.createComponent(ReaderViewComponent);
+    f.componentRef.setInput('entry', entry());
+    f.componentRef.setInput('showToolbar', false);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.bar')).toBeNull();
+    const close = jest.fn();
+    f.componentInstance.close.subscribe(close);
+    const back = el.querySelector('.title-row .back') as HTMLButtonElement;
+    expect(back).not.toBeNull();
+    back.click();
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the back button in the toolbar (not the content) when the toolbar shows', () => {
+    const el = mount(entry()).nativeElement as HTMLElement;
+    expect(el.querySelector('.title-row .back')).toBeNull();
+    expect(el.querySelector('.bar .close')).not.toBeNull();
+  });
+
   it('disables prev/next at the ends', () => {
     const el = mount(entry(), false, false).nativeElement as HTMLElement;
     expect((el.querySelector('.prev') as HTMLButtonElement).disabled).toBe(true);

@@ -1,8 +1,9 @@
 // src/app/reader/header/reader-header.component.ts
-import { Component, inject, output, signal } from '@angular/core';
+import { Component, inject, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { AuthService } from '../../core/auth.service';
+import { ReaderModeService } from '../reader-mode.service';
 
 @Component({
   selector: 'app-reader-header',
@@ -24,6 +25,42 @@ import { AuthService } from '../../core/auth.service';
         </a>
       </div>
       <div class="right">
+        @if (articleOpen()) {
+          @if (readerMode.canToggle()) {
+            <button
+              class="mode"
+              type="button"
+              [attr.aria-pressed]="readerMode.mode() === 'reader'"
+              [attr.aria-label]="
+                readerMode.mode() === 'reader' ? 'Show original feed content' : 'Show reader view'
+              "
+              (click)="readerMode.toggle()"
+            >
+              <app-icon [name]="readerMode.mode() === 'reader' ? 'article' : 'feed'" [size]="18" />
+              <span class="mode-label">{{
+                readerMode.mode() === 'reader' ? 'Reader' : 'Original'
+              }}</span>
+            </button>
+          }
+          <button
+            class="icon-btn"
+            type="button"
+            aria-label="Previous"
+            [disabled]="!hasPrev()"
+            (click)="prev.emit()"
+          >
+            <app-icon name="chevron_left" [size]="20" />
+          </button>
+          <button
+            class="icon-btn"
+            type="button"
+            aria-label="Next"
+            [disabled]="!hasNext()"
+            (click)="next.emit()"
+          >
+            <app-icon name="chevron_right" [size]="20" />
+          </button>
+        }
         <div class="account">
           <button
             aria-haspopup="menu"
@@ -130,6 +167,33 @@ import { AuthService } from '../../core/auth.service';
           display: inline-flex;
         }
       }
+      .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        background: none;
+        border: none;
+        color: var(--text-primary);
+        cursor: pointer;
+        padding: var(--space-1);
+      }
+      .icon-btn:disabled {
+        color: var(--text-muted);
+        cursor: default;
+      }
+      .mode {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: var(--space-1);
+        font-size: var(--fs-sm);
+      }
+      .mode[aria-pressed='true'] {
+        color: var(--accent);
+      }
       .account {
         position: relative;
       }
@@ -164,8 +228,17 @@ import { AuthService } from '../../core/auth.service';
   ],
 })
 export class ReaderHeaderComponent {
+  /** True when an article is open full-screen: the bar swaps the brand for a
+   *  back button and shows the reader switch and prev/next. */
+  readonly articleOpen = input(false);
+  readonly hasPrev = input(false);
+  readonly hasNext = input(false);
+
   readonly toggleSidebar = output<void>();
+  readonly prev = output<void>();
+  readonly next = output<void>();
 
   readonly auth = inject(AuthService);
+  readonly readerMode = inject(ReaderModeService);
   readonly menuOpen = signal(false);
 }

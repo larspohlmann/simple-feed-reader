@@ -17,6 +17,7 @@ import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
 import { EntryDto, ReaderArticle, SubscriptionTagDto } from '../models';
 import { ReaderContentService } from '../reader-content.service';
+import { ReaderModeService } from '../reader-mode.service';
 import { relativeTime } from '../format';
 
 /** Give up on a hung extraction and fall back to feed content (backend caps a
@@ -29,47 +30,56 @@ const READER_LOAD_TIMEOUT_MS = 30_000;
   template: `
     @if (entry(); as e) {
       <div class="reader">
-        <div class="bar">
-          <button class="close" type="button" aria-label="Back to list" (click)="close.emit()">
-            <app-icon name="arrow_back" [size]="20" />
-          </button>
-          <div class="nav">
-            @if (canToggle()) {
+        @if (showToolbar()) {
+          <div class="bar">
+            <button class="close" type="button" aria-label="Back to list" (click)="close.emit()">
+              <app-icon name="arrow_back" [size]="20" />
+            </button>
+            <div class="nav">
+              @if (readerMode.canToggle()) {
+                <button
+                  class="mode"
+                  type="button"
+                  [attr.aria-pressed]="mode() === 'reader'"
+                  [attr.aria-label]="
+                    mode() === 'reader' ? 'Show original feed content' : 'Show reader view'
+                  "
+                  (click)="toggleMode()"
+                >
+                  <app-icon [name]="mode() === 'reader' ? 'article' : 'feed'" [size]="18" />
+                  {{ mode() === 'reader' ? 'Reader' : 'Original' }}
+                </button>
+              }
               <button
-                class="mode"
+                class="prev"
                 type="button"
-                [attr.aria-pressed]="mode() === 'reader'"
-                [attr.aria-label]="
-                  mode() === 'reader' ? 'Show original feed content' : 'Show reader view'
-                "
-                (click)="toggleMode()"
+                aria-label="Previous"
+                [disabled]="!hasPrev()"
+                (click)="prev.emit()"
               >
-                <app-icon [name]="mode() === 'reader' ? 'article' : 'feed'" [size]="18" />
-                {{ mode() === 'reader' ? 'Reader' : 'Original' }}
+                <app-icon name="chevron_left" [size]="20" />
+              </button>
+              <button
+                class="next"
+                type="button"
+                aria-label="Next"
+                [disabled]="!hasNext()"
+                (click)="next.emit()"
+              >
+                <app-icon name="chevron_right" [size]="20" />
+              </button>
+            </div>
+          </div>
+        }
+        <article>
+          <div class="title-row">
+            @if (!showToolbar()) {
+              <button class="back" type="button" aria-label="Back to list" (click)="close.emit()">
+                <app-icon name="arrow_back" [size]="20" />
               </button>
             }
-            <button
-              class="prev"
-              type="button"
-              aria-label="Previous"
-              [disabled]="!hasPrev()"
-              (click)="prev.emit()"
-            >
-              <app-icon name="chevron_left" [size]="20" />
-            </button>
-            <button
-              class="next"
-              type="button"
-              aria-label="Next"
-              [disabled]="!hasNext()"
-              (click)="next.emit()"
-            >
-              <app-icon name="chevron_right" [size]="20" />
-            </button>
+            <h1 class="title">{{ e.title }}</h1>
           </div>
-        </div>
-        <article>
-          <h1 class="title">{{ e.title }}</h1>
           <p class="meta">
             <app-favicon [url]="e.faviconUrl" [size]="16" />{{ e.source }}
             @if (e.author) {
@@ -126,6 +136,13 @@ const READER_LOAD_TIMEOUT_MS = 30_000;
         height: 100%;
         overflow: auto;
       }
+      /* A query container so the back button can react to the reading pane's
+         own width (which differs from the window in split-pane mode). */
+      .reader {
+        position: relative;
+        container-type: inline-size;
+        container-name: reader;
+      }
       .bar {
         position: sticky;
         top: 0;
@@ -153,10 +170,43 @@ const READER_LOAD_TIMEOUT_MS = 30_000;
         margin: 0 auto;
         padding: var(--space-5) var(--space-4);
       }
+      /* Narrow default: the back button stacks above the title (see the wide
+         override below, which lifts it into the left gutter instead). */
+      .title-row {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-2);
+        margin: 0 0 var(--space-2);
+      }
+      .back {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 2px;
+      }
+      .back:hover {
+        color: var(--text-primary);
+      }
       .title {
         font-size: var(--fs-xl);
-        margin: 0 0 var(--space-2);
+        margin: 0;
         color: var(--text-primary);
+      }
+      /* Wide reading pane: hang the back button in the left gutter, out of flow,
+         so it sits left of all content without pushing the title in. Keyed off
+         the reader pane's own width, not the window's, so a narrow split pane
+         also gets the stacked layout. */
+      @container reader (min-width: 860px) {
+        .back {
+          position: absolute;
+          left: var(--space-3);
+          top: var(--space-5);
+        }
       }
       .meta {
         font-size: var(--fs-sm);
@@ -308,6 +358,10 @@ export class ReaderViewComponent {
   readonly tags = input<SubscriptionTagDto[]>([]);
   readonly hasPrev = input(false);
   readonly hasNext = input(false);
+  /** Whether to render the in-article toolbar. False in full-screen reading,
+   *  where the top bar hosts the back button, reader switch and prev/next;
+   *  true in split-pane mode, where the reader has no shared top bar. */
+  readonly showToolbar = input(true);
 
   readonly favorite = output<void>();
   readonly keep = output<void>();
@@ -320,6 +374,7 @@ export class ReaderViewComponent {
 
   private readonly content = viewChild<ElementRef<HTMLElement>>('content');
   private readonly reader = inject(ReaderContentService);
+  protected readonly readerMode = inject(ReaderModeService);
   private readonly destroyRef = inject(DestroyRef);
 
   // The open entry's object reference changes on every optimistic flag update
@@ -329,7 +384,9 @@ export class ReaderViewComponent {
   private loadedId: number | null = null;
   private loadSub: Subscription | null = null;
 
-  readonly mode = signal<'reader' | 'original'>('reader');
+  // Alias the shared mode signal so the template and computeds read it directly;
+  // writes go through the ReaderModeService lifecycle methods below.
+  readonly mode = this.readerMode.mode;
   private readonly state = signal<
     { status: 'idle' | 'loading' } | { status: 'ok'; article: ReaderArticle } | { status: 'failed' }
   >({ status: 'idle' });
@@ -340,7 +397,6 @@ export class ReaderViewComponent {
     const s = this.state();
     return s.status === 'ok' ? s.article : null;
   });
-  readonly canToggle = computed(() => this.article() !== null);
   // A hero image for articles whose extracted body has none (only in reader mode;
   // the original-content view keeps its own inline images).
   readonly leadImage = computed(() =>
@@ -367,7 +423,7 @@ export class ReaderViewComponent {
       if (id === this.loadedId) return;
       this.loadedId = id;
       this.loadSub?.unsubscribe();
-      this.mode.set('reader');
+      this.readerMode.reset();
       if (!e) {
         this.state.set({ status: 'idle' });
         return;
@@ -380,14 +436,15 @@ export class ReaderViewComponent {
           next: (c) => {
             if (c.status === 'ok') {
               this.state.set({ status: 'ok', article: c });
+              this.readerMode.enableToggle();
             } else {
               this.state.set({ status: 'failed' });
-              this.mode.set('original');
+              this.readerMode.setOriginalOnly();
             }
           },
           error: () => {
             this.state.set({ status: 'failed' });
-            this.mode.set('original');
+            this.readerMode.setOriginalOnly();
           },
         });
     });
@@ -412,7 +469,7 @@ export class ReaderViewComponent {
   }
 
   toggleMode(): void {
-    this.mode.set(this.mode() === 'reader' ? 'original' : 'reader');
+    this.readerMode.toggle();
   }
 
   when(e: EntryDto): string {

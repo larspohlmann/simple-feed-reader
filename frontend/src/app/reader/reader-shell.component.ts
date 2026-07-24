@@ -25,7 +25,14 @@ import { ManageActions } from './manage/manage-actions.service';
   selector: 'app-reader-shell',
   imports: [ReaderHeaderComponent, SidebarComponent, EntryListComponent, ReaderViewComponent],
   template: `
-    <app-reader-header (toggleSidebar)="sidebarOpen.set(!sidebarOpen())" />
+    <app-reader-header
+      [articleOpen]="articleFullscreen()"
+      [hasPrev]="hasPrev()"
+      [hasNext]="hasNext()"
+      (toggleSidebar)="sidebarOpen.set(!sidebarOpen())"
+      (prev)="onPrev()"
+      (next)="onNext()"
+    />
     <div class="body">
       @if (sidebarOpen()) {
         <button
@@ -95,13 +102,10 @@ import { ManageActions } from './manage/manage-actions.service';
           <app-reader-view
             [entry]="openEntry()"
             [tags]="openEntryTags()"
-            [hasPrev]="hasPrev()"
-            [hasNext]="hasNext()"
+            [showToolbar]="false"
             (favorite)="withOpen(onFavorite)"
             (keep)="withOpen(onKeep)"
             (read)="withOpen(onToggleRead)"
-            (prev)="onPrev()"
-            (next)="onNext()"
             (close)="onCloseReader()"
           />
         } @else {
@@ -248,6 +252,9 @@ export class ReaderShellComponent implements OnInit {
   readonly hasMore = computed(() => this.entries.nextCursor() !== null);
   readonly canMarkAllRead = computed(() => markReadTarget(this.selection()) !== null);
   readonly paneMode = computed(() => this.layout.mode() === 'pane' && this.screen.isWide());
+  /** An article filling the whole main area (not the split pane) — the top bar
+   *  takes over its back button, reader switch and prev/next. */
+  readonly articleFullscreen = computed(() => this.openEntry() !== null && !this.paneMode());
   /** Mobile drawer state; the sidebar is a fixed overlay below 720px. */
   readonly sidebarOpen = signal(false);
 
