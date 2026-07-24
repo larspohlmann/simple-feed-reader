@@ -262,7 +262,12 @@ article {
   border-top: 1px solid var(--border);
 }
 
-.content ::ng-deep a {
+/* Only real links (with an href) get the accent colour. Some feeds wrap their
+         section headings and in-page TOC entries in <a> tags whose href the
+         sanitiser strips; those are not links, so left unscoped this rule painted
+         every heading teal ("all titles turn green", #21). Hrefless anchors now
+         inherit the surrounding text colour, matching the UA :link/:visited rules. */
+.content ::ng-deep a[href] {
   color: var(--accent);
 }
 

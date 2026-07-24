@@ -34,7 +34,11 @@ select {
   color: inherit;
 }
 
-a {
+/* Only genuine links (those with an href) take the accent colour. Feed content
+   can contain <a> tags whose href the sanitiser strips — often section headings
+   or TOC entries wrapped in anchors — and those are not links, so colouring them
+   would paint whole headings teal (#21). Hrefless anchors inherit text colour. */
+a[href] {
   color: var(--accent);
   text-decoration: none;
 }
