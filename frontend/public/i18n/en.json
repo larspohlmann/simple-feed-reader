@@ -210,6 +210,7 @@
     "moreFrom": "More from {{source}}",
     "moreFromCount": "{{count}} more from {{source}}",
     "backToList": "Back to list",
+    "backToTop": "Back to top",
     "contents": "Contents",
     "openOriginal": "Open original",
     "loadingReader": "Loading reader view…",
