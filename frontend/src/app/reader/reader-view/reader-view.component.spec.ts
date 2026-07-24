@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { of, Subject } from 'rxjs';
 import { ReaderViewComponent } from './reader-view.component';
@@ -106,7 +106,11 @@ describe('ReaderViewComponent', () => {
     const back = el.querySelector('.title-row .back') as HTMLButtonElement;
     expect(back).not.toBeNull();
     back.click();
-    expect(close).toHaveBeenCalledTimes(1);
+    // The back button plays the slide-out (like a back-swipe) rather than
+    // cutting straight to the list, so close is deferred until it finishes.
+    expect(close).not.toHaveBeenCalled();
+    expect(f.componentInstance.leaving()).toBe(true);
+    f.destroy();
   });
 
   it('keeps the back button in the toolbar (not the content) when the toolbar shows', () => {
@@ -228,6 +232,25 @@ describe('ReaderViewComponent', () => {
       expect(c.leaving()).toBe(true);
       f.destroy();
     });
+
+    it('slides the article out to the right, then returns, on a back-button click', fakeAsync(() => {
+      const f = fullscreen();
+      const el = f.nativeElement as HTMLElement;
+      const close = jest.fn();
+      f.componentInstance.close.subscribe(close);
+      (el.querySelector('.title-row .back') as HTMLButtonElement).click();
+      f.detectChanges();
+      // Committed to leaving and slid fully off to the right (same as a swipe).
+      expect(f.componentInstance.leaving()).toBe(true);
+      expect((el.querySelector('.reader') as HTMLElement).style.transform).toContain(
+        `${window.innerWidth}px`,
+      );
+      // close only fires once the slide-out animation has played.
+      expect(close).not.toHaveBeenCalled();
+      tick(220);
+      expect(close).toHaveBeenCalledTimes(1);
+      f.destroy();
+    }));
 
     it('snaps back (does not return) on a short swipe', () => {
       const c = fullscreen().componentInstance;
