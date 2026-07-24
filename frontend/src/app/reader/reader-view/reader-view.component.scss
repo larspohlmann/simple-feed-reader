@@ -145,6 +145,62 @@ article {
   margin-bottom: var(--space-5);
 }
 
+/* Collapsible table of contents for longer articles. Collapsed by default. */
+.toc {
+  margin: 0 0 var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+
+.toc-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--space-3) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toc-list li.lvl-3 {
+  padding-left: var(--space-4);
+}
+
+.toc-list li.lvl-4 {
+  padding-left: var(--space-6);
+}
+
+.toc-list button {
+  display: block;
+  width: 100%;
+  padding: var(--space-1) 0;
+  background: none;
+  border: none;
+  text-align: left;
+  color: var(--accent);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.toc-list button:hover {
+  text-decoration: underline;
+}
+
 /* Article typography. The body is [innerHTML]-injected, so its child
          elements carry no view-encapsulation attribute — the descendant rules
          must use ::ng-deep (kept scoped under .content). The sanitizer also
