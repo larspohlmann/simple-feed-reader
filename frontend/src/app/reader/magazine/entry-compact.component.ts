@@ -2,9 +2,11 @@
 import { Component, computed, input, output } from '@angular/core';
 import { EntryDto } from '../models';
 import { relativeTime } from '../format';
+import { FaviconComponent } from '../../shared/favicon/favicon.component';
 
 @Component({
   selector: 'app-entry-compact',
+  imports: [FaviconComponent],
   template: `
     <article
       class="compact"
@@ -17,7 +19,12 @@ import { relativeTime } from '../format';
     >
       <span class="dot" [class.on]="!entry().isRead" aria-hidden="true"></span>
       <div class="body">
-        <p class="kicker">{{ showSource() ? entry().source + ' · ' + when() : when() }}</p>
+        <p class="kicker">
+          @if (showSource()) {
+            <app-favicon [url]="entry().faviconUrl" [size]="12" />{{ entry().source }} ·
+          }
+          {{ when() }}
+        </p>
         <p class="title">{{ entry().title }}</p>
       </div>
     </article>

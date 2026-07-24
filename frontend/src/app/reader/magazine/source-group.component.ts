@@ -2,15 +2,16 @@
 import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { EntryCompactComponent } from './entry-compact.component';
 import { EntryDto } from '../models';
 
 @Component({
   selector: 'app-source-group',
-  imports: [RouterLink, IconComponent, EntryCompactComponent],
+  imports: [RouterLink, IconComponent, FaviconComponent, EntryCompactComponent],
   template: `
     <div class="group">
-      <p class="ghead">{{ source() }}</p>
+      <p class="ghead"><app-favicon [url]="entries()[0]?.faviconUrl ?? null" [size]="14" />{{ source() }}</p>
       <div class="items">
         @for (item of entries(); track item.id) {
           <div class="item">

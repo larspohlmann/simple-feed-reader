@@ -24,6 +24,8 @@ export interface SubscriptionDto {
   /** The shared feed's id — the handle for scoping a refresh to this feed. */
   feedId: number;
   title: string;
+  /** Absolute https favicon URL for the feed's site, or null if unresolved. */
+  faviconUrl: string | null;
   customTitle: string | null;
   feedUrl: string;
   siteUrl: string | null;
@@ -49,6 +51,8 @@ export interface EntryDto {
   createdAt: string;
   subscriptionId: number;
   source: string;
+  /** Absolute https favicon URL for the entry's feed, or null if unresolved. */
+  faviconUrl: string | null;
   isRead: boolean;
   isFavorite: boolean;
   isKept: boolean;

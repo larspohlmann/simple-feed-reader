@@ -1,13 +1,14 @@
 // src/app/reader/magazine/entry-hero.component.ts
 import { Component, computed, effect, input, output, signal } from '@angular/core';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { EntryDto } from '../models';
 import { firstPreviewImage, textSnippet } from '../preview-image';
 import { relativeTime } from '../format';
 
 @Component({
   selector: 'app-entry-hero',
-  imports: [IconComponent],
+  imports: [IconComponent, FaviconComponent],
   template: `
     <article
       class="hero"
@@ -33,7 +34,7 @@ import { relativeTime } from '../format';
       <div class="body">
         <p class="kicker">
           <span class="dot" [class.on]="!entry().isRead" aria-hidden="true"></span>
-          {{ entry().source }} · {{ when() }}
+          <app-favicon [url]="entry().faviconUrl" [size]="14" />{{ entry().source }} · {{ when() }}
         </p>
         <h3 class="title">{{ entry().title }}</h3>
         @if (snippet()) {
