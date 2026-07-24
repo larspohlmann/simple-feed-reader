@@ -29,6 +29,10 @@ final class SubscriptionJsonTest extends TestCase
 
         self::assertSame('Example Feed', $shape['title']);
         self::assertNull($shape['customTitle']);
+        // The shared feed's id — the handle the client needs to scope a refresh
+        // (POST /api/refresh?feedId=) to a just-added feed. Null until persisted.
+        self::assertArrayHasKey('feedId', $shape);
+        self::assertSame($feed->getId(), $shape['feedId']);
         self::assertSame('https://example.com/feed.xml', $shape['feedUrl']);
         self::assertSame('https://example.com', $shape['siteUrl']);
         self::assertSame('active', $shape['status']);

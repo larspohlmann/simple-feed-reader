@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { parseProblem } from '../core/problem';
 import { ReaderApi } from '../reader/reader-api';
+import { RefreshService } from '../reader/refresh.service';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { OpmlImportResult } from '../reader/models';
 
@@ -111,6 +112,7 @@ import { OpmlImportResult } from '../reader/models';
 export class OpmlSectionComponent {
   private readonly api = inject(ReaderApi);
   private readonly subs = inject(SubscriptionsStore);
+  private readonly refresh = inject(RefreshService);
 
   readonly text = signal('');
   readonly reading = signal(false);
@@ -162,6 +164,12 @@ export class OpmlSectionComponent {
         this.importing.set(false);
         this.result.set(r);
         this.subs.load();
+        // Freshly imported feeds are due but empty until a fetch runs. Kick a
+        // refresh now so they populate without waiting for a manual one; reload
+        // the list as it progresses so unread counts fill in.
+        if (r.imported > 0) {
+          this.refresh.run(() => this.subs.load());
+        }
       },
       error: (e: HttpErrorResponse) => {
         this.importing.set(false);
