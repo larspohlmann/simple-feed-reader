@@ -201,4 +201,58 @@ describe('ReaderViewComponent', () => {
       .nativeElement as HTMLElement;
     expect(el.querySelector('.content')!.innerHTML).toContain('Just a summary');
   });
+
+  describe('return-to-list gestures (full-screen)', () => {
+    const touch = (x: number, y: number) =>
+      ({
+        touches: [{ clientX: x, clientY: y }],
+        preventDefault() {
+          /* test stub */
+        },
+      }) as unknown as TouchEvent;
+
+    function fullscreen() {
+      const f = mount(entry());
+      f.componentRef.setInput('showToolbar', false);
+      f.detectChanges();
+      return f;
+    }
+
+    it('returns to the list on a decisive rightward swipe', () => {
+      const f = fullscreen();
+      const c = f.componentInstance;
+      c.onTouchStart(touch(0, 0));
+      c.onTouchMove(touch(130, 6));
+      c.onTouchEnd();
+      expect(c.leaving()).toBe(true);
+      f.destroy();
+    });
+
+    it('snaps back (does not return) on a short swipe', () => {
+      const c = fullscreen().componentInstance;
+      c.onTouchStart(touch(0, 0));
+      c.onTouchMove(touch(30, 4));
+      c.onTouchEnd();
+      expect(c.leaving()).toBe(false);
+    });
+
+    it('returns to the list on a pull past the article end', () => {
+      const f = fullscreen();
+      const c = f.componentInstance;
+      // jsdom has no layout, so the scroller reads as already at the bottom.
+      c.onTouchStart(touch(5, 300));
+      c.onTouchMove(touch(7, 0)); // strong upward pull → rubber-banded past threshold
+      c.onTouchEnd();
+      expect(c.leaving()).toBe(true);
+      f.destroy();
+    });
+
+    it('ignores swipes while the in-pane toolbar is shown (split-pane)', () => {
+      const c = mount(entry()).componentInstance; // showToolbar defaults to true
+      c.onTouchStart(touch(0, 0));
+      c.onTouchMove(touch(200, 0));
+      c.onTouchEnd();
+      expect(c.leaving()).toBe(false);
+    });
+  });
 });

@@ -1,5 +1,10 @@
 @if (entry(); as e) {
-  <div class="reader">
+  <div
+    class="reader"
+    [class.leaving]="leaving()"
+    [style.transform]="readerTransform()"
+    [style.transition]="readerTransition()"
+  >
     @if (showToolbar()) {
       <div class="bar">
         <button class="close" type="button" aria-label="Back to list" (click)="close.emit()">
@@ -92,6 +97,11 @@
         <div #content class="content" [innerHTML]="displayHtml()"></div>
       }
     </article>
+    @if (!showToolbar() && pulling()) {
+      <div class="pull-back" [class.armed]="pullArmed()" aria-hidden="true">
+        <app-spinner [size]="22" />
+      </div>
+    }
   </div>
 } @else {
   <div class="placeholder"><p>Select an article to read.</p></div>

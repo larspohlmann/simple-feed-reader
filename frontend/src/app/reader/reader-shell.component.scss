@@ -32,6 +32,33 @@ app-reader-header {
   flex: 1;
   min-width: 0;
   display: flex;
+  position: relative;
+}
+
+/* The full-screen article sits on top of the still-mounted list. The reader's
+         own host background is transparent, so a swipe-away reveals the list
+         underneath; it enters by sliding in from the right. */
+.article-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  animation: article-enter 0.22s ease-out;
+}
+
+@keyframes article-enter {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .article-overlay {
+    animation: none;
+  }
 }
 
 .main.split .list {
