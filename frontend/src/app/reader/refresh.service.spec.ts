@@ -46,6 +46,18 @@ describe('RefreshService', () => {
     expect(done).toHaveBeenCalledTimes(1);
   });
 
+  it('scopes every request to the given feed id across the poll loop', () => {
+    svc.run(undefined, 42);
+    const first = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+    expect(first.request.params.get('feedId')).toBe('42');
+    first.flush(report({ status: 'partial', remaining: 1 }));
+    // The scope must survive the re-poll, not just the first call.
+    const second = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+    expect(second.request.params.get('feedId')).toBe('42');
+    second.flush(report({ status: 'completed', remaining: 0 }));
+    expect(svc.running()).toBe(false);
+  });
+
   it('backs off on busy then retries', fakeAsync(() => {
     svc.run();
     ctrl

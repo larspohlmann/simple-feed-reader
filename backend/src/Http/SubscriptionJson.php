@@ -15,7 +15,7 @@ final class SubscriptionJson
      * untagged "Feeds" list.
      *
      * @return array{
-     *   id: int|null, title: string, customTitle: string|null, feedUrl: string,
+     *   id: int|null, feedId: int|null, title: string, customTitle: string|null, feedUrl: string,
      *   siteUrl: string|null, status: string, sourceFormat: string, createdAt: string, position: int,
      *   tags: list<array{id: int|null, name: string, color: string|null, icon: string|null, position: int}>,
      *   unreadCount: int
@@ -35,6 +35,7 @@ final class SubscriptionJson
 
         return [
             'id' => $sub->getId(),
+            'feedId' => $feed->getId(),
             'title' => $title,
             'customTitle' => $sub->getCustomTitle(),
             'feedUrl' => $feed->getUrl(),

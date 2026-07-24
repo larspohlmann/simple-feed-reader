@@ -21,6 +21,8 @@ export interface SubscriptionTagDto {
 
 export interface SubscriptionDto {
   id: number;
+  /** The shared feed's id — the handle for scoping a refresh to this feed. */
+  feedId: number;
   title: string;
   customTitle: string | null;
   feedUrl: string;

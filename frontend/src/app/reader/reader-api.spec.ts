@@ -77,10 +77,28 @@ describe('ReaderApi', () => {
     api.refresh().subscribe();
     const req = ctrl.expectOne('https://api.test/api/refresh');
     expect(req.request.method).toBe('POST');
+    expect(req.request.params.has('feedId')).toBe(false);
     req.flush({
       status: 'completed',
       total: 0,
       fetched: 0,
+      notModified: 0,
+      failed: 0,
+      skippedForBudget: 0,
+      remaining: 0,
+      pruned: 0,
+    });
+  });
+
+  it('scopes refresh to a single feed when given a feedId', () => {
+    api.refresh(42).subscribe();
+    const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.params.get('feedId')).toBe('42');
+    req.flush({
+      status: 'completed',
+      total: 1,
+      fetched: 1,
       notModified: 0,
       failed: 0,
       skippedForBudget: 0,

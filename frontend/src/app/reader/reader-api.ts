@@ -64,8 +64,12 @@ export class ReaderApi {
     return this.http.get<ReaderContent>(`${this.base}/api/entries/${entryId}/reader`);
   }
 
-  refresh(): Observable<RefreshReport> {
-    return this.http.post<RefreshReport>(`${this.base}/api/refresh`, {});
+  /** Omit feedId to refresh all the caller's due feeds; pass one to scope the
+   *  run to a single feed (e.g. populating a just-added feed immediately). */
+  refresh(feedId?: number): Observable<RefreshReport> {
+    let params = new HttpParams();
+    if (feedId != null) params = params.set('feedId', feedId);
+    return this.http.post<RefreshReport>(`${this.base}/api/refresh`, {}, { params });
   }
 
   updateSubscription(

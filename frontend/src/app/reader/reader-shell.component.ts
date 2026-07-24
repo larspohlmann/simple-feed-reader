@@ -405,6 +405,13 @@ export class ReaderShellComponent implements OnInit {
         queryParams: { subscription: sub.id, view: null, tag: null, entry: null },
         queryParamsHandling: 'merge',
       });
+      // A just-added feed has no entries until its first fetch. Populate it now,
+      // scoped to this one feed so it stays fast, instead of leaving the user on
+      // an empty list until they hit refresh. Reload the list once it lands.
+      this.refreshSvc.run(() => {
+        this.subs.load();
+        this.entries.load(queryFromSelection(this.selection()));
+      }, sub.feedId);
     });
   }
 }

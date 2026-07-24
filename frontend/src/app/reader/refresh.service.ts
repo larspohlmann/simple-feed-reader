@@ -22,25 +22,27 @@ export class RefreshService {
     return Math.min(1, Math.max(0, (r.total - r.remaining) / r.total));
   });
 
-  run(onDone?: () => void): void {
+  /** Pass feedId to populate a single feed (e.g. one just added); omit it to
+   *  sweep all the caller's due feeds. The scope holds across the poll loop. */
+  run(onDone?: () => void, feedId?: number): void {
     if (this.running()) return;
     this.running.set(true);
     this.report.set(null);
     this.error.set(null);
-    this.step(0, onDone);
+    this.step(0, onDone, feedId);
   }
 
-  private step(busyRetries: number, onDone?: () => void): void {
-    this.api.refresh().subscribe({
+  private step(busyRetries: number, onDone?: () => void, feedId?: number): void {
+    this.api.refresh(feedId).subscribe({
       next: (r) => {
         this.report.set(r);
         if (r.status === 'partial' && r.remaining > 0) {
-          this.step(0, onDone);
+          this.step(0, onDone, feedId);
         } else if (r.status === 'busy') {
           if (busyRetries >= MAX_BUSY_RETRIES) {
             this.finish(onDone);
           } else {
-            setTimeout(() => this.step(busyRetries + 1, onDone), BUSY_BACKOFF_MS);
+            setTimeout(() => this.step(busyRetries + 1, onDone, feedId), BUSY_BACKOFF_MS);
           }
         } else {
           this.finish(onDone); // completed | aborted
