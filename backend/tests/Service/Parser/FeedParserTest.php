@@ -40,7 +40,9 @@ final class FeedParserTest extends TestCase
         self::assertSame('Jane Doe', $first->author);
         self::assertSame('Short teaser text.', $first->summary);
         self::assertStringContainsString('<strong>story</strong>', (string) $first->contentHtml);
-        self::assertSame('2026-07-20T08:30:00+02:00', $first->publishedAt?->format(DATE_ATOM));
+        // The feed's +02:00 pubDate is normalised to UTC (same instant) so stored
+        // dates share one timezone with createdAt (#48).
+        self::assertSame('2026-07-20T06:30:00+00:00', $first->publishedAt?->format(DATE_ATOM));
 
         $second = $feed->entries[1];
         self::assertSame('https://blog.example.com/second', $second->guid);
