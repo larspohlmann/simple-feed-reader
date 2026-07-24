@@ -41,9 +41,10 @@ describe('EditSubscriptionDialogComponent', () => {
     ctrl.expectOne('https://api.test/api/tags').flush({
       tags: [
         { id: 1, name: 'Tech', color: null, icon: null },
-        { id: 2, name: 'News', color: null, icon: null },
+        { id: 2, name: 'News', color: 'rgb(34, 197, 94)', icon: 'public' },
       ],
     });
+    f.detectChanges(); // render the tag pills now the store has loaded
     return f;
   }
 
@@ -54,6 +55,51 @@ describe('EditSubscriptionDialogComponent', () => {
     const c = mount().componentInstance;
     expect(c.checked().has(1)).toBe(true);
     expect(c.checked().has(2)).toBe(false);
+  });
+
+  it('renders each tag as a toggle pill with aria-pressed reflecting selection', () => {
+    const el = mount().nativeElement as HTMLElement;
+    const pills = el.querySelectorAll('button.tag-pill');
+    expect(pills.length).toBe(2);
+    // Tech (id 1) is a current tag → pressed; News (id 2) → not pressed.
+    const tech = [...pills].find((p) => p.textContent!.includes('Tech'))!;
+    const news = [...pills].find((p) => p.textContent!.includes('News'))!;
+    expect(tech.getAttribute('aria-pressed')).toBe('true');
+    expect(news.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it("shows a tag's icon when it has one, and a colour dot otherwise", () => {
+    const el = mount().nativeElement as HTMLElement;
+    const pills = [...el.querySelectorAll('button.tag-pill')];
+    const tech = pills.find((p) => p.textContent!.includes('Tech'))!;
+    const news = pills.find((p) => p.textContent!.includes('News'))!;
+    // News carries an icon → renders app-icon, no dot; Tech has none → dot.
+    expect(news.querySelector('app-icon')).not.toBeNull();
+    expect(news.querySelector('.dot')).toBeNull();
+    expect(tech.querySelector('app-icon')).toBeNull();
+    expect(tech.querySelector('.dot')).not.toBeNull();
+  });
+
+  it('colours an inactive tag icon with the tag colour', () => {
+    const el = mount().nativeElement as HTMLElement;
+    // News (id 2) is not one of the feed's tags → inactive → shows its own colour.
+    const news = [...el.querySelectorAll('button.tag-pill')].find((p) =>
+      p.textContent!.includes('News'),
+    )!;
+    const icon = news.querySelector('app-icon') as HTMLElement;
+    expect(icon.style.color).toBe('rgb(34, 197, 94)');
+  });
+
+  it('toggles a tag when its pill is clicked', () => {
+    const f = mount();
+    const el = f.nativeElement as HTMLElement;
+    const news = [...el.querySelectorAll('button.tag-pill')].find((p) =>
+      p.textContent!.includes('News'),
+    ) as HTMLButtonElement;
+    news.click();
+    f.detectChanges();
+    expect(f.componentInstance.checked().has(2)).toBe(true);
+    expect(news.getAttribute('aria-pressed')).toBe('true');
   });
 
   it('PATCHes customTitle (empty → null) and the toggled tag set', () => {
