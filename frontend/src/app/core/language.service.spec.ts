@@ -47,4 +47,13 @@ describe('LanguageService', () => {
     expect(localStorage.getItem(LANG_KEY)).toBe('de');
     expect(transloco.setActiveLang).toHaveBeenLastCalledWith('de');
   });
+
+  it('keeps the document language attribute in step', () => {
+    localStorage.setItem(LANG_KEY, 'en');
+    const { svc } = setup();
+    const s = svc();
+    expect(document.documentElement.lang).toBe('en');
+    s.set('de');
+    expect(document.documentElement.lang).toBe('de');
+  });
 });

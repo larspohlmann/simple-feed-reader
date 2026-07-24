@@ -15,13 +15,20 @@ export class LanguageService {
   readonly lang = signal<Lang>(this.initial());
 
   constructor() {
-    this.transloco.setActiveLang(this.lang());
+    this.apply(this.lang());
   }
 
   set(lang: Lang): void {
     localStorage.setItem(LANG_KEY, lang);
     this.lang.set(lang);
+    this.apply(lang);
+  }
+
+  private apply(lang: Lang): void {
     this.transloco.setActiveLang(lang);
+    // Keep the document language in step so screen readers pronounce content in
+    // the right language and the browser offers the right translation prompts.
+    if (typeof document !== 'undefined') document.documentElement.lang = lang;
   }
 
   private initial(): Lang {
