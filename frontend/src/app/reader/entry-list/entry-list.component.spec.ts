@@ -2,7 +2,6 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { EntryListComponent } from './entry-list.component';
 import { EntryDto } from '../models';
-import { ListScrollStore, listScrollKey } from '../list-scroll.store';
 
 const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   id,
@@ -115,14 +114,6 @@ describe('EntryListComponent', () => {
     expect((f.nativeElement as HTMLElement).querySelector('.list-header')!.classList).toContain(
       'collapsed',
     );
-  });
-
-  it('saves the scroll position under the selection key while scrolling', () => {
-    const selection = { kind: 'tag' as const, id: 7, unread: true };
-    const f = mount({ selection });
-    const store = TestBed.inject(ListScrollStore);
-    f.componentInstance.onRowsScroll({ target: { scrollTop: 333 } } as unknown as Event);
-    expect(store.restore(listScrollKey(selection))).toBe(333);
   });
 
   it('re-expands the list header when the selection changes', () => {

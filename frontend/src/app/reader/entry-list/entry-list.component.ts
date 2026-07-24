@@ -1,6 +1,5 @@
 // src/app/reader/entry-list/entry-list.component.ts
 import {
-  AfterViewInit,
   Component,
   ElementRef,
   OnDestroy,
@@ -25,7 +24,6 @@ import { Selection } from '../query';
 import { Problem } from '../../core/problem';
 import { LayoutService } from '../layout.service';
 import { nextHeaderHidden } from '../header-scroll';
-import { ListScrollStore, listScrollKey } from '../list-scroll.store';
 
 @Component({
   selector: 'app-entry-list',
@@ -40,7 +38,7 @@ import { ListScrollStore, listScrollKey } from '../list-scroll.store';
   templateUrl: './entry-list.component.html',
   styleUrl: './entry-list.component.scss',
 })
-export class EntryListComponent implements AfterViewInit, OnDestroy {
+export class EntryListComponent implements OnDestroy {
   readonly title = input.required<string>();
   readonly entries = input.required<EntryDto[]>();
   readonly loading = input.required<boolean>();
@@ -66,9 +64,6 @@ export class EntryListComponent implements AfterViewInit, OnDestroy {
   );
 
   private readonly screen = inject(LayoutService);
-  private readonly scrollStore = inject(ListScrollStore);
-  /** Identity of the current list, used to remember its scroll offset. */
-  private readonly scrollKey = computed(() => listScrollKey(this.selection()));
   // On a narrow layout the list header collapses to a slim tag-name-only bar as
   // you scroll down the list, expanding again on scroll up (same direction logic
   // as the app header's hide-on-scroll). Always expanded on wide screens.
@@ -91,25 +86,6 @@ export class EntryListComponent implements AfterViewInit, OnDestroy {
     this.collapsed.set(
       nextHeaderHidden(this.collapsed(), this.lastScrollTop, top, this.screen.isWide()),
     );
-    this.lastScrollTop = top;
-    // Remember where we are so returning from an article lands here again.
-    this.scrollStore.save(this.scrollKey(), top);
-  }
-
-  ngAfterViewInit(): void {
-    // The full-screen article destroys this list; on the way back it remounts
-    // with the entries still cached, so restore the offset we left off at.
-    const top = this.scrollStore.restore(this.scrollKey());
-    if (top <= 0) return;
-    this.applyScroll(top);
-    // Re-apply next frame in case late layout (e.g. images) shifted things.
-    requestAnimationFrame(() => this.applyScroll(top));
-  }
-
-  private applyScroll(top: number): void {
-    const el = this.rows()?.nativeElement;
-    if (!el) return;
-    el.scrollTop = top;
     this.lastScrollTop = top;
   }
 
