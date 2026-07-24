@@ -103,8 +103,14 @@ export interface FeedPreview {
   items: FeedPreviewItem[];
 }
 
-/** Why the scraper fallback could not turn an HTML page into a feed. */
-export type ScrapeFailureReason = 'blocked' | 'unreachable' | 'not_scrapable';
+/**
+ * Why the scraper fallback could not turn an HTML page into a feed. The known
+ * reasons are enumerated for editor support, but the type stays an open string:
+ * the backend's reason set is open (see the spec's openness note), so a newer
+ * server may send a reason this build hasn't heard of. `failureText()` renders a
+ * generic warning for anything outside the known set rather than an empty box.
+ */
+export type ScrapeFailureReason = 'blocked' | 'unreachable' | 'not_scrapable' | (string & {});
 
 /** POST /subscriptions returns either the created subscription or a candidate
  *  list; an empty list may carry the reason the scraper fallback gave up. */
