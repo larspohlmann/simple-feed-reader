@@ -217,8 +217,18 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     this.lastScrollTop = top;
   };
 
-  onFavorite = (e: EntryDto): void => this.patchOpen(e, { isFavorite: !e.isFavorite });
-  onKeep = (e: EntryDto): void => this.patchOpen(e, { isKept: !e.isKept });
+  // Toggle favourite/kept and keep the sidebar badge in sync optimistically,
+  // reverting the count if the PATCH fails (mirrors the unread-count handling).
+  onFavorite = (e: EntryDto): void => {
+    const delta = e.isFavorite ? -1 : 1;
+    this.subs.bumpFavorites(delta);
+    this.patchOpen(e, { isFavorite: !e.isFavorite }, () => this.subs.bumpFavorites(-delta));
+  };
+  onKeep = (e: EntryDto): void => {
+    const delta = e.isKept ? -1 : 1;
+    this.subs.bumpKept(delta);
+    this.patchOpen(e, { isKept: !e.isKept }, () => this.subs.bumpKept(-delta));
+  };
   onToggleRead = (e: EntryDto): void => this.setRead(e, !e.isRead);
 
   /** Reader-view outputs are payload-less; apply them to the currently open entry. */

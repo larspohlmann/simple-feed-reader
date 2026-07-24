@@ -40,6 +40,14 @@ export interface SubscriptionDto {
   unreadCount: number;
 }
 
+/** The sidebar bootstrap payload: the feed list plus the user-wide favourite and
+ *  kept totals shown as badges on the Favorites/Kept nav items. */
+export interface SubscriptionsResponse {
+  subscriptions: SubscriptionDto[];
+  favoritesCount: number;
+  keptCount: number;
+}
+
 export interface EntryDto {
   id: number;
   title: string;

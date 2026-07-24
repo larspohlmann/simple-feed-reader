@@ -30,6 +30,8 @@ function mount(
     tagTree: TagNode[];
     untagged: SubscriptionDto[];
     totalUnread: number;
+    favoritesCount: number;
+    keptCount: number;
     selection: Selection;
   }> = {},
 ) {
@@ -46,6 +48,8 @@ function mount(
   f.componentRef.setInput('tagTree', over.tagTree ?? []);
   f.componentRef.setInput('untagged', over.untagged ?? []);
   f.componentRef.setInput('totalUnread', over.totalUnread ?? 0);
+  f.componentRef.setInput('favoritesCount', over.favoritesCount ?? 0);
+  f.componentRef.setInput('keptCount', over.keptCount ?? 0);
   f.componentRef.setInput('selection', over.selection ?? { kind: 'all', id: null, unread: true });
   f.componentRef.setInput('loading', false);
   f.detectChanges();
@@ -58,6 +62,15 @@ describe('SidebarComponent', () => {
     const all = el.querySelector('.nav.all')!;
     expect(all.textContent).toContain('24');
     expect(all.classList).toContain('active');
+  });
+
+  it('shows favourite and kept totals on their nav items, omitting a zero', () => {
+    const el = mount({ favoritesCount: 5, keptCount: 0 }).nativeElement as HTMLElement;
+    const navs = [...el.querySelectorAll('.nav')];
+    const fav = navs.find((n) => n.textContent?.includes('Favorites'))!;
+    const kept = navs.find((n) => n.textContent?.includes('Kept'))!;
+    expect(fav.querySelector('.count')?.textContent).toContain('5');
+    expect(kept.querySelector('.count')).toBeNull();
   });
 
   it('emits refresh and addFeed from the action buttons', () => {

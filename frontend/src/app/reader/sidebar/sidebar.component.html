@@ -42,6 +42,9 @@
     queryParamsHandling="merge"
   >
     <app-icon name="star" [size]="18" /><span>{{ 'reader.favorites' | transloco }}</span>
+    @if (favoritesCount() > 0) {
+      <span class="count">{{ favoritesCount() }}</span>
+    }
   </a>
   <a
     class="nav"
@@ -51,6 +54,9 @@
     queryParamsHandling="merge"
   >
     <app-icon name="bookmark" [size]="18" /><span>{{ 'reader.kept' | transloco }}</span>
+    @if (keptCount() > 0) {
+      <span class="count">{{ keptCount() }}</span>
+    }
   </a>
 
   @if (tagTree().length) {
