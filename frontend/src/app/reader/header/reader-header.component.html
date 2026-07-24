@@ -1,6 +1,10 @@
 <header>
   <div class="left">
-    <button class="menu-btn" aria-label="Toggle sidebar" (click)="toggleSidebar.emit()">
+    <button
+      class="menu-btn"
+      [attr.aria-label]="'reader.toggleSidebar' | transloco"
+      (click)="toggleSidebar.emit()"
+    >
       <app-icon name="menu" [size]="20" />
     </button>
     <a
@@ -21,20 +25,21 @@
           type="button"
           [attr.aria-pressed]="readerMode.mode() === 'reader'"
           [attr.aria-label]="
-            readerMode.mode() === 'reader' ? 'Show original feed content' : 'Show reader view'
+            (readerMode.mode() === 'reader' ? 'reader.showOriginal' : 'reader.showReader')
+              | transloco
           "
           (click)="readerMode.toggle()"
         >
           <app-icon [name]="readerMode.mode() === 'reader' ? 'article' : 'feed'" [size]="18" />
           <span class="mode-label">{{
-            readerMode.mode() === 'reader' ? 'Reader' : 'Original'
+            (readerMode.mode() === 'reader' ? 'reader.readerView' : 'reader.original') | transloco
           }}</span>
         </button>
       }
       <button
         class="icon-btn"
         type="button"
-        aria-label="Previous"
+        [attr.aria-label]="'reader.previous' | transloco"
         [disabled]="!hasPrev()"
         (click)="prev.emit()"
       >
@@ -43,7 +48,7 @@
       <button
         class="icon-btn"
         type="button"
-        aria-label="Next"
+        [attr.aria-label]="'reader.next' | transloco"
         [disabled]="!hasNext()"
         (click)="next.emit()"
       >
@@ -62,11 +67,17 @@
       </button>
       @if (menuOpen()) {
         <div class="menu" role="menu">
-          <a role="menuitem" routerLink="/settings" (click)="menuOpen.set(false)">Settings</a>
+          <a role="menuitem" routerLink="/settings" (click)="menuOpen.set(false)">{{
+            'reader.settings' | transloco
+          }}</a>
           @if (auth.isAdmin()) {
-            <a role="menuitem" routerLink="/admin/users" (click)="menuOpen.set(false)">Admin</a>
+            <a role="menuitem" routerLink="/admin/users" (click)="menuOpen.set(false)">{{
+              'reader.admin' | transloco
+            }}</a>
           }
-          <button role="menuitem" (click)="auth.logout()">Sign out</button>
+          <button role="menuitem" (click)="auth.logout()">
+            {{ 'reader.signOut' | transloco }}
+          </button>
         </div>
       }
     </div>
@@ -74,7 +85,7 @@
 </header>
 
 @if (!articleOpen() && tags().length) {
-  <nav class="tagrow" aria-label="Tags">
+  <nav class="tagrow" [attr.aria-label]="'reader.tags' | transloco">
     @for (t of tags(); track t.id) {
       <a
         class="chip"

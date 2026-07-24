@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { EntryRowComponent } from './entry-row.component';
 import { EntryDto } from '../models';
 
@@ -27,7 +28,9 @@ function mount(e: EntryDto) {
 }
 
 describe('EntryRowComponent', () => {
-  beforeEach(() => TestBed.configureTestingModule({ imports: [EntryRowComponent] }));
+  beforeEach(() =>
+    TestBed.configureTestingModule({ imports: [EntryRowComponent, provideTranslocoTesting()] }),
+  );
 
   it('renders title, source, snippet and the https thumbnail', () => {
     const el = mount(entry()).nativeElement as HTMLElement;

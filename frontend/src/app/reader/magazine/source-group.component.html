@@ -24,7 +24,11 @@
     }"
     queryParamsHandling="merge"
   >
-    {{ moreCount() > 0 ? moreCount() + ' more from ' + source() : 'More from ' + source() }}
+    {{
+      moreCount() > 0
+        ? ('reader.moreFromCount' | transloco: { count: moreCount(), source: source() })
+        : ('reader.moreFrom' | transloco: { source: source() })
+    }}
     <app-icon name="arrow_forward" [size]="16" />
   </a>
 </div>

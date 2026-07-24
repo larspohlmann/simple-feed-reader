@@ -1,16 +1,21 @@
-<nav class="sidebar" aria-label="Feeds" cdkDropListGroup>
+<nav class="sidebar" [attr.aria-label]="'reader.feeds' | transloco" cdkDropListGroup>
   <div class="actions">
     <button
       class="act"
       type="button"
-      aria-label="Refresh"
+      [attr.aria-label]="'reader.refresh' | transloco"
       [disabled]="refreshSvc.running()"
       (click)="refresh.emit()"
     >
-      <app-icon name="refresh" [size]="18" /><span>Refresh</span>
+      <app-icon name="refresh" [size]="18" /><span>{{ 'reader.refresh' | transloco }}</span>
     </button>
-    <button class="act" type="button" aria-label="Add feed" (click)="addFeed.emit()">
-      <app-icon name="add" [size]="18" /><span>Add feed</span>
+    <button
+      class="act"
+      type="button"
+      [attr.aria-label]="'reader.addFeed' | transloco"
+      (click)="addFeed.emit()"
+    >
+      <app-icon name="add" [size]="18" /><span>{{ 'reader.addFeed' | transloco }}</span>
     </button>
   </div>
   @if (refreshSvc.running()) {
@@ -24,7 +29,7 @@
     [queryParams]="{ view: null, tag: null, subscription: null, entry: null }"
     queryParamsHandling="merge"
   >
-    <app-icon name="inbox" [size]="18" /><span>All items</span>
+    <app-icon name="inbox" [size]="18" /><span>{{ 'reader.allItems' | transloco }}</span>
     @if (totalUnread() > 0) {
       <span class="count">{{ totalUnread() }}</span>
     }
@@ -36,7 +41,7 @@
     [queryParams]="{ view: 'favorites', tag: null, subscription: null, entry: null }"
     queryParamsHandling="merge"
   >
-    <app-icon name="star" [size]="18" /><span>Favorites</span>
+    <app-icon name="star" [size]="18" /><span>{{ 'reader.favorites' | transloco }}</span>
   </a>
   <a
     class="nav"
@@ -45,11 +50,11 @@
     [queryParams]="{ view: 'kept', tag: null, subscription: null, entry: null }"
     queryParamsHandling="merge"
   >
-    <app-icon name="bookmark" [size]="18" /><span>Kept</span>
+    <app-icon name="bookmark" [size]="18" /><span>{{ 'reader.kept' | transloco }}</span>
   </a>
 
   @if (tagTree().length) {
-    <p class="label">Tags</p>
+    <p class="label">{{ 'reader.tags' | transloco }}</p>
     <!-- Each tag contributes two TOP-LEVEL drop lists (never nested): a
              header list that reorders tags and accepts a feed to add the tag,
              and — when expanded — a feed list that reorders/receives feeds.
@@ -81,7 +86,7 @@
               class="expand"
               type="button"
               [attr.aria-expanded]="expanded().has(node.tag.id)"
-              [attr.aria-label]="'Toggle ' + node.tag.name"
+              [attr.aria-label]="'reader.toggleTag' | transloco: { name: node.tag.name }"
               (click)="toggle(node.tag.id)"
             >
               <app-icon
@@ -119,7 +124,7 @@
               <button
                 class="dots"
                 type="button"
-                [attr.aria-label]="'Manage ' + node.tag.name"
+                [attr.aria-label]="'reader.manage' | transloco: { name: node.tag.name }"
                 (click)="toggleMenu('tag-' + node.tag.id, $event)"
               >
                 <app-icon name="more_horiz" [size]="18" />
@@ -127,10 +132,10 @@
               @if (menuFor() === 'tag-' + node.tag.id) {
                 <div class="pop" role="menu">
                   <button role="menuitem" (click)="editTag.emit(node.tag); closeMenu()">
-                    Edit tag
+                    {{ 'reader.editTag' | transloco }}
                   </button>
                   <button role="menuitem" (click)="deleteTag.emit(node.tag); closeMenu()">
-                    Delete tag
+                    {{ 'reader.deleteTag' | transloco }}
                   </button>
                 </div>
               }
@@ -170,7 +175,7 @@
                   <button
                     class="dots"
                     type="button"
-                    [attr.aria-label]="'Manage ' + s.title"
+                    [attr.aria-label]="'reader.manage' | transloco: { name: s.title }"
                     (click)="toggleMenu('sub-' + node.tag.id + '-' + s.id, $event)"
                   >
                     <app-icon name="more_horiz" [size]="18" />
@@ -178,10 +183,10 @@
                   @if (menuFor() === 'sub-' + node.tag.id + '-' + s.id) {
                     <div class="pop" role="menu">
                       <button role="menuitem" (click)="editFeed.emit(s); closeMenu()">
-                        Edit feed
+                        {{ 'reader.editFeed' | transloco }}
                       </button>
                       <button role="menuitem" (click)="unsubscribe.emit(s); closeMenu()">
-                        Unsubscribe
+                        {{ 'reader.unsubscribe' | transloco }}
                       </button>
                     </div>
                   }
@@ -195,7 +200,7 @@
   }
 
   @if (untagged().length || dragging()) {
-    <p class="label">Feeds</p>
+    <p class="label">{{ 'reader.feeds' | transloco }}</p>
   }
   <div
     class="feedlist"
@@ -229,16 +234,18 @@
           <button
             class="dots"
             type="button"
-            [attr.aria-label]="'Manage ' + s.title"
+            [attr.aria-label]="'reader.manage' | transloco: { name: s.title }"
             (click)="toggleMenu('sub-' + s.id, $event)"
           >
             <app-icon name="more_horiz" [size]="18" />
           </button>
           @if (menuFor() === 'sub-' + s.id) {
             <div class="pop" role="menu">
-              <button role="menuitem" (click)="editFeed.emit(s); closeMenu()">Edit feed</button>
+              <button role="menuitem" (click)="editFeed.emit(s); closeMenu()">
+                {{ 'reader.editFeed' | transloco }}
+              </button>
               <button role="menuitem" (click)="unsubscribe.emit(s); closeMenu()">
-                Unsubscribe
+                {{ 'reader.unsubscribe' | transloco }}
               </button>
             </div>
           }
@@ -246,7 +253,7 @@
       </div>
     }
     @if (dragging() && untagged().length === 0) {
-      <p class="dropzone-hint">Drop here to remove tags</p>
+      <p class="dropzone-hint">{{ 'reader.dropToRemoveTags' | transloco }}</p>
     }
   </div>
 

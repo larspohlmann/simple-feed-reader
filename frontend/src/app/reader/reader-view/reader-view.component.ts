@@ -13,6 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { Subscription, timeout } from 'rxjs';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
@@ -40,7 +41,7 @@ const LEAVE_ANIM_MS = 220;
 
 @Component({
   selector: 'app-reader-view',
-  imports: [IconComponent, FaviconComponent, SpinnerComponent, SourceTagsComponent],
+  imports: [IconComponent, FaviconComponent, SpinnerComponent, SourceTagsComponent, TranslocoPipe],
   templateUrl: './reader-view.component.html',
   styleUrl: './reader-view.component.scss',
 })

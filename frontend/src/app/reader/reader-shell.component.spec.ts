@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
@@ -48,7 +49,7 @@ describe('ReaderShellComponent', () => {
   beforeEach(() => {
     qp.next(convertToParamMap({}));
     TestBed.configureTestingModule({
-      imports: [ReaderShellComponent],
+      imports: [ReaderShellComponent, provideTranslocoTesting()],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),

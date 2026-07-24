@@ -1,5 +1,6 @@
 // src/app/reader/magazine/entry-hero.component.ts
 import { Component, computed, effect, input, output, signal } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
@@ -9,7 +10,7 @@ import { relativeTime } from '../format';
 
 @Component({
   selector: 'app-entry-hero',
-  imports: [IconComponent, FaviconComponent, SourceTagsComponent],
+  imports: [IconComponent, FaviconComponent, SourceTagsComponent, TranslocoPipe],
   templateUrl: './entry-hero.component.html',
   styleUrl: './entry-hero.component.scss',
 })

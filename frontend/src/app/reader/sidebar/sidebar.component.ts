@@ -8,6 +8,7 @@ import {
   CdkDropListGroup,
   moveItemInArray,
 } from '@angular/cdk/drag-drop';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { ViewControlsComponent } from '../view-controls/view-controls.component';
@@ -26,6 +27,7 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
     IconComponent,
     FaviconComponent,
     ViewControlsComponent,
+    TranslocoPipe,
     CdkDropListGroup,
     CdkDropList,
     CdkDrag,

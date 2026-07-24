@@ -1,6 +1,7 @@
 // src/app/reader/magazine/source-group.component.ts
 import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { EntryCompactComponent } from './entry-compact.component';
@@ -15,6 +16,7 @@ import { EntryDto, SubscriptionTagDto } from '../models';
     FaviconComponent,
     EntryCompactComponent,
     SourceTagsComponent,
+    TranslocoPipe,
   ],
   templateUrl: './source-group.component.html',
   styleUrl: './source-group.component.scss',

@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { provideRouter } from '@angular/router';
 import { SourceGroupComponent } from './source-group.component';
 import { EntryDto, SubscriptionTagDto } from '../models';
@@ -30,7 +31,7 @@ const e = (id: number): EntryDto => ({
 describe('SourceGroupComponent', () => {
   function mount(moreCount: number) {
     TestBed.configureTestingModule({
-      imports: [SourceGroupComponent],
+      imports: [SourceGroupComponent, provideTranslocoTesting()],
       providers: [provideRouter([])],
     });
     const f = TestBed.createComponent(SourceGroupComponent);
@@ -58,7 +59,7 @@ describe('SourceGroupComponent', () => {
 
   it('shows the feed tags as pills once, on the group header', () => {
     TestBed.configureTestingModule({
-      imports: [SourceGroupComponent],
+      imports: [SourceGroupComponent, provideTranslocoTesting()],
       providers: [provideRouter([])],
     });
     const f = TestBed.createComponent(SourceGroupComponent);
