@@ -12,20 +12,35 @@
           [routerLink]="[]"
           [queryParams]="{ unread: null }"
           queryParamsHandling="merge"
-          >{{ 'reader.unread' | transloco }}</a
+          [attr.aria-label]="'reader.unread' | transloco"
+          [attr.title]="'reader.unread' | transloco"
         >
+          <app-icon class="ico" name="circle" [size]="14" />
+          <span class="txt">{{ 'reader.unread' | transloco }}</span>
+        </a>
         <a
           [class.on]="!selection().unread"
           [routerLink]="[]"
           [queryParams]="{ unread: '0' }"
           queryParamsHandling="merge"
-          >{{ 'reader.all' | transloco }}</a
+          [attr.aria-label]="'reader.all' | transloco"
+          [attr.title]="'reader.all' | transloco"
         >
+          <app-icon class="ico" name="list" [size]="18" />
+          <span class="txt">{{ 'reader.all' | transloco }}</span>
+        </a>
       </div>
     }
     @if (canMarkAllRead()) {
-      <button class="mark-all" type="button" (click)="markAllRead.emit()">
-        <app-icon name="done_all" [size]="18" /> {{ 'reader.markAllRead' | transloco }}
+      <button
+        class="mark-all"
+        type="button"
+        (click)="markAllRead.emit()"
+        [attr.aria-label]="'reader.markAllRead' | transloco"
+        [attr.title]="'reader.markAllRead' | transloco"
+      >
+        <app-icon name="done_all" [size]="18" />
+        <span class="txt">{{ 'reader.markAllRead' | transloco }}</span>
       </button>
     }
   </div>
