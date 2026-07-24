@@ -1,6 +1,7 @@
 // src/app/settings/settings.component.ts
 import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../shared/icon/icon.component';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { TagsStore } from '../reader/tags.store';
@@ -14,6 +15,7 @@ import { PreferencesSectionComponent } from './preferences-section.component';
   selector: 'app-settings',
   imports: [
     RouterLink,
+    TranslocoPipe,
     IconComponent,
     FeedsSectionComponent,
     TagsSectionComponent,

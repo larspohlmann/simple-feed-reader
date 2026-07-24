@@ -1,12 +1,12 @@
 <section>
   <div class="head">
-    <h2>Tags</h2>
+    <h2>{{ 'settings.tags.title' | transloco }}</h2>
     <button class="new" (click)="manage.createTag()">
-      <app-icon name="add" [size]="16" /> New tag
+      <app-icon name="add" [size]="16" /> {{ 'settings.tags.new' | transloco }}
     </button>
   </div>
   @if (tagsStore.tags().length === 0) {
-    <p class="muted">No tags yet — create one to group your feeds.</p>
+    <p class="muted">{{ 'settings.tags.none' | transloco }}</p>
   } @else {
     <ul class="list">
       @for (t of tagsStore.tags(); track t.id) {
@@ -17,14 +17,19 @@
               <app-icon [name]="t.icon" [size]="18" />
             }
             <span class="name">{{ t.name }}</span>
-            <span class="count"
-              >{{ usage()[t.id] || 0 }} {{ (usage()[t.id] || 0) === 1 ? 'feed' : 'feeds' }}</span
-            >
+            <span class="count">{{
+              ((usage()[t.id] || 0) === 1
+                ? 'settings.tags.feedCountOne'
+                : 'settings.tags.feedCountOther'
+              ) | transloco: { count: usage()[t.id] || 0 }
+            }}</span>
           </span>
           <span class="acts">
-            <button (click)="manage.editTag(t)"><app-icon name="edit" [size]="16" /> Edit</button>
+            <button (click)="manage.editTag(t)">
+              <app-icon name="edit" [size]="16" /> {{ 'settings.tags.edit' | transloco }}
+            </button>
             <button class="danger" (click)="manage.deleteTag(t)">
-              <app-icon name="delete" [size]="16" /> Delete
+              <app-icon name="delete" [size]="16" /> {{ 'settings.tags.delete' | transloco }}
             </button>
           </span>
         </li>

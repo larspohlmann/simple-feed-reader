@@ -1,17 +1,20 @@
 <section>
-  <h2>Account</h2>
+  <h2>{{ 'settings.account.title' | transloco }}</h2>
   @if (auth.user(); as u) {
     <dl class="grid">
-      <dt>Email</dt>
+      <dt>{{ 'settings.account.email' | transloco }}</dt>
       <dd>{{ u.email }}</dd>
-      <dt>Member since</dt>
+      <dt>{{ 'settings.account.memberSince' | transloco }}</dt>
       <dd>{{ u.createdAt | date: 'longDate' }}</dd>
     </dl>
     @if (auth.isAdmin()) {
       <a class="admin" routerLink="/admin/users">
-        <app-icon name="shield_person" [size]="18" /> Admin — user queue
+        <app-icon name="shield_person" [size]="18" />
+        {{ 'settings.account.adminQueue' | transloco }}
       </a>
     }
-    <button class="signout" (click)="auth.logout()">Sign out</button>
+    <button class="signout" (click)="auth.logout()">
+      {{ 'settings.account.signOut' | transloco }}
+    </button>
   }
 </section>

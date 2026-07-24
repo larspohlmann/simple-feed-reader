@@ -1,10 +1,16 @@
-<div class="dialog" role="dialog" aria-modal="true" [attr.aria-label]="title" cdkTrapFocus>
-  <h2>{{ title }}</h2>
+<div
+  class="dialog"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-label]="titleKey | transloco"
+  cdkTrapFocus
+>
+  <h2>{{ titleKey | transloco }}</h2>
   <form [formGroup]="form" (ngSubmit)="submit()">
-    <label class="lbl" for="tag-name">Name</label>
+    <label class="lbl" for="tag-name">{{ 'dialog.tagForm.name' | transloco }}</label>
     <input id="tag-name" class="field" formControlName="name" maxlength="100" cdkFocusInitial />
 
-    <p class="lbl">Colour</p>
+    <p class="lbl">{{ 'dialog.tagForm.colour' | transloco }}</p>
     <div class="swatches">
       @for (c of colors; track c) {
         <button
@@ -12,27 +18,29 @@
           class="swatch"
           [class.on]="color() === c"
           [style.background]="c"
-          [attr.aria-label]="'Colour ' + c"
+          [attr.aria-label]="'dialog.tagForm.colourAria' | transloco: { colour: c }"
           (click)="color.set(c)"
         ></button>
       }
       <input
         type="color"
         class="picker"
-        aria-label="Custom colour"
+        [attr.aria-label]="'dialog.tagForm.customColour' | transloco"
         [value]="color() ?? '#3f8676'"
         (input)="color.set(pickerValue($event))"
       />
-      <button type="button" class="clear" (click)="color.set(null)">None</button>
+      <button type="button" class="clear" (click)="color.set(null)">
+        {{ 'dialog.tagForm.none' | transloco }}
+      </button>
     </div>
 
-    <p class="lbl">Icon</p>
+    <p class="lbl">{{ 'dialog.tagForm.icon' | transloco }}</p>
     <div class="icons">
       <button
         type="button"
         class="icon"
         [class.on]="icon() === null"
-        aria-label="No icon"
+        [attr.aria-label]="'dialog.tagForm.noIcon' | transloco"
         (click)="icon.set(null)"
       >
         <app-icon name="block" [size]="18" />
@@ -54,9 +62,9 @@
       <p class="error" role="alert">{{ error() }}</p>
     }
     <div class="row">
-      <button type="button" (click)="ref.close()">Cancel</button>
+      <button type="button" (click)="ref.close()">{{ 'dialog.cancel' | transloco }}</button>
       <button type="submit" class="primary" [disabled]="loading()">
-        {{ loading() ? 'Saving…' : 'Save' }}
+        {{ (loading() ? 'dialog.tagForm.saving' : 'dialog.tagForm.save') | transloco }}
       </button>
     </div>
   </form>

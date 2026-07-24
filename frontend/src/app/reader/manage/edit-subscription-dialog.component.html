@@ -1,7 +1,13 @@
-<div class="dialog" role="dialog" aria-modal="true" aria-label="Edit feed" cdkTrapFocus>
-  <h2>Edit feed</h2>
+<div
+  class="dialog"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-label]="'dialog.editFeed.title' | transloco"
+  cdkTrapFocus
+>
+  <h2>{{ 'dialog.editFeed.title' | transloco }}</h2>
   <form [formGroup]="form" (ngSubmit)="submit()">
-    <label class="lbl" for="sub-title">Custom title</label>
+    <label class="lbl" for="sub-title">{{ 'dialog.editFeed.customTitle' | transloco }}</label>
     <input
       id="sub-title"
       class="field"
@@ -11,9 +17,9 @@
       cdkFocusInitial
     />
 
-    <p class="lbl">Tags</p>
+    <p class="lbl">{{ 'dialog.editFeed.tags' | transloco }}</p>
     @if (tagsStore.tags().length === 0) {
-      <p class="hint">No tags yet — create one from Settings › Tags.</p>
+      <p class="hint">{{ 'dialog.editFeed.noTags' | transloco }}</p>
     }
     <div class="tags">
       @for (t of tagsStore.tags(); track t.id) {
@@ -49,9 +55,9 @@
       <p class="error" role="alert">{{ error() }}</p>
     }
     <div class="row">
-      <button type="button" (click)="ref.close()">Cancel</button>
+      <button type="button" (click)="ref.close()">{{ 'dialog.cancel' | transloco }}</button>
       <button type="submit" class="primary" [disabled]="loading()">
-        {{ loading() ? 'Saving…' : 'Save' }}
+        {{ (loading() ? 'dialog.editFeed.saving' : 'dialog.editFeed.save') | transloco }}
       </button>
     </div>
   </form>

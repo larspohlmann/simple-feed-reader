@@ -4,6 +4,7 @@ import { Component, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { parseProblem } from '../../core/problem';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { ReaderApi } from '../reader-api';
@@ -12,7 +13,7 @@ import { TAG_COLORS, TAG_ICONS } from './icon-choices';
 
 @Component({
   selector: 'app-tag-form-dialog',
-  imports: [ReactiveFormsModule, A11yModule, IconComponent],
+  imports: [ReactiveFormsModule, A11yModule, IconComponent, TranslocoPipe],
   templateUrl: './tag-form-dialog.component.html',
   styleUrl: './tag-form-dialog.component.scss',
 })
@@ -25,7 +26,7 @@ export class TagFormDialogComponent {
   readonly colors = TAG_COLORS;
   readonly icons = TAG_ICONS;
   readonly isEdit = this.data !== null;
-  readonly title = this.isEdit ? 'Edit tag' : 'New tag';
+  readonly titleKey = this.isEdit ? 'dialog.tagForm.editTitle' : 'dialog.tagForm.newTitle';
 
   readonly form = this.fb.group({
     name: [this.data?.name ?? '', [Validators.required, Validators.maxLength(100)]],

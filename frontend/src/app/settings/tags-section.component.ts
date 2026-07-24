@@ -1,5 +1,6 @@
 // src/app/settings/tags-section.component.ts
 import { Component, computed, inject } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../shared/icon/icon.component';
 import { TagsStore } from '../reader/tags.store';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
@@ -7,7 +8,7 @@ import { ManageActions } from '../reader/manage/manage-actions.service';
 
 @Component({
   selector: 'app-tags-section',
-  imports: [IconComponent],
+  imports: [IconComponent, TranslocoPipe],
   templateUrl: './tags-section.component.html',
   styleUrl: './tags-section.component.scss',
 })

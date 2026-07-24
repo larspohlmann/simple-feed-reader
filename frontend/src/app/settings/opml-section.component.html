@@ -1,10 +1,10 @@
 <section>
-  <h2>Import &amp; export</h2>
+  <h2>{{ 'settings.opml.title' | transloco }}</h2>
 
   <div class="block">
-    <p class="lead">Download all your feeds as an OPML file.</p>
+    <p class="lead">{{ 'settings.opml.exportLead' | transloco }}</p>
     <button class="btn" [disabled]="exporting()" (click)="exportOpml()">
-      {{ exporting() ? 'Preparing…' : 'Export OPML' }}
+      {{ (exporting() ? 'settings.opml.preparing' : 'settings.opml.export') | transloco }}
     </button>
     @if (exportError()) {
       <p class="error" role="alert">{{ exportError() }}</p>
@@ -12,12 +12,12 @@
   </div>
 
   <div class="block">
-    <p class="lead">Import an OPML file, or paste its contents.</p>
+    <p class="lead">{{ 'settings.opml.importLead' | transloco }}</p>
     <input type="file" accept=".opml,.xml,text/xml,text/x-opml" (change)="onFile($event)" />
     <textarea
       class="field area"
       rows="4"
-      placeholder="…or paste OPML here"
+      [placeholder]="'settings.opml.pastePlaceholder' | transloco"
       [value]="text()"
       (input)="text.set(value($event))"
     ></textarea>
@@ -26,16 +26,23 @@
       [disabled]="importing() || reading() || !text().trim()"
       (click)="importText()"
     >
-      {{ importing() ? 'Importing…' : 'Import' }}
+      {{ (importing() ? 'settings.opml.importing' : 'settings.opml.import') | transloco }}
     </button>
     @if (importError()) {
       <p class="error" role="alert">{{ importError() }}</p>
     }
     @if (result(); as r) {
       <p class="result">
-        Imported {{ r.imported }}, already subscribed {{ r.alreadySubscribed }}, invalid
-        {{ r.invalid }}, skipped over limit {{ r.skippedOverLimit }}. New feeds fill in on the next
-        refresh.
+        {{
+          'settings.opml.result'
+            | transloco
+              : {
+                  imported: r.imported,
+                  already: r.alreadySubscribed,
+                  invalid: r.invalid,
+                  skipped: r.skippedOverLimit,
+                }
+        }}
       </p>
     }
   </div>

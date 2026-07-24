@@ -1,6 +1,7 @@
 // src/app/settings/opml-section.component.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { parseProblem } from '../core/problem';
 import { ReaderApi } from '../reader/reader-api';
 import { RefreshService } from '../reader/refresh.service';
@@ -9,6 +10,7 @@ import { OpmlImportResult } from '../reader/models';
 
 @Component({
   selector: 'app-opml-section',
+  imports: [TranslocoPipe],
   templateUrl: './opml-section.component.html',
   styleUrl: './opml-section.component.scss',
 })

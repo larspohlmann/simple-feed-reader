@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { TagsSectionComponent } from './tags-section.component';
 import { TagsStore } from '../reader/tags.store';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
@@ -20,6 +21,7 @@ describe('TagsSectionComponent', () => {
 
   function mount(tags: TagDto[], subs: SubscriptionDto[] = []) {
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         {
           provide: TagsStore,

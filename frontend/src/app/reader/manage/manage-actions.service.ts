@@ -2,6 +2,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Dialog } from '@angular/cdk/dialog';
+import { TranslocoService } from '@jsverse/transloco';
 import { ReaderApi } from '../reader-api';
 import { SubscriptionsStore } from '../subscriptions.store';
 import { TagsStore } from '../tags.store';
@@ -21,6 +22,7 @@ export class ManageActions {
   private readonly api = inject(ReaderApi);
   private readonly subs = inject(SubscriptionsStore);
   private readonly tags = inject(TagsStore);
+  private readonly i18n = inject(TranslocoService);
 
   editSubscription(sub: SubscriptionDto): void {
     const ref = this.dialog.open<SubscriptionDto>(EditSubscriptionDialogComponent, { data: sub });
@@ -62,9 +64,9 @@ export class ManageActions {
 
   unsubscribe(sub: SubscriptionDto): void {
     const data: ConfirmData = {
-      title: 'Unsubscribe',
-      message: `Remove “${sub.title}” and its entries from your feeds?`,
-      confirmLabel: 'Unsubscribe',
+      title: this.i18n.translate('manage.unsubscribeTitle'),
+      message: this.i18n.translate('manage.unsubscribeMessage', { title: sub.title }),
+      confirmLabel: this.i18n.translate('manage.unsubscribeConfirm'),
       danger: true,
     };
     const ref = this.dialog.open<boolean>(ConfirmDialogComponent, { data });
@@ -92,9 +94,9 @@ export class ManageActions {
 
   deleteTag(tag: TagDto): void {
     const data: ConfirmData = {
-      title: 'Delete tag',
-      message: `Delete “${tag.name}”? It will be removed from every feed that uses it.`,
-      confirmLabel: 'Delete',
+      title: this.i18n.translate('manage.deleteTagTitle'),
+      message: this.i18n.translate('manage.deleteTagMessage', { name: tag.name }),
+      confirmLabel: this.i18n.translate('manage.deleteConfirm'),
       danger: true,
     };
     const ref = this.dialog.open<boolean>(ConfirmDialogComponent, { data });
