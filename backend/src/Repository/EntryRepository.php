@@ -49,6 +49,37 @@ class EntryRepository extends ServiceEntityRepository
     }
 
     /**
+     * The feed's existing entries for the given guid hashes, indexed by hash —
+     * lets a re-parse match items back to their persisted rows.
+     *
+     * @param list<string> $guidHashes
+     *
+     * @return array<string, Entry>
+     */
+    public function findByFeedIndexedByGuidHash(Feed $feed, array $guidHashes): array
+    {
+        if ($guidHashes === []) {
+            return [];
+        }
+
+        /** @var list<Entry> $rows */
+        $rows = $this->createQueryBuilder('e')
+            ->andWhere('e.feed = :feed')
+            ->andWhere('e.guidHash IN (:hashes)')
+            ->setParameter('feed', $feed)
+            ->setParameter('hashes', $guidHashes)
+            ->getQuery()
+            ->getResult();
+
+        $byHash = [];
+        foreach ($rows as $entry) {
+            $byHash[$entry->getGuidHash()] = $entry;
+        }
+
+        return $byHash;
+    }
+
+    /**
      * Entries in feeds the caller subscribes to, newest first by
      * effectiveDate (publishedAt ?? createdAt) then id, keyset-paginated.
      * LEFT JOINs the caller's EntryState and folds Subscription.markedReadUntil
