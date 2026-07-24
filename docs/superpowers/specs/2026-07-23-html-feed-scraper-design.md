@@ -224,6 +224,14 @@ has no native feed, `FeedDiscoveryResult` carries a nullable
   (<3 items): UI warns "This page offers no feed and no article list could
   be detected — it can't be subscribed."
 
+**Open reason set (third openness application, 2026-07-24):** the reason
+union above is the *known* set, not a closed contract. The frontend types
+the field as an open string with the union documented, and `failureText()`
+falls back to a generic "This page can't be subscribed." for any unknown
+reason — so a future backend reason ships without a frontend release, and
+an out-of-date frontend degrades to a correct (if less specific) warning
+instead of an empty box.
+
 Frontend add-feed flow: the candidate card shows a "Scraped" format badge
 where RSS/Atom badges show today, plus a one-line hint ("No feed found —
 generated from the page's article list"). The existing preview cards then
