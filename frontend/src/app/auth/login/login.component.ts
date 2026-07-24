@@ -28,7 +28,12 @@ import { FormErrorComponent } from '../../shared/form-error/form-error.component
         </label>
         <label class="field">
           <span>Password</span>
-          <input type="password" formControlName="password" name="password" autocomplete="current-password" />
+          <input
+            type="password"
+            formControlName="password"
+            name="password"
+            autocomplete="current-password"
+          />
         </label>
         <app-form-error [message]="error()" />
         <app-button variant="primary" [loading]="loading()" (click)="submit()">Sign in</app-button>
