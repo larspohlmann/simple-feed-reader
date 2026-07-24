@@ -18,6 +18,13 @@ button.primary {
   border-color: var(--accent);
 }
 
+/* The default spinner's signal colour is the accent, which would vanish on a
+   primary button's accent fill; retint it to the on-accent colour instead. */
+button.primary app-spinner {
+  --spin-sig: var(--on-accent);
+  --spin-dim: color-mix(in srgb, var(--on-accent) 35%, transparent);
+}
+
 button:disabled {
   cursor: default;
   opacity: 0.7;

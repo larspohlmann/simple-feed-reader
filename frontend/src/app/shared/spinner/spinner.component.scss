@@ -1,13 +1,59 @@
-.spin {
-  display: inline-block;
-  border: 2px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: r 0.7s linear infinite;
+:host {
+  display: inline-flex;
+
+  /* Signal / non-signal colours. Overridable per context (e.g. on an accent
+     button) so the mark stays legible wherever it renders. */
+  --spin-sig: var(--accent);
+  --spin-dim: var(--text-muted);
+  --spin-dur: 1.8s;
 }
 
-@keyframes r {
-  to {
-    transform: rotate(1turn);
+.rss {
+  display: block;
+}
+
+/* Idle: the whole mark rests in the signal colour. */
+.p {
+  color: var(--spin-sig);
+}
+
+/* Animated: each part rests in the non-signal colour and lights up to the
+   signal colour for ~one third of the cycle. Staggering the three parts by a
+   third means exactly one is "lit" at a time and the signal wanders
+   dot → inner → outer, reading as a feed transmitting outward. */
+.animate .p {
+  color: var(--spin-dim);
+  animation: wander var(--spin-dur) linear infinite;
+}
+
+.animate .p1 {
+  animation-delay: calc(var(--spin-dur) / -3);
+}
+
+.animate .p3 {
+  animation-delay: calc(var(--spin-dur) / -3 * 2);
+}
+
+@keyframes wander {
+  0%,
+  22% {
+    color: var(--spin-dim);
+  }
+
+  30%,
+  58% {
+    color: var(--spin-sig);
+  }
+
+  66%,
+  100% {
+    color: var(--spin-dim);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate .p {
+    animation: none;
+    color: var(--spin-sig);
   }
 }
