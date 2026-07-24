@@ -10,7 +10,14 @@
   (prev)="onPrev()"
   (next)="onNext()"
 />
-<div class="body">
+<div
+  class="body"
+  appDrawerSwipe
+  [appDrawerSwipeOpen]="sidebarOpen()"
+  [appDrawerSwipeDisabled]="!screen.isNarrow() || articleFullscreen()"
+  (appDrawerSwipeOpenDrawer)="sidebarOpen.set(true)"
+  (appDrawerSwipeCloseDrawer)="sidebarOpen.set(false)"
+>
   @if (sidebarOpen()) {
     <button
       class="backdrop"
@@ -19,7 +26,7 @@
       (click)="sidebarOpen.set(false)"
     ></button>
   }
-  <aside class="sidebar" [class.open]="sidebarOpen()">
+  <aside class="sidebar" data-drawer-panel [class.open]="sidebarOpen()">
     <app-sidebar
       [tagTree]="subs.tagTree()"
       [untagged]="subs.untagged()"
