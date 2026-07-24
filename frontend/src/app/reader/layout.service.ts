@@ -6,11 +6,16 @@ import { map } from 'rxjs';
 
 /** True when the viewport is wide enough to place the reader in a side pane. */
 export const WIDE_QUERY = '(min-width: 900px)';
+/** True below this width, where the sidebar is a swipe-in drawer, not a column. */
+export const NARROW_QUERY = '(max-width: 720px)';
 
 @Injectable({ providedIn: 'root' })
 export class LayoutService {
   private readonly bp = inject(BreakpointObserver);
   readonly isWide = toSignal(this.bp.observe(WIDE_QUERY).pipe(map((s) => s.matches)), {
     initialValue: typeof window !== 'undefined' ? window.matchMedia(WIDE_QUERY).matches : true,
+  });
+  readonly isNarrow = toSignal(this.bp.observe(NARROW_QUERY).pipe(map((s) => s.matches)), {
+    initialValue: typeof window !== 'undefined' ? window.matchMedia(NARROW_QUERY).matches : false,
   });
 }

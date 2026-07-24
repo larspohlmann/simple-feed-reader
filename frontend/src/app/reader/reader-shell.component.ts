@@ -33,10 +33,17 @@ import { EntryListComponent } from './entry-list/entry-list.component';
 import { ReaderViewComponent } from './reader-view/reader-view.component';
 import { AddFeedDialogComponent } from './add-feed/add-feed-dialog.component';
 import { ManageActions } from './manage/manage-actions.service';
+import { DrawerSwipeDirective } from './drawer-swipe.directive';
 
 @Component({
   selector: 'app-reader-shell',
-  imports: [ReaderHeaderComponent, SidebarComponent, EntryListComponent, ReaderViewComponent],
+  imports: [
+    ReaderHeaderComponent,
+    SidebarComponent,
+    EntryListComponent,
+    ReaderViewComponent,
+    DrawerSwipeDirective,
+  ],
   templateUrl: './reader-shell.component.html',
   styleUrl: './reader-shell.component.scss',
 })

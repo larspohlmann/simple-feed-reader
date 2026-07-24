@@ -1,8 +1,10 @@
 import {
+  DRAWER_SWIPE_MIN_X,
   OVERSCROLL_BACK_MIN,
   SWIPE_BACK_MIN_X,
   atBottom,
   isBackSwipe,
+  isDrawerSwipe,
   overscrollTriggersBack,
   rubberBand,
 } from './reader-gestures';
@@ -22,6 +24,30 @@ describe('isBackSwipe', () => {
 
   it('rejects a swipe dominated by vertical movement', () => {
     expect(isBackSwipe(80, 120)).toBe(false);
+  });
+});
+
+describe('isDrawerSwipe', () => {
+  it('accepts a decisive rightward swipe to open (dir 1)', () => {
+    expect(isDrawerSwipe(DRAWER_SWIPE_MIN_X + 10, 15, 1)).toBe(true);
+  });
+
+  it('accepts a decisive leftward swipe to close (dir -1)', () => {
+    expect(isDrawerSwipe(-(DRAWER_SWIPE_MIN_X + 10), 15, -1)).toBe(true);
+  });
+
+  it('rejects a swipe in the wrong direction', () => {
+    expect(isDrawerSwipe(-100, 0, 1)).toBe(false);
+    expect(isDrawerSwipe(100, 0, -1)).toBe(false);
+  });
+
+  it('rejects a swipe that has not travelled far enough', () => {
+    expect(isDrawerSwipe(DRAWER_SWIPE_MIN_X - 1, 0, 1)).toBe(false);
+  });
+
+  it('rejects a swipe dominated by vertical movement', () => {
+    expect(isDrawerSwipe(80, 120, 1)).toBe(false);
+    expect(isDrawerSwipe(-80, 120, -1)).toBe(false);
   });
 });
 

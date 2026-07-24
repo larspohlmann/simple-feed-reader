@@ -10,10 +10,23 @@ export const SWIPE_AXIS_RATIO = 1.5;
 export const OVERSCROLL_BACK_MIN = 90;
 /** Movement (px) before a gesture commits to the horizontal or vertical axis. */
 export const AXIS_LOCK_MIN = 10;
+/** Minimum horizontal travel (px) for a swipe to open or close the mobile drawer. */
+export const DRAWER_SWIPE_MIN_X = 60;
 
 /** A decisive rightward, mostly-horizontal swipe — the "back to list" gesture. */
 export function isBackSwipe(dx: number, dy: number): boolean {
   return dx >= SWIPE_BACK_MIN_X && dx >= Math.abs(dy) * SWIPE_AXIS_RATIO;
+}
+
+/**
+ * A decisive, mostly-horizontal swipe that opens or closes the mobile sidebar
+ * drawer. `dir` is the intended direction: 1 for a rightward open-swipe, -1 for
+ * a leftward close-swipe. Rejects wrong-direction, too-short, and vertical-
+ * dominated moves so it never fires on a plain up/down scroll of the list.
+ */
+export function isDrawerSwipe(dx: number, dy: number, dir: 1 | -1): boolean {
+  const along = dx * dir;
+  return along >= DRAWER_SWIPE_MIN_X && along >= Math.abs(dy) * SWIPE_AXIS_RATIO;
 }
 
 /** Whether an at-the-end pull is far enough to return to the list. */
