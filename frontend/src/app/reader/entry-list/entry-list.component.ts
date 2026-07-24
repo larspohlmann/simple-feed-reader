@@ -5,8 +5,10 @@ import {
   OnDestroy,
   computed,
   effect,
+  inject,
   input,
   output,
+  signal,
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -20,6 +22,8 @@ import { ReadingLayout } from '../reading-layout.service';
 import { EntryDto, SubscriptionTagDto } from '../models';
 import { Selection } from '../query';
 import { Problem } from '../../core/problem';
+import { LayoutService } from '../layout.service';
+import { nextHeaderHidden } from '../header-scroll';
 
 @Component({
   selector: 'app-entry-list',
@@ -58,6 +62,32 @@ export class EntryListComponent implements OnDestroy {
   readonly blocks = computed<MagazineBlock[]>(() =>
     planMagazine(this.entries(), this.selection().kind !== 'subscription', !this.hasMore()),
   );
+
+  private readonly screen = inject(LayoutService);
+  // On a narrow layout the list header collapses to a slim tag-name-only bar as
+  // you scroll down the list, expanding again on scroll up (same direction logic
+  // as the app header's hide-on-scroll). Always expanded on wide screens.
+  readonly collapsed = signal(false);
+  private lastScrollTop = 0;
+
+  // A new selection reloads the list from the top, and a resize past the wide
+  // breakpoint restores the full-size header — expand the bar in both cases.
+  private readonly _resetCollapse = effect(() => {
+    this.selection();
+    this.screen.isWide();
+    this.collapsed.set(false);
+    this.lastScrollTop = 0;
+  });
+
+  onRowsScroll(e: Event): void {
+    const el = e.target as HTMLElement | null;
+    if (!el || typeof el.scrollTop !== 'number') return;
+    const top = el.scrollTop;
+    this.collapsed.set(
+      nextHeaderHidden(this.collapsed(), this.lastScrollTop, top, this.screen.isWide()),
+    );
+    this.lastScrollTop = top;
+  }
 
   tagsFor(subscriptionId: number): SubscriptionTagDto[] {
     return this.feedTags().get(subscriptionId) ?? [];

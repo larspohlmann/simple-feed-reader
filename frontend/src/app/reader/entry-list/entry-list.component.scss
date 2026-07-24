@@ -12,6 +12,7 @@
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border);
+  transition: padding 0.2s ease;
 }
 
 .list-header h2 {
@@ -24,6 +25,25 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: font-size 0.2s ease;
+}
+
+/* Narrow layout: as you scroll the list down the header collapses to a slim
+         tag-name-only bar (Unread/All + Mark-all-read drop away), expanding again
+         on scroll up. Wide screens always show the full header. */
+@media (width < 900px) {
+  .list-header.collapsed {
+    padding-top: var(--space-1);
+    padding-bottom: var(--space-1);
+  }
+
+  .list-header.collapsed h2 {
+    font-size: var(--fs-sm);
+  }
+
+  .list-header.collapsed .tools {
+    display: none;
+  }
 }
 
 .tools {
@@ -122,5 +142,10 @@
 @media (prefers-reduced-motion: reduce) {
   .skeleton {
     animation: none;
+  }
+
+  .list-header,
+  .list-header h2 {
+    transition: none;
   }
 }

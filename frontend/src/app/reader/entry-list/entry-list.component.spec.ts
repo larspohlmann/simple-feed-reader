@@ -101,4 +101,27 @@ describe('EntryListComponent', () => {
     expect(el.querySelectorAll('app-entry-row').length).toBe(2);
     expect(el.querySelector('app-source-group')).toBeNull();
   });
+
+  it('does not collapse the list header by default', () => {
+    const el = mount().nativeElement as HTMLElement;
+    expect(el.querySelector('.list-header')!.classList).not.toContain('collapsed');
+  });
+
+  it('collapses the list header when the collapsed state is set (scrolled down on mobile)', () => {
+    const f = mount();
+    f.componentInstance.collapsed.set(true);
+    f.detectChanges();
+    expect((f.nativeElement as HTMLElement).querySelector('.list-header')!.classList).toContain(
+      'collapsed',
+    );
+  });
+
+  it('re-expands the list header when the selection changes', () => {
+    const f = mount();
+    f.componentInstance.collapsed.set(true);
+    f.detectChanges();
+    f.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
+    f.detectChanges();
+    expect(f.componentInstance.collapsed()).toBe(false);
+  });
 });

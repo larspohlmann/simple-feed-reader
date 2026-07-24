@@ -1,4 +1,4 @@
-<header class="list-header">
+<header class="list-header" [class.collapsed]="collapsed()">
   <h2>{{ title() }}</h2>
   <div class="tools">
     @if (
@@ -44,7 +44,7 @@
 } @else if (entries().length === 0) {
   <p class="empty">{{ selection().unread ? "You're all caught up." : 'Nothing here yet.' }}</p>
 } @else if (layout() === 'magazine') {
-  <div class="rows magazine" #rows>
+  <div class="rows magazine" #rows (scroll)="onRowsScroll($event)">
     @for (b of blocks(); track blockKey(b)) {
       @switch (b.kind) {
         @case ('hero') {
@@ -102,7 +102,7 @@
     }
   </div>
 } @else {
-  <div class="rows" #rows>
+  <div class="rows" #rows (scroll)="onRowsScroll($event)">
     @for (e of entries(); track e.id) {
       <app-entry-row
         [entry]="e"
