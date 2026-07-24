@@ -2,30 +2,8 @@ import { Component, Input } from '@angular/core';
 
 @Component({
   selector: 'app-icon',
-  template: `<span
-    class="material-symbols-outlined"
-    [style.font-size.px]="size"
-    aria-hidden="true"
-    >{{ name }}</span
-  >`,
-  styles: [
-    `
-      :host {
-        display: inline-flex;
-        align-items: center;
-      }
-      span {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 1em;
-        height: 1em;
-        line-height: 1;
-        user-select: none;
-        font-variation-settings: 'opsz' 20;
-      }
-    `,
-  ],
+  templateUrl: './icon.component.html',
+  styleUrl: './icon.component.scss',
 })
 export class IconComponent {
   @Input({ required: true }) name!: string;

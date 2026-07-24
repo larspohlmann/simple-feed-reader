@@ -1,0 +1,11 @@
+<app-auth-shell title="Signing you in">
+  @switch (state()) {
+    @case ('loading') {
+      <app-spinner />
+    }
+    @case ('error') {
+      <p class="err">Sign-in did not complete. Please try again.</p>
+      <a routerLink="/login">Back to sign in</a>
+    }
+  }
+</app-auth-shell>

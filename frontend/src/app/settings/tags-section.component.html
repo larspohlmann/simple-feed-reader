@@ -1,0 +1,34 @@
+<section>
+  <div class="head">
+    <h2>Tags</h2>
+    <button class="new" (click)="manage.createTag()">
+      <app-icon name="add" [size]="16" /> New tag
+    </button>
+  </div>
+  @if (tagsStore.tags().length === 0) {
+    <p class="muted">No tags yet — create one to group your feeds.</p>
+  } @else {
+    <ul class="list">
+      @for (t of tagsStore.tags(); track t.id) {
+        <li class="tag">
+          <span class="ident">
+            <span class="dot" [style.background]="t.color || 'var(--text-muted)'"></span>
+            @if (t.icon) {
+              <app-icon [name]="t.icon" [size]="18" />
+            }
+            <span class="name">{{ t.name }}</span>
+            <span class="count"
+              >{{ usage()[t.id] || 0 }} {{ (usage()[t.id] || 0) === 1 ? 'feed' : 'feeds' }}</span
+            >
+          </span>
+          <span class="acts">
+            <button (click)="manage.editTag(t)"><app-icon name="edit" [size]="16" /> Edit</button>
+            <button class="danger" (click)="manage.deleteTag(t)">
+              <app-icon name="delete" [size]="16" /> Delete
+            </button>
+          </span>
+        </li>
+      }
+    </ul>
+  }
+</section>

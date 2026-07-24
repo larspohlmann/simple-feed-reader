@@ -1,0 +1,57 @@
+<header class="bar">
+  <a class="back" routerLink="/"><app-icon name="arrow_back" [size]="18" /> Reader</a>
+  <h1>Users</h1>
+</header>
+
+<div class="filters" role="group" aria-label="Filter by status">
+  @for (f of filters; track f.label) {
+    <button [class.active]="filter() === f.status" (click)="setFilter(f.status)">
+      {{ f.label }}
+    </button>
+  }
+</div>
+
+@if (actionError()) {
+  <div class="banner" role="alert">
+    {{ actionError()!.detail || actionError()!.title }}
+    <button (click)="actionError.set(null)">Dismiss</button>
+  </div>
+}
+
+@if (loading()) {
+  <div class="pad"><app-spinner /></div>
+} @else if (error()) {
+  <div class="banner" role="alert">
+    {{ error()!.detail || error()!.title }}
+    <button (click)="load()">Retry</button>
+  </div>
+} @else if (users().length === 0) {
+  <p class="pad muted">No users match this filter.</p>
+} @else {
+  <ul class="users">
+    @for (u of users(); track u.id) {
+      <li>
+        <div class="who">
+          <span class="email">{{ u.email }}</span>
+          <span class="meta">
+            <span class="badge" [attr.data-s]="u.status">{{ label(u.status) }}</span>
+            @if (u.identities.length) {
+              <span class="prov">{{ u.identities.join(', ') }}</span>
+            }
+          </span>
+        </div>
+        <div class="acts">
+          @if (canApprove(u)) {
+            <button class="ok" (click)="act(u, 'approve')">Approve</button>
+          }
+          @if (canReject(u)) {
+            <button class="warn" (click)="act(u, 'reject')">Reject</button>
+          }
+          @if (canSuspend(u)) {
+            <button class="warn" (click)="act(u, 'suspend')">Suspend</button>
+          }
+        </div>
+      </li>
+    }
+  </ul>
+}

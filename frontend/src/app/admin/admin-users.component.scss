@@ -1,0 +1,157 @@
+:host {
+  display: block;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: var(--space-4);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+h1 {
+  font-size: var(--fs-xl);
+  margin: 0;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: var(--space-4) 0;
+}
+
+.filters button {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.filters button.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.users {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.users li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.email {
+  color: var(--text-primary);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.badge {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius);
+  background: var(--surface-0);
+  color: var(--text-secondary);
+}
+
+.badge[data-s='active'] {
+  background: var(--bg-success);
+  color: var(--success);
+}
+
+.badge[data-s='suspended'],
+.badge[data-s='rejected'] {
+  background: var(--bg-danger);
+  color: var(--danger);
+}
+
+.acts {
+  display: flex;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+}
+
+.acts button {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.acts button.ok {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}
+
+.acts button.warn {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.banner {
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  background: var(--bg-danger);
+  color: var(--danger);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.banner button {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.pad {
+  padding: var(--space-5);
+  text-align: center;
+}
+
+.muted {
+  color: var(--text-muted);
+}

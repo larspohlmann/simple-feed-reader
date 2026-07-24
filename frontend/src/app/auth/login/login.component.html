@@ -1,0 +1,33 @@
+<app-auth-shell title="Sign in" subtitle="Welcome back to your reader.">
+  <form [formGroup]="form">
+    <label class="field">
+      <span>Email</span>
+      <input type="email" formControlName="email" name="email" autocomplete="email" />
+    </label>
+    <label class="field">
+      <span>Password</span>
+      <input
+        type="password"
+        formControlName="password"
+        name="password"
+        autocomplete="current-password"
+      />
+    </label>
+    <app-form-error [message]="error()" />
+    <app-button variant="primary" [loading]="loading()" (click)="submit()">Sign in</app-button>
+  </form>
+
+  @if (providers().length) {
+    <div class="divider"><span>or</span></div>
+    @for (p of providers(); track p) {
+      <button class="oauth" type="button" (click)="startOAuth(p)">
+        Continue with {{ label(p) }}
+      </button>
+    }
+  }
+
+  <p class="links">
+    <a routerLink="/register">Create account</a>
+    <a routerLink="/reset-password-request">Forgot password?</a>
+  </p>
+</app-auth-shell>

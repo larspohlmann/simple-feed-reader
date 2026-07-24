@@ -1,0 +1,110 @@
+<app-reader-header
+  #hdr
+  [articleOpen]="articleFullscreen()"
+  [hasPrev]="hasPrev()"
+  [hasNext]="hasNext()"
+  [tags]="headerTags()"
+  [activeTagId]="activeTagId()"
+  [style.marginTop.px]="headerHidden() ? -headerHeight() : 0"
+  (toggleSidebar)="sidebarOpen.set(!sidebarOpen())"
+  (prev)="onPrev()"
+  (next)="onNext()"
+/>
+<div class="body">
+  @if (sidebarOpen()) {
+    <button
+      class="backdrop"
+      type="button"
+      aria-label="Close menu"
+      (click)="sidebarOpen.set(false)"
+    ></button>
+  }
+  <aside class="sidebar" [class.open]="sidebarOpen()">
+    <app-sidebar
+      [tagTree]="subs.tagTree()"
+      [untagged]="subs.untagged()"
+      [totalUnread]="subs.totalUnread()"
+      [selection]="selection()"
+      [loading]="subs.loading()"
+      (editTag)="manage.editTag($event)"
+      (deleteTag)="manage.deleteTag($event)"
+      (editFeed)="manage.editSubscription($event)"
+      (unsubscribe)="manage.unsubscribe($event)"
+      (retag)="manage.retag($event.sub, $event.tagIds)"
+      (reorderTags)="manage.reorderTags($event)"
+      (reorderUntagged)="manage.reorderUntagged($event)"
+      (reorderTagFeeds)="manage.reorderTagFeeds($event.tagId, $event.subscriptionIds)"
+      (refresh)="onRefresh()"
+      (addFeed)="onAddFeed()"
+    />
+  </aside>
+  <main class="main" [class.split]="paneMode()">
+    @if (paneMode()) {
+      <section class="list">
+        <app-entry-list
+          [layout]="layout.mode()"
+          [title]="title()"
+          [entries]="entries.entries()"
+          [loading]="entries.loading()"
+          [loadingMore]="entries.loadingMore()"
+          [error]="entries.error()"
+          [hasMore]="hasMore()"
+          [canMarkAllRead]="canMarkAllRead()"
+          [selection]="selection()"
+          [openEntryId]="entryId()"
+          [feedTags]="feedTags()"
+          (loadMore)="entries.loadMore()"
+          (markAllRead)="onMarkAllRead()"
+          (favorite)="onFavorite($event)"
+          (keep)="onKeep($event)"
+          (read)="onToggleRead($event)"
+          (open)="onOpen($event)"
+        />
+      </section>
+      <section class="reader">
+        <app-reader-view
+          [entry]="openEntry()"
+          [tags]="openEntryTags()"
+          [hasPrev]="hasPrev()"
+          [hasNext]="hasNext()"
+          (favorite)="withOpen(onFavorite)"
+          (keep)="withOpen(onKeep)"
+          (read)="withOpen(onToggleRead)"
+          (prev)="onPrev()"
+          (next)="onNext()"
+          (close)="onCloseReader()"
+        />
+      </section>
+    } @else if (openEntry()) {
+      <app-reader-view
+        [entry]="openEntry()"
+        [tags]="openEntryTags()"
+        [showToolbar]="false"
+        (favorite)="withOpen(onFavorite)"
+        (keep)="withOpen(onKeep)"
+        (read)="withOpen(onToggleRead)"
+        (close)="onCloseReader()"
+      />
+    } @else {
+      <app-entry-list
+        [layout]="layout.mode()"
+        [title]="title()"
+        [entries]="entries.entries()"
+        [loading]="entries.loading()"
+        [loadingMore]="entries.loadingMore()"
+        [error]="entries.error()"
+        [hasMore]="hasMore()"
+        [canMarkAllRead]="canMarkAllRead()"
+        [selection]="selection()"
+        [openEntryId]="entryId()"
+        [feedTags]="feedTags()"
+        (loadMore)="entries.loadMore()"
+        (markAllRead)="onMarkAllRead()"
+        (favorite)="onFavorite($event)"
+        (keep)="onKeep($event)"
+        (read)="onToggleRead($event)"
+        (open)="onOpen($event)"
+      />
+    }
+  </main>
+</div>

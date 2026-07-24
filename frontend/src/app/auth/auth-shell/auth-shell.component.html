@@ -1,0 +1,9 @@
+<main>
+  <section class="card">
+    <h1>{{ title }}</h1>
+    @if (subtitle) {
+      <p class="sub">{{ subtitle }}</p>
+    }
+    <ng-content />
+  </section>
+</main>

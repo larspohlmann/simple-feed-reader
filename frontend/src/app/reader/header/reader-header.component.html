@@ -1,0 +1,95 @@
+<header>
+  <div class="left">
+    <button class="menu-btn" aria-label="Toggle sidebar" (click)="toggleSidebar.emit()">
+      <app-icon name="menu" [size]="20" />
+    </button>
+    <a
+      class="brand"
+      [routerLink]="[]"
+      [queryParams]="{ view: null, tag: null, subscription: null, entry: null }"
+      queryParamsHandling="merge"
+    >
+      <app-icon name="rss_feed" [size]="20" />
+      <span class="name">simple feed reader</span>
+    </a>
+  </div>
+  <div class="right">
+    @if (articleOpen()) {
+      @if (readerMode.canToggle()) {
+        <button
+          class="mode"
+          type="button"
+          [attr.aria-pressed]="readerMode.mode() === 'reader'"
+          [attr.aria-label]="
+            readerMode.mode() === 'reader' ? 'Show original feed content' : 'Show reader view'
+          "
+          (click)="readerMode.toggle()"
+        >
+          <app-icon [name]="readerMode.mode() === 'reader' ? 'article' : 'feed'" [size]="18" />
+          <span class="mode-label">{{
+            readerMode.mode() === 'reader' ? 'Reader' : 'Original'
+          }}</span>
+        </button>
+      }
+      <button
+        class="icon-btn"
+        type="button"
+        aria-label="Previous"
+        [disabled]="!hasPrev()"
+        (click)="prev.emit()"
+      >
+        <app-icon name="chevron_left" [size]="20" />
+      </button>
+      <button
+        class="icon-btn"
+        type="button"
+        aria-label="Next"
+        [disabled]="!hasNext()"
+        (click)="next.emit()"
+      >
+        <app-icon name="chevron_right" [size]="20" />
+      </button>
+    }
+    <div class="account">
+      <button
+        aria-haspopup="menu"
+        [attr.aria-expanded]="menuOpen()"
+        (click)="menuOpen.set(!menuOpen())"
+      >
+        <app-icon class="acct-ico" name="account_circle" [size]="20" />
+        <span class="acct-email">{{ auth.user()?.email ?? '…' }}</span>
+        <app-icon name="expand_more" [size]="18" />
+      </button>
+      @if (menuOpen()) {
+        <div class="menu" role="menu">
+          <a role="menuitem" routerLink="/settings" (click)="menuOpen.set(false)">Settings</a>
+          @if (auth.isAdmin()) {
+            <a role="menuitem" routerLink="/admin/users" (click)="menuOpen.set(false)">Admin</a>
+          }
+          <button role="menuitem" (click)="auth.logout()">Sign out</button>
+        </div>
+      }
+    </div>
+  </div>
+</header>
+
+@if (!articleOpen() && tags().length) {
+  <nav class="tagrow" aria-label="Tags">
+    @for (t of tags(); track t.id) {
+      <a
+        class="chip"
+        [class.active]="t.id === activeTagId()"
+        [routerLink]="[]"
+        [queryParams]="{ tag: t.id, view: null, subscription: null, entry: null }"
+        queryParamsHandling="merge"
+      >
+        @if (t.icon) {
+          <app-icon [name]="t.icon" [size]="14" [style.color]="t.color || 'var(--text-muted)'" />
+        } @else {
+          <span class="dot" [style.background]="t.color || 'var(--text-muted)'"></span>
+        }
+        {{ t.name }}
+      </a>
+    }
+  </nav>
+}

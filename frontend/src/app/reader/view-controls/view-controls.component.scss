@@ -1,0 +1,40 @@
+:host {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.seg {
+  display: inline-flex;
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.seg button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+  background: var(--surface-2);
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.seg button:hover {
+  background: var(--surface-0);
+}
+
+.seg button.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* Pane layout needs a wide viewport, so hide it on narrow screens. */
+@media (width <= 720px) {
+  .seg button.pane {
+    display: none;
+  }
+}

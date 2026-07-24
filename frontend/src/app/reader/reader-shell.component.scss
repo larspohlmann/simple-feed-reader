@@ -1,0 +1,85 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+
+  /* Clip the header when it slides up off the top (hide-on-scroll). */
+  overflow: hidden;
+}
+
+/* The header slides up by its own height on scroll-down; keep it above the
+         content while it animates. */
+app-reader-header {
+  position: relative;
+  z-index: 10;
+  transition: margin-top 0.2s ease;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.sidebar {
+  width: 260px;
+  flex: 0 0 auto;
+  border-right: 1px solid var(--border);
+  background: var(--surface-1);
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+.main.split .list {
+  flex: 0 0 42%;
+  max-width: 480px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.main.split .reader {
+  flex: 1;
+  min-width: 0;
+}
+
+.main:not(.split) > * {
+  flex: 1;
+  min-width: 0;
+}
+
+.backdrop {
+  display: none;
+  border: 0;
+  padding: 0;
+}
+
+@media (width <= 720px) {
+  .sidebar {
+    position: fixed;
+    top: 56px;
+    bottom: 0;
+    left: 0;
+    z-index: 20;
+    width: 260px;
+    max-width: 82vw;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 56px 0 0;
+    z-index: 15;
+    background: rgb(0 0 0 / 40%);
+  }
+}

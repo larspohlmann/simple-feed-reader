@@ -1,0 +1,21 @@
+@if (tags().length) {
+  <span class="pills">
+    @for (t of tags(); track t.id) {
+      <a
+        class="pill"
+        [routerLink]="[]"
+        [queryParams]="{ tag: t.id, view: null, subscription: null, entry: null }"
+        queryParamsHandling="merge"
+        [attr.title]="'Filter by ' + t.name"
+        (click)="$event.stopPropagation()"
+      >
+        @if (t.icon) {
+          <app-icon [name]="t.icon" [size]="12" [style.color]="t.color || 'var(--text-muted)'" />
+        } @else {
+          <span class="dot" [style.background]="t.color || 'var(--text-muted)'"></span>
+        }
+        {{ t.name }}
+      </a>
+    }
+  </span>
+}

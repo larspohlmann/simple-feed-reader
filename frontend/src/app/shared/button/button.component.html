@@ -1,0 +1,7 @@
+<button [type]="type" [disabled]="loading || disabled" [class.primary]="variant === 'primary'">
+  @if (loading) {
+    <app-spinner [size]="16" />
+  } @else {
+    <ng-content />
+  }
+</button>

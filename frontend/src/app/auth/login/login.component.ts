@@ -19,67 +19,8 @@ import { FormErrorComponent } from '../../shared/form-error/form-error.component
     ButtonComponent,
     FormErrorComponent,
   ],
-  template: `
-    <app-auth-shell title="Sign in" subtitle="Welcome back to your reader.">
-      <form [formGroup]="form">
-        <label class="field">
-          <span>Email</span>
-          <input type="email" formControlName="email" name="email" autocomplete="email" />
-        </label>
-        <label class="field">
-          <span>Password</span>
-          <input
-            type="password"
-            formControlName="password"
-            name="password"
-            autocomplete="current-password"
-          />
-        </label>
-        <app-form-error [message]="error()" />
-        <app-button variant="primary" [loading]="loading()" (click)="submit()">Sign in</app-button>
-      </form>
-
-      @if (providers().length) {
-        <div class="divider"><span>or</span></div>
-        @for (p of providers(); track p) {
-          <button class="oauth" type="button" (click)="startOAuth(p)">
-            Continue with {{ label(p) }}
-          </button>
-        }
-      }
-
-      <p class="links">
-        <a routerLink="/register">Create account</a>
-        <a routerLink="/reset-password-request">Forgot password?</a>
-      </p>
-    </app-auth-shell>
-  `,
-  styles: [
-    `
-      .divider {
-        text-align: center;
-        color: var(--text-muted);
-        font-size: var(--fs-sm);
-        margin: var(--space-4) 0;
-      }
-      .oauth {
-        width: 100%;
-        height: var(--control-h);
-        margin-bottom: var(--space-2);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        background: var(--surface-1);
-        color: var(--text-primary);
-        cursor: pointer;
-      }
-      .links {
-        display: flex;
-        justify-content: space-between;
-        margin-top: var(--space-5);
-        font-size: var(--fs-sm);
-      }
-    `,
-  ],
+  templateUrl: './login.component.html',
+  styleUrl: './login.component.scss',
 })
 export class LoginComponent implements OnInit {
   private readonly fb = inject(NonNullableFormBuilder);

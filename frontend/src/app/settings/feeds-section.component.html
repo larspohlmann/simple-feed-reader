@@ -1,0 +1,45 @@
+<section>
+  <h2>Feeds</h2>
+  @if (feeds().length === 0) {
+    <p class="muted">No feeds yet — add one from the reader.</p>
+  } @else {
+    <ul class="list">
+      @for (s of feeds(); track s.id) {
+        <li class="feed">
+          <div class="info">
+            <span class="title">{{ s.title }}</span>
+            <span class="sub">
+              <span class="badge" [attr.data-s]="s.status" [title]="statusHint(s.status)">{{
+                s.status
+              }}</span>
+              @if (s.sourceFormat === 'scraped') {
+                <span
+                  class="badge scraped"
+                  title="Generated from the page's article list — the site offers no feed"
+                  >scraped</span
+                >
+              }
+              @for (t of s.tags; track t.id) {
+                <span class="chip">
+                  <span class="dot" [style.background]="t.color || 'var(--text-muted)'"></span>
+                  {{ t.name }}
+                </span>
+              }
+              @if (s.unreadCount > 0) {
+                <span class="count">{{ s.unreadCount }} unread</span>
+              }
+            </span>
+          </div>
+          <div class="acts">
+            <button (click)="manage.editSubscription(s)">
+              <app-icon name="edit" [size]="16" /> Rename &amp; tags
+            </button>
+            <button class="danger" (click)="manage.unsubscribe(s)">
+              <app-icon name="delete" [size]="16" /> Unsubscribe
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</section>

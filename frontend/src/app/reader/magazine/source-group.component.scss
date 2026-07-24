@@ -1,0 +1,45 @@
+:host {
+  display: block;
+}
+
+.group {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ghead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.gname {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.item:not(:last-child) {
+  border-bottom: 1px solid var(--border);
+}
+
+.more {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border);
+  color: var(--accent);
+  text-decoration: none;
+  font-size: var(--fs-sm);
+}
+
+.more:hover {
+  background: var(--surface-0);
+}

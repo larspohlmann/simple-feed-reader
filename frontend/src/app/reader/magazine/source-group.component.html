@@ -1,0 +1,30 @@
+<div class="group">
+  <div class="ghead">
+    <p class="gname">
+      <app-favicon [url]="entries()[0]?.faviconUrl ?? null" [size]="14" />{{ source() }}
+    </p>
+    <app-source-tags [tags]="tags()" />
+  </div>
+  <div class="items">
+    @for (item of entries(); track item.id) {
+      <div class="item">
+        <app-entry-compact [entry]="item" [showSource]="false" (open)="open.emit($event)" />
+      </div>
+    }
+  </div>
+  <a
+    class="more"
+    [routerLink]="[]"
+    [queryParams]="{
+      subscription: subscriptionId(),
+      view: null,
+      tag: null,
+      entry: null,
+      unread: '0',
+    }"
+    queryParamsHandling="merge"
+  >
+    {{ moreCount() > 0 ? moreCount() + ' more from ' + source() : 'More from ' + source() }}
+    <app-icon name="arrow_forward" [size]="16" />
+  </a>
+</div>

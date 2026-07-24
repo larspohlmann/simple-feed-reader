@@ -4,7 +4,8 @@
     "color-no-hex": true,
     "scss/dollar-variable-pattern": null,
     "selector-class-pattern": null,
-    "no-empty-source": null
+    "no-empty-source": null,
+    "selector-pseudo-element-no-unknown": [true, { "ignorePseudoElements": ["ng-deep"] }]
   },
   "overrides": [
     {

@@ -1,0 +1,130 @@
+<header class="list-header">
+  <h2>{{ title() }}</h2>
+  <div class="tools">
+    @if (
+      selection().kind === 'all' ||
+      selection().kind === 'tag' ||
+      selection().kind === 'subscription'
+    ) {
+      <div class="toggle" role="group" aria-label="Filter">
+        <a
+          [class.on]="selection().unread"
+          [routerLink]="[]"
+          [queryParams]="{ unread: null }"
+          queryParamsHandling="merge"
+          >Unread</a
+        >
+        <a
+          [class.on]="!selection().unread"
+          [routerLink]="[]"
+          [queryParams]="{ unread: '0' }"
+          queryParamsHandling="merge"
+          >All</a
+        >
+      </div>
+    }
+    @if (canMarkAllRead()) {
+      <button class="mark-all" type="button" (click)="markAllRead.emit()">
+        <app-icon name="done_all" [size]="18" /> Mark all read
+      </button>
+    }
+  </div>
+</header>
+
+@if (error()) {
+  <div class="banner" role="alert">{{ error()!.detail ?? error()!.title }}</div>
+}
+
+@if (loading()) {
+  <div class="rows">
+    @for (i of [1, 2, 3, 4, 5]; track i) {
+      <div class="skeleton"></div>
+    }
+  </div>
+} @else if (entries().length === 0) {
+  <p class="empty">{{ selection().unread ? "You're all caught up." : 'Nothing here yet.' }}</p>
+} @else if (layout() === 'magazine') {
+  <div class="rows magazine" #rows>
+    @for (b of blocks(); track blockKey(b)) {
+      @switch (b.kind) {
+        @case ('hero') {
+          <app-entry-hero
+            [entry]="hero(b).entry"
+            [tags]="tagsFor(hero(b).entry.subscriptionId)"
+            (favorite)="favorite.emit($event)"
+            (keep)="keep.emit($event)"
+            (read)="read.emit($event)"
+            (open)="open.emit($event)"
+          />
+        }
+        @case ('feature') {
+          <app-entry-row
+            [entry]="feat(b).entry"
+            [imageSide]="feat(b).imageSide"
+            [tags]="tagsFor(feat(b).entry.subscriptionId)"
+            [class.open]="openEntryId() === feat(b).entry.id"
+            (favorite)="favorite.emit($event)"
+            (keep)="keep.emit($event)"
+            (read)="read.emit($event)"
+            (open)="open.emit($event)"
+          />
+        }
+        @case ('compact') {
+          <app-entry-compact
+            [entry]="compact(b).entry"
+            [tags]="tagsFor(compact(b).entry.subscriptionId)"
+            (open)="open.emit($event)"
+          />
+        }
+        @case ('group') {
+          <app-source-group
+            [source]="grp(b).source"
+            [subscriptionId]="grp(b).subscriptionId"
+            [entries]="grp(b).entries"
+            [moreCount]="grp(b).moreCount"
+            [tags]="tagsFor(grp(b).subscriptionId)"
+            (open)="open.emit($event)"
+          />
+        }
+      }
+    }
+    @if (hasMore()) {
+      <div class="foot" #sentinel>
+        <button
+          class="load-more"
+          type="button"
+          [disabled]="loadingMore()"
+          (click)="loadMore.emit()"
+        >
+          {{ loadingMore() ? 'Loading…' : 'Load more' }}
+        </button>
+      </div>
+    }
+  </div>
+} @else {
+  <div class="rows" #rows>
+    @for (e of entries(); track e.id) {
+      <app-entry-row
+        [entry]="e"
+        [tags]="tagsFor(e.subscriptionId)"
+        [class.open]="openEntryId() === e.id"
+        (favorite)="favorite.emit($event)"
+        (keep)="keep.emit($event)"
+        (read)="read.emit($event)"
+        (open)="open.emit($event)"
+      />
+    }
+    @if (hasMore()) {
+      <div class="foot" #sentinel>
+        <button
+          class="load-more"
+          type="button"
+          [disabled]="loadingMore()"
+          (click)="loadMore.emit()"
+        >
+          {{ loadingMore() ? 'Loading…' : 'Load more' }}
+        </button>
+      </div>
+    }
+  </div>
+}

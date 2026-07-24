@@ -1,0 +1,216 @@
+header {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+}
+
+/* The swipeable tag row is a mobile-only affordance; on wider screens the
+         sidebar already lists the tags. */
+.tagrow {
+  display: none;
+}
+
+@media (width <= 720px) {
+  .tagrow {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-1);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+  }
+
+  .tagrow::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+  white-space: nowrap;
+  scroll-snap-align: start;
+}
+
+.chip.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.chip .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 700;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.brand .name {
+  white-space: nowrap;
+}
+
+.brand app-icon {
+  color: var(--accent);
+}
+
+.acct-ico {
+  display: none;
+}
+
+.acct-email {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-btn {
+  display: none;
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: var(--space-1);
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.account > button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+@media (width <= 720px) {
+  header {
+    padding: 0 var(--space-3);
+  }
+
+  .menu-btn {
+    display: inline-flex;
+  }
+
+  .right {
+    gap: var(--space-2);
+  }
+
+  /* Drop the wordmark and the long email; keep icon-only affordances. */
+  .brand .name {
+    display: none;
+  }
+
+  .acct-email {
+    display: none;
+  }
+
+  .acct-ico {
+    display: inline-flex;
+  }
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: var(--space-1);
+}
+
+.icon-btn:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--space-1);
+  font-size: var(--fs-sm);
+}
+
+.mode[aria-pressed='true'] {
+  color: var(--accent);
+}
+
+.account {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: 40px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-width: 140px;
+}
+
+.menu button {
+  width: 100%;
+  text-align: left;
+  padding: var(--space-3);
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.menu a {
+  display: block;
+  padding: var(--space-3);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.menu a:hover {
+  background: var(--surface-0);
+}

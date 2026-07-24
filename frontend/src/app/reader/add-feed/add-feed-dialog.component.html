@@ -1,0 +1,80 @@
+<div class="dialog" role="dialog" aria-modal="true" aria-label="Add a feed" cdkTrapFocus>
+  <h2>Add a feed</h2>
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <input
+      class="field"
+      formControlName="url"
+      type="url"
+      placeholder="https://example.com"
+      aria-label="Feed or site URL"
+      cdkFocusInitial
+    />
+    @if (error()) {
+      <p class="error" role="alert">{{ error() }}</p>
+    }
+    @if (candidates().length) {
+      <p class="hint">We found these feeds — pick one:</p>
+      <ul class="candidates">
+        @for (c of candidates(); track c.url) {
+          @let state = previews()[c.url];
+          @let p = okPreview(state);
+          <li class="card">
+            <div class="card-head">
+              <span class="card-title">{{ p?.title || c.title || c.url }}</span>
+              @if (p) {
+                <span class="count">{{ p.itemCount }} items</span>
+              }
+            </div>
+            <div class="badges">
+              <span class="badge format">{{ formatLabel(c.format) }}</span>
+              @if (p) {
+                <span class="badge">{{ contentLabel(p.content) }}</span>
+                <span class="badge">{{ p.hasImages ? 'With images' : 'No images' }}</span>
+              }
+            </div>
+            @if (c.format === 'scraped') {
+              <p class="muted scraped-hint">
+                No feed found — generated from the page's article list.
+              </p>
+            }
+            @if (state?.status === 'loading') {
+              <p class="muted">Loading preview…</p>
+            } @else if (state?.status === 'error') {
+              <p class="muted">{{ errorMessage(state) }}</p>
+            } @else if (p) {
+              @if (p.items.length) {
+                <ul class="samples">
+                  @for (it of p.items.slice(0, 3); track $index) {
+                    <li>{{ it.title }}</li>
+                  }
+                </ul>
+              } @else {
+                <p class="muted">No recent items</p>
+              }
+            }
+            <button type="button" class="subscribe primary" (click)="pick(c)">Subscribe</button>
+          </li>
+        }
+      </ul>
+    }
+    @if (searched() && candidates().length === 0) {
+      <p class="hint">No feeds found at that address.</p>
+    }
+    @if (failureReason(); as r) {
+      <div class="warn" role="alert">{{ failureText(r) }}</div>
+    }
+    <div class="row">
+      <button type="button" (click)="ref.close()">Cancel</button>
+      <!-- Once candidates are shown, each card carries its own Subscribe
+               button, so the footer submit would be a confusing third action.
+               It only makes sense before a search (and to retry when none were
+               found). A scrape failure means this URL cannot be subscribed at
+               all, so hide it until the URL changes. -->
+      @if (!candidates().length && !failureReason()) {
+        <button type="submit" class="primary" [disabled]="loading()">
+          {{ loading() ? 'Adding…' : 'Add' }}
+        </button>
+      }
+    </div>
+  </form>
+</div>
