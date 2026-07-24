@@ -20,6 +20,7 @@ final class SubscriptionJsonTest extends TestCase
         $feed = new Feed('https://example.com/feed.xml');
         $feed->setTitle('Example Feed');
         $feed->setSiteUrl('https://example.com');
+        $feed->setFaviconUrl('https://example.com/favicon.ico');
         $sub = new Subscription($user, $feed, $now);
         $tag = new Tag($user, 'news');
         $tag->setColor('#ff8800');
@@ -35,6 +36,7 @@ final class SubscriptionJsonTest extends TestCase
         self::assertSame($feed->getId(), $shape['feedId']);
         self::assertSame('https://example.com/feed.xml', $shape['feedUrl']);
         self::assertSame('https://example.com', $shape['siteUrl']);
+        self::assertSame('https://example.com/favicon.ico', $shape['faviconUrl']);
         self::assertSame('active', $shape['status']);
         self::assertSame('xml', $shape['sourceFormat']);
         self::assertSame('2026-02-03T04:05:06+00:00', $shape['createdAt']);

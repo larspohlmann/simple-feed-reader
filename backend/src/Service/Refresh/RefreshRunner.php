@@ -10,6 +10,7 @@ use App\Service\EntryIngestor;
 use App\Service\EntryPruner;
 use App\Service\FeedScheduler;
 use App\Service\Fetch\Exception\FeedGoneException;
+use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
@@ -50,6 +51,7 @@ final class RefreshRunner
         private readonly FeedFetcherInterface $fetcher,
         private readonly FeedBodyParser $bodyParser,
         private readonly EntryIngestor $ingestor,
+        private readonly FaviconResolver $faviconResolver,
         private readonly FeedScheduler $scheduler,
         private readonly EntryPruner $pruner,
         private readonly LockFactory $lockFactory,
@@ -181,6 +183,9 @@ final class RefreshRunner
                 // location; without this the redirect chain is re-walked on
                 // every single refresh, forever.
                 $this->applyPermanentRedirect($feed, $response);
+                // Favicon resolution is independent of the feed body (it reads
+                // the site homepage), so a 304 feed still gets one on first sight.
+                $this->resolveFaviconIfMissing($feed);
                 $this->scheduler->recordSuccess($feed, 0);
                 $this->em->flush();
 
@@ -196,6 +201,8 @@ final class RefreshRunner
 
             $parsed = $this->bodyParser->parse($feed, $body);
             $created = $this->ingestor->ingest($feed, $parsed);
+            // Ingestion has just filled in siteUrl; resolve the favicon off it.
+            $this->resolveFaviconIfMissing($feed);
 
             $feed->setEtag($this->truncate($response->etag, self::ETAG_MAX));
             $feed->setLastModified($this->truncate($response->lastModified, self::LAST_MODIFIED_MAX));
@@ -217,6 +224,18 @@ final class RefreshRunner
 
             return FeedOutcome::Failed;
         }
+    }
+
+    /**
+     * Resolve and store a feed's favicon the first time it is seen. Best-effort
+     * (the resolver never throws), and skipped once a feed already has one.
+     */
+    private function resolveFaviconIfMissing(Feed $feed): void
+    {
+        if (null !== $feed->getFaviconUrl()) {
+            return;
+        }
+        $feed->setFaviconUrl($this->faviconResolver->resolve($feed->getSiteUrl() ?? $feed->getUrl()));
     }
 
     private function applyPermanentRedirect(Feed $feed, FetchResponse $response): void
