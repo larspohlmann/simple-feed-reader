@@ -61,11 +61,19 @@
 }
 
 .toggle a {
+  display: inline-flex;
+  align-items: center;
   padding: var(--space-1) var(--space-3);
   font-size: var(--fs-sm);
   color: var(--text-secondary);
   text-decoration: none;
   cursor: pointer;
+}
+
+/* The toggle icons only stand in for the labels in the compact (narrow)
+         layout below; the wide header keeps the Unread/All text. */
+.toggle .ico {
+  display: none;
 }
 
 .toggle a.on {
@@ -82,6 +90,24 @@
   color: var(--accent);
   cursor: pointer;
   font-size: var(--fs-sm);
+}
+
+/* Compact controls: below this width the labels are dropped so a long feed or
+         tag title (worse with German strings) stays readable. The icons, backed
+         by aria-label/title tooltips, carry the meaning on one row. */
+@media (width <= 560px) {
+  .toggle .txt,
+  .mark-all .txt {
+    display: none;
+  }
+
+  .toggle .ico {
+    display: inline-flex;
+  }
+
+  .toggle a {
+    padding: var(--space-1) var(--space-2);
+  }
 }
 
 .rows {
