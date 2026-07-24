@@ -68,6 +68,24 @@ final class FeedParserTest extends TestCase
         $this->parser()->parse('this is { not xml');
     }
 
+    /**
+     * An empty 200 response body is a real event (misconfigured feeds, edge
+     * CDNs). loadXML() throws a raw ValueError on '' instead of returning false,
+     * so without an explicit guard this escapes as an uncaught error and 500s
+     * the whole refresh run — one empty feed then stops every feed after it.
+     */
+    public function testRejectsEmptyBody(): void
+    {
+        $this->expectException(FeedParseException::class);
+        $this->parser()->parse('');
+    }
+
+    public function testRejectsWhitespaceOnlyBody(): void
+    {
+        $this->expectException(FeedParseException::class);
+        $this->parser()->parse("  \n\t ");
+    }
+
     public function testRejectsDocumentsDeclaringADtd(): void
     {
         $this->expectException(FeedParseException::class);
