@@ -3,7 +3,6 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { API_BASE_URL } from '../../core/api';
-import { ReadingLayoutService } from '../reading-layout.service';
 import { AuthService } from '../../core/auth.service';
 import { ReaderHeaderComponent } from './reader-header.component';
 import { signal } from '@angular/core';
@@ -40,28 +39,10 @@ describe('ReaderHeaderComponent', () => {
     expect(toggle).toHaveBeenCalledTimes(1);
   });
 
-  it('toggles the reading layout', () => {
-    const f = create();
-    const layout = TestBed.inject(ReadingLayoutService);
-    (f.nativeElement.querySelector('[aria-label="Pane layout"]') as HTMLButtonElement).click();
-    expect(layout.mode()).toBe('pane');
-  });
-
-  it('shows a Magazine layout button first, and switches to it', () => {
-    const f = create();
-    const layout = TestBed.inject(ReadingLayoutService);
-    const group = f.nativeElement.querySelector('[aria-label="Reading layout"]') as HTMLElement;
-    const buttons = group.querySelectorAll('button');
-    expect(buttons[0].getAttribute('aria-label')).toBe('Magazine layout');
-
-    layout.set('list');
-    f.detectChanges();
-    expect(group.querySelector('[aria-label="Magazine layout"]')!.classList).not.toContain(
-      'active',
-    );
-
-    (group.querySelector('[aria-label="Magazine layout"]') as HTMLButtonElement).click();
-    expect(layout.mode()).toBe('magazine');
+  it('no longer hosts the layout/theme controls (moved to the sidebar)', () => {
+    const el = create().nativeElement as HTMLElement;
+    expect(el.querySelector('[aria-label="Reading layout"]')).toBeNull();
+    expect(el.querySelector('[aria-label="Theme"]')).toBeNull();
   });
 
   it('shows a Settings link, and Admin only for admins', () => {

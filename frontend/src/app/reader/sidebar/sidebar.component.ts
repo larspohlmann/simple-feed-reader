@@ -10,6 +10,7 @@ import {
 } from '@angular/cdk/drag-drop';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
+import { ViewControlsComponent } from '../view-controls/view-controls.component';
 import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
 import { SubscriptionDto, TagDto } from '../models';
@@ -20,7 +21,15 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
 
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, IconComponent, FaviconComponent, CdkDropListGroup, CdkDropList, CdkDrag],
+  imports: [
+    RouterLink,
+    IconComponent,
+    FaviconComponent,
+    ViewControlsComponent,
+    CdkDropListGroup,
+    CdkDropList,
+    CdkDrag,
+  ],
   template: `
     <nav class="sidebar" aria-label="Feeds" cdkDropListGroup>
       <div class="actions">
@@ -275,6 +284,8 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
           <p class="dropzone-hint">Drop here to remove tags</p>
         }
       </div>
+
+      <app-view-controls class="controls" />
     </nav>
   `,
   styles: [
@@ -291,6 +302,11 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
         display: flex;
         gap: var(--space-2);
         margin-bottom: var(--space-1);
+      }
+      /* Pin the layout/theme controls to the bottom of the sidebar. */
+      .controls {
+        margin-top: auto;
+        padding-top: var(--space-3);
       }
       .act {
         flex: 1;

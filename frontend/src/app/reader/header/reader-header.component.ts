@@ -3,9 +3,6 @@ import { Component, inject, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { AuthService } from '../../core/auth.service';
-import { ThemeService } from '../../theme/theme.service';
-import { ThemeMode } from '../../theme/themes/registry';
-import { ReadingLayoutService } from '../reading-layout.service';
 
 @Component({
   selector: 'app-reader-header',
@@ -27,43 +24,6 @@ import { ReadingLayoutService } from '../reading-layout.service';
         </a>
       </div>
       <div class="right">
-        <div class="seg" role="group" aria-label="Reading layout">
-          <button
-            aria-label="Magazine layout"
-            [class.active]="layout.mode() === 'magazine'"
-            (click)="layout.set('magazine')"
-          >
-            <app-icon name="view_quilt" [size]="18" />
-          </button>
-          <button
-            aria-label="List layout"
-            [class.active]="layout.mode() === 'list'"
-            (click)="layout.set('list')"
-          >
-            <app-icon name="view_agenda" [size]="18" />
-          </button>
-          <button
-            aria-label="Pane layout"
-            [class.active]="layout.mode() === 'pane'"
-            (click)="layout.set('pane')"
-          >
-            <app-icon name="view_column_2" [size]="18" />
-          </button>
-        </div>
-
-        <div class="seg" role="group" aria-label="Theme">
-          @for (m of modes; track m.id) {
-            <button
-              [class.active]="theme.mode() === m.id"
-              [attr.aria-pressed]="theme.mode() === m.id"
-              [title]="m.label"
-              (click)="theme.setMode(m.id)"
-            >
-              <app-icon [name]="m.icon" [size]="18" />
-            </button>
-          }
-        </div>
-
         <div class="account">
           <button
             aria-haspopup="menu"
@@ -169,27 +129,6 @@ import { ReadingLayoutService } from '../reading-layout.service';
         .acct-ico {
           display: inline-flex;
         }
-        /* Pane layout needs a wide viewport, so it is useless here. */
-        .seg [aria-label='Pane layout'] {
-          display: none;
-        }
-      }
-      .seg {
-        display: inline-flex;
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        overflow: hidden;
-      }
-      .seg button {
-        padding: var(--space-2);
-        background: var(--surface-1);
-        border: none;
-        color: var(--text-secondary);
-        cursor: pointer;
-      }
-      .seg button.active {
-        background: var(--accent-soft);
-        color: var(--accent);
       }
       .account {
         position: relative;
@@ -228,13 +167,5 @@ export class ReaderHeaderComponent {
   readonly toggleSidebar = output<void>();
 
   readonly auth = inject(AuthService);
-  readonly theme = inject(ThemeService);
-  readonly layout = inject(ReadingLayoutService);
   readonly menuOpen = signal(false);
-
-  readonly modes: { id: ThemeMode; label: string; icon: string }[] = [
-    { id: 'light', label: 'Light', icon: 'light_mode' },
-    { id: 'dark', label: 'Dark', icon: 'dark_mode' },
-    { id: 'system', label: 'System', icon: 'contrast' },
-  ];
 }
