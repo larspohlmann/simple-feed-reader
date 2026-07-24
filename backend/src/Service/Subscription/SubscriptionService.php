@@ -87,6 +87,11 @@ final readonly class SubscriptionService
             // Never the reverse: a 'scraped' arrival is user-asserted and must
             // not downgrade a format discovery or the creator established.
             $feed->setSourceFormat(SourceFormat::XML);
+            // Persist the heal in its own step, BEFORE the duplicate check can
+            // throw. An existing victim re-adding the feed to fix its format is
+            // the natural repair path; without this flush that check aborts the
+            // unit of work and the heal is rolled back, so the fix does nothing.
+            $this->em->flush();
         }
 
         if ($this->subscriptions->existsForUserAndFeed($userId, (int) $feed->getId())) {
