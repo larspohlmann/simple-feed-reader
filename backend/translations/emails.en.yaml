@@ -1,0 +1,11 @@
+# Account emails. Bodies are single-quoted single lines with explicit \n so the
+# rendered text stays flush-left (the link must sit on its own un-indented line).
+verify:
+    subject: 'Confirm your email address'
+    body: "Welcome to Simple Feed Reader.\n\nConfirm your email address by opening this link:\n\n%link%\n\nThe link is valid for 24 hours. After confirming, an administrator\nreviews your account before you can sign in.\n\nIf you did not sign up, ignore this message — the account is\ndeleted automatically within 48 hours."
+approved:
+    subject: 'Your account has been approved'
+    body: "Your Simple Feed Reader account has been approved.\n\nYou can now sign in at %url%"
+reset:
+    subject: 'Reset your password'
+    body: "Someone requested a password reset for your Simple Feed Reader\naccount.\n\nChoose a new password here:\n\n%link%\n\nThe link is valid for 24 hours and can be used once. If you did\nnot request this, ignore this message — your password is unchanged."

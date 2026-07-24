@@ -61,6 +61,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $passwordChangedAt = null;
 
+    /**
+     * The recipient language for this account's emails ('en' | 'de'), captured
+     * from the UI at registration. The API itself is locale-agnostic; only the
+     * transactional mails vary by language.
+     */
+    // The DB default backfills rows that predate the column (see the migration);
+    // declaring it here keeps the mapping in sync with that DDL.
+    #[ORM\Column(length: 5, options: ['default' => 'en'])]
+    private string $locale = 'en';
+
     public function __construct(string $email, \DateTimeImmutable $createdAt)
     {
         $email = self::normalizeEmail($email);
@@ -171,6 +181,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setApprovedAt(?\DateTimeImmutable $approvedAt): void
     {
         $this->approvedAt = $approvedAt;
+    }
+
+    public function getLocale(): string
+    {
+        return $this->locale;
+    }
+
+    public function setLocale(string $locale): void
+    {
+        $this->locale = $locale;
     }
 
     /**

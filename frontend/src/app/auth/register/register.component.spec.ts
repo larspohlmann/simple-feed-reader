@@ -37,6 +37,7 @@ describe('RegisterComponent', () => {
       email: 'a@b.c',
       password: 'password12345',
       altcha: 'SOLVED',
+      locale: 'en',
     });
     reg.flush({ status: 'pending_verification' }, { status: 202, statusText: 'Accepted' });
     await done;

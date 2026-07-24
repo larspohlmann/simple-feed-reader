@@ -50,7 +50,13 @@ export class RegisterComponent {
       const solution = await solveAltcha(challenge);
       const { email, password } = this.form.getRawValue();
       await firstValueFrom(
-        this.http.post(`${this.base}/api/auth/register`, { email, password, altcha: solution }),
+        this.http.post(`${this.base}/api/auth/register`, {
+          email,
+          password,
+          altcha: solution,
+          // Tell the backend which language to send this account's emails in.
+          locale: this.i18n.getActiveLang(),
+        }),
       );
       this.done.set(true);
     } catch (e) {
