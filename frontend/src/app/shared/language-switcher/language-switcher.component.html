@@ -1,0 +1,12 @@
+<div class="seg" role="group" [attr.aria-label]="'lang.label' | transloco">
+  @for (l of langs; track l) {
+    <button
+      type="button"
+      [class.on]="language.lang() === l"
+      [attr.aria-pressed]="language.lang() === l"
+      (click)="language.set(l)"
+    >
+      {{ 'lang.' + l | transloco }}
+    </button>
+  }
+</div>

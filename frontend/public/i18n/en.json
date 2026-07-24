@@ -1,0 +1,19 @@
+{
+  "lang": {
+    "label": "Language",
+    "en": "English",
+    "de": "German"
+  },
+  "settings": {
+    "preferences": "Preferences"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "close": "Close",
+    "add": "Add",
+    "loading": "Loading…",
+    "retry": "Retry"
+  }
+}

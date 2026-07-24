@@ -1,0 +1,19 @@
+{
+  "lang": {
+    "label": "Sprache",
+    "en": "Englisch",
+    "de": "Deutsch"
+  },
+  "settings": {
+    "preferences": "Einstellungen"
+  },
+  "common": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "close": "Schließen",
+    "add": "Hinzufügen",
+    "loading": "Wird geladen…",
+    "retry": "Erneut versuchen"
+  }
+}
