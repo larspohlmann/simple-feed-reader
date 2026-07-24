@@ -1,0 +1,14 @@
+@if (showImage()) {
+  <img
+    class="avatar"
+    [src]="url()"
+    [width]="size()"
+    [height]="size()"
+    alt=""
+    decoding="async"
+    referrerpolicy="no-referrer"
+    (error)="onError()"
+  />
+} @else {
+  <app-icon name="account_circle" [size]="size()" />
+}

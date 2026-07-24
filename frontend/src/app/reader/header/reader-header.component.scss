@@ -6,6 +6,11 @@ header {
   padding: 0 var(--space-4);
   border-bottom: 1px solid var(--border);
   background: var(--surface-1);
+
+  /* Own stacking context above the mobile tag row, which is a later sibling and
+     would otherwise paint over the account dropdown that overflows the bar. */
+  position: relative;
+  z-index: 2;
 }
 
 /* The swipeable tag row is a mobile-only affordance; on wider screens the
@@ -85,17 +90,6 @@ header {
   color: var(--accent);
 }
 
-.acct-ico {
-  display: none;
-}
-
-.acct-email {
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .menu-btn {
   display: none;
   align-items: center;
@@ -135,17 +129,9 @@ header {
     gap: var(--space-2);
   }
 
-  /* Drop the wordmark and the long email; keep icon-only affordances. */
+  /* Drop the wordmark; the avatar-only account button is already compact. */
   .brand .name {
     display: none;
-  }
-
-  .acct-email {
-    display: none;
-  }
-
-  .acct-ico {
-    display: inline-flex;
   }
 }
 
@@ -187,11 +173,13 @@ header {
 .menu {
   position: absolute;
   right: 0;
-  top: 40px;
+  top: 44px;
+  z-index: 30;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   min-width: 140px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 18%);
 }
 
 .menu button {
