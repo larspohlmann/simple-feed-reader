@@ -182,11 +182,18 @@ import { Problem } from '../../core/problem';
       .list-header h2 {
         margin: 0;
         font-size: var(--fs-lg);
+        /* A long feed title must truncate rather than shove the Unread/All
+           toggle off-screen (notably on mobile). */
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .tools {
         display: flex;
         align-items: center;
         gap: var(--space-3);
+        flex: none;
       }
       .toggle {
         display: inline-flex;

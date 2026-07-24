@@ -69,6 +69,31 @@ describe('ReaderHeaderComponent', () => {
     expect(next).toHaveBeenCalledTimes(1);
   });
 
+  it('renders a chip per tag with the tag-filter link and marks the active tag', () => {
+    const f = create();
+    f.componentRef.setInput('tags', [
+      { id: 1, name: 'News', color: null, icon: null, position: 0 },
+      { id: 2, name: 'Tech', color: null, icon: null, position: 1 },
+    ]);
+    f.componentRef.setInput('activeTagId', 2);
+    f.detectChanges();
+    const chips = (f.nativeElement as HTMLElement).querySelectorAll('.tagrow .chip');
+    expect(chips.length).toBe(2);
+    expect(chips[0].getAttribute('href')).toContain('tag=1');
+    expect(chips[0].textContent).toContain('News');
+    expect(chips[1].classList).toContain('active');
+  });
+
+  it('hides the tag row while an article is open', () => {
+    const f = create();
+    f.componentRef.setInput('tags', [
+      { id: 1, name: 'News', color: null, icon: null, position: 0 },
+    ]);
+    f.componentRef.setInput('articleOpen', true);
+    f.detectChanges();
+    expect((f.nativeElement as HTMLElement).querySelector('.tagrow')).toBeNull();
+  });
+
   it('shows the reader/original switch only once toggling is available', () => {
     const f = create();
     f.componentRef.setInput('articleOpen', true);
