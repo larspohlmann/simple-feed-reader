@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { AuthService } from '../../core/auth.service';
 import { ReaderModeService } from '../reader-mode.service';
+import { TagDto } from '../models';
 
 @Component({
   selector: 'app-reader-header',
@@ -83,6 +84,31 @@ import { ReaderModeService } from '../reader-mode.service';
         </div>
       </div>
     </header>
+
+    @if (!articleOpen() && tags().length) {
+      <nav class="tagrow" aria-label="Tags">
+        @for (t of tags(); track t.id) {
+          <a
+            class="chip"
+            [class.active]="t.id === activeTagId()"
+            [routerLink]="[]"
+            [queryParams]="{ tag: t.id, view: null, subscription: null, entry: null }"
+            queryParamsHandling="merge"
+          >
+            @if (t.icon) {
+              <app-icon
+                [name]="t.icon"
+                [size]="14"
+                [style.color]="t.color || 'var(--text-muted)'"
+              />
+            } @else {
+              <span class="dot" [style.background]="t.color || 'var(--text-muted)'"></span>
+            }
+            {{ t.name }}
+          </a>
+        }
+      </nav>
+    }
   `,
   styles: [
     `
@@ -94,6 +120,54 @@ import { ReaderModeService } from '../reader-mode.service';
         padding: 0 var(--space-4);
         border-bottom: 1px solid var(--border);
         background: var(--surface-1);
+      }
+      /* The swipeable tag row is a mobile-only affordance; on wider screens the
+         sidebar already lists the tags. */
+      .tagrow {
+        display: none;
+      }
+      @media (max-width: 720px) {
+        .tagrow {
+          display: flex;
+          gap: var(--space-2);
+          align-items: center;
+          padding: var(--space-2) var(--space-3);
+          border-bottom: 1px solid var(--border);
+          background: var(--surface-1);
+          overflow-x: auto;
+          scrollbar-width: none;
+          -webkit-overflow-scrolling: touch;
+          scroll-snap-type: x proximity;
+        }
+        .tagrow::-webkit-scrollbar {
+          display: none;
+        }
+      }
+      .chip {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: var(--space-1) var(--space-3);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface-2);
+        color: var(--text-secondary);
+        font-size: var(--fs-sm);
+        text-decoration: none;
+        white-space: nowrap;
+        scroll-snap-align: start;
+      }
+      .chip.active {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .chip .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex: none;
       }
       .left {
         display: flex;
@@ -233,6 +307,10 @@ export class ReaderHeaderComponent {
   readonly articleOpen = input(false);
   readonly hasPrev = input(false);
   readonly hasNext = input(false);
+  /** Tags for the mobile swipe row; empty hides the row (and on wider screens
+   *  CSS hides it regardless). */
+  readonly tags = input<TagDto[]>([]);
+  readonly activeTagId = input<number | null>(null);
 
   readonly toggleSidebar = output<void>();
   readonly prev = output<void>();

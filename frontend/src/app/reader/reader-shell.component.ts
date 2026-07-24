@@ -1,5 +1,17 @@
 // src/app/reader/reader-shell.component.ts
-import { Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Dialog } from '@angular/cdk/dialog';
@@ -13,7 +25,8 @@ import { ReadingLayoutService } from './reading-layout.service';
 import { LayoutService } from './layout.service';
 import { markReadTarget, queryFromSelection, selectionFromParams } from './query';
 import { entryParam } from './slug';
-import { EntryDto, EntryStatePatch, SubscriptionDto, SubscriptionTagDto } from './models';
+import { EntryDto, EntryStatePatch, SubscriptionDto, SubscriptionTagDto, TagDto } from './models';
+import { nextHeaderHidden } from './header-scroll';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
@@ -26,9 +39,13 @@ import { ManageActions } from './manage/manage-actions.service';
   imports: [ReaderHeaderComponent, SidebarComponent, EntryListComponent, ReaderViewComponent],
   template: `
     <app-reader-header
+      #hdr
       [articleOpen]="articleFullscreen()"
       [hasPrev]="hasPrev()"
       [hasNext]="hasNext()"
+      [tags]="headerTags()"
+      [activeTagId]="activeTagId()"
+      [style.marginTop.px]="headerHidden() ? -headerHeight() : 0"
       (toggleSidebar)="sidebarOpen.set(!sidebarOpen())"
       (prev)="onPrev()"
       (next)="onNext()"
@@ -138,6 +155,15 @@ import { ManageActions } from './manage/manage-actions.service';
         display: flex;
         flex-direction: column;
         height: 100vh;
+        /* Clip the header when it slides up off the top (hide-on-scroll). */
+        overflow: hidden;
+      }
+      /* The header slides up by its own height on scroll-down; keep it above the
+         content while it animates. */
+      app-reader-header {
+        position: relative;
+        z-index: 10;
+        transition: margin-top 0.2s ease;
       }
       .body {
         flex: 1;
@@ -201,12 +227,13 @@ import { ManageActions } from './manage/manage-actions.service';
     `,
   ],
 })
-export class ReaderShellComponent implements OnInit {
+export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dialog = inject(Dialog);
   private readonly api = inject(ReaderApi);
   private readonly auth = inject(AuthService);
+  private readonly hostRef = inject(ElementRef<HTMLElement>);
 
   readonly manage = inject(ManageActions);
   readonly subs = inject(SubscriptionsStore);
@@ -255,6 +282,21 @@ export class ReaderShellComponent implements OnInit {
   /** An article filling the whole main area (not the split pane) — the top bar
    *  takes over its back button, reader switch and prev/next. */
   readonly articleFullscreen = computed(() => this.openEntry() !== null && !this.paneMode());
+
+  /** The user's tags for the mobile swipe row (the sidebar covers wider screens). */
+  readonly headerTags = computed<TagDto[]>(() => this.subs.tagTree().map((n) => n.tag));
+  readonly activeTagId = computed(() => {
+    const s = this.selection();
+    return s.kind === 'tag' ? (s.id ?? null) : null;
+  });
+
+  // Mobile hide-on-scroll header: slide the whole header (top bar + tag row) up
+  // by its measured height when scrolling down the content, back on scroll up.
+  readonly headerHidden = signal(false);
+  readonly headerHeight = signal(0);
+  private readonly hdr = viewChild('hdr', { read: ElementRef });
+  private lastScrollTop = 0;
+  private resizeObs?: ResizeObserver;
   /** Mobile drawer state; the sidebar is a fixed overlay below 720px. */
   readonly sidebarOpen = signal(false);
 
@@ -330,6 +372,37 @@ export class ReaderShellComponent implements OnInit {
     this.tags.load(); // the sidebar tag tree (order, empty tags) reads TagsStore
     if (!this.auth.user()) this.auth.loadMe().subscribe({ error: () => undefined });
   }
+
+  ngAfterViewInit(): void {
+    const hdrEl = this.hdr()?.nativeElement as HTMLElement | undefined;
+    if (hdrEl && typeof ResizeObserver !== 'undefined') {
+      this.resizeObs = new ResizeObserver(() => this.headerHeight.set(hdrEl.offsetHeight));
+      this.resizeObs.observe(hdrEl);
+    }
+    // Scroll events don't bubble, so capture them from whichever inner content
+    // pane is scrolling to drive the hide-on-scroll header.
+    this.hostRef.nativeElement.addEventListener('scroll', this.onContentScroll, {
+      capture: true,
+      passive: true,
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.resizeObs?.disconnect();
+    this.hostRef.nativeElement.removeEventListener('scroll', this.onContentScroll, {
+      capture: true,
+    } as EventListenerOptions);
+  }
+
+  private readonly onContentScroll = (e: Event): void => {
+    const el = e.target as HTMLElement | null;
+    if (!el || typeof el.scrollTop !== 'number') return;
+    const top = el.scrollTop;
+    this.headerHidden.set(
+      nextHeaderHidden(this.headerHidden(), this.lastScrollTop, top, this.screen.isWide()),
+    );
+    this.lastScrollTop = top;
+  };
 
   onFavorite = (e: EntryDto): void => this.patchOpen(e, { isFavorite: !e.isFavorite });
   onKeep = (e: EntryDto): void => this.patchOpen(e, { isKept: !e.isKept });
