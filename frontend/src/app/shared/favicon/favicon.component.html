@@ -1,0 +1,15 @@
+@if (src(); as url) {
+  <img
+    class="favicon"
+    [src]="url"
+    [width]="size()"
+    [height]="size()"
+    alt=""
+    loading="lazy"
+    decoding="async"
+    referrerpolicy="no-referrer"
+    (error)="broken.set(true)"
+  />
+} @else {
+  <app-icon name="rss_feed" [size]="size()" />
+}

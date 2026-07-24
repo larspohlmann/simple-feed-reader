@@ -1,0 +1,22 @@
+<div
+  class="dialog"
+  role="alertdialog"
+  aria-modal="true"
+  [attr.aria-label]="data.title"
+  cdkTrapFocus
+>
+  <h2>{{ data.title }}</h2>
+  <p class="msg">{{ data.message }}</p>
+  <div class="row">
+    <button type="button" (click)="ref.close(false)">Cancel</button>
+    <button
+      type="button"
+      [class.primary]="!data.danger"
+      [class.danger]="data.danger"
+      cdkFocusInitial
+      (click)="ref.close(true)"
+    >
+      {{ data.confirmLabel }}
+    </button>
+  </div>
+</div>

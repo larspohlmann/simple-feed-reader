@@ -21,45 +21,8 @@ import { FormErrorComponent } from '../../shared/form-error/form-error.component
     ButtonComponent,
     FormErrorComponent,
   ],
-  template: `
-    <app-auth-shell title="Create account" subtitle="Register, then confirm your email.">
-      @if (done()) {
-        <p class="ok">
-          Check your email for a confirmation link. After you confirm, an administrator reviews your
-          account before you can sign in.
-        </p>
-        <a routerLink="/login">Back to sign in</a>
-      } @else {
-        <form (ngSubmit)="submit()" [formGroup]="form">
-          <label class="field">
-            <span>Email</span>
-            <input type="email" formControlName="email" autocomplete="email" />
-          </label>
-          <label class="field">
-            <span>Password (at least 12 characters)</span>
-            <input type="password" formControlName="password" autocomplete="new-password" />
-          </label>
-          <app-form-error [message]="error()" />
-          <app-button type="submit" variant="primary" [loading]="loading()"
-            >Create account</app-button
-          >
-        </form>
-        <p class="links"><a routerLink="/login">Already have an account?</a></p>
-      }
-    </app-auth-shell>
-  `,
-  styles: [
-    `
-      .ok {
-        color: var(--text-secondary);
-        margin-bottom: var(--space-4);
-      }
-      .links {
-        margin-top: var(--space-5);
-        font-size: var(--fs-sm);
-      }
-    `,
-  ],
+  templateUrl: './register.component.html',
+  styleUrl: './register.component.scss',
 })
 export class RegisterComponent {
   private readonly fb = inject(NonNullableFormBuilder);

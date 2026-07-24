@@ -1,0 +1,24 @@
+.divider {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  margin: var(--space-4) 0;
+}
+
+.oauth {
+  width: 100%;
+  height: var(--control-h);
+  margin-bottom: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.links {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-5);
+  font-size: var(--fs-sm);
+}

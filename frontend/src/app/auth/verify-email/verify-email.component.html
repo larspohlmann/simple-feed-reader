@@ -1,0 +1,17 @@
+<app-auth-shell title="Confirm email">
+  @switch (state()) {
+    @case ('loading') {
+      <app-spinner />
+    }
+    @case ('ok') {
+      <p>
+        Your email is confirmed. An administrator will review your account before you can sign in.
+      </p>
+      <a routerLink="/login">Back to sign in</a>
+    }
+    @case ('error') {
+      <p class="err">This confirmation link is invalid or has expired.</p>
+      <a routerLink="/login">Back to sign in</a>
+    }
+  }
+</app-auth-shell>

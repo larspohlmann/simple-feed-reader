@@ -1,0 +1,63 @@
+<div class="dialog" role="dialog" aria-modal="true" [attr.aria-label]="title" cdkTrapFocus>
+  <h2>{{ title }}</h2>
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <label class="lbl" for="tag-name">Name</label>
+    <input id="tag-name" class="field" formControlName="name" maxlength="100" cdkFocusInitial />
+
+    <p class="lbl">Colour</p>
+    <div class="swatches">
+      @for (c of colors; track c) {
+        <button
+          type="button"
+          class="swatch"
+          [class.on]="color() === c"
+          [style.background]="c"
+          [attr.aria-label]="'Colour ' + c"
+          (click)="color.set(c)"
+        ></button>
+      }
+      <input
+        type="color"
+        class="picker"
+        aria-label="Custom colour"
+        [value]="color() ?? '#3f8676'"
+        (input)="color.set(pickerValue($event))"
+      />
+      <button type="button" class="clear" (click)="color.set(null)">None</button>
+    </div>
+
+    <p class="lbl">Icon</p>
+    <div class="icons">
+      <button
+        type="button"
+        class="icon"
+        [class.on]="icon() === null"
+        aria-label="No icon"
+        (click)="icon.set(null)"
+      >
+        <app-icon name="block" [size]="18" />
+      </button>
+      @for (i of icons; track i) {
+        <button
+          type="button"
+          class="icon"
+          [class.on]="icon() === i"
+          [attr.aria-label]="i"
+          (click)="icon.set(i)"
+        >
+          <app-icon [name]="i" [size]="18" />
+        </button>
+      }
+    </div>
+
+    @if (error()) {
+      <p class="error" role="alert">{{ error() }}</p>
+    }
+    <div class="row">
+      <button type="button" (click)="ref.close()">Cancel</button>
+      <button type="submit" class="primary" [disabled]="loading()">
+        {{ loading() ? 'Saving…' : 'Save' }}
+      </button>
+    </div>
+  </form>
+</div>

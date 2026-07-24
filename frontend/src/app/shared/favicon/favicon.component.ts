@@ -10,36 +10,8 @@ import { IconComponent } from '../icon/icon.component';
 @Component({
   selector: 'app-favicon',
   imports: [IconComponent],
-  template: `
-    @if (src(); as url) {
-      <img
-        class="favicon"
-        [src]="url"
-        [width]="size()"
-        [height]="size()"
-        alt=""
-        loading="lazy"
-        decoding="async"
-        referrerpolicy="no-referrer"
-        (error)="broken.set(true)"
-      />
-    } @else {
-      <app-icon name="rss_feed" [size]="size()" />
-    }
-  `,
-  styles: `
-    :host {
-      display: inline-flex;
-      align-items: center;
-      vertical-align: middle;
-      margin-inline-end: 0.35em;
-      flex: none;
-    }
-    .favicon {
-      border-radius: 3px;
-      object-fit: contain;
-    }
-  `,
+  templateUrl: './favicon.component.html',
+  styleUrl: './favicon.component.scss',
 })
 export class FaviconComponent {
   readonly url = input<string | null>(null);

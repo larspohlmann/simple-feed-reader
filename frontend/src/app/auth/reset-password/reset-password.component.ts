@@ -18,33 +18,8 @@ import { FormErrorComponent } from '../../shared/form-error/form-error.component
     ButtonComponent,
     FormErrorComponent,
   ],
-  template: `
-    <app-auth-shell title="Set a new password">
-      @if (token()) {
-        <form (ngSubmit)="submit()" [formGroup]="form">
-          <label class="field">
-            <span>New password (at least 12 characters)</span>
-            <input type="password" formControlName="password" autocomplete="new-password" />
-          </label>
-          <app-form-error [message]="error()" />
-          <app-button type="submit" variant="primary" [loading]="loading()"
-            >Save password</app-button
-          >
-        </form>
-      } @else {
-        <p class="err">This reset link is invalid or has expired.</p>
-        <a routerLink="/reset-password-request">Request a new link</a>
-      }
-    </app-auth-shell>
-  `,
-  styles: [
-    `
-      .err {
-        color: var(--danger);
-        margin-bottom: var(--space-4);
-      }
-    `,
-  ],
+  templateUrl: './reset-password.component.html',
+  styleUrl: './reset-password.component.scss',
 })
 export class ResetPasswordComponent implements OnInit {
   private readonly fb = inject(NonNullableFormBuilder);

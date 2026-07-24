@@ -11,27 +11,8 @@ import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 @Component({
   selector: 'app-oauth-callback',
   imports: [RouterLink, AuthShellComponent, SpinnerComponent],
-  template: `
-    <app-auth-shell title="Signing you in">
-      @switch (state()) {
-        @case ('loading') {
-          <app-spinner />
-        }
-        @case ('error') {
-          <p class="err">Sign-in did not complete. Please try again.</p>
-          <a routerLink="/login">Back to sign in</a>
-        }
-      }
-    </app-auth-shell>
-  `,
-  styles: [
-    `
-      .err {
-        color: var(--danger);
-        margin-bottom: var(--space-4);
-      }
-    `,
-  ],
+  templateUrl: './oauth-callback.component.html',
+  styleUrl: './oauth-callback.component.scss',
 })
 export class OAuthCallbackComponent implements OnInit {
   private readonly http = inject(HttpClient);

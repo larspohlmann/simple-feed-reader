@@ -1,0 +1,17 @@
+<section>
+  <h2>Account</h2>
+  @if (auth.user(); as u) {
+    <dl class="grid">
+      <dt>Email</dt>
+      <dd>{{ u.email }}</dd>
+      <dt>Member since</dt>
+      <dd>{{ u.createdAt | date: 'longDate' }}</dd>
+    </dl>
+    @if (auth.isAdmin()) {
+      <a class="admin" routerLink="/admin/users">
+        <app-icon name="shield_person" [size]="18" /> Admin — user queue
+      </a>
+    }
+    <button class="signout" (click)="auth.logout()">Sign out</button>
+  }
+</section>

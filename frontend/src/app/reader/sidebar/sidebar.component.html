@@ -1,0 +1,254 @@
+<nav class="sidebar" aria-label="Feeds" cdkDropListGroup>
+  <div class="actions">
+    <button
+      class="act"
+      type="button"
+      aria-label="Refresh"
+      [disabled]="refreshSvc.running()"
+      (click)="refresh.emit()"
+    >
+      <app-icon name="refresh" [size]="18" /><span>Refresh</span>
+    </button>
+    <button class="act" type="button" aria-label="Add feed" (click)="addFeed.emit()">
+      <app-icon name="add" [size]="18" /><span>Add feed</span>
+    </button>
+  </div>
+  @if (refreshSvc.running()) {
+    <span class="prog"><i [style.width.%]="refreshSvc.progress() * 100"></i></span>
+  }
+
+  <a
+    class="nav all"
+    [class.active]="selection().kind === 'all'"
+    [routerLink]="[]"
+    [queryParams]="{ view: null, tag: null, subscription: null, entry: null }"
+    queryParamsHandling="merge"
+  >
+    <app-icon name="inbox" [size]="18" /><span>All items</span>
+    @if (totalUnread() > 0) {
+      <span class="count">{{ totalUnread() }}</span>
+    }
+  </a>
+  <a
+    class="nav"
+    [class.active]="selection().kind === 'favorites'"
+    [routerLink]="[]"
+    [queryParams]="{ view: 'favorites', tag: null, subscription: null, entry: null }"
+    queryParamsHandling="merge"
+  >
+    <app-icon name="star" [size]="18" /><span>Favorites</span>
+  </a>
+  <a
+    class="nav"
+    [class.active]="selection().kind === 'kept'"
+    [routerLink]="[]"
+    [queryParams]="{ view: 'kept', tag: null, subscription: null, entry: null }"
+    queryParamsHandling="merge"
+  >
+    <app-icon name="bookmark" [size]="18" /><span>Kept</span>
+  </a>
+
+  @if (tagTree().length) {
+    <p class="label">Tags</p>
+    <!-- Each tag contributes two TOP-LEVEL drop lists (never nested): a
+             header list that reorders tags and accepts a feed to add the tag,
+             and — when expanded — a feed list that reorders/receives feeds.
+             CDK does not connect drop lists nested inside one another, so a
+             wrapping list here would silently break every cross-list drop. -->
+    <div class="tags">
+      @for (node of tagTree(); track node.tag.id) {
+        <div
+          class="taghead"
+          cdkDropList
+          [cdkDropListData]="tagDrop(node.tag)"
+          [cdkDropListEnterPredicate]="acceptOnTagHead"
+          [cdkDropListSortingDisabled]="true"
+          [class.drop-line]="dropHover() === 'tag-' + node.tag.id && dragKind() === 'tag'"
+          [class.drop-active]="dropHover() === 'tag-' + node.tag.id && dragKind() === 'feed'"
+          (cdkDropListDropped)="onTagHeadDrop($event)"
+          (cdkDropListEntered)="dropHover.set('tag-' + node.tag.id)"
+          (cdkDropListExited)="dropHover.set(null)"
+        >
+          <div
+            class="tag"
+            cdkDrag
+            [cdkDragData]="node.tag"
+            [cdkDragStartDelay]="dragDelay"
+            (cdkDragStarted)="onDragStart('tag')"
+            (cdkDragEnded)="onDragEnd()"
+          >
+            <button
+              class="expand"
+              type="button"
+              [attr.aria-expanded]="expanded().has(node.tag.id)"
+              [attr.aria-label]="'Toggle ' + node.tag.name"
+              (click)="toggle(node.tag.id)"
+            >
+              <app-icon
+                [name]="expanded().has(node.tag.id) ? 'expand_more' : 'chevron_right'"
+                [size]="18"
+              />
+            </button>
+            <a
+              class="nav grow"
+              [class.active]="selection().kind === 'tag' && selection().id === node.tag.id"
+              [routerLink]="[]"
+              [queryParams]="{ tag: node.tag.id, view: null, subscription: null, entry: null }"
+              queryParamsHandling="merge"
+            >
+              <span class="lead">
+                @if (node.tag.icon) {
+                  <app-icon
+                    [name]="node.tag.icon"
+                    [size]="18"
+                    [style.color]="node.tag.color || 'var(--text-muted)'"
+                  />
+                } @else {
+                  <span
+                    class="dot"
+                    [style.background]="node.tag.color || 'var(--text-muted)'"
+                  ></span>
+                }
+              </span>
+              <span>{{ node.tag.name }}</span>
+              @if (node.unreadCount > 0) {
+                <span class="count">{{ node.unreadCount }}</span>
+              }
+            </a>
+            <div class="rowmenu">
+              <button
+                class="dots"
+                type="button"
+                [attr.aria-label]="'Manage ' + node.tag.name"
+                (click)="toggleMenu('tag-' + node.tag.id, $event)"
+              >
+                <app-icon name="more_horiz" [size]="18" />
+              </button>
+              @if (menuFor() === 'tag-' + node.tag.id) {
+                <div class="pop" role="menu">
+                  <button role="menuitem" (click)="editTag.emit(node.tag); closeMenu()">
+                    Edit tag
+                  </button>
+                  <button role="menuitem" (click)="deleteTag.emit(node.tag); closeMenu()">
+                    Delete tag
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+        @if (expanded().has(node.tag.id)) {
+          <div
+            class="tagfeeds"
+            cdkDropList
+            [cdkDropListData]="tagDrop(node.tag)"
+            [cdkDropListEnterPredicate]="isFeedDrag"
+            (cdkDropListDropped)="onDrop($event)"
+          >
+            @for (s of node.subscriptions; track s.id) {
+              <div
+                class="feedrow"
+                cdkDrag
+                [cdkDragData]="s"
+                [cdkDragStartDelay]="dragDelay"
+                (cdkDragStarted)="onDragStart('feed')"
+                (cdkDragEnded)="onDragEnd()"
+              >
+                <a
+                  class="nav tag-sub"
+                  [class.active]="selection().kind === 'subscription' && selection().id === s.id"
+                  [routerLink]="[]"
+                  [queryParams]="{ subscription: s.id, view: null, tag: null, entry: null }"
+                  queryParamsHandling="merge"
+                >
+                  <app-favicon [url]="s.faviconUrl" /><span>{{ s.title }}</span>
+                  @if (s.unreadCount > 0) {
+                    <span class="count">{{ s.unreadCount }}</span>
+                  }
+                </a>
+                <div class="rowmenu">
+                  <button
+                    class="dots"
+                    type="button"
+                    [attr.aria-label]="'Manage ' + s.title"
+                    (click)="toggleMenu('sub-' + node.tag.id + '-' + s.id, $event)"
+                  >
+                    <app-icon name="more_horiz" [size]="18" />
+                  </button>
+                  @if (menuFor() === 'sub-' + node.tag.id + '-' + s.id) {
+                    <div class="pop" role="menu">
+                      <button role="menuitem" (click)="editFeed.emit(s); closeMenu()">
+                        Edit feed
+                      </button>
+                      <button role="menuitem" (click)="unsubscribe.emit(s); closeMenu()">
+                        Unsubscribe
+                      </button>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
+  }
+
+  @if (untagged().length || dragging()) {
+    <p class="label">Feeds</p>
+  }
+  <div
+    class="feedlist"
+    cdkDropList
+    [cdkDropListData]="untaggedDrop"
+    [cdkDropListEnterPredicate]="isFeedDrag"
+    (cdkDropListDropped)="onDrop($event)"
+  >
+    @for (s of untagged(); track s.id) {
+      <div
+        class="feedrow"
+        cdkDrag
+        [cdkDragData]="s"
+        [cdkDragStartDelay]="dragDelay"
+        (cdkDragStarted)="onDragStart('feed')"
+        (cdkDragEnded)="onDragEnd()"
+      >
+        <a
+          class="nav"
+          [class.active]="selection().kind === 'subscription' && selection().id === s.id"
+          [routerLink]="[]"
+          [queryParams]="{ subscription: s.id, view: null, tag: null, entry: null }"
+          queryParamsHandling="merge"
+        >
+          <app-favicon [url]="s.faviconUrl" /><span>{{ s.title }}</span>
+          @if (s.unreadCount > 0) {
+            <span class="count">{{ s.unreadCount }}</span>
+          }
+        </a>
+        <div class="rowmenu">
+          <button
+            class="dots"
+            type="button"
+            [attr.aria-label]="'Manage ' + s.title"
+            (click)="toggleMenu('sub-' + s.id, $event)"
+          >
+            <app-icon name="more_horiz" [size]="18" />
+          </button>
+          @if (menuFor() === 'sub-' + s.id) {
+            <div class="pop" role="menu">
+              <button role="menuitem" (click)="editFeed.emit(s); closeMenu()">Edit feed</button>
+              <button role="menuitem" (click)="unsubscribe.emit(s); closeMenu()">
+                Unsubscribe
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    }
+    @if (dragging() && untagged().length === 0) {
+      <p class="dropzone-hint">Drop here to remove tags</p>
+    }
+  </div>
+
+  <app-view-controls class="controls" />
+</nav>

@@ -13,40 +13,8 @@ import { ButtonComponent } from '../../shared/button/button.component';
 @Component({
   selector: 'app-reset-request',
   imports: [ReactiveFormsModule, RouterLink, AuthShellComponent, ButtonComponent],
-  template: `
-    <app-auth-shell title="Reset password" subtitle="We’ll email you a reset link.">
-      @if (done()) {
-        <p class="ok">
-          If that address has an account, a reset link is on its way. The link is valid for 24
-          hours.
-        </p>
-        <a routerLink="/login">Back to sign in</a>
-      } @else {
-        <form (ngSubmit)="submit()" [formGroup]="form">
-          <label class="field">
-            <span>Email</span>
-            <input type="email" formControlName="email" autocomplete="email" />
-          </label>
-          <app-button type="submit" variant="primary" [loading]="loading()"
-            >Send reset link</app-button
-          >
-        </form>
-        <p class="links"><a routerLink="/login">Back to sign in</a></p>
-      }
-    </app-auth-shell>
-  `,
-  styles: [
-    `
-      .ok {
-        color: var(--text-secondary);
-        margin-bottom: var(--space-4);
-      }
-      .links {
-        margin-top: var(--space-5);
-        font-size: var(--fs-sm);
-      }
-    `,
-  ],
+  templateUrl: './reset-request.component.html',
+  styleUrl: './reset-request.component.scss',
 })
 export class ResetRequestComponent {
   private readonly fb = inject(NonNullableFormBuilder);

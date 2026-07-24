@@ -9,34 +9,8 @@ import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 @Component({
   selector: 'app-verify-email',
   imports: [RouterLink, AuthShellComponent, SpinnerComponent],
-  template: `
-    <app-auth-shell title="Confirm email">
-      @switch (state()) {
-        @case ('loading') {
-          <app-spinner />
-        }
-        @case ('ok') {
-          <p>
-            Your email is confirmed. An administrator will review your account before you can sign
-            in.
-          </p>
-          <a routerLink="/login">Back to sign in</a>
-        }
-        @case ('error') {
-          <p class="err">This confirmation link is invalid or has expired.</p>
-          <a routerLink="/login">Back to sign in</a>
-        }
-      }
-    </app-auth-shell>
-  `,
-  styles: [
-    `
-      .err {
-        color: var(--danger);
-        margin-bottom: var(--space-4);
-      }
-    `,
-  ],
+  templateUrl: './verify-email.component.html',
+  styleUrl: './verify-email.component.scss',
 })
 export class VerifyEmailComponent implements OnInit {
   private readonly http = inject(HttpClient);

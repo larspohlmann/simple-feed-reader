@@ -1,0 +1,12 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-inline-end: 0.35em;
+  flex: none;
+}
+
+.favicon {
+  border-radius: 3px;
+  object-fit: contain;
+}

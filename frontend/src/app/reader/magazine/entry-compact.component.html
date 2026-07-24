@@ -1,0 +1,23 @@
+<article
+  class="compact"
+  role="button"
+  tabindex="0"
+  [class.read]="entry().isRead"
+  (click)="open.emit(entry())"
+  (keydown.enter)="open.emit(entry())"
+  (keydown.space)="$event.preventDefault(); open.emit(entry())"
+>
+  <span class="dot" [class.on]="!entry().isRead" aria-hidden="true"></span>
+  <div class="body">
+    <p class="kicker">
+      @if (showSource()) {
+        <app-favicon [url]="entry().faviconUrl" [size]="12" />{{ entry().source }} ·
+      }
+      {{ when() }}
+    </p>
+    <p class="title">{{ entry().title }}</p>
+    @if (showSource()) {
+      <app-source-tags [tags]="tags()" />
+    }
+  </div>
+</article>
