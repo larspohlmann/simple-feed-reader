@@ -1,0 +1,56 @@
+// src/app/reader/list-scroll-memory.ts
+import { Injectable } from '@angular/core';
+import { Selection } from './query';
+
+/**
+ * Storage key for a selection's scroll offset. Distinguishes feed / tag / view and
+ * unread-vs-all so every list remembers its own place independently.
+ */
+export function scrollKey(s: Selection): string {
+  return `feed-reader:list-scroll:${s.kind}:${s.id ?? ''}:${s.unread ? 'u' : 'a'}`;
+}
+
+/**
+ * Remembers each list's scroll offset in sessionStorage so that when the browser
+ * discards and reloads the page — iOS Safari / Brave background a tab and reload it
+ * on resume — the list lands where the user left off instead of jumping to the top.
+ *
+ * sessionStorage (not an in-memory Map) is the point: it survives the full page
+ * reload the resume triggers, yet is scoped to the tab session so it clears when
+ * the tab closes. All access is defensive — a blocked or full store just loses the
+ * memory rather than breaking the list.
+ */
+@Injectable({ providedIn: 'root' })
+export class ListScrollMemory {
+  save(s: Selection, top: number): void {
+    const store = this.store();
+    if (!store) return;
+    try {
+      store.setItem(scrollKey(s), String(Math.max(0, Math.round(top))));
+    } catch {
+      // Quota exceeded or storage blocked (private mode) — scroll memory is
+      // a convenience, so dropping it silently is the right failure mode.
+    }
+  }
+
+  read(s: Selection): number {
+    const store = this.store();
+    if (!store) return 0;
+    try {
+      const raw = store.getItem(scrollKey(s));
+      const n = raw == null ? 0 : Number(raw);
+      return Number.isFinite(n) && n > 0 ? n : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  private store(): Storage | null {
+    try {
+      return typeof sessionStorage === 'undefined' ? null : sessionStorage;
+    } catch {
+      // Merely touching sessionStorage can throw when storage is disabled.
+      return null;
+    }
+  }
+}
