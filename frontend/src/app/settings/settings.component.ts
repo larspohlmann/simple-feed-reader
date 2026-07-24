@@ -5,7 +5,6 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../shared/icon/icon.component';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { TagsStore } from '../reader/tags.store';
-import { FeedsSectionComponent } from './feeds-section.component';
 import { TagsSectionComponent } from './tags-section.component';
 import { OpmlSectionComponent } from './opml-section.component';
 import { AccountSectionComponent } from './account-section.component';
@@ -17,7 +16,6 @@ import { PreferencesSectionComponent } from './preferences-section.component';
     RouterLink,
     TranslocoPipe,
     IconComponent,
-    FeedsSectionComponent,
     TagsSectionComponent,
     OpmlSectionComponent,
     AccountSectionComponent,

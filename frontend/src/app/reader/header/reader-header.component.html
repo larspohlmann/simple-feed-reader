@@ -58,11 +58,11 @@
     <div class="account">
       <button
         aria-haspopup="menu"
+        [attr.aria-label]="'reader.account' | transloco"
         [attr.aria-expanded]="menuOpen()"
         (click)="menuOpen.set(!menuOpen())"
       >
-        <app-icon class="acct-ico" name="account_circle" [size]="20" />
-        <span class="acct-email">{{ auth.user()?.email ?? '…' }}</span>
+        <app-user-avatar [email]="auth.user()?.email ?? null" [size]="26" />
         <app-icon name="expand_more" [size]="18" />
       </button>
       @if (menuOpen()) {

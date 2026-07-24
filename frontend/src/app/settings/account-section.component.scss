@@ -3,6 +3,22 @@ h2 {
   margin: 0 0 var(--space-3);
 }
 
+.who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+  min-width: 0;
+}
+
+.who-email {
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .grid {
   display: grid;
   grid-template-columns: auto 1fr;

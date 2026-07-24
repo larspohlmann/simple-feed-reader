@@ -1,9 +1,11 @@
 <section>
   <h2>{{ 'settings.account.title' | transloco }}</h2>
   @if (auth.user(); as u) {
+    <div class="who">
+      <app-user-avatar [email]="u.email" [size]="48" />
+      <span class="who-email">{{ u.email }}</span>
+    </div>
     <dl class="grid">
-      <dt>{{ 'settings.account.email' | transloco }}</dt>
-      <dd>{{ u.email }}</dd>
       <dt>{{ 'settings.account.memberSince' | transloco }}</dt>
       <dd>{{ memberSince(u.createdAt) }}</dd>
     </dl>

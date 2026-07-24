@@ -60,6 +60,19 @@ describe('ListScrollMemory', () => {
     expect(mem.read(sel({ kind: 'tag', id: 2 }))).toBe(0);
   });
 
+  it('round-trips an article scroll offset per entry id, surviving a fresh instance', () => {
+    mem.saveEntry(514, 1200);
+    expect(new ListScrollMemory().readEntry(514)).toBe(1200);
+    expect(mem.readEntry(999)).toBe(0);
+  });
+
+  it('keeps article and list offsets in separate keys', () => {
+    mem.save(sel({ kind: 'subscription', id: 5 }), 300);
+    mem.saveEntry(5, 900);
+    expect(mem.read(sel({ kind: 'subscription', id: 5 }))).toBe(300);
+    expect(mem.readEntry(5)).toBe(900);
+  });
+
   it('never throws when storage access is blocked (private mode / quota)', () => {
     const setItem = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('blocked');

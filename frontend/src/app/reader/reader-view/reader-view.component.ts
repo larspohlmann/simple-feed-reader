@@ -22,6 +22,7 @@ import { EntryDto, ReaderArticle, SubscriptionTagDto } from '../models';
 import { ReaderContentService } from '../reader-content.service';
 import { ReaderModeService } from '../reader-mode.service';
 import { LanguageService } from '../../core/language.service';
+import { ListScrollMemory } from '../list-scroll-memory';
 import { focusOpacity, readingBlocks } from '../reading-focus';
 import {
   AXIS_LOCK_MIN,
@@ -39,6 +40,11 @@ const READER_LOAD_TIMEOUT_MS = 30_000;
 const MAX_PULL = 160;
 /** Slide-out/return animation before the list takes over. */
 const LEAVE_ANIM_MS = 220;
+
+// Article scroll-restore settle: re-assert the target for at most this many frames
+// per content render, stopping early once the height has held steady this long.
+const ARTICLE_SETTLE_FRAMES = 60;
+const ARTICLE_SETTLE_STABLE = 4;
 
 @Component({
   selector: 'app-reader-view',
@@ -70,7 +76,15 @@ export class ReaderViewComponent {
   private readonly reader = inject(ReaderContentService);
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
+  private readonly scroll = inject(ListScrollMemory);
   private readonly destroyRef = inject(DestroyRef);
+
+  // Article scroll restore: a browser resume-reload reopens the entry from the URL
+  // at the top; re-seat it where the user was reading. `pendingRestore` holds the
+  // target until it lands (re-asserted across the original→reader content swap and
+  // image loads) or the user scrolls, whichever comes first.
+  private pendingRestore: { id: number; top: number } | null = null;
+  private restoreRaf = 0;
 
   // Reading-focus effect: the paragraph nearest the reading centre stays fully
   // opaque while the rest dims, refreshed on scroll. Skipped entirely when the
@@ -150,10 +164,15 @@ export class ReaderViewComponent {
       this.loadedId = id;
       this.loadSub?.unsubscribe();
       this.readerMode.reset();
+      this.cancelRestore();
       if (!e) {
+        this.pendingRestore = null;
         this.state.set({ status: 'idle' });
         return;
       }
+      // Arm a scroll restore for this entry if we remember a position for it.
+      const savedTop = this.scroll.readEntry(e.id);
+      this.pendingRestore = savedTop > 0 ? { id: e.id, top: savedTop } : null;
       this.state.set({ status: 'loading' });
       this.loadSub = this.reader
         .load(e.id)
@@ -192,6 +211,9 @@ export class ReaderViewComponent {
           }
         }
         this.scheduleFocus();
+        // Content just (re-)rendered — re-seat a pending scroll restore. Runs on
+        // the original render and again when the reader content swaps in.
+        if (this.pendingRestore?.id === this.entry()?.id) this.startRestore();
       });
     });
 
@@ -214,16 +236,25 @@ export class ReaderViewComponent {
     el.addEventListener('touchmove', move, { passive: false });
     el.addEventListener('touchend', end);
     el.addEventListener('touchcancel', end);
+    // A real wheel/touch gesture hands scrolling back to the user, cancelling any
+    // in-flight restore so it never fights them.
+    const abortRestore = (): void => {
+      this.pendingRestore = null;
+    };
+    el.addEventListener('wheel', abortRestore, { passive: true });
     this.destroyRef.onDestroy(() => {
       el.removeEventListener('touchstart', start);
       el.removeEventListener('touchmove', move);
       el.removeEventListener('touchend', end);
       el.removeEventListener('touchcancel', end);
+      el.removeEventListener('wheel', abortRestore);
+      this.cancelRestore();
       if (this.leaveTimer) clearTimeout(this.leaveTimer);
     });
   }
 
   onTouchStart(e: TouchEvent): void {
+    this.pendingRestore = null; // the user is taking over; stop restoring
     if (this.showToolbar() || this.leaving() || e.touches.length !== 1) return;
     const t = e.touches[0];
     this.touchStartX = t.clientX;
@@ -287,6 +318,51 @@ export class ReaderViewComponent {
   @HostListener('scroll')
   protected onScroll(): void {
     this.scheduleFocus();
+    // Remember the reading position so a resume-reload can restore it. Skip while
+    // a restore is in flight: the content may still be short and its clamped
+    // scrollTop would overwrite the good target.
+    const id = this.entry()?.id;
+    if (id != null && !this.pendingRestore && !this.leaving()) {
+      this.scroll.saveEntry(id, this.host.nativeElement.scrollTop);
+    }
+  }
+
+  /**
+   * Re-assert the pending scroll target across the frames where the article's
+   * height is still settling (original→reader swap, images loading), stopping
+   * once the height holds steady, the budget is spent, or the user takes over.
+   */
+  private startRestore(): void {
+    this.cancelRestore();
+    const p = this.pendingRestore;
+    if (!p) return;
+    // Rough landing right away so the restore holds even where rAF is throttled
+    // (e.g. a backgrounded tab); the loop below then refines it as height settles.
+    this.host.nativeElement.scrollTop = p.top;
+    if (typeof requestAnimationFrame === 'undefined') return;
+    let frames = 0;
+    let stable = 0;
+    let lastHeight = -1;
+    const step = (): void => {
+      const p = this.pendingRestore;
+      const el = this.host.nativeElement;
+      if (!p || p.id !== this.entry()?.id) return; // aborted or entry changed
+      el.scrollTop = p.top;
+      const height = el.scrollHeight;
+      stable = height === lastHeight ? stable + 1 : 0;
+      lastHeight = height;
+      if (++frames < ARTICLE_SETTLE_FRAMES && stable < ARTICLE_SETTLE_STABLE) {
+        this.restoreRaf = requestAnimationFrame(step);
+      }
+    };
+    this.restoreRaf = requestAnimationFrame(step);
+  }
+
+  private cancelRestore(): void {
+    if (this.restoreRaf && typeof cancelAnimationFrame !== 'undefined') {
+      cancelAnimationFrame(this.restoreRaf);
+    }
+    this.restoreRaf = 0;
   }
 
   /** Coalesce focus recomputes to one per animation frame. */

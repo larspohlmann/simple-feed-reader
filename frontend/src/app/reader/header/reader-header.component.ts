@@ -3,13 +3,14 @@ import { Component, inject, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { UserAvatarComponent } from '../../shared/user-avatar/user-avatar.component';
 import { AuthService } from '../../core/auth.service';
 import { ReaderModeService } from '../reader-mode.service';
 import { TagDto } from '../models';
 
 @Component({
   selector: 'app-reader-header',
-  imports: [IconComponent, RouterLink, TranslocoPipe],
+  imports: [IconComponent, RouterLink, TranslocoPipe, UserAvatarComponent],
   templateUrl: './reader-header.component.html',
   styleUrl: './reader-header.component.scss',
 })
