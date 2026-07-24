@@ -5,7 +5,7 @@
       <dt>{{ 'settings.account.email' | transloco }}</dt>
       <dd>{{ u.email }}</dd>
       <dt>{{ 'settings.account.memberSince' | transloco }}</dt>
-      <dd>{{ u.createdAt | date: 'longDate' }}</dd>
+      <dd>{{ memberSince(u.createdAt) }}</dd>
     </dl>
     @if (auth.isAdmin()) {
       <a class="admin" routerLink="/admin/users">
