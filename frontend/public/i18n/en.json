@@ -7,6 +7,52 @@
   "settings": {
     "preferences": "Preferences"
   },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "backToSignIn": "Back to sign in",
+    "login": {
+      "title": "Sign in",
+      "subtitle": "Welcome back to your reader.",
+      "submit": "Sign in",
+      "or": "or",
+      "continueWith": "Continue with {{provider}}",
+      "createAccount": "Create account",
+      "forgotPassword": "Forgot password?",
+      "invalidInput": "Please enter a valid email and password.",
+      "failed": "Sign in failed."
+    },
+    "register": {
+      "title": "Create account",
+      "subtitle": "Register, then confirm your email.",
+      "done": "Check your email for a confirmation link. After you confirm, an administrator reviews your account before you can sign in.",
+      "passwordLabel": "Password (at least 12 characters)",
+      "submit": "Create account",
+      "haveAccount": "Already have an account?",
+      "failed": "Registration failed. Try again."
+    },
+    "reset": {
+      "requestTitle": "Reset password",
+      "requestSubtitle": "We’ll email you a reset link.",
+      "requestDone": "If that address has an account, a reset link is on its way. The link is valid for 24 hours.",
+      "sendLink": "Send reset link",
+      "newTitle": "Set a new password",
+      "newPasswordLabel": "New password (at least 12 characters)",
+      "savePassword": "Save password",
+      "linkInvalid": "This reset link is invalid or has expired.",
+      "requestNew": "Request a new link",
+      "failed": "Could not reset the password. Request a new link."
+    },
+    "verify": {
+      "title": "Confirm email",
+      "ok": "Your email is confirmed. An administrator will review your account before you can sign in.",
+      "invalid": "This confirmation link is invalid or has expired."
+    },
+    "oauth": {
+      "title": "Signing you in",
+      "error": "Sign-in did not complete. Please try again."
+    }
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",

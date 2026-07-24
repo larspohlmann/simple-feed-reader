@@ -3,6 +3,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { API_BASE_URL } from '../../core/api';
 import { AuthService } from '../../core/auth.service';
 import { parseProblem } from '../../core/problem';
@@ -15,6 +16,7 @@ import { FormErrorComponent } from '../../shared/form-error/form-error.component
   imports: [
     ReactiveFormsModule,
     RouterLink,
+    TranslocoPipe,
     AuthShellComponent,
     ButtonComponent,
     FormErrorComponent,
@@ -28,6 +30,7 @@ export class LoginComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly base = inject(API_BASE_URL);
   private readonly router = inject(Router);
+  private readonly i18n = inject(TranslocoService);
 
   readonly form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -56,7 +59,7 @@ export class LoginComponent implements OnInit {
     }
 
     if (this.form.invalid) {
-      this.error.set('Please enter a valid email and password.');
+      this.error.set(this.i18n.translate('auth.login.invalidInput'));
       return;
     }
     this.loading.set(true);
@@ -69,7 +72,7 @@ export class LoginComponent implements OnInit {
           error: () => void this.router.navigate(['/']),
         }),
       error: (e: HttpErrorResponse) => {
-        this.error.set(parseProblem(e).detail ?? 'Sign in failed.');
+        this.error.set(parseProblem(e).detail ?? this.i18n.translate('auth.login.failed'));
         this.loading.set(false);
       },
     });

@@ -5,12 +5,13 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { API_BASE_URL } from '../../core/api';
 import { ResetRequestComponent } from './reset-request.component';
 import * as altcha from '../altcha';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 
 describe('ResetRequestComponent', () => {
   let ctrl: HttpTestingController;
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ResetRequestComponent],
+      imports: [ResetRequestComponent, provideTranslocoTesting()],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),

@@ -2,6 +2,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { API_BASE_URL } from '../../core/api';
 import { AuthService } from '../../core/auth.service';
 import { TokenStore } from '../../core/token.store';
@@ -10,7 +11,7 @@ import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 
 @Component({
   selector: 'app-oauth-callback',
-  imports: [RouterLink, AuthShellComponent, SpinnerComponent],
+  imports: [RouterLink, TranslocoPipe, AuthShellComponent, SpinnerComponent],
   templateUrl: './oauth-callback.component.html',
   styleUrl: './oauth-callback.component.scss',
 })

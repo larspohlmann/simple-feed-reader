@@ -5,6 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Router, provideRouter } from '@angular/router';
 import { API_BASE_URL } from '../../core/api';
 import { LoginComponent } from './login.component';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 
 describe('LoginComponent', () => {
   let ctrl: HttpTestingController;
@@ -13,7 +14,7 @@ describe('LoginComponent', () => {
   beforeEach(async () => {
     localStorage.clear();
     await TestBed.configureTestingModule({
-      imports: [LoginComponent],
+      imports: [LoginComponent, provideTranslocoTesting()],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),

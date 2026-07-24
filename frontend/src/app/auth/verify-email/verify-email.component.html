@@ -1,17 +1,15 @@
-<app-auth-shell title="Confirm email">
+<app-auth-shell [title]="'auth.verify.title' | transloco">
   @switch (state()) {
     @case ('loading') {
       <app-spinner />
     }
     @case ('ok') {
-      <p>
-        Your email is confirmed. An administrator will review your account before you can sign in.
-      </p>
-      <a routerLink="/login">Back to sign in</a>
+      <p>{{ 'auth.verify.ok' | transloco }}</p>
+      <a routerLink="/login">{{ 'auth.backToSignIn' | transloco }}</a>
     }
     @case ('error') {
-      <p class="err">This confirmation link is invalid or has expired.</p>
-      <a routerLink="/login">Back to sign in</a>
+      <p class="err">{{ 'auth.verify.invalid' | transloco }}</p>
+      <a routerLink="/login">{{ 'auth.backToSignIn' | transloco }}</a>
     }
   }
 </app-auth-shell>

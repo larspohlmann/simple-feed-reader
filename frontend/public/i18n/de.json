@@ -7,6 +7,52 @@
   "settings": {
     "preferences": "Einstellungen"
   },
+  "auth": {
+    "email": "E-Mail",
+    "password": "Passwort",
+    "backToSignIn": "Zurück zur Anmeldung",
+    "login": {
+      "title": "Anmelden",
+      "subtitle": "Willkommen zurück bei deinem Reader.",
+      "submit": "Anmelden",
+      "or": "oder",
+      "continueWith": "Weiter mit {{provider}}",
+      "createAccount": "Konto erstellen",
+      "forgotPassword": "Passwort vergessen?",
+      "invalidInput": "Bitte gib eine gültige E-Mail-Adresse und ein Passwort ein.",
+      "failed": "Anmeldung fehlgeschlagen."
+    },
+    "register": {
+      "title": "Konto erstellen",
+      "subtitle": "Registrieren und anschließend die E-Mail bestätigen.",
+      "done": "Prüfe deine E-Mails auf einen Bestätigungslink. Nach der Bestätigung prüft ein Administrator dein Konto, bevor du dich anmelden kannst.",
+      "passwordLabel": "Passwort (mindestens 12 Zeichen)",
+      "submit": "Konto erstellen",
+      "haveAccount": "Schon ein Konto?",
+      "failed": "Registrierung fehlgeschlagen. Bitte erneut versuchen."
+    },
+    "reset": {
+      "requestTitle": "Passwort zurücksetzen",
+      "requestSubtitle": "Wir senden dir einen Link zum Zurücksetzen.",
+      "requestDone": "Falls zu dieser Adresse ein Konto existiert, ist ein Link zum Zurücksetzen unterwegs. Der Link ist 24 Stunden gültig.",
+      "sendLink": "Link senden",
+      "newTitle": "Neues Passwort festlegen",
+      "newPasswordLabel": "Neues Passwort (mindestens 12 Zeichen)",
+      "savePassword": "Passwort speichern",
+      "linkInvalid": "Dieser Link zum Zurücksetzen ist ungültig oder abgelaufen.",
+      "requestNew": "Neuen Link anfordern",
+      "failed": "Passwort konnte nicht zurückgesetzt werden. Fordere einen neuen Link an."
+    },
+    "verify": {
+      "title": "E-Mail bestätigen",
+      "ok": "Deine E-Mail ist bestätigt. Ein Administrator prüft dein Konto, bevor du dich anmelden kannst.",
+      "invalid": "Dieser Bestätigungslink ist ungültig oder abgelaufen."
+    },
+    "oauth": {
+      "title": "Anmeldung läuft",
+      "error": "Die Anmeldung wurde nicht abgeschlossen. Bitte versuche es erneut."
+    }
+  },
   "common": {
     "save": "Speichern",
     "cancel": "Abbrechen",

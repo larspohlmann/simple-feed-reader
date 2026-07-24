@@ -4,6 +4,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { API_BASE_URL } from '../../core/api';
 import { parseProblem } from '../../core/problem';
 import { AltchaService } from '../altcha.service';
@@ -17,6 +18,7 @@ import { FormErrorComponent } from '../../shared/form-error/form-error.component
   imports: [
     ReactiveFormsModule,
     RouterLink,
+    TranslocoPipe,
     AuthShellComponent,
     ButtonComponent,
     FormErrorComponent,
@@ -29,6 +31,7 @@ export class RegisterComponent {
   private readonly http = inject(HttpClient);
   private readonly base = inject(API_BASE_URL);
   private readonly altcha = inject(AltchaService);
+  private readonly i18n = inject(TranslocoService);
 
   readonly form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -53,7 +56,7 @@ export class RegisterComponent {
     } catch (e) {
       const p = parseProblem(e as HttpErrorResponse);
       const firstFieldError = p.errors ? Object.values(p.errors)[0]?.[0] : undefined;
-      this.error.set(firstFieldError ?? p.detail ?? 'Registration failed. Try again.');
+      this.error.set(firstFieldError ?? p.detail ?? this.i18n.translate('auth.register.failed'));
     } finally {
       this.loading.set(false);
     }

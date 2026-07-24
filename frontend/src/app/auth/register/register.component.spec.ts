@@ -5,13 +5,14 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { API_BASE_URL } from '../../core/api';
 import { RegisterComponent } from './register.component';
 import * as altcha from '../altcha';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 
 describe('RegisterComponent', () => {
   let ctrl: HttpTestingController;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [RegisterComponent],
+      imports: [RegisterComponent, provideTranslocoTesting()],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
