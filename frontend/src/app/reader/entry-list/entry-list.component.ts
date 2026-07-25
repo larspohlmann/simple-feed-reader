@@ -15,6 +15,10 @@ import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
+import {
+  BACK_TO_TOP_AFTER_PX,
+  ToTopButtonComponent,
+} from '../../shared/to-top-button/to-top-button.component';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { EntryHeroComponent } from '../magazine/entry-hero.component';
 import { EntryCompactComponent } from '../magazine/entry-compact.component';
@@ -50,6 +54,7 @@ const MAX_PULL = 100;
     EntryHeroComponent,
     EntryCompactComponent,
     SourceGroupComponent,
+    ToTopButtonComponent,
   ],
   templateUrl: './entry-list.component.html',
   styleUrl: './entry-list.component.scss',
@@ -125,6 +130,8 @@ export class EntryListComponent implements OnDestroy {
   // as the app header's hide-on-scroll). Always expanded on wide screens.
   readonly collapsed = signal(false);
   private lastScrollTop = 0;
+  /** Drives the corner back-to-top button; set from the scroll handler. */
+  readonly showToTop = signal(false);
 
   /**
    * The header's EXPANDED height, which is the space the scroller reserves for
@@ -148,12 +155,17 @@ export class EntryListComponent implements OnDestroy {
     if (h > 0) this.host.nativeElement.style.setProperty('--list-bar-h', `${h}px`);
   });
 
-  // A new selection reloads the list from the top, and a resize past the wide
-  // breakpoint restores the full-size header — expand the bar in both cases.
+  // A new selection reloads the list from the top, a resize past the wide
+  // breakpoint restores the full-size header, and a layout toggle (list <->
+  // magazine) swaps in a fresh #rows element that starts at 0 — all three make
+  // the collapsed/showToTop state (and its lastScrollTop baseline) stale, so
+  // reset them together.
   private readonly _resetCollapse = effect(() => {
     this.selection();
     this.screen.isWide();
+    this.layout();
     this.collapsed.set(false);
+    this.showToTop.set(false);
     this.lastScrollTop = 0;
   });
 
@@ -165,9 +177,39 @@ export class EntryListComponent implements OnDestroy {
       nextHeaderHidden(this.collapsed(), this.lastScrollTop, top, this.screen.isWide()),
     );
     this.lastScrollTop = top;
+    this.showToTop.set(top > BACK_TO_TOP_AFTER_PX);
     // Remember where the user is so a browser resume-reload (iOS/Brave discard the
     // tab and reload it) can drop them back here rather than at the top.
     this.scroll.save(this.selection(), top);
+  }
+
+  /**
+   * Jump the list back to the top. Shared by the corner button and by the tap on
+   * the empty middle of the app bar.
+   */
+  scrollToTop(): void {
+    const el = this.rows()?.nativeElement;
+    if (!el) return;
+    // A scroll restore in flight re-asserts its own target every frame; the
+    // user's jump has to win.
+    this.cancelSettle();
+    el.scrollTo({ top: 0, behavior: this.reduceMotion ? 'auto' : 'smooth' });
+    // Say the bar is expanded now rather than waiting for a scroll event: this
+    // way the tap expands it immediately instead of ~300ms later once the
+    // animation lands, and a scroll gesture that interrupts the animation
+    // partway (wheel/touch — see cancelSettle above) may never reach 0 at all.
+    this.collapsed.set(false);
+    // `lastScrollTop` deliberately keeps its pre-jump value. Zeroing it would
+    // make the smooth scroll's own first event (still far down the list) read
+    // as a large scroll *down* and immediately re-collapse the bar.
+    // `showToTop` is likewise left to the scroll events: clearing it here would
+    // only make the button blink out and back in as the animation passes the
+    // threshold, which is how the article view behaves too.
+    // Best-effort restore point in case a reload lands before the animation
+    // finishes: `onRowsScroll` overwrites this on every frame of the smooth
+    // scroll, so it's a floor for the reduced-motion/interrupted cases, not a
+    // guarantee that 0 is what actually gets remembered.
+    this.scroll.save(this.selection(), 0);
   }
 
   tagsFor(subscriptionId: number): SubscriptionTagDto[] {

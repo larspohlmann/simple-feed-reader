@@ -288,4 +288,94 @@ describe('EntryListComponent', () => {
     f.detectChanges();
     expect(apply).not.toHaveBeenCalled();
   });
+
+  describe('back to top', () => {
+    /** Stub the scroller: jsdom implements neither scrollTo nor real scrolling. */
+    function stubScroller(f: ReturnType<typeof mount>) {
+      const rows = (f.nativeElement as HTMLElement).querySelector('.rows') as HTMLElement;
+      const scrollTo = jest.fn();
+      rows.scrollTo = scrollTo as unknown as typeof rows.scrollTo;
+      return { scrollTo };
+    }
+
+    it('shows the button only once the list is scrolled well down', () => {
+      const f = mount();
+      const el = f.nativeElement as HTMLElement;
+      expect(el.querySelector('app-to-top-button')).toBeNull();
+
+      f.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
+      f.detectChanges();
+      expect(el.querySelector('app-to-top-button')).not.toBeNull();
+
+      f.componentInstance.onRowsScroll({ target: { scrollTop: 100 } } as unknown as Event);
+      f.detectChanges();
+      expect(el.querySelector('app-to-top-button')).toBeNull();
+    });
+
+    it('scrolls the container to the top, expands the bar and forgets the offset', () => {
+      const f = mount();
+      const { scrollTo } = stubScroller(f);
+      f.componentInstance.collapsed.set(true);
+      memory.save.mockClear();
+
+      f.componentInstance.scrollToTop();
+
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+      expect(f.componentInstance.collapsed()).toBe(false);
+      expect(memory.save).toHaveBeenCalledWith({ kind: 'all', id: null, unread: true }, 0);
+    });
+
+    it('clicking the button scrolls to the top', () => {
+      const f = mount();
+      const { scrollTo } = stubScroller(f);
+      f.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
+      f.detectChanges();
+
+      (
+        (f.nativeElement as HTMLElement).querySelector(
+          'app-to-top-button button',
+        ) as HTMLButtonElement
+      ).click();
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+    });
+
+    it('scrolls the magazine layout’s own container too', () => {
+      // The magazine branch renders a different #rows element; scrollToTop has to
+      // resolve the live one at call time rather than caching it.
+      const f = mount({ layout: 'magazine' });
+      const { scrollTo } = stubScroller(f);
+
+      f.componentInstance.scrollToTop();
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+    });
+
+    it('hides the button again when the selection changes', () => {
+      const f = mount();
+      f.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
+      f.detectChanges();
+      expect((f.nativeElement as HTMLElement).querySelector('app-to-top-button')).not.toBeNull();
+
+      f.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
+      f.detectChanges();
+      expect(f.componentInstance.showToTop()).toBe(false);
+    });
+
+    it('keeps the bar expanded as the smooth scroll travels back up', () => {
+      const f = mount();
+      stubScroller(f);
+      f.componentInstance.onRowsScroll({ target: { scrollTop: 3000 } } as unknown as Event);
+      f.componentInstance.scrollToTop();
+      // The animation's own first event, still deep in the list. Against a zeroed
+      // baseline this would read as a 2900px scroll *down* and re-collapse the bar.
+      f.componentInstance.onRowsScroll({ target: { scrollTop: 2900 } } as unknown as Event);
+      expect(f.componentInstance.collapsed()).toBe(false);
+    });
+
+    it('does nothing when there is no scroll container yet', () => {
+      const f = mount({ entries: [] });
+      memory.save.mockClear();
+      expect(() => f.componentInstance.scrollToTop()).not.toThrow();
+      expect(memory.save).not.toHaveBeenCalled();
+    });
+  });
 });

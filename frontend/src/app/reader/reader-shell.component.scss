@@ -1,7 +1,13 @@
 :host {
   display: flex;
   flex-direction: column;
+
+  /* `dvh` tracks mobile Safari's toolbar, which never minimizes here because
+     the page itself does not scroll — an inner container does. Without it the
+     shell's bottom edge, and anything anchored to it, hides behind the toolbar.
+     The `vh` line above is the fallback for browsers without `dvh`. */
   height: 100vh;
+  height: 100dvh;
 
   /* Clip the header when it slides up off the top (hide-on-scroll), and anchor
      it: it is positioned against this box, not the viewport. */

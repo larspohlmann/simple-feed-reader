@@ -182,3 +182,7 @@
     }
   </div>
 }
+
+@if (showToTop()) {
+  <app-to-top-button (activate)="scrollToTop()" />
+}
