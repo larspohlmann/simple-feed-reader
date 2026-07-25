@@ -145,14 +145,7 @@
     }
   </div>
   @if (showToTop()) {
-    <button
-      class="to-top"
-      type="button"
-      [attr.aria-label]="'reader.backToTop' | transloco"
-      (click)="scrollToTop()"
-    >
-      <app-icon name="arrow_upward" [size]="20" />
-    </button>
+    <app-to-top-button (activate)="scrollToTop()" />
   }
 } @else {
   <div class="placeholder">

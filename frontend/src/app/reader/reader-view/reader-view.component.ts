@@ -17,6 +17,10 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
+import {
+  BACK_TO_TOP_AFTER_PX,
+  ToTopButtonComponent,
+} from '../../shared/to-top-button/to-top-button.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
 import { EntryDto, ReaderArticle, SubscriptionTagDto } from '../models';
 import { ReaderContentService } from '../reader-content.service';
@@ -46,9 +50,6 @@ const LEAVE_ANIM_MS = 220;
 const ARTICLE_SETTLE_FRAMES = 60;
 const ARTICLE_SETTLE_STABLE = 4;
 
-/** How far the reader must scroll before the back-to-top button appears. */
-const BACK_TO_TOP_AFTER_PX = 500;
-
 /** Below this many headings an article is too short to warrant a contents list. */
 const TOC_MIN_HEADINGS = 3;
 
@@ -72,7 +73,14 @@ function slugify(text: string): string {
 
 @Component({
   selector: 'app-reader-view',
-  imports: [IconComponent, FaviconComponent, SpinnerComponent, SourceTagsComponent, TranslocoPipe],
+  imports: [
+    IconComponent,
+    FaviconComponent,
+    SpinnerComponent,
+    SourceTagsComponent,
+    ToTopButtonComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './reader-view.component.html',
   styleUrl: './reader-view.component.scss',
 })
