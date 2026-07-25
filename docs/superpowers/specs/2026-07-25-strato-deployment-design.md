@@ -69,8 +69,17 @@ Three call sites were checked and all compose correctly with a base path:
    `rtrim($frontendUrl,'/')`. With `APP_FRONTEND_URL=https://lars-pohlmann.de/reader`
    these yield `.../reader/verify-email?token=...` and `.../reader/auth/callback`.
 
-So the subpath is achieved entirely through **environment values plus one additive
+So the subpath is achieved almost entirely through **environment values plus one additive
 Angular build configuration**.
+
+**One exception, found while planning.** `frontend/src/app/core/transloco-loader.ts` requests
+`/i18n/${lang}.json` — absolute from the domain root. Mounted at `/reader` that resolves to
+`https://lars-pohlmann.de/i18n/de.json`, which belongs to the portfolio and 404s. Dictionaries
+are preloaded before first paint, so the entire UI would come up untranslated. The fix is to
+make the path relative, which resolves against the document base URI and is therefore correct
+at the root and under a subpath alike. A sweep of `frontend/src` found this to be the **only**
+root-absolute reference: Material Symbols uses `./`, and the base href in `index.html` is
+replaced by the build.
 
 ### Serving: one docroot for SPA and API
 
@@ -164,6 +173,17 @@ New, unavoidably outside that directory:
 - `.github/workflows/deploy-strato.yml` — workflows only run from `.github/workflows/`.
   Named unambiguously so it reads as personal infrastructure.
 
+Changed, existing files — behaviour preserved at the domain root:
+
+- `frontend/src/app/core/transloco-loader.ts` — the root-absolute i18n path becomes relative.
+  Identical behaviour when served at the root; correct under a subpath.
+- `backend/config/packages/cache.yaml` and `backend/.env` — the filesystem cache pools'
+  directory and key namespace become env-driven. Symfony's defaults place the pools inside
+  `var/cache` (per-release, and wiped by `cache:clear`) and seed the namespace with
+  `%kernel.project_dir%` (the release path), so **both** must be overridable or a deploy
+  resets every rate limit and forgets every spent ALTCHA solution. The committed defaults
+  reproduce the previous behaviour exactly.
+
 Additive, existing files — no existing behaviour altered:
 
 - `frontend/angular.json` gains a `strato` build configuration (base href `/reader/`,
@@ -216,9 +236,13 @@ These need the STRATO and Google consoles and cannot be scripted:
 
 ## Testing
 
-This is deployment infrastructure, so verification is a live runbook rather than unit
-tests. There are no new application code paths to unit-test; the one testable behaviour
-change is the Angular build configuration, which is verified by building it.
+This is mostly deployment infrastructure, so verification is largely a live runbook. Two
+changes are genuinely testable and get tests:
+
+- The i18n loader's URL is asserted to be relative (no leading slash) by a unit test — this
+  is the one application-code change on the branch.
+- The Angular build configuration is verified by building it and asserting the emitted base
+  href, in both directions.
 
 Build-time checks (in CI, on the runner):
 
