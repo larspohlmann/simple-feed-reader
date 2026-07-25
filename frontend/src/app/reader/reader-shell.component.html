@@ -5,28 +5,38 @@
   [hasNext]="hasNext()"
   [tags]="headerTags()"
   [activeTagId]="activeTagId()"
-  [style.marginTop.px]="headerHidden() ? -headerHeight() : 0"
-  (toggleSidebar)="sidebarOpen.set(!sidebarOpen())"
+  [class.hidden]="headerHidden()"
+  (toggleSidebar)="setSidebarOpen(!sidebarOpen())"
   (prev)="onPrev()"
   (next)="onNext()"
 />
+<!-- No top offset here: the scrolling panes reserve the header's height
+     themselves (via --app-bar-h) and their content passes under it, so
+     retracting the header uncovers content instead of leaving a dead strip
+     (#87). Only the in-flow sidebar takes the offset, in the stylesheet. -->
 <div
   class="body"
   appDrawerSwipe
   [appDrawerSwipeOpen]="sidebarOpen()"
   [appDrawerSwipeDisabled]="!screen.isNarrow() || articleFullscreen()"
-  (appDrawerSwipeOpenDrawer)="sidebarOpen.set(true)"
-  (appDrawerSwipeCloseDrawer)="sidebarOpen.set(false)"
+  (appDrawerSwipeOpenDrawer)="setSidebarOpen(true)"
+  (appDrawerSwipeCloseDrawer)="setSidebarOpen(false)"
 >
   @if (sidebarOpen()) {
     <button
       class="backdrop"
       type="button"
       aria-label="Close menu"
-      (click)="sidebarOpen.set(false)"
+      [style.top.px]="headerHeight() || null"
+      (click)="setSidebarOpen(false)"
     ></button>
   }
-  <aside class="sidebar" data-drawer-panel [class.open]="sidebarOpen()">
+  <aside
+    class="sidebar"
+    data-drawer-panel
+    [class.open]="sidebarOpen()"
+    [style.top.px]="headerHeight() || null"
+  >
     <app-sidebar
       [tagTree]="subs.tagTree()"
       [untagged]="subs.untagged()"

@@ -206,6 +206,11 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       this.resizeObs = new ResizeObserver(() => this.headerHeight.set(hdrEl.offsetHeight));
       this.resizeObs.observe(hdrEl);
     }
+    // This height now drives the content area's top padding and the mobile
+    // drawer's offset, not just how far the header used to slide. The
+    // observer's first callback covers the initial measurement; until it lands
+    // the stylesheet's own 56px (the bare bar, no tag row) holds, which is why
+    // the template binds `headerHeight() || null` rather than a raw 0.
     // Scroll events don't bubble, so capture them from whichever inner content
     // pane is scrolling to drive the hide-on-scroll header.
     this.hostRef.nativeElement.addEventListener('scroll', this.onContentScroll, {
@@ -219,6 +224,38 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     this.hostRef.nativeElement.removeEventListener('scroll', this.onContentScroll, {
       capture: true,
     } as EventListenerOptions);
+  }
+
+  /**
+   * Publish the bar's geometry to everything under the shell as inherited
+   * custom properties (#87):
+   *
+   *   --app-bar-h      how much space a scrolling pane reserves at its top
+   *   --app-bar-shift  how far a pane's own sticky furniture travels with the
+   *                    bar when it retracts, so nothing is left hanging in the
+   *                    gap the bar leaves behind
+   *
+   * Both are constants from the panes' point of view — `--app-bar-h` never
+   * changes with the hidden state, which is what keeps their geometry fixed.
+   * Set imperatively rather than through a `[style.--x]` binding so there is no
+   * doubt about custom-property support in the template compiler.
+   */
+  private readonly _publishBarVars = effect(() => {
+    const style = this.hostRef.nativeElement.style;
+    const h = this.headerHeight();
+    if (h > 0) style.setProperty('--app-bar-h', `${h}px`);
+    style.setProperty('--app-bar-shift', this.headerHidden() ? `-${h}px` : '0px');
+  });
+
+  /**
+   * The mobile drawer hangs below the header, so it must never open under a
+   * retracted one — that would leave a strip of backdrop where the bar should
+   * be. Showing the header again costs nothing: the drawer covers the content,
+   * so there is no scrolling going on to hide it for.
+   */
+  setSidebarOpen(open: boolean): void {
+    if (open) this.headerHidden.set(false);
+    this.sidebarOpen.set(open);
   }
 
   private readonly onContentScroll = (e: Event): void => {

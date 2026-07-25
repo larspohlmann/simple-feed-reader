@@ -91,6 +91,43 @@ describe('ReaderShellComponent', () => {
     expect(el.querySelector('app-entry-hero, app-entry-compact, app-entry-row')).not.toBeNull();
   });
 
+  // #87: the header used to be pulled out of view with a negative margin-top,
+  // which re-ran layout and resized the scroller under the user's finger. It is
+  // an overlay now, so hiding it must change the header and nothing else.
+  describe('hide-on-scroll header', () => {
+    it('publishes a bar height that does not move when the bar does', () => {
+      const f = boot();
+      const el = f.nativeElement as HTMLElement;
+      // jsdom has no ResizeObserver, so nothing measures the header; stand in
+      // for the measurement to exercise everything that depends on it.
+      f.componentInstance.headerHeight.set(90);
+      f.detectChanges();
+      expect(el.style.getPropertyValue('--app-bar-h')).toBe('90px');
+      expect(el.style.getPropertyValue('--app-bar-shift')).toBe('0px');
+
+      f.componentInstance.headerHidden.set(true);
+      f.detectChanges();
+      // The reservation is unchanged — only the shift moves. That is the fix:
+      // the panes' geometry cannot depend on whether the bar is showing.
+      expect(el.style.getPropertyValue('--app-bar-h')).toBe('90px');
+      expect(el.style.getPropertyValue('--app-bar-shift')).toBe('-90px');
+      expect(el.querySelector('app-reader-header')!.classList).toContain('hidden');
+      // The old mechanism, and the whole bug: no margin may be involved.
+      expect(el.querySelector<HTMLElement>('app-reader-header')!.style.marginTop).toBe('');
+    });
+
+    it('shows the header again when the mobile drawer opens', () => {
+      // The drawer hangs below the bar, so opening it under a retracted header
+      // would leave a strip of backdrop where the bar belongs.
+      const f = boot();
+      f.componentInstance.headerHidden.set(true);
+      f.componentInstance.setSidebarOpen(true);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(false);
+      expect(f.componentInstance.sidebarOpen()).toBe(true);
+    });
+  });
+
   it('marks the opened entry read', () => {
     const f = boot();
     qp.next(convertToParamMap({ entry: '1' }));
