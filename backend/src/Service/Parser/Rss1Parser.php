@@ -6,12 +6,17 @@ namespace App\Service\Parser;
 
 use App\Service\Parser\Exception\FeedParseException;
 
-final class Rss1Parser
+final class Rss1Parser implements FeedFormatParserInterface
 {
     private const string RSS1_NS = 'http://purl.org/rss/1.0/';
     private const string RDF_NS = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
     private const string DC_NS = 'http://purl.org/dc/elements/1.1/';
     private const string CONTENT_NS = 'http://purl.org/rss/1.0/modules/content/';
+
+    public function supports(\DOMElement $root): bool
+    {
+        return $root->localName === 'RDF';
+    }
 
     public function parse(\DOMDocument $document): ParsedFeed
     {

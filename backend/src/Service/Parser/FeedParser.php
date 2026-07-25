@@ -9,10 +9,7 @@ use App\Service\Parser\Exception\FeedParseException;
 final readonly class FeedParser
 {
     public function __construct(
-        private readonly Rss2Parser $rss2Parser,
-        private readonly Atom10Parser $atom10Parser,
-        private readonly Atom03Parser $atom03Parser,
-        private readonly Rss1Parser $rss1Parser,
+        private FeedParserFactory $parserFactory,
     ) {
     }
 
@@ -50,29 +47,9 @@ final readonly class FeedParser
             throw new FeedParseException('Feed documents must not declare a DTD');
         }
 
-        return match ($root->localName) {
-            'rss' => $this->rss2Parser->parse($document),
-            'feed' => $this->atomParserFor($root)->parse($document),
-            'RDF' => $this->rss1Parser->parse($document),
-            default => throw new FeedParseException(
-                sprintf('Unknown feed root element <%s>', (string) $root->localName),
-            ),
-        };
-    }
-
-    /**
-     * A <feed> root is Atom, but the dialect is decided by its namespace — the
-     * modern 1.0 or the legacy 0.3. Anything else is a feed we do not parse, and
-     * saying so beats handing it to the wrong parser and yielding an empty feed.
-     */
-    private function atomParserFor(\DOMElement $root): AbstractAtomParser
-    {
-        return match ($root->namespaceURI) {
-            Atom10Parser::NAMESPACE => $this->atom10Parser,
-            Atom03Parser::NAMESPACE => $this->atom03Parser,
-            default => throw new FeedParseException(
-                sprintf('Unsupported Atom namespace "%s"', (string) $root->namespaceURI),
-            ),
-        };
+        // Which dialect parser handles this root — including the Atom 1.0 vs 0.3
+        // namespace split — is each parser's own call now; the factory returns
+        // the match or raises FeedParseException when none claims the root.
+        return $this->parserFactory->parserFor($root)->parse($document);
     }
 }

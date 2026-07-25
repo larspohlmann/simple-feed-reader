@@ -11,10 +11,19 @@ use App\Service\Parser\Exception\FeedParseException;
  * handful of element names is identical between Atom 1.0 and Atom 0.3, so the
  * subclasses declare only those differences and inherit the traversal here.
  */
-abstract class AbstractAtomParser
+abstract class AbstractAtomParser implements FeedFormatParserInterface
 {
     /** The single XML namespace this dialect uses throughout the document. */
     abstract protected function namespaceUri(): string;
+
+    /**
+     * A <feed> root is Atom; the dialect is decided by its namespace, so each
+     * subclass claims only the root whose namespace matches its own.
+     */
+    public function supports(\DOMElement $root): bool
+    {
+        return $root->localName === 'feed' && $root->namespaceURI === $this->namespaceUri();
+    }
 
     /**
      * Entry publication-date element names, most-preferred first.
