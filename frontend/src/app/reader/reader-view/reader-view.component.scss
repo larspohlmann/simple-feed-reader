@@ -2,11 +2,6 @@
   display: block;
   height: 100%;
   overflow: auto;
-
-  /* The other scrolling pane under the floating app bar, and it reserves the
-     bar's height the same way the list does: a constant, so retracting the bar
-     never resizes this box (#87). The article passes underneath it. */
-  padding-top: calc(var(--app-bar-h, 56px) + var(--bar-gap));
 }
 
 /* A query container so the back button can react to the reading pane's
@@ -20,6 +15,14 @@
   background: var(--surface-0);
   container-type: inline-size;
   container-name: reader;
+
+  /* Reserves the floating app bar's height, the same constant the list scroller
+     uses (#87). It belongs on this element and NOT on the scrolling host: the
+     host is deliberately transparent so a swipe-away reveals the list beneath,
+     so padding there is a see-through strip and the list shows through at the
+     top of an open article. This is opaque and full-height, so it covers the
+     reservation as well as the article. */
+  padding-top: calc(var(--app-bar-h, 56px) + var(--bar-gap));
 }
 
 /* Overscroll-to-return affordance: anchored just below the article's end, so a

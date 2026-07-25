@@ -44,6 +44,12 @@ async function signInAsAdmin(page: Page): Promise<boolean> {
 }
 
 async function stubEntries(page: Page): Promise<void> {
+  await page.route('**/api/entries/*/state', async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: { state: { entryId: 1, isRead: true, isFavorite: false, isKept: false, readAt: 'x' } },
+    });
+  });
   await page.route('**/api/entries*', async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
     await route.fulfill({ status: 200, json: { entries: ENTRIES, nextCursor: null } });
@@ -126,6 +132,33 @@ test.describe('Hide-on-scroll header on a phone', () => {
     const after = (await anchor.boundingBox())!;
 
     expect(after.y).toBeCloseTo(before.y + 100, 0);
+  });
+
+  // The article renders as an overlay over the still-mounted list, and its
+  // scrolling host is transparent on purpose so a swipe-away reveals that list.
+  // Anything the article reserves at its top therefore has to be reserved on
+  // the opaque panel inside it, or the list shows through the gap.
+  test('an open article is opaque all the way to the top', async ({ page }) => {
+    const signedIn = await signInAsAdmin(page);
+    test.skip(
+      !signedIn,
+      'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
+    );
+
+    await stubEntries(page);
+    await page.reload();
+    await expect(page.locator(ROWS)).toBeVisible();
+    await settle(page);
+
+    await page.getByText('Entry number 1', { exact: false }).first().click();
+    const host = page.locator('app-reader-view');
+    const panel = host.locator('.reader');
+    await expect(panel).toBeVisible();
+
+    const hostBox = (await host.boundingBox())!;
+    const panelBox = (await panel.boundingBox())!;
+    expect(panelBox.y).toBeCloseTo(hostBox.y, 0);
+    expect(panelBox.height).toBeGreaterThanOrEqual(hostBox.height - 1);
   });
 
   test('the content area keeps its height while the header slides', async ({ page }) => {
