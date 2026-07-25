@@ -58,7 +58,7 @@ rejects the npm-11-authored lockfile) and then `npm ci`.
 
 | File | Responsibility |
 | --- | --- |
-| `.github/workflows/deploy-strato.yml` | Thin trigger; calls the two scripts above |
+| `.github/workflows/deploy-strato.yml` | Deploys `develop` after CI passes; calls the two scripts above |
 | `frontend/src/environments/environment.strato.ts` | `apiBaseUrl: '/reader'` |
 
 **Modified — additive, defaults unchanged:**
@@ -69,6 +69,7 @@ rejects the npm-11-authored lockfile) and then `npm ci`.
 | `frontend/src/app/core/transloco-loader.ts` | Absolute `/i18n/` path → relative (bug fix) |
 | `backend/config/packages/cache.yaml` | `prefix_seed` + `directory` become env-driven |
 | `backend/.env` | Defaults for the two new variables, preserving current behaviour |
+| `.github/workflows/ci.yml` | `develop` joins the push-trigger branches, so the deploy has a CI result to gate on |
 
 ---
 
@@ -728,15 +729,19 @@ Symfony derives its base path from `SCRIPT_NAME`, so routes need no prefix. Angu
 
 ## Deploying
 
-Push a tag, or run the workflow by hand:
+**`develop` is continuously deployed.** Every push or merge to `develop` runs CI, and if CI
+passes the deploy workflow builds both halves on the runner, uploads the release, migrates,
+and flips `current`. Migrations run **before** the flip, so a failed migration leaves the
+previous release live.
 
-```bash
-git tag v1.0.0 && git push origin v1.0.0
-```
+Nothing to do by hand — merge to `develop` and it ships.
 
-The workflow builds both halves on the runner, uploads the release, then migrates and flips
-`current`. Migrations run **before** the flip, so a failed migration leaves the previous
-release live.
+Two caveats:
+
+- `workflow_run` only fires when the deploy workflow is on the **default branch** (`main`).
+  Until `develop` has been merged to `main` once, automatic deploys do not happen.
+- To deploy on demand at any time, run the **Deploy (Strato)** workflow manually from the
+  Actions tab (`workflow_dispatch`).
 
 ## Rolling back
 
@@ -788,14 +793,45 @@ git commit -m "docs(deploy): production env template and Strato runbook (#73)"
 
 ## Task 8: Write the GitHub Actions workflow
 
-Thin on purpose: it sets up toolchains, calls the two scripts, and moves files between them.
-Both triggers are restricted to people with write access, and GitHub withholds secrets from
-fork pull requests — which matters because this repository is public.
+Deploys on every push or merge to `develop`, gated on CI passing. Thin on purpose: it sets up
+toolchains, calls the two scripts, and moves files between them.
+
+Two `workflow_run` behaviours drive the shape of this file, and getting either wrong breaks
+the deploy silently:
+
+- It fires **only when the workflow file is on the default branch** (`main` here). Under
+  git-flow this branch merges to `develop` first, so automatic deploys stay dormant until
+  `develop` reaches `main`. `workflow_dispatch` covers the interim.
+- It checks out the **default branch** by default, not the commit CI ran on. The checkout
+  must pin `github.event.workflow_run.head_sha` or every deploy would ship `main`.
 
 **Files:**
+- Modify: `.github/workflows/ci.yml:4-6` (add `develop` to the push branches)
 - Create: `.github/workflows/deploy-strato.yml`
 
-- [ ] **Step 1: Create the workflow**
+- [ ] **Step 1: Make CI run on `develop`**
+
+CI currently triggers on `push` to `main` and on `pull_request`, so nothing runs on a merge
+into `develop` — there would be no CI result to gate the deploy on. In
+`.github/workflows/ci.yml`, change:
+
+```yaml
+on:
+  push:
+    branches: [main]
+  pull_request:
+```
+
+to:
+
+```yaml
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+```
+
+- [ ] **Step 2: Create the workflow**
 
 Create `.github/workflows/deploy-strato.yml`:
 
@@ -803,11 +839,19 @@ Create `.github/workflows/deploy-strato.yml`:
 # Personal deployment to the maintainer's Strato shared hosting.
 # Not part of CI and not needed by anyone else working on this project --
 # see deploy/strato/README.md.
+#
+# Runs after CI succeeds on develop, so develop is continuously deployed and a
+# red build never reaches production.
+#
+# NOTE: workflow_run only fires when this file is on the DEFAULT branch (main).
+# Until develop is merged to main, deploy by hand with workflow_dispatch.
 name: Deploy (Strato)
 
 on:
-  push:
-    tags: ['v*']
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [develop]
   workflow_dispatch:
 
 # One deploy at a time. Two overlapping runs could interleave an rsync with
@@ -820,12 +864,19 @@ jobs:
   deploy:
     name: Build and deploy
     runs-on: ubuntu-latest
-    # Never run from a fork: secrets would be unavailable and the job would
-    # fail halfway through, after building.
-    if: github.repository == 'larspohlmann/simple-feed-reader'
+    # Deploy only a green build. A manual dispatch is trusted on its own; a
+    # workflow_run must report success, since the event fires on failure too.
+    if: >-
+      github.repository == 'larspohlmann/simple-feed-reader' &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.event.workflow_run.conclusion == 'success')
 
     steps:
+      # workflow_run checks out the DEFAULT branch unless told otherwise, so
+      # pin the commit CI actually tested -- otherwise every deploy ships main.
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -844,9 +895,12 @@ jobs:
       - name: Pin npm
         run: npm i -g npm@11
 
+      # No tag to name a release after, so use a sortable timestamp plus the
+      # short SHA of the commit being deployed.
       - name: Name the release
         id: release
-        run: echo "name=${GITHUB_REF_NAME}-$(date -u +%Y%m%d%H%M%S)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "name=$(date -u +%Y%m%d%H%M%S)-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Build the release
         run: ./deploy/strato/build-release.sh "${RUNNER_TEMP}/release"
@@ -905,7 +959,7 @@ jobs:
             "cd '${DEPLOY_PATH}/releases' && ls -1t | tail -n +6 | xargs -r rm -rf"
 ```
 
-- [ ] **Step 2: Verify the YAML parses**
+- [ ] **Step 3: Verify the YAML parses**
 
 ```bash
 python3 -c "import yaml,sys; yaml.safe_load(open('.github/workflows/deploy-strato.yml')); print('YAML OK')"
@@ -913,7 +967,7 @@ python3 -c "import yaml,sys; yaml.safe_load(open('.github/workflows/deploy-strat
 
 Expected: `YAML OK`.
 
-- [ ] **Step 3: Confirm the secret names match what exists**
+- [ ] **Step 4: Confirm the secret names match what exists**
 
 ```bash
 gh secret list
@@ -922,7 +976,7 @@ gh secret list
 Expected: `STRATO_SSH_HOST`, `STRATO_SSH_USER`, `STRATO_SSH_KEY`, `STRATO_KNOWN_HOSTS`,
 `STRATO_DEPLOY_PATH` — every name referenced in the workflow.
 
-- [ ] **Step 3b: Confirm `STRATO_DEPLOY_PATH` points at the app directory**
+- [ ] **Step 5: Confirm `STRATO_DEPLOY_PATH` points at the app directory**
 
 The scripts assume `${DEPLOY_PATH}/releases`, `${DEPLOY_PATH}/shared`, and
 `${DEPLOY_PATH}/current`. The secret was set on 2026-07-21 and its value cannot be read back,
@@ -940,11 +994,18 @@ directory — as an absolute path, since the workflow interpolates it into remot
 gh secret set STRATO_DEPLOY_PATH --body '/mnt/web319/b2/38/59606538/htdocs/simplefeedreader'
 ```
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add .github/workflows/deploy-strato.yml
-git commit -m "ci(deploy): tag-triggered Strato deployment workflow (#73)"
+git add .github/workflows/deploy-strato.yml .github/workflows/ci.yml
+git commit -m "ci(deploy): deploy develop to Strato after CI passes (#73)
+
+CI did not run on develop at all, so a merge there had no test result to
+gate on. develop joins the push triggers, and the deploy waits on a
+successful CI workflow_run rather than duplicating the suite.
+
+workflow_run checks out the default branch unless told otherwise, so the
+checkout pins the SHA CI actually tested."
 ```
 
 ---
@@ -1017,6 +1078,8 @@ Closes #73"
 ## After the merge
 
 The code is only half of it. Work through **One-time setup** in `deploy/strato/README.md`
-(panel steps, JWT keys, `.env.local`, the mount), then tag a release and work through
+(panel steps, JWT keys, `.env.local`, the mount). Merging this branch into `develop` will not
+deploy on its own — `workflow_run` needs the workflow on `main` first — so run the **Deploy
+(Strato)** workflow manually the first time, then work through
 **Verifying a deploy**. Close [#73](https://github.com/larspohlmann/simple-feed-reader/issues/73)
 by hand — PRs merge into `develop`, so GitHub will not auto-close it.

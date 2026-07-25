@@ -46,7 +46,7 @@ symlink flip from GitHub Actions.
 | Isolation | Isolated `deploy/strato/` directory, merged to `develop` |
 | Scope | Full: registration + email + Google OAuth — but **no cron** |
 | Database | MySQL (the hosting package's DB) |
-| Deploy trigger | GitHub Actions (tag push `v*` or manual dispatch) |
+| Deploy trigger | GitHub Actions — every push/merge to `develop`, gated on CI passing |
 | OAuth providers | Google only |
 | Mailer | STRATO SMTP (included in the package) |
 | Old subdomain | Redirects to `/reader` |
@@ -139,9 +139,30 @@ correctness requirements, not conveniences:
 The server has no composer, no node, and no crontab, so **everything is built on the
 runner** and shipped as artifacts.
 
-Trigger: **tag push matching `v*`, or `workflow_dispatch`**. Never `pull_request_target`.
-The repository is public; GitHub withholds secrets from fork pull requests, and both
-chosen triggers are restricted to people with write access.
+Trigger: **every push or merge to `develop`, but only after CI passes.** `develop` is the
+integration branch, so this makes it continuously deployed.
+
+CI does not currently run on `develop` at all — `ci.yml` triggers on `push` to `main` and on
+`pull_request`. So a push to `develop` would deploy code whose tests never ran on the merged
+result. Two coupled changes fix that: `develop` joins `ci.yml`'s push branches, and the deploy
+workflow triggers on `workflow_run` (CI completed on `develop`) with a job-level condition
+requiring `conclusion == 'success'`. Ordering is then guaranteed by GitHub rather than by a
+duplicated test run inside the deploy workflow.
+
+Two consequences of `workflow_run` worth stating plainly:
+
+- **It only fires when the workflow file is on the default branch**, which is `main`. Under
+  git-flow the branch merges to `develop` first, so automatic deploys stay dormant until
+  `develop` is merged to `main`. `workflow_dispatch` covers the interim and remains the
+  manual escape hatch afterwards.
+- **It checks out the default branch by default, not the commit that triggered CI.** The
+  checkout must pin `github.event.workflow_run.head_sha`, or every deploy would ship `main`.
+
+Never `pull_request_target`. The repository is public; GitHub withholds secrets from fork
+pull requests, and neither trigger is reachable from a fork.
+
+Releases are named from the timestamp and the short commit SHA (there is no tag to name them
+after), which keeps them sortable and traceable back to a commit.
 
 Steps: checkout → PHP 8.4 + `composer install --no-dev --optimize-autoloader` → Node +
 `npm ci` → `ng build --configuration=strato` → assemble the release tree (backend +
@@ -174,6 +195,10 @@ New, unavoidably outside that directory:
   Named unambiguously so it reads as personal infrastructure.
 
 Changed, existing files — behaviour preserved at the domain root:
+
+- `.github/workflows/ci.yml` — `develop` joins the push-trigger branches. Additive: it makes
+  CI run on a branch it previously ignored, and changes nothing about `main` or pull requests.
+  Required so the deploy has a CI result to gate on.
 
 - `frontend/src/app/core/transloco-loader.ts` — the root-absolute i18n path becomes relative.
   Identical behaviour when served at the root; correct under a subpath.
