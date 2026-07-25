@@ -27,7 +27,7 @@ import { ReaderContentService } from '../reader-content.service';
 import { ReaderModeService } from '../reader-mode.service';
 import { LanguageService } from '../../core/language.service';
 import { ListScrollMemory } from '../list-scroll-memory';
-import { focusOpacity, readingBlocks } from '../reading-focus';
+import { focusOpacity, needsReadingTail, readingBlocks } from '../reading-focus';
 import {
   AXIS_LOCK_MIN,
   atBottom,
@@ -126,6 +126,7 @@ export class ReaderViewComponent {
   private readonly reduceMotion =
     typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   private focusRaf = 0;
+  private contentObs?: ResizeObserver;
 
   // Touch gestures (full-screen only): a rightward swipe or a pull past the end
   // returns to the list. dragX follows a horizontal swipe; pull follows an
@@ -173,6 +174,9 @@ export class ReaderViewComponent {
 
   /** Back-to-top affordance: revealed once the reader has scrolled past a screen. */
   readonly showToTop = signal(false);
+
+  /** Whether the article carries tail space below it — see measureTail(). */
+  readonly hasTail = signal(false);
 
   readonly loading = computed(() => this.state().status === 'loading');
   readonly failed = computed(() => this.state().status === 'failed');
@@ -266,20 +270,38 @@ export class ReaderViewComponent {
         }
         this.buildToc(host);
         this.scheduleFocus();
+        this.measureTail();
         // Content just (re-)rendered — re-seat a pending scroll restore. Runs on
         // the original render and again when the reader content swaps in.
         if (this.pendingRestore?.id === this.entry()?.id) this.startRestore();
       });
     });
 
-    if (!this.reduceMotion) {
-      const onResize = () => this.scheduleFocus();
-      window.addEventListener('resize', onResize, { passive: true });
-      this.destroyRef.onDestroy(() => {
-        window.removeEventListener('resize', onResize);
-        if (this.focusRaf) cancelAnimationFrame(this.focusRaf);
-      });
-    }
+    // Registered whatever the motion preference: scheduleFocus() no-ops under
+    // reduced motion, but the tail below is a scroll-range concern, not a motion
+    // one, and a viewport resize changes whether the article still needs it.
+    const onResize = () => {
+      this.scheduleFocus();
+      this.measureTail();
+    };
+    window.addEventListener('resize', onResize, { passive: true });
+    this.destroyRef.onDestroy(() => {
+      window.removeEventListener('resize', onResize);
+      if (this.focusRaf) cancelAnimationFrame(this.focusRaf);
+    });
+
+    // The article's height firms up after first paint (images, fonts, the
+    // original→reader swap), and whether it overflows can change with it.
+    effect(() => {
+      const el = this.content()?.nativeElement;
+      this.contentObs?.disconnect();
+      this.contentObs = undefined;
+      if (!el || typeof ResizeObserver === 'undefined') return;
+      const obs = new ResizeObserver(() => this.measureTail());
+      obs.observe(el);
+      this.contentObs = obs;
+    });
+    this.destroyRef.onDestroy(() => this.contentObs?.disconnect());
 
     // Touch listeners live on the scroll host. touchmove is non-passive so a
     // committed horizontal swipe / at-end pull can preventDefault the scroll.
@@ -443,6 +465,23 @@ export class ReaderViewComponent {
       cancelAnimationFrame(this.restoreRaf);
     }
     this.restoreRaf = 0;
+  }
+
+  /**
+   * Decide whether the article carries tail space below it. Measures the
+   * article's own content box against the pane — never the panel's, which
+   * already includes the tail and would feed the measurement back into itself.
+   */
+  private measureTail(): void {
+    const content = this.content()?.nativeElement;
+    if (!content) {
+      this.hasTail.set(false);
+      return;
+    }
+    const host = this.host.nativeElement;
+    const bottom =
+      content.getBoundingClientRect().bottom - host.getBoundingClientRect().top + host.scrollTop;
+    this.hasTail.set(needsReadingTail(bottom, host.clientHeight));
   }
 
   /** Coalesce focus recomputes to one per animation frame. */

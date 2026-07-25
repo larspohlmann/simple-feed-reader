@@ -30,6 +30,22 @@
   padding-top: calc(var(--app-bar-h, 56px) + var(--bar-gap));
 }
 
+/* Tail space for an article longer than the pane, so its closing paragraphs can
+   be scrolled up out of the bottom edge. Half the pane is what the reading focus
+   asks for: it fully highlights the block whose centre sits at the *centre* of
+   the viewport, so anything less leaves the last paragraph permanently dimmed
+   at the foot of the fade curve (#107). Only when the article overflows — the
+   component withholds the class otherwise, since half a screen of blank space
+   below a short article is dead scroll and would sit in front of the
+   pull-past-the-bottom return gesture.
+
+   `dvh`, like the shell's own height, so a mobile browser's retracting toolbar
+   doesn't leave the tail short; the `vh` line is the fallback. */
+.reader.with-tail {
+  padding-bottom: 50vh;
+  padding-bottom: 50dvh;
+}
+
 /* With the article's own toolbar (the split-pane layout) the reservation shrinks
    to the app bar's bare height: the toolbar hangs flush beneath it — the same
    arrangement the list header uses — and carries the gap under itself instead. */

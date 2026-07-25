@@ -2,6 +2,7 @@
   <div
     class="reader"
     [class.with-bar]="showToolbar()"
+    [class.with-tail]="hasTail()"
     [class.leaving]="leaving()"
     [style.transform]="readerTransform()"
     [style.transition]="readerTransition()"

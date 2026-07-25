@@ -27,6 +27,21 @@ export function readingBlocks(root: Element): HTMLElement[] {
 }
 
 /**
+ * Whether an article needs tail space below it so its closing paragraphs can
+ * still be scrolled up into the reading-focus centre (#107).
+ *
+ * `contentBottom` is the article's own bottom edge in the scroller's content
+ * coordinates — deliberately not the padded panel's, which already includes any
+ * tail and would make the measurement feed back into itself. An article that
+ * fits the viewport gets no tail: half a screen of blank space below a short
+ * article is dead scroll, and it would sit in front of the pull-to-return
+ * gesture that is otherwise available right away.
+ */
+export function needsReadingTail(contentBottom: number, viewportHeight: number): boolean {
+  return viewportHeight > 0 && contentBottom > viewportHeight;
+}
+
+/**
  * Opacity for a block whose vertical center is `blockCenter` px from the top of
  * a `viewportHeight`-tall scroll viewport. The block nearest the viewport centre
  * is fully opaque (1) and fades linearly to `min` for blocks a half-viewport or

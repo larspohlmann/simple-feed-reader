@@ -1,4 +1,19 @@
-import { FOCUS_MIN_OPACITY, focusOpacity, readingBlocks } from './reading-focus';
+import { FOCUS_MIN_OPACITY, focusOpacity, needsReadingTail, readingBlocks } from './reading-focus';
+
+describe('needsReadingTail', () => {
+  it('gives an article taller than the viewport room to scroll on', () => {
+    expect(needsReadingTail(1400, 800)).toBe(true);
+  });
+
+  it('leaves an article that fits alone, so it gains no dead scroll', () => {
+    expect(needsReadingTail(500, 800)).toBe(false);
+    expect(needsReadingTail(800, 800)).toBe(false); // exactly a screenful
+  });
+
+  it('is false before the pane has been measured', () => {
+    expect(needsReadingTail(500, 0)).toBe(false);
+  });
+});
 
 describe('focusOpacity', () => {
   it('is fully opaque at the viewport center', () => {
