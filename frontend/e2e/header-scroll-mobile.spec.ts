@@ -200,7 +200,6 @@ test.describe('Hide-on-scroll header on a phone', () => {
 
     // Well past the 500px threshold, so the corner button is showing.
     await rows.evaluate((el) => el.scrollTo({ top: 1500 }));
-    await page.waitForTimeout(400);
     expect(await rows.evaluate((el) => el.scrollTop)).toBeGreaterThan(1000);
 
     const corner = page.locator('app-entry-list app-to-top-button');
@@ -236,12 +235,23 @@ test.describe('Hide-on-scroll header on a phone', () => {
     );
 
     await stubEntries(page);
-    // /api/entries/:id/reader isn't stubbed, so it hits the real backend, which
-    // tries to extract the seeded entry's own URL and fails (setOriginalOnly()),
-    // leaving the view in 'original' mode — the entry's own contentHtml/summary.
-    // A stub with real height is therefore enough to drive the article's own
-    // scroller. Overriding after stubEntries() means this route wins (Playwright
-    // tries the most-recently-registered matching handler first).
+    // Force extraction to fail so the view is deterministically in 'original'
+    // mode (the entry's own contentHtml/summary — see displayHtml()), rather
+    // than depending on the real backend's attempt to fetch the seeded entry's
+    // actual URL failing on its own. Left unstubbed, a day this extraction
+    // starts succeeding flips the view to 'reader' mode, "Paragraph 0" never
+    // renders, and the test fails for a reason that has nothing to do with the
+    // back-to-top button — plus every run would make a real outbound HTTP call.
+    await page.route('**/api/entries/*/reader', async (route) => {
+      await route.fulfill({
+        status: 200,
+        json: { status: 'failed', url: null, reason: 'unextractable' },
+      });
+    });
+    // A stub with real height drives the article's own scroller past the
+    // back-to-top threshold. Overriding after stubEntries() means this route
+    // wins (Playwright tries the most-recently-registered matching handler
+    // first).
     await page.route('**/api/entries*', async (route) => {
       if (route.request().method() !== 'GET') return route.fallback();
       const tallEntries = ENTRIES.map((e) =>
@@ -270,14 +280,40 @@ test.describe('Hide-on-scroll header on a phone', () => {
     await article.evaluate((el) => el.scrollTo({ top: 900 }));
     const button = page.locator('app-reader-view app-to-top-button');
     await expect(button).toBeVisible();
-    // A beat for the fixed-position layout to settle after the button mounts
-    // mid-scroll — measured immediately, its box reflects a stale pre-scroll
-    // position for one frame (looks briefly `absolute`, not `fixed`).
-    await page.waitForTimeout(200);
+
+    // Sample across frames rather than measuring once, because the regression
+    // this guards against is transient: a transform on the overlay makes it the
+    // containing block for this fixed-position button, and while that holds the
+    // button resolves against the article's own scrolled box and rides off the
+    // top of the screen (#100). Every sampled y must stay on screen; x is free
+    // to move, since the button rides along with the slide-in.
+    //
+    // Honest limitation: the overlay's animation is ~220ms and several
+    // Playwright round-trips have already happened by the time this runs, so
+    // sampling often starts after it has finished. This catches the regression
+    // when it wins the race and never false-fails when it doesn't — the actual
+    // guarantee is the wrapper element in reader-shell.component.html, not this
+    // assertion. Do not add a wait here to "stabilise" it; that would restore
+    // the blind spot this replaced.
+    const ys = await button.evaluate(
+      (el) =>
+        new Promise<number[]>((resolve) => {
+          const samples: number[] = [];
+          const collect = () => {
+            samples.push(el.getBoundingClientRect().y);
+            if (samples.length < 20) requestAnimationFrame(collect);
+            else resolve(samples);
+          };
+          requestAnimationFrame(collect);
+        }),
+    );
+    for (const y of ys) expect(y).toBeGreaterThan(0);
+
+    // By now the animation (~220ms, comfortably inside the ~330ms sampled
+    // above) has settled, so this is the steady-state position.
     const first = (await button.boundingBox())!;
 
     await article.evaluate((el) => el.scrollTo({ top: 1400 }));
-    await page.waitForTimeout(200);
     const second = (await button.boundingBox())!;
 
     // Fixed to the viewport, so 500px of article scroll must not move it.
