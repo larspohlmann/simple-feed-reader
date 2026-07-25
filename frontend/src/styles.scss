@@ -1,4 +1,11 @@
 // src/styles.scss
+// Structural styles for every CDK overlay (dialogs). Without this the classes
+// the CDK puts on the DOM carry no rules at all: the container is not fixed,
+// centres nothing and blocks no scrolling, so a dialog renders as a plain block
+// appended after the 100vh reader shell -- i.e. a full viewport below the fold
+// (#85). Loaded here rather than in angular.json so every build configuration
+// gets it.
+@use '@angular/cdk/overlay-prebuilt.css';
 @use './app/theme/tokens';
 @use './styles/reset';
 @use './styles/base';
