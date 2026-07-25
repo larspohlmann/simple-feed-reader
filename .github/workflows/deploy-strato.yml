@@ -251,6 +251,30 @@ jobs:
                  exit 1; }
           echo
 
+          # Prove the Authorization header reaches PHP. Under cgi-fcgi Apache
+          # keeps it unless the vhost forwards it, and a deployment that loses
+          # it looks entirely healthy from here: /api/health is public, login
+          # needs no header, and only the request *after* signing in fails. That
+          # shipped once and presented as "the sign-in button does nothing".
+          #
+          # The probe needs no credentials. A deliberately invalid bearer token
+          # makes the firewall reject even this public route, so:
+          #   401 -> the header arrived (what we want)
+          #   200 -> the header was eaten on the way in
+          # Verified both ways against the live host by removing the rewrite
+          # rule and putting it back.
+          code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 \
+            -H 'Authorization: Bearer deliberately-invalid' \
+            https://lars-pohlmann.de/reader/api/health)"
+          if [ "${code}" != "401" ]; then
+            echo "!!! /api/health answered ${code} to an invalid bearer token, expected 401." >&2
+            echo "!!! The Authorization header is not reaching PHP, so every request after" >&2
+            echo "!!! a successful login will 401 and the app will bounce users back to the" >&2
+            echo "!!! sign-in form. Check the HTTP_AUTHORIZATION rewrite in public/.htaccess." >&2
+            exit 1
+          fi
+          echo "==> Authorization header reaches PHP"
+
       # Keep the five most recent releases so a rollback target always exists.
       #
       # The naive form of this (`ls -1t | tail -n +6 | xargs -r rm -rf`) decides
