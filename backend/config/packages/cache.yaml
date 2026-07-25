@@ -14,6 +14,11 @@ framework:
         # APCu (not recommended with heavy random-write workloads as memory fragmentation can cause perf issues)
         #app: cache.adapter.apcu
 
+        # Both are env-driven so a release-directory deployment can point them
+        # at storage that outlives a single release. See backend/.env.
+        prefix_seed: '%env(CACHE_PREFIX_SEED)%'
+        directory: '%env(resolve:CACHE_DIRECTORY)%'
+
         # Namespaced pools use the above "app" backend by default
         pools:
             # Remembers spent ALTCHA solutions so one proof-of-work cannot
