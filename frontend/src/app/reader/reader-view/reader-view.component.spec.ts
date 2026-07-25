@@ -207,6 +207,24 @@ describe('ReaderViewComponent', () => {
     expect(el.querySelector('.bar .close')).not.toBeNull();
   });
 
+  // The panel reserves the floating app bar's height at its top, and how much it
+  // reserves depends on whether its own toolbar is there to hang beneath the bar
+  // (#97). jsdom cannot see the resulting layout, so pin the flag the stylesheet
+  // keys off instead — silently losing it would drop the article's first lines
+  // behind the app bar.
+  it('marks the panel as carrying its own toolbar only when it renders one', () => {
+    const withBar = mount(entry()).nativeElement as HTMLElement;
+    expect(withBar.querySelector('.reader')!.classList).toContain('with-bar');
+
+    const f = TestBed.createComponent(ReaderViewComponent);
+    f.componentRef.setInput('entry', entry());
+    f.componentRef.setInput('showToolbar', false);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.reader')!.classList).not.toContain('with-bar');
+    f.destroy();
+  });
+
   it('disables prev/next at the ends', () => {
     const el = mount(entry(), false, false).nativeElement as HTMLElement;
     expect((el.querySelector('.prev') as HTMLButtonElement).disabled).toBe(true);

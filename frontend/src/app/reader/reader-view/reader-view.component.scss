@@ -21,8 +21,22 @@
      host is deliberately transparent so a swipe-away reveals the list beneath,
      so padding there is a see-through strip and the list shows through at the
      top of an open article. This is opaque and full-height, so it covers the
-     reservation as well as the article. */
-  padding-top: calc(var(--app-bar-h, 56px) + var(--bar-gap));
+     reservation as well as the article.
+
+     Named, because anything positioned against this panel has to add the same
+     reservation back by hand: an absolutely positioned child resolves `top`
+     against the *padding box*, whose top edge sits above this padding, so a
+     naive offset lands inside the strip the app bar floats over (#97). */
+  --bar-reserve: calc(var(--app-bar-h, 56px) + var(--bar-gap));
+
+  padding-top: var(--bar-reserve);
+}
+
+/* With the article's own toolbar (the split-pane layout) the reservation shrinks
+   to the app bar's bare height: the toolbar hangs flush beneath it — the same
+   arrangement the list header uses — and carries the gap under itself instead. */
+.reader.with-bar {
+  padding-top: var(--app-bar-h, 56px);
 }
 
 /* Overscroll-to-return affordance: anchored just below the article's end, so a
@@ -54,7 +68,22 @@ app-to-top-button {
 
 .bar {
   position: sticky;
-  top: 0;
+
+  /* Pinned directly beneath the floating app bar, not at the scroller's own top
+     edge: the reading pane deliberately passes *under* that bar (#87), so
+     `top: 0` slid this toolbar — the back button with it — underneath the bar on
+     the first scroll (#97). Its resting place is exactly this offset, so it
+     never actually moves; the app bar does not retract on the wide layout, the
+     only one that renders this toolbar, so there is nothing to track. */
+  top: var(--app-bar-h, 56px);
+
+  /* Sticky alone does not win the paint order here. Reading-focus sets an inline
+     `opacity` on every article block (applyFocus()), and an element with
+     opacity < 1 paints as if it were positioned at z-index 0 — so each dimmed
+     paragraph lands in this bar's layer and, being later in the DOM, on top of
+     it. The toolbar's buttons then look fine and swallow clicks. */
+  z-index: 2;
+  margin-bottom: var(--bar-gap);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -122,7 +151,13 @@ article {
   .back {
     position: absolute;
     left: var(--space-3);
-    top: var(--space-5);
+
+    /* Add back the app-bar reservation (see `--bar-reserve`): `top` resolves
+       against the panel's padding box, which starts *above* that padding, so
+       the plain `var(--space-5)` this used to carry parked the button inside
+       the strip the bar floats over and the bar swallowed every click (#97).
+       With it, the button lines up with the article's first line instead. */
+    top: calc(var(--bar-reserve) + var(--space-5));
   }
 }
 
