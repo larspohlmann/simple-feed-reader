@@ -146,7 +146,8 @@
       "passwordLabel": "Passwort (mindestens 12 Zeichen)",
       "submit": "Konto erstellen",
       "haveAccount": "Schon ein Konto?",
-      "failed": "Registrierung fehlgeschlagen. Bitte erneut versuchen."
+      "failed": "Registrierung fehlgeschlagen. Bitte erneut versuchen.",
+      "invalidInput": "Bitte gib eine gültige E-Mail-Adresse und ein Passwort mit mindestens 12 Zeichen ein."
     },
     "reset": {
       "requestTitle": "Passwort zurücksetzen",
