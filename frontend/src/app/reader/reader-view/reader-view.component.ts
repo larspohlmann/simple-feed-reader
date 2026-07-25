@@ -104,6 +104,8 @@ export class ReaderViewComponent {
   readonly close = output<void>();
 
   private readonly content = viewChild<ElementRef<HTMLElement>>('content');
+  /** Focus target for the corner button on activation — see scrollToTop(). */
+  private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly reader = inject(ReaderContentService);
   protected readonly readerMode = inject(ReaderModeService);
@@ -389,6 +391,13 @@ export class ReaderViewComponent {
   scrollToTop(): void {
     this.pendingRestore = null; // don't let a restore fight the jump
     this.host.nativeElement.scrollTo({ top: 0, behavior: this.reduceMotion ? 'auto' : 'smooth' });
+    // Land focus on the title, not just wherever the button happened to be: the
+    // button unmounts as soon as showToTop flips false, and an unmounted focused
+    // element drops focus to <body>, stranding a keyboard/screen-reader user.
+    // preventScroll is required — the heading is still off-screen at this instant
+    // (that's why the button was showing), and a plain focus() would yank it into
+    // view and cancel the smooth scroll above.
+    this.titleHeading()?.nativeElement.focus({ preventScroll: true });
   }
 
   /**

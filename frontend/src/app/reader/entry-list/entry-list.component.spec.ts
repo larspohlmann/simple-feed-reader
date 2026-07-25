@@ -339,6 +339,25 @@ describe('EntryListComponent', () => {
       expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
     });
 
+    // #98: the button unmounts once showToTop flips false, which would otherwise
+    // drop keyboard focus to <body> and strand a keyboard/screen-reader user.
+    it('moves focus to the list title instead of dropping it to the body', () => {
+      const f = mount();
+      stubScroller(f);
+      f.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
+      f.detectChanges();
+
+      (
+        (f.nativeElement as HTMLElement).querySelector(
+          'app-to-top-button button',
+        ) as HTMLButtonElement
+      ).click();
+
+      expect(document.activeElement).toBe(
+        (f.nativeElement as HTMLElement).querySelector('.list-header .heading h2'),
+      );
+    });
+
     it('scrolls the magazine layout’s own container too', () => {
       // The magazine branch renders a different #rows element; scrollToTop has to
       // resolve the live one at call time rather than caching it.

@@ -143,6 +143,8 @@ export class EntryListComponent implements OnDestroy {
   readonly headerHeight = signal(0);
   private readonly listHdr = viewChild<ElementRef<HTMLElement>>('listHdr');
   private headerObs?: ResizeObserver;
+  /** Focus target for the corner button on activation — see scrollToTop(). */
+  private readonly listTitle = viewChild<ElementRef<HTMLElement>>('listTitle');
 
   /**
    * Published as `--list-bar-h` for the stylesheet to add to the app bar's own
@@ -194,6 +196,15 @@ export class EntryListComponent implements OnDestroy {
     // user's jump has to win.
     this.cancelSettle();
     el.scrollTo({ top: 0, behavior: this.reduceMotion ? 'auto' : 'smooth' });
+    // Land focus on the title, not just wherever the button happened to be: the
+    // button unmounts as soon as showToTop flips false, and an unmounted focused
+    // element drops focus to <body>, stranding a keyboard/screen-reader user.
+    // preventScroll is required for a different reason here than in the article
+    // view: `.list-header` is a `position: absolute` sibling of `.rows`, not a
+    // descendant of the scroller, so a default focus() couldn't touch the smooth
+    // scroll above anyway — it would instead ask some *outer* ancestor to scroll
+    // the (already fully visible) heading into view, which is equally unwanted.
+    this.listTitle()?.nativeElement.focus({ preventScroll: true });
     // Say the bar is expanded now rather than waiting for a scroll event: this
     // way the tap expands it immediately instead of ~300ms later once the
     // animation lands, and a scroll gesture that interrupts the animation
