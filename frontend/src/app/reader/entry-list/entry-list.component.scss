@@ -224,7 +224,7 @@
      hidden state nor this list's collapsed one, so the rows never move (#87).
      They pass behind the bars instead, which is what makes retracting them
      actually give the reader more to look at. */
-  padding-top: calc(var(--app-bar-h, 56px) + var(--list-bar-h, 0px));
+  padding-top: calc(var(--app-bar-h, 56px) + var(--list-bar-h, 0px) + var(--bar-gap));
 }
 
 /* An error banner sits above the scroller in the flow and takes the reservation
@@ -236,7 +236,7 @@
 
 .rows.magazine {
   padding: var(--space-3);
-  padding-top: calc(var(--app-bar-h, 56px) + var(--list-bar-h, 0px));
+  padding-top: calc(var(--app-bar-h, 56px) + var(--list-bar-h, 0px) + var(--bar-gap));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -251,13 +251,15 @@
 .empty {
   color: var(--text-muted);
   padding: var(--space-6);
-  padding-top: calc(var(--app-bar-h, 56px) + var(--list-bar-h, 0px) + var(--space-6));
+  padding-top: calc(
+    var(--app-bar-h, 56px) + var(--list-bar-h, 0px) + var(--bar-gap) + var(--space-6)
+  );
   text-align: center;
 }
 
 .banner {
   margin: var(--space-3) var(--space-4);
-  margin-top: calc(var(--app-bar-h, 56px) + var(--list-bar-h, 0px) + var(--space-3));
+  margin-top: calc(var(--app-bar-h, 56px) + var(--list-bar-h, 0px) + var(--bar-gap));
   padding: var(--space-3);
   border-radius: var(--radius);
   background: var(--bg-danger);
