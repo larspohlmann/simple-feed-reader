@@ -61,6 +61,20 @@ Options +FollowSymLinks
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
+    # A request that names a file type and got past the rule above is asking for
+    # something that is not there. Say so, rather than falling through.
+    #
+    # This matters far more than it looks. Every deploy changes the content hash
+    # in the bundle filenames, and a browser tab opened before the deploy still
+    # holds the old names. When it lazy-loads a route chunk it asks for a file
+    # the new release does not have -- and without this rule Apache answers 200
+    # with index.html, so the browser receives HTML labelled as JavaScript. The
+    # parse fails, Angular's router quietly gives up, and the page keeps
+    # rendering while its buttons do nothing at all. A 404 makes the failure
+    # legible instead, both in the console and in the network panel.
+    RewriteCond %{REQUEST_URI} \.(js|mjs|css|map|json|txt|xml|png|jpe?g|gif|svg|ico|webp|avif|woff2?|ttf|otf|eot)$ [NC]
+    RewriteRule ^ - [R=404,L]
+
     # Everything else is an Angular client-side route: hand it the shell and
     # let the router sort it out.
     RewriteRule ^ %{ENV:BASE}/index.html [L]
