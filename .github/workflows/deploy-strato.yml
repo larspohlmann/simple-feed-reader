@@ -1,0 +1,284 @@
+# Personal deployment to the maintainer's Strato shared hosting.
+# Not part of CI and not needed by anyone else working on this project --
+# see deploy/strato/README.md.
+#
+# Runs after CI succeeds on develop, so develop is continuously deployed and a
+# red build never reaches production. Thin on purpose: it sets up the two
+# toolchains the server does not have, calls deploy/strato/build-release.sh and
+# deploy/strato/activate-release.sh, and moves files between them.
+#
+# NOTE: workflow_run only fires when this file is on the DEFAULT branch (main).
+# Until develop is merged to main, deploy by hand with workflow_dispatch.
+name: Deploy (Strato)
+
+on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [develop]
+  workflow_dispatch:
+
+# One deploy at a time. Two overlapping runs could interleave an rsync with
+# another release's symlink flip. Never cancel a run in progress: the dangerous
+# moment is between "migrations started" and "current flipped", and killing the
+# job there leaves a migrated database in front of the old code with no record
+# of how far it got. A superseded *pending* run is dropped by GitHub anyway, so
+# nothing older than the head of the queue ever reaches the host.
+concurrency:
+  group: deploy-strato
+  cancel-in-progress: false
+
+# This job talks to the Strato host over SSH and to the GitHub API not at all.
+# `contents: read` is what actions/checkout needs and nothing else is granted.
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Deploy only a green build of our own code. A manual dispatch is trusted on
+    # its own. A workflow_run must clear three bars, not one:
+    #   conclusion  -- the event fires on failure and cancellation too.
+    #   event       -- CI also runs on pull_request, and the branch filter above
+    #                  matches the *head* branch. A pull request opened from a
+    #                  fork whose branch happens to be named `develop` would
+    #                  otherwise reach this job, which runs with the deploy
+    #                  secrets and executes the branch's own build scripts.
+    #   head_repository -- belt and braces for the same attack.
+    if: >-
+      github.repository == 'larspohlmann/simple-feed-reader' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))
+
+    steps:
+      # workflow_run checks out the DEFAULT branch unless told otherwise, so
+      # pin the commit CI actually tested -- otherwise every deploy ships main.
+      # Nothing here needs git write access, so the token is not left in
+      # .git/config for the build steps to trip over.
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          persist-credentials: false
+
+      # Two seconds here rather than a confusing failure three minutes in. The
+      # value is interpolated into remote command lines below, where it is
+      # single-quoted: that survives spaces but not a single quote of its own.
+      # Relative paths are refused because `current` stores an absolute target
+      # and an SSH command starts in $HOME, not in the deploy root.
+      - name: Check the deploy target
+        env:
+          DEPLOY_PATH: ${{ secrets.STRATO_DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          # The value is a secret, so it is never echoed -- the message says
+          # what is wrong with it, not what it is.
+          die() { echo "!!! STRATO_DEPLOY_PATH $1" >&2; exit 1; }
+          [ -n "${DEPLOY_PATH}" ] || die "is empty"
+          [ "${DEPLOY_PATH#/}" != "${DEPLOY_PATH}" ] || die "is not an absolute path"
+          [ "$(printf '%s' "${DEPLOY_PATH}" | wc -l)" -eq 0 ] || die "contains a newline"
+          case "${DEPLOY_PATH}" in
+            *\'*) die "contains a single quote, which the remote commands below cannot quote" ;;
+          esac
+
+      # Everything the later steps need to reach the host lives in ~/.ssh/config
+      # under the alias `strato`, so no step has to repeat the connection
+      # details and neither the host nor the user appears on a command line.
+      # printf rather than a heredoc: the values are secrets and must land in
+      # the file verbatim, not as something the shell got a second look at.
+      - name: Configure SSH
+        env:
+          SSH_HOST: ${{ secrets.STRATO_SSH_HOST }}
+          SSH_USER: ${{ secrets.STRATO_SSH_USER }}
+          SSH_KEY: ${{ secrets.STRATO_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.STRATO_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          # printf, not echo: `echo` mangles a value beginning with -n or -e,
+          # and the trailing \n is what saves a key stored without one --
+          # OpenSSH rejects a private key whose final line is unterminated.
+          printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
+          printf '%s\n' "${KNOWN_HOSTS}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+          {
+            printf 'Host strato\n'
+            printf '  HostName %s\n' "${SSH_HOST}"
+            printf '  User %s\n' "${SSH_USER}"
+            printf '  IdentityFile ~/.ssh/deploy_key\n'
+            printf '  UserKnownHostsFile ~/.ssh/known_hosts\n'
+            # IdentitiesOnly stops the agent offering other keys and burning
+            # the server's MaxAuthTries before ours is tried; StrictHostKeyChecking
+            # plus BatchMode turn an unknown host into a failure rather than a
+            # prompt that would hang the job until the 30-minute timeout.
+            printf '  IdentitiesOnly yes\n'
+            printf '  StrictHostKeyChecking yes\n'
+            printf '  BatchMode yes\n'
+            printf '  ConnectTimeout 20\n'
+            # A migration can legitimately run for minutes on a shared host, but
+            # a connection that has silently died should not hold the job open.
+            printf '  ServerAliveInterval 15\n'
+            printf '  ServerAliveCountMax 8\n'
+          } > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+      # Fails before the build rather than after it if the key, the host key, or
+      # the account is wrong.
+      - name: Check the SSH connection
+        run: ssh strato true
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: intl, pdo_sqlite, pdo_mysql
+          coverage: none
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # Node 22 ships npm 10.9.8, which mis-resolves chokidar and rejects the
+      # npm-11-authored lockfile. Same pin as the CI workflow.
+      - name: Pin npm 11 (matches the lockfile author)
+        run: npm i -g npm@11
+
+      # No tag to name a release after, so use a sortable UTC timestamp plus the
+      # short SHA of the commit being deployed. The name is validated because it
+      # becomes a path segment on the server, an argument to the activation
+      # script, and the thing the prune step below reasons about.
+      - name: Name the release
+        run: |
+          set -euo pipefail
+          : "${RUNNER_TEMP:?RUNNER_TEMP is unset}"
+          sha="$(git rev-parse --short HEAD)"
+          name="$(date -u +%Y%m%d%H%M%S)-${sha}"
+          case "${name}" in
+            [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9a-f]*) ;;
+            *) echo "!!! refusing to deploy under the release name '${name}'" >&2; exit 1 ;;
+          esac
+          echo "RELEASE_NAME=${name}" >> "$GITHUB_ENV"
+          echo "RELEASE_DIR=${RUNNER_TEMP}/release" >> "$GITHUB_ENV"
+          echo "==> Release ${name}"
+
+      # Installs production dependencies, builds the SPA with the /reader base
+      # href, assembles the tree, and sanity-checks it. The script's EXIT trap
+      # that restores dev dependencies is skipped here because GitHub Actions
+      # sets CI=true for every step; it would be harmless on this throwaway
+      # checkout anyway.
+      - name: Build the release
+        run: ./deploy/strato/build-release.sh "${RELEASE_DIR}"
+
+      # Travels with the release instead of being uploaded to a fixed path of
+      # its own: one transfer fewer, no chance of overwriting the copy a
+      # concurrent run is executing, and a release on disk stays activatable
+      # later by exactly the script it was built against.
+      - name: Add the activation script to the release
+        run: cp deploy/strato/activate-release.sh "${RELEASE_DIR}/activate-release.sh"
+
+      # No --delete: the destination is a fresh directory every time (the name
+      # carries a timestamp), so it would have nothing to delete -- while an
+      # empty or malformed RELEASE_NAME would aim it at releases/ itself and
+      # empty the lot. The name is validated above and the source is checked
+      # here; --delete would still be a loaded gun for no gain.
+      #
+      # The remote path is deliberately unquoted, unlike the ssh commands below.
+      # Since 3.2.4 rsync backslash-escapes shell-active characters in a remote
+      # argument itself (the runner has 3.2.7), so a space in DEPLOY_PATH is
+      # handled for us and quotes of our own would become part of the path.
+      - name: Upload the release
+        env:
+          DEPLOY_PATH: ${{ secrets.STRATO_DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          test -f "${RELEASE_DIR}/public/index.php" \
+            || { echo "!!! ${RELEASE_DIR} is not a built release" >&2; exit 1; }
+          rsync -az --info=stats1 \
+            "${RELEASE_DIR}/" \
+            "strato:${DEPLOY_PATH}/releases/${RELEASE_NAME}/"
+
+      # Links shared state, warms the cache, migrates, and flips `current` last.
+      # A failure here leaves the previous release serving traffic, and ssh
+      # returns the script's exit status, so the job goes red with it.
+      #
+      # Run through `bash` rather than chmod + execute: one round trip fewer and
+      # one fewer thing to go wrong if the host ever mounts the webspace noexec.
+      # Single quotes around the interpolated values are what makes a DEPLOY_PATH
+      # containing a space survive the remote shell.
+      - name: Activate the release
+        env:
+          DEPLOY_PATH: ${{ secrets.STRATO_DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2029  # expanding here is the point: the runner
+          # knows the path and the release name, the server does not.
+          ssh strato "bash '${DEPLOY_PATH}/releases/${RELEASE_NAME}/activate-release.sh' '${DEPLOY_PATH}' '${RELEASE_NAME}'"
+
+      # Keep the five most recent releases so a rollback target always exists.
+      #
+      # The naive form of this (`ls -1t | tail -n +6 | xargs -r rm -rf`) decides
+      # what to delete purely by modification time, and mtime is not the same
+      # question as "which release is serving the site". A release directory's
+      # mtime moves whenever anything is written into it, releases that were
+      # uploaded but never activated stay on disk and are newer than the live
+      # one, and a rollback makes `current` point at something that is not the
+      # newest at all. Any of those can push the live release past position five
+      # -- and deleting it takes the site down instantly, with the deploy
+      # reporting success. So resolve `current` first and never delete its
+      # target, whatever the sort order says. If `current` cannot be resolved,
+      # nothing is deleted at all.
+      #
+      # This runs after the flip, so the new release is already live: a failure
+      # in this step is a red build over a healthy site, not a failed deploy.
+      - name: Prune old releases (the new release is already live)
+        env:
+          DEPLOY_PATH: ${{ secrets.STRATO_DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2029  # ditto: DEPLOY_PATH must expand here.
+          # The script itself is quoted (<<'REMOTE') and expands on the server.
+          ssh strato "bash -s -- '${DEPLOY_PATH}' 5" <<'REMOTE'
+          set -eu
+          root=$1
+          keep=$2
+
+          cd "$root/releases" || { echo "!!! no releases directory" >&2; exit 1; }
+
+          # `cd` + `pwd -P` resolves a symlink and a real directory alike, and
+          # fails on a dangling one -- which is the case where guessing would be
+          # worst.
+          live="$(cd "$root/current" 2>/dev/null && pwd -P)" || live=''
+          if [ -z "$live" ]; then
+            echo "!!! cannot resolve $root/current -- refusing to prune anything" >&2
+            exit 1
+          fi
+          live="$(basename "$live")"
+          echo "==> live release: $live"
+
+          seen=0
+          while IFS= read -r name; do
+            [ -n "$name" ] || continue
+            [ -d "$name" ] || continue
+            seen=$((seen + 1))
+            if [ "$seen" -le "$keep" ]; then
+              continue
+            fi
+            if [ "$name" = "$live" ]; then
+              echo "    keeping $name (it is live, despite being older than $keep others)"
+              continue
+            fi
+            echo "    removing $name"
+            rm -rf -- "./$name"
+          done <<EOF
+          $(ls -1t)
+          EOF
+          echo "==> pruned"
+          REMOTE
