@@ -14,12 +14,12 @@ use Symfony\Component\Clock\ClockInterface;
  */
 final class FeedScheduler
 {
-    private const FLOOR_MINUTES = 30;
-    private const CEILING_MINUTES = 1440;      // 24 h
-    private const FAILURE_CAP_MINUTES = 10080; // 7 days
-    private const FAILURES_UNTIL_GONE = 30;
-    private const MAX_BACKOFF_EXPONENT = 9;
-    private const ERROR_MESSAGE_MAX = 1000;
+    private const int FLOOR_MINUTES = 30;
+    private const int CEILING_MINUTES = 1440;      // 24 h
+    private const int FAILURE_CAP_MINUTES = 10080; // 7 days
+    private const int FAILURES_UNTIL_GONE = 30;
+    private const int MAX_BACKOFF_EXPONENT = 9;
+    private const int ERROR_MESSAGE_MAX = 1000;
 
     public function __construct(private readonly ClockInterface $clock)
     {

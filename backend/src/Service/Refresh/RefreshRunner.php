@@ -36,14 +36,14 @@ use Symfony\Component\Lock\LockFactory;
  */
 final class RefreshRunner
 {
-    private const LOCK_NAME = 'feed-refresh';
-    private const LOCK_TTL_SECONDS = 300.0;
-    private const BATCH_LIMIT = 50;
-    private const SAFETY_MARGIN_SECONDS = 10;
-    private const COOLDOWN_MINUTES = 5;
-    private const ETAG_MAX = 512;
-    private const LAST_MODIFIED_MAX = 255;
-    private const URL_MAX = 750;
+    private const string LOCK_NAME = 'feed-refresh';
+    private const float LOCK_TTL_SECONDS = 300.0;
+    private const int BATCH_LIMIT = 50;
+    private const int SAFETY_MARGIN_SECONDS = 10;
+    private const int COOLDOWN_MINUTES = 5;
+    private const int ETAG_MAX = 512;
+    private const int LAST_MODIFIED_MAX = 255;
+    private const int URL_MAX = 750;
 
     public function __construct(
         private readonly FeedRepository $feedRepository,

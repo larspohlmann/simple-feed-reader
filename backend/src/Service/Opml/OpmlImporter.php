@@ -25,7 +25,7 @@ use Psr\Clock\ClockInterface;
  */
 final readonly class OpmlImporter
 {
-    private const MAX_TAG_NAME = 100;
+    private const int MAX_TAG_NAME = 100;
 
     /**
      * Feed.url is VARCHAR(750); a longer URL would pass a naive scheme/host
@@ -33,7 +33,7 @@ final readonly class OpmlImporter
      * (strict mode), losing the whole import. Bound it here so an over-long URL
      * is merely counted invalid and the rest still imports.
      */
-    private const MAX_FEED_URL = 750;
+    private const int MAX_FEED_URL = 750;
 
     public function __construct(
         private EntityManagerInterface $em,

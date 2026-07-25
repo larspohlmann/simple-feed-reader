@@ -69,8 +69,8 @@ final readonly class InsecureProductionConfigGuard
      * override", which is a fact, instead of a strength heuristic that would
      * both miss real weak keys and reject fine unusual ones.
      */
-    public const PLACEHOLDER_ALTCHA_HMAC_KEY = 'test-altcha-hmac-key-not-for-production';
-    public const NULL_MAILER_DSN = 'null://null';
+    public const string PLACEHOLDER_ALTCHA_HMAC_KEY = 'test-altcha-hmac-key-not-for-production';
+    public const string NULL_MAILER_DSN = 'null://null';
 
     public function __construct(
         #[Autowire('%kernel.environment%')]

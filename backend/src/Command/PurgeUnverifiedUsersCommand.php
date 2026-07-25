@@ -26,7 +26,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 )]
 final class PurgeUnverifiedUsersCommand extends Command
 {
-    private const MAX_AGE = 'PT48H';
+    private const string MAX_AGE = 'PT48H';
 
     public function __construct(
         private readonly UserRepository $users,

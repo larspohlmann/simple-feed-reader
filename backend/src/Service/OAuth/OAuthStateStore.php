@@ -94,8 +94,8 @@ use Psr\Clock\ClockInterface;
 final readonly class OAuthStateStore
 {
     /** Public so OAuthController can size the flow cookie to outlive it. */
-    public const LIFETIME_SECONDS = 600;
-    private const KEY_PREFIX = 'oauth_state_';
+    public const int LIFETIME_SECONDS = 600;
+    private const string KEY_PREFIX = 'oauth_state_';
 
     public function __construct(
         private CacheItemPoolInterface $oauthStateCache,
@@ -175,15 +175,8 @@ final readonly class OAuthStateStore
         // expiry check is still burned rather than left available to retry.
         $this->oauthStateCache->deleteItem($key);
 
-        $stored = $item->get();
-        if (
-            !\is_array($stored)
-            || !\is_string($stored['provider'] ?? null)
-            || !\is_string($stored['nonce'] ?? null)
-            || !\is_string($stored['code_verifier'] ?? null)
-            || !\is_string($stored['browser_digest'] ?? null)
-            || !\is_int($stored['expires_at'] ?? null)
-        ) {
+        $stored = self::decodeStored($item->get());
+        if (null === $stored) {
             return null;
         }
 
@@ -218,6 +211,43 @@ final readonly class OAuthStateStore
             $codeVerifier,
             self::challengeFor($codeVerifier),
         );
+    }
+
+    /**
+     * Validates the shape of a cache entry written by start(), returning it
+     * typed or null if anything is missing or of the wrong type. A corrupt or
+     * tampered entry is thereby treated exactly like an unknown state — the
+     * caller cannot tell the two apart, which is the same collapse-to-null the
+     * rest of consume() relies on.
+     *
+     * @return array{
+     *     provider: string,
+     *     nonce: string,
+     *     code_verifier: string,
+     *     browser_digest: string,
+     *     expires_at: int,
+     * }|null
+     */
+    private static function decodeStored(mixed $stored): ?array
+    {
+        if (
+            !\is_array($stored)
+            || !\is_string($stored['provider'] ?? null)
+            || !\is_string($stored['nonce'] ?? null)
+            || !\is_string($stored['code_verifier'] ?? null)
+            || !\is_string($stored['browser_digest'] ?? null)
+            || !\is_int($stored['expires_at'] ?? null)
+        ) {
+            return null;
+        }
+
+        return [
+            'provider' => $stored['provider'],
+            'nonce' => $stored['nonce'],
+            'code_verifier' => $stored['code_verifier'],
+            'browser_digest' => $stored['browser_digest'],
+            'expires_at' => $stored['expires_at'],
+        ];
     }
 
     /**

@@ -10,7 +10,7 @@ namespace App\Service\Parser;
  */
 final class Atom10Parser extends AbstractAtomParser
 {
-    public const NAMESPACE = 'http://www.w3.org/2005/Atom';
+    public const string NAMESPACE = 'http://www.w3.org/2005/Atom';
 
     protected function namespaceUri(): string
     {

@@ -24,10 +24,10 @@ use App\Service\Scraper\HtmlItemExtractor;
  */
 final readonly class FeedDiscovery implements FeedDiscoveryInterface
 {
-    private const FEED_LINK_TYPES = ['application/rss+xml', 'application/atom+xml'];
+    private const array FEED_LINK_TYPES = ['application/rss+xml', 'application/atom+xml'];
 
     /** Statuses meaning "the site answered but refused us" — retrying won't help, a feed URL might. */
-    private const BLOCKED_STATUSES = [401, 403, 429];
+    private const array BLOCKED_STATUSES = [401, 403, 429];
 
     public function __construct(
         private FeedFetcherInterface $fetcher,

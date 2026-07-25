@@ -20,12 +20,12 @@ use App\Service\Scraper\HtmlItemExtractor;
  */
 final readonly class FeedPreviewService
 {
-    private const SAMPLE_SIZE = 4;
-    private const FULL_TEXT_MIN = 600;
-    private const SNIPPET_LEN = 200;
+    private const int SAMPLE_SIZE = 4;
+    private const int FULL_TEXT_MIN = 600;
+    private const int SNIPPET_LEN = 200;
 
     /** Richest tier first: ties in the verdict resolve to whichever comes first here. */
-    private const TIERS_BY_RICHNESS = ['full', 'summary', 'title-only'];
+    private const array TIERS_BY_RICHNESS = ['full', 'summary', 'title-only'];
 
     public function __construct(
         private FeedFetcherInterface $fetcher,

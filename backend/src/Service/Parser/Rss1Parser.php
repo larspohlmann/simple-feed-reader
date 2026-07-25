@@ -8,10 +8,10 @@ use App\Service\Parser\Exception\FeedParseException;
 
 final class Rss1Parser
 {
-    private const RSS1_NS = 'http://purl.org/rss/1.0/';
-    private const RDF_NS = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
-    private const DC_NS = 'http://purl.org/dc/elements/1.1/';
-    private const CONTENT_NS = 'http://purl.org/rss/1.0/modules/content/';
+    private const string RSS1_NS = 'http://purl.org/rss/1.0/';
+    private const string RDF_NS = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+    private const string DC_NS = 'http://purl.org/dc/elements/1.1/';
+    private const string CONTENT_NS = 'http://purl.org/rss/1.0/modules/content/';
 
     public function parse(\DOMDocument $document): ParsedFeed
     {

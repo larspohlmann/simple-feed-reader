@@ -39,8 +39,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  */
 final readonly class AppleClientSecretFactory
 {
-    private const AUDIENCE = 'https://appleid.apple.com';
-    private const LIFETIME_SECONDS = 3600;
+    private const string AUDIENCE = 'https://appleid.apple.com';
+    private const int LIFETIME_SECONDS = 3600;
 
     public function __construct(
         private ClockInterface $clock,
