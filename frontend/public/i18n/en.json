@@ -159,7 +159,9 @@
       "savePassword": "Save password",
       "linkInvalid": "This reset link is invalid or has expired.",
       "requestNew": "Request a new link",
-      "failed": "Could not reset the password. Request a new link."
+      "failed": "Could not reset the password. Request a new link.",
+      "requestInvalidInput": "Enter a valid email address.",
+      "newInvalidInput": "Enter a password of at least 12 characters."
     },
     "verify": {
       "title": "Confirm email",

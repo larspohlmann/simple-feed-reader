@@ -11,6 +11,7 @@
         <span>{{ 'auth.email' | transloco }}</span>
         <input type="email" formControlName="email" autocomplete="email" />
       </label>
+      <app-form-error [message]="error()" />
       <app-button type="submit" variant="primary" [loading]="loading()">{{
         'auth.reset.sendLink' | transloco
       }}</app-button>

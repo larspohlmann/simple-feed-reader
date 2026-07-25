@@ -1,5 +1,5 @@
 // src/app/auth/login/login.component.ts
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -7,6 +7,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { API_BASE_URL } from '../../core/api';
 import { AuthService } from '../../core/auth.service';
 import { parseProblem } from '../../core/problem';
+import { adoptAutofilledValues } from '../autofill';
 import { AuthShellComponent } from '../auth-shell/auth-shell.component';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { FormErrorComponent } from '../../shared/form-error/form-error.component';
@@ -31,6 +32,7 @@ export class LoginComponent implements OnInit {
   private readonly base = inject(API_BASE_URL);
   private readonly router = inject(Router);
   private readonly i18n = inject(TranslocoService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -49,14 +51,13 @@ export class LoginComponent implements OnInit {
 
   submit(): void {
     if (this.loading()) return;
-
-    // iOS autofill: DOM value may not be synced to the form control.
-    for (const name of ['email', 'password'] as const) {
-      const el = document.querySelector<HTMLInputElement>(`[name="${name}"]`);
-      if (el && el.value !== this.form.get(name)?.value) {
-        this.form.get(name)?.setValue(el.value);
-      }
-    }
+    // This form already carried a hand-rolled version of this, keyed on the
+    // `name` attribute and querying the whole document. It is now the shared
+    // helper: scoped to this component, and keyed on formControlName, which is
+    // the attribute actually guaranteed to be there. Generalising it is the
+    // point -- the register form had the identical bug and no workaround, which
+    // is how a filled-in form came to refuse to submit with nothing on screen.
+    adoptAutofilledValues(this.host.nativeElement, this.form);
 
     if (this.form.invalid) {
       this.error.set(this.i18n.translate('auth.login.invalidInput'));
