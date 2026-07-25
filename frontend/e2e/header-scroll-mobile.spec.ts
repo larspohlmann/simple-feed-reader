@@ -181,4 +181,107 @@ test.describe('Hide-on-scroll header on a phone', () => {
     await page.waitForTimeout(400);
     expect(await height()).toBe(before);
   });
+
+  test('the bar’s empty middle and the corner button both return the list to the top', async ({
+    page,
+  }) => {
+    const signedIn = await signInAsAdmin(page);
+    test.skip(
+      !signedIn,
+      'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
+    );
+
+    await stubEntries(page);
+    await page.reload();
+
+    const rows = page.locator(ROWS);
+    await expect(rows).toBeVisible();
+    await settle(page);
+
+    // Well past the 500px threshold, so the corner button is showing.
+    await rows.evaluate((el) => el.scrollTo({ top: 1500 }));
+    await page.waitForTimeout(400);
+    expect(await rows.evaluate((el) => el.scrollTop)).toBeGreaterThan(1000);
+
+    const corner = page.locator('app-entry-list app-to-top-button');
+    await expect(corner).toBeVisible();
+    await corner.click();
+    await expect.poll(() => rows.evaluate((el) => el.scrollTop)).toBe(0);
+    await expect(corner).toBeHidden();
+
+    // And again via the empty middle of the app bar. Scrolling down retracts the
+    // bar, so scroll back up a little first to bring it into reach — exactly what
+    // the user does.
+    await rows.evaluate((el) => el.scrollTo({ top: 1500 }));
+    await page.waitForTimeout(400);
+    await rows.evaluate((el) => el.scrollBy(0, -100));
+    await page.waitForTimeout(400);
+
+    await page.locator('app-reader-header .tap-to-top').click();
+    await expect.poll(() => rows.evaluate((el) => el.scrollTop)).toBe(0);
+  });
+
+  // The article view has its own copy of the shared back-to-top component, but
+  // pinned to the viewport (`position: fixed`) rather than the list's pane
+  // (`position: absolute`) — see to-top-button.component.ts. Pin that contract
+  // here so an extraction that hoists the two into one place can't silently
+  // regress it.
+  test('the article’s back-to-top button stays pinned while the article scrolls', async ({
+    page,
+  }) => {
+    const signedIn = await signInAsAdmin(page);
+    test.skip(
+      !signedIn,
+      'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
+    );
+
+    await stubEntries(page);
+    // /api/entries/:id/reader isn't stubbed, so it hits the real backend, which
+    // tries to extract the seeded entry's own URL and fails (setOriginalOnly()),
+    // leaving the view in 'original' mode — the entry's own contentHtml/summary.
+    // A stub with real height is therefore enough to drive the article's own
+    // scroller. Overriding after stubEntries() means this route wins (Playwright
+    // tries the most-recently-registered matching handler first).
+    await page.route('**/api/entries*', async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      const tallEntries = ENTRIES.map((e) =>
+        e.id === 1
+          ? {
+              ...e,
+              contentHtml: Array.from(
+                { length: 20 },
+                (_, i) =>
+                  `<p>Paragraph ${i} of filler text, long enough to give the article real height so it can scroll well past the back-to-top threshold.</p>`,
+              ).join(''),
+            }
+          : e,
+      );
+      await route.fulfill({ status: 200, json: { entries: tallEntries, nextCursor: null } });
+    });
+    await page.reload();
+    await expect(page.locator(ROWS)).toBeVisible();
+    await settle(page);
+
+    await page.getByText('Entry number 1', { exact: false }).first().click();
+    const article = page.locator('app-reader-view');
+    await expect(article).toBeVisible();
+    await expect(page.getByText('Paragraph 0 of filler text').first()).toBeVisible();
+
+    await article.evaluate((el) => el.scrollTo({ top: 900 }));
+    const button = page.locator('app-reader-view app-to-top-button');
+    await expect(button).toBeVisible();
+    // A beat for the fixed-position layout to settle after the button mounts
+    // mid-scroll — measured immediately, its box reflects a stale pre-scroll
+    // position for one frame (looks briefly `absolute`, not `fixed`).
+    await page.waitForTimeout(200);
+    const first = (await button.boundingBox())!;
+
+    await article.evaluate((el) => el.scrollTo({ top: 1400 }));
+    await page.waitForTimeout(200);
+    const second = (await button.boundingBox())!;
+
+    // Fixed to the viewport, so 500px of article scroll must not move it.
+    expect(second.y).toBeCloseTo(first.y, 0);
+    expect(second.x).toBeCloseTo(first.x, 0);
+  });
 });
