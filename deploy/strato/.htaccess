@@ -50,6 +50,19 @@ Options +FollowSymLinks
     RewriteCond %{REQUEST_URI}::$0 ^(/.+)/(.*)::\2$
     RewriteRule ^(.*) - [E=BASE:%1]
 
+    # Apache does not hand the Authorization header to PHP under cgi-fcgi. It
+    # keeps it for itself unless told otherwise, so a bearer token disappears
+    # between the browser and Symfony -- and the failure is beautifully
+    # misleading: /api/auth/login needs no header and returns 200 with a valid
+    # token, then every authenticated request 401s. The frontend's interceptor
+    # treats a 401 as a dead session, clears the token and returns to the login
+    # form, so the whole thing presents as "signing in does nothing".
+    #
+    # symfony/apache-pack ships this rule for exactly this reason. This file is
+    # hand-written and did not.
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
     # Symfony owns /api (36 routes) and /maintenance (the refresh endpoint).
     # Tested first so neither the static-file rule nor the SPA fallback can
     # claim them.
