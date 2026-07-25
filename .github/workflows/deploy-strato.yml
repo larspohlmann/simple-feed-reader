@@ -7,8 +7,11 @@
 # toolchains the server does not have, calls deploy/strato/build-release.sh and
 # deploy/strato/activate-release.sh, and moves files between them.
 #
-# NOTE: workflow_run only fires when this file is on the DEFAULT branch (main).
-# Until develop is merged to main, deploy by hand with workflow_dispatch.
+# NOTE: GitHub reads this file from the DEFAULT branch (main), whichever branch
+# the deploy is *for*. That cuts both ways: pushes to develop have triggered it
+# since the file reached main (first from-develop deploy: 20260725145104-e48292e),
+# but an edit to this file does nothing until it is merged to main -- the run you
+# get is still main's copy. Change it on develop, then promote, then trust it.
 name: Deploy (Strato)
 
 on:

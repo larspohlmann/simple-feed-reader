@@ -236,17 +236,24 @@ passes the deploy workflow builds both halves on the runner, uploads the release
 cache, migrates, and flips `current`. Migrations run **before** the flip, so a failed
 migration leaves the previous release serving traffic. Merge to `develop` and it ships.
 
-**None of that works until the workflow file is on `main`.** GitHub only reads workflow
-definitions from the **default branch** for the triggers this workflow uses — `workflow_run`
-*and* `workflow_dispatch` alike. So while the deploy workflow exists only on `develop` it
-does not appear in the Actions tab at all, and `gh workflow run "Deploy (Strato)"` fails with
-*could not find any workflows named…*. There is no "run it manually in the meantime": the
-first deploy requires merging to `main` first, or deploying by hand.
+This is live: the first deploy triggered by a merge to `develop` rather than by hand was
+`20260725145104-e48292e` on 2026-07-25. Nothing needs to reach `main` to ship.
+
+**But GitHub reads the workflow file itself from the default branch (`main`).** That applies
+to both triggers this workflow uses — `workflow_run` *and* `workflow_dispatch` — regardless
+of which branch is being deployed. Two consequences, and the second one bites:
+
+- Before the workflow file existed on `main` it did not appear in the Actions tab at all,
+  and `gh workflow run "Deploy (Strato)"` failed with *could not find any workflows named…*.
+- **Editing this workflow on `develop` changes nothing.** Merging the edit to `develop`
+  deploys the app, but the run that deploys it is still `main`'s copy of the workflow. A
+  deploy-pipeline change only takes effect once it is promoted to `main` — until then you
+  are testing a file nobody is executing.
 
 ### Deploying by hand
 
-This is the genuine interim path, and it is also what you fall back to if the runner is
-unavailable. It is the same sequence the workflow performs, with the same release-name
+The fallback when the runner is unavailable, or when you want to ship something that is not
+a `develop` merge. It is the same sequence the workflow performs, with the same release-name
 convention (a sortable UTC timestamp plus the short SHA being deployed, e.g.
 `20260725143012-a1b2c3d`):
 
