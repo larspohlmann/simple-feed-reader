@@ -23,7 +23,7 @@ import { EntriesStore } from './entries.store';
 import { RefreshService } from './refresh.service';
 import { ReadingLayoutService } from './reading-layout.service';
 import { LayoutService } from './layout.service';
-import { markReadTarget, queryFromSelection, selectionFromParams } from './query';
+import { RefreshScope, markReadTarget, queryFromSelection, selectionFromParams } from './query';
 import { entryParam } from './slug';
 import { EntryDto, EntryStatePatch, SubscriptionDto, SubscriptionTagDto, TagDto } from './models';
 import { nextHeaderHidden } from './header-scroll';
@@ -320,6 +320,37 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  /** Map the current selection to a refresh scope, or null where a scoped
+   *  refresh doesn't apply (the cross-feed favorites/kept views). A subscription
+   *  resolves to its underlying feed id — the API keys refresh by feed, and a
+   *  subscription id is a different id space. */
+  private refreshScope(s = this.selection()): RefreshScope | null {
+    switch (s.kind) {
+      case 'all':
+        return {};
+      case 'tag':
+        return s.id != null ? { tagId: s.id } : null;
+      case 'subscription': {
+        const feedId = this.subs.subscriptions().find((x) => x.id === s.id)?.feedId;
+        return feedId != null ? { feedId } : null;
+      }
+      default:
+        return null;
+    }
+  }
+
+  /** The list-scoped refresh (header button + mobile pull): sweep only the feeds
+   *  behind the current selection, then reload the list once it lands. */
+  onScopedRefresh(): void {
+    const scope = this.refreshScope();
+    if (!scope) return;
+    this.refreshSvc.run(() => {
+      this.subs.load();
+      this.tags.load();
+      this.entries.load(queryFromSelection(this.selection()));
+    }, scope);
+  }
+
   onAddFeed(): void {
     const ref = this.dialog.open<SubscriptionDto>(AddFeedDialogComponent);
     ref.closed.subscribe((sub) => {
@@ -333,10 +364,13 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       // A just-added feed has no entries until its first fetch. Populate it now,
       // scoped to this one feed so it stays fast, instead of leaving the user on
       // an empty list until they hit refresh. Reload the list once it lands.
-      this.refreshSvc.run(() => {
-        this.subs.load();
-        this.entries.load(queryFromSelection(this.selection()));
-      }, sub.feedId);
+      this.refreshSvc.run(
+        () => {
+          this.subs.load();
+          this.entries.load(queryFromSelection(this.selection()));
+        },
+        { feedId: sub.feedId },
+      );
     });
   }
 }

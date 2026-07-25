@@ -3,6 +3,7 @@
   flex-direction: column;
   min-height: 0;
   height: 100%;
+  position: relative; /* anchor for the pull-to-refresh indicator */
 }
 
 .list-header {
@@ -90,6 +91,48 @@
   color: var(--accent);
   cursor: pointer;
   font-size: var(--fs-sm);
+}
+
+.refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.refresh:disabled {
+  cursor: default;
+  color: var(--text-muted);
+}
+
+/* Rubber-banded pull-to-refresh chip. Sits just above the list and is drawn
+   down into view by the inline translateY as the user pulls; `pull() > 0`
+   gates its rendering so it never shows at rest. */
+.pull-indicator {
+  position: absolute;
+  top: -44px;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-left: -18px;
+  border-radius: 50%;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-1, 0 1px 4px rgb(0 0 0 / 15%));
+  color: var(--text-secondary);
+}
+
+.pull-indicator.armed {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 /* Compact controls: below this width the labels are dropped so a long feed or

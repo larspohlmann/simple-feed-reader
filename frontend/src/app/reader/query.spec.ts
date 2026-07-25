@@ -1,5 +1,5 @@
 import { convertToParamMap } from '@angular/router';
-import { markReadTarget, queryFromSelection, selectionFromParams } from './query';
+import { canScopedRefresh, markReadTarget, queryFromSelection, selectionFromParams } from './query';
 
 const pm = (o: Record<string, string>) => convertToParamMap(o);
 
@@ -68,5 +68,17 @@ describe('markReadTarget', () => {
       id: 7,
     });
     expect(markReadTarget({ kind: 'favorites', id: null, unread: false })).toBeNull();
+  });
+});
+
+describe('canScopedRefresh', () => {
+  it('is allowed for all/tag/subscription selections', () => {
+    expect(canScopedRefresh({ kind: 'all', id: null, unread: true })).toBe(true);
+    expect(canScopedRefresh({ kind: 'tag', id: 3, unread: true })).toBe(true);
+    expect(canScopedRefresh({ kind: 'subscription', id: 7, unread: true })).toBe(true);
+  });
+  it('is disallowed for the cross-feed saved views', () => {
+    expect(canScopedRefresh({ kind: 'favorites', id: null, unread: false })).toBe(false);
+    expect(canScopedRefresh({ kind: 'kept', id: null, unread: false })).toBe(false);
   });
 });

@@ -91,6 +91,29 @@ describe('EntryListComponent', () => {
     expect(el.querySelector('.mark-all')).toBeNull();
   });
 
+  it('emits refresh when the scoped refresh button is clicked', () => {
+    const f = mount();
+    let hits = 0;
+    f.componentInstance.refresh.subscribe(() => hits++);
+    (f.nativeElement.querySelector('.refresh') as HTMLButtonElement).click();
+    expect(hits).toBe(1);
+  });
+
+  it('disables the refresh button while a run is in progress', () => {
+    const f = mount({ refreshing: true });
+    expect((f.nativeElement.querySelector('.refresh') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('hides the scoped refresh button in the cross-feed saved views', () => {
+    for (const kind of ['favorites', 'kept'] as const) {
+      const el = mount({
+        selection: { kind, id: null, unread: false },
+        canMarkAllRead: false,
+      }).nativeElement as HTMLElement;
+      expect(el.querySelector('.refresh')).toBeNull();
+    }
+  });
+
   it('renders planned magazine blocks when layout is magazine', () => {
     const grouped = [1, 2, 3].map((id) => entry(id));
     const diverse = entry(4, { subscriptionId: 4, source: 'diverse' });

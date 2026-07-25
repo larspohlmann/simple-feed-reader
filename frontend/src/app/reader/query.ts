@@ -9,6 +9,19 @@ export interface Selection {
   unread: boolean;
 }
 
+/** How a scoped refresh is keyed. Empty = all the user's due feeds; feedId =
+ *  one feed; tagId = every feed carrying that tag. */
+export interface RefreshScope {
+  feedId?: number;
+  tagId?: number;
+}
+
+/** Whether the current selection supports a scoped refresh — the cross-feed
+ *  saved views (favorites/kept) don't map to any feed scope, so they can't. */
+export function canScopedRefresh(s: Selection): boolean {
+  return s.kind === 'all' || s.kind === 'tag' || s.kind === 'subscription';
+}
+
 export function selectionFromParams(p: ParamMap): {
   selection: Selection;
   entryId: number | null;

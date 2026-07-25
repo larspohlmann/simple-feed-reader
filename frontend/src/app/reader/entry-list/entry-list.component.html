@@ -43,8 +43,31 @@
         <span class="txt">{{ 'reader.markAllRead' | transloco }}</span>
       </button>
     }
+    @if (canRefresh()) {
+      <button
+        class="refresh"
+        type="button"
+        [disabled]="refreshing()"
+        (click)="refresh.emit()"
+        [attr.aria-label]="'reader.refresh' | transloco"
+        [attr.title]="'reader.refresh' | transloco"
+      >
+        <app-spinner [size]="18" [decorative]="true" [animate]="refreshing()" />
+      </button>
+    }
   </div>
 </header>
+
+@if (pull() > 0) {
+  <div
+    class="pull-indicator"
+    [class.armed]="pullArmed()"
+    [style.transform]="'translateY(' + pull() + 'px)'"
+    aria-hidden="true"
+  >
+    <app-spinner [size]="20" [decorative]="true" [animate]="pullArmed()" />
+  </div>
+}
 
 @if (error()) {
   <div class="banner" role="alert">{{ error()!.detail ?? error()!.title }}</div>

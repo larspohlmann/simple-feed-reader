@@ -47,13 +47,25 @@ describe('RefreshService', () => {
   });
 
   it('scopes every request to the given feed id across the poll loop', () => {
-    svc.run(undefined, 42);
+    svc.run(undefined, { feedId: 42 });
     const first = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
     expect(first.request.params.get('feedId')).toBe('42');
     first.flush(report({ status: 'partial', remaining: 1 }));
     // The scope must survive the re-poll, not just the first call.
     const second = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
     expect(second.request.params.get('feedId')).toBe('42');
+    second.flush(report({ status: 'completed', remaining: 0 }));
+    expect(svc.running()).toBe(false);
+  });
+
+  it('scopes every request to the given tag id across the poll loop', () => {
+    svc.run(undefined, { tagId: 3 });
+    const first = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+    expect(first.request.params.get('tag')).toBe('3');
+    expect(first.request.params.get('feedId')).toBeNull();
+    first.flush(report({ status: 'partial', remaining: 1 }));
+    const second = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+    expect(second.request.params.get('tag')).toBe('3');
     second.flush(report({ status: 'completed', remaining: 0 }));
     expect(svc.running()).toBe(false);
   });
