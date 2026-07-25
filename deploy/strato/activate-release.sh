@@ -28,35 +28,31 @@ esac
 RELEASE="${ROOT}/releases/${NAME}"
 SHARED="${ROOT}/shared"
 
-# The host's PHP binary is `php84` and its SAPI is cgi-fcgi, not cli. That
-# changes how a command line has to be spelled, in three ways that are each
-# silent or fatal if missed:
+# An absolute vendor path, not the `php84` on PATH, because the two are not the
+# same SAPI. `php84` is a symlink to the cgi-fcgi binary: it has to be spelled
+# `-q -f <script> -- <args>` (the -q suppresses HTTP headers, the -- stops the
+# SAPI swallowing the first dash-prefixed argument), it chdir()s into the
+# script's directory, and its ini caps max_execution_time at 240 seconds. None
+# of that is wanted here -- least of all the ceiling, which is enough to kill a
+# migration on a table with real data.
 #
-#   -q                      suppresses the HTTP headers the SAPI would
-#                           otherwise print ahead of the command's output.
-#   register_argc_argv      is already on in the host's ini (measured
-#                           2026-07-25), so this is belt and braces, not a fix.
-#                           It is pinned because the failure mode is silent
-#                           rather than loud: Symfony's ArgvInput reads
-#                           $_SERVER['argv'], which this setting populates, so
-#                           if the host ever flips it off every command below
-#                           would degrade into `bin/console list` and exit 0 --
-#                           a deploy that reports success having migrated
-#                           nothing. The ini is the host's, not ours.
-#   --                      is mandatory. The SAPI keeps parsing options after
-#                           the script name, so `-f bin/console cache:clear
-#                           --no-interaction` aborts with "no argument for
-#                           option -" before PHP ever starts.
+# /opt/RZphp84/bin/php-cli is the same PHP 8.4.22 build, differing only in SAPI.
+# Measured on the host 2026-07-25: max_execution_time 0 (no ceiling), memory
+# limit 512M as with cgi-fcgi, every extension this app requires present, empty
+# disable_functions, date.timezone UTC, ordinary argument passing, and exit
+# codes propagate. The path shape is a Strato convention rather than a one-off:
+# php-cli exists identically under /opt/RZphp82, RZphp83, RZphp84 and RZphp85.
+# It is simply not on PATH, which is the only reason it looks odd here.
 #
-# The path is absolute because this script is invoked over SSH, where the shell
-# starts in $HOME. The SAPI does chdir() into the script's own directory, but
-# only after it has located and opened the file -- so a relative `-f bin/console`
-# would be resolved against $HOME and simply not be found. ${RELEASE} is
-# absolute anyway, by the normalization above.
-console() {
-    php84 -d register_argc_argv=1 -q -f "${RELEASE}/bin/console" -- "$@"
-}
+# ${RELEASE}/bin/console stays absolute, for a different reason than before: the
+# CLI does *not* chdir, it stays in the directory it was invoked from, and an
+# SSH command starts in $HOME. ${RELEASE} is absolute anyway, by the
+# normalization above.
+PHP=/opt/RZphp84/bin/php-cli
 
+console() { "${PHP}" "${RELEASE}/bin/console" "$@"; }
+
+test -x "${PHP}" || die "no PHP CLI at ${PHP} -- if Strato has reorganised /opt, look for the new path with 'ls -d /opt/RZphp*/bin/php-cli' and update this script. The cgi-fcgi binary on PATH still works as a fallback, spelled: php84 -q -f ${RELEASE}/bin/console -- <command>"
 test -d "${RELEASE}" || die "no such release: ${RELEASE}"
 test -f "${SHARED}/.env.local" || die "missing ${SHARED}/.env.local"
 test -f "${SHARED}/config/jwt/private.pem" || die "missing shared JWT key: ${SHARED}/config/jwt/private.pem"
@@ -117,19 +113,24 @@ echo "==> Warming the cache"
 # mid-warmup cannot build on top of a half-written cache. One command, not two:
 # cache:clear warms the cache itself unless --no-warmup is passed (Symfony 7.4,
 # CacheClearCommand), so a following cache:warmup would buy a second container
-# compile against the host's 240s max_execution_time and nothing else.
+# compile and nothing else.
 console cache:clear --no-interaction
 
 echo "==> Running migrations"
 # Before the flip on purpose: if this fails, the old release is still live.
 #
-# It can fail halfway. MySQL 8 commits implicitly on DDL, so Doctrine's
-# per-migration transaction does not protect a migration that dies partway
-# through -- the host's 240s max_execution_time is enough to kill one on a
-# table with real data. What is left behind is a half-changed schema with no
-# row in doctrine_migration_versions, and a blind retry then fails on something
-# like "Duplicate column name". This script cannot make DDL transactional; all
-# it can do is refuse to fail mutely.
+# It can fail halfway, and that is the expensive case. MySQL 8 commits
+# implicitly on DDL, so Doctrine's per-migration transaction does not protect a
+# migration that dies partway through: a statement the server rejects, a
+# connection lost to the shared MySQL host, or the job being killed leaves a
+# half-changed schema with no row in doctrine_migration_versions, and a blind
+# retry then fails on something like "Duplicate column name".
+#
+# What is *no longer* one of those causes is a timeout. Under the CLI above
+# max_execution_time is 0; the 240s ceiling belongs to the cgi-fcgi SAPI this
+# script deliberately does not use. The implicit-commit hazard is unchanged --
+# this script cannot make DDL transactional; all it can do is refuse to fail
+# mutely.
 migrate_status=0
 console doctrine:migrations:migrate --no-interaction --allow-no-migration || migrate_status=$?
 if [ "${migrate_status}" -ne 0 ]; then
@@ -141,7 +142,7 @@ if [ "${migrate_status}" -ne 0 ]; then
         echo "!!! statements from a migration that died partway through can be applied"
         echo "!!! without the migration being recorded as executed."
         echo "!!! Check what actually ran before retrying the deploy:"
-        echo "!!!   php84 -d register_argc_argv=1 -q -f ${RELEASE}/bin/console -- doctrine:migrations:status"
+        echo "!!!   ${PHP} ${RELEASE}/bin/console doctrine:migrations:status"
     } >&2
     exit "${migrate_status}"
 fi

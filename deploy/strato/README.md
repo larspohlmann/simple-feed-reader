@@ -16,7 +16,7 @@ certificate is the only alternative and it costs money.
 ```
 ~/larspohlmann/reader  ->  ~/simplefeedreader/current/public
 ~/simplefeedreader/
-  releases/<name>/           one directory per deploy; the workflow prunes to five
+  releases/<name>/           one directory per deploy; the workflow prunes old ones
   current -> releases/<name> flipped last, atomically
   shared/
     .env.local               secrets; symlinked into each release
@@ -38,26 +38,39 @@ the release during activation. That is the whole trick: the release directory is
 ## One-time setup
 
 Do these in order. Activation checks two of them: it refuses to run without the JWT keypair
-(6) or `shared/.env.local` (7), and it reads that file's contents. It checks nothing about
-the mount (9), because `activate-release.sh` never looks outside the deploy root and has no
+(7) or `shared/.env.local` (8), and it reads that file's contents. It checks nothing about
+the mount (10), because `activate-release.sh` never looks outside the deploy root and has no
 business doing so — which makes a missing or misaimed mount precisely the silent failure you
 might hope a script would catch. Activation prints "Active release is now …" and exits 0
 while the URL 404s. Verification step 1 is what catches that.
 
-1. **MySQL database** — create it in the Strato panel. The DSN goes in `shared/.env.local`.
-2. **Mailbox** — create `noreply@lars-pohlmann.de`. Its SMTP credentials go in the same
+1. **Deploy root skeleton** — create the two directories every later step writes into:
+
+   ```bash
+   ssh strato-feedreader 'mkdir -p ~/simplefeedreader/releases ~/simplefeedreader/shared'
+   ```
+
+   Nothing else creates `releases/`. Activation creates `shared/var/*` itself, and the JWT
+   step below creates `shared/config/jwt`, but the upload lands *before* activation runs and
+   `rsync` creates only the final path component. On a bare deploy root the deploy therefore
+   dies at the upload with `mkdir failed: No such file or directory` — before anything on the
+   server has changed, but with nothing in the message to say which directory it meant.
+2. **MySQL database** — create it in the Strato panel. The DSN goes in `shared/.env.local`.
+3. **Mailbox** — create `noreply@lars-pohlmann.de`. Its SMTP credentials go in the same
    file, and the address must also be `MAIL_FROM`: Strato will not relay mail claiming a
    sender you did not authenticate as.
-3. ~~**PHP version**~~ — nothing to do. The vhost was measured serving **PHP 8.4.22**
-   (cgi-fcgi) on 2026-07-25, which is what reader mode needs (readability.php v4).
-4. **Google OAuth** — register the redirect URI, exactly:
+4. ~~**PHP version**~~ — nothing to do. The vhost was measured serving **PHP 8.4.22**
+   (cgi-fcgi) on 2026-07-25, which is what reader mode needs (readability.php v4). The shell
+   side runs the same 8.4.22 build through a real CLI binary — see *Running a console command
+   on the server* below.
+5. **Google OAuth** — register the redirect URI, exactly:
    `https://lars-pohlmann.de/reader/api/auth/oauth/google/callback`
-5. **Subdomain** — `reader.lars-pohlmann.de` already exists and already points at
+6. **Subdomain** — `reader.lars-pohlmann.de` already exists and already points at
    `~/simplefeedreader/current/public`, so this is a *re*-point, not fresh setup: aim it at
    `https://lars-pohlmann.de/reader` instead. That redirect travels over plain HTTP, because
    the subdomain has no certificate. It is a convenience for old links, not an entry point
    anyone should be given.
-6. **JWT keys** — generate them locally and upload **both** files. Activation refuses to run
+7. **JWT keys** — generate them locally and upload **both** files. Activation refuses to run
    unless `shared/config/jwt/private.pem` *and* `shared/config/jwt/public.pem` are present,
    because a release that silently came up without a signing key would fail every login at
    runtime instead of at deploy time.
@@ -88,11 +101,11 @@ while the URL 404s. Verification step 1 is what catches that.
    — the same place, because the key without the passphrase is useless and either alone is
    not a recovery. Do not keep a backup loose on disk; the lines above delete the local
    copies deliberately, and re-uploading the server's copy is what a restore looks like.
-7. **Environment** — copy `.env.local.example` to `shared/.env.local`, fill it in, and
+8. **Environment** — copy `.env.local.example` to `shared/.env.local`, fill it in, and
    `chmod 600` it. It holds the database password. Read the comments in that file rather
    than skimming the variable names; several of the committed defaults are functional, which
    is exactly what makes forgetting them expensive.
-8. **Remove the placeholder `current`** — `~/simplefeedreader/current` exists on the host
+9. **Remove the placeholder `current`** — `~/simplefeedreader/current` exists on the host
    as a **real directory**, holding a placeholder `public/index.html` from before this
    deployment was built. It has to be gone before the first deploy:
 
@@ -106,15 +119,15 @@ while the URL 404s. Verification step 1 is what catches that.
    warmed and the migrations run: the failure would leave you with a migrated production
    schema, no deploy, and the placeholder still serving the URL.
 
-9. **Mount** — link the app into the portfolio docroot:
+10. **Mount** — link the app into the portfolio docroot:
 
-   ```bash
-   ssh strato-feedreader 'ln -sfn ~/simplefeedreader/current/public ~/larspohlmann/reader'
-   ```
+    ```bash
+    ssh strato-feedreader 'ln -sfn ~/simplefeedreader/current/public ~/larspohlmann/reader'
+    ```
 
-   The link dangles until the first deploy creates `current`. That is expected.
+    The link dangles until the first deploy creates `current`. That is expected.
 
-10. **First admin** — do this **after** the first successful deploy; it needs a migrated
+11. **First admin** — do this **after** the first successful deploy; it needs a migrated
     database and a `current` that resolves.
 
     Nothing in this codebase grants `ROLE_ADMIN` in production. The one command that grants
@@ -129,17 +142,20 @@ while the URL 404s. Verification step 1 is what catches that.
     to have arrived: the statement below makes the account active outright.
 
     ```bash
-    ssh strato-feedreader "php84 -d register_argc_argv=1 -q -f ~/simplefeedreader/current/bin/console -- dbal:run-sql \"UPDATE app_user SET roles = JSON_ARRAY('ROLE_ADMIN'), status = 'active', approved_at = UTC_TIMESTAMP() WHERE email = 'you@example.com'\""
+    ssh strato-feedreader "/opt/RZphp84/bin/php-cli ~/simplefeedreader/current/bin/console dbal:run-sql \"UPDATE app_user SET roles = JSON_ARRAY('ROLE_ADMIN'), status = 'active', approved_at = UTC_TIMESTAMP() WHERE email = 'you@example.com'\""
     ```
 
     It reports one row affected. Read it back before believing it:
 
     ```bash
-    ssh strato-feedreader "php84 -d register_argc_argv=1 -q -f ~/simplefeedreader/current/bin/console -- dbal:run-sql \"SELECT id, email, roles, status, approved_at FROM app_user\""
+    ssh strato-feedreader "/opt/RZphp84/bin/php-cli ~/simplefeedreader/current/bin/console dbal:run-sql \"SELECT id, email, roles, status, approved_at FROM app_user\""
     ```
 
     Each part of that statement is load-bearing:
 
+    - `/opt/RZphp84/bin/php-cli` is the host's real PHP CLI. It is not on `PATH`, which is
+      why the absolute path is spelled out; *Running a console command on the server* below
+      explains why the `php84` on `PATH` is the wrong binary for this.
     - `dbal:run-sql` is doctrine-bundle's own command. It is registered in **every**
       environment, not just dev, and it reaches the database through PHP's mysqlnd. That is
       the point: the host's `mysql` CLI is a 5.6 client and cannot authenticate to this
@@ -187,51 +203,105 @@ passes the deploy workflow builds both halves on the runner, uploads the release
 cache, migrates, and flips `current`. Migrations run **before** the flip, so a failed
 migration leaves the previous release serving traffic. Merge to `develop` and it ships.
 
-Two caveats:
+**None of that works until the workflow file is on `main`.** GitHub only reads workflow
+definitions from the **default branch** for the triggers this workflow uses — `workflow_run`
+*and* `workflow_dispatch` alike. So while the deploy workflow exists only on `develop` it
+does not appear in the Actions tab at all, and `gh workflow run "Deploy (Strato)"` fails with
+*could not find any workflows named…*. There is no "run it manually in the meantime": the
+first deploy requires merging to `main` first, or deploying by hand.
 
-- `workflow_run` only fires when the deploy workflow is on the **default branch** (`main`).
-  Until `develop` has been merged to `main` once, automatic deploys do not happen.
-- To deploy on demand, run the **Deploy (Strato)** workflow from the Actions tab.
+### Deploying by hand
 
-You can also assemble a release by hand — `./deploy/strato/build-release.sh /tmp/release` —
-which is mostly useful for inspecting what would be shipped. The script strips dev
-dependencies from `backend/vendor` to build, and restores them on the way out whatever
-happens, so there is nothing to reinstall afterwards — unless the restore itself fails,
-which it tells you about, printing the `composer install` to run by hand.
+This is the genuine interim path, and it is also what you fall back to if the runner is
+unavailable. It is the same sequence the workflow performs, with the same release-name
+convention (a sortable UTC timestamp plus the short SHA being deployed, e.g.
+`20260725143012-a1b2c3d`):
+
+```bash
+name="$(date -u +%Y%m%d%H%M%S)-$(git rev-parse --short HEAD)"
+
+./deploy/strato/build-release.sh /tmp/sfr-release
+cp deploy/strato/activate-release.sh /tmp/sfr-release/activate-release.sh
+rsync -az "/tmp/sfr-release/" "strato-feedreader:simplefeedreader/releases/${name}/"
+ssh strato-feedreader "bash ~/simplefeedreader/releases/${name}/activate-release.sh ~/simplefeedreader '${name}'"
+```
+
+The `cp` is not optional: the workflow ships the activation script *inside* the release, so
+that a release on disk stays activatable later by exactly the script it was built against.
+
+The rsync destination is written **relative**, without a `~`. A remote path with no leading
+slash is resolved against the remote user's home directory by rsync itself, whereas a `~`
+depends on whether this rsync version hands the path to a remote shell at all — since 3.2.4
+it usually does not. The `~` in the `ssh` line is fine: that one really is a shell command,
+and the remote shell expands the tilde before `bash` ever runs — which matters, because an
+SSH command starts in `$HOME` and `current` ends up storing a path built from that argument.
+
+Building alone — `./deploy/strato/build-release.sh /tmp/release` — is also useful just for
+inspecting what would be shipped. The script strips dev dependencies from `backend/vendor` to
+build, and restores them on the way out whatever happens, so there is nothing to reinstall
+afterwards — unless the restore itself fails, which it tells you about, printing the
+`composer install` to run by hand.
+
+A hand-uploaded release is an ordinary release: the next deploy prunes it by the same rule as
+any other.
 
 ## Running a console command on the server
 
-The host's PHP is `php84` and its SAPI is **cgi-fcgi**, not cli. That changes how a command
-line has to be spelled, and the failure is not obvious:
+**The host has two PHP binaries, and the one on `PATH` is the wrong one.** They are the same
+build — PHP 8.4.22, built 8 June 2026 — and differ only in SAPI:
+
+| | `php84` (on `PATH`) | `/opt/RZphp84/bin/php-cli` |
+| --- | --- | --- |
+| SAPI | cgi-fcgi | cli |
+| `max_execution_time` | **240s** | **0 — no ceiling** |
+| arguments | `-q -f <script> -- <args>`, the `--` mandatory | ordinary; dashes pass straight through |
+| working directory | `chdir()`s into the script's directory | unchanged |
+| `php -r` | unavailable | works |
+| `memory_limit`, extensions, `disable_functions`, `date.timezone` | 512M, all present, none, UTC | identical |
+
+`php84` is a symlink to the cgi-fcgi binary. It is what a shell finds, which is why every
+earlier note here was written around its quirks, but it is not the binary you want: its 240
+second execution ceiling is enough to kill a migration on a table with real data, and MySQL
+commits DDL implicitly, so being killed halfway is not recoverable by a retry.
+
+So use the real CLI, by its absolute path — it is simply not on `PATH`:
 
 ```bash
 ssh strato-feedreader \
-  'php84 -d register_argc_argv=1 -q -f ~/simplefeedreader/current/bin/console -- doctrine:migrations:status'
+  '/opt/RZphp84/bin/php-cli ~/simplefeedreader/current/bin/console doctrine:migrations:status'
 ```
 
-`-d register_argc_argv=1` is belt and braces: the host's ini already has it on (measured
-2026-07-25), but `activate-release.sh` pins it anyway, because if the host ever turned it
-off Symfony's `ArgvInput` would see no arguments and silently degrade every command into
-`bin/console list`, exiting 0. Write commands the same way the script does, so a command you
-ran by hand and a command the deploy ran are the same command.
+That is exactly what `activate-release.sh` does, deliberately: a command you run by hand and a
+command the deploy ran should be the same command. The path to `bin/console` must still be
+absolute — the CLI does **not** `chdir()`, it stays where it was invoked, and an SSH command
+starts in `$HOME`. The `~` above qualifies; a bare `bin/console` does not.
 
-`-q` suppresses the HTTP headers the SAPI would otherwise print ahead of the output. **The
-`--` is mandatory.** The SAPI keeps parsing its own options past the script name, so the
-first dash-prefixed argument aborts with
+The path shape is a Strato convention rather than a lucky find: `php-cli` exists identically
+under `/opt/RZphp82`, `RZphp83`, `RZphp84` and `RZphp85`, and the ini is
+`/opt/RZphp84/etc/php.ini`. `activate-release.sh` checks the binary is there before doing
+anything and tells you this if it is not.
 
+**If Strato ever reorganises `/opt`**, find the new path with
+`ssh strato-feedreader 'ls -d /opt/RZphp*/bin/php-cli'` — and the cgi-fcgi binary still works
+as a fallback, spelled the long way:
+
+```bash
+ssh strato-feedreader \
+  'php84 -q -f ~/simplefeedreader/current/bin/console -- doctrine:migrations:status'
 ```
-Error in argument 4, char 2: no argument for option -
-```
 
+In that form `-q` suppresses the HTTP headers the SAPI prints ahead of the output, and **the
+`--` is mandatory**: the SAPI keeps parsing its own options past the script name, so the first
+dash-prefixed argument aborts with `Error in argument 4, char 2: no argument for option -`
 and exit status 1, before PHP starts. Non-dash arguments happen to work without the
 separator, which is how an earlier probe of this host missed it — do not take a command that
-worked once as evidence that the separator is optional. Always write it. The path must be
-absolute by the time PHP sees it, too: the SAPI does `chdir()` into the script's directory,
-but only after it has found the file, and an SSH command starts in `$HOME`. The `~` above
-qualifies — the remote shell expands it to an absolute path before `php84` is executed — but
-a bare `bin/console` does not.
+worked once as evidence that the separator is optional.
 
-`php -r` does not work at all here.
+The `-d register_argc_argv=1` that used to be pinned on every one of these command lines is
+gone. It guarded against a silent failure that only exists under cgi-fcgi: Symfony's
+`ArgvInput` reads `$_SERVER['argv']`, so with the setting off every command would degrade
+into `bin/console list` and exit 0 — a deploy reporting success having migrated nothing. The
+CLI SAPI populates `argv` unconditionally, ini or no ini, so there is nothing left to pin.
 
 ## Rolling back
 
@@ -252,9 +322,11 @@ also makes the command fail loudly instead of nesting a link inside `current` sh
 `current` ever be a real directory.
 
 No rebuild is needed: the old release is intact on disk, still carrying the symlinks its own
-activation created. Pruning is the deploy workflow's job, not the activation script's, and
-it keeps the five newest releases — so anything older than that is already gone, and a
-hand-uploaded release is subject to the same pruning on the next deploy.
+activation created. Pruning is the deploy workflow's job, not the activation script's, and it
+keeps the five newest releases **plus the live one** — the prune resolves `current` first and
+refuses to delete whatever it points at, even when that release has aged past the fifth
+position, which is exactly what a rollback makes happen. Everything else that old is already
+gone, and a hand-uploaded release is subject to the same rule on the next deploy.
 
 What a rollback does **not** do, because `activate-release.sh` is not re-run:
 
@@ -318,6 +390,7 @@ earlier review rounds had flagged as undiagnosable:
 | `memory_limit` / `max_execution_time` | 512M / 240s |
 | opcache / `allow_url_fopen` / `disable_functions` | on / on / none |
 | `date.timezone` | UTC — matches how the app persists datetimes |
+| Shell-context PHP | **8.4.22 cli** at `/opt/RZphp84/bin/php-cli` — same build as the vhost's, not on `PATH`; 512M, `max_execution_time` **0**, all required extensions, no `disable_functions`, UTC, exit codes propagate |
 
 The decisive detail for the subpath: a request to `/_probe/d/api/health` arrived with
 `SCRIPT_NAME=/_probe/d/index.php` and `REQUEST_URI=/_probe/d/api/health` — exactly the pair
@@ -344,11 +417,15 @@ things were established about it, and each one shapes the deploy:
 
 **What the probe did NOT cover**, and still needs watching on the first real deploy:
 
-- The probe ran a two-line PHP file, not Symfony. Booting the real kernel under cgi-fcgi —
-  and running the console for migrations — is exercised for the first time on deploy.
+- The probe ran a two-line PHP file, not Symfony. Booting the real kernel under cgi-fcgi on
+  the vhost — and running the console under the CLI for migrations — is exercised for the
+  first time on deploy.
 - `fastcgi_finish_request()` does not exist under cgi-fcgi, so the deferred-mailer timing
-  guarantee is weaker here than the code's comments assume.
-- MySQL 8 commits DDL implicitly, so a migration killed by the 240s `max_execution_time`
-  leaves a half-changed schema with no row in `doctrine_migration_versions`. A blind retry
-  then fails on something like "Duplicate column name". Check
-  `doctrine:migrations:status` before retrying a failed deploy.
+  guarantee is weaker here than the code's comments assume. This one is about the *web*
+  SAPI and is unaffected by which binary the deploy uses.
+- MySQL 8 commits DDL implicitly, so a migration that dies partway through leaves a
+  half-changed schema with no row in `doctrine_migration_versions`, and a blind retry then
+  fails on something like "Duplicate column name". Check `doctrine:migrations:status` before
+  retrying a failed deploy. A **timeout** is no longer one of the ways this happens: the CLI
+  has no execution ceiling, and the 240s limit in the table above belongs to the cgi-fcgi
+  SAPI, which the deploy does not use.
