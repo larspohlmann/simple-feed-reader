@@ -1,11 +1,12 @@
 // src/app/auth/reset-password/reset-password.component.ts
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { API_BASE_URL } from '../../core/api';
 import { parseProblem } from '../../core/problem';
+import { adoptAutofilledValues } from '../autofill';
 import { AuthShellComponent } from '../auth-shell/auth-shell.component';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { FormErrorComponent } from '../../shared/form-error/form-error.component';
@@ -30,6 +31,7 @@ export class ResetPasswordComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly i18n = inject(TranslocoService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly token = signal<string | null>(null);
   readonly form = this.fb.group({
@@ -44,7 +46,14 @@ export class ResetPasswordComponent implements OnInit {
 
   submit(): void {
     const token = this.token();
-    if (!token || this.form.invalid || this.loading()) return;
+    if (this.loading()) return;
+    adoptAutofilledValues(this.host.nativeElement, this.form);
+    // Never return in silence: an unexplained no-op reads as a broken button.
+    if (!token || this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.error.set(this.i18n.translate('auth.reset.newInvalidInput'));
+      return;
+    }
     this.loading.set(true);
     this.error.set(null);
     this.http

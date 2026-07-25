@@ -9,6 +9,7 @@ import { API_BASE_URL } from '../../core/api';
 import { parseProblem } from '../../core/problem';
 import { AltchaService } from '../altcha.service';
 import { solveAltcha } from '../altcha';
+import { adoptAutofilledValues } from '../autofill';
 import { AuthShellComponent } from '../auth-shell/auth-shell.component';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { FormErrorComponent } from '../../shared/form-error/form-error.component';
@@ -42,29 +43,9 @@ export class RegisterComponent {
   readonly error = signal<string | null>(null);
   readonly done = signal(false);
 
-  /** Copy what is actually in the inputs into the form model.
-   *
-   *  Angular binds to the `input` event. A password manager filling both fields
-   *  does not always dispatch one -- iOS is the reliable offender -- so the user
-   *  sees their credentials on screen while the form model is still empty, the
-   *  form reads as invalid, and submitting does nothing. Reading the DOM once,
-   *  at submit, closes that gap whatever mechanism did the filling.
-   */
-  private adoptAutofilledValues(): void {
-    const host = this.host.nativeElement;
-    const email = host.querySelector<HTMLInputElement>('input[type="email"]');
-    const password = host.querySelector<HTMLInputElement>('input[type="password"]');
-    if (email && email.value !== this.form.controls.email.value) {
-      this.form.controls.email.setValue(email.value);
-    }
-    if (password && password.value !== this.form.controls.password.value) {
-      this.form.controls.password.setValue(password.value);
-    }
-  }
-
   async submit(): Promise<void> {
     if (this.loading()) return;
-    this.adoptAutofilledValues();
+    adoptAutofilledValues(this.host.nativeElement, this.form);
     // Say why nothing happened. Returning silently here makes the button look
     // broken rather than refused -- and it is not a theoretical case: a password
     // manager can fill both fields without dispatching the event Angular binds

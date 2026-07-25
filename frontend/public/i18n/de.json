@@ -159,7 +159,9 @@
       "savePassword": "Passwort speichern",
       "linkInvalid": "Dieser Link zum Zurücksetzen ist ungültig oder abgelaufen.",
       "requestNew": "Neuen Link anfordern",
-      "failed": "Passwort konnte nicht zurückgesetzt werden. Fordere einen neuen Link an."
+      "failed": "Passwort konnte nicht zurückgesetzt werden. Fordere einen neuen Link an.",
+      "requestInvalidInput": "Bitte gib eine gültige E-Mail-Adresse ein.",
+      "newInvalidInput": "Bitte gib ein Passwort mit mindestens 12 Zeichen ein."
     },
     "verify": {
       "title": "E-Mail bestätigen",
