@@ -86,6 +86,27 @@ header {
   white-space: nowrap;
 }
 
+/* The empty middle of the bar, made tappable — the mobile convention for "back
+   to top". A dedicated element rather than a click handler on the bar itself,
+   so a tap that lands on the padding beside the menu button or the avatar still
+   does nothing. Mobile only, and never while an article is open: there, the
+   entry list is not the visible scroller, so scrolling it to the top would do
+   nothing observable. */
+.tap-to-top {
+  flex: 1;
+  align-self: stretch;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+
+  /* A ~190×55px target would otherwise flash the default translucent tap
+     highlight across the middle of the bar on iOS Safari / Android Chrome —
+     visible on an element meant to be invisible. No other button in src/ needs
+     this because every other one is icon-sized. */
+  -webkit-tap-highlight-color: transparent;
+}
+
 .menu-btn {
   display: none;
   align-items: center;

@@ -31,7 +31,7 @@
 - `frontend/src/app/reader/reader-shell.component.{html,ts,spec.ts}` — forward the header's `scrollTop` to the mounted entry list.
 - `frontend/e2e/header-scroll-mobile.spec.ts` — one phone-viewport test covering both entry points end to end.
 
-**Not modified:** `public/i18n/{en,de}.json`. Both new controls reuse the existing `reader.backToTop` key ("Back to top" / "Zurück nach oben"), which describes them exactly. This is a deliberate deviation from the ticket's sketch of a separate `reader.scrollToTop` key — a second key with identical text would be dead weight for translators.
+**Not modified:** `public/i18n/{en,de}.json`. The corner `app-to-top-button` reuses the existing `reader.backToTop` key ("Back to top" / "Zurück nach oben"), which describes it exactly. This is a deliberate deviation from the ticket's sketch of a separate `reader.scrollToTop` key — a second key with identical text would be dead weight for translators. The app-bar spacer carries no label at all (see Task 4): it is `aria-hidden`, a pointer-only duplicate of the corner button, so the `reader.backToTop` decision applies to that one control only.
 
 ---
 
@@ -597,8 +597,13 @@ import { LayoutService } from '../layout.service';
 Inside `describe('ReaderHeaderComponent', ...)`, next to the existing `auth` stub:
 
 ```ts
-  const layout = { isWide: signal(false), isNarrow: signal(true) };
+  const layout = { isWide: signal(false), isNarrow: signal(true) } satisfies Pick<
+    LayoutService,
+    'isWide' | 'isNarrow'
+  >;
 ```
+
+Typed with `satisfies Pick<LayoutService, 'isWide' | 'isNarrow'>` so a rename on `LayoutService` fails the build instead of surfacing as a runtime `undefined is not a function`.
 
 Add it to the `providers` array in `beforeEach`, and reset it there so cases cannot leak into each other:
 
@@ -632,9 +637,21 @@ Then append these tests to the describe block:
 
       const spacer = el.querySelector('.tap-to-top') as HTMLButtonElement;
       expect(spacer).not.toBeNull();
-      expect(spacer.getAttribute('aria-label')).toBe('Back to top');
+      expect(spacer.getAttribute('aria-hidden')).toBe('true');
+      expect(spacer.getAttribute('tabindex')).toBe('-1');
       spacer.click();
       expect(fired).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not fire when the controls beside it are tapped', () => {
+      const f = create();
+      const el = f.nativeElement as HTMLElement;
+      const fired = jest.fn();
+      f.componentInstance.scrollTop.subscribe(fired);
+
+      (el.querySelector('.menu-btn') as HTMLButtonElement).click();
+      (el.querySelector('[aria-haspopup="menu"]') as HTMLButtonElement).click();
+      expect(fired).not.toHaveBeenCalled();
     });
 
     it('is absent on a wide layout', () => {
@@ -681,15 +698,23 @@ Add the injection next to the other injected services (after line 36):
 In `frontend/src/app/reader/header/reader-header.component.html`, insert between the closing `</div>` of `.left` (line 24) and the opening `<div class="right">` (line 25):
 
 ```html
+  <!-- Pointer-only duplicate of the corner back-to-top button (iOS status-bar-tap
+       convention). Kept out of both the accessibility tree and the tab order:
+       keyboard and screen-reader users already have the corner button, which is
+       visible and labelled, so this element would only add a second, identically
+       named, invisible control between the brand link and the account button. -->
   @if (!articleOpen() && screen.isNarrow()) {
     <button
       class="tap-to-top"
       type="button"
-      [attr.aria-label]="'reader.backToTop' | transloco"
+      aria-hidden="true"
+      tabindex="-1"
       (click)="scrollTop.emit()"
     ></button>
   }
 ```
+
+The spacer carries no `aria-label` and no `transloco` binding — it is `aria-hidden`, so a label would never be read anyway. `reader.backToTop` remains reused, but only by the corner `app-to-top-button`. Both `aria-hidden="true"` and `tabindex="-1"` are required together: an `aria-hidden` element that is still focusable is an `aria-hidden-focus` violation.
 
 In `frontend/src/app/reader/header/reader-header.component.scss`, add after the `.brand .name` rule (line 87):
 
@@ -697,16 +722,22 @@ In `frontend/src/app/reader/header/reader-header.component.scss`, add after the 
 /* The empty middle of the bar, made tappable — the mobile convention for "back
    to top". A dedicated element rather than a click handler on the bar itself,
    so a tap that lands on the padding beside the menu button or the avatar still
-   does nothing. Mobile only, and never while an article is open, where the
-   prev/next and reader-mode controls occupy this space. */
+   does nothing. Mobile only, and never while an article is open: there, the
+   entry list is not the visible scroller, so scrolling it to the top would do
+   nothing observable. */
 .tap-to-top {
   flex: 1;
   align-self: stretch;
-  min-width: 0;
   padding: 0;
   background: none;
   border: none;
   cursor: pointer;
+
+  /* A ~190×55px target would otherwise flash the default translucent tap
+     highlight across the middle of the bar on iOS Safari / Android Chrome —
+     visible on an element meant to be invisible. No other button in src/ needs
+     this because every other one is icon-sized. */
+  -webkit-tap-highlight-color: transparent;
 }
 ```
 
@@ -948,4 +979,4 @@ Check each off against the built app before opening the PR:
 - [ ] The list header expands again once back at the top.
 - [ ] Under `prefers-reduced-motion` the scroll is instant and the button does not animate in.
 - [ ] The remembered scroll offset resets to 0, so a resume-reload also lands at the top.
-- [ ] Unit tests cover the header button's emit and both absence cases, `scrollToTop()`'s scroll and collapse reset, the `showToTop` threshold, and the reduced-motion branch.
+- [ ] Unit tests cover the header spacer's `aria-hidden`/`tabindex` and emit, both absence cases, that taps beside it (menu button, account button) do not fire it, `scrollToTop()`'s scroll and collapse reset, the `showToTop` threshold, and the reduced-motion branch.
