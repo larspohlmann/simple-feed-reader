@@ -5,19 +5,12 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Dto\OAuth\OAuthExchangeRequest;
-use App\Entity\User;
-use App\Exception\AccountNotActiveException;
-use App\Exception\InvalidTokenException;
 use App\Exception\OAuth\OAuthFailedException;
 use App\Exception\RateLimitedException;
-use App\Repository\UserRepository;
-use App\Security\AccountStatusException;
-use App\Security\LoginUserChecker;
 use App\Service\OAuth\LoginCodeStore;
-use App\Service\OAuth\OAuthAccountLinker;
 use App\Service\OAuth\OAuthProviderRegistry;
+use App\Service\OAuth\OAuthSignIn;
 use App\Service\OAuth\OAuthStateStore;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -39,6 +32,13 @@ use Symfony\Component\Routing\Attribute\Route;
  * A JWT in a redirect's query string would be written to browser history, sent
  * onward in `Referer` headers and logged verbatim by every proxy in between;
  * the code is worthless 30 seconds later and worthless after one use.
+ *
+ * What this class does NOT decide: what the login code is bound to, which
+ * failures are indistinguishable from one another, and where the account-status
+ * gate sits. Those are one rule set spanning both legs and they live in
+ * {@see OAuthSignIn}. What is left here is the HTTP around them — reading the
+ * binding cookie off the request, setting and clearing it, and choosing between
+ * a redirect and problem+json.
  *
  * ROUTE ORDER IS LOAD-BEARING. `/{provider}` would happily match `providers`
  * and `exchange` too, so the two literal routes are declared FIRST — Symfony
@@ -106,11 +106,7 @@ final class OAuthController
     public function __construct(
         private readonly OAuthProviderRegistry $providers,
         private readonly OAuthStateStore $stateStore,
-        private readonly LoginCodeStore $loginCodes,
-        private readonly OAuthAccountLinker $linker,
-        private readonly UserRepository $users,
-        private readonly JWTTokenManagerInterface $jwtManager,
-        private readonly LoginUserChecker $loginUserChecker,
+        private readonly OAuthSignIn $signIn,
         private readonly ClockInterface $clock,
         private readonly LoggerInterface $logger,
         private readonly RateLimiterFactoryInterface $oauthStartLimiter,
@@ -161,37 +157,17 @@ final class OAuthController
         // sent none — which the store treats as a failure, not as a reason to
         // skip the check.
         $browserToken = $httpRequest->cookies->get(self::FLOW_COOKIE);
-        $userId = $this->loginCodes->consume(
+
+        $token = $this->signIn->redeemLoginCode(
             $request->code,
             \is_string($browserToken) ? $browserToken : null,
         );
 
-        // Unknown, already spent, expired, or — the case a bearer code could
-        // never catch — presented by a browser that did not complete the flow.
-        // All four are one answer on purpose: a caller who could tell them
-        // apart could confirm that a captured code was still live.
-        if (null === $userId) {
-            throw new InvalidTokenException();
-        }
-
-        $user = $this->users->find($userId);
-
-        // The account was deleted, or purged, between the callback and this
-        // request. Same answer as a bad code — there is nothing to sign in as,
-        // and the two must not be distinguishable.
-        if (!$user instanceof User) {
-            throw new InvalidTokenException();
-        }
-
-        $this->assertMayLogIn($user);
-
         // The code is spent and the session has begun, so the binding has
-        // nothing left to bind. Not cleared on the 403 path above: that throws,
-        // so the response is the exception listener's rather than ours — and
-        // the cookie expires with the flow's ten minutes regardless.
-        return $this->clearFlowCookie(
-            new JsonResponse(['token' => $this->jwtManager->create($user)]),
-        );
+        // nothing left to bind. Not cleared when redeeming throws: the response
+        // is then the exception listener's rather than ours — and the cookie
+        // expires with the flow's ten minutes regardless.
+        return $this->clearFlowCookie(new JsonResponse(['token' => $token]));
     }
 
     /**
@@ -270,35 +246,24 @@ final class OAuthController
             return $this->failure('exchange_failed');
         }
 
-        $user = $this->linker->resolve($identity);
-
-        // Deliberately NOT gated on status here. A pending_approval or
-        // suspended user still receives a login code and still exchanges it —
-        // and exchange() is where the status check lives, so that the SPA gets
-        // a proper problem+json explaining WHY it cannot sign in, exactly as
-        // the password login does. Refusing here would collapse "you are
-        // waiting for approval" into a generic redirect error.
-        //
-        // The login code is worth nothing on its own: it names a user id, and
-        // exchange() re-reads that user and re-runs the status gate before any
-        // token is minted.
-        $userId = $user->getId();
-        \assert(null !== $userId);
-
         // consume() above refuses a null token outright, so reaching this line
         // proves the cookie was present and matched. Restated for the type
-        // checker, and because the next line depends on it being a string.
+        // checker, and because issuing the code depends on it being a string.
         \assert(null !== $browserToken);
 
-        // NOT cleared here, unlike every failure exit. The code minted below is
-        // bound to this same value and the exchange needs it back one hop
-        // later; clearing here would make every sign-in fail with what looks
-        // exactly like a bad code. exchange() clears it instead, once the code
-        // has been spent and the binding has nothing left to bind.
+        // The flow cookie is NOT cleared here, unlike every failure exit. The
+        // code minted below is bound to this same value and the exchange needs
+        // it back one hop later; clearing here would make every sign-in fail
+        // with what looks exactly like a bad code. exchange() clears it instead,
+        // once the code has been spent and the binding has nothing left to bind.
+        //
+        // Note that a suspended or pending user reaches this line too, and
+        // leaves with a working code — see OAuthSignIn::issueLoginCode() for why
+        // the status gate deliberately sits at the exchange instead.
         return new RedirectResponse(\sprintf(
             '%s/auth/callback?code=%s',
             $this->frontendBaseUrl(),
-            urlencode($this->loginCodes->issue($userId, $browserToken)),
+            urlencode($this->signIn->issueLoginCode($identity, $browserToken)),
         ));
     }
 
@@ -414,42 +379,6 @@ final class OAuthController
         );
 
         return $response;
-    }
-
-    /**
-     * The status gate, and the ONLY thing between a suspended account and a
-     * working JWT on this path.
-     *
-     * OAuthAccountLinker::resolve() deliberately returns suspended and rejected
-     * users unchanged — linking proves an address, it does not overrule an
-     * admin — so nothing earlier in this flow refuses them. Delete this call
-     * and a suspended user signs in through OAuth.
-     *
-     * LoginUserChecker::checkPostAuth() is called rather than the rule being
-     * restated, so a future status change is made in exactly one place and both
-     * login paths follow it. The translation below is the same one
-     * LoginFailureHandler performs for the password login: the security layer's
-     * AccountStatusException is an AuthenticationException, which the API
-     * exception listener renders as a bare 401 "unauthorized" — correct for a
-     * stolen JWT, wrong here, where the user has just proved an identity and is
-     * owed the reason.
-     *
-     * The plan suggested teaching the listener to map AccountStatusException
-     * globally instead. That was rejected on purpose: the `api` firewall's
-     * UserChecker throws the SAME exception for a suspended holder of a live
-     * token, and JwtAccessTest::testSuspendedTokenDoesNotLeakAccountStatus
-     * pins that path to a 401 disclosing nothing. A global mapping would put a
-     * status-disclosing 403 one listener-priority change away from that path.
-     * Disclosure is decided at the endpoint that verified an identity, which is
-     * exactly where LoginFailureHandler decides it too.
-     */
-    private function assertMayLogIn(User $user): void
-    {
-        try {
-            $this->loginUserChecker->checkPostAuth($user);
-        } catch (AccountStatusException $e) {
-            throw new AccountNotActiveException($e->accountStatus);
-        }
     }
 
     /**

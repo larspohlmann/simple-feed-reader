@@ -60,7 +60,7 @@ final readonly class GoogleOAuthProvider extends AbstractOidcProvider
         return 'openid email';
     }
 
-    protected function getTokenEndpoint(): string
+    protected function getTokenEndpointUrl(): string
     {
         return self::TOKEN_ENDPOINT;
     }
