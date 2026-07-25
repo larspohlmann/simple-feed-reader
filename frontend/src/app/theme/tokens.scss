@@ -26,6 +26,11 @@
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
+
+  /* Breathing room between the floating top bars and the content that starts
+     beneath them. Added to the measured bar heights by every scrolling pane, so
+     this one value tunes the gap everywhere (#87). */
+  --bar-gap: var(--space-4);
   --font-sans: system-ui, -apple-system, 'Segoe UI', roboto, sans-serif;
   --fs-sm: 13px;
   --fs-base: 15px;

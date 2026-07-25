@@ -6,7 +6,7 @@
   /* The other scrolling pane under the floating app bar, and it reserves the
      bar's height the same way the list does: a constant, so retracting the bar
      never resizes this box (#87). The article passes underneath it. */
-  padding-top: var(--app-bar-h, 56px);
+  padding-top: calc(var(--app-bar-h, 56px) + var(--bar-gap));
 }
 
 /* A query container so the back button can react to the reading pane's
