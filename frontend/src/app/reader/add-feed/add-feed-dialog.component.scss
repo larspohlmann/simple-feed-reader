@@ -7,6 +7,27 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+
+  /* Discovery can return any number of candidates, each a card with badges and
+     up to three sample headlines, so this dialog outgrows a phone screen at
+     three of them. Cap it and let the candidate list scroll inside (#85).
+     `dvh` tracks mobile Safari's collapsing toolbar; the `vh` line above it is
+     the fallback for browsers without it. */
+  max-height: 90vh;
+  max-height: 90dvh;
+
+  /* The list is the scroller, not the box -- the heading and the Cancel row
+     must stay reachable. */
+  overflow: hidden;
+}
+
+/* Only the candidate list scrolls, so `min-height: 0` has to travel down the
+   whole flex chain: without it every ancestor keeps its content height and the
+   overflow silently reappears at the bottom of the dialog. */
+form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 h2 {
@@ -41,9 +62,20 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+
+  /* The one part of the dialog that grows without bound. It gives up its height
+     first (`min-height: 0`) and scrolls; `overscroll-behavior: contain` stops a
+     flick past the last card from scrolling the reader underneath. */
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .card {
+  /* A card inside a scrolling flex column must keep its natural height rather
+     than compress to make the list fit. */
+  flex: none;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -123,6 +155,10 @@ h2 {
 }
 
 .row {
+  /* Separates the pinned footer from the candidate list's scroll edge, where a
+     card is otherwise clipped flush against the buttons. Matches the sibling
+     dialogs, which already space their footer this way. */
+  margin-top: var(--space-2);
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
