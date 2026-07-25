@@ -232,6 +232,36 @@ describe('ReaderViewComponent', () => {
     });
   });
 
+  // #107: the reading focus only ever fully highlights the block at the viewport
+  // centre, and the article used to stop scrolling with its last paragraph at the
+  // bottom edge — the one block that could never be brought into focus.
+  describe('tail space below a long article', () => {
+    /** Pin the pane's height and where the article's own content box ends. */
+    function stubGeometry(f: ReturnType<typeof mount>, contentBottom: number, viewport: number) {
+      const host = f.nativeElement as HTMLElement;
+      Object.defineProperty(host, 'clientHeight', { configurable: true, value: viewport });
+      host.getBoundingClientRect = () => ({ top: 0, bottom: viewport }) as DOMRect;
+      const content = host.querySelector('.content') as HTMLElement;
+      content.getBoundingClientRect = () => ({ top: 0, bottom: contentBottom }) as DOMRect;
+      // A resize is one of the moments the pane re-measures itself.
+      window.dispatchEvent(new Event('resize'));
+      f.detectChanges();
+      return host;
+    }
+
+    it('adds it when the article is taller than the pane', () => {
+      const f = mount(entry());
+      const host = stubGeometry(f, 2400, 800);
+      expect(host.querySelector('.reader')!.classList).toContain('with-tail');
+    });
+
+    it('withholds it from an article that fits, which would be dead scroll', () => {
+      const f = mount(entry());
+      const host = stubGeometry(f, 400, 800);
+      expect(host.querySelector('.reader')!.classList).not.toContain('with-tail');
+    });
+  });
+
   it('emits favorite/keep/read/prev/next/close', () => {
     const f = mount(entry());
     const c = { favorite: 0, keep: 0, read: 0, prev: 0, next: 0, close: 0 };
