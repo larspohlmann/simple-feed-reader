@@ -126,11 +126,11 @@ describe('ReaderViewComponent', () => {
     it('appears only after scrolling down and jumps back to the top on click', () => {
       const f = mount(entry());
       const host = f.nativeElement as HTMLElement;
-      expect(host.querySelector('.to-top')).toBeNull(); // hidden at the top
+      expect(host.querySelector('app-to-top-button')).toBeNull(); // hidden at the top
 
       scrollHostTo(host, 900);
       f.detectChanges();
-      const btn = host.querySelector('.to-top') as HTMLButtonElement;
+      const btn = host.querySelector('app-to-top-button button') as HTMLButtonElement;
       expect(btn).not.toBeNull();
 
       const scrollTo = jest.fn();
@@ -144,11 +144,25 @@ describe('ReaderViewComponent', () => {
       const host = f.nativeElement as HTMLElement;
       scrollHostTo(host, 900);
       f.detectChanges();
-      expect(host.querySelector('.to-top')).not.toBeNull();
+      expect(host.querySelector('app-to-top-button')).not.toBeNull();
 
       scrollHostTo(host, 20);
       f.detectChanges();
-      expect(host.querySelector('.to-top')).toBeNull();
+      expect(host.querySelector('app-to-top-button')).toBeNull();
+    });
+
+    // #98: the button unmounts once showToTop flips false, which would otherwise
+    // drop keyboard focus to <body> and strand a keyboard/screen-reader user.
+    it('moves focus to the article title instead of dropping it to the body', () => {
+      const f = mount(entry());
+      const host = f.nativeElement as HTMLElement;
+      scrollHostTo(host, 900);
+      f.detectChanges();
+      host.scrollTo = jest.fn() as unknown as typeof host.scrollTo;
+
+      (host.querySelector('app-to-top-button button') as HTMLButtonElement).click();
+
+      expect(document.activeElement).toBe(host.querySelector('h1.title'));
     });
   });
 

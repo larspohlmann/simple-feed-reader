@@ -63,7 +63,7 @@
             <app-icon name="arrow_back" [size]="20" />
           </button>
         }
-        <h1 class="title">{{ e.title }}</h1>
+        <h1 class="title" #titleHeading tabindex="-1">{{ e.title }}</h1>
       </div>
       <p class="meta">
         <app-favicon [url]="e.faviconUrl" [size]="16" />{{ e.source }}
@@ -145,14 +145,7 @@
     }
   </div>
   @if (showToTop()) {
-    <button
-      class="to-top"
-      type="button"
-      [attr.aria-label]="'reader.backToTop' | transloco"
-      (click)="scrollToTop()"
-    >
-      <app-icon name="arrow_upward" [size]="20" />
-    </button>
+    <app-to-top-button (activate)="scrollToTop()" />
   }
 } @else {
   <div class="placeholder">

@@ -8,10 +8,17 @@ import { ReaderModeService } from '../reader-mode.service';
 import { ReaderHeaderComponent } from './reader-header.component';
 import { signal } from '@angular/core';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
+import { LayoutService } from '../layout.service';
 
 describe('ReaderHeaderComponent', () => {
   const auth = { user: signal({ email: 'a@b.c' }), logout: jest.fn(), isAdmin: () => false };
+  const layout = { isWide: signal(false), isNarrow: signal(true) } satisfies Pick<
+    LayoutService,
+    'isWide' | 'isNarrow'
+  >;
   beforeEach(() => {
+    layout.isNarrow.set(true);
+    layout.isWide.set(false);
     localStorage.clear();
     TestBed.configureTestingModule({
       imports: [ReaderHeaderComponent, provideTranslocoTesting()],
@@ -21,6 +28,7 @@ describe('ReaderHeaderComponent', () => {
         provideRouter([]),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
         { provide: AuthService, useValue: auth },
+        { provide: LayoutService, useValue: layout },
       ],
     });
   });
@@ -129,5 +137,45 @@ describe('ReaderHeaderComponent', () => {
     (el.querySelector('[aria-haspopup="menu"]') as HTMLButtonElement).click();
     f.detectChanges();
     expect(el.querySelector('a[routerLink="/admin/users"]')).not.toBeNull();
+  });
+
+  describe('tap the empty middle to scroll the list to the top', () => {
+    it('emits scrollTop when the middle of the bar is tapped on mobile', () => {
+      const f = create();
+      const el = f.nativeElement as HTMLElement;
+      const fired = jest.fn();
+      f.componentInstance.scrollTop.subscribe(fired);
+
+      const spacer = el.querySelector('.tap-to-top') as HTMLButtonElement;
+      expect(spacer).not.toBeNull();
+      expect(spacer.getAttribute('aria-hidden')).toBe('true');
+      expect(spacer.getAttribute('tabindex')).toBe('-1');
+      spacer.click();
+      expect(fired).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not fire when the controls beside it are tapped', () => {
+      const f = create();
+      const el = f.nativeElement as HTMLElement;
+      const fired = jest.fn();
+      f.componentInstance.scrollTop.subscribe(fired);
+
+      (el.querySelector('.menu-btn') as HTMLButtonElement).click();
+      (el.querySelector('[aria-haspopup="menu"]') as HTMLButtonElement).click();
+      expect(fired).not.toHaveBeenCalled();
+    });
+
+    it('is absent on a wide layout', () => {
+      layout.isNarrow.set(false);
+      const el = create().nativeElement as HTMLElement;
+      expect(el.querySelector('.tap-to-top')).toBeNull();
+    });
+
+    it('is absent while an article is open', () => {
+      const f = create();
+      f.componentRef.setInput('articleOpen', true);
+      f.detectChanges();
+      expect((f.nativeElement as HTMLElement).querySelector('.tap-to-top')).toBeNull();
+    });
   });
 });

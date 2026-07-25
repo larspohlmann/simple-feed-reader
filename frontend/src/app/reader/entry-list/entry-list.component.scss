@@ -301,3 +301,17 @@
     animation: none;
   }
 }
+
+/* Anchored to this component's own box (`:host` is already relative), not to the
+   viewport: in split-pane mode a fixed button would hang over the reader pane
+   instead of the list it scrolls. This component establishes no stacking
+   context, so the number below competes directly in the shell's global scale.
+   The list stays mounted under an open article and `showToTop` isn't cleared
+   when one opens, so the button renders the whole time — it must stay strictly
+   below `.article-overlay`'s z-index: 5 (reader-shell.component.scss) or it
+   would punch through the open article on mobile. */
+app-to-top-button {
+  right: 24px;
+  bottom: 24px;
+  z-index: 4;
+}

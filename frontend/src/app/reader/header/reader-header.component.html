@@ -22,6 +22,20 @@
       <span class="name">simple feed reader</span>
     </a>
   </div>
+  <!-- Pointer-only duplicate of the corner back-to-top button (iOS status-bar-tap
+       convention). Kept out of both the accessibility tree and the tab order:
+       keyboard and screen-reader users already have the corner button, which is
+       visible and labelled, so this element would only add a second, identically
+       named, invisible control between the brand link and the account button. -->
+  @if (!articleOpen() && screen.isNarrow()) {
+    <button
+      class="tap-to-top"
+      type="button"
+      aria-hidden="true"
+      tabindex="-1"
+      (click)="scrollTop.emit()"
+    ></button>
+  }
   <div class="right">
     @if (articleOpen()) {
       @if (readerMode.canToggle()) {

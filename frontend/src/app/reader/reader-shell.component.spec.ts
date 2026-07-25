@@ -3,11 +3,14 @@ import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { By } from '@angular/platform-browser';
 import { BehaviorSubject, of } from 'rxjs';
 import { signal } from '@angular/core';
 import { API_BASE_URL } from '../core/api';
 import { AuthService } from '../core/auth.service';
 import { ReaderShellComponent } from './reader-shell.component';
+import { EntryListComponent } from './entry-list/entry-list.component';
+import { ReaderHeaderComponent } from './header/reader-header.component';
 
 describe('ReaderShellComponent', () => {
   let ctrl: HttpTestingController;
@@ -257,5 +260,18 @@ describe('ReaderShellComponent', () => {
       .flush({ entries: [], nextCursor: null });
     f.detectChanges();
     expect(f.nativeElement.querySelector('.empty')).not.toBeNull();
+  });
+
+  it('forwards the header tap to the entry list', () => {
+    const f = boot();
+    const list = f.debugElement.query(By.directive(EntryListComponent))
+      .componentInstance as EntryListComponent;
+    const jump = jest.spyOn(list, 'scrollToTop').mockImplementation(() => undefined);
+
+    const header = f.debugElement.query(By.directive(ReaderHeaderComponent))
+      .componentInstance as ReaderHeaderComponent;
+    header.scrollTop.emit();
+
+    expect(jump).toHaveBeenCalledTimes(1);
   });
 });

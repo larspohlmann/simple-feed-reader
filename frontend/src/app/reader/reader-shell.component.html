@@ -9,6 +9,7 @@
   (toggleSidebar)="setSidebarOpen(!sidebarOpen())"
   (prev)="onPrev()"
   (next)="onNext()"
+  (scrollTop)="onScrollListTop()"
 />
 <!-- No top offset here: the scrolling panes reserve the header's height
      themselves (via --app-bar-h) and their content passes under it, so
@@ -123,16 +124,17 @@
         (open)="onOpen($event)"
       />
       @if (openEntry()) {
-        <app-reader-view
-          class="article-overlay"
-          [entry]="openEntry()"
-          [tags]="openEntryTags()"
-          [showToolbar]="false"
-          (favorite)="withOpen(onFavorite)"
-          (keep)="withOpen(onKeep)"
-          (read)="withOpen(onToggleRead)"
-          (close)="onCloseReader()"
-        />
+        <div class="article-overlay">
+          <app-reader-view
+            [entry]="openEntry()"
+            [tags]="openEntryTags()"
+            [showToolbar]="false"
+            (favorite)="withOpen(onFavorite)"
+            (keep)="withOpen(onKeep)"
+            (read)="withOpen(onToggleRead)"
+            (close)="onCloseReader()"
+          />
+        </div>
       }
     }
   </main>

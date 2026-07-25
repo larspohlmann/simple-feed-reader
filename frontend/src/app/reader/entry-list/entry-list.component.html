@@ -3,7 +3,7 @@
      rows stay put under the finger (#87). -->
 <header class="list-header" #listHdr [class.collapsed]="collapsed()">
   <div class="heading">
-    <h2>{{ title() }}</h2>
+    <h2 #listTitle tabindex="-1">{{ title() }}</h2>
     @if (lastRefreshedLabel()) {
       <span class="last-refreshed"
         >{{ 'reader.lastRefreshed' | transloco }} {{ lastRefreshedLabel() }}</span
@@ -181,4 +181,8 @@
       </div>
     }
   </div>
+}
+
+@if (showToTop()) {
+  <app-to-top-button (activate)="scrollToTop()" />
 }

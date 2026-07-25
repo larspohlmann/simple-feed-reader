@@ -1,7 +1,13 @@
 :host {
   display: flex;
   flex-direction: column;
+
+  /* `dvh` tracks mobile Safari's toolbar, which never minimizes here because
+     the page itself does not scroll — an inner container does. Without it the
+     shell's bottom edge, and anything anchored to it, hides behind the toolbar.
+     The `vh` line above is the fallback for browsers without `dvh`. */
   height: 100vh;
+  height: 100dvh;
 
   /* Clip the header when it slides up off the top (hide-on-scroll), and anchor
      it: it is positioned against this box, not the viewport. */
@@ -67,7 +73,17 @@ app-reader-header.hidden {
 
 /* The full-screen article sits on top of the still-mounted list. The reader's
          own host background is transparent, so a swipe-away reveals the list
-         underneath; it enters by sliding in from the right. */
+         underneath; it enters by sliding in from the right.
+
+         This animation must live on a wrapper, NOT on `app-reader-view` itself:
+         that component's host is the article's own scroller (`overflow: auto`),
+         and a non-`none` transform on a scroll container becomes the containing
+         block for its `position: fixed` descendants — including the corner
+         back-to-top button. For the length of the animation the button would
+         resolve `fixed` against the scroller's own (unscrolled) box instead of
+         the viewport, so it rides up off-screen with whatever the article's
+         scrollTop happens to be (#100). A wrapper that never scrolls keeps that
+         containing-block promotion harmless: its box is always the full pane. */
 .article-overlay {
   position: absolute;
   inset: 0;

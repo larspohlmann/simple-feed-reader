@@ -8,6 +8,7 @@ import { UserAvatarComponent } from '../../shared/user-avatar/user-avatar.compon
 import { AuthService } from '../../core/auth.service';
 import { ReaderModeService } from '../reader-mode.service';
 import { RefreshService } from '../refresh.service';
+import { LayoutService } from '../layout.service';
 import { TagDto } from '../models';
 
 @Component({
@@ -30,9 +31,12 @@ export class ReaderHeaderComponent {
   readonly toggleSidebar = output<void>();
   readonly prev = output<void>();
   readonly next = output<void>();
+  /** The empty middle of the bar was tapped — scroll the list back to the top. */
+  readonly scrollTop = output<void>();
 
   readonly auth = inject(AuthService);
   readonly readerMode = inject(ReaderModeService);
   readonly refreshSvc = inject(RefreshService);
+  readonly screen = inject(LayoutService);
   readonly menuOpen = signal(false);
 }

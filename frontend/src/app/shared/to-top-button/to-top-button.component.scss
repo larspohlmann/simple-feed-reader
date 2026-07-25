@@ -1,0 +1,40 @@
+/* Out of flow by default so it can hang in a corner; the consumer supplies the
+   offsets, the stacking order, and whether it pins to the viewport instead.
+
+   That override has to come from the consumer's own component stylesheet, where
+   it compiles to `app-to-top-button[_ngcontent-x]` and outranks this `:host`
+   (`[_nghost-x]`) on specificity. The same selector in a global stylesheet is a
+   bare type selector, loses to this rule, and would silently leave the button
+   absolutely positioned against whatever ancestor happens to be relative. */
+:host {
+  position: absolute;
+  display: inline-flex;
+}
+
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 25%);
+  animation: to-top-in 0.15s ease-out;
+}
+
+@keyframes to-top-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button {
+    animation: none;
+  }
+}

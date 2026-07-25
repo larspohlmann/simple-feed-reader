@@ -17,6 +17,10 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
+import {
+  BACK_TO_TOP_AFTER_PX,
+  ToTopButtonComponent,
+} from '../../shared/to-top-button/to-top-button.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
 import { EntryDto, ReaderArticle, SubscriptionTagDto } from '../models';
 import { ReaderContentService } from '../reader-content.service';
@@ -46,9 +50,6 @@ const LEAVE_ANIM_MS = 220;
 const ARTICLE_SETTLE_FRAMES = 60;
 const ARTICLE_SETTLE_STABLE = 4;
 
-/** How far the reader must scroll before the back-to-top button appears. */
-const BACK_TO_TOP_AFTER_PX = 500;
-
 /** Below this many headings an article is too short to warrant a contents list. */
 const TOC_MIN_HEADINGS = 3;
 
@@ -72,7 +73,14 @@ function slugify(text: string): string {
 
 @Component({
   selector: 'app-reader-view',
-  imports: [IconComponent, FaviconComponent, SpinnerComponent, SourceTagsComponent, TranslocoPipe],
+  imports: [
+    IconComponent,
+    FaviconComponent,
+    SpinnerComponent,
+    SourceTagsComponent,
+    ToTopButtonComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './reader-view.component.html',
   styleUrl: './reader-view.component.scss',
 })
@@ -96,6 +104,8 @@ export class ReaderViewComponent {
   readonly close = output<void>();
 
   private readonly content = viewChild<ElementRef<HTMLElement>>('content');
+  /** Focus target for the corner button on activation — see scrollToTop(). */
+  private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly reader = inject(ReaderContentService);
   protected readonly readerMode = inject(ReaderModeService);
@@ -381,6 +391,13 @@ export class ReaderViewComponent {
   scrollToTop(): void {
     this.pendingRestore = null; // don't let a restore fight the jump
     this.host.nativeElement.scrollTo({ top: 0, behavior: this.reduceMotion ? 'auto' : 'smooth' });
+    // Land focus on the title, not just wherever the button happened to be: the
+    // button unmounts as soon as showToTop flips false, and an unmounted focused
+    // element drops focus to <body>, stranding a keyboard/screen-reader user.
+    // preventScroll is required — the heading is still off-screen at this instant
+    // (that's why the button was showing), and a plain focus() would yank it into
+    // view and cancel the smooth scroll above.
+    this.titleHeading()?.nativeElement.focus({ preventScroll: true });
   }
 
   /**
