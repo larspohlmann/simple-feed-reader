@@ -31,13 +31,15 @@ SHARED="${ROOT}/shared"
 #
 #   -q                      suppresses the HTTP headers the SAPI would
 #                           otherwise print ahead of the command's output.
-#   register_argc_argv      is what the php.ini PHP ships for production turns
-#                           off, and it is the host's ini, not ours. Symfony's
-#                           ArgvInput reads $_SERVER['argv'], so left off every
-#                           command below degrades into `bin/console list` and
-#                           exits 0 -- a deploy that reports success while
-#                           having migrated nothing. Forced on rather than
-#                           trusted, because the failure is silent.
+#   register_argc_argv      is already on in the host's ini (measured
+#                           2026-07-25), so this is belt and braces, not a fix.
+#                           It is pinned because the failure mode is silent
+#                           rather than loud: Symfony's ArgvInput reads
+#                           $_SERVER['argv'], which this setting populates, so
+#                           if the host ever flips it off every command below
+#                           would degrade into `bin/console list` and exit 0 --
+#                           a deploy that reports success having migrated
+#                           nothing. The ini is the host's, not ours.
 #   --                      is mandatory. The SAPI keeps parsing options after
 #                           the script name, so `-f bin/console cache:clear
 #                           --no-interaction` aborts with "no argument for
