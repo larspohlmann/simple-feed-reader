@@ -458,6 +458,10 @@ composer install \
 
 echo "==> Frontend bundle (/reader base href)"
 npm --prefix "${ROOT}/frontend" ci
+# BOTH configurations, in this order. `strato` alone still produces a working,
+# correctly-routed bundle -- but it silently loses content hashing, so browsers
+# and caches keep serving the previous deploy's JavaScript. The hash check
+# below is what catches that if this line is ever shortened.
 npm --prefix "${ROOT}/frontend" exec -- ng build --configuration production,strato
 
 echo "==> Copying backend"
@@ -482,6 +486,12 @@ test -f "${OUT}/public/.htaccess"   || { echo "missing .htaccess"; exit 1; }
 test -d "${OUT}/vendor"             || { echo "missing vendor/"; exit 1; }
 grep -q 'base href="/reader/"' "${OUT}/public/index.html" \
     || { echo "SPA was not built with the /reader base href"; exit 1; }
+
+# Content hashing proves the production configuration composed in. Without it
+# the deploy would ship cache-poisoned filenames (main.js rather than
+# main-<hash>.js) and users would keep running the previous release's code.
+ls "${OUT}/public/" | grep -qE '^main-[A-Z0-9]+\.js$' \
+    || { echo "bundle is not content-hashed: build the SPA with --configuration production,strato"; exit 1; }
 
 echo "==> Release assembled"
 du -sh "${OUT}"
