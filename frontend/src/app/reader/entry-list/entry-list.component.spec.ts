@@ -57,6 +57,38 @@ describe('EntryListComponent', () => {
     expect(el.querySelectorAll('app-entry-row').length).toBe(2);
   });
 
+  // #87: the collapsing list header is a second bar with the same defect as the
+  // app header — it used to shrink the list's own box, resizing the scroller
+  // mid-gesture. It floats over reserved padding now.
+  describe('collapsing list header', () => {
+    it('publishes the expanded bar height and keeps it while collapsed', () => {
+      const f = mount({ layout: 'list' });
+      const host = f.nativeElement as HTMLElement;
+      // jsdom has no ResizeObserver, so stand in for the measurement.
+      f.componentInstance.headerHeight.set(53);
+      f.detectChanges();
+      expect(host.style.getPropertyValue('--list-bar-h')).toBe('53px');
+
+      // The reservation must not follow the bar down: the scroller's padding is
+      // computed from this value, and shrinking it would move every row.
+      f.componentInstance.collapsed.set(true);
+      f.detectChanges();
+      expect(host.style.getPropertyValue('--list-bar-h')).toBe('53px');
+      expect(host.querySelector('.list-header')!.classList).toContain('collapsed');
+    });
+
+    it('marks the scroller so it drops the reservation when a banner takes it', () => {
+      // Both claiming it would open a gap the height of both bars below the banner.
+      const el = mount({ layout: 'list', error: { title: 'Nope', detail: 'Broken' } })
+        .nativeElement as HTMLElement;
+      expect(el.querySelector('.banner')).not.toBeNull();
+      expect(el.querySelector('.rows')!.classList).toContain('after-banner');
+
+      const clean = mount({ layout: 'list' }).nativeElement as HTMLElement;
+      expect(clean.querySelector('.rows')!.classList).not.toContain('after-banner');
+    });
+  });
+
   it('shows skeletons while loading and an empty state when empty', () => {
     expect(
       (mount({ loading: true, entries: [] }).nativeElement as HTMLElement).querySelector(

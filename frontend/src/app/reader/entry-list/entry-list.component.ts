@@ -125,6 +125,28 @@ export class EntryListComponent implements OnDestroy {
   readonly collapsed = signal(false);
   private lastScrollTop = 0;
 
+  /**
+   * The header's EXPANDED height, which is the space the scroller reserves for
+   * it. Only measured while expanded: feeding the collapsed height back would
+   * shrink the reservation and reintroduce exactly the jump this replaces
+   * (#87). Rows scroll *under* the bar, so a collapsed bar reveals content
+   * rather than leaving a gap.
+   */
+  readonly headerHeight = signal(0);
+  private readonly listHdr = viewChild<ElementRef<HTMLElement>>('listHdr');
+  private headerObs?: ResizeObserver;
+
+  /**
+   * Published as `--list-bar-h` for the stylesheet to add to the app bar's own
+   * reservation. A custom property rather than an inline padding binding
+   * because four elements need the same sum, and the shell's half of it
+   * (`--app-bar-h`) already arrives this way.
+   */
+  private readonly _publishBarHeight = effect(() => {
+    const h = this.headerHeight();
+    if (h > 0) this.host.nativeElement.style.setProperty('--list-bar-h', `${h}px`);
+  });
+
   // A new selection reloads the list from the top, and a resize past the wide
   // breakpoint restores the full-size header — expand the bar in both cases.
   private readonly _resetCollapse = effect(() => {
@@ -176,6 +198,20 @@ export class EntryListComponent implements OnDestroy {
   // (Re)attach the pull-to-refresh touch listeners whenever the scroll container
   // appears or is swapped (list <-> magazine, load <-> empty). touchmove is
   // non-passive so a committed pull can preventDefault the native overscroll.
+  // Measure the bar so the scroller can reserve its height. Guarded by
+  // `collapsed()` so only the expanded size is ever recorded.
+  private readonly _measureHeader = effect(() => {
+    const el = this.listHdr()?.nativeElement;
+    this.headerObs?.disconnect();
+    this.headerObs = undefined;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const obs = new ResizeObserver(() => {
+      if (!this.collapsed()) this.headerHeight.set(el.offsetHeight);
+    });
+    obs.observe(el);
+    this.headerObs = obs;
+  });
+
   private pullCleanup?: () => void;
   private readonly _wirePull = effect(() => {
     const el = this.rows()?.nativeElement;
@@ -322,6 +358,7 @@ export class EntryListComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.observer?.disconnect();
+    this.headerObs?.disconnect();
     this.pullCleanup?.();
     this.cancelSettle();
     const host = this.host.nativeElement;

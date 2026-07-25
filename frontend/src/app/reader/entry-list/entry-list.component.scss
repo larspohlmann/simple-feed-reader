@@ -6,14 +6,38 @@
   position: relative; /* anchor for the pull-to-refresh indicator */
 }
 
+/* Floats over the scroller instead of sitting above it in the flow. Collapsing
+   it used to shrink the list's own box, which changed the scroller's height
+   mid-gesture and made the rows jump — the same defect as the app header, one
+   level down (#87). The scroller reserves the expanded height as padding and
+   the rows scroll underneath, so a collapsed bar reveals content rather than
+   leaving a gap. Opaque for that reason: rows pass behind it. */
 .list-header {
+  position: absolute;
+  top: var(--app-bar-h, 56px);
+  left: 0;
+  right: 0;
+  z-index: 3;
+
+  /* Travels with the app bar. It hangs directly beneath it, so if it stayed put
+     while the bar retracted it would float over a strip of nothing. Only this
+     bar moves — the rows below are untouched. */
+  transform: translateY(var(--app-bar-shift, 0));
+  transition: transform 0.2s ease;
+  background: var(--surface-0);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border);
-  transition: padding 0.2s ease;
+
+  /* Deliberately NOT animated. The scroller reserves this bar's expanded
+     height, so that height is measured; an animating box reports every
+     intermediate value on the way, the reservation follows it, and the rows
+     move again — 16px of the jump this fix is about, reintroduced by the
+     easing. The bar snaps between its two sizes instead, which is hard to
+     notice now that nothing around it moves. */
 }
 
 .heading {
@@ -32,7 +56,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  transition: font-size 0.2s ease;
+
+  /* Not animated either, and for the same reason as the bar's padding above:
+     the type size drives the line box, which drives the bar's height, which is
+     the number the scroller reserves. */
 }
 
 /* "Last refreshed …" hint under a single-feed title. Wide screens only — it's
@@ -192,10 +219,24 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
+
+  /* Reserves both floating bars. Constant: it tracks neither the app bar's
+     hidden state nor this list's collapsed one, so the rows never move (#87).
+     They pass behind the bars instead, which is what makes retracting them
+     actually give the reader more to look at. */
+  padding-top: calc(var(--app-bar-h, 56px) + var(--list-bar-h, 0px));
+}
+
+/* An error banner sits above the scroller in the flow and takes the reservation
+   itself; the scroller must not add it a second time. */
+.rows.after-banner,
+.empty.after-banner {
+  padding-top: 0;
 }
 
 .rows.magazine {
   padding: var(--space-3);
+  padding-top: calc(var(--app-bar-h, 56px) + var(--list-bar-h, 0px));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -210,11 +251,13 @@
 .empty {
   color: var(--text-muted);
   padding: var(--space-6);
+  padding-top: calc(var(--app-bar-h, 56px) + var(--list-bar-h, 0px) + var(--space-6));
   text-align: center;
 }
 
 .banner {
   margin: var(--space-3) var(--space-4);
+  margin-top: calc(var(--app-bar-h, 56px) + var(--list-bar-h, 0px) + var(--space-3));
   padding: var(--space-3);
   border-radius: var(--radius);
   background: var(--bg-danger);
@@ -244,16 +287,15 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .list-header {
+    transition: none;
+  }
+
   .skeleton {
     animation: none;
   }
 
   .refresh.spinning app-icon {
     animation: none;
-  }
-
-  .list-header,
-  .list-header h2 {
-    transition: none;
   }
 }

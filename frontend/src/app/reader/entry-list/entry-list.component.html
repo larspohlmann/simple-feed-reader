@@ -1,4 +1,7 @@
-<header class="list-header" [class.collapsed]="collapsed()">
+<!-- Floats over the scroller's reserved top padding rather than sitting above
+     it in the flow, so collapsing the bar never resizes the scroller and the
+     rows stay put under the finger (#87). -->
+<header class="list-header" #listHdr [class.collapsed]="collapsed()">
   <div class="heading">
     <h2>{{ title() }}</h2>
     @if (lastRefreshedLabel()) {
@@ -79,21 +82,23 @@
 }
 
 @if (error()) {
-  <div class="banner" role="alert">{{ error()!.detail ?? error()!.title }}</div>
+  <div class="banner" role="alert">
+    {{ error()!.detail ?? error()!.title }}
+  </div>
 }
 
 @if (loading()) {
-  <div class="rows">
+  <div class="rows" [class.after-banner]="!!error()">
     @for (i of [1, 2, 3, 4, 5]; track i) {
       <div class="skeleton"></div>
     }
   </div>
 } @else if (entries().length === 0) {
-  <p class="empty">
+  <p class="empty" [class.after-banner]="!!error()">
     {{ (selection().unread ? 'reader.allCaughtUp' : 'reader.nothingHere') | transloco }}
   </p>
 } @else if (layout() === 'magazine') {
-  <div class="rows magazine" #rows (scroll)="onRowsScroll($event)">
+  <div class="rows magazine" [class.after-banner]="!!error()" #rows (scroll)="onRowsScroll($event)">
     @for (b of blocks(); track blockKey(b)) {
       @switch (b.kind) {
         @case ('hero') {
@@ -151,7 +156,7 @@
     }
   </div>
 } @else {
-  <div class="rows" #rows (scroll)="onRowsScroll($event)">
+  <div class="rows" [class.after-banner]="!!error()" #rows (scroll)="onRowsScroll($event)">
     @for (e of entries(); track e.id) {
       <app-entry-row
         [entry]="e"
