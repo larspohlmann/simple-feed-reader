@@ -122,6 +122,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly headerHidden = signal(false);
   readonly headerHeight = signal(0);
   private readonly hdr = viewChild('hdr', { read: ElementRef });
+  /** Only one of the two template branches renders a list at a time. */
+  private readonly list = viewChild(EntryListComponent);
   private lastScrollTop = 0;
   private resizeObs?: ResizeObserver;
   /** Mobile drawer state; the sidebar is a fixed overlay below 720px. */
@@ -256,6 +258,11 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   setSidebarOpen(open: boolean): void {
     if (open) this.headerHidden.set(false);
     this.sidebarOpen.set(open);
+  }
+
+  /** The top bar's empty middle was tapped: send the list back to the top. */
+  onScrollListTop(): void {
+    this.list()?.scrollToTop();
   }
 
   private readonly onContentScroll = (e: Event): void => {
