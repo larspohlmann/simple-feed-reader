@@ -657,8 +657,11 @@ APP_DEBUG=0
 # Generate once: openssl rand -hex 16
 APP_SECRET=
 
-# The hosting package's MySQL database, created in the Strato panel.
-DATABASE_URL="mysql://USER:PASSWORD@HOST:3306/DBNAME?serverVersion=8.0&charset=utf8mb4"
+# The hosting package's MySQL database. Host and database name are already
+# known; only the password is secret. The server speaks MySQL 8 (it defaults
+# to caching_sha2_password) -- confirm the exact serverVersion after the first
+# successful connect, since Doctrine picks its platform from this value.
+DATABASE_URL="mysql://dbs15919276:PASSWORD@database-5020972012.webspace-host.com:3306/dbs15919276?serverVersion=8.0&charset=utf8mb4"
 
 # Strato SMTP, using the noreply@ mailbox created in the panel.
 MAILER_DSN=smtp://USER:PASSWORD@smtp.strato.de:587
@@ -824,9 +827,26 @@ The decisive detail for the subpath: a request to `/_probe/d/api/health` arrived
 Symfony uses to derive a base URL of `/_probe/d` and a path info of `/api/health`. The mount
 mechanism is confirmed, not inferred.
 
+### The database
+
+It exists: `dbs15919276` on **`database-5020972012.webspace-host.com`**, port 3306. Three
+things were established about it, and each one shapes the deploy:
+
+- **Migrations over SSH work.** TCP 3306 is open from the shell host, and a PDO connection
+  with a deliberately wrong password came back `1045 Access denied for user
+  'dbs15919276'@'swh-live-shell002.swh.1u1.it'` — the handshake completed and only the
+  credentials were refused. So `php84 -q -f bin/console doctrine:migrations:migrate` in
+  `activate-release.sh` is sound; no web-triggered migration fallback is needed.
+- **Never use the host's `mysql` CLI against this database.** It is a MySQL 5.6 client
+  (`/opt/RZmysql56/`) and fails with `ERROR 2059 … caching_sha2_password cannot be loaded`
+  against what is clearly a MySQL 8 server. PHP's mysqlnd negotiates it fine. This rules out
+  shell-based dumps or imports through that client — relevant if a backup step is ever added.
+- **Grants are host-scoped.** MySQL returns the same 1045 for "wrong password" and "this host
+  may not connect", so whether the *shell* host is granted access is only proven on the first
+  real deploy. If migrations fail with 1045 despite correct credentials, that is the cause.
+
 **What the probe did NOT cover**, and still needs watching on the first real deploy:
 
-- No MySQL database exists yet (no `~/.my.cnf`); it must be created in the panel.
 - The probe ran a two-line PHP file, not Symfony. Booting the real kernel under cgi-fcgi —
   and `php84 -q -f bin/console` for migrations — is exercised for the first time on deploy.
 - `fastcgi_finish_request()` does not exist under cgi-fcgi, so the deferred-mailer timing
