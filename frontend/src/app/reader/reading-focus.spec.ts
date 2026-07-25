@@ -70,4 +70,40 @@ describe('readingBlocks', () => {
     const blocks = readingBlocks(root('<div><p>only</p></div>'));
     expect(blocks.map((b) => b.tagName)).toEqual(['P']);
   });
+
+  // #109: the real shape readability produced for the reported wired.com
+  // article. The paragraphs sit two levels below the first branching level, so
+  // taking that level's children made the whole article two blocks — nothing
+  // ever highlighted, then seventeen paragraphs at once.
+  it('reaches paragraphs that sit below several branching wrappers', () => {
+    const blocks = readingBlocks(
+      root(`<div class="page"><div>
+              <div><figure><img></figure><div><p>a</p><p>b</p><h2>c</h2><p>d</p></div></div>
+              <div><p>e</p><h2>f</h2><p>g</p></div>
+            </div></div>`),
+    );
+    expect(blocks.map((b) => b.tagName)).toEqual(['FIGURE', 'P', 'P', 'H2', 'P', 'P', 'H2', 'P']);
+  });
+
+  it('keeps a list, a quote and a figure as one block each', () => {
+    const blocks = readingBlocks(
+      root(
+        '<div><ul><li>a</li><li>b</li></ul><blockquote><p>q</p></blockquote>' +
+          '<figure><img><figcaption>cap</figcaption></figure></div>',
+      ),
+    );
+    expect(blocks.map((b) => b.tagName)).toEqual(['UL', 'BLOCKQUOTE', 'FIGURE']);
+  });
+
+  it('treats a wrapper holding only inline content as the paragraph itself', () => {
+    const blocks = readingBlocks(root('<div><div>text with <a href="#">a link</a></div></div>'));
+    expect(blocks.map((b) => b.tagName)).toEqual(['DIV']);
+    expect(blocks[0].textContent).toContain('text with');
+  });
+
+  it('stops descending at a bounded depth', () => {
+    const deep = '<div>'.repeat(40) + '<p>bottom</p>' + '</div>'.repeat(40);
+    const blocks = readingBlocks(root(deep));
+    expect(blocks.length).toBeGreaterThan(0); // terminates, and returns something to fade
+  });
 });

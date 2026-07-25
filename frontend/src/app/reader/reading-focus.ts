@@ -5,25 +5,70 @@
 export const FOCUS_MIN_OPACITY = 0.55;
 
 /** Generic containers we descend through to reach the real reading blocks. */
-const WRAPPER_TAGS = new Set(['DIV', 'SECTION', 'ARTICLE', 'MAIN']);
+const WRAPPER_TAGS = new Set(['DIV', 'SECTION', 'ARTICLE', 'MAIN', 'ASIDE', 'HEADER', 'FOOTER']);
 
 /**
- * The block-level elements to fade individually. Extracted article bodies are
- * often a single wrapper chain (`div > article > p, h2, …`), so descend through
- * lone generic wrappers until reaching the level that actually holds several
- * blocks — then return that level's children. A leaf block (a `<p>` with only
- * inline content) is never descended into.
+ * Tags that make a wrapper a container of blocks rather than a paragraph in its
+ * own right. Lists, quotes, figures and tables are on it because they end a
+ * descent — each is one visual unit, and fading an `<li>` or a `<figcaption>`
+ * away from what it belongs to reads worse than not fading it at all.
+ */
+const BLOCK_TAGS = new Set([
+  ...WRAPPER_TAGS,
+  'P',
+  'H1',
+  'H2',
+  'H3',
+  'H4',
+  'H5',
+  'H6',
+  'UL',
+  'OL',
+  'BLOCKQUOTE',
+  'FIGURE',
+  'PRE',
+  'TABLE',
+  'DL',
+  'HR',
+  'VIDEO',
+  'IFRAME',
+]);
+
+/** Depth of generic nesting we will walk down before taking what we have. */
+const MAX_WRAPPER_DEPTH = 12;
+
+/** Whether an element groups blocks (so we descend) or is one (so we don't). */
+function groupsBlocks(el: Element): boolean {
+  return (
+    WRAPPER_TAGS.has(el.tagName) &&
+    Array.from(el.children).some((child) => BLOCK_TAGS.has(child.tagName))
+  );
+}
+
+/**
+ * The block-level elements to fade individually — what a reader sees as one
+ * paragraph.
+ *
+ * Extracted article bodies bury their paragraphs at wildly different depths, and
+ * the wrappers around them branch: the level that first holds several children
+ * is regularly a pair of *sections*, not the paragraphs (#109). So descend
+ * through every generic wrapper that groups block-level children, however deep
+ * and however many siblings it has, and take everything else as a block. A
+ * wrapper holding only inline content is a paragraph itself, not a container.
  */
 export function readingBlocks(root: Element): HTMLElement[] {
-  let scope = root;
-  while (
-    scope.children.length === 1 &&
-    WRAPPER_TAGS.has(scope.firstElementChild!.tagName) &&
-    scope.firstElementChild!.children.length > 0
-  ) {
-    scope = scope.firstElementChild!;
-  }
-  return Array.from(scope.children) as HTMLElement[];
+  const blocks: HTMLElement[] = [];
+  const collect = (scope: Element, depth: number): void => {
+    for (const child of Array.from(scope.children)) {
+      if (depth < MAX_WRAPPER_DEPTH && groupsBlocks(child)) {
+        collect(child, depth + 1);
+      } else {
+        blocks.push(child as HTMLElement);
+      }
+    }
+  };
+  collect(root, 0);
+  return blocks;
 }
 
 /**
