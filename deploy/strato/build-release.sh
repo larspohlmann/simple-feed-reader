@@ -38,6 +38,14 @@ fi
 case "${ROOT}/" in
     "${OUT%/}"/*) die "refusing to build into ${OUT}: it contains the repository (${ROOT})" ;;
 esac
+# A directory *inside* the checkout is a fine target (deploy/out, say), but not
+# one of the source trees: `rm -rf` on backend/ would take config/jwt/private.pem
+# and var/data_dev.db with it -- the very files this script removes from the
+# release to keep them off a public host.
+case "${OUT}/" in
+    "${ROOT}"/backend/*|"${ROOT}"/frontend/*|"${ROOT}"/.git/*)
+        die "refusing to build into a source directory (${OUT})" ;;
+esac
 
 echo "==> Assembling release into ${OUT}"
 rm -rf "${OUT}"
@@ -53,10 +61,11 @@ if [ -z "${CI:-}" ]; then
     echo "!!! phpmd). They will be reinstalled when this script exits." >&2
     trap restore_dev_dependencies EXIT
 fi
-# --no-scripts: the auto-scripts are cache:clear and assets:install. Both would
-# run here in the runner's environment, baking a cache built from the wrong
-# APP_ENV and the wrong paths into the release. Activation warms the cache on
-# the server instead, where the real environment exists.
+# --no-scripts: the auto-scripts are cache:clear and assets:install. Neither can
+# reach the release -- they write to backend/var/, which is never copied -- but
+# both run against the runner's environment, dirtying the working tree for no
+# gain and failing confusingly when a production variable is absent. Activation
+# warms the cache on the server, where the real environment exists.
 composer install \
     --working-dir="${ROOT}/backend" \
     --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts
@@ -67,8 +76,10 @@ echo "==> Frontend bundle (/reader base href)"
 # and caches keep serving the previous deploy's JavaScript. The hash check
 # below is what catches that if this line is ever shortened.
 #
-# Run from frontend/ in a subshell: `npm --prefix` only changes where npm looks
-# for the package, not the working directory the build inherits.
+# Run from frontend/ in a subshell: `npm exec` runs in the caller's working
+# directory rather than the prefix, so it only found the right project here by
+# fallback -- and on a miss it will happily install a same-named package from
+# the registry instead. (`npm run --prefix` does chdir; `npm exec` does not.)
 ( cd "${ROOT}/frontend" && npm ci && npm run build -- --configuration production,strato )
 
 echo "==> Copying backend"
