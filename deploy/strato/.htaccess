@@ -1,0 +1,43 @@
+# One directory serves two things: Symfony's front controller for the API and
+# the built Angular bundle for everything else. This file is copied into the
+# release's public/ during assembly.
+
+# Pinned deliberately. index.php and index.html share this directory, and if
+# the server's default index order puts index.php first, a bare request for
+# /reader/ reaches Symfony -- which has no route for "/" and answers 404
+# instead of serving the app.
+DirectoryIndex index.html
+
+<IfModule mod_negotiation.c>
+    # Without this, a request for /reader/index could be content-negotiated
+    # onto index.php and bypass the rules below.
+    Options -MultiViews
+</IfModule>
+
+# The directory is reached through a symlink from the portfolio docroot.
+Options +FollowSymLinks
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Derive the path this app is mounted at, so no rule below has to hardcode
+    # "/reader". Compares the request URI against the path mod_rewrite matched
+    # and keeps the difference in ENV:BASE.
+    RewriteCond %{REQUEST_URI}::$0 ^(/.+)/(.*)::\2$
+    RewriteRule ^(.*) - [E=BASE:%1]
+
+    # Symfony owns /api (36 routes) and /maintenance (the refresh endpoint).
+    # Tested first so neither the static-file rule nor the SPA fallback can
+    # claim them.
+    RewriteRule ^(api|maintenance)(/.*)?$ %{ENV:BASE}/index.php [L]
+
+    # Anything that exists on disk -- hashed bundles, i18n dictionaries,
+    # favicons -- is served as it is.
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Everything else is an Angular client-side route: hand it the shell and
+    # let the router sort it out.
+    RewriteRule ^ %{ENV:BASE}/index.html [L]
+</IfModule>
