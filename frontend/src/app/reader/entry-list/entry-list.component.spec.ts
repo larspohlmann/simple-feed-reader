@@ -397,4 +397,41 @@ describe('EntryListComponent', () => {
       expect(memory.save).not.toHaveBeenCalled();
     });
   });
+
+  describe('back to top under prefers-reduced-motion', () => {
+    const realMatchMedia = window.matchMedia;
+
+    afterEach(() => {
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        value: realMatchMedia,
+      });
+    });
+
+    it('jumps instead of animating', () => {
+      // The component reads the flag once, in a field initialiser — so the stub
+      // has to be in place before mount(), not before the click.
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        value: (query: string) => ({
+          matches: query.includes('prefers-reduced-motion'),
+          media: query,
+          onchange: null,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+          addListener: () => undefined,
+          removeListener: () => undefined,
+          dispatchEvent: () => false,
+        }),
+      });
+
+      const f = mount();
+      const rows = (f.nativeElement as HTMLElement).querySelector('.rows') as HTMLElement;
+      const scrollTo = jest.fn();
+      rows.scrollTo = scrollTo as unknown as typeof rows.scrollTo;
+
+      f.componentInstance.scrollToTop();
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
+    });
+  });
 });
