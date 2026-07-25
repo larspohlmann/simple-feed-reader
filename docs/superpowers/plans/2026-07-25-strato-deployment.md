@@ -724,8 +724,8 @@ Symfony derives its base path from `SCRIPT_NAME`, so routes need no prefix. Angu
 
 1. **MySQL database** — create it in the Strato panel; put the DSN in `shared/.env.local`.
 2. **Mailbox** — create `noreply@lars-pohlmann.de`; put its SMTP credentials in the same file.
-3. **PHP version** — set the vhost to **PHP 8.4** in the panel. Reader mode needs it
-   (readability.php v4). The CLI already resolves `php84`; the web vhost is separate.
+3. ~~**PHP version**~~ — nothing to do. The vhost was measured serving **PHP 8.4.22**
+   (cgi-fcgi) on 2026-07-25, which is what reader mode needs (readability.php v4).
 4. **Google OAuth** — register the redirect URI exactly:
    `https://lars-pohlmann.de/reader/api/auth/oauth/google/callback`
 5. **Subdomain** — point `reader.lars-pohlmann.de` at `https://lars-pohlmann.de/reader`.
@@ -797,30 +797,40 @@ schema, rolling back the code does not roll back the database.
   Symfony, so a static asset or directory with either name would be swallowed before the SPA
   ever saw it. Nothing in the current build produces one.
 
-## Two failure modes this setup cannot self-diagnose
+## Host capabilities — measured, not assumed (2026-07-25)
 
-Both were reproduced against a real Apache while writing the rewrite rules, so they are
-concrete behaviours rather than theoretical worries. If the first request to `/reader/` fails,
-check `error_log` for these before anything else:
+Every assumption this deployment rests on was probed on the live host by mounting a throwaway
+directory under the portfolio docroot and driving it over HTTPS. The probe was removed
+afterwards and the portfolio verified intact. **All of it passed**, which retires the risks
+earlier review rounds had flagged as undiagnosable:
 
-- **`Options not allowed here` → hard 500.** `Options` directives in `.htaccess` require the
-  enclosing config to grant `AllowOverride Options` (or `All`). If STRATO restricts it, every
-  request 500s. Wrapping `Options` in `<IfModule>` does *not* help — the failure is a
-  permission check, not a missing module. (The `Header` and `FilesMatch` blocks *are* guarded,
-  because for those the guard is meaningful.)
-- **`Symbolic link not allowed` → 403.** `Options +FollowSymLinks` inside this `.htaccess`
-  governs only symlinks *below* the mounted directory. It cannot authorise the outer
-  `~/larspohlmann/reader → …/current/public` symlink — that is decided by the portfolio
-  docroot's own configuration, which this file cannot reach. Shared hosting is almost always
-  permissive here, but it is not something the app can guarantee.
-- **Two protections that fail *silently*, with no error at all.** The dotfile deny and the
-  shell's `no-cache` header are wrapped in `<IfModule>`, so if `mod_authz_core` or
-  `mod_headers` is not loaded they simply do nothing. The guards are correct — unguarded,
-  an unknown directive would 500 the entire site — but the failure mode is invisible.
-  `mod_headers` in particular is not enabled by default everywhere, and losing it silently
-  restores the stale-shell bug: users keep running the previous release's JavaScript. If
-  either symptom appears (`/reader/.htaccess` returns 200, or `index.html` comes back with
-  no `Cache-Control`), check that both modules are loaded before looking anywhere else.
+| Assumption | Result |
+| --- | --- |
+| Apache version | 2.4.68 (Unix) |
+| `.htaccess` honoured at all | yes — `DirectoryIndex` took effect |
+| `AllowOverride` permits `Options` | **yes** — no 500; this was the biggest flagged risk |
+| `mod_rewrite` | yes — all four request shapes routed correctly |
+| `mod_headers` | yes — `Header set` reached the client |
+| `mod_authz_core` | yes — dotfile denied with 403 |
+| Symlinked directory served over the web | **yes** — 200 through a symlink in the docroot |
+| Web-context PHP | **8.4.22**, cgi-fcgi — already correct, no panel change needed |
+| Required extensions | all present (ctype, dom, iconv, libxml, filter, mbstring, openssl, sodium, xml, pdo_mysql, curl, intl, tokenizer, session, json) |
+| `memory_limit` / `max_execution_time` | 512M / 240s |
+| opcache / `allow_url_fopen` / `disable_functions` | on / on / none |
+| `date.timezone` | UTC — matches how the app persists datetimes |
+
+The decisive detail for the subpath: a request to `/_probe/d/api/health` arrived with
+`SCRIPT_NAME=/_probe/d/index.php` and `REQUEST_URI=/_probe/d/api/health` — exactly the pair
+Symfony uses to derive a base URL of `/_probe/d` and a path info of `/api/health`. The mount
+mechanism is confirmed, not inferred.
+
+**What the probe did NOT cover**, and still needs watching on the first real deploy:
+
+- No MySQL database exists yet (no `~/.my.cnf`); it must be created in the panel.
+- The probe ran a two-line PHP file, not Symfony. Booting the real kernel under cgi-fcgi —
+  and `php84 -q -f bin/console` for migrations — is exercised for the first time on deploy.
+- `fastcgi_finish_request()` does not exist under cgi-fcgi, so the deferred-mailer timing
+  guarantee is weaker here than the code's comments assume.
 ````
 
 - [ ] **Step 3: Verify no real secrets are present**

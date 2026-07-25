@@ -250,8 +250,8 @@ These need the STRATO and Google consoles and cannot be scripted:
 
 1. Create the MySQL database in the STRATO panel; record credentials.
 2. Create the `noreply@lars-pohlmann.de` mailbox; record SMTP credentials.
-3. **Set the vhost's PHP version to 8.4** — reader mode requires it (readability.php v4).
-   The CLI already resolves `php84`; the web vhost is configured separately.
+3. ~~Set the vhost's PHP version to 8.4~~ — **already the case.** Probed on 2026-07-25: the
+   web vhost serves PHP 8.4.22 (cgi-fcgi), which is what reader mode needs.
 4. Register the Google OAuth redirect URI **exactly**:
    `https://lars-pohlmann.de/reader/api/auth/oauth/google/callback`
 5. Repoint `reader.lars-pohlmann.de` as a redirect to `https://lars-pohlmann.de/reader`.
