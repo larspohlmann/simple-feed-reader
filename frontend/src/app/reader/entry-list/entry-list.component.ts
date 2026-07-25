@@ -105,8 +105,13 @@ export class EntryListComponent implements OnDestroy {
   // article's motion affordances — under prefers-reduced-motion.
   private readonly reduceMotion =
     typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Two values, deliberately: `pull` is the damped offset the indicator is drawn
+  // at, `pulled` the finger's actual travel. Arming off the damped offset made
+  // the threshold a function of the indicator's ceiling — and against a ceiling
+  // of 100 it took ~400px of pull to arm, so the gesture never fired (#105).
   readonly pull = signal(0);
-  readonly pullArmed = computed(() => pullTriggersRefresh(this.pull()));
+  private readonly pulled = signal(0);
+  readonly pullArmed = computed(() => pullTriggersRefresh(this.pulled()));
   private pullStartY = 0;
   private pullTracking = false;
 
@@ -305,8 +310,10 @@ export class EntryListComponent implements OnDestroy {
     // it and hands the gesture back to normal scrolling.
     if (dy <= 0 || !atTop(el.scrollTop)) {
       if (this.pull() !== 0) this.pull.set(0);
+      if (this.pulled() !== 0) this.pulled.set(0);
       return;
     }
+    this.pulled.set(dy);
     this.pull.set(rubberBand(dy, MAX_PULL));
     e.preventDefault();
   }
@@ -314,8 +321,9 @@ export class EntryListComponent implements OnDestroy {
   onPullEnd(): void {
     if (!this.pullTracking) return;
     this.pullTracking = false;
-    const trigger = pullTriggersRefresh(this.pull());
+    const trigger = pullTriggersRefresh(this.pulled());
     this.pull.set(0);
+    this.pulled.set(0);
     if (trigger) this.refresh.emit();
   }
 
