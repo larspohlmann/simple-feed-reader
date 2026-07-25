@@ -96,9 +96,16 @@ Angular bundle. The `.htaccess` is new work: the repo has only nginx configs tod
 (`backend/public/` contains just `index.php`), because Docker serves the SPA from nginx
 and proxies `/api` to php-fpm. Apache needs the equivalent expressed as rewrite rules:
 
-1. An existing file or directory is served as-is (assets, `index.html`).
+1. An existing file or directory is served as-is (assets, `index.html`) — except dotfiles,
+   which are denied so the rule cannot serve the `.htaccess` itself.
 2. Anything under `/api` (plus any other Symfony route) goes to `index.php`.
 3. Everything else falls back to `index.html` for Angular's client-side router.
+
+`index.html` is additionally sent with `Cache-Control: no-cache`. It names the content-hashed
+bundles, so a heuristically cached copy would pin a browser to the previous release's
+JavaScript however well the assets themselves are versioned. This also makes `api` and
+`maintenance` reserved top-level names: a static asset called either would be routed to
+Symfony before the SPA ever saw it.
 
 Rule 3 must not swallow rule 2, and rule 1 must come first so hashed assets are served
 directly. Apache also needs `FollowSymLinks` for the mount to resolve.

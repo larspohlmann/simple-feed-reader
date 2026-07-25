@@ -791,6 +791,26 @@ schema, rolling back the code does not roll back the database.
 - There is **no scheduled refresh**. Feeds update when someone presses refresh.
 - The server has no composer, node, or crontab; everything is built on the runner.
 - The host's PHP is cgi-fcgi: `php -r` does not work. Use `php84 -q -f bin/console <cmd>`.
+- **`api` and `maintenance` are reserved top-level names.** The `.htaccess` routes them to
+  Symfony, so a static asset or directory with either name would be swallowed before the SPA
+  ever saw it. Nothing in the current build produces one.
+
+## Two failure modes this setup cannot self-diagnose
+
+Both were reproduced against a real Apache while writing the rewrite rules, so they are
+concrete behaviours rather than theoretical worries. If the first request to `/reader/` fails,
+check `error_log` for these before anything else:
+
+- **`Options not allowed here` → hard 500.** `Options` directives in `.htaccess` require the
+  enclosing config to grant `AllowOverride Options` (or `All`). If STRATO restricts it, every
+  request 500s. Wrapping `Options` in `<IfModule>` does *not* help — the failure is a
+  permission check, not a missing module. (The `Header` and `FilesMatch` blocks *are* guarded,
+  because for those the guard is meaningful.)
+- **`Symbolic link not allowed` → 403.** `Options +FollowSymLinks` inside this `.htaccess`
+  governs only symlinks *below* the mounted directory. It cannot authorise the outer
+  `~/larspohlmann/reader → …/current/public` symlink — that is decided by the portfolio
+  docroot's own configuration, which this file cannot reach. Shared hosting is almost always
+  permissive here, but it is not something the app can guarantee.
 ````
 
 - [ ] **Step 3: Verify no real secrets are present**
