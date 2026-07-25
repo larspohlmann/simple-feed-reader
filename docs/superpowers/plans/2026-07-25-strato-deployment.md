@@ -641,18 +641,21 @@ Create `deploy/strato/activate-release.sh`:
 # Usage: activate-release.sh <deploy-root> <release-name>
 set -euo pipefail
 
+die() { echo "$*" >&2; exit 1; }
+
 ROOT="${1:?usage: activate-release.sh <deploy-root> <release-name>}"
 NAME="${2:?usage: activate-release.sh <deploy-root> <release-name>}"
 
-# `current` is dereferenced from a symlink in a different directory (the
-# portfolio docroot), so it has to point at an absolute path -- which means ROOT
-# must be absolute before it is ever used to build one.
-ROOT="$(cd "${ROOT}" && pwd)"
+# `ln` writes ${RELEASE} into `current` verbatim, and that string is resolved
+# later, relative to the directory the link lives in -- the deploy root. A
+# relative ROOT would therefore produce a dangling `current` and an instantly
+# dead site, so normalize it before anything is built out of it.
+ROOT="$(cd "${ROOT}" 2>/dev/null && pwd -P)" || die "no such deploy root: ${1}"
 
 # A release name is one path segment. Anything else would let `..` walk the
 # `rm -rf` below out of the release directory and aim the flip at a parent.
 case "${NAME}" in
-    */*|.|..) echo "release name must be a single path segment: ${NAME}"; exit 1 ;;
+    */*|.|..) die "release name must be a single path segment: ${NAME}" ;;
 esac
 
 RELEASE="${ROOT}/releases/${NAME}"
@@ -678,19 +681,44 @@ SHARED="${ROOT}/shared"
 #                           --no-interaction` aborts with "no argument for
 #                           option -" before PHP ever starts.
 #
-# The path is absolute because this SAPI chdir()s to the script's own directory,
-# so the shell's working directory says nothing about what `bin/console`
-# resolves to.
+# The path is absolute because this script is invoked over SSH, where the shell
+# starts in $HOME. The SAPI does chdir() into the script's own directory, but
+# only after it has located and opened the file -- so a relative `-f bin/console`
+# would be resolved against $HOME and simply not be found. ${RELEASE} is
+# absolute anyway, by the normalization above.
 console() {
     php84 -d register_argc_argv=1 -q -f "${RELEASE}/bin/console" -- "$@"
 }
 
-test -d "${RELEASE}" || { echo "no such release: ${RELEASE}"; exit 1; }
-test -f "${SHARED}/.env.local" || { echo "missing ${SHARED}/.env.local"; exit 1; }
-test -f "${SHARED}/config/jwt/private.pem" || { echo "missing shared JWT keys"; exit 1; }
+test -d "${RELEASE}" || die "no such release: ${RELEASE}"
+test -f "${SHARED}/.env.local" || die "missing ${SHARED}/.env.local"
+test -f "${SHARED}/config/jwt/private.pem" || die "missing shared JWT key: ${SHARED}/config/jwt/private.pem"
+test -f "${SHARED}/config/jwt/public.pem" || die "missing shared JWT key: ${SHARED}/config/jwt/public.pem"
+
+# shared/.env.local is hand-written on the server, so its *contents* are as
+# unverified as its existence. Two omissions there are silent and expensive,
+# because backend/.env ships a working default for each and the deploy then
+# succeeds with it.
+#
+# APP_ENV: the committed default is `dev`. Missing here, the cache is warmed for
+# the dev environment and the site goes live in debug mode, serving stack traces
+# -- with the database credentials in them -- to the public internet.
+grep -Eq "^APP_ENV=['\"]?prod['\"]?[[:space:]]*$" "${SHARED}/.env.local" \
+    || die "${SHARED}/.env.local does not set APP_ENV=prod -- the deploy would warm a dev cache and put the site live in debug mode, serving stack traces to the public"
+# CACHE_DIRECTORY: the committed default is kernel-relative, so it resolves
+# inside the release's own var/cache -- which `cache:clear` below wipes. Missing
+# (or left kernel-relative) here, every deploy silently resets the filesystem
+# pools: rate-limit counters, spent ALTCHA solutions, pending OAuth states and
+# login codes. Requiring an absolute path is what rules out the kernel-relative
+# default; that it points into shared/ is the operator's job.
+grep -Eq "^CACHE_DIRECTORY=['\"]?/" "${SHARED}/.env.local" \
+    || die "${SHARED}/.env.local does not set CACHE_DIRECTORY to an absolute path -- the filesystem cache pools would live inside the release, so every deploy would reset the rate-limit counters and the record of spent ALTCHA solutions (point it at ${SHARED}/var/cache-pools)"
 
 echo "==> Linking shared state"
-# Secrets. Never shipped in the release.
+# Secrets. Never shipped in the release. Unguarded on purpose, unlike the two
+# links below: `ln -sfn` over an existing *regular file* does the right thing,
+# because -f unlinks it before creating the link. The trap is specific to the
+# target already being a real directory.
 ln -sfn "${SHARED}/.env.local" "${RELEASE}/.env.local"
 
 # JWT keys. Shared because regenerating them per release would invalidate
@@ -706,20 +734,60 @@ ln -sfn "${SHARED}/config/jwt" "${RELEASE}/config/jwt"
 # the release's own var/cache -- from resetting them on every deploy.
 mkdir -p "${SHARED}/var/log" "${SHARED}/var/cache-pools"
 mkdir -p "${RELEASE}/var"
+# `rm -rf` first for the same reason as config/jwt above. If ${RELEASE}/var/log
+# already exists as a real directory, `ln -sfn` puts the link *inside* it --
+# var/log/log -> shared/var/log -- and exits 0, and the release then writes its
+# logs to a directory that vanishes with it. Nothing about that is visible in
+# the deploy output. That the release currently arrives without var/ at all is
+# a property of build-release.sh's copy list, not something this script may
+# assume. Re-running is safe: `rm -rf` on a symlink removes the link, not the
+# shared directory it points at.
+rm -rf "${RELEASE}/var/log"
 ln -sfn "${SHARED}/var/log" "${RELEASE}/var/log"
 
 echo "==> Warming the cache"
 # Clear first so a re-run against a release whose previous activation died
-# mid-warmup cannot build on top of a half-written cache.
+# mid-warmup cannot build on top of a half-written cache. One command, not two:
+# cache:clear warms the cache itself unless --no-warmup is passed (Symfony 7.4,
+# CacheClearCommand), so a following cache:warmup would buy a second container
+# compile against the host's 240s max_execution_time and nothing else.
 console cache:clear --no-interaction
-console cache:warmup --no-interaction
 
 echo "==> Running migrations"
 # Before the flip on purpose: if this fails, the old release is still live.
-console doctrine:migrations:migrate --no-interaction --allow-no-migration
+#
+# It can fail halfway. MySQL 8 commits implicitly on DDL, so Doctrine's
+# per-migration transaction does not protect a migration that dies partway
+# through -- the host's 240s max_execution_time is enough to kill one on a
+# table with real data. What is left behind is a half-changed schema with no
+# row in doctrine_migration_versions, and a blind retry then fails on something
+# like "Duplicate column name". This script cannot make DDL transactional; all
+# it can do is refuse to fail mutely.
+migrate_status=0
+console doctrine:migrations:migrate --no-interaction --allow-no-migration || migrate_status=$?
+if [ "${migrate_status}" -ne 0 ]; then
+    {
+        echo "!!! Migrations failed (exit ${migrate_status})."
+        echo "!!! current was NOT flipped: ${ROOT}/current still points at the previous"
+        echo "!!! release, and that release is still serving the site."
+        echo "!!! The schema may be partially migrated -- MySQL commits DDL implicitly, so"
+        echo "!!! statements from a migration that died partway through can be applied"
+        echo "!!! without the migration being recorded as executed."
+        echo "!!! Check what actually ran before retrying the deploy:"
+        echo "!!!   php84 -d register_argc_argv=1 -q -f ${RELEASE}/bin/console -- doctrine:migrations:status"
+    } >&2
+    exit "${migrate_status}"
+fi
 
 echo "==> Flipping current"
-ln -sfn "${RELEASE}" "${ROOT}/current"
+# Two steps, because `ln -sfn` over an existing link is unlink() then symlink():
+# for the instant in between, `current` does not exist and in-flight requests
+# resolve a dangling path. Creating the link beside it and renaming it over the
+# old one is a single rename(2), which is atomic -- there is no moment at which
+# `current` is missing. -T also makes this fail loudly rather than nest a link
+# inside it, should `current` ever be a real directory.
+ln -sfn "${RELEASE}" "${ROOT}/current.tmp"
+mv -Tf "${ROOT}/current.tmp" "${ROOT}/current"
 
 echo "==> Active release is now ${NAME}"
 ```
