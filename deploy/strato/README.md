@@ -399,21 +399,25 @@ mechanism is confirmed, not inferred.
 
 ### The database
 
-It exists: `dbs15919276` on **`database-5020972012.webspace-host.com`**, port 3306. Three
-things were established about it, and each one shapes the deploy:
+Database `dbs15919276`, user **`dbu2399961`**, on `database-5020972012.webspace-host.com`,
+port 3306, MySQL **8.0.36**. Connecting from the shell host has been verified end to end:
+the credentials work, the schema is empty, and `CREATE`/`DROP` are permitted, so migrations
+can build it.
 
-- **Migrations over SSH work.** TCP 3306 is open from the shell host, and a PDO connection
-  with a deliberately wrong password came back `1045 Access denied for user
-  'dbs15919276'@'swh-live-shell002.swh.1u1.it'` — the handshake completed and only the
-  credentials were refused. So running `doctrine:migrations:migrate` from
-  `activate-release.sh` is sound; no web-triggered migration fallback is needed.
+- **The user is not the database name.** Strato issues `dbs<digits>` for the database and a
+  separate `dbu<digits>` for the account. Assuming they were the same cost an hour here: the
+  wrong user fails with `1045 Access denied`, exactly like a wrong password, from every host.
+  Both values sit side by side in the panel under *Datenbanken*.
+- **A 1045 is ambiguous three ways** — wrong password, wrong user, or a host that may not
+  connect. Grants are host-scoped and Strato's shell hosts rotate (`swh-live-shell002` one
+  day, `shell003` the next), so host-scoping is a real candidate rather than a theoretical
+  one. The way to tell them apart is to try the same credentials from the *web* context,
+  which runs on a different machine: if both are refused, it is the credentials, not the
+  grant.
 - **Never use the host's `mysql` CLI against this database.** It is a MySQL 5.6 client
   (`/opt/RZmysql56/`) and fails with `ERROR 2059 … caching_sha2_password cannot be loaded`
-  against what is clearly a MySQL 8 server. PHP's mysqlnd negotiates it fine. This rules out
-  shell-based dumps or imports through that client — relevant if a backup step is ever added.
-- **Grants are host-scoped.** MySQL returns the same 1045 for "wrong password" and "this host
-  may not connect", so whether the *shell* host is granted access is only proven on the first
-  real deploy. If migrations fail with 1045 despite correct credentials, that is the cause.
+  against the MySQL 8 server. PHP's mysqlnd negotiates it fine. This rules out shell-based
+  dumps or imports through that client — relevant if a backup step is ever added.
 
 **What the probe did NOT cover**, and still needs watching on the first real deploy:
 
