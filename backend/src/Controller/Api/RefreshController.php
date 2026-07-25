@@ -30,7 +30,7 @@ final class RefreshController
      * Above RefreshRunner::SAFETY_MARGIN_SECONDS (10) so a call processes more
      * than a single feed, and below typical FastCGI limits.
      */
-    private const BUDGET_SECONDS = 25;
+    private const int BUDGET_SECONDS = 25;
 
     public function __construct(
         private readonly RefreshRunner $refreshRunner,

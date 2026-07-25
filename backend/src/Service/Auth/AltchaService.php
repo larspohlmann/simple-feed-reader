@@ -19,7 +19,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  */
 final readonly class AltchaService
 {
-    private const ALGORITHM = 'SHA-256';
+    private const string ALGORITHM = 'SHA-256';
     /**
      * Difficulty window, in iterations of sha256. Both bounds are measured, not
      * guessed (PHP 8.3 / Node 22, Apple silicon):
@@ -52,9 +52,9 @@ final readonly class AltchaService
      *
      * Re-derive with: hash 2e5 candidates and divide.
      */
-    private const MIN_NUMBER = 100_000;
-    private const MAX_NUMBER = 200_000;
-    private const TTL_SECONDS = 3600;
+    private const int MIN_NUMBER = 100_000;
+    private const int MAX_NUMBER = 200_000;
+    private const int TTL_SECONDS = 3600;
     /**
      * The replay entry must outlive the challenge itself. If it expired at the
      * same moment, a solution issued at T and first spent just before T+TTL
@@ -65,7 +65,7 @@ final readonly class AltchaService
      * wall clock, which MockClock cannot move, so the boundary this guards is
      * unreachable from a unit test. Verified by reading, not by assertion.
      */
-    private const REPLAY_TTL_SECONDS = self::TTL_SECONDS + 600;
+    private const int REPLAY_TTL_SECONDS = self::TTL_SECONDS + 600;
 
     public function __construct(
         #[Autowire('%env(ALTCHA_HMAC_KEY)%')]
@@ -147,6 +147,20 @@ final readonly class AltchaService
             return null;
         }
 
+        return $this->extractSolution($decoded);
+    }
+
+    /**
+     * Pulls the five fields the widget sends out of the decoded payload,
+     * rejecting anything missing or of the wrong type. Split from decode() so
+     * the base64/JSON unwrapping and the field validation each stay simple.
+     *
+     * @param array<array-key, mixed> $decoded
+     *
+     * @return array{algorithm: string, challenge: string, number: int, salt: string, signature: string}|null
+     */
+    private function extractSolution(array $decoded): ?array
+    {
         foreach (['algorithm', 'challenge', 'number', 'salt', 'signature'] as $key) {
             if (!isset($decoded[$key])) {
                 return null;

@@ -69,15 +69,15 @@ abstract readonly class AbstractOidcProvider implements OAuthProviderInterface
      * avoids failing honest logins; anything larger would meaningfully extend
      * the life of a captured token.
      */
-    private const CLOCK_SKEW_SECONDS = 60;
+    private const int CLOCK_SKEW_SECONDS = 60;
 
     /**
      * Inactivity timeout and total wall-clock budget for the token call. The
      * second one matters: `timeout` alone resets on every byte, so a provider
      * that dribbles a response can hold a PHP-FPM worker indefinitely.
      */
-    private const REQUEST_TIMEOUT_SECONDS = 10;
-    private const REQUEST_MAX_DURATION_SECONDS = 15;
+    private const int REQUEST_TIMEOUT_SECONDS = 10;
+    private const int REQUEST_MAX_DURATION_SECONDS = 15;
 
     public function __construct(
         protected HttpClientInterface $httpClient,

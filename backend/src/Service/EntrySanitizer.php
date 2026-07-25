@@ -18,7 +18,7 @@ use Symfony\Component\HtmlSanitizer\HtmlSanitizerInterface;
  */
 final class EntrySanitizer
 {
-    private const MAX_INPUT_LENGTH = 150_000;
+    private const int MAX_INPUT_LENGTH = 150_000;
 
     private readonly HtmlSanitizerInterface $sanitizer;
 

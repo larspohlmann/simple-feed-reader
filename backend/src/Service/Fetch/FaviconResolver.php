@@ -15,7 +15,7 @@ use Psr\Log\LoggerInterface;
  */
 final readonly class FaviconResolver
 {
-    private const URL_MAX = 2048;
+    private const int URL_MAX = 2048;
 
     public function __construct(
         private FeedFetcherInterface $fetcher,

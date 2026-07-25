@@ -18,7 +18,7 @@ use Psr\Clock\ClockInterface;
  */
 final readonly class ActionTokenService
 {
-    private const LIFETIME = 'PT24H';
+    private const string LIFETIME = 'PT24H';
 
     public function __construct(
         private EntityManagerInterface $em,

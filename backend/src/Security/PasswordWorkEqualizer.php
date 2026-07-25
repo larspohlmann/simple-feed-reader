@@ -32,7 +32,7 @@ final readonly class PasswordWorkEqualizer implements PasswordWorkEqualizerInter
      * Never a real credential — only the hasher's workload matters, and for
      * bcrypt/argon2 that is set by the cost parameters, not by the input.
      */
-    private const DUMMY_PASSWORD = 'timing-equalisation-placeholder';
+    private const string DUMMY_PASSWORD = 'timing-equalisation-placeholder';
 
     public function __construct(
         private PasswordHasherFactoryInterface $hasherFactory,

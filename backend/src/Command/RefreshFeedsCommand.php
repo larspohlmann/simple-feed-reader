@@ -26,7 +26,7 @@ final class RefreshFeedsCommand extends Command
      * edge must still finish inside the cap. This also leaves room for the
      * runner's safety margin and the pruning pass.
      */
-    private const DEFAULT_BUDGET_SECONDS = 120;
+    private const int DEFAULT_BUDGET_SECONDS = 120;
 
     public function __construct(private readonly RefreshRunner $refreshRunner)
     {

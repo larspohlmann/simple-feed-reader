@@ -11,7 +11,7 @@ namespace App\Service\Parser;
  */
 final class Atom03Parser extends AbstractAtomParser
 {
-    public const NAMESPACE = 'http://purl.org/atom/ns#';
+    public const string NAMESPACE = 'http://purl.org/atom/ns#';
 
     protected function namespaceUri(): string
     {

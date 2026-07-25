@@ -16,14 +16,14 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  */
 final readonly class GoogleOAuthProvider extends AbstractOidcProvider
 {
-    private const AUTHORIZATION_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
+    private const string AUTHORIZATION_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 
     /**
      * Constants, not configuration. The parent substitutes this host's TLS
      * certificate for the ID token's signature, so the host must not be
      * something a deployment — or a request — can move.
      */
-    private const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
+    private const string TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 
     public function __construct(
         HttpClientInterface $httpClient,
