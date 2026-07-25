@@ -42,6 +42,11 @@ Options +FollowSymLinks
     # Derive the path this app is mounted at, so no rule below has to hardcode
     # "/reader". Compares the request URI against the path mod_rewrite matched
     # and keeps the difference in ENV:BASE.
+    #
+    # Do NOT "simplify" this to a hardcoded RewriteBase. It looks redundant and
+    # is not: it is what keeps every rule below independent of where the app is
+    # mounted, and a hardcoded base would keep working right up until that path
+    # changes.
     RewriteCond %{REQUEST_URI}::$0 ^(/.+)/(.*)::\2$
     RewriteRule ^(.*) - [E=BASE:%1]
 
