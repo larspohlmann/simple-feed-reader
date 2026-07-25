@@ -206,8 +206,11 @@ Changed, existing files — behaviour preserved at the domain root:
   directory and key namespace become env-driven. Symfony's defaults place the pools inside
   `var/cache` (per-release, and wiped by `cache:clear`) and seed the namespace with
   `%kernel.project_dir%` (the release path), so **both** must be overridable or a deploy
-  resets every rate limit and forgets every spent ALTCHA solution. The committed defaults
-  reproduce the previous behaviour exactly.
+  resets every rate limit and forgets every spent ALTCHA solution. The committed directory
+  default is Symfony's own, verbatim. The committed seed deliberately is **not** — a stable
+  literal replaces a project-path-derived one, which costs a single renamespacing wherever
+  cache data already exists (a cold start all three pools tolerate) and is the only way to
+  get one namespace that survives a release flip.
 
 Additive, existing files — no existing behaviour altered:
 
