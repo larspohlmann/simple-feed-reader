@@ -901,7 +901,7 @@ DATABASE_URL="mysql://dbu2399961:PASSWORD@database-5020972012.webspace-host.com:
 # InsecureProductionConfigGuard refuses every request, because null:// discards
 # mail and reports success -- registration would 202 with no verification mail
 # and nothing would log a thing.
-MAILER_DSN=sendmail://default
+MAILER_DSN="sendmail://default?command=%2Fusr%2Fsbin%2Fsendmail%20-t%20-i"
 
 # The From: header on account mail. The committed default is example.com, which
 # a real transport will either reject or deliver straight to spam. Strato

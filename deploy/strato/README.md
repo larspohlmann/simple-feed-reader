@@ -57,12 +57,25 @@ while the URL 404s. Verification step 1 is what catches that.
    server has changed, but with nothing in the message to say which directory it meant.
 2. **MySQL database** — create it in the Strato panel. The DSN goes in `shared/.env.local`.
 3. ~~**Mailbox**~~ — nothing to create, and no credentials to store. The host has a local
-   MTA at `/usr/sbin/sendmail`, and `php.ini` sets `sendmail_path=/usr/sbin/sendmail -t -i`,
-   so `MAILER_DSN=sendmail://default` sends without authenticating against anything.
-   Symfony's `SendmailTransport` picks that command up from the ini and pipes the message
-   (`-t` selects pipe mode rather than `-bs`); it needs `proc_open`, which is available
-   because `disable_functions` is empty here. Verified on 2026-07-25 by sending a message
-   this way and receiving it.
+   MTA at `/usr/sbin/sendmail`, and `proc_open` is available (`disable_functions` is empty),
+   so mail goes out without authenticating against anything.
+
+   **The `?command=` in the DSN is load-bearing.** Symfony's `SendmailTransport` does *not*
+   read php.ini's `sendmail_path`. It hardcodes `/usr/sbin/sendmail -bs` — an interactive
+   SMTP-over-pipe mode this host's sendmail does not implement — so a plain
+   `sendmail://default` fails, and fails *quietly*: delivery is deferred to
+   `kernel.terminate`, so registration still answers 202 and the only trace is
+   `Deferred mail delivery failed … "process /usr/sbin/sendmail -bs" has been closed
+   unexpectedly` in `shared/var/log/`. Spell the pipe mode out:
+
+   ```dotenv
+   MAILER_DSN="sendmail://default?command=%2Fusr%2Fsbin%2Fsendmail%20-t%20-i"
+   ```
+
+   This was found the expensive way — a registration that answered 202 and sent nothing.
+   Testing the binary directly proves only that the *binary* works; it skips the layer that
+   was actually broken. Verify through Symfony's own `Transport::fromDsn()` using the
+   release's `vendor/`, with the DSN read from `.env.local`, or not at all.
 
    Two things worth knowing before you reach for SMTP instead. **Unauthenticated relay
    through `smtp.strato.de` is not possible** — it answers `530 5.7.0 User not

@@ -254,7 +254,7 @@ These need the STRATO and Google consoles and cannot be scripted:
 
 1. Create the MySQL database in the STRATO panel; record credentials.
 2. ~~Create a mailbox~~ — not needed. The host has a local MTA and
-   `MAILER_DSN=sendmail://default` sends without credentials (measured, and a test message
+   `MAILER_DSN="sendmail://default?command=%2Fusr%2Fsbin%2Fsendmail%20-t%20-i"` sends without credentials (measured, and a test message
    was delivered). Unauthenticated relay through `smtp.strato.de` is refused, so this
    property belongs to the MTA, not to Strato submission.
 3. ~~Set the vhost's PHP version to 8.4~~ — **already the case.** Probed on 2026-07-25: the
