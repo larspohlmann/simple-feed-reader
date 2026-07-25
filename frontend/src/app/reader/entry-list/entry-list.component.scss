@@ -170,12 +170,19 @@
   }
 }
 
-/* Rubber-banded pull-to-refresh chip. Sits just above the list and is drawn
-   down into view by the inline translateY as the user pulls; `pull() > 0`
-   gates its rendering so it never shows at rest. */
+/* Rubber-banded pull-to-refresh chip. Parks 44px above the first row and is
+   drawn down into view by the inline translateY as the user pulls; `pull() > 0`
+   gates its rendering so it never shows at rest. It emerges from *behind* the
+   list header, hence the z-index below that bar's.
+
+   The offset has to be measured from the bars, not from the host's top edge:
+   since #87 the bars float and the host starts at the viewport top, underneath
+   the app bar, so a plain `top: -44px` parked the chip behind it. Clearing it
+   would have taken more pull than the rubber band's ceiling allows, which is
+   why nothing whatsoever appeared while pulling (#105). */
 .pull-indicator {
   position: absolute;
-  top: -44px;
+  top: calc(var(--app-bar-h, 56px) + var(--list-bar-h, 0px) - 44px);
   left: 50%;
   z-index: 2;
   display: flex;

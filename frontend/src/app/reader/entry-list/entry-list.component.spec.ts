@@ -182,6 +182,66 @@ describe('EntryListComponent', () => {
     }
   });
 
+  // #105: the gesture had no coverage at all, which is how a threshold that
+  // needed ~400px of finger travel shipped. Drive the real listeners on the
+  // scroller rather than the handler methods — the wiring is half the feature.
+  describe('pull-to-refresh (mobile)', () => {
+    // jsdom has no TouchEvent constructor; a plain Event with a touches list is
+    // what the handlers actually read.
+    function touch(type: string, y: number): Event {
+      const e = new Event(type, { bubbles: true, cancelable: true });
+      Object.defineProperty(e, 'touches', { value: [{ clientX: 0, clientY: y }] });
+      return e;
+    }
+
+    /** Drag `distance` px down from the top of the list and let go. */
+    function pullBy(f: ReturnType<typeof mount>, distance: number, release = true) {
+      const rows = (f.nativeElement as HTMLElement).querySelector('.rows') as HTMLElement;
+      rows.dispatchEvent(touch('touchstart', 100));
+      rows.dispatchEvent(touch('touchmove', 100 + distance));
+      f.detectChanges();
+      if (release) rows.dispatchEvent(touch('touchend', 100 + distance));
+      return rows;
+    }
+
+    it('refreshes on a pull a thumb can actually make', () => {
+      const f = mount();
+      let hits = 0;
+      f.componentInstance.refresh.subscribe(() => hits++);
+      pullBy(f, 140);
+      expect(hits).toBe(1);
+    });
+
+    it('does not refresh on a short pull', () => {
+      const f = mount();
+      let hits = 0;
+      f.componentInstance.refresh.subscribe(() => hits++);
+      pullBy(f, 40);
+      expect(hits).toBe(0);
+    });
+
+    it('shows the indicator, armed only once the pull is far enough', () => {
+      const f = mount();
+      pullBy(f, 40, false);
+      const chip = (f.nativeElement as HTMLElement).querySelector('.pull-indicator');
+      expect(chip).not.toBeNull(); // visible feedback from the first pixels
+      expect(chip!.classList).not.toContain('armed');
+
+      pullBy(f, 140, false);
+      expect(
+        (f.nativeElement as HTMLElement).querySelector('.pull-indicator')!.classList,
+      ).toContain('armed');
+    });
+
+    it('ignores the gesture in the cross-feed saved views', () => {
+      const f = mount({ selection: { kind: 'favorites', id: null, unread: false } });
+      let hits = 0;
+      f.componentInstance.refresh.subscribe(() => hits++);
+      pullBy(f, 140);
+      expect(hits).toBe(0);
+    });
+  });
+
   it('labels the refresh button with a refresh icon and text', () => {
     const el = mount().nativeElement as HTMLElement;
     const btn = el.querySelector('.refresh') as HTMLButtonElement;

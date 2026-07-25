@@ -8,8 +8,15 @@ export const SWIPE_BACK_MIN_X = 70;
 export const SWIPE_AXIS_RATIO = 1.5;
 /** Minimum rubber-banded pull (px) past the article's end to return to the list. */
 export const OVERSCROLL_BACK_MIN = 90;
-/** Minimum rubber-banded pull (px) past the list's top to trigger a refresh. */
-export const PULL_REFRESH_MIN = 80;
+/**
+ * Minimum finger travel (px) past the list's top to trigger a refresh.
+ *
+ * Deliberately measured in real travel, not in the rubber-banded offset the
+ * indicator is drawn at: expressed in that damped space this threshold silently
+ * depended on the indicator's ceiling, and against a ceiling of 100 it needed
+ * ~400px of pull to reach 80 — a gesture nobody makes (#105).
+ */
+export const PULL_REFRESH_MIN = 120;
 /** Movement (px) before a gesture commits to the horizontal or vertical axis. */
 export const AXIS_LOCK_MIN = 10;
 /** Minimum horizontal travel (px) for a swipe to open or close the mobile drawer. */
@@ -36,9 +43,9 @@ export function overscrollTriggersBack(distance: number): boolean {
   return distance >= OVERSCROLL_BACK_MIN;
 }
 
-/** Whether an at-the-top pull is far enough to trigger a scoped refresh. */
-export function pullTriggersRefresh(distance: number): boolean {
-  return distance >= PULL_REFRESH_MIN;
+/** Whether the finger has travelled far enough down to trigger a scoped refresh. */
+export function pullTriggersRefresh(travel: number): boolean {
+  return travel >= PULL_REFRESH_MIN;
 }
 
 /** Whether the scroller is at (within `tol` of) its end. */
