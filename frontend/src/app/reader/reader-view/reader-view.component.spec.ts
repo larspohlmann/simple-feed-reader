@@ -3,6 +3,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { of, Subject } from 'rxjs';
 import { ReaderViewComponent } from './reader-view.component';
 import { ReaderContentService } from '../reader-content.service';
+import { entryScrollKey } from '../list-scroll-memory';
 import { EntryDto, ReaderContent } from '../models';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
@@ -163,6 +164,71 @@ describe('ReaderViewComponent', () => {
       (host.querySelector('app-to-top-button button') as HTMLButtonElement).click();
 
       expect(document.activeElement).toBe(host.querySelector('h1.title'));
+    });
+  });
+
+  // #101: the restore has to fire on every path that ends with the article
+  // rendered — including extraction failure, where the rendered HTML never
+  // changes value (mode flips reader -> original but the feed's own content is
+  // shown either way), so the content signal alone can never trigger it.
+  describe('article scroll restore', () => {
+    // jsdom has no layout, so a real scrollTop write is a no-op and always reads
+    // back 0. Record the writes instead — that is what the restore does.
+    function trackScrollTop(host: HTMLElement): { top: number } {
+      const state = { top: 0 };
+      Object.defineProperty(host, 'scrollTop', {
+        configurable: true,
+        get: () => state.top,
+        set: (v: number) => {
+          state.top = v;
+        },
+      });
+      return state;
+    }
+
+    /** Mount entry 1 with a remembered offset and extraction still in flight. */
+    function mountRemembering(top: number) {
+      const load = new Subject<ReaderContent>();
+      loadMock.mockReturnValue(load);
+      sessionStorage.setItem(entryScrollKey(1), String(top));
+      const f = TestBed.createComponent(ReaderViewComponent);
+      const scroll = trackScrollTop(f.nativeElement as HTMLElement);
+      f.componentRef.setInput('entry', entry({ id: 1 }));
+      f.detectChanges();
+      return { f, scroll, load };
+    }
+
+    /** Let the content-processing microtask and any follow-up effect settle. */
+    async function settle(f: { detectChanges(): void }) {
+      await Promise.resolve();
+      f.detectChanges();
+      await Promise.resolve();
+    }
+
+    afterEach(() => sessionStorage.clear());
+
+    it('restores the remembered offset when extraction fails', async () => {
+      const { f, scroll, load } = mountRemembering(900);
+      load.next({ status: 'failed', reason: 'fetch', url: null });
+      await settle(f);
+      expect(scroll.top).toBe(900);
+      f.destroy();
+    });
+
+    it('restores the remembered offset when extraction succeeds', async () => {
+      const { f, scroll, load } = mountRemembering(900);
+      load.next(okContent());
+      await settle(f);
+      expect(scroll.top).toBe(900);
+      f.destroy();
+    });
+
+    it('leaves an article with no remembered offset at the top', async () => {
+      const { f, scroll, load } = mountRemembering(0);
+      load.next({ status: 'failed', reason: 'fetch', url: null });
+      await settle(f);
+      expect(scroll.top).toBe(0);
+      f.destroy();
     });
   });
 

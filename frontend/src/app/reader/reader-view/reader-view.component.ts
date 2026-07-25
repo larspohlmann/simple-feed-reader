@@ -246,6 +246,13 @@ export class ReaderViewComponent {
     // rendered HTML changes (new article, or Reader/Original toggle).
     effect(() => {
       this.displayHtml();
+      // Depend on the container too, not just on the HTML. When extraction fails
+      // the mode flips reader -> original but the feed's own content shows either
+      // way, so displayHtml() recomputes to the same string and never notifies —
+      // the container replacing the loading placeholder is then the only signal
+      // that the article has rendered, and without it the scroll restore below
+      // never fires on that path (#101).
+      if (!this.content()) return;
       queueMicrotask(() => {
         const host = this.content()?.nativeElement;
         if (!host) return;
