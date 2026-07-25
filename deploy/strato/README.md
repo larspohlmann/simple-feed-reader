@@ -56,9 +56,19 @@ while the URL 404s. Verification step 1 is what catches that.
    dies at the upload with `mkdir failed: No such file or directory` — before anything on the
    server has changed, but with nothing in the message to say which directory it meant.
 2. **MySQL database** — create it in the Strato panel. The DSN goes in `shared/.env.local`.
-3. **Mailbox** — create `noreply@lars-pohlmann.de`. Its SMTP credentials go in the same
-   file, and the address must also be `MAIL_FROM`: Strato will not relay mail claiming a
-   sender you did not authenticate as.
+3. **Mail** — `lars-pohlmann.de` has a **catch-all**, so nothing has to be created to
+   *receive* at `noreply@`: bounces and the occasional human reply arrive on their own.
+
+   Sending is the separate question. `MAILER_DSN` authenticates against a real mailbox, so
+   it needs the credentials of one that exists — the catch-all is not an account and has no
+   password. Point `MAILER_DSN` at whichever mailbox you are willing to authenticate as.
+
+   `MAIL_FROM` is then the one thing to test rather than assume. Providers commonly refuse
+   to relay a `From:` that differs from the authenticated mailbox, but I have not verified
+   Strato's behaviour here. Set `MAIL_FROM=noreply@lars-pohlmann.de`, register an account,
+   and see whether the verification mail arrives. If Strato rejects it, set `MAIL_FROM` to
+   the authenticating mailbox instead — the catch-all means replies still reach you either
+   way.
 4. ~~**PHP version**~~ — nothing to do. The vhost was measured serving **PHP 8.4.22**
    (cgi-fcgi) on 2026-07-25, which is what reader mode needs (readability.php v4). The shell
    side runs the same 8.4.22 build through a real CLI binary — see *Running a console command
