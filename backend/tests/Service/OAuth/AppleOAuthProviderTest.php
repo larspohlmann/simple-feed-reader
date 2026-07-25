@@ -69,7 +69,8 @@ final class AppleOAuthProviderTest extends TestCase
     }
 
     /**
-     * A structural guard, not a behavioural one.
+     * A structural guard, not a behavioural one, and the Apple-specific half of
+     * the one OidcBoundaryTest makes in general.
      *
      * Apple's `form_post` callback carries an `id_token` in the request body.
      * That token did NOT arrive by direct communication with the token
@@ -77,36 +78,33 @@ final class AppleOAuthProviderTest extends TestCase
      * skip signature verification does not cover it — trusting it would need
      * full JWKS verification that nothing here does.
      *
-     * The defence is that there is no method to hand such a token to:
-     * readIdentity() is private and exchangeCode() is final, so no subclass and
-     * no future edit can route a callback-supplied token into the claim reader
-     * without deleting one of these two modifiers. This test fails the moment
-     * somebody does.
+     * The general defence is that IdTokenVerifier accepts only an IdToken and
+     * only TokenEndpoint mints one; OidcBoundaryTest pins that. What is left to
+     * check here is that THIS provider — the one whose callback actually carries
+     * such a token — has not grown a door of its own: no override of the
+     * exchange, and no claim reading in the subclass.
      */
-    public function testTheClaimReaderCannotBeHandedACallbackSuppliedToken(): void
+    public function testAppleCannotRouteItsCallbackTokenIntoTheVerifier(): void
     {
-        $parent = new \ReflectionClass(AbstractOidcProvider::class);
-
         self::assertTrue(
-            $parent->getMethod('readIdentity')->isPrivate(),
-            'readIdentity() must stay private: a protected one could be fed the callback body id_token.',
-        );
-        self::assertTrue(
-            $parent->getMethod('exchangeCode')->isFinal(),
+            (new \ReflectionClass(AbstractOidcProvider::class))->getMethod('exchangeCode')->isFinal(),
             'exchangeCode() must stay final: an override could skip the token-endpoint fetch entirely.',
         );
 
-        // And the Apple subclass must not have grown its own door.
         $apple = new \ReflectionClass(AppleOAuthProvider::class);
+
         foreach ($apple->getMethods() as $method) {
             if ($method->getDeclaringClass()->getName() !== AppleOAuthProvider::class) {
                 continue;
             }
 
-            self::assertNotSame(
-                'readIdentity',
+            // The subclass supplies configuration and nothing else. A method
+            // here that reads claims or verifies a token would be reimplementing
+            // the boundary rather than standing behind it.
+            self::assertDoesNotMatchRegularExpression(
+                '/^(readIdentity|verify|decodeClaims|exchangeCode)$/',
                 $method->getName(),
-                'AppleOAuthProvider must not reimplement the claim reader.',
+                'AppleOAuthProvider must not reimplement any part of the claim reader.',
             );
         }
     }

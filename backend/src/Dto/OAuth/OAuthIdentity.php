@@ -27,9 +27,10 @@ final readonly class OAuthIdentity
     /**
      * $emailVerified is typed `bool`, and this file declares strict_types, so
      * a provider's `"true"` / `1` / `null` cannot reach it — the conversion is
-     * AbstractOidcProvider's job, at the boundary where the raw claim is read.
-     * Keeping the coercion out here means there is exactly one place that
-     * decides what a provider's spelling of "verified" means.
+     * {@see \App\Service\OAuth\Oidc\IdTokenVerifier}'s job, at the boundary
+     * where the raw claim is read. Keeping the coercion out here means there is
+     * exactly one place that decides what a provider's spelling of "verified"
+     * means.
      */
     public function __construct(
         public string $provider,

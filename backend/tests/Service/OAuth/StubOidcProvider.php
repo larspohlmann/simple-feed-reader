@@ -47,7 +47,7 @@ final readonly class StubOidcProvider extends AbstractOidcProvider
         return 'openid email';
     }
 
-    protected function getTokenEndpoint(): string
+    protected function getTokenEndpointUrl(): string
     {
         return $this->tokenEndpoint;
     }

@@ -100,7 +100,7 @@ final readonly class AppleOAuthProvider extends AbstractOidcProvider
         return ['response_mode' => 'form_post'];
     }
 
-    protected function getTokenEndpoint(): string
+    protected function getTokenEndpointUrl(): string
     {
         return self::TOKEN_ENDPOINT;
     }
