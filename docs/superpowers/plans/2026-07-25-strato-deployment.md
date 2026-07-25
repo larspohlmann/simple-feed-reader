@@ -500,8 +500,9 @@ grep -q 'base href="/reader/"' "${OUT}/public/index.html" \
 # Content hashing proves the production configuration composed in. Without it
 # the deploy would ship cache-poisoned filenames (main.js rather than
 # main-<hash>.js) and users would keep running the previous release's code.
-# The hash alphabet is mixed case -- an uppercase-only pattern rejects a
-# perfectly good build the first time a hash contains a lowercase character.
+# esbuild's hash alphabet is fixed uppercase base32, so [A-Z0-9] would in fact
+# match every real hash -- the wider class is a deliberate superset that keeps
+# the check working if a future Angular version changes the alphabet.
 ls "${OUT}/public/" | grep -qE '^main-[A-Za-z0-9]+\.js$' \
     || { echo "bundle is not content-hashed: build the SPA with --configuration production,strato"; exit 1; }
 
