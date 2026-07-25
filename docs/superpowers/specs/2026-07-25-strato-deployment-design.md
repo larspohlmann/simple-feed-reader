@@ -120,8 +120,8 @@ has no route for `/` and answers 404 instead of serving the app. The `.htaccess`
 
 ```
 ~/simplefeedreader/
-  releases/<tag>/        one directory per deploy
-  current -> releases/<tag>     atomic symlink, flipped last
+  releases/<name>/       one directory per deploy, named <utc-timestamp>-<short-sha>
+  current -> releases/<name>    atomic symlink (mv -T), flipped last
   shared/
     .env.local           all secrets — never in git
     config/jwt/          JWT keypair
@@ -173,13 +173,17 @@ after), which keeps them sortable and traceable back to a commit.
 
 Steps: checkout → PHP 8.4 + `composer install --no-dev --optimize-autoloader` → Node +
 `npm ci` → `ng build --configuration=strato` → assemble the release tree (backend +
-built SPA into `public/`, plus `.htaccess`) → `rsync` over SSH into `releases/<tag>` →
-over SSH: link `shared/`, warm the cache, run migrations → `ln -sfn` flip `current`.
+built SPA into `public/`, plus `.htaccess`) → `rsync` over SSH into `releases/<name>` →
+over SSH: link `shared/`, warm the cache, run migrations → flip `current` with `mv -T`,
+which is a single `rename(2)` and therefore has no instant where `current` is missing.
 
-Console commands run as `php84 -q -f bin/console <cmd>`: the host's PHP is the
-**cgi-fcgi SAPI**, where `-q` suppresses HTTP headers and `-f` takes the script. (`php -r`
-is not available in this SAPI.) PHP 8.4.22 is present, with `pdo_mysql`, `pdo_sqlite`,
-`curl`, `dom`, `intl`, `mbstring`, `openssl`, and `xml` all compiled in.
+Console commands run as `/opt/RZphp84/bin/php-cli bin/console <cmd>`. That binary is a real
+CLI, unlinked from `PATH` but measured present alongside every PHP version the host ships.
+The `php84` on `PATH` is a symlink to the **cgi-fcgi** build instead, where `php -r` does not
+work, dash-prefixed arguments need `-q -f <script> --`, the SAPI `chdir()`s into the script's
+directory, and `max_execution_time` is capped at 240s — the CLI has no such ceiling, which is
+what keeps a long migration from being killed halfway. Both are PHP 8.4.22, with `pdo_mysql`,
+`pdo_sqlite`, `curl`, `dom`, `intl`, `mbstring`, `openssl`, and `xml` compiled in.
 
 The migration step runs **before** the symlink flip, so a failed migration leaves the
 live release untouched. The first deploy migrates a fresh, empty database; no
@@ -216,7 +220,7 @@ Changed, existing files — behaviour preserved at the domain root:
   resets every rate limit and forgets every spent ALTCHA solution. The committed directory
   default is Symfony's own, verbatim. The committed seed deliberately is **not** — a stable
   literal replaces a project-path-derived one, which costs a single renamespacing wherever
-  cache data already exists (a cold start all three pools tolerate) and is the only way to
+  cache data already exists (a cold start all four pools tolerate) and is the only way to
   get one namespace that survives a release flip.
 
 Additive, existing files — no existing behaviour altered:

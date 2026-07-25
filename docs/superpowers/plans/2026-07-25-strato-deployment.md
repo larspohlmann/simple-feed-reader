@@ -15,8 +15,10 @@
 
 ## Context an implementer needs
 
-**The host.** STRATO shared hosting. PHP 8.4.22 in the **cgi-fcgi** SAPI — `php -r` does not
-work; console commands are `php84 -q -f bin/console <cmd>`. There is no composer, no node,
+**The host.** STRATO shared hosting. The *vhost* runs PHP 8.4.22 in the **cgi-fcgi** SAPI,
+where `php -r` does not work. A real CLI of the same build sits at
+`/opt/RZphp84/bin/php-cli`, unlinked from `PATH` — console commands use that, spelled
+ordinarily, and it carries no `max_execution_time` ceiling. There is no composer, no node,
 and no crontab on the server, so everything is built on the runner and shipped as files.
 `git`, `rsync`, and the `mysql` client are present. Symlinks work.
 
@@ -394,12 +396,36 @@ DirectoryIndex index.html
 # The directory is reached through a symlink from the portfolio docroot.
 Options +FollowSymLinks
 
+# The rewrite rules below serve anything that exists on disk, which would
+# include this file. Apache's stock config usually denies .ht* already, but
+# this docroot is a symlink into a deploy-assembled release tree, so do not
+# rely on the parent's defaults.
+<IfModule mod_authz_core.c>
+    <FilesMatch "^\.">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+<IfModule mod_headers.c>
+    # The shell names the content-hashed bundles, so a cached copy pins the
+    # browser to the previous release's JavaScript no matter how the assets
+    # are named. The assets themselves are hashed and may cache freely.
+    <Files "index.html">
+        Header set Cache-Control "no-cache, must-revalidate"
+    </Files>
+</IfModule>
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
     # Derive the path this app is mounted at, so no rule below has to hardcode
     # "/reader". Compares the request URI against the path mod_rewrite matched
     # and keeps the difference in ENV:BASE.
+    #
+    # Do NOT "simplify" this to a hardcoded RewriteBase. It looks redundant and
+    # is not: it is what keeps every rule below independent of where the app is
+    # mounted, and a hardcoded base would keep working right up until that path
+    # changes.
     RewriteCond %{REQUEST_URI}::$0 ^(/.+)/(.*)::\2$
     RewriteRule ^(.*) - [E=BASE:%1]
 
@@ -661,35 +687,31 @@ esac
 RELEASE="${ROOT}/releases/${NAME}"
 SHARED="${ROOT}/shared"
 
-# The host's PHP binary is `php84` and its SAPI is cgi-fcgi, not cli. That
-# changes how a command line has to be spelled, in three ways that are each
-# silent or fatal if missed:
+# An absolute vendor path, not the `php84` on PATH, because the two are not the
+# same SAPI. `php84` is a symlink to the cgi-fcgi binary: it has to be spelled
+# `-q -f <script> -- <args>` (the -q suppresses HTTP headers, the -- stops the
+# SAPI swallowing the first dash-prefixed argument), it chdir()s into the
+# script's directory, and its ini caps max_execution_time at 240 seconds. None
+# of that is wanted here -- least of all the ceiling, which is enough to kill a
+# migration on a table with real data.
 #
-#   -q                      suppresses the HTTP headers the SAPI would
-#                           otherwise print ahead of the command's output.
-#   register_argc_argv      is already on in the host's ini (measured
-#                           2026-07-25), so this is belt and braces, not a fix.
-#                           It is pinned because the failure mode is silent
-#                           rather than loud: Symfony's ArgvInput reads
-#                           $_SERVER['argv'], which this setting populates, so
-#                           if the host ever flips it off every command below
-#                           would degrade into `bin/console list` and exit 0 --
-#                           a deploy that reports success having migrated
-#                           nothing. The ini is the host's, not ours.
-#   --                      is mandatory. The SAPI keeps parsing options after
-#                           the script name, so `-f bin/console cache:clear
-#                           --no-interaction` aborts with "no argument for
-#                           option -" before PHP ever starts.
+# /opt/RZphp84/bin/php-cli is the same PHP 8.4.22 build, differing only in SAPI.
+# Measured on the host 2026-07-25: max_execution_time 0 (no ceiling), memory
+# limit 512M as with cgi-fcgi, every extension this app requires present, empty
+# disable_functions, date.timezone UTC, ordinary argument passing, and exit
+# codes propagate. The path shape is a Strato convention rather than a one-off:
+# php-cli exists identically under /opt/RZphp82, RZphp83, RZphp84 and RZphp85.
+# It is simply not on PATH, which is the only reason it looks odd here.
 #
-# The path is absolute because this script is invoked over SSH, where the shell
-# starts in $HOME. The SAPI does chdir() into the script's own directory, but
-# only after it has located and opened the file -- so a relative `-f bin/console`
-# would be resolved against $HOME and simply not be found. ${RELEASE} is
-# absolute anyway, by the normalization above.
-console() {
-    php84 -d register_argc_argv=1 -q -f "${RELEASE}/bin/console" -- "$@"
-}
+# ${RELEASE}/bin/console stays absolute, for a different reason than before: the
+# CLI does *not* chdir, it stays in the directory it was invoked from, and an
+# SSH command starts in $HOME. ${RELEASE} is absolute anyway, by the
+# normalization above.
+PHP=/opt/RZphp84/bin/php-cli
 
+console() { "${PHP}" "${RELEASE}/bin/console" "$@"; }
+
+test -x "${PHP}" || die "no PHP CLI at ${PHP} -- if Strato has reorganised /opt, look for the new path with 'ls -d /opt/RZphp*/bin/php-cli' and update this script. The cgi-fcgi binary on PATH still works as a fallback, spelled: php84 -q -f ${RELEASE}/bin/console -- <command>"
 test -d "${RELEASE}" || die "no such release: ${RELEASE}"
 test -f "${SHARED}/.env.local" || die "missing ${SHARED}/.env.local"
 test -f "${SHARED}/config/jwt/private.pem" || die "missing shared JWT key: ${SHARED}/config/jwt/private.pem"
@@ -750,19 +772,24 @@ echo "==> Warming the cache"
 # mid-warmup cannot build on top of a half-written cache. One command, not two:
 # cache:clear warms the cache itself unless --no-warmup is passed (Symfony 7.4,
 # CacheClearCommand), so a following cache:warmup would buy a second container
-# compile against the host's 240s max_execution_time and nothing else.
+# compile and nothing else.
 console cache:clear --no-interaction
 
 echo "==> Running migrations"
 # Before the flip on purpose: if this fails, the old release is still live.
 #
-# It can fail halfway. MySQL 8 commits implicitly on DDL, so Doctrine's
-# per-migration transaction does not protect a migration that dies partway
-# through -- the host's 240s max_execution_time is enough to kill one on a
-# table with real data. What is left behind is a half-changed schema with no
-# row in doctrine_migration_versions, and a blind retry then fails on something
-# like "Duplicate column name". This script cannot make DDL transactional; all
-# it can do is refuse to fail mutely.
+# It can fail halfway, and that is the expensive case. MySQL 8 commits
+# implicitly on DDL, so Doctrine's per-migration transaction does not protect a
+# migration that dies partway through: a statement the server rejects, a
+# connection lost to the shared MySQL host, or the job being killed leaves a
+# half-changed schema with no row in doctrine_migration_versions, and a blind
+# retry then fails on something like "Duplicate column name".
+#
+# What is *no longer* one of those causes is a timeout. Under the CLI above
+# max_execution_time is 0; the 240s ceiling belongs to the cgi-fcgi SAPI this
+# script deliberately does not use. The implicit-commit hazard is unchanged --
+# this script cannot make DDL transactional; all it can do is refuse to fail
+# mutely.
 migrate_status=0
 console doctrine:migrations:migrate --no-interaction --allow-no-migration || migrate_status=$?
 if [ "${migrate_status}" -ne 0 ]; then
@@ -774,7 +801,7 @@ if [ "${migrate_status}" -ne 0 ]; then
         echo "!!! statements from a migration that died partway through can be applied"
         echo "!!! without the migration being recorded as executed."
         echo "!!! Check what actually ran before retrying the deploy:"
-        echo "!!!   php84 -d register_argc_argv=1 -q -f ${RELEASE}/bin/console -- doctrine:migrations:status"
+        echo "!!!   ${PHP} ${RELEASE}/bin/console doctrine:migrations:status"
     } >&2
     exit "${migrate_status}"
 fi
@@ -826,46 +853,131 @@ git commit -m "feat(deploy): server-side release activation with a last-step fli
 Create `deploy/strato/.env.local.example`:
 
 ```dotenv
-# Production environment for the personal Strato deployment.
+# Production environment for the maintainer's personal Strato deployment.
 #
-# Copy to shared/.env.local ON THE SERVER and fill in real values. This file
-# documents names only -- never commit real secrets.
+# Copy this to shared/.env.local ON THE SERVER and fill in the real values
+# there. This file documents NAMES ONLY: every secret below ends in `=` with
+# nothing after it, and it must stay that way -- the file is committed.
+#
+# Symfony loads .env first and .env.local second, so anything set here wins
+# over the committed defaults in backend/.env. Anything NOT set here silently
+# keeps its committed default, which is why the variables below are listed
+# even where the default happens to be harmless: the dangerous ones are
+# dangerous precisely because they work.
+#
+# activate-release.sh refuses to activate a release unless this file sets
+# APP_ENV=prod and points CACHE_DIRECTORY at an absolute path. See the
+# runbook for why those two, and only those two, are enforced.
 
 APP_ENV=prod
+# Redundant on paper -- Dotenv derives 0 from APP_ENV=prod -- but symfony/runtime
+# reads it directly, so pinning it costs nothing and beats an inherited export.
 APP_DEBUG=0
-# Generate once: openssl rand -hex 16
+# Generate once, on your own machine: openssl rand -hex 16
+# That is exactly what Symfony Flex generates (32 hex characters from 16 random
+# bytes). Any non-empty string works; this one is the convention.
+#
+# Unlike everything else here, leaving this empty breaks nothing today: its only
+# consumer is framework.secret, and this app has no CSRF tokens, no UriSigner
+# and no remember-me cookie to derive a key for. Set it anyway. It is also the
+# only variable whose committed default is empty, so an unedited copy of this
+# file is indistinguishable from a deliberate one -- and the day something here
+# does start deriving keys from it, that would be a silent, shared, public
+# secret rather than a loud missing one.
 APP_SECRET=
 
-# The hosting package's MySQL database. Host and database name are already
-# known; only the password is secret. The server speaks MySQL 8 (it defaults
-# to caching_sha2_password) -- confirm the exact serverVersion after the first
-# successful connect, since Doctrine picks its platform from this value.
+# The hosting package's MySQL database. The database name and the host are not
+# secret; the password is. The server is MySQL 8 -- confirm the exact
+# serverVersion after the first successful connect, because Doctrine picks its
+# platform (and therefore the SQL its migrations emit) from this string.
 DATABASE_URL="mysql://dbs15919276:PASSWORD@database-5020972012.webspace-host.com:3306/dbs15919276?serverVersion=8.0&charset=utf8mb4"
 
-# Strato SMTP, using the noreply@ mailbox created in the panel.
+# Strato SMTP, using the noreply@ mailbox created in the panel. The username is
+# the full mailbox address. If the password contains any of : / ? # [ ] @ it
+# MUST be percent-encoded here, or the DSN parses into a different host and the
+# failure looks like a credentials problem.
+#
+# Leaving this at the committed default (null://null) is a hard error in prod:
+# InsecureProductionConfigGuard refuses every request, because null:// discards
+# mail and reports success -- registration would 202 with no verification mail
+# and nothing would log a thing.
 MAILER_DSN=smtp://USER:PASSWORD@smtp.strato.de:587
 
+# The From: header on account mail. The committed default is example.com, which
+# a real transport will either reject or deliver straight to spam. Strato
+# requires the sender to be the mailbox you authenticated as.
+MAIL_FROM=noreply@lars-pohlmann.de
+MAIL_FROM_NAME="Simple Feed Reader"
+
 # Both point at the mount, not the domain root: the app lives under /reader.
-# The mailer concatenates this with /verify-email etc., and the OAuth
-# controller redirects to /auth/callback beneath it.
+# AccountMailer concatenates APP_FRONTEND_URL with /verify-email and friends,
+# and the OAuth controller redirects beneath it. APP_BACKEND_URL is what builds
+# the redirect URI handed to the identity providers, so it must match what is
+# registered with them byte for byte.
+#
+# APP_FRONTEND_URL is also the single allowed CORS origin -- CorsListener
+# reduces it to scheme://host and echoes that, never the request's own Origin.
+# There is no separate CORS variable. Here the SPA and the API share an origin,
+# so the policy is inert; get this URL wrong and the SPA breaks before CORS
+# ever becomes the interesting part.
 APP_FRONTEND_URL=https://lars-pohlmann.de/reader
 APP_BACKEND_URL=https://lars-pohlmann.de/reader
 
-# JWT keys live in shared/config/jwt/ and are symlinked into each release.
+# Used only to generate absolute URLs outside an HTTP request (console
+# commands). Nothing does that today; set it anyway so the day something does,
+# it does not emit http://localhost links.
+DEFAULT_URI=https://lars-pohlmann.de/reader
+
+# Signs ALTCHA challenges, and is the ONLY thing making one unforgeable.
+# backend/.env ships a known placeholder in a public repository: with that in
+# place anyone computes a valid solution in one hash instead of ~150k, and the
+# proof-of-work on /register and /password-reset-request is void while both
+# endpoints keep answering 200. InsecureProductionConfigGuard therefore refuses
+# to serve prod traffic at all while the placeholder is still here -- every
+# request 500s until this is set.
+#
+# Generate once: openssl rand -hex 32
+ALTCHA_HMAC_KEY=
+
+# The passphrase for shared/config/jwt/private.pem, which activation symlinks
+# into each release. If it contains a `#` or a space, quote it -- dotenv treats
+# an unquoted `#` as the start of a comment, and the resulting error is
+# "unable to load private key", not "your passphrase was truncated".
 JWT_PASSPHRASE=
 
 # Google sign-in. The redirect URI registered in the Google Cloud console must
 # be exactly:
 #   https://lars-pohlmann.de/reader/api/auth/oauth/google/callback
+# Leave both blank to disable Google sign-in; the provider registry then
+# reports it as unconfigured rather than failing at the callback.
 GOOGLE_OAUTH_CLIENT_ID=
 GOOGLE_OAUTH_CLIENT_SECRET=
 
-# Apple sign-in stays off: a blank client id disables that leg entirely.
+# Apple sign-in stays off. A blank Services ID disables that leg entirely, so
+# APPLE_OAUTH_TEAM_ID, APPLE_OAUTH_KEY_ID and APPLE_OAUTH_PRIVATE_KEY are left
+# to their (empty) committed defaults and are deliberately not listed here.
 APPLE_OAUTH_CLIENT_ID=''
 
-# Filesystem cache pools must outlive a release, or every deploy resets the
-# rate limits and forgets spent ALTCHA solutions. Absolute path into shared/.
+# Shared token for POST /maintenance/refresh, the only way to refresh feeds
+# without a logged-in browser. There is no scheduler yet, and an empty token is
+# fail-closed -- MaintenanceController refuses every call before comparing
+# anything -- so leaving this blank is a safe default and NOT an oversight.
+# Fill it in (openssl rand -hex 32) on the day a pinger exists.
+MAINTENANCE_TOKEN=
+
+# The filesystem cache pools -- rate limiter, spent ALTCHA solutions, pending
+# OAuth states, login codes -- must outlive a release. The committed default is
+# kernel-relative, so it resolves inside the release's own var/cache, which
+# activation wipes: every deploy would reset the rate limits and re-open the
+# ALTCHA replay window. An absolute path into shared/ is what fixes that, and
+# activate-release.sh refuses to activate without one.
 CACHE_DIRECTORY=/mnt/web319/b2/38/59606538/htdocs/simplefeedreader/shared/var/cache-pools
+
+# A literal, not Symfony's default. Symfony seeds the namespace with the
+# project directory, which changes with every release, so the pools would be
+# renamespaced on each deploy even after CACHE_DIRECTORY is shared. This must
+# stay byte-identical across releases; changing it is a one-time cold start of
+# all four pools.
 CACHE_PREFIX_SEED=simple-feed-reader
 ```
 
@@ -873,164 +985,10 @@ CACHE_PREFIX_SEED=simple-feed-reader
 
 Create `deploy/strato/README.md`:
 
-````markdown
-# Personal Strato deployment
-
-The maintainer's own deployment of this app to STRATO shared hosting. **It is not the
-supported way to run the project** — use the Docker setup in the repository root for that.
-Nothing here is required to develop or run the app.
-
-The app is served at <https://lars-pohlmann.de/reader>. It is mounted at a subpath rather
-than a subdomain because STRATO's free certificate covers only the apex domain and `www`,
-and the apex is already certified.
-
-## How it fits together
-
-```
-~/larspohlmann/reader  ->  ~/simplefeedreader/current/public
-~/simplefeedreader/
-  releases/<tag>/            one directory per deploy
-  current -> releases/<tag>  flipped atomically, last
-  shared/
-    .env.local               secrets
-    config/jwt/              JWT keypair
-    var/log/
-    var/cache-pools/         rate limiter + ALTCHA replay
-```
-
-Symfony derives its base path from `SCRIPT_NAME`, so routes need no prefix. Angular gets
-`/reader/` from the `strato` build configuration. `public/.htaccess` sends `/api` and
-`/maintenance` to `index.php`, serves real files as they are, and falls back to `index.html`.
-
-## One-time setup
-
-1. **MySQL database** — create it in the Strato panel; put the DSN in `shared/.env.local`.
-2. **Mailbox** — create `noreply@lars-pohlmann.de`; put its SMTP credentials in the same file.
-3. ~~**PHP version**~~ — nothing to do. The vhost was measured serving **PHP 8.4.22**
-   (cgi-fcgi) on 2026-07-25, which is what reader mode needs (readability.php v4).
-4. **Google OAuth** — register the redirect URI exactly:
-   `https://lars-pohlmann.de/reader/api/auth/oauth/google/callback`
-5. **Subdomain** — point `reader.lars-pohlmann.de` at `https://lars-pohlmann.de/reader`.
-   That redirect travels over plain HTTP (the subdomain has no certificate); it is a
-   convenience for old links, not a secure entry point.
-6. **JWT keys** — generate them and place them in `shared/config/jwt/`:
-
-   ```bash
-   ssh strato-feedreader 'mkdir -p ~/simplefeedreader/shared/config/jwt'
-   # locally, then upload:
-   openssl genpkey -out private.pem -aes256 -algorithm rsa -pkeyopt rsa_keygen_bits:4096
-   openssl pkey -in private.pem -out public.pem -pubout
-   scp private.pem public.pem strato-feedreader:~/simplefeedreader/shared/config/jwt/
-   ```
-
-   The passphrase goes in `JWT_PASSPHRASE`.
-7. **Environment** — copy `.env.local.example` to `shared/.env.local` and fill it in.
-8. **Mount** — link the app into the portfolio docroot:
-
-   ```bash
-   ssh strato-feedreader 'ln -sfn ~/simplefeedreader/current/public ~/larspohlmann/reader'
-   ```
-
-## Deploying
-
-**`develop` is continuously deployed.** Every push or merge to `develop` runs CI, and if CI
-passes the deploy workflow builds both halves on the runner, uploads the release, migrates,
-and flips `current`. Migrations run **before** the flip, so a failed migration leaves the
-previous release live.
-
-Nothing to do by hand — merge to `develop` and it ships.
-
-Two caveats:
-
-- `workflow_run` only fires when the deploy workflow is on the **default branch** (`main`).
-  Until `develop` has been merged to `main` once, automatic deploys do not happen.
-- To deploy on demand at any time, run the **Deploy (Strato)** workflow manually from the
-  Actions tab (`workflow_dispatch`).
-
-## Rolling back
-
-```bash
-ssh strato-feedreader 'ls ~/simplefeedreader/releases'
-ssh strato-feedreader 'ln -sfn ~/simplefeedreader/releases/<previous> ~/simplefeedreader/current'
-```
-
-No rebuild needed. Down-migrations are not part of this setup: if a release migrated the
-schema, rolling back the code does not roll back the database.
-
-## Verifying a deploy
-
-1. <https://lars-pohlmann.de/reader> loads over a valid certificate.
-2. `https://lars-pohlmann.de/reader/api/health` responds.
-3. A client-side route survives a browser reload (proves the SPA fallback).
-4. Register → verification email arrives → verify → approve.
-5. Google sign-in completes and lands back under `/reader`.
-6. Subscribe to a feed, refresh, open an article, switch to reader mode
-   (this is what proves PHP 8.4 on the vhost).
-7. <https://lars-pohlmann.de/> and `/de/` still work — the mount must not disturb them.
-8. Deploy again: logins survive (shared JWT keys) and rate-limit state survives
-   (shared cache pools).
-
-## Notes
-
-- There is **no scheduled refresh**. Feeds update when someone presses refresh.
-- The server has no composer, node, or crontab; everything is built on the runner.
-- The host's PHP is cgi-fcgi: `php -r` does not work. Use `php84 -q -f bin/console <cmd>`.
-- **`api` and `maintenance` are reserved top-level names.** The `.htaccess` routes them to
-  Symfony, so a static asset or directory with either name would be swallowed before the SPA
-  ever saw it. Nothing in the current build produces one.
-
-## Host capabilities — measured, not assumed (2026-07-25)
-
-Every assumption this deployment rests on was probed on the live host by mounting a throwaway
-directory under the portfolio docroot and driving it over HTTPS. The probe was removed
-afterwards and the portfolio verified intact. **All of it passed**, which retires the risks
-earlier review rounds had flagged as undiagnosable:
-
-| Assumption | Result |
-| --- | --- |
-| Apache version | 2.4.68 (Unix) |
-| `.htaccess` honoured at all | yes — `DirectoryIndex` took effect |
-| `AllowOverride` permits `Options` | **yes** — no 500; this was the biggest flagged risk |
-| `mod_rewrite` | yes — all four request shapes routed correctly |
-| `mod_headers` | yes — `Header set` reached the client |
-| `mod_authz_core` | yes — dotfile denied with 403 |
-| Symlinked directory served over the web | **yes** — 200 through a symlink in the docroot |
-| Web-context PHP | **8.4.22**, cgi-fcgi — already correct, no panel change needed |
-| Required extensions | all present (ctype, dom, iconv, libxml, filter, mbstring, openssl, sodium, xml, pdo_mysql, curl, intl, tokenizer, session, json) |
-| `memory_limit` / `max_execution_time` | 512M / 240s |
-| opcache / `allow_url_fopen` / `disable_functions` | on / on / none |
-| `date.timezone` | UTC — matches how the app persists datetimes |
-
-The decisive detail for the subpath: a request to `/_probe/d/api/health` arrived with
-`SCRIPT_NAME=/_probe/d/index.php` and `REQUEST_URI=/_probe/d/api/health` — exactly the pair
-Symfony uses to derive a base URL of `/_probe/d` and a path info of `/api/health`. The mount
-mechanism is confirmed, not inferred.
-
-### The database
-
-It exists: `dbs15919276` on **`database-5020972012.webspace-host.com`**, port 3306. Three
-things were established about it, and each one shapes the deploy:
-
-- **Migrations over SSH work.** TCP 3306 is open from the shell host, and a PDO connection
-  with a deliberately wrong password came back `1045 Access denied for user
-  'dbs15919276'@'swh-live-shell002.swh.1u1.it'` — the handshake completed and only the
-  credentials were refused. So `php84 -q -f bin/console doctrine:migrations:migrate` in
-  `activate-release.sh` is sound; no web-triggered migration fallback is needed.
-- **Never use the host's `mysql` CLI against this database.** It is a MySQL 5.6 client
-  (`/opt/RZmysql56/`) and fails with `ERROR 2059 … caching_sha2_password cannot be loaded`
-  against what is clearly a MySQL 8 server. PHP's mysqlnd negotiates it fine. This rules out
-  shell-based dumps or imports through that client — relevant if a backup step is ever added.
-- **Grants are host-scoped.** MySQL returns the same 1045 for "wrong password" and "this host
-  may not connect", so whether the *shell* host is granted access is only proven on the first
-  real deploy. If migrations fail with 1045 despite correct credentials, that is the cause.
-
-**What the probe did NOT cover**, and still needs watching on the first real deploy:
-
-- The probe ran a two-line PHP file, not Symfony. Booting the real kernel under cgi-fcgi —
-  and `php84 -q -f bin/console` for migrations — is exercised for the first time on deploy.
-- `fastcgi_finish_request()` does not exist under cgi-fcgi, so the deferred-mailer timing
-  guarantee is weaker here than the code's comments assume.
-````
+The runbook shipped as `deploy/strato/README.md`. It is deliberately not reproduced here:
+it grew well past the draft during review -- gaining the admin-bootstrap step, the
+placeholder-`current` removal, the deploy-root skeleton, the hand-deploy path, and the
+real-CLI console form -- and a second copy in this document would only rot. Read the file.
 
 - [ ] **Step 3: Verify no real secrets are present**
 
@@ -1100,7 +1058,9 @@ Create `.github/workflows/deploy-strato.yml`:
 # see deploy/strato/README.md.
 #
 # Runs after CI succeeds on develop, so develop is continuously deployed and a
-# red build never reaches production.
+# red build never reaches production. Thin on purpose: it sets up the two
+# toolchains the server does not have, calls deploy/strato/build-release.sh and
+# deploy/strato/activate-release.sh, and moves files between them.
 #
 # NOTE: workflow_run only fires when this file is on the DEFAULT branch (main).
 # Until develop is merged to main, deploy by hand with workflow_dispatch.
@@ -1114,28 +1074,118 @@ on:
   workflow_dispatch:
 
 # One deploy at a time. Two overlapping runs could interleave an rsync with
-# another release's symlink flip.
+# another release's symlink flip. Never cancel a run in progress: the dangerous
+# moment is between "migrations started" and "current flipped", and killing the
+# job there leaves a migrated database in front of the old code with no record
+# of how far it got. A superseded *pending* run is dropped by GitHub anyway, so
+# nothing older than the head of the queue ever reaches the host.
 concurrency:
   group: deploy-strato
   cancel-in-progress: false
+
+# This job talks to the Strato host over SSH and to the GitHub API not at all.
+# `contents: read` is what actions/checkout needs and nothing else is granted.
+permissions:
+  contents: read
 
 jobs:
   deploy:
     name: Build and deploy
     runs-on: ubuntu-latest
-    # Deploy only a green build. A manual dispatch is trusted on its own; a
-    # workflow_run must report success, since the event fires on failure too.
+    timeout-minutes: 30
+    # Deploy only a green build of our own code. A manual dispatch is trusted on
+    # its own. A workflow_run must clear three bars, not one:
+    #   conclusion  -- the event fires on failure and cancellation too.
+    #   event       -- CI also runs on pull_request, and the branch filter above
+    #                  matches the *head* branch. A pull request opened from a
+    #                  fork whose branch happens to be named `develop` would
+    #                  otherwise reach this job, which runs with the deploy
+    #                  secrets and executes the branch's own build scripts.
+    #   head_repository -- belt and braces for the same attack.
     if: >-
       github.repository == 'larspohlmann/simple-feed-reader' &&
       (github.event_name == 'workflow_dispatch' ||
-       github.event.workflow_run.conclusion == 'success')
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))
 
     steps:
       # workflow_run checks out the DEFAULT branch unless told otherwise, so
       # pin the commit CI actually tested -- otherwise every deploy ships main.
+      # Nothing here needs git write access, so the token is not left in
+      # .git/config for the build steps to trip over.
       - uses: actions/checkout@v5
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          persist-credentials: false
+
+      # Two seconds here rather than a confusing failure three minutes in. The
+      # value is interpolated into remote command lines below, where it is
+      # single-quoted: that survives spaces but not a single quote of its own.
+      # Relative paths are refused because `current` stores an absolute target
+      # and an SSH command starts in $HOME, not in the deploy root.
+      - name: Check the deploy target
+        env:
+          DEPLOY_PATH: ${{ secrets.STRATO_DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          # The value is a secret, so it is never echoed -- the message says
+          # what is wrong with it, not what it is.
+          die() { echo "!!! STRATO_DEPLOY_PATH $1" >&2; exit 1; }
+          [ -n "${DEPLOY_PATH}" ] || die "is empty"
+          [ "${DEPLOY_PATH#/}" != "${DEPLOY_PATH}" ] || die "is not an absolute path"
+          [ "$(printf '%s' "${DEPLOY_PATH}" | wc -l)" -eq 0 ] || die "contains a newline"
+          case "${DEPLOY_PATH}" in
+            *\'*) die "contains a single quote, which the remote commands below cannot quote" ;;
+          esac
+
+      # Everything the later steps need to reach the host lives in ~/.ssh/config
+      # under the alias `strato`, so no step has to repeat the connection
+      # details and neither the host nor the user appears on a command line.
+      # printf rather than a heredoc: the values are secrets and must land in
+      # the file verbatim, not as something the shell got a second look at.
+      - name: Configure SSH
+        env:
+          SSH_HOST: ${{ secrets.STRATO_SSH_HOST }}
+          SSH_USER: ${{ secrets.STRATO_SSH_USER }}
+          SSH_KEY: ${{ secrets.STRATO_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.STRATO_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          # printf, not echo: `echo` mangles a value beginning with -n or -e,
+          # and the trailing \n is what saves a key stored without one --
+          # OpenSSH rejects a private key whose final line is unterminated.
+          printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
+          printf '%s\n' "${KNOWN_HOSTS}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+          {
+            printf 'Host strato\n'
+            printf '  HostName %s\n' "${SSH_HOST}"
+            printf '  User %s\n' "${SSH_USER}"
+            printf '  IdentityFile ~/.ssh/deploy_key\n'
+            printf '  UserKnownHostsFile ~/.ssh/known_hosts\n'
+            # IdentitiesOnly stops the agent offering other keys and burning
+            # the server's MaxAuthTries before ours is tried; StrictHostKeyChecking
+            # plus BatchMode turn an unknown host into a failure rather than a
+            # prompt that would hang the job until the 30-minute timeout.
+            printf '  IdentitiesOnly yes\n'
+            printf '  StrictHostKeyChecking yes\n'
+            printf '  BatchMode yes\n'
+            printf '  ConnectTimeout 20\n'
+            # A migration can legitimately run for minutes on a shared host, but
+            # a connection that has silently died should not hold the job open.
+            printf '  ServerAliveInterval 15\n'
+            printf '  ServerAliveCountMax 8\n'
+          } > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+      # Fails before the build rather than after it if the key, the host key, or
+      # the account is wrong.
+      - name: Check the SSH connection
+        run: ssh strato true
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -1148,74 +1198,167 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       # Node 22 ships npm 10.9.8, which mis-resolves chokidar and rejects the
       # npm-11-authored lockfile. Same pin as the CI workflow.
-      - name: Pin npm
+      - name: Pin npm 11 (matches the lockfile author)
         run: npm i -g npm@11
 
-      # No tag to name a release after, so use a sortable timestamp plus the
-      # short SHA of the commit being deployed.
+      # No tag to name a release after, so use a sortable UTC timestamp plus the
+      # short SHA of the commit being deployed. The name is validated because it
+      # becomes a path segment on the server, an argument to the activation
+      # script, and the thing the prune step below reasons about.
       - name: Name the release
-        id: release
         run: |
-          echo "name=$(date -u +%Y%m%d%H%M%S)-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          : "${RUNNER_TEMP:?RUNNER_TEMP is unset}"
+          sha="$(git rev-parse --short HEAD)"
+          name="$(date -u +%Y%m%d%H%M%S)-${sha}"
+          case "${name}" in
+            [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9a-f]*) ;;
+            *) echo "!!! refusing to deploy under the release name '${name}'" >&2; exit 1 ;;
+          esac
+          echo "RELEASE_NAME=${name}" >> "$GITHUB_ENV"
+          echo "RELEASE_DIR=${RUNNER_TEMP}/release" >> "$GITHUB_ENV"
+          echo "==> Release ${name}"
 
+      # Installs production dependencies, builds the SPA with the /reader base
+      # href, assembles the tree, and sanity-checks it. The script's EXIT trap
+      # that restores dev dependencies is skipped here because GitHub Actions
+      # sets CI=true for every step; it would be harmless on this throwaway
+      # checkout anyway.
       - name: Build the release
-        run: ./deploy/strato/build-release.sh "${RUNNER_TEMP}/release"
+        run: ./deploy/strato/build-release.sh "${RELEASE_DIR}"
 
-      - name: Configure SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.STRATO_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          echo "${{ secrets.STRATO_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+      # Travels with the release instead of being uploaded to a fixed path of
+      # its own: one transfer fewer, no chance of overwriting the copy a
+      # concurrent run is executing, and a release on disk stays activatable
+      # later by exactly the script it was built against.
+      - name: Add the activation script to the release
+        run: cp deploy/strato/activate-release.sh "${RELEASE_DIR}/activate-release.sh"
 
+      # No --delete: the destination is a fresh directory every time (the name
+      # carries a timestamp), so it would have nothing to delete -- while an
+      # empty or malformed RELEASE_NAME would aim it at releases/ itself and
+      # empty the lot. The name is validated above and the source is checked
+      # here; --delete would still be a loaded gun for no gain.
+      #
+      # The remote path is deliberately unquoted, unlike the ssh commands below.
+      # Since 3.2.4 rsync backslash-escapes shell-active characters in a remote
+      # argument itself (the runner has 3.2.7), so a space in DEPLOY_PATH is
+      # handled for us and quotes of our own would become part of the path.
       - name: Upload the release
         env:
-          SSH_USER: ${{ secrets.STRATO_SSH_USER }}
-          SSH_HOST: ${{ secrets.STRATO_SSH_HOST }}
-          DEPLOY_PATH: ${{ secrets.STRATO_DEPLOY_PATH }}
-          RELEASE: ${{ steps.release.outputs.name }}
-        run: |
-          rsync -az --delete \
-            -e "ssh -i ~/.ssh/deploy_key -o UserKnownHostsFile=~/.ssh/known_hosts" \
-            "${RUNNER_TEMP}/release/" \
-            "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/releases/${RELEASE}/"
-
-      - name: Upload the activation script
-        env:
-          SSH_USER: ${{ secrets.STRATO_SSH_USER }}
-          SSH_HOST: ${{ secrets.STRATO_SSH_HOST }}
           DEPLOY_PATH: ${{ secrets.STRATO_DEPLOY_PATH }}
         run: |
-          scp -i ~/.ssh/deploy_key -o UserKnownHostsFile=~/.ssh/known_hosts \
-            deploy/strato/activate-release.sh \
-            "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/activate-release.sh"
+          set -euo pipefail
+          test -f "${RELEASE_DIR}/public/index.php" \
+            || { echo "!!! ${RELEASE_DIR} is not a built release" >&2; exit 1; }
+          rsync -az --info=stats1 \
+            "${RELEASE_DIR}/" \
+            "strato:${DEPLOY_PATH}/releases/${RELEASE_NAME}/"
 
-      # Links shared state, migrates, warms the cache, and flips `current`
-      # last. A failure here leaves the previous release serving traffic.
+      # Links shared state, warms the cache, migrates, and flips `current` last.
+      # A failure here leaves the previous release serving traffic, and ssh
+      # returns the script's exit status, so the job goes red with it.
+      #
+      # Run through `bash` rather than chmod + execute: one round trip fewer and
+      # one fewer thing to go wrong if the host ever mounts the webspace noexec.
+      # Single quotes around the interpolated values are what makes a DEPLOY_PATH
+      # containing a space survive the remote shell.
       - name: Activate the release
         env:
-          SSH_USER: ${{ secrets.STRATO_SSH_USER }}
-          SSH_HOST: ${{ secrets.STRATO_SSH_HOST }}
           DEPLOY_PATH: ${{ secrets.STRATO_DEPLOY_PATH }}
-          RELEASE: ${{ steps.release.outputs.name }}
         run: |
-          ssh -i ~/.ssh/deploy_key -o UserKnownHostsFile=~/.ssh/known_hosts \
-            "${SSH_USER}@${SSH_HOST}" \
-            "chmod +x '${DEPLOY_PATH}/activate-release.sh' && '${DEPLOY_PATH}/activate-release.sh' '${DEPLOY_PATH}' '${RELEASE}'"
+          set -euo pipefail
+          # shellcheck disable=SC2029  # expanding here is the point: the runner
+          # knows the path and the release name, the server does not.
+          ssh strato "bash '${DEPLOY_PATH}/releases/${RELEASE_NAME}/activate-release.sh' '${DEPLOY_PATH}' '${RELEASE_NAME}'"
+
+      # Activation deliberately checks only the two .env.local settings whose
+      # absence fails silently. Everything else -- ALTCHA_HMAC_KEY, MAILER_DSN,
+      # a database that refuses the connection -- surfaces only once the app
+      # serves a request, and InsecureProductionConfigGuard answers 500 to
+      # every route when it is unhappy. Without this step that release would go
+      # live and the deploy would report success. develop is continuously
+      # deployed, so nobody is necessarily watching.
+      #
+      # Deliberately after the flip: the point is to exercise the release that
+      # is actually serving. A failure here means the site is broken NOW and
+      # wants a rollback, not that the deploy did not happen.
+      - name: Smoke-test the live release
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 3 --retry-delay 5 --max-time 30 \
+            https://lars-pohlmann.de/reader/api/health \
+            || { echo "!!! ${RELEASE_NAME} is live but /api/health is not answering." >&2
+                 echo "!!! Roll back per deploy/strato/README.md, then check .env.local:" >&2
+                 echo "!!!   ALTCHA_HMAC_KEY and MAILER_DSN both 500 every route while unset." >&2
+                 exit 1; }
+          echo
 
       # Keep the five most recent releases so a rollback target always exists.
-      - name: Prune old releases
+      #
+      # The naive form of this (`ls -1t | tail -n +6 | xargs -r rm -rf`) decides
+      # what to delete purely by modification time, and mtime is not the same
+      # question as "which release is serving the site". A release directory's
+      # mtime moves whenever anything is written into it, releases that were
+      # uploaded but never activated stay on disk and are newer than the live
+      # one, and a rollback makes `current` point at something that is not the
+      # newest at all. Any of those can push the live release past position five
+      # -- and deleting it takes the site down instantly, with the deploy
+      # reporting success. So resolve `current` first and never delete its
+      # target, whatever the sort order says. If `current` cannot be resolved,
+      # nothing is deleted at all.
+      #
+      # This runs after the flip, so the new release is already live: a failure
+      # in this step is a red build over a healthy site, not a failed deploy.
+      - name: Prune old releases (the new release is already live)
         env:
-          SSH_USER: ${{ secrets.STRATO_SSH_USER }}
-          SSH_HOST: ${{ secrets.STRATO_SSH_HOST }}
           DEPLOY_PATH: ${{ secrets.STRATO_DEPLOY_PATH }}
         run: |
-          ssh -i ~/.ssh/deploy_key -o UserKnownHostsFile=~/.ssh/known_hosts \
-            "${SSH_USER}@${SSH_HOST}" \
-            "cd '${DEPLOY_PATH}/releases' && ls -1t | tail -n +6 | xargs -r rm -rf"
+          set -euo pipefail
+          # shellcheck disable=SC2029  # ditto: DEPLOY_PATH must expand here.
+          # The script itself is quoted (<<'REMOTE') and expands on the server.
+          ssh strato "bash -s -- '${DEPLOY_PATH}' 5" <<'REMOTE'
+          set -eu
+          root=$1
+          keep=$2
+
+          cd "$root/releases" || { echo "!!! no releases directory" >&2; exit 1; }
+
+          # `cd` + `pwd -P` resolves a symlink and a real directory alike, and
+          # fails on a dangling one -- which is the case where guessing would be
+          # worst.
+          live="$(cd "$root/current" 2>/dev/null && pwd -P)" || live=''
+          if [ -z "$live" ]; then
+            echo "!!! cannot resolve $root/current -- refusing to prune anything" >&2
+            exit 1
+          fi
+          live="$(basename "$live")"
+          echo "==> live release: $live"
+
+          seen=0
+          while IFS= read -r name; do
+            [ -n "$name" ] || continue
+            [ -d "$name" ] || continue
+            seen=$((seen + 1))
+            if [ "$seen" -le "$keep" ]; then
+              continue
+            fi
+            if [ "$name" = "$live" ]; then
+              echo "    keeping $name (it is live, despite being older than $keep others)"
+              continue
+            fi
+            echo "    removing $name"
+            rm -rf -- "./$name"
+          done <<EOF
+          $(ls -1t)
+          EOF
+          echo "==> pruned"
+          REMOTE
 ```
 
 - [ ] **Step 3: Verify the YAML parses**
