@@ -222,6 +222,28 @@ jobs:
           # knows the path and the release name, the server does not.
           ssh strato "bash '${DEPLOY_PATH}/releases/${RELEASE_NAME}/activate-release.sh' '${DEPLOY_PATH}' '${RELEASE_NAME}'"
 
+      # Activation deliberately checks only the two .env.local settings whose
+      # absence fails silently. Everything else -- ALTCHA_HMAC_KEY, MAILER_DSN,
+      # a database that refuses the connection -- surfaces only once the app
+      # serves a request, and InsecureProductionConfigGuard answers 500 to
+      # every route when it is unhappy. Without this step that release would go
+      # live and the deploy would report success. develop is continuously
+      # deployed, so nobody is necessarily watching.
+      #
+      # Deliberately after the flip: the point is to exercise the release that
+      # is actually serving. A failure here means the site is broken NOW and
+      # wants a rollback, not that the deploy did not happen.
+      - name: Smoke-test the live release
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 3 --retry-delay 5 --max-time 30 \
+            https://lars-pohlmann.de/reader/api/health \
+            || { echo "!!! ${RELEASE_NAME} is live but /api/health is not answering." >&2
+                 echo "!!! Roll back per deploy/strato/README.md, then check .env.local:" >&2
+                 echo "!!!   ALTCHA_HMAC_KEY and MAILER_DSN both 500 every route while unset." >&2
+                 exit 1; }
+          echo
+
       # Keep the five most recent releases so a rollback target always exists.
       #
       # The naive form of this (`ls -1t | tail -n +6 | xargs -r rm -rf`) decides
