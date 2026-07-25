@@ -50,7 +50,7 @@ rejects the npm-11-authored lockfile) and then `npm ci`.
 | --- | --- |
 | `deploy/strato/.htaccess` | Apache rules splitting one directory between Symfony and the SPA |
 | `deploy/strato/build-release.sh` | Build both halves on the runner and assemble a release tree |
-| `deploy/strato/activate-release.sh` | Run on the server: link shared state, migrate, flip `current` |
+| `deploy/strato/activate-release.sh` | Run on the server: link shared state, warm the cache, migrate, flip `current` |
 | `deploy/strato/.env.local.example` | Names and explanations of every production variable — no values |
 | `deploy/strato/README.md` | Manual panel steps, first-deploy runbook, rollback |
 
@@ -550,7 +550,7 @@ git commit -m "feat(deploy): script to build and assemble a Strato release (#73)
 ## Task 6: Write the release activation script
 
 Runs **on the server**, over SSH, against an already-uploaded release directory. Links the
-shared state, migrates, warms the cache, and flips `current` last so a failure anywhere before
+shared state, warms the cache, migrates, and flips `current` last so a failure anywhere before
 the flip leaves the live site untouched.
 
 **Files:**

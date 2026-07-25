@@ -174,7 +174,7 @@ after), which keeps them sortable and traceable back to a commit.
 Steps: checkout → PHP 8.4 + `composer install --no-dev --optimize-autoloader` → Node +
 `npm ci` → `ng build --configuration=strato` → assemble the release tree (backend +
 built SPA into `public/`, plus `.htaccess`) → `rsync` over SSH into `releases/<tag>` →
-over SSH: link `shared/`, run migrations, warm the cache → `ln -sfn` flip `current`.
+over SSH: link `shared/`, warm the cache, run migrations → `ln -sfn` flip `current`.
 
 Console commands run as `php84 -q -f bin/console <cmd>`: the host's PHP is the
 **cgi-fcgi SAPI**, where `-q` suppresses HTTP headers and `-f` takes the script. (`php -r`
