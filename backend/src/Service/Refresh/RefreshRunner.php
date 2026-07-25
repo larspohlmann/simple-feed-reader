@@ -87,6 +87,7 @@ final class RefreshRunner
             self::BATCH_LIMIT,
             $request->userId,
             $request->feedId,
+            $request->tagId,
             $request->force,
             $cooldownCutoff,
         );
@@ -139,6 +140,7 @@ final class RefreshRunner
                 $this->clock->now(),
                 $request->userId,
                 $request->feedId,
+                $request->tagId,
                 $request->force,
                 $cooldownCutoff,
             );
