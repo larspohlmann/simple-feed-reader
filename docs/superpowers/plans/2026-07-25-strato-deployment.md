@@ -890,7 +890,7 @@ APP_SECRET=
 # secret; the password is. The server is MySQL 8 -- confirm the exact
 # serverVersion after the first successful connect, because Doctrine picks its
 # platform (and therefore the SQL its migrations emit) from this string.
-DATABASE_URL="mysql://dbs15919276:PASSWORD@database-5020972012.webspace-host.com:3306/dbs15919276?serverVersion=8.0&charset=utf8mb4"
+DATABASE_URL="mysql://dbu2399961:PASSWORD@database-5020972012.webspace-host.com:3306/dbs15919276?serverVersion=8.0.36&charset=utf8mb4"
 
 # Strato SMTP, using the noreply@ mailbox created in the panel. The username is
 # the full mailbox address. If the password contains any of : / ? # [ ] @ it
