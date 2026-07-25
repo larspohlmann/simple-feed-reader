@@ -16,7 +16,7 @@ certificate is the only alternative and it costs money.
 ```
 ~/larspohlmann/reader  ->  ~/simplefeedreader/current/public
 ~/simplefeedreader/
-  releases/<name>/           one directory per deploy, five kept
+  releases/<name>/           one directory per deploy; the workflow prunes to five
   current -> releases/<name> flipped last, atomically
   shared/
     .env.local               secrets; symlinked into each release
@@ -37,7 +37,12 @@ the release during activation. That is the whole trick: the release directory is
 
 ## One-time setup
 
-Do these in order; activation fails loudly if the last three are missing.
+Do these in order. Activation checks two of them: it refuses to run without the JWT keypair
+(6) or `shared/.env.local` (7), and it reads that file's contents. It checks nothing about
+the mount (9), because `activate-release.sh` never looks outside the deploy root and has no
+business doing so — which makes a missing or misaimed mount precisely the silent failure you
+might hope a script would catch. Activation prints "Active release is now …" and exits 0
+while the URL 404s. Verification step 1 is what catches that.
 
 1. **MySQL database** — create it in the Strato panel. The DSN goes in `shared/.env.local`.
 2. **Mailbox** — create `noreply@lars-pohlmann.de`. Its SMTP credentials go in the same
@@ -47,33 +52,111 @@ Do these in order; activation fails loudly if the last three are missing.
    (cgi-fcgi) on 2026-07-25, which is what reader mode needs (readability.php v4).
 4. **Google OAuth** — register the redirect URI, exactly:
    `https://lars-pohlmann.de/reader/api/auth/oauth/google/callback`
-5. **Subdomain** — point `reader.lars-pohlmann.de` at `https://lars-pohlmann.de/reader`.
-   That redirect travels over plain HTTP, because the subdomain has no certificate. It is a
-   convenience for old links, not an entry point anyone should be given.
+5. **Subdomain** — `reader.lars-pohlmann.de` already exists and already points at
+   `~/simplefeedreader/current/public`, so this is a *re*-point, not fresh setup: aim it at
+   `https://lars-pohlmann.de/reader` instead. That redirect travels over plain HTTP, because
+   the subdomain has no certificate. It is a convenience for old links, not an entry point
+   anyone should be given.
 6. **JWT keys** — generate them locally and upload **both** files. Activation refuses to run
    unless `shared/config/jwt/private.pem` *and* `shared/config/jwt/public.pem` are present,
    because a release that silently came up without a signing key would fail every login at
    runtime instead of at deploy time.
 
+   Generate them in a scratch directory, **not in the repository checkout** — which is
+   where you are most likely standing while reading this. `backend/.gitignore` ignores
+   `/config/jwt/*.pem` and nothing else, so a `private.pem` sitting at the repo root is not
+   ignored, and one `git add -A` publishes a 4096-bit signing key to a public repository.
+
    ```bash
    ssh strato-feedreader 'mkdir -p ~/simplefeedreader/shared/config/jwt'
+   cd "$(mktemp -d)"
    openssl genpkey -out private.pem -aes256 -algorithm rsa -pkeyopt rsa_keygen_bits:4096
    openssl pkey -in private.pem -out public.pem -pubout
+   chmod 600 private.pem
    scp private.pem public.pem strato-feedreader:~/simplefeedreader/shared/config/jwt/
    ssh strato-feedreader 'chmod 600 ~/simplefeedreader/shared/config/jwt/private.pem'
+   rm -f private.pem public.pem
    ```
 
+   The `cd` and the `rm` are the substance of that block, not tidiness: the scratch
+   directory keeps the key out of any tree `git` can see, and the `chmod 600` guards it
+   against your umask for the minute it exists. The server copy is the one that matters.
+
    The passphrase you typed goes in `JWT_PASSPHRASE`. Keep the keypair: it is shared across
-   releases on purpose, and replacing it logs every user out.
+   releases on purpose, and replacing it logs every user out. "Keep" means the copy on the
+   server plus, if you want a backup, one in your password manager alongside the passphrase
+   — the same place, because the key without the passphrase is useless and either alone is
+   not a recovery. Do not keep a backup loose on disk; the lines above delete the local
+   copies deliberately, and re-uploading the server's copy is what a restore looks like.
 7. **Environment** — copy `.env.local.example` to `shared/.env.local`, fill it in, and
    `chmod 600` it. It holds the database password. Read the comments in that file rather
    than skimming the variable names; several of the committed defaults are functional, which
    is exactly what makes forgetting them expensive.
-8. **Mount** — link the app into the portfolio docroot:
+8. **Remove the placeholder `current`** — `~/simplefeedreader/current` exists on the host
+   as a **real directory**, holding a placeholder `public/index.html` from before this
+   deployment was built. It has to be gone before the first deploy:
+
+   ```bash
+   ssh strato-feedreader 'rm -rf ~/simplefeedreader/current'
+   ```
+
+   The flip at the end of `activate-release.sh` is `mv -Tf current.tmp current`, and `-T`
+   refuses, by design, to replace a real directory with a symlink. That refusal is the
+   script's **last** line, so it fires after the shared state has been linked, the cache
+   warmed and the migrations run: the failure would leave you with a migrated production
+   schema, no deploy, and the placeholder still serving the URL.
+
+9. **Mount** — link the app into the portfolio docroot:
 
    ```bash
    ssh strato-feedreader 'ln -sfn ~/simplefeedreader/current/public ~/larspohlmann/reader'
    ```
+
+   The link dangles until the first deploy creates `current`. That is expected.
+
+10. **First admin** — do this **after** the first successful deploy; it needs a migrated
+    database and a `current` that resolves.
+
+    Nothing in this codebase grants `ROLE_ADMIN` in production. The one command that grants
+    it, `app:e2e:seed-admin`, refuses to run under `APP_ENV=prod`, and no migration seeds an
+    account. So a fresh production database has no administrator — and without one, every
+    registration stops at `pending_approval` forever, because `UserChecker` refuses to
+    authenticate anything that is not `active` and only `ROLE_ADMIN` can approve. Including
+    your own account. This step is the way out of that, and it happens once, ever.
+
+    Register your own account through the UI first, so the row exists and carries a real
+    password hash — there is no other way to get one in. The verification mail does not have
+    to have arrived: the statement below makes the account active outright.
+
+    ```bash
+    ssh strato-feedreader "php84 -d register_argc_argv=1 -q -f ~/simplefeedreader/current/bin/console -- dbal:run-sql \"UPDATE app_user SET roles = JSON_ARRAY('ROLE_ADMIN'), status = 'active', approved_at = UTC_TIMESTAMP() WHERE email = 'you@example.com'\""
+    ```
+
+    It reports one row affected. Read it back before believing it:
+
+    ```bash
+    ssh strato-feedreader "php84 -d register_argc_argv=1 -q -f ~/simplefeedreader/current/bin/console -- dbal:run-sql \"SELECT id, email, roles, status, approved_at FROM app_user\""
+    ```
+
+    Each part of that statement is load-bearing:
+
+    - `dbal:run-sql` is doctrine-bundle's own command. It is registered in **every**
+      environment, not just dev, and it reaches the database through PHP's mysqlnd. That is
+      the point: the host's `mysql` CLI is a 5.6 client and cannot authenticate to this
+      MySQL 8 server at all (see *The database* below), so no shell client will do this job.
+    - `roles` is a JSON column. `JSON_ARRAY('ROLE_ADMIN')` yields `["ROLE_ADMIN"]` without
+      putting a double quote anywhere on the command line, which is the only reason the
+      statement survives two levels of shell quoting intact. Do not add `ROLE_USER`;
+      `User::getRoles()` appends it at runtime.
+    - `status` is a string-backed enum and `active` is the stored value — see
+      `App\Enum\UserStatus`, not the PHP case name.
+    - `UTC_TIMESTAMP()`, not `NOW()`: every datetime in this schema is a naive UTC wall
+      clock, and `NOW()` would write whatever the MySQL session's timezone happens to be.
+
+    Column names come from the `app_user` DDL in `Version20260721153011`, not from the
+    entity's property names — they differ.
+
+    From here on everyone registers normally and you approve them in the admin UI.
 
 ### What activation checks, and why only these
 
@@ -113,7 +196,8 @@ Two caveats:
 You can also assemble a release by hand — `./deploy/strato/build-release.sh /tmp/release` —
 which is mostly useful for inspecting what would be shipped. The script strips dev
 dependencies from `backend/vendor` to build, and restores them on the way out whatever
-happens, so there is nothing to reinstall afterwards.
+happens, so there is nothing to reinstall afterwards — unless the restore itself fails,
+which it tells you about, printing the `composer install` to run by hand.
 
 ## Running a console command on the server
 
@@ -122,8 +206,14 @@ line has to be spelled, and the failure is not obvious:
 
 ```bash
 ssh strato-feedreader \
-  'php84 -q -f ~/simplefeedreader/current/bin/console -- doctrine:migrations:status'
+  'php84 -d register_argc_argv=1 -q -f ~/simplefeedreader/current/bin/console -- doctrine:migrations:status'
 ```
+
+`-d register_argc_argv=1` is belt and braces: the host's ini already has it on (measured
+2026-07-25), but `activate-release.sh` pins it anyway, because if the host ever turned it
+off Symfony's `ArgvInput` would see no arguments and silently degrade every command into
+`bin/console list`, exiting 0. Write commands the same way the script does, so a command you
+ran by hand and a command the deploy ran are the same command.
 
 `-q` suppresses the HTTP headers the SAPI would otherwise print ahead of the output. **The
 `--` is mandatory.** The SAPI keeps parsing its own options past the script name, so the
@@ -136,8 +226,10 @@ Error in argument 4, char 2: no argument for option -
 and exit status 1, before PHP starts. Non-dash arguments happen to work without the
 separator, which is how an earlier probe of this host missed it — do not take a command that
 worked once as evidence that the separator is optional. Always write it. The path must be
-absolute, too: the SAPI does `chdir()` into the script's directory, but only after it has
-found the file, and an SSH command starts in `$HOME`.
+absolute by the time PHP sees it, too: the SAPI does `chdir()` into the script's directory,
+but only after it has found the file, and an SSH command starts in `$HOME`. The `~` above
+qualifies — the remote shell expands it to an absolute path before `php84` is executed — but
+a bare `bin/console` does not.
 
 `php -r` does not work at all here.
 
@@ -160,7 +252,9 @@ also makes the command fail loudly instead of nesting a link inside `current` sh
 `current` ever be a real directory.
 
 No rebuild is needed: the old release is intact on disk, still carrying the symlinks its own
-activation created. Five releases are kept, so anything older than that is gone.
+activation created. Pruning is the deploy workflow's job, not the activation script's, and
+it keeps the five newest releases — so anything older than that is already gone, and a
+hand-uploaded release is subject to the same pruning on the next deploy.
 
 What a rollback does **not** do, because `activate-release.sh` is not re-run:
 
@@ -178,9 +272,12 @@ What a rollback does **not** do, because `activate-release.sh` is not re-run:
 1. <https://lars-pohlmann.de/reader> loads over a valid certificate.
 2. `https://lars-pohlmann.de/reader/api/health` responds.
 3. A client-side route survives a browser reload (proves the SPA fallback).
-4. Register → verification mail arrives → verify → approve. This exercises the real SMTP
-   transport and the real ALTCHA key at once; if either is still a placeholder you will not
-   get this far, you will get a 500 on every page.
+4. Register → verification mail arrives → verify. This exercises the real SMTP transport
+   and the real ALTCHA key at once; if either is still a placeholder you will not get this
+   far, you will get a 500 on every page. The account then stops at `pending_approval`, and
+   that is correct, not a fault: approval needs an admin, and on a fresh database the first
+   one is made by hand in one-time setup step 10. Approving *from the UI* is only a check
+   once that step has been done and you are signed in as that admin.
 5. Google sign-in completes and lands back under `/reader`.
 6. Subscribe to a feed, refresh, open an article, switch to reader mode — this is what
    proves PHP 8.4 on the vhost.
