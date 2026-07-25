@@ -8,6 +8,7 @@ use App\Service\Parser\Atom03Parser;
 use App\Service\Parser\Atom10Parser;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
+use App\Service\Parser\FeedParserFactory;
 use App\Service\Parser\Rss1Parser;
 use App\Service\Parser\Rss2Parser;
 use PHPUnit\Framework\TestCase;
@@ -16,7 +17,12 @@ final class FeedParserTest extends TestCase
 {
     private function parser(): FeedParser
     {
-        return new FeedParser(new Rss2Parser(), new Atom10Parser(), new Atom03Parser(), new Rss1Parser());
+        return new FeedParser(new FeedParserFactory([
+            new Rss2Parser(),
+            new Atom10Parser(),
+            new Atom03Parser(),
+            new Rss1Parser(),
+        ]));
     }
 
     private function fixture(string $name): string

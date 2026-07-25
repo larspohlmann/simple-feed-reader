@@ -22,6 +22,7 @@ use App\Service\Fetch\FetchResponse;
 use App\Service\Parser\Atom03Parser;
 use App\Service\Parser\Atom10Parser;
 use App\Service\Parser\FeedParser;
+use App\Service\Parser\FeedParserFactory;
 use App\Service\Parser\Rss1Parser;
 use App\Service\Parser\Rss2Parser;
 use App\Service\Refresh\FeedBodyParser;
@@ -95,7 +96,12 @@ final class RefreshRunnerTest extends DbTestCase
 
         return new FeedBodyParser(new ServiceLocator([
             XmlBodyParser::format() => static fn (): XmlBodyParser => new XmlBodyParser(
-                new FeedParser(new Rss2Parser(), new Atom10Parser(), new Atom03Parser(), new Rss1Parser()),
+                new FeedParser(new FeedParserFactory([
+                    new Rss2Parser(),
+                    new Atom10Parser(),
+                    new Atom03Parser(),
+                    new Rss1Parser(),
+                ])),
             ),
             ScrapedBodyParser::format() => static fn (): ScrapedBodyParser => new ScrapedBodyParser($extractor),
         ]));
