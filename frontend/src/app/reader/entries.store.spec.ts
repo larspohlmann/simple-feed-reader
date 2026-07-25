@@ -61,6 +61,28 @@ describe('EntriesStore', () => {
     ctrl.expectNone((r) => r.url === 'https://api.test/api/entries'); // no cursor -> no request
   });
 
+  // #91: a viewport-scaled prefetch margin fires the sentinel much earlier and
+  // can re-fire while a page is still on the wire. Only one request may be in
+  // flight, or a slow backend gets a burst and the same page is appended twice.
+  it('ignores loadMore while a page is already in flight', () => {
+    store.load({ view: 'unread' });
+    const first = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
+
+    store.loadMore(); // still on the first page -> no cursor yet
+    ctrl.expectNone((r) => r.params.get('cursor') === 'C1');
+    first.flush({ entries: [entry(1)], nextCursor: 'C1' });
+
+    store.loadMore();
+    const more = ctrl.expectOne((r) => r.params.get('cursor') === 'C1');
+    store.loadMore();
+    store.loadMore();
+    ctrl.expectNone((r) => r.url === 'https://api.test/api/entries');
+
+    more.flush({ entries: [entry(2)], nextCursor: 'C2' });
+    expect(store.entries().map((e) => e.id)).toEqual([1, 2]);
+    expect(store.loadingMore()).toBe(false);
+  });
+
   it('resets when the query changes', () => {
     store.load({ view: 'unread' });
     ctrl
