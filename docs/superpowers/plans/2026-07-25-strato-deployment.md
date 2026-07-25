@@ -892,7 +892,7 @@ APP_SECRET=
 # platform (and therefore the SQL its migrations emit) from this string.
 DATABASE_URL="mysql://dbs15919276:PASSWORD@database-5020972012.webspace-host.com:3306/dbs15919276?serverVersion=8.0&charset=utf8mb4"
 
-# Strato SMTP, using the noreply@ mailbox created in the panel. The username is
+# The host's local MTA -- no credentials needed. See deploy/strato/README.md. The username is
 # the full mailbox address. If the password contains any of : / ? # [ ] @ it
 # MUST be percent-encoded here, or the DSN parses into a different host and the
 # failure looks like a credentials problem.
@@ -901,12 +901,12 @@ DATABASE_URL="mysql://dbs15919276:PASSWORD@database-5020972012.webspace-host.com
 # InsecureProductionConfigGuard refuses every request, because null:// discards
 # mail and reports success -- registration would 202 with no verification mail
 # and nothing would log a thing.
-MAILER_DSN=smtp://USER:PASSWORD@smtp.strato.de:587
+MAILER_DSN=sendmail://default
 
 # The From: header on account mail. The committed default is example.com, which
 # a real transport will either reject or deliver straight to spam. Strato
 # requires the sender to be the mailbox you authenticated as.
-MAIL_FROM=noreply@lars-pohlmann.de
+MAIL_FROM=simplefeedreader@lars-pohlmann.de
 MAIL_FROM_NAME="Simple Feed Reader"
 
 # Both point at the mount, not the domain root: the app lives under /reader.
