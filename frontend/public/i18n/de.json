@@ -173,6 +173,7 @@
   "reader": {
     "toggleSidebar": "Seitenleiste umschalten",
     "refresh": "Aktualisieren",
+    "lastRefreshed": "Zuletzt aktualisiert",
     "addFeed": "Feed hinzufügen",
     "allItems": "Alle Einträge",
     "favorites": "Favoriten",

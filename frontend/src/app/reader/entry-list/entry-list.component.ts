@@ -24,6 +24,8 @@ import { ReadingLayout } from '../reading-layout.service';
 import { EntryDto, SubscriptionTagDto } from '../models';
 import { Selection, canScopedRefresh } from '../query';
 import { atTop, pullTriggersRefresh, rubberBand } from '../reader-gestures';
+import { relativeTime } from '../format';
+import { LanguageService } from '../../core/language.service';
 import { Problem } from '../../core/problem';
 import { LayoutService } from '../layout.service';
 import { ListScrollMemory } from '../list-scroll-memory';
@@ -64,8 +66,11 @@ export class EntryListComponent implements OnDestroy {
   readonly layout = input<ReadingLayout>('list');
   /** Feed tags keyed by subscription id, used to render each entry's tag pills. */
   readonly feedTags = input<Map<number, SubscriptionTagDto[]>>(new Map());
-  /** True while any refresh runs — disables the button and spins its RSS mark. */
+  /** True while any refresh runs — disables the button and spins its icon. */
   readonly refreshing = input<boolean>(false);
+  /** The selected feed's last-fetched time (ISO), or null. Only meaningful for a
+   *  single-feed selection; drives the header's "Last refreshed" hint. */
+  readonly lastRefreshed = input<string | null>(null);
 
   readonly loadMore = output<void>();
   readonly markAllRead = output<void>();
@@ -77,6 +82,16 @@ export class EntryListComponent implements OnDestroy {
 
   /** The refresh button + pull gesture are hidden in the cross-feed saved views. */
   readonly canRefresh = computed(() => canScopedRefresh(this.selection()));
+
+  private readonly language = inject(LanguageService);
+  /** A localised "last refreshed 5 min ago" label for a single-feed selection,
+   *  or null when it doesn't apply (not a feed, or never fetched). Wide-only
+   *  visibility is handled in CSS. */
+  readonly lastRefreshedLabel = computed(() => {
+    const iso = this.lastRefreshed();
+    if (this.selection().kind !== 'subscription' || !iso) return null;
+    return relativeTime(iso, this.language.lang());
+  });
 
   // Pull-to-refresh (mobile): pulling down past the top of the list scroller
   // rubber-bands an indicator; releasing past the threshold fires a scoped

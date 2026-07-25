@@ -1,5 +1,12 @@
 <header class="list-header" [class.collapsed]="collapsed()">
-  <h2>{{ title() }}</h2>
+  <div class="heading">
+    <h2>{{ title() }}</h2>
+    @if (lastRefreshedLabel()) {
+      <span class="last-refreshed"
+        >{{ 'reader.lastRefreshed' | transloco }} {{ lastRefreshedLabel() }}</span
+      >
+    }
+  </div>
   <div class="tools">
     @if (
       selection().kind === 'all' ||
@@ -47,12 +54,14 @@
       <button
         class="refresh"
         type="button"
+        [class.spinning]="refreshing()"
         [disabled]="refreshing()"
         (click)="refresh.emit()"
         [attr.aria-label]="'reader.refresh' | transloco"
         [attr.title]="'reader.refresh' | transloco"
       >
-        <app-spinner [size]="18" [decorative]="true" [animate]="refreshing()" />
+        <app-icon name="refresh" [size]="18" />
+        <span class="txt">{{ 'reader.refresh' | transloco }}</span>
       </button>
     }
   </div>

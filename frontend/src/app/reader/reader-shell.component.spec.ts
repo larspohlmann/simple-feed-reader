@@ -21,6 +21,7 @@ describe('ReaderShellComponent', () => {
         feedId: 55,
         title: 'heise',
         customTitle: null,
+        lastFetchedAt: '2026-07-22T10:00:00Z',
         feedUrl: 'https://f/5',
         siteUrl: null,
         status: 'active',

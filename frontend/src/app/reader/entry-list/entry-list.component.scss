@@ -16,6 +16,12 @@
   transition: padding 0.2s ease;
 }
 
+.heading {
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* let the title truncate instead of shoving the tools away */
+}
+
 .list-header h2 {
   margin: 0;
   font-size: var(--fs-lg);
@@ -27,6 +33,22 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   transition: font-size 0.2s ease;
+}
+
+/* "Last refreshed …" hint under a single-feed title. Wide screens only — it's
+   the same breakpoint that gives the reader its side pane. */
+.last-refreshed {
+  font-size: var(--fs-xs, var(--fs-sm));
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (width < 900px) {
+  .last-refreshed {
+    display: none;
+  }
 }
 
 /* Narrow layout: as you scroll the list down the header collapses to a slim
@@ -96,17 +118,29 @@
 .refresh {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: var(--space-1);
   background: none;
   border: none;
   padding: 0;
   color: var(--accent);
   cursor: pointer;
+  font-size: var(--fs-sm);
 }
 
 .refresh:disabled {
   cursor: default;
   color: var(--text-muted);
+}
+
+/* Spin the icon while a run is in flight (the button is also disabled). */
+.refresh.spinning app-icon {
+  animation: refresh-spin 0.9s linear infinite;
+}
+
+@keyframes refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Rubber-banded pull-to-refresh chip. Sits just above the list and is drawn
@@ -140,7 +174,8 @@
          by aria-label/title tooltips, carry the meaning on one row. */
 @media (width <= 560px) {
   .toggle .txt,
-  .mark-all .txt {
+  .mark-all .txt,
+  .refresh .txt {
     display: none;
   }
 
@@ -210,6 +245,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .skeleton {
+    animation: none;
+  }
+
+  .refresh.spinning app-icon {
     animation: none;
   }
 

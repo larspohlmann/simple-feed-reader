@@ -98,6 +98,13 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   });
   readonly hasMore = computed(() => this.entries.nextCursor() !== null);
   readonly canMarkAllRead = computed(() => markReadTarget(this.selection()) !== null);
+  /** The selected feed's last-fetched time, for the list header's "Last
+   *  refreshed" hint. Null unless a single feed is selected. */
+  readonly selectedFeedLastFetched = computed(() => {
+    const s = this.selection();
+    if (s.kind !== 'subscription') return null;
+    return this.subs.subscriptions().find((x) => x.id === s.id)?.lastFetchedAt ?? null;
+  });
   readonly paneMode = computed(() => this.layout.mode() === 'pane' && this.screen.isWide());
   /** An article filling the whole main area (not the split pane) — the top bar
    *  takes over its back button, reader switch and prev/next. */

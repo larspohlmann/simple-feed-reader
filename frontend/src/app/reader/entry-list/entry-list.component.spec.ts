@@ -114,6 +114,38 @@ describe('EntryListComponent', () => {
     }
   });
 
+  it('labels the refresh button with a refresh icon and text', () => {
+    const el = mount().nativeElement as HTMLElement;
+    const btn = el.querySelector('.refresh') as HTMLButtonElement;
+    expect(btn.querySelector('app-icon[name="refresh"]')).not.toBeNull();
+    expect(btn.querySelector('.txt')).not.toBeNull();
+  });
+
+  it('shows a last-refreshed hint for a single-feed selection', () => {
+    const el = mount({
+      selection: { kind: 'subscription', id: 7, unread: true },
+      lastRefreshed: '2026-07-25T08:00:00Z',
+    }).nativeElement as HTMLElement;
+    expect(el.querySelector('.last-refreshed')).not.toBeNull();
+  });
+
+  it('shows no last-refreshed hint for all/tag or a never-fetched feed', () => {
+    expect(
+      (
+        mount({
+          selection: { kind: 'all', id: null, unread: true },
+          lastRefreshed: '2026-07-25T08:00:00Z',
+        }).nativeElement as HTMLElement
+      ).querySelector('.last-refreshed'),
+    ).toBeNull();
+    expect(
+      (
+        mount({ selection: { kind: 'subscription', id: 7, unread: true }, lastRefreshed: null })
+          .nativeElement as HTMLElement
+      ).querySelector('.last-refreshed'),
+    ).toBeNull();
+  });
+
   it('renders planned magazine blocks when layout is magazine', () => {
     const grouped = [1, 2, 3].map((id) => entry(id));
     const diverse = entry(4, { subscriptionId: 4, source: 'diverse' });

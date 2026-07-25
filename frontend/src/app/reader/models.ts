@@ -34,6 +34,9 @@ export interface SubscriptionDto {
    *  (generated from the page's article list) today; stays an open string. */
   sourceFormat: string;
   createdAt: string;
+  /** When the feed was last successfully fetched (ISO), or null if never. Powers
+   *  the list header's "Last refreshed" hint for a single-feed selection. */
+  lastFetchedAt: string | null;
   /** The feed's order in the untagged "Feeds" list (ascending). */
   position: number;
   tags: SubscriptionTagDto[];

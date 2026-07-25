@@ -21,6 +21,7 @@ final class SubscriptionJsonTest extends TestCase
         $feed->setTitle('Example Feed');
         $feed->setSiteUrl('https://example.com');
         $feed->setFaviconUrl('https://example.com/favicon.ico');
+        $feed->setLastFetchedAt(new \DateTimeImmutable('2026-02-04T10:11:12Z'));
         $sub = new Subscription($user, $feed, $now);
         $tag = new Tag($user, 'news');
         $tag->setColor('#ff8800');
@@ -40,6 +41,9 @@ final class SubscriptionJsonTest extends TestCase
         self::assertSame('active', $shape['status']);
         self::assertSame('xml', $shape['sourceFormat']);
         self::assertSame('2026-02-03T04:05:06+00:00', $shape['createdAt']);
+        // When the feed was last successfully fetched — powers the header's
+        // "Last refreshed" hint for a single-feed selection. Null until fetched.
+        self::assertSame('2026-02-04T10:11:12+00:00', $shape['lastFetchedAt']);
         self::assertSame(0, $shape['position']);
         self::assertSame(
             [[
@@ -68,5 +72,7 @@ final class SubscriptionJsonTest extends TestCase
         $sub->setCustomTitle(null);
         $shape = SubscriptionJson::one($sub);
         self::assertSame('https://example.com/feed.xml', $shape['title']); // url fallback
+        // A never-fetched feed reports a null last-refreshed time.
+        self::assertNull($shape['lastFetchedAt']);
     }
 }
