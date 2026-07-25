@@ -13,10 +13,10 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 final class HttpFeedFetcher implements FeedFetcherInterface
 {
-    private const MAX_REDIRECTS = 5;
-    private const MAX_BYTES = 5_000_000;
-    private const TIMEOUT_SECONDS = 10.0;
-    private const USER_AGENT = 'SimpleFeedReader/1.0 (+https://github.com/larspohlmann/simple-feed-reader)';
+    private const int MAX_REDIRECTS = 5;
+    private const int MAX_BYTES = 5_000_000;
+    private const float TIMEOUT_SECONDS = 10.0;
+    private const string USER_AGENT = 'SimpleFeedReader/1.0 (+https://github.com/larspohlmann/simple-feed-reader)';
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,

@@ -32,15 +32,15 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  */
 final readonly class AppleOAuthProvider extends AbstractOidcProvider
 {
-    private const AUTHORIZATION_ENDPOINT = 'https://appleid.apple.com/auth/authorize';
+    private const string AUTHORIZATION_ENDPOINT = 'https://appleid.apple.com/auth/authorize';
 
     /**
      * Constants, not configuration — the parent substitutes this host's TLS
      * certificate for the ID token's signature, so the host must not be
      * something a deployment, or a request, can move.
      */
-    private const TOKEN_ENDPOINT = 'https://appleid.apple.com/auth/token';
-    private const ISSUER = 'https://appleid.apple.com';
+    private const string TOKEN_ENDPOINT = 'https://appleid.apple.com/auth/token';
+    private const string ISSUER = 'https://appleid.apple.com';
 
     public function __construct(
         HttpClientInterface $httpClient,

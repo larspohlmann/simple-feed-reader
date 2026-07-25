@@ -80,8 +80,8 @@ use Psr\Clock\ClockInterface;
 final readonly class LoginCodeStore
 {
     /** Public so OAuthController can size the flow cookie to outlive it. */
-    public const LIFETIME_SECONDS = 30;
-    private const KEY_PREFIX = 'oauth_login_code_';
+    public const int LIFETIME_SECONDS = 30;
+    private const string KEY_PREFIX = 'oauth_login_code_';
 
     public function __construct(
         private CacheItemPoolInterface $loginCodeCache,

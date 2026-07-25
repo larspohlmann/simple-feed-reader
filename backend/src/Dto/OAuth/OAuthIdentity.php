@@ -20,7 +20,7 @@ final readonly class OAuthIdentity
      * it. It is a real, verified, deliverable address that nonetheless can
      * never be an address a human typed into our signup form.
      */
-    private const PRIVATE_RELAY_DOMAIN = 'privaterelay.appleid.com';
+    private const string PRIVATE_RELAY_DOMAIN = 'privaterelay.appleid.com';
 
     public ?string $email;
 

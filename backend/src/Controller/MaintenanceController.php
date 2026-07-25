@@ -20,7 +20,7 @@ use Symfony\Component\Routing\Attribute\Route;
  */
 final class MaintenanceController
 {
-    private const REFRESH_BUDGET_SECONDS = 20;
+    private const int REFRESH_BUDGET_SECONDS = 20;
 
     public function __construct(
         #[Autowire('%env(MAINTENANCE_TOKEN)%')]

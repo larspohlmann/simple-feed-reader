@@ -10,7 +10,7 @@ namespace App\Service\Fetch;
  */
 final class IpValidator
 {
-    private const BLOCKED_RANGES = [
+    private const array BLOCKED_RANGES = [
         '0.0.0.0/8',
         '10.0.0.0/8',
         '100.64.0.0/10',
@@ -41,7 +41,7 @@ final class IpValidator
         'ff00::/8',
     ];
 
-    private const V4_MAPPED_PREFIX = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff";
+    private const string V4_MAPPED_PREFIX = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff";
 
     public function isPublic(string $ip): bool
     {

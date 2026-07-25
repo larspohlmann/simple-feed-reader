@@ -18,11 +18,11 @@ use Symfony\Component\Clock\ClockInterface;
  */
 final class EntryIngestor
 {
-    private const TITLE_MAX = 1024;
-    private const AUTHOR_MAX = 255;
-    private const URL_MAX = 2048;
-    private const FEED_TITLE_MAX = 512;
-    private const SUMMARY_MAX = 500;
+    private const int TITLE_MAX = 1024;
+    private const int AUTHOR_MAX = 255;
+    private const int URL_MAX = 2048;
+    private const int FEED_TITLE_MAX = 512;
+    private const int SUMMARY_MAX = 500;
 
     public function __construct(
         private readonly EntityManagerInterface $em,

@@ -12,7 +12,7 @@ namespace App\Service\Parser;
  */
 final class ItemImageExtractor
 {
-    private const MEDIA_NS = 'http://search.yahoo.com/mrss/';
+    private const string MEDIA_NS = 'http://search.yahoo.com/mrss/';
 
     /**
      * Media RSS image: <media:thumbnail> preferred, else an image

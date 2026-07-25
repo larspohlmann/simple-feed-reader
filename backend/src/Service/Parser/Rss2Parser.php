@@ -8,8 +8,8 @@ use App\Service\Parser\Exception\FeedParseException;
 
 final class Rss2Parser
 {
-    private const CONTENT_NS = 'http://purl.org/rss/1.0/modules/content/';
-    private const DC_NS = 'http://purl.org/dc/elements/1.1/';
+    private const string CONTENT_NS = 'http://purl.org/rss/1.0/modules/content/';
+    private const string DC_NS = 'http://purl.org/dc/elements/1.1/';
 
     public function parse(\DOMDocument $document): ParsedFeed
     {

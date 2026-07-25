@@ -59,7 +59,7 @@ final readonly class MySqlCollationSchemaListener
      * MySQL collation names carry their character set as a prefix. Matching on
      * that is what keeps this listener from touching a portable collation.
      */
-    private const MYSQL_COLLATION_PREFIX = 'utf8mb4_';
+    private const string MYSQL_COLLATION_PREFIX = 'utf8mb4_';
 
     /**
      * The event args expose the metadata, the schema and the table, but not the

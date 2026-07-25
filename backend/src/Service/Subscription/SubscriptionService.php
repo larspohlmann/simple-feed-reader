@@ -18,7 +18,7 @@ use Psr\Clock\ClockInterface;
 
 final readonly class SubscriptionService
 {
-    public const MAX_SUBSCRIPTIONS_PER_USER = 500;
+    public const int MAX_SUBSCRIPTIONS_PER_USER = 500;
 
     public function __construct(
         private FeedDiscoveryInterface $discovery,

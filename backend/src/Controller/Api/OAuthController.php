@@ -80,7 +80,7 @@ final class OAuthController
      * the string would keep passing if this were renamed and the cookie
      * silently stopped being set.
      */
-    public const FLOW_COOKIE = '__Host-oauth_flow';
+    public const string FLOW_COOKIE = '__Host-oauth_flow';
 
     /**
      * The state's life plus the login code's, because the cookie now has to
@@ -94,14 +94,14 @@ final class OAuthController
      * code. Computed from the two stores rather than written as a number, so
      * changing either lifetime cannot silently reopen that gap.
      */
-    private const FLOW_COOKIE_LIFETIME = OAuthStateStore::LIFETIME_SECONDS
+    private const int FLOW_COOKIE_LIFETIME = OAuthStateStore::LIFETIME_SECONDS
         + LoginCodeStore::LIFETIME_SECONDS;
 
     /**
      * Bounds the `{provider}` segment to something that could plausibly name a
      * provider. See the class docblock for what this does and does not fix.
      */
-    private const PROVIDER_PATTERN = '[a-z][a-z0-9_-]{1,31}';
+    private const string PROVIDER_PATTERN = '[a-z][a-z0-9_-]{1,31}';
 
     public function __construct(
         private readonly OAuthProviderRegistry $providers,

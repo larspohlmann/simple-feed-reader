@@ -69,16 +69,16 @@ final class CorsListener
      * what this API actually answers, not a reflection of whatever the browser
      * asked for.
      */
-    private const ALLOWED_METHODS = 'GET, POST, PATCH, DELETE, OPTIONS';
+    private const string ALLOWED_METHODS = 'GET, POST, PATCH, DELETE, OPTIONS';
 
     /**
      * `Authorization` for the JWT, `Content-Type` for the JSON bodies. Nothing
      * else is read from a request header by any endpoint.
      */
-    private const ALLOWED_HEADERS = 'Authorization, Content-Type';
+    private const string ALLOWED_HEADERS = 'Authorization, Content-Type';
 
     /** Ten minutes of preflight caching, Chromium's ceiling for this header. */
-    private const MAX_AGE = '600';
+    private const string MAX_AGE = '600';
 
     /**
      * The one origin this API answers to, as scheme://host[:port], or null if
