@@ -146,7 +146,8 @@
       "passwordLabel": "Password (at least 12 characters)",
       "submit": "Create account",
       "haveAccount": "Already have an account?",
-      "failed": "Registration failed. Try again."
+      "failed": "Registration failed. Try again.",
+      "invalidInput": "Enter a valid email address and a password of at least 12 characters."
     },
     "reset": {
       "requestTitle": "Reset password",
