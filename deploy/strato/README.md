@@ -56,9 +56,29 @@ while the URL 404s. Verification step 1 is what catches that.
    dies at the upload with `mkdir failed: No such file or directory` — before anything on the
    server has changed, but with nothing in the message to say which directory it meant.
 2. **MySQL database** — create it in the Strato panel. The DSN goes in `shared/.env.local`.
-3. **Mailbox** — create `noreply@lars-pohlmann.de`. Its SMTP credentials go in the same
-   file, and the address must also be `MAIL_FROM`: Strato will not relay mail claiming a
-   sender you did not authenticate as.
+3. ~~**Mailbox**~~ — nothing to create, and no credentials to store. The host has a local
+   MTA at `/usr/sbin/sendmail`, and `php.ini` sets `sendmail_path=/usr/sbin/sendmail -t -i`,
+   so `MAILER_DSN=sendmail://default` sends without authenticating against anything.
+   Symfony's `SendmailTransport` picks that command up from the ini and pipes the message
+   (`-t` selects pipe mode rather than `-bs`); it needs `proc_open`, which is available
+   because `disable_functions` is empty here. Verified on 2026-07-25 by sending a message
+   this way and receiving it.
+
+   Two things worth knowing before you reach for SMTP instead. **Unauthenticated relay
+   through `smtp.strato.de` is not possible** — it answers `530 5.7.0 User not
+   authenticated` — so the no-password property belongs to the local MTA, not to Strato's
+   submission service. And SMTP *does* work if you prefer it: both 587 (STARTTLS) and 465
+   (implicit TLS) are reachable from the host and advertise `AUTH PLAIN LOGIN`, spelled
+   `smtp://<mailbox>:PASSWORD@smtp.strato.de:587` with the `@` in the mailbox
+   percent-encoded. It simply buys nothing here and costs one more secret on disk.
+
+   The tradeoff you are accepting: the local MTA takes the message without anything
+   checking that it can go out, where a bad SMTP password would have failed loudly. Watch
+   the first real registration rather than assuming.
+
+   `MAIL_FROM` is `simplefeedreader@lars-pohlmann.de`, a real mailbox on the domain. The
+   domain also has a catch-all, so bounces and replies arrive whatever address is used —
+   and with the local MTA there is no authenticated mailbox this has to match.
 4. ~~**PHP version**~~ — nothing to do. The vhost was measured serving **PHP 8.4.22**
    (cgi-fcgi) on 2026-07-25, which is what reader mode needs (readability.php v4). The shell
    side runs the same 8.4.22 build through a real CLI binary — see *Running a console command

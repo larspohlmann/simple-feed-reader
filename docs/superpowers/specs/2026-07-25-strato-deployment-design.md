@@ -253,7 +253,10 @@ Set in `shared/.env.local` on the server, never in git:
 These need the STRATO and Google consoles and cannot be scripted:
 
 1. Create the MySQL database in the STRATO panel; record credentials.
-2. Create the `noreply@lars-pohlmann.de` mailbox; record SMTP credentials.
+2. ~~Create a mailbox~~ — not needed. The host has a local MTA and
+   `MAILER_DSN=sendmail://default` sends without credentials (measured, and a test message
+   was delivered). Unauthenticated relay through `smtp.strato.de` is refused, so this
+   property belongs to the MTA, not to Strato submission.
 3. ~~Set the vhost's PHP version to 8.4~~ — **already the case.** Probed on 2026-07-25: the
    web vhost serves PHP 8.4.22 (cgi-fcgi), which is what reader mode needs.
 4. Register the Google OAuth redirect URI **exactly**:
