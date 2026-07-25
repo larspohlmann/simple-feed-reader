@@ -134,6 +134,26 @@ test.describe('Article back button on desktop', () => {
     expect(box.y).toBeGreaterThanOrEqual(bar.y + bar.height);
     expect(await hitAtCentre(page, 'app-reader-view .back')).toBe('self');
 
+    // In the gutter immediately left of the article column, not pinned to the
+    // far edge of the pane: it hangs off the article, so it tracks that column
+    // at every pane width instead of drifting away from the text.
+    const article = (await page.locator('app-reader-view article').boundingBox())!;
+    expect(box.x + box.width).toBeLessThanOrEqual(article.x);
+    expect(box.x).toBeGreaterThan(article.x - 60);
+
+    // Level with the headline's *first line* — measured with a Range, because
+    // the h1 wraps to two lines at real headline lengths and its box centre
+    // would then sit a whole line below where the arrow belongs.
+    const offset = await page.evaluate(() => {
+      const title = document.querySelector('app-reader-view .title')!;
+      const range = document.createRange();
+      range.selectNodeContents(title);
+      const firstLine = range.getClientRects()[0];
+      const btn = document.querySelector('app-reader-view .back')!.getBoundingClientRect();
+      return btn.y + btn.height / 2 - (firstLine.y + firstLine.height / 2);
+    });
+    expect(Math.abs(offset)).toBeLessThanOrEqual(2);
+
     // And it does what it says: clicking returns to the list.
     await back.click();
     await expect(page.locator('app-reader-view')).toBeHidden();

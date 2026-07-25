@@ -23,13 +23,11 @@
      top of an open article. This is opaque and full-height, so it covers the
      reservation as well as the article.
 
-     Named, because anything positioned against this panel has to add the same
-     reservation back by hand: an absolutely positioned child resolves `top`
-     against the *padding box*, whose top edge sits above this padding, so a
-     naive offset lands inside the strip the app bar floats over (#97). */
-  --bar-reserve: calc(var(--app-bar-h, 56px) + var(--bar-gap));
-
-  padding-top: var(--bar-reserve);
+     Nothing may position itself against this element and expect to clear the
+     bar: an absolutely positioned child resolves `top` against the *padding
+     box*, whose top edge sits above this padding, so it lands inside the strip
+     the bar floats over (#97). Position against the article instead. */
+  padding-top: calc(var(--app-bar-h, 56px) + var(--bar-gap));
 }
 
 /* With the article's own toolbar (the split-pane layout) the reservation shrinks
@@ -107,6 +105,9 @@ app-to-top-button {
 }
 
 article {
+  /* The anchor for the wide layout's back button: the column the reader's eye
+     follows, not the pane. See the container query below. */
+  position: relative;
   max-width: 720px;
   margin: 0 auto;
   padding: var(--space-5) var(--space-4);
@@ -149,15 +150,25 @@ article {
          also gets the stacked layout. */
 @container reader (min-width: 860px) {
   .back {
-    position: absolute;
-    left: var(--space-3);
+    /* Against the article, not the panel — it belongs beside the text it takes
+       you back from, so it tracks the centred column instead of drifting to the
+       far edge of a wide pane. That also keeps it clear of the floating app bar
+       for free: the article already starts below the panel's reservation,
+       whereas positioning against the panel resolves `top` from above that
+       padding and parks the button underneath the bar (#97).
 
-    /* Add back the app-bar reservation (see `--bar-reserve`): `top` resolves
-       against the panel's padding box, which starts *above* that padding, so
-       the plain `var(--space-5)` this used to carry parked the button inside
-       the strip the bar floats over and the bar swallowed every click (#97).
-       With it, the button lines up with the article's first line instead. */
-    top: calc(var(--bar-reserve) + var(--space-5));
+       The gutter is at least 54px at the 860px this query opens at, so the
+       button (~28px) and its 12px of clearance always fit outside the column. */
+    position: absolute;
+    left: calc(-1 * (var(--space-6) + var(--space-2)));
+    top: var(--space-5);
+
+    /* Take the height of the title's first line — `--fs-xl` at the 1.25 the
+       global stylesheet gives h1 — and let the base rule's `align-items: center`
+       centre the icon inside it. Sized to the icon instead, the arrow hangs off
+       the top of the line box and reads as floating above the headline rather
+       than sitting on it. */
+    height: calc(var(--fs-xl) * 1.25);
   }
 }
 
