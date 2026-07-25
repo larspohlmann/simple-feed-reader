@@ -500,7 +500,9 @@ grep -q 'base href="/reader/"' "${OUT}/public/index.html" \
 # Content hashing proves the production configuration composed in. Without it
 # the deploy would ship cache-poisoned filenames (main.js rather than
 # main-<hash>.js) and users would keep running the previous release's code.
-ls "${OUT}/public/" | grep -qE '^main-[A-Z0-9]+\.js$' \
+# The hash alphabet is mixed case -- an uppercase-only pattern rejects a
+# perfectly good build the first time a hash contains a lowercase character.
+ls "${OUT}/public/" | grep -qE '^main-[A-Za-z0-9]+\.js$' \
     || { echo "bundle is not content-hashed: build the SPA with --configuration production,strato"; exit 1; }
 
 echo "==> Release assembled"
@@ -811,6 +813,14 @@ check `error_log` for these before anything else:
   `~/larspohlmann/reader → …/current/public` symlink — that is decided by the portfolio
   docroot's own configuration, which this file cannot reach. Shared hosting is almost always
   permissive here, but it is not something the app can guarantee.
+- **Two protections that fail *silently*, with no error at all.** The dotfile deny and the
+  shell's `no-cache` header are wrapped in `<IfModule>`, so if `mod_authz_core` or
+  `mod_headers` is not loaded they simply do nothing. The guards are correct — unguarded,
+  an unknown directive would 500 the entire site — but the failure mode is invisible.
+  `mod_headers` in particular is not enabled by default everywhere, and losing it silently
+  restores the stale-shell bug: users keep running the previous release's JavaScript. If
+  either symptom appears (`/reader/.htaccess` returns 200, or `index.html` comes back with
+  no `Cache-Control`), check that both modules are loaded before looking anywhere else.
 ````
 
 - [ ] **Step 3: Verify no real secrets are present**
