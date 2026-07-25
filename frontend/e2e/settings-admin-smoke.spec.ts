@@ -32,12 +32,18 @@ test('settings page renders and the tag dialog opens; admin queue loads', async 
   const signedIn = await signInAsAdmin(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
-  // Open Settings from the account menu.
-  await page.getByRole('button', { name: /@/ }).click(); // the email button
+  // Open Settings from the account menu. The button carries an avatar and is
+  // named by its aria-label; it stopped rendering the email in #39, which is
+  // what left this spec timing out on a `/@/` locator (#93).
+  await page.getByRole('button', { name: 'Account' }).click();
   await page.getByRole('menuitem', { name: 'Settings' }).click();
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Feeds' })).toBeVisible();
+  // The sections that exist. #39 also deleted the Feeds section — subscriptions
+  // are managed from the sidebar — so asserting a "Feeds" heading here pinned
+  // behaviour the app had already dropped.
   await expect(page.getByRole('heading', { name: 'Tags' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Import & export' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Account' })).toBeVisible();
 
   // The New-tag dialog opens and closes (no network write).
   await page.getByRole('button', { name: 'New tag' }).click();
