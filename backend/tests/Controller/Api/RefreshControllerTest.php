@@ -6,6 +6,7 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
+use App\Entity\Tag;
 use App\Service\Fetch\FeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
 use App\Tests\Support\StubFeedFetcher;
@@ -92,6 +93,71 @@ final class RefreshControllerTest extends WebTestCase
         $client->request(
             'POST',
             '/api/refresh?feedId=' . $feed->getId(),
+            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token],
+        );
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertContains($body['status'], ['completed', 'partial']);
+        self::assertSame(1, $body['total']);
+    }
+
+    public function testTagRefreshOfAForeignTagIs404(): void
+    {
+        $client = self::createClient();
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        $factory = new UserFactory($em, self::getContainer()->get('security.user_password_hasher'));
+        $owner = $factory->create('tagowner@example.com');
+        $stranger = $factory->create('tagstranger@example.com');
+        $tag = new Tag($owner, 'news');
+        $em->persist($tag);
+        $em->flush();
+
+        // The stranger asking to refresh a tag they do not own must get a 404,
+        // mirroring the per-feed IDOR guard (not 403 — do not confirm it exists).
+        $token = self::getContainer()->get(JWTTokenManagerInterface::class)->create($stranger);
+        $client->request(
+            'POST',
+            '/api/refresh?tag=' . $tag->getId(),
+            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token],
+        );
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testTagRefreshOfAnUnknownTagIs404(): void
+    {
+        $client = self::createClient();
+        $headers = $this->auth('unknowntag@example.com');
+        $client->request('POST', '/api/refresh?tag=999999', server: $headers);
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testTagRefreshOfOwnTagIsAccepted(): void
+    {
+        $client = self::createClient();
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        $factory = new UserFactory($em, self::getContainer()->get('security.user_password_hasher'));
+        $user = $factory->create('tagowner2@example.com');
+        $tag = new Tag($user, 'news');
+        $em->persist($tag);
+        $feed = new Feed('https://example.com/tagged.xml');
+        $em->persist($feed);
+        $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $sub->addTag($tag);
+        $em->persist($sub);
+        $em->flush();
+
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn(
+            'https://example.com/tagged.xml',
+            FetchResponse::notModified('https://example.com/tagged.xml', false, null, null),
+        );
+        self::getContainer()->set(FeedFetcherInterface::class, $fetcher);
+
+        $token = self::getContainer()->get(JWTTokenManagerInterface::class)->create($user);
+        $client->request(
+            'POST',
+            '/api/refresh?tag=' . $tag->getId(),
             server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token],
         );
         self::assertResponseIsSuccessful();

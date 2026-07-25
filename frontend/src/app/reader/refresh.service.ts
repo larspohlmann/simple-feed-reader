@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Problem, parseProblem } from '../core/problem';
 import { ReaderApi } from './reader-api';
+import { RefreshScope } from './query';
 import { RefreshReport } from './models';
 
 const BUSY_BACKOFF_MS = 1500;
@@ -22,27 +23,28 @@ export class RefreshService {
     return Math.min(1, Math.max(0, (r.total - r.remaining) / r.total));
   });
 
-  /** Pass feedId to populate a single feed (e.g. one just added); omit it to
-   *  sweep all the caller's due feeds. The scope holds across the poll loop. */
-  run(onDone?: () => void, feedId?: number): void {
+  /** Pass a scope to sweep just one feed (feedId) or one tag's feeds (tagId);
+   *  omit it to sweep all the caller's due feeds. The scope holds across the
+   *  whole poll loop. */
+  run(onDone?: () => void, scope?: RefreshScope): void {
     if (this.running()) return;
     this.running.set(true);
     this.report.set(null);
     this.error.set(null);
-    this.step(0, onDone, feedId);
+    this.step(0, onDone, scope);
   }
 
-  private step(busyRetries: number, onDone?: () => void, feedId?: number): void {
-    this.api.refresh(feedId).subscribe({
+  private step(busyRetries: number, onDone?: () => void, scope?: RefreshScope): void {
+    this.api.refresh(scope).subscribe({
       next: (r) => {
         this.report.set(r);
         if (r.status === 'partial' && r.remaining > 0) {
-          this.step(0, onDone, feedId);
+          this.step(0, onDone, scope);
         } else if (r.status === 'busy') {
           if (busyRetries >= MAX_BUSY_RETRIES) {
             this.finish(onDone);
           } else {
-            setTimeout(() => this.step(busyRetries + 1, onDone, feedId), BUSY_BACKOFF_MS);
+            setTimeout(() => this.step(busyRetries + 1, onDone, scope), BUSY_BACKOFF_MS);
           }
         } else {
           this.finish(onDone); // completed | aborted

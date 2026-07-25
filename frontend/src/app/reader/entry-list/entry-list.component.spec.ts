@@ -91,6 +91,61 @@ describe('EntryListComponent', () => {
     expect(el.querySelector('.mark-all')).toBeNull();
   });
 
+  it('emits refresh when the scoped refresh button is clicked', () => {
+    const f = mount();
+    let hits = 0;
+    f.componentInstance.refresh.subscribe(() => hits++);
+    (f.nativeElement.querySelector('.refresh') as HTMLButtonElement).click();
+    expect(hits).toBe(1);
+  });
+
+  it('disables the refresh button while a run is in progress', () => {
+    const f = mount({ refreshing: true });
+    expect((f.nativeElement.querySelector('.refresh') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('hides the scoped refresh button in the cross-feed saved views', () => {
+    for (const kind of ['favorites', 'kept'] as const) {
+      const el = mount({
+        selection: { kind, id: null, unread: false },
+        canMarkAllRead: false,
+      }).nativeElement as HTMLElement;
+      expect(el.querySelector('.refresh')).toBeNull();
+    }
+  });
+
+  it('labels the refresh button with a refresh icon and text', () => {
+    const el = mount().nativeElement as HTMLElement;
+    const btn = el.querySelector('.refresh') as HTMLButtonElement;
+    expect(btn.querySelector('app-icon[name="refresh"]')).not.toBeNull();
+    expect(btn.querySelector('.txt')).not.toBeNull();
+  });
+
+  it('shows a last-refreshed hint for a single-feed selection', () => {
+    const el = mount({
+      selection: { kind: 'subscription', id: 7, unread: true },
+      lastRefreshed: '2026-07-25T08:00:00Z',
+    }).nativeElement as HTMLElement;
+    expect(el.querySelector('.last-refreshed')).not.toBeNull();
+  });
+
+  it('shows no last-refreshed hint for all/tag or a never-fetched feed', () => {
+    expect(
+      (
+        mount({
+          selection: { kind: 'all', id: null, unread: true },
+          lastRefreshed: '2026-07-25T08:00:00Z',
+        }).nativeElement as HTMLElement
+      ).querySelector('.last-refreshed'),
+    ).toBeNull();
+    expect(
+      (
+        mount({ selection: { kind: 'subscription', id: 7, unread: true }, lastRefreshed: null })
+          .nativeElement as HTMLElement
+      ).querySelector('.last-refreshed'),
+    ).toBeNull();
+  });
+
   it('renders planned magazine blocks when layout is magazine', () => {
     const grouped = [1, 2, 3].map((id) => entry(id));
     const diverse = entry(4, { subscriptionId: 4, source: 'diverse' });

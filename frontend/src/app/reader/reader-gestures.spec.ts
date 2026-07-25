@@ -1,11 +1,14 @@
 import {
   DRAWER_SWIPE_MIN_X,
   OVERSCROLL_BACK_MIN,
+  PULL_REFRESH_MIN,
   SWIPE_BACK_MIN_X,
   atBottom,
+  atTop,
   isBackSwipe,
   isDrawerSwipe,
   overscrollTriggersBack,
+  pullTriggersRefresh,
   rubberBand,
 } from './reader-gestures';
 
@@ -65,6 +68,25 @@ describe('atBottom', () => {
 
   it('is false while there is more to scroll', () => {
     expect(atBottom(500, 100, 1000)).toBe(false);
+  });
+});
+
+describe('atTop', () => {
+  it('is true at (and within tolerance of) the top', () => {
+    expect(atTop(0)).toBe(true);
+    expect(atTop(2)).toBe(true); // within the default 2px tolerance
+  });
+
+  it('is false once the list has been scrolled down', () => {
+    expect(atTop(3)).toBe(false);
+    expect(atTop(200)).toBe(false);
+  });
+});
+
+describe('pullTriggersRefresh', () => {
+  it('is true only once the pull passes the threshold', () => {
+    expect(pullTriggersRefresh(PULL_REFRESH_MIN)).toBe(true);
+    expect(pullTriggersRefresh(PULL_REFRESH_MIN - 1)).toBe(false);
   });
 });
 

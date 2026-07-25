@@ -14,6 +14,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { EntryHeroComponent } from '../magazine/entry-hero.component';
 import { EntryCompactComponent } from '../magazine/entry-compact.component';
@@ -21,7 +22,10 @@ import { SourceGroupComponent } from '../magazine/source-group.component';
 import { MagazineBlock, planMagazine } from '../magazine/magazine-planner';
 import { ReadingLayout } from '../reading-layout.service';
 import { EntryDto, SubscriptionTagDto } from '../models';
-import { Selection } from '../query';
+import { Selection, canScopedRefresh } from '../query';
+import { atTop, pullTriggersRefresh, rubberBand } from '../reader-gestures';
+import { relativeTime } from '../format';
+import { LanguageService } from '../../core/language.service';
 import { Problem } from '../../core/problem';
 import { LayoutService } from '../layout.service';
 import { ListScrollMemory } from '../list-scroll-memory';
@@ -31,6 +35,8 @@ import { nextHeaderHidden } from '../header-scroll';
 // stopping early once the content height has held steady for this many in a row.
 const MAX_SETTLE_FRAMES = 30;
 const SETTLE_STABLE_FRAMES = 3;
+// Ceiling the rubber-banded pull-to-refresh indicator approaches but never reaches.
+const MAX_PULL = 100;
 
 @Component({
   selector: 'app-entry-list',
@@ -38,6 +44,7 @@ const SETTLE_STABLE_FRAMES = 3;
     RouterLink,
     TranslocoPipe,
     IconComponent,
+    SpinnerComponent,
     EntryRowComponent,
     EntryHeroComponent,
     EntryCompactComponent,
@@ -59,13 +66,43 @@ export class EntryListComponent implements OnDestroy {
   readonly layout = input<ReadingLayout>('list');
   /** Feed tags keyed by subscription id, used to render each entry's tag pills. */
   readonly feedTags = input<Map<number, SubscriptionTagDto[]>>(new Map());
+  /** True while any refresh runs — disables the button and spins its icon. */
+  readonly refreshing = input<boolean>(false);
+  /** The selected feed's last-fetched time (ISO), or null. Only meaningful for a
+   *  single-feed selection; drives the header's "Last refreshed" hint. */
+  readonly lastRefreshed = input<string | null>(null);
 
   readonly loadMore = output<void>();
   readonly markAllRead = output<void>();
+  readonly refresh = output<void>();
   readonly favorite = output<EntryDto>();
   readonly keep = output<EntryDto>();
   readonly read = output<EntryDto>();
   readonly open = output<EntryDto>();
+
+  /** The refresh button + pull gesture are hidden in the cross-feed saved views. */
+  readonly canRefresh = computed(() => canScopedRefresh(this.selection()));
+
+  private readonly language = inject(LanguageService);
+  /** A localised "last refreshed 5 min ago" label for a single-feed selection,
+   *  or null when it doesn't apply (not a feed, or never fetched). Wide-only
+   *  visibility is handled in CSS. */
+  readonly lastRefreshedLabel = computed(() => {
+    const iso = this.lastRefreshed();
+    if (this.selection().kind !== 'subscription' || !iso) return null;
+    return relativeTime(iso, this.language.lang());
+  });
+
+  // Pull-to-refresh (mobile): pulling down past the top of the list scroller
+  // rubber-bands an indicator; releasing past the threshold fires a scoped
+  // refresh. Disabled on wide screens, in the saved views, and — like the
+  // article's motion affordances — under prefers-reduced-motion.
+  private readonly reduceMotion =
+    typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  readonly pull = signal(0);
+  readonly pullArmed = computed(() => pullTriggersRefresh(this.pull()));
+  private pullStartY = 0;
+  private pullTracking = false;
 
   readonly blocks = computed<MagazineBlock[]>(() =>
     planMagazine(this.entries(), this.selection().kind !== 'subscription', !this.hasMore()),
@@ -135,6 +172,62 @@ export class EntryListComponent implements OnDestroy {
   private readonly rows = viewChild<ElementRef<HTMLElement>>('rows');
   private readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
   private observer?: IntersectionObserver;
+
+  // (Re)attach the pull-to-refresh touch listeners whenever the scroll container
+  // appears or is swapped (list <-> magazine, load <-> empty). touchmove is
+  // non-passive so a committed pull can preventDefault the native overscroll.
+  private pullCleanup?: () => void;
+  private readonly _wirePull = effect(() => {
+    const el = this.rows()?.nativeElement;
+    this.pullCleanup?.();
+    this.pullCleanup = undefined;
+    if (!el) return;
+    const start = (e: TouchEvent): void => this.onPullStart(e, el);
+    const move = (e: TouchEvent): void => this.onPullMove(e, el);
+    const end = (): void => this.onPullEnd();
+    el.addEventListener('touchstart', start, { passive: true });
+    el.addEventListener('touchmove', move, { passive: false });
+    el.addEventListener('touchend', end);
+    el.addEventListener('touchcancel', end);
+    this.pullCleanup = () => {
+      el.removeEventListener('touchstart', start);
+      el.removeEventListener('touchmove', move);
+      el.removeEventListener('touchend', end);
+      el.removeEventListener('touchcancel', end);
+    };
+  });
+
+  private pullEnabled(): boolean {
+    return this.canRefresh() && !this.screen.isWide() && !this.reduceMotion && !this.refreshing();
+  }
+
+  onPullStart(e: TouchEvent, el: HTMLElement): void {
+    // Only arm a pull that begins at the very top with a single finger.
+    this.pullTracking = this.pullEnabled() && e.touches.length === 1 && atTop(el.scrollTop);
+    if (this.pullTracking) this.pullStartY = e.touches[0].clientY;
+  }
+
+  onPullMove(e: TouchEvent, el: HTMLElement): void {
+    if (!this.pullTracking || e.touches.length !== 1) return;
+    const dy = e.touches[0].clientY - this.pullStartY;
+    // A downward pull that is still anchored at the top rubber-bands the
+    // indicator; anything else (upward, or the list has since scrolled) releases
+    // it and hands the gesture back to normal scrolling.
+    if (dy <= 0 || !atTop(el.scrollTop)) {
+      if (this.pull() !== 0) this.pull.set(0);
+      return;
+    }
+    this.pull.set(rubberBand(dy, MAX_PULL));
+    e.preventDefault();
+  }
+
+  onPullEnd(): void {
+    if (!this.pullTracking) return;
+    this.pullTracking = false;
+    const trigger = pullTriggersRefresh(this.pull());
+    this.pull.set(0);
+    if (trigger) this.refresh.emit();
+  }
 
   // Re-observe whenever the sentinel appears/disappears (hasMore toggles it).
   private readonly _wire = effect(() => {
@@ -229,6 +322,7 @@ export class EntryListComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.observer?.disconnect();
+    this.pullCleanup?.();
     this.cancelSettle();
     const host = this.host.nativeElement;
     host.removeEventListener('wheel', this.onUserScrollIntent, { capture: true });

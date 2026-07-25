@@ -1,5 +1,12 @@
 <header class="list-header" [class.collapsed]="collapsed()">
-  <h2>{{ title() }}</h2>
+  <div class="heading">
+    <h2>{{ title() }}</h2>
+    @if (lastRefreshedLabel()) {
+      <span class="last-refreshed"
+        >{{ 'reader.lastRefreshed' | transloco }} {{ lastRefreshedLabel() }}</span
+      >
+    }
+  </div>
   <div class="tools">
     @if (
       selection().kind === 'all' ||
@@ -43,8 +50,33 @@
         <span class="txt">{{ 'reader.markAllRead' | transloco }}</span>
       </button>
     }
+    @if (canRefresh()) {
+      <button
+        class="refresh"
+        type="button"
+        [class.spinning]="refreshing()"
+        [disabled]="refreshing()"
+        (click)="refresh.emit()"
+        [attr.aria-label]="'reader.refresh' | transloco"
+        [attr.title]="'reader.refresh' | transloco"
+      >
+        <app-icon name="refresh" [size]="18" />
+        <span class="txt">{{ 'reader.refresh' | transloco }}</span>
+      </button>
+    }
   </div>
 </header>
+
+@if (pull() > 0) {
+  <div
+    class="pull-indicator"
+    [class.armed]="pullArmed()"
+    [style.transform]="'translateY(' + pull() + 'px)'"
+    aria-hidden="true"
+  >
+    <app-spinner [size]="20" [decorative]="true" [animate]="pullArmed()" />
+  </div>
+}
 
 @if (error()) {
   <div class="banner" role="alert">{{ error()!.detail ?? error()!.title }}</div>

@@ -18,8 +18,10 @@ describe('ReaderShellComponent', () => {
     subscriptions: [
       {
         id: 5,
+        feedId: 55,
         title: 'heise',
         customTitle: null,
+        lastFetchedAt: '2026-07-22T10:00:00Z',
         feedUrl: 'https://f/5',
         siteUrl: null,
         status: 'active',
@@ -149,6 +151,64 @@ describe('ReaderShellComponent', () => {
     expect(f.nativeElement.querySelector('app-reader-view .title')?.textContent).toContain(
       'Entry B',
     );
+  });
+
+  const refreshDone = {
+    status: 'completed',
+    total: 0,
+    fetched: 0,
+    notModified: 0,
+    failed: 0,
+    skippedForBudget: 0,
+    remaining: 0,
+    pruned: 0,
+  };
+
+  it('scopes an all-items refresh to nothing (sweeps every due feed)', () => {
+    const f = boot();
+    f.componentInstance.onScopedRefresh();
+    const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+    expect(req.request.params.has('feedId')).toBe(false);
+    expect(req.request.params.has('tag')).toBe(false);
+    req.flush(refreshDone);
+  });
+
+  it('scopes a tag refresh to the tag id', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ tag: '3' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.componentInstance.onScopedRefresh();
+    const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+    expect(req.request.params.get('tag')).toBe('3');
+    req.flush(refreshDone);
+  });
+
+  it('scopes a subscription refresh to the underlying feed id', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ subscription: '5' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.componentInstance.onScopedRefresh();
+    const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+    // The subscription's real feed id (55), not the subscription id (5).
+    expect(req.request.params.get('feedId')).toBe('55');
+    req.flush(refreshDone);
+  });
+
+  it('does not refresh from the cross-feed saved views', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ view: 'favorites' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.componentInstance.onScopedRefresh();
+    ctrl.expectNone((r) => r.url === 'https://api.test/api/refresh');
   });
 
   it('reloads entries when the selection changes', () => {

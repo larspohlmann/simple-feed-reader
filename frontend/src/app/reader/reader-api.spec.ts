@@ -91,15 +91,34 @@ describe('ReaderApi', () => {
   });
 
   it('scopes refresh to a single feed when given a feedId', () => {
-    api.refresh(42).subscribe();
+    api.refresh({ feedId: 42 }).subscribe();
     const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
     expect(req.request.method).toBe('POST');
     expect(req.request.params.get('feedId')).toBe('42');
+    expect(req.request.params.has('tag')).toBe(false);
     req.flush({
       status: 'completed',
       total: 1,
       fetched: 1,
       notModified: 0,
+      failed: 0,
+      skippedForBudget: 0,
+      remaining: 0,
+      pruned: 0,
+    });
+  });
+
+  it('scopes refresh to a tag when given a tagId', () => {
+    api.refresh({ tagId: 3 }).subscribe();
+    const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.params.get('tag')).toBe('3');
+    expect(req.request.params.has('feedId')).toBe(false);
+    req.flush({
+      status: 'completed',
+      total: 1,
+      fetched: 0,
+      notModified: 1,
       failed: 0,
       skippedForBudget: 0,
       remaining: 0,

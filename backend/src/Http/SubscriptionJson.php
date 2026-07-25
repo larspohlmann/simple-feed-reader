@@ -17,7 +17,7 @@ final class SubscriptionJson
      * @return array{
      *   id: int|null, feedId: int|null, title: string, customTitle: string|null, feedUrl: string,
      *   siteUrl: string|null, faviconUrl: string|null, status: string, sourceFormat: string,
-     *   createdAt: string, position: int,
+     *   createdAt: string, lastFetchedAt: string|null, position: int,
      *   tags: list<array{id: int|null, name: string, color: string|null, icon: string|null, position: int}>,
      *   unreadCount: int
      * }
@@ -47,6 +47,7 @@ final class SubscriptionJson
             // entries are teasers rather than the feed author's own content.
             'sourceFormat' => $feed->getSourceFormat(),
             'createdAt' => $sub->getCreatedAt()->format(\DateTimeInterface::ATOM),
+            'lastFetchedAt' => $feed->getLastFetchedAt()?->format(\DateTimeInterface::ATOM),
             'position' => $sub->getPosition(),
             'tags' => $tags,
             'unreadCount' => $unreadCount,

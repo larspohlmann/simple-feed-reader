@@ -26,8 +26,9 @@ class FeedRepository extends ServiceEntityRepository
      *
      * Scopes: $feedId selects exactly one feed (including "gone" ones — this
      * is the manual-retry path); $userId restricts to feeds the user is
-     * subscribed to; $force ignores the schedule but respects
-     * $cooldownCutoff (feeds fetched after the cutoff are skipped).
+     * subscribed to; $tagId further restricts to feeds the user has tagged with
+     * it; $force ignores the schedule but respects $cooldownCutoff (feeds
+     * fetched after the cutoff are skipped).
      *
      * @return list<Feed>
      */
@@ -36,11 +37,12 @@ class FeedRepository extends ServiceEntityRepository
         int $limit,
         ?int $userId = null,
         ?int $feedId = null,
+        ?int $tagId = null,
         bool $force = false,
         ?\DateTimeImmutable $cooldownCutoff = null,
     ): array {
         /** @var list<Feed> $feeds */
-        $feeds = $this->dueQueryBuilder($now, $userId, $feedId, $force, $cooldownCutoff)
+        $feeds = $this->dueQueryBuilder($now, $userId, $feedId, $tagId, $force, $cooldownCutoff)
             ->addSelect('COALESCE(f.nextFetchAt, :epoch) AS HIDDEN dueOrder')
             ->setParameter('epoch', new \DateTimeImmutable('@0'))
             ->orderBy('dueOrder', 'ASC')
@@ -56,10 +58,11 @@ class FeedRepository extends ServiceEntityRepository
         \DateTimeImmutable $now,
         ?int $userId = null,
         ?int $feedId = null,
+        ?int $tagId = null,
         bool $force = false,
         ?\DateTimeImmutable $cooldownCutoff = null,
     ): int {
-        return (int) $this->dueQueryBuilder($now, $userId, $feedId, $force, $cooldownCutoff)
+        return (int) $this->dueQueryBuilder($now, $userId, $feedId, $tagId, $force, $cooldownCutoff)
             ->select('COUNT(f.id)')
             ->getQuery()
             ->getSingleScalarResult();
@@ -69,6 +72,7 @@ class FeedRepository extends ServiceEntityRepository
         \DateTimeImmutable $now,
         ?int $userId,
         ?int $feedId,
+        ?int $tagId,
         bool $force,
         ?\DateTimeImmutable $cooldownCutoff,
     ): QueryBuilder {
@@ -97,6 +101,17 @@ class FeedRepository extends ServiceEntityRepository
                 'EXISTS (SELECT s.id FROM %s s WHERE s.feed = f AND s.user = :userId)',
                 Subscription::class,
             ))->setParameter('userId', $userId);
+        }
+
+        if ($tagId !== null) {
+            // Scope to feeds the user has tagged with $tagId. Pinning the
+            // subscription to :userId means another user's identically-named tag
+            // can never widen the scope.
+            $qb->andWhere(sprintf(
+                'EXISTS (SELECT ts.id FROM %s ts JOIN ts.subscriptionTags tst '
+                . 'WHERE ts.feed = f AND ts.user = :userId AND tst.tag = :tagId)',
+                Subscription::class,
+            ))->setParameter('tagId', $tagId);
         }
 
         return $qb;

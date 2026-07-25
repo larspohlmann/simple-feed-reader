@@ -7,6 +7,7 @@ namespace App\Controller\Api;
 use App\Entity\User;
 use App\Exception\RateLimitedException;
 use App\Repository\SubscriptionRepository;
+use App\Repository\TagRepository;
 use App\Service\Refresh\RefreshRequest;
 use App\Service\Refresh\RefreshRunner;
 use Psr\Clock\ClockInterface;
@@ -35,6 +36,7 @@ final class RefreshController
     public function __construct(
         private readonly RefreshRunner $refreshRunner,
         private readonly SubscriptionRepository $subscriptions,
+        private readonly TagRepository $tags,
         private readonly ClockInterface $clock,
         private readonly RateLimiterFactoryInterface $refreshLimiter,
     ) {
@@ -44,6 +46,7 @@ final class RefreshController
     public function __invoke(
         #[CurrentUser] User $user,
         #[MapQueryParameter] ?int $feedId = null,
+        #[MapQueryParameter] ?int $tag = null,
     ): JsonResponse {
         $this->enforceLimit($user);
 
@@ -58,6 +61,13 @@ final class RefreshController
                 throw new NotFoundHttpException('No such subscription.');
             }
             $request = RefreshRequest::forUserFeed($userId, $feedId, self::BUDGET_SECONDS);
+        } elseif (null !== $tag) {
+            // Same IDOR guard as the per-feed path: 404 (not 403) when the tag is
+            // unknown or belongs to someone else, so it stays scoped to the user.
+            if (null === $this->tags->findOneOwnedBy($tag, $userId)) {
+                throw new NotFoundHttpException('No such tag.');
+            }
+            $request = RefreshRequest::forUserTag($userId, $tag, self::BUDGET_SECONDS);
         } else {
             $request = RefreshRequest::forUser($userId, self::BUDGET_SECONDS);
         }

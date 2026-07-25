@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
+import { RefreshScope } from './query';
 import {
   EntriesPage,
   EntryDto,
@@ -65,11 +66,13 @@ export class ReaderApi {
     return this.http.get<ReaderContent>(`${this.base}/api/entries/${entryId}/reader`);
   }
 
-  /** Omit feedId to refresh all the caller's due feeds; pass one to scope the
-   *  run to a single feed (e.g. populating a just-added feed immediately). */
-  refresh(feedId?: number): Observable<RefreshReport> {
+  /** Omit the scope (or pass an empty one) to refresh all the caller's due
+   *  feeds; scope by feedId for a single feed (e.g. a just-added one) or by
+   *  tagId for every feed carrying that tag. */
+  refresh(scope?: RefreshScope): Observable<RefreshReport> {
     let params = new HttpParams();
-    if (feedId != null) params = params.set('feedId', feedId);
+    if (scope?.feedId != null) params = params.set('feedId', scope.feedId);
+    else if (scope?.tagId != null) params = params.set('tag', scope.tagId);
     return this.http.post<RefreshReport>(`${this.base}/api/refresh`, {}, { params });
   }
 

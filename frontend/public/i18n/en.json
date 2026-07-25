@@ -173,6 +173,7 @@
   "reader": {
     "toggleSidebar": "Toggle sidebar",
     "refresh": "Refresh",
+    "lastRefreshed": "Last refreshed",
     "addFeed": "Add feed",
     "allItems": "All items",
     "favorites": "Favorites",
