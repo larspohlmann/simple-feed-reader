@@ -30,6 +30,7 @@ import { Problem } from '../../core/problem';
 import { LayoutService } from '../layout.service';
 import { ListScrollMemory } from '../list-scroll-memory';
 import { nextHeaderHidden } from '../header-scroll';
+import { prefetchMargin } from '../paging';
 
 // Scroll-restore settle window: re-assert the target for at most this many frames,
 // stopping early once the content height has held steady for this many in a row.
@@ -276,7 +277,7 @@ export class EntryListComponent implements OnDestroy {
           if (es.some((e) => e.isIntersecting) && this.hasMore() && !this.loadingMore())
             this.loadMore.emit();
         },
-        { root, rootMargin: '300px' },
+        { root, rootMargin: prefetchMargin(root?.clientHeight ?? 0) },
       );
       this.observer.observe(node);
     }

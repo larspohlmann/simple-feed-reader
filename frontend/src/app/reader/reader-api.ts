@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
+import { PAGE_SIZE } from './paging';
 import { RefreshScope } from './query';
 import {
   EntriesPage,
@@ -45,7 +46,7 @@ export class ReaderApi {
   }
 
   entries(query: EntryQuery, cursor?: string | null): Observable<EntriesPage> {
-    let params = new HttpParams().set('view', query.view);
+    let params = new HttpParams().set('view', query.view).set('limit', PAGE_SIZE);
     if (query.subscription != null) params = params.set('subscription', query.subscription);
     if (query.tag != null) params = params.set('tag', query.tag);
     if (cursor) params = params.set('cursor', cursor);

@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../core/api';
 import { ReaderApi } from './reader-api';
+import { PAGE_SIZE } from './paging';
 import { ReaderContent } from './models';
 
 describe('ReaderApi', () => {
@@ -53,6 +54,19 @@ describe('ReaderApi', () => {
     expect(req.request.params.get('tag')).toBeNull();
     expect(req.request.params.get('cursor')).toBe('CUR');
     req.flush({ entries: [], nextCursor: null });
+  });
+
+  // #91: the STRATO host is slow, so the client asks for the biggest page the
+  // backend allows rather than falling back to its smaller default.
+  it('asks for a full page on both the first request and a paged one', () => {
+    api.entries({ view: 'all' }).subscribe();
+    api.entries({ view: 'all' }, 'CUR').subscribe();
+    const reqs = ctrl.match((r) => r.url === 'https://api.test/api/entries');
+    expect(reqs.map((r) => r.request.params.get('limit'))).toEqual([
+      String(PAGE_SIZE),
+      String(PAGE_SIZE),
+    ]);
+    for (const r of reqs) r.flush({ entries: [], nextCursor: null });
   });
 
   it('PATCHes entry state', () => {

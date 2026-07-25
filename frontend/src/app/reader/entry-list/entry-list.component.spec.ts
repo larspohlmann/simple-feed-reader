@@ -3,6 +3,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { provideRouter } from '@angular/router';
 import { EntryListComponent } from './entry-list.component';
 import { ListScrollMemory } from '../list-scroll-memory';
+import { prefetchMargin } from '../paging';
 import { EntryDto } from '../models';
 
 const memory = { save: jest.fn(), read: jest.fn().mockReturnValue(0) };
@@ -116,6 +117,41 @@ describe('EntryListComponent', () => {
     const el = mount({ hasMore: true }).nativeElement as HTMLElement;
     // The observer root is .rows, so the sentinel must be a descendant of it.
     expect(el.querySelector('.rows .load-more')).not.toBeNull();
+  });
+
+  // #91: on a slow backend a fixed 300px lead means scrolling into the spinner.
+  // The lead scales with the scroller so it is the same number of screens
+  // whatever the window height.
+  it('observes the sentinel a viewport-scaled distance ahead', () => {
+    const seen: IntersectionObserverInit[] = [];
+    const real = globalThis.IntersectionObserver;
+    globalThis.IntersectionObserver = class {
+      constructor(_cb: IntersectionObserverCallback, init?: IntersectionObserverInit) {
+        seen.push(init ?? {});
+      }
+      readonly observe = jest.fn();
+      readonly unobserve = jest.fn();
+      readonly disconnect = jest.fn();
+      takeRecords(): [] {
+        return [];
+      }
+    } as unknown as typeof IntersectionObserver;
+
+    try {
+      // No sentinel yet, so no observer — this lets us fake the scroller's
+      // height (jsdom lays nothing out) before the one we care about is made.
+      const f = mount({ hasMore: false });
+      const rows = (f.nativeElement as HTMLElement).querySelector('.rows')!;
+      Object.defineProperty(rows, 'clientHeight', { value: 900, configurable: true });
+
+      f.componentRef.setInput('hasMore', true);
+      f.detectChanges();
+
+      expect(seen.at(-1)).toMatchObject({ root: rows, rootMargin: prefetchMargin(900) });
+      expect(seen.at(-1)!.rootMargin).not.toBe('300px');
+    } finally {
+      globalThis.IntersectionObserver = real;
+    }
   });
 
   it('hides mark-all-read when not applicable', () => {
