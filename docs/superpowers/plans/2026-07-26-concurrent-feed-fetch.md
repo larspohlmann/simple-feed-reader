@@ -2474,6 +2474,23 @@ git commit -m "perf(refresh): fetch due feeds concurrently (#116)"
 
 ## Task 10: Concurrent favicon resolution
 
+**Scope the batch to feeds this pass actually processed.** Task 9's scaffolding
+iterates the entire due-feed list filtered only by `null === getFaviconUrl()`,
+with no filter for whether the feed was attempted. That means a feed the budget
+explicitly deferred still triggers a homepage fetch this pass — phase two
+immediately undoes the bound `BudgetedFeedQueue` just established, and a
+budget-exhausted run takes meaningfully longer wall-clock than its budget
+implies. Pass the processed feeds through from phase one and resolve favicons
+only for those; a skipped feed gets its favicon on the pass that actually
+fetches it.
+
+**Keep the phase-two flush inside the report.** Before Task 9, favicon
+persistence rode inside the per-feed flush and was covered by the
+`UniqueConstraintViolationException | ORMException` guard. Phase two flushes on
+its own, so it needs its own guard: `RefreshController` promises *always HTTP
+200* and the frontend poll loop has no branch for a 500. Task 9 added that
+guard — do not drop it when you replace the method.
+
 **Read this before you start.** The engine's request headers are hard-coded for feeds — `Accept: application/rss+xml, application/atom+xml, …` and a 5 MB cap — and `FetchTicket` has no field to vary them. This batch fetches HTML homepages, so it will content-negotiate as though it wanted XML. Today's `FaviconResolver` already goes through the same feed-shaped fetcher, so this is **not a regression** and you should NOT fix it as a side quest. But if a site turns out to serve something unhelpful under that `Accept`, the fix is a per-batch profile on `FetchTicket` — not a special case inside the engine. Report it rather than improvising.
 
 **Files:**
@@ -2733,17 +2750,28 @@ docker compose exec php bin/console app:feeds:refresh --user=49 --budget=300
 
 Then read `backend/var/log/dev.log` for deprecations and swallowed errors. A generator that is never closed, or a cancelled response that logs a transport warning, shows up here and nowhere else.
 
-- [ ] **Step 4: Re-measure**
+- [ ] **Step 4: Prove the budget gate works against the REAL engine**
+
+Every budget test so far runs against `StubFeedFetcher`'s wave simulation, and
+`ConcurrentFeedFetcher`'s concurrency has its own tests — but nothing proves the
+two collaborate correctly under budget pressure. Add one integration test that
+drives `RefreshRunner` with the real `ConcurrentFeedFetcher` over
+`MockHttpClient`, with a budget small enough to skip feeds, and assert that
+`skippedForBudget` plus the processed count equals the batch size and that
+`remaining` is non-zero. This is the seam where a lazy-generator mistake would
+hide.
+
+- [ ] **Step 5: Re-measure**
 
 Re-run the timing script from the issue against the same 24-feed set and record the new total. **Baseline to beat: 5.37s of fetch time over 24 feeds, 5.77s end-to-end.** Expected: roughly 1s of fetch time.
 
 If the improvement is materially worse than ~3x, do not paper over it — find out why before opening the PR. The likeliest causes are a concurrency parameter that did not get bound (check `bin/console debug:container --parameter=fetch_concurrency`) or `awaitNext()` returning after every chunk rather than every completed response.
 
-- [ ] **Step 5: Verify in the browser**
+- [ ] **Step 6: Verify in the browser**
 
 With `docker compose up -d` and `npm start` running, click refresh in the reader at http://localhost:4200/ and confirm the spinner completes in one poll round with no console errors.
 
-- [ ] **Step 6: Open the PR**
+- [ ] **Step 7: Open the PR**
 
 ```bash
 git push -u origin feature/116-concurrent-feed-fetch
