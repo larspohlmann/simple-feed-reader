@@ -2,23 +2,32 @@
 # Not part of CI and not needed by anyone else working on this project --
 # see deploy/strato/README.md.
 #
-# Runs after CI succeeds on develop, so develop is continuously deployed and a
-# red build never reaches production. Thin on purpose: it sets up the two
-# toolchains the server does not have, calls deploy/strato/build-release.sh and
-# deploy/strato/activate-release.sh, and moves files between them.
+# Runs when a develop pre-release tag is pushed, so shipping is a deliberate act
+# and several merges can go out as one release. Thin on purpose: it sets up the
+# two toolchains the server does not have, calls deploy/strato/build-release.sh
+# and deploy/strato/activate-release.sh, and moves files between them.
 #
-# NOTE: GitHub reads this file from the DEFAULT branch (main), whichever branch
-# the deploy is *for*. That cuts both ways: pushes to develop have triggered it
-# since the file reached main (first from-develop deploy: 20260725145104-e48292e),
-# but an edit to this file does nothing until it is merged to main -- the run you
-# get is still main's copy. Change it on develop, then promote, then trust it.
+# A tag push carries no proof of anything by itself -- it can name any commit in
+# the repository, and CI does not run on tags. The two guard steps at the top of
+# the job supply what the trigger cannot: the commit is on develop, and CI went
+# green on that exact SHA. Neither is decoration; without them a mistyped
+# `git tag v0.5.0-dev.1 <feature-sha>` ships untested code with the deploy
+# secrets.
+#
+# NOTE: a `push` event on a tag runs this file AS IT EXISTS AT THAT TAG, not the
+# default branch's copy. So an edit here takes effect on the first tag pushed
+# after it merges -- no promote-to-main-first dance. (That dance was real while
+# this was a workflow_run: GitHub read main's copy no matter which branch the
+# deploy was for. It no longer applies.)
 name: Deploy (Strato)
 
 on:
-  workflow_run:
-    workflows: ['CI']
-    types: [completed]
-    branches: [develop]
+  push:
+    # GitHub filter patterns, not regex: `.` is literal and `+` means "one or
+    # more of the preceding character", so this is vX.Y.Z-dev.N and nothing
+    # else. A plain v1.2.3 release tag is deliberately unmatched -- main
+    # releases are a separate lane that does not exist yet.
+    tags: ['v[0-9]+.[0-9]+.[0-9]+-dev.[0-9]+']
   workflow_dispatch:
 
 # One deploy at a time. Two overlapping runs could interleave an rsync with
@@ -31,41 +40,108 @@ concurrency:
   group: deploy-strato
   cancel-in-progress: false
 
-# This job talks to the Strato host over SSH and to the GitHub API not at all.
-# `contents: read` is what actions/checkout needs and nothing else is granted.
+# This job talks to the Strato host over SSH, and to the GitHub API only to ask
+# whether CI passed. `contents: read` is what actions/checkout needs;
+# `actions: read` is what reading another workflow's runs needs. Nothing else.
 permissions:
   contents: read
+  actions: read
 
 jobs:
   deploy:
     name: Build and deploy
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # Deploy only a green build of our own code. A manual dispatch is trusted on
-    # its own. A workflow_run must clear three bars, not one:
-    #   conclusion  -- the event fires on failure and cancellation too.
-    #   event       -- CI also runs on pull_request, and the branch filter above
-    #                  matches the *head* branch. A pull request opened from a
-    #                  fork whose branch happens to be named `develop` would
-    #                  otherwise reach this job, which runs with the deploy
-    #                  secrets and executes the branch's own build scripts.
-    #   head_repository -- belt and braces for the same attack.
-    if: >-
-      github.repository == 'larspohlmann/simple-feed-reader' &&
-      (github.event_name == 'workflow_dispatch' ||
-       (github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.event == 'push' &&
-        github.event.workflow_run.head_repository.full_name == github.repository))
+    # Only this repository, never a fork. The fork-PR checks this condition used
+    # to carry are gone with workflow_run: that event matched a *pull request's
+    # head branch*, so a fork PR on a branch named `develop` could reach the job.
+    # A tag push can only originate here, so repository identity is the whole
+    # test. Everything else a deploy must prove is proven by the guard steps,
+    # where a failure is loud instead of a silently skipped job.
+    if: github.repository == 'larspohlmann/simple-feed-reader'
 
     steps:
-      # workflow_run checks out the DEFAULT branch unless told otherwise, so
-      # pin the commit CI actually tested -- otherwise every deploy ships main.
-      # Nothing here needs git write access, so the token is not left in
-      # .git/config for the build steps to trip over.
+      # A tag push checks out the tagged commit by default, so no `ref:` needed.
+      # fetch-depth: 0 is for the ancestry guard below -- it is what populates
+      # refs/remotes/origin/develop, and it happens here because checkout still
+      # has the token. Nothing after this needs git write access, so the token is
+      # not left in .git/config for the build steps to trip over.
       - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          fetch-depth: 0
           persist-credentials: false
+
+      # GUARD 1 of 2. A tag is just a label someone typed; it can name any commit
+      # in the repository, including one on a feature branch that never passed
+      # review. Refuse anything that is not an ancestor of develop.
+      #
+      # Tag pushes only: a workflow_dispatch is a human deliberately choosing a
+      # ref, which is the escape hatch for deploying a branch on purpose.
+      - name: Check the tagged commit is on develop
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          if ! git rev-parse --verify --quiet refs/remotes/origin/develop >/dev/null; then
+            echo "!!! origin/develop is not in this checkout, so the tag cannot be" >&2
+            echo "!!! checked against it. This means fetch-depth: 0 above stopped" >&2
+            echo "!!! fetching branch refs -- fix the checkout, do not drop the check." >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" refs/remotes/origin/develop; then
+            echo "!!! ${GITHUB_REF_NAME} points at ${GITHUB_SHA}, which is not on develop." >&2
+            echo "!!! Refusing to deploy. Delete the tag, then re-tag a develop commit:" >&2
+            echo "!!!   git tag -d ${GITHUB_REF_NAME} && git push origin :${GITHUB_REF_NAME}" >&2
+            exit 1
+          fi
+          echo "==> ${GITHUB_SHA} is on develop"
+
+      # GUARD 2 of 2. This is what the old workflow_run trigger bought us, bought
+      # back a different way. CI runs on every push to develop, so the commit
+      # being tagged was already tested -- the deploy only has to look up the
+      # verdict rather than re-run a suite that takes minutes.
+      #
+      # Absence is failure, not success. A commit that only ever lived on a
+      # feature branch has no `push` CI run at all, and must not slip through on
+      # an empty result.
+      - name: Check CI passed for this commit
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Only `push` runs count: a pull_request run tests the PR's *merge*
+          # commit, not this SHA, so a green one proves nothing about this tag.
+          conclusions="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${GITHUB_SHA}&status=completed" \
+            --jq '.workflow_runs[] | select(.event == "push") | .conclusion')"
+
+          if [ -z "${conclusions}" ]; then
+            echo "!!! no completed CI run found for ${GITHUB_SHA}." >&2
+            echo "!!! CI runs on pushes to develop, so a commit with no run never" >&2
+            echo "!!! reached develop by the normal route. Refusing to deploy." >&2
+            exit 1
+          fi
+
+          # Every run must be green, rather than "the newest one". Re-running a
+          # workflow updates that run in place, so a flake fixed by a re-run
+          # already reads as success here; a second *entry* means the commit was
+          # genuinely pushed twice (develop, then main during a promote), and
+          # there is no good reason to ship it while either verdict is red.
+          # Checking all of them also means this never has to assume what order
+          # the API returns runs in.
+          echo "==> CI conclusions for ${GITHUB_SHA}:"
+          failed=0
+          while IFS= read -r conclusion; do
+            echo "    ${conclusion}"
+            [ "${conclusion}" = "success" ] || failed=1
+          done <<< "${conclusions}"
+
+          if [ "${failed}" -ne 0 ]; then
+            echo "!!! CI is not green for ${GITHUB_SHA} (see the list above)." >&2
+            echo "!!! Fix develop and tag the fix; do not re-tag a red commit." >&2
+            exit 1
+          fi
+          echo "==> CI is green"
 
       # Two seconds here rather than a confusing failure three minutes in. The
       # value is interpolated into remote command lines below, where it is
@@ -154,19 +230,37 @@ jobs:
       - name: Pin npm 11 (matches the lockfile author)
         run: npm i -g npm@11
 
-      # No tag to name a release after, so use a sortable UTC timestamp plus the
-      # short SHA of the commit being deployed. The name is validated because it
-      # becomes a path segment on the server, an argument to the activation
-      # script, and the thing the prune step below reasons about.
+      # A sortable UTC timestamp keeps `ls releases/` in deploy order; the tag
+      # after it says *what* is running, which is the point of tagging at all.
+      # A workflow_dispatch has no tag, so it falls back to the short SHA and
+      # keeps the old shape.
+      #
+      # The name is validated because it becomes a path segment on the server and
+      # an argument to the activation script. The trigger's tag filter is not the
+      # validation: a dispatch can be aimed at any ref and never passes through
+      # it. Rejecting every character outside [0-9A-Za-z._-] is what stops a
+      # ref name from meaning something to a shell or to a path.
       - name: Name the release
         run: |
           set -euo pipefail
           : "${RUNNER_TEMP:?RUNNER_TEMP is unset}"
-          sha="$(git rev-parse --short HEAD)"
-          name="$(date -u +%Y%m%d%H%M%S)-${sha}"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            label="${GITHUB_REF_NAME}"
+          else
+            label="$(git rev-parse --short HEAD)"
+          fi
+          name="$(date -u +%Y%m%d%H%M%S)-${label}"
           case "${name}" in
-            [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9a-f]*) ;;
+            # Leading 14-digit timestamp, then anything from the safe set. The
+            # second pattern is the veto: any character outside it fails.
+            [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-?*) ;;
             *) echo "!!! refusing to deploy under the release name '${name}'" >&2; exit 1 ;;
+          esac
+          case "${name}" in
+            *[!0-9A-Za-z._-]*)
+              echo "!!! release name '${name}' has characters that are not safe" >&2
+              echo "!!! in a path or a command line. Refusing to deploy." >&2
+              exit 1 ;;
           esac
           echo "RELEASE_NAME=${name}" >> "$GITHUB_ENV"
           echo "RELEASE_DIR=${RUNNER_TEMP}/release" >> "$GITHUB_ENV"
