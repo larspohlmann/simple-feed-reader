@@ -205,7 +205,16 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   ngAfterViewInit(): void {
     const hdrEl = this.hdr()?.nativeElement as HTMLElement | undefined;
     if (hdrEl && typeof ResizeObserver !== 'undefined') {
-      this.resizeObs = new ResizeObserver(() => this.headerHeight.set(hdrEl.offsetHeight));
+      // Floor the *fractional* rendered height, not `offsetHeight`. With the
+      // mobile tag row present the bar's real height is fractional, and
+      // `offsetHeight` rounds it — rounding up drops every element anchored at
+      // `--app-bar-h` (the list header, the drawer) a sub-pixel *below* the
+      // bar's true bottom edge, opening a hairline the scrolling list shows
+      // through on iOS Safari (#122). Flooring lands them at or just under that
+      // edge, so the bands overlap instead of gapping.
+      this.resizeObs = new ResizeObserver(() =>
+        this.headerHeight.set(Math.floor(hdrEl.getBoundingClientRect().height)),
+      );
       this.resizeObs.observe(hdrEl);
     }
     // This height now drives the content area's top padding and the mobile
