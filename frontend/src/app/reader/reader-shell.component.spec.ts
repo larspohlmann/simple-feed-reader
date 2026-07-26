@@ -2,15 +2,17 @@ import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { BehaviorSubject, of } from 'rxjs';
 import { signal } from '@angular/core';
 import { API_BASE_URL } from '../core/api';
 import { AuthService } from '../core/auth.service';
+import { OnboardingSkip } from '../discover/onboarding-skip';
 import { ReaderShellComponent } from './reader-shell.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
 import { ReaderHeaderComponent } from './header/reader-header.component';
+import { RefreshService } from './refresh.service';
 
 describe('ReaderShellComponent', () => {
   let ctrl: HttpTestingController;
@@ -52,6 +54,7 @@ describe('ReaderShellComponent', () => {
   };
 
   beforeEach(() => {
+    sessionStorage.clear(); // OnboardingSkip persists here; don't leak across tests
     qp.next(convertToParamMap({}));
     TestBed.configureTestingModule({
       imports: [ReaderShellComponent, provideTranslocoTesting()],
@@ -81,6 +84,62 @@ describe('ReaderShellComponent', () => {
     f.detectChanges();
     return f;
   }
+
+  // One subscription row in the shape the shell reads. Overlay `id`/`lastFetchedAt`
+  // per test to describe "fetched" vs "never fetched" feeds.
+  const SUBSCRIPTION_FIXTURE = {
+    id: 1,
+    feedId: 11,
+    title: 'The Verge',
+    customTitle: null,
+    lastFetchedAt: null as string | null,
+    feedUrl: 'https://f/1',
+    siteUrl: null,
+    status: 'active',
+    sourceFormat: 'xml',
+    createdAt: 'x',
+    tags: [],
+    unreadCount: 0,
+  };
+
+  // Boot the shell against a CUSTOM subscriptions list, draining the three
+  // requests it always fires (subscriptions, tags, entries) so a later
+  // expectOne/expectNone on '/api/catalog' or '/api/refresh' is unambiguous.
+  function bootWith(subscriptions: unknown[]) {
+    const f = TestBed.createComponent(ReaderShellComponent);
+    f.detectChanges();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ subscriptions, favoritesCount: 0, keptCount: 0 });
+    ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+    return f;
+  }
+
+  const CATALOG_WITH_FEEDS = {
+    categories: [
+      {
+        id: 1,
+        key: 'technology',
+        name: 'Technology',
+        icon: 'memory',
+        color: '#3b82f6',
+        feeds: [
+          {
+            id: 10,
+            title: 'The Verge',
+            description: null,
+            siteUrl: null,
+            faviconUrl: '/f/10',
+            subscribed: false,
+          },
+        ],
+      },
+    ],
+  };
 
   it('renders header + sidebar and loads the initial list', () => {
     const el = boot().nativeElement as HTMLElement;
@@ -325,5 +384,72 @@ describe('ReaderShellComponent', () => {
     header.scrollTop.emit();
 
     expect(jump).toHaveBeenCalledTimes(1);
+  });
+
+  describe('onboarding redirect and first sweep', () => {
+    it('redirects a user with no subscriptions to the picker, replacing the URL', async () => {
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = bootWith([]);
+      await f.whenStable();
+      ctrl.expectOne('https://api.test/api/catalog').flush(CATALOG_WITH_FEEDS);
+      await f.whenStable();
+      f.detectChanges();
+      expect(nav).toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
+    });
+
+    it('does not redirect when nobody has imported a catalog yet', async () => {
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = bootWith([]);
+      await f.whenStable();
+      ctrl.expectOne('https://api.test/api/catalog').flush({ categories: [] });
+      await f.whenStable();
+      f.detectChanges();
+      expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
+    });
+
+    it('does not redirect when the catalog cannot be loaded', async () => {
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = bootWith([]);
+      await f.whenStable();
+      ctrl
+        .expectOne('https://api.test/api/catalog')
+        .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+      await f.whenStable();
+      f.detectChanges();
+      expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
+    });
+
+    it('does not even ask for the catalog when the user has subscriptions', () => {
+      bootWith([{ ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' }]);
+      ctrl.expectNone('https://api.test/api/catalog');
+    });
+
+    it('does not redirect when the user skipped this session, and does not fetch the catalog', async () => {
+      TestBed.inject(OnboardingSkip).remember();
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = bootWith([]);
+      await f.whenStable();
+      ctrl.expectNone('https://api.test/api/catalog');
+      expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
+    });
+
+    it('sweeps once when subscriptions exist that have never been fetched', () => {
+      const run = jest
+        .spyOn(TestBed.inject(RefreshService), 'run')
+        .mockImplementation(() => undefined);
+      bootWith([
+        { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: null },
+        { ...SUBSCRIPTION_FIXTURE, id: 2, feedId: 12, lastFetchedAt: null },
+      ]);
+      expect(run).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not sweep when every subscription has been fetched before', () => {
+      const run = jest
+        .spyOn(TestBed.inject(RefreshService), 'run')
+        .mockImplementation(() => undefined);
+      bootWith([{ ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' }]);
+      expect(run).not.toHaveBeenCalled();
+    });
   });
 });

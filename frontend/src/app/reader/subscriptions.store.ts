@@ -84,6 +84,11 @@ export class SubscriptionsStore {
   readonly loading = signal(false);
   readonly error = signal<Problem | null>(null);
 
+  /** True once a load has completed, successfully or not. `loading` cannot serve
+   *  here: it is false BEFORE the first request too, which would let a redirect
+   *  fire against an empty list the server has not answered on yet. */
+  readonly resolved = signal(false);
+
   readonly tagTree = computed(() => buildTagTree(this.subscriptions(), this.tags.tags()));
   readonly untagged = computed(() => untaggedSubs(this.subscriptions()));
   readonly totalUnread = computed(() => sumUnread(this.subscriptions()));
@@ -97,10 +102,12 @@ export class SubscriptionsStore {
         this.favoritesCount.set(r.favoritesCount);
         this.keptCount.set(r.keptCount);
         this.loading.set(false);
+        this.resolved.set(true);
       },
       error: (e: HttpErrorResponse) => {
         this.error.set(parseProblem(e));
         this.loading.set(false);
+        this.resolved.set(true);
       },
     });
   }
