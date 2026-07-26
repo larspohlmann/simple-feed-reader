@@ -86,7 +86,7 @@ final class Version20260726120000 extends AbstractMigration
                     PRIMARY KEY(id)
                 ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB
                 SQL);
-            $this->addSql('ALTER TABLE catalog_feed ADD CONSTRAINT fk_catalog_feed_category FOREIGN KEY (category_id) REFERENCES catalog_category (id) ON DELETE CASCADE');
+            $this->addSql('ALTER TABLE catalog_feed ADD CONSTRAINT FK_56F5F4DD12469DE2 FOREIGN KEY (category_id) REFERENCES catalog_category (id) ON DELETE CASCADE');
         }
 
         if ($sqlite) {
@@ -120,7 +120,7 @@ final class Version20260726120000 extends AbstractMigration
                     favicon_content_type VARCHAR(100) DEFAULT NULL,
                     favicon_fetched_at DATETIME DEFAULT NULL,
                     favicon_failed_at DATETIME DEFAULT NULL,
-                    CONSTRAINT fk_catalog_feed_category FOREIGN KEY (category_id) REFERENCES catalog_category (id) ON DELETE CASCADE
+                    CONSTRAINT FK_56F5F4DD12469DE2 FOREIGN KEY (category_id) REFERENCES catalog_category (id) ON DELETE CASCADE
                 )
                 SQL);
             $this->addSql('CREATE UNIQUE INDEX uniq_catalog_feed_url ON catalog_feed (url)');
