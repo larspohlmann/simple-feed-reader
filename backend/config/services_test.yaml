@@ -197,3 +197,12 @@ services:
     App\Service\Catalog\CatalogImporter:
         autowire: true
         public: true
+
+    # CatalogSubscriberTest turns a picker selection into subscriptions through
+    # the real autowired graph (catalog repository, BulkSubscriber). Its only
+    # production caller arrives with the onboarding endpoint in a later task, so
+    # until then the compiler would inline it away and the test container could
+    # not fetch it. Same `autowire` caveat as above.
+    App\Service\Catalog\CatalogSubscriber:
+        autowire: true
+        public: true
