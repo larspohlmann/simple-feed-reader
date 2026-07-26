@@ -32,8 +32,8 @@ use Symfony\Component\Lock\LockFactory;
  * ingest, flush — happens serially as each outcome arrives, so persistence
  * semantics are unchanged from the one-feed-at-a-time original.
  *
- * The ten constructor collaborators are deliberate: the runner is the refresh
- * pipeline's composition root, and each one is a seam the tests swap
+ * The eleven constructor collaborators are deliberate: the runner is the
+ * refresh pipeline's composition root, and each one is a seam the tests swap
  * independently (fetcher, body parser, ingestor, scheduler, …). Bagging them
  * into a parameter object would hide that coupling, not reduce it.
  *
@@ -117,7 +117,44 @@ final class RefreshRunner
             );
         }
 
-        $this->resolveMissingFavicons($feeds);
+        return $this->resolveFaviconsAndReport($request, $feeds, $tally, $queue, $cooldownCutoff);
+    }
+
+    /**
+     * Resolves favicons, then assembles the completed report. Split out so the
+     * favicon flush's own failure mode is visible next to the code that
+     * handles it: every feed's fetch outcome has already been flushed
+     * individually, so nothing already persisted is at risk here — but the
+     * EntityManager can still close under this flush exactly as it can under
+     * a fetch's, and RefreshController's contract promises the client a JSON
+     * report with a `status` field, never an opaque 500 its poll loop has no
+     * branch for.
+     *
+     * @param list<Feed> $feeds
+     */
+    private function resolveFaviconsAndReport(
+        RefreshRequest $request,
+        array $feeds,
+        RefreshTally $tally,
+        BudgetedFeedQueue $queue,
+        ?\DateTimeImmutable $cooldownCutoff,
+    ): RefreshReport {
+        try {
+            $this->resolveMissingFavicons($feeds);
+        } catch (UniqueConstraintViolationException | ORMException $e) {
+            $this->logger->error(
+                'Refresh aborted: persistence failed while resolving favicons',
+                ['exception' => $e],
+            );
+
+            return RefreshReport::aborted(
+                \count($feeds),
+                $tally->fetched,
+                $tally->notModified,
+                $tally->failed,
+                $queue->skippedCount(),
+            );
+        }
 
         return RefreshReport::finished(
             \count($feeds),

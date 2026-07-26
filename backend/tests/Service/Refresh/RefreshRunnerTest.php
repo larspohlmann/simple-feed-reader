@@ -705,6 +705,49 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertNotContains('https://three.example.com/feed', $this->fetcher->fetchedUrls);
     }
 
+    /**
+     * Favicon resolution's flush runs after every feed's own outcome has
+     * already been flushed individually, so a failure here cannot lose
+     * anything already persisted — but it must still degrade to an aborted
+     * report instead of letting the exception escape run(): RefreshController
+     * promises the client JSON with a `status` field, never an opaque 500 its
+     * poll loop has no branch for.
+     */
+    public function testFaviconFlushFailureIsReportedAsAbortedNotThrown(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->em->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
+        );
+
+        $flushes = 0;
+        $failingEm = $this->createStub(EntityManagerInterface::class);
+        $failingEm->method('flush')->willReturnCallback(function () use (&$flushes): void {
+            $flushes++;
+            // Flush 1 is the feed's own fetch outcome; flush 2 is the favicon
+            // phase's — the one this test targets.
+            if ($flushes === 2) {
+                throw new UniqueConstraintViolationException(
+                    new class ('duplicate key', '23000', 1062) extends DriverAbstractException {
+                    },
+                    null,
+                );
+            }
+            $this->em->flush();
+        });
+
+        $report = $this->runner($failingEm)->run(RefreshRequest::allDue(300));
+
+        self::assertSame('aborted', $report->status);
+        self::assertSame(1, $report->total);
+        // The feed's own fetch and flush already succeeded before the favicon
+        // phase failed, so that outcome is not lost.
+        self::assertSame(1, $report->fetched);
+        self::assertSame(0, $report->pruned);
+    }
+
     public function testLockIsReleasedAfterAnAbortedRun(): void
     {
         $feed = $this->dueFeed('https://one.example.com/feed');

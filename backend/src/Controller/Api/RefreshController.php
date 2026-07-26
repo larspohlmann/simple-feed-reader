@@ -28,8 +28,8 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 final class RefreshController
 {
     /**
-     * Above RefreshRunner::SAFETY_MARGIN_SECONDS (10) so a call processes more
-     * than a single feed, and below typical FastCGI limits.
+     * Above BudgetedFeedQueue::SAFETY_MARGIN_SECONDS (10) so a call processes
+     * more than a single feed, and below typical FastCGI limits.
      */
     private const int BUDGET_SECONDS = 25;
 
