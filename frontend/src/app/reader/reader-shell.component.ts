@@ -26,7 +26,7 @@ import { LayoutService } from './layout.service';
 import { RefreshScope, markReadTarget, queryFromSelection, selectionFromParams } from './query';
 import { entryParam } from './slug';
 import { EntryDto, EntryStatePatch, SubscriptionDto, SubscriptionTagDto, TagDto } from './models';
-import { nextHeaderHidden } from './header-scroll';
+import { headerHiddenAtRest, nextHeaderHidden } from './header-scroll';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
@@ -252,11 +252,15 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   /**
    * The mobile drawer hangs below the header, so it must never open under a
    * retracted one — that would leave a strip of backdrop where the bar should
-   * be. Showing the header again costs nothing: the drawer covers the content,
-   * so there is no scrolling going on to hide it for.
+   * be. On close the header returns to what the scroll position implies: leaving
+   * it expanded over a scrolled-down list dead-zones touch-scroll in the strip it
+   * overlays (it covers the list but is not its scroller), which reads as the
+   * list refusing to scroll until the swipe starts below the bar.
    */
   setSidebarOpen(open: boolean): void {
-    if (open) this.headerHidden.set(false);
+    this.headerHidden.set(
+      open ? false : headerHiddenAtRest(this.lastScrollTop, this.screen.isWide()),
+    );
     this.sidebarOpen.set(open);
   }
 

@@ -154,6 +154,33 @@ describe('ReaderShellComponent', () => {
 
       expect(f.componentInstance.headerHidden()).toBe(false);
     });
+
+    it('re-minimizes the header when the drawer closes over a scrolled-down list', () => {
+      // #121 follow-up: opening forces the header back (so the drawer never hangs
+      // below a retracted bar), but closing must not leave it expanded over
+      // scrolled-down content. That top strip overlays the list yet isn't its
+      // scroller, so a swipe starting there scrolls nothing — a dead zone.
+      const f = boot();
+      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+
+      // Swipe up / scroll down: the header minimizes.
+      const host = f.nativeElement as HTMLElement;
+      const scroller = document.createElement('div');
+      Object.defineProperty(scroller, 'scrollTop', { value: 500, configurable: true });
+      host.appendChild(scroller);
+      scroller.dispatchEvent(new Event('scroll'));
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(true);
+
+      f.componentInstance.setSidebarOpen(true);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(false); // shown while open
+
+      f.componentInstance.setSidebarOpen(false);
+      f.detectChanges();
+      // Back to the resting state the scroll offset implies — minimized.
+      expect(f.componentInstance.headerHidden()).toBe(true);
+    });
   });
 
   it('marks the opened entry read', () => {
