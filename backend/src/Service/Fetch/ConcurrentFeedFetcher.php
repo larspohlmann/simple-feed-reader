@@ -21,7 +21,6 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  */
 final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
 {
-    private const int MAX_BYTES = 5_000_000;
     private const float TIMEOUT_SECONDS = 10.0;
     private const string USER_AGENT = 'SimpleFeedReader/1.0 (+https://github.com/larspohlmann/simple-feed-reader)';
 
@@ -163,7 +162,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
 
             return $chunk->isLast() ? $this->classifier->fromBody($response, $attempt) : null;
         } catch (ExceptionInterface $e) {
-            $this->rethrowTooLarge($e);
+            ResponseTooLargeException::rethrowIfWrapped($e);
 
             throw new FeedUnreachableException(sprintf('%s: %s', $attempt->url, $e->getMessage()), previous: $e);
         }
@@ -217,13 +216,16 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
                 'max_duration' => self::TIMEOUT_SECONDS * 2,
                 'resolve' => [$guarded->host => $guarded->ip],
                 'on_progress' => static function (int $downloaded): void {
-                    if ($downloaded > self::MAX_BYTES) {
-                        throw new ResponseTooLargeException(sprintf('response exceeds %d bytes', self::MAX_BYTES));
+                    if ($downloaded > ResponseTooLargeException::MAX_BYTES) {
+                        throw new ResponseTooLargeException(sprintf(
+                            'response exceeds %d bytes',
+                            ResponseTooLargeException::MAX_BYTES,
+                        ));
                     }
                 },
             ]);
         } catch (ExceptionInterface $e) {
-            $this->rethrowTooLarge($e);
+            ResponseTooLargeException::rethrowIfWrapped($e);
 
             throw new FeedUnreachableException(sprintf('%s: %s', $attempt->url, $e->getMessage()), previous: $e);
         }
@@ -262,19 +264,5 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     private function iterator(iterable $tickets): \Iterator
     {
         yield from $tickets;
-    }
-
-    /**
-     * The HTTP client wraps exceptions thrown inside on_progress; unwrap and
-     * rethrow our size-limit exception so callers see the real cause.
-     */
-    private function rethrowTooLarge(?\Throwable $e): void
-    {
-        while (null !== $e) {
-            if ($e instanceof ResponseTooLargeException) {
-                throw $e;
-            }
-            $e = $e->getPrevious();
-        }
     }
 }

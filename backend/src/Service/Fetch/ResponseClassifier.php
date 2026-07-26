@@ -20,7 +20,6 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  */
 final class ResponseClassifier
 {
-    private const int MAX_BYTES = 5_000_000;
     private const array REDIRECT_CODES = [301, 302, 303, 307, 308];
     private const array PERMANENT_CODES = [301, 308];
 
@@ -58,10 +57,12 @@ final class ResponseClassifier
     public function fromBody(ResponseInterface $response, FetchAttempt $attempt): FetchResponse
     {
         $body = $this->content($response, $attempt->url);
-        if (\strlen($body) > self::MAX_BYTES) {
-            throw new ResponseTooLargeException(
-                sprintf('%s: response exceeds %d bytes', $attempt->url, self::MAX_BYTES),
-            );
+        if (\strlen($body) > ResponseTooLargeException::MAX_BYTES) {
+            throw new ResponseTooLargeException(sprintf(
+                '%s: response exceeds %d bytes',
+                $attempt->url,
+                ResponseTooLargeException::MAX_BYTES,
+            ));
         }
 
         return FetchResponse::fetched(
@@ -95,7 +96,7 @@ final class ResponseClassifier
         try {
             return $response->getStatusCode();
         } catch (ExceptionInterface $e) {
-            $this->rethrowTooLarge($e);
+            ResponseTooLargeException::rethrowIfWrapped($e);
 
             throw new FeedUnreachableException(sprintf('%s: %s', $url, $e->getMessage()), previous: $e);
         }
@@ -106,7 +107,7 @@ final class ResponseClassifier
         try {
             return $response->getContent(false);
         } catch (ExceptionInterface $e) {
-            $this->rethrowTooLarge($e);
+            ResponseTooLargeException::rethrowIfWrapped($e);
 
             throw new FeedUnreachableException(sprintf('%s: %s', $url, $e->getMessage()), previous: $e);
         }
@@ -121,19 +122,5 @@ final class ResponseClassifier
         }
 
         return $headers[$name][0] ?? null;
-    }
-
-    /**
-     * The HTTP client wraps exceptions thrown inside on_progress; unwrap and
-     * rethrow our size-limit exception so callers see the real cause.
-     */
-    private function rethrowTooLarge(?\Throwable $e): void
-    {
-        while (null !== $e) {
-            if ($e instanceof ResponseTooLargeException) {
-                throw $e;
-            }
-            $e = $e->getPrevious();
-        }
     }
 }

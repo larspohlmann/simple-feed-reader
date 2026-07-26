@@ -4,6 +4,10 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    # How many feed requests a refresh sweep keeps in flight. A parameter rather
+    # than a class constant so the shared Strato host can be dialled down in
+    # config alone. Eight x the 5 MB response cap is 40 MB against a 512 MB limit.
+    fetch_concurrency: 8
 
 services:
     # default configuration for services in *this* file
@@ -47,6 +51,17 @@ services:
     App\Security\PasswordWorkEqualizerInterface: '@App\Security\PasswordWorkEqualizer'
     App\Service\Fetch\DnsResolverInterface: '@App\Service\Fetch\NativeDnsResolver'
     App\Service\Fetch\FeedFetcherInterface: '@App\Service\Fetch\HttpFeedFetcher'
+    App\Service\Fetch\BatchFeedFetcherInterface: '@App\Service\Fetch\ConcurrentFeedFetcher'
+
+    # The sweep's in-flight cap. Wired on this one service rather than as a
+    # `bind` in _defaults: a binding matches by parameter NAME, so a global
+    # `int $concurrency` would also feed any unrelated service that ever names a
+    # parameter that way, and renaming the engine's own parameter to
+    # `$fetchConcurrency` just to satisfy the binder would stutter at every read.
+    # The engine rejects a value below 1, so a broken parameter fails at boot.
+    App\Service\Fetch\ConcurrentFeedFetcher:
+        arguments:
+            $concurrency: '%fetch_concurrency%'
     App\Service\Discovery\FeedDiscoveryInterface: '@App\Service\Discovery\FeedDiscovery'
     App\Service\Reader\ArticleExtractorInterface: '@App\Service\Reader\ArticleExtractor'
 

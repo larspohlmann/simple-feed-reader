@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
+use App\Service\Fetch\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
@@ -11,6 +12,7 @@ use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Service\Fetch\HttpFeedFetcher;
 use App\Service\Fetch\IpValidator;
+use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -38,7 +40,12 @@ final class HttpFeedFetcherTest extends TestCase
             }
         };
 
-        return new HttpFeedFetcher(new MockHttpClient($responses), new UrlGuard($resolver, new IpValidator()));
+        return new HttpFeedFetcher(new ConcurrentFeedFetcher(
+            new MockHttpClient($responses),
+            new UrlGuard($resolver, new IpValidator()),
+            new ResponseClassifier(),
+            1,
+        ));
     }
 
     public function testFetchesBodyAndCachingHeaders(): void

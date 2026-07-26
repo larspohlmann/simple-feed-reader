@@ -1626,16 +1626,18 @@ parameters:
     fetch_concurrency: 8
 ```
 
-and under `_defaults.bind`, add:
-
-```yaml
-            int $fetchConcurrency: '%fetch_concurrency%'
-```
-
 Next to the existing interface aliases, add:
 
 ```yaml
     App\Service\Fetch\BatchFeedFetcherInterface: '@App\Service\Fetch\ConcurrentFeedFetcher'
+```
+
+**Amended during Task 6.** This step originally said to add `int $fetchConcurrency: '%fetch_concurrency%'` under `_defaults.bind`. A binding matches by parameter *name*, and Task 5's engine names its parameter `$concurrency`, so that binding never applies and the container fails with "argument `$concurrency` … you should configure its value explicitly". Renaming the engine's parameter to satisfy the binder would stutter at every read (`$this->fetchConcurrency`), and binding `int $concurrency` in `_defaults` would silently feed any future service that happens to use that parameter name. Wire the one service instead:
+
+```yaml
+    App\Service\Fetch\ConcurrentFeedFetcher:
+        arguments:
+            $concurrency: '%fetch_concurrency%'
 ```
 
 In `backend/config/services_test.yaml`, add alongside the existing `FeedFetcherInterface` entry:

@@ -6,6 +6,13 @@ services:
         alias: App\Service\Fetch\HttpFeedFetcher
         public: true
 
+    # RefreshRunner now depends on the batch interface, and the functional tests
+    # swap it for a stub via `self::getContainer()->set(...)`, which the container
+    # only allows on public services. Test environment only.
+    App\Service\Fetch\BatchFeedFetcherInterface:
+        alias: App\Service\Fetch\ConcurrentFeedFetcher
+        public: true
+
     # The reader-endpoint test swaps a fake extractor via
     # `self::getContainer()->set(...)` so no outbound page fetch happens; the
     # container only permits that on a public service. Test environment only.
