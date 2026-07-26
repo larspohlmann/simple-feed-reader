@@ -144,6 +144,11 @@ Two consequences to respect:
   must run after phase 1 has flushed, not alongside it.
 - If phase 1 returns `Aborted` the EntityManager is closed, so phase 2 is
   skipped entirely, exactly as `countDue` and pruning already are.
+- A feed whose own fetch **failed** this pass is excluded from phase 2, not
+  just one the budget deferred: it has no new content to show an icon beside,
+  and a feed that never recovers (a 404 feed whose site also blocks the
+  crawler, say) would otherwise pay a homepage round trip on every sweep,
+  forever, inside the shared-hosting FastCGI budget.
 
 `RefreshRunner` is `FaviconResolver`'s only production caller, so there is no
 second path to keep in sync and no reason to extract an icon-picking

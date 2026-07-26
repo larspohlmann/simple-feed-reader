@@ -140,7 +140,7 @@ final class RefreshRunner
         ?\DateTimeImmutable $cooldownCutoff,
     ): RefreshReport {
         try {
-            $this->resolveMissingFavicons($tally->processedFeeds);
+            $this->resolveMissingFavicons($tally->faviconEligibleFeeds);
         } catch (UniqueConstraintViolationException | ORMException $e) {
             $this->logger->error(
                 'Refresh aborted: persistence failed while resolving favicons',
@@ -282,12 +282,14 @@ final class RefreshRunner
     }
 
     /**
-     * Resolve and store a favicon for each processed feed that still lacks
-     * one, fetching every homepage in one concurrent batch. Scoped to
-     * $feeds — the feeds THIS pass actually fetched — rather than the full
-     * due-feed list: a feed the budget deferred never started a fetch, so
-     * giving it a homepage fetch here would undo the budget just enforced.
-     * It gets its favicon on the pass that actually fetches it.
+     * Resolve and store a favicon for each favicon-eligible feed that still
+     * lacks one, fetching every homepage in one concurrent batch. $feeds is
+     * `RefreshTally::$faviconEligibleFeeds`, not the full due-feed list and
+     * not every processed feed: a feed the budget deferred never started a
+     * fetch (it gets its favicon on the pass that actually fetches it), and a
+     * feed whose own fetch just failed has no new content to show an icon
+     * beside, so it is excluded too rather than paying a homepage round trip
+     * on every sweep for a feed that may never recover.
      *
      * @param list<Feed> $feeds
      */

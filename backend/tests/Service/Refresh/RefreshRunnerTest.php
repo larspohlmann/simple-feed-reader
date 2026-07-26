@@ -195,6 +195,11 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(FeedStatus::Erroring, $bad->getStatus());
         self::assertSame(1, $bad->getConsecutiveFailures());
         self::assertStringContainsString('connection refused', (string) $bad->getLastErrorMessage());
+        // The failed feed has no new content to show an icon beside, and
+        // retrying its homepage on every sweep would add a permanent guarded
+        // HTTP round trip for a feed that may never recover — so it must not
+        // be in phase two's favicon batch at all, favicon-less or not.
+        self::assertNotContains('https://bad.example.com', $this->faviconFetcher->fetchedUrls);
     }
 
     public function testUnparseableBodyIsRecordedAsFailure(): void

@@ -16,14 +16,20 @@ final class RefreshTally
     public bool $aborted = false;
 
     /**
-     * Feeds whose fetch actually started this pass, in the order their outcome
-     * landed. Phase two (favicons) scopes itself to this list rather than the
-     * full due-feed list, so a feed the budget deferred is not also given a
-     * homepage fetch it never earned this pass.
+     * Feeds phase two may fetch a homepage for, in the order their outcome
+     * landed. Deliberately narrower than "processed": a feed the budget
+     * deferred never started a fetch (so chasing its favicon here would undo
+     * the budget just enforced), and a feed whose fetch FAILED has no new
+     * content to show an icon beside — worse, retrying its homepage on every
+     * sweep would add a permanent guarded HTTP round trip for a feed that may
+     * never recover (a 404 feed whose site also 403s the crawler, say), which
+     * is a real cost on a time-boxed FastCGI budget. "Counted in the report"
+     * and "eligible for a favicon" are different sets on purpose; give them
+     * separate names so a future change can't conflate them again.
      *
      * @var list<Feed>
      */
-    public array $processedFeeds = [];
+    public array $faviconEligibleFeeds = [];
 
     public function record(FeedOutcome $outcome, Feed $feed): void
     {
@@ -39,12 +45,15 @@ final class RefreshTally
         }
 
         $this->processed++;
-        $this->processedFeeds[] = $feed;
 
         match ($outcome) {
             FeedOutcome::Fetched => $this->fetched++,
             FeedOutcome::NotModified => $this->notModified++,
             FeedOutcome::Failed => $this->failed++,
         };
+
+        if (FeedOutcome::Failed !== $outcome) {
+            $this->faviconEligibleFeeds[] = $feed;
+        }
     }
 }
