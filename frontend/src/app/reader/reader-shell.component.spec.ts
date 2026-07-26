@@ -129,6 +129,31 @@ describe('ReaderShellComponent', () => {
       expect(f.componentInstance.headerHidden()).toBe(false);
       expect(f.componentInstance.sidebarOpen()).toBe(true);
     });
+
+    it('keeps the header shown when momentum scroll fires after the drawer opens', () => {
+      // #121: the open-swipe's touchend shows the header, but inertial scrolling
+      // keeps firing scroll events afterwards. One arriving under the open drawer
+      // must not re-hide the header — the drawer would then hang below a gap.
+      const f = boot();
+      // Only a narrow layout hides the header at all; force it so the residual
+      // scroll would otherwise register as a hide.
+      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+      f.componentInstance.headerHeight.set(90);
+      f.componentInstance.setSidebarOpen(true);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(false);
+
+      // A residual downward scroll (0 → 500) delivered to the shell's
+      // capture-phase scroll listener while the drawer is open.
+      const host = f.nativeElement as HTMLElement;
+      const scroller = document.createElement('div');
+      Object.defineProperty(scroller, 'scrollTop', { value: 500, configurable: true });
+      host.appendChild(scroller);
+      scroller.dispatchEvent(new Event('scroll'));
+      f.detectChanges();
+
+      expect(f.componentInstance.headerHidden()).toBe(false);
+    });
   });
 
   it('marks the opened entry read', () => {

@@ -269,9 +269,16 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     const el = e.target as HTMLElement | null;
     if (!el || typeof el.scrollTop !== 'number') return;
     const top = el.scrollTop;
-    this.headerHidden.set(
-      nextHeaderHidden(this.headerHidden(), this.lastScrollTop, top, this.screen.isWide()),
-    );
+    // While the drawer is open the header must stay shown (it hangs below the
+    // bar). Inertial scrolling keeps firing scroll events after the open-swipe's
+    // touchend, so the gesture handler cannot be trusted as the last word — guard
+    // here. lastScrollTop still advances, so the next real scroll sees no phantom
+    // jump once the drawer closes.
+    if (!this.sidebarOpen()) {
+      this.headerHidden.set(
+        nextHeaderHidden(this.headerHidden(), this.lastScrollTop, top, this.screen.isWide()),
+      );
+    }
     this.lastScrollTop = top;
   };
 
