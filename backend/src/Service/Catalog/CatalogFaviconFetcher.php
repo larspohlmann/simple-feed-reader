@@ -26,8 +26,12 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * `FaviconResolver::resolveAll()` (see #116) and hands each URL here to download.
  *
  * Invoked ONLY by the warmer. No request path fetches an icon.
+ *
+ * Not `final`: the warmer's tests double this collaborator, and there is no
+ * fetcher interface to mock instead. `readonly` still holds the immutability
+ * guarantee that matters.
  */
-final readonly class CatalogFaviconFetcher
+readonly class CatalogFaviconFetcher
 {
     public const int MAX_BYTES = 262144;
 

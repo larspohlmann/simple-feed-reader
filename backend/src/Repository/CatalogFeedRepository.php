@@ -77,6 +77,22 @@ class CatalogFeedRepository extends ServiceEntityRepository
         return $rows;
     }
 
+    /**
+     * How many rows still want an icon — what a polling caller stops on.
+     */
+    public function countNeedingFavicon(\DateTimeImmutable $staleBefore, \DateTimeImmutable $retryBefore): int
+    {
+        return (int) $this->createQueryBuilder('f')
+            ->select('COUNT(f.id)')
+            ->andWhere('f.enabled = true')
+            ->andWhere('f.faviconFetchedAt IS NULL OR f.faviconFetchedAt < :stale')
+            ->setParameter('stale', $staleBefore)
+            ->andWhere('f.faviconFailedAt IS NULL OR f.faviconFailedAt < :retry')
+            ->setParameter('retry', $retryBefore)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
     public function nextPositionInCategory(int $categoryId): int
     {
         $max = $this->createQueryBuilder('f')

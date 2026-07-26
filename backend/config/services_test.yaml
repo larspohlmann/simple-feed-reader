@@ -197,3 +197,17 @@ services:
     App\Service\Catalog\CatalogImporter:
         autowire: true
         public: true
+
+    # The favicon-warmer command test swaps a stub resolver and a stub fetcher
+    # in via `self::getContainer()->set(...)`, so the warmer never touches the
+    # network. Both have production callers (the warmer) and would survive
+    # compilation on their own — `public: true` is only so the test container's
+    # `set(...)` can replace them, which it refuses on a private service. Same
+    # `autowire` caveat as above. Test environment only.
+    App\Service\Fetch\FaviconResolver:
+        autowire: true
+        public: true
+
+    App\Service\Catalog\CatalogFaviconFetcher:
+        autowire: true
+        public: true

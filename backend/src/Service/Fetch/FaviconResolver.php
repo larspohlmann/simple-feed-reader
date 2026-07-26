@@ -13,8 +13,12 @@ use Psr\Log\LoggerInterface;
  * site, falling back to the /favicon.ico convention. Never throws: a favicon
  * is a nicety, so any failure degrades to the fallback (or null) rather than
  * disturbing the refresh that asked for it.
+ *
+ * Not `final`: the catalog favicon warmer and command tests double this
+ * collaborator, and the codebase has no favicon-resolver interface to mock
+ * instead. `readonly` still holds the immutability guarantee that matters.
  */
-final readonly class FaviconResolver
+readonly class FaviconResolver
 {
     private const int URL_MAX = 2048;
 
