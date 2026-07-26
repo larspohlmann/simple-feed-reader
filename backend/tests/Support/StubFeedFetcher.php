@@ -78,6 +78,10 @@ final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInt
      */
     private function runWave(array $wave): \Generator
     {
+        // Must precede the yielding loop below: a caller consuming the first
+        // outcome should already have paid the whole wave's cost, matching the
+        // real engine where nothing is readable until the network has answered.
+        // Task 9's budget assertions rely on this ordering.
         if ($this->secondsPerFetch > 0) {
             $this->clock?->sleep($this->secondsPerFetch);
         }
