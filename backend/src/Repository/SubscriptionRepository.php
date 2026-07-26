@@ -152,8 +152,8 @@ class SubscriptionRepository extends ServiceEntityRepository
         $rows = $this->getEntityManager()->createQuery(sprintf(
             'SELECT s.id AS subscriptionId, COUNT(e.id) AS unreadCount
              FROM %s s
-             JOIN %s e WITH e.feed = s.feed
-             LEFT JOIN %s es WITH es.entry = e AND es.user = s.user
+             JOIN %s e ON e.feed = s.feed
+             LEFT JOIN %s es ON es.entry = e AND es.user = s.user
              WHERE s.user = :user AND (
                  es.isRead = :false
                  OR (es.isRead IS NULL AND (s.markedReadUntil IS NULL
