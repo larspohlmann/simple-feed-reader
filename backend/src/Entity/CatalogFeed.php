@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Enum\SourceFormat;
 use App\Repository\CatalogFeedRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -63,16 +64,16 @@ class CatalogFeed
     #[ORM\Column(length: 750, nullable: true)]
     private ?string $faviconSourceUrl = null;
 
-    #[ORM\Column(type: 'blob', nullable: true)]
+    #[ORM\Column(type: Types::BLOB, nullable: true)]
     private mixed $faviconData = null;
 
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $faviconContentType = null;
 
-    #[ORM\Column(nullable: true)]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $faviconFetchedAt = null;
 
-    #[ORM\Column(nullable: true)]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $faviconFailedAt = null;
 
     public function __construct(CatalogCategory $category, string $title, string $url)
@@ -215,17 +216,21 @@ class CatalogFeed
         return $this->faviconFailedAt;
     }
 
-    public function storeFavicon(string $sourceUrl, string $bytes, string $contentType, \DateTimeImmutable $at): void
-    {
+    public function storeFavicon(
+        string $sourceUrl,
+        string $bytes,
+        string $contentType,
+        \DateTimeImmutable $fetchedAt,
+    ): void {
         $this->faviconSourceUrl = $sourceUrl;
         $this->faviconData = $bytes;
         $this->faviconContentType = $contentType;
-        $this->faviconFetchedAt = $at;
+        $this->faviconFetchedAt = $fetchedAt;
         $this->faviconFailedAt = null;
     }
 
-    public function recordFaviconFailure(\DateTimeImmutable $at): void
+    public function recordFaviconFailure(\DateTimeImmutable $failedAt): void
     {
-        $this->faviconFailedAt = $at;
+        $this->faviconFailedAt = $failedAt;
     }
 }

@@ -26,12 +26,17 @@ final class CatalogCategoryRepositoryTest extends DbTestCase
         $hidden->setEnabled(false);
 
         $live = new CatalogFeed($first, 'The Verge', 'https://www.theverge.com/rss/index.xml');
-        $live->setPosition(0);
+        $live->setPosition(5);
         $retired = new CatalogFeed($first, 'Retired', 'https://example.com/gone.xml');
         $retired->setPosition(1);
         $retired->setEnabled(false);
+        // Lower position than The Verge, but persisted after it — proves the
+        // #[ORM\OrderBy] on CatalogCategory::$feeds sorts by position, not by
+        // insertion order.
+        $earlyRiser = new CatalogFeed($first, 'Ars Technica', 'https://arstechnica.com/feed/');
+        $earlyRiser->setPosition(2);
 
-        foreach ([$second, $first, $hidden, $live, $retired] as $row) {
+        foreach ([$second, $first, $hidden, $live, $retired, $earlyRiser] as $row) {
             $em->persist($row);
         }
         $em->flush();
@@ -52,7 +57,7 @@ final class CatalogCategoryRepositoryTest extends DbTestCase
             static fn (CatalogCategory $c): string => $c->getName(),
             $rows,
         ));
-        self::assertSame(['The Verge'], array_map(
+        self::assertSame(['Ars Technica', 'The Verge'], array_map(
             static fn (CatalogFeed $f): string => $f->getTitle(),
             $rows[0]->getEnabledFeeds(),
         ));
