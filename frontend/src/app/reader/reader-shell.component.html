@@ -27,6 +27,12 @@
       }
     </p>
   }
+  @if (showCatalogEmptyWarning()) {
+    <p class="catalog-warning" role="status" data-testid="catalog-empty-warning">
+      {{ 'discover.adminEmptyWarning' | transloco }}
+      <a routerLink="/admin/catalog">{{ 'discover.adminEmptyAction' | transloco }}</a>
+    </p>
+  }
 </div>
 <!-- No top offset here: the scrolling panes reserve the header's height
      themselves (via --app-bar-h) and their content passes under it, so

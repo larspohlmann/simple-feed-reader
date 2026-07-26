@@ -260,6 +260,9 @@
     "loadFailed": "Der Katalog konnte nicht geladen werden.",
     "subscribeFailed": "Abonnieren fehlgeschlagen. Bitte erneut versuchen.",
     "retry": "Erneut versuchen",
-    "emptyCatalog": "Es sind noch keine Vorschläge eingerichtet. Ein Administrator kann im Admin-Bereich einen Katalog importieren."
+    "emptyCatalog": "Es sind noch keine Vorschläge eingerichtet. Ein Administrator kann im Admin-Bereich einen Katalog importieren.",
+    "browseCatalog": "Feed-Vorschläge durchsuchen",
+    "adminEmptyWarning": "Es wurde kein Feed-Katalog importiert – neue Nutzer bekommen deshalb keine Vorschläge.",
+    "adminEmptyAction": "Katalog importieren"
   }
 }

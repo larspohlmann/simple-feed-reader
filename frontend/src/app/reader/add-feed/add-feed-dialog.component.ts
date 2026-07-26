@@ -5,6 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef } from '@angular/cdk/dialog';
+import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { parseProblem } from '../../core/problem';
@@ -19,7 +20,7 @@ type PreviewState =
 
 @Component({
   selector: 'app-add-feed-dialog',
-  imports: [ReactiveFormsModule, A11yModule, IconComponent, TranslocoPipe],
+  imports: [ReactiveFormsModule, A11yModule, RouterLink, IconComponent, TranslocoPipe],
   templateUrl: './add-feed-dialog.component.html',
   styleUrl: './add-feed-dialog.component.scss',
 })

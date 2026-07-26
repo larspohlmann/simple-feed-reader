@@ -260,6 +260,9 @@
     "loadFailed": "The catalog could not be loaded.",
     "subscribeFailed": "Subscribing failed. Please try again.",
     "retry": "Try again",
-    "emptyCatalog": "No suggestions have been set up yet. An administrator can import a catalog from the admin area."
+    "emptyCatalog": "No suggestions have been set up yet. An administrator can import a catalog from the admin area.",
+    "browseCatalog": "Browse suggested feeds",
+    "adminEmptyWarning": "No feed catalog has been imported, so new users are not being offered any suggestions.",
+    "adminEmptyAction": "Import one"
   }
 }

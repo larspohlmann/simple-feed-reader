@@ -3,6 +3,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { DialogRef } from '@angular/cdk/dialog';
+import { provideRouter } from '@angular/router';
 import { API_BASE_URL } from '../../core/api';
 import { AddFeedDialogComponent } from './add-feed-dialog.component';
 
@@ -16,6 +17,7 @@ describe('AddFeedDialogComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideRouter([]),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
         { provide: DialogRef, useValue: { close } },
       ],

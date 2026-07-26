@@ -12,7 +12,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, convertToParamMap } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Dialog } from '@angular/cdk/dialog';
 import { AuthService } from '../core/auth.service';
@@ -48,6 +48,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
     ReaderViewComponent,
     DrawerSwipeDirective,
     ProgressHairlineComponent,
+    RouterLink,
     TranslocoPipe,
   ],
   templateUrl: './reader-shell.component.html',
@@ -76,6 +77,17 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  into a blank page. */
   private readonly onboardingAvailable = computed(
     () => this.catalog.resolved() && this.catalog.hasEntries(),
+  );
+
+  /** Admins get the catalog resolved unconditionally — they are the only ones
+   *  who can fix an empty one, and the suppressed onboarding is otherwise
+   *  invisible. One cached request per session. */
+  private readonly loadCatalogForAdmin = effect(() => {
+    if (this.auth.isAdmin()) untracked(() => this.catalog.load());
+  });
+
+  readonly showCatalogEmptyWarning = computed(
+    () => this.auth.isAdmin() && this.catalog.resolved() && !this.catalog.hasEntries(),
   );
 
   /** A brand-new subscription set: rows exist, none has ever been fetched. This

@@ -17,7 +17,12 @@ import { RefreshService } from './refresh.service';
 describe('ReaderShellComponent', () => {
   let ctrl: HttpTestingController;
   const qp = new BehaviorSubject(convertToParamMap({}));
-  const auth = { user: signal({ email: 'a@b.c' }), loadMe: () => of({}), logout: jest.fn() };
+  const auth = {
+    user: signal({ email: 'a@b.c' }),
+    loadMe: () => of({}),
+    logout: jest.fn(),
+    isAdmin: jest.fn().mockReturnValue(false),
+  };
 
   const subsBody = {
     subscriptions: [
@@ -55,6 +60,7 @@ describe('ReaderShellComponent', () => {
 
   beforeEach(() => {
     sessionStorage.clear(); // OnboardingSkip persists here; don't leak across tests
+    auth.isAdmin.mockReturnValue(false); // default non-admin; a test opting in overrides it
     qp.next(convertToParamMap({}));
     TestBed.configureTestingModule({
       imports: [ReaderShellComponent, provideTranslocoTesting()],
@@ -419,7 +425,9 @@ describe('ReaderShellComponent', () => {
       expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
     });
 
-    it('does not even ask for the catalog when the user has subscriptions', () => {
+    it('does not even ask for the catalog when a non-admin user has subscriptions', () => {
+      // Non-admin (the default mock): a populated reader has no reason to touch
+      // the catalog. Admins DO fetch it unconditionally — covered separately below.
       bootWith([{ ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' }]);
       ctrl.expectNone('https://api.test/api/catalog');
     });
@@ -484,6 +492,52 @@ describe('ReaderShellComponent', () => {
       ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
       f.detectChanges();
       expect((f.nativeElement as HTMLElement).querySelector('.fetch-banner')).toBeNull();
+    });
+  });
+
+  describe('admin empty-catalog warning', () => {
+    it('warns an admin that no catalog has been imported', async () => {
+      auth.isAdmin.mockReturnValue(true);
+      const f = bootWith([
+        { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' },
+      ]);
+      await f.whenStable();
+      // An admin gets the catalog fetched EVEN WITH their own subscriptions — the
+      // loadCatalogForAdmin effect, not the redirect (which returns on non-empty subs).
+      ctrl.expectOne('https://api.test/api/catalog').flush({ categories: [] });
+      f.detectChanges();
+      const warning = (f.nativeElement as HTMLElement).querySelector(
+        '[data-testid="catalog-empty-warning"]',
+      );
+      expect(warning).not.toBeNull();
+      expect(warning!.querySelector('a')!.getAttribute('href')).toBe('/admin/catalog');
+    });
+
+    it('shows an admin no warning once a catalog exists', async () => {
+      auth.isAdmin.mockReturnValue(true);
+      const f = bootWith([
+        { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' },
+      ]);
+      await f.whenStable();
+      ctrl.expectOne('https://api.test/api/catalog').flush(CATALOG_WITH_FEEDS);
+      f.detectChanges();
+      expect(
+        (f.nativeElement as HTMLElement).querySelector('[data-testid="catalog-empty-warning"]'),
+      ).toBeNull();
+    });
+
+    it('never shows the warning to a non-admin', async () => {
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = bootWith([]);
+      await f.whenStable();
+      // The redirect effect (empty subs, non-admin) is what fetches the catalog here.
+      ctrl.expectOne('https://api.test/api/catalog').flush({ categories: [] });
+      await f.whenStable();
+      f.detectChanges();
+      expect(
+        (f.nativeElement as HTMLElement).querySelector('[data-testid="catalog-empty-warning"]'),
+      ).toBeNull();
+      expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
     });
   });
 });

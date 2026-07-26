@@ -32,6 +32,7 @@ import { relativeTime } from '../format';
 import { LanguageService } from '../../core/language.service';
 import { Problem } from '../../core/problem';
 import { LayoutService } from '../layout.service';
+import { CatalogStore } from '../../discover/catalog.store';
 import { ListScrollMemory } from '../list-scroll-memory';
 import { nextHeaderHidden } from '../header-scroll';
 import { prefetchMargin } from '../paging';
@@ -122,6 +123,13 @@ export class EntryListComponent implements OnDestroy {
   private readonly screen = inject(LayoutService);
   private readonly scroll = inject(ListScrollMemory);
   private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly catalog = inject(CatalogStore);
+
+  /** True only once the catalog has been resolved AND has no entries.
+   *  Unresolved reads as not-empty, so the /discover link is never hidden on a
+   *  guess — it simply shows until the shell (which loads the catalog on the
+   *  onboarding path) proves the catalog empty. */
+  readonly catalogEmpty = computed(() => this.catalog.resolved() && !this.catalog.hasEntries());
 
   constructor() {
     // Capture so we hear the gesture even though scroll events fire on inner .rows;
