@@ -69,11 +69,11 @@
       <outline type="rss" text="The Verge"
                xmlUrl="https://www.theverge.com/rss/index.xml"
                htmlUrl="https://www.theverge.com"
-               description="Technology, science and culture"/>
+               description="Consumer tech news, reviews and gadgets"/>
       <outline type="rss" text="Wired"
                xmlUrl="https://www.wired.com/feed/rss"
                htmlUrl="https://www.wired.com"
-               description="Technology, science and culture"/>
+               description="How technology shapes business and culture"/>
     </outline>
     <outline text="AI &amp; Machine Learning" key="ai_machine_learning" icon="smart_toy" color="#8b5cf6">
       <outline type="rss" text="Ahead of AI"
@@ -331,11 +331,11 @@
       <outline type="rss" text="Designboom"
                xmlUrl="https://www.designboom.com/feed/"
                htmlUrl="https://www.designboom.com"
-               description="Architecture and design magazine"/>
+               description="Art, architecture and product design"/>
       <outline type="rss" text="Dezeen"
                xmlUrl="https://www.dezeen.com/feed/"
                htmlUrl="https://www.dezeen.com"
-               description="Architecture and design magazine"/>
+               description="Architecture and interiors magazine"/>
       <outline type="rss" text="Nielsen Norman Group"
                xmlUrl="https://www.nngroup.com/feed/rss/"
                htmlUrl="https://www.nngroup.com"
@@ -431,11 +431,11 @@
       <outline type="rss" text="FAZ"
                xmlUrl="https://www.faz.net/rss/aktuell/"
                htmlUrl="https://www.faz.net"
-               description="German daily newspaper"/>
+               description="Frankfurt-based German daily newspaper"/>
       <outline type="rss" text="Sueddeutsche Zeitung"
                xmlUrl="https://rss.sueddeutsche.de/rss/Topthemen"
                htmlUrl="https://www.sueddeutsche.de"
-               description="German daily newspaper"/>
+               description="Munich-based German daily newspaper"/>
       <outline type="rss" text="Zeit Online"
                xmlUrl="https://newsfeed.zeit.de/index"
                htmlUrl="https://www.zeit.de"
@@ -447,7 +447,7 @@
       <outline type="rss" text="taz"
                xmlUrl="https://taz.de/!p4608;rss/"
                htmlUrl="https://taz.de"
-               description="German daily newspaper"/>
+               description="Berlin left-leaning German daily newspaper"/>
     </outline>
     <outline text="Tech &amp; Netzpolitik (DE)" key="tech_netzpolitik_de" icon="lan" color="#6366f1">
       <outline type="rss" text="Basic Thinking"
@@ -461,7 +461,7 @@
       <outline type="rss" text="Golem.de"
                xmlUrl="https://rss.golem.de/rss.php?feed=RSS2.0"
                htmlUrl="https://www.golem.de"
-               description="German IT news"/>
+               description="German IT news for professionals"/>
       <outline type="rss" text="Spektrum.de"
                xmlUrl="https://www.spektrum.de/alias/rss/spektrum-de-rss-feed/996406"
                htmlUrl="https://www.spektrum.de"
@@ -473,7 +473,7 @@
       <outline type="rss" text="heise online"
                xmlUrl="https://www.heise.de/rss/heise-atom.xml"
                htmlUrl="https://www.heise.de"
-               description="German IT news"/>
+               description="German IT and technology news portal"/>
       <outline type="rss" text="netzpolitik.org"
                xmlUrl="https://netzpolitik.org/feed/"
                htmlUrl="https://netzpolitik.org"
