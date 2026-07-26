@@ -295,13 +295,19 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertNull($feed->getNextFetchAt());
     }
 
-    public function testBudgetExhaustionSkipsRemainingFeeds(): void
+    /**
+     * With concurrency 1 the engine starts one feed per wave, so the deadline is
+     * re-checked between each — the same skid the serial runner had, now
+     * expressed in terms of when a fetch may *start*.
+     */
+    public function testBudgetExhaustionSkipsFeedsThatWereNeverStarted(): void
     {
         $first = $this->dueFeed('https://one.example.com/feed');
         $second = $this->dueFeed('https://two.example.com/feed');
         $third = $this->dueFeed('https://three.example.com/feed');
         $this->em->flush();
 
+        $this->fetcher = new StubFeedFetcher($this->clock, concurrency: 1);
         foreach ([$first, $second, $third] as $index => $feed) {
             $this->fetcher->willReturn(
                 $feed->getUrl(),
@@ -313,12 +319,37 @@ final class RefreshRunnerTest extends DbTestCase
         $report = $this->runner()->run(RefreshRequest::allDue(205));
 
         // 100 s + 100 s spent leaves 5 s — below the 10 s safety margin, so the
-        // third feed is skipped and stays due for the next run.
+        // third feed never starts and stays due for the next run.
         self::assertSame('partial', $report->status);
         self::assertSame(2, $report->fetched);
         self::assertSame(1, $report->skippedForBudget);
         self::assertSame(1, $report->remaining);
         self::assertCount(2, $this->fetcher->fetchedUrls);
+    }
+
+    /**
+     * The counterpart to the test above, and the actual point of this change: at
+     * a realistic concurrency the same three feeds all fit in one wave, so a
+     * budget that used to skip one now completes the sweep.
+     */
+    public function testAConcurrentWaveCompletesWithinABudgetThatSerialWouldExhaust(): void
+    {
+        foreach (['one', 'two', 'three'] as $index => $name) {
+            $feed = $this->dueFeed(sprintf('https://%s.example.com/feed', $name));
+            $this->fetcher->willReturn(
+                $feed->getUrl(),
+                FetchResponse::fetched($feed->getUrl(), false, $this->rss('F' . $index, 'g-' . $index), null, null),
+            );
+        }
+        $this->em->flush();
+        $this->fetcher->secondsPerFetch = 100;
+
+        $report = $this->runner()->run(RefreshRequest::allDue(205));
+
+        self::assertSame('completed', $report->status);
+        self::assertSame(3, $report->fetched);
+        self::assertSame(0, $report->skippedForBudget);
+        self::assertSame(0, $report->remaining);
     }
 
     /**
@@ -332,12 +363,14 @@ final class RefreshRunnerTest extends DbTestCase
         $second = $this->dueFeed('https://two.example.com/feed');
         $this->em->flush();
 
+        $this->fetcher = new StubFeedFetcher($this->clock, concurrency: 1);
         foreach ([$first, $second] as $feed) {
             $this->fetcher->willReturn(
                 $feed->getUrl(),
                 FetchResponse::notModified($feed->getUrl(), false, null, null),
             );
         }
+        $this->fetcher->secondsPerFetch = 5;
 
         $report = $this->runner()->run(RefreshRequest::allDue(3));
 
@@ -633,6 +666,9 @@ final class RefreshRunnerTest extends DbTestCase
         $third = $this->dueFeed('https://three.example.com/feed');
         $this->em->flush();
 
+        // Concurrency 1 makes "the third feed is never started" deterministic
+        // rather than a race against however many feeds a wave happens to fit.
+        $this->fetcher = new StubFeedFetcher($this->clock, concurrency: 1);
         foreach ([$first, $second, $third] as $index => $feed) {
             $this->fetcher->willReturn(
                 $feed->getUrl(),
@@ -664,11 +700,9 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(0, $report->pruned);
         // The failing feed plus the untouched third one are still due.
         self::assertSame(2, $report->remaining);
-        // The loop stopped: the third feed was never fetched.
-        self::assertSame(
-            ['https://one.example.com/feed', 'https://two.example.com/feed'],
-            $this->fetcher->fetchedUrls,
-        );
+        // The run stopped: the third feed's outcome was never processed.
+        self::assertCount(2, $this->fetcher->fetchedUrls);
+        self::assertNotContains('https://three.example.com/feed', $this->fetcher->fetchedUrls);
     }
 
     public function testLockIsReleasedAfterAnAbortedRun(): void

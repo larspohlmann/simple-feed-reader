@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Entity\Feed;
-use App\Service\Fetch\FeedFetcherInterface;
+use App\Service\Fetch\BatchFeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
 use App\Tests\Support\StubFeedFetcher;
 use Doctrine\ORM\EntityManagerInterface;
@@ -49,7 +49,7 @@ final class MaintenanceControllerTest extends WebTestCase
 
         $stub = new StubFeedFetcher();
         $stub->willReturn($feed->getUrl(), FetchResponse::notModified($feed->getUrl(), false, null, null));
-        self::getContainer()->set(FeedFetcherInterface::class, $stub);
+        self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
 
         // token from .env.test
         $client->request('POST', '/maintenance/refresh?token=test-maintenance-token');
@@ -69,7 +69,7 @@ final class MaintenanceControllerTest extends WebTestCase
 
         $stub = new StubFeedFetcher();
         $stub->willReturn($feed->getUrl(), FetchResponse::notModified($feed->getUrl(), false, null, null));
-        self::getContainer()->set(FeedFetcherInterface::class, $stub);
+        self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
 
         $client->request('POST', '/maintenance/refresh', server: [
             'HTTP_X_MAINTENANCE_TOKEN' => 'test-maintenance-token',
