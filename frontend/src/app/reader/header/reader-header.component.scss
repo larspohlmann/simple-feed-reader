@@ -1,3 +1,16 @@
+/* Opaque backing for the whole floating bar. The bar slides on scroll (a
+   composited layer) and the tag row below is its own momentum-scroll layer
+   (`-webkit-overflow-scrolling: touch`); on iOS Safari those two layers round
+   their bounds to device pixels independently, so a hairline can open between
+   them — and with no background on the host, the list scrolling underneath
+   shows through it (#122). Both bands are `--surface-1`, so this fill is
+   invisible except exactly in that seam. The host's box is positioned by the
+   shell (`app-reader-header` in reader-shell.component.scss). */
+:host {
+  display: block;
+  background: var(--surface-1);
+}
+
 header {
   height: 56px;
   display: flex;
