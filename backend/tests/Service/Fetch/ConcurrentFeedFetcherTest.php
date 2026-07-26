@@ -8,6 +8,7 @@ use App\Service\Fetch\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
+use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Service\Fetch\FetchOutcome;
 use App\Service\Fetch\FetchTicket;
@@ -15,6 +16,7 @@ use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -56,6 +58,19 @@ final class ConcurrentFeedFetcherTest extends TestCase
         }
 
         return $collected;
+    }
+
+    /**
+     * The cap is bound from a container parameter so the host can be dialled
+     * down in config alone. A value below one opens no requests, which the
+     * engine cannot tell apart from an empty batch — it has to fail loudly.
+     */
+    public function testRejectsAConcurrencyBelowOne(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Concurrency must be at least 1, got 0.');
+
+        $this->fetcher([], concurrency: 0);
     }
 
     public function testFetchesASingleTicket(): void
@@ -179,8 +194,11 @@ final class ConcurrentFeedFetcherTest extends TestCase
     public function testAFeedStillRedirectingDoesNotBlockOthersFromCompleting(): void
     {
         $redirects = 0;
+        $requested = [];
         $fetcher = $this->fetcher(
-            static function (string $method, string $url) use (&$redirects): MockResponse {
+            static function (string $method, string $url) use (&$redirects, &$requested): MockResponse {
+                $requested[] = $url;
+
                 if (str_contains($url, 'slow')) {
                     $redirects++;
 
@@ -202,6 +220,63 @@ final class ConcurrentFeedFetcherTest extends TestCase
 
         self::assertNull($outcomes[2]->failure());
         self::assertInstanceOf(FeedUnreachableException::class, $outcomes[1]->failure());
+
+        // The real claim: the fast feed goes on the wire second, while the slow
+        // one is only one hop into its chain. Run serially it would wait out all
+        // six of the slow feed's hops and be requested seventh instead, so this
+        // ordering — not the fact that both terminate — is what proves overlap.
+        self::assertSame(
+            ['https://slow.example.com/feed', 'https://fast.example.com/feed'],
+            \array_slice($requested, 0, 2),
+        );
+    }
+
+    public function testAnIdleTimeoutMidResponseIsReportedAsAFailure(): void
+    {
+        // MockResponse turns an empty yield into an idle-timeout chunk.
+        $body = (static function (): \Generator {
+            yield '<rss';
+            yield '';
+        })();
+
+        $fetcher = $this->fetcher([new MockResponse($body, ['http_code' => 200])]);
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://example.com/feed')]));
+
+        $failure = $outcomes[1]->failure();
+        self::assertInstanceOf(FeedUnreachableException::class, $failure);
+        self::assertStringContainsString('timed out', $failure->getMessage());
+    }
+
+    public function testATransportErrorMidBodyIsReportedAsAFailure(): void
+    {
+        $body = (static function (): \Generator {
+            yield '<rss';
+            yield new TransportException('connection reset by peer');
+        })();
+
+        $fetcher = $this->fetcher([new MockResponse($body, ['http_code' => 200])]);
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://example.com/feed')]));
+
+        $failure = $outcomes[1]->failure();
+        self::assertInstanceOf(FeedUnreachableException::class, $failure);
+        self::assertStringContainsString('connection reset by peer', $failure->getMessage());
+    }
+
+    /**
+     * The size cap is enforced from inside on_progress, so the client wraps it;
+     * the outcome must still carry the real cause rather than the wrapper.
+     */
+    public function testAnOversizedBodyIsReportedAsTooLarge(): void
+    {
+        $fetcher = $this->fetcher([
+            new MockResponse(str_repeat('x', 6_000_000), ['http_code' => 200]),
+        ]);
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://example.com/feed')]));
+
+        self::assertInstanceOf(ResponseTooLargeException::class, $outcomes[1]->failure());
     }
 
     public function testSendsConditionalGetHeaders(): void
@@ -220,14 +295,21 @@ final class ConcurrentFeedFetcherTest extends TestCase
         ]));
 
         self::assertTrue($outcomes[1]->responseOrThrow()->notModified);
+
+        // Only the field name is case-insensitive. The value is compared as sent,
+        // so a mangled HTTP-date cannot pass for a well-formed one.
         $headers = [];
         foreach ((array) ($seenOptions['headers'] ?? []) as $header) {
-            if (\is_string($header)) {
-                $headers[] = strtolower($header);
+            if (!\is_string($header)) {
+                continue;
+            }
+            $parts = explode(': ', $header, 2);
+            if (2 === \count($parts)) {
+                $headers[strtolower($parts[0])] = $parts[1];
             }
         }
-        self::assertContains('if-none-match: "v1"', $headers);
-        self::assertContains('if-modified-since: mon, 20 jul 2026 08:30:00 gmt', $headers);
+        self::assertSame('"v1"', $headers['if-none-match'] ?? null);
+        self::assertSame('Mon, 20 Jul 2026 08:30:00 GMT', $headers['if-modified-since'] ?? null);
     }
 
     public function testAbandoningTheGeneratorCancelsWhatIsStillInFlight(): void

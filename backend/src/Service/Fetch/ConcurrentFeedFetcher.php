@@ -31,6 +31,15 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
         private readonly ResponseClassifier $classifier,
         private readonly int $concurrency,
     ) {
+        // A cap below one opens no requests at all, and the engine would report
+        // an empty run as a clean one: the sweep's `remaining` never decrements
+        // and the frontend's poll loop recurses forever on `partial`. This value
+        // is bound from a container parameter, so a typo has to fail loudly.
+        if ($concurrency < 1) {
+            throw new \InvalidArgumentException(
+                sprintf('Concurrency must be at least 1, got %d.', $concurrency),
+            );
+        }
     }
 
     /**
@@ -139,6 +148,11 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
         FetchAttempt $attempt,
     ): FetchResponse|FetchAttempt|null {
         try {
+            // Order is load-bearing. On a timeout ErrorChunk isTimeout() returns
+            // true while isFirst() throws, so asking isFirst() first would report
+            // every timeout as a generic transport failure. On an error chunk
+            // isTimeout() throws instead, which the catch below turns into the
+            // message carrying the real cause.
             if ($chunk->isTimeout()) {
                 throw new FeedUnreachableException(sprintf('%s: timed out', $attempt->url));
             }
