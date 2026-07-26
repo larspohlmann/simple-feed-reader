@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Command;
 
 use App\Entity\Feed;
-use App\Service\Fetch\FeedFetcherInterface;
+use App\Service\Fetch\BatchFeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
 use App\Tests\DbTestCase;
 use App\Tests\Support\StubFeedFetcher;
@@ -38,7 +38,13 @@ final class RefreshFeedsCommandTest extends DbTestCase
 
         $stub = new StubFeedFetcher();
         $stub->willReturn($feed->getUrl(), FetchResponse::notModified($feed->getUrl(), false, null, null));
-        self::getContainer()->set(FeedFetcherInterface::class, $stub);
+        // The runner's favicon phase fetches the site homepage through the
+        // same fetcher — stub the origin too, or it throws just as loudly.
+        $stub->willReturn(
+            'https://cli.example.com',
+            FetchResponse::fetched('https://cli.example.com', false, '<html></html>', null, null),
+        );
+        self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
 
         $tester = $this->tester();
         $exitCode = $tester->execute(['--budget' => '60']);

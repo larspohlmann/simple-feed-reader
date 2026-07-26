@@ -7,7 +7,7 @@ namespace App\Tests\Controller\Api;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
-use App\Service\Fetch\FeedFetcherInterface;
+use App\Service\Fetch\BatchFeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\UserFactory;
@@ -88,7 +88,13 @@ final class RefreshControllerTest extends WebTestCase
             'https://example.com/mine.xml',
             FetchResponse::notModified('https://example.com/mine.xml', false, null, null),
         );
-        self::getContainer()->set(FeedFetcherInterface::class, $fetcher);
+        // The runner's favicon phase fetches the feed's site homepage through
+        // this same fetcher — stub the origin too, or it throws just as loudly.
+        $fetcher->willReturn(
+            'https://example.com',
+            FetchResponse::fetched('https://example.com', false, '<html></html>', null, null),
+        );
+        self::getContainer()->set(BatchFeedFetcherInterface::class, $fetcher);
 
         $client->request(
             'POST',
@@ -152,7 +158,13 @@ final class RefreshControllerTest extends WebTestCase
             'https://example.com/tagged.xml',
             FetchResponse::notModified('https://example.com/tagged.xml', false, null, null),
         );
-        self::getContainer()->set(FeedFetcherInterface::class, $fetcher);
+        // The runner's favicon phase fetches the feed's site homepage through
+        // this same fetcher — stub the origin too, or it throws just as loudly.
+        $fetcher->willReturn(
+            'https://example.com',
+            FetchResponse::fetched('https://example.com', false, '<html></html>', null, null),
+        );
+        self::getContainer()->set(BatchFeedFetcherInterface::class, $fetcher);
 
         $token = self::getContainer()->get(JWTTokenManagerInterface::class)->create($user);
         $client->request(

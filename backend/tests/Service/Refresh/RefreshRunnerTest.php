@@ -121,6 +121,17 @@ final class RefreshRunnerTest extends DbTestCase
         $feed->setNextFetchAt($this->clock->now()->modify('-1 hour'));
         $this->em->persist($feed);
 
+        // Every due feed starts without a favicon, so a successful refresh
+        // always triggers phase two's homepage fetch for it. Stub a bland
+        // default here so tests that don't care about the favicon outcome
+        // aren't forced to configure one; a test that does can still call
+        // faviconFetcher->willReturn() afterwards to override it.
+        $origin = 'https://' . (string) parse_url($url, \PHP_URL_HOST);
+        $this->faviconFetcher->willReturn(
+            $origin,
+            FetchResponse::fetched($origin, false, '<html></html>', null, null),
+        );
+
         return $feed;
     }
 
@@ -184,6 +195,11 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(FeedStatus::Erroring, $bad->getStatus());
         self::assertSame(1, $bad->getConsecutiveFailures());
         self::assertStringContainsString('connection refused', (string) $bad->getLastErrorMessage());
+        // The failed feed has no new content to show an icon beside, and
+        // retrying its homepage on every sweep would add a permanent guarded
+        // HTTP round trip for a feed that may never recover — so it must not
+        // be in phase two's favicon batch at all, favicon-less or not.
+        self::assertNotContains('https://bad.example.com', $this->faviconFetcher->fetchedUrls);
     }
 
     public function testUnparseableBodyIsRecordedAsFailure(): void
@@ -281,6 +297,47 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame('https://blog.example.com/icon.png', $feed->getFaviconUrl());
     }
 
+    public function testFaviconsAreResolvedForFeedsThatLackOne(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->em->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
+        );
+        $this->faviconFetcher->willReturn(
+            'https://one.example.com',
+            FetchResponse::fetched('https://one.example.com', false, '<link rel="icon" href="/i.png">', null, null),
+        );
+
+        $this->runner()->run(RefreshRequest::allDue(300));
+
+        self::assertSame('https://one.example.com/i.png', $feed->getFaviconUrl());
+    }
+
+    public function testAnAbortedRunResolvesNoFavicons(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->em->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
+        );
+
+        $failingEm = $this->createStub(EntityManagerInterface::class);
+        $failingEm->method('flush')->willThrowException(new UniqueConstraintViolationException(
+            new class ('duplicate key', '23000', 1062) extends DriverAbstractException {
+            },
+            null,
+        ));
+
+        $report = $this->runner($failingEm)->run(RefreshRequest::allDue(300));
+
+        self::assertSame('aborted', $report->status);
+        // The EntityManager is closed; phase two never ran.
+        self::assertSame([], $this->faviconFetcher->fetchedUrls);
+    }
+
     public function testGoneFeedIsMarkedGone(): void
     {
         $feed = $this->dueFeed('https://dead.example.com/feed');
@@ -295,13 +352,19 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertNull($feed->getNextFetchAt());
     }
 
-    public function testBudgetExhaustionSkipsRemainingFeeds(): void
+    /**
+     * With concurrency 1 the engine starts one feed per wave, so the deadline is
+     * re-checked between each — the same skid the serial runner had, now
+     * expressed in terms of when a fetch may *start*.
+     */
+    public function testBudgetExhaustionSkipsFeedsThatWereNeverStarted(): void
     {
         $first = $this->dueFeed('https://one.example.com/feed');
         $second = $this->dueFeed('https://two.example.com/feed');
         $third = $this->dueFeed('https://three.example.com/feed');
         $this->em->flush();
 
+        $this->fetcher = new StubFeedFetcher($this->clock, concurrency: 1);
         foreach ([$first, $second, $third] as $index => $feed) {
             $this->fetcher->willReturn(
                 $feed->getUrl(),
@@ -313,12 +376,41 @@ final class RefreshRunnerTest extends DbTestCase
         $report = $this->runner()->run(RefreshRequest::allDue(205));
 
         // 100 s + 100 s spent leaves 5 s — below the 10 s safety margin, so the
-        // third feed is skipped and stays due for the next run.
+        // third feed never starts and stays due for the next run.
         self::assertSame('partial', $report->status);
         self::assertSame(2, $report->fetched);
         self::assertSame(1, $report->skippedForBudget);
         self::assertSame(1, $report->remaining);
         self::assertCount(2, $this->fetcher->fetchedUrls);
+        // The third feed's fetch never started, so phase two must not chase
+        // its homepage either — doing so would spend wall-clock the budget
+        // just refused to grant.
+        self::assertNotContains('https://three.example.com', $this->faviconFetcher->fetchedUrls);
+    }
+
+    /**
+     * The counterpart to the test above, and the actual point of this change: at
+     * a realistic concurrency the same three feeds all fit in one wave, so a
+     * budget that used to skip one now completes the sweep.
+     */
+    public function testAConcurrentWaveCompletesWithinABudgetThatSerialWouldExhaust(): void
+    {
+        foreach (['one', 'two', 'three'] as $index => $name) {
+            $feed = $this->dueFeed(sprintf('https://%s.example.com/feed', $name));
+            $this->fetcher->willReturn(
+                $feed->getUrl(),
+                FetchResponse::fetched($feed->getUrl(), false, $this->rss('F' . $index, 'g-' . $index), null, null),
+            );
+        }
+        $this->em->flush();
+        $this->fetcher->secondsPerFetch = 100;
+
+        $report = $this->runner()->run(RefreshRequest::allDue(205));
+
+        self::assertSame('completed', $report->status);
+        self::assertSame(3, $report->fetched);
+        self::assertSame(0, $report->skippedForBudget);
+        self::assertSame(0, $report->remaining);
     }
 
     /**
@@ -332,12 +424,14 @@ final class RefreshRunnerTest extends DbTestCase
         $second = $this->dueFeed('https://two.example.com/feed');
         $this->em->flush();
 
+        $this->fetcher = new StubFeedFetcher($this->clock, concurrency: 1);
         foreach ([$first, $second] as $feed) {
             $this->fetcher->willReturn(
                 $feed->getUrl(),
                 FetchResponse::notModified($feed->getUrl(), false, null, null),
             );
         }
+        $this->fetcher->secondsPerFetch = 5;
 
         $report = $this->runner()->run(RefreshRequest::allDue(3));
 
@@ -382,6 +476,12 @@ final class RefreshRunnerTest extends DbTestCase
         $this->fetcher->willReturn(
             $feed->getUrl(),
             FetchResponse::fetched('https://new.example.com/feed', true, $this->rss('Moved', 'm-1'), null, null),
+        );
+        // The redirect adopts the new URL before phase two runs, so the
+        // favicon homepage fetch targets the new origin, not the old one.
+        $this->faviconFetcher->willReturn(
+            'https://new.example.com',
+            FetchResponse::fetched('https://new.example.com', false, '<html></html>', null, null),
         );
 
         $this->runner()->run(RefreshRequest::allDue(300));
@@ -437,6 +537,12 @@ final class RefreshRunnerTest extends DbTestCase
         $this->fetcher->willReturn(
             $feed->getUrl(),
             FetchResponse::notModified('https://new.example.com/feed', true, null, null),
+        );
+        // The redirect adopts the new URL before phase two runs, so the
+        // favicon homepage fetch targets the new origin, not the old one.
+        $this->faviconFetcher->willReturn(
+            'https://new.example.com',
+            FetchResponse::fetched('https://new.example.com', false, '<html></html>', null, null),
         );
 
         $report = $this->runner()->run(RefreshRequest::allDue(300));
@@ -633,6 +739,9 @@ final class RefreshRunnerTest extends DbTestCase
         $third = $this->dueFeed('https://three.example.com/feed');
         $this->em->flush();
 
+        // Concurrency 1 makes "the third feed is never started" deterministic
+        // rather than a race against however many feeds a wave happens to fit.
+        $this->fetcher = new StubFeedFetcher($this->clock, concurrency: 1);
         foreach ([$first, $second, $third] as $index => $feed) {
             $this->fetcher->willReturn(
                 $feed->getUrl(),
@@ -664,11 +773,52 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(0, $report->pruned);
         // The failing feed plus the untouched third one are still due.
         self::assertSame(2, $report->remaining);
-        // The loop stopped: the third feed was never fetched.
-        self::assertSame(
-            ['https://one.example.com/feed', 'https://two.example.com/feed'],
-            $this->fetcher->fetchedUrls,
+        // The run stopped: the third feed's outcome was never processed.
+        self::assertCount(2, $this->fetcher->fetchedUrls);
+        self::assertNotContains('https://three.example.com/feed', $this->fetcher->fetchedUrls);
+    }
+
+    /**
+     * Favicon resolution's flush runs after every feed's own outcome has
+     * already been flushed individually, so a failure here cannot lose
+     * anything already persisted — but it must still degrade to an aborted
+     * report instead of letting the exception escape run(): RefreshController
+     * promises the client JSON with a `status` field, never an opaque 500 its
+     * poll loop has no branch for.
+     */
+    public function testFaviconFlushFailureIsReportedAsAbortedNotThrown(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->em->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
         );
+
+        $flushes = 0;
+        $failingEm = $this->createStub(EntityManagerInterface::class);
+        $failingEm->method('flush')->willReturnCallback(function () use (&$flushes): void {
+            $flushes++;
+            // Flush 1 is the feed's own fetch outcome; flush 2 is the favicon
+            // phase's — the one this test targets.
+            if ($flushes === 2) {
+                throw new UniqueConstraintViolationException(
+                    new class ('duplicate key', '23000', 1062) extends DriverAbstractException {
+                    },
+                    null,
+                );
+            }
+            $this->em->flush();
+        });
+
+        $report = $this->runner($failingEm)->run(RefreshRequest::allDue(300));
+
+        self::assertSame('aborted', $report->status);
+        self::assertSame(1, $report->total);
+        // The feed's own fetch and flush already succeeded before the favicon
+        // phase failed, so that outcome is not lost.
+        self::assertSame(1, $report->fetched);
+        self::assertSame(0, $report->pruned);
     }
 
     public function testLockIsReleasedAfterAnAbortedRun(): void
