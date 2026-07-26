@@ -88,6 +88,12 @@ final class RefreshControllerTest extends WebTestCase
             'https://example.com/mine.xml',
             FetchResponse::notModified('https://example.com/mine.xml', false, null, null),
         );
+        // The runner's favicon phase fetches the feed's site homepage through
+        // this same fetcher — stub the origin too, or it throws just as loudly.
+        $fetcher->willReturn(
+            'https://example.com',
+            FetchResponse::fetched('https://example.com', false, '<html></html>', null, null),
+        );
         self::getContainer()->set(BatchFeedFetcherInterface::class, $fetcher);
 
         $client->request(
@@ -151,6 +157,12 @@ final class RefreshControllerTest extends WebTestCase
         $fetcher->willReturn(
             'https://example.com/tagged.xml',
             FetchResponse::notModified('https://example.com/tagged.xml', false, null, null),
+        );
+        // The runner's favicon phase fetches the feed's site homepage through
+        // this same fetcher — stub the origin too, or it throws just as loudly.
+        $fetcher->willReturn(
+            'https://example.com',
+            FetchResponse::fetched('https://example.com', false, '<html></html>', null, null),
         );
         self::getContainer()->set(BatchFeedFetcherInterface::class, $fetcher);
 

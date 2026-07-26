@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Refresh;
 
+use App\Entity\Feed;
+
 /** Running counts for one refresh pass. Mutable: it is a tally. */
 final class RefreshTally
 {
@@ -13,7 +15,17 @@ final class RefreshTally
     public int $processed = 0;
     public bool $aborted = false;
 
-    public function record(FeedOutcome $outcome): void
+    /**
+     * Feeds whose fetch actually started this pass, in the order their outcome
+     * landed. Phase two (favicons) scopes itself to this list rather than the
+     * full due-feed list, so a feed the budget deferred is not also given a
+     * homepage fetch it never earned this pass.
+     *
+     * @var list<Feed>
+     */
+    public array $processedFeeds = [];
+
+    public function record(FeedOutcome $outcome, Feed $feed): void
     {
         // An aborted feed is deliberately NOT counted as processed: its flush
         // rolled back, so it is still due and must appear in `remaining`.
@@ -27,6 +39,7 @@ final class RefreshTally
         }
 
         $this->processed++;
+        $this->processedFeeds[] = $feed;
 
         match ($outcome) {
             FeedOutcome::Fetched => $this->fetched++,

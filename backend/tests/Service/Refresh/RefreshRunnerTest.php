@@ -121,6 +121,17 @@ final class RefreshRunnerTest extends DbTestCase
         $feed->setNextFetchAt($this->clock->now()->modify('-1 hour'));
         $this->em->persist($feed);
 
+        // Every due feed starts without a favicon, so a successful refresh
+        // always triggers phase two's homepage fetch for it. Stub a bland
+        // default here so tests that don't care about the favicon outcome
+        // aren't forced to configure one; a test that does can still call
+        // faviconFetcher->willReturn() afterwards to override it.
+        $origin = 'https://' . (string) parse_url($url, \PHP_URL_HOST);
+        $this->faviconFetcher->willReturn(
+            $origin,
+            FetchResponse::fetched($origin, false, '<html></html>', null, null),
+        );
+
         return $feed;
     }
 
@@ -281,6 +292,47 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame('https://blog.example.com/icon.png', $feed->getFaviconUrl());
     }
 
+    public function testFaviconsAreResolvedForFeedsThatLackOne(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->em->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
+        );
+        $this->faviconFetcher->willReturn(
+            'https://one.example.com',
+            FetchResponse::fetched('https://one.example.com', false, '<link rel="icon" href="/i.png">', null, null),
+        );
+
+        $this->runner()->run(RefreshRequest::allDue(300));
+
+        self::assertSame('https://one.example.com/i.png', $feed->getFaviconUrl());
+    }
+
+    public function testAnAbortedRunResolvesNoFavicons(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->em->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
+        );
+
+        $failingEm = $this->createStub(EntityManagerInterface::class);
+        $failingEm->method('flush')->willThrowException(new UniqueConstraintViolationException(
+            new class ('duplicate key', '23000', 1062) extends DriverAbstractException {
+            },
+            null,
+        ));
+
+        $report = $this->runner($failingEm)->run(RefreshRequest::allDue(300));
+
+        self::assertSame('aborted', $report->status);
+        // The EntityManager is closed; phase two never ran.
+        self::assertSame([], $this->faviconFetcher->fetchedUrls);
+    }
+
     public function testGoneFeedIsMarkedGone(): void
     {
         $feed = $this->dueFeed('https://dead.example.com/feed');
@@ -416,6 +468,12 @@ final class RefreshRunnerTest extends DbTestCase
             $feed->getUrl(),
             FetchResponse::fetched('https://new.example.com/feed', true, $this->rss('Moved', 'm-1'), null, null),
         );
+        // The redirect adopts the new URL before phase two runs, so the
+        // favicon homepage fetch targets the new origin, not the old one.
+        $this->faviconFetcher->willReturn(
+            'https://new.example.com',
+            FetchResponse::fetched('https://new.example.com', false, '<html></html>', null, null),
+        );
 
         $this->runner()->run(RefreshRequest::allDue(300));
 
@@ -470,6 +528,12 @@ final class RefreshRunnerTest extends DbTestCase
         $this->fetcher->willReturn(
             $feed->getUrl(),
             FetchResponse::notModified('https://new.example.com/feed', true, null, null),
+        );
+        // The redirect adopts the new URL before phase two runs, so the
+        // favicon homepage fetch targets the new origin, not the old one.
+        $this->faviconFetcher->willReturn(
+            'https://new.example.com',
+            FetchResponse::fetched('https://new.example.com', false, '<html></html>', null, null),
         );
 
         $report = $this->runner()->run(RefreshRequest::allDue(300));

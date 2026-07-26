@@ -38,6 +38,12 @@ final class RefreshFeedsCommandTest extends DbTestCase
 
         $stub = new StubFeedFetcher();
         $stub->willReturn($feed->getUrl(), FetchResponse::notModified($feed->getUrl(), false, null, null));
+        // The runner's favicon phase fetches the site homepage through the
+        // same fetcher — stub the origin too, or it throws just as loudly.
+        $stub->willReturn(
+            'https://cli.example.com',
+            FetchResponse::fetched('https://cli.example.com', false, '<html></html>', null, null),
+        );
         self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
 
         $tester = $this->tester();

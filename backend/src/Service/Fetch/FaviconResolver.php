@@ -7,58 +7,73 @@ namespace App\Service\Fetch;
 use Psr\Log\LoggerInterface;
 
 /**
- * Best-effort favicon resolution for a feed's site. Fetches the site homepage
- * through the SSRF-guarded fetcher, parses its <link rel="...icon..."> tags and
- * returns the largest https icon, falling back to the /favicon.ico convention.
- * Never throws: a favicon is a nicety, so any failure degrades to the fallback
- * (or null) rather than disturbing the refresh that asked for it.
+ * Best-effort favicon resolution for a batch of feeds' sites. Fetches each
+ * site homepage concurrently through the SSRF-guarded batch fetcher, parses
+ * its <link rel="...icon..."> tags and returns the largest https icon per
+ * site, falling back to the /favicon.ico convention. Never throws: a favicon
+ * is a nicety, so any failure degrades to the fallback (or null) rather than
+ * disturbing the refresh that asked for it.
  */
 final readonly class FaviconResolver
 {
     private const int URL_MAX = 2048;
 
     public function __construct(
-        private FeedFetcherInterface $fetcher,
+        private BatchFeedFetcherInterface $fetcher,
         private LoggerInterface $logger,
     ) {
     }
 
     /**
-     * Resolve a favicon URL for the site behind $baseUrl (a feed's siteUrl or,
-     * failing that, its feed URL). Returns an https URL, or null when $baseUrl
-     * carries no host to derive one from.
+     * Resolve a favicon for each site, fetching the homepages concurrently.
+     *
+     * @param array<int, string> $baseUrlsByFeedId a feed's siteUrl or, failing
+     *                                             that, its feed URL
+     *
+     * @return array<int, string|null> an https URL per input key, or null when
+     *                                 the URL carried no host to derive one from
      */
-    public function resolve(?string $baseUrl): ?string
+    public function resolveAll(array $baseUrlsByFeedId): array
     {
-        if (null === $baseUrl) {
-            return null;
-        }
-        $origin = self::httpsOrigin($baseUrl);
-        if (null === $origin) {
-            return null;
+        $origins = [];
+        $icons = [];
+        foreach ($baseUrlsByFeedId as $feedId => $baseUrl) {
+            $origin = self::httpsOrigin($baseUrl);
+            if (null === $origin) {
+                $icons[$feedId] = null;
+                continue;
+            }
+            $origins[$feedId] = $origin;
         }
 
-        $icon = $this->fromHomepage($origin);
+        $tickets = array_map(static fn (string $origin): FetchTicket => new FetchTicket($origin), $origins);
+        foreach ($this->fetcher->fetchAll($tickets) as $feedId => $outcome) {
+            // fetchAll's key type is the wider int|string of any batch caller;
+            // this resolver's own contract is keyed by feed id, always an int.
+            $feedId = (int) $feedId;
+            $icons[$feedId] = mb_substr(
+                $this->iconFrom($outcome, $origins[$feedId]) ?? $origins[$feedId] . '/favicon.ico',
+                0,
+                self::URL_MAX,
+            );
+        }
 
-        return mb_substr($icon ?? $origin . '/favicon.ico', 0, self::URL_MAX);
+        return $icons;
     }
 
-    private function fromHomepage(string $origin): ?string
+    private function iconFrom(FetchOutcome $outcome, string $origin): ?string
     {
-        try {
-            $response = $this->fetcher->fetch($origin);
-        } catch (\Throwable $e) {
-            $this->logger->info('Favicon fetch failed for {origin}', ['origin' => $origin, 'exception' => $e]);
+        $failure = $outcome->failure();
+        if (null !== $failure) {
+            $this->logger->info('Favicon fetch failed for {origin}', ['origin' => $origin, 'exception' => $failure]);
 
             return null;
         }
 
+        $response = $outcome->responseOrThrow();
         $body = $response->body ?? '';
-        if ('' === trim($body)) {
-            return null;
-        }
 
-        return $this->pickIcon($body, $response->finalUrl);
+        return '' === trim($body) ? null : $this->pickIcon($body, $response->finalUrl);
     }
 
     /** The best https icon a page's <link> tags advertise, or null. */

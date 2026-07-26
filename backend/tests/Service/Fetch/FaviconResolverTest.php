@@ -37,10 +37,9 @@ final class FaviconResolverTest extends TestCase
             $this->page('<link rel="icon" href="https://cdn.example.com/fav.png">'),
         );
 
-        self::assertSame(
-            'https://cdn.example.com/fav.png',
-            $this->resolver($fetcher)->resolve('https://blog.example.com/'),
-        );
+        $icons = $this->resolver($fetcher)->resolveAll([1 => 'https://blog.example.com/']);
+
+        self::assertSame('https://cdn.example.com/fav.png', $icons[1]);
     }
 
     public function testResolvesRelativeIconAgainstTheFinalUrl(): void
@@ -51,10 +50,9 @@ final class FaviconResolverTest extends TestCase
             $this->page('<link rel="shortcut icon" href="/assets/icon.png">'),
         );
 
-        self::assertSame(
-            'https://blog.example.com/assets/icon.png',
-            $this->resolver($fetcher)->resolve('https://blog.example.com/'),
-        );
+        $icons = $this->resolver($fetcher)->resolveAll([1 => 'https://blog.example.com/']);
+
+        self::assertSame('https://blog.example.com/assets/icon.png', $icons[1]);
     }
 
     public function testPrefersTheLargestDeclaredSize(): void
@@ -68,10 +66,9 @@ final class FaviconResolverTest extends TestCase
             ),
         );
 
-        self::assertSame(
-            'https://blog.example.com/big.png',
-            $this->resolver($fetcher)->resolve('https://blog.example.com/'),
-        );
+        $icons = $this->resolver($fetcher)->resolveAll([1 => 'https://blog.example.com/']);
+
+        self::assertSame('https://blog.example.com/big.png', $icons[1]);
     }
 
     public function testRejectsInsecureIconAndFallsBackToFaviconIco(): void
@@ -82,12 +79,11 @@ final class FaviconResolverTest extends TestCase
             $this->page('<link rel="icon" href="http://insecure.example.com/fav.png">'),
         );
 
+        $icons = $this->resolver($fetcher)->resolveAll([1 => 'https://blog.example.com/']);
+
         // A http icon is mixed-content-blocked in the https app, so it is
         // rejected in favour of the https /favicon.ico convention.
-        self::assertSame(
-            'https://blog.example.com/favicon.ico',
-            $this->resolver($fetcher)->resolve('https://blog.example.com/'),
-        );
+        self::assertSame('https://blog.example.com/favicon.ico', $icons[1]);
     }
 
     public function testFallsBackToFaviconIcoWhenThePageDeclaresNoIcon(): void
@@ -95,10 +91,9 @@ final class FaviconResolverTest extends TestCase
         $fetcher = new StubFeedFetcher();
         $fetcher->willReturn('https://blog.example.com', $this->page('<title>No icon here</title>'));
 
-        self::assertSame(
-            'https://blog.example.com/favicon.ico',
-            $this->resolver($fetcher)->resolve('https://blog.example.com/'),
-        );
+        $icons = $this->resolver($fetcher)->resolveAll([1 => 'https://blog.example.com/']);
+
+        self::assertSame('https://blog.example.com/favicon.ico', $icons[1]);
     }
 
     public function testFallsBackToFaviconIcoWhenTheFetchFails(): void
@@ -106,12 +101,11 @@ final class FaviconResolverTest extends TestCase
         $fetcher = new StubFeedFetcher();
         $fetcher->willThrow('https://blog.example.com', new FeedUnreachableException('boom'));
 
+        $icons = $this->resolver($fetcher)->resolveAll([1 => 'https://blog.example.com/']);
+
         // Best-effort: a favicon fetch failure must never propagate to the
         // refresh that called it, so a sensible fallback is still returned.
-        self::assertSame(
-            'https://blog.example.com/favicon.ico',
-            $this->resolver($fetcher)->resolve('https://blog.example.com/'),
-        );
+        self::assertSame('https://blog.example.com/favicon.ico', $icons[1]);
     }
 
     public function testDerivesTheHostFromTheBaseIgnoringSchemeAndPath(): void
@@ -125,20 +119,59 @@ final class FaviconResolverTest extends TestCase
             lastModified: null,
         ));
 
+        $icons = $this->resolver($fetcher)->resolveAll([1 => 'http://news.example.com/some/feed.xml']);
+
         // A http feed URL with a path still resolves the favicon on the https
         // host root — the app renders favicons over https only.
-        self::assertSame(
-            'https://news.example.com/favicon.ico',
-            $this->resolver($fetcher)->resolve('http://news.example.com/some/feed.xml'),
-        );
+        self::assertSame('https://news.example.com/favicon.ico', $icons[1]);
     }
 
     public function testReturnsNullWhenTheBaseHasNoHost(): void
     {
         $fetcher = new StubFeedFetcher();
 
-        self::assertNull($this->resolver($fetcher)->resolve('not a url'));
-        self::assertNull($this->resolver($fetcher)->resolve(null));
+        $icons = $this->resolver($fetcher)->resolveAll([1 => 'not a url']);
+
+        self::assertNull($icons[1]);
         self::assertSame([], $fetcher->fetchedUrls);
+    }
+
+    public function testResolvesManySitesInOneBatch(): void
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn(
+            'https://one.example.com',
+            FetchResponse::fetched('https://one.example.com', false, '<link rel="icon" href="/a.png">', null, null),
+        );
+        $fetcher->willReturn(
+            'https://two.example.com',
+            FetchResponse::fetched('https://two.example.com', false, '<html></html>', null, null),
+        );
+
+        $icons = $this->resolver($fetcher)->resolveAll([
+            7 => 'https://one.example.com/feed',
+            9 => 'https://two.example.com/feed',
+        ]);
+
+        self::assertSame('https://one.example.com/a.png', $icons[7]);
+        // No <link> tag, so the /favicon.ico convention stands in.
+        self::assertSame('https://two.example.com/favicon.ico', $icons[9]);
+    }
+
+    public function testAFailedHomepageFetchYieldsTheConventionalFallback(): void
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willThrow('https://one.example.com', new FeedUnreachableException('boom'));
+
+        $icons = $this->resolver($fetcher)->resolveAll([7 => 'https://one.example.com/feed']);
+
+        self::assertSame('https://one.example.com/favicon.ico', $icons[7]);
+    }
+
+    public function testAUrlWithoutAHostYieldsNoIcon(): void
+    {
+        $icons = $this->resolver(new StubFeedFetcher())->resolveAll([7 => 'not a url']);
+
+        self::assertNull($icons[7]);
     }
 }

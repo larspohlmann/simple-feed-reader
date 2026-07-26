@@ -140,7 +140,7 @@ final class RefreshRunner
         ?\DateTimeImmutable $cooldownCutoff,
     ): RefreshReport {
         try {
-            $this->resolveMissingFavicons($feeds);
+            $this->resolveMissingFavicons($tally->processedFeeds);
         } catch (UniqueConstraintViolationException | ORMException $e) {
             $this->logger->error(
                 'Refresh aborted: persistence failed while resolving favicons',
@@ -183,8 +183,9 @@ final class RefreshRunner
         $tally = new RefreshTally();
 
         foreach ($this->fetcher->fetchAll($queue->tickets()) as $feedId => $outcome) {
-            $outcomeKind = $this->applyOutcome($byId[$feedId], $outcome);
-            $tally->record($outcomeKind);
+            $feed = $byId[$feedId];
+            $outcomeKind = $this->applyOutcome($feed, $outcome);
+            $tally->record($outcomeKind, $feed);
 
             if (FeedOutcome::Aborted === $outcomeKind) {
                 break;
@@ -281,21 +282,37 @@ final class RefreshRunner
     }
 
     /**
-     * Resolve and store each feed's favicon the first time it is seen.
-     * Best-effort (the resolver never throws), and skipped once a feed already
-     * has one. Still serial per feed — Task 10 replaces this with a concurrent
-     * batch, matching the fetch path above.
+     * Resolve and store a favicon for each processed feed that still lacks
+     * one, fetching every homepage in one concurrent batch. Scoped to
+     * $feeds — the feeds THIS pass actually fetched — rather than the full
+     * due-feed list: a feed the budget deferred never started a fetch, so
+     * giving it a homepage fetch here would undo the budget just enforced.
+     * It gets its favicon on the pass that actually fetches it.
      *
      * @param list<Feed> $feeds
      */
     private function resolveMissingFavicons(array $feeds): void
     {
+        $baseUrls = [];
         foreach ($feeds as $feed) {
             if (null !== $feed->getFaviconUrl()) {
                 continue;
             }
-            $feed->setFaviconUrl($this->faviconResolver->resolve($feed->getSiteUrl() ?? $feed->getUrl()));
+            $baseUrls[(int) $feed->getId()] = $feed->getSiteUrl() ?? $feed->getUrl();
         }
+
+        if ([] === $baseUrls) {
+            return;
+        }
+
+        $icons = $this->faviconResolver->resolveAll($baseUrls);
+        foreach ($feeds as $feed) {
+            $icon = $icons[(int) $feed->getId()] ?? null;
+            if (null !== $icon) {
+                $feed->setFaviconUrl($icon);
+            }
+        }
+
         $this->em->flush();
     }
 

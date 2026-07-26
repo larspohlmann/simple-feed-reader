@@ -49,6 +49,12 @@ final class MaintenanceControllerTest extends WebTestCase
 
         $stub = new StubFeedFetcher();
         $stub->willReturn($feed->getUrl(), FetchResponse::notModified($feed->getUrl(), false, null, null));
+        // The runner's favicon phase fetches the site homepage through the
+        // same fetcher — stub the origin too, or it throws just as loudly.
+        $stub->willReturn(
+            'https://maint.example.com',
+            FetchResponse::fetched('https://maint.example.com', false, '<html></html>', null, null),
+        );
         self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
 
         // token from .env.test
@@ -69,6 +75,12 @@ final class MaintenanceControllerTest extends WebTestCase
 
         $stub = new StubFeedFetcher();
         $stub->willReturn($feed->getUrl(), FetchResponse::notModified($feed->getUrl(), false, null, null));
+        // The runner's favicon phase fetches the site homepage through the
+        // same fetcher — stub the origin too, or it throws just as loudly.
+        $stub->willReturn(
+            'https://maint.example.com',
+            FetchResponse::fetched('https://maint.example.com', false, '<html></html>', null, null),
+        );
         self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
 
         $client->request('POST', '/maintenance/refresh', server: [
