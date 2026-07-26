@@ -58,6 +58,24 @@ final class CatalogImporterTest extends DbTestCase
         ));
     }
 
+    /**
+     * Two empty categories, in the REVERSE of alphabetical order, so a test can
+     * tell "positioned by document order" apart from "fell back to the name
+     * tiebreak" — the two would otherwise look identical.
+     */
+    private function twoCategoryDocumentInReverseAlphabeticalOrder(): ParsedCatalog
+    {
+        $parser = self::getContainer()->get(CatalogDocument::class);
+        self::assertInstanceOf(CatalogDocument::class, $parser);
+
+        return $parser->parse(
+            '<opml version="2.0"><head><title>t</title></head><body>'
+            . '<outline text="Zebra" key="zebra" icon="memory" color="#3b82f6"></outline>'
+            . '<outline text="Apple" key="apple" icon="memory" color="#3b82f6"></outline>'
+            . '</body></opml>',
+        );
+    }
+
     public function testAFirstImportCreatesEverything(): void
     {
         $result = $this->importer()->import(
@@ -256,5 +274,19 @@ final class CatalogImporterTest extends DbTestCase
         $second = $this->em()->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Second']);
         self::assertNotNull($second);
         self::assertSame(1, $second->getPosition());
+    }
+
+    public function testFirstImportPositionsCategoriesInDocumentOrder(): void
+    {
+        $this->importer()->import($this->twoCategoryDocumentInReverseAlphabeticalOrder(), CatalogImportMode::Merge);
+
+        $this->em()->clear();
+        $ordered = $this->em()->getRepository(CatalogCategory::class)->findAllOrdered();
+
+        self::assertSame(
+            ['Zebra', 'Apple'],
+            array_map(static fn (CatalogCategory $category): string => $category->getName(), $ordered),
+            'a category created on a first import must keep the document order, not fall back to name',
+        );
     }
 }

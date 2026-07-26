@@ -64,6 +64,7 @@ final readonly class CatalogImporter
                         $documentCategory->icon,
                         $documentCategory->color,
                     );
+                    $category->setPosition($position);
                     $this->em->persist($category);
                     $result = $result->with(categoriesCreated: 1);
                 } elseif ($category->isLocked()) {
