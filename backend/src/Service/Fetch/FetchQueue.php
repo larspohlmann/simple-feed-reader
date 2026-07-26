@@ -17,6 +17,8 @@ final class FetchQueue
     /** @var list<FetchAttempt> */
     private array $continuations = [];
 
+    private bool $currentConsumed = false;
+
     /** @param \Iterator<int|string, FetchTicket> $tickets */
     public function __construct(private readonly \Iterator $tickets)
     {
@@ -29,7 +31,12 @@ final class FetchQueue
 
     public function hasMore(): bool
     {
-        return [] !== $this->continuations || $this->tickets->valid();
+        if ([] !== $this->continuations) {
+            return true;
+        }
+        $this->retireConsumed();
+
+        return $this->tickets->valid();
     }
 
     public function next(): FetchAttempt
@@ -39,13 +46,27 @@ final class FetchQueue
             return $continuation;
         }
 
+        $this->retireConsumed();
         if (!$this->tickets->valid()) {
             throw new \LogicException('next() called on an exhausted queue; guard with hasMore().');
         }
 
         $attempt = FetchAttempt::start($this->tickets->key(), $this->tickets->current());
-        $this->tickets->next();
+        $this->currentConsumed = true;
 
         return $attempt;
+    }
+
+    /**
+     * Advancing is deferred until the next item is wanted: the ticket source is
+     * a budget-gated generator, and resuming it early would run its deadline
+     * check — and its "started" tally — for a feed no slot has opened for yet.
+     */
+    private function retireConsumed(): void
+    {
+        if ($this->currentConsumed) {
+            $this->tickets->next();
+            $this->currentConsumed = false;
+        }
     }
 }

@@ -100,4 +100,22 @@ final class FetchQueueTest extends TestCase
 
         $this->queue([])->next();
     }
+
+    public function testTheTicketSourceIsNotAdvancedUntilTheNextItemIsWanted(): void
+    {
+        $resumptions = [];
+        $tickets = (function () use (&$resumptions): \Generator {
+            $resumptions[] = 1;
+            yield 11 => new FetchTicket('https://one.example.com/feed');
+            $resumptions[] = 2;
+            yield 22 => new FetchTicket('https://two.example.com/feed');
+        })();
+
+        $queue = new FetchQueue($tickets);
+        $queue->next();
+
+        // Only the first yield has run: pulling one ticket must not resume the
+        // generator body up to the second yield's deadline check.
+        self::assertSame([1], $resumptions);
+    }
 }
