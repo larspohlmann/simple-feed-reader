@@ -1597,7 +1597,24 @@ In `backend/tests/Service/Fetch/HttpFeedFetcherTest.php`, replace the body of `f
 
 Add `use App\Service\Fetch\ConcurrentFeedFetcher;` and `use App\Service\Fetch\ResponseClassifier;` to the imports. **Do not touch any `public function test…` in this file.**
 
-- [ ] **Step 3: Wire the container**
+- [ ] **Step 3: Collapse the duplicated size cap and exception unwrapping**
+
+This is the task where the duplication was supposed to disappear, and it is not only `classify()`. `MAX_BYTES` and `rethrowTooLarge()` now exist verbatim in BOTH `ConcurrentFeedFetcher` and `ResponseClassifier` — one safety constant in two places, with two *different* semantics (wire bytes counted in `on_progress` versus buffered `strlen` in `fromBody`), which must stay in lockstep or raising one silently changes behaviour. The same `catch (ExceptionInterface) → rethrowTooLarge → FeedUnreachableException` idiom appears five times across the two files.
+
+Collapse it. Move the knowledge next to the exception it describes:
+
+```php
+    /**
+     * The HTTP client wraps exceptions thrown inside on_progress; unwrap and
+     * rethrow this one so callers see the real cause rather than a generic
+     * transport failure.
+     */
+    public static function rethrowIfWrapped(?\Throwable $e): void
+```
+
+on `ResponseTooLargeException`, and give the size cap a single public home so both the `on_progress` guard and the buffered check read the same number. Delete both private copies. `composer md` must stay clean and every existing test must stay green — this is a refactor, not a behaviour change.
+
+- [ ] **Step 4: Wire the container**
 
 In `backend/config/services.yaml`, fill in the (currently empty) `parameters:` block:
 
@@ -1632,17 +1649,17 @@ In `backend/config/services_test.yaml`, add alongside the existing `FeedFetcherI
         public: true
 ```
 
-- [ ] **Step 4: Run the full suite**
+- [ ] **Step 5: Run the full suite**
 
 Run: `php bin/phpunit`
 Expected: PASS. `HttpFeedFetcherTest`'s 14 cases green with no assertion edited is the signal that the serial path is behaviour-identical.
 
-- [ ] **Step 5: Verify the container builds**
+- [ ] **Step 6: Verify the container builds**
 
 Run: `php bin/console lint:container`
 Expected: no errors — this catches a mistyped alias or an unbound `$fetchConcurrency`.
 
-- [ ] **Step 6: Run the gates and commit**
+- [ ] **Step 7: Run the gates and commit**
 
 ```bash
 composer check && composer md
@@ -1786,7 +1803,61 @@ git commit -m "test: teach StubFeedFetcher the batch interface (#116)"
 
 This is the fan-out bookkeeping the spec keeps out of `RefreshRunner`. It hands the engine tickets one at a time and stops once the deadline is close, counting what it let through.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Fix FetchQueue's eager advance first**
+
+Task 4's `FetchQueue::next()` calls `$this->tickets->next()` immediately after reading the current ticket. On a plain iterator that is harmless. On the **generator** this task is about to pass it, it is not: resuming the generator runs its body straight through to the *next* `yield`, which means the deadline check and the `started++` for feed N+1 execute the instant feed N is handed out — before anything has asked for N+1.
+
+Two consequences: `startedCount()` over-reports by one whenever the caller stops early, and the deadline is evaluated one slot too soon. Fix it by deferring the advance to the moment the next item is actually wanted, so the generator's budget check runs when a concurrency slot really opens:
+
+```php
+    private bool $currentConsumed = false;
+
+    public function hasMore(): bool
+    {
+        if ([] !== $this->continuations) {
+            return true;
+        }
+        $this->retireConsumed();
+
+        return $this->tickets->valid();
+    }
+
+    public function next(): FetchAttempt
+    {
+        $continuation = array_shift($this->continuations);
+        if (null !== $continuation) {
+            return $continuation;
+        }
+
+        $this->retireConsumed();
+        if (!$this->tickets->valid()) {
+            throw new \LogicException('next() called on an exhausted queue; guard with hasMore().');
+        }
+
+        $attempt = FetchAttempt::start($this->tickets->key(), $this->tickets->current());
+        $this->currentConsumed = true;
+
+        return $attempt;
+    }
+
+    /**
+     * Advancing is deferred until the next item is wanted: the ticket source is
+     * a budget-gated generator, and resuming it early would run its deadline
+     * check — and its "started" tally — for a feed no slot has opened for yet.
+     */
+    private function retireConsumed(): void
+    {
+        if ($this->currentConsumed) {
+            $this->tickets->next();
+            $this->currentConsumed = false;
+        }
+    }
+```
+
+Add a test to `backend/tests/Service/Fetch/FetchQueueTest.php` proving the source is not advanced early — pass a generator that records each resumption, pull one ticket, and assert the generator has not yet produced the second. All six existing `FetchQueueTest` cases must stay green.
+
+
+- [ ] **Step 2: Write the failing test**
 
 `backend/tests/Service/Refresh/BudgetedFeedQueueTest.php`:
 
@@ -1885,12 +1956,12 @@ final class BudgetedFeedQueueTest extends TestCase
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 3: Run test to verify it fails**
 
 Run: `php bin/phpunit tests/Service/Refresh/BudgetedFeedQueueTest.php`
 Expected: FAIL — `Class "App\Service\Refresh\BudgetedFeedQueue" not found`.
 
-- [ ] **Step 3: Write the implementation**
+- [ ] **Step 4: Write the implementation**
 
 `backend/src/Service/Refresh/BudgetedFeedQueue.php`:
 
@@ -1972,23 +2043,26 @@ final class BudgetedFeedQueue
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 5: Run test to verify it passes**
 
 Run: `php bin/phpunit tests/Service/Refresh/BudgetedFeedQueueTest.php`
 Expected: PASS, 5 tests.
 
 Note the keyed `yield` inside a `@return \Generator<int, FetchTicket>` — PHPStan wants `\Generator<int, FetchTicket, mixed, void>` if it complains about the key type. Fix the annotation, not the code.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add backend/src/Service/Refresh/BudgetedFeedQueue.php backend/tests/Service/Refresh/BudgetedFeedQueueTest.php
+git add backend/src/Service/Fetch/FetchQueue.php backend/tests/Service/Fetch/FetchQueueTest.php \
+  backend/src/Service/Refresh/BudgetedFeedQueue.php backend/tests/Service/Refresh/BudgetedFeedQueueTest.php
 git commit -m "feat(refresh): add BudgetedFeedQueue for lazy, deadline-gated fan-out (#116)"
 ```
 
 ---
 
 ## Task 9: RefreshRunner consumes the batch
+
+**What "budget" now means.** The deadline gates *starting* a fetch, and nothing cancels one already running. The real per-response bound is `max_duration` (20 s), not the `stream()` idle timeout — each `awaitNext()` re-entry builds a fresh `stream()` whose elapsed-timeout counter restarts, and Symfony resets it on activity from *any* response in the multi handle. So a run can overrun its budget by up to 20 s, or by up to 6 x 20 s on a pathological redirect chain. The serial fetcher has the identical per-feed bound, so this is not a regression — but say so plainly in a comment where `remaining` is computed, because "budget" reading as a hard ceiling is exactly the misunderstanding that would send someone hunting a phantom bug.
 
 **Files:**
 - Modify: `backend/src/Service/Refresh/RefreshRunner.php:15,51,77-176`
@@ -2367,6 +2441,8 @@ git commit -m "perf(refresh): fetch due feeds concurrently (#116)"
 ---
 
 ## Task 10: Concurrent favicon resolution
+
+**Read this before you start.** The engine's request headers are hard-coded for feeds — `Accept: application/rss+xml, application/atom+xml, …` and a 5 MB cap — and `FetchTicket` has no field to vary them. This batch fetches HTML homepages, so it will content-negotiate as though it wanted XML. Today's `FaviconResolver` already goes through the same feed-shaped fetcher, so this is **not a regression** and you should NOT fix it as a side quest. But if a site turns out to serve something unhelpful under that `Accept`, the fix is a per-batch profile on `FetchTicket` — not a special case inside the engine. Report it rather than improvising.
 
 **Files:**
 - Modify: `backend/src/Service/Fetch/FaviconResolver.php`
