@@ -279,5 +279,9 @@
     "adminEmptyWarning": "Es wurde kein Feed-Katalog importiert – neue Nutzer bekommen deshalb keine Vorschläge.",
     "adminEmptyAction": "Katalog importieren",
     "close": "Schließen"
+  },
+  "iconPicker": {
+    "choose": "Symbol wählen",
+    "none": "Kein Symbol"
   }
 }

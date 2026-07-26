@@ -279,5 +279,9 @@
     "adminEmptyWarning": "No feed catalog has been imported, so new users are not being offered any suggestions.",
     "adminEmptyAction": "Import one",
     "close": "Close"
+  },
+  "iconPicker": {
+    "choose": "Choose icon",
+    "none": "No icon"
   }
 }

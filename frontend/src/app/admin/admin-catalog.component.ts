@@ -6,6 +6,7 @@ import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
 import { IconComponent } from '../shared/icon/icon.component';
+import { IconPickerComponent } from '../shared/icon-picker/icon-picker.component';
 import { SpinnerComponent } from '../shared/spinner/spinner.component';
 import { AdminApi } from './admin-api';
 import {
@@ -25,7 +26,14 @@ type FeedDraft = Omit<
 
 @Component({
   selector: 'app-admin-catalog',
-  imports: [RouterLink, FormsModule, IconComponent, SpinnerComponent, TranslocoPipe],
+  imports: [
+    RouterLink,
+    FormsModule,
+    IconComponent,
+    IconPickerComponent,
+    SpinnerComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './admin-catalog.component.html',
   styleUrl: './admin-catalog.component.scss',
 })
@@ -53,42 +61,6 @@ export class AdminCatalogComponent implements OnInit {
   readonly newFeed = signal<FeedDraft>(this.blankFeed());
 
   readonly hasFeeds = computed(() => this.feeds().length > 0);
-
-  /** Curated Material Symbols offered as autocomplete for the icon field, so an
-   *  admin picks a real glyph name from a list instead of guessing at one. Any
-   *  valid symbol name still works — this is a suggestion list, not a whitelist. */
-  readonly iconChoices: readonly string[] = [
-    'memory',
-    'science',
-    'public',
-    'newspaper',
-    'code',
-    'terminal',
-    'rocket_launch',
-    'sports_esports',
-    'movie',
-    'music_note',
-    'restaurant',
-    'palette',
-    'brush',
-    'business_center',
-    'trending_up',
-    'savings',
-    'health_and_safety',
-    'cardiology',
-    'school',
-    'auto_stories',
-    'travel_explore',
-    'flight',
-    'sports_soccer',
-    'pets',
-    'eco',
-    'local_cafe',
-    'photo_camera',
-    'forum',
-    'gavel',
-    'home',
-  ];
 
   private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
 
