@@ -1,0 +1,116 @@
+<div class="discover">
+  <header class="top">
+    <h1>{{ 'discover.title' | transloco }}</h1>
+    <p>{{ 'discover.subtitle' | transloco }}</p>
+  </header>
+
+  <app-category-chips
+    [categories]="categories()"
+    [activeId]="active.activeId()"
+    [picked]="pickedByCategory()"
+    (jump)="onJump($event)"
+  />
+
+  <div class="body">
+    <app-category-rail
+      [categories]="categories()"
+      [activeId]="active.activeId()"
+      [picked]="pickedByCategory()"
+      (jump)="onJump($event)"
+    />
+
+    <main class="sections">
+      @if (error()) {
+        <p class="error" role="alert">{{ 'discover.subscribeFailed' | transloco }}</p>
+      }
+
+      @if (catalogEmpty()) {
+        <p class="empty-catalog">{{ 'discover.emptyCatalog' | transloco }}</p>
+      }
+
+      @for (category of categories(); track category.id) {
+        <!-- role="group", not the implicit "region" a labelled <section> gets:
+             the design calls each category a labelled GROUP of checkboxes, and
+             the e2e locates them with getByRole('group'). -->
+        <section
+          #section
+          role="group"
+          [attr.data-category-id]="category.id"
+          [attr.aria-labelledby]="'cat-' + category.id"
+        >
+          <div class="cat-head">
+            <span class="cat-ico" [style.background]="category.color">
+              <app-icon [name]="category.icon" [size]="14" />
+            </span>
+            <h2 [id]="'cat-' + category.id">{{ category.name }}</h2>
+            <span class="cat-count">{{ category.feeds.length }}</span>
+            <span class="cat-act">
+              <button type="button" (click)="selection.selectAll(category.id)">
+                {{ 'discover.selectAll' | transloco }}
+              </button>
+              <button type="button" (click)="selection.clearCategory(category.id)">
+                {{ 'discover.clear' | transloco }}
+              </button>
+            </span>
+          </div>
+
+          <ul class="grid">
+            @for (feed of category.feeds; track feed.id) {
+              <li data-testid="catalog-feed">
+                <label
+                  [class.on]="selection.isSelected(feed.id)"
+                  [class.locked]="selection.isLocked(feed.id)"
+                >
+                  <input
+                    type="checkbox"
+                    [checked]="selection.isSelected(feed.id)"
+                    [disabled]="selection.isLocked(feed.id)"
+                    (change)="selection.toggle(feed.id)"
+                  />
+                  <img
+                    class="fav"
+                    [src]="feed.faviconUrl"
+                    alt=""
+                    width="20"
+                    height="20"
+                    loading="lazy"
+                  />
+                  <span class="text">
+                    <span class="title">{{ feed.title }}</span>
+                    @if (selection.isLocked(feed.id)) {
+                      <span class="desc">{{ 'discover.subscribed' | transloco }}</span>
+                    } @else if (feed.description) {
+                      <span class="desc">{{ feed.description }}</span>
+                    }
+                  </span>
+                </label>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    </main>
+  </div>
+
+  <footer class="foot">
+    <span class="cnt" aria-live="polite">
+      {{
+        'discover.summary'
+          | transloco
+            : { feeds: selection.selectedCount(), categories: selection.selectedCategoryCount() }
+      }}
+    </span>
+    <button type="button" class="ghost" (click)="onSkip()">
+      {{ 'discover.skip' | transloco }}
+    </button>
+    <button
+      type="button"
+      class="primary"
+      data-testid="subscribe"
+      [disabled]="selection.selectedCount() === 0 || submitting()"
+      (click)="onSubscribe()"
+    >
+      {{ 'discover.subscribe' | transloco }}
+    </button>
+  </footer>
+</div>

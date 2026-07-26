@@ -242,5 +242,21 @@
     "add": "Hinzufügen",
     "loading": "Wird geladen…",
     "retry": "Erneut versuchen"
+  },
+  "discover": {
+    "title": "Feeds entdecken",
+    "subtitle": "Wähle ein paar aus – du kannst jederzeit weitere hinzufügen",
+    "categories": "Kategorien",
+    "selectAll": "Alle auswählen",
+    "clear": "Zurücksetzen",
+    "subscribed": "Bereits abonniert",
+    "summary": "{{feeds}} Feeds in {{categories}} Kategorien",
+    "createsTags": "erstellt {{count}} Tags",
+    "subscribe": "Abonnieren",
+    "skip": "Später",
+    "loadFailed": "Der Katalog konnte nicht geladen werden.",
+    "subscribeFailed": "Abonnieren fehlgeschlagen. Bitte erneut versuchen.",
+    "retry": "Erneut versuchen",
+    "emptyCatalog": "Es sind noch keine Vorschläge eingerichtet. Ein Administrator kann im Admin-Bereich einen Katalog importieren."
   }
 }

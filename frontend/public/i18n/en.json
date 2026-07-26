@@ -242,5 +242,21 @@
     "add": "Add",
     "loading": "Loading…",
     "retry": "Retry"
+  },
+  "discover": {
+    "title": "Discover feeds",
+    "subtitle": "Pick a few to get started — you can always add more later",
+    "categories": "Categories",
+    "selectAll": "Select all",
+    "clear": "Clear",
+    "subscribed": "Already subscribed",
+    "summary": "{{feeds}} feeds in {{categories}} categories",
+    "createsTags": "creates {{count}} tags",
+    "subscribe": "Subscribe",
+    "skip": "Skip for now",
+    "loadFailed": "The catalog could not be loaded.",
+    "subscribeFailed": "Subscribing failed. Please try again.",
+    "retry": "Try again",
+    "emptyCatalog": "No suggestions have been set up yet. An administrator can import a catalog from the admin area."
   }
 }
