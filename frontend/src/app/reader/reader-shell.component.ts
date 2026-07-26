@@ -36,6 +36,8 @@ import { ManageActions } from './manage/manage-actions.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { CatalogStore } from '../discover/catalog.store';
 import { OnboardingSkip } from '../discover/onboarding-skip';
+import { ProgressHairlineComponent } from '../shared/progress-hairline/progress-hairline.component';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 @Component({
   selector: 'app-reader-shell',
@@ -45,6 +47,8 @@ import { OnboardingSkip } from '../discover/onboarding-skip';
     EntryListComponent,
     ReaderViewComponent,
     DrawerSwipeDirective,
+    ProgressHairlineComponent,
+    TranslocoPipe,
   ],
   templateUrl: './reader-shell.component.html',
   styleUrl: './reader-shell.component.scss',
@@ -83,7 +87,26 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       this.subs.subscriptions().every((s) => s.lastFetchedAt === null),
   );
 
-  private sweptOnce = false;
+  private readonly sweptOnce = signal(false);
+  /** True only for the span of the post-onboarding sweep — set when it fires,
+   *  cleared once it lands without error. `sweptOnce` is a permanent one-way
+   *  latch, so gating the banner on it would re-show the counted banner on every
+   *  later refresh (sidebar button, scoped, add-feed) over an already-populated
+   *  list. This sweep-scoped flag is what keeps the banner to the sweep alone. */
+  private readonly sweeping = signal(false);
+
+  /** The counted banner belongs to the post-onboarding sweep only. Every other
+   *  refresh has the hairline, which is enough context for a user who already
+   *  knows what their reader looks like. Within the sweep window `sweeping` is
+   *  true exactly while the sweep runs or has errored; the template's inner
+   *  branch picks counting vs. the error+retry message. */
+  readonly showFetchBanner = computed(() => this.sweeping());
+
+  readonly fetchProgress = computed(() => {
+    const report = this.refreshSvc.report();
+    if (!report) return { done: 0, total: 0 };
+    return { done: report.total - report.remaining, total: report.total };
+  });
 
   private readonly params = toSignal(this.route.queryParamMap, {
     initialValue: convertToParamMap({}),
@@ -244,9 +267,21 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     // load. Expressing it as "feeds exist that have never been fetched" removes
     // the ordering question entirely.
     effect(() => {
-      if (!this.awaitingFirstFetch() || this.sweptOnce) return;
-      this.sweptOnce = true;
+      if (!this.awaitingFirstFetch() || this.sweptOnce()) return;
+      this.sweptOnce.set(true);
+      this.sweeping.set(true);
       this.refreshSvc.run();
+    });
+
+    // Close the sweep window once the onboarding sweep lands without error. A
+    // failure keeps it open so the banner's retry stays available until a retry
+    // succeeds. Gated on `sweeping` so no later, unrelated refresh reopens it —
+    // and RefreshService.run()'s onDone fires on both success and failure, which
+    // is why the clear is expressed as state here rather than in that callback.
+    effect(() => {
+      if (this.sweeping() && !this.refreshSvc.running() && this.refreshSvc.error() === null) {
+        untracked(() => this.sweeping.set(false));
+      }
     });
 
     // Repopulate as slices land, not only when the sweep ends. Landing in a

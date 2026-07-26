@@ -11,6 +11,23 @@
   (next)="onNext()"
   (scrollTop)="onScrollListTop()"
 />
+<!-- Out of flow, dropped into the seam just under the (absolute, opaque)
+     header: an in-flow hairline would paint at y=0 behind the header and add
+     2px of column height when it toggles. The wrapper holds the permanent
+     hairline (every refresh) stacked above the sweep-only counted banner. -->
+<div class="under-header">
+  <app-progress-hairline [active]="refreshSvc.running()" [value]="refreshSvc.progress()" />
+  @if (showFetchBanner()) {
+    <p class="fetch-banner" role="status" aria-live="polite">
+      @if (refreshSvc.error()) {
+        {{ 'reader.fetchFailed' | transloco }}
+        <button type="button" (click)="onRefresh()">{{ 'reader.retryFetch' | transloco }}</button>
+      } @else {
+        {{ 'reader.fetchingFeeds' | transloco: fetchProgress() }}
+      }
+    </p>
+  }
+</div>
 <!-- No top offset here: the scrolling panes reserve the header's height
      themselves (via --app-bar-h) and their content passes under it, so
      retracting the header uncovers content instead of leaving a dead strip

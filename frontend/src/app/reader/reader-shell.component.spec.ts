@@ -451,5 +451,39 @@ describe('ReaderShellComponent', () => {
       bootWith([{ ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' }]);
       expect(run).not.toHaveBeenCalled();
     });
+
+    it('shows the counted fetch banner while the onboarding sweep runs', () => {
+      const f = bootWith([
+        { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: null },
+        { ...SUBSCRIPTION_FIXTURE, id: 2, feedId: 12, lastFetchedAt: null },
+      ]);
+      // The sweep fired a real refresh; a partial slice keeps it running, so the
+      // counted banner shows this-much-done.
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/refresh')
+        .flush({ ...refreshDone, status: 'partial', total: 2, remaining: 1, fetched: 1 });
+      f.detectChanges();
+      const banner = (f.nativeElement as HTMLElement).querySelector('.fetch-banner');
+      expect(banner).not.toBeNull();
+      expect(banner!.textContent).toContain('1 of 2');
+      // The partial re-armed the poll; finish it so the sweep completes.
+      ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
+    });
+
+    it('does not reshow the fetch banner on a later refresh once the sweep has landed', () => {
+      const f = bootWith([{ ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: null }]);
+      // Complete the onboarding sweep successfully → the banner window closes.
+      ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
+      f.detectChanges();
+      expect((f.nativeElement as HTMLElement).querySelector('.fetch-banner')).toBeNull();
+
+      // A later manual refresh (the sidebar button) must NOT bring the counted
+      // banner back over the now-populated reader — it belongs to the sweep only.
+      f.componentInstance.onRefresh();
+      f.detectChanges();
+      ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
+      f.detectChanges();
+      expect((f.nativeElement as HTMLElement).querySelector('.fetch-banner')).toBeNull();
+    });
   });
 });

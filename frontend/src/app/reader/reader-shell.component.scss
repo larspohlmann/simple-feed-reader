@@ -125,6 +125,43 @@ app-reader-header.hidden {
   min-width: 0;
 }
 
+/* The header is an absolute, opaque overlay and the scrolling panes reserve its
+   height internally, so nothing in normal flow can sit "below the header". This
+   wrapper is positioned instead: taken out of flow (zero layout shift for the
+   main column) and dropped by the bar's own height into the visible seam just
+   under it. Its contents — the 2px hairline, then the sweep banner — flow
+   normally inside it, so they stack rather than fight for the same `top`.
+   z-index sits above the list's sticky header (z-index: 3, same `:host`
+   stacking context) and below the article overlay (5) and the header (10). */
+.under-header {
+  position: absolute;
+  top: var(--app-bar-h, 56px);
+  left: 0;
+  right: 0;
+  z-index: 4;
+}
+
+/* The post-onboarding fetch banner: an in-flow strip inside `.under-header`. */
+.fetch-banner {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--accent-soft);
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+
+  button {
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+  }
+}
+
 .backdrop {
   display: none;
   border: 0;
