@@ -100,3 +100,14 @@ services:
     App\Service\Catalog\BundledCatalog:
         arguments:
             $projectDir: '%kernel.project_dir%'
+
+    # A child of the framework's http_client so the rot-check command holds its
+    # own injectable client id. The point of the separate id is the test: it can
+    # `set('catalog.rot_check.http_client', $mockClient)` to swap in a
+    # MockHttpClient without touching the app-wide client every other fetch uses.
+    catalog.rot_check.http_client:
+        parent: 'http_client'
+
+    App\Command\CheckCatalogUrlsCommand:
+        arguments:
+            $httpClient: '@catalog.rot_check.http_client'

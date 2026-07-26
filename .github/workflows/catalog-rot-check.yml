@@ -1,0 +1,59 @@
+name: Catalog rot check
+
+# Scheduled only, plus manual. NEVER a pull_request trigger: this fetches 111
+# publisher domains, and rate limits, bot blocks and transient outages would
+# make it a red merge check for reasons that have nothing to do with the PR.
+on:
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: intl, pdo_sqlite
+          coverage: none
+
+      - name: Install dependencies
+        working-directory: backend
+        run: composer install --no-interaction --no-progress
+
+      - name: Check every catalog URL
+        id: check
+        working-directory: backend
+        continue-on-error: true
+        run: php bin/console app:catalog:check-urls | tee "${RUNNER_TEMP}/rot.txt"
+
+      - name: Open an issue when something rotted
+        if: steps.check.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          {
+            echo "The weekly catalog check found URLs that no longer serve a feed."
+            echo
+            echo '```'
+            cat "${RUNNER_TEMP}/rot.txt"
+            echo '```'
+            echo
+            echo "Fix by editing \`backend/resources/catalog/catalog.opml\`, then"
+            echo "importing it from the admin area. Use **merge** to add and correct"
+            echo "without touching anything else, or **replace** to also drop the rows"
+            echo "the document no longer lists."
+          } > "${RUNNER_TEMP}/body.md"
+          gh issue create \
+            --title "Catalog rot check: feeds need attention" \
+            --body-file "${RUNNER_TEMP}/body.md" \
+            --label enhancement
