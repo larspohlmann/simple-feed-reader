@@ -6,9 +6,11 @@ services:
         alias: App\Service\Fetch\HttpFeedFetcher
         public: true
 
-    # RefreshRunner now depends on the batch interface, and the functional tests
-    # swap it for a stub via `self::getContainer()->set(...)`, which the container
-    # only allows on public services. Test environment only.
+    # HttpFeedFetcher depends on BatchFeedFetcherInterface today, so swapping the
+    # batch in a test stubs the discovery, preview and favicon paths in one call.
+    # The functional tests swap it for a stub via
+    # `self::getContainer()->set(...)`, which the container only allows on
+    # public services. Test environment only.
     App\Service\Fetch\BatchFeedFetcherInterface:
         alias: App\Service\Fetch\ConcurrentFeedFetcher
         public: true

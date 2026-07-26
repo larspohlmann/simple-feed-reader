@@ -6,6 +6,7 @@ namespace App\Service\Fetch;
 
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
+use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -57,12 +58,8 @@ final class ResponseClassifier
     public function fromBody(ResponseInterface $response, FetchAttempt $attempt): FetchResponse
     {
         $body = $this->content($response, $attempt->url);
-        if (\strlen($body) > ResponseTooLargeException::MAX_BYTES) {
-            throw new ResponseTooLargeException(sprintf(
-                '%s: response exceeds %d bytes',
-                $attempt->url,
-                ResponseTooLargeException::MAX_BYTES,
-            ));
+        if (null !== $tooLarge = ResponseTooLargeException::ifExceeded(\strlen($body), $attempt->url)) {
+            throw $tooLarge;
         }
 
         return FetchResponse::fetched(
@@ -96,9 +93,7 @@ final class ResponseClassifier
         try {
             return $response->getStatusCode();
         } catch (ExceptionInterface $e) {
-            ResponseTooLargeException::rethrowIfWrapped($e);
-
-            throw new FeedUnreachableException(sprintf('%s: %s', $url, $e->getMessage()), previous: $e);
+            throw FetchException::from($url, $e);
         }
     }
 
@@ -107,9 +102,7 @@ final class ResponseClassifier
         try {
             return $response->getContent(false);
         } catch (ExceptionInterface $e) {
-            ResponseTooLargeException::rethrowIfWrapped($e);
-
-            throw new FeedUnreachableException(sprintf('%s: %s', $url, $e->getMessage()), previous: $e);
+            throw FetchException::from($url, $e);
         }
     }
 

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch;
 
-use App\Service\Fetch\Exception\FeedUnreachableException;
-
 /**
  * Single-URL adapter over the batch engine, for the callers that genuinely want
  * one feed and can afford to block: discovery, preview, favicon resolution and
@@ -27,8 +25,10 @@ final readonly class HttpFeedFetcher implements FeedFetcherInterface
             return $outcome->responseOrThrow();
         }
 
-        // The engine yields exactly one outcome per ticket, so an empty result
-        // means the batch contract was broken rather than the feed being at fault.
-        throw new FeedUnreachableException(sprintf('%s: the fetcher returned no outcome', $url));
+        // Not a FetchException: the engine yields exactly one outcome per ticket,
+        // so an empty result is a broken batch implementation, not a bad feed.
+        // Every caller of fetch() swallows FetchException as "this feed failed",
+        // which would bury the defect behind four plausible-looking feed errors.
+        throw new \LogicException(sprintf('%s: the fetcher returned no outcome.', $url));
     }
 }

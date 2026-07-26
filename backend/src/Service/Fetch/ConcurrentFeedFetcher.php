@@ -162,9 +162,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
 
             return $chunk->isLast() ? $this->classifier->fromBody($response, $attempt) : null;
         } catch (ExceptionInterface $e) {
-            ResponseTooLargeException::rethrowIfWrapped($e);
-
-            throw new FeedUnreachableException(sprintf('%s: %s', $attempt->url, $e->getMessage()), previous: $e);
+            throw FetchException::from($attempt->url, $e);
         }
     }
 
@@ -216,18 +214,13 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
                 'max_duration' => self::TIMEOUT_SECONDS * 2,
                 'resolve' => [$guarded->host => $guarded->ip],
                 'on_progress' => static function (int $downloaded): void {
-                    if ($downloaded > ResponseTooLargeException::MAX_BYTES) {
-                        throw new ResponseTooLargeException(sprintf(
-                            'response exceeds %d bytes',
-                            ResponseTooLargeException::MAX_BYTES,
-                        ));
+                    if (null !== $tooLarge = ResponseTooLargeException::ifExceeded($downloaded)) {
+                        throw $tooLarge;
                     }
                 },
             ]);
         } catch (ExceptionInterface $e) {
-            ResponseTooLargeException::rethrowIfWrapped($e);
-
-            throw new FeedUnreachableException(sprintf('%s: %s', $attempt->url, $e->getMessage()), previous: $e);
+            throw FetchException::from($attempt->url, $e);
         }
     }
 

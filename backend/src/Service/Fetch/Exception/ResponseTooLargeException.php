@@ -12,20 +12,23 @@ final class ResponseTooLargeException extends FetchException
      * same memory while they quote the same number, so the number lives here,
      * beside the failure it produces, instead of once per fetcher.
      */
-    public const int MAX_BYTES = 5_000_000;
+    private const int MAX_BYTES = 5_000_000;
 
     /**
-     * The HTTP client wraps exceptions thrown inside on_progress; unwrap and
-     * rethrow this one so callers see the real cause rather than a generic
-     * transport failure.
+     * Both size guards call this at their own checkpoint — wire bytes as they
+     * arrive, before a URL is even resolved, and the buffered body once the
+     * response is complete. Returning null when $observedBytes is within the
+     * limit lets each guard stay a plain `if`, while the limit itself and the
+     * two message shapes it produces live only here.
      */
-    public static function rethrowIfWrapped(?\Throwable $e): void
+    public static function ifExceeded(int $observedBytes, ?string $url = null): ?self
     {
-        while (null !== $e) {
-            if ($e instanceof self) {
-                throw $e;
-            }
-            $e = $e->getPrevious();
+        if ($observedBytes <= self::MAX_BYTES) {
+            return null;
         }
+
+        return new self(null === $url
+            ? sprintf('response exceeds %d bytes', self::MAX_BYTES)
+            : sprintf('%s: response exceeds %d bytes', $url, self::MAX_BYTES));
     }
 }
