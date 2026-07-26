@@ -157,4 +157,54 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         self::assertNotNull($reloaded);
         self::assertNotNull($reloaded->getFaviconFailedAt());
     }
+
+    public function testMarkAllForReWarmingMakesFreshRowsDueAgain(): void
+    {
+        $feed = $this->persistFeed('Fresh');
+        $resolver = $this->resolverReturning([0 => 'https://example.com/favicon.ico']);
+        $fetcher = $this->createStub(CatalogFaviconFetcherInterface::class);
+        $fetcher->method('download')
+            ->willReturn(new FetchedFavicon('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
+
+        $warmer = $this->warmer($resolver, $fetcher);
+        $warmer->warm(120);
+
+        // Warmed rows drop out of the due set.
+        self::assertNotContainsFeed($feed, $this->due());
+
+        $warmer->markAllForReWarming();
+
+        // ...until force marks them due again.
+        self::assertContainsFeed($feed, $this->due());
+    }
+
+    /**
+     * @return list<CatalogFeed>
+     */
+    private function due(): array
+    {
+        $now = $this->clock()->now();
+
+        return $this->feeds()->findNeedingFavicon(
+            $now->sub(new \DateInterval('P90D')),
+            $now->sub(new \DateInterval('P14D')),
+            null,
+        );
+    }
+
+    /**
+     * @param list<CatalogFeed> $feeds
+     */
+    private static function assertContainsFeed(CatalogFeed $needle, array $feeds): void
+    {
+        self::assertContains($needle->getId(), array_map(static fn (CatalogFeed $f): ?int => $f->getId(), $feeds));
+    }
+
+    /**
+     * @param list<CatalogFeed> $feeds
+     */
+    private static function assertNotContainsFeed(CatalogFeed $needle, array $feeds): void
+    {
+        self::assertNotContains($needle->getId(), array_map(static fn (CatalogFeed $f): ?int => $f->getId(), $feeds));
+    }
 }

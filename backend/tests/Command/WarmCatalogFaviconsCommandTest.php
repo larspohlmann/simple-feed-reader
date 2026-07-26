@@ -50,7 +50,7 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
         // Stub resolution too, so the warmer's up-front resolveAll() never
         // touches the network: hand every site the same canned icon URL, which
         // the mocked fetcher above then "downloads".
-        $resolver = $this->createMock(FaviconResolverInterface::class);
+        $resolver = $this->createStub(FaviconResolverInterface::class);
         $resolver->method('resolveAll')->willReturnCallback(
             static fn (array $bases): array => array_map(
                 static fn (): string => 'https://example.com/favicon.ico',
@@ -95,7 +95,7 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
     {
         $this->persistFeed('Dead Feed', 'https://dead.example.com/rss.xml');
 
-        $fetcher = $this->createMock(CatalogFaviconFetcherInterface::class);
+        $fetcher = $this->createStub(CatalogFaviconFetcherInterface::class);
         $fetcher->method('download')->willThrowException(new FaviconUnavailableException('gone'));
 
         $tester = $this->tester($fetcher);
@@ -123,5 +123,31 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
         $tester->execute(['--limit' => '1']);
 
         self::assertSame(0, $tester->getStatusCode());
+    }
+
+    public function testForceReWarmsAlreadyFreshRowsAndTerminates(): void
+    {
+        $this->persistFeed('One', 'https://one.example.com/rss.xml');
+        $this->persistFeed('Two', 'https://two.example.com/rss.xml');
+
+        // Both runs download two icons: the plain run warms the two fresh rows,
+        // then --force re-warms the same two. atLeast(4) proves force actually
+        // re-downloaded rather than skipping the already-fresh rows.
+        $fetcher = $this->createMock(CatalogFaviconFetcherInterface::class);
+        $fetcher->expects(self::atLeast(4))
+            ->method('download')
+            ->willReturn(new FetchedFavicon('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
+
+        $tester = $this->tester($fetcher);
+
+        $tester->execute([]);
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertStringContainsString('warmed 2', $tester->getDisplay());
+
+        // The key property: --force with no --limit COMPLETES (a hang here means
+        // the loop never converges) and re-warms the just-warmed rows.
+        $tester->execute(['--force' => true]);
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertStringContainsString('warmed 2', $tester->getDisplay());
     }
 }

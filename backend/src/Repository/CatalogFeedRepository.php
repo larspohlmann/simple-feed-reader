@@ -93,6 +93,28 @@ class CatalogFeedRepository extends ServiceEntityRepository
             ->getSingleScalarResult();
     }
 
+    /**
+     * Marks every enabled row as needing a fresh icon — the --force path.
+     * A bulk UPDATE, run ONCE before a force warm; the normal window then lets
+     * each row drop out of the due set as it is (re-)warmed, so the loop converges.
+     *
+     * @return int rows affected
+     */
+    public function resetFaviconFreshness(): int
+    {
+        $affected = $this->createQueryBuilder('f')
+            ->update()
+            ->set('f.faviconFetchedAt', 'NULL')
+            ->set('f.faviconFailedAt', 'NULL')
+            ->andWhere('f.enabled = true')
+            ->getQuery()
+            ->execute();
+
+        // A DQL UPDATE returns its affected-row count, but Doctrine types
+        // execute() as mixed; narrow it rather than blind-casting.
+        return \is_int($affected) ? $affected : 0;
+    }
+
     public function nextPositionInCategory(int $categoryId): int
     {
         $max = $this->createQueryBuilder('f')

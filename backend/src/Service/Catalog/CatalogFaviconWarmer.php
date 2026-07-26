@@ -47,11 +47,11 @@ final readonly class CatalogFaviconWarmer
     ) {
     }
 
-    public function warm(int $budgetSeconds, bool $force = false, ?int $limit = null): CatalogWarmReport
+    public function warm(int $budgetSeconds, ?int $limit = null): CatalogWarmReport
     {
         $now = $this->clock->now();
         $deadline = $now->getTimestamp() + $budgetSeconds;
-        [$staleBefore, $retryBefore] = $this->windows($now, $force);
+        [$staleBefore, $retryBefore] = $this->windows($now);
 
         $due = $this->feeds->findNeedingFavicon($staleBefore, $retryBefore, $limit ?? self::BATCH_LIMIT);
 
@@ -71,7 +71,7 @@ final readonly class CatalogFaviconWarmer
             // would report progress it did not make. One overshoot by a single
             // icon's timeout is the price of an honest count. (Resolution already
             // happened above as one bounded burst, so the loop only downloads.)
-            if (time() >= $deadline) {
+            if ($this->clock->now()->getTimestamp() >= $deadline) {
                 break;
             }
         }
@@ -86,17 +86,22 @@ final readonly class CatalogFaviconWarmer
     /**
      * @return array{0: \DateTimeImmutable, 1: \DateTimeImmutable}
      */
-    private function windows(\DateTimeImmutable $now, bool $force): array
+    private function windows(\DateTimeImmutable $now): array
     {
-        if ($force) {
-            // Everything is stale and every failure is retryable.
-            return [$now->add(new \DateInterval('P1D')), $now->add(new \DateInterval('P1D'))];
-        }
-
         return [
             $now->sub(new \DateInterval(self::STALE_AFTER)),
             $now->sub(new \DateInterval(self::RETRY_FAILURES_AFTER)),
         ];
+    }
+
+    /**
+     * Force path: mark every enabled row for re-warming. Call ONCE, then loop
+     * warm(): the normal P90D/P14D window lets each row leave the due set as it
+     * is re-warmed, so the loop converges rather than re-downloading forever.
+     */
+    public function markAllForReWarming(): void
+    {
+        $this->feeds->resetFaviconFreshness();
     }
 
     /**

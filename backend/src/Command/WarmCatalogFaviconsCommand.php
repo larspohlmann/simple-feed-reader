@@ -40,19 +40,25 @@ final class WarmCatalogFaviconsCommand extends Command
 
     protected function configure(): void
     {
-        $this->addOption('force', null, InputOption::VALUE_NONE, 'Ignore the freshness and failure windows');
+        $this->addOption('force', null, InputOption::VALUE_NONE, 'Re-warm all rows, ignoring freshness windows');
         $this->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Warm at most this many in one slice, then stop');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $force = (bool) $input->getOption('force');
         $limit = $this->limitOption($input);
 
+        // --force resets freshness ONCE, up front, then warming proceeds through
+        // the normal window so each row leaves the due set as it is re-warmed —
+        // resetting per slice would re-mark just-warmed rows and never terminate.
+        if ((bool) $input->getOption('force')) {
+            $this->warmer->markAllForReWarming();
+        }
+
         $totals = null !== $limit
-            ? $this->warmOneSlice($io, $force, $limit)
-            : $this->warmUntilDone($io, $force);
+            ? $this->warmOneSlice($io, $limit)
+            : $this->warmUntilDone($io);
 
         $io->success(\sprintf('Catalog favicons: warmed %d, failed %d.', $totals->warmed, $totals->failed));
 
@@ -60,20 +66,21 @@ final class WarmCatalogFaviconsCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function warmOneSlice(SymfonyStyle $io, bool $force, int $limit): CatalogWarmReport
+    private function warmOneSlice(SymfonyStyle $io, int $limit): CatalogWarmReport
     {
-        $report = $this->warmer->warm(self::SLICE_BUDGET_SECONDS, $force, $limit);
+        $report = $this->warmer->warm(self::SLICE_BUDGET_SECONDS, $limit);
         $this->report($io, $report->warmed, $report->failed, $report->remaining);
 
         return $report;
     }
 
-    private function warmUntilDone(SymfonyStyle $io, bool $force): CatalogWarmReport
+    private function warmUntilDone(SymfonyStyle $io): CatalogWarmReport
     {
         $warmed = 0;
         $failed = 0;
+        $previousRemaining = \PHP_INT_MAX;
         do {
-            $report = $this->warmer->warm(self::SLICE_BUDGET_SECONDS, $force);
+            $report = $this->warmer->warm(self::SLICE_BUDGET_SECONDS);
             $warmed += $report->warmed;
             $failed += $report->failed;
             $this->report($io, $warmed, $failed, $report->remaining);
@@ -83,6 +90,13 @@ final class WarmCatalogFaviconsCommand extends Command
             if (0 === $report->warmed && 0 === $report->failed) {
                 break;
             }
+
+            // Belt-and-suspenders: a slice that does not shrink the backlog can
+            // never converge, so stop even if a future window change regresses.
+            if ($report->remaining >= $previousRemaining) {
+                break;
+            }
+            $previousRemaining = $report->remaining;
         } while ($report->remaining > 0);
 
         return new CatalogWarmReport($warmed, $failed, $report->remaining);
