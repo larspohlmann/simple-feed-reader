@@ -17,6 +17,11 @@ export class RefreshService {
   readonly report = signal<RefreshReport | null>(null);
   readonly error = signal<Problem | null>(null);
 
+  /** Increments every time a report lands, including partial slices. Consumers watch
+   *  this to refetch progressively — waiting for onDone would leave a new user
+   *  staring at an empty list for the whole sweep. */
+  readonly slice = signal(0);
+
   readonly progress = computed(() => {
     const r = this.report();
     if (!r || r.total <= 0) return 0;
@@ -31,6 +36,7 @@ export class RefreshService {
     this.running.set(true);
     this.report.set(null);
     this.error.set(null);
+    this.slice.set(0);
     this.step(0, onDone, scope);
   }
 
@@ -38,6 +44,7 @@ export class RefreshService {
     this.api.refresh(scope).subscribe({
       next: (r) => {
         this.report.set(r);
+        this.slice.update((n) => n + 1);
         if (r.status === 'partial' && r.remaining > 0) {
           this.step(0, onDone, scope);
         } else if (r.status === 'busy') {

@@ -1,3 +1,4 @@
+import { effect } from '@angular/core';
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -44,6 +45,29 @@ describe('RefreshService', () => {
     expect(svc.running()).toBe(false);
     expect(svc.progress()).toBe(1);
     expect(done).toHaveBeenCalledTimes(1);
+  });
+
+  it('emits a slice tick for every partial report, not just at the end', () => {
+    const ticks: number[] = [];
+    TestBed.runInInjectionContext(() => {
+      effect(() => ticks.push(svc.slice()));
+    });
+    TestBed.tick(); // flush the effect's initial run — captures the starting 0
+
+    svc.run();
+
+    ctrl
+      .expectOne('https://api.test/api/refresh')
+      .flush(report({ status: 'partial', remaining: 2, fetched: 2 }));
+    TestBed.tick();
+
+    ctrl
+      .expectOne('https://api.test/api/refresh')
+      .flush(report({ status: 'completed', remaining: 0, fetched: 4 }));
+    TestBed.tick();
+
+    // 0 on subscribe, then one increment per landed report.
+    expect(ticks).toEqual([0, 1, 2]);
   });
 
   it('scopes every request to the given feed id across the poll loop', () => {
