@@ -497,9 +497,13 @@ final class ResponseClassifierTest extends TestCase
         );
 
         self::assertSame(HeaderDecision::Terminal, $verdict->decision);
-        self::assertTrue($verdict->response?->notModified);
-        self::assertSame('"v1"', $verdict->response?->etag);
-        self::assertSame('Mon, 20 Jul 2026 08:30:00 GMT', $verdict->response?->lastModified);
+        // Narrow once into a local: PHPStan at level max rejects a second and
+        // third `?->` on the same property as `nullsafe.neverNull`.
+        $response = $verdict->response;
+        self::assertNotNull($response);
+        self::assertTrue($response->notModified);
+        self::assertSame('"v1"', $response->etag);
+        self::assertSame('Mon, 20 Jul 2026 08:30:00 GMT', $response->lastModified);
     }
 
     public function testAFourTenIsGone(): void
