@@ -67,6 +67,11 @@ security:
     access_control:
         - { path: ^/api/health$, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/, roles: PUBLIC_ACCESS }
+        # Catalog favicons are public image bytes (cached icon or a monogram
+        # placeholder), served to plain <img> tags that cannot carry the bearer
+        # JWT. They hold no user data — the subscribed flags live on the
+        # authenticated /api/catalog list, not here — so this one path is public.
+        - { path: '^/api/catalog/feeds/\d+/favicon$', roles: PUBLIC_ACCESS }
         - { path: ^/api/admin/, roles: ROLE_ADMIN }
         - { path: ^/api/, roles: IS_AUTHENTICATED_FULLY }
 
