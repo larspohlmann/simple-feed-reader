@@ -2070,7 +2070,37 @@ git commit -m "feat(refresh): add BudgetedFeedQueue for lazy, deadline-gated fan
 - Modify: `backend/src/Service/Refresh/RefreshRunner.php:15,51,77-176`
 - Modify: `backend/tests/Service/Refresh/RefreshRunnerTest.php`
 
-- [ ] **Step 1: Rewrite the failing budget tests first**
+- [ ] **Step 1: Repoint the functional-test stubs BEFORE anything else**
+
+Five functional tests intercept the refresh path with
+`self::getContainer()->set(FeedFetcherInterface::class, $stub)`. The moment
+`RefreshRunner` depends on `BatchFeedFetcherInterface` instead, those swaps stop
+intercepting anything and the real `ConcurrentFeedFetcher` runs — against
+`https://maint.example.com/feed`, `https://cli.example.com/feed` and
+`https://example.com/mine.xml`. That means **live DNS and live network calls
+inside the test suite**, and assertions like `assertSame(1, $payload['notModified'])`
+flipping to `failed: 1`. Change all five to
+`set(BatchFeedFetcherInterface::class, $stub)`:
+
+- `tests/Controller/MaintenanceControllerTest.php:52` and `:72`
+- `tests/Controller/Api/RefreshControllerTest.php:91` and `:155`
+- `tests/Command/RefreshFeedsCommandTest.php:41`
+
+Two other files stub the same interface and must **stay** on
+`FeedFetcherInterface`, because they exercise the preview and discovery paths,
+which keep using the single-URL adapter:
+
+- `tests/Controller/Api/FeedPreviewControllerTest.php:65`
+- `tests/Controller/Api/SubscriptionControllerTest.php:55`
+
+Check `SubscriptionControllerTest` specifically before deciding: subscribing
+triggers a refresh-on-add, so if that test's assertions depend on the refresh
+being stubbed it needs **both** interfaces swapped, not one. Run it and see.
+
+This step is deliberately first: doing it after the runner change means watching
+the suite make real network calls and guessing why.
+
+- [ ] **Step 2: Rewrite the failing budget tests**
 
 In `backend/tests/Service/Refresh/RefreshRunnerTest.php`, replace `testBudgetExhaustionSkipsRemainingFeeds` (line ~297) with a version that pins concurrency so waves are observable:
 
@@ -2176,12 +2206,12 @@ In the abort test (line ~668), the ordered assertion becomes order-insensitive �
 
 Add `concurrency: 1` to the `StubFeedFetcher` in that test's arrangement so "the third feed is never started" is deterministic rather than a race against the wave size.
 
-- [ ] **Step 2: Run to verify they fail**
+- [ ] **Step 3: Run to verify they fail**
 
 Run: `php bin/phpunit tests/Service/Refresh/RefreshRunnerTest.php`
 Expected: FAIL — `RefreshRunner` still calls `fetch()` per feed.
 
-- [ ] **Step 3: Rewrite RefreshRunner's refresh loop**
+- [ ] **Step 4: Rewrite RefreshRunner's refresh loop**
 
 This step references `RefreshTally`, which Step 4 creates. Write both before running the suite — or do Step 4 first if you would rather keep the file parseable at every point.
 
@@ -2377,7 +2407,7 @@ Delete `resolveFaviconIfMissing()` and its two call sites — Task 10 replaces i
     }
 ```
 
-- [ ] **Step 4: Add RefreshTally**
+- [ ] **Step 5: Add RefreshTally**
 
 `backend/src/Service/Refresh/RefreshTally.php`:
 
@@ -2423,17 +2453,17 @@ final class RefreshTally
 
 Check this against the existing abort test, which is the arithmetic that matters: three feeds, the second one's flush fails. `processed` is 1, so `remaining` is `3 - 1 = 2` — the failing feed plus the untouched third — and `failed` is 1. Those are exactly the numbers `testAbortStopsTheRun` already asserts.
 
-- [ ] **Step 5: Run the tests**
+- [ ] **Step 6: Run the tests**
 
 Run: `php bin/phpunit tests/Service/Refresh/RefreshRunnerTest.php`
 Expected: PASS, 26 tests (25 original plus the new concurrency case).
 
-- [ ] **Step 6: Run the full suite and gates**
+- [ ] **Step 7: Run the full suite and gates**
 
 Run: `php bin/phpunit && composer check && composer md`
 Expected: all green. `RefreshRunner` must be PHPMD-clean; if the class is now too long, move `processOutcomes`/`applyOutcome` into a dedicated collaborator rather than suppressing.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add backend/src/Service/Refresh/ backend/tests/Service/Refresh/
