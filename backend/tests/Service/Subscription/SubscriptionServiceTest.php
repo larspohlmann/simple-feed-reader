@@ -6,6 +6,8 @@ namespace App\Tests\Service\Subscription;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
+use App\Entity\SubscriptionTag;
+use App\Entity\Tag;
 use App\Exception\AlreadySubscribedException;
 use App\Service\Discovery\FeedCandidate;
 use App\Service\Discovery\FeedDiscoveryInterface;
@@ -47,6 +49,7 @@ final class SubscriptionServiceTest extends DbTestCase
             $discovery,
             $this->em->getRepository(Subscription::class),
             $this->em->getRepository(Feed::class),
+            $this->em->getRepository(SubscriptionTag::class),
             $this->em,
             new MockClock('2026-06-01T00:00:00Z'),
         );
@@ -163,6 +166,83 @@ final class SubscriptionServiceTest extends DbTestCase
 
         self::assertNotNull($outcome->subscription);
         self::assertSame('xml', $feed->getSourceFormat());
+    }
+
+    public function testDirectFeedSubscribeAttachesTheGivenTags(): void
+    {
+        $user = $this->factory()->create('tagger@example.com');
+        $news = new Tag($user, 'News');
+        $tech = new Tag($user, 'Tech');
+        $this->em->persist($news);
+        $this->em->persist($tech);
+        $this->em->flush();
+
+        $service = $this->service(
+            $this->discoveryReturning(FeedDiscoveryResult::directFeed('https://example.com/feed.xml')),
+        );
+
+        $outcome = $service->subscribe($user, 'https://example.com/feed', null, [$news, $tech]);
+
+        self::assertNotNull($outcome->subscription);
+        $tagNames = array_map(
+            static fn (Tag $t): string => $t->getName(),
+            $outcome->subscription->getTags()->toArray(),
+        );
+        self::assertSame(['News', 'Tech'], $tagNames);
+    }
+
+    /**
+     * The 'scraped' shortcut skips discovery, but it still runs through
+     * createSubscription — so the tags picked in the add-feed form must land on
+     * the row it creates, exactly as on the discovery-confirmed path.
+     */
+    public function testScrapedSubscribeAttachesTheGivenTags(): void
+    {
+        $user = $this->factory()->create('scrapedtagger@example.com');
+        $blog = new Tag($user, 'Blogs');
+        $this->em->persist($blog);
+        $this->em->flush();
+
+        $service = $this->service(
+            $this->discoveryReturning(FeedDiscoveryResult::directFeed('https://example.com/unused.xml')),
+        );
+
+        $outcome = $service->subscribe($user, 'https://example.com/page', 'scraped', [$blog]);
+
+        self::assertNotNull($outcome->subscription);
+        self::assertSame(
+            ['Blogs'],
+            array_map(static fn (Tag $t): string => $t->getName(), $outcome->subscription->getTags()->toArray()),
+        );
+    }
+
+    /**
+     * A newly tagged feed appends to the END of that tag's list: its join
+     * position is one past the tag's current maximum, not a fixed 0 that would
+     * float it above feeds already in the tag.
+     */
+    public function testNewlyTaggedFeedAppendsWithinTheTag(): void
+    {
+        $user = $this->factory()->create('appender@example.com');
+        $tag = new Tag($user, 'Daily');
+        $existingFeed = new Feed('https://existing.example.com/feed.xml');
+        $existing = new Subscription($user, $existingFeed, new \DateTimeImmutable('2026-05-01T00:00:00Z'));
+        $existing->addTag($tag, 0);
+        $this->em->persist($tag);
+        $this->em->persist($existingFeed);
+        $this->em->persist($existing);
+        $this->em->flush();
+
+        $service = $this->service(
+            $this->discoveryReturning(FeedDiscoveryResult::directFeed('https://fresh.example.com/feed.xml')),
+        );
+
+        $outcome = $service->subscribe($user, 'https://fresh.example.com/feed', null, [$tag]);
+
+        self::assertNotNull($outcome->subscription);
+        $joins = $outcome->subscription->getSubscriptionTags();
+        self::assertCount(1, $joins);
+        self::assertSame(1, $joins[0]->getPosition());
     }
 
     public function testHtmlPageReturnsCandidatesWithoutSubscribing(): void

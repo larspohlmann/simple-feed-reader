@@ -56,6 +56,7 @@
     "addFeed": {
       "title": "Add a feed",
       "urlLabel": "Feed or site URL",
+      "tags": "Tags",
       "foundPick": "We found these feeds — pick one:",
       "items": "{{count}} items",
       "withImages": "With images",

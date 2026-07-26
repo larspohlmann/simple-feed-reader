@@ -22,10 +22,25 @@ final readonly class SubscribeRequest
     #[Assert\Length(max: 20)]
     public ?string $format;
 
-    public function __construct(string $url = '', ?string $format = null)
+    /**
+     * Tag ids to attach to the new feed, picked in the same add-feed form.
+     * Ownership is enforced when the ids are resolved (non-owned ids are
+     * dropped, mirroring the PATCH tag-sync), so validation here only pins the
+     * shape: a list of positive integers.
+     *
+     * @var list<int>
+     */
+    #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
+    public array $tagIds;
+
+    /**
+     * @param list<int> $tagIds
+     */
+    public function __construct(string $url = '', ?string $format = null, array $tagIds = [])
     {
         $this->url = self::normalizeUrl($url);
         $this->format = $format;
+        $this->tagIds = $tagIds;
     }
 
     /**

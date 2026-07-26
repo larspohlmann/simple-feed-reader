@@ -39,6 +39,19 @@ describe('ReaderApi', () => {
     req.flush({ subscription: {} });
   });
 
+  it('includes tagIds in the subscribe body only when tags are selected', () => {
+    api.subscribe('https://example.com/feed', undefined, [2, 5]).subscribe();
+    const req = ctrl.expectOne('https://api.test/api/subscriptions');
+    expect(req.request.body).toEqual({ url: 'https://example.com/feed', tagIds: [2, 5] });
+    req.flush({ subscription: {} });
+
+    // An empty selection stays byte-compatible with the tag-less body.
+    api.subscribe('https://example.com/feed', undefined, []).subscribe();
+    expect(ctrl.expectOne('https://api.test/api/subscriptions').request.body).toEqual({
+      url: 'https://example.com/feed',
+    });
+  });
+
   it('GETs a single entry by id', () => {
     api.entry(514).subscribe();
     const req = ctrl.expectOne('https://api.test/api/entries/514');

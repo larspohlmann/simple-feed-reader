@@ -6,6 +6,7 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
+use App\Entity\Tag;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
@@ -117,6 +118,125 @@ final class SubscriptionControllerTest extends WebTestCase
         // Sidebar favourite/kept badge totals travel on the same payload.
         self::assertSame(0, $list['favoritesCount']);
         self::assertSame(0, $list['keptCount']);
+    }
+
+    public function testSubscribeWithTagIdsCreatesAlreadyTaggedFeed(): void
+    {
+        $client = self::createClient();
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+
+        $user = $this->userFactory()->create('withtags@example.com');
+        $news = new Tag($user, 'News');
+        $tech = new Tag($user, 'Tech');
+        $em->persist($news);
+        $em->persist($tech);
+        $em->flush();
+        $newsId = (int) $news->getId();
+        $techId = (int) $tech->getId();
+
+        $rss = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
+        self::assertIsString($rss);
+        $stub = new StubFeedFetcher();
+        $stub->willReturn(
+            'https://example.com/feed',
+            FetchResponse::fetched(
+                'https://example.com/feed.xml',
+                permanentRedirect: false,
+                body: $rss,
+                etag: null,
+                lastModified: null,
+            ),
+        );
+        $this->installFetcher($stub);
+
+        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
+        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
+        $headers = ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)];
+
+        $client->request(
+            'POST',
+            '/api/subscriptions',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(
+                ['url' => 'https://example.com/feed', 'tagIds' => [$newsId, $techId]],
+                \JSON_THROW_ON_ERROR,
+            ),
+        );
+        self::assertResponseStatusCodeSame(201);
+        $created = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($created);
+        self::assertIsArray($created['subscription']);
+        $tags = $created['subscription']['tags'];
+        self::assertIsArray($tags);
+        self::assertCount(2, $tags);
+        self::assertIsArray($tags[0]);
+        self::assertIsArray($tags[1]);
+        self::assertSame('News', $tags[0]['name']);
+        self::assertSame('Tech', $tags[1]['name']);
+    }
+
+    /**
+     * A tag id the requester does not own is silently dropped, not rejected —
+     * the same forgiving contract as the PATCH tag-sync. The feed is still
+     * created; it just carries only the caller's own tags.
+     */
+    public function testSubscribeIgnoresTagIdsOwnedByAnotherUser(): void
+    {
+        $client = self::createClient();
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+
+        $factory = $this->userFactory();
+        $stranger = $factory->create('tagstranger@example.com');
+        $strangerTag = new Tag($stranger, 'Secret');
+        $em->persist($strangerTag);
+        $em->flush();
+        $strangerTagId = (int) $strangerTag->getId();
+
+        $subscriber = $factory->create('tagvictim@example.com');
+        $ownTag = new Tag($subscriber, 'Mine');
+        $em->persist($ownTag);
+        $em->flush();
+        $ownTagId = (int) $ownTag->getId();
+
+        $rss = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
+        self::assertIsString($rss);
+        $stub = new StubFeedFetcher();
+        $stub->willReturn(
+            'https://example.com/feed',
+            FetchResponse::fetched(
+                'https://example.com/feed.xml',
+                permanentRedirect: false,
+                body: $rss,
+                etag: null,
+                lastModified: null,
+            ),
+        );
+        $this->installFetcher($stub);
+
+        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
+        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
+        $headers = ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($subscriber)];
+
+        $client->request(
+            'POST',
+            '/api/subscriptions',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(
+                ['url' => 'https://example.com/feed', 'tagIds' => [$ownTagId, $strangerTagId]],
+                \JSON_THROW_ON_ERROR,
+            ),
+        );
+        self::assertResponseStatusCodeSame(201);
+        $created = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($created);
+        self::assertIsArray($created['subscription']);
+        $tags = $created['subscription']['tags'];
+        self::assertIsArray($tags);
+        self::assertCount(1, $tags);
+        self::assertIsArray($tags[0]);
+        self::assertSame('Mine', $tags[0]['name']);
     }
 
     public function testSubscribeToHtmlReturnsCandidates(): void

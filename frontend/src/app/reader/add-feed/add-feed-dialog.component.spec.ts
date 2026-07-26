@@ -23,8 +23,18 @@ describe('AddFeedDialogComponent', () => {
     ctrl = TestBed.inject(HttpTestingController);
   });
 
+  afterEach(() => ctrl.verify());
+
   function create() {
     const f = TestBed.createComponent(AddFeedDialogComponent);
+    f.detectChanges();
+    // ngOnInit loads the full tag list to populate the picker.
+    ctrl.expectOne('https://api.test/api/tags').flush({
+      tags: [
+        { id: 1, name: 'Tech', color: null, icon: null, position: 0 },
+        { id: 2, name: 'News', color: null, icon: null, position: 1 },
+      ],
+    });
     f.detectChanges();
     return f;
   }
@@ -37,6 +47,46 @@ describe('AddFeedDialogComponent', () => {
       .expectOne('https://api.test/api/subscriptions')
       .flush({ subscription: { id: 9 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 9 });
+  });
+
+  it('renders the tag picker and sends the checked tag ids on submit', () => {
+    const f = create();
+    const pills = (f.nativeElement as HTMLElement).querySelectorAll('button.tag-pill');
+    expect(pills.length).toBe(2);
+
+    f.componentInstance.toggle(2);
+    f.componentInstance.form.setValue({ url: 'https://example.com/feed' });
+    f.componentInstance.submit();
+
+    const req = ctrl.expectOne('https://api.test/api/subscriptions');
+    expect(req.request.body).toEqual({ url: 'https://example.com/feed', tagIds: [2] });
+    req.flush({ subscription: { id: 9 } }, { status: 201, statusText: 'Created' });
+    expect(close).toHaveBeenCalledWith({ id: 9 });
+  });
+
+  it('carries the selected tags through to a picked candidate', () => {
+    const f = create();
+    f.componentInstance.toggle(1);
+    f.componentInstance.form.setValue({ url: 'https://example.com' });
+    f.componentInstance.submit();
+    // The first POST resolves to candidates, not a subscription, so no tags are
+    // applied yet — they must ride along on the follow-up pick.
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss' }] });
+    ctrl
+      .expectOne((r) => r.url.endsWith('/api/feeds/preview'))
+      .flush({
+        feed: { title: 'RSS', itemCount: 1, content: 'full', hasImages: false, items: [] },
+      });
+    f.detectChanges();
+
+    const card = (f.nativeElement as HTMLElement).querySelector('.card')!;
+    (card.querySelector('.subscribe') as HTMLButtonElement).click();
+    const subReq = ctrl.expectOne('https://api.test/api/subscriptions');
+    expect(subReq.request.body).toEqual({ url: 'https://f/rss', tagIds: [1] });
+    subReq.flush({ subscription: { id: 4 } }, { status: 201, statusText: 'Created' });
+    expect(close).toHaveBeenCalledWith({ id: 4 });
   });
 
   it('lists candidates as cards with previews and subscribes via the Subscribe button', () => {
