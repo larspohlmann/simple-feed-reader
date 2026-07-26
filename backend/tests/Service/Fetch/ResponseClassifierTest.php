@@ -11,6 +11,7 @@ use App\Service\Fetch\FetchAttempt;
 use App\Service\Fetch\FetchTicket;
 use App\Service\Fetch\HeaderDecision;
 use App\Service\Fetch\ResponseClassifier;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -65,6 +66,28 @@ final class ResponseClassifierTest extends TestCase
 
         self::assertSame(HeaderDecision::Redirect, $verdict->decision);
         self::assertSame('https://example.com/relative', $verdict->redirectUrl);
+        self::assertFalse($verdict->permanent);
+    }
+
+    /** @return iterable<string, array{int}> */
+    public static function otherTemporaryRedirectCodes(): iterable
+    {
+        yield '303' => [303];
+        yield '307' => [307];
+    }
+
+    #[DataProvider('otherTemporaryRedirectCodes')]
+    public function testOtherRedirectCodesAreNotPermanent(int $statusCode): void
+    {
+        $verdict = (new ResponseClassifier())->fromHeaders(
+            $this->respond(new MockResponse('', [
+                'http_code' => $statusCode,
+                'response_headers' => ['location' => 'https://example.com/moved'],
+            ])),
+            $this->attempt(),
+        );
+
+        self::assertSame(HeaderDecision::Redirect, $verdict->decision);
         self::assertFalse($verdict->permanent);
     }
 
