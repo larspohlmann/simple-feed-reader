@@ -145,14 +145,12 @@ Two consequences to respect:
 - If phase 1 returns `Aborted` the EntityManager is closed, so phase 2 is
   skipped entirely, exactly as `countDue` and pruning already are.
 
-`FaviconResolver` today interleaves two jobs: fetching the homepage
-(`fromHomepage`) and picking the best icon out of its markup (`pickIcon`,
-`largestSize`, `httpsOrigin`). Only the fetching half needs to become
-concurrent, so the picking half is extracted into its own collaborator that
-takes markup and a base URL and returns an icon URL. `FaviconResolver` keeps its
-current single-URL signature for its other callers and delegates to that
-collaborator; the batch path reuses it directly against bodies the engine
-returns. One copy of the icon-selection rules.
+`RefreshRunner` is `FaviconResolver`'s only production caller, so there is no
+second path to keep in sync and no reason to extract an icon-picking
+collaborator: `resolve(?string $baseUrl)` simply becomes a batch method that
+takes the base URLs of the feeds needing an icon and returns one icon URL per
+feed. The icon-selection rules (`pickIcon`, `largestSize`, `httpsOrigin`) stay
+exactly where they are, with one copy, as they are today.
 
 `FaviconResolver` keeps its never-throws contract — a favicon is a nicety, and a
 failure must not disturb the refresh that asked for it. A feed whose favicon
@@ -209,8 +207,8 @@ depend on real wiring get functional coverage.
 - Favicon phase: a feed missing a favicon gets one from the second batch; a feed
   that already has one is never fetched for; a resolution failure leaves the feed
   without a favicon and does not fail the refresh; an aborted phase 1 skips
-  phase 2. The extracted icon-picking collaborator keeps the existing
-  `FaviconResolver` coverage green.
+  phase 2. `FaviconResolverTest` moves to the batch signature, keeping its
+  existing icon-selection cases intact.
 - Existing `HttpFeedFetcherTest` (14 cases) must pass unchanged — it is the
   regression net proving the delegating serial path kept its behaviour.
 - Both suite legs before the PR: `php bin/phpunit` (SQLite) and
