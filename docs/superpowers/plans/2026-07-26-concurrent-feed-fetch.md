@@ -1195,7 +1195,17 @@ final class ConcurrentFeedFetcherTest extends TestCase
 Run: `php bin/phpunit tests/Service/Fetch/ConcurrentFeedFetcherTest.php`
 Expected: FAIL — `Class "App\Service\Fetch\ConcurrentFeedFetcher" not found`.
 
-- [ ] **Step 3: Write the interface**
+- [ ] **Step 3: Make the redirect limit reachable**
+
+`ConcurrentFeedFetcher` has to name the limit in its error message, and today's `HttpFeedFetcher` keeps that message and its loop bound on one constant. Task 2 made `FetchAttempt::MAX_REDIRECTS` private, which would force a bare `5` literal here — three unlinked places for one number. Change its visibility:
+
+```php
+    public const int MAX_REDIRECTS = 5;
+```
+
+Enforcement stays inside `canFollowRedirect()`; the constant is public only so the message can quote it.
+
+- [ ] **Step 4: Write the interface**
 
 `backend/src/Service/Fetch/BatchFeedFetcherInterface.php`:
 
@@ -1224,7 +1234,7 @@ interface BatchFeedFetcherInterface
 }
 ```
 
-- [ ] **Step 4: Write the engine**
+- [ ] **Step 5: Write the engine**
 
 `backend/src/Service/Fetch/ConcurrentFeedFetcher.php`:
 
@@ -1397,9 +1407,11 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
         }
 
         if (!$attempt->canFollowRedirect()) {
-            throw new FeedUnreachableException(
-                sprintf('%s: more than 5 redirects', $attempt->ticket->url),
-            );
+            throw new FeedUnreachableException(sprintf(
+                '%s: more than %d redirects',
+                $attempt->ticket->url,
+                FetchAttempt::MAX_REDIRECTS,
+            ));
         }
 
         \assert(null !== $verdict->redirectUrl);
@@ -1492,7 +1504,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
 }
 ```
 
-- [ ] **Step 5: Run the tests**
+- [ ] **Step 6: Run the tests**
 
 Run: `php bin/phpunit tests/Service/Fetch/ConcurrentFeedFetcherTest.php`
 Expected: PASS, 11 tests.
@@ -1501,16 +1513,16 @@ Expected: PASS, 11 tests.
 
 **If `testSendsConditionalGetHeaders` fails on the option key:** dump `$options` and read the actual normalisation. `HttpFeedFetcherTest::testSendsConditionalGetHeaders` already asserts this successfully — copy its exact accessor rather than inventing one.
 
-- [ ] **Step 6: Run the gates**
+- [ ] **Step 7: Run the gates**
 
 Run: `composer check && composer md`
 Expected: no findings. `ConcurrentFeedFetcher` is the class most at risk of tripping PHPMD length/complexity — if it does, extract, do not suppress.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add backend/src/Service/Fetch/BatchFeedFetcherInterface.php backend/src/Service/Fetch/ConcurrentFeedFetcher.php backend/tests/Service/Fetch/ConcurrentFeedFetcherTest.php
-git commit -m "feat(fetch): add ConcurrentFeedFetcher over HttpClient::stream (#116)"
+git add backend/src/Service/Fetch/FetchAttempt.php backend/src/Service/Fetch/BatchFeedFetcherInterface.php \
+  backend/src/Service/Fetch/ConcurrentFeedFetcher.php backend/tests/Service/Fetch/ConcurrentFeedFetcherTest.php
 ```
 
 ---
