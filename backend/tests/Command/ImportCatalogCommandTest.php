@@ -38,4 +38,16 @@ final class ImportCatalogCommandTest extends DbTestCase
 
         self::assertSame(1, $tester->getStatusCode());
     }
+
+    public function testAnUnknownModeIsAnErrorAndImportsNothing(): void
+    {
+        $tester = $this->tester();
+        $tester->execute(['--mode' => 'nonsense']);
+
+        self::assertSame(1, $tester->getStatusCode());
+
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        self::assertCount(0, $em->getRepository(CatalogFeed::class)->findAll());
+    }
 }

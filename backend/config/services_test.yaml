@@ -184,11 +184,12 @@ services:
 
     # CatalogImporterTest parses documents and runs imports through the
     # container rather than constructing these by hand, so it exercises the
-    # real autowired graph (repositories, entity manager). Neither service has
-    # another caller yet — the import endpoint and console command land in a
-    # later task — so without this entry the compiler removes them as unused
-    # and the test container cannot fetch either. Same `autowire` caveat as
-    # above.
+    # real autowired graph (repositories, entity manager). Both services now
+    # have production callers (AdminCatalogImportController, ImportCatalogCommand)
+    # and would survive compilation on their own — `public: true` here is only
+    # so the test container's `self::getContainer()->get(...)` can fetch them,
+    # which the container refuses on a private service. Same `autowire` caveat
+    # as above.
     App\Service\Catalog\CatalogDocument:
         autowire: true
         public: true
