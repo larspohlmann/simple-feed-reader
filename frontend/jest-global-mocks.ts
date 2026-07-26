@@ -33,3 +33,19 @@ class IntersectionObserverStub {
 }
 (globalThis as unknown as { IntersectionObserver: unknown }).IntersectionObserver =
   IntersectionObserverStub;
+
+// jsdom's Blob/File has no text(); the catalog importer reads the chosen file
+// with it. Resolve synchronously from the buffer jsdom keeps internally so the
+// promise settles as a microtask — a real FileReader load is an untracked
+// macrotask that ComponentFixture.whenStable() would race past.
+if (typeof Blob !== 'undefined' && typeof Blob.prototype.text !== 'function') {
+  Blob.prototype.text = function readBlobText(this: Blob): Promise<string> {
+    const implSymbol = Object.getOwnPropertySymbols(this).find(
+      (symbol) => symbol.toString() === 'Symbol(impl)',
+    );
+    const impl = implSymbol
+      ? (this as unknown as Record<symbol, { _buffer?: Buffer }>)[implSymbol]
+      : undefined;
+    return Promise.resolve(impl?._buffer?.toString('utf8') ?? '');
+  };
+}

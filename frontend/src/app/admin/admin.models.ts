@@ -13,3 +13,55 @@ export interface AdminUserDto {
 }
 
 export type AdminAction = 'approve' | 'reject' | 'suspend';
+
+export type ImportMode = 'merge' | 'replace';
+
+export interface AdminCatalogCategoryDto {
+  id: number;
+  key: string;
+  name: string;
+  icon: string;
+  color: string;
+  position: number;
+  enabled: boolean;
+  /** Locked rows survive an import untouched — neither overwritten nor deleted. */
+  locked: boolean;
+}
+
+export interface BundledCatalogInfo {
+  available: boolean;
+  categories: number;
+  feeds: number;
+}
+
+export interface CatalogWarmReport {
+  warmed: number;
+  failed: number;
+  remaining: number;
+}
+
+export interface CatalogImportCounts {
+  categoriesCreated: number;
+  categoriesUpdated: number;
+  categoriesRemoved: number;
+  feedsCreated: number;
+  feedsUpdated: number;
+  feedsRemoved: number;
+  lockedSkipped: number;
+}
+
+export interface AdminCatalogFeedDto {
+  id: number;
+  categoryId: number;
+  title: string;
+  url: string;
+  siteUrl: string | null;
+  description: string | null;
+  sourceFormat: string;
+  position: number;
+  enabled: boolean;
+  /** Locked rows survive an import untouched — neither overwritten nor deleted. */
+  locked: boolean;
+  faviconFetchedAt: string | null;
+  faviconFailedAt: string | null;
+}
