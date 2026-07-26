@@ -231,34 +231,56 @@ degraded, it is quietly failing at the things it exists for.
 
 ## Deploying
 
-**`develop` is continuously deployed.** Every push or merge to `develop` runs CI, and if CI
-passes the deploy workflow builds both halves on the runner, uploads the release, warms the
-cache, migrates, and flips `current`. Migrations run **before** the flip, so a failed
-migration leaves the previous release serving traffic. Merge to `develop` and it ships.
+**Pushing a `develop` pre-release tag deploys.** Merging to `develop` does *not*: it runs CI
+and stops there. Shipping is a separate, deliberate act, so several merges can go out as one
+release and the thing that is live has a name rather than a commit hash.
 
-This is live: the first deploy triggered by a merge to `develop` rather than by hand was
-`20260725145104-e48292e` on 2026-07-25. Nothing needs to reach `main` to ship.
+Tags are SemVer prereleases — `vX.Y.Z-dev.N`:
 
-**But GitHub reads the workflow file itself from the default branch (`main`).** That applies
-to both triggers this workflow uses — `workflow_run` *and* `workflow_dispatch` — regardless
-of which branch is being deployed. Two consequences, and the second one bites:
+```bash
+git checkout develop && git pull
+git tag v0.5.0-dev.1
+git push origin v0.5.0-dev.1
+```
 
-- Before the workflow file existed on `main` it did not appear in the Actions tab at all,
-  and `gh workflow run "Deploy (Strato)"` failed with *could not find any workflows named…*.
-- **Editing this workflow on `develop` changes nothing.** Merging the edit to `develop`
-  deploys the app, but the run that deploys it is still `main`'s copy of the workflow. A
-  deploy-pipeline change only takes effect once it is promoted to `main` — until then you
-  are testing a file nobody is executing.
+A plain `v0.5.0` is deliberately ignored by the deploy filter. Main-release tags are a
+separate lane that does not exist yet.
+
+On a matching tag the workflow builds both halves on the runner, uploads the release, warms
+the cache, migrates, and flips `current`. Migrations run **before** the flip, so a failed
+migration leaves the previous release serving traffic.
+
+**Two guards run before anything touches the host**, because a tag proves nothing on its own
+— it can name any commit in the repository, and CI does not run on tags:
+
+- **The tagged commit must be on `develop`.** Checked with `git merge-base --is-ancestor`.
+  This is what stops a mistyped `git tag v0.5.0-dev.1 <feature-sha>` from shipping unreviewed
+  code with the deploy secrets.
+- **CI must be green for that exact SHA.** The commit was already tested when it landed on
+  `develop`, so the deploy looks the verdict up through the API rather than re-running the
+  suite. *No CI run found is a failure, not a pass* — a commit that never reached `develop`
+  by the normal route has no run at all, and must not slip through on an empty result.
+
+Both guards are skipped for `workflow_dispatch`, which is a human deliberately choosing a
+ref — that is the escape hatch for deploying a branch on purpose.
+
+**A `push` event on a tag runs the workflow file as it exists at that tag.** So an edit to
+the deploy pipeline takes effect on the first tag pushed after it merges to `develop`;
+nothing needs to reach `main` first. (That was not true while this hung off `workflow_run`:
+GitHub read `main`'s copy no matter which branch the deploy was for, so a pipeline change
+had to be promoted to `main` before it did anything. That trap is gone.)
 
 ### Deploying by hand
 
 The fallback when the runner is unavailable, or when you want to ship something that is not
-a `develop` merge. It is the same sequence the workflow performs, with the same release-name
-convention (a sortable UTC timestamp plus the short SHA being deployed, e.g.
-`20260725143012-a1b2c3d`):
+a tagged `develop` commit. It is the same sequence the workflow performs, with the same
+release-name convention: a sortable UTC timestamp — which is what keeps `ls releases/` in
+deploy order — followed by the tag being deployed, e.g. `20260726120000-v0.5.0-dev.1`. With
+no tag to hand, use the short SHA instead (`20260725143012-a1b2c3d`), exactly as a
+`workflow_dispatch` run does:
 
 ```bash
-name="$(date -u +%Y%m%d%H%M%S)-$(git rev-parse --short HEAD)"
+name="$(date -u +%Y%m%d%H%M%S)-$(git describe --exact-match --tags 2>/dev/null || git rev-parse --short HEAD)"
 
 ./deploy/strato/build-release.sh /tmp/sfr-release
 cp deploy/strato/activate-release.sh /tmp/sfr-release/activate-release.sh
