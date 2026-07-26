@@ -11,7 +11,7 @@ namespace App\Service\Fetch;
  */
 final readonly class FetchAttempt
 {
-    private const int MAX_REDIRECTS = 5;
+    public const int MAX_REDIRECTS = 5;
 
     /**
      * Private so a fresh attempt can only be built by `start()`, which seeds the
