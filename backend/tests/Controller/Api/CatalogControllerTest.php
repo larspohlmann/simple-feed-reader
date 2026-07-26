@@ -8,6 +8,7 @@ use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Entity\Feed;
 use App\Entity\Subscription;
+use App\Entity\User;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -73,6 +74,11 @@ final class CatalogControllerTest extends WebTestCase
             $em->persist($row);
         }
         $em->flush();
+        // Same identity-map-hydration reason as CatalogCategoryRepositoryTest:
+        // querying $technology back in this same EntityManager without a clear()
+        // would return the managed object with its original (pre-join) empty
+        // feeds collection instead of hydrating it from the query below.
+        $em->clear();
 
         $client->request('GET', '/api/catalog', server: $headers);
 
@@ -107,7 +113,7 @@ final class CatalogControllerTest extends WebTestCase
         $category = new CatalogCategory('technology', 'Technology', 'memory', '#3b82f6');
         $catalogFeed = new CatalogFeed($category, 'The Verge', 'https://www.theverge.com/rss/index.xml');
 
-        $user = $em->getRepository(\App\Entity\User::class)->findOneBy(['email' => 'subscribed@example.com']);
+        $user = $em->getRepository(User::class)->findOneBy(['email' => 'subscribed@example.com']);
         self::assertNotNull($user);
 
         $feed = new Feed('https://www.theverge.com/rss/index.xml');
@@ -117,6 +123,11 @@ final class CatalogControllerTest extends WebTestCase
             $em->persist($row);
         }
         $em->flush();
+        // Same identity-map-hydration reason as CatalogCategoryRepositoryTest:
+        // querying $category back in this same EntityManager without a clear()
+        // would return the managed object with its original (pre-join) empty
+        // feeds collection instead of hydrating it from the query below.
+        $em->clear();
 
         $client->request('GET', '/api/catalog', server: $headers);
 
