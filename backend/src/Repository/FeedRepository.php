@@ -68,6 +68,31 @@ class FeedRepository extends ServiceEntityRepository
             ->getSingleScalarResult();
     }
 
+    /**
+     * The URLs of the feeds this user is subscribed to, as a lookup set. The
+     * catalog marks its entries `subscribed` by URL rather than by feed id
+     * because a catalog row knows a URL, not which shared Feed row it became.
+     *
+     * @return array<string, true>
+     */
+    public function subscribedUrlSetForUser(int $userId): array
+    {
+        /** @var list<array{url: string}> $rows */
+        $rows = $this->createQueryBuilder('f')
+            ->select('f.url AS url')
+            ->join(Subscription::class, 's', 'ON', 's.feed = f AND s.user = :userId')
+            ->setParameter('userId', $userId)
+            ->getQuery()
+            ->getArrayResult();
+
+        $set = [];
+        foreach ($rows as $row) {
+            $set[$row['url']] = true;
+        }
+
+        return $set;
+    }
+
     private function dueQueryBuilder(
         \DateTimeImmutable $now,
         ?int $userId,
