@@ -1,7 +1,19 @@
-<div class="discover">
+<div class="scrim" aria-hidden="true"></div>
+
+<div class="panel" role="dialog" aria-modal="true" [attr.aria-label]="'discover.title' | transloco">
   <header class="top">
-    <h1>{{ 'discover.title' | transloco }}</h1>
-    <p>{{ 'discover.subtitle' | transloco }}</p>
+    <div class="head-text">
+      <h1>{{ 'discover.title' | transloco }}</h1>
+      <p>{{ 'discover.subtitle' | transloco }}</p>
+    </div>
+    <button
+      type="button"
+      class="close"
+      [attr.aria-label]="'discover.close' | transloco"
+      (click)="onSkip()"
+    >
+      <app-icon name="close" [size]="20" />
+    </button>
   </header>
 
   <app-category-chips
@@ -30,8 +42,8 @@
 
       @for (category of categories(); track category.id) {
         <!-- role="group", not the implicit "region" a labelled <section> gets:
-             the design calls each category a labelled GROUP of checkboxes, and
-             the e2e locates them with getByRole('group'). -->
+             the design calls each category a labelled GROUP of feeds, and the
+             e2e locates them with getByRole('group'). -->
         <section
           #section
           role="group"
@@ -39,8 +51,12 @@
           [attr.aria-labelledby]="'cat-' + category.id"
         >
           <div class="cat-head">
-            <span class="cat-ico" [style.background]="category.color">
-              <app-icon [name]="category.icon" [size]="14" />
+            <span class="cat-ico">
+              <app-icon
+                [name]="category.icon"
+                [size]="18"
+                [style.color]="category.color || 'var(--text-muted)'"
+              />
             </span>
             <h2 [id]="'cat-' + category.id">{{ category.name }}</h2>
             <span class="cat-count">{{ category.feeds.length }}</span>
@@ -57,16 +73,15 @@
           <ul class="grid">
             @for (feed of category.feeds; track feed.id) {
               <li data-testid="catalog-feed">
-                <label
+                <button
+                  type="button"
+                  class="card"
                   [class.on]="selection.isSelected(feed.id)"
                   [class.locked]="selection.isLocked(feed.id)"
+                  [attr.aria-pressed]="selection.isSelected(feed.id)"
+                  [disabled]="selection.isLocked(feed.id)"
+                  (click)="selection.toggle(feed.id)"
                 >
-                  <input
-                    type="checkbox"
-                    [checked]="selection.isSelected(feed.id)"
-                    [disabled]="selection.isLocked(feed.id)"
-                    (change)="selection.toggle(feed.id)"
-                  />
                   <img
                     class="fav"
                     [src]="feed.faviconUrl"
@@ -83,7 +98,12 @@
                       <span class="desc">{{ feed.description }}</span>
                     }
                   </span>
-                </label>
+                  <span class="mark" aria-hidden="true">
+                    @if (selection.isSelected(feed.id)) {
+                      <app-icon name="check" [size]="16" />
+                    }
+                  </span>
+                </button>
               </li>
             }
           </ul>

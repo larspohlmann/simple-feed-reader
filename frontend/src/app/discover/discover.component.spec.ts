@@ -66,19 +66,19 @@ describe('DiscoverComponent', () => {
     expect(cards).toHaveLength(2);
   });
 
-  it('renders an already-subscribed feed as checked and disabled', () => {
-    const boxes: HTMLInputElement[] = Array.from(
-      fixture.nativeElement.querySelectorAll('[data-testid="catalog-feed"] input'),
+  it('renders an already-subscribed feed as pressed and disabled', () => {
+    const cards: HTMLButtonElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('[data-testid="catalog-feed"] button'),
     );
-    expect(boxes[1].checked).toBe(true);
-    expect(boxes[1].disabled).toBe(true);
+    expect(cards[1].getAttribute('aria-pressed')).toBe('true');
+    expect(cards[1].disabled).toBe(true);
   });
 
   it('submits only the newly picked ids', () => {
-    const boxes: HTMLInputElement[] = Array.from(
-      fixture.nativeElement.querySelectorAll('[data-testid="catalog-feed"] input'),
+    const cards: HTMLButtonElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('[data-testid="catalog-feed"] button'),
     );
-    boxes[0].click();
+    cards[0].click();
     fixture.detectChanges();
 
     fixture.nativeElement.querySelector('[data-testid="subscribe"]').click();
@@ -97,10 +97,10 @@ describe('DiscoverComponent', () => {
     const router = TestBed.inject(Router);
     const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
 
-    const boxes: HTMLInputElement[] = Array.from(
-      fixture.nativeElement.querySelectorAll('[data-testid="catalog-feed"] input'),
+    const cards: HTMLButtonElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('[data-testid="catalog-feed"] button'),
     );
-    boxes[0].click();
+    cards[0].click();
     fixture.detectChanges();
     fixture.nativeElement.querySelector('[data-testid="subscribe"]').click();
 

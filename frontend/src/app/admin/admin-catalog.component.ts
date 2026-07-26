@@ -54,6 +54,42 @@ export class AdminCatalogComponent implements OnInit {
 
   readonly hasFeeds = computed(() => this.feeds().length > 0);
 
+  /** Curated Material Symbols offered as autocomplete for the icon field, so an
+   *  admin picks a real glyph name from a list instead of guessing at one. Any
+   *  valid symbol name still works — this is a suggestion list, not a whitelist. */
+  readonly iconChoices: readonly string[] = [
+    'memory',
+    'science',
+    'public',
+    'newspaper',
+    'code',
+    'terminal',
+    'rocket_launch',
+    'sports_esports',
+    'movie',
+    'music_note',
+    'restaurant',
+    'palette',
+    'brush',
+    'business_center',
+    'trending_up',
+    'savings',
+    'health_and_safety',
+    'cardiology',
+    'school',
+    'auto_stories',
+    'travel_explore',
+    'flight',
+    'sports_soccer',
+    'pets',
+    'eco',
+    'local_cafe',
+    'photo_camera',
+    'forum',
+    'gavel',
+    'home',
+  ];
+
   private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
 
   ngOnInit(): void {

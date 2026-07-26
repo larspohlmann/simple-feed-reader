@@ -4,6 +4,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  HostListener,
   OnDestroy,
   computed,
   effect,
@@ -134,6 +135,13 @@ export class DiscoverComponent implements OnDestroy {
   onSkip(): void {
     this.skip.remember();
     void this.router.navigate(['/']);
+  }
+
+  /** Escape closes the picker the same way the X and "Skip for now" do — the
+   *  modal convention, and the reader's own dialogs behave this way too. */
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.onSkip();
   }
 
   /**

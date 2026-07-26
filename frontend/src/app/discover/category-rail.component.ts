@@ -1,6 +1,7 @@
 // src/app/discover/category-rail.component.ts
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { IconComponent } from '../shared/icon/icon.component';
 import { CatalogCategoryDto } from './catalog.models';
 
 /**
@@ -8,12 +9,13 @@ import { CatalogCategoryDto } from './catalog.models';
  * many feeds have been picked from each one so "what have I chosen so far" is
  * answerable without scrolling back.
  *
- * Navigation only — clicking a row never selects a feed.
+ * Navigation only — clicking a row never selects a feed. The leading tinted
+ * glyph mirrors the reader sidebar's tag treatment so the two read as one app.
  */
 @Component({
   selector: 'app-category-rail',
   standalone: true,
-  imports: [TranslocoPipe],
+  imports: [TranslocoPipe, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <nav class="rail" [attr.aria-label]="'discover.categories' | transloco">
@@ -26,7 +28,13 @@ import { CatalogCategoryDto } from './catalog.models';
               [attr.aria-current]="category.id === activeId() ? 'true' : null"
               (click)="jump.emit(category.id)"
             >
-              <span class="dot" [style.background]="category.color"></span>
+              <span class="lead">
+                <app-icon
+                  [name]="category.icon"
+                  [size]="18"
+                  [style.color]="category.color || 'var(--text-muted)'"
+                />
+              </span>
               <span class="name">{{ category.name }}</span>
               <span class="count" [class.picked]="picked()[category.id] > 0">
                 {{ picked()[category.id] || category.feeds.length }}
@@ -38,16 +46,28 @@ import { CatalogCategoryDto } from './catalog.models';
     </nav>
   `,
   styles: `
-    .rail {
+    /* The host is the flex child of the scrolling body, so the stickiness must
+       live here — a sticky <nav> inside a content-height host has no room to
+       stick and scrolls away with it. Cap the height to the body and let the
+       rail scroll internally when the categories outrun it. */
+    :host {
       position: sticky;
       top: 0;
-      align-self: start;
-      width: 200px;
-      padding: var(--space-2) 0;
+      display: block;
+      align-self: flex-start;
+      width: 220px;
+      max-height: 100%;
+      overflow-y: auto;
       border-right: 1px solid var(--border);
       background: var(--surface-1);
     }
+    .rail {
+      padding: var(--space-3) var(--space-2);
+    }
     ul {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
       margin: 0;
       padding: 0;
       list-style: none;
@@ -57,25 +77,30 @@ import { CatalogCategoryDto } from './catalog.models';
       gap: var(--space-2);
       align-items: center;
       width: 100%;
-      padding: var(--space-1) var(--space-3);
+      padding: var(--space-2) var(--space-3);
       border: 0;
+      border-radius: var(--radius);
       background: none;
       color: var(--text-secondary);
       font-size: var(--fs-sm);
       text-align: left;
       cursor: pointer;
     }
+    button:hover {
+      background: var(--surface-2);
+      color: var(--text-primary);
+    }
     button.active {
-      box-shadow: inset 2px 0 0 var(--accent);
       background: var(--accent-soft);
       color: var(--text-primary);
       font-weight: 600;
     }
-    .dot {
+    .lead {
+      display: inline-flex;
       flex: none;
-      width: 8px;
-      height: 8px;
-      border-radius: 3px;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
     }
     .name {
       overflow: hidden;
@@ -92,7 +117,7 @@ import { CatalogCategoryDto } from './catalog.models';
       font-weight: 700;
     }
     @media (max-width: 800px) {
-      .rail {
+      :host {
         display: none;
       }
     }

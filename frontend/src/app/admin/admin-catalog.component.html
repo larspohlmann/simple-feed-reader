@@ -108,6 +108,14 @@
 
   <p class="hint">{{ 'admin.lockedHint' | transloco }}</p>
 
+  <!-- Autocomplete for every icon field: the admin picks a real glyph name from
+       the list instead of typing one blind. Any Material Symbol name still works. -->
+  <datalist id="catalog-icon-names">
+    @for (choice of iconChoices; track choice) {
+      <option [value]="choice"></option>
+    }
+  </datalist>
+
   <ul class="categories">
     @for (category of categories(); track category.id; let ci = $index) {
       <li class="category" data-testid="admin-category">
@@ -117,7 +125,19 @@
             <app-icon class="lock" name="lock" [size]="16" />
           }
           <input class="grow" [(ngModel)]="category.name" [attr.aria-label]="'name'" />
-          <input class="icon" [(ngModel)]="category.icon" [attr.aria-label]="'icon'" />
+          <span class="icon-field">
+            <span class="preview" [style.color]="category.color">
+              @if (category.icon) {
+                <app-icon [name]="category.icon" [size]="18" />
+              }
+            </span>
+            <input
+              class="icon"
+              list="catalog-icon-names"
+              [(ngModel)]="category.icon"
+              [attr.aria-label]="'icon'"
+            />
+          </span>
           <input class="color" type="color" [(ngModel)]="category.color" />
           <label class="check">
             <input type="checkbox" [(ngModel)]="category.enabled" />
@@ -213,7 +233,19 @@
     <li class="category add">
       <span class="swatch" [style.background]="newCategory().color"></span>
       <input class="grow" [(ngModel)]="newCategory().name" placeholder="name" />
-      <input class="icon" [(ngModel)]="newCategory().icon" placeholder="icon" />
+      <span class="icon-field">
+        <span class="preview" [style.color]="newCategory().color">
+          @if (newCategory().icon) {
+            <app-icon [name]="newCategory().icon" [size]="18" />
+          }
+        </span>
+        <input
+          class="icon"
+          list="catalog-icon-names"
+          [(ngModel)]="newCategory().icon"
+          placeholder="icon"
+        />
+      </span>
       <input class="color" type="color" [(ngModel)]="newCategory().color" />
       <button class="ok" (click)="addCategory()">{{ 'common.add' | transloco }}</button>
     </li>

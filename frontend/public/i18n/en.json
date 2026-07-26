@@ -277,6 +277,7 @@
     "emptyCatalog": "No suggestions have been set up yet. An administrator can import a catalog from the admin area.",
     "browseCatalog": "Browse suggested feeds",
     "adminEmptyWarning": "No feed catalog has been imported, so new users are not being offered any suggestions.",
-    "adminEmptyAction": "Import one"
+    "adminEmptyAction": "Import one",
+    "close": "Close"
   }
 }

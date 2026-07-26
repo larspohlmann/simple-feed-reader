@@ -153,6 +153,26 @@ h1 {
   min-width: 6rem;
 }
 
+.icon-field {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+// Renders the typed glyph, tinted with the category colour, so the field shows
+// what it means instead of a bare name.
+.preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-0);
+}
+
 .icon {
   width: 6rem;
 }
