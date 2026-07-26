@@ -7,11 +7,10 @@ namespace App\Tests\Service\Catalog;
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Repository\CatalogFeedRepository;
-use App\Service\Catalog\CatalogFaviconFetcher;
+use App\Service\Catalog\CatalogFaviconFetcherInterface;
 use App\Service\Catalog\CatalogFaviconWarmer;
-use App\Service\Catalog\Exception\FaviconUnavailableException;
 use App\Service\Catalog\FetchedFavicon;
-use App\Service\Fetch\FaviconResolver;
+use App\Service\Fetch\FaviconResolverInterface;
 use App\Tests\DbTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\Stub;
@@ -43,8 +42,10 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         return $clock;
     }
 
-    private function warmer(FaviconResolver $resolver, CatalogFaviconFetcher $fetcher): CatalogFaviconWarmer
-    {
+    private function warmer(
+        FaviconResolverInterface $resolver,
+        CatalogFaviconFetcherInterface $fetcher,
+    ): CatalogFaviconWarmer {
         return new CatalogFaviconWarmer($this->feeds(), $resolver, $fetcher, $this->em(), $this->clock());
     }
 
@@ -63,11 +64,11 @@ final class CatalogFaviconWarmerTest extends DbTestCase
     /**
      * @param array<int, string|null> $urlsByKey
      *
-     * @return FaviconResolver&Stub
+     * @return FaviconResolverInterface&Stub
      */
-    private function resolverReturning(array $urlsByKey): FaviconResolver
+    private function resolverReturning(array $urlsByKey): FaviconResolverInterface
     {
-        $resolver = $this->createStub(FaviconResolver::class);
+        $resolver = $this->createStub(FaviconResolverInterface::class);
         $resolver->method('resolveAll')->willReturnCallback(
             static function (array $bases) use ($urlsByKey): array {
                 $resolved = [];
@@ -87,7 +88,7 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         $feed = $this->persistFeed('Verge');
         $resolver = $this->resolverReturning([0 => 'https://example.com/favicon.ico']);
 
-        $fetcher = $this->createMock(CatalogFaviconFetcher::class);
+        $fetcher = $this->createMock(CatalogFaviconFetcherInterface::class);
         $fetcher->expects(self::once())
             ->method('download')
             ->with('https://example.com/favicon.ico')
@@ -110,7 +111,7 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         $feed = $this->persistFeed('Dead');
         $resolver = $this->resolverReturning([0 => null]);
 
-        $fetcher = $this->createMock(CatalogFaviconFetcher::class);
+        $fetcher = $this->createMock(CatalogFaviconFetcherInterface::class);
         $fetcher->expects(self::never())->method('download');
 
         $report = $this->warmer($resolver, $fetcher)->warm(120);
@@ -129,7 +130,7 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         $feed = $this->persistFeed('One');
         $resolver = $this->resolverReturning([0 => 'https://example.com/favicon.ico']);
 
-        $fetcher = $this->createStub(CatalogFaviconFetcher::class);
+        $fetcher = $this->createStub(CatalogFaviconFetcherInterface::class);
         $fetcher->method('download')
             ->willReturn(new FetchedFavicon('https://example.com/favicon.ico', 'ICOBYTES', 'image/x-icon'));
 
@@ -146,7 +147,7 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         $feed = $this->persistFeed('Two');
         $resolver = $this->resolverReturning([0 => null]);
 
-        $fetcher = $this->createMock(CatalogFaviconFetcher::class);
+        $fetcher = $this->createMock(CatalogFaviconFetcherInterface::class);
         $fetcher->expects(self::never())->method('download');
 
         $this->warmer($resolver, $fetcher)->refresh($feed);

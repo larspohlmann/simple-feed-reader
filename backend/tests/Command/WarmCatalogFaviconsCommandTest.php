@@ -7,9 +7,11 @@ namespace App\Tests\Command;
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Service\Catalog\CatalogFaviconFetcher;
+use App\Service\Catalog\CatalogFaviconFetcherInterface;
 use App\Service\Catalog\Exception\FaviconUnavailableException;
 use App\Service\Catalog\FetchedFavicon;
 use App\Service\Fetch\FaviconResolver;
+use App\Service\Fetch\FaviconResolverInterface;
 use App\Tests\DbTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
@@ -37,14 +39,18 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
         return $feed;
     }
 
-    private function tester(CatalogFaviconFetcher $fetcher): CommandTester
+    private function tester(CatalogFaviconFetcherInterface $fetcher): CommandTester
     {
+        // The warmer autowires the interfaces, which Symfony auto-aliases to the
+        // single concrete implementation. The test container honours set() on the
+        // concrete service ids, so override those — an interface mock satisfies
+        // the constructor's interface type.
         self::getContainer()->set(CatalogFaviconFetcher::class, $fetcher);
 
         // Stub resolution too, so the warmer's up-front resolveAll() never
         // touches the network: hand every site the same canned icon URL, which
         // the mocked fetcher above then "downloads".
-        $resolver = $this->createMock(FaviconResolver::class);
+        $resolver = $this->createMock(FaviconResolverInterface::class);
         $resolver->method('resolveAll')->willReturnCallback(
             static fn (array $bases): array => array_map(
                 static fn (): string => 'https://example.com/favicon.ico',
@@ -62,7 +68,7 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
     {
         $feed = $this->persistFeed('The Verge', 'https://www.theverge.com/rss/index.xml');
 
-        $fetcher = $this->createMock(CatalogFaviconFetcher::class);
+        $fetcher = $this->createMock(CatalogFaviconFetcherInterface::class);
         $fetcher->expects(self::once())
             ->method('download')
             ->willReturn(new FetchedFavicon('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
@@ -89,7 +95,7 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
     {
         $this->persistFeed('Dead Feed', 'https://dead.example.com/rss.xml');
 
-        $fetcher = $this->createMock(CatalogFaviconFetcher::class);
+        $fetcher = $this->createMock(CatalogFaviconFetcherInterface::class);
         $fetcher->method('download')->willThrowException(new FaviconUnavailableException('gone'));
 
         $tester = $this->tester($fetcher);
@@ -108,7 +114,7 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
         $this->persistFeed('One', 'https://one.example.com/rss.xml');
         $this->persistFeed('Two', 'https://two.example.com/rss.xml');
 
-        $fetcher = $this->createMock(CatalogFaviconFetcher::class);
+        $fetcher = $this->createMock(CatalogFaviconFetcherInterface::class);
         $fetcher->expects(self::once())
             ->method('download')
             ->willReturn(new FetchedFavicon('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
