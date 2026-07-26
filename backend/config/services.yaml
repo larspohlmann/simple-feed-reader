@@ -96,3 +96,7 @@ services:
         decorates: security.login_throttling.login.limiter
         arguments:
             $inner: '@.inner'
+
+    App\Service\Catalog\BundledCatalog:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
