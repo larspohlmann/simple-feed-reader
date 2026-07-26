@@ -46,16 +46,46 @@ final readonly class FaviconResolver
             $origins[$feedId] = $origin;
         }
 
+        return $icons + $this->fetchAllIcons($origins);
+    }
+
+    /**
+     * Fetches every homepage in one batch and resolves each to an icon URL.
+     * `BatchFeedFetcherInterface::fetchAll()` promises never to throw for an
+     * individual site's outcome, but that promise does not cover an invariant
+     * violation inside the fetcher itself (an exhausted queue pulled once too
+     * often, a misconfigured concurrency, ...) — a bug there is still not
+     * this best-effort component's business to propagate. Any site the batch
+     * never got a turn to answer for still falls back to the /favicon.ico
+     * convention rather than being silently dropped from the result.
+     *
+     * @param array<int, string> $origins
+     *
+     * @return array<int, string>
+     */
+    private function fetchAllIcons(array $origins): array
+    {
+        $icons = [];
         $tickets = array_map(static fn (string $origin): FetchTicket => new FetchTicket($origin), $origins);
-        foreach ($this->fetcher->fetchAll($tickets) as $feedId => $outcome) {
-            // fetchAll's key type is the wider int|string of any batch caller;
-            // this resolver's own contract is keyed by feed id, always an int.
-            $feedId = (int) $feedId;
-            $icons[$feedId] = mb_substr(
-                $this->iconFrom($outcome, $origins[$feedId]) ?? $origins[$feedId] . '/favicon.ico',
-                0,
-                self::URL_MAX,
-            );
+
+        try {
+            foreach ($this->fetcher->fetchAll($tickets) as $feedId => $outcome) {
+                // fetchAll's key type is the wider int|string of any batch
+                // caller; this resolver's own contract is keyed by feed id,
+                // always an int.
+                $feedId = (int) $feedId;
+                $icons[$feedId] = mb_substr(
+                    $this->iconFrom($outcome, $origins[$feedId]) ?? $origins[$feedId] . '/favicon.ico',
+                    0,
+                    self::URL_MAX,
+                );
+            }
+        } catch (\Throwable $e) {
+            $this->logger->error('Favicon batch fetch failed', ['exception' => $e]);
+        }
+
+        foreach ($origins as $feedId => $origin) {
+            $icons[$feedId] ??= mb_substr($origin . '/favicon.ico', 0, self::URL_MAX);
         }
 
         return $icons;

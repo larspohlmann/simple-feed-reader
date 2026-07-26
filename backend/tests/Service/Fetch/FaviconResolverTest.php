@@ -174,4 +174,27 @@ final class FaviconResolverTest extends TestCase
 
         self::assertNull($icons[7]);
     }
+
+    /**
+     * BatchFeedFetcherInterface::fetchAll() only promises never to throw for
+     * an individual site's outcome — an invariant violation inside the
+     * fetcher itself (StubFeedFetcher's own "you forgot to stub this URL"
+     * guard is a stand-in for one) is a different failure shape entirely,
+     * and it must not escape resolveAll(): every site still gets the
+     * conventional fallback rather than blowing up the whole batch.
+     */
+    public function testABatchLevelFailureDegradesEverySiteToTheFallback(): void
+    {
+        // No stubs configured at all, so the very first ticket makes the
+        // generator throw instead of yielding a FetchOutcome.
+        $fetcher = new StubFeedFetcher();
+
+        $icons = $this->resolver($fetcher)->resolveAll([
+            7 => 'https://one.example.com/feed',
+            9 => 'https://two.example.com/feed',
+        ]);
+
+        self::assertSame('https://one.example.com/favicon.ico', $icons[7]);
+        self::assertSame('https://two.example.com/favicon.ico', $icons[9]);
+    }
 }

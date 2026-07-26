@@ -377,6 +377,10 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(1, $report->skippedForBudget);
         self::assertSame(1, $report->remaining);
         self::assertCount(2, $this->fetcher->fetchedUrls);
+        // The third feed's fetch never started, so phase two must not chase
+        // its homepage either — doing so would spend wall-clock the budget
+        // just refused to grant.
+        self::assertNotContains('https://three.example.com', $this->faviconFetcher->fetchedUrls);
     }
 
     /**
