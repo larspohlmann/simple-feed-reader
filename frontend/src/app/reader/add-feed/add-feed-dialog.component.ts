@@ -1,13 +1,15 @@
 // src/app/reader/add-feed/add-feed-dialog.component.ts
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { IconComponent } from '../../shared/icon/icon.component';
 import { parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
+import { TagsStore } from '../tags.store';
 import { FeedCandidate, FeedPreview, ScrapeFailureReason, SubscriptionDto } from '../models';
 
 type PreviewState =
@@ -17,13 +19,14 @@ type PreviewState =
 
 @Component({
   selector: 'app-add-feed-dialog',
-  imports: [ReactiveFormsModule, A11yModule, TranslocoPipe],
+  imports: [ReactiveFormsModule, A11yModule, IconComponent, TranslocoPipe],
   templateUrl: './add-feed-dialog.component.html',
   styleUrl: './add-feed-dialog.component.scss',
 })
-export class AddFeedDialogComponent {
+export class AddFeedDialogComponent implements OnInit {
   readonly ref = inject<DialogRef<SubscriptionDto>>(DialogRef);
   private readonly api = inject(ReaderApi);
+  readonly tagsStore = inject(TagsStore);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly i18n = inject(TranslocoService);
 
@@ -34,12 +37,31 @@ export class AddFeedDialogComponent {
   readonly searched = signal(false);
   readonly previews = signal<Record<string, PreviewState>>({});
   readonly failureReason = signal<ScrapeFailureReason | null>(null);
+  /** Tags to apply to the new feed; they persist across a search so picking a
+   *  discovered candidate carries the same selection through. */
+  readonly checked = signal<Set<number>>(new Set());
 
   constructor() {
     // A scrape failure is about the URL as typed; editing it starts over.
     this.form.controls.url.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.failureReason.set(null));
+  }
+
+  ngOnInit(): void {
+    if (this.tagsStore.tags().length === 0) this.tagsStore.load();
+  }
+
+  toggle(id: number): void {
+    this.checked.update((set) => {
+      const next = new Set(set);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   }
 
   okPreview(state: PreviewState | undefined): FeedPreview | null {
@@ -111,7 +133,7 @@ export class AddFeedDialogComponent {
     // contradict the warning.
     this.candidates.set([]);
     this.previews.set({});
-    this.api.subscribe(url, format).subscribe({
+    this.api.subscribe(url, format, [...this.checked()]).subscribe({
       next: (res) => {
         this.loading.set(false);
         if ('subscription' in res) this.ref.close(res.subscription);

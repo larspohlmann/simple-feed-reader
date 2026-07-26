@@ -6,12 +6,14 @@ namespace App\Service\Subscription;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
+use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Exception\AlreadySubscribedException;
 use App\Exception\SubscriptionLimitReachedException;
 use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
+use App\Repository\SubscriptionTagRepository;
 use App\Service\Discovery\FeedDiscoveryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -24,12 +26,18 @@ final readonly class SubscriptionService
         private FeedDiscoveryInterface $discovery,
         private SubscriptionRepository $subscriptions,
         private FeedRepository $feeds,
+        private SubscriptionTagRepository $subscriptionTags,
         private EntityManagerInterface $em,
         private ClockInterface $clock,
     ) {
     }
 
-    public function subscribe(User $user, string $url, ?string $format = null): SubscribeOutcome
+    /**
+     * @param list<Tag> $tags the user-owned tags to attach to a newly created
+     *                        subscription; ignored when the outcome is a
+     *                        candidate list rather than a subscription
+     */
+    public function subscribe(User $user, string $url, ?string $format = null, array $tags = []): SubscribeOutcome
     {
         // A 'scraped' subscribe re-posts a candidate URL discovery itself just
         // produced: the page IS the feed. Running discovery again would
@@ -41,7 +49,7 @@ final readonly class SubscriptionService
         // this user's cap and converges via applyPermanentRedirect on refresh.
         if (SourceFormat::SCRAPED === $format) {
             return SubscribeOutcome::subscribed(
-                $this->createSubscription($user, $url, SourceFormat::SCRAPED),
+                $this->createSubscription($user, $url, SourceFormat::SCRAPED, $tags),
             );
         }
 
@@ -52,7 +60,7 @@ final readonly class SubscriptionService
         }
 
         return SubscribeOutcome::subscribed(
-            $this->createSubscription($user, (string) $result->feedUrl, SourceFormat::XML),
+            $this->createSubscription($user, (string) $result->feedUrl, SourceFormat::XML, $tags),
         );
     }
 
@@ -62,7 +70,10 @@ final readonly class SubscriptionService
      * the cap, the shared-feed lookup and the duplicate check can never
      * diverge between them.
      */
-    private function createSubscription(User $user, string $feedUrl, string $sourceFormat): Subscription
+    /**
+     * @param list<Tag> $tags
+     */
+    private function createSubscription(User $user, string $feedUrl, string $sourceFormat, array $tags): Subscription
     {
         $userId = (int) $user->getId();
         if ($this->subscriptions->countForUser($userId) >= self::MAX_SUBSCRIPTIONS_PER_USER) {
@@ -100,9 +111,24 @@ final readonly class SubscriptionService
 
         $subscription = new Subscription($user, $feed, $this->clock->now());
         $subscription->setPosition($this->subscriptions->nextPositionForUser($userId));
+        $this->attachTags($subscription, $tags);
         $this->em->persist($subscription);
         $this->em->flush();
 
         return $subscription;
+    }
+
+    /**
+     * Attach each tag at the end of its own list (one past the tag's current
+     * max), so a feed added to a tag never floats above feeds already in it.
+     * The join rows cascade-persist with the subscription.
+     *
+     * @param list<Tag> $tags
+     */
+    private function attachTags(Subscription $subscription, array $tags): void
+    {
+        foreach ($tags as $tag) {
+            $subscription->addTag($tag, $this->subscriptionTags->nextPositionForTag($tag));
+        }
     }
 }

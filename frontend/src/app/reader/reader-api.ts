@@ -33,11 +33,13 @@ export class ReaderApi {
     return this.http.get<SubscriptionsResponse>(`${this.base}/api/subscriptions`);
   }
 
-  subscribe(url: string, format?: string): Observable<SubscribeResult> {
-    return this.http.post<SubscribeResult>(
-      `${this.base}/api/subscriptions`,
-      format ? { url, format } : { url },
-    );
+  subscribe(url: string, format?: string, tagIds?: number[]): Observable<SubscribeResult> {
+    const body: { url: string; format?: string; tagIds?: number[] } = { url };
+    if (format) body.format = format;
+    // Omit an empty selection so the body stays byte-compatible with clients
+    // (and tests) that never send tags.
+    if (tagIds && tagIds.length > 0) body.tagIds = tagIds;
+    return this.http.post<SubscribeResult>(`${this.base}/api/subscriptions`, body);
   }
 
   /** A single entry by id — lets a deep link open an entry not in the loaded page. */

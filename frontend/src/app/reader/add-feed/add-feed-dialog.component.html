@@ -18,6 +18,38 @@
     @if (error()) {
       <p class="error" role="alert">{{ error() }}</p>
     }
+    @if (tagsStore.tags().length) {
+      <p class="lbl">{{ 'dialog.addFeed.tags' | transloco }}</p>
+      <div class="tags">
+        @for (t of tagsStore.tags(); track t.id) {
+          <button
+            type="button"
+            class="tag-pill"
+            [class.on]="checked().has(t.id)"
+            [attr.aria-pressed]="checked().has(t.id)"
+            (click)="toggle(t.id)"
+          >
+            @if (t.icon) {
+              <app-icon
+                [name]="t.icon"
+                [size]="14"
+                [style.color]="
+                  checked().has(t.id) ? 'var(--on-accent)' : t.color || 'var(--text-muted)'
+                "
+              />
+            } @else {
+              <span
+                class="dot"
+                [style.background]="
+                  checked().has(t.id) ? 'var(--on-accent)' : t.color || 'var(--text-muted)'
+                "
+              ></span>
+            }
+            {{ t.name }}
+          </button>
+        }
+      </div>
+    }
     @if (candidates().length) {
       <p class="hint">{{ 'dialog.addFeed.foundPick' | transloco }}</p>
       <ul class="candidates">
