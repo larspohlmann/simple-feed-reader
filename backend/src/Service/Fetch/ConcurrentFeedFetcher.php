@@ -214,9 +214,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
                 'max_duration' => self::TIMEOUT_SECONDS * 2,
                 'resolve' => [$guarded->host => $guarded->ip],
                 'on_progress' => static function (int $downloaded): void {
-                    if (null !== $tooLarge = ResponseTooLargeException::ifExceeded($downloaded)) {
-                        throw $tooLarge;
-                    }
+                    ResponseTooLargeException::throwIfExceeded($downloaded);
                 },
             ]);
         } catch (ExceptionInterface $e) {

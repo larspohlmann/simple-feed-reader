@@ -17,17 +17,19 @@ final class ResponseTooLargeException extends FetchException
     /**
      * Both size guards call this at their own checkpoint — wire bytes as they
      * arrive, before a URL is even resolved, and the buffered body once the
-     * response is complete. Returning null when $observedBytes is within the
-     * limit lets each guard stay a plain `if`, while the limit itself and the
-     * two message shapes it produces live only here.
+     * response is complete. Each guard collapses to one unconditional line,
+     * while the limit itself and the two message shapes it produces live only
+     * here.
+     *
+     * @throws self when $observedBytes exceeds the limit
      */
-    public static function ifExceeded(int $observedBytes, ?string $url = null): ?self
+    public static function throwIfExceeded(int $observedBytes, ?string $url = null): void
     {
         if ($observedBytes <= self::MAX_BYTES) {
-            return null;
+            return;
         }
 
-        return new self(null === $url
+        throw new self(null === $url
             ? sprintf('response exceeds %d bytes', self::MAX_BYTES)
             : sprintf('%s: response exceeds %d bytes', $url, self::MAX_BYTES));
     }

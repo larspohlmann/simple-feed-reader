@@ -58,9 +58,7 @@ final class ResponseClassifier
     public function fromBody(ResponseInterface $response, FetchAttempt $attempt): FetchResponse
     {
         $body = $this->content($response, $attempt->url);
-        if (null !== $tooLarge = ResponseTooLargeException::ifExceeded(\strlen($body), $attempt->url)) {
-            throw $tooLarge;
-        }
+        ResponseTooLargeException::throwIfExceeded(\strlen($body), $attempt->url);
 
         return FetchResponse::fetched(
             $attempt->url,
