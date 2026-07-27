@@ -1,0 +1,5 @@
+@if (name(); as glyph) {
+  <app-icon [name]="glyph" [size]="size()" [style.color]="tint()" />
+} @else {
+  <span class="dot" [style.background]="tint()"></span>
+}
