@@ -104,7 +104,7 @@ app-reader-header.hidden {
 /* Below the wide breakpoint (LayoutService's WIDE_QUERY) the article is the
    immersive top layer: above the app bar, which is the LIST's chrome there and
    keeps whatever hide-on-scroll state the list gave it (#128). */
-@media (width <= bp.$bp-lg) {
+@media (width < bp.$bp-lg) {
   .article-overlay {
     z-index: 12;
   }

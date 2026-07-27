@@ -260,7 +260,7 @@ article {
          rhythm or the article reads as one dense block. */
 .content {
   color: var(--text-primary);
-  font-size: var(--fs-base);
+  font-size: var(--fs-read);
   line-height: 1.75;
 }
 
@@ -292,18 +292,18 @@ article {
 /* Article headings are sized in `em`, against `.content`'s own type size, not
    picked off the UI type scale: that scale has five steps, and h2 and h3 would
    both land on the same one — a flattened hierarchy in the one place the
-   hierarchy is the content. The ratios below reproduce the sizes the articles
-   have always rendered at. */
+   hierarchy is the content. The ratios are the articles' long-standing sizes
+   over the 16px reading size: 22, 20 and 17px. */
 .content ::ng-deep h1 {
-  font-size: 1.5em;
+  font-size: 1.375em;
 }
 
 .content ::ng-deep h2 {
-  font-size: 1.35em;
+  font-size: 1.25em;
 }
 
 .content ::ng-deep h3 {
-  font-size: 1.15em;
+  font-size: 1.0625em;
 }
 
 .content ::ng-deep :is(h4, h5, h6) {

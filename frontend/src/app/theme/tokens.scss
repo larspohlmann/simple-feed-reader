@@ -66,11 +66,21 @@
      this one value tunes the gap everywhere (#87). */
   --bar-gap: var(--space-4);
 
-  /* Type scale. */
+  /* EntryListComponent overwrites this on its host once it has measured its
+     own bar; the default is what the `calc()`s add before that happens. It is
+     declared here rather than written as a var() fallback at each use site so
+     the arithmetic reads as arithmetic. */
+  --list-bar-h: 0px;
+
+  /* Type scale. --fs-read is the article body size and is deliberately a step
+     above --fs-base: long-form reading wants more than UI chrome does. Article
+     headings size in `em` against it, so changing this one value rescales the
+     whole article. */
   --font-sans: system-ui, -apple-system, 'Segoe UI', roboto, sans-serif;
   --fs-xs: 11px;
   --fs-sm: 13px;
   --fs-base: 15px;
+  --fs-read: 16px;
   --fs-lg: 18px;
   --fs-xl: 24px;
   --lh-tight: 1.25;

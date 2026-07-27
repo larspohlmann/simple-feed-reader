@@ -74,7 +74,7 @@
   white-space: nowrap;
 }
 
-@media (width <= bp.$bp-lg) {
+@media (width < bp.$bp-lg) {
   .last-refreshed {
     display: none;
   }
@@ -83,7 +83,7 @@
 /* Narrow layout: as you scroll the list down the header collapses to a slim
          tag-name-only bar (Unread/All + Mark-all-read drop away), expanding again
          on scroll up. Wide screens always show the full header. */
-@media (width <= bp.$bp-lg) {
+@media (width < bp.$bp-lg) {
   .list-header.collapsed {
     padding-top: var(--space-1);
     padding-bottom: var(--space-1);
@@ -186,10 +186,9 @@
   position: absolute;
 
   /* The trailing `- 44px` is the park offset described above — how far the
-     chip hides above the bars — not a tap target. `0rem` is the unmeasured
-     fallback for the list bar; zero length, spelled in a relative unit so it
-     reads as "nothing to reserve yet". */
-  top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h, 0rem) - 44px);
+     chip hides above the bars — not a tap target, despite sharing the number
+     with --tap-target. */
+  top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) - 44px);
   left: 50%;
   z-index: 2;
   display: flex;
@@ -238,7 +237,7 @@
      hidden state nor this list's collapsed one, so the rows never move (#87).
      They pass behind the bars instead, which is what makes retracting them
      actually give the reader more to look at. */
-  padding-top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h, 0rem) + var(--bar-gap));
+  padding-top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
 }
 
 /* An error banner sits above the scroller in the flow and takes the reservation
@@ -250,7 +249,7 @@
 
 .rows.magazine {
   padding: var(--space-3);
-  padding-top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h, 0rem) + var(--bar-gap));
+  padding-top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -269,7 +268,7 @@
   color: var(--text-muted);
   padding: var(--space-6);
   padding-top: calc(
-    var(--app-bar-h, var(--bar-h)) + var(--list-bar-h, 0rem) + var(--bar-gap) + var(--space-6)
+    var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap) + var(--space-6)
   );
   text-align: center;
 
@@ -283,7 +282,7 @@
 
 .banner {
   margin: var(--space-3) var(--space-4);
-  margin-top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h, 0rem) + var(--bar-gap));
+  margin-top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
   padding: var(--space-3);
   border-radius: var(--radius);
   background: var(--bg-danger);
