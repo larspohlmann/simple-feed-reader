@@ -26,6 +26,7 @@ const e = (id: number): EntryDto => ({
   createdAt: 'x',
   subscriptionId: 7,
   source: 'heise',
+  faviconUrl: null,
   isRead: false,
   isFavorite: false,
   isKept: false,
@@ -54,10 +55,11 @@ describe('SourceGroupComponent', () => {
     expect(el.querySelector('.more')!.textContent).toContain('4 more from heise');
   });
 
-  it('drops the count when moreCount is 0', () => {
+  it('renders no more-link when nothing is held back', () => {
+    // The reworked planner shows every entry it plans, so a group with a zero
+    // remainder has nothing to link to — the digest is complete on the page.
     const el = mount(0).nativeElement as HTMLElement;
-    expect(el.querySelector('.more')!.textContent).toContain('More from heise');
-    expect(el.querySelector('.more')!.textContent).not.toContain('0 more');
+    expect(el.querySelector('.more')).toBeNull();
   });
 
   it('shows the feed tags as pills once, on the group header', () => {
