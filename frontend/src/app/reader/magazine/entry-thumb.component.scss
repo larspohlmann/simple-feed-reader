@@ -1,0 +1,93 @@
+:host {
+  display: block;
+}
+
+.thumb {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+}
+
+.thumb:hover {
+  border-color: var(--border-strong);
+}
+
+.img {
+  /* A fixed 88×66 box with BOTH dimensions explicit, not width + aspect-ratio.
+     A flex row stretches an aspect-ratio-only image to the text column's height
+     (and a not-yet-loaded lazy image has no intrinsic size to fall back on), so
+     the ratio alone does not hold the box. Fixing both sides makes the thumbnail
+     the same 4:3 box whether or not its image has loaded; object-fit crops. */
+  flex: none;
+  /* stylelint-disable declaration-property-unit-allowed-list --
+     tuned thumbnail box, not spacing values. */
+  width: 88px;
+  height: 66px;
+  /* stylelint-enable declaration-property-unit-allowed-list */
+  object-fit: cover;
+  border-radius: var(--radius);
+  display: block;
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.kicker {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.kicker app-favicon {
+  margin-inline-end: 0;
+}
+
+.dot {
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  flex: none;
+}
+
+.dot.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--text-primary);
+}
+
+.thumb.read .title {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.dek {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

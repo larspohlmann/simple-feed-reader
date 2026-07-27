@@ -7,7 +7,7 @@ and seven breakpoints where three were meant.
 
 Everything here is enforced mechanically where it can be (Stylelint, via
 `npm run check`) and written down where it cannot be. If a rule below looks
-arbitrary, it is almost certainly recorded in [§5 Deliberate exceptions](#5-deliberate-exceptions)
+arbitrary, it is almost certainly recorded in [§6 Deliberate exceptions](#6-deliberate-exceptions)
 or in a comment at the definition site — read that before changing it.
 
 ---
@@ -226,7 +226,7 @@ names on one left edge. Callers highlighting a selected row pass the highlight
 colour in `color` (`'currentColor'`, say) — both branches honour it.
 
 **Not for:** a surface that wants the dot **and** the glyph side by side. That is
-a different design; see [§5](#5-deliberate-exceptions) on `settings/tags-section`.
+a different design; see [§6](#6-deliberate-exceptions) on `settings/tags-section`.
 
 ### `<app-field>`
 
@@ -255,7 +255,7 @@ control is styled globally by `styles/_controls.scss`, because
 
 **Not for:** a dense data grid whose controls have no visible label. The stacked
 label would triple the row height — see `admin-catalog` in
-[§5](#5-deliberate-exceptions).
+[§6](#6-deliberate-exceptions).
 
 ### `<app-color-field>`
 
@@ -545,7 +545,45 @@ styles too" — it fails the whole run with a `CssSyntaxError` per file. The
 
 ---
 
-## 5. Deliberate exceptions
+## 5. Magazine blocks
+
+The reader's magazine list (`frontend/src/app/reader/magazine/`) plans entries
+onto eight block types, introduced by #148 to replace a layout that had
+collapsed to two-thirds compact rows. `magazine-block.ts`'s `BLOCK_HEIGHT`
+holds the measured height each contributes to the planner's per-page budget;
+`magazine-planner.ts`'s `fits()` decides whether a given entry may fill a
+slot of that kind. Heights are measured at a 390px viewport width and are
+relative units for the budget, not a layout guarantee.
+
+| Block | Height | Image | Fills when |
+|---|---|---|---|
+| **Hero** | 463px | full-width, adaptive `aspect-ratio` from the persisted dimensions (fallback 16/9) | image ≥ 500px wide, or width unknown but `imageUrl` is persisted |
+| **Wide** | 260px | full-width band at 3:1 | image ≥ 400px wide, or width unknown but `imageUrl` is persisted |
+| **Quote** | 180px | suppressed — first sentence set in `--font-voice` instead | snippet text ≥ 300 characters |
+| **Split** | 150px | side image at 38% of the column (148px mobile / 258px desktop) | image ≥ 300px wide, or width unknown but `imageUrl` is persisted |
+| **Kicker** | 140px | none — oversized title only | always |
+| **Thumb** | 90px | fixed 88px box, `aspect-ratio: 4 / 3` | any persisted image |
+| **Compact** | 66px | none | always |
+| **Group** (source digest) | ~300px (not in `BLOCK_HEIGHT` — it consumes entries directly, not a template slot) | none — each row inside is a `<app-entry-compact>` | a same-source run of ≥ 3 entries whose source holds under 40% of the loaded entries |
+
+**"Width unknown" is not the same treatment everywhere.** `fits()` reads the
+persisted `imageWidth` and treats `0` (unknown) differently per kind. The three
+large image blocks — `hero`, `wide` and `split` — trust an unknown width only
+when `imageUrl` itself is a persisted field, because an inline `<img>` with
+neither a persisted URL nor a known width is, in practice, a ~148px archive
+thumbnail: exactly what used to produce heroes and bands with no real picture.
+`thumb` is the exception — it accepts any image regardless of width, since its
+box is fixed at 88px, so even that miniature thumbnail fills it cleanly, which
+is precisely why it is the demotion target for the larger image blocks.
+
+An entry that cannot fill its planned slot demotes transitively:
+`hero → wide → split → thumb → compact`, and `quote → kicker → compact` —
+never one step, since demoting a hero straight to `wide` in an image-less
+view would still leave an image block with no image.
+
+---
+
+## 6. Deliberate exceptions
 
 Each of these was decided during #126 and looks like an oversight from the
 outside. They are not. Read the reason before "fixing" one.
@@ -598,9 +636,26 @@ a blanket rule scores (0,2,1) and outranks `button.danger` at (0,1,1) — it wou
 repaint a destructive button's border in the accent colour on hover. Each variant
 gets its own hover block instead.
 
+**`entry-thumb.component.scss`'s `.img` fixes an 88px flex-basis.** It is the
+thumbnail's tuned box proportion, not a spacing value the density scale
+models, hence the `stylelint-disable-next-line
+declaration-property-unit-allowed-list` comment at the declaration. Tokenising
+it as a `--space-*` step would couple an unrelated visual constant to the
+spacing scale, so the day spacing changes, the thumbnail would resize with it
+for no reason.
+
+**`entry-split.component.scss`'s `.img` fixes a 38% flex-basis.** It is the
+split block's defining proportion — the direct fix for "the medium widget
+shows images too small" (#148, was 88px) — not a spacing value either. It
+carries no `stylelint-disable` comment because `flex`/`flex-basis` is not one
+of the properties `declaration-property-unit-allowed-list` governs at all, but
+the reasoning is identical to the thumb box above and is recorded in a plain
+comment at the declaration so a future reader does not migrate it to a
+`--space-*` token anyway.
+
 ---
 
-## 6. Adding a new surface
+## 7. Adding a new surface
 
 1. **Reach for the shared component before writing markup.** A labelled control
    is `<app-field>`. A dialog is `<app-overlay-panel>` opened with

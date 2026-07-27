@@ -12,23 +12,21 @@
       </div>
     }
   </div>
-  <a
-    class="more"
-    [routerLink]="[]"
-    [queryParams]="{
-      subscription: subscriptionId(),
-      view: null,
-      tag: null,
-      entry: null,
-      unread: '0',
-    }"
-    queryParamsHandling="merge"
-  >
-    {{
-      moreCount() > 0
-        ? ('reader.moreFromCount' | transloco: { count: moreCount(), source: source() })
-        : ('reader.moreFrom' | transloco: { source: source() })
-    }}
-    <app-icon name="arrow_forward" size="sm" />
-  </a>
+  @if (moreCount() > 0) {
+    <a
+      class="more"
+      [routerLink]="[]"
+      [queryParams]="{
+        subscription: subscriptionId(),
+        view: null,
+        tag: null,
+        entry: null,
+        unread: '0',
+      }"
+      queryParamsHandling="merge"
+    >
+      {{ 'reader.moreFromCount' | transloco: { count: moreCount(), source: source() } }}
+      <app-icon name="arrow_forward" size="sm" />
+    </a>
+  }
 </div>

@@ -58,6 +58,11 @@ export interface EntryDto {
   author: string | null;
   summary: string | null;
   contentHtml: string | null;
+  /** Absolute image URL the feed supplied, or null. Persisted server-side. */
+  imageUrl: string | null;
+  /** Dimensions AS DECLARED by the feed. Null means unknown, not square. */
+  imageWidth: number | null;
+  imageHeight: number | null;
   publishedAt: string | null;
   createdAt: string;
   subscriptionId: number;

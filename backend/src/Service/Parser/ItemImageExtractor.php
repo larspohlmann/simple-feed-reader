@@ -5,80 +5,51 @@ declare(strict_types=1);
 namespace App\Service\Parser;
 
 /**
- * Finds the first usable image URL attached to a feed item. Callers combine the
- * sources in the precedence their format prefers (Media RSS, then a format's
- * enclosure, then an inline <img>). URLs are returned verbatim — callers that
- * need an absolute URL resolve it themselves; the preview only needs presence.
+ * Finds the best image attached to a feed item. Callers combine the sources in
+ * the precedence their format prefers (Media RSS, then a format's enclosure,
+ * then an inline <img>).
+ *
+ * Within Media RSS the WIDEST declared variant wins, not the first. Feeds
+ * routinely ship a ladder of sizes — the Guardian publishes 140/460/700 in
+ * ascending order, so "first" would persist a thumbnail too small to feature.
+ * An element that declares no width loses to any element that declares one;
+ * when nothing declares a width, document order decides.
+ *
+ * URLs are returned verbatim — callers that need an absolute URL resolve it
+ * themselves.
  */
 final class ItemImageExtractor
 {
     private const string MEDIA_NS = 'http://search.yahoo.com/mrss/';
 
-    /**
-     * Media RSS image: <media:thumbnail> preferred, else an image
-     * <media:content>. Feeds often wrap these in a <media:group>, so that
-     * container is searched too when nothing is attached directly.
-     */
-    public static function fromMedia(\DOMElement $item): ?string
+    /** Media RSS image, searching <media:group> when nothing is attached directly. */
+    public static function fromMedia(\DOMElement $item): ?ParsedImage
     {
-        $direct = self::mediaImageIn($item);
-        if ($direct !== null) {
-            return $direct;
-        }
+        $candidates = self::mediaCandidatesIn($item);
 
         foreach ($item->childNodes as $child) {
-            if (
-                $child instanceof \DOMElement
-                && $child->localName === 'group'
-                && $child->namespaceURI === self::MEDIA_NS
-            ) {
-                $grouped = self::mediaImageIn($child);
-                if ($grouped !== null) {
-                    return $grouped;
-                }
+            if (self::isMediaElement($child, 'group')) {
+                /** @var \DOMElement $child */
+                $candidates = [...$candidates, ...self::mediaCandidatesIn($child)];
             }
         }
 
-        return null;
-    }
-
-    /** The first Media RSS image directly under $parent, or null. */
-    private static function mediaImageIn(\DOMElement $parent): ?string
-    {
-        $thumb = self::mediaUrl($parent, 'thumbnail');
-        if ($thumb !== null) {
-            return $thumb;
-        }
-
-        foreach ($parent->childNodes as $child) {
-            if (
-                !$child instanceof \DOMElement
-                || $child->localName !== 'content'
-                || $child->namespaceURI !== self::MEDIA_NS
-            ) {
-                continue;
-            }
-            $url = trim($child->getAttribute('url'));
-            $medium = strtolower($child->getAttribute('medium'));
-            $type = strtolower($child->getAttribute('type'));
-            if ($url !== '' && ($medium === 'image' || str_starts_with($type, 'image/'))) {
-                return $url;
-            }
-        }
-
-        return null;
+        return self::widest($candidates);
     }
 
     /** RSS 2.0 <enclosure type="image/*" url="…">. */
-    public static function fromRssEnclosure(\DOMElement $item): ?string
+    public static function fromRssEnclosure(\DOMElement $item): ?ParsedImage
     {
         foreach ($item->childNodes as $child) {
             if (!$child instanceof \DOMElement || $child->localName !== 'enclosure') {
                 continue;
             }
+            if (!str_starts_with(strtolower($child->getAttribute('type')), 'image/')) {
+                continue;
+            }
             $url = trim($child->getAttribute('url'));
-            if ($url !== '' && str_starts_with(strtolower($child->getAttribute('type')), 'image/')) {
-                return $url;
+            if ($url !== '') {
+                return self::imageFrom($child, $url);
             }
         }
 
@@ -86,7 +57,7 @@ final class ItemImageExtractor
     }
 
     /** Atom <link rel="enclosure" type="image/*" href="…">. */
-    public static function fromAtomEnclosure(\DOMElement $entry, string $ns): ?string
+    public static function fromAtomEnclosure(\DOMElement $entry, string $ns): ?ParsedImage
     {
         foreach ($entry->childNodes as $child) {
             if (
@@ -97,44 +68,88 @@ final class ItemImageExtractor
             ) {
                 continue;
             }
+            if (!str_starts_with(strtolower($child->getAttribute('type')), 'image/')) {
+                continue;
+            }
             $href = trim($child->getAttribute('href'));
-            if ($href !== '' && str_starts_with(strtolower($child->getAttribute('type')), 'image/')) {
-                return $href;
+            if ($href !== '') {
+                return self::imageFrom($child, $href);
             }
         }
 
         return null;
     }
 
-    /** First <img src="…"> in a fragment of HTML. */
-    public static function fromHtml(?string $html): ?string
+    /** First <img src="…"> in a fragment of HTML. Dimensions are never trusted here. */
+    public static function fromHtml(?string $html): ?ParsedImage
     {
         if ($html === null || $html === '') {
             return null;
         }
-        if (preg_match('/<img\b[^>]*?\bsrc\s*=\s*(["\'])(.*?)\1/i', $html, $m) !== 1) {
+        if (preg_match('/<img\b[^>]*?\bsrc\s*=\s*(["\'])(.*?)\1/i', $html, $matches) !== 1) {
             return null;
         }
-        $src = trim(html_entity_decode($m[2], ENT_QUOTES | ENT_HTML5));
+        $src = trim(html_entity_decode($matches[2], ENT_QUOTES | ENT_HTML5));
 
-        return $src === '' ? null : $src;
+        return $src === '' ? null : new ParsedImage($src);
     }
 
-    private static function mediaUrl(\DOMElement $item, string $localName): ?string
+    /** @return list<ParsedImage> */
+    private static function mediaCandidatesIn(\DOMElement $parent): array
     {
-        foreach ($item->childNodes as $child) {
-            if (
-                $child instanceof \DOMElement
-                && $child->localName === $localName
-                && $child->namespaceURI === self::MEDIA_NS
-            ) {
-                $url = trim($child->getAttribute('url'));
-                if ($url !== '') {
-                    return $url;
-                }
+        $candidates = [];
+        foreach ($parent->childNodes as $child) {
+            if (!self::isMediaElement($child, 'thumbnail') && !self::isMediaElement($child, 'content')) {
+                continue;
+            }
+            /** @var \DOMElement $child */
+            $url = trim($child->getAttribute('url'));
+            if ($url === '' || !MediaImageClassifier::isImage($child)) {
+                continue;
+            }
+            $candidates[] = self::imageFrom($child, $url);
+        }
+
+        return $candidates;
+    }
+
+    private static function isMediaElement(\DOMNode $node, string $localName): bool
+    {
+        return $node instanceof \DOMElement
+            && $node->localName === $localName
+            && $node->namespaceURI === self::MEDIA_NS;
+    }
+
+    private static function imageFrom(\DOMElement $element, string $url): ParsedImage
+    {
+        return new ParsedImage(
+            $url,
+            self::positiveInt($element->getAttribute('width')),
+            self::positiveInt($element->getAttribute('height')),
+        );
+    }
+
+    private static function positiveInt(string $raw): ?int
+    {
+        $value = filter_var(trim($raw), FILTER_VALIDATE_INT);
+
+        return \is_int($value) && $value > 0 ? $value : null;
+    }
+
+    /** @param list<ParsedImage> $candidates */
+    private static function widest(array $candidates): ?ParsedImage
+    {
+        $best = null;
+        foreach ($candidates as $candidate) {
+            if ($best === null) {
+                $best = $candidate;
+                continue;
+            }
+            if (($candidate->width ?? 0) > ($best->width ?? 0)) {
+                $best = $candidate;
             }
         }
 
-        return null;
+        return $best;
     }
 }

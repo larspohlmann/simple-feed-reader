@@ -7,6 +7,7 @@ namespace App\Service\Scraper;
 use App\Service\Parser\GuidFallback;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
+use App\Service\Parser\ParsedImage;
 use App\Service\Scraper\Exception\HtmlExtractionException;
 use App\Service\Scraper\Layer\ScrapeLayerInterface;
 use Dom\HTMLDocument;
@@ -136,7 +137,7 @@ final readonly class HtmlItemExtractor
                 ? null
                 : '<p>' . htmlspecialchars($teaser, \ENT_QUOTES) . '</p>',
             publishedAt: $item->publishedAt,
-            imageUrl: $item->imageUrl,
+            image: $item->imageUrl === null ? null : new ParsedImage($item->imageUrl),
         );
     }
 }

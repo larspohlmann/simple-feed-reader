@@ -1,0 +1,34 @@
+<article
+  class="thumb"
+  role="button"
+  tabindex="0"
+  [class.read]="entry().isRead"
+  (click)="open.emit(entry())"
+  (keydown.enter)="open.emit(entry())"
+  (keydown.space)="$event.preventDefault(); open.emit(entry())"
+>
+  @if (showImage()) {
+    <img
+      class="img"
+      [src]="image()!.url"
+      [attr.width]="image()!.width"
+      [attr.height]="image()!.height"
+      alt=""
+      loading="lazy"
+      decoding="async"
+      referrerpolicy="no-referrer"
+      (error)="imgError.set(true)"
+    />
+  }
+  <div class="body">
+    <p class="kicker">
+      <span class="dot" [class.on]="!entry().isRead" aria-hidden="true"></span>
+      <app-favicon [url]="entry().faviconUrl" [size]="12" />{{ entry().source }} · {{ when() }}
+    </p>
+    <p class="title">{{ entry().title }}</p>
+    @if (snippet()) {
+      <p class="dek">{{ snippet() }}</p>
+    }
+    <app-source-tags [tags]="tags()" />
+  </div>
+</article>

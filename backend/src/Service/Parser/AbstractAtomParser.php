@@ -95,7 +95,7 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
             summary: XmlHelper::childText($entry, 'summary', $ns),
             contentHtml: $contentHtml,
             publishedAt: DateParser::parse($this->firstDate($entry, $ns)),
-            imageUrl: $image,
+            image: $image,
         );
     }
 

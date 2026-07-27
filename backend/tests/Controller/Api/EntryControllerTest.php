@@ -88,6 +88,42 @@ final class EntryControllerTest extends WebTestCase
         self::assertNull($body['nextCursor']);
     }
 
+    public function testExposesThePersistedImageOnEachEntry(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-image@example.com');
+
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $feed = new Feed('https://example.com/img-feed.xml');
+        $feed->setTitle('Seeded');
+        $em->persist($feed);
+        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        $july2 = new \DateTimeImmutable('2026-07-02T00:00:00Z');
+        $withImage = new Entry($feed, 'img-1', 'https://example.com/1', 'Post', $july1);
+        $withImage->setImage('https://i.example.com/big.jpg', 948, 474);
+        $em->persist($withImage);
+        $em->persist(new Entry($feed, 'img-2', 'https://example.com/2', 'Post 2', $july2));
+        $em->flush();
+
+        $client->request('GET', '/api/entries', server: $headers);
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entries']);
+        // Newest first: img-2 (no image), then img-1 (with image).
+        [$second, $first] = $body['entries'];
+        self::assertIsArray($first);
+        self::assertIsArray($second);
+        self::assertSame('https://i.example.com/big.jpg', $first['imageUrl']);
+        self::assertSame(948, $first['imageWidth']);
+        self::assertSame(474, $first['imageHeight']);
+        self::assertNull($second['imageUrl']);
+        self::assertNull($second['imageWidth']);
+        self::assertNull($second['imageHeight']);
+    }
+
     public function testPaginatesWithCursor(): void
     {
         $client = self::createClient();

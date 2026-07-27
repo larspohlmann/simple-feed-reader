@@ -10,7 +10,10 @@
   @if (showImage()) {
     <img
       class="img"
-      [src]="image()!"
+      [src]="image()!.url"
+      [style.aspect-ratio]="aspect()"
+      [attr.width]="image()!.width"
+      [attr.height]="image()!.height"
       alt=""
       loading="lazy"
       decoding="async"

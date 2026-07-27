@@ -89,7 +89,7 @@ final readonly class FeedPreviewService
             title: $entry->title,
             publishedAt: $entry->publishedAt,
             author: $entry->author,
-            hasImage: $entry->imageUrl !== null,
+            hasImage: $entry->image !== null,
             textLength: mb_strlen($text),
             snippet: $this->snippet($text),
         );

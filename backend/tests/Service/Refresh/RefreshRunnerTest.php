@@ -176,6 +176,40 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertCount(1, $this->em->getRepository(Entry::class)->findAll());
     }
 
+    public function testRefreshBackfillsTheImageOntoAnAlreadyStoredEntryThatLacksOne(): void
+    {
+        // A functional guard on the #148 wiring: FillMissingImagesTest exercises
+        // the ingestor method directly, which cannot prove the refresh path
+        // actually calls it inside persistOutcome's unit of work. Pre-store an
+        // imageless entry, then serve the same guid carrying a media image.
+        $feed = $this->dueFeed('https://img.example.com/feed');
+        $stored = new Entry($feed, 'has-image', 'https://img.example.com/p', 'Post', $this->clock->now());
+        $this->em->persist($stored);
+        $this->em->flush();
+        self::assertNull($stored->getImageUrl());
+
+        $body = <<<XML
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>T</title>
+            <item><title>Post</title><link>https://img.example.com/p</link><guid>has-image</guid>
+            <media:content url="https://img.example.com/big.jpg" medium="image" width="800" height="450"/>
+            </item></channel></rss>
+            XML;
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($feed->getUrl(), false, $body, null, null),
+        );
+
+        $report = $this->runner()->run(RefreshRequest::allDue(300));
+
+        self::assertSame(1, $report->fetched);
+        // No NEW entry — the guid already existed, so this is pure backfill.
+        self::assertCount(1, $this->em->getRepository(Entry::class)->findAll());
+        self::assertSame('https://img.example.com/big.jpg', $stored->getImageUrl());
+        self::assertSame(800, $stored->getImageWidth());
+        self::assertSame(450, $stored->getImageHeight());
+    }
+
     public function testFailedFeedIsRecordedAndOthersContinue(): void
     {
         $bad = $this->dueFeed('https://bad.example.com/feed');

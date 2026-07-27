@@ -1,0 +1,77 @@
+:host {
+  display: block;
+}
+
+.wide {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.wide:hover {
+  border-color: var(--border-strong);
+}
+
+.img {
+  width: 100%;
+
+  /* height:auto keeps the fixed 3:1 ratio authoritative; without it a
+     not-yet-loaded lazy image renders at its raw `height` attribute instead. */
+  height: auto;
+
+  /* A cinematic band: image-forward at a third of a hero's height, which is
+     what lets the planner spend an image block without spending a screenful. */
+  aspect-ratio: 3 / 1;
+  object-fit: cover;
+  display: block;
+}
+
+.body {
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.kicker {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+/* The row's `gap` already spaces both sides of the favicon; its own inline
+   margin, meant for text runs that have no gap, would land on the right only
+   and leave the unread dot looking pinched against it. Let the gap do it. */
+.kicker app-favicon {
+  margin-inline-end: 0;
+}
+
+.dot {
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+}
+
+.dot.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.wide.read .title {
+  color: var(--text-secondary);
+  font-weight: 400;
+}

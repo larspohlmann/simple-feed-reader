@@ -10,10 +10,14 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   author: null,
   summary: 'A meaningful summary.',
   contentHtml: '<p>A meaningful summary.</p><img src="https://x/a.jpg">',
+  imageUrl: null,
+  imageWidth: null,
+  imageHeight: null,
   publishedAt: null,
   createdAt: 'x',
   subscriptionId: 1,
   source: 'Src',
+  faviconUrl: null,
   isRead: false,
   isFavorite: false,
   isKept: false,
@@ -57,5 +61,21 @@ describe('EntryHeroComponent', () => {
     f.componentInstance.onLoad({ target: { naturalWidth: 100 } } as unknown as Event);
     f.detectChanges();
     expect(f.nativeElement.querySelector('img.img')).toBeNull();
+  });
+
+  it('sets the aspect ratio from the declared dimensions', () => {
+    const el = mount(entry({ imageUrl: 'https://i/a.jpg', imageWidth: 1232, imageHeight: 1232 }))
+      .nativeElement as HTMLElement;
+    const img = el.querySelector('img.img') as HTMLImageElement;
+    expect(img.style.aspectRatio).toBe('1232 / 1232');
+    expect(img.getAttribute('width')).toBe('1232');
+    expect(img.getAttribute('height')).toBe('1232');
+  });
+
+  it('falls back to 16 / 9 when the feed declared no dimensions', () => {
+    const el = mount(entry({ imageUrl: 'https://i/a.jpg' })).nativeElement as HTMLElement;
+    const img = el.querySelector('img.img') as HTMLImageElement;
+    expect(img.style.aspectRatio).toBe('16 / 9');
+    expect(img.getAttribute('width')).toBeNull();
   });
 });

@@ -16,7 +16,11 @@
 
 .img {
   width: 100%;
-  aspect-ratio: 16 / 9;
+
+  /* height:auto makes the bound aspect-ratio authoritative. Without it a
+     not-yet-loaded lazy image falls back to its raw `height` attribute (e.g.
+     2560), rendering a monstrously tall block until it loads. */
+  height: auto;
   object-fit: cover;
   display: block;
 }

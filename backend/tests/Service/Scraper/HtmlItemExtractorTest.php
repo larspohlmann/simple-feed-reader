@@ -64,7 +64,7 @@ final class HtmlItemExtractorTest extends TestCase
         }
         $teasers = array_filter($parsed->entries, static fn ($e) => $e->summary !== null);
         self::assertGreaterThanOrEqual(20, \count($teasers)); // abstracts arrived
-        $images = array_filter($parsed->entries, static fn ($e) => $e->imageUrl !== null);
+        $images = array_filter($parsed->entries, static fn ($e) => $e->image !== null);
         self::assertGreaterThanOrEqual(20, \count($images));
     }
 

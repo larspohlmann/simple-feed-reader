@@ -258,6 +258,11 @@ final class RefreshRunner
 
             $parsed = $this->bodyParser->parse($feed, $body);
             $created = $this->ingestor->ingest($feed, $parsed);
+            // Opportunistically fill images onto entries stored before the image
+            // column existed (#148). The count is discarded on purpose: the
+            // refresh's success signal is NEW content, and a backfilled image is
+            // not new content. The caller's flush below covers both writes.
+            $this->ingestor->fillMissingImages($feed, $parsed);
 
             $feed->setEtag($this->truncate($response->etag, self::ETAG_MAX));
             $feed->setLastModified($this->truncate($response->lastModified, self::LAST_MODIFIED_MAX));

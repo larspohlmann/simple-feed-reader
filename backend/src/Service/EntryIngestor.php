@@ -7,7 +7,9 @@ namespace App\Service;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Repository\EntryRepository;
+use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
+use App\Service\Parser\ParsedImage;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
@@ -22,7 +24,6 @@ final class EntryIngestor
     private const int AUTHOR_MAX = 255;
     private const int URL_MAX = 2048;
     private const int FEED_TITLE_MAX = 512;
-    private const int SUMMARY_MAX = 500;
 
     public function __construct(
         private readonly EntityManagerInterface $em,
@@ -40,15 +41,12 @@ final class EntryIngestor
             return 0;
         }
 
-        $hashes = array_map(
-            static fn ($entry): string => hash('sha256', $entry->guid),
-            $parsed->entries,
-        );
+        $hashes = $this->guidHashesOf($parsed->entries);
         $seen = array_fill_keys($this->entryRepository->findExistingGuidHashes($feed, $hashes), true);
 
         $created = 0;
         foreach ($parsed->entries as $parsedEntry) {
-            $hash = hash('sha256', $parsedEntry->guid);
+            $hash = self::guidHash($parsedEntry->guid);
             if (isset($seen[$hash])) {
                 continue;
             }
@@ -64,9 +62,10 @@ final class EntryIngestor
             $entry->setAuthor(
                 $parsedEntry->author === null ? null : mb_substr($parsedEntry->author, 0, self::AUTHOR_MAX),
             );
-            $entry->setSummary($this->summarize($parsedEntry->summary));
+            $entry->setSummary(EntrySnippet::from($parsedEntry->summary ?? $parsedEntry->contentHtml));
             $entry->setContentHtml($this->sanitizer->sanitize($parsedEntry->contentHtml));
             $entry->setPublishedAt($parsedEntry->publishedAt);
+            $this->applyImage($entry, $parsedEntry->image);
 
             $this->em->persist($entry);
             $created++;
@@ -87,10 +86,7 @@ final class EntryIngestor
             return 0;
         }
 
-        $hashes = array_map(
-            static fn ($entry): string => hash('sha256', $entry->guid),
-            $parsed->entries,
-        );
+        $hashes = $this->guidHashesOf($parsed->entries);
         $existing = $this->entryRepository->findByFeedIndexedByGuidHash($feed, $hashes);
 
         $updated = 0;
@@ -98,7 +94,7 @@ final class EntryIngestor
             if ($parsedEntry->publishedAt === null) {
                 continue;
             }
-            $entry = $existing[hash('sha256', $parsedEntry->guid)] ?? null;
+            $entry = $existing[self::guidHash($parsedEntry->guid)] ?? null;
             if ($entry === null) {
                 continue;
             }
@@ -107,6 +103,45 @@ final class EntryIngestor
                 continue;
             }
             $entry->setPublishedAt($parsedEntry->publishedAt);
+            $updated++;
+        }
+
+        return $updated;
+    }
+
+    /**
+     * Fill in the image on entries ingested before the feed's image was
+     * persisted (#148), matching by guid hash against a fresh parse.
+     *
+     * Only entries whose image is currently NULL are touched — a feed that
+     * later drops or downgrades its images must never erase what we have. The
+     * archive this can reach is bounded by what the feed still serves (15–50
+     * items against thousands stored), so this is opportunistic repair, not a
+     * migration. Caller flushes. Returns the number updated.
+     */
+    public function fillMissingImages(Feed $feed, ParsedFeed $parsed): int
+    {
+        if ($parsed->entries === []) {
+            return 0;
+        }
+
+        $hashes = $this->guidHashesOf($parsed->entries);
+        $existing = $this->entryRepository->findByFeedIndexedByGuidHash($feed, $hashes);
+
+        $updated = 0;
+        foreach ($parsed->entries as $parsedEntry) {
+            if ($parsedEntry->image === null) {
+                continue;
+            }
+            $entry = $existing[self::guidHash($parsedEntry->guid)] ?? null;
+            if ($entry === null || $entry->getImageUrl() !== null) {
+                continue;
+            }
+            $url = $this->persistableImageUrl($parsedEntry->image);
+            if ($url === null) {
+                continue;
+            }
+            $entry->setImage($url, $parsedEntry->image->width, $parsedEntry->image->height);
             $updated++;
         }
 
@@ -127,23 +162,69 @@ final class EntryIngestor
     }
 
     /**
-     * Produces PLAIN TEXT, not HTML. strip_tags removes real tags, then
-     * html_entity_decode turns "&lt;script&gt;" back into literal "<script>"
-     * characters — so the result may contain <, > and & and has NOT been
-     * through EntrySanitizer. Render it as text only; never with |raw,
-     * innerHTML, or dangerouslySetInnerHTML.
+     * Sets all three image columns together so a rejected image (null, an
+     * unusable scheme, or a URL over the column limit) never leaves a stale
+     * width/height behind. ParsedImage already treats a missing image as a
+     * first-class case the layout falls back from, so losing the image here
+     * is preferable to persisting something guaranteed to render broken
+     * forever.
      */
-    private function summarize(?string $summary): ?string
+    private function applyImage(Entry $entry, ?ParsedImage $image): void
     {
-        if ($summary === null) {
+        if ($image === null) {
+            $entry->setImage(null, null, null);
+
+            return;
+        }
+
+        $url = $this->persistableImageUrl($image);
+        if ($url === null) {
+            $entry->setImage(null, null, null);
+
+            return;
+        }
+
+        $entry->setImage($url, $image->width, $image->height);
+    }
+
+    /**
+     * Rejects a parsed image URL in the two ways it can be unusable rather
+     * than trying to repair it:
+     *
+     * - Scheme: the reader SPA is served over https, so an http:// image is
+     *   mixed-content-blocked and never renders — dead weight, silently. A
+     *   `//host/path` protocol-relative src is unambiguous and upgraded to
+     *   https:// before the check; a `data:` URI or a site-relative path
+     *   (`/img/x.jpg`) has no scheme to upgrade and no base URL is plumbed
+     *   this deep to resolve one against, so it is dropped rather than
+     *   guessed at.
+     * - Length: a URL over URL_MAX is not truncated. Cutting it at exactly
+     *   URL_MAX characters does not shorten a valid URL, it produces a
+     *   different, broken one that will 404 in the reader.
+     */
+    private function persistableImageUrl(ParsedImage $image): ?string
+    {
+        $url = str_starts_with($image->url, '//') ? 'https:' . $image->url : $image->url;
+
+        if (!str_starts_with($url, 'https://')) {
             return null;
         }
 
-        $text = trim(html_entity_decode(strip_tags($summary), ENT_QUOTES | ENT_HTML5));
-        if ($text === '') {
-            return null;
-        }
+        return mb_strlen($url) > self::URL_MAX ? null : $url;
+    }
 
-        return mb_substr($text, 0, self::SUMMARY_MAX);
+    /**
+     * @param list<ParsedEntry> $entries
+     *
+     * @return list<string>
+     */
+    private function guidHashesOf(array $entries): array
+    {
+        return array_map(static fn (ParsedEntry $entry): string => self::guidHash($entry->guid), $entries);
+    }
+
+    private static function guidHash(string $guid): string
+    {
+        return hash('sha256', $guid);
     }
 }

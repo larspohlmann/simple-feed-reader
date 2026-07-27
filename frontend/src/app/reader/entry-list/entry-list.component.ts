@@ -23,7 +23,13 @@ import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { EntryHeroComponent } from '../magazine/entry-hero.component';
 import { EntryCompactComponent } from '../magazine/entry-compact.component';
 import { SourceGroupComponent } from '../magazine/source-group.component';
-import { MagazineBlock, planMagazine } from '../magazine/magazine-planner';
+import { EntrySplitComponent } from '../magazine/entry-split.component';
+import { EntryWideComponent } from '../magazine/entry-wide.component';
+import { EntryThumbComponent } from '../magazine/entry-thumb.component';
+import { EntryQuoteComponent } from '../magazine/entry-quote.component';
+import { EntryKickerComponent } from '../magazine/entry-kicker.component';
+import { MagazineBlock } from '../magazine/magazine-block';
+import { planMagazine } from '../magazine/magazine-planner';
 import { ReadingLayout } from '../reading-layout.service';
 import { EntryDto, SubscriptionTagDto } from '../models';
 import { Selection, canScopedRefresh } from '../query';
@@ -55,6 +61,11 @@ const MAX_PULL = 100;
     EntryHeroComponent,
     EntryCompactComponent,
     SourceGroupComponent,
+    EntrySplitComponent,
+    EntryWideComponent,
+    EntryThumbComponent,
+    EntryQuoteComponent,
+    EntryKickerComponent,
     ToTopButtonComponent,
   ],
   templateUrl: './entry-list.component.html',
@@ -122,7 +133,11 @@ export class EntryListComponent implements OnDestroy {
   private pullTracking = false;
 
   readonly blocks = computed<MagazineBlock[]>(() =>
-    planMagazine(this.entries(), this.selection().kind !== 'subscription', !this.hasMore()),
+    planMagazine({
+      entries: this.entries(),
+      grouping: this.selection().kind !== 'subscription',
+      complete: !this.hasMore(),
+    }),
   );
 
   private readonly screen = inject(LayoutService);
@@ -253,22 +268,23 @@ export class EntryListComponent implements OnDestroy {
     return this.feedTags().get(subscriptionId) ?? [];
   }
 
-  blockKey(b: MagazineBlock): string {
-    return b.kind === 'group'
-      ? `group-${b.subscriptionId}-${b.entries[0].id}`
-      : `${b.kind}-${b.entry.id}`;
+  blockKey(block: MagazineBlock): string {
+    return block.kind === 'group'
+      ? `g${block.subscriptionId}:${block.entries[0].id}`
+      : `${block.kind}:${block.entry.id}`;
   }
-  hero(b: MagazineBlock) {
-    return b as Extract<MagazineBlock, { kind: 'hero' }>;
+
+  /** Narrow a block to its entry-carrying form for the template. */
+  entryOf(block: MagazineBlock): EntryDto {
+    return (block as Extract<MagazineBlock, { entry: EntryDto }>).entry;
   }
-  feat(b: MagazineBlock) {
-    return b as Extract<MagazineBlock, { kind: 'feature' }>;
+
+  side(block: MagazineBlock): 'left' | 'right' {
+    return block.kind === 'split' ? block.imageSide : 'right';
   }
-  compact(b: MagazineBlock) {
-    return b as Extract<MagazineBlock, { kind: 'compact' }>;
-  }
-  grp(b: MagazineBlock) {
-    return b as Extract<MagazineBlock, { kind: 'group' }>;
+
+  grp(block: MagazineBlock): Extract<MagazineBlock, { kind: 'group' }> {
+    return block as Extract<MagazineBlock, { kind: 'group' }>;
   }
 
   private readonly rows = viewChild<ElementRef<HTMLElement>>('rows');

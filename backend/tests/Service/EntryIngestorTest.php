@@ -11,6 +11,7 @@ use App\Service\EntryIngestor;
 use App\Service\EntrySanitizer;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
+use App\Service\Parser\ParsedImage;
 use App\Tests\DbTestCase;
 use Symfony\Component\Clock\MockClock;
 
@@ -28,6 +29,29 @@ final class EntryIngestorTest extends DbTestCase
             $entryRepository,
             new EntrySanitizer(),
             new MockClock('2026-07-21 12:00:00', 'UTC'),
+        );
+    }
+
+    private function feed(): Feed
+    {
+        $feed = new Feed('https://example.com/feed');
+        $this->em->persist($feed);
+        $this->em->flush();
+
+        return $feed;
+    }
+
+    private function parsedEntryWithImage(string $guid, ?ParsedImage $image): ParsedEntry
+    {
+        return new ParsedEntry(
+            guid: $guid,
+            url: null,
+            title: 'Title',
+            author: null,
+            summary: null,
+            contentHtml: '<p>body</p>',
+            publishedAt: null,
+            image: $image,
         );
     }
 
@@ -136,6 +160,174 @@ final class EntryIngestorTest extends DbTestCase
         self::assertSame(2048, mb_strlen((string) $entry->getUrl()));
         self::assertLessThanOrEqual(500, mb_strlen((string) $entry->getSummary()));
         self::assertSame(512, mb_strlen((string) $feed->getTitle()));
+    }
+
+    public function testPersistsTheFeedSuppliedImage(): void
+    {
+        $feed = $this->feed();
+        $parsed = new ParsedFeed('T', null, null, [
+            new ParsedEntry(
+                guid: 'g1',
+                url: 'https://x/1',
+                title: 'One',
+                author: null,
+                summary: null,
+                contentHtml: '<p>body</p>',
+                publishedAt: null,
+                image: new ParsedImage('https://i/1.jpg', 948, 474),
+            ),
+        ]);
+
+        $this->ingestor->ingest($feed, $parsed);
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'g1']);
+        self::assertNotNull($entry);
+        self::assertSame('https://i/1.jpg', $entry->getImageUrl());
+        self::assertSame(948, $entry->getImageWidth());
+        self::assertSame(474, $entry->getImageHeight());
+    }
+
+    public function testMissingImageLeavesTheColumnsNull(): void
+    {
+        $feed = $this->feed();
+        $parsed = new ParsedFeed('T', null, null, [
+            new ParsedEntry('no-image', 'https://x/1', 'One', null, null, '<p>body</p>', null, null),
+        ]);
+
+        $this->ingestor->ingest($feed, $parsed);
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'no-image']);
+        self::assertNotNull($entry);
+        self::assertNull($entry->getImageUrl());
+        self::assertNull($entry->getImageWidth());
+        self::assertNull($entry->getImageHeight());
+    }
+
+    public function testAnImageUrlOverTheColumnLimitIsDroppedRatherThanTruncated(): void
+    {
+        $feed = $this->feed();
+        $overlongUrl = 'https://i/' . str_repeat('u', 2048) . '.jpg';
+        $parsed = new ParsedFeed('T', null, null, [
+            new ParsedEntry(
+                guid: 'overlong-image',
+                url: 'https://x/1',
+                title: 'One',
+                author: null,
+                summary: null,
+                contentHtml: '<p>body</p>',
+                publishedAt: null,
+                image: new ParsedImage($overlongUrl, 100, 100),
+            ),
+        ]);
+
+        $this->ingestor->ingest($feed, $parsed);
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'overlong-image']);
+        self::assertNotNull($entry);
+        self::assertNull($entry->getImageUrl());
+        self::assertNull($entry->getImageWidth());
+        self::assertNull($entry->getImageHeight());
+    }
+
+    public function testProtocolRelativeImageUrlIsUpgradedToHttpsAndKept(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, [
+            $this->parsedEntryWithImage('protocol-relative', new ParsedImage('//i.example.com/img.jpg', 400, 300)),
+        ]));
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'protocol-relative']);
+        self::assertNotNull($entry);
+        self::assertSame('https://i.example.com/img.jpg', $entry->getImageUrl());
+    }
+
+    public function testHttpImageUrlIsDroppedAsMixedContent(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, [
+            $this->parsedEntryWithImage('http-image', new ParsedImage('http://i.example.com/img.jpg', 400, 300)),
+        ]));
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'http-image']);
+        self::assertNotNull($entry);
+        self::assertNull($entry->getImageUrl());
+    }
+
+    public function testDataUriImageIsDropped(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, [
+            $this->parsedEntryWithImage('data-uri-image', new ParsedImage('data:image/png;base64,AAAA', null, null)),
+        ]));
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'data-uri-image']);
+        self::assertNotNull($entry);
+        self::assertNull($entry->getImageUrl());
+    }
+
+    public function testSiteRelativeImageUrlIsDropped(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, [
+            $this->parsedEntryWithImage('site-relative-image', new ParsedImage('/img/x.jpg', 400, 300)),
+        ]));
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'site-relative-image']);
+        self::assertNotNull($entry);
+        self::assertNull($entry->getImageUrl());
+    }
+
+    public function testSummaryFallsBackToContentHtmlWhenFeedSummaryIsNull(): void
+    {
+        $feed = $this->feed();
+        $parsed = new ParsedFeed('T', null, null, [
+            new ParsedEntry(
+                guid: 'fallback-summary',
+                url: null,
+                title: 'One',
+                author: null,
+                summary: null,
+                contentHtml: '<p>Body text here.</p>',
+                publishedAt: null,
+            ),
+        ]);
+
+        $this->ingestor->ingest($feed, $parsed);
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'fallback-summary']);
+        self::assertNotNull($entry);
+        self::assertSame('Body text here.', $entry->getSummary());
+    }
+
+    public function testJunkContentHtmlYieldsNullSummaryNotTheJunkToken(): void
+    {
+        $feed = $this->feed();
+        $parsed = new ParsedFeed('T', null, null, [
+            new ParsedEntry(
+                guid: 'junk-summary',
+                url: null,
+                title: 'One',
+                author: null,
+                summary: null,
+                contentHtml: '<a href="https://x"><img src="https://i/a.jpg"/></a> None',
+                publishedAt: null,
+            ),
+        ]);
+
+        $this->ingestor->ingest($feed, $parsed);
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'junk-summary']);
+        self::assertNotNull($entry);
+        self::assertNull($entry->getSummary());
     }
 
     public function testEmptyParsedFeedStillUpdatesMetadata(): void

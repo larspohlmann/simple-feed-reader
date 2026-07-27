@@ -44,6 +44,16 @@ class Entry
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $contentHtml = null;
 
+    #[ORM\Column(length: 2048, nullable: true)]
+    private ?string $imageUrl = null;
+
+    /** As DECLARED by the feed. Null means unknown, not "no image". */
+    #[ORM\Column(nullable: true)]
+    private ?int $imageWidth = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $imageHeight = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $publishedAt = null;
 
@@ -128,6 +138,28 @@ class Entry
     public function setContentHtml(?string $contentHtml): void
     {
         $this->contentHtml = $contentHtml;
+    }
+
+    public function getImageUrl(): ?string
+    {
+        return $this->imageUrl;
+    }
+
+    public function getImageWidth(): ?int
+    {
+        return $this->imageWidth;
+    }
+
+    public function getImageHeight(): ?int
+    {
+        return $this->imageHeight;
+    }
+
+    public function setImage(?string $url, ?int $width, ?int $height): void
+    {
+        $this->imageUrl = $url;
+        $this->imageWidth = $width;
+        $this->imageHeight = $height;
     }
 
     public function getPublishedAt(): ?\DateTimeImmutable

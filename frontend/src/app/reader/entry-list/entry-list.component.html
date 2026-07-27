@@ -106,30 +106,54 @@
       @switch (b.kind) {
         @case ('hero') {
           <app-entry-hero
-            [entry]="hero(b).entry"
-            [tags]="tagsFor(hero(b).entry.subscriptionId)"
+            [entry]="entryOf(b)"
+            [tags]="tagsFor(entryOf(b).subscriptionId)"
             (favorite)="favorite.emit($event)"
             (keep)="keep.emit($event)"
             (read)="read.emit($event)"
             (open)="open.emit($event)"
           />
         }
-        @case ('feature') {
-          <app-entry-row
-            [entry]="feat(b).entry"
-            [imageSide]="feat(b).imageSide"
-            [tags]="tagsFor(feat(b).entry.subscriptionId)"
-            [class.open]="openEntryId() === feat(b).entry.id"
-            (favorite)="favorite.emit($event)"
-            (keep)="keep.emit($event)"
-            (read)="read.emit($event)"
+        @case ('wide') {
+          <app-entry-wide
+            [entry]="entryOf(b)"
+            [tags]="tagsFor(entryOf(b).subscriptionId)"
+            (open)="open.emit($event)"
+          />
+        }
+        @case ('quote') {
+          <app-entry-quote
+            [entry]="entryOf(b)"
+            [tags]="tagsFor(entryOf(b).subscriptionId)"
+            (open)="open.emit($event)"
+          />
+        }
+        @case ('split') {
+          <app-entry-split
+            [entry]="entryOf(b)"
+            [imageSide]="side(b)"
+            [tags]="tagsFor(entryOf(b).subscriptionId)"
+            (open)="open.emit($event)"
+          />
+        }
+        @case ('kicker') {
+          <app-entry-kicker
+            [entry]="entryOf(b)"
+            [tags]="tagsFor(entryOf(b).subscriptionId)"
+            (open)="open.emit($event)"
+          />
+        }
+        @case ('thumb') {
+          <app-entry-thumb
+            [entry]="entryOf(b)"
+            [tags]="tagsFor(entryOf(b).subscriptionId)"
             (open)="open.emit($event)"
           />
         }
         @case ('compact') {
           <app-entry-compact
-            [entry]="compact(b).entry"
-            [tags]="tagsFor(compact(b).entry.subscriptionId)"
+            [entry]="entryOf(b)"
+            [tags]="tagsFor(entryOf(b).subscriptionId)"
             (open)="open.emit($event)"
           />
         }

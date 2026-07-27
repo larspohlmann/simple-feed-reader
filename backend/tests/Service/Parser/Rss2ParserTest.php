@@ -49,8 +49,8 @@ final class Rss2ParserTest extends TestCase
         $feed = (new Rss2Parser())->parse($this->document($xml));
 
         self::assertCount(3, $feed->entries);
-        self::assertSame('https://e/a.jpg', $feed->entries[0]->imageUrl);
-        self::assertSame('https://e/b.jpg', $feed->entries[1]->imageUrl);
-        self::assertNull($feed->entries[2]->imageUrl);
+        self::assertSame('https://e/a.jpg', $feed->entries[0]->image?->url);
+        self::assertSame('https://e/b.jpg', $feed->entries[1]->image?->url);
+        self::assertNull($feed->entries[2]->image);
     }
 }

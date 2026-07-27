@@ -1,4 +1,6 @@
 // src/app/reader/preview-image.ts
+import { EntryDto } from './models';
+
 /** Parse HTML inertly and return the first absolute https image src, or null.
  *  http/relative/data srcs are rejected: the app is https, so http images are
  *  mixed-content-blocked, and relative srcs can't be resolved without a base. */
@@ -24,4 +26,23 @@ export function textSnippet(html: string | null): string {
   if (!html) return '';
   const doc = new DOMParser().parseFromString(html, 'text/html');
   return (doc.body.textContent ?? '').replace(/\s+/g, ' ').trim();
+}
+
+export interface EntryImage {
+  url: string;
+  /** Declared width, or null when the feed did not say. */
+  width: number | null;
+  height: number | null;
+}
+
+/** The entry's image: the persisted field when present, else an inline <img>.
+ *  The fallback exists for rows ingested before the image column landed — a
+ *  refresh only backfills what the feed still serves, so the deep archive keeps
+ *  depending on inline markup indefinitely. */
+export function entryImage(entry: EntryDto): EntryImage | null {
+  if (entry.imageUrl) {
+    return { url: entry.imageUrl, width: entry.imageWidth, height: entry.imageHeight };
+  }
+  const inline = firstPreviewImage(entry.contentHtml, entry.summary);
+  return inline === null ? null : { url: inline, width: null, height: null };
 }
