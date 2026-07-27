@@ -6,15 +6,22 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { parseProblem } from '../../core/problem';
-import { IconComponent } from '../../shared/icon/icon.component';
+import { ColorFieldComponent } from '../../shared/color-field/color-field.component';
+import { IconPickerComponent } from '../../shared/icon-picker/icon-picker.component';
 import { FieldComponent } from '../../shared/field/field.component';
 import { ReaderApi } from '../reader-api';
 import { TagDto } from '../models';
-import { TAG_COLORS, TAG_ICONS } from '../../shared/icon-choices';
 
 @Component({
   selector: 'app-tag-form-dialog',
-  imports: [ReactiveFormsModule, A11yModule, IconComponent, FieldComponent, TranslocoPipe],
+  imports: [
+    ReactiveFormsModule,
+    A11yModule,
+    ColorFieldComponent,
+    IconPickerComponent,
+    FieldComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './tag-form-dialog.component.html',
   styleUrl: './tag-form-dialog.component.scss',
 })
@@ -24,8 +31,6 @@ export class TagFormDialogComponent {
   private readonly api = inject(ReaderApi);
   private readonly fb = inject(NonNullableFormBuilder);
 
-  readonly colors = TAG_COLORS;
-  readonly icons = TAG_ICONS;
   readonly isEdit = this.data !== null;
   readonly titleKey = this.isEdit ? 'dialog.tagForm.editTitle' : 'dialog.tagForm.newTitle';
 
@@ -36,10 +41,6 @@ export class TagFormDialogComponent {
   readonly icon = signal<string | null>(this.data?.icon ?? null);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
-
-  pickerValue(e: Event): string {
-    return (e.target as HTMLInputElement).value;
-  }
 
   submit(): void {
     if (this.form.invalid) return;

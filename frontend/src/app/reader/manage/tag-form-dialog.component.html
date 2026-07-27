@@ -12,52 +12,16 @@
     </app-field>
 
     <p class="lbl">{{ 'dialog.tagForm.colour' | transloco }}</p>
-    <div class="swatches">
-      @for (c of colors; track c) {
-        <button
-          type="button"
-          class="swatch"
-          [class.on]="color() === c"
-          [style.background]="c"
-          [attr.aria-label]="'dialog.tagForm.colourAria' | transloco: { colour: c }"
-          (click)="color.set(c)"
-        ></button>
-      }
-      <input
-        type="color"
-        class="picker"
-        [attr.aria-label]="'dialog.tagForm.customColour' | transloco"
-        [value]="color() ?? '#3f8676'"
-        (input)="color.set(pickerValue($event))"
-      />
-      <button type="button" class="clear" (click)="color.set(null)">
-        {{ 'dialog.tagForm.none' | transloco }}
-      </button>
-    </div>
+    <app-color-field [value]="color()" (valueChange)="color.set($event)">
+      {{ 'dialog.tagForm.none' | transloco }}
+    </app-color-field>
 
     <p class="lbl">{{ 'dialog.tagForm.icon' | transloco }}</p>
-    <div class="icons">
-      <button
-        type="button"
-        class="icon"
-        [class.on]="icon() === null"
-        [attr.aria-label]="'dialog.tagForm.noIcon' | transloco"
-        (click)="icon.set(null)"
-      >
-        <app-icon name="block" size="md" />
-      </button>
-      @for (i of icons; track i) {
-        <button
-          type="button"
-          class="icon"
-          [class.on]="icon() === i"
-          [attr.aria-label]="i"
-          (click)="icon.set(i)"
-        >
-          <app-icon [name]="i" size="md" />
-        </button>
-      }
-    </div>
+    <app-icon-picker
+      [value]="icon() ?? ''"
+      [color]="color()"
+      (valueChange)="icon.set($event || null)"
+    />
 
     @if (error()) {
       <p class="error" role="alert">{{ error() }}</p>

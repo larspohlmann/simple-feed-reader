@@ -7,6 +7,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
 import { IconComponent } from '../shared/icon/icon.component';
 import { IconPickerComponent } from '../shared/icon-picker/icon-picker.component';
+import { ColorFieldComponent } from '../shared/color-field/color-field.component';
 import { SpinnerComponent } from '../shared/spinner/spinner.component';
 import { FieldComponent } from '../shared/field/field.component';
 import { AdminApi } from './admin-api';
@@ -33,6 +34,7 @@ type FeedDraft = Omit<
     FormsModule,
     IconComponent,
     IconPickerComponent,
+    ColorFieldComponent,
     SpinnerComponent,
     TranslocoPipe,
   ],
@@ -109,6 +111,15 @@ export class AdminCatalogComponent implements OnInit {
 
   saveCategory(category: AdminCatalogCategoryDto): void {
     this.persistCategory(category.id, this.categoryBody(category));
+  }
+
+  /**
+   * A category always carries a colour, so its app-color-field runs with the
+   * clear button off and never emits null; the guard states that invariant.
+   */
+  applyCategoryColor(category: CategoryDraft, color: string | null): void {
+    if (color === null) return;
+    category.color = color;
   }
 
   addCategory(): void {

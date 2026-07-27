@@ -155,18 +155,6 @@ h1 {
   min-width: 6rem;
 }
 
-// Colour inputs are painted by the user agent, so styles/_controls.scss leaves
-// them alone; match the shared control height here so the swatch lines up with
-// the text inputs beside it in the row.
-.color {
-  width: 2.5rem;
-  height: var(--control-h);
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: none;
-}
-
 .check {
   display: inline-flex;
   align-items: center;

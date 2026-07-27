@@ -50,6 +50,27 @@ describe('IconPickerComponent', () => {
     expect(fixture.nativeElement.querySelector('.pop')).toBeNull();
   });
 
+  it('swallows the Escape that closes the popover', () => {
+    const seenByAncestors: Event[] = [];
+    const listener = (event: Event) => seenByAncestors.push(event);
+    document.addEventListener('keydown', listener);
+
+    try {
+      trigger().click();
+      fixture.detectChanges();
+      trigger().dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+      );
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.pop')).toBeNull();
+      // A dialog hosting the picker listens further up; it must not also close.
+      expect(seenByAncestors).toEqual([]);
+    } finally {
+      document.removeEventListener('keydown', listener);
+    }
+  });
+
   it('clears the glyph through the no-icon option', () => {
     const chosen: string[] = [];
     fixture.componentInstance.value.subscribe((value) => chosen.push(value));

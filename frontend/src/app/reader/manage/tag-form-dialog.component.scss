@@ -10,13 +10,13 @@
   flex-direction: column;
   gap: var(--space-3);
 
-  /* Never taller than the viewport -- the icon grid below scrolls instead (#85).
-     Reachable in landscape on a phone, where 216px of icons plus the name field,
-     the swatches and the buttons no longer fit. `vh` first as the fallback for
-     browsers without `dvh`. */
+  /* Never taller than the viewport (#85): reachable in landscape on a phone.
+     The icon grid that used to blow the height now lives in app-icon-picker's
+     popover, so the dialog itself is what scrolls. `vh` first as the fallback
+     for browsers without `dvh`. */
   max-height: 90vh;
   max-height: 90dvh;
-  overflow: hidden;
+  overflow: auto;
 }
 
 h2 {
@@ -28,84 +28,12 @@ form {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  min-height: 0;
 }
 
 .lbl {
   margin: var(--space-2) 0 0;
   font-size: var(--fs-sm);
   color: var(--text-secondary);
-}
-
-.swatches {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  align-items: center;
-}
-
-.swatch {
-  width: var(--space-5);
-  height: var(--space-5);
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  cursor: pointer;
-}
-
-.swatch.on {
-  border-color: var(--text-primary);
-}
-
-.picker {
-  width: var(--space-6);
-  height: var(--space-5);
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: none;
-  cursor: pointer;
-}
-
-.clear {
-  font-size: var(--fs-sm);
-  background: var(--surface-1);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  color: var(--text-secondary);
-  padding: 0 var(--space-2);
-  cursor: pointer;
-}
-
-.icons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     tuned icon-grid cap, not a spacing value; see the note above. */
-  max-height: 216px;
-
-  /* Shrink below the 216px cap when the dialog itself runs out of room. */
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: var(--space-0);
-}
-
-.icon {
-  display: inline-flex;
-  padding: var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-1);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.icon.on {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-soft);
 }
 
 .error {

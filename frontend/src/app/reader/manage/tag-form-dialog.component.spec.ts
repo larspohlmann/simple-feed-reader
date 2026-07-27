@@ -73,6 +73,28 @@ describe('TagFormDialogComponent', () => {
     expect(close).not.toHaveBeenCalled();
   });
 
+  it('drives the colour and icon signals from the shared pickers', () => {
+    const f = mount(null);
+    const c = f.componentInstance;
+    const host: HTMLElement = f.nativeElement;
+
+    (host.querySelector('app-color-field .swatch') as HTMLButtonElement).click();
+    expect(c.color()).toBe('#3f8676');
+
+    (host.querySelector('app-icon-picker .trigger') as HTMLButtonElement).click();
+    f.detectChanges();
+    (
+      host.querySelector('app-icon-picker .pop .opt[aria-label="code"]') as HTMLButtonElement
+    ).click();
+    expect(c.icon()).toBe('code');
+
+    // The "no icon" option is the first in the popover and clears back to null.
+    (host.querySelector('app-icon-picker .trigger') as HTMLButtonElement).click();
+    f.detectChanges();
+    (host.querySelector('app-icon-picker .pop .opt') as HTMLButtonElement).click();
+    expect(c.icon()).toBeNull();
+  });
+
   it('does not submit an empty name', () => {
     const c = mount(null).componentInstance;
     c.submit();

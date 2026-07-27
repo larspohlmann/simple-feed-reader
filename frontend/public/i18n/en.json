@@ -90,11 +90,8 @@
       "editTitle": "Edit tag",
       "name": "Name",
       "colour": "Colour",
-      "colourAria": "Colour {{colour}}",
-      "customColour": "Custom colour",
       "none": "None",
       "icon": "Icon",
-      "noIcon": "No icon",
       "saving": "Saving…",
       "save": "Save"
     },
@@ -292,5 +289,9 @@
   "iconPicker": {
     "choose": "Choose icon",
     "none": "No icon"
+  },
+  "colorField": {
+    "swatch": "Colour {{colour}}",
+    "custom": "Custom colour"
   }
 }

@@ -94,8 +94,21 @@ export class IconPickerComponent {
     }
   }
 
+  /**
+   * Escape dismisses the popover only. The picker is used inside the tag
+   * dialog, whose CDK overlay also closes on Escape from a listener on
+   * `body` — stop the event here so one keypress does not close both.
+   */
+  @HostListener('keydown.escape', ['$event'])
+  onEscape(event: Event): void {
+    if (!this.open()) return;
+    this.open.set(false);
+    event.stopPropagation();
+  }
+
+  /** Fallback for an Escape pressed while focus sits outside the picker. */
   @HostListener('document:keydown.escape')
-  onEscape(): void {
+  onEscapeElsewhere(): void {
     if (this.open()) this.open.set(false);
   }
 }
