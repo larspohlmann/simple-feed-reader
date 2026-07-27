@@ -12,7 +12,7 @@
       [attr.aria-label]="'discover.close' | transloco"
       (click)="onSkip()"
     >
-      <app-icon name="close" [size]="20" />
+      <app-icon name="close" size="md" />
     </button>
   </header>
 
@@ -52,11 +52,7 @@
         >
           <div class="cat-head">
             <span class="cat-ico">
-              <app-icon
-                [name]="category.icon"
-                [size]="18"
-                [style.color]="category.color || 'var(--text-muted)'"
-              />
+              <app-tag-glyph [name]="category.icon" [color]="category.color" size="md" />
             </span>
             <h2 [id]="'cat-' + category.id">{{ category.name }}</h2>
             <span class="cat-count">{{ category.feeds.length }}</span>
@@ -100,7 +96,7 @@
                   </span>
                   <span class="mark" aria-hidden="true">
                     @if (selection.isSelected(feed.id)) {
-                      <app-icon name="check" [size]="16" />
+                      <app-icon name="check" size="sm" />
                     }
                   </span>
                 </button>

@@ -16,6 +16,7 @@ import { Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
 import { IconComponent } from '../shared/icon/icon.component';
+import { TagGlyphComponent } from '../shared/tag-glyph/tag-glyph.component';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { TagsStore } from '../reader/tags.store';
 import { ActiveCategory } from './active-category';
@@ -32,7 +33,13 @@ const JUMP_SETTLE_MS = 700;
 @Component({
   selector: 'app-discover',
   standalone: true,
-  imports: [TranslocoPipe, IconComponent, CategoryRailComponent, CategoryChipsComponent],
+  imports: [
+    TranslocoPipe,
+    IconComponent,
+    TagGlyphComponent,
+    CategoryRailComponent,
+    CategoryChipsComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [CatalogSelection, ActiveCategory],
   templateUrl: './discover.component.html',

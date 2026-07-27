@@ -1,6 +1,6 @@
 <header class="bar">
   <a class="back" routerLink="/">
-    <app-icon name="arrow_back" [size]="18" /> {{ 'settings.backReader' | transloco }}
+    <app-icon name="arrow_back" size="md" /> {{ 'settings.backReader' | transloco }}
   </a>
   <h1>{{ 'admin.catalog' | transloco }}</h1>
 </header>
@@ -114,7 +114,7 @@
         <div class="row">
           <span class="swatch" [style.background]="category.color"></span>
           @if (category.locked) {
-            <app-icon class="lock" name="lock" [size]="16" />
+            <app-icon class="lock" name="lock" size="sm" />
           }
           <input class="grow" [(ngModel)]="category.name" [attr.aria-label]="'name'" />
           <app-icon-picker [(value)]="category.icon" [color]="category.color" />
@@ -129,10 +129,10 @@
           </label>
           <div class="acts">
             <button (click)="moveCategory(ci, -1)" aria-label="up">
-              <app-icon name="keyboard_arrow_up" [size]="18" />
+              <app-icon name="keyboard_arrow_up" size="md" />
             </button>
             <button (click)="moveCategory(ci, 1)" aria-label="down">
-              <app-icon name="keyboard_arrow_down" [size]="18" />
+              <app-icon name="keyboard_arrow_down" size="md" />
             </button>
             <button class="ok" (click)="saveCategory(category)">
               {{ 'common.save' | transloco }}
@@ -147,7 +147,7 @@
           @for (feed of feedsFor(category.id); track feed.id) {
             <li class="feed" data-testid="admin-feed">
               @if (feed.locked) {
-                <app-icon class="lock" name="lock" [size]="16" />
+                <app-icon class="lock" name="lock" size="sm" />
               }
               <input class="grow" [(ngModel)]="feed.title" [attr.aria-label]="'title'" />
               <input class="grow" [(ngModel)]="feed.url" [attr.aria-label]="'url'" />
@@ -178,13 +178,13 @@
               </label>
               <div class="acts">
                 <button (click)="moveFeed(feed, -1)" aria-label="up">
-                  <app-icon name="keyboard_arrow_up" [size]="18" />
+                  <app-icon name="keyboard_arrow_up" size="md" />
                 </button>
                 <button (click)="moveFeed(feed, 1)" aria-label="down">
-                  <app-icon name="keyboard_arrow_down" [size]="18" />
+                  <app-icon name="keyboard_arrow_down" size="md" />
                 </button>
                 <button data-testid="refresh-favicon" (click)="refreshFavicon(feed)">
-                  <app-icon name="refresh" [size]="18" />
+                  <app-icon name="refresh" size="md" />
                 </button>
                 <button class="ok" data-testid="feed-save" (click)="saveFeed(feed)">
                   {{ 'common.save' | transloco }}

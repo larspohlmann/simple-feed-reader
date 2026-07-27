@@ -1,7 +1,7 @@
 // src/app/discover/category-chips.component.ts
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { IconComponent } from '../shared/icon/icon.component';
+import { TagGlyphComponent } from '../shared/tag-glyph/tag-glyph.component';
 import { CatalogCategoryDto } from './catalog.models';
 
 /**
@@ -13,7 +13,7 @@ import { CatalogCategoryDto } from './catalog.models';
 @Component({
   selector: 'app-category-chips',
   standalone: true,
-  imports: [TranslocoPipe, IconComponent],
+  imports: [TranslocoPipe, TagGlyphComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <nav class="chips" [attr.aria-label]="'discover.categories' | transloco">
@@ -24,12 +24,10 @@ import { CatalogCategoryDto } from './catalog.models';
           [attr.aria-current]="category.id === activeId() ? 'true' : null"
           (click)="jump.emit(category.id)"
         >
-          <app-icon
+          <app-tag-glyph
             [name]="category.icon"
-            [size]="16"
-            [style.color]="
-              category.id === activeId() ? 'currentColor' : category.color || 'var(--text-muted)'
-            "
+            [color]="category.id === activeId() ? 'currentColor' : category.color"
+            size="sm"
           />
           {{ category.name }}
           @if (picked()[category.id] > 0) {

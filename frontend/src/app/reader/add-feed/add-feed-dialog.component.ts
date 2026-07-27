@@ -7,7 +7,7 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef } from '@angular/cdk/dialog';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { IconComponent } from '../../shared/icon/icon.component';
+import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
 import { TagsStore } from '../tags.store';
@@ -20,7 +20,7 @@ type PreviewState =
 
 @Component({
   selector: 'app-add-feed-dialog',
-  imports: [ReactiveFormsModule, A11yModule, RouterLink, IconComponent, TranslocoPipe],
+  imports: [ReactiveFormsModule, A11yModule, RouterLink, TagGlyphComponent, TranslocoPipe],
   templateUrl: './add-feed-dialog.component.html',
   styleUrl: './add-feed-dialog.component.scss',
 })

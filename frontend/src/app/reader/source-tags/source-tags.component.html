@@ -9,11 +9,7 @@
         [attr.title]="'reader.filterByTag' | transloco: { name: t.name }"
         (click)="$event.stopPropagation()"
       >
-        @if (t.icon) {
-          <app-icon [name]="t.icon" [size]="12" [style.color]="t.color || 'var(--text-muted)'" />
-        } @else {
-          <span class="dot" [style.background]="t.color || 'var(--text-muted)'"></span>
-        }
+        <app-tag-glyph [name]="t.icon" [color]="t.color" size="xs" />
         {{ t.name }}
       </a>
     }

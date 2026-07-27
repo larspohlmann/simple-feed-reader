@@ -10,6 +10,7 @@ import {
 } from '@angular/cdk/drag-drop';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { ViewControlsComponent } from '../view-controls/view-controls.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
@@ -27,6 +28,7 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
   imports: [
     RouterLink,
     IconComponent,
+    TagGlyphComponent,
     FaviconComponent,
     ViewControlsComponent,
     TranslocoPipe,

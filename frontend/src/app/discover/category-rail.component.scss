@@ -58,14 +58,6 @@ button.active {
   font-weight: 600;
 }
 
-.lead {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: var(--icon-md);
-}
-
 .name {
   overflow: hidden;
   text-overflow: ellipsis;

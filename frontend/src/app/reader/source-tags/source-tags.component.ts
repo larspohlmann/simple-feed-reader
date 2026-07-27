@@ -1,7 +1,7 @@
 import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { IconComponent } from '../../shared/icon/icon.component';
+import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { SubscriptionTagDto } from '../models';
 
 /**
@@ -13,7 +13,7 @@ import { SubscriptionTagDto } from '../models';
  */
 @Component({
   selector: 'app-source-tags',
-  imports: [RouterLink, IconComponent, TranslocoPipe],
+  imports: [RouterLink, TagGlyphComponent, TranslocoPipe],
   templateUrl: './source-tags.component.html',
   styleUrl: './source-tags.component.scss',
 })

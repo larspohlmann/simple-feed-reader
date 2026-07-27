@@ -5,7 +5,7 @@
       [attr.aria-label]="'reader.toggleSidebar' | transloco"
       (click)="toggleSidebar.emit()"
     >
-      <app-icon name="menu" [size]="20" />
+      <app-icon name="menu" size="md" />
     </button>
     <a
       class="brand"
@@ -45,7 +45,7 @@
         (click)="menuOpen.set(!menuOpen())"
       >
         <app-user-avatar [email]="auth.user()?.email ?? null" [size]="26" />
-        <app-icon name="expand_more" [size]="18" />
+        <app-icon name="expand_more" size="md" />
       </button>
       @if (menuOpen()) {
         <div class="menu" role="menu">
@@ -83,7 +83,7 @@
         queryParamsHandling="merge"
       >
         @if (t.icon) {
-          <app-icon [name]="t.icon" [size]="14" [style.color]="t.color || 'var(--text-muted)'" />
+          <app-icon [name]="t.icon" size="sm" [style.color]="t.color || 'var(--text-muted)'" />
         } @else {
           <span class="dot" [style.background]="t.color || 'var(--text-muted)'"></span>
         }

@@ -43,7 +43,7 @@
         [attr.aria-label]="'dialog.tagForm.noIcon' | transloco"
         (click)="icon.set(null)"
       >
-        <app-icon name="block" [size]="18" />
+        <app-icon name="block" size="md" />
       </button>
       @for (i of icons; track i) {
         <button
@@ -53,7 +53,7 @@
           [attr.aria-label]="i"
           (click)="icon.set(i)"
         >
-          <app-icon [name]="i" [size]="18" />
+          <app-icon [name]="i" size="md" />
         </button>
       }
     </div>

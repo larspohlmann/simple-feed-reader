@@ -25,7 +25,7 @@
           [attr.aria-label]="'reader.unread' | transloco"
           [attr.title]="'reader.unread' | transloco"
         >
-          <app-icon class="ico" name="circle" [size]="14" />
+          <app-icon class="ico" name="circle" size="sm" />
           <span class="txt">{{ 'reader.unread' | transloco }}</span>
         </a>
         <a
@@ -36,7 +36,7 @@
           [attr.aria-label]="'reader.all' | transloco"
           [attr.title]="'reader.all' | transloco"
         >
-          <app-icon class="ico" name="list" [size]="18" />
+          <app-icon class="ico" name="list" size="md" />
           <span class="txt">{{ 'reader.all' | transloco }}</span>
         </a>
       </div>
@@ -49,7 +49,7 @@
         [attr.aria-label]="'reader.markAllRead' | transloco"
         [attr.title]="'reader.markAllRead' | transloco"
       >
-        <app-icon name="done_all" [size]="18" />
+        <app-icon name="done_all" size="md" />
         <span class="txt">{{ 'reader.markAllRead' | transloco }}</span>
       </button>
     }
@@ -63,7 +63,7 @@
         [attr.aria-label]="'reader.refresh' | transloco"
         [attr.title]="'reader.refresh' | transloco"
       >
-        <app-icon name="refresh" [size]="18" />
+        <app-icon name="refresh" size="md" />
         <span class="txt">{{ 'reader.refresh' | transloco }}</span>
       </button>
     }

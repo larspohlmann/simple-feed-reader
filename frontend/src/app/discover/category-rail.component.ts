@@ -1,7 +1,7 @@
 // src/app/discover/category-rail.component.ts
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { IconComponent } from '../shared/icon/icon.component';
+import { TagGlyphComponent } from '../shared/tag-glyph/tag-glyph.component';
 import { CatalogCategoryDto } from './catalog.models';
 
 /**
@@ -15,7 +15,7 @@ import { CatalogCategoryDto } from './catalog.models';
 @Component({
   selector: 'app-category-rail',
   standalone: true,
-  imports: [TranslocoPipe, IconComponent],
+  imports: [TranslocoPipe, TagGlyphComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <nav class="rail" [attr.aria-label]="'discover.categories' | transloco">
@@ -29,11 +29,7 @@ import { CatalogCategoryDto } from './catalog.models';
               (click)="jump.emit(category.id)"
             >
               <span class="lead">
-                <app-icon
-                  [name]="category.icon"
-                  [size]="18"
-                  [style.color]="category.color || 'var(--text-muted)'"
-                />
+                <app-tag-glyph [name]="category.icon" [color]="category.color" size="md" />
               </span>
               <span class="name">{{ category.name }}</span>
               <span class="count" [class.picked]="picked()[category.id] > 0">

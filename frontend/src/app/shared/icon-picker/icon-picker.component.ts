@@ -35,9 +35,9 @@ import { TAG_ICONS } from '../icon-choices';
       (click)="toggle()"
     >
       <span class="glyph" [style.color]="color() || 'var(--text-muted)'">
-        <app-icon [name]="value() || 'block'" [size]="18" />
+        <app-icon [name]="value() || 'block'" size="md" />
       </span>
-      <app-icon class="caret" name="expand_more" [size]="16" />
+      <app-icon class="caret" name="expand_more" size="sm" />
     </button>
 
     @if (open()) {
@@ -49,7 +49,7 @@ import { TAG_ICONS } from '../icon-choices';
           [attr.aria-label]="'iconPicker.none' | transloco"
           (click)="choose('')"
         >
-          <app-icon name="block" [size]="18" />
+          <app-icon name="block" size="md" />
         </button>
         @for (name of icons; track name) {
           <button
@@ -59,7 +59,7 @@ import { TAG_ICONS } from '../icon-choices';
             [attr.aria-label]="name"
             (click)="choose(name)"
           >
-            <app-icon [name]="name" [size]="18" />
+            <app-icon [name]="name" size="md" />
           </button>
         }
       </div>

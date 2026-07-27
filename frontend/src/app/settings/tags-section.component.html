@@ -2,7 +2,7 @@
   <div class="head">
     <h2>{{ 'settings.tags.title' | transloco }}</h2>
     <button class="new" (click)="manage.createTag()">
-      <app-icon name="add" [size]="16" /> {{ 'settings.tags.new' | transloco }}
+      <app-icon name="add" size="sm" /> {{ 'settings.tags.new' | transloco }}
     </button>
   </div>
   @if (tagsStore.tags().length === 0) {
@@ -14,7 +14,7 @@
           <span class="ident">
             <span class="dot" [style.background]="t.color || 'var(--text-muted)'"></span>
             @if (t.icon) {
-              <app-icon [name]="t.icon" [size]="18" />
+              <app-icon [name]="t.icon" size="md" />
             }
             <span class="name">{{ t.name }}</span>
             <span class="count">{{
@@ -26,10 +26,10 @@
           </span>
           <span class="acts">
             <button (click)="manage.editTag(t)">
-              <app-icon name="edit" [size]="16" /> {{ 'settings.tags.edit' | transloco }}
+              <app-icon name="edit" size="sm" /> {{ 'settings.tags.edit' | transloco }}
             </button>
             <button class="danger" (click)="manage.deleteTag(t)">
-              <app-icon name="delete" [size]="16" /> {{ 'settings.tags.delete' | transloco }}
+              <app-icon name="delete" size="sm" /> {{ 'settings.tags.delete' | transloco }}
             </button>
           </span>
         </li>
