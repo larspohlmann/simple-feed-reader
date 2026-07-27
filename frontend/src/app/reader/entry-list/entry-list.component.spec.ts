@@ -27,6 +27,7 @@ const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   createdAt: 'x',
   subscriptionId: 1,
   source: 'src',
+  faviconUrl: null,
   isRead: false,
   isFavorite: false,
   isKept: false,
@@ -287,11 +288,17 @@ describe('EntryListComponent', () => {
   });
 
   it('renders planned magazine blocks when layout is magazine', () => {
+    // The grouped run must stay a MINORITY of the loaded entries (<=40%, see
+    // magazine-planner's DOMINANT_SHARE) or the planner treats it as the
+    // dominant source and leaves it ungrouped — hence five distinct diverse
+    // entries alongside the run of three.
     const grouped = [1, 2, 3].map((id) => entry(id));
-    const diverse = entry(4, { subscriptionId: 4, source: 'diverse' });
+    const diverse = [4, 5, 6, 7, 8].map((id) =>
+      entry(id, { subscriptionId: id, source: `diverse${id}` }),
+    );
     const el = mount({
       layout: 'magazine',
-      entries: [...grouped, diverse],
+      entries: [...grouped, ...diverse],
     }).nativeElement as HTMLElement;
     expect(el.querySelector('app-source-group')).not.toBeNull();
     expect(el.querySelector('.rows.magazine')).not.toBeNull();
