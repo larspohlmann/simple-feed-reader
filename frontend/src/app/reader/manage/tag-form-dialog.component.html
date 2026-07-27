@@ -7,8 +7,9 @@
 >
   <h2>{{ titleKey | transloco }}</h2>
   <form [formGroup]="form" (ngSubmit)="submit()">
-    <label class="lbl" for="tag-name">{{ 'dialog.tagForm.name' | transloco }}</label>
-    <input id="tag-name" class="field" formControlName="name" maxlength="100" cdkFocusInitial />
+    <app-field [label]="'dialog.tagForm.name' | transloco">
+      <input id="tag-name" formControlName="name" maxlength="100" cdkFocusInitial />
+    </app-field>
 
     <p class="lbl">{{ 'dialog.tagForm.colour' | transloco }}</p>
     <div class="swatches">

@@ -57,12 +57,11 @@ h1 {
   gap: var(--space-3);
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  font-size: var(--fs-sm);
-  color: var(--text-secondary);
+// The upload row lays its fields out horizontally and supplies its own rhythm
+// through `gap`, so a field's stacking margin would only drop the Import
+// button out of line with the controls it belongs to.
+.upload app-field {
+  margin-bottom: 0;
 }
 
 .warm {
@@ -156,21 +155,16 @@ h1 {
   min-width: 6rem;
 }
 
+// Colour inputs are painted by the user agent, so styles/_controls.scss leaves
+// them alone; match the shared control height here so the swatch lines up with
+// the text inputs beside it in the row.
 .color {
   width: 2.5rem;
+  height: var(--control-h);
   padding: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: none;
-}
-
-input:not([type='checkbox'], [type='color']),
-select {
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-1);
-  color: var(--text-primary);
 }
 
 .check {

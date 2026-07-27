@@ -35,8 +35,7 @@
     }
 
     <div class="upload">
-      <label class="field">
-        <span>{{ 'admin.importUpload' | transloco }}</span>
+      <app-field [label]="'admin.importUpload' | transloco">
         <input
           #fileInput
           type="file"
@@ -44,9 +43,8 @@
           data-testid="import-file"
           (change)="onFileSelected($event)"
         />
-      </label>
-      <label class="field">
-        <span>{{ 'admin.importMode' | transloco }}</span>
+      </app-field>
+      <app-field [label]="'admin.importMode' | transloco">
         <select data-testid="import-mode" (change)="setMode($event)">
           <option value="merge" [selected]="importMode() === 'merge'">
             {{ 'admin.importModeMerge' | transloco }}
@@ -55,7 +53,7 @@
             {{ 'admin.importModeReplace' | transloco }}
           </option>
         </select>
-      </label>
+      </app-field>
       <button
         class="primary"
         data-testid="import-run"

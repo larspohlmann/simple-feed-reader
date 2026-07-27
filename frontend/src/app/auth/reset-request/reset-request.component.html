@@ -7,10 +7,9 @@
     <a routerLink="/login">{{ 'auth.backToSignIn' | transloco }}</a>
   } @else {
     <form (ngSubmit)="submit()" [formGroup]="form">
-      <label class="field">
-        <span>{{ 'auth.email' | transloco }}</span>
+      <app-field [label]="'auth.email' | transloco">
         <input type="email" formControlName="email" autocomplete="email" />
-      </label>
+      </app-field>
       <app-form-error [message]="error()" />
       <app-button type="submit" variant="primary" [loading]="loading()">{{
         'auth.reset.sendLink' | transloco

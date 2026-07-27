@@ -3,19 +3,17 @@
   [subtitle]="'auth.login.subtitle' | transloco"
 >
   <form [formGroup]="form">
-    <label class="field">
-      <span>{{ 'auth.email' | transloco }}</span>
+    <app-field [label]="'auth.email' | transloco">
       <input type="email" formControlName="email" name="email" autocomplete="email" />
-    </label>
-    <label class="field">
-      <span>{{ 'auth.password' | transloco }}</span>
+    </app-field>
+    <app-field [label]="'auth.password' | transloco">
       <input
         type="password"
         formControlName="password"
         name="password"
         autocomplete="current-password"
       />
-    </label>
+    </app-field>
     <app-form-error [message]="error()" />
     <app-button variant="primary" [loading]="loading()" (click)="submit()">{{
       'auth.login.submit' | transloco

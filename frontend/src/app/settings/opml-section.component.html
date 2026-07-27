@@ -15,7 +15,7 @@
     <p class="lead">{{ 'settings.opml.importLead' | transloco }}</p>
     <input type="file" accept=".opml,.xml,text/xml,text/x-opml" (change)="onFile($event)" />
     <textarea
-      class="field area"
+      class="area"
       rows="4"
       [placeholder]="'settings.opml.pastePlaceholder' | transloco"
       [value]="text()"

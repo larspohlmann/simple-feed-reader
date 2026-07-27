@@ -6,6 +6,7 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
+import { FieldComponent } from '../../shared/field/field.component';
 import { parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
 import { TagsStore } from '../tags.store';
@@ -13,7 +14,7 @@ import { SubscriptionDto } from '../models';
 
 @Component({
   selector: 'app-edit-subscription-dialog',
-  imports: [ReactiveFormsModule, A11yModule, TagGlyphComponent, TranslocoPipe],
+  imports: [ReactiveFormsModule, A11yModule, TagGlyphComponent, FieldComponent, TranslocoPipe],
   templateUrl: './edit-subscription-dialog.component.html',
   styleUrl: './edit-subscription-dialog.component.scss',
 })

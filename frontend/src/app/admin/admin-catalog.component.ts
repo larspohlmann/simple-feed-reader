@@ -8,6 +8,7 @@ import { Problem, parseProblem } from '../core/problem';
 import { IconComponent } from '../shared/icon/icon.component';
 import { IconPickerComponent } from '../shared/icon-picker/icon-picker.component';
 import { SpinnerComponent } from '../shared/spinner/spinner.component';
+import { FieldComponent } from '../shared/field/field.component';
 import { AdminApi } from './admin-api';
 import {
   AdminCatalogCategoryDto,
@@ -28,6 +29,7 @@ type FeedDraft = Omit<
   selector: 'app-admin-catalog',
   imports: [
     RouterLink,
+    FieldComponent,
     FormsModule,
     IconComponent,
     IconPickerComponent,

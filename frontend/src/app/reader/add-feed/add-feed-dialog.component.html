@@ -7,17 +7,9 @@
 >
   <h2>{{ 'dialog.addFeed.title' | transloco }}</h2>
   <form [formGroup]="form" (ngSubmit)="submit()">
-    <input
-      class="field"
-      formControlName="url"
-      type="url"
-      placeholder="https://example.com"
-      [attr.aria-label]="'dialog.addFeed.urlLabel' | transloco"
-      cdkFocusInitial
-    />
-    @if (error()) {
-      <p class="error" role="alert">{{ error() }}</p>
-    }
+    <app-field [label]="'dialog.addFeed.urlLabel' | transloco" [error]="error()">
+      <input formControlName="url" type="url" placeholder="https://example.com" cdkFocusInitial />
+    </app-field>
     @if (tagsStore.tags().length) {
       <p class="lbl">{{ 'dialog.addFeed.tags' | transloco }}</p>
       <div class="tags">

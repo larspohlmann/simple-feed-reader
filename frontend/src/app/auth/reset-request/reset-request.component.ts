@@ -12,6 +12,7 @@ import { solveAltcha } from '../altcha';
 import { AuthShellComponent } from '../auth-shell/auth-shell.component';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { FormErrorComponent } from '../../shared/form-error/form-error.component';
+import { FieldComponent } from '../../shared/field/field.component';
 
 @Component({
   selector: 'app-reset-request',
@@ -22,6 +23,7 @@ import { FormErrorComponent } from '../../shared/form-error/form-error.component
     AuthShellComponent,
     ButtonComponent,
     FormErrorComponent,
+    FieldComponent,
   ],
   templateUrl: './reset-request.component.html',
   styleUrl: './reset-request.component.scss',

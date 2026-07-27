@@ -7,15 +7,15 @@
 >
   <h2>{{ 'dialog.editFeed.title' | transloco }}</h2>
   <form [formGroup]="form" (ngSubmit)="submit()">
-    <label class="lbl" for="sub-title">{{ 'dialog.editFeed.customTitle' | transloco }}</label>
-    <input
-      id="sub-title"
-      class="field"
-      formControlName="customTitle"
-      maxlength="512"
-      [placeholder]="data.title"
-      cdkFocusInitial
-    />
+    <app-field [label]="'dialog.editFeed.customTitle' | transloco">
+      <input
+        id="sub-title"
+        formControlName="customTitle"
+        maxlength="512"
+        [placeholder]="data.title"
+        cdkFocusInitial
+      />
+    </app-field>
 
     <p class="lbl">{{ 'dialog.editFeed.tags' | transloco }}</p>
     @if (tagsStore.tags().length === 0) {

@@ -7,13 +7,14 @@ import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { parseProblem } from '../../core/problem';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { FieldComponent } from '../../shared/field/field.component';
 import { ReaderApi } from '../reader-api';
 import { TagDto } from '../models';
 import { TAG_COLORS, TAG_ICONS } from '../../shared/icon-choices';
 
 @Component({
   selector: 'app-tag-form-dialog',
-  imports: [ReactiveFormsModule, A11yModule, IconComponent, TranslocoPipe],
+  imports: [ReactiveFormsModule, A11yModule, IconComponent, FieldComponent, TranslocoPipe],
   templateUrl: './tag-form-dialog.component.html',
   styleUrl: './tag-form-dialog.component.scss',
 })
