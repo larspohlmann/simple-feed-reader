@@ -17,6 +17,13 @@ export interface MagazinePlanInput {
  *  it fired at full strength with nothing to protect against, and hid 84% of the
  *  entries (#148). */
 const DOMINANT_SHARE = 0.4;
+/** Dominance is judged over a fixed leading window, never the whole loaded
+ *  set: a source's SHARE of the full list shrinks as more pages load, which
+ *  would flip its grouping and reshuffle already-rendered blocks. The window
+ *  is far smaller than one API page (PAGE_SIZE = 100), so every render past
+ *  the first samples the identical leading entries — the plan stays a stable
+ *  prefix under infinite scroll. */
+const DOMINANCE_SAMPLE = 24;
 const GROUP_MIN = 3;
 const GROUP_SHOW = 3;
 /** A digest consumes its lead plus at most GROUP_SHOW; the rest of the run
@@ -32,7 +39,9 @@ const QUOTE_MIN_TEXT = 300;
 export function planMagazine(input: MagazinePlanInput): MagazineBlock[] {
   const { entries, grouping, complete } = input;
   const blocks: MagazineBlock[] = [];
-  const dominant = grouping ? dominantSources(entries) : new Set<number>();
+  const dominant = grouping
+    ? dominantSources(entries.slice(0, DOMINANCE_SAMPLE))
+    : new Set<number>();
 
   let index = 0;
   let page = 0;
@@ -174,9 +183,11 @@ function fits(kind: EntryKind, entry: EntryDto): boolean {
       // as not, which is what produced heroes with no picture.
       return !!image && (width >= 500 || (width === 0 && !!entry.imageUrl));
     case 'wide':
-      return !!image && (width >= 400 || width === 0);
+      // Same untrusted-inline-thumbnail guard as hero: a 148px archive image
+      // otherwise fills a full-width band meant for a real photo.
+      return !!image && (width >= 400 || (width === 0 && !!entry.imageUrl));
     case 'split':
-      return !!image && (width >= 300 || width === 0);
+      return !!image && (width >= 300 || (width === 0 && !!entry.imageUrl));
     case 'thumb':
       return !!image;
     case 'quote':

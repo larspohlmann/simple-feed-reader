@@ -106,4 +106,41 @@ describe('planMagazine', () => {
     expect(held.length).toBeLessThanOrEqual(done.length);
     expect(entryCount(done)).toBe(20);
   });
+
+  it('is prefix-stable even when a front-loaded source crosses the dominance threshold', () => {
+    // 30 of source 1 up front, then 90 of other sources. Source 1 is 50% of the
+    // first 60 but 25% of all 120 — a whole-window dominance test would flip it.
+    const entries = [
+      ...many(30, (i) => big(i, { subscriptionId: 1, source: 'Burst' })),
+      ...many(90, (i) => big(100 + i, { subscriptionId: (i % 6) + 2 })),
+    ];
+    const first = planMagazine({ entries: entries.slice(0, 60), grouping: true, complete: false });
+    const full = planMagazine({ entries, grouping: true, complete: true });
+    expect(kinds(full).slice(0, first.length)).toEqual(kinds(first));
+  });
+
+  it('never fills a wide or split block from an untrusted inline thumbnail', () => {
+    const entries = many(40, (i) =>
+      e(i, { subscriptionId: (i % 6) + 1, contentHtml: '<img src="https://i/thumb.jpg">' }),
+    );
+    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    expect(kinds(blocks)).not.toContain('wide');
+    expect(kinds(blocks)).not.toContain('split');
+  });
+
+  it('bounds the LOOK_AHEAD reorder to a single swap without losing entries', () => {
+    // Entry 1 has no image (can't fill the tallest slot); entry 3 does and is
+    // within LOOK_AHEAD (2), so the reorder should pull it forward while
+    // everything else stays in place — and no entry is lost or duplicated.
+    const lookAhead = 2;
+    const entries = [e(1), big(2), big(3), big(4), big(5)];
+    const blocks = planMagazine({ entries, grouping: false, complete: true });
+    const ids = blocks.flatMap((b) =>
+      b.kind === 'group' ? b.entries.map((x) => x.id) : [b.entry.id],
+    );
+    expect([...ids].sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5]);
+    ids.forEach((id, position) => {
+      expect(Math.abs(id - 1 - position)).toBeLessThanOrEqual(lookAhead);
+    });
+  });
 });
