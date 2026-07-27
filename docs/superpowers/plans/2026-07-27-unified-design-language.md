@@ -22,6 +22,17 @@
   `scss/comment-no-empty`, and it applies inside `theme/` too — the overrides in
   `.stylelintrc.json` disable specific rules, not the whole config. Keep
   comment blocks contiguous.
+- **Stylelint cannot read `.ts` files, so never pass a `.ts` glob to it.** No
+  `customSyntax` (`postcss-lit`, `postcss-styled-syntax`) is installed, so
+  stylelint throws `CssSyntaxError` on the first import statement of every `.ts`
+  file and never reaches an inline `styles:` block. The consequence is that an
+  inline `styles:` block is **completely unenforced**. Rather than add a
+  PostCSS dependency, this plan removes the remaining inline blocks: every
+  component's styles live in a sibling `.scss` file, which is the house pattern
+  commit `496d06d` already established. Four components still had inline blocks
+  at planning time — `shared/icon-picker`, `shared/progress-hairline`,
+  `discover/category-rail`, `discover/category-chips` — and the tasks below
+  extract all four.
 - Commit after every task. Never leave `main`/`develop` — this branch merges to `develop` via PR.
 - Where a task says "expected: N violations", the number is a guide from the state at planning time. If your count differs, that is information, not necessarily a bug — but investigate before proceeding.
 
@@ -214,27 +225,27 @@ These land **red on purpose**. Phase C makes them pass. Do not commit this task 
     "no-empty-source": null,
     "selector-pseudo-element-no-unknown": [true, { "ignorePseudoElements": ["ng-deep"] }],
     "declaration-property-unit-allowed-list": {
-      "padding": [],
-      "padding-top": [],
-      "padding-right": [],
-      "padding-bottom": [],
-      "padding-left": [],
-      "margin": [],
-      "margin-top": [],
-      "margin-right": [],
-      "margin-bottom": [],
-      "margin-left": [],
-      "gap": [],
-      "row-gap": [],
-      "column-gap": [],
-      "font-size": [],
-      "border-radius": [],
-      "width": [],
-      "height": [],
-      "min-width": [],
-      "min-height": [],
-      "max-width": [],
-      "max-height": []
+      "padding": ["%", "em", "rem"],
+      "padding-top": ["%", "em", "rem"],
+      "padding-right": ["%", "em", "rem"],
+      "padding-bottom": ["%", "em", "rem"],
+      "padding-left": ["%", "em", "rem"],
+      "margin": ["%", "em", "rem"],
+      "margin-top": ["%", "em", "rem"],
+      "margin-right": ["%", "em", "rem"],
+      "margin-bottom": ["%", "em", "rem"],
+      "margin-left": ["%", "em", "rem"],
+      "gap": ["%", "em", "rem"],
+      "row-gap": ["%", "em", "rem"],
+      "column-gap": ["%", "em", "rem"],
+      "font-size": ["%", "em", "rem"],
+      "border-radius": ["%", "em", "rem"],
+      "width": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "fr"],
+      "height": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "fr"],
+      "min-width": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "fr"],
+      "min-height": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "fr"],
+      "max-width": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "fr"],
+      "max-height": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "fr"]
     },
     "media-feature-name-unit-allowed-list": { "width": [] }
   },
@@ -251,10 +262,22 @@ These land **red on purpose**. Phase C makes them pass. Do not commit this task 
 }
 ```
 
-Two notes on what is deliberately **not** in this list:
+Three notes on the shape of this rule:
 
-- `border-width` and `outline-*` are absent, so the 88 `1px` hairlines stay literal. Tokenising a hairline lengthens every border declaration and buys nothing.
-- An empty array (`"padding": []`) means "no units permitted at all" — so `padding: 0` and `padding: var(--space-2)` pass, while `padding: 12px` and `padding: 0.5rem` fail. That is the intent: the value must come from a token.
+- The rule lists **allowed** units, so the lists above say "any relative unit, but
+  never `px`". That is the actual intent. An earlier draft used `[]` ("no units
+  at all"), which made `width: 100%`, `height: 1em` and `border-radius: 50%`
+  violations — legitimate CSS that would have needed a lint suppression on every
+  occurrence. Relative units are not the problem; hardcoded `px` is.
+- `border-width` and `outline-*` are absent from the list entirely, so the 88
+  `1px` hairlines stay literal. Tokenising a hairline lengthens every border
+  declaration and buys nothing.
+- `padding: 0` and `padding: var(--space-2)` pass either way — a unitless zero
+  and a `var()` carry no unit token for the rule to reject.
+
+`media-feature-name-unit-allowed-list` keeps `[]`, because a breakpoint genuinely
+must come from the SCSS partial and there is no legitimate relative-unit media
+query in this codebase.
 
 - [ ] **Step 2: Confirm the rules bite**
 
@@ -343,13 +366,19 @@ npx stylelint "src/app/shared/**/*.scss" --formatter compact
 Work file by file through the output. Known specifics:
 
 - `shared/to-top-button/to-top-button.component.scss:18-19` — `width: 44px` and `height: 44px` become `var(--tap-target)`. This is the one honest tap target in the codebase.
-- `shared/icon-picker/icon-picker.component.ts` — 9 px values in the inline `styles:` block. Inline blocks are linted too; apply the same rules.
+- `shared/icon-picker/icon-picker.component.ts` and
+  `shared/progress-hairline/progress-hairline.component.ts` still carry inline
+  `styles:` blocks, which Stylelint cannot see at all (see Working agreements).
+  **Extract each into a sibling `.scss` file** and switch the decorator from
+  `styles: \`…\`` to `styleUrl: './<name>.component.scss'`, matching the house
+  pattern from commit `496d06d`. Then migrate the extracted SCSS like any other
+  file. Extraction is what puts these styles under enforcement at all.
 - `shared/spinner`, `shared/favicon`, `shared/user-avatar` — sizes are component dimensions driven by an input; use the disable comment where the value is structural.
 
 - [ ] **Step 3: Verify this area is clean**
 
 ```bash
-npx stylelint "src/app/shared/**/*.scss" "src/app/shared/**/*.ts"
+npx stylelint "src/app/shared/**/*.scss"
 ```
 
 Expected: PASS (no output).
@@ -473,7 +502,7 @@ git commit -m "refactor(admin): move spacing onto the token scale (#126)"
 - [ ] **Step 1: List the violations**
 
 ```bash
-npx stylelint "src/app/discover/**/*.scss" "src/app/discover/**/*.ts" --formatter compact
+npx stylelint "src/app/discover/**/*.scss" --formatter compact
 ```
 
 - [ ] **Step 2: Apply the rules**
@@ -495,7 +524,7 @@ This is consistent with the house pattern and removes the last inline style bloc
 - [ ] **Step 4: Verify**
 
 ```bash
-npx stylelint "src/app/discover/**/*.scss" "src/app/discover/**/*.ts" && npm test -- discover
+npx stylelint "src/app/discover/**/*.scss" && npm test -- discover
 ```
 
 Expected: both PASS.
@@ -579,7 +608,7 @@ Specifics:
 npm run check
 ```
 
-Expected: **PASS** — this is the moment the Stylelint rules added in Task 3 go green. If `npm run stylelint` still reports violations, they are outside `src/app/reader`; find them with `npx stylelint "src/**/*.scss" "src/**/*.ts" --formatter compact`.
+Expected: **PASS** — this is the moment the Stylelint rules added in Task 3 go green. If `npm run stylelint` still reports violations, they are outside `src/app/reader`; find them with `npx stylelint "src/**/*.scss" --formatter compact`.
 
 - [ ] **Step 4: Commit**
 
