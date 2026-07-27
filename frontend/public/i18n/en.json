@@ -49,6 +49,14 @@
       "memberSince": "Member since",
       "adminQueue": "Admin — user queue",
       "signOut": "Sign out"
+    },
+    "about": {
+      "title": "About",
+      "app": "App",
+      "api": "API",
+      "loading": "checking…",
+      "unavailable": "unavailable",
+      "stale": "Your browser is running an older build than the server. Reload the page to update."
     }
   },
   "dialog": {
@@ -249,7 +257,8 @@
       "light": "Light",
       "dark": "Dark",
       "system": "System"
-    }
+    },
+    "versionLabel": "Version {{version}} — open settings"
   },
   "common": {
     "save": "Save",

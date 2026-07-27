@@ -10,6 +10,7 @@ import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
 import { SubscriptionDto, TagDto } from '../models';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
+import { buildVersion } from '../../../environments/version';
 
 const sub = (id: number, unread = 0): SubscriptionDto => ({
   id,
@@ -394,5 +395,12 @@ describe('SidebarComponent', () => {
     const buttons2 = el.querySelectorAll('.feedrow .pop [role="menuitem"]');
     (buttons2[1] as HTMLButtonElement).click();
     expect(unsub).toHaveBeenCalledWith(s);
+  });
+
+  it('shows the running build as a link into settings', () => {
+    const version = (mount().nativeElement as HTMLElement).querySelector('.version');
+
+    expect(version?.textContent?.trim()).toBe(buildVersion.version);
+    expect(version?.getAttribute('href')).toBe('/settings');
   });
 });

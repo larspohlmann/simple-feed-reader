@@ -1,0 +1,30 @@
+<section>
+  <h2>{{ 'settings.about.title' | transloco }}</h2>
+
+  @for (row of rows(); track row.labelKey) {
+    <div class="row">
+      <span class="label">{{ row.labelKey | transloco }}</span>
+      @if (row.release; as release) {
+        <span class="value">
+          <code>{{ release.version }}</code>
+          <span class="detail">
+            {{ release.commit }}
+            @if (release.builtAt) {
+              · {{ release.builtAt | date: 'mediumDate' }}
+            }
+          </span>
+        </span>
+      } @else {
+        <span class="value pending">
+          {{
+            (unavailable() ? 'settings.about.unavailable' : 'settings.about.loading') | transloco
+          }}
+        </span>
+      }
+    </div>
+  }
+
+  @if (staleBundle()) {
+    <p class="stale">{{ 'settings.about.stale' | transloco }}</p>
+  }
+</section>

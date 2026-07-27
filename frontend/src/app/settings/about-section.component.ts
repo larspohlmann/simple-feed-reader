@@ -1,0 +1,50 @@
+// src/app/settings/about-section.component.ts
+import { DatePipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { ReleaseVersion, VersionService } from '../core/version.service';
+import { DEVELOPMENT_VERSION, buildVersion } from '../../environments/version';
+
+/** One line of the About table: which half of the app, and what it reports. */
+interface VersionRow {
+  labelKey: string;
+  release: ReleaseVersion | null;
+}
+
+@Component({
+  selector: 'app-about-section',
+  imports: [TranslocoPipe, DatePipe],
+  templateUrl: './about-section.component.html',
+  styleUrl: './about-section.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class AboutSectionComponent implements OnInit {
+  private readonly versions = inject(VersionService);
+
+  readonly unavailable = this.versions.unavailable;
+
+  readonly rows = computed<VersionRow[]>(() => [
+    { labelKey: 'settings.about.app', release: buildVersion },
+    { labelKey: 'settings.about.api', release: this.versions.apiVersion() },
+  ]);
+
+  /**
+   * Both halves ship together, so a difference means the browser is holding a
+   * bundle from an earlier release. Only compares real releases: a development
+   * build on either side is not evidence of a stale cache.
+   */
+  readonly staleBundle = computed(() => {
+    const api = this.versions.apiVersion();
+    if (api === null) {
+      return false;
+    }
+    const bothAreReleases =
+      api.version !== DEVELOPMENT_VERSION && buildVersion.version !== DEVELOPMENT_VERSION;
+
+    return bothAreReleases && api.version !== buildVersion.version;
+  });
+
+  ngOnInit(): void {
+    this.versions.load();
+  }
+}

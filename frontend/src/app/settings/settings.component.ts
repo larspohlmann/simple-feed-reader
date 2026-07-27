@@ -9,6 +9,7 @@ import { TagsSectionComponent } from './tags-section.component';
 import { OpmlSectionComponent } from './opml-section.component';
 import { AccountSectionComponent } from './account-section.component';
 import { PreferencesSectionComponent } from './preferences-section.component';
+import { AboutSectionComponent } from './about-section.component';
 
 @Component({
   selector: 'app-settings',
@@ -20,6 +21,7 @@ import { PreferencesSectionComponent } from './preferences-section.component';
     OpmlSectionComponent,
     AccountSectionComponent,
     PreferencesSectionComponent,
+    AboutSectionComponent,
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',

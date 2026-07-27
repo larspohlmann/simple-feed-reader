@@ -17,6 +17,7 @@ import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
 import { SubscriptionDto, TagDto } from '../models';
 import { RefreshService } from '../refresh.service';
+import { buildVersion } from '../../../environments/version';
 
 /** What a sidebar drop target represents: a tag to add, or the untagged bucket. */
 export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
@@ -38,6 +39,9 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
   styleUrl: './sidebar.component.scss',
 })
 export class SidebarComponent {
+  /** Baked in at build time, so it names the bundle actually running. */
+  readonly version = buildVersion.version;
+
   readonly tagTree = input.required<TagNode[]>();
   readonly untagged = input.required<SubscriptionDto[]>();
   readonly totalUnread = input.required<number>();

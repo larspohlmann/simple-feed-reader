@@ -279,4 +279,11 @@
   </div>
 
   <app-view-controls class="controls" />
+
+  <a
+    class="version"
+    routerLink="/settings"
+    [attr.aria-label]="'reader.versionLabel' | transloco: { version }"
+    >{{ version }}</a
+  >
 </nav>

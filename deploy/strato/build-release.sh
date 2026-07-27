@@ -10,11 +10,21 @@ die() { echo "$*" >&2; exit 1; }
 
 # Installed as an EXIT trap outside CI (see below). Preserves the script's own
 # exit status: a failed restore is worth a warning, not a rewritten verdict.
-restore_dev_dependencies() {
+#
+# Both halves of this undo something the build does to the working tree, so a
+# hand-run build does not leave the checkout in a state a developer then commits
+# by accident: backend/vendor loses its dev dependencies, and version.ts gets a
+# real tag written into it.
+restore_working_tree() {
     local status=$?
     echo "==> Restoring dev dependencies in backend/vendor" >&2
     composer install --working-dir="${ROOT}/backend" --no-interaction --no-progress >&2 \
         || echo "!!! restore failed -- run: composer install --working-dir=${ROOT}/backend" >&2
+    if [ -n "${VERSION_FILE_BACKUP:-}" ] && [ -f "${VERSION_FILE_BACKUP}" ]; then
+        echo "==> Restoring ${VERSION_SOURCE_FILE}" >&2
+        mv "${VERSION_FILE_BACKUP}" "${VERSION_SOURCE_FILE}" \
+            || echo "!!! restore failed -- run: git checkout -- ${VERSION_SOURCE_FILE}" >&2
+    fi
     exit "${status}"
 }
 
@@ -59,7 +69,7 @@ echo "==> Backend dependencies (production only)"
 if [ -z "${CI:-}" ]; then
     echo "!!! backend/vendor is about to lose its dev dependencies (phpunit, phpstan," >&2
     echo "!!! phpmd). They will be reinstalled when this script exits." >&2
-    trap restore_dev_dependencies EXIT
+    trap restore_working_tree EXIT
 fi
 # --no-scripts: the auto-scripts are cache:clear and assets:install. Neither can
 # reach the release -- they write to backend/var/, which is never copied -- but
@@ -69,6 +79,38 @@ fi
 composer install \
     --working-dir="${ROOT}/backend" \
     --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts
+
+echo "==> Deriving the release version"
+# GITHUB_REF_NAME holds the tag on a tag push -- but on a workflow_dispatch it
+# holds a BRANCH name, and reading it unguarded would ship a bundle proudly
+# labelled `develop`. Accept only something tag-shaped; anything else falls
+# through to git, which describes the commit honestly as N commits past the last
+# tag. The workflow's `fetch-depth: 0` is what gives describe its tags.
+VERSION="${GITHUB_REF_NAME:-}"
+case "${VERSION}" in
+    v[0-9]*) ;;
+    *) VERSION="$(git -C "${ROOT}" describe --tags --always 2>/dev/null || echo dev)" ;;
+esac
+COMMIT="$(git -C "${ROOT}" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+BUILT_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo "==> ${VERSION} (${COMMIT}, built ${BUILT_AT})"
+
+# The SPA carries its version baked in rather than asking the API for it. A
+# cached bundle that displayed the *server's* version would report the one thing
+# it cannot know -- that it is itself out of date. version.ts is committed with
+# placeholders so a fresh clone builds, serves and tests with no generation step;
+# here it gets the real values, and outside CI the EXIT trap puts it back.
+VERSION_SOURCE_FILE="${ROOT}/frontend/src/environments/version.ts"
+VERSION_FILE_BACKUP="${VERSION_SOURCE_FILE}.orig"
+cp "${VERSION_SOURCE_FILE}" "${VERSION_FILE_BACKUP}"
+sed -e "s|^  version: '.*',$|  version: '${VERSION}',|" \
+    -e "s|^  commit: '.*',$|  commit: '${COMMIT}',|" \
+    -e "s|^  builtAt: '.*',$|  builtAt: '${BUILT_AT}',|" \
+    "${VERSION_FILE_BACKUP}" > "${VERSION_SOURCE_FILE}"
+# A silent no-match here would ship placeholders that look like a working build,
+# so the substitution is verified rather than assumed.
+grep -qF "version: '${VERSION}'" "${VERSION_SOURCE_FILE}" \
+    || die "could not write the version into ${VERSION_SOURCE_FILE}: its shape changed"
 
 echo "==> Frontend bundle (/reader base href)"
 # `production` is not optional. `strato` alone still produces a working,
@@ -108,6 +150,18 @@ rm -rf "${OUT}/config/jwt"
 echo "==> Copying the built SPA into public/"
 cp -R "${ROOT}/frontend/dist/frontend/browser/." "${OUT}/public/"
 
+echo "==> Recording the release version"
+# At the release root, which is %kernel.project_dir% on the server -- and NOT
+# under public/, so the file itself is never web-served. Only /api/version
+# exposes what it holds, and that route is authenticated.
+cat > "${OUT}/version.json" <<JSON
+{
+  "version": "${VERSION}",
+  "commit": "${COMMIT}",
+  "builtAt": "${BUILT_AT}"
+}
+JSON
+
 echo "==> Installing .htaccess"
 cp "${ROOT}/deploy/strato/.htaccess" "${OUT}/public/.htaccess"
 
@@ -134,6 +188,16 @@ shopt -s nullglob
 bundles=("${OUT}"/public/main-*.js)
 (( ${#bundles[@]} )) \
     || die "bundle is not content-hashed: build the SPA with --configuration production,strato"
+
+# Both halves must be able to name the release. The backend reads version.json;
+# the SPA carries the same value compiled in, and this grep is what proves the
+# rewrite above actually reached the bundle rather than being served from a
+# stale build cache. Without it a deploy would ship a sidebar and a Settings
+# page reporting `dev` -- which reads as "not deployed yet", the exact question
+# this feature exists to answer.
+test -f "${OUT}/version.json" || die "missing version.json at the release root"
+grep -qF "${VERSION}" "${bundles[@]}" \
+    || die "the SPA bundle does not carry ${VERSION}: the version.ts rewrite did not compose in"
 
 echo "==> Release assembled"
 du -sh "${OUT}"
