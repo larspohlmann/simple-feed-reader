@@ -174,14 +174,16 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     return s.kind === 'tag' ? (s.id ?? null) : null;
   });
 
-  // Mobile hide-on-scroll header: slide the whole header (top bar + tag row) up
-  // by its measured height when scrolling down the content, back on scroll up.
+  // Mobile hide-on-scroll app bar — the LIST's chrome, driven exclusively by
+  // the entry list's typed `scrolled` output. A full-screen article is a layer
+  // above this bar with its own toolbar, so opening or closing one never
+  // touches it (#128).
   readonly headerHidden = signal(false);
   readonly headerHeight = signal(0);
   private readonly hdr = viewChild('hdr', { read: ElementRef });
   /** Only one of the two template branches renders a list at a time. */
   private readonly list = viewChild(EntryListComponent);
-  private lastScrollTop = 0;
+  private lastListScrollTop = 0;
   private resizeObs?: ResizeObserver;
   /** Mobile drawer state; the sidebar is a fixed overlay below 720px. */
   readonly sidebarOpen = signal(false);
@@ -306,6 +308,13 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         this.entries.load(queryFromSelection(this.selection()));
       });
     });
+
+    // The wide layout never hides the bar. Crossing the breakpoint with a
+    // retracted one (a phone rotation) must not leave it stuck off-screen:
+    // only list scrolls bring it back, and the wide layouts scroll other panes.
+    effect(() => {
+      if (this.screen.isWide()) untracked(() => this.headerHidden.set(false));
+    });
   }
 
   ngOnInit(): void {
@@ -329,24 +338,15 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       );
       this.resizeObs.observe(hdrEl);
     }
-    // This height now drives the content area's top padding and the mobile
-    // drawer's offset, not just how far the header used to slide. The
-    // observer's first callback covers the initial measurement; until it lands
-    // the stylesheet's own 56px (the bare bar, no tag row) holds, which is why
+    // This height drives the content area's top padding and the mobile
+    // drawer's offset, not just how far the header slides. The observer's
+    // first callback covers the initial measurement; until it lands the
+    // stylesheet's own 56px (the bare bar, no tag row) holds, which is why
     // the template binds `headerHeight() || null` rather than a raw 0.
-    // Scroll events don't bubble, so capture them from whichever inner content
-    // pane is scrolling to drive the hide-on-scroll header.
-    this.hostRef.nativeElement.addEventListener('scroll', this.onContentScroll, {
-      capture: true,
-      passive: true,
-    });
   }
 
   ngOnDestroy(): void {
     this.resizeObs?.disconnect();
-    this.hostRef.nativeElement.removeEventListener('scroll', this.onContentScroll, {
-      capture: true,
-    } as EventListenerOptions);
   }
 
   /**
@@ -360,6 +360,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *
    * Both are constants from the panes' point of view — `--app-bar-h` never
    * changes with the hidden state, which is what keeps their geometry fixed.
+   * The bar itself never changes with an article either: the full-screen
+   * article is a layer above it with its own toolbar, so this height cannot
+   * churn when one opens or closes (#128).
    * Set imperatively rather than through a `[style.--x]` binding so there is no
    * doubt about custom-property support in the template compiler.
    */
@@ -373,16 +376,24 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   /**
    * The mobile drawer hangs below the header, so it must never open under a
    * retracted one — that would leave a strip of backdrop where the bar should
-   * be. On close the header returns to what the scroll position implies: leaving
-   * it expanded over a scrolled-down list dead-zones touch-scroll in the strip it
-   * overlays (it covers the list but is not its scroller), which reads as the
-   * list refusing to scroll until the swipe starts below the bar.
+   * be. On close the header returns to what the *list's* scroll position
+   * implies — asked of the list itself, because the last scroller to fire may
+   * have been an article's, whose offset says nothing about the list (#128).
+   * Leaving the bar expanded over a scrolled-down list dead-zones touch-scroll
+   * in the strip it overlays (it covers the list but is not its scroller),
+   * which reads as the list refusing to scroll until the swipe starts below
+   * the bar.
    */
   setSidebarOpen(open: boolean): void {
-    this.headerHidden.set(
-      open ? false : headerHiddenAtRest(this.lastScrollTop, this.screen.isWide()),
-    );
+    this.headerHidden.set(open ? false : this.restingHeaderHidden());
     this.sidebarOpen.set(open);
+  }
+
+  /** The bar state the list's own scroll offset implies, asked of the list
+   *  itself: the last scroller to fire may have been an article's, whose offset
+   *  says nothing about the list (#128). */
+  private restingHeaderHidden(): boolean {
+    return headerHiddenAtRest(this.list()?.currentScrollTop() ?? 0, this.screen.isWide());
   }
 
   /** The top bar's empty middle was tapped: send the list back to the top. */
@@ -390,22 +401,27 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     this.list()?.scrollToTop();
   }
 
-  private readonly onContentScroll = (e: Event): void => {
-    const el = e.target as HTMLElement | null;
-    if (!el || typeof el.scrollTop !== 'number') return;
-    const top = el.scrollTop;
+  /**
+   * The entry list scrolled. This typed output is the bar's ONE scroll source:
+   * the shell used to capture-listen for scroll events across everything
+   * beneath it and guess which scroller mattered — the article overlay's (its
+   * own coordinate space, so deltas across the two were nonsense) and the tag
+   * row's (horizontal, so its snap events read as scrollTop 0, springing the
+   * retracted bar back via the near-top rule) both fed it (#128).
+   */
+  onListScrolled(top: number): void {
+    const previous = this.lastListScrollTop;
+    this.lastListScrollTop = top;
     // While the drawer is open the header must stay shown (it hangs below the
     // bar). Inertial scrolling keeps firing scroll events after the open-swipe's
     // touchend, so the gesture handler cannot be trusted as the last word — guard
-    // here. lastScrollTop still advances, so the next real scroll sees no phantom
-    // jump once the drawer closes.
-    if (!this.sidebarOpen()) {
-      this.headerHidden.set(
-        nextHeaderHidden(this.headerHidden(), this.lastScrollTop, top, this.screen.isWide()),
-      );
-    }
-    this.lastScrollTop = top;
-  };
+    // here. The offset still advances above, so the next real scroll sees no
+    // phantom jump once the drawer closes.
+    if (this.sidebarOpen()) return;
+    this.headerHidden.set(
+      nextHeaderHidden(this.headerHidden(), previous, top, this.screen.isWide()),
+    );
+  }
 
   // Toggle favourite/kept and keep the sidebar badge in sync optimistically,
   // reverting the count if the PATCH fails (mirrors the unread-count handling).

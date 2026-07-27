@@ -278,47 +278,95 @@ describe('ReaderViewComponent', () => {
     expect(c).toEqual({ favorite: 1, keep: 1, read: 1, prev: 1, next: 1, close: 1 });
   });
 
-  it('in full-screen (no toolbar) hides the bar and shows a content back button', () => {
+  it('carries the full-screen back button in its own toolbar, sliding out before close', () => {
+    // Full-screen chrome belongs to the article, not the shell's bar (#128):
+    // the toolbar rides the overlay, so the list's header underneath never has
+    // to change — and the back button plays the slide-out (like a back-swipe)
+    // rather than cutting straight to the list, so close waits for it.
     const f = TestBed.createComponent(ReaderViewComponent);
     f.componentRef.setInput('entry', entry());
-    f.componentRef.setInput('showToolbar', false);
+    f.componentRef.setInput('fullscreen', true);
     f.detectChanges();
     const el = f.nativeElement as HTMLElement;
-    expect(el.querySelector('.bar')).toBeNull();
     const close = jest.fn();
     f.componentInstance.close.subscribe(close);
-    const back = el.querySelector('.title-row .back') as HTMLButtonElement;
+    const back = el.querySelector('.bar .close') as HTMLButtonElement;
     expect(back).not.toBeNull();
     back.click();
-    // The back button plays the slide-out (like a back-swipe) rather than
-    // cutting straight to the list, so close is deferred until it finishes.
     expect(close).not.toHaveBeenCalled();
     expect(f.componentInstance.leaving()).toBe(true);
     f.destroy();
   });
 
-  it('keeps the back button in the toolbar (not the content) when the toolbar shows', () => {
-    const el = mount(entry()).nativeElement as HTMLElement;
-    expect(el.querySelector('.title-row .back')).toBeNull();
-    expect(el.querySelector('.bar .close')).not.toBeNull();
-  });
-
-  // The panel reserves the floating app bar's height at its top, and how much it
-  // reserves depends on whether its own toolbar is there to hang beneath the bar
-  // (#97). jsdom cannot see the resulting layout, so pin the flag the stylesheet
-  // keys off instead — silently losing it would drop the article's first lines
-  // behind the app bar.
-  it('marks the panel as carrying its own toolbar only when it renders one', () => {
+  // The panel reserves the floating app bar's height only in the split pane,
+  // where the shell's bar floats above it (#97). Full-screen, the article rides
+  // an overlay ABOVE that bar and brings its own in-flow toolbar, so a
+  // reservation would be a blank strip. jsdom cannot see the resulting layout,
+  // so pin the flag the stylesheet keys off instead.
+  it('reserves the app bar only in the split pane, not full-screen', () => {
     const withBar = mount(entry()).nativeElement as HTMLElement;
     expect(withBar.querySelector('.reader')!.classList).toContain('with-bar');
 
     const f = TestBed.createComponent(ReaderViewComponent);
     f.componentRef.setInput('entry', entry());
-    f.componentRef.setInput('showToolbar', false);
+    f.componentRef.setInput('fullscreen', true);
     f.detectChanges();
     const el = f.nativeElement as HTMLElement;
     expect(el.querySelector('.reader')!.classList).not.toContain('with-bar');
     f.destroy();
+  });
+
+  describe('full-screen toolbar hide-on-scroll', () => {
+    function fullscreenMount() {
+      const f = TestBed.createComponent(ReaderViewComponent);
+      f.componentRef.setInput('entry', entry());
+      f.componentRef.setInput('fullscreen', true);
+      f.detectChanges();
+      return f;
+    }
+
+    function scrollHostTo(f: ReturnType<typeof mount>, top: number): void {
+      const host = f.nativeElement as HTMLElement;
+      host.scrollTop = top;
+      host.dispatchEvent(new Event('scroll'));
+      f.detectChanges();
+    }
+
+    it('opens presented, retracts scrolling down, returns scrolling up', () => {
+      const f = fullscreenMount();
+      const bar = (f.nativeElement as HTMLElement).querySelector('.bar')!;
+      expect(bar.classList).not.toContain('hidden');
+
+      scrollHostTo(f, 400); // down
+      expect(bar.classList).toContain('hidden');
+
+      scrollHostTo(f, 300); // up
+      expect(bar.classList).not.toContain('hidden');
+      f.destroy();
+    });
+
+    it('presents the toolbar anew for the next entry', () => {
+      // prev/next reuse this component instance; a toolbar the previous
+      // article's reading had retracted must not open the next one headless.
+      const f = fullscreenMount();
+      scrollHostTo(f, 400);
+      expect((f.nativeElement as HTMLElement).querySelector('.bar')!.classList).toContain('hidden');
+
+      f.componentRef.setInput('entry', entry({ id: 2 }));
+      f.detectChanges();
+      expect((f.nativeElement as HTMLElement).querySelector('.bar')!.classList).not.toContain(
+        'hidden',
+      );
+      f.destroy();
+    });
+
+    it('never retracts the split-pane toolbar', () => {
+      const f = mount(entry());
+      const bar = (f.nativeElement as HTMLElement).querySelector('.bar')!;
+      scrollHostTo(f, 100);
+      scrollHostTo(f, 500);
+      expect(bar.classList).not.toContain('hidden');
+    });
   });
 
   it('disables prev/next at the ends', () => {
@@ -420,7 +468,7 @@ describe('ReaderViewComponent', () => {
 
     function fullscreen() {
       const f = mount(entry());
-      f.componentRef.setInput('showToolbar', false);
+      f.componentRef.setInput('fullscreen', true);
       f.detectChanges();
       return f;
     }
@@ -440,7 +488,7 @@ describe('ReaderViewComponent', () => {
       const el = f.nativeElement as HTMLElement;
       const close = jest.fn();
       f.componentInstance.close.subscribe(close);
-      (el.querySelector('.title-row .back') as HTMLButtonElement).click();
+      (el.querySelector('.bar .close') as HTMLButtonElement).click();
       f.detectChanges();
       // Committed to leaving and slid fully off to the right (same as a swipe).
       expect(f.componentInstance.leaving()).toBe(true);

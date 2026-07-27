@@ -71,9 +71,12 @@ app-reader-header.hidden {
   position: relative;
 }
 
-/* The full-screen article sits on top of the still-mounted list. The reader's
-         own host background is transparent, so a swipe-away reveals the list
-         underneath; it enters by sliding in from the right.
+/* The full-screen article sits on top of the still-mounted list — the app bar
+         included: the article is its own layer with its own toolbar, and the
+         bar underneath is the list's chrome, left exactly as the list's
+         scrolling put it (#128). The reader's own host background is
+         transparent, so a swipe-away reveals the list underneath; it enters by
+         sliding in from the right.
 
          This animation must live on a wrapper, NOT on `app-reader-view` itself:
          that component's host is the article's own scroller (`overflow: auto`),
@@ -87,8 +90,20 @@ app-reader-header.hidden {
 .article-overlay {
   position: absolute;
   inset: 0;
+
+  /* Wide: beneath the app bar (10) — brand and account stay visible, and the
+     article panel reserves the bar's height like the split pane does. */
   z-index: 5;
   animation: article-enter 0.22s ease-out;
+}
+
+/* Below the wide breakpoint (LayoutService's WIDE_QUERY) the article is the
+   immersive top layer: above the app bar, which is the LIST's chrome there and
+   keeps whatever hide-on-scroll state the list gave it (#128). */
+@media (width < 900px) {
+  .article-overlay {
+    z-index: 12;
+  }
 }
 
 @keyframes article-enter {
@@ -132,7 +147,8 @@ app-reader-header.hidden {
    under it. Its contents — the 2px hairline, then the sweep banner — flow
    normally inside it, so they stack rather than fight for the same `top`.
    z-index sits above the list's sticky header (z-index: 3, same `:host`
-   stacking context) and below the article overlay (5) and the header (10). */
+   stacking context) and below the article overlay (5 wide, 12 narrow) and the
+   header (10). */
 .under-header {
   position: absolute;
   top: var(--app-bar-h, 56px);

@@ -93,6 +93,13 @@ Enforced mechanically by `composer check` and `composer md`:
 ## Frontend conventions
 
 - Standalone components and signals; no NgModules.
+- **Offer the architectural fix, not just the patch.** When a frontend bug —
+  however small — traces back to an architectural weakness, and a rework would
+  both fix it and make future development simpler, propose that rework to the
+  user alongside the narrow patch: what it deletes, what it risks, what the
+  patch would leave behind. Let the user choose; don't silently default to the
+  band-aid. (Case in point: #128 — three successive patches to the shared
+  header state lost to one layer-isolation redesign.)
 - **Hex colours are forbidden in `.scss` outside `src/app/theme/`** (Stylelint
   `color-no-hex`). Component styles are inline in the `.ts` and kept token-only
   (`var(--…)`) by convention.

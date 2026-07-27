@@ -1,70 +1,58 @@
 @if (entry(); as e) {
   <div
     class="reader"
-    [class.with-bar]="showToolbar()"
+    [class.with-bar]="!fullscreen()"
     [class.with-tail]="hasTail()"
     [class.leaving]="leaving()"
     [style.transform]="readerTransform()"
     [style.transition]="readerTransition()"
   >
-    @if (showToolbar()) {
-      <div class="bar">
-        <button
-          class="close"
-          type="button"
-          [attr.aria-label]="'reader.backToList' | transloco"
-          (click)="close.emit()"
-        >
-          <app-icon name="arrow_back" [size]="20" />
-        </button>
-        <div class="nav">
-          @if (readerMode.canToggle()) {
-            <button
-              class="mode"
-              type="button"
-              [attr.aria-pressed]="mode() === 'reader'"
-              [attr.aria-label]="
-                (mode() === 'reader' ? 'reader.showOriginal' : 'reader.showReader') | transloco
-              "
-              (click)="toggleMode()"
-            >
-              <app-icon [name]="mode() === 'reader' ? 'article' : 'feed'" [size]="18" />
-              {{ (mode() === 'reader' ? 'reader.readerView' : 'reader.original') | transloco }}
-            </button>
-          }
+    <div class="bar" [class.hidden]="toolbarHidden()">
+      <button
+        class="close"
+        type="button"
+        [attr.aria-label]="'reader.backToList' | transloco"
+        (click)="onBack()"
+      >
+        <app-icon name="arrow_back" [size]="20" />
+      </button>
+      <div class="nav">
+        @if (readerMode.canToggle()) {
           <button
-            class="prev"
+            class="mode"
             type="button"
-            [attr.aria-label]="'reader.previous' | transloco"
-            [disabled]="!hasPrev()"
-            (click)="prev.emit()"
+            [attr.aria-pressed]="mode() === 'reader'"
+            [attr.aria-label]="
+              (mode() === 'reader' ? 'reader.showOriginal' : 'reader.showReader') | transloco
+            "
+            (click)="toggleMode()"
           >
-            <app-icon name="chevron_left" [size]="20" />
-          </button>
-          <button
-            class="next"
-            type="button"
-            [attr.aria-label]="'reader.next' | transloco"
-            [disabled]="!hasNext()"
-            (click)="next.emit()"
-          >
-            <app-icon name="chevron_right" [size]="20" />
-          </button>
-        </div>
-      </div>
-    }
-    <article>
-      <div class="title-row">
-        @if (!showToolbar()) {
-          <button
-            class="back"
-            type="button"
-            [attr.aria-label]="'reader.backToList' | transloco"
-            (click)="slideBack()"
-          >
-            <app-icon name="arrow_back" [size]="20" />
+            <app-icon [name]="mode() === 'reader' ? 'article' : 'feed'" [size]="18" />
+            {{ (mode() === 'reader' ? 'reader.readerView' : 'reader.original') | transloco }}
           </button>
         }
+        <button
+          class="prev"
+          type="button"
+          [attr.aria-label]="'reader.previous' | transloco"
+          [disabled]="!hasPrev()"
+          (click)="prev.emit()"
+        >
+          <app-icon name="chevron_left" [size]="20" />
+        </button>
+        <button
+          class="next"
+          type="button"
+          [attr.aria-label]="'reader.next' | transloco"
+          [disabled]="!hasNext()"
+          (click)="next.emit()"
+        >
+          <app-icon name="chevron_right" [size]="20" />
+        </button>
+      </div>
+    </div>
+    <article>
+      <div class="title-row">
         <h1 class="title" #titleHeading tabindex="-1">{{ e.title }}</h1>
       </div>
       <p class="meta">
@@ -140,7 +128,7 @@
         <div #content class="content" [innerHTML]="displayHtml()"></div>
       }
     </article>
-    @if (!showToolbar() && pulling()) {
+    @if (fullscreen() && pulling()) {
       <div class="pull-back" [class.armed]="pullArmed()" aria-hidden="true">
         <app-spinner [size]="22" />
       </div>

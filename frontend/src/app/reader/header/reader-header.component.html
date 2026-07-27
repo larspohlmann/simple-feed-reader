@@ -27,7 +27,7 @@
        keyboard and screen-reader users already have the corner button, which is
        visible and labelled, so this element would only add a second, identically
        named, invisible control between the brand link and the account button. -->
-  @if (!articleOpen() && screen.isNarrow()) {
+  @if (screen.isNarrow()) {
     <button
       class="tap-to-top"
       type="button"
@@ -37,43 +37,6 @@
     ></button>
   }
   <div class="right">
-    @if (articleOpen()) {
-      @if (readerMode.canToggle()) {
-        <button
-          class="mode"
-          type="button"
-          [attr.aria-pressed]="readerMode.mode() === 'reader'"
-          [attr.aria-label]="
-            (readerMode.mode() === 'reader' ? 'reader.showOriginal' : 'reader.showReader')
-              | transloco
-          "
-          (click)="readerMode.toggle()"
-        >
-          <app-icon [name]="readerMode.mode() === 'reader' ? 'article' : 'feed'" [size]="18" />
-          <span class="mode-label">{{
-            (readerMode.mode() === 'reader' ? 'reader.readerView' : 'reader.original') | transloco
-          }}</span>
-        </button>
-      }
-      <button
-        class="icon-btn"
-        type="button"
-        [attr.aria-label]="'reader.previous' | transloco"
-        [disabled]="!hasPrev()"
-        (click)="prev.emit()"
-      >
-        <app-icon name="chevron_left" [size]="20" />
-      </button>
-      <button
-        class="icon-btn"
-        type="button"
-        [attr.aria-label]="'reader.next' | transloco"
-        [disabled]="!hasNext()"
-        (click)="next.emit()"
-      >
-        <app-icon name="chevron_right" [size]="20" />
-      </button>
-    }
     <div class="account">
       <button
         aria-haspopup="menu"
@@ -109,7 +72,7 @@
   </div>
 </header>
 
-@if (!articleOpen() && tags().length) {
+@if (tags().length) {
   <nav class="tagrow" [attr.aria-label]="'reader.tags' | transloco">
     @for (t of tags(); track t.id) {
       <a

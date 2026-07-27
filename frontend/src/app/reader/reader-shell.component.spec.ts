@@ -208,13 +208,11 @@ describe('ReaderShellComponent', () => {
       f.detectChanges();
       expect(f.componentInstance.headerHidden()).toBe(false);
 
-      // A residual downward scroll (0 → 500) delivered to the shell's
+      // A residual downward scroll (100 → 500) delivered to the shell's
       // capture-phase scroll listener while the drawer is open.
-      const host = f.nativeElement as HTMLElement;
-      const scroller = document.createElement('div');
-      Object.defineProperty(scroller, 'scrollTop', { value: 500, configurable: true });
-      host.appendChild(scroller);
-      scroller.dispatchEvent(new Event('scroll'));
+      const rows = listScroller(f);
+      rows.scrollTo(100);
+      rows.scrollTo(500);
       f.detectChanges();
 
       expect(f.componentInstance.headerHidden()).toBe(false);
@@ -229,11 +227,9 @@ describe('ReaderShellComponent', () => {
       (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
 
       // Swipe up / scroll down: the header minimizes.
-      const host = f.nativeElement as HTMLElement;
-      const scroller = document.createElement('div');
-      Object.defineProperty(scroller, 'scrollTop', { value: 500, configurable: true });
-      host.appendChild(scroller);
-      scroller.dispatchEvent(new Event('scroll'));
+      const rows = listScroller(f);
+      rows.scrollTo(100);
+      rows.scrollTo(500);
       f.detectChanges();
       expect(f.componentInstance.headerHidden()).toBe(true);
 
@@ -245,6 +241,134 @@ describe('ReaderShellComponent', () => {
       f.detectChanges();
       // Back to the resting state the scroll offset implies — minimized.
       expect(f.componentInstance.headerHidden()).toBe(true);
+    });
+  });
+
+  /** Drive the entry list's real scroll container: assign an offset and fire the
+   *  scroll event the shell's capture-phase listener hears. The drawer-close
+   *  restore reads this element's offset back, so tests must scroll the element
+   *  the component actually consults, not a stand-in. */
+  function listScroller(f: ReturnType<typeof boot>) {
+    const el = (f.nativeElement as HTMLElement).querySelector<HTMLElement>('.rows')!;
+    return {
+      el,
+      scrollTo(top: number): void {
+        el.scrollTop = top;
+        el.dispatchEvent(new Event('scroll'));
+      },
+    };
+  }
+
+  describe('returning from a full-screen article (#128)', () => {
+    /** An extra scroller under the shell (the article overlay's, say), with its
+     *  own coordinate space, heard by the same capture-phase listener. */
+    function scroller(f: ReturnType<typeof boot>) {
+      const el = document.createElement('div');
+      let top = 0;
+      Object.defineProperty(el, 'scrollTop', { get: () => top, configurable: true });
+      (f.nativeElement as HTMLElement).appendChild(el);
+      return {
+        el,
+        scrollTo(next: number): void {
+          top = next;
+          el.dispatchEvent(new Event('scroll'));
+        },
+      };
+    }
+
+    function bootNarrowScrolledDown() {
+      const f = boot();
+      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+      const rows = listScroller(f);
+      rows.scrollTo(100);
+      rows.scrollTo(800);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(true);
+      return { f, rows };
+    }
+
+    function openArticle(f: ReturnType<typeof boot>): void {
+      qp.next(convertToParamMap({ entry: '1' }));
+      f.detectChanges();
+      ctrl.expectOne('https://api.test/api/entries/1/state').flush({
+        state: { entryId: 1, isRead: true, isFavorite: false, isKept: false, readAt: 'x' },
+      });
+      f.detectChanges();
+      expect(f.componentInstance.articleFullscreen()).toBe(true);
+    }
+
+    function closeArticle(f: ReturnType<typeof boot>): void {
+      qp.next(convertToParamMap({ entry: null }));
+      f.detectChanges();
+      expect(f.componentInstance.articleFullscreen()).toBe(false);
+    }
+
+    it('leaves the list bar alone across article open and close', () => {
+      // The full-screen article is a layer above the whole list — bar
+      // included — with its own toolbar. Opening and closing it must not
+      // touch the bar's hide-on-scroll state: the list is revealed exactly
+      // as it was left (#128).
+      const { f } = bootNarrowScrolledDown();
+      openArticle(f);
+      expect(f.componentInstance.headerHidden()).toBe(true);
+
+      closeArticle(f);
+      expect(f.componentInstance.headerHidden()).toBe(true);
+    });
+
+    it('hears no scroller but the list', () => {
+      // The bar used to be driven by a capture-phase listener on the shell,
+      // which heard EVERY scroller underneath: the article overlay's (own
+      // coordinate space — a cross-scroller delta read as a hard scroll-up)
+      // and the header's horizontal tag row (whose re-snap after remount
+      // reports scrollTop 0, satisfying the near-top show rule). It is driven
+      // by the entry list's typed scrolled output now, so foreign scroll
+      // events must change nothing (#128).
+      const { f, rows } = bootNarrowScrolledDown();
+      openArticle(f);
+
+      const article = scroller(f);
+      article.scrollTo(100);
+      article.scrollTo(2000);
+      const tagRowLike = scroller(f);
+      tagRowLike.scrollTo(0); // horizontal snap: scrollTop stays 0
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(true);
+
+      closeArticle(f);
+      rows.scrollTo(810); // a small further scroll DOWN on the list
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(true);
+
+      rows.scrollTo(300); // a real scroll UP still expands the header
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(false);
+    });
+
+    it('restores the drawer-close header state from the list, not the article', () => {
+      // setSidebarOpen(false) re-derives the header from "the" scroll offset.
+      // After deep-scrolling an article, that offset must be the list's own —
+      // here near the top, so the header must stay expanded.
+      const f = boot();
+      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+      const rows = listScroller(f);
+      rows.scrollTo(30);
+      rows.scrollTo(10);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(false);
+
+      openArticle(f);
+      const article = scroller(f);
+      article.scrollTo(100);
+      article.scrollTo(2000);
+      f.detectChanges();
+      closeArticle(f);
+
+      f.componentInstance.setSidebarOpen(true);
+      f.detectChanges();
+      f.componentInstance.setSidebarOpen(false);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(false);
     });
   });
 

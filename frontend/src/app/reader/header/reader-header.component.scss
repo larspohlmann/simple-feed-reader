@@ -165,37 +165,6 @@ header {
   }
 }
 
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
-  background: none;
-  border: none;
-  color: var(--text-primary);
-  cursor: pointer;
-  padding: var(--space-1);
-}
-
-.icon-btn:disabled {
-  color: var(--text-muted);
-  cursor: default;
-}
-
-.mode {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: var(--space-1);
-  font-size: var(--fs-sm);
-}
-
-.mode[aria-pressed='true'] {
-  color: var(--accent);
-}
-
 .account {
   position: relative;
 }

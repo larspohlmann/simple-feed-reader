@@ -27,6 +27,7 @@ import { ReaderContentService } from '../reader-content.service';
 import { ReaderModeService } from '../reader-mode.service';
 import { LanguageService } from '../../core/language.service';
 import { ListScrollMemory } from '../list-scroll-memory';
+import { nextHeaderHidden } from '../header-scroll';
 import { focusOpacity, needsReadingTail, readingBlocks } from '../reading-focus';
 import {
   AXIS_LOCK_MIN,
@@ -89,10 +90,12 @@ export class ReaderViewComponent {
   readonly tags = input<SubscriptionTagDto[]>([]);
   readonly hasPrev = input(false);
   readonly hasNext = input(false);
-  /** Whether to render the in-article toolbar. False in full-screen reading,
-   *  where the top bar hosts the back button, reader switch and prev/next;
-   *  true in split-pane mode, where the reader has no shared top bar. */
-  readonly showToolbar = input(true);
+  /** Full-screen reading (the mobile overlay) as opposed to the split pane.
+   *  The article is its own layer there: the toolbar rides the overlay with
+   *  its own hide-on-scroll, the back button plays the slide-out, and the
+   *  return gestures are armed. The shell's app bar — the LIST's chrome —
+   *  stays beneath the overlay, untouched (#128). */
+  readonly fullscreen = input(false);
 
   readonly favorite = output<void>();
   readonly keep = output<void>();
@@ -175,6 +178,12 @@ export class ReaderViewComponent {
   /** Back-to-top affordance: revealed once the reader has scrolled past a screen. */
   readonly showToTop = signal(false);
 
+  /** Full-screen only: the toolbar retracts scrolling down and returns
+   *  scrolling up, exactly like the list's app bar over the list — driven by
+   *  this article's own scroller alone. */
+  readonly toolbarHidden = signal(false);
+  private lastToolbarScrollTop = 0;
+
   /** Whether the article carries tail space below it — see measureTail(). */
   readonly hasTail = signal(false);
 
@@ -212,10 +221,15 @@ export class ReaderViewComponent {
       this.loadSub?.unsubscribe();
       this.readerMode.reset();
       this.cancelRestore();
-      // A new article starts at the top, with a fresh, collapsed contents list.
+      // A new article starts at the top, with a fresh, collapsed contents list
+      // and its toolbar presented — prev/next reuse this instance, and a bar
+      // the previous article's reading retracted must not open the next one
+      // headless.
       this.toc.set([]);
       this.tocOpen.set(false);
       this.showToTop.set(false);
+      this.toolbarHidden.set(false);
+      this.lastToolbarScrollTop = 0;
       if (!e) {
         this.pendingRestore = null;
         this.state.set({ status: 'idle' });
@@ -332,7 +346,7 @@ export class ReaderViewComponent {
 
   onTouchStart(e: TouchEvent): void {
     this.pendingRestore = null; // the user is taking over; stop restoring
-    if (this.showToolbar() || this.leaving() || e.touches.length !== 1) return;
+    if (!this.fullscreen() || this.leaving() || e.touches.length !== 1) return;
     const t = e.touches[0];
     this.touchStartX = t.clientX;
     this.touchStartY = t.clientY;
@@ -345,7 +359,7 @@ export class ReaderViewComponent {
   }
 
   onTouchMove(e: TouchEvent): void {
-    if (this.showToolbar() || this.leaving() || e.touches.length !== 1) return;
+    if (!this.fullscreen() || this.leaving() || e.touches.length !== 1) return;
     const t = e.touches[0];
     const dx = t.clientX - this.touchStartX;
     const dy = t.clientY - this.touchStartY;
@@ -367,7 +381,7 @@ export class ReaderViewComponent {
   }
 
   onTouchEnd(): void {
-    if (this.showToolbar() || this.leaving()) return;
+    if (!this.fullscreen() || this.leaving()) return;
     const axis = this.axis;
     this.axis = 'none';
     this.snapping.set(true);
@@ -383,9 +397,16 @@ export class ReaderViewComponent {
     }
   }
 
-  /** Full-screen back button: play the same slide-out-to-the-right as a
-   *  back-swipe (rather than cutting straight to the list), then return. */
-  slideBack(): void {
+  /** The toolbar's back button. Full-screen it plays the same
+   *  slide-out-to-the-right as a back-swipe (rather than cutting straight to
+   *  the list); in the split pane there is no overlay to slide, so it closes
+   *  directly. */
+  onBack(): void {
+    if (this.fullscreen()) this.slideBack();
+    else this.close.emit();
+  }
+
+  private slideBack(): void {
     if (this.leaving()) return;
     this.snapping.set(true);
     this.pull.set(0);
@@ -407,6 +428,14 @@ export class ReaderViewComponent {
     this.scheduleFocus();
     const scrollTop = this.host.nativeElement.scrollTop;
     this.showToTop.set(scrollTop > BACK_TO_TOP_AFTER_PX);
+    if (this.fullscreen()) {
+      // `isWide` is false by definition here: full-screen reading only exists
+      // on the narrow layout, and the split pane keeps its toolbar put.
+      this.toolbarHidden.set(
+        nextHeaderHidden(this.toolbarHidden(), this.lastToolbarScrollTop, scrollTop, false),
+      );
+    }
+    this.lastToolbarScrollTop = scrollTop;
     // Remember the reading position so a resume-reload can restore it. Skip while
     // a restore is in flight: the content may still be short and its clamped
     // scrollTop would overwrite the good target.
@@ -530,7 +559,7 @@ export class ReaderViewComponent {
     if (!el) return;
     this.pendingRestore = null; // a jump takes over from any in-flight restore
     const host = this.host.nativeElement;
-    const offset = this.showToolbar() ? 52 : 8;
+    const offset = this.fullscreen() ? 8 : 52;
     const top = el.getBoundingClientRect().top - host.getBoundingClientRect().top + host.scrollTop;
     host.scrollTo({
       top: Math.max(0, top - offset),

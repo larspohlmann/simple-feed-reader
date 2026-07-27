@@ -5,9 +5,8 @@ const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
 
 // Wide enough for both shell breakpoints that matter here: the sidebar is a
-// column (>720px) and the pane layout is allowed (>=900px). With the 260px
-// sidebar the reading pane is ~1020px in overlay mode, comfortably past the
-// 860px container query that lifts the back button into the left gutter.
+// column (>720px) and the wide layout is active (>=900px), which keeps the app
+// bar above the article and gives the article the split-pane toolbar.
 const DESKTOP = { width: 1280, height: 900 };
 
 /** Long enough that the article scrolls well past its own sticky toolbar. */
@@ -107,12 +106,14 @@ async function hitAtCentre(page: Page, selector: string): Promise<string> {
 test.describe('Article back button on desktop', () => {
   test.use({ viewport: DESKTOP });
 
-  // The full-pane article (magazine/list layout). Its back button is hung in
-  // the article's left gutter by a container query, absolutely positioned
-  // against the article panel — whose padding-box top edge is *above* the
-  // padding that reserves the floating app bar's height. Positioned naively it
-  // lands inside that reservation and the bar covers it (#97).
-  test('the article’s own back button clears the app bar', async ({ page }) => {
+  // The full-pane article (magazine/list layout on a wide screen). The app bar
+  // is app chrome on desktop — brand and account stay visible — so the article
+  // slots BENEATH it, reserving its height, and carries the same toolbar the
+  // split pane uses; the back button lives in that toolbar (#128). Only below
+  // the wide breakpoint does the article become the immersive top layer.
+  test('the full-pane article sits beneath the app bar, back button clear of it', async ({
+    page,
+  }) => {
     const signedIn = await signInAsAdmin(page, 'magazine');
     test.skip(
       !signedIn,
@@ -123,36 +124,27 @@ test.describe('Article back button on desktop', () => {
     await page.reload();
     await page.getByText('Entry number 1', { exact: false }).first().click();
 
-    const back = page.locator('app-reader-view .back');
+    const back = page.locator('app-reader-view .bar .close');
     await expect(back).toBeVisible();
     await settle(page);
+
+    // The bar is still the topmost chrome: its account button must be hittable
+    // with the article open.
+    expect(await hitAtCentre(page, 'app-reader-header [aria-haspopup="menu"]')).toBe('self');
 
     const bar = (await page.locator('app-reader-header header').boundingBox())!;
     const box = (await back.boundingBox())!;
 
-    // Fully below the bar, not merely peeking out from under it.
+    // Fully below the bar, not merely peeking out from under it — and really
+    // hittable there, not painted under the floating bar.
     expect(box.y).toBeGreaterThanOrEqual(bar.y + bar.height);
-    expect(await hitAtCentre(page, 'app-reader-view .back')).toBe('self');
+    expect(await hitAtCentre(page, 'app-reader-view .bar .close')).toBe('self');
 
-    // In the gutter immediately left of the article column, not pinned to the
-    // far edge of the pane: it hangs off the article, so it tracks that column
-    // at every pane width instead of drifting away from the text.
-    const article = (await page.locator('app-reader-view article').boundingBox())!;
-    expect(box.x + box.width).toBeLessThanOrEqual(article.x);
-    expect(box.x).toBeGreaterThan(article.x - 60);
-
-    // Level with the headline's *first line* — measured with a Range, because
-    // the h1 wraps to two lines at real headline lengths and its box centre
-    // would then sit a whole line below where the arrow belongs.
-    const offset = await page.evaluate(() => {
-      const title = document.querySelector('app-reader-view .title')!;
-      const range = document.createRange();
-      range.selectNodeContents(title);
-      const firstLine = range.getClientRects()[0];
-      const btn = document.querySelector('app-reader-view .back')!.getBoundingClientRect();
-      return btn.y + btn.height / 2 - (firstLine.y + firstLine.height / 2);
-    });
-    expect(Math.abs(offset)).toBeLessThanOrEqual(2);
+    // The toolbar sticks below the bar while the article scrolls, same
+    // contract as the split pane.
+    await page.locator('app-reader-view').evaluate((el) => el.scrollTo({ top: 800 }));
+    await page.waitForTimeout(200);
+    expect((await back.boundingBox())!.y).toBeGreaterThanOrEqual(bar.y + bar.height);
 
     // And it does what it says: clicking returns to the list.
     await back.click();
