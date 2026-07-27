@@ -558,22 +558,23 @@ relative units for the budget, not a layout guarantee.
 | Block | Height | Image | Fills when |
 |---|---|---|---|
 | **Hero** | 463px | full-width, adaptive `aspect-ratio` from the persisted dimensions (fallback 16/9) | image ≥ 500px wide, or width unknown but `imageUrl` is persisted |
-| **Wide** | 260px | full-width band at 3:1 | image ≥ 400px wide, or width unknown |
+| **Wide** | 260px | full-width band at 3:1 | image ≥ 400px wide, or width unknown but `imageUrl` is persisted |
 | **Quote** | 180px | suppressed — first sentence set in `--font-voice` instead | snippet text ≥ 300 characters |
-| **Split** | 150px | side image at 38% of the column (148px mobile / 258px desktop) | image ≥ 300px wide, or width unknown |
+| **Split** | 150px | side image at 38% of the column (148px mobile / 258px desktop) | image ≥ 300px wide, or width unknown but `imageUrl` is persisted |
 | **Kicker** | 140px | none — oversized title only | always |
 | **Thumb** | 90px | fixed 88px box, `aspect-ratio: 4 / 3` | any persisted image |
 | **Compact** | 66px | none | always |
 | **Group** (source digest) | ~300px (not in `BLOCK_HEIGHT` — it consumes entries directly, not a template slot) | none — each row inside is a `<app-entry-compact>` | a same-source run of ≥ 3 entries whose source holds under 40% of the loaded entries |
 
 **"Width unknown" is not the same treatment everywhere.** `fits()` reads the
-persisted `imageWidth` and treats `0` (unknown) differently per kind: `wide`
-and `split` trust it because a wide/split image is never the miniature
-thumbnail an unsized `<img>` sometimes turns out to be; `hero` trusts it only
-when `imageUrl` itself is persisted, because an inline image with neither a
-persisted URL nor a known width is, in practice, a 148px archive thumbnail —
-exactly what used to produce heroes with no picture. `thumb` accepts any
-image regardless of width, since its box is fixed at 88px either way.
+persisted `imageWidth` and treats `0` (unknown) differently per kind. The three
+large image blocks — `hero`, `wide` and `split` — trust an unknown width only
+when `imageUrl` itself is a persisted field, because an inline `<img>` with
+neither a persisted URL nor a known width is, in practice, a ~148px archive
+thumbnail: exactly what used to produce heroes and bands with no real picture.
+`thumb` is the exception — it accepts any image regardless of width, since its
+box is fixed at 88px, so even that miniature thumbnail fills it cleanly, which
+is precisely why it is the demotion target for the larger image blocks.
 
 An entry that cannot fill its planned slot demotes transitively:
 `hero → wide → split → thumb → compact`, and `quote → kicker → compact` —
