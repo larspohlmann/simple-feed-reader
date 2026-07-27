@@ -1,8 +1,9 @@
 // src/app/settings/about-section.component.ts
-import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ReleaseVersion, VersionService } from '../core/version.service';
+import { LanguageService } from '../core/language.service';
+import { formatLongDate } from '../reader/format';
 import { DEVELOPMENT_VERSION, buildVersion } from '../../environments/version';
 
 /** One line of the About table: which half of the app, and what it reports. */
@@ -13,15 +14,21 @@ interface VersionRow {
 
 @Component({
   selector: 'app-about-section',
-  imports: [TranslocoPipe, DatePipe],
+  imports: [TranslocoPipe],
   templateUrl: './about-section.component.html',
   styleUrl: './about-section.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AboutSectionComponent implements OnInit {
   private readonly versions = inject(VersionService);
+  private readonly language = inject(LanguageService);
 
   readonly unavailable = this.versions.unavailable;
+
+  /** Empty for a development build, which has no build date to show. */
+  buildDate(iso: string): string {
+    return formatLongDate(iso, this.language.lang());
+  }
 
   readonly rows = computed<VersionRow[]>(() => [
     { labelKey: 'settings.about.app', release: buildVersion },

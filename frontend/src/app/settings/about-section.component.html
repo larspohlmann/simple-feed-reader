@@ -10,7 +10,7 @@
           <span class="detail">
             {{ release.commit }}
             @if (release.builtAt) {
-              · {{ release.builtAt | date: 'mediumDate' }}
+              · {{ buildDate(release.builtAt) }}
             }
           </span>
         </span>

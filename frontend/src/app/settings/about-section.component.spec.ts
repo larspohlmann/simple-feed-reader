@@ -47,6 +47,16 @@ describe('AboutSectionComponent', () => {
 
     expect(text(f)).toContain('v0.5.0-dev.3');
     expect(text(f)).toContain('a1b2c3d');
+    // Localised through the same helper the rest of the app uses, not DatePipe.
+    expect(text(f)).toContain('July 27, 2026');
+  });
+
+  it('shows no build date for a development build, which has none', () => {
+    Object.assign(buildVersion, { version: 'dev', commit: 'local', builtAt: '' });
+    const f = mount({ version: 'dev', commit: 'local', builtAt: '' });
+
+    expect(text(f)).toContain('local');
+    expect(text(f)).not.toContain('·');
   });
 
   it('still shows the app version when the API cannot be reached', () => {
