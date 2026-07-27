@@ -123,8 +123,15 @@
   padding: var(--space-2) 0 var(--space-2) var(--space-1);
 }
 
+/* `min-width: 0` is what lets the name actually truncate. Without it this flex
+         item keeps its automatic minimum size — its min-content width — so it refuses
+         to shrink, the ellipsis rule on the name span never gets squeezed, and a long
+         tag name pushes the unread count and the `⋯` menu out of the 260px column
+         entirely (#131). `.feedrow .nav` below carries the same line for the same
+         reason. */
 .tag .grow {
   flex: 1;
+  min-width: 0;
 }
 
 .tag-sub {
