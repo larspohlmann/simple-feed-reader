@@ -9,10 +9,13 @@ main {
 
 .card {
   width: 100%;
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned component dimension, not a spacing value. */
   max-width: 380px;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--space-3);
   padding: var(--space-6);
 }
 
