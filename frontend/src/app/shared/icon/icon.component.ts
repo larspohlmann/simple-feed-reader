@@ -10,9 +10,14 @@ export type IconSize = 'text' | 'xs' | 'sm' | 'md' | 'lg';
  * tag pill -- has no business picking a fixed size, because the thing it must
  * agree with is the surrounding type, not the scale. Picking the nearest step
  * instead is what made those two icons look oversized in #126.
+ *
+ * It is 0.85em, not 1em, because a Material Symbol fills its em box while the
+ * lowercase text beside it reaches barely half of it. Matching the font sizes
+ * numerically still leaves the glyph looking about twice the weight of the
+ * letters; matching what the eye sees means going under.
  */
 export const ICON_SIZE_TOKEN: Record<IconSize, string> = {
-  text: '1em',
+  text: '0.85em',
   xs: 'var(--icon-xs)',
   sm: 'var(--icon-sm)',
   md: 'var(--icon-md)',

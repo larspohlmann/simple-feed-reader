@@ -79,7 +79,7 @@ sidebar lead; three steps would inflate the pill.
 | `--icon-sm` | `16px` | `sm` |
 | `--icon-md` | `20px` | `md` (default) |
 | `--icon-lg` | `24px` | `lg` |
-| — | `1em` | `text` |
+| — | `0.85em` | `text` |
 
 Never write these directly in a component if an `<app-icon>` / `<app-tag-glyph>`
 `size` input will do: `ICON_SIZE_TOKEN` in `shared/icon/icon.component.ts` maps
@@ -92,6 +92,13 @@ surrounding type, not with the scale, and it must keep agreeing when that type
 changes. Snapping these to the nearest step is what made both of them look
 oversized during #126: the open-in-new went 14px → 16px next to 13px text, and
 the pill glyph held at 12px while `--fs-xs` pulled the pill's own text to 11px.
+
+It resolves to **`0.85em`, not `1em`**, and that is deliberate. A Material
+Symbol fills its em box; the lowercase text beside it reaches barely half of it.
+Matching the two font sizes numerically still leaves the glyph looking about
+twice the weight of the letters, so matching what the eye sees means going
+under. Note this makes inline icons smaller than they were before #126 — the
+open-in-new was 14px on 13px text on `develop`, i.e. already above `1em`.
 
 The rule: **an icon inside a run of text uses `text`; a standalone icon — a
 button's glyph, a list row's lead, a rail item — uses a step on the scale.**
