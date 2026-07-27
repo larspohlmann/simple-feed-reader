@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 export type IconSize = 'xs' | 'sm' | 'md' | 'lg';
 
 /** Maps the named size onto its token. Kept here so no consumer writes a px. */
-const SIZE_TOKEN: Record<IconSize, string> = {
+export const ICON_SIZE_TOKEN: Record<IconSize, string> = {
   xs: 'var(--icon-xs)',
   sm: 'var(--icon-sm)',
   md: 'var(--icon-md)',
@@ -26,6 +26,6 @@ export class IconComponent {
   readonly size = input<IconSize>('md');
 
   protected fontSize(): string {
-    return SIZE_TOKEN[this.size()];
+    return ICON_SIZE_TOKEN[this.size()];
   }
 }

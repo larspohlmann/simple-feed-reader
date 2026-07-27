@@ -5,7 +5,7 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { IconComponent } from '../../shared/icon/icon.component';
+import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
 import { TagsStore } from '../tags.store';
@@ -13,7 +13,7 @@ import { SubscriptionDto } from '../models';
 
 @Component({
   selector: 'app-edit-subscription-dialog',
-  imports: [ReactiveFormsModule, A11yModule, IconComponent, TranslocoPipe],
+  imports: [ReactiveFormsModule, A11yModule, TagGlyphComponent, TranslocoPipe],
   templateUrl: './edit-subscription-dialog.component.html',
   styleUrl: './edit-subscription-dialog.component.scss',
 })

@@ -30,22 +30,11 @@
           [attr.aria-pressed]="checked().has(t.id)"
           (click)="toggle(t.id)"
         >
-          @if (t.icon) {
-            <app-icon
-              [name]="t.icon"
-              size="sm"
-              [style.color]="
-                checked().has(t.id) ? 'var(--on-accent)' : t.color || 'var(--text-muted)'
-              "
-            />
-          } @else {
-            <span
-              class="dot"
-              [style.background]="
-                checked().has(t.id) ? 'var(--on-accent)' : t.color || 'var(--text-muted)'
-              "
-            ></span>
-          }
+          <app-tag-glyph
+            [name]="t.icon"
+            [color]="checked().has(t.id) ? 'var(--on-accent)' : t.color"
+            size="sm"
+          />
           {{ t.name }}
         </button>
       }

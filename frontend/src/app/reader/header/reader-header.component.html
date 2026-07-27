@@ -82,11 +82,7 @@
         [queryParams]="{ tag: t.id, view: null, subscription: null, entry: null }"
         queryParamsHandling="merge"
       >
-        @if (t.icon) {
-          <app-icon [name]="t.icon" size="sm" [style.color]="t.color || 'var(--text-muted)'" />
-        } @else {
-          <span class="dot" [style.background]="t.color || 'var(--text-muted)'"></span>
-        }
+        <app-tag-glyph [name]="t.icon" [color]="t.color" size="sm" />
         {{ t.name }}
       </a>
     }

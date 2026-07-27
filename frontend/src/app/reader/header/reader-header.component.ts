@@ -3,6 +3,7 @@ import { Component, inject, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 import { UserAvatarComponent } from '../../shared/user-avatar/user-avatar.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
@@ -20,6 +21,7 @@ import { TagDto } from '../models';
   selector: 'app-reader-header',
   imports: [
     IconComponent,
+    TagGlyphComponent,
     RouterLink,
     TranslocoPipe,
     UserAvatarComponent,

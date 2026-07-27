@@ -150,10 +150,11 @@
   padding-left: var(--space-6);
 }
 
-/* A fixed leading slot so tag names share one left edge whether the tag
-         shows a colour dot or a glyph, which are different sizes. */
+/* Tag names share one left edge whether the tag shows a colour dot or a
+         glyph, because app-tag-glyph is a fixed square either way. The slot
+         only has to keep the flex row from squeezing it. */
 .tag .lead {
-  flex: 0 0 var(--icon-md);
+  flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
