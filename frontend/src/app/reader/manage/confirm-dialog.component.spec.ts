@@ -42,4 +42,21 @@ describe('ConfirmDialogComponent', () => {
     (buttons[1] as HTMLButtonElement).click(); // Confirm
     expect(close).toHaveBeenCalledWith(true);
   });
+
+  // The CDK's focus trap calls focus() on whatever carries cdkFocusInitial, and
+  // an <app-button> host is not focusable -- the marker has to reach the real
+  // button inside it or the dialog opens with nothing focused.
+  it('marks the real confirm button as the dialog focus target', () => {
+    const el: HTMLElement = mount().nativeElement;
+    const marked = el.querySelectorAll('[cdkFocusInitial]');
+    expect(marked).toHaveLength(1);
+    expect(marked[0].tagName).toBe('BUTTON');
+    expect(marked[0].textContent?.trim()).toBe('Delete');
+  });
+
+  it('weights a destructive confirmation as danger', () => {
+    const el: HTMLElement = mount().nativeElement;
+    const confirm = el.querySelectorAll('button')[1];
+    expect(confirm.classList.contains('danger')).toBe(true);
+  });
 });
