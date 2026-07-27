@@ -18,10 +18,17 @@
 }
 
 .img {
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     tuned thumbnail box, not a spacing value. */
-  flex: 0 0 88px;
-  aspect-ratio: 4 / 3;
+  /* A fixed 88×66 box with BOTH dimensions explicit, not width + aspect-ratio.
+     A flex row stretches an aspect-ratio-only image to the text column's height
+     (and a not-yet-loaded lazy image has no intrinsic size to fall back on), so
+     the ratio alone does not hold the box. Fixing both sides makes the thumbnail
+     the same 4:3 box whether or not its image has loaded; object-fit crops. */
+  flex: none;
+  /* stylelint-disable declaration-property-unit-allowed-list --
+     tuned thumbnail box, not spacing values. */
+  width: 88px;
+  height: 66px;
+  /* stylelint-enable declaration-property-unit-allowed-list */
   object-fit: cover;
   border-radius: var(--radius);
   display: block;

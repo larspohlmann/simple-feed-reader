@@ -24,8 +24,14 @@
 .img {
   /* The medium block's defining proportion: 38% of the column, so the image is
      148px on a phone and 258px at the 680px measure. The old 88px thumbnail is
-     what made this block feel like a list row (#148). */
-  flex: 0 0 38%;
+     what made this block feel like a list row (#148).
+     A definite `width` (not `flex-basis`) is deliberate: a flex-basis image with
+     an `aspect-ratio` gets its height stretched to the text column and then the
+     ratio drives the WIDTH back up past the basis, crushing the text. A definite
+     width makes the ratio derive height from width instead. */
+  flex: none;
+  width: 38%;
+  height: auto;
   aspect-ratio: 3 / 2;
   object-fit: cover;
   border-radius: var(--radius);
