@@ -14,7 +14,7 @@ export type ButtonSize = 'sm' | 'md';
 
 /**
  * The app's one ordinary button: a label, optionally a leading icon, one of
- * four weights. Icon-only affordances that carry their own interaction
+ * five weights. Icon-only affordances that carry their own interaction
  * semantics -- the sidebar's row menus, the entry row's read toggles, the
  * view-controls segmented control -- deliberately stay out; forcing them
  * through here would turn this into a grab bag.
