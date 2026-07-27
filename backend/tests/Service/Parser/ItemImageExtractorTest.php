@@ -80,6 +80,21 @@ final class ItemImageExtractorTest extends TestCase
         self::assertSame('https://i/typed.png', $image->url);
     }
 
+    public function testIgnoresAMediaContentWithNeitherMediumNorTypeDeclared(): void
+    {
+        self::assertNull(ItemImageExtractor::fromMedia($this->item(
+            '<media:content url="https://i/episode.mp3" length="583910"/>',
+        )));
+    }
+
+    public function testIgnoresAMediaContentWithAnExplicitNonImageKind(): void
+    {
+        self::assertNull(ItemImageExtractor::fromMedia($this->item(
+            '<media:content url="https://i/episode.mp3" medium="audio"/>'
+            . '<media:content url="https://i/clip.mp4" type="video/mp4"/>',
+        )));
+    }
+
     public function testFallsBackToDocumentOrderWhenNothingDeclaresAWidth(): void
     {
         $image = ItemImageExtractor::fromMedia($this->item(

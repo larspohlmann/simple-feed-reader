@@ -125,9 +125,7 @@ final class ItemImageExtractor
         $medium = strtolower($element->getAttribute('medium'));
         $type = strtolower($element->getAttribute('type'));
 
-        return $medium === 'image'
-            || str_starts_with($type, 'image/')
-            || ($medium === '' && $type === '');
+        return $medium === 'image' || str_starts_with($type, 'image/');
     }
 
     private static function isMediaElement(\DOMNode $node, string $localName): bool
