@@ -1,0 +1,67 @@
+:host {
+  position: relative;
+  display: inline-block;
+}
+
+.trigger {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  height: var(--space-5);
+  padding: 0 var(--space-1) 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.trigger.open,
+.trigger:hover {
+  border-color: var(--border-strong);
+}
+
+.glyph {
+  display: inline-flex;
+}
+
+.pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned popover width, not a spacing value. */
+  width: 248px;
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned popover max-height, not a spacing value. */
+  max-height: 220px;
+  padding: var(--space-2);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 24%);
+}
+
+.opt {
+  display: inline-flex;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.opt.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}

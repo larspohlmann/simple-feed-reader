@@ -23,21 +23,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
       </div>
     }
   `,
-  styles: `
-    .bar {
-      height: var(--space-0);
-      background: var(--border);
-    }
-    span {
-      display: block;
-
-      /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-         fills the parent bar's height; a proportion, not a spacing value. */
-      height: 100%;
-      background: var(--accent);
-      transition: width 0.3s ease-out;
-    }
-  `,
+  styleUrl: './progress-hairline.component.scss',
 })
 export class ProgressHairlineComponent {
   readonly active = input.required<boolean>();

@@ -18,7 +18,7 @@ button {
   width: var(--tap-target);
   height: var(--tap-target);
   border: none;
-  border-radius: var(--radius-pill);
+  border-radius: 50%;
   background: var(--accent);
   color: var(--on-accent);
   cursor: pointer;

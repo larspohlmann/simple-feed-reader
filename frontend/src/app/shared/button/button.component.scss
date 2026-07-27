@@ -6,10 +6,6 @@ button {
   background: var(--surface-1);
   color: var(--text-primary);
   cursor: pointer;
-
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     fills the width of whatever container places it; a proportion, not a
-     spacing value. */
   width: 100%;
   display: inline-flex;
   align-items: center;

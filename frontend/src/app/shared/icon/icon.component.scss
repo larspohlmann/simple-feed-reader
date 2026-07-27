@@ -7,14 +7,7 @@ span {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     sized in em to track the glyph's own font-size (set per instance from
-     the `size` input), not a spacing value. */
   width: 1em;
-
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     sized in em to track the glyph's own font-size (set per instance from
-     the `size` input), not a spacing value. */
   height: 1em;
   line-height: 1;
   user-select: none;
