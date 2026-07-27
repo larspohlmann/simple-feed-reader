@@ -3,6 +3,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: var(--space-5);
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned dialog measure, not a spacing value. */
   width: min(460px, 92vw);
   display: flex;
   flex-direction: column;
@@ -43,8 +45,8 @@ form {
 }
 
 .swatch {
-  width: 22px;
-  height: 22px;
+  width: var(--space-5);
+  height: var(--space-5);
   border-radius: 50%;
   border: 2px solid var(--border);
   cursor: pointer;
@@ -55,8 +57,8 @@ form {
 }
 
 .picker {
-  width: 30px;
-  height: 26px;
+  width: var(--space-6);
+  height: var(--space-5);
   padding: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -78,13 +80,16 @@ form {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned icon-grid cap, not a spacing value; see the note above. */
   max-height: 216px;
 
   /* Shrink below the 216px cap when the dialog itself runs out of room. */
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 2px;
+  padding: var(--space-0);
 }
 
 .icon {

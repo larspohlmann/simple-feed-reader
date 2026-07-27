@@ -5,7 +5,7 @@
 .hero {
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   cursor: pointer;
 }
@@ -38,8 +38,8 @@
 }
 
 .dot {
-  width: 8px;
-  height: 8px;
+  width: var(--space-2);
+  height: var(--space-2);
   border-radius: 50%;
   border: 1px solid var(--border-strong);
 }
@@ -81,7 +81,7 @@
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 2px;
+  padding: var(--space-0);
 }
 
 .actions button.on {

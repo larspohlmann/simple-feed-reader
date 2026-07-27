@@ -3,6 +3,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: var(--space-5);
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned dialog measure, not a spacing value. */
   width: min(440px, 92vw);
   display: flex;
   flex-direction: column;
@@ -44,6 +46,9 @@ form {
 .tags {
   margin: 0;
   padding: 0;
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned tag-list cap, not a spacing value. */
   max-height: 220px;
 
   /* Shrink below the 220px cap when the dialog itself runs out of room. */
@@ -61,7 +66,7 @@ form {
   gap: var(--space-2);
   padding: var(--space-1) var(--space-3);
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface-1);
   color: var(--text-secondary);
   font-size: var(--fs-sm);
@@ -79,8 +84,8 @@ form {
 }
 
 .dot {
-  width: 9px;
-  height: 9px;
+  width: var(--space-2);
+  height: var(--space-2);
   border-radius: 50%;
   flex: 0 0 auto;
 }

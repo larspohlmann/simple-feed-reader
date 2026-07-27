@@ -11,10 +11,10 @@
 }
 
 .dot {
-  width: 8px;
-  height: 8px;
+  width: var(--space-2);
+  height: var(--space-2);
   border-radius: 50%;
-  margin-top: 6px;
+  margin-top: var(--space-2);
   flex: 0 0 auto;
   border: 1px solid var(--border-strong);
 }
@@ -72,7 +72,7 @@
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 2px;
+  padding: var(--space-0);
 }
 
 .actions button.on {
@@ -80,7 +80,12 @@
 }
 
 .thumb {
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned thumbnail box (4:3), not a spacing value. */
   width: 88px;
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned thumbnail box (4:3), not a spacing value. */
   height: 66px;
   object-fit: cover;
   border-radius: var(--radius);

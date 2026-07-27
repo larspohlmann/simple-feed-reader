@@ -3,6 +3,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: var(--space-5);
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned dialog measure, not a spacing value. */
   width: min(400px, 92vw);
   display: flex;
   flex-direction: column;

@@ -2,7 +2,7 @@
   padding: var(--space-3) var(--space-2);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-0);
   overflow: auto;
   height: 100%;
 }
@@ -57,8 +57,8 @@
 
 .prog {
   display: block;
-  height: 3px;
-  border-radius: 2px;
+  height: var(--space-1);
+  border-radius: var(--radius-sm);
   background: var(--border);
   overflow: hidden;
   margin: 0 var(--space-1) var(--space-1);
@@ -151,7 +151,7 @@
 }
 
 /* A fixed leading slot so tag names share one left edge whether the tag
-         shows a 9px colour dot or an 18px icon. */
+         shows an 8px colour dot or an 18px icon. */
 .tag .lead {
   flex: 0 0 18px;
   display: inline-flex;
@@ -160,8 +160,8 @@
 }
 
 .dot {
-  width: 9px;
-  height: 9px;
+  width: var(--space-2);
+  height: var(--space-2);
   border-radius: 50%;
   flex: 0 0 auto;
 }
@@ -201,8 +201,8 @@
   position: absolute;
   left: 0;
   right: 0;
-  top: -2px;
-  height: 2px;
+  top: calc(var(--space-0) * -1);
+  height: var(--space-0);
   background: var(--accent);
 }
 
@@ -240,10 +240,10 @@
          dragged feed will land (it takes the row's slot). Square edges — a
          rounded pill read as stray corners. */
 .feedrow.cdk-drag-placeholder {
-  height: 2px;
-  min-height: 2px;
+  height: var(--space-0);
+  min-height: var(--space-0);
   box-sizing: border-box;
-  margin: 1px 0;
+  margin: var(--space-0) 0;
   padding: 0;
   background: var(--accent);
   border-radius: 0;
@@ -309,6 +309,9 @@
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned popover measure, not a spacing value. */
   min-width: 140px;
 }
 
