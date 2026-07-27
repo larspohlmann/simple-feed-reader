@@ -123,13 +123,28 @@ app-to-top-button {
   }
 }
 
+/* The toolbar's buttons carry different type sizes -- the mode toggle is
+   --fs-sm, the arrows inherit the bar's own size -- so leaving them inline
+   sat them on their own differing baselines and staggered them against each
+   other. A flex row centres them by layout instead of by type metrics. */
+.nav {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
 .bar button,
 .actions button {
-  background: none;
+  /* Centre the glyph within the button rather than letting it sit on the
+     button's text baseline, where a 20px icon over 15px type hangs low. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
   border: none;
+  background: none;
   color: var(--text-secondary);
   cursor: pointer;
-  padding: var(--space-1);
 }
 
 .bar button:disabled {
