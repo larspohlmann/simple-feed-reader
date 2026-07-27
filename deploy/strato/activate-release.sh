@@ -157,4 +157,20 @@ echo "==> Flipping current"
 ln -sfn "${RELEASE}" "${ROOT}/current.tmp"
 mv -Tf "${ROOT}/current.tmp" "${ROOT}/current"
 
+echo "==> Warming catalog favicons"
+# A convenience for this server, not a requirement of the app: the admin UI warms
+# icons after an import on any deployment, and a cold cache renders monograms,
+# which is a working picker. Forks deploying some other way lose nothing.
+#
+# Deliberately AFTER the flip and deliberately non-fatal. The release is live at
+# this point, and a publisher's icon host being down must not turn a good deploy
+# red.
+#
+# Self-limiting: minutes on the first deploy against an empty cache, a no-op on
+# every deploy after, because cached rows are neither missing nor stale.
+if ! console app:catalog:warm-favicons; then
+    echo "!!! Favicon warming failed; the release is live and serving." >&2
+    echo "!!! Icons fall back to monograms until the next successful run." >&2
+fi
+
 echo "==> Active release is now ${NAME}"

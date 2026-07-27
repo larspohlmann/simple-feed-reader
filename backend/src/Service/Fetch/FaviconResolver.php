@@ -14,7 +14,7 @@ use Psr\Log\LoggerInterface;
  * is a nicety, so any failure degrades to the fallback (or null) rather than
  * disturbing the refresh that asked for it.
  */
-final readonly class FaviconResolver
+final readonly class FaviconResolver implements FaviconResolverInterface
 {
     private const int URL_MAX = 2048;
 

@@ -2,20 +2,27 @@ import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { BehaviorSubject, of } from 'rxjs';
 import { signal } from '@angular/core';
 import { API_BASE_URL } from '../core/api';
 import { AuthService } from '../core/auth.service';
+import { OnboardingSkip } from '../discover/onboarding-skip';
 import { ReaderShellComponent } from './reader-shell.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
 import { ReaderHeaderComponent } from './header/reader-header.component';
+import { RefreshService } from './refresh.service';
 
 describe('ReaderShellComponent', () => {
   let ctrl: HttpTestingController;
   const qp = new BehaviorSubject(convertToParamMap({}));
-  const auth = { user: signal({ email: 'a@b.c' }), loadMe: () => of({}), logout: jest.fn() };
+  const auth = {
+    user: signal({ email: 'a@b.c' }),
+    loadMe: () => of({}),
+    logout: jest.fn(),
+    isAdmin: jest.fn().mockReturnValue(false),
+  };
 
   const subsBody = {
     subscriptions: [
@@ -52,6 +59,8 @@ describe('ReaderShellComponent', () => {
   };
 
   beforeEach(() => {
+    sessionStorage.clear(); // OnboardingSkip persists here; don't leak across tests
+    auth.isAdmin.mockReturnValue(false); // default non-admin; a test opting in overrides it
     qp.next(convertToParamMap({}));
     TestBed.configureTestingModule({
       imports: [ReaderShellComponent, provideTranslocoTesting()],
@@ -81,6 +90,62 @@ describe('ReaderShellComponent', () => {
     f.detectChanges();
     return f;
   }
+
+  // One subscription row in the shape the shell reads. Overlay `id`/`lastFetchedAt`
+  // per test to describe "fetched" vs "never fetched" feeds.
+  const SUBSCRIPTION_FIXTURE = {
+    id: 1,
+    feedId: 11,
+    title: 'The Verge',
+    customTitle: null,
+    lastFetchedAt: null as string | null,
+    feedUrl: 'https://f/1',
+    siteUrl: null,
+    status: 'active',
+    sourceFormat: 'xml',
+    createdAt: 'x',
+    tags: [],
+    unreadCount: 0,
+  };
+
+  // Boot the shell against a CUSTOM subscriptions list, draining the three
+  // requests it always fires (subscriptions, tags, entries) so a later
+  // expectOne/expectNone on '/api/catalog' or '/api/refresh' is unambiguous.
+  function bootWith(subscriptions: unknown[]) {
+    const f = TestBed.createComponent(ReaderShellComponent);
+    f.detectChanges();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ subscriptions, favoritesCount: 0, keptCount: 0 });
+    ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+    return f;
+  }
+
+  const CATALOG_WITH_FEEDS = {
+    categories: [
+      {
+        id: 1,
+        key: 'technology',
+        name: 'Technology',
+        icon: 'memory',
+        color: '#3b82f6',
+        feeds: [
+          {
+            id: 10,
+            title: 'The Verge',
+            description: null,
+            siteUrl: null,
+            faviconUrl: '/f/10',
+            subscribed: false,
+          },
+        ],
+      },
+    ],
+  };
 
   it('renders header + sidebar and loads the initial list', () => {
     const el = boot().nativeElement as HTMLElement;
@@ -325,5 +390,154 @@ describe('ReaderShellComponent', () => {
     header.scrollTop.emit();
 
     expect(jump).toHaveBeenCalledTimes(1);
+  });
+
+  describe('onboarding redirect and first sweep', () => {
+    it('redirects a user with no subscriptions to the picker, replacing the URL', async () => {
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = bootWith([]);
+      await f.whenStable();
+      ctrl.expectOne('https://api.test/api/catalog').flush(CATALOG_WITH_FEEDS);
+      await f.whenStable();
+      f.detectChanges();
+      expect(nav).toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
+    });
+
+    it('does not redirect when nobody has imported a catalog yet', async () => {
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = bootWith([]);
+      await f.whenStable();
+      ctrl.expectOne('https://api.test/api/catalog').flush({ categories: [] });
+      await f.whenStable();
+      f.detectChanges();
+      expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
+    });
+
+    it('does not redirect when the catalog cannot be loaded', async () => {
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = bootWith([]);
+      await f.whenStable();
+      ctrl
+        .expectOne('https://api.test/api/catalog')
+        .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+      await f.whenStable();
+      f.detectChanges();
+      expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
+    });
+
+    it('does not even ask for the catalog when a non-admin user has subscriptions', () => {
+      // Non-admin (the default mock): a populated reader has no reason to touch
+      // the catalog. Admins DO fetch it unconditionally — covered separately below.
+      bootWith([{ ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' }]);
+      ctrl.expectNone('https://api.test/api/catalog');
+    });
+
+    it('does not redirect when the user skipped this session, and does not fetch the catalog', async () => {
+      TestBed.inject(OnboardingSkip).remember();
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = bootWith([]);
+      await f.whenStable();
+      ctrl.expectNone('https://api.test/api/catalog');
+      expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
+    });
+
+    it('sweeps once when subscriptions exist that have never been fetched', () => {
+      const run = jest
+        .spyOn(TestBed.inject(RefreshService), 'run')
+        .mockImplementation(() => undefined);
+      bootWith([
+        { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: null },
+        { ...SUBSCRIPTION_FIXTURE, id: 2, feedId: 12, lastFetchedAt: null },
+      ]);
+      expect(run).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not sweep when every subscription has been fetched before', () => {
+      const run = jest
+        .spyOn(TestBed.inject(RefreshService), 'run')
+        .mockImplementation(() => undefined);
+      bootWith([{ ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' }]);
+      expect(run).not.toHaveBeenCalled();
+    });
+
+    it('shows the counted fetch banner while the onboarding sweep runs', () => {
+      const f = bootWith([
+        { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: null },
+        { ...SUBSCRIPTION_FIXTURE, id: 2, feedId: 12, lastFetchedAt: null },
+      ]);
+      // The sweep fired a real refresh; a partial slice keeps it running, so the
+      // counted banner shows this-much-done.
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/refresh')
+        .flush({ ...refreshDone, status: 'partial', total: 2, remaining: 1, fetched: 1 });
+      f.detectChanges();
+      const banner = (f.nativeElement as HTMLElement).querySelector('.fetch-banner');
+      expect(banner).not.toBeNull();
+      expect(banner!.textContent).toContain('1 of 2');
+      // The partial re-armed the poll; finish it so the sweep completes.
+      ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
+    });
+
+    it('does not reshow the fetch banner on a later refresh once the sweep has landed', () => {
+      const f = bootWith([{ ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: null }]);
+      // Complete the onboarding sweep successfully → the banner window closes.
+      ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
+      f.detectChanges();
+      expect((f.nativeElement as HTMLElement).querySelector('.fetch-banner')).toBeNull();
+
+      // A later manual refresh (the sidebar button) must NOT bring the counted
+      // banner back over the now-populated reader — it belongs to the sweep only.
+      f.componentInstance.onRefresh();
+      f.detectChanges();
+      ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
+      f.detectChanges();
+      expect((f.nativeElement as HTMLElement).querySelector('.fetch-banner')).toBeNull();
+    });
+  });
+
+  describe('admin empty-catalog warning', () => {
+    it('warns an admin that no catalog has been imported', async () => {
+      auth.isAdmin.mockReturnValue(true);
+      const f = bootWith([
+        { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' },
+      ]);
+      await f.whenStable();
+      // An admin gets the catalog fetched EVEN WITH their own subscriptions — the
+      // loadCatalogForAdmin effect, not the redirect (which returns on non-empty subs).
+      ctrl.expectOne('https://api.test/api/catalog').flush({ categories: [] });
+      f.detectChanges();
+      const warning = (f.nativeElement as HTMLElement).querySelector(
+        '[data-testid="catalog-empty-warning"]',
+      );
+      expect(warning).not.toBeNull();
+      expect(warning!.querySelector('a')!.getAttribute('href')).toBe('/admin/catalog');
+    });
+
+    it('shows an admin no warning once a catalog exists', async () => {
+      auth.isAdmin.mockReturnValue(true);
+      const f = bootWith([
+        { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' },
+      ]);
+      await f.whenStable();
+      ctrl.expectOne('https://api.test/api/catalog').flush(CATALOG_WITH_FEEDS);
+      f.detectChanges();
+      expect(
+        (f.nativeElement as HTMLElement).querySelector('[data-testid="catalog-empty-warning"]'),
+      ).toBeNull();
+    });
+
+    it('never shows the warning to a non-admin', async () => {
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = bootWith([]);
+      await f.whenStable();
+      // The redirect effect (empty subs, non-admin) is what fetches the catalog here.
+      ctrl.expectOne('https://api.test/api/catalog').flush({ categories: [] });
+      await f.whenStable();
+      f.detectChanges();
+      expect(
+        (f.nativeElement as HTMLElement).querySelector('[data-testid="catalog-empty-warning"]'),
+      ).toBeNull();
+      expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
+    });
   });
 });

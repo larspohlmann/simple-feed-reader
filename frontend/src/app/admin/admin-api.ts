@@ -3,7 +3,17 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
-import { AdminAction, AdminUserDto, AdminUserStatus } from './admin.models';
+import {
+  AdminAction,
+  AdminCatalogCategoryDto,
+  AdminCatalogFeedDto,
+  AdminUserDto,
+  AdminUserStatus,
+  BundledCatalogInfo,
+  CatalogImportCounts,
+  CatalogWarmReport,
+  ImportMode,
+} from './admin.models';
 
 @Injectable({ providedIn: 'root' })
 export class AdminApi {
@@ -21,5 +31,78 @@ export class AdminApi {
       `${this.base}/api/admin/users/${id}/${action}`,
       {},
     );
+  }
+
+  catalog(): Observable<{
+    categories: AdminCatalogCategoryDto[];
+    feeds: AdminCatalogFeedDto[];
+  }> {
+    return this.http.get<{ categories: AdminCatalogCategoryDto[]; feeds: AdminCatalogFeedDto[] }>(
+      `${this.base}/api/admin/catalog`,
+    );
+  }
+
+  saveCategory(
+    id: number | null,
+    body: Omit<AdminCatalogCategoryDto, 'id' | 'position'>,
+  ): Observable<{ category: AdminCatalogCategoryDto }> {
+    const url = `${this.base}/api/admin/catalog/categories${id === null ? '' : `/${id}`}`;
+    return id === null
+      ? this.http.post<{ category: AdminCatalogCategoryDto }>(url, body)
+      : this.http.patch<{ category: AdminCatalogCategoryDto }>(url, body);
+  }
+
+  deleteCategory(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/api/admin/catalog/categories/${id}`);
+  }
+
+  reorderCategories(ids: number[]): Observable<void> {
+    return this.http.patch<void>(`${this.base}/api/admin/catalog/categories/reorder`, { ids });
+  }
+
+  saveFeed(
+    id: number | null,
+    body: Omit<AdminCatalogFeedDto, 'id' | 'position' | 'faviconFetchedAt' | 'faviconFailedAt'>,
+  ): Observable<{ feed: AdminCatalogFeedDto }> {
+    const url = `${this.base}/api/admin/catalog/feeds${id === null ? '' : `/${id}`}`;
+    return id === null
+      ? this.http.post<{ feed: AdminCatalogFeedDto }>(url, body)
+      : this.http.patch<{ feed: AdminCatalogFeedDto }>(url, body);
+  }
+
+  deleteFeed(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/api/admin/catalog/feeds/${id}`);
+  }
+
+  reorderFeeds(ids: number[]): Observable<void> {
+    return this.http.patch<void>(`${this.base}/api/admin/catalog/feeds/reorder`, { ids });
+  }
+
+  refreshFavicon(id: number): Observable<{ feed: AdminCatalogFeedDto }> {
+    return this.http.post<{ feed: AdminCatalogFeedDto }>(
+      `${this.base}/api/admin/catalog/feeds/${id}/favicon`,
+      {},
+    );
+  }
+
+  importCatalog(mode: ImportMode, document: string): Observable<CatalogImportCounts> {
+    return this.http.post<CatalogImportCounts>(`${this.base}/api/admin/catalog/import`, {
+      mode,
+      document,
+    });
+  }
+
+  bundledCatalog(): Observable<BundledCatalogInfo> {
+    return this.http.get<BundledCatalogInfo>(`${this.base}/api/admin/catalog/bundled`);
+  }
+
+  importBundledCatalog(mode: ImportMode): Observable<CatalogImportCounts> {
+    return this.http.post<CatalogImportCounts>(`${this.base}/api/admin/catalog/import/bundled`, {
+      mode,
+    });
+  }
+
+  warmFavicons(): Observable<CatalogWarmReport> {
+    return this.http.post<CatalogWarmReport>(`${this.base}/api/admin/catalog/favicons/warm`, {});
   }
 }

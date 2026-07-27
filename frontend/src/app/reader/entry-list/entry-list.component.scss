@@ -262,6 +262,13 @@
     var(--app-bar-h, 56px) + var(--list-bar-h, 0px) + var(--bar-gap) + var(--space-6)
   );
   text-align: center;
+
+  a {
+    display: inline-block;
+    margin-top: var(--space-3);
+    color: var(--accent);
+    text-decoration: none;
+  }
 }
 
 .banner {

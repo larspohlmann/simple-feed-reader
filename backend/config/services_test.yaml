@@ -181,3 +181,28 @@ services:
     App\Service\OAuth\OAuthProviderRegistry:
         autowire: true
         public: true
+
+    # CatalogImporterTest parses documents and runs imports through the
+    # container rather than constructing these by hand, so it exercises the
+    # real autowired graph (repositories, entity manager). Both services now
+    # have production callers (AdminCatalogImportController, ImportCatalogCommand)
+    # and would survive compilation on their own — `public: true` here is only
+    # so the test container's `self::getContainer()->get(...)` can fetch them,
+    # which the container refuses on a private service. Same `autowire` caveat
+    # as above.
+    App\Service\Catalog\CatalogDocument:
+        autowire: true
+        public: true
+
+    App\Service\Catalog\CatalogImporter:
+        autowire: true
+        public: true
+
+    # CatalogSubscriberTest turns a picker selection into subscriptions through
+    # the real autowired graph (catalog repository, BulkSubscriber). Its only
+    # production caller arrives with the onboarding endpoint in a later task, so
+    # until then the compiler would inline it away and the test container could
+    # not fetch it. Same `autowire` caveat as above.
+    App\Service\Catalog\CatalogSubscriber:
+        autowire: true
+        public: true

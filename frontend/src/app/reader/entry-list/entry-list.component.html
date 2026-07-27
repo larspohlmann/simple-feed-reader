@@ -96,6 +96,9 @@
 } @else if (entries().length === 0) {
   <p class="empty" [class.after-banner]="!!error()">
     {{ (selection().unread ? 'reader.allCaughtUp' : 'reader.nothingHere') | transloco }}
+    @if (!catalogEmpty()) {
+      <a routerLink="/discover">{{ 'discover.browseCatalog' | transloco }}</a>
+    }
   </p>
 } @else if (layout() === 'magazine') {
   <div class="rows magazine" [class.after-banner]="!!error()" #rows (scroll)="onRowsScroll($event)">

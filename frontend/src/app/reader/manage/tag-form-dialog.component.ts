@@ -9,7 +9,7 @@ import { parseProblem } from '../../core/problem';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { ReaderApi } from '../reader-api';
 import { TagDto } from '../models';
-import { TAG_COLORS, TAG_ICONS } from './icon-choices';
+import { TAG_COLORS, TAG_ICONS } from '../../shared/icon-choices';
 
 @Component({
   selector: 'app-tag-form-dialog',

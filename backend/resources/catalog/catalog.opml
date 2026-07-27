@@ -1,0 +1,487 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The onboarding feed catalog.
+
+  Imported through the admin area (or `bin/console app:catalog:import`); nothing
+  reads this file at runtime and no migration inserts it. Ordinary OPML 2.0, so
+  it opens in any other reader — with three extra attributes on each category
+  outline that OPML has no equivalent for: `key` (stable identity across
+  imports), `icon` (Material Symbol) and `color`.
+-->
+<opml version="2.0">
+  <head>
+    <title>simple-feed-reader onboarding catalog</title>
+  </head>
+  <body>
+    <outline text="Technology" key="technology" icon="memory" color="#3b82f6">
+      <outline type="rss" text="404 Media"
+               xmlUrl="https://www.404media.co/rss/"
+               htmlUrl="https://www.404media.co"
+               description="Journalist-owned technology reporting"/>
+      <outline type="rss" text="9to5Mac"
+               xmlUrl="https://9to5mac.com/feed/"
+               htmlUrl="https://9to5mac.com"
+               description="Apple news and rumours"/>
+      <outline type="rss" text="Ars Technica"
+               xmlUrl="https://feeds.arstechnica.com/arstechnica/index"
+               htmlUrl="https://arstechnica.com"
+               description="Technology news and analysis"/>
+      <outline type="rss" text="Daring Fireball"
+               xmlUrl="https://daringfireball.net/feeds/main"
+               htmlUrl="https://daringfireball.net"
+               description="Apple-focused commentary by John Gruber"/>
+      <outline type="rss" text="Engadget"
+               xmlUrl="https://www.engadget.com/rss.xml"
+               htmlUrl="https://www.engadget.com"
+               description="Consumer technology news and reviews"/>
+      <outline type="rss" text="Hacker News (100+ points)"
+               xmlUrl="https://hnrss.org/frontpage?points=100"
+               htmlUrl="https://news.ycombinator.com"
+               description="Top Hacker News stories"/>
+      <outline type="rss" text="IEEE Spectrum"
+               xmlUrl="https://spectrum.ieee.org/feeds/feed.rss"
+               htmlUrl="https://spectrum.ieee.org"
+               description="Engineering and technology journalism"/>
+      <outline type="rss" text="MIT Technology Review"
+               xmlUrl="https://www.technologyreview.com/feed/"
+               htmlUrl="https://www.technologyreview.com"
+               description="Emerging technology news and analysis"/>
+      <outline type="rss" text="Six Colors"
+               xmlUrl="https://sixcolors.com/feed/"
+               htmlUrl="https://sixcolors.com"
+               description="Apple and technology commentary"/>
+      <outline type="rss" text="Slashdot"
+               xmlUrl="https://rss.slashdot.org/Slashdot/slashdotMain"
+               htmlUrl="https://slashdot.org"
+               description="News for nerds, stuff that matters"/>
+      <outline type="rss" text="TechCrunch"
+               xmlUrl="https://techcrunch.com/feed/"
+               htmlUrl="https://techcrunch.com"
+               description="Startup and technology news"/>
+      <outline type="rss" text="Techmeme"
+               xmlUrl="https://www.techmeme.com/feed.xml"
+               htmlUrl="https://www.techmeme.com"
+               description="Technology news aggregator"/>
+      <outline type="rss" text="The Register"
+               xmlUrl="https://www.theregister.com/headlines.atom"
+               htmlUrl="https://www.theregister.com"
+               description="Enterprise technology news"/>
+      <outline type="rss" text="The Verge"
+               xmlUrl="https://www.theverge.com/rss/index.xml"
+               htmlUrl="https://www.theverge.com"
+               description="Consumer tech news, reviews and gadgets"/>
+      <outline type="rss" text="Wired"
+               xmlUrl="https://www.wired.com/feed/rss"
+               htmlUrl="https://www.wired.com"
+               description="How technology shapes business and culture"/>
+    </outline>
+    <outline text="AI &amp; Machine Learning" key="ai_machine_learning" icon="smart_toy" color="#8b5cf6">
+      <outline type="rss" text="Ahead of AI"
+               xmlUrl="https://magazine.sebastianraschka.com/feed"
+               htmlUrl="https://magazine.sebastianraschka.com"
+               description="Machine learning by Sebastian Raschka"/>
+      <outline type="rss" text="BAIR Blog"
+               xmlUrl="https://bair.berkeley.edu/blog/feed.xml"
+               htmlUrl="https://bair.berkeley.edu"
+               description="Berkeley AI Research blog"/>
+      <outline type="rss" text="Google AI Blog"
+               xmlUrl="https://blog.google/technology/ai/rss/"
+               htmlUrl="https://blog.google"
+               description="Google artificial intelligence news"/>
+      <outline type="rss" text="Google DeepMind"
+               xmlUrl="https://deepmind.google/blog/rss.xml"
+               htmlUrl="https://deepmind.google"
+               description="AI research from Google DeepMind"/>
+      <outline type="rss" text="Hugging Face Blog"
+               xmlUrl="https://huggingface.co/blog/feed.xml"
+               htmlUrl="https://huggingface.co"
+               description="Machine learning tools and research"/>
+      <outline type="rss" text="Import AI"
+               xmlUrl="https://importai.substack.com/feed"
+               htmlUrl="https://importai.substack.com"
+               description="Weekly AI research newsletter"/>
+      <outline type="rss" text="Last Week in AI"
+               xmlUrl="https://lastweekin.ai/feed"
+               htmlUrl="https://lastweekin.ai"
+               description="Weekly artificial intelligence roundup"/>
+      <outline type="rss" text="MarkTechPost"
+               xmlUrl="https://www.marktechpost.com/feed/"
+               htmlUrl="https://www.marktechpost.com"
+               description="AI and machine learning news"/>
+      <outline type="rss" text="OpenAI News"
+               xmlUrl="https://openai.com/news/rss.xml"
+               htmlUrl="https://openai.com"
+               description="News and updates from OpenAI"/>
+      <outline type="rss" text="Simon Willison"
+               xmlUrl="https://simonwillison.net/atom/everything/"
+               htmlUrl="https://simonwillison.net"
+               description="Writing on AI and software"/>
+      <outline type="rss" text="The Gradient"
+               xmlUrl="https://thegradient.pub/rss/"
+               htmlUrl="https://thegradient.pub"
+               description="Artificial intelligence research and perspectives"/>
+      <outline type="rss" text="arXiv cs.AI"
+               xmlUrl="http://export.arxiv.org/rss/cs.AI"
+               htmlUrl="https://arxiv.org"
+               description="New artificial intelligence preprints"/>
+    </outline>
+    <outline text="Software Development" key="software_development" icon="code" color="#22c55e">
+      <outline type="rss" text="Angular Blog"
+               xmlUrl="https://blog.angular.dev/feed"
+               htmlUrl="https://blog.angular.dev"
+               description="Official Angular framework blog"/>
+      <outline type="rss" text="CSS-Tricks"
+               xmlUrl="https://css-tricks.com/feed/"
+               htmlUrl="https://css-tricks.com"
+               description="Web design and development tips"/>
+      <outline type="rss" text="Changelog"
+               xmlUrl="https://changelog.com/feed"
+               htmlUrl="https://changelog.com"
+               description="Software development news and podcasts"/>
+      <outline type="rss" text="Cloudflare Blog"
+               xmlUrl="https://blog.cloudflare.com/rss/"
+               htmlUrl="https://blog.cloudflare.com"
+               description="Web infrastructure and networking"/>
+      <outline type="rss" text="GitHub Blog"
+               xmlUrl="https://github.blog/feed/"
+               htmlUrl="https://github.blog"
+               description="News and updates from GitHub"/>
+      <outline type="rss" text="InfoQ"
+               xmlUrl="https://feed.infoq.com/"
+               htmlUrl="https://www.infoq.com"
+               description="Software development news and articles"/>
+      <outline type="rss" text="Julia Evans"
+               xmlUrl="https://jvns.ca/atom.xml"
+               htmlUrl="https://jvns.ca"
+               description="Programming and systems explainers"/>
+      <outline type="rss" text="MDN Blog"
+               xmlUrl="https://developer.mozilla.org/en-US/blog/rss.xml"
+               htmlUrl="https://developer.mozilla.org"
+               description="Web platform news from Mozilla"/>
+      <outline type="rss" text="Martin Fowler"
+               xmlUrl="https://martinfowler.com/feed.atom"
+               htmlUrl="https://martinfowler.com"
+               description="Software design and architecture"/>
+      <outline type="rss" text="Netflix TechBlog"
+               xmlUrl="https://netflixtechblog.com/feed"
+               htmlUrl="https://netflixtechblog.com"
+               description="Engineering at Netflix"/>
+      <outline type="rss" text="Rust Blog"
+               xmlUrl="https://blog.rust-lang.org/feed.xml"
+               htmlUrl="https://blog.rust-lang.org"
+               description="Official Rust language blog"/>
+      <outline type="rss" text="Smashing Magazine"
+               xmlUrl="https://www.smashingmagazine.com/feed/"
+               htmlUrl="https://www.smashingmagazine.com"
+               description="Web design and development articles"/>
+      <outline type="rss" text="Stack Overflow Blog"
+               xmlUrl="https://stackoverflow.blog/feed/"
+               htmlUrl="https://stackoverflow.blog"
+               description="Developer community and industry writing"/>
+      <outline type="rss" text="Symfony Blog"
+               xmlUrl="https://feeds.feedburner.com/symfony/blog"
+               htmlUrl="https://symfony.com"
+               description="Official Symfony framework blog"/>
+      <outline type="rss" text="The Go Blog"
+               xmlUrl="https://go.dev/blog/feed.atom"
+               htmlUrl="https://go.dev"
+               description="Official Go language blog"/>
+      <outline type="rss" text="overreacted"
+               xmlUrl="https://overreacted.io/rss.xml"
+               htmlUrl="https://overreacted.io"
+               description="Writing on React by Dan Abramov"/>
+    </outline>
+    <outline text="Security &amp; Privacy" key="security_privacy" icon="security" color="#ef4444">
+      <outline type="rss" text="BleepingComputer"
+               xmlUrl="https://www.bleepingcomputer.com/feed/"
+               htmlUrl="https://www.bleepingcomputer.com"
+               description="Cybersecurity and technology news"/>
+      <outline type="rss" text="Google Project Zero"
+               xmlUrl="https://googleprojectzero.blogspot.com/feeds/posts/default"
+               htmlUrl="https://googleprojectzero.blogspot.com"
+               description="Security research from Google"/>
+      <outline type="rss" text="Krebs on Security"
+               xmlUrl="https://krebsonsecurity.com/feed/"
+               htmlUrl="https://krebsonsecurity.com"
+               description="In-depth security journalism"/>
+      <outline type="rss" text="Schneier on Security"
+               xmlUrl="https://www.schneier.com/feed/atom/"
+               htmlUrl="https://www.schneier.com"
+               description="Security commentary by Bruce Schneier"/>
+      <outline type="rss" text="The Hacker News"
+               xmlUrl="https://feeds.feedburner.com/TheHackersNews"
+               htmlUrl="https://thehackernews.com"
+               description="Cybersecurity news and analysis"/>
+      <outline type="rss" text="Troy Hunt"
+               xmlUrl="https://www.troyhunt.com/rss/"
+               htmlUrl="https://www.troyhunt.com"
+               description="Web security and data breaches"/>
+    </outline>
+    <outline text="Science" key="science" icon="science" color="#14b8a6">
+      <outline type="rss" text="ESA Space News"
+               xmlUrl="https://www.esa.int/rssfeed/Our_Activities/Space_News"
+               htmlUrl="https://www.esa.int"
+               description="European Space Agency news"/>
+      <outline type="rss" text="NASA Breaking News"
+               xmlUrl="https://www.nasa.gov/rss/dyn/breaking_news.rss"
+               htmlUrl="https://www.nasa.gov"
+               description="Latest news from NASA"/>
+      <outline type="rss" text="Nature"
+               xmlUrl="https://www.nature.com/nature.rss"
+               htmlUrl="https://www.nature.com"
+               description="International science journal"/>
+      <outline type="rss" text="Phys.org"
+               xmlUrl="https://phys.org/rss-feed/"
+               htmlUrl="https://phys.org"
+               description="Science and research news"/>
+      <outline type="rss" text="Quanta Magazine"
+               xmlUrl="https://api.quantamagazine.org/feed/"
+               htmlUrl="https://www.quantamagazine.org"
+               description="Mathematics and science journalism"/>
+      <outline type="rss" text="Science News"
+               xmlUrl="https://www.sciencenews.org/feed"
+               htmlUrl="https://www.sciencenews.org"
+               description="News across the sciences"/>
+      <outline type="rss" text="ScienceDaily"
+               xmlUrl="https://www.sciencedaily.com/rss/all.xml"
+               htmlUrl="https://www.sciencedaily.com"
+               description="Research news across disciplines"/>
+      <outline type="rss" text="Scientific American"
+               xmlUrl="http://rss.sciam.com/ScientificAmerican-Global"
+               htmlUrl="https://www.scientificamerican.com"
+               description="Science news and analysis"/>
+    </outline>
+    <outline text="World News" key="world_news" icon="public" color="#0ea5e9">
+      <outline type="rss" text="Al Jazeera"
+               xmlUrl="https://www.aljazeera.com/xml/rss/all.xml"
+               htmlUrl="https://www.aljazeera.com"
+               description="International news coverage"/>
+      <outline type="rss" text="BBC World"
+               xmlUrl="https://feeds.bbci.co.uk/news/world/rss.xml"
+               htmlUrl="https://www.bbc.com"
+               description="World news from the BBC"/>
+      <outline type="rss" text="DW English"
+               xmlUrl="https://rss.dw.com/rdf/rss-en-all"
+               htmlUrl="https://www.dw.com"
+               description="German public broadcaster in English"/>
+      <outline type="rss" text="NPR News"
+               xmlUrl="https://feeds.npr.org/1001/rss.xml"
+               htmlUrl="https://www.npr.org"
+               description="US public radio news"/>
+      <outline type="rss" text="NYT World"
+               xmlUrl="https://rss.nytimes.com/services/xml/rss/nyt/World.xml"
+               htmlUrl="https://www.nytimes.com"
+               description="World news from The New York Times"/>
+      <outline type="rss" text="Politico Europe"
+               xmlUrl="https://www.politico.eu/feed/"
+               htmlUrl="https://www.politico.eu"
+               description="European politics and policy"/>
+      <outline type="rss" text="The Guardian World"
+               xmlUrl="https://www.theguardian.com/world/rss"
+               htmlUrl="https://www.theguardian.com"
+               description="World news from The Guardian"/>
+      <outline type="rss" text="Washington Post World"
+               xmlUrl="https://feeds.washingtonpost.com/rss/world"
+               htmlUrl="https://www.washingtonpost.com"
+               description="World news from The Washington Post"/>
+    </outline>
+    <outline text="Business &amp; Economics" key="business_economics" icon="trending_up" color="#eab308">
+      <outline type="rss" text="Axios"
+               xmlUrl="https://api.axios.com/feed/"
+               htmlUrl="https://www.axios.com"
+               description="Concise business and politics news"/>
+      <outline type="rss" text="Financial Times"
+               xmlUrl="https://www.ft.com/rss/home"
+               htmlUrl="https://www.ft.com"
+               description="Global business and financial news"/>
+      <outline type="rss" text="Handelsblatt"
+               xmlUrl="https://www.handelsblatt.com/contentexport/feed/schlagzeilen"
+               htmlUrl="https://www.handelsblatt.com"
+               description="German business newspaper"/>
+      <outline type="rss" text="Marginal Revolution"
+               xmlUrl="https://marginalrevolution.com/feed"
+               htmlUrl="https://marginalrevolution.com"
+               description="Economics blog and commentary"/>
+      <outline type="rss" text="Stratechery"
+               xmlUrl="https://stratechery.com/feed/"
+               htmlUrl="https://stratechery.com"
+               description="Technology and business strategy"/>
+      <outline type="rss" text="The Economist"
+               xmlUrl="https://www.economist.com/latest/rss.xml"
+               htmlUrl="https://www.economist.com"
+               description="World news, economics and business"/>
+      <outline type="rss" text="WirtschaftsWoche"
+               xmlUrl="https://www.wiwo.de/contentexport/feed/rss/schlagzeilen"
+               htmlUrl="https://www.wiwo.de"
+               description="German business magazine"/>
+    </outline>
+    <outline text="Design &amp; Architecture" key="design_architecture" icon="palette" color="#ec4899">
+      <outline type="rss" text="A List Apart"
+               xmlUrl="https://alistapart.com/main/feed/"
+               htmlUrl="https://alistapart.com"
+               description="Web design and standards"/>
+      <outline type="rss" text="Core77"
+               xmlUrl="https://www.core77.com/blog/rss.xml"
+               htmlUrl="https://www.core77.com"
+               description="Industrial design news"/>
+      <outline type="rss" text="Creative Bloq"
+               xmlUrl="https://www.creativebloq.com/feeds/all"
+               htmlUrl="https://www.creativebloq.com"
+               description="Art and design inspiration"/>
+      <outline type="rss" text="Designboom"
+               xmlUrl="https://www.designboom.com/feed/"
+               htmlUrl="https://www.designboom.com"
+               description="Art, architecture and product design"/>
+      <outline type="rss" text="Dezeen"
+               xmlUrl="https://www.dezeen.com/feed/"
+               htmlUrl="https://www.dezeen.com"
+               description="Architecture and interiors magazine"/>
+      <outline type="rss" text="Nielsen Norman Group"
+               xmlUrl="https://www.nngroup.com/feed/rss/"
+               htmlUrl="https://www.nngroup.com"
+               description="User experience research and guidance"/>
+    </outline>
+    <outline text="Gaming" key="gaming" icon="sports_esports" color="#a855f7">
+      <outline type="rss" text="Eurogamer"
+               xmlUrl="https://www.eurogamer.net/feed"
+               htmlUrl="https://www.eurogamer.net"
+               description="Video game news and reviews"/>
+      <outline type="rss" text="GameStar"
+               xmlUrl="https://www.gamestar.de/news/rss/news.rss"
+               htmlUrl="https://www.gamestar.de"
+               description="German video game magazine"/>
+      <outline type="rss" text="Kotaku"
+               xmlUrl="https://kotaku.com/rss"
+               htmlUrl="https://kotaku.com"
+               description="Gaming news and culture"/>
+      <outline type="rss" text="PC Gamer"
+               xmlUrl="https://www.pcgamer.com/rss/"
+               htmlUrl="https://www.pcgamer.com"
+               description="PC gaming news and reviews"/>
+      <outline type="rss" text="Polygon"
+               xmlUrl="https://www.polygon.com/rss/index.xml"
+               htmlUrl="https://www.polygon.com"
+               description="Gaming and entertainment news"/>
+      <outline type="rss" text="Rock Paper Shotgun"
+               xmlUrl="https://www.rockpapershotgun.com/feed"
+               htmlUrl="https://www.rockpapershotgun.com"
+               description="PC gaming news and commentary"/>
+    </outline>
+    <outline text="Culture &amp; Longreads" key="culture_longreads" icon="menu_book" color="#f97316">
+      <outline type="rss" text="Aeon"
+               xmlUrl="https://aeon.co/feed.rss"
+               htmlUrl="https://aeon.co"
+               description="Ideas, philosophy and culture"/>
+      <outline type="rss" text="Longreads"
+               xmlUrl="https://longreads.com/feed/"
+               htmlUrl="https://longreads.com"
+               description="Best long-form storytelling on the web"/>
+      <outline type="rss" text="Open Culture"
+               xmlUrl="https://www.openculture.com/feed"
+               htmlUrl="https://www.openculture.com"
+               description="Free cultural and educational media"/>
+      <outline type="rss" text="The Atlantic"
+               xmlUrl="https://www.theatlantic.com/feed/all/"
+               htmlUrl="https://www.theatlantic.com"
+               description="Politics, culture and ideas"/>
+      <outline type="rss" text="The Marginalian"
+               xmlUrl="https://www.themarginalian.org/feed/"
+               htmlUrl="https://www.themarginalian.org"
+               description="Essays on art, science and meaning"/>
+      <outline type="rss" text="The New Yorker"
+               xmlUrl="https://www.newyorker.com/feed/everything"
+               htmlUrl="https://www.newyorker.com"
+               description="Reporting, culture and fiction"/>
+      <outline type="rss" text="kottke.org"
+               xmlUrl="https://feeds.kottke.org/main"
+               htmlUrl="https://kottke.org"
+               description="Curated web miscellany"/>
+    </outline>
+    <outline text="Sport" key="sport" icon="sports_soccer" color="#10b981">
+      <outline type="rss" text="BBC Sport"
+               xmlUrl="https://feeds.bbci.co.uk/sport/rss.xml"
+               htmlUrl="https://www.bbc.com"
+               description="Sport news from the BBC"/>
+      <outline type="rss" text="Guardian Sport"
+               xmlUrl="https://www.theguardian.com/uk/sport/rss"
+               htmlUrl="https://www.theguardian.com"
+               description="Sport news from The Guardian"/>
+      <outline type="rss" text="Sky Sports"
+               xmlUrl="https://www.skysports.com/rss/12040"
+               htmlUrl="https://www.skysports.com"
+               description="Sport news and results"/>
+      <outline type="rss" text="kicker"
+               xmlUrl="https://newsfeed.kicker.de/news/aktuell"
+               htmlUrl="https://www.kicker.de"
+               description="German football news"/>
+    </outline>
+    <outline text="Nachrichten (DE)" key="nachrichten_de" icon="newspaper" color="#64748b">
+      <outline type="rss" text="DW Deutsch"
+               xmlUrl="https://rss.dw.com/rdf/rss-de-all"
+               htmlUrl="https://www.dw.com"
+               description="German public broadcaster news"/>
+      <outline type="rss" text="Der Spiegel"
+               xmlUrl="https://www.spiegel.de/schlagzeilen/index.rss"
+               htmlUrl="https://www.spiegel.de"
+               description="German news magazine"/>
+      <outline type="rss" text="Deutschlandfunk"
+               xmlUrl="https://www.deutschlandfunk.de/nachrichten-100.rss"
+               htmlUrl="https://www.deutschlandfunk.de"
+               description="German public radio news"/>
+      <outline type="rss" text="FAZ"
+               xmlUrl="https://www.faz.net/rss/aktuell/"
+               htmlUrl="https://www.faz.net"
+               description="Frankfurt-based German daily newspaper"/>
+      <outline type="rss" text="Sueddeutsche Zeitung"
+               xmlUrl="https://rss.sueddeutsche.de/rss/Topthemen"
+               htmlUrl="https://www.sueddeutsche.de"
+               description="Munich-based German daily newspaper"/>
+      <outline type="rss" text="Zeit Online"
+               xmlUrl="https://newsfeed.zeit.de/index"
+               htmlUrl="https://www.zeit.de"
+               description="German weekly newspaper"/>
+      <outline type="rss" text="tagesschau"
+               xmlUrl="https://www.tagesschau.de/xml/rss2/"
+               htmlUrl="https://www.tagesschau.de"
+               description="German public television news"/>
+      <outline type="rss" text="taz"
+               xmlUrl="https://taz.de/!p4608;rss/"
+               htmlUrl="https://taz.de"
+               description="Berlin left-leaning German daily newspaper"/>
+    </outline>
+    <outline text="Tech &amp; Netzpolitik (DE)" key="tech_netzpolitik_de" icon="lan" color="#6366f1">
+      <outline type="rss" text="Basic Thinking"
+               xmlUrl="https://www.basicthinking.de/blog/feed/"
+               htmlUrl="https://www.basicthinking.de"
+               description="German technology and digital blog"/>
+      <outline type="rss" text="Caschys Blog"
+               xmlUrl="https://stadt-bremerhaven.de/feed/"
+               htmlUrl="https://stadt-bremerhaven.de"
+               description="German technology and gadgets blog"/>
+      <outline type="rss" text="Golem.de"
+               xmlUrl="https://rss.golem.de/rss.php?feed=RSS2.0"
+               htmlUrl="https://www.golem.de"
+               description="German IT news for professionals"/>
+      <outline type="rss" text="Spektrum.de"
+               xmlUrl="https://www.spektrum.de/alias/rss/spektrum-de-rss-feed/996406"
+               htmlUrl="https://www.spektrum.de"
+               description="German science magazine"/>
+      <outline type="rss" text="c&apos;t Magazin"
+               xmlUrl="https://www.heise.de/ct/rss/artikel-atom.xml"
+               htmlUrl="https://www.heise.de"
+               description="German computing magazine"/>
+      <outline type="rss" text="heise online"
+               xmlUrl="https://www.heise.de/rss/heise-atom.xml"
+               htmlUrl="https://www.heise.de"
+               description="German IT and technology news portal"/>
+      <outline type="rss" text="netzpolitik.org"
+               xmlUrl="https://netzpolitik.org/feed/"
+               htmlUrl="https://netzpolitik.org"
+               description="Digital rights and net politics"/>
+      <outline type="rss" text="t3n"
+               xmlUrl="https://t3n.de/rss.xml"
+               htmlUrl="https://t3n.de"
+               description="German digital business magazine"/>
+    </outline>
+  </body>
+</opml>

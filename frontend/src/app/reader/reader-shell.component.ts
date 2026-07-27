@@ -12,7 +12,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, convertToParamMap } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Dialog } from '@angular/cdk/dialog';
 import { AuthService } from '../core/auth.service';
@@ -34,6 +34,10 @@ import { ReaderViewComponent } from './reader-view/reader-view.component';
 import { AddFeedDialogComponent } from './add-feed/add-feed-dialog.component';
 import { ManageActions } from './manage/manage-actions.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
+import { CatalogStore } from '../discover/catalog.store';
+import { OnboardingSkip } from '../discover/onboarding-skip';
+import { ProgressHairlineComponent } from '../shared/progress-hairline/progress-hairline.component';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 @Component({
   selector: 'app-reader-shell',
@@ -43,6 +47,9 @@ import { DrawerSwipeDirective } from './drawer-swipe.directive';
     EntryListComponent,
     ReaderViewComponent,
     DrawerSwipeDirective,
+    ProgressHairlineComponent,
+    RouterLink,
+    TranslocoPipe,
   ],
   templateUrl: './reader-shell.component.html',
   styleUrl: './reader-shell.component.scss',
@@ -62,6 +69,56 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly refreshSvc = inject(RefreshService);
   readonly layout = inject(ReadingLayoutService);
   readonly screen = inject(LayoutService);
+  private readonly skip = inject(OnboardingSkip);
+  private readonly catalog = inject(CatalogStore);
+
+  /** Is the picker worth showing at all? Nothing seeds the catalog — it arrives
+   *  by admin import — so a deployment without one must not redirect anybody
+   *  into a blank page. */
+  private readonly onboardingAvailable = computed(
+    () => this.catalog.resolved() && this.catalog.hasEntries(),
+  );
+
+  /** Admins get the catalog resolved unconditionally — they are the only ones
+   *  who can fix an empty one, and the suppressed onboarding is otherwise
+   *  invisible. One cached request per session. */
+  private readonly loadCatalogForAdmin = effect(() => {
+    if (this.auth.isAdmin()) untracked(() => this.catalog.load());
+  });
+
+  readonly showCatalogEmptyWarning = computed(
+    () => this.auth.isAdmin() && this.catalog.resolved() && !this.catalog.hasEntries(),
+  );
+
+  /** A brand-new subscription set: rows exist, none has ever been fetched. This
+   *  is what a just-completed onboarding looks like from the shell's side. */
+  private readonly awaitingFirstFetch = computed(
+    () =>
+      this.subs.resolved() &&
+      this.subs.subscriptions().length > 0 &&
+      this.subs.subscriptions().every((s) => s.lastFetchedAt === null),
+  );
+
+  private readonly sweptOnce = signal(false);
+  /** True only for the span of the post-onboarding sweep — set when it fires,
+   *  cleared once it lands without error. `sweptOnce` is a permanent one-way
+   *  latch, so gating the banner on it would re-show the counted banner on every
+   *  later refresh (sidebar button, scoped, add-feed) over an already-populated
+   *  list. This sweep-scoped flag is what keeps the banner to the sweep alone. */
+  private readonly sweeping = signal(false);
+
+  /** The counted banner belongs to the post-onboarding sweep only. Every other
+   *  refresh has the hairline, which is enough context for a user who already
+   *  knows what their reader looks like. Within the sweep window `sweeping` is
+   *  true exactly while the sweep runs or has errored; the template's inner
+   *  branch picks counting vs. the error+retry message. */
+  readonly showFetchBanner = computed(() => this.sweeping());
+
+  readonly fetchProgress = computed(() => {
+    const report = this.refreshSvc.report();
+    if (!report) return { done: 0, total: 0 };
+    return { done: report.total - report.remaining, total: report.total };
+  });
 
   private readonly params = toSignal(this.route.queryParamMap, {
     initialValue: convertToParamMap({}),
@@ -192,6 +249,61 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
             if (this.entryId() === id) this.fetchedEntry.set(null);
           },
         });
+      });
+    });
+
+    // Nothing to read and nothing skipped: send the user to the picker. Purely
+    // state-driven — no guard, no resolver — and gated on `resolved` so it never
+    // fires against a list the server has not answered on yet. Use `replaceUrl`:
+    // otherwise Back from /discover lands here and redirects again — a dead Back
+    // button.
+    effect(() => {
+      if (!this.subs.resolved()) return;
+      if (this.subs.subscriptions().length > 0) return;
+      if (this.skip.wasSkipped()) return;
+
+      // Ask what the catalog holds before deciding. load() is a no-op once
+      // resolved, and the store is shared with /discover, so the redirect path
+      // still fetches the catalog exactly once. Untracked so the effect depends
+      // on the catalog's resolution (onboardingAvailable, below), not on the
+      // synchronous loading flag load() sets.
+      untracked(() => this.catalog.load());
+      if (!this.onboardingAvailable()) return;
+
+      void this.router.navigate(['/discover'], { replaceUrl: true });
+    });
+
+    // The post-onboarding sweep, owned BY STATE rather than by being called:
+    // RefreshService.run() early-returns while a refresh is already running, so a
+    // call made from the picker could be silently swallowed by the shell's own
+    // load. Expressing it as "feeds exist that have never been fetched" removes
+    // the ordering question entirely.
+    effect(() => {
+      if (!this.awaitingFirstFetch() || this.sweptOnce()) return;
+      this.sweptOnce.set(true);
+      this.sweeping.set(true);
+      this.refreshSvc.run();
+    });
+
+    // Close the sweep window once the onboarding sweep lands without error. A
+    // failure keeps it open so the banner's retry stays available until a retry
+    // succeeds. Gated on `sweeping` so no later, unrelated refresh reopens it —
+    // and RefreshService.run()'s onDone fires on both success and failure, which
+    // is why the clear is expressed as state here rather than in that callback.
+    effect(() => {
+      if (this.sweeping() && !this.refreshSvc.running() && this.refreshSvc.error() === null) {
+        untracked(() => this.sweeping.set(false));
+      }
+    });
+
+    // Repopulate as slices land, not only when the sweep ends. Landing in a
+    // reader that stays empty for two minutes is the bad first impression this
+    // whole feature exists to remove.
+    effect(() => {
+      if (this.refreshSvc.slice() === 0) return;
+      untracked(() => {
+        this.subs.load();
+        this.entries.load(queryFromSelection(this.selection()));
       });
     });
   }

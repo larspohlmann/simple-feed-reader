@@ -1,12 +1,17 @@
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { provideRouter } from '@angular/router';
 import { EntryListComponent } from './entry-list.component';
 import { ListScrollMemory } from '../list-scroll-memory';
+import { CatalogStore } from '../../discover/catalog.store';
 import { prefetchMargin } from '../paging';
 import { EntryDto } from '../models';
 
 const memory = { save: jest.fn(), read: jest.fn().mockReturnValue(0) };
+// A stub for the two signals `catalogEmpty` reads — keeps the real CatalogStore
+// (and its HttpClient chain) out of this component's unit test.
+const catalog = { resolved: signal(false), hasEntries: signal(false) };
 
 const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   id,
@@ -31,7 +36,11 @@ function mount(over: Record<string, unknown> = {}) {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     imports: [EntryListComponent, provideTranslocoTesting()],
-    providers: [provideRouter([]), { provide: ListScrollMemory, useValue: memory }],
+    providers: [
+      provideRouter([]),
+      { provide: ListScrollMemory, useValue: memory },
+      { provide: CatalogStore, useValue: catalog },
+    ],
   });
   const f = TestBed.createComponent(EntryListComponent);
   const inputs = {
