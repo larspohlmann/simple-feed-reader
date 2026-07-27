@@ -6,7 +6,7 @@ import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
 import { LanguageService } from '../../core/language.service';
 import { EntryDto, SubscriptionTagDto } from '../models';
-import { firstPreviewImage, textSnippet } from '../preview-image';
+import { entryImage, textSnippet } from '../preview-image';
 import { relativeTime } from '../format';
 
 @Component({
@@ -25,10 +25,14 @@ export class EntryHeroComponent {
 
   readonly imgError = signal(false);
   readonly tooSmall = signal(false);
-  readonly image = computed(() =>
-    firstPreviewImage(this.entry().contentHtml, this.entry().summary),
-  );
+  readonly image = computed(() => entryImage(this.entry()));
   readonly showImage = computed(() => !!this.image() && !this.imgError() && !this.tooSmall());
+  /** Honour the feed's own ratio so a square image is not cropped by 46%.
+   *  Unknown dimensions keep the editorial default. */
+  readonly aspect = computed(() => {
+    const img = this.image();
+    return img?.width && img?.height ? `${img.width} / ${img.height}` : '16 / 9';
+  });
   readonly snippet = computed(() => textSnippet(this.entry().summary || this.entry().contentHtml));
   private readonly language = inject(LanguageService);
   readonly when = computed(() =>
