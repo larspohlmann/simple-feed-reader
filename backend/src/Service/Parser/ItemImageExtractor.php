@@ -104,28 +104,13 @@ final class ItemImageExtractor
             }
             /** @var \DOMElement $child */
             $url = trim($child->getAttribute('url'));
-            if ($url === '' || !self::isImageElement($child)) {
+            if ($url === '' || !MediaImageClassifier::isImage($child)) {
                 continue;
             }
             $candidates[] = self::imageFrom($child, $url);
         }
 
         return $candidates;
-    }
-
-    /**
-     * <media:thumbnail> is an image by definition. <media:content> is only an
-     * image when it says so — the same element carries audio and video.
-     */
-    private static function isImageElement(\DOMElement $element): bool
-    {
-        if ($element->localName === 'thumbnail') {
-            return true;
-        }
-        $medium = strtolower($element->getAttribute('medium'));
-        $type = strtolower($element->getAttribute('type'));
-
-        return $medium === 'image' || str_starts_with($type, 'image/');
     }
 
     private static function isMediaElement(\DOMNode $node, string $localName): bool

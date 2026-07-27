@@ -95,6 +95,26 @@ final class ItemImageExtractorTest extends TestCase
         )));
     }
 
+    /**
+     * The Guardian's real format: a bare <media:content> with width first and no
+     * medium or type at all, the URL carrying an image extension before its query
+     * string. Every other test declares medium="image", which the live feed does
+     * not — this is the case that the extension inference exists for, and whose
+     * absence let the whole feed regress to zero images (#148).
+     */
+    public function testSelectsAWidestBareMediaContentByImageExtension(): void
+    {
+        $image = ItemImageExtractor::fromMedia($this->item(
+            '<media:content width="140" url="https://i.guim.co.uk/img/media/x/master/4299.jpg?width=140&amp;s=a"/>'
+            . '<media:content width="460" url="https://i.guim.co.uk/img/media/x/master/4299.jpg?width=460&amp;s=b"/>'
+            . '<media:content width="700" url="https://i.guim.co.uk/img/media/x/master/4299.jpg?width=700&amp;s=c"/>',
+        ));
+
+        self::assertNotNull($image);
+        self::assertSame(700, $image->width);
+        self::assertStringContainsString('width=700', $image->url);
+    }
+
     public function testFallsBackToDocumentOrderWhenNothingDeclaresAWidth(): void
     {
         $image = ItemImageExtractor::fromMedia($this->item(
