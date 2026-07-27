@@ -104,11 +104,15 @@ final class ReaderJourneyE2eTest extends E2eTestCase
 
         $unresolved = [];
 
-        foreach ($candidates as [$label, $candidateUrl]) {
+        foreach ($candidates as [$label, $candidateUrl, $candidateFormat]) {
             // Clean slate so the admin holds exactly the one feed under test.
             $this->deleteAllSubscriptions($token);
 
-            $created = $this->postJson('/api/subscriptions', ['url' => $candidateUrl], $token);
+            $created = $this->postJson(
+                '/api/subscriptions',
+                $this->subscribeBody($candidateUrl, $candidateFormat),
+                $token,
+            );
             if (422 === $created->getStatusCode()) {
                 // The feed became unreachable between discovery and subscribe —
                 // an external hiccup, not a stack fault. Try the next candidate.
@@ -180,11 +184,15 @@ final class ReaderJourneyE2eTest extends E2eTestCase
 
         $notes = [];
 
-        foreach ($candidates as [$label, $candidateUrl]) {
+        foreach ($candidates as [$label, $candidateUrl, $candidateFormat]) {
             // Clean slate so the admin holds exactly the one feed under test.
             $this->deleteAllSubscriptions($token);
 
-            $created = $this->postJson('/api/subscriptions', ['url' => $candidateUrl], $token);
+            $created = $this->postJson(
+                '/api/subscriptions',
+                $this->subscribeBody($candidateUrl, $candidateFormat),
+                $token,
+            );
             if (201 !== $created->getStatusCode()) {
                 // The feed became unreachable between discovery and subscribe —
                 // an external hiccup, not a stack fault. Try the next candidate.
@@ -349,12 +357,19 @@ final class ReaderJourneyE2eTest extends E2eTestCase
         return $report;
     }
 
+    /** @return array{url: string, format?: string} */
+    private function subscribeBody(string $url, ?string $format): array
+    {
+        return null === $format ? ['url' => $url] : ['url' => $url, 'format' => $format];
+    }
+
     /**
      * Every feed candidate advertised by the reachable homepages, as
-     * `[label, candidateUrl]` pairs in domain order. Empty when nothing is
-     * reachable or nothing advertises a feed.
+     * `[label, candidateUrl, format]` triples in domain order (format is null
+     * for a direct feed URL). Empty when nothing is reachable or advertises a
+     * feed.
      *
-     * @return list<array{string, string}>
+     * @return list<array{string, string, string|null}>
      */
     private function discoverFeedCandidates(string $token): array
     {
@@ -377,8 +392,12 @@ final class ReaderJourneyE2eTest extends E2eTestCase
 
             foreach ($candidates as $candidate) {
                 $url = is_array($candidate) ? ($candidate['url'] ?? null) : null;
-                if (is_string($url) && '' !== trim($url)) {
-                    $found[] = [$label, $url];
+                if (is_array($candidate) && is_string($url) && '' !== trim($url)) {
+                    // Carry the format: a 'scraped' candidate's URL is the homepage
+                    // itself, so re-posting it without the format just re-runs
+                    // discovery (200 candidates) instead of subscribing (201).
+                    $format = $candidate['format'] ?? null;
+                    $found[] = [$label, $url, is_string($format) ? $format : null];
                 }
             }
         }
