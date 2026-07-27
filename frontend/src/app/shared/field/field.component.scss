@@ -1,0 +1,33 @@
+:host {
+  display: block;
+  margin-bottom: var(--space-4);
+}
+
+label {
+  display: block;
+}
+
+.lbl {
+  display: block;
+  margin-bottom: var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+.required {
+  color: var(--danger);
+}
+
+.hint,
+.error {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-sm);
+}
+
+.hint {
+  color: var(--text-muted);
+}
+
+.error {
+  color: var(--danger);
+}

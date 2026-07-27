@@ -1,0 +1,58 @@
+// src/styles/_controls.scss
+// Styles for the native controls projected into <app-field>. Global rather
+// than component-scoped because Angular's ViewEncapsulation does not style
+// projected content, and because a bare <input> outside a field should still
+// look like the rest of the app.
+// Checkbox, radio and colour inputs are excluded throughout: the user agent
+// paints those, so a border, a fixed height or a cleared outline only distorts
+// them.
+input:not([type='checkbox'], [type='radio'], [type='color']),
+select,
+textarea {
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+input:not([type='checkbox'], [type='radio'], [type='color']),
+select {
+  height: var(--control-h);
+}
+
+textarea {
+  padding: var(--space-2) var(--space-3);
+  line-height: var(--lh-normal);
+}
+
+// Width is layout, not chrome, so it belongs to the field rather than to the
+// control: inside <app-field> the control fills the row, but a bare control in
+// a dense row (admin-catalog's category and feed grid) has to stay sized by
+// its container's flex rules. Setting it globally stretched those selects to
+// the full row width and pushed them onto a line of their own.
+app-field input,
+app-field select,
+app-field textarea {
+  width: 100%;
+}
+
+// Only the controls that actually carry a border may trade the focus outline
+// for an accent border. Applying `outline: none` to every input outranks the
+// :focus-visible rule in _base.scss (0,1,1 beats 0,1,0) and would leave
+// checkboxes, radios and colour swatches — which have no border to tint — with
+// no visible keyboard focus at all.
+input:not([type='checkbox'], [type='radio'], [type='color']):focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
