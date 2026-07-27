@@ -2171,6 +2171,29 @@ and tabulate them.
    breakpoint partial; use `--row-pad-*` for rows; put stickiness on the host;
    run `npm run check`.
 
+Record these **deliberate exceptions**, found during implementation. Each is a
+case where applying the shared convention would have been worse than not
+applying it, and each needs to be written down or someone will "fix" it later:
+
+- `settings/tags-section` renders the colour dot **and** the icon together as a
+  swatch-plus-glyph pair, not as the either/or fallback `<app-tag-glyph>`
+  implements. Converting it would change the design, not just the code.
+- `admin-catalog`'s feed rows are a **dense data grid, not a form**: 16 of its 18
+  controls have no visible label (only dev-facing `aria-label`s and no
+  translation keys). They get the global control styling — border, radius,
+  `--control-h` — but not `<app-field>`, whose stacked label would triple the
+  row height and require inventing i18n strings. `<app-field>` is for labelled
+  fields; two labelled controls in that file do use it.
+- `discover`'s `.mark` keeps an explicit `--icon-sm` footprint because it
+  reserves space for a check icon that is *absent* most of the time; the row
+  must not reflow when it appears. `<app-tag-glyph>`'s self-sizing does not
+  apply — it is an `app-icon` slot, not a tag glyph.
+- `_controls.scss` scopes `width: 100%` to `app-field` descendants, and scopes
+  its `:focus` rule away from checkbox/radio/colour inputs. Both are load-bearing:
+  unscoped width broke the admin grid layout, and the unscoped `:focus { outline: none }`
+  outranked `:focus-visible` (specificity 0,1,1 vs 0,1,0) and removed the focus
+  ring from controls that have no border to tint — a WCAG 2.4.7 failure.
+
 Also record the escape hatch: a tuned component dimension may use
 `/* stylelint-disable-next-line declaration-property-unit-allowed-list -- … */`
 with a reason, and list the ones that legitimately do (rail width, discover
