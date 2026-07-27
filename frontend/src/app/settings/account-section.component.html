@@ -11,11 +11,11 @@
     </dl>
     @if (auth.isAdmin()) {
       <a class="admin" routerLink="/admin/users">
-        <app-icon name="shield_person" size="md" />
+        <app-icon name="shield_person" size="sm" />
         {{ 'settings.account.adminQueue' | transloco }}
       </a>
       <a class="admin" routerLink="/admin/catalog">
-        <app-icon name="shield_person" size="md" />
+        <app-icon name="shield_person" size="sm" />
         {{ 'admin.catalog' | transloco }}
       </a>
     }
