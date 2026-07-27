@@ -18,22 +18,57 @@
 
 // Mode-invariant tokens (same in every theme).
 :root {
-  --radius: 8px;
-  --control-h: 40px;
+  /* Spacing scale. --space-0 is a real half-step for tight gaps (rail rows,
+     icon-grid padding), not a stray. Anything off this scale is a Stylelint
+     failure outside theme/ and styles/. */
+  --space-0: 2px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
+  --space-7: 48px;
+
+  /* Radii. --radius-pill is for chips and pills; --radius-sm for elements
+     nested inside an already-rounded container. */
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-pill: 999px;
+
+  /* Structural sizing. --bar-h is the *fallback* for the floating app bar,
+     whose real height is measured at runtime by ReaderShellComponent and
+     written to --app-bar-h; read it as `var(--app-bar-h, var(--bar-h))`.
+     --tap-target is the documented minimum touch target. */
+  --control-h: 40px;
+  --bar-h: 56px;
+  --tap-target: 44px;
+
+  /* Icon sizes. Four steps because the same tag glyph is rendered from a
+     12px pill up to a 20px sidebar lead; three steps would inflate the pill. */
+  --icon-xs: 12px;
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
+
+  /* Row density. Every list, rail and picker row derives its padding from
+     these two, which is what keeps the picker rail and the reader's lists
+     from drifting apart again. */
+  --row-pad-y: var(--space-2);
+  --row-pad-x: var(--space-3);
 
   /* Breathing room between the floating top bars and the content that starts
      beneath them. Added to the measured bar heights by every scrolling pane, so
      this one value tunes the gap everywhere (#87). */
   --bar-gap: var(--space-4);
+
+  /* Type scale. */
   --font-sans: system-ui, -apple-system, 'Segoe UI', roboto, sans-serif;
+  --fs-xs: 11px;
   --fs-sm: 13px;
   --fs-base: 15px;
   --fs-lg: 18px;
   --fs-xl: 24px;
+  --lh-tight: 1.25;
+  --lh-normal: 1.5;
 }
