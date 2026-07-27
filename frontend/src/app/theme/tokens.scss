@@ -30,10 +30,14 @@
   --space-6: 32px;
   --space-7: 48px;
 
-  /* Radii. --radius-pill is for chips and pills; --radius-sm for elements
-     nested inside an already-rounded container. */
+  /* Radii. --radius-sm for elements nested inside an already-rounded
+     container, --radius for controls, --radius-lg for a large surface that
+     carries content (a card, a dialog, a panel), --radius-pill for chips.
+     The lg step is not invented: the magazine hero, the magazine source group,
+     the discover panel and the auth card each arrived at 12px independently. */
   --radius-sm: 4px;
   --radius: 8px;
+  --radius-lg: 12px;
   --radius-pill: 999px;
 
   /* Structural sizing. --bar-h is the *fallback* for the floating app bar,
