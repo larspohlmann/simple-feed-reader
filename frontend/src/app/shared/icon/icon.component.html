@@ -1,1 +1,8 @@
-<span class="material-symbols-outlined" aria-hidden="true">{{ name() }}</span>
+<!-- `font-size: inherit` is inline, not in the stylesheet, and that is load-bearing:
+     the vendor rule `.material-symbols-outlined { font-size: 24px }` matches this
+     very element, so it beats anything the host merely passes down. An inline
+     declaration outranks it whatever the stylesheet order or encapsulation does.
+     Without it every icon renders at 24px regardless of its size input. -->
+<span class="material-symbols-outlined" style="font-size: inherit" aria-hidden="true">{{
+  name()
+}}</span>

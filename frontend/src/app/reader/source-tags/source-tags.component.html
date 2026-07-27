@@ -9,7 +9,7 @@
         [attr.title]="'reader.filterByTag' | transloco: { name: t.name }"
         (click)="$event.stopPropagation()"
       >
-        <app-tag-glyph [name]="t.icon" [color]="t.color" size="text" />
+        <app-tag-glyph [name]="t.icon" [color]="t.color" size="xs" />
         {{ t.name }}
       </a>
     }
