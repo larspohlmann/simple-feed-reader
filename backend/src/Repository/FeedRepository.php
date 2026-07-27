@@ -112,8 +112,15 @@ class FeedRepository extends ServiceEntityRepository
 
             if ($force) {
                 if ($cooldownCutoff !== null) {
-                    $qb->andWhere('(f.lastFetchedAt IS NULL OR f.lastFetchedAt <= :cooldownCutoff)')
-                        ->setParameter('cooldownCutoff', $cooldownCutoff);
+                    // A lastFetchedAt in the future is impossible under a correct
+                    // clock: a skewed process clock (observed on the FastCGI host)
+                    // stamped it there. Treat it as stale rather than let it read
+                    // as "just fetched" and freeze the feed out of every refresh.
+                    $qb->andWhere(
+                        '(f.lastFetchedAt IS NULL OR f.lastFetchedAt <= :cooldownCutoff OR f.lastFetchedAt > :now)',
+                    )
+                        ->setParameter('cooldownCutoff', $cooldownCutoff)
+                        ->setParameter('now', $now);
                 }
             } else {
                 $qb->andWhere('(f.nextFetchAt IS NULL OR f.nextFetchAt <= :now)')
