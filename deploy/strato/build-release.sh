@@ -195,8 +195,14 @@ bundles=("${OUT}"/public/main-*.js)
 # stale build cache. Without it a deploy would ship a sidebar and a Settings
 # page reporting `dev` -- which reads as "not deployed yet", the exact question
 # this feature exists to answer.
+#
+# Search every emitted script, not just main-*.js (#139). version.ts is imported
+# by the sidebar and the Settings About section, both of which are lazily
+# loaded, so Angular compiles the version into a lazy chunk and main-*.js never
+# carries it. Which chunk it lands in is a build-time detail that moves whenever
+# imports do; that the value reached the SPA at all is the thing worth asserting.
 test -f "${OUT}/version.json" || die "missing version.json at the release root"
-grep -qF "${VERSION}" "${bundles[@]}" \
+grep -qrF "${VERSION}" "${OUT}/public" --include='*.js' \
     || die "the SPA bundle does not carry ${VERSION}: the version.ts rewrite did not compose in"
 
 echo "==> Release assembled"
