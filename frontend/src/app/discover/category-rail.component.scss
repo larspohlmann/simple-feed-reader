@@ -15,6 +15,11 @@
   width: 220px;
   max-height: 100%;
   overflow-y: auto;
+
+  /* Reaching the end of the rail must not hand the wheel to the panel body
+     behind it: the sections would scroll and the rail would appear to jump to
+     a category the reader never picked. */
+  overscroll-behavior: contain;
   border-right: 1px solid var(--border);
   background: var(--surface-1);
 }
@@ -37,7 +42,7 @@ button {
   gap: var(--space-2);
   align-items: center;
   width: 100%;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--row-pad-y) var(--row-pad-x);
   border: 0;
   border-radius: var(--radius);
   background: none;

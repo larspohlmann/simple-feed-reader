@@ -16,6 +16,10 @@
   gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
   overflow-x: auto;
+
+  /* Swiping past the last chip must not chain into the panel body, which on a
+     phone would scroll the sections away under the reader's thumb. */
+  overscroll-behavior: contain;
   border-bottom: 1px solid var(--border);
   background: var(--surface-1);
   scrollbar-width: none;
@@ -30,7 +34,7 @@ button {
   flex: none;
   gap: var(--space-1);
   align-items: center;
-  padding: var(--space-1) var(--space-3);
+  padding: var(--row-pad-y) var(--row-pad-x);
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
   background: var(--surface-1);

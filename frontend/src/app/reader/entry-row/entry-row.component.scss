@@ -1,7 +1,7 @@
 .row {
   display: flex;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--row-pad-y) var(--row-pad-x);
   border-bottom: 1px solid var(--border);
   cursor: pointer;
 }

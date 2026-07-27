@@ -79,7 +79,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2);
+  padding: var(--row-pad-y) var(--row-pad-x);
   border-radius: var(--radius);
   color: var(--text-primary);
   text-decoration: none;
@@ -313,7 +313,7 @@
   display: block;
   width: 100%;
   text-align: left;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--row-pad-y) var(--row-pad-x);
   background: none;
   border: none;
   color: var(--text-primary);
