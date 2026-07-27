@@ -9,6 +9,7 @@ import { parseProblem } from '../../core/problem';
 import { ColorFieldComponent } from '../../shared/color-field/color-field.component';
 import { IconPickerComponent } from '../../shared/icon-picker/icon-picker.component';
 import { FieldComponent } from '../../shared/field/field.component';
+import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
 import { ReaderApi } from '../reader-api';
 import { TagDto } from '../models';
 
@@ -20,6 +21,7 @@ import { TagDto } from '../models';
     ColorFieldComponent,
     IconPickerComponent,
     FieldComponent,
+    OverlayPanelComponent,
     TranslocoPipe,
   ],
   templateUrl: './tag-form-dialog.component.html',

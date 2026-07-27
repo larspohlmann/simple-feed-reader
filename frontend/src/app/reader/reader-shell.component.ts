@@ -551,7 +551,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onAddFeed(): void {
-    const ref = this.dialog.open<SubscriptionDto>(AddFeedDialogComponent);
+    const ref = this.dialog.open<SubscriptionDto>(AddFeedDialogComponent, {
+      panelClass: 'app-dialog',
+    });
     ref.closed.subscribe((sub) => {
       if (!sub) return;
       this.subs.load();

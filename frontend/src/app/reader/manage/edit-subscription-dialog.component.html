@@ -1,53 +1,52 @@
-<div
-  class="dialog"
-  role="dialog"
-  aria-modal="true"
-  [attr.aria-label]="'dialog.editFeed.title' | transloco"
-  cdkTrapFocus
->
-  <h2>{{ 'dialog.editFeed.title' | transloco }}</h2>
-  <form [formGroup]="form" (ngSubmit)="submit()">
-    <app-field [label]="'dialog.editFeed.customTitle' | transloco">
-      <input
-        id="sub-title"
-        formControlName="customTitle"
-        maxlength="512"
-        [placeholder]="data.title"
-        cdkFocusInitial
-      />
-    </app-field>
+<!-- The form wraps the panel rather than sitting inside it: Save is projected
+     into the panel's footer, and a submit button only submits a form it is a
+     DOM descendant of. -->
+<form [formGroup]="form" (ngSubmit)="submit()" cdkTrapFocus>
+  <app-overlay-panel [heading]="'dialog.editFeed.title' | transloco">
+    <div class="fields">
+      <app-field [label]="'dialog.editFeed.customTitle' | transloco">
+        <input
+          id="sub-title"
+          formControlName="customTitle"
+          maxlength="512"
+          [placeholder]="data.title"
+          cdkFocusInitial
+        />
+      </app-field>
 
-    <p class="lbl">{{ 'dialog.editFeed.tags' | transloco }}</p>
-    @if (tagsStore.tags().length === 0) {
-      <p class="hint">{{ 'dialog.editFeed.noTags' | transloco }}</p>
-    }
-    <div class="tags">
-      @for (t of tagsStore.tags(); track t.id) {
-        <button
-          type="button"
-          class="tag-pill"
-          [class.on]="checked().has(t.id)"
-          [attr.aria-pressed]="checked().has(t.id)"
-          (click)="toggle(t.id)"
-        >
-          <app-tag-glyph
-            [name]="t.icon"
-            [color]="checked().has(t.id) ? 'var(--on-accent)' : t.color"
-            size="sm"
-          />
-          {{ t.name }}
-        </button>
+      <p class="lbl">{{ 'dialog.editFeed.tags' | transloco }}</p>
+      @if (tagsStore.tags().length === 0) {
+        <p class="hint">{{ 'dialog.editFeed.noTags' | transloco }}</p>
+      }
+      <div class="tags">
+        @for (t of tagsStore.tags(); track t.id) {
+          <button
+            type="button"
+            class="tag-pill"
+            [class.on]="checked().has(t.id)"
+            [attr.aria-pressed]="checked().has(t.id)"
+            (click)="toggle(t.id)"
+          >
+            <app-tag-glyph
+              [name]="t.icon"
+              [color]="checked().has(t.id) ? 'var(--on-accent)' : t.color"
+              size="sm"
+            />
+            {{ t.name }}
+          </button>
+        }
+      </div>
+
+      @if (error()) {
+        <p class="error" role="alert">{{ error() }}</p>
       }
     </div>
 
-    @if (error()) {
-      <p class="error" role="alert">{{ error() }}</p>
-    }
-    <div class="row">
-      <button type="button" (click)="ref.close()">{{ 'dialog.cancel' | transloco }}</button>
-      <button type="submit" class="primary" [disabled]="loading()">
-        {{ (loading() ? 'dialog.editFeed.saving' : 'dialog.editFeed.save') | transloco }}
-      </button>
-    </div>
-  </form>
-</div>
+    <button footer class="act" type="button" (click)="ref.close()">
+      {{ 'dialog.cancel' | transloco }}
+    </button>
+    <button footer class="act primary" type="submit" [disabled]="loading()">
+      {{ (loading() ? 'dialog.editFeed.saving' : 'dialog.editFeed.save') | transloco }}
+    </button>
+  </app-overlay-panel>
+</form>

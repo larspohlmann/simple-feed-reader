@@ -9,6 +9,7 @@ import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { FieldComponent } from '../../shared/field/field.component';
+import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
 import { parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
 import { TagsStore } from '../tags.store';
@@ -27,6 +28,7 @@ type PreviewState =
     RouterLink,
     TagGlyphComponent,
     FieldComponent,
+    OverlayPanelComponent,
     TranslocoPipe,
   ],
   templateUrl: './add-feed-dialog.component.html',

@@ -1,20 +1,20 @@
 <div class="scrim" aria-hidden="true"></div>
 
-<div class="panel" role="dialog" aria-modal="true" [attr.aria-label]="'discover.title' | transloco">
-  <header class="top">
-    <div class="head-text">
-      <h1>{{ 'discover.title' | transloco }}</h1>
-      <p>{{ 'discover.subtitle' | transloco }}</p>
-    </div>
-    <button
-      type="button"
-      class="close"
-      [attr.aria-label]="'discover.close' | transloco"
-      (click)="onSkip()"
-    >
-      <app-icon name="close" size="md" />
-    </button>
-  </header>
+<app-overlay-panel [heading]="'discover.title' | transloco">
+  <button
+    headerActions
+    type="button"
+    class="close"
+    [attr.aria-label]="'discover.close' | transloco"
+    (click)="onSkip()"
+  >
+    <app-icon name="close" size="md" />
+  </button>
+
+  <!-- The subtitle and the category chips do not fit the panel's head, which is
+       one row of heading plus actions. They lead the body instead; the chips
+       stay pinned because they stick to the body's own scrollport. -->
+  <p class="subtitle">{{ 'discover.subtitle' | transloco }}</p>
 
   <app-category-chips
     [categories]="categories()"
@@ -23,7 +23,8 @@
     (jump)="onJump($event)"
   />
 
-  <div class="body">
+  <!-- The rail sticks to the top of the body while the sections scroll past. -->
+  <div class="cols">
     <app-category-rail
       [categories]="categories()"
       [activeId]="active.activeId()"
@@ -108,25 +109,24 @@
     </main>
   </div>
 
-  <footer class="foot">
-    <span class="cnt" aria-live="polite">
-      {{
-        'discover.summary'
-          | transloco
-            : { feeds: selection.selectedCount(), categories: selection.selectedCategoryCount() }
-      }}
-    </span>
-    <button type="button" class="ghost" (click)="onSkip()">
-      {{ 'discover.skip' | transloco }}
-    </button>
-    <button
-      type="button"
-      class="primary"
-      data-testid="subscribe"
-      [disabled]="selection.selectedCount() === 0 || submitting()"
-      (click)="onSubscribe()"
-    >
-      {{ 'discover.subscribe' | transloco }}
-    </button>
-  </footer>
-</div>
+  <span footer class="cnt" aria-live="polite">
+    {{
+      'discover.summary'
+        | transloco
+          : { feeds: selection.selectedCount(), categories: selection.selectedCategoryCount() }
+    }}
+  </span>
+  <button footer type="button" class="ghost" (click)="onSkip()">
+    {{ 'discover.skip' | transloco }}
+  </button>
+  <button
+    footer
+    type="button"
+    class="primary"
+    data-testid="subscribe"
+    [disabled]="selection.selectedCount() === 0 || submitting()"
+    (click)="onSubscribe()"
+  >
+    {{ 'discover.subscribe' | transloco }}
+  </button>
+</app-overlay-panel>

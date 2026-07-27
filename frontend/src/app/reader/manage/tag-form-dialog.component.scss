@@ -1,37 +1,24 @@
-.dialog {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--space-5);
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     tuned dialog measure, not a spacing value. */
-  width: min(460px, 92vw);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+// The frame is app-overlay-panel's; only the width is this dialog's to choose.
+// `display: contents` on both the host and the form removes the two boxes that
+// would otherwise sit between the CDK's dialog container and the panel, neither
+// of which the CDK knows how to centre or stretch.
+// The panel caps itself at 90dvh and scrolls its body (#85), so the icons plus
+// the name field, the swatches and the buttons still fit in landscape on a
+// phone -- app-icon-picker's inline grid caps and scrolls on its own as well.
+:host {
+  display: contents;
 
-  /* Never taller than the viewport -- app-icon-picker's inline grid scrolls
-     instead (#85). Reachable in landscape on a phone, where the icons plus the
-     name field, the swatches and the buttons no longer fit. `hidden` because
-     nothing here should scroll but that grid; `vh` first as the fallback for
-     browsers without `dvh`. */
-  max-height: 90vh;
-  max-height: 90dvh;
-  overflow: hidden;
-}
-
-h2 {
-  margin: 0;
-  font-size: var(--fs-lg);
+  --panel-w: 460px;
 }
 
 form {
+  display: contents;
+}
+
+.fields {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-
-  /* Let the icon grid shrink below its cap when the dialog runs out of room. */
-  min-height: 0;
 }
 
 .lbl {
@@ -46,14 +33,10 @@ form {
   margin: 0;
 }
 
-.row {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-
-.row button {
+// Scoped to `.act`, not `.footer button`: .footer belongs to
+// app-overlay-panel's template and this stylesheet cannot cross that
+// encapsulation boundary.
+.act {
   padding: var(--space-2) var(--space-4);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
@@ -62,7 +45,7 @@ form {
   cursor: pointer;
 }
 
-.row button.primary {
+.act.primary {
   background: var(--accent);
   color: var(--on-accent);
   border-color: var(--accent);

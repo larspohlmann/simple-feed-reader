@@ -1,32 +1,31 @@
-<div
-  class="dialog"
-  role="dialog"
-  aria-modal="true"
-  [attr.aria-label]="titleKey | transloco"
-  cdkTrapFocus
->
-  <h2>{{ titleKey | transloco }}</h2>
-  <form [formGroup]="form" (ngSubmit)="submit()">
-    <app-field [label]="'dialog.tagForm.name' | transloco">
-      <input id="tag-name" formControlName="name" maxlength="100" cdkFocusInitial />
-    </app-field>
+<!-- The form wraps the panel rather than sitting inside it: Save is projected
+     into the panel's footer, and a submit button only submits a form it is a
+     DOM descendant of. -->
+<form [formGroup]="form" (ngSubmit)="submit()" cdkTrapFocus>
+  <app-overlay-panel [heading]="titleKey | transloco">
+    <div class="fields">
+      <app-field [label]="'dialog.tagForm.name' | transloco">
+        <input id="tag-name" formControlName="name" maxlength="100" cdkFocusInitial />
+      </app-field>
 
-    <p class="lbl">{{ 'dialog.tagForm.colour' | transloco }}</p>
-    <app-color-field [value]="color()" (valueChange)="color.set($event)">
-      {{ 'dialog.tagForm.none' | transloco }}
-    </app-color-field>
+      <p class="lbl">{{ 'dialog.tagForm.colour' | transloco }}</p>
+      <app-color-field [value]="color()" (valueChange)="color.set($event)">
+        {{ 'dialog.tagForm.none' | transloco }}
+      </app-color-field>
 
-    <p class="lbl">{{ 'dialog.tagForm.icon' | transloco }}</p>
-    <app-icon-picker inline [value]="icon() ?? ''" (valueChange)="icon.set($event || null)" />
+      <p class="lbl">{{ 'dialog.tagForm.icon' | transloco }}</p>
+      <app-icon-picker inline [value]="icon() ?? ''" (valueChange)="icon.set($event || null)" />
 
-    @if (error()) {
-      <p class="error" role="alert">{{ error() }}</p>
-    }
-    <div class="row">
-      <button type="button" (click)="ref.close()">{{ 'dialog.cancel' | transloco }}</button>
-      <button type="submit" class="primary" [disabled]="loading()">
-        {{ (loading() ? 'dialog.tagForm.saving' : 'dialog.tagForm.save') | transloco }}
-      </button>
+      @if (error()) {
+        <p class="error" role="alert">{{ error() }}</p>
+      }
     </div>
-  </form>
-</div>
+
+    <button footer class="act" type="button" (click)="ref.close()">
+      {{ 'dialog.cancel' | transloco }}
+    </button>
+    <button footer class="act primary" type="submit" [disabled]="loading()">
+      {{ (loading() ? 'dialog.tagForm.saving' : 'dialog.tagForm.save') | transloco }}
+    </button>
+  </app-overlay-panel>
+</form>

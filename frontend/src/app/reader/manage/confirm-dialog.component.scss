@@ -1,19 +1,10 @@
-.dialog {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--space-5);
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     tuned dialog measure, not a spacing value. */
-  width: min(400px, 92vw);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
+// `display: contents` so app-overlay-panel's .panel is laid out by the CDK's
+// dialog container directly; a host box in between is a wrapper the CDK does
+// not know how to centre or stretch.
+:host {
+  display: contents;
 
-h2 {
-  margin: 0;
-  font-size: var(--fs-lg);
+  --panel-w: 400px;
 }
 
 .msg {
@@ -21,13 +12,10 @@ h2 {
   color: var(--text-secondary);
 }
 
-.row {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-2);
-}
-
-.row button {
+// The footer buttons carry their own chrome: the panel owns the row, not what
+// sits in it. Scoped to `.act` because .footer belongs to app-overlay-panel's
+// template and this stylesheet cannot reach across that encapsulation boundary.
+.act {
   padding: var(--space-2) var(--space-4);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
@@ -36,13 +24,13 @@ h2 {
   cursor: pointer;
 }
 
-.row button.primary {
+.act.primary {
   background: var(--accent);
   color: var(--on-accent);
   border-color: var(--accent);
 }
 
-.row button.danger {
+.act.danger {
   background: var(--danger);
   color: var(--on-accent);
   border-color: var(--danger);

@@ -1,10 +1,18 @@
 @use '../theme/breakpoints' as bp;
 
-.chips {
+/* The host is the sticky element, not .chips — the same reason the rail sticks
+   on its host: the chips now lead the panel body's scroll region, and a sticky
+   child of a content-height host has no room to travel and scrolls away with
+   it. The host, being a block child of the scroller, travels the full body. */
+:host {
   display: none;
   position: sticky;
   top: 0;
   z-index: 2;
+}
+
+.chips {
+  display: flex;
   gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
   overflow-x: auto;
@@ -45,7 +53,7 @@ button.active {
 }
 
 @media (width <= bp.$bp-md) {
-  .chips {
-    display: flex;
+  :host {
+    display: block;
   }
 }

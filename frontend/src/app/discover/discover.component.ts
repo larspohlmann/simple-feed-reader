@@ -17,6 +17,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
 import { IconComponent } from '../shared/icon/icon.component';
 import { TagGlyphComponent } from '../shared/tag-glyph/tag-glyph.component';
+import { OverlayPanelComponent } from '../shared/overlay-panel/overlay-panel.component';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { TagsStore } from '../reader/tags.store';
 import { ActiveCategory } from './active-category';
@@ -37,6 +38,7 @@ const JUMP_SETTLE_MS = 700;
     TranslocoPipe,
     IconComponent,
     TagGlyphComponent,
+    OverlayPanelComponent,
     CategoryRailComponent,
     CategoryChipsComponent,
   ],
