@@ -53,4 +53,15 @@ describe('EntrySplitComponent', () => {
     (f.nativeElement as HTMLElement).querySelector('article')!.dispatchEvent(new Event('click'));
     expect(opened).not.toBeNull();
   });
+
+  it('resets the image-error gate when the host recycles the component for a new entry', () => {
+    const f = mount(entry());
+    f.componentInstance.imgError.set(true);
+    f.detectChanges();
+
+    f.componentRef.setInput('entry', entry({ id: 2 }));
+    f.detectChanges();
+
+    expect(f.componentInstance.imgError()).toBe(false);
+  });
 });

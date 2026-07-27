@@ -50,3 +50,8 @@
   font-weight: 500;
   color: var(--text-primary);
 }
+
+.kicker-card.read .title {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
