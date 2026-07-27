@@ -1,0 +1,59 @@
+:host {
+  display: block;
+}
+
+.quote {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+}
+
+.quote:hover {
+  border-color: var(--border-strong);
+}
+
+.kicker {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.kicker app-favicon {
+  margin-inline-end: 0;
+}
+
+.dot {
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  flex: none;
+}
+
+.dot.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.pull {
+  margin: 0;
+  font-family: var(--font-voice);
+  font-size: var(--fs-lg);
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
