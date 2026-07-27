@@ -206,6 +206,11 @@ article {
 .meta app-favicon {
   position: relative;
   bottom: 0.15em;
+
+  /* This line is a true text run, so nothing but the margin separates the
+     favicon from the source name; it needs more than the component's inline
+     default. Rows elsewhere get their spacing from a flex gap instead. */
+  margin-inline-end: 0.55em;
 }
 
 .tags {

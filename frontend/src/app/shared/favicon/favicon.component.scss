@@ -2,6 +2,13 @@
   display: inline-flex;
   align-items: center;
   vertical-align: middle;
+
+  /* Breathing room before the source name, for the inline runs where nothing
+     else provides it. Deliberately modest: in a flex row the parent's `gap`
+     already spaces this, and widening the margin there only pads the right,
+     which pushes the row out of symmetry against whatever precedes the
+     favicon -- the unread dot, typically. Contexts that want more add it
+     themselves. */
   margin-inline-end: 0.35em;
   flex: none;
 }
