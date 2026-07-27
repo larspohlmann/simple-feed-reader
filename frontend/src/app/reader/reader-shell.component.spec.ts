@@ -246,6 +246,56 @@ describe('ReaderShellComponent', () => {
       // Back to the resting state the scroll offset implies — minimized.
       expect(f.componentInstance.headerHidden()).toBe(true);
     });
+
+    it('does not spring the header back when returning from a full-screen article', () => {
+      // #128: on mobile the full-screen article overlays the still-mounted list,
+      // and its scroller has its own coordinate space. If its offset feeds the
+      // shared lastScrollTop, the first scroll back on the list computes a
+      // cross-scroller delta (list 800 − article 2000 = −1200), reads it as a
+      // hard scroll-up, and springs the hidden header visible — the list jumps.
+      const f = boot();
+      const inst = f.componentInstance;
+      (inst.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+      const host = f.nativeElement as HTMLElement;
+
+      const scrollerAt = (top: number): HTMLElement => {
+        const el = document.createElement('div');
+        Object.defineProperty(el, 'scrollTop', { value: top, configurable: true });
+        host.appendChild(el);
+        return el;
+      };
+
+      // Scroll the list down: the header minimizes, the offset (800) is remembered.
+      const list = scrollerAt(800);
+      list.dispatchEvent(new Event('scroll'));
+      f.detectChanges();
+      expect(inst.headerHidden()).toBe(true);
+
+      // Open the full-screen article and scroll it deep (2000). That offset must
+      // touch neither the header nor the remembered list offset.
+      qp.next(convertToParamMap({ entry: '1' }));
+      f.detectChanges();
+      ctrl.expectOne('https://api.test/api/entries/1/state').flush({
+        state: { entryId: 1, isRead: true, isFavorite: false, isKept: false, readAt: 'x' },
+      });
+      f.detectChanges();
+      expect(inst.articleFullscreen()).toBe(true);
+
+      scrollerAt(2000).dispatchEvent(new Event('scroll'));
+      f.detectChanges();
+      expect(inst.headerHidden()).toBe(true); // unchanged while the article is open
+
+      // Swipe back: the list is revealed, still at its real offset (800). Its
+      // first scroll is measured against the list's own remembered offset, so
+      // there is no phantom jump.
+      qp.next(convertToParamMap({ entry: null }));
+      f.detectChanges();
+      expect(inst.articleFullscreen()).toBe(false);
+
+      list.dispatchEvent(new Event('scroll'));
+      f.detectChanges();
+      expect(inst.headerHidden()).toBe(true);
+    });
   });
 
   it('marks the opened entry read', () => {

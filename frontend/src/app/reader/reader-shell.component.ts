@@ -393,6 +393,16 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly onContentScroll = (e: Event): void => {
     const el = e.target as HTMLElement | null;
     if (!el || typeof el.scrollTop !== 'number') return;
+    // On mobile a full-screen article overlays the still-mounted list, and its
+    // scroller lives in its own coordinate space. `lastScrollTop` is shared
+    // across every inner scroller, so letting the article write it makes the
+    // first delta taken back on the list nonsense — list 800 minus article 2000
+    // reads as a hard scroll-up, springing the header visible and jumping the
+    // list on swipe-back (#128). Freeze both while the overlay is open: the
+    // list keeps the offset and direction-state it was left at, so returning to
+    // it is seamless. Only the article overlay fits this — the split pane has no
+    // hide-on-scroll header at all — so `articleFullscreen` is the exact guard.
+    if (this.articleFullscreen()) return;
     const top = el.scrollTop;
     // While the drawer is open the header must stay shown (it hangs below the
     // bar). Inertial scrolling keeps firing scroll events after the open-swipe's
