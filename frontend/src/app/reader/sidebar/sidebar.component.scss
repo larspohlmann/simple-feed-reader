@@ -19,6 +19,18 @@
   padding-top: var(--space-3);
 }
 
+/* Rides along under the controls, which already carry the margin-top: auto. */
+.version {
+  padding: var(--space-1) var(--space-2) 0;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+}
+
+.version:hover {
+  color: var(--text-secondary);
+}
+
 .act {
   flex: 1;
   display: inline-flex;

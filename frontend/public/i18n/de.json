@@ -49,6 +49,14 @@
       "memberSince": "Mitglied seit",
       "adminQueue": "Admin – Benutzerliste",
       "signOut": "Abmelden"
+    },
+    "about": {
+      "title": "Über",
+      "app": "App",
+      "api": "API",
+      "loading": "wird geprüft…",
+      "unavailable": "nicht verfügbar",
+      "stale": "Dein Browser führt einen älteren Build aus als der Server. Lade die Seite neu."
     }
   },
   "dialog": {
@@ -249,7 +257,8 @@
       "light": "Hell",
       "dark": "Dunkel",
       "system": "System"
-    }
+    },
+    "versionLabel": "Version {{version}} — Einstellungen öffnen"
   },
   "common": {
     "save": "Speichern",
