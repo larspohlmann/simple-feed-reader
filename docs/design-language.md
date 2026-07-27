@@ -1,0 +1,602 @@
+# Design language
+
+One vocabulary for the SPA: a token set, a small catalog of shared components, and
+the conventions that keep new surfaces consistent with the ones already shipped.
+Introduced by #126, which found the same list row implemented four different ways
+and seven breakpoints where three were meant.
+
+Everything here is enforced mechanically where it can be (Stylelint, via
+`npm run check`) and written down where it cannot be. If a rule below looks
+arbitrary, it is almost certainly recorded in [§5 Deliberate exceptions](#5-deliberate-exceptions)
+or in a comment at the definition site — read that before changing it.
+
+---
+
+## 1. Tokens
+
+All tokens are CSS custom properties declared in
+`frontend/src/app/theme/tokens.scss`. Colour tokens are mode-dependent and come
+from a theme mixin (`theme/themes/_graphite.scss`); everything below is
+mode-invariant.
+
+### Spacing
+
+`--space-0` is a real half-step for tight gaps, not a stray. Anything off this
+scale fails Stylelint outside `theme/` and `styles/`.
+
+| Token | Value | For |
+|---|---|---|
+| `--space-0` | `2px` | hairline gaps — rail row gaps, icon-grid padding |
+| `--space-1` | `4px` | label-to-control, icon-to-label |
+| `--space-2` | `8px` | compact row padding-y, footer button gap |
+| `--space-3` | `12px` | control padding-x, comfortable row padding-y |
+| `--space-4` | `16px` | comfortable row padding-x, field bottom margin, `--bar-gap` |
+| `--space-5` | `24px` | panel head/body/footer padding |
+| `--space-6` | `32px` | section separation |
+| `--space-7` | `48px` | page-level blocks |
+
+### Radii
+
+| Token | Value | For |
+|---|---|---|
+| `--radius-sm` | `4px` | an element nested inside an already-rounded container |
+| `--radius` | `8px` | controls — buttons, inputs, selects, row hit areas |
+| `--radius-lg` | `12px` | a large surface that carries content: card, dialog, panel |
+| `--radius-pill` | `999px` | chips |
+
+The `lg` step is not invented. The magazine hero, the magazine source group, the
+discover panel and the auth card each arrived at 12px independently.
+
+### Structural sizing
+
+| Token | Value | For |
+|---|---|---|
+| `--control-h` | `40px` | the height of a button, input or select |
+| `--bar-h` | `56px` | **fallback** for the floating app bar's height |
+| `--tap-target` | `44px` | the documented minimum touch target |
+| `--list-bar-h` | `0px` | the entry list's own bar; overwritten on its host once measured |
+| `--bar-gap` | `var(--space-4)` | breathing room between a floating bar and the content under it |
+
+**`--bar-h` is a fallback, not the height.** `ReaderShellComponent` measures the
+real app bar at runtime and writes it to `--app-bar-h`. Every consumer must read
+it as:
+
+```scss
+top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
+```
+
+`--list-bar-h` is declared at `:root` with a `0px` default rather than written as
+a `var()` fallback at each use site, so the `calc()` above reads as arithmetic.
+
+### Icon sizes
+
+Four steps, because the same tag glyph is rendered from a 12px pill up to a 20px
+sidebar lead; three steps would inflate the pill.
+
+| Token | Value | Named size |
+|---|---|---|
+| `--icon-xs` | `12px` | `xs` |
+| `--icon-sm` | `16px` | `sm` |
+| `--icon-md` | `20px` | `md` (default) |
+| `--icon-lg` | `24px` | `lg` |
+
+Never write these directly in a component if an `<app-icon>` / `<app-tag-glyph>`
+`size` input will do: `ICON_SIZE_TOKEN` in `shared/icon/icon.component.ts` maps
+the named size onto the token, so no consumer writes a px.
+
+### Row density
+
+Two named pairs. Every list, rail and picker row derives its padding from one of
+them — that is what keeps the picker and the reader's lists from drifting apart
+again.
+
+| Token | Value | |
+|---|---|---|
+| `--row-pad-y` | `var(--space-2)` | **compact** |
+| `--row-pad-x` | `var(--space-3)` | |
+| `--row-pad-comfy-y` | `var(--space-3)` | **comfortable** |
+| `--row-pad-comfy-x` | `var(--space-4)` | |
+
+**Compact** — navigation rails, chip strips, row menus, sidebar entries:
+surfaces where scanning many items at once matters more than breathing room.
+In use by `discover/category-rail`, `discover/category-chips`,
+`reader/sidebar`, `admin/admin-catalog`.
+
+**Comfortable** — the primary content lists a reader actually reads, and the
+settings/admin rows that carry a control per line. In use by
+`reader/entry-row`, `settings/tags-section`, `admin/admin-users`. The reader's
+entry list is the standard the picker was measured against in #126, so it is the
+one that must never get tighter.
+
+### Type
+
+| Token | Value | For |
+|---|---|---|
+| `--font-sans` | `system-ui, -apple-system, 'Segoe UI', roboto, sans-serif` | the only family |
+| `--fs-xs` | `11px` | badges, counts |
+| `--fs-sm` | `13px` | secondary text, dense rows, `size="sm"` buttons |
+| `--fs-base` | `15px` | UI chrome — the `body` size |
+| `--fs-read` | `16px` | **article body** |
+| `--fs-lg` | `18px` | panel and section headings |
+| `--fs-xl` | `24px` | page titles |
+| `--lh-tight` | `1.25` | headings |
+| `--lh-normal` | `1.5` | body copy |
+
+**`--fs-read` is deliberately a step above `--fs-base`.** Long-form reading wants
+more than UI chrome does. Article headings size in `em` against it, so changing
+this one value rescales the whole article.
+
+### Breakpoints
+
+Three steps only. The seven values that existed before (560/720/800/820/899/900/960)
+were drift, not intent.
+
+| Variable | Value | Meaning |
+|---|---|---|
+| `bp.$bp-sm` | `560px` | phone |
+| `bp.$bp-md` | `720px` | small tablet, phone landscape |
+| `bp.$bp-lg` | `900px` | desktop layout switch |
+
+**These are SCSS variables, not custom properties, and that is not an oversight.**
+`@media` cannot read custom properties: `@media (width <= var(--bp-md))` is not
+an error, it simply never matches — the media query is silently dead and the
+mobile layout never appears. So the breakpoints live in a SCSS partial and are
+resolved at build time.
+
+Usage — `@use` the partial with the relative path from the stylesheet:
+
+```scss
+@use '../../theme/breakpoints' as bp;
+
+@media (width <= bp.$bp-md) {
+  :host { display: none; }
+}
+```
+
+Stylelint's `media-feature-name-unit-allowed-list: { "width": [] }` forbids any
+unit inside a `width` media feature, so a literal `@media (width <= 720px)` is a
+lint failure. The variable is the only way through.
+
+---
+
+## 2. Component catalog
+
+All live in `frontend/src/app/shared/`. All are standalone, `OnPush`, and use
+signal `input()`s.
+
+### `<app-icon>`
+
+A Material Symbol at a named size.
+
+| Input | Type | Default |
+|---|---|---|
+| `name` | `string` (required) | — |
+| `size` | `'xs' \| 'sm' \| 'md' \| 'lg'` | `'md'` |
+
+```html
+<app-icon name="delete" size="sm" />
+```
+
+The size lands on the host's `font-size`, not on an inner span, so the two
+consumers with a genuinely fluid pixel box — `app-favicon` and `app-user-avatar`
+— can override it with a template style binding (which outranks a host binding).
+
+**Not for:** a tag's or category's glyph — that is `<app-tag-glyph>`, which also
+owns the colour fallback and the square footprint.
+
+### `<app-tag-glyph>`
+
+The one way to render a tag or catalog category. With an icon it renders the
+glyph tinted; without one it falls back to a colour dot, so an icon-less tag is
+still identifiable at a glance.
+
+| Input | Type | Default |
+|---|---|---|
+| `name` | `string \| null` | `null` |
+| `color` | `string \| null` | `null` (→ `var(--text-muted)`) |
+| `size` | `'xs' \| 'sm' \| 'md' \| 'lg'` | `'md'` |
+
+```html
+<app-tag-glyph [name]="node.tag.icon" [color]="node.tag.color" size="md" />
+```
+
+The host is a square of the named size whichever branch renders, because a dot is
+far smaller than a glyph and lists mix the two freely. Owning the footprint here
+is what lets every consumer drop the fixed-width slot it used to need to keep tag
+names on one left edge. Callers highlighting a selected row pass the highlight
+colour in `color` (`'currentColor'`, say) — both branches honour it.
+
+**Not for:** a surface that wants the dot **and** the glyph side by side. That is
+a different design; see [§5](#5-deliberate-exceptions) on `settings/tags-section`.
+
+### `<app-field>`
+
+Form field layout: label, optional required marker, the projected control, an
+optional hint and an optional error.
+
+| Input | Type | Default |
+|---|---|---|
+| `label` | `string` (required) | — |
+| `error` | `string \| null` | `null` |
+| `hint` | `string \| null` | `null` |
+| `required` | `boolean` | `false` |
+
+```html
+<app-field [label]="'dialog.tagForm.name' | transloco">
+  <input id="tag-name" formControlName="name" maxlength="100" cdkFocusInitial />
+</app-field>
+```
+
+**Deliberately not a `ControlValueAccessor`.** The native control stays in the
+consumer's template with its own `formControlName`, so `type`, `autocomplete`,
+`inputmode` and the rest need no re-exposure as inputs. This component owns only
+what was being retyped: the label, the rhythm and the error slot. The projected
+control is styled globally by `styles/_controls.scss`, because
+`ViewEncapsulation` does not reach projected content.
+
+**Not for:** a dense data grid whose controls have no visible label. The stacked
+label would triple the row height — see `admin-catalog` in
+[§5](#5-deliberate-exceptions).
+
+### `<app-color-field>`
+
+Colour chooser: a row of presets, a native picker for anything else, and an
+optional clear button for "no colour". The presets come from
+`shared/icon-choices.ts`, which stays the single place the palette is defined.
+
+| Input / output | Type | Default |
+|---|---|---|
+| `value` | `string \| null` | `null` |
+| `valueChange` | `output<string \| null>` | — |
+| `clearable` | `boolean` | `true` |
+
+The clear button's label is projected as content.
+
+```html
+<app-color-field [value]="color()" (valueChange)="color.set($event)">
+  {{ 'dialog.tagForm.none' | transloco }}
+</app-color-field>
+```
+
+Not a `ControlValueAccessor` either: both consumers drive it from a signal, and
+`value`/`valueChange` keeps it usable with either. Pass `[clearable]="false"`
+where the value is mandatory (a catalog category always has a colour).
+
+**Not for:** a bare `<input type="color">` that needs no presets — that is a
+native control and takes the global styling in `styles/_controls.scss`.
+
+### `<app-icon-picker>`
+
+A selector over the curated Material Symbols in `shared/icon-choices.ts` — the
+same set the reader's tag form and the admin catalog both offer, so a tag and a
+category are picked from one palette.
+
+| Input | Type | Default |
+|---|---|---|
+| `value` | `model<string>` (two-way) | `''` — the empty string is "no icon" |
+| `color` | `string \| null` | `null` — tints the trigger glyph |
+| `inline` | `boolean` (attribute) | `false` |
+
+**Two framings of one grid, chosen with `inline`:**
+
+- *popover* (default) — a compact trigger that sits between other controls in a
+  dense row. Used by the admin catalog.
+- *inline* — the grid takes a permanent place and selection costs one click.
+  Used by the tag form, which has room to spare.
+
+```html
+<!-- popover -->
+<app-icon-picker [(value)]="category.icon" [color]="category.color" />
+
+<!-- inline -->
+<app-icon-picker inline [value]="icon() ?? ''" (valueChange)="icon.set($event || null)" />
+```
+
+Escape dismisses an open popover and is swallowed, so it does not also reach the
+CDK dialog listening on `body` and close the whole form. Inline mode never opens,
+so Escape passes through untouched and still belongs to the dialog.
+
+**Not for:** picking an arbitrary Material Symbol. The set is curated on purpose.
+
+### `<app-overlay-panel>`
+
+The frame every interrupt surface renders inside: a centred card on desktop, full
+screen on a phone. Owns the heading, the scrolling body and the footer row, so a
+dialog's own stylesheet carries only what is specific to it.
+
+| Input | Type | Default |
+|---|---|---|
+| `heading` | `string` (required) | — |
+| `headingLevel` | `1 \| 2` | `2` |
+
+Content slots: default content becomes the scrolling body; `[headerActions]`
+lands beside the heading; `[footer]` lands in the footer row (which hides itself
+when empty).
+
+```html
+<app-overlay-panel [heading]="data.title" cdkTrapFocus>
+  <p class="msg">{{ data.message }}</p>
+
+  <app-button footer (click)="ref.close(false)">{{ 'dialog.cancel' | transloco }}</app-button>
+  <app-button footer focusInitial variant="danger" (click)="ref.close(true)">
+    {{ data.confirmLabel }}
+  </app-button>
+</app-overlay-panel>
+```
+
+`heading`, not `title`: an input called `title` on a component host collides with
+the native attribute and renders a stray browser tooltip over every dialog.
+
+`headingLevel` is an outline decision, not a typographic one — both render at
+`--fs-lg`. A dialog opens over a page that already has an `h1`, so `2` is right
+for every one of them. A panel that *is* the page (discover, a route rather than
+an overlay) passes `1`.
+
+Width and max-height are per-consumer and come from `--panel-w` / `--panel-max-h`
+set on the consumer's host — not from inputs, so they stay in the stylesheet with
+the rest of the sizing. In use: 400px (confirm), 440px (add feed, edit
+subscription), 460px (tag form, and the component default), 1040px (discover).
+
+**Not for:** a non-modal popover or dropdown menu. The panel declares
+`role="dialog" aria-modal="true"`.
+
+### `<app-button>`
+
+The app's one ordinary button: a label, optionally a leading icon, one of five
+weights.
+
+| Input | Type | Default |
+|---|---|---|
+| `type` | `'button' \| 'submit'` | `'button'` |
+| `variant` | `'default' \| 'primary' \| 'danger' \| 'danger-outline' \| 'ghost'` | `'default'` |
+| `size` | `'sm' \| 'md'` | `'md'` |
+| `loading` | `boolean` | `false` — swaps the label for a spinner and disables |
+| `disabled` | `boolean` | `false` |
+| `block` | `boolean` (attribute) | `false` — stretch to the container's width |
+| `focusInitial` | `boolean` (attribute) | `false` |
+
+| Variant | Weight | Use for |
+|---|---|---|
+| `default` | bordered, surface fill | the ordinary action |
+| `primary` | accent fill | the one action the surface exists for |
+| `danger` | filled danger | **confirming** a destructive action |
+| `danger-outline` | danger border, danger text | **initiating** a destructive action |
+| `ghost` | no chrome at rest | the quiet way out — Cancel, Skip |
+
+`size="sm"` is for dense rows (a settings list, an admin table) where a 40px
+control would set the row height instead of the content; its height comes from
+padding, so the label and any leading icon still decide it.
+
+`focusInitial` puts `cdkFocusInitial` on the real `<button>`. The CDK's focus
+trap calls `focus()` on the element carrying that attribute, and this component's
+host is not focusable — put the attribute on the host and the dialog opens with
+nothing focused.
+
+`block` is opt-in. It used to be unconditional, which is why no surface outside
+the auth forms could adopt this component.
+
+#### Two rules that were decided the hard way
+
+**1. `<app-button>` is for ordinary action buttons, and nothing else.** It is
+*not* for icon-only affordances that carry their own interaction semantics.
+These deliberately stay out and own their markup and styles:
+
+- the sidebar's `.dots` row-menu triggers
+- the entry row's read toggle
+- the view-controls segmented control
+- `<app-to-top-button>`
+- `<app-icon-picker>`'s trigger
+
+Forcing those through `<app-button>` would turn it into a grab bag: each needs a
+different hit area, a different pressed/active state, or an `aria-*` contract
+this component does not model.
+
+**2. Destructive weight is a two-step scale.** Filled `danger` *confirms* a
+destructive action — it is the moment of destruction and should carry the weight
+of one. `danger-outline` only *initiates* one: the Delete sitting on every row of
+a list, which opens a confirmation rather than destroying anything itself.
+Flattening the two would make every Delete in a list shout as loudly as the
+confirmation.
+
+---
+
+## 3. Conventions
+
+### Density
+
+Every list, rail and picker row derives its padding from one of the two token
+pairs in [§1](#row-density) — never from raw `--space-*`, and never from a
+literal. If a new surface genuinely fits neither, that is a design conversation,
+not a third pair invented in a component stylesheet.
+
+### Sticky and scroll
+
+**Stickiness lives on the flex-child host, never on an inner wrapper.** A sticky
+element inside a content-height host has no room to stick: the host is exactly as
+tall as its content, so the sticky element hits the bottom of its containing
+block immediately and scrolls away with its parent. This is exactly the
+`category-rail` bug #126 reported. The fix is `position: sticky` on `:host`, with
+`align-self: flex-start` and a `max-height` so the rail can scroll internally
+when the categories outrun it:
+
+```scss
+:host {
+  position: sticky;
+  top: 0;
+  display: block;
+  align-self: flex-start;
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+```
+
+**Every internal scroller gets `overscroll-behavior: contain`.** Reaching the end
+of a rail must not hand the wheel to the panel body behind it — the sections
+would scroll and the rail would appear to jump to a category the reader never
+picked. In use by the overlay panel body, the category rail, the category chips,
+the icon picker grid, and the add-feed and edit-subscription dialogs.
+
+**Content beneath a floating bar offsets by the measured height plus `--bar-gap`,
+never by a literal:**
+
+```scss
+padding-top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
+```
+
+One value (`--bar-gap`) tunes the gap everywhere.
+
+### Overlay
+
+Every interrupt surface renders inside `<app-overlay-panel>`. Every
+`dialog.open()` passes `panelClass: 'app-dialog'` — the class lands on the CDK's
+`.cdk-overlay-pane` and is what lets `styles.scss` size the pane to the viewport
+on a phone, which the full-screen panel needs to reach the screen at all.
+Per-consumer width and max-height come from `--panel-w` / `--panel-max-h` set on
+the consumer's host.
+
+The CDK's structural overlay CSS is imported by `src/styles.scss`, not by
+`angular.json`, so every build configuration gets it. Without it a dialog renders
+as a plain block appended after the 100vh reader shell — a full viewport below
+the fold (#85).
+
+### Forms
+
+`<app-field>` wraps a labelled control; the native control keeps its own
+`formControlName` and its own attributes. Global control styling — border,
+radius, height, padding, focus, disabled — lives in `styles/_controls.scss`,
+because Angular's `ViewEncapsulation` does not style projected content, and
+because a bare `<input>` outside a field should still look like the rest of the
+app.
+
+---
+
+## 4. Enforcement and escape hatches
+
+`frontend/.stylelintrc.json`, run by `npm run check` (which is `ng lint` +
+`prettier --check` + `stylelint "src/**/*.scss"` + `jest`).
+
+| Rule | Effect |
+|---|---|
+| `color-no-hex` | no hex literals — colours come from tokens |
+| `declaration-property-unit-allowed-list` | `padding*`, `margin*`, `gap`/`row-gap`/`column-gap`, `font-size`, `border-radius` accept only `%`/`em`/`rem` — i.e. a raw `px` is a failure, and a `var(--space-*)` is not a unit at all, so tokens pass |
+| ↳ same rule, sizing props | `width`/`height`/`min-*`/`max-*` additionally accept `ch`/`vw`/`vh`/`dvw`/`dvh`/`fr` |
+| `media-feature-name-unit-allowed-list` | `@media (width …)` accepts **no** unit — forces `bp.$bp-*` |
+
+**Exempt** (all three rules disabled): `src/app/theme/**/*.scss`,
+`src/styles/**/*.scss`, `src/styles.scss`. Those files *define* the tokens and
+the global chrome, so they are where the literals belong.
+
+### The escape hatch
+
+A tuned component dimension that is genuinely not a spacing value — a panel
+measure, a rail width, a menu min-width — disables the rule for one line, with a
+reason:
+
+```scss
+/* stylelint-disable-next-line declaration-property-unit-allowed-list --
+   tuned component dimension, not a spacing value. */
+width: 220px;
+```
+
+The reason after `--` is mandatory in practice: without it the next reader
+cannot tell a considered exception from an unmigrated literal.
+
+### Standing rule: styles go in a `.scss` file
+
+**Stylelint cannot parse `.ts`.** No `customSyntax` is installed, so it throws on
+the first line of TypeScript and never reaches an inline `styles:` block:
+
+```
+src/app/shared/icon-picker/icon-picker.component.ts
+  3:3  ✖  Unknown word booleanAttribute  CssSyntaxError
+```
+
+Therefore **component styles must live in a sibling `.scss` file referenced by
+`styleUrl`**, or they are silently unenforced — no hex check, no `px` check, no
+breakpoint check. All 48 styled components in `src/app` do this today; keep it
+that way.
+
+And: **never pass a `.ts` glob to stylelint.** It does not "lint the inline
+styles too" — it fails the whole run with a `CssSyntaxError` per file. The
+`npm run stylelint` glob is `src/**/*.scss` and should stay that way.
+
+(Inline `template:` is fine — stylelint has no opinion on templates, and
+`<app-icon-picker>` keeps one.)
+
+---
+
+## 5. Deliberate exceptions
+
+Each of these was decided during #126 and looks like an oversight from the
+outside. They are not. Read the reason before "fixing" one.
+
+**`settings/tags-section` renders the colour dot *and* the icon.** It shows a
+`--space-2` swatch followed by an `<app-icon>` — a swatch-plus-glyph pair, not
+`<app-tag-glyph>`'s either/or fallback. Converting it to `<app-tag-glyph>` would
+change the design: the colour would stop being visible on tags that have an
+icon, which on the tag-management screen is exactly the information the user is
+there to edit.
+
+**`admin-catalog`'s feed and category rows are a dense data grid, not a form.**
+Most controls there have no visible label and no translation key — they are
+identified by column position and `aria-label`. They take the global control
+styling from `styles/_controls.scss` but not `<app-field>`, whose stacked label
+would roughly triple the row height and destroy the grid. The two genuinely
+labelled controls on that page (the OPML import file input and the import-mode
+select) *do* use `<app-field>`.
+
+**`discover`'s `.mark` keeps an explicit `--icon-sm` footprint.** It reserves
+space for a check icon that is usually absent. Sizing it from its content would
+let the card titles reflow the moment a card is picked. The token is doing
+layout, not icon sizing, which is why it stays even though no icon renders.
+
+**`_controls.scss` scopes `width: 100%` to `app-field` descendants.** Width is
+layout, not chrome, so it belongs to the field rather than to the control. Set
+globally it stretched the admin grid's selects to the full row width and pushed
+each onto a line of its own.
+
+**`_controls.scss` scopes its `:focus` rule away from checkbox, radio and colour
+inputs.** Only controls that actually carry a border may trade the focus outline
+for an accent border. The unscoped
+`input:focus { border-color: …; outline: none }` has specificity (0,1,1) and
+outranks `_base.scss`'s `:focus-visible { outline: … }` at (0,1,0) — which left
+checkboxes, radios and colour swatches, none of which have a border to tint, with
+no visible keyboard focus at all. That is a WCAG 2.4.7 failure, not a cosmetic
+one.
+
+**`entry-list`'s `- 44px` and `reader-header`'s `top: 44px` are positioning
+offsets that coincidentally share the `--tap-target` number.** The first is how
+far the pull-to-refresh chip parks above the bars; the second is how far the
+account dropdown hangs below the account button's top edge. Neither is a touch
+target. Tokenising them would couple two unrelated numbers, so that the day
+`--tap-target` moves to 48px the chip would silently park in the wrong place.
+Both sites carry a comment saying so.
+
+**`ButtonComponent`'s hover rules are per-variant, not a blanket
+`button:hover:not(:disabled)`.** `:not()` carries its argument's specificity, so
+a blanket rule scores (0,2,1) and outranks `button.danger` at (0,1,1) — it would
+repaint a destructive button's border in the accent colour on hover. Each variant
+gets its own hover block instead.
+
+---
+
+## 6. Adding a new surface
+
+1. **Reach for the shared component before writing markup.** A labelled control
+   is `<app-field>`. A dialog is `<app-overlay-panel>` opened with
+   `panelClass: 'app-dialog'`. An action button is `<app-button>`. A tag or
+   category is `<app-tag-glyph>`. An icon is `<app-icon>` at a named size.
+2. **Derive every spacing value from a token.** No raw `px` for padding, margin,
+   gap, font-size or border-radius. If you need a tuned dimension, use the
+   documented escape hatch *with a reason*.
+3. **`@use '<rel>/theme/breakpoints' as bp;`** and write `bp.$bp-sm/md/lg`. Never
+   a literal in a media query — it will not lint, and a custom property will not
+   match.
+4. **Pick a density pair for rows** — compact or comfortable — and use it for
+   every row on the surface.
+5. **Put stickiness on the host**, not an inner wrapper, and give any internal
+   scroller `overscroll-behavior: contain`.
+6. **Styles go in a sibling `.scss` file**, never inline in the `.ts` — inline
+   styles are invisible to Stylelint.
+7. **Run `npm run check`** from `frontend/`.
