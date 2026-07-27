@@ -1,5 +1,8 @@
 :host {
   display: block;
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned component dimension, not a spacing value. */
   max-width: 960px;
   margin: 0 auto;
   padding: var(--space-4);
@@ -116,8 +119,8 @@ h1 {
 }
 
 .swatch {
-  width: 16px;
-  height: 16px;
+  width: var(--space-4);
+  height: var(--space-4);
   border-radius: 50%;
   border: 1px solid var(--border-strong);
   flex: 0 0 auto;
