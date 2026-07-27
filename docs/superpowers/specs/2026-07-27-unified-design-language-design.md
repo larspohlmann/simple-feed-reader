@@ -89,10 +89,25 @@ them would re-encode today's drift as tokens.
 
 ### Icon sizes
 
-`--icon-sm: 16px`, `--icon-md: 20px`, `--icon-lg: 24px`. Today 18/20/22/26px are
-used interchangeably across surfaces. `IconComponent`'s `size` input changes from
-a free `number` to `'sm' | 'md' | 'lg'`, defaulting to `md`, so an off-scale icon
-size becomes a type error rather than a judgement call.
+`--icon-xs: 12px`, `--icon-sm: 16px`, `--icon-md: 20px`, `--icon-lg: 24px`.
+`IconComponent`'s `size` input changes from a free `number` to
+`'xs' | 'sm' | 'md' | 'lg'`, defaulting to `md`, so an off-scale icon size
+becomes a type error rather than a judgement call.
+
+Four steps rather than three: the five sites rendering the *same* tag/category
+glyph currently pass 12, 14, 16, 18 and 20px. A three-step scale starting at
+16px would inflate the `source-tags` pill glyph by a third. The mapping is:
+
+| Site | Today | Token |
+|---|---|---|
+| `source-tags` pill | 12px | `xs` (12px) |
+| `add-feed-dialog` tag chip | 14px | `sm` (16px) |
+| `category-chips` | 16px | `sm` (16px) |
+| `sidebar` tag lead | 18px | `md` (20px) |
+| `category-rail` | 18px | `md` (20px) |
+
+Note the last two: the sidebar and the picker rail land on the same token. That
+they disagreed at all was the original complaint in #126.
 
 ### Type
 
