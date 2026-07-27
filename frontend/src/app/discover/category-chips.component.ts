@@ -39,52 +39,7 @@ import { CatalogCategoryDto } from './catalog.models';
       }
     </nav>
   `,
-  styles: `
-    .chips {
-      display: none;
-      position: sticky;
-      top: 0;
-      z-index: 2;
-      gap: var(--space-1);
-      padding: var(--space-2) var(--space-3);
-      overflow-x: auto;
-      border-bottom: 1px solid var(--border);
-      background: var(--surface-1);
-      scrollbar-width: none;
-    }
-    .chips::-webkit-scrollbar {
-      display: none;
-    }
-    button {
-      display: inline-flex;
-      flex: none;
-      gap: var(--space-1);
-      align-items: center;
-      padding: var(--space-1) var(--space-3);
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      background: var(--surface-1);
-      color: var(--text-secondary);
-      font-size: var(--fs-sm);
-      white-space: nowrap;
-      cursor: pointer;
-    }
-    button.active {
-      border-color: var(--accent);
-      background: var(--accent);
-      color: var(--on-accent);
-      font-weight: 600;
-    }
-    .n {
-      margin-left: var(--space-1);
-      font-weight: 700;
-    }
-    @media (max-width: 800px) {
-      .chips {
-        display: flex;
-      }
-    }
-  `,
+  styleUrl: './category-chips.component.scss',
 })
 export class CategoryChipsComponent {
   readonly categories = input.required<CatalogCategoryDto[]>();

@@ -1,3 +1,5 @@
+@use '../theme/breakpoints' as bp;
+
 // The picker floats over the reader as a modal: a scrim dims the app behind it
 // and a centred panel carries the content. On phones the panel fills the screen
 // (its own view), so the scrim is invisible but harmless.
@@ -21,11 +23,16 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned panel measure, not a spacing value. */
   width: min(1040px, 100%);
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned panel measure, not a spacing value. */
   max-height: min(860px, 100%);
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: calc(var(--radius) * 1.5);
+  border-radius: var(--radius-lg);
   background: var(--surface-0);
   box-shadow: 0 24px 60px rgb(0 0 0 / 28%);
 }
@@ -114,7 +121,7 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 20px;
+  width: var(--icon-md);
 }
 
 .cat-count {
@@ -130,7 +137,7 @@
   button {
     padding: var(--space-1) var(--space-3);
     border: 1px solid var(--border);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--accent-soft);
     color: var(--accent);
     font-size: var(--fs-sm);
@@ -179,7 +186,7 @@
 
 .fav {
   flex: none;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
 }
 
 .text {
@@ -210,8 +217,8 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
   color: var(--accent);
 }
 
@@ -269,7 +276,7 @@
 
 // Phone: the panel is the screen. Drop the scrim gap, the rounding and the
 // shadow so it reads as its own view, not a floating card.
-@media (width <= 800px) {
+@media (width <= bp.$bp-md) {
   :host {
     padding: 0;
   }
