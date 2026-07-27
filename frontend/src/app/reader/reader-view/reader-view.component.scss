@@ -16,18 +16,11 @@
   container-type: inline-size;
   container-name: reader;
 
-  /* Reserves the floating app bar's height, the same constant the list scroller
-     uses (#87). It belongs on this element and NOT on the scrolling host: the
-     host is deliberately transparent so a swipe-away reveals the list beneath,
-     so padding there is a see-through strip and the list shows through at the
-     top of an open article. This is opaque and full-height, so it covers the
-     reservation as well as the article.
-
-     Nothing may position itself against this element and expect to clear the
-     bar: an absolutely positioned child resolves `top` against the *padding
-     box*, whose top edge sits above this padding, so it lands inside the strip
-     the bar floats over (#97). Position against the article instead. */
-  padding-top: calc(var(--app-bar-h, 56px) + var(--bar-gap));
+  /* No app-bar reservation here: full-screen, the article rides an overlay
+     ABOVE the shell's bar — the bar is the list's chrome and stays put
+     underneath (#128) — and the article's own toolbar sits in flow (sticky),
+     occupying its own space. Only the split pane, where the shell's bar
+     floats over this panel, reserves it — see .with-bar. */
 }
 
 /* Tail space for an article longer than the pane, so its closing paragraphs can
@@ -46,9 +39,9 @@
   padding-bottom: 50dvh;
 }
 
-/* With the article's own toolbar (the split-pane layout) the reservation shrinks
-   to the app bar's bare height: the toolbar hangs flush beneath it — the same
-   arrangement the list header uses — and carries the gap under itself instead. */
+/* Split pane: the shell's bar floats over this panel, so the panel reserves
+   its height and the toolbar hangs flush beneath it — the same arrangement the
+   list header uses — carrying the gap under itself. */
 .reader.with-bar {
   padding-top: var(--app-bar-h, 56px);
 }
@@ -83,13 +76,14 @@ app-to-top-button {
 .bar {
   position: sticky;
 
-  /* Pinned directly beneath the floating app bar, not at the scroller's own top
-     edge: the reading pane deliberately passes *under* that bar (#87), so
-     `top: 0` slid this toolbar — the back button with it — underneath the bar on
-     the first scroll (#97). Its resting place is exactly this offset, so it
-     never actually moves; the app bar does not retract on the wide layout, the
-     only one that renders this toolbar, so there is nothing to track. */
-  top: var(--app-bar-h, 56px);
+  /* Full-screen the toolbar is the topmost chrome of its own layer, so it
+     sticks to the scroller's top edge and retracts on scroll like the list's
+     app bar does over the list (.hidden below). The split pane overrides the
+     offset: there the shell's bar floats above, and the reading pane passes
+     *under* it (#87), so `top: 0` would slide this toolbar — back button and
+     all — underneath that bar on the first scroll (#97). */
+  top: 0;
+  transition: transform 0.2s ease;
 
   /* Sticky alone does not win the paint order here. Reading-focus sets an inline
      `opacity` on every article block (applyFocus()), and an element with
@@ -104,6 +98,24 @@ app-to-top-button {
   padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--border);
   background: var(--surface-1);
+}
+
+.bar.hidden {
+  transform: translateY(-100%);
+}
+
+/* Split pane: pinned directly beneath the floating app bar (see .bar above);
+   its resting place is exactly this offset, so it never actually moves — the
+   app bar does not retract on the wide layout. */
+.with-bar .bar {
+  top: var(--app-bar-h, 56px);
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    transition: none;
+  }
 }
 
 .bar button,
@@ -129,63 +141,16 @@ article {
   padding: var(--space-5) var(--space-4);
 }
 
-/* Narrow default: the back button stacks above the title (see the wide
-         override below, which lifts it into the left gutter instead). */
+/* The toolbar carries the back button in every mode now (#128), so this is
+   just the title's box. */
 .title-row {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
   margin: 0 0 var(--space-2);
-}
-
-.back {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 2px;
-}
-
-.back:hover {
-  color: var(--text-primary);
 }
 
 .title {
   font-size: var(--fs-xl);
   margin: 0;
   color: var(--text-primary);
-}
-
-/* Wide reading pane: hang the back button in the left gutter, out of flow,
-         so it sits left of all content without pushing the title in. Keyed off
-         the reader pane's own width, not the window's, so a narrow split pane
-         also gets the stacked layout. */
-@container reader (min-width: 860px) {
-  .back {
-    /* Against the article, not the panel — it belongs beside the text it takes
-       you back from, so it tracks the centred column instead of drifting to the
-       far edge of a wide pane. That also keeps it clear of the floating app bar
-       for free: the article already starts below the panel's reservation,
-       whereas positioning against the panel resolves `top` from above that
-       padding and parks the button underneath the bar (#97).
-
-       The gutter is at least 54px at the 860px this query opens at, so the
-       button (~28px) and its 12px of clearance always fit outside the column. */
-    position: absolute;
-    left: calc(-1 * (var(--space-6) + var(--space-2)));
-    top: var(--space-5);
-
-    /* Take the height of the title's first line — `--fs-xl` at the 1.25 the
-       global stylesheet gives h1 — and let the base rule's `align-items: center`
-       centre the icon inside it. Sized to the icon instead, the arrow hangs off
-       the top of the line box and reads as floating above the headline rather
-       than sitting on it. */
-    height: calc(var(--fs-xl) * 1.25);
-  }
 }
 
 .meta {

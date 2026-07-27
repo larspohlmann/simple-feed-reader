@@ -56,7 +56,7 @@ async function stubEntries(page: Page): Promise<void> {
   });
 }
 
-/** The list's own scroll container — the element the shell listens to. */
+/** The list's own scroll container — the scroller that drives the app bar. */
 const ROWS = '.rows';
 
 /**
@@ -218,6 +218,87 @@ test.describe('Hide-on-scroll header on a phone', () => {
 
     await page.locator('app-reader-header .tap-to-top').click();
     await expect.poll(() => rows.evaluate((el) => el.scrollTop)).toBe(0);
+  });
+
+  // #128: returning from a full-screen article used to spring the retracted
+  // header back and shift the list. The historical trigger was oblique —
+  // closing the article remounted the header's tag row, the browser re-snapped
+  // its x-scroll, and that scroll event's `scrollTop: 0` satisfied the header
+  // logic's near-top rule; the rows also shifted because the bar's published
+  // height followed its shorter article form. The article is its own layer now
+  // (own toolbar, above the untouched bar), but this walks the full path with
+  // a real tag row in place to keep it that way.
+  test('returning from an article keeps the retracted header retracted and the list still', async ({
+    page,
+  }) => {
+    const signedIn = await signInAsAdmin(page);
+    test.skip(
+      !signedIn,
+      'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
+    );
+
+    await stubEntries(page);
+    // Enough tags, long enough, that the mobile tag row overflows and the
+    // browser has a snap position to re-settle to when the row remounts.
+    await page.route('**/api/tags', async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      await route.fulfill({
+        status: 200,
+        json: {
+          tags: Array.from({ length: 8 }, (_, i) => ({
+            id: i + 1,
+            name: `Long tag name number ${i + 1}`,
+            color: null,
+            icon: null,
+            position: i,
+          })),
+        },
+      });
+    });
+    await page.reload();
+
+    const rows = page.locator(ROWS);
+    await expect(rows).toBeVisible();
+    await expect(page.locator('app-reader-header .tagrow')).toBeVisible();
+    await settle(page);
+
+    // Retract the header, then note where a row rests.
+    await rows.evaluate((el) => el.scrollBy(0, 800));
+    await page.waitForTimeout(400);
+    const header = page.locator('app-reader-header');
+    await expect(header).toHaveClass(/hidden/);
+    const anchor = page.getByText('Entry number 12', { exact: false }).first();
+    const before = (await anchor.boundingBox())!;
+    const scrollBefore = await rows.evaluate((el) => el.scrollTop);
+
+    // Open whichever entry is on screen — clicking through Playwright would
+    // auto-scroll the target into view and move the very offset under test.
+    await page.evaluate(() => {
+      const visible = [...document.querySelectorAll('.rows app-entry-row .title')].find((t) => {
+        const b = t.getBoundingClientRect();
+        return b.top > 100 && b.top < 500;
+      }) as HTMLElement;
+      visible.click();
+    });
+    await expect(page.locator('app-reader-view')).toBeVisible();
+    // The article brings its own toolbar; the list's bar stays retracted
+    // beneath the overlay, untouched.
+    await expect(page.locator('app-reader-view .bar .close')).toBeVisible();
+    await expect(header).toHaveClass(/hidden/);
+    await page.waitForTimeout(400);
+
+    // Back to the list (same leave path as the swipe), across the 220ms
+    // slide-out and the route change.
+    await page.locator('app-reader-view .bar .close').click();
+    await expect(page.locator('app-reader-view')).toBeHidden();
+    await page.waitForTimeout(500);
+
+    // The list is exactly as left: still scrolled, header still retracted,
+    // rows at the same pixel.
+    await expect(header).toHaveClass(/hidden/);
+    expect(await rows.evaluate((el) => el.scrollTop)).toBe(scrollBefore);
+    const after = (await anchor.boundingBox())!;
+    expect(after.y).toBeCloseTo(before.y, 0);
   });
 
   // The article view has its own copy of the shared back-to-top component, but

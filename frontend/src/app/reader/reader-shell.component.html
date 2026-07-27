@@ -1,14 +1,9 @@
 <app-reader-header
   #hdr
-  [articleOpen]="articleFullscreen()"
-  [hasPrev]="hasPrev()"
-  [hasNext]="hasNext()"
   [tags]="headerTags()"
   [activeTagId]="activeTagId()"
   [class.hidden]="headerHidden()"
   (toggleSidebar)="setSidebarOpen(!sidebarOpen())"
-  (prev)="onPrev()"
-  (next)="onNext()"
   (scrollTop)="onScrollListTop()"
 />
 <!-- Out of flow, dropped into the seam just under the (absolute, opaque)
@@ -123,7 +118,9 @@
       </section>
     } @else {
       <!-- The list stays mounted; a full-screen article overlays it, so swiping
-           the article away reveals the list (and its scroll) underneath. -->
+           the article away reveals the list (and its scroll) underneath. Only
+           this list drives the bar's hide-on-scroll — its scrolled output is
+           the bar's one and only scroll source (#128). -->
       <app-entry-list
         [layout]="layout.mode()"
         [title]="title()"
@@ -138,6 +135,7 @@
         [feedTags]="feedTags()"
         [refreshing]="refreshSvc.running()"
         [lastRefreshed]="selectedFeedLastFetched()"
+        (scrolled)="onListScrolled($event)"
         (loadMore)="entries.loadMore()"
         (markAllRead)="onMarkAllRead()"
         (refresh)="onScopedRefresh()"
@@ -148,13 +146,21 @@
       />
       @if (openEntry()) {
         <div class="article-overlay">
+          <!-- Immersive (own toolbar, above the app bar) only below the wide
+               breakpoint. On wide screens the bar is app chrome — brand and
+               account stay visible — so the full-pane article slots beneath it
+               with the same toolbar arrangement the split pane uses. -->
           <app-reader-view
             [entry]="openEntry()"
             [tags]="openEntryTags()"
-            [showToolbar]="false"
+            [fullscreen]="!screen.isWide()"
+            [hasPrev]="hasPrev()"
+            [hasNext]="hasNext()"
             (favorite)="withOpen(onFavorite)"
             (keep)="withOpen(onKeep)"
             (read)="withOpen(onToggleRead)"
+            (prev)="onPrev()"
+            (next)="onNext()"
             (close)="onCloseReader()"
           />
         </div>
