@@ -380,7 +380,10 @@ final class ItemImageExtractor
 
     /**
      * <media:thumbnail> is an image by definition. <media:content> is only an
-     * image when it says so — the same element carries audio and video.
+     * image when it says so — the same element carries audio and video, so an
+     * element that declares neither medium nor type is rejected rather than
+     * guessed at. Guessing would let a podcast's bare <media:content> mp3 be
+     * persisted as an entry image.
      */
     private static function isImageElement(\DOMElement $element): bool
     {
@@ -390,9 +393,7 @@ final class ItemImageExtractor
         $medium = strtolower($element->getAttribute('medium'));
         $type = strtolower($element->getAttribute('type'));
 
-        return $medium === 'image'
-            || str_starts_with($type, 'image/')
-            || ($medium === '' && $type === '');
+        return $medium === 'image' || str_starts_with($type, 'image/');
     }
 
     private static function isMediaElement(\DOMNode $node, string $localName): bool
@@ -454,12 +455,22 @@ git commit -m "feat(parser): select the widest declared image variant and captur
 
 ## Task 3: Thread `ParsedImage` through the format parsers
 
+> **Amended during execution:** Tasks 2 and 3 were implemented as one commit. Task 2
+> alone cannot pass its own gate — changing the extractor's return type breaks
+> PHPStan level max and the suite until `ParsedEntry` changes with it.
+
 **Files:**
 - Modify: `backend/src/Service/Parser/ParsedEntry.php`
 - Modify: `backend/src/Service/Parser/Rss2Parser.php:57-70`
 - Modify: `backend/src/Service/Parser/Rss1Parser.php:66`
 - Modify: `backend/src/Service/Parser/AbstractAtomParser.php:98`
 - Modify: `backend/src/Service/Preview/FeedPreviewService.php:92`
+- Modify: `backend/src/Service/Scraper/HtmlItemExtractor.php:139` — **missed when this
+  plan was written.** The scraper builds a `ParsedEntry` too, from its own
+  `ScrapedItem::$imageUrl` (`?string`). Wrap it: `image: $item->imageUrl === null ? null : new ParsedImage($item->imageUrl)`.
+  `ScrapedItem`, `CardFields` and the rest of `Service/Scraper/` keep plain strings — do not rename them.
+- Modify the assertions in `tests/Service/Parser/{Rss2,Rss1,Atom10}ParserTest.php` and
+  `tests/Service/Scraper/HtmlItemExtractorTest.php` — rename to `image?->url`, never delete.
 
 - [ ] **Step 1: Run the suite to see the current baseline**
 
