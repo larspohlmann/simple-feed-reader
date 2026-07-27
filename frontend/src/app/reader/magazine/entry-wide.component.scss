@@ -17,6 +17,10 @@
 .img {
   width: 100%;
 
+  /* height:auto keeps the fixed 3:1 ratio authoritative; without it a
+     not-yet-loaded lazy image renders at its raw `height` attribute instead. */
+  height: auto;
+
   /* A cinematic band: image-forward at a third of a hero's height, which is
      what lets the planner spend an image block without spending a screenful. */
   aspect-ratio: 3 / 1;

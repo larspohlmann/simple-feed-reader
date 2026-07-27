@@ -46,6 +46,28 @@ describe('EntrySplitComponent', () => {
     expect(el.querySelector('.split.img-left')).not.toBeNull();
   });
 
+  it('gives a portrait image a portrait side box, bounded at 3:4', () => {
+    const f = mount(entry({ imageWidth: 900, imageHeight: 1100 }));
+    const ratio = () => {
+      f.detectChanges();
+      return ((f.nativeElement as HTMLElement).querySelector('img.img') as HTMLImageElement).style
+        .aspectRatio;
+    };
+    const swap = (over: Partial<EntryDto>) => f.componentRef.setInput('entry', entry(over));
+
+    // A moderate portrait keeps its true ratio…
+    expect(ratio()).toBe('900 / 1100');
+    // …an extreme one is clamped to 3:4 (height = width * 4/3 = 1200).
+    swap({ imageWidth: 900, imageHeight: 3000 });
+    expect(ratio()).toBe('900 / 1200');
+    // …a wide landscape is clamped to 3:2 (height = width * 2/3 = 600).
+    swap({ imageWidth: 900, imageHeight: 200 });
+    expect(ratio()).toBe('900 / 600');
+    // …unknown dimensions keep the 3:2 default.
+    swap({ imageWidth: null, imageHeight: null });
+    expect(ratio()).toBe('3 / 2');
+  });
+
   it('emits open on click', () => {
     const f = mount(entry());
     let opened: EntryDto | null = null;

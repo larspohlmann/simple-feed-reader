@@ -12,5 +12,8 @@
     <app-favicon [url]="entry().faviconUrl" [size]="12" />{{ entry().source }} · {{ when() }}
   </p>
   <p class="title">{{ entry().title }}</p>
+  @if (snippet()) {
+    <p class="dek">{{ snippet() }}</p>
+  }
   <app-source-tags [tags]="tags()" />
 </article>

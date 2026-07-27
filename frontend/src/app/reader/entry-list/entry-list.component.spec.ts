@@ -288,17 +288,23 @@ describe('EntryListComponent', () => {
   });
 
   it('renders planned magazine blocks when layout is magazine', () => {
-    // The grouped run must stay a MINORITY of the loaded entries (<=40%, see
-    // magazine-planner's DOMINANT_SHARE) or the planner treats it as the
-    // dominant source and leaves it ungrouped — hence five distinct diverse
-    // entries alongside the run of three.
-    const grouped = [1, 2, 3].map((id) => entry(id));
-    const diverse = [4, 5, 6, 7, 8].map((id) =>
-      entry(id, { subscriptionId: id, source: `diverse${id}` }),
+    // The grouped run must not sit at the very start — the planner never opens
+    // with a group digest — so lead with distinct sources. It must also stay a
+    // MINORITY (<=40%, see magazine-planner's DOMINANT_SHARE) or it is treated
+    // as the dominant source and left ungrouped, and long enough to survive a
+    // template page boundary landing mid-run.
+    const lead = [1, 2, 3, 4, 5, 6].map((id) =>
+      entry(id, { subscriptionId: id, source: `lead${id}` }),
+    );
+    const run = [11, 12, 13, 14, 15, 16, 17, 18].map((id) =>
+      entry(id, { subscriptionId: 99, source: 'Burst' }),
+    );
+    const tail = [21, 22, 23, 24, 25, 26, 27].map((id) =>
+      entry(id, { subscriptionId: id, source: `tail${id}` }),
     );
     const el = mount({
       layout: 'magazine',
-      entries: [...grouped, ...diverse],
+      entries: [...lead, ...run, ...tail],
     }).nativeElement as HTMLElement;
     expect(el.querySelector('app-source-group')).not.toBeNull();
     expect(el.querySelector('.rows.magazine')).not.toBeNull();

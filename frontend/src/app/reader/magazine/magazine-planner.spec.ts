@@ -24,6 +24,17 @@ const e = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
 });
 const big = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
   e(id, { imageUrl: `https://i/${id}.jpg`, imageWidth: 900, imageHeight: 600, ...over });
+const portrait = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
+  e(id, { imageUrl: `https://i/${id}.jpg`, imageWidth: 900, imageHeight: 1600, ...over });
+// A wire-service entry: the feed ships only a tiny thumbnail but long copy.
+const wire = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
+  e(id, {
+    imageUrl: `https://i/${id}.jpg`,
+    imageWidth: 90,
+    imageHeight: 90,
+    summary: 'A wire-service summary long enough to fill a pull quote. '.repeat(8),
+    ...over,
+  });
 
 const many = (n: number, make: (i: number) => EntryDto): EntryDto[] =>
   Array.from({ length: n }, (_, i) => make(i + 1));
@@ -68,6 +79,91 @@ describe('planMagazine', () => {
     const entries = many(200, (i) => big(i, { subscriptionId: (i % 9) + 1 }));
     const blocks = planMagazine({ entries, grouping: true, complete: true });
     expect(trigramEntropy(kinds(blocks))).toBeGreaterThan(4);
+  });
+
+  it('never opens the list with a group digest', () => {
+    // A leading minority-source run would otherwise be grouped into the first
+    // block; a wall of headlines is a weak start.
+    const entries = [
+      ...many(8, (i) => big(i, { subscriptionId: 1, source: 'Burst' })),
+      ...many(40, (i) => big(100 + i, { subscriptionId: (i % 6) + 2 })),
+    ];
+    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    expect(blocks[0].kind).not.toBe('group');
+  });
+
+  it('never stacks a portrait image above the text — no hero or wide', () => {
+    // A portrait image belongs beside the text (split), not above it: a tall
+    // image in a hero slot would own most of the screen.
+    const entries = many(80, (i) => portrait(i, { subscriptionId: (i % 6) + 1 }));
+    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    expect(kinds(blocks)).not.toContain('hero');
+    expect(kinds(blocks)).not.toContain('wide');
+    // The image survives — it lands on an image-beside block, not a text block.
+    expect(kinds(blocks)).toContain('split');
+    expect(entryCount(blocks)).toBe(80);
+  });
+
+  it('renders a text-forward rhythm for an image-poor, text-rich view', () => {
+    // A wire service ships only tiny thumbnails and long copy. The image family
+    // would collapse every large slot to one `thumb` — a uniform wall — so the
+    // planner switches to the text family: pull-quotes and headline bands, with
+    // the small thumbnail as an accent, never the whole page.
+    const entries = many(80, (i) => wire(i, { subscriptionId: (i % 6) + 1 }));
+    const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
+    expect(ks).not.toContain('hero');
+    expect(ks).not.toContain('wide');
+    expect(ks).not.toContain('split');
+    expect(ks).toContain('quote');
+    expect(ks).toContain('kicker');
+    const thumbShare = ks.filter((k) => k === 'thumb').length / ks.length;
+    expect(thumbShare).toBeLessThan(0.6);
+    expect(trigramEntropy(ks)).toBeGreaterThan(4);
+  });
+
+  it('keeps the image family for an image-poor but text-poor view, surfacing what images exist', () => {
+    // A dev blog: short posts, most with no image, a quarter carrying a large
+    // one. Image-poor rules out the image-rich path, but text-poor rules out the
+    // text family too — its pull-quotes would demote to headlines and its
+    // headline slots would HIDE the images that do exist. The image family's
+    // adaptive fillers surface them instead.
+    const entries = many(80, (i) =>
+      i % 4 === 0 ? big(i, { subscriptionId: (i % 6) + 1 }) : e(i, { subscriptionId: (i % 6) + 1 }),
+    );
+    const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
+    expect(ks.some((k) => k === 'hero' || k === 'wide' || k === 'split' || k === 'thumb')).toBe(
+      true,
+    );
+  });
+
+  it('leads with a nearby image when the newest entries have none', () => {
+    // The three newest posts are image-less; the fourth carries a photo. The
+    // reader should land on that photo, and nothing is lost.
+    const entries = [e(1), e(2), e(3), big(4), big(5), big(6), big(7), big(8)];
+    const blocks = planMagazine({ entries, grouping: false, complete: true });
+    const first = blocks[0];
+    expect(first.kind).not.toBe('group');
+    expect(first.kind === 'group' ? null : first.entry.id).toBe(4);
+    expect(['hero', 'wide', 'split']).toContain(first.kind);
+    expect(entryCount(blocks)).toBe(8);
+  });
+
+  it('is prefix-stable when the opener leads with a pulled-up image', () => {
+    // The lead-image reorder reads only the fixed head, so a partial first
+    // render and the full one pull the same entry up and share a prefix.
+    const entries = [e(1), e(2), ...many(118, (i) => big(200 + i))];
+    const first = planMagazine({ entries: entries.slice(0, 60), grouping: true, complete: false });
+    const full = planMagazine({ entries, grouping: true, complete: true });
+    expect(kinds(full).slice(0, first.length)).toEqual(kinds(first));
+  });
+
+  it('keeps the chronological head when no image is within reach of the start', () => {
+    // Seven image-less posts, then images — the first image is past the reach,
+    // so the list opens in order rather than yanking a distant photo up.
+    const entries = [...many(7, (i) => e(i)), ...many(20, (i) => big(100 + i))];
+    const blocks = planMagazine({ entries, grouping: false, complete: true });
+    const first = blocks[0];
+    expect(first.kind === 'group' ? null : first.entry.id).toBe(1);
   });
 
   it('emits no image block when no entry has an image', () => {

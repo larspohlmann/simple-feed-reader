@@ -55,3 +55,14 @@
   color: var(--text-secondary);
   font-weight: 400;
 }
+
+.dek {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
