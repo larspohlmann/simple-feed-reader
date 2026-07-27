@@ -101,6 +101,30 @@ final class FeedRepositoryTest extends DbTestCase
         self::assertSame([$stale->getId()], $this->ids($due));
     }
 
+    public function testForceTreatsAFutureLastFetchedAtAsEligible(): void
+    {
+        // A fast web-tier clock (observed on the FastCGI host) can stamp
+        // lastFetchedAt in the future. Evaluated by a correct clock, that must
+        // not read as "just fetched" and freeze the feed out of every refresh —
+        // a future fetch time is impossible, so the feed is due.
+        $future = $this->feed('https://a.example.com/feed', $this->now->modify('+1 hour'));
+        $future->setLastFetchedAt($this->now->modify('+59 minutes'));
+        $this->em->flush();
+
+        $due = $this->repository->findDue(
+            $this->now,
+            10,
+            force: true,
+            cooldownCutoff: $this->now->modify('-5 minutes'),
+        );
+
+        self::assertSame([$future->getId()], $this->ids($due));
+        self::assertSame(
+            1,
+            $this->repository->countDue($this->now, force: true, cooldownCutoff: $this->now->modify('-5 minutes')),
+        );
+    }
+
     public function testForceStillExcludesGoneFeeds(): void
     {
         $this->feed('https://gone.example.com/feed', null, FeedStatus::Gone);

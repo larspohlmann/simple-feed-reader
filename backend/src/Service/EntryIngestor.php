@@ -44,6 +44,11 @@ final class EntryIngestor
         $hashes = $this->guidHashesOf($parsed->entries);
         $seen = array_fill_keys($this->entryRepository->findExistingGuidHashes($feed, $hashes), true);
 
+        // One clock read for the whole batch: the clock may be database-backed
+        // (see DatabaseClock), and every entry ingested in one pass shares the
+        // same instant anyway.
+        $ingestedAt = $this->clock->now();
+
         $created = 0;
         foreach ($parsed->entries as $parsedEntry) {
             $hash = self::guidHash($parsedEntry->guid);
@@ -57,7 +62,7 @@ final class EntryIngestor
                 $parsedEntry->guid,
                 $parsedEntry->url === null ? null : mb_substr($parsedEntry->url, 0, self::URL_MAX),
                 mb_substr($parsedEntry->title, 0, self::TITLE_MAX),
-                $this->clock->now(),
+                $ingestedAt,
             );
             $entry->setAuthor(
                 $parsedEntry->author === null ? null : mb_substr($parsedEntry->author, 0, self::AUTHOR_MAX),

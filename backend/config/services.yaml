@@ -56,6 +56,27 @@ services:
     App\Service\Reader\ArticleExtractorInterface: '@App\Service\Reader\ArticleExtractor'
     App\Service\Version\ReleaseVersionReader: '@App\Service\Version\FileReleaseVersionReader'
 
+    # The refresh pipeline reads and writes time through the database clock, not
+    # the PHP process clock. The FastCGI web tier was observed running ~1 h fast,
+    # and a last_fetched_at in the future freezes a feed out of the force-refresh
+    # cooldown (FeedRepository::dueQueryBuilder). All three must share one clock:
+    # the writers (FeedScheduler, EntryIngestor) stamp fetch/ingest times, and
+    # the runner evaluates the cooldown and the "remaining due" count against
+    # them — a split clock would read a just-fetched feed as still due and spin
+    # the client's refresh poll forever. RefreshClockWiringTest pins this.
+    # Scoped to the pipeline on purpose: JWT, ALTCHA and rate-limiting keep the
+    # native clock — they issue and validate on the same tier, so they stay
+    # self-consistent and gain nothing from a per-call round trip.
+    App\Service\FeedScheduler:
+        arguments:
+            $clock: '@App\Service\Clock\DatabaseClock'
+    App\Service\EntryIngestor:
+        arguments:
+            $clock: '@App\Service\Clock\DatabaseClock'
+    App\Service\Refresh\RefreshRunner:
+        arguments:
+            $clock: '@App\Service\Clock\DatabaseClock'
+
     # The sweep's in-flight cap. Wired on this one service rather than as a
     # `bind` in _defaults: a binding matches by parameter NAME, so a global
     # `int $concurrency` would also feed any unrelated service that ever names a
