@@ -1,0 +1,12 @@
+<section class="panel" role="dialog" aria-modal="true" [attr.aria-labelledby]="headingId">
+  <header class="head">
+    <h2 [id]="headingId">{{ heading() }}</h2>
+    <ng-content select="[headerActions]" />
+  </header>
+  <div class="body">
+    <ng-content />
+  </div>
+  <footer class="footer">
+    <ng-content select="[footer]" />
+  </footer>
+</section>
