@@ -172,6 +172,27 @@ article {
   text-decoration: none;
 }
 
+/* The only icon in the app that sits in a genuine run of text rather than in a
+   flex row, so it is the only place vertical alignment is visible at all. It
+   reads as a superscript mark on the link -- like a footnote marker -- rather
+   than as a glyph sharing the line, so it takes the superscript position
+   instead of the centred one the icon host defaults to. Scoped here because
+   the flex-row icons elsewhere already centre exactly. */
+.meta a app-icon {
+  vertical-align: super;
+}
+
+/* `vertical-align: middle` centres a box on the x-height, which is right when
+   the box is about the size of the text. This favicon is 16px against 13px
+   text, so centring it there leaves it hanging below the baseline and reading
+   as fallen off the line. Lift it onto the text block's own centre. In `em` so
+   it tracks the type, and scoped to the meta line because every other favicon
+   sits in a flex row that centres it already. */
+.meta app-favicon {
+  position: relative;
+  bottom: 0.15em;
+}
+
 .tags {
   display: block;
   margin: 0 0 var(--space-3);
