@@ -41,6 +41,20 @@ final class EntryIngestorTest extends DbTestCase
         return $feed;
     }
 
+    private function parsedEntryWithImage(string $guid, ?ParsedImage $image): ParsedEntry
+    {
+        return new ParsedEntry(
+            guid: $guid,
+            url: null,
+            title: 'Title',
+            author: null,
+            summary: null,
+            contentHtml: '<p>body</p>',
+            publishedAt: null,
+            image: $image,
+        );
+    }
+
     private function parsedEntry(string $guid, string $title, ?string $contentHtml = null): ParsedEntry
     {
         return new ParsedEntry(
@@ -216,6 +230,104 @@ final class EntryIngestorTest extends DbTestCase
         self::assertNull($entry->getImageUrl());
         self::assertNull($entry->getImageWidth());
         self::assertNull($entry->getImageHeight());
+    }
+
+    public function testProtocolRelativeImageUrlIsUpgradedToHttpsAndKept(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, [
+            $this->parsedEntryWithImage('protocol-relative', new ParsedImage('//i.example.com/img.jpg', 400, 300)),
+        ]));
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'protocol-relative']);
+        self::assertNotNull($entry);
+        self::assertSame('https://i.example.com/img.jpg', $entry->getImageUrl());
+    }
+
+    public function testHttpImageUrlIsDroppedAsMixedContent(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, [
+            $this->parsedEntryWithImage('http-image', new ParsedImage('http://i.example.com/img.jpg', 400, 300)),
+        ]));
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'http-image']);
+        self::assertNotNull($entry);
+        self::assertNull($entry->getImageUrl());
+    }
+
+    public function testDataUriImageIsDropped(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, [
+            $this->parsedEntryWithImage('data-uri-image', new ParsedImage('data:image/png;base64,AAAA', null, null)),
+        ]));
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'data-uri-image']);
+        self::assertNotNull($entry);
+        self::assertNull($entry->getImageUrl());
+    }
+
+    public function testSiteRelativeImageUrlIsDropped(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, [
+            $this->parsedEntryWithImage('site-relative-image', new ParsedImage('/img/x.jpg', 400, 300)),
+        ]));
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'site-relative-image']);
+        self::assertNotNull($entry);
+        self::assertNull($entry->getImageUrl());
+    }
+
+    public function testSummaryFallsBackToContentHtmlWhenFeedSummaryIsNull(): void
+    {
+        $feed = $this->feed();
+        $parsed = new ParsedFeed('T', null, null, [
+            new ParsedEntry(
+                guid: 'fallback-summary',
+                url: null,
+                title: 'One',
+                author: null,
+                summary: null,
+                contentHtml: '<p>Body text here.</p>',
+                publishedAt: null,
+            ),
+        ]);
+
+        $this->ingestor->ingest($feed, $parsed);
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'fallback-summary']);
+        self::assertNotNull($entry);
+        self::assertSame('Body text here.', $entry->getSummary());
+    }
+
+    public function testJunkContentHtmlYieldsNullSummaryNotTheJunkToken(): void
+    {
+        $feed = $this->feed();
+        $parsed = new ParsedFeed('T', null, null, [
+            new ParsedEntry(
+                guid: 'junk-summary',
+                url: null,
+                title: 'One',
+                author: null,
+                summary: null,
+                contentHtml: '<a href="https://x"><img src="https://i/a.jpg"/></a> None',
+                publishedAt: null,
+            ),
+        ]);
+
+        $this->ingestor->ingest($feed, $parsed);
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'junk-summary']);
+        self::assertNotNull($entry);
+        self::assertNull($entry->getSummary());
     }
 
     public function testEmptyParsedFeedStillUpdatesMetadata(): void

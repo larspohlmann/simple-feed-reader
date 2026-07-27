@@ -162,15 +162,12 @@ final class EntryIngestor
     }
 
     /**
-     * Sets all three image columns together so a rejected image (null, or a
-     * URL over the column limit) never leaves a stale width/height behind.
-     *
-     * A URL longer than URL_MAX is not truncated: cutting it at exactly
-     * URL_MAX characters does not shorten a valid URL, it produces a
-     * different, broken one that will 404 in the reader. ParsedImage already
-     * treats a missing image as a first-class case the layout falls back
-     * from, so losing the image here is preferable to persisting something
-     * guaranteed to render broken forever.
+     * Sets all three image columns together so a rejected image (null, an
+     * unusable scheme, or a URL over the column limit) never leaves a stale
+     * width/height behind. ParsedImage already treats a missing image as a
+     * first-class case the layout falls back from, so losing the image here
+     * is preferable to persisting something guaranteed to render broken
+     * forever.
      */
     private function applyImage(Entry $entry, ?ParsedImage $image): void
     {
@@ -190,9 +187,30 @@ final class EntryIngestor
         $entry->setImage($url, $image->width, $image->height);
     }
 
+    /**
+     * Rejects a parsed image URL in the two ways it can be unusable rather
+     * than trying to repair it:
+     *
+     * - Scheme: the reader SPA is served over https, so an http:// image is
+     *   mixed-content-blocked and never renders — dead weight, silently. A
+     *   `//host/path` protocol-relative src is unambiguous and upgraded to
+     *   https:// before the check; a `data:` URI or a site-relative path
+     *   (`/img/x.jpg`) has no scheme to upgrade and no base URL is plumbed
+     *   this deep to resolve one against, so it is dropped rather than
+     *   guessed at.
+     * - Length: a URL over URL_MAX is not truncated. Cutting it at exactly
+     *   URL_MAX characters does not shorten a valid URL, it produces a
+     *   different, broken one that will 404 in the reader.
+     */
     private function persistableImageUrl(ParsedImage $image): ?string
     {
-        return mb_strlen($image->url) > self::URL_MAX ? null : $image->url;
+        $url = str_starts_with($image->url, '//') ? 'https:' . $image->url : $image->url;
+
+        if (!str_starts_with($url, 'https://')) {
+            return null;
+        }
+
+        return mb_strlen($url) > self::URL_MAX ? null : $url;
     }
 
     /**
