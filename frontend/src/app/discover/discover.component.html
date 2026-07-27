@@ -114,7 +114,7 @@
 
   <span footer class="cnt" aria-live="polite">
     {{
-      'discover.summary'
+      summaryKey()
         | transloco
           : { feeds: selection.selectedCount(), categories: selection.selectedCategoryCount() }
     }}

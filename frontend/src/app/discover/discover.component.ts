@@ -83,6 +83,26 @@ export class DiscoverComponent implements OnDestroy {
     return counts;
   });
 
+  /**
+   * The footer sentence, as a translation key rather than an assembled string,
+   * so each language keeps its own word order and inflection.
+   *
+   * Only four states are reachable: a feed belongs to exactly one category, so
+   * "1 feed in 2 categories" cannot happen and needs no key. The zero case is
+   * its own sentence because a count there says nothing about the selection —
+   * "0 feeds in 0 categories" sits under a full picker and reads as a claim
+   * that the catalog is empty (#146).
+   */
+  readonly summaryKey = computed(() => {
+    const feeds = this.selection.selectedCount();
+    if (feeds === 0) return 'discover.summaryNone';
+    if (feeds === 1) return 'discover.summaryOne';
+
+    return this.selection.selectedCategoryCount() === 1
+      ? 'discover.summaryOneCategory'
+      : 'discover.summaryManyCategories';
+  });
+
   /** Selection state follows whatever the store holds, including a reload after
    *  an invalidate. */
   private readonly syncSelection = effect(() => {

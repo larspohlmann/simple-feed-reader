@@ -37,6 +37,55 @@ const CATALOG = {
   ],
 };
 
+/** Two categories with two pickable feeds between them, which CATALOG cannot
+ *  offer — it has exactly one feed nobody is subscribed to. */
+const MULTI = {
+  categories: [
+    {
+      id: 1,
+      key: 'technology',
+      name: 'Technology',
+      icon: 'memory',
+      color: '#3b82f6',
+      feeds: [
+        {
+          id: 10,
+          title: 'The Verge',
+          description: null,
+          siteUrl: null,
+          faviconUrl: '/f/10',
+          subscribed: false,
+        },
+        {
+          id: 11,
+          title: 'Wired',
+          description: null,
+          siteUrl: null,
+          faviconUrl: '/f/11',
+          subscribed: false,
+        },
+      ],
+    },
+    {
+      id: 2,
+      key: 'science',
+      name: 'Science',
+      icon: 'science',
+      color: '#22c55e',
+      feeds: [
+        {
+          id: 20,
+          title: 'Nature',
+          description: null,
+          siteUrl: null,
+          faviconUrl: '/f/20',
+          subscribed: false,
+        },
+      ],
+    },
+  ],
+};
+
 describe('DiscoverComponent', () => {
   let fixture: ComponentFixture<DiscoverComponent>;
   let http: HttpTestingController;
@@ -60,6 +109,49 @@ describe('DiscoverComponent', () => {
   });
 
   afterEach(() => http.verify());
+
+  /** The catalog store is app-wide, so a test needing a different catalog has to
+   *  reset it and mount its own component — the same path the scroll-spy test
+   *  below uses to reach the genuine first-visit state. */
+  const mountWith = (catalog: unknown): ComponentFixture<DiscoverComponent> => {
+    TestBed.inject(CatalogStore).invalidate();
+    const local = TestBed.createComponent(DiscoverComponent);
+    local.detectChanges();
+    http.expectOne('https://api.test/api/catalog').flush(catalog);
+    local.detectChanges();
+    return local;
+  };
+
+  const pick = (target: ComponentFixture<DiscoverComponent>, ...cardIndexes: number[]): string => {
+    const cards: HTMLButtonElement[] = Array.from(
+      target.nativeElement.querySelectorAll('[data-testid="catalog-feed"] button'),
+    );
+    cardIndexes.forEach((index) => cards[index].click());
+    target.detectChanges();
+
+    return target.nativeElement.querySelector('.cnt').textContent.trim();
+  };
+
+  // The footer counts the SELECTION, and the sentence has to say so: rendered as
+  // bare numbers it read "0 feeds in 0 categories" under a full picker, which
+  // parses as a claim that the catalog is empty (#146).
+  it('names the selection rather than counting an empty one', () => {
+    expect(fixture.nativeElement.querySelector('.cnt').textContent.trim()).toBe(
+      'Nothing selected yet',
+    );
+  });
+
+  it('inflects the summary for one feed', () => {
+    expect(pick(fixture, 0)).toBe('1 feed selected');
+  });
+
+  it('inflects the summary for several feeds in one category', () => {
+    expect(pick(mountWith(MULTI), 0, 1)).toBe('2 feeds selected in 1 category');
+  });
+
+  it('inflects the summary for several feeds across categories', () => {
+    expect(pick(mountWith(MULTI), 0, 2)).toBe('2 feeds selected in 2 categories');
+  });
 
   it('renders every category and its feeds', () => {
     const cards = fixture.nativeElement.querySelectorAll('[data-testid="catalog-feed"]');
