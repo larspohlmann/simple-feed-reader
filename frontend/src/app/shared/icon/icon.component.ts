@@ -1,9 +1,18 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-export type IconSize = 'xs' | 'sm' | 'md' | 'lg';
+export type IconSize = 'text' | 'xs' | 'sm' | 'md' | 'lg';
 
-/** Maps the named size onto its token. Kept here so no consumer writes a px. */
+/**
+ * Maps the named size onto its token. Kept here so no consumer writes a px.
+ *
+ * `text` is not a step on the scale: it means "match the text you sit in".
+ * An icon inline in a sentence -- the open-in-new after a link, the glyph in a
+ * tag pill -- has no business picking a fixed size, because the thing it must
+ * agree with is the surrounding type, not the scale. Picking the nearest step
+ * instead is what made those two icons look oversized in #126.
+ */
 export const ICON_SIZE_TOKEN: Record<IconSize, string> = {
+  text: '1em',
   xs: 'var(--icon-xs)',
   sm: 'var(--icon-sm)',
   md: 'var(--icon-md)',
