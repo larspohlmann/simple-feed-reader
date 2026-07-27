@@ -5,12 +5,40 @@
     "scss/dollar-variable-pattern": null,
     "selector-class-pattern": null,
     "no-empty-source": null,
-    "selector-pseudo-element-no-unknown": [true, { "ignorePseudoElements": ["ng-deep"] }]
+    "selector-pseudo-element-no-unknown": [true, { "ignorePseudoElements": ["ng-deep"] }],
+    "declaration-property-unit-allowed-list": {
+      "padding": [],
+      "padding-top": [],
+      "padding-right": [],
+      "padding-bottom": [],
+      "padding-left": [],
+      "margin": [],
+      "margin-top": [],
+      "margin-right": [],
+      "margin-bottom": [],
+      "margin-left": [],
+      "gap": [],
+      "row-gap": [],
+      "column-gap": [],
+      "font-size": [],
+      "border-radius": [],
+      "width": [],
+      "height": [],
+      "min-width": [],
+      "min-height": [],
+      "max-width": [],
+      "max-height": []
+    },
+    "media-feature-name-unit-allowed-list": { "width": [] }
   },
   "overrides": [
     {
-      "files": ["src/app/theme/**/*.scss"],
-      "rules": { "color-no-hex": null }
+      "files": ["src/app/theme/**/*.scss", "src/styles/**/*.scss", "src/styles.scss"],
+      "rules": {
+        "color-no-hex": null,
+        "declaration-property-unit-allowed-list": null,
+        "media-feature-name-unit-allowed-list": null
+      }
     }
   ]
 }

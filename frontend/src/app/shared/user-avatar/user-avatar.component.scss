@@ -1,6 +1,6 @@
 .avatar {
   display: block;
-  border-radius: 50%;
+  border-radius: var(--radius-pill);
   object-fit: cover;
   background: var(--surface-2);
 }

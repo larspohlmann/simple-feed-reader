@@ -74,7 +74,7 @@ import { TAG_ICONS } from '../icon-choices';
       display: inline-flex;
       gap: var(--space-1);
       align-items: center;
-      height: 26px;
+      height: var(--space-5);
       padding: 0 var(--space-1) 0 var(--space-2);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -97,7 +97,13 @@ import { TAG_ICONS } from '../icon-choices';
       display: flex;
       flex-wrap: wrap;
       gap: var(--space-1);
+
+      /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+         tuned popover width, not a spacing value. */
       width: 248px;
+
+      /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+         tuned popover max-height, not a spacing value. */
       max-height: 220px;
       padding: var(--space-2);
       overflow-y: auto;
