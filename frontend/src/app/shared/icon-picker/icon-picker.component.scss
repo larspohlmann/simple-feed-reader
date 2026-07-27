@@ -3,6 +3,14 @@
   display: inline-block;
 }
 
+/* Inline mode is a plain block in the form's column, and must be allowed to
+   shrink so the grid inside it scrolls rather than pushing the dialog taller. */
+:host(.inline) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .trigger {
   display: inline-flex;
   gap: var(--space-1);
@@ -25,14 +33,21 @@
   display: inline-flex;
 }
 
+/* The one grid both modes render; .pop and :host(.inline) only frame it. */
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .pop {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
   z-index: 20;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
 
   /* stylelint-disable-next-line declaration-property-unit-allowed-list --
      tuned popover width, not a spacing value. */
@@ -42,12 +57,20 @@
      tuned popover max-height, not a spacing value. */
   max-height: 220px;
   padding: var(--space-2);
-  overflow-y: auto;
-  overscroll-behavior: contain;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-2);
   box-shadow: 0 12px 32px rgb(0 0 0 / 24%);
+}
+
+/* Cap the inline grid so it scrolls instead of growing (#85): in landscape on a
+   phone the icons plus the name field, the swatches and the buttons no longer
+   fit the dialog. `min-height: 0` above lets it shrink further still. */
+:host(.inline) .grid {
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned grid cap, see #85. */
+  max-height: 216px;
+  padding: var(--space-0);
 }
 
 .opt {

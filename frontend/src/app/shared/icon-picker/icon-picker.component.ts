@@ -1,7 +1,9 @@
 // src/app/shared/icon-picker/icon-picker.component.ts
 import {
+  booleanAttribute,
   ChangeDetectionStrategy,
   Component,
+  computed,
   ElementRef,
   HostListener,
   inject,
@@ -14,34 +16,42 @@ import { IconComponent } from '../icon/icon.component';
 import { TAG_ICONS } from '../icon-choices';
 
 /**
- * A compact icon selector: a trigger showing the current glyph, and a popover
- * grid of the curated Material Symbols — the same set the reader's tag form
- * offers, so a category and a tag are picked from one palette. Two-way bound on
- * `value`; the empty string means "no icon".
+ * An icon selector over the curated Material Symbols — the same set the reader's
+ * tag form and the admin catalog both offer, so a tag and a category are picked
+ * from one palette. Two-way bound on `value`; the empty string means "no icon".
+ *
+ * Two framings of one grid, chosen with `inline`:
+ * - popover (default) for a dense row like the admin catalog, where a compact
+ *   trigger has to sit between other controls;
+ * - inline for a form with room to spare, where the grid is worth a permanent
+ *   place and selection should cost one click.
  */
 @Component({
   selector: 'app-icon-picker',
   standalone: true,
   imports: [IconComponent, TranslocoPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.inline]': 'inline()' },
   template: `
-    <button
-      type="button"
-      class="trigger"
-      [class.open]="open()"
-      aria-haspopup="listbox"
-      [attr.aria-expanded]="open()"
-      [attr.aria-label]="'iconPicker.choose' | transloco"
-      (click)="toggle()"
-    >
-      <span class="glyph" [style.color]="color() || 'var(--text-muted)'">
-        <app-icon [name]="value() || 'block'" size="md" />
-      </span>
-      <app-icon class="caret" name="expand_more" size="sm" />
-    </button>
+    @if (!inline()) {
+      <button
+        type="button"
+        class="trigger"
+        [class.open]="open()"
+        aria-haspopup="listbox"
+        [attr.aria-expanded]="open()"
+        [attr.aria-label]="'iconPicker.choose' | transloco"
+        (click)="toggle()"
+      >
+        <span class="glyph" [style.color]="color() || 'var(--text-muted)'">
+          <app-icon [name]="value() || 'block'" size="md" />
+        </span>
+        <app-icon class="caret" name="expand_more" size="sm" />
+      </button>
+    }
 
-    @if (open()) {
-      <div class="pop" role="listbox">
+    @if (expanded()) {
+      <div class="grid" [class.pop]="!inline()" role="listbox">
         <button
           type="button"
           class="opt"
@@ -72,9 +82,14 @@ export class IconPickerComponent {
   readonly value = model<string>('');
   /** Tints the trigger glyph — usually the category's colour. */
   readonly color = input<string | null>(null);
+  /** Renders the grid in place instead of behind a trigger. */
+  readonly inline = input(false, { transform: booleanAttribute });
 
   readonly icons = TAG_ICONS;
   readonly open = signal(false);
+
+  /** Inline is permanently expanded; the popover only while it is open. */
+  protected readonly expanded = computed(() => this.inline() || this.open());
 
   private readonly host = inject(ElementRef<HTMLElement>);
 
@@ -95,9 +110,10 @@ export class IconPickerComponent {
   }
 
   /**
-   * Escape dismisses the popover only. The picker is used inside the tag
-   * dialog, whose CDK overlay also closes on Escape from a listener on
-   * `body` — stop the event here so one keypress does not close both.
+   * Escape dismisses an open popover, and is swallowed so it does not also
+   * reach the CDK dialog listening on `body` and close the whole form. Inline
+   * mode never opens, so the keypress passes through untouched — there is
+   * nothing to dismiss there and Escape still belongs to the dialog.
    */
   @HostListener('keydown.escape', ['$event'])
   onEscape(event: Event): void {

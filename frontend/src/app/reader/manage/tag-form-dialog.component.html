@@ -17,11 +17,7 @@
     </app-color-field>
 
     <p class="lbl">{{ 'dialog.tagForm.icon' | transloco }}</p>
-    <app-icon-picker
-      [value]="icon() ?? ''"
-      [color]="color()"
-      (valueChange)="icon.set($event || null)"
-    />
+    <app-icon-picker inline [value]="icon() ?? ''" (valueChange)="icon.set($event || null)" />
 
     @if (error()) {
       <p class="error" role="alert">{{ error() }}</p>

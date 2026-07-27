@@ -81,17 +81,16 @@ describe('TagFormDialogComponent', () => {
     (host.querySelector('app-color-field .swatch') as HTMLButtonElement).click();
     expect(c.color()).toBe('#3f8676');
 
-    (host.querySelector('app-icon-picker .trigger') as HTMLButtonElement).click();
-    f.detectChanges();
+    // The grid is inline here, so an icon is one click away -- no trigger.
+    expect(host.querySelector('app-icon-picker .trigger')).toBeNull();
     (
-      host.querySelector('app-icon-picker .pop .opt[aria-label="code"]') as HTMLButtonElement
+      host.querySelector('app-icon-picker .grid .opt[aria-label="code"]') as HTMLButtonElement
     ).click();
     expect(c.icon()).toBe('code');
 
-    // The "no icon" option is the first in the popover and clears back to null.
-    (host.querySelector('app-icon-picker .trigger') as HTMLButtonElement).click();
+    // The "no icon" option is the first in the grid and clears back to null.
     f.detectChanges();
-    (host.querySelector('app-icon-picker .pop .opt') as HTMLButtonElement).click();
+    (host.querySelector('app-icon-picker .grid .opt') as HTMLButtonElement).click();
     expect(c.icon()).toBeNull();
   });
 

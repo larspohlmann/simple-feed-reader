@@ -10,13 +10,14 @@
   flex-direction: column;
   gap: var(--space-3);
 
-  /* Never taller than the viewport (#85): reachable in landscape on a phone.
-     The icon grid that used to blow the height now lives in app-icon-picker's
-     popover, so the dialog itself is what scrolls. `vh` first as the fallback
-     for browsers without `dvh`. */
+  /* Never taller than the viewport -- app-icon-picker's inline grid scrolls
+     instead (#85). Reachable in landscape on a phone, where the icons plus the
+     name field, the swatches and the buttons no longer fit. `hidden` because
+     nothing here should scroll but that grid; `vh` first as the fallback for
+     browsers without `dvh`. */
   max-height: 90vh;
   max-height: 90dvh;
-  overflow: auto;
+  overflow: hidden;
 }
 
 h2 {
@@ -28,6 +29,9 @@ form {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+
+  /* Let the icon grid shrink below its cap when the dialog runs out of room. */
+  min-height: 0;
 }
 
 .lbl {
