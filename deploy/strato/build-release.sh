@@ -127,7 +127,7 @@ echo "==> Frontend bundle (/reader base href)"
 echo "==> Copying backend"
 # Everything the app needs at runtime, and nothing else. var/ is deliberately
 # absent: it is created and linked during activation.
-for item in bin config migrations public src vendor composer.json composer.lock .env; do
+for item in bin config migrations public resources src vendor composer.json composer.lock .env; do
     cp -a "${ROOT}/backend/${item}" "${OUT}/"
 done
 # Optional only because this app is an API and may legitimately carry neither:
@@ -202,6 +202,13 @@ bundles=("${OUT}"/public/main-*.js)
 # carries it. Which chunk it lands in is a build-time detail that moves whenever
 # imports do; that the value reached the SPA at all is the thing worth asserting.
 test -f "${OUT}/version.json" || die "missing version.json at the release root"
+
+# The bundled catalog is what makes the admin's one-click seed possible; without
+# it BundledCatalog reports unavailable and the button simply does not render
+# (#142). That silence is the reason to assert it here: the release built clean
+# and smoke-tested green while the feature was quietly missing.
+test -f "${OUT}/resources/catalog/catalog.opml" \
+    || die "the bundled catalog is missing from the release"
 grep -qrF "${VERSION}" "${OUT}/public" --include='*.js' \
     || die "the SPA bundle does not carry ${VERSION}: the version.ts rewrite did not compose in"
 
