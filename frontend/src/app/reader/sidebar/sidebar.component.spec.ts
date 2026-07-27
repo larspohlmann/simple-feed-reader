@@ -165,6 +165,27 @@ describe('SidebarComponent', () => {
     expect(deleteTag).toHaveBeenCalledWith(node.tag);
   });
 
+  it('closes an open row menu when the pointer goes down elsewhere', () => {
+    const f = mount({
+      tagTree: [
+        {
+          tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
+          subscriptions: [],
+          unreadCount: 0,
+        },
+      ],
+    });
+    const el = f.nativeElement as HTMLElement;
+    (el.querySelector('.tag .dots') as HTMLButtonElement).click();
+    f.detectChanges();
+    expect(el.querySelector('.tag .pop')).not.toBeNull();
+
+    document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    f.detectChanges();
+
+    expect(el.querySelector('.tag .pop')).toBeNull();
+  });
+
   it('opens only one menu when the same feed appears under two expanded tags', () => {
     const shared = sub(1, 0);
     const f = mount({

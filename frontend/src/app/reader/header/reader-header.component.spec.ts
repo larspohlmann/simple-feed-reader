@@ -87,6 +87,19 @@ describe('ReaderHeaderComponent', () => {
     expect(el.querySelector('a[routerLink="/admin/users"]')).toBeNull();
   });
 
+  it('closes the account menu when the pointer goes down elsewhere', () => {
+    const f = create();
+    const el = f.nativeElement as HTMLElement;
+    (el.querySelector('[aria-haspopup="menu"]') as HTMLButtonElement).click();
+    f.detectChanges();
+    expect(el.querySelector('.menu')).not.toBeNull();
+
+    document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    f.detectChanges();
+
+    expect(el.querySelector('.menu')).toBeNull();
+  });
+
   it('shows Admin when the user is an admin', () => {
     TestBed.overrideProvider(AuthService, {
       useValue: { user: signal({ email: 'a@b.c' }), logout: jest.fn(), isAdmin: () => true },
