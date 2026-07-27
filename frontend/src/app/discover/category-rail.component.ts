@@ -28,9 +28,7 @@ import { CatalogCategoryDto } from './catalog.models';
               [attr.aria-current]="category.id === activeId() ? 'true' : null"
               (click)="jump.emit(category.id)"
             >
-              <span class="lead">
-                <app-tag-glyph [name]="category.icon" [color]="category.color" size="sm" />
-              </span>
+              <app-tag-glyph [name]="category.icon" [color]="category.color" size="sm" />
               <span class="name">{{ category.name }}</span>
               <span class="count" [class.picked]="picked()[category.id] > 0">
                 {{ picked()[category.id] || category.feeds.length }}

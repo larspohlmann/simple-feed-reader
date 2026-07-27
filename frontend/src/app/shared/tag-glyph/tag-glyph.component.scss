@@ -3,6 +3,11 @@
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
+
+  /* Centre on the text rather than sitting on its baseline — see the same rule
+     in IconComponent. A tag glyph is nearly always beside a tag name, so this
+     is the common case, not the exception. */
+  vertical-align: middle;
 }
 
 .dot {
