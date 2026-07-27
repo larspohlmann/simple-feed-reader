@@ -29,7 +29,7 @@ import { CatalogCategoryDto } from './catalog.models';
               (click)="jump.emit(category.id)"
             >
               <span class="lead">
-                <app-tag-glyph [name]="category.icon" [color]="category.color" size="md" />
+                <app-tag-glyph [name]="category.icon" [color]="category.color" size="sm" />
               </span>
               <span class="name">{{ category.name }}</span>
               <span class="count" [class.picked]="picked()[category.id] > 0">
