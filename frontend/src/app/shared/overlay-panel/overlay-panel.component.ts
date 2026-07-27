@@ -26,6 +26,15 @@ export class OverlayPanelComponent {
    */
   readonly heading = input.required<string>();
 
+  /**
+   * Where the heading sits in the document outline. A dialog opens over a page
+   * that already has its own `h1`, so 2 is right for every one of them. A panel
+   * that *is* the page — discover, a route rather than an overlay — has to
+   * supply the `h1` itself, or the page has none and its section headings rank
+   * level with the title.
+   */
+  readonly headingLevel = input<1 | 2>(2);
+
   /** Ties the panel to its heading; unique so several panels can coexist. */
   protected readonly headingId = `overlay-panel-heading-${nextId++}`;
 }

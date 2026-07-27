@@ -1,13 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import { Component } from '@angular/core';
-import { ButtonComponent } from './button/button.component';
 import { FormErrorComponent } from './form-error/form-error.component';
 import { SpinnerComponent } from './spinner/spinner.component';
 
+// The button has its own spec (button.component.spec.ts) now that it carries
+// variants, sizes and an opt-in full width; duplicating its loading case here
+// would only be a second place to forget.
 @Component({
-  imports: [ButtonComponent, FormErrorComponent, SpinnerComponent],
+  imports: [FormErrorComponent, SpinnerComponent],
   template: `
-    <app-button [loading]="true">Save</app-button>
     <app-form-error [message]="'Bad input'" />
     <app-spinner />
   `,
@@ -15,13 +16,11 @@ import { SpinnerComponent } from './spinner/spinner.component';
 class Host {}
 
 describe('shared primitives', () => {
-  it('button shows a spinner when loading and disables itself', async () => {
+  it('form error renders its message', async () => {
     await TestBed.configureTestingModule({ imports: [Host] }).compileComponents();
     const fixture = TestBed.createComponent(Host);
     fixture.detectChanges();
     const el: HTMLElement = fixture.nativeElement;
-    expect(el.querySelector('button')?.disabled).toBe(true);
-    expect(el.querySelector('app-button app-spinner')).toBeTruthy();
     expect(el.querySelector('app-form-error')?.textContent).toContain('Bad input');
   });
 

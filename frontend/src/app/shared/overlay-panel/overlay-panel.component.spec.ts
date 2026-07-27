@@ -1,17 +1,19 @@
 import { TestBed } from '@angular/core/testing';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { OverlayPanelComponent } from './overlay-panel.component';
 
 @Component({
   imports: [OverlayPanelComponent],
   template: `
-    <app-overlay-panel heading="Edit tag">
+    <app-overlay-panel heading="Edit tag" [headingLevel]="level()">
       <p class="body-probe">body</p>
       <button footer class="footer-probe">Save</button>
     </app-overlay-panel>
   `,
 })
-class Host {}
+class Host {
+  readonly level = signal<1 | 2>(2);
+}
 
 describe('OverlayPanelComponent', () => {
   const mount = async () => {
@@ -43,5 +45,21 @@ describe('OverlayPanelComponent', () => {
     const heading = el.querySelector('h2') as HTMLElement;
     expect(panel.getAttribute('aria-labelledby')).toBe(heading.id);
     expect(heading.id).toBeTruthy();
+  });
+
+  it('renders the heading at the requested level, still labelling the panel', async () => {
+    const fixture = await mount();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('h1')).toBeNull();
+
+    fixture.componentInstance.level.set(1);
+    fixture.detectChanges();
+
+    const heading = el.querySelector('h1') as HTMLElement;
+    expect(heading.textContent?.trim()).toBe('Edit tag');
+    expect(el.querySelector('h2')).toBeNull();
+    expect((el.querySelector('.panel') as HTMLElement).getAttribute('aria-labelledby')).toBe(
+      heading.id,
+    );
   });
 });

@@ -27,6 +27,7 @@ import { CatalogSelection } from './catalog-selection.store';
 import { CategoryChipsComponent } from './category-chips.component';
 import { CategoryRailComponent } from './category-rail.component';
 import { OnboardingSkip } from './onboarding-skip';
+import { ButtonComponent } from '../shared/button/button.component';
 
 /** How long a smooth scroll is given to settle before observations count again. */
 const JUMP_SETTLE_MS = 700;
@@ -38,6 +39,7 @@ const JUMP_SETTLE_MS = 700;
     TranslocoPipe,
     IconComponent,
     TagGlyphComponent,
+    ButtonComponent,
     OverlayPanelComponent,
     CategoryRailComponent,
     CategoryChipsComponent,

@@ -14,6 +14,7 @@ import { parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
 import { TagsStore } from '../tags.store';
 import { FeedCandidate, FeedPreview, ScrapeFailureReason, SubscriptionDto } from '../models';
+import { ButtonComponent } from '../../shared/button/button.component';
 
 type PreviewState =
   | { status: 'loading' }
@@ -28,6 +29,7 @@ type PreviewState =
     RouterLink,
     TagGlyphComponent,
     FieldComponent,
+    ButtonComponent,
     OverlayPanelComponent,
     TranslocoPipe,
   ],

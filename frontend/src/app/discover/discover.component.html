@@ -1,6 +1,9 @@
 <div class="scrim" aria-hidden="true"></div>
 
-<app-overlay-panel [heading]="'discover.title' | transloco">
+<!-- headingLevel 1: discover is a route, not an overlay over a page that already
+     has an h1, so the panel's heading is this page's only top-level heading —
+     without it the category headings below would rank level with the title. -->
+<app-overlay-panel [heading]="'discover.title' | transloco" [headingLevel]="1">
   <button
     headerActions
     type="button"
@@ -116,17 +119,16 @@
           : { feeds: selection.selectedCount(), categories: selection.selectedCategoryCount() }
     }}
   </span>
-  <button footer type="button" class="ghost" (click)="onSkip()">
+  <app-button footer class="skip" variant="ghost" (click)="onSkip()">
     {{ 'discover.skip' | transloco }}
-  </button>
-  <button
+  </app-button>
+  <app-button
     footer
-    type="button"
-    class="primary"
+    variant="primary"
     data-testid="subscribe"
     [disabled]="selection.selectedCount() === 0 || submitting()"
     (click)="onSubscribe()"
   >
     {{ 'discover.subscribe' | transloco }}
-  </button>
+  </app-button>
 </app-overlay-panel>

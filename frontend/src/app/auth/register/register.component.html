@@ -14,7 +14,7 @@
         <input type="password" formControlName="password" autocomplete="new-password" />
       </app-field>
       <app-form-error [message]="error()" />
-      <app-button type="submit" variant="primary" [loading]="loading()">{{
+      <app-button block type="submit" variant="primary" [loading]="loading()">{{
         'auth.register.submit' | transloco
       }}</app-button>
     </form>

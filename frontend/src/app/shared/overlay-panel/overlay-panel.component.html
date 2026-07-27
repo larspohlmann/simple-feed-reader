@@ -1,6 +1,10 @@
 <section class="panel" role="dialog" aria-modal="true" [attr.aria-labelledby]="headingId">
   <header class="head">
-    <h2 [id]="headingId">{{ heading() }}</h2>
+    @if (headingLevel() === 1) {
+      <h1 [id]="headingId">{{ heading() }}</h1>
+    } @else {
+      <h2 [id]="headingId">{{ heading() }}</h2>
+    }
     <ng-content select="[headerActions]" />
   </header>
   <div class="body">

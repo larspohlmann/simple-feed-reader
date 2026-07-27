@@ -3,9 +3,9 @@
 
   <div class="block">
     <p class="lead">{{ 'settings.opml.exportLead' | transloco }}</p>
-    <button class="btn" [disabled]="exporting()" (click)="exportOpml()">
+    <app-button [disabled]="exporting()" (click)="exportOpml()">
       {{ (exporting() ? 'settings.opml.preparing' : 'settings.opml.export') | transloco }}
-    </button>
+    </app-button>
     @if (exportError()) {
       <p class="error" role="alert">{{ exportError() }}</p>
     }
@@ -21,13 +21,13 @@
       [value]="text()"
       (input)="text.set(value($event))"
     ></textarea>
-    <button
-      class="btn primary"
+    <app-button
+      variant="primary"
       [disabled]="importing() || reading() || !text().trim()"
       (click)="importText()"
     >
       {{ (importing() ? 'settings.opml.importing' : 'settings.opml.import') | transloco }}
-    </button>
+    </app-button>
     @if (importError()) {
       <p class="error" role="alert">{{ importError() }}</p>
     }

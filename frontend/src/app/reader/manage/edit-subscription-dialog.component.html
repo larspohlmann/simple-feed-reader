@@ -42,11 +42,11 @@
       }
     </div>
 
-    <button footer class="act" type="button" (click)="ref.close()">
+    <app-button footer (click)="ref.close()">
       {{ 'dialog.cancel' | transloco }}
-    </button>
-    <button footer class="act primary" type="submit" [disabled]="loading()">
+    </app-button>
+    <app-button footer type="submit" variant="primary" [disabled]="loading()">
       {{ (loading() ? 'dialog.editFeed.saving' : 'dialog.editFeed.save') | transloco }}
-    </button>
+    </app-button>
   </app-overlay-panel>
 </form>

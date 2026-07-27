@@ -10,6 +10,7 @@ import { IconPickerComponent } from '../shared/icon-picker/icon-picker.component
 import { ColorFieldComponent } from '../shared/color-field/color-field.component';
 import { SpinnerComponent } from '../shared/spinner/spinner.component';
 import { FieldComponent } from '../shared/field/field.component';
+import { ButtonComponent } from '../shared/button/button.component';
 import { AdminApi } from './admin-api';
 import {
   AdminCatalogCategoryDto,
@@ -32,6 +33,7 @@ type FeedDraft = Omit<
     RouterLink,
     FieldComponent,
     FormsModule,
+    ButtonComponent,
     IconComponent,
     IconPickerComponent,
     ColorFieldComponent,

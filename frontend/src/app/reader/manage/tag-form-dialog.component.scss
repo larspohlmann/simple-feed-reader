@@ -32,21 +32,3 @@ form {
   font-size: var(--fs-sm);
   margin: 0;
 }
-
-// Scoped to `.act`, not `.footer button`: .footer belongs to
-// app-overlay-panel's template and this stylesheet cannot cross that
-// encapsulation boundary.
-.act {
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--surface-1);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.act.primary {
-  background: var(--accent);
-  color: var(--on-accent);
-  border-color: var(--accent);
-}

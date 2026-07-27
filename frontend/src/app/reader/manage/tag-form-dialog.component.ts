@@ -12,6 +12,7 @@ import { FieldComponent } from '../../shared/field/field.component';
 import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
 import { ReaderApi } from '../reader-api';
 import { TagDto } from '../models';
+import { ButtonComponent } from '../../shared/button/button.component';
 
 @Component({
   selector: 'app-tag-form-dialog',
@@ -21,6 +22,7 @@ import { TagDto } from '../models';
     ColorFieldComponent,
     IconPickerComponent,
     FieldComponent,
+    ButtonComponent,
     OverlayPanelComponent,
     TranslocoPipe,
   ],

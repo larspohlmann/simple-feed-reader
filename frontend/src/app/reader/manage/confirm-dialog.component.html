@@ -1,18 +1,15 @@
 <app-overlay-panel [heading]="data.title" cdkTrapFocus>
   <p class="msg">{{ data.message }}</p>
 
-  <button footer class="act" type="button" (click)="ref.close(false)">
+  <app-button footer (click)="ref.close(false)">
     {{ 'dialog.cancel' | transloco }}
-  </button>
-  <button
+  </app-button>
+  <app-button
     footer
-    class="act"
-    type="button"
-    [class.primary]="!data.danger"
-    [class.danger]="data.danger"
-    cdkFocusInitial
+    focusInitial
+    [variant]="data.danger ? 'danger' : 'primary'"
     (click)="ref.close(true)"
   >
     {{ data.confirmLabel }}
-  </button>
+  </app-button>
 </app-overlay-panel>

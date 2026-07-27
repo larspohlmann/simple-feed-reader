@@ -1,5 +1,10 @@
-<button [type]="type" [disabled]="loading || disabled" [class.primary]="variant === 'primary'">
-  @if (loading) {
+<button
+  [type]="type()"
+  [disabled]="loading() || disabled()"
+  [class]="variant() + ' ' + size()"
+  [attr.cdkFocusInitial]="focusInitial() ? '' : null"
+>
+  @if (loading()) {
     <app-spinner [size]="16" />
   } @else {
     <ng-content />

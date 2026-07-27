@@ -5,10 +5,11 @@ import { IconComponent } from '../shared/icon/icon.component';
 import { TagsStore } from '../reader/tags.store';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { ManageActions } from '../reader/manage/manage-actions.service';
+import { ButtonComponent } from '../shared/button/button.component';
 
 @Component({
   selector: 'app-tags-section',
-  imports: [IconComponent, TranslocoPipe],
+  imports: [ButtonComponent, IconComponent, TranslocoPipe],
   templateUrl: './tags-section.component.html',
   styleUrl: './tags-section.component.scss',
 })

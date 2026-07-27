@@ -26,12 +26,12 @@
 
   <section class="import">
     @if (bundled()?.available) {
-      <button class="primary" data-testid="import-bundled" (click)="importBundled()">
+      <app-button variant="primary" data-testid="import-bundled" (click)="importBundled()">
         {{
           'admin.importBundled'
             | transloco: { categories: bundled()!.categories, feeds: bundled()!.feeds }
         }}
-      </button>
+      </app-button>
     }
 
     <div class="upload">
@@ -54,14 +54,14 @@
           </option>
         </select>
       </app-field>
-      <button
-        class="primary"
+      <app-button
+        variant="primary"
         data-testid="import-run"
         [disabled]="pendingDocument() === null"
         (click)="importUpload()"
       >
         {{ 'admin.importUpload' | transloco }}
-      </button>
+      </app-button>
     </div>
 
     @if (importError()) {
@@ -89,9 +89,9 @@
     }
 
     <div class="warm">
-      <button (click)="warm()" [disabled]="warming()">
+      <app-button [disabled]="warming()" (click)="warm()">
         {{ 'admin.warmIcons' | transloco }}
-      </button>
+      </app-button>
       @if (warming()) {
         <span class="progress">
           {{ 'admin.warmingIcons' | transloco: { remaining: warmRemaining() } }}

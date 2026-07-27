@@ -15,7 +15,7 @@
       />
     </app-field>
     <app-form-error [message]="error()" />
-    <app-button variant="primary" [loading]="loading()" (click)="submit()">{{
+    <app-button block variant="primary" [loading]="loading()" (click)="submit()">{{
       'auth.login.submit' | transloco
     }}</app-button>
   </form>

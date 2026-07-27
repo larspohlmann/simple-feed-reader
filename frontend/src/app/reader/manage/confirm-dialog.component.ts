@@ -3,6 +3,7 @@ import { Component, inject } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { ButtonComponent } from '../../shared/button/button.component';
 import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
 
 export interface ConfirmData {
@@ -14,7 +15,7 @@ export interface ConfirmData {
 
 @Component({
   selector: 'app-confirm-dialog',
-  imports: [A11yModule, TranslocoPipe, OverlayPanelComponent],
+  imports: [A11yModule, TranslocoPipe, ButtonComponent, OverlayPanelComponent],
   templateUrl: './confirm-dialog.component.html',
   styleUrl: './confirm-dialog.component.scss',
 })

@@ -89,18 +89,18 @@
     <a footer class="browse" routerLink="/discover" (click)="ref.close()">
       {{ 'discover.browseCatalog' | transloco }}
     </a>
-    <button footer class="act" type="button" (click)="ref.close()">
+    <app-button footer (click)="ref.close()">
       {{ 'dialog.cancel' | transloco }}
-    </button>
+    </app-button>
     <!-- Once candidates are shown, each card carries its own Subscribe button,
          so the footer submit would be a confusing third action. It only makes
          sense before a search (and to retry when none were found). A scrape
          failure means this URL cannot be subscribed at all, so hide it until
          the URL changes. -->
     @if (!candidates().length && !failureReason()) {
-      <button footer class="act primary" type="submit" [disabled]="loading()">
+      <app-button footer type="submit" variant="primary" [disabled]="loading()">
         {{ (loading() ? 'dialog.addFeed.adding' : 'common.add') | transloco }}
-      </button>
+      </app-button>
     }
   </app-overlay-panel>
 </form>

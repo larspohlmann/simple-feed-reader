@@ -23,9 +23,11 @@
   /* Never taller than the viewport -- the body below scrolls instead (#85).
      Reachable in landscape on a phone, and by every surface whose content grows
      without bound: the discovered feed candidates, the tag pickers, the inline
-     icon grid. `vh` first as the fallback for browsers without `dvh`. */
+     icon grid. `vh` first as the fallback for browsers without `dvh`.
+     A consumer whose content reads badly at full height caps itself tighter
+     through --panel-max-h (discover does). */
   max-height: 90vh;
-  max-height: 90dvh;
+  max-height: var(--panel-max-h, 90dvh);
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -41,6 +43,9 @@
   padding: var(--space-5) var(--space-5) var(--space-3);
 }
 
+// One size whichever level the consumer asked for: the heading's rank is an
+// outline decision, not a typographic one.
+h1,
 h2 {
   margin: 0;
   font-size: var(--fs-lg);

@@ -80,20 +80,6 @@ h1 {
   font-size: var(--fs-sm);
 }
 
-.primary {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius);
-  border: 1px solid var(--accent);
-  background: var(--accent);
-  color: var(--on-accent);
-  cursor: pointer;
-}
-
-.primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .categories {
   list-style: none;
   margin: 0;

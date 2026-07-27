@@ -1,15 +1,41 @@
-button {
-  height: var(--control-h);
-  padding: 0 var(--space-4);
-  border-radius: var(--radius);
-  border: 1px solid var(--border-strong);
-  background: var(--surface-1);
-  color: var(--text-primary);
-  cursor: pointer;
-  width: 100%;
+// The host hugs its label so a button can sit in a footer row, a toolbar or a
+// table cell without a wrapper; `block` (below) is the opt-in for the auth
+// forms, where the button spans the form.
+:host {
   display: inline-flex;
+}
+
+:host(.block) {
+  display: flex;
+  width: 100%;
+}
+
+:host(.block) button {
+  width: 100%;
+}
+
+button {
+  display: inline-flex;
+  gap: var(--space-1);
   align-items: center;
   justify-content: center;
+  height: var(--control-h);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+// Dense rows -- a settings list, an admin table -- where a 40px control would
+// set the row height instead of the content. Height comes from the padding so
+// the label and any leading icon still decide it.
+button.sm {
+  height: auto;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--fs-sm);
 }
 
 button.primary {
@@ -18,9 +44,39 @@ button.primary {
   border-color: var(--accent);
 }
 
+button.danger {
+  background: var(--danger);
+  color: var(--on-accent);
+  border-color: var(--danger);
+}
+
+// No chrome at rest: the quiet way out of a decision, next to the weighted
+// action that is the point of the surface.
+button.ghost {
+  border-color: transparent;
+  background: none;
+  color: var(--text-secondary);
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+button.primary:hover:not(:disabled),
+button.danger:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+button.ghost:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--surface-0);
+  color: var(--text-primary);
+}
+
 /* The default spinner's signal colour is the accent, which would vanish on a
    primary button's accent fill; retint it to the on-accent colour instead. */
-button.primary app-spinner {
+button.primary app-spinner,
+button.danger app-spinner {
   --spin-sig: var(--on-accent);
   --spin-dim: color-mix(in srgb, var(--on-accent) 35%, transparent);
 }

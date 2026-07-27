@@ -44,12 +44,9 @@ dd {
   margin-bottom: var(--space-3);
 }
 
+// Its own line under the admin links, which are inline-flex and would
+// otherwise sit beside it; still only as wide as its label.
 .signout {
-  display: block;
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--surface-1);
-  color: var(--text-primary);
-  cursor: pointer;
+  display: flex;
+  width: fit-content;
 }

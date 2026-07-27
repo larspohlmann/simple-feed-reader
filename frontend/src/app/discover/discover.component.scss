@@ -15,6 +15,16 @@
   padding: var(--space-5);
 
   --panel-w: 1040px;
+
+  /* The picker is a grid of cards, not prose: past this it stops reading as a
+     dialog and the rail's categories drift far from the cards they label. The
+     panel's own 90dvh is the right cap for the dialogs, not for this. `100%`
+     is the scrim host's content box, which keeps the panel on screen when the
+     window is shorter than the cap. */
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned panel measure, not a spacing value. */
+  --panel-max-h: min(860px, 100%);
 }
 
 .scrim {
@@ -206,28 +216,8 @@ app-category-chips {
   font-weight: 600;
 }
 
-.ghost {
+.skip {
   margin-left: auto;
-  border: 0;
-  background: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.primary {
-  height: var(--control-h);
-  padding: 0 var(--space-5);
-  border: 0;
-  border-radius: var(--radius);
-  background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 600;
-  cursor: pointer;
-
-  &:disabled {
-    cursor: default;
-    opacity: 0.5;
-  }
 }
 
 .error {

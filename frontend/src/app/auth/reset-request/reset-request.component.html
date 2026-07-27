@@ -11,7 +11,7 @@
         <input type="email" formControlName="email" autocomplete="email" />
       </app-field>
       <app-form-error [message]="error()" />
-      <app-button type="submit" variant="primary" [loading]="loading()">{{
+      <app-button block type="submit" variant="primary" [loading]="loading()">{{
         'auth.reset.sendLink' | transloco
       }}</app-button>
     </form>
