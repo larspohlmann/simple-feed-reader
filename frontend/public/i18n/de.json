@@ -90,11 +90,8 @@
       "editTitle": "Tag bearbeiten",
       "name": "Name",
       "colour": "Farbe",
-      "colourAria": "Farbe {{colour}}",
-      "customColour": "Eigene Farbe",
       "none": "Keine",
       "icon": "Symbol",
-      "noIcon": "Kein Symbol",
       "saving": "Wird gespeichert…",
       "save": "Speichern"
     },
@@ -292,5 +289,9 @@
   "iconPicker": {
     "choose": "Symbol wählen",
     "none": "Kein Symbol"
+  },
+  "colorField": {
+    "swatch": "Farbe {{colour}}",
+    "custom": "Eigene Farbe"
   }
 }

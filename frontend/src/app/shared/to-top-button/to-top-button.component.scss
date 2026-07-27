@@ -15,8 +15,8 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: var(--tap-target);
+  height: var(--tap-target);
   border: none;
   border-radius: 50%;
   background: var(--accent);

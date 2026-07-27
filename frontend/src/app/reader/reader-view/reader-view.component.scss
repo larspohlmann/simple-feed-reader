@@ -35,7 +35,12 @@
    `dvh`, like the shell's own height, so a mobile browser's retracting toolbar
    doesn't leave the tail short; the `vh` line is the fallback. */
 .reader.with-tail {
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     a deliberate share of the viewport, not a spacing value; see above. */
   padding-bottom: 50vh;
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     a deliberate share of the viewport, not a spacing value; see above. */
   padding-bottom: 50dvh;
 }
 
@@ -43,7 +48,7 @@
    its height and the toolbar hangs flush beneath it — the same arrangement the
    list header uses — carrying the gap under itself. */
 .reader.with-bar {
-  padding-top: var(--app-bar-h, 56px);
+  padding-top: var(--app-bar-h, var(--bar-h));
 }
 
 /* Overscroll-to-return affordance: anchored just below the article's end, so a
@@ -108,7 +113,7 @@ app-to-top-button {
    its resting place is exactly this offset, so it never actually moves — the
    app bar does not retract on the wide layout. */
 .with-bar .bar {
-  top: var(--app-bar-h, 56px);
+  top: var(--app-bar-h, var(--bar-h));
   transition: none;
 }
 
@@ -118,13 +123,28 @@ app-to-top-button {
   }
 }
 
+/* The toolbar's buttons carry different type sizes -- the mode toggle is
+   --fs-sm, the arrows inherit the bar's own size -- so leaving them inline
+   sat them on their own differing baselines and staggered them against each
+   other. A flex row centres them by layout instead of by type metrics. */
+.nav {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
 .bar button,
 .actions button {
-  background: none;
+  /* Centre the glyph within the button rather than letting it sit on the
+     button's text baseline, where a 20px icon over 15px type hangs low. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
   border: none;
+  background: none;
   color: var(--text-secondary);
   cursor: pointer;
-  padding: var(--space-1);
 }
 
 .bar button:disabled {
@@ -136,6 +156,9 @@ article {
   /* The anchor for the wide layout's back button: the column the reader's eye
      follows, not the pane. See the container query below. */
   position: relative;
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned reading measure, not a spacing value. */
   max-width: 720px;
   margin: 0 auto;
   padding: var(--space-5) var(--space-4);
@@ -162,6 +185,32 @@ article {
 .meta a {
   color: var(--accent);
   text-decoration: none;
+}
+
+/* The only icon in the app that sits in a genuine run of text rather than in a
+   flex row, so it is the only place vertical alignment is visible at all. It
+   reads as a superscript mark on the link -- like a footnote marker -- rather
+   than as a glyph sharing the line, so it takes the superscript position
+   instead of the centred one the icon host defaults to. Scoped here because
+   the flex-row icons elsewhere already centre exactly. */
+.meta a app-icon {
+  vertical-align: super;
+}
+
+/* `vertical-align: middle` centres a box on the x-height, which is right when
+   the box is about the size of the text. This favicon is 16px against 13px
+   text, so centring it there leaves it hanging below the baseline and reading
+   as fallen off the line. Lift it onto the text block's own centre. In `em` so
+   it tracks the type, and scoped to the meta line because every other favicon
+   sits in a flex row that centres it already. */
+.meta app-favicon {
+  position: relative;
+  bottom: 0.15em;
+
+  /* This line is a true text run, so nothing but the margin separates the
+     favicon from the source name; it needs more than the component's inline
+     default. Rows elsewhere get their spacing from a flex gap instead. */
+  margin-inline-end: 0.55em;
 }
 
 .tags {
@@ -217,7 +266,7 @@ article {
   padding: 0 var(--space-3) var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-0);
 }
 
 .toc-list li.lvl-3 {
@@ -252,7 +301,7 @@ article {
          rhythm or the article reads as one dense block. */
 .content {
   color: var(--text-primary);
-  font-size: 16px;
+  font-size: var(--fs-read);
   line-height: 1.75;
 }
 
@@ -281,20 +330,25 @@ article {
   color: var(--text-primary);
 }
 
+/* Article headings are sized in `em`, against `.content`'s own type size, not
+   picked off the UI type scale: that scale has five steps, and h2 and h3 would
+   both land on the same one — a flattened hierarchy in the one place the
+   hierarchy is the content. The ratios are the articles' long-standing sizes
+   over the 16px reading size: 22, 20 and 17px. */
 .content ::ng-deep h1 {
-  font-size: 22px;
+  font-size: 1.375em;
 }
 
 .content ::ng-deep h2 {
-  font-size: 20px;
+  font-size: 1.25em;
 }
 
 .content ::ng-deep h3 {
-  font-size: 17px;
+  font-size: 1.0625em;
 }
 
 .content ::ng-deep :is(h4, h5, h6) {
-  font-size: 16px;
+  font-size: 1em;
 }
 
 .content ::ng-deep :is(ul, ol) {
@@ -381,7 +435,7 @@ article {
 .mode {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   font-size: var(--fs-sm);
 }
 

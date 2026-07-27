@@ -1,0 +1,20 @@
+<!-- The control is projected, so the association is real but only exists at
+     runtime: the linter sees an ng-content where the input will be and cannot
+     follow it. Wrapping the control in the label is what gives it its
+     accessible name, so no for/id pair is needed either. -->
+<!-- eslint-disable-next-line @angular-eslint/template/label-has-associated-control -->
+<label>
+  <span class="lbl">
+    {{ label() }}
+    @if (required()) {
+      <span class="required" aria-hidden="true">*</span>
+    }
+  </span>
+  <ng-content />
+</label>
+@if (hint(); as text) {
+  <p class="hint">{{ text }}</p>
+}
+@if (error(); as text) {
+  <p class="error" role="alert">{{ text }}</p>
+}

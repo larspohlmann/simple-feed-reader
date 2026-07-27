@@ -7,7 +7,7 @@
       [disabled]="refreshSvc.running()"
       (click)="refresh.emit()"
     >
-      <app-icon name="refresh" [size]="18" /><span>{{ 'reader.refresh' | transloco }}</span>
+      <app-icon name="refresh" size="sm" /><span>{{ 'reader.refresh' | transloco }}</span>
     </button>
     <button
       class="act"
@@ -15,7 +15,7 @@
       [attr.aria-label]="'reader.addFeed' | transloco"
       (click)="addFeed.emit()"
     >
-      <app-icon name="add" [size]="18" /><span>{{ 'reader.addFeed' | transloco }}</span>
+      <app-icon name="add" size="sm" /><span>{{ 'reader.addFeed' | transloco }}</span>
     </button>
   </div>
   @if (refreshSvc.running()) {
@@ -29,7 +29,7 @@
     [queryParams]="{ view: null, tag: null, subscription: null, entry: null }"
     queryParamsHandling="merge"
   >
-    <app-icon name="inbox" [size]="18" /><span>{{ 'reader.allItems' | transloco }}</span>
+    <app-icon name="inbox" size="sm" /><span>{{ 'reader.allItems' | transloco }}</span>
     @if (totalUnread() > 0) {
       <span class="count">{{ totalUnread() }}</span>
     }
@@ -41,7 +41,7 @@
     [queryParams]="{ view: 'favorites', tag: null, subscription: null, entry: null }"
     queryParamsHandling="merge"
   >
-    <app-icon name="star" [size]="18" /><span>{{ 'reader.favorites' | transloco }}</span>
+    <app-icon name="star" size="sm" /><span>{{ 'reader.favorites' | transloco }}</span>
     @if (favoritesCount() > 0) {
       <span class="count">{{ favoritesCount() }}</span>
     }
@@ -53,7 +53,7 @@
     [queryParams]="{ view: 'kept', tag: null, subscription: null, entry: null }"
     queryParamsHandling="merge"
   >
-    <app-icon name="bookmark" [size]="18" /><span>{{ 'reader.kept' | transloco }}</span>
+    <app-icon name="bookmark" size="sm" /><span>{{ 'reader.kept' | transloco }}</span>
     @if (keptCount() > 0) {
       <span class="count">{{ keptCount() }}</span>
     }
@@ -97,7 +97,7 @@
             >
               <app-icon
                 [name]="expanded().has(node.tag.id) ? 'expand_more' : 'chevron_right'"
-                [size]="18"
+                size="sm"
               />
             </button>
             <a
@@ -108,18 +108,7 @@
               queryParamsHandling="merge"
             >
               <span class="lead">
-                @if (node.tag.icon) {
-                  <app-icon
-                    [name]="node.tag.icon"
-                    [size]="18"
-                    [style.color]="node.tag.color || 'var(--text-muted)'"
-                  />
-                } @else {
-                  <span
-                    class="dot"
-                    [style.background]="node.tag.color || 'var(--text-muted)'"
-                  ></span>
-                }
+                <app-tag-glyph [name]="node.tag.icon" [color]="node.tag.color" size="sm" />
               </span>
               <span>{{ node.tag.name }}</span>
               @if (node.unreadCount > 0) {
@@ -138,7 +127,7 @@
                 [attr.aria-label]="'reader.manage' | transloco: { name: node.tag.name }"
                 (click)="toggleMenu(tagMenuKey, $event)"
               >
-                <app-icon name="more_horiz" [size]="18" />
+                <app-icon name="more_horiz" size="sm" />
               </button>
               @if (menuFor() === tagMenuKey) {
                 <div class="pop" role="menu">
@@ -194,7 +183,7 @@
                     [attr.aria-label]="'reader.manage' | transloco: { name: s.title }"
                     (click)="toggleMenu(taggedFeedMenuKey, $event)"
                   >
-                    <app-icon name="more_horiz" [size]="18" />
+                    <app-icon name="more_horiz" size="sm" />
                   </button>
                   @if (menuFor() === taggedFeedMenuKey) {
                     <div class="pop" role="menu">
@@ -258,7 +247,7 @@
             [attr.aria-label]="'reader.manage' | transloco: { name: s.title }"
             (click)="toggleMenu(untaggedFeedMenuKey, $event)"
           >
-            <app-icon name="more_horiz" [size]="18" />
+            <app-icon name="more_horiz" size="sm" />
           </button>
           @if (menuFor() === untaggedFeedMenuKey) {
             <div class="pop" role="menu">

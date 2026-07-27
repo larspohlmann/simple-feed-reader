@@ -25,7 +25,10 @@ export class ManageActions {
   private readonly i18n = inject(TranslocoService);
 
   editSubscription(sub: SubscriptionDto): void {
-    const ref = this.dialog.open<SubscriptionDto>(EditSubscriptionDialogComponent, { data: sub });
+    const ref = this.dialog.open<SubscriptionDto>(EditSubscriptionDialogComponent, {
+      data: sub,
+      panelClass: 'app-dialog',
+    });
     ref.closed.subscribe((updated) => {
       if (updated) this.subs.load();
     });
@@ -69,7 +72,14 @@ export class ManageActions {
       confirmLabel: this.i18n.translate('manage.unsubscribeConfirm'),
       danger: true,
     };
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, { data });
+    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
+      data,
+      // A destructive confirmation is an alert, not a plain dialog; the role
+      // belongs on the CDK's modal container, which is the outermost element
+      // assistive tech sees.
+      role: 'alertdialog',
+      panelClass: 'app-dialog',
+    });
     ref.closed.subscribe((ok) => {
       if (!ok) return;
       this.api.deleteSubscription(sub.id).subscribe({ next: () => this.subs.load() });
@@ -77,14 +87,20 @@ export class ManageActions {
   }
 
   createTag(): void {
-    const ref = this.dialog.open<TagDto>(TagFormDialogComponent, { data: null });
+    const ref = this.dialog.open<TagDto>(TagFormDialogComponent, {
+      data: null,
+      panelClass: 'app-dialog',
+    });
     ref.closed.subscribe((tag) => {
       if (tag) this.tags.load();
     });
   }
 
   editTag(tag: TagDto): void {
-    const ref = this.dialog.open<TagDto>(TagFormDialogComponent, { data: tag });
+    const ref = this.dialog.open<TagDto>(TagFormDialogComponent, {
+      data: tag,
+      panelClass: 'app-dialog',
+    });
     ref.closed.subscribe((updated) => {
       if (!updated) return;
       this.tags.load();
@@ -99,7 +115,14 @@ export class ManageActions {
       confirmLabel: this.i18n.translate('manage.deleteConfirm'),
       danger: true,
     };
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, { data });
+    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
+      data,
+      // A destructive confirmation is an alert, not a plain dialog; the role
+      // belongs on the CDK's modal container, which is the outermost element
+      // assistive tech sees.
+      role: 'alertdialog',
+      panelClass: 'app-dialog',
+    });
     ref.closed.subscribe((ok) => {
       if (!ok) return;
       this.api.deleteTag(tag.id).subscribe({

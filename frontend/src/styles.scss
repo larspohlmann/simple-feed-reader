@@ -6,6 +6,30 @@
 // (#85). Loaded here rather than in angular.json so every build configuration
 // gets it.
 @use '@angular/cdk/overlay-prebuilt.css';
+@use './app/theme/breakpoints' as bp;
 @use './app/theme/tokens';
 @use './styles/reset';
 @use './styles/base';
+@use './styles/controls';
+
+// Every dialog.open() passes `panelClass: 'app-dialog'`, which lands on the
+// CDK's .cdk-overlay-pane. The frame itself is app-overlay-panel's -- the pane
+// only has to stay out of its way, and the prebuilt CSS already does on a
+// desktop: the pane is `position: absolute; display: flex` with no size of its
+// own, so it shrink-wraps the panel and the global position strategy centres
+// it. Nothing to add there.
+// A phone is the exception. The panel goes full screen, and it can only reach
+// the screen if the pane it lives in already fills it: the pane is shrink-to-
+// fit, so a percentage size inside it would resolve against the panel's own
+// content instead of the viewport. Sizing the pane explicitly breaks that
+// circularity, and it is also why the panel uses `100%` rather than `100vw` --
+// with the scroll block's reserved scrollbar the two disagree, and `100vw`
+// would overflow the pane by exactly that width.
+@media (width <= bp.$bp-sm) {
+  .cdk-overlay-pane.app-dialog {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+  }
+}

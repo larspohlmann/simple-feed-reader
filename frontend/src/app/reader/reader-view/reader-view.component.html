@@ -14,7 +14,7 @@
         [attr.aria-label]="'reader.backToList' | transloco"
         (click)="onBack()"
       >
-        <app-icon name="arrow_back" [size]="20" />
+        <app-icon name="arrow_back" size="md" />
       </button>
       <div class="nav">
         @if (readerMode.canToggle()) {
@@ -27,7 +27,7 @@
             "
             (click)="toggleMode()"
           >
-            <app-icon [name]="mode() === 'reader' ? 'article' : 'feed'" [size]="18" />
+            <app-icon [name]="mode() === 'reader' ? 'article' : 'feed'" size="md" />
             {{ (mode() === 'reader' ? 'reader.readerView' : 'reader.original') | transloco }}
           </button>
         }
@@ -38,7 +38,7 @@
           [disabled]="!hasPrev()"
           (click)="prev.emit()"
         >
-          <app-icon name="chevron_left" [size]="20" />
+          <app-icon name="chevron_left" size="md" />
         </button>
         <button
           class="next"
@@ -47,7 +47,7 @@
           [disabled]="!hasNext()"
           (click)="next.emit()"
         >
-          <app-icon name="chevron_right" [size]="20" />
+          <app-icon name="chevron_right" size="md" />
         </button>
       </div>
     </div>
@@ -64,7 +64,7 @@
         @if (e.url) {
           ·
           <a [href]="e.url" target="_blank" rel="noopener noreferrer"
-            >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" [size]="14"
+            >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" size="text"
           /></a>
         }
       </p>
@@ -76,7 +76,7 @@
           [class.on]="e.isFavorite"
           (click)="favorite.emit()"
         >
-          <app-icon name="star" [size]="20" />
+          <app-icon name="star" size="md" />
         </button>
         <button
           type="button"
@@ -84,14 +84,14 @@
           [class.on]="e.isKept"
           (click)="keep.emit()"
         >
-          <app-icon name="bookmark" [size]="20" />
+          <app-icon name="bookmark" size="md" />
         </button>
         <button
           type="button"
           [attr.aria-label]="'reader.toggleRead' | transloco"
           (click)="read.emit()"
         >
-          <app-icon [name]="e.isRead ? 'mark_email_unread' : 'check'" [size]="20" />
+          <app-icon [name]="e.isRead ? 'mark_email_unread' : 'check'" size="md" />
         </button>
       </div>
       @if (showToc()) {
@@ -102,7 +102,7 @@
             [attr.aria-expanded]="tocOpen()"
             (click)="tocOpen.set(!tocOpen())"
           >
-            <app-icon [name]="tocOpen() ? 'expand_more' : 'chevron_right'" [size]="18" />
+            <app-icon [name]="tocOpen() ? 'expand_more' : 'chevron_right'" size="md" />
             {{ 'reader.contents' | transloco }}
           </button>
           @if (tocOpen()) {

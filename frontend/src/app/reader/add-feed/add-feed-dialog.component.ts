@@ -7,11 +7,14 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef } from '@angular/cdk/dialog';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { IconComponent } from '../../shared/icon/icon.component';
+import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
+import { FieldComponent } from '../../shared/field/field.component';
+import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
 import { parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
 import { TagsStore } from '../tags.store';
 import { FeedCandidate, FeedPreview, ScrapeFailureReason, SubscriptionDto } from '../models';
+import { ButtonComponent } from '../../shared/button/button.component';
 
 type PreviewState =
   | { status: 'loading' }
@@ -20,7 +23,16 @@ type PreviewState =
 
 @Component({
   selector: 'app-add-feed-dialog',
-  imports: [ReactiveFormsModule, A11yModule, RouterLink, IconComponent, TranslocoPipe],
+  imports: [
+    ReactiveFormsModule,
+    A11yModule,
+    RouterLink,
+    TagGlyphComponent,
+    FieldComponent,
+    ButtonComponent,
+    OverlayPanelComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './add-feed-dialog.component.html',
   styleUrl: './add-feed-dialog.component.scss',
 })

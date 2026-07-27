@@ -111,9 +111,12 @@ test.describe('Add feed on a phone', () => {
     expect(box.height).toBeLessThanOrEqual(PHONE.height);
     expect(box.y).toBeGreaterThanOrEqual(0);
 
-    // The candidate list, not the page, is what scrolls: it must actually be
-    // overflowing here, or this test would pass for the wrong reason.
-    const list = dialog.locator('.candidates');
+    // The dialog's body, not the page, is what scrolls: it must actually be
+    // overflowing here, or this test would pass for the wrong reason. The body
+    // is app-overlay-panel's — every interrupt surface shares that one frame
+    // and its one scroll region (#126), so the candidate list itself no longer
+    // scrolls on its own.
+    const list = dialog.locator('.body');
     const { scrollHeight, clientHeight } = await list.evaluate((el) => ({
       scrollHeight: el.scrollHeight,
       clientHeight: el.clientHeight,
@@ -131,7 +134,7 @@ test.describe('Add feed on a phone', () => {
     await expect(dialog).toBeHidden();
   });
 
-  test('the heading and Cancel stay put while the candidate list scrolls', async ({ page }) => {
+  test('the heading and Cancel stay put while the dialog body scrolls', async ({ page }) => {
     const signedIn = await signInAsAdmin(page);
     test.skip(
       !signedIn,
@@ -147,7 +150,7 @@ test.describe('Add feed on a phone', () => {
 
     const cancel = dialog.getByRole('button', { name: 'Cancel' });
     const before = (await cancel.boundingBox())!;
-    await dialog.locator('.candidates').evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    await dialog.locator('.body').evaluate((el) => el.scrollTo(0, el.scrollHeight));
     const after = (await cancel.boundingBox())!;
     expect(after.y).toBeCloseTo(before.y, 0);
 

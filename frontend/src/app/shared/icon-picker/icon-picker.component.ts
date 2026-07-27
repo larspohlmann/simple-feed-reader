@@ -1,7 +1,9 @@
 // src/app/shared/icon-picker/icon-picker.component.ts
 import {
+  booleanAttribute,
   ChangeDetectionStrategy,
   Component,
+  computed,
   ElementRef,
   HostListener,
   inject,
@@ -14,34 +16,42 @@ import { IconComponent } from '../icon/icon.component';
 import { TAG_ICONS } from '../icon-choices';
 
 /**
- * A compact icon selector: a trigger showing the current glyph, and a popover
- * grid of the curated Material Symbols — the same set the reader's tag form
- * offers, so a category and a tag are picked from one palette. Two-way bound on
- * `value`; the empty string means "no icon".
+ * An icon selector over the curated Material Symbols — the same set the reader's
+ * tag form and the admin catalog both offer, so a tag and a category are picked
+ * from one palette. Two-way bound on `value`; the empty string means "no icon".
+ *
+ * Two framings of one grid, chosen with `inline`:
+ * - popover (default) for a dense row like the admin catalog, where a compact
+ *   trigger has to sit between other controls;
+ * - inline for a form with room to spare, where the grid is worth a permanent
+ *   place and selection should cost one click.
  */
 @Component({
   selector: 'app-icon-picker',
   standalone: true,
   imports: [IconComponent, TranslocoPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.inline]': 'inline()' },
   template: `
-    <button
-      type="button"
-      class="trigger"
-      [class.open]="open()"
-      aria-haspopup="listbox"
-      [attr.aria-expanded]="open()"
-      [attr.aria-label]="'iconPicker.choose' | transloco"
-      (click)="toggle()"
-    >
-      <span class="glyph" [style.color]="color() || 'var(--text-muted)'">
-        <app-icon [name]="value() || 'block'" [size]="18" />
-      </span>
-      <app-icon class="caret" name="expand_more" [size]="16" />
-    </button>
+    @if (!inline()) {
+      <button
+        type="button"
+        class="trigger"
+        [class.open]="open()"
+        aria-haspopup="listbox"
+        [attr.aria-expanded]="open()"
+        [attr.aria-label]="'iconPicker.choose' | transloco"
+        (click)="toggle()"
+      >
+        <span class="glyph" [style.color]="color() || 'var(--text-muted)'">
+          <app-icon [name]="value() || 'block'" size="md" />
+        </span>
+        <app-icon class="caret" name="expand_more" size="sm" />
+      </button>
+    }
 
-    @if (open()) {
-      <div class="pop" role="listbox">
+    @if (expanded()) {
+      <div class="grid" [class.pop]="!inline()" role="listbox">
         <button
           type="button"
           class="opt"
@@ -49,7 +59,7 @@ import { TAG_ICONS } from '../icon-choices';
           [attr.aria-label]="'iconPicker.none' | transloco"
           (click)="choose('')"
         >
-          <app-icon name="block" [size]="18" />
+          <app-icon name="block" size="md" />
         </button>
         @for (name of icons; track name) {
           <button
@@ -59,78 +69,27 @@ import { TAG_ICONS } from '../icon-choices';
             [attr.aria-label]="name"
             (click)="choose(name)"
           >
-            <app-icon [name]="name" [size]="18" />
+            <app-icon [name]="name" size="md" />
           </button>
         }
       </div>
     }
   `,
-  styles: `
-    :host {
-      position: relative;
-      display: inline-block;
-    }
-    .trigger {
-      display: inline-flex;
-      gap: var(--space-1);
-      align-items: center;
-      height: 26px;
-      padding: 0 var(--space-1) 0 var(--space-2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--surface-1);
-      color: var(--text-muted);
-      cursor: pointer;
-    }
-    .trigger.open,
-    .trigger:hover {
-      border-color: var(--border-strong);
-    }
-    .glyph {
-      display: inline-flex;
-    }
-    .pop {
-      position: absolute;
-      top: calc(100% + 4px);
-      left: 0;
-      z-index: 20;
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--space-1);
-      width: 248px;
-      max-height: 220px;
-      padding: var(--space-2);
-      overflow-y: auto;
-      overscroll-behavior: contain;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--surface-2);
-      box-shadow: 0 12px 32px rgb(0 0 0 / 24%);
-    }
-    .opt {
-      display: inline-flex;
-      padding: var(--space-2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--surface-1);
-      color: var(--text-secondary);
-      cursor: pointer;
-    }
-    .opt.on {
-      border-color: var(--accent);
-      background: var(--accent-soft);
-      color: var(--accent);
-    }
-  `,
+  styleUrl: './icon-picker.component.scss',
 })
 export class IconPickerComponent {
   /** Two-way bound glyph name; the empty string is "no icon". */
   readonly value = model<string>('');
   /** Tints the trigger glyph — usually the category's colour. */
   readonly color = input<string | null>(null);
+  /** Renders the grid in place instead of behind a trigger. */
+  readonly inline = input(false, { transform: booleanAttribute });
 
   readonly icons = TAG_ICONS;
   readonly open = signal(false);
+
+  /** Inline is permanently expanded; the popover only while it is open. */
+  protected readonly expanded = computed(() => this.inline() || this.open());
 
   private readonly host = inject(ElementRef<HTMLElement>);
 
@@ -150,8 +109,22 @@ export class IconPickerComponent {
     }
   }
 
+  /**
+   * Escape dismisses an open popover, and is swallowed so it does not also
+   * reach the CDK dialog listening on `body` and close the whole form. Inline
+   * mode never opens, so the keypress passes through untouched — there is
+   * nothing to dismiss there and Escape still belongs to the dialog.
+   */
+  @HostListener('keydown.escape', ['$event'])
+  onEscape(event: Event): void {
+    if (!this.open()) return;
+    this.open.set(false);
+    event.stopPropagation();
+  }
+
+  /** Fallback for an Escape pressed while focus sits outside the picker. */
   @HostListener('document:keydown.escape')
-  onEscape(): void {
+  onEscapeElsewhere(): void {
     if (this.open()) this.open.set(false);
   }
 }

@@ -1,22 +1,15 @@
-<div
-  class="dialog"
-  role="alertdialog"
-  aria-modal="true"
-  [attr.aria-label]="data.title"
-  cdkTrapFocus
->
-  <h2>{{ data.title }}</h2>
+<app-overlay-panel [heading]="data.title" cdkTrapFocus>
   <p class="msg">{{ data.message }}</p>
-  <div class="row">
-    <button type="button" (click)="ref.close(false)">{{ 'dialog.cancel' | transloco }}</button>
-    <button
-      type="button"
-      [class.primary]="!data.danger"
-      [class.danger]="data.danger"
-      cdkFocusInitial
-      (click)="ref.close(true)"
-    >
-      {{ data.confirmLabel }}
-    </button>
-  </div>
-</div>
+
+  <app-button footer (click)="ref.close(false)">
+    {{ 'dialog.cancel' | transloco }}
+  </app-button>
+  <app-button
+    footer
+    focusInitial
+    [variant]="data.danger ? 'danger' : 'primary'"
+    (click)="ref.close(true)"
+  >
+    {{ data.confirmLabel }}
+  </app-button>
+</app-overlay-panel>

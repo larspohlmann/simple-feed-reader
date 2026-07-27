@@ -10,6 +10,7 @@ import { adoptAutofilledValues } from '../autofill';
 import { AuthShellComponent } from '../auth-shell/auth-shell.component';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { FormErrorComponent } from '../../shared/form-error/form-error.component';
+import { FieldComponent } from '../../shared/field/field.component';
 
 @Component({
   selector: 'app-reset-password',
@@ -20,6 +21,7 @@ import { FormErrorComponent } from '../../shared/form-error/form-error.component
     AuthShellComponent,
     ButtonComponent,
     FormErrorComponent,
+    FieldComponent,
   ],
   templateUrl: './reset-password.component.html',
   styleUrl: './reset-password.component.scss',

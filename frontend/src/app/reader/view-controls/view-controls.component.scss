@@ -1,3 +1,5 @@
+@use '../../theme/breakpoints' as bp;
+
 :host {
   display: flex;
   gap: var(--space-2);
@@ -33,7 +35,7 @@
 }
 
 /* Pane layout needs a wide viewport, so hide it on narrow screens. */
-@media (width <= 720px) {
+@media (width <= bp.$bp-md) {
   .seg button.pane {
     display: none;
   }

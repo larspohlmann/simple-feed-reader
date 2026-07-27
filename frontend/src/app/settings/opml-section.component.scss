@@ -26,26 +26,6 @@ h2 {
   font-family: var(--font-sans);
 }
 
-.btn {
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--surface-1);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.btn.primary {
-  background: var(--accent);
-  color: var(--on-accent);
-  border-color: var(--accent);
-}
-
-.btn:disabled {
-  opacity: 0.7;
-  cursor: default;
-}
-
 .error {
   color: var(--danger);
   font-size: var(--fs-sm);

@@ -1,0 +1,25 @@
+<div class="swatches">
+  @for (preset of presets; track preset) {
+    <button
+      type="button"
+      class="swatch"
+      [class.on]="preset === value()"
+      [style.background]="preset"
+      [attr.aria-pressed]="preset === value()"
+      [attr.aria-label]="'colorField.swatch' | transloco: { colour: preset }"
+      (click)="pick(preset)"
+    ></button>
+  }
+  <input
+    type="color"
+    class="picker"
+    [attr.aria-label]="'colorField.custom' | transloco"
+    [value]="value() ?? fallback"
+    (input)="pick(pickedValue($event))"
+  />
+  @if (clearable()) {
+    <button type="button" class="clear" (click)="clear()">
+      <ng-content />
+    </button>
+  }
+</div>

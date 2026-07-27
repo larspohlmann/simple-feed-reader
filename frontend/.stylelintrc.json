@@ -5,12 +5,40 @@
     "scss/dollar-variable-pattern": null,
     "selector-class-pattern": null,
     "no-empty-source": null,
-    "selector-pseudo-element-no-unknown": [true, { "ignorePseudoElements": ["ng-deep"] }]
+    "selector-pseudo-element-no-unknown": [true, { "ignorePseudoElements": ["ng-deep"] }],
+    "declaration-property-unit-allowed-list": {
+      "padding": ["%", "em", "rem"],
+      "padding-top": ["%", "em", "rem"],
+      "padding-right": ["%", "em", "rem"],
+      "padding-bottom": ["%", "em", "rem"],
+      "padding-left": ["%", "em", "rem"],
+      "margin": ["%", "em", "rem"],
+      "margin-top": ["%", "em", "rem"],
+      "margin-right": ["%", "em", "rem"],
+      "margin-bottom": ["%", "em", "rem"],
+      "margin-left": ["%", "em", "rem"],
+      "gap": ["%", "em", "rem"],
+      "row-gap": ["%", "em", "rem"],
+      "column-gap": ["%", "em", "rem"],
+      "font-size": ["%", "em", "rem"],
+      "border-radius": ["%", "em", "rem"],
+      "width": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "fr"],
+      "height": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "fr"],
+      "min-width": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "fr"],
+      "min-height": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "fr"],
+      "max-width": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "fr"],
+      "max-height": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "fr"]
+    },
+    "media-feature-name-unit-allowed-list": { "width": [] }
   },
   "overrides": [
     {
-      "files": ["src/app/theme/**/*.scss"],
-      "rules": { "color-no-hex": null }
+      "files": ["src/app/theme/**/*.scss", "src/styles/**/*.scss", "src/styles.scss"],
+      "rules": {
+        "color-no-hex": null,
+        "declaration-property-unit-allowed-list": null,
+        "media-feature-name-unit-allowed-list": null
+      }
     }
   ]
 }

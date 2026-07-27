@@ -1,9 +1,9 @@
 <section>
   <div class="head">
     <h2>{{ 'settings.tags.title' | transloco }}</h2>
-    <button class="new" (click)="manage.createTag()">
-      <app-icon name="add" [size]="16" /> {{ 'settings.tags.new' | transloco }}
-    </button>
+    <app-button class="new" size="sm" variant="primary" (click)="manage.createTag()">
+      <app-icon name="add" size="sm" /> {{ 'settings.tags.new' | transloco }}
+    </app-button>
   </div>
   @if (tagsStore.tags().length === 0) {
     <p class="muted">{{ 'settings.tags.none' | transloco }}</p>
@@ -14,7 +14,7 @@
           <span class="ident">
             <span class="dot" [style.background]="t.color || 'var(--text-muted)'"></span>
             @if (t.icon) {
-              <app-icon [name]="t.icon" [size]="18" />
+              <app-icon [name]="t.icon" size="sm" />
             }
             <span class="name">{{ t.name }}</span>
             <span class="count">{{
@@ -25,12 +25,12 @@
             }}</span>
           </span>
           <span class="acts">
-            <button (click)="manage.editTag(t)">
-              <app-icon name="edit" [size]="16" /> {{ 'settings.tags.edit' | transloco }}
-            </button>
-            <button class="danger" (click)="manage.deleteTag(t)">
-              <app-icon name="delete" [size]="16" /> {{ 'settings.tags.delete' | transloco }}
-            </button>
+            <app-button size="sm" (click)="manage.editTag(t)">
+              <app-icon name="edit" size="sm" /> {{ 'settings.tags.edit' | transloco }}
+            </app-button>
+            <app-button size="sm" variant="danger-outline" (click)="manage.deleteTag(t)">
+              <app-icon name="delete" size="sm" /> {{ 'settings.tags.delete' | transloco }}
+            </app-button>
           </span>
         </li>
       }

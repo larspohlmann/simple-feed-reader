@@ -16,6 +16,8 @@ import { Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
 import { IconComponent } from '../shared/icon/icon.component';
+import { TagGlyphComponent } from '../shared/tag-glyph/tag-glyph.component';
+import { OverlayPanelComponent } from '../shared/overlay-panel/overlay-panel.component';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { TagsStore } from '../reader/tags.store';
 import { ActiveCategory } from './active-category';
@@ -25,6 +27,7 @@ import { CatalogSelection } from './catalog-selection.store';
 import { CategoryChipsComponent } from './category-chips.component';
 import { CategoryRailComponent } from './category-rail.component';
 import { OnboardingSkip } from './onboarding-skip';
+import { ButtonComponent } from '../shared/button/button.component';
 
 /** How long a smooth scroll is given to settle before observations count again. */
 const JUMP_SETTLE_MS = 700;
@@ -32,7 +35,15 @@ const JUMP_SETTLE_MS = 700;
 @Component({
   selector: 'app-discover',
   standalone: true,
-  imports: [TranslocoPipe, IconComponent, CategoryRailComponent, CategoryChipsComponent],
+  imports: [
+    TranslocoPipe,
+    IconComponent,
+    TagGlyphComponent,
+    ButtonComponent,
+    OverlayPanelComponent,
+    CategoryRailComponent,
+    CategoryChipsComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [CatalogSelection, ActiveCategory],
   templateUrl: './discover.component.html',

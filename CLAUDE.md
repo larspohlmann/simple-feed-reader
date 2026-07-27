@@ -101,8 +101,14 @@ Enforced mechanically by `composer check` and `composer md`:
   band-aid. (Case in point: #128 — three successive patches to the shared
   header state lost to one layer-isolation redesign.)
 - **Hex colours are forbidden in `.scss` outside `src/app/theme/`** (Stylelint
-  `color-no-hex`). Component styles are inline in the `.ts` and kept token-only
-  (`var(--…)`) by convention.
+  `color-no-hex`), and so are ad-hoc `px` spacing values and media-query
+  literals — both fail `npm run check`.
+- **Component styles live in a sibling `.scss` file** (`styleUrl`), never inline
+  in the `.ts`: Stylelint has no TS syntax installed, so inline styles are
+  silently unlinted.
+- [docs/design-language.md](docs/design-language.md) is the source for tokens,
+  the shared component catalog (`src/app/shared/`), the density/sticky/overlay
+  conventions and the recorded exceptions. Read it before adding a surface.
 - Bearer JWT in `localStorage` is the entire auth story — no auth cookie, no
   session. A functional interceptor attaches it and clears it on `401`.
 

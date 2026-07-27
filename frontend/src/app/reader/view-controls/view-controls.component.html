@@ -4,14 +4,14 @@
     [class.active]="layout.mode() === 'magazine'"
     (click)="layout.set('magazine')"
   >
-    <app-icon name="view_quilt" [size]="18" />
+    <app-icon name="view_quilt" size="md" />
   </button>
   <button
     [attr.aria-label]="'reader.layout.list' | transloco"
     [class.active]="layout.mode() === 'list'"
     (click)="layout.set('list')"
   >
-    <app-icon name="view_agenda" [size]="18" />
+    <app-icon name="view_agenda" size="md" />
   </button>
   <button
     class="pane"
@@ -19,7 +19,7 @@
     [class.active]="layout.mode() === 'pane'"
     (click)="layout.set('pane')"
   >
-    <app-icon name="view_column_2" [size]="18" />
+    <app-icon name="view_column_2" size="md" />
   </button>
 </div>
 
@@ -31,7 +31,7 @@
       [title]="'reader.theme.' + m.id | transloco"
       (click)="theme.setMode(m.id)"
     >
-      <app-icon [name]="m.icon" [size]="18" />
+      <app-icon [name]="m.icon" size="md" />
     </button>
   }
 </div>

@@ -1,3 +1,5 @@
+@use '../theme/breakpoints' as bp;
+
 .head {
   display: flex;
   align-items: center;
@@ -8,18 +10,6 @@
 h2 {
   font-size: var(--fs-lg);
   margin: 0;
-}
-
-.new {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius);
-  background: var(--accent);
-  color: var(--on-accent);
-  cursor: pointer;
 }
 
 .muted {
@@ -40,7 +30,7 @@ h2 {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-3);
+  padding: var(--row-pad-comfy-y) var(--row-pad-comfy-x);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-1);
@@ -54,8 +44,8 @@ h2 {
 }
 
 .dot {
-  width: 10px;
-  height: 10px;
+  width: var(--space-2);
+  height: var(--space-2);
   border-radius: 50%;
   flex: 0 0 auto;
 }
@@ -75,26 +65,9 @@ h2 {
   flex: 0 0 auto;
 }
 
-.acts button {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--surface-1);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.acts button.danger {
-  color: var(--danger);
-  border-color: var(--danger);
-}
-
 /* Stack the row on narrow screens so the tag name and its feed count aren't
    crushed by the Edit/Delete buttons (worse with longer localised labels). */
-@media (width <= 560px) {
+@media (width <= bp.$bp-sm) {
   .tag {
     flex-direction: column;
     align-items: stretch;

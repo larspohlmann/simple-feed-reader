@@ -18,22 +18,82 @@
 
 // Mode-invariant tokens (same in every theme).
 :root {
-  --radius: 8px;
-  --control-h: 40px;
+  /* Spacing scale. --space-0 is a real half-step for tight gaps (rail rows,
+     icon-grid padding), not a stray. Anything off this scale is a Stylelint
+     failure outside theme/ and styles/. */
+  --space-0: 2px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
+  --space-7: 48px;
+
+  /* Radii. --radius-sm for elements nested inside an already-rounded
+     container, --radius for controls, --radius-lg for a large surface that
+     carries content (a card, a dialog, a panel), --radius-pill for chips.
+     The lg step is not invented: the magazine hero, the magazine source group,
+     the discover panel and the auth card each arrived at 12px independently. */
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+
+  /* Structural sizing. --bar-h is the *fallback* for the floating app bar,
+     whose real height is measured at runtime by ReaderShellComponent and
+     written to --app-bar-h; read it as `var(--app-bar-h, var(--bar-h))`.
+     --tap-target is the documented minimum touch target. */
+  --control-h: 40px;
+  --bar-h: 56px;
+  --tap-target: 44px;
+
+  /* Icon sizes. Four steps because the same tag glyph is rendered from a
+     12px pill up to a 20px sidebar lead; three steps would inflate the pill. */
+  --icon-xs: 12px;
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
+
+  /* Row density, in two named steps. Every list, rail and picker row derives
+     its padding from one of these pairs, which is what keeps the picker and
+     the reader's lists from drifting apart again (#126).
+
+     Compact: navigation rails, chip strips, row menus, sidebar entries --
+     surfaces where scanning many items at once matters more than breathing
+     room. */
+  --row-pad-y: var(--space-2);
+  --row-pad-x: var(--space-3);
+
+  /* Comfortable: the primary content lists a reader actually reads, and the
+     settings/admin rows that carry a control per line. The reader's entry list
+     is the standard the picker was measured against in #126, so it is the one
+     that must never get tighter. */
+  --row-pad-comfy-y: var(--space-3);
+  --row-pad-comfy-x: var(--space-4);
 
   /* Breathing room between the floating top bars and the content that starts
      beneath them. Added to the measured bar heights by every scrolling pane, so
      this one value tunes the gap everywhere (#87). */
   --bar-gap: var(--space-4);
+
+  /* EntryListComponent overwrites this on its host once it has measured its
+     own bar; the default is what the `calc()`s add before that happens. It is
+     declared here rather than written as a var() fallback at each use site so
+     the arithmetic reads as arithmetic. */
+  --list-bar-h: 0px;
+
+  /* Type scale. --fs-read is the article body size and is deliberately a step
+     above --fs-base: long-form reading wants more than UI chrome does. Article
+     headings size in `em` against it, so changing this one value rescales the
+     whole article. */
   --font-sans: system-ui, -apple-system, 'Segoe UI', roboto, sans-serif;
+  --fs-xs: 11px;
   --fs-sm: 13px;
   --fs-base: 15px;
+  --fs-read: 16px;
   --fs-lg: 18px;
   --fs-xl: 24px;
+  --lh-tight: 1.25;
+  --lh-normal: 1.5;
 }

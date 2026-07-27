@@ -5,7 +5,7 @@
 .group {
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
@@ -23,6 +23,15 @@
   font-size: var(--fs-lg);
   font-weight: 500;
   color: var(--text-primary);
+}
+
+/* An inline run, not a flex row, so the favicon aligns by type metrics:
+   `vertical-align: middle` centres it on the x-height, which against 18px
+   heading type leaves it sitting below the letters' optical centre. Lift it
+   onto that centre. In `em`, so it stays right if the heading size changes. */
+.gname app-favicon {
+  position: relative;
+  bottom: 0.1em;
 }
 
 .item:not(:last-child) {

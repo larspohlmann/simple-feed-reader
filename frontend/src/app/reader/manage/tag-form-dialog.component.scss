@@ -1,32 +1,24 @@
-.dialog {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--space-5);
-  width: min(460px, 92vw);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+// The frame is app-overlay-panel's; only the width is this dialog's to choose.
+// `display: contents` on both the host and the form removes the two boxes that
+// would otherwise sit between the CDK's dialog container and the panel, neither
+// of which the CDK knows how to centre or stretch.
+// The panel caps itself at 90dvh and scrolls its body (#85), so the icons plus
+// the name field, the swatches and the buttons still fit in landscape on a
+// phone -- app-icon-picker's inline grid caps and scrolls on its own as well.
+:host {
+  display: contents;
 
-  /* Never taller than the viewport -- the icon grid below scrolls instead (#85).
-     Reachable in landscape on a phone, where 216px of icons plus the name field,
-     the swatches and the buttons no longer fit. `vh` first as the fallback for
-     browsers without `dvh`. */
-  max-height: 90vh;
-  max-height: 90dvh;
-  overflow: hidden;
-}
-
-h2 {
-  margin: 0;
-  font-size: var(--fs-lg);
+  --panel-w: 460px;
 }
 
 form {
+  display: contents;
+}
+
+.fields {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  min-height: 0;
 }
 
 .lbl {
@@ -35,98 +27,8 @@ form {
   color: var(--text-secondary);
 }
 
-.swatches {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  align-items: center;
-}
-
-.swatch {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  cursor: pointer;
-}
-
-.swatch.on {
-  border-color: var(--text-primary);
-}
-
-.picker {
-  width: 30px;
-  height: 26px;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: none;
-  cursor: pointer;
-}
-
-.clear {
-  font-size: var(--fs-sm);
-  background: var(--surface-1);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  color: var(--text-secondary);
-  padding: 0 var(--space-2);
-  cursor: pointer;
-}
-
-.icons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-  max-height: 216px;
-
-  /* Shrink below the 216px cap when the dialog itself runs out of room. */
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 2px;
-}
-
-.icon {
-  display: inline-flex;
-  padding: var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-1);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.icon.on {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-
 .error {
   color: var(--danger);
   font-size: var(--fs-sm);
   margin: 0;
-}
-
-.row {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-
-.row button {
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--surface-1);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.row button.primary {
-  background: var(--accent);
-  color: var(--on-accent);
-  border-color: var(--accent);
 }

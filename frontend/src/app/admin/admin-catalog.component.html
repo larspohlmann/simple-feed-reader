@@ -1,6 +1,6 @@
 <header class="bar">
   <a class="back" routerLink="/">
-    <app-icon name="arrow_back" [size]="18" /> {{ 'settings.backReader' | transloco }}
+    <app-icon name="arrow_back" size="sm" /> {{ 'settings.backReader' | transloco }}
   </a>
   <h1>{{ 'admin.catalog' | transloco }}</h1>
 </header>
@@ -26,17 +26,16 @@
 
   <section class="import">
     @if (bundled()?.available) {
-      <button class="primary" data-testid="import-bundled" (click)="importBundled()">
+      <app-button variant="primary" data-testid="import-bundled" (click)="importBundled()">
         {{
           'admin.importBundled'
             | transloco: { categories: bundled()!.categories, feeds: bundled()!.feeds }
         }}
-      </button>
+      </app-button>
     }
 
     <div class="upload">
-      <label class="field">
-        <span>{{ 'admin.importUpload' | transloco }}</span>
+      <app-field [label]="'admin.importUpload' | transloco">
         <input
           #fileInput
           type="file"
@@ -44,9 +43,8 @@
           data-testid="import-file"
           (change)="onFileSelected($event)"
         />
-      </label>
-      <label class="field">
-        <span>{{ 'admin.importMode' | transloco }}</span>
+      </app-field>
+      <app-field [label]="'admin.importMode' | transloco">
         <select data-testid="import-mode" (change)="setMode($event)">
           <option value="merge" [selected]="importMode() === 'merge'">
             {{ 'admin.importModeMerge' | transloco }}
@@ -55,15 +53,15 @@
             {{ 'admin.importModeReplace' | transloco }}
           </option>
         </select>
-      </label>
-      <button
-        class="primary"
+      </app-field>
+      <app-button
+        variant="primary"
         data-testid="import-run"
         [disabled]="pendingDocument() === null"
         (click)="importUpload()"
       >
         {{ 'admin.importUpload' | transloco }}
-      </button>
+      </app-button>
     </div>
 
     @if (importError()) {
@@ -91,9 +89,9 @@
     }
 
     <div class="warm">
-      <button (click)="warm()" [disabled]="warming()">
+      <app-button [disabled]="warming()" (click)="warm()">
         {{ 'admin.warmIcons' | transloco }}
-      </button>
+      </app-button>
       @if (warming()) {
         <span class="progress">
           {{ 'admin.warmingIcons' | transloco: { remaining: warmRemaining() } }}
@@ -114,11 +112,15 @@
         <div class="row">
           <span class="swatch" [style.background]="category.color"></span>
           @if (category.locked) {
-            <app-icon class="lock" name="lock" [size]="16" />
+            <app-icon class="lock" name="lock" size="sm" />
           }
           <input class="grow" [(ngModel)]="category.name" [attr.aria-label]="'name'" />
           <app-icon-picker [(value)]="category.icon" [color]="category.color" />
-          <input class="color" type="color" [(ngModel)]="category.color" />
+          <app-color-field
+            [value]="category.color"
+            [clearable]="false"
+            (valueChange)="applyCategoryColor(category, $event)"
+          />
           <label class="check">
             <input type="checkbox" [(ngModel)]="category.enabled" />
             {{ 'admin.status.active' | transloco }}
@@ -129,10 +131,10 @@
           </label>
           <div class="acts">
             <button (click)="moveCategory(ci, -1)" aria-label="up">
-              <app-icon name="keyboard_arrow_up" [size]="18" />
+              <app-icon name="keyboard_arrow_up" size="md" />
             </button>
             <button (click)="moveCategory(ci, 1)" aria-label="down">
-              <app-icon name="keyboard_arrow_down" [size]="18" />
+              <app-icon name="keyboard_arrow_down" size="md" />
             </button>
             <button class="ok" (click)="saveCategory(category)">
               {{ 'common.save' | transloco }}
@@ -147,7 +149,7 @@
           @for (feed of feedsFor(category.id); track feed.id) {
             <li class="feed" data-testid="admin-feed">
               @if (feed.locked) {
-                <app-icon class="lock" name="lock" [size]="16" />
+                <app-icon class="lock" name="lock" size="sm" />
               }
               <input class="grow" [(ngModel)]="feed.title" [attr.aria-label]="'title'" />
               <input class="grow" [(ngModel)]="feed.url" [attr.aria-label]="'url'" />
@@ -178,13 +180,13 @@
               </label>
               <div class="acts">
                 <button (click)="moveFeed(feed, -1)" aria-label="up">
-                  <app-icon name="keyboard_arrow_up" [size]="18" />
+                  <app-icon name="keyboard_arrow_up" size="md" />
                 </button>
                 <button (click)="moveFeed(feed, 1)" aria-label="down">
-                  <app-icon name="keyboard_arrow_down" [size]="18" />
+                  <app-icon name="keyboard_arrow_down" size="md" />
                 </button>
                 <button data-testid="refresh-favicon" (click)="refreshFavicon(feed)">
-                  <app-icon name="refresh" [size]="18" />
+                  <app-icon name="refresh" size="md" />
                 </button>
                 <button class="ok" data-testid="feed-save" (click)="saveFeed(feed)">
                   {{ 'common.save' | transloco }}
@@ -214,7 +216,11 @@
       <span class="swatch" [style.background]="newCategory().color"></span>
       <input class="grow" [(ngModel)]="newCategory().name" placeholder="name" />
       <app-icon-picker [(value)]="newCategory().icon" [color]="newCategory().color" />
-      <input class="color" type="color" [(ngModel)]="newCategory().color" />
+      <app-color-field
+        [value]="newCategory().color"
+        [clearable]="false"
+        (valueChange)="applyCategoryColor(newCategory(), $event)"
+      />
       <button class="ok" (click)="addCategory()">{{ 'common.add' | transloco }}</button>
     </li>
   </ul>

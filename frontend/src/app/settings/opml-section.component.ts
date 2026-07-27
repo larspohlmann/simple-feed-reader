@@ -7,10 +7,11 @@ import { ReaderApi } from '../reader/reader-api';
 import { RefreshService } from '../reader/refresh.service';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { OpmlImportResult } from '../reader/models';
+import { ButtonComponent } from '../shared/button/button.component';
 
 @Component({
   selector: 'app-opml-section',
-  imports: [TranslocoPipe],
+  imports: [ButtonComponent, TranslocoPipe],
   templateUrl: './opml-section.component.html',
   styleUrl: './opml-section.component.scss',
 })

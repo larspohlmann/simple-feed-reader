@@ -23,18 +23,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
       </div>
     }
   `,
-  styles: `
-    .bar {
-      height: 2px;
-      background: var(--border);
-    }
-    span {
-      display: block;
-      height: 100%;
-      background: var(--accent);
-      transition: width 0.3s ease-out;
-    }
-  `,
+  styleUrl: './progress-hairline.component.scss',
 })
 export class ProgressHairlineComponent {
   readonly active = input.required<boolean>();

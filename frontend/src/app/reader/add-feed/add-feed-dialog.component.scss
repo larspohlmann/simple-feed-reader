@@ -1,44 +1,24 @@
-.dialog {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--space-5);
-  width: min(440px, 92vw);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+// The frame is app-overlay-panel's; only the width is this dialog's to choose.
+// `display: contents` on both the host and the form removes the two boxes that
+// would otherwise sit between the CDK's dialog container and the panel, neither
+// of which the CDK knows how to centre or stretch.
+// Discovery can return any number of candidates, each a card with badges and up
+// to three sample headlines, so this dialog outgrows a phone screen at three of
+// them. The panel caps itself at 90dvh and scrolls its body (#85), which is
+// what keeps the heading and the footer reachable.
+:host {
+  display: contents;
 
-  /* Discovery can return any number of candidates, each a card with badges and
-     up to three sample headlines, so this dialog outgrows a phone screen at
-     three of them. Cap it and let the candidate list scroll inside (#85).
-     `dvh` tracks mobile Safari's collapsing toolbar; the `vh` line above it is
-     the fallback for browsers without it. */
-  max-height: 90vh;
-  max-height: 90dvh;
-
-  /* The list is the scroller, not the box -- the heading and the Cancel row
-     must stay reachable. */
-  overflow: hidden;
+  --panel-w: 440px;
 }
 
-/* Only the candidate list scrolls, so `min-height: 0` has to travel down the
-   whole flex chain: without it every ancestor keeps its content height and the
-   overflow silently reappears at the bottom of the dialog. */
 form {
+  display: contents;
+}
+
+.fields {
   display: flex;
   flex-direction: column;
-  min-height: 0;
-}
-
-h2 {
-  margin: 0;
-  font-size: var(--fs-lg);
-}
-
-.error {
-  color: var(--danger);
-  font-size: var(--fs-sm);
-  margin: 0;
 }
 
 .warn {
@@ -65,12 +45,14 @@ h2 {
 
 .tags {
   /* Separate the picker from whatever follows — the "found feeds" hint when a
-     search has run, or the footer buttons before one has. */
+     search has run, or nothing at all before one has. */
   margin: 0 0 var(--space-4);
   padding: 0;
 
   /* Cap the picker and let it scroll on its own so a long tag list never
      squeezes out the URL field or the candidate list below it. */
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned picker cap, not a spacing value. */
   max-height: 160px;
   min-height: 0;
   overflow: auto;
@@ -86,7 +68,7 @@ h2 {
   gap: var(--space-2);
   padding: var(--space-1) var(--space-3);
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface-1);
   color: var(--text-secondary);
   font-size: var(--fs-sm);
@@ -103,13 +85,9 @@ h2 {
   color: var(--on-accent);
 }
 
-.dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  flex: 0 0 auto;
-}
-
+// The one part of the dialog that grows without bound. It no longer scrolls on
+// its own: the panel's body is the single scroller, so the cards run on and it
+// is the 90dvh cap that stops them.
 .candidates {
   list-style: none;
   margin: 0;
@@ -117,19 +95,11 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-
-  /* The one part of the dialog that grows without bound. It gives up its height
-     first (`min-height: 0`) and scrolls; `overscroll-behavior: contain` stops a
-     flick past the last card from scrolling the reader underneath. */
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
 }
 
 .card {
-  /* A card inside a scrolling flex column must keep its natural height rather
-     than compress to make the list fit. */
+  /* A card inside a flex column must keep its natural height rather than
+     compress to make the list fit. */
   flex: none;
   display: flex;
   flex-direction: column;
@@ -209,38 +179,12 @@ h2 {
   cursor: pointer;
 }
 
-.row {
-  /* Separates the pinned footer from the candidate list's scroll edge, where a
-     card is otherwise clipped flush against the buttons. Matches the sibling
-     dialogs, which already space their footer this way. */
-  margin-top: var(--space-2);
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-2);
-}
-
-.row button {
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--surface-1);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.row button.primary {
-  background: var(--accent);
-  color: var(--on-accent);
-  border-color: var(--accent);
-}
-
+// The catalog is the alternative to typing a URL, not a third confirmation, so
+// it sits at the far end of the footer rather than beside Cancel and Add.
 .browse {
-  margin: var(--space-3) 0 0;
-  text-align: center;
-  font-size: var(--fs-sm);
-}
-
-.browse a {
+  margin-right: auto;
+  align-self: center;
   color: var(--accent);
+  font-size: var(--fs-sm);
   text-decoration: none;
 }

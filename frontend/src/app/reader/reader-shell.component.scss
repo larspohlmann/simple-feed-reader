@@ -1,3 +1,5 @@
+@use '../theme/breakpoints' as bp;
+
 :host {
   display: flex;
   flex-direction: column;
@@ -52,6 +54,8 @@ app-reader-header.hidden {
 }
 
 .sidebar {
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned sidebar measure, not a spacing value. */
   width: 260px;
   flex: 0 0 auto;
   border-right: 1px solid var(--border);
@@ -61,7 +65,7 @@ app-reader-header.hidden {
      it. Between 721px and 899px the sidebar is already a column while the
      header still hides, which is why this offset belongs here and not on
      `.body`: keyed to the element that needs it, not to a breakpoint. */
-  padding-top: var(--app-bar-h, 56px);
+  padding-top: var(--app-bar-h, var(--bar-h));
 }
 
 .main {
@@ -100,7 +104,7 @@ app-reader-header.hidden {
 /* Below the wide breakpoint (LayoutService's WIDE_QUERY) the article is the
    immersive top layer: above the app bar, which is the LIST's chrome there and
    keeps whatever hide-on-scroll state the list gave it (#128). */
-@media (width < 900px) {
+@media (width < bp.$bp-lg) {
   .article-overlay {
     z-index: 12;
   }
@@ -124,6 +128,9 @@ app-reader-header.hidden {
 
 .main.split .list {
   flex: 0 0 42%;
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned list-pane measure, not a spacing value. */
   max-width: 480px;
   border-right: 1px solid var(--border);
   display: flex;
@@ -151,7 +158,7 @@ app-reader-header.hidden {
    header (10). */
 .under-header {
   position: absolute;
-  top: var(--app-bar-h, 56px);
+  top: var(--app-bar-h, var(--bar-h));
   left: 0;
   right: 0;
   z-index: 4;
@@ -203,18 +210,21 @@ app-reader-header.hidden {
   padding: 0;
 }
 
-@media (width <= 720px) {
+@media (width <= bp.$bp-md) {
   /* `top` here and on .backdrop is the pre-measurement fallback only: the shell
      binds the measured header height inline, so the drawer starts below the bar
      whether or not the tag row is present. Opening the drawer also forces the
      header back into view, so this offset is never applied to a hidden one. */
   .sidebar {
     position: fixed;
-    top: 56px;
+    top: var(--bar-h);
     bottom: 0;
     padding-top: 0; /* the fixed `top` above places it; see the column rule */
     left: 0;
     z-index: 20;
+
+    /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+       tuned drawer measure, not a spacing value. */
     width: 260px;
     max-width: 82vw;
     transform: translateX(-100%);
@@ -228,7 +238,7 @@ app-reader-header.hidden {
   .backdrop {
     display: block;
     position: fixed;
-    inset: 56px 0 0;
+    inset: var(--bar-h) 0 0;
     z-index: 15;
     background: rgb(0 0 0 / 40%);
   }

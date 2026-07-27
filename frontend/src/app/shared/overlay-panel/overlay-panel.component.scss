@@ -1,0 +1,91 @@
+@use '../../theme/breakpoints' as bp;
+
+// The host box would sit between the frame's container -- the CDK's dialog
+// container, or discover's own scrim host -- and .panel, and neither centres a
+// wrapper it does not know about. `display: contents` removes it so .panel is
+// laid out by that container directly.
+:host {
+  display: contents;
+}
+
+.panel {
+  // Positioned so a sibling scrim (discover, which is a route rather than a CDK
+  // overlay) paints below the panel instead of over it.
+  position: relative;
+  display: flex;
+  flex-direction: column;
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned panel measure, not a spacing value; the literal is only the fallback
+     for a consumer that never set --panel-w. */
+  width: min(var(--panel-w, 460px), 92vw);
+
+  /* Never taller than the viewport -- the body below scrolls instead (#85).
+     Reachable in landscape on a phone, and by every surface whose content grows
+     without bound: the discovered feed candidates, the tag pickers, the inline
+     icon grid. `vh` first as the fallback for browsers without `dvh`.
+     A consumer whose content reads badly at full height caps itself tighter
+     through --panel-max-h (discover does). */
+  max-height: 90vh;
+  max-height: var(--panel-max-h, 90dvh);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 28%);
+}
+
+.head {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5) var(--space-5) var(--space-3);
+}
+
+// One size whichever level the consumer asked for: the heading's rank is an
+// outline decision, not a typographic one.
+h1,
+h2 {
+  margin: 0;
+  font-size: var(--fs-lg);
+}
+
+// `flex: 1 1 auto` rather than `flex: 1`: a zero basis would stop the body's
+// content from contributing to the panel's height, collapsing every
+// content-sized dialog to its heading and buttons. Growing only bites when the
+// panel has a height of its own -- full screen on a phone -- where it keeps the
+// footer at the bottom edge.
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0 var(--space-5);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.footer {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  padding: var(--space-3) var(--space-5) var(--space-5);
+}
+
+.footer:empty {
+  display: none;
+}
+
+// Phone: the panel is the screen, not a card floating on one. `100%`, not
+// `100vw`/`100dvh` -- the container is already exactly the viewport, and the
+// viewport units disagree with it by the width of a classic scrollbar.
+@media (width <= bp.$bp-sm) {
+  .panel {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
