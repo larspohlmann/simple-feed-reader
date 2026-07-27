@@ -53,9 +53,9 @@ final class Atom10ParserTest extends TestCase
         $feed = $this->parse($xml);
 
         self::assertCount(4, $feed->entries);
-        self::assertSame('https://e/t.jpg', $feed->entries[0]->imageUrl);
-        self::assertSame('https://e/enc.png', $feed->entries[1]->imageUrl);
-        self::assertSame('https://e/inline.jpg', $feed->entries[2]->imageUrl);
-        self::assertNull($feed->entries[3]->imageUrl);
+        self::assertSame('https://e/t.jpg', $feed->entries[0]->image?->url);
+        self::assertSame('https://e/enc.png', $feed->entries[1]->image?->url);
+        self::assertSame('https://e/inline.jpg', $feed->entries[2]->image?->url);
+        self::assertNull($feed->entries[3]->image);
     }
 }
