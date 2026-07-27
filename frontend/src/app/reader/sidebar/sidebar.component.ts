@@ -12,6 +12,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { ViewControlsComponent } from '../view-controls/view-controls.component';
+import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
 import { SubscriptionDto, TagDto } from '../models';
@@ -31,6 +32,7 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
     CdkDropListGroup,
     CdkDropList,
     CdkDrag,
+    DismissOnOutsideDirective,
   ],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss',

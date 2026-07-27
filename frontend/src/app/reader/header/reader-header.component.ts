@@ -5,6 +5,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 import { UserAvatarComponent } from '../../shared/user-avatar/user-avatar.component';
+import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { AuthService } from '../../core/auth.service';
 import { RefreshService } from '../refresh.service';
 import { LayoutService } from '../layout.service';
@@ -17,7 +18,14 @@ import { TagDto } from '../models';
  */
 @Component({
   selector: 'app-reader-header',
-  imports: [IconComponent, RouterLink, TranslocoPipe, UserAvatarComponent, SpinnerComponent],
+  imports: [
+    IconComponent,
+    RouterLink,
+    TranslocoPipe,
+    UserAvatarComponent,
+    SpinnerComponent,
+    DismissOnOutsideDirective,
+  ],
   templateUrl: './reader-header.component.html',
   styleUrl: './reader-header.component.scss',
 })

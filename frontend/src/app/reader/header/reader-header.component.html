@@ -37,7 +37,7 @@
     ></button>
   }
   <div class="right">
-    <div class="account">
+    <div class="account" [appDismissOnOutside]="menuOpen()" (dismiss)="menuOpen.set(false)">
       <button
         aria-haspopup="menu"
         [attr.aria-label]="'reader.account' | transloco"
