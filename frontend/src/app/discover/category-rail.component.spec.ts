@@ -30,10 +30,10 @@ describe('CategoryRailComponent', () => {
 
   it('renders the tinted glyph for a category that has an icon', async () => {
     const el = await mount([category({ icon: 'memory', color: '#3b82f6' })]);
-    const lead = el.querySelector('.lead') as HTMLElement;
+    const glyph = el.querySelector('app-tag-glyph') as HTMLElement;
 
-    expect(lead.querySelector('.material-symbols-outlined')?.textContent?.trim()).toBe('memory');
-    expect(lead.querySelector('.dot')).toBeNull();
+    expect(glyph.querySelector('.material-symbols-outlined')?.textContent?.trim()).toBe('memory');
+    expect(glyph.querySelector('.dot')).toBeNull();
   });
 
   /* #126: the rail used to render a bare <app-icon>, so a category carrying a
@@ -41,9 +41,9 @@ describe('CategoryRailComponent', () => {
      colour dot, which is what keeps such a category identifiable. */
   it('falls back to the colour dot for a category with a colour but no icon', async () => {
     const el = await mount([category({ icon: '', color: '#c08a3e' })]);
-    const lead = el.querySelector('.lead') as HTMLElement;
+    const glyph = el.querySelector('app-tag-glyph') as HTMLElement;
 
-    expect(lead.querySelector('.material-symbols-outlined')).toBeNull();
-    expect((lead.querySelector('.dot') as HTMLElement).style.background).toBeTruthy();
+    expect(glyph.querySelector('.material-symbols-outlined')).toBeNull();
+    expect((glyph.querySelector('.dot') as HTMLElement).style.background).toBeTruthy();
   });
 });
