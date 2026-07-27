@@ -18,6 +18,10 @@
 
 - Run all frontend commands from `frontend/`.
 - The CI gate is `npm run check` (ESLint + Prettier + Stylelint + Jest). Run it before every commit.
+- **No blank `//` comment lines in SCSS.** `stylelint-config-standard-scss` enables
+  `scss/comment-no-empty`, and it applies inside `theme/` too — the overrides in
+  `.stylelintrc.json` disable specific rules, not the whole config. Keep
+  comment blocks contiguous.
 - Commit after every task. Never leave `main`/`develop` — this branch merges to `develop` via PR.
 - Where a task says "expected: N violations", the number is a guide from the state at planning time. If your count differs, that is information, not necessarily a bug — but investigate before proceeding.
 
@@ -164,7 +168,6 @@ git commit -m "feat(theme): extend the token scale for the design language (#126
 // cannot read custom properties, so `@media (width <= var(--bp-md))` silently
 // never matches. Components `@use` this partial and write
 // `@media (width <= bp.$bp-md)`.
-//
 // Three steps only. The seven values that existed before (560/720/800/820/
 // 899/900/960) were drift, not intent.
 
