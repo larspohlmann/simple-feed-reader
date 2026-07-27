@@ -2166,10 +2166,20 @@ const LOOK_AHEAD = 2;
 const PAGE_HEIGHT_CAP = 1100;
 const QUOTE_MIN_TEXT = 300;
 
+// Amended during execution: dominance is judged over a FIXED LEADING WINDOW, not
+// the whole loaded set. A source's share of the full list shrinks as more pages
+// load; judging over everything let a front-loaded source flip from dominant to
+// minority between renders, regrouping already-shown blocks and breaking prefix
+// stability. The window (24) is far smaller than one API page (PAGE_SIZE = 100),
+// so every render samples the identical leading entries.
+const DOMINANCE_SAMPLE = 24;
+
 export function planMagazine(input: MagazinePlanInput): MagazineBlock[] {
   const { entries, grouping, complete } = input;
   const blocks: MagazineBlock[] = [];
-  const dominant = grouping ? dominantSources(entries) : new Set<number>();
+  const dominant = grouping
+    ? dominantSources(entries.slice(0, DOMINANCE_SAMPLE))
+    : new Set<number>();
 
   let index = 0;
   let page = 0;
@@ -2315,9 +2325,12 @@ function fits(kind: EntryKind, entry: EntryDto): boolean {
       // as not, which is what produced heroes with no picture.
       return !!image && (width >= 500 || (width === 0 && !!entry.imageUrl));
     case 'wide':
-      return !!image && (width >= 400 || width === 0);
+      // Amended during execution: an unknown width is trusted only when it is the
+      // persisted field, exactly as `hero` does. Trusting `width === 0` outright
+      // let an inline archive thumbnail (~148px) fill a full-width band.
+      return !!image && (width >= 400 || (width === 0 && !!entry.imageUrl));
     case 'split':
-      return !!image && (width >= 300 || width === 0);
+      return !!image && (width >= 300 || (width === 0 && !!entry.imageUrl));
     case 'thumb':
       return !!image;
     case 'quote':
