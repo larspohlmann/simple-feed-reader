@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
-import { ButtonComponent } from './button.component';
+import { ButtonComponent, ButtonVariant } from './button.component';
 
 @Component({
   imports: [ButtonComponent],
   template: `<app-button [variant]="variant()" [loading]="loading()">Save</app-button>`,
 })
 class Host {
-  readonly variant = signal<'default' | 'primary' | 'danger' | 'ghost'>('default');
+  readonly variant = signal<ButtonVariant>('default');
   readonly loading = signal(false);
 }
 
@@ -27,6 +27,23 @@ describe('ButtonComponent', () => {
     fixture.componentInstance.variant.set('danger');
     fixture.detectChanges();
     expect(button().classList.contains('danger')).toBe(true);
+  });
+
+  // Filled danger confirms a destructive action, outlined danger initiates one;
+  // they are two weights, not two names for the same thing.
+  it('keeps the two destructive weights apart', async () => {
+    const fixture = await mount();
+    const button = () => fixture.nativeElement.querySelector('button') as HTMLElement;
+
+    fixture.componentInstance.variant.set('danger');
+    fixture.detectChanges();
+    expect(button().classList.contains('danger')).toBe(true);
+    expect(button().classList.contains('danger-outline')).toBe(false);
+
+    fixture.componentInstance.variant.set('danger-outline');
+    fixture.detectChanges();
+    expect(button().classList.contains('danger-outline')).toBe(true);
+    expect(button().classList.contains('danger')).toBe(false);
   });
 
   it('swaps the label for a spinner and disables while loading', async () => {

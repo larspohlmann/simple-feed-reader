@@ -2,7 +2,14 @@
 import { booleanAttribute, ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { SpinnerComponent } from '../spinner/spinner.component';
 
-export type ButtonVariant = 'default' | 'primary' | 'danger' | 'ghost';
+/**
+ * `danger` confirms a destructive action, `danger-outline` initiates one: the
+ * filled weight belongs to the moment of destruction (a confirm dialog's
+ * confirm), the outlined one to the row action that merely opens that dialog.
+ * Both existed before the component absorbed them; flattening them would have
+ * made every Delete in a list shout as loudly as the confirmation.
+ */
+export type ButtonVariant = 'default' | 'primary' | 'danger' | 'danger-outline' | 'ghost';
 export type ButtonSize = 'sm' | 'md';
 
 /**

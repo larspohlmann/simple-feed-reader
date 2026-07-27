@@ -44,10 +44,19 @@ button.primary {
   border-color: var(--accent);
 }
 
+// Filled danger confirms a destructive action -- it is the moment of
+// destruction, and it should carry the weight of one.
 button.danger {
   background: var(--danger);
   color: var(--on-accent);
   border-color: var(--danger);
+}
+
+// Outlined danger only *initiates* one: a Delete sitting on every row of a
+// list, which opens a confirmation rather than destroying anything itself.
+button.danger-outline {
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 // No chrome at rest: the quiet way out of a decision, next to the weighted
@@ -58,7 +67,10 @@ button.ghost {
   color: var(--text-secondary);
 }
 
-button:hover:not(:disabled) {
+// Scoped per variant rather than a blanket `button:hover`: a blanket rule
+// outranks the variant blocks above (`:not()` carries its argument's weight)
+// and would repaint the danger border in the accent colour on hover.
+button.default:hover:not(:disabled) {
   border-color: var(--accent);
 }
 
@@ -67,8 +79,11 @@ button.danger:hover:not(:disabled) {
   filter: brightness(1.08);
 }
 
+button.danger-outline:hover:not(:disabled) {
+  background: var(--bg-danger);
+}
+
 button.ghost:hover:not(:disabled) {
-  border-color: transparent;
   background: var(--surface-0);
   color: var(--text-primary);
 }

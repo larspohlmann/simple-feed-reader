@@ -55,11 +55,22 @@
   --icon-md: 20px;
   --icon-lg: 24px;
 
-  /* Row density. Every list, rail and picker row derives its padding from
-     these two, which is what keeps the picker rail and the reader's lists
-     from drifting apart again. */
+  /* Row density, in two named steps. Every list, rail and picker row derives
+     its padding from one of these pairs, which is what keeps the picker and
+     the reader's lists from drifting apart again (#126).
+
+     Compact: navigation rails, chip strips, row menus, sidebar entries --
+     surfaces where scanning many items at once matters more than breathing
+     room. */
   --row-pad-y: var(--space-2);
   --row-pad-x: var(--space-3);
+
+  /* Comfortable: the primary content lists a reader actually reads, and the
+     settings/admin rows that carry a control per line. The reader's entry list
+     is the standard the picker was measured against in #126, so it is the one
+     that must never get tighter. */
+  --row-pad-comfy-y: var(--space-3);
+  --row-pad-comfy-x: var(--space-4);
 
   /* Breathing room between the floating top bars and the content that starts
      beneath them. Added to the measured bar heights by every scrolling pane, so
