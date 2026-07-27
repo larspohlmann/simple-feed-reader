@@ -79,10 +79,22 @@ sidebar lead; three steps would inflate the pill.
 | `--icon-sm` | `16px` | `sm` |
 | `--icon-md` | `20px` | `md` (default) |
 | `--icon-lg` | `24px` | `lg` |
+| — | `1em` | `text` |
 
 Never write these directly in a component if an `<app-icon>` / `<app-tag-glyph>`
 `size` input will do: `ICON_SIZE_TOKEN` in `shared/icon/icon.component.ts` maps
 the named size onto the token, so no consumer writes a px.
+
+**`text` is not a step on the scale.** It means "match the text you sit in", and
+it is the right choice for any icon inline in a line of copy — the open-in-new
+after a link, the glyph inside a tag pill. Such an icon has to agree with the
+surrounding type, not with the scale, and it must keep agreeing when that type
+changes. Snapping these to the nearest step is what made both of them look
+oversized during #126: the open-in-new went 14px → 16px next to 13px text, and
+the pill glyph held at 12px while `--fs-xs` pulled the pill's own text to 11px.
+
+The rule: **an icon inside a run of text uses `text`; a standalone icon — a
+button's glyph, a list row's lead, a rail item — uses a step on the scale.**
 
 ### Row density
 
@@ -171,7 +183,7 @@ A Material Symbol at a named size.
 | Input | Type | Default |
 |---|---|---|
 | `name` | `string` (required) | — |
-| `size` | `'xs' \| 'sm' \| 'md' \| 'lg'` | `'md'` |
+| `size` | `'text' \| 'xs' \| 'sm' \| 'md' \| 'lg'` | `'md'` |
 
 ```html
 <app-icon name="delete" size="sm" />
@@ -194,7 +206,7 @@ still identifiable at a glance.
 |---|---|---|
 | `name` | `string \| null` | `null` |
 | `color` | `string \| null` | `null` (→ `var(--text-muted)`) |
-| `size` | `'xs' \| 'sm' \| 'md' \| 'lg'` | `'md'` |
+| `size` | `'text' \| 'xs' \| 'sm' \| 'md' \| 'lg'` | `'md'` |
 
 ```html
 <app-tag-glyph [name]="node.tag.icon" [color]="node.tag.color" size="md" />
