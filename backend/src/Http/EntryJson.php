@@ -11,7 +11,9 @@ final class EntryJson
     /**
      * @return array{
      *   id: int|null, title: string, url: string|null, author: string|null,
-     *   summary: string|null, contentHtml: string|null, publishedAt: string|null,
+     *   summary: string|null, contentHtml: string|null,
+     *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null,
+     *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
      *   isRead: bool, isFavorite: bool, isKept: bool
      * }
@@ -27,6 +29,9 @@ final class EntryJson
             'author' => $e->getAuthor(),
             'summary' => $e->getSummary(),
             'contentHtml' => $e->getContentHtml(),
+            'imageUrl' => $e->getImageUrl(),
+            'imageWidth' => $e->getImageWidth(),
+            'imageHeight' => $e->getImageHeight(),
             'publishedAt' => $e->getPublishedAt()?->format(\DateTimeInterface::ATOM),
             'createdAt' => $e->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'subscriptionId' => $row->subscriptionId,
