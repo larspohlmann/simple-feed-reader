@@ -35,34 +35,6 @@
   gap: var(--space-2);
 }
 
-.kicker {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
-
-/* The row's `gap` already spaces both sides of the favicon; its own inline
-   margin, meant for text runs that have no gap, would land on the right only
-   and leave the unread dot looking pinched against it. Let the gap do it. */
-.kicker app-favicon {
-  margin-inline-end: 0;
-}
-
-.dot {
-  width: var(--space-2);
-  height: var(--space-2);
-  border-radius: 50%;
-  border: 1px solid var(--border-strong);
-}
-
-.dot.on {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
 .title {
   margin: 0;
   font-size: var(--fs-lg);

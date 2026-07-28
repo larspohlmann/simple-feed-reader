@@ -21,10 +21,7 @@
     />
   }
   <div class="body">
-    <p class="kicker">
-      <span class="dot" [class.on]="!entry().isRead" aria-hidden="true"></span>
-      <app-favicon [url]="entry().faviconUrl" [size]="12" />{{ entry().source }} · {{ when() }}
-    </p>
+    <app-entry-kicker-line [entry]="entry()" />
     <p class="title">{{ entry().title }}</p>
     @if (snippet()) {
       <p class="dek">{{ snippet() }}</p>

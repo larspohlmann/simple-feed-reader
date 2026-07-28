@@ -1,12 +1,12 @@
 // src/app/reader/magazine/entry-split.component.ts
 import { Component, computed, input } from '@angular/core';
-import { FaviconComponent } from '../../shared/favicon/favicon.component';
+import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
 import { EntryImageBlockBase } from './entry-image-block-base';
 
 @Component({
   selector: 'app-entry-split',
-  imports: [FaviconComponent, SourceTagsComponent],
+  imports: [EntryKickerLineComponent, SourceTagsComponent],
   templateUrl: './entry-split.component.html',
   styleUrl: './entry-split.component.scss',
 })

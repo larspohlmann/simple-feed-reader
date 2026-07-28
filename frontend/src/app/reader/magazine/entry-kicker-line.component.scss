@@ -1,0 +1,60 @@
+/* `width` is not belt-and-braces with `min-width`, it is the load-bearing half.
+   A block whose parent sets `align-items: flex-start` (the kicker card) is not
+   stretched, so a nowrap row would take its max-content width — 476px inside a
+   351px card — and push the list scroller sideways instead of ellipsising. */
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Never wraps. The source is the only elastic item in the row: it shrinks and
+   ellipsises, while the dot, favicon, separator and time always render whole.
+   A feed whose title runs to five clauses ("NDR.de - Das Beste am Norden -
+   Radio - Fernsehen - Nachrichten") used to push the time onto a third line. */
+.kicker {
+  margin: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.source {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Both sit after the elastic source, so both must refuse to shrink — a
+   flex item's default `min-width: auto` is what would otherwise let the
+   time itself get clipped instead of the source. */
+.separator,
+.when {
+  flex: none;
+}
+
+/* The row's `gap` already spaces both sides of the favicon; its own inline
+   margin, meant for text runs that have no gap, would land on the right only
+   and double the space there. */
+.kicker app-favicon {
+  flex: none;
+  margin-inline-end: 0;
+}
+
+.dot {
+  width: var(--space-2);
+  height: var(--space-2);
+  flex: none;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+}
+
+.dot.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
