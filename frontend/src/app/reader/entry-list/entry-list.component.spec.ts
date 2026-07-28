@@ -296,11 +296,10 @@ describe('EntryListComponent', () => {
   });
 
   it('renders planned magazine blocks when layout is magazine', () => {
-    // The grouped run must not sit at the very start — the planner never opens
-    // with a group digest — so lead with distinct sources. It must also stay a
-    // MINORITY (<=40%, see magazine-planner's DOMINANT_SHARE) or it is treated
-    // as the dominant source and left ungrouped, and long enough to survive a
-    // template page boundary landing mid-run.
+    // The grouped run must not sit at the very start — the planner leads with
+    // featured blocks, never a group. Lead with distinct sources so the
+    // collapse-enable gate (>= MIN_VIEW_SOURCES) is on, keep the run >= RUN_MIN,
+    // and give it a diverse tail so the trailing-diversity guard fires.
     const lead = [1, 2, 3, 4, 5, 6].map((id) =>
       entry(id, { subscriptionId: id, source: `lead${id}` }),
     );
