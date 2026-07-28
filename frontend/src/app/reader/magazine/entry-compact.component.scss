@@ -33,6 +33,14 @@
   border-color: var(--accent);
 }
 
+/* Inside a source group the kicker drops the favicon and shows only the time,
+   so the lift above — calibrated to the favicon's centre — leaves the dot
+   floating above the smaller text. With no favicon to meet, sit it on the
+   baseline and let it centre on the time text instead. */
+.compact.no-source .dot {
+  bottom: 0;
+}
+
 .body {
   min-width: 0;
 }

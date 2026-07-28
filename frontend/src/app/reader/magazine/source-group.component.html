@@ -1,7 +1,13 @@
 <div class="group">
   <div class="ghead">
     <p class="gname">
-      <app-favicon [url]="entries()[0]?.faviconUrl ?? null" [size]="14" />{{ source() }}
+      <app-favicon [url]="entries()[0]?.faviconUrl ?? null" [size]="14" /><a
+        class="gsource"
+        [routerLink]="[]"
+        [queryParams]="{ subscription: subscriptionId(), view: null, tag: null, entry: null }"
+        queryParamsHandling="merge"
+        >{{ source() }}</a
+      >
     </p>
     <app-source-tags [tags]="tags()" />
   </div>

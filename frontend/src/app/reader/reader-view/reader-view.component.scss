@@ -147,11 +147,6 @@ app-to-top-button {
   cursor: pointer;
 }
 
-.bar button:disabled {
-  color: var(--text-muted);
-  cursor: default;
-}
-
 article {
   /* The anchor for the wide layout's back button: the column the reader's eye
      follows, not the pane. See the container query below. */
@@ -185,6 +180,17 @@ article {
 .meta a {
   color: var(--accent);
   text-decoration: none;
+}
+
+/* The source name is a link to the feed's list, but it names the source rather
+   than inviting an action, so it keeps the muted meta colour instead of the
+   accent the "open original" link takes, underlining only on hover. */
+.meta a.source-link {
+  color: inherit;
+}
+
+.meta a.source-link:hover {
+  text-decoration: underline;
 }
 
 /* The only icon in the app that sits in a genuine run of text rather than in a

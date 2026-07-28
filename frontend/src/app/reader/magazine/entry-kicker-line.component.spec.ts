@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { EntryDto } from '../models';
@@ -30,6 +31,7 @@ function mount(e: EntryDto, inputs: Record<string, unknown> = {}) {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     imports: [EntryKickerLineComponent, provideTranslocoTesting()],
+    providers: [provideRouter([])],
   });
   const fixture = TestBed.createComponent(EntryKickerLineComponent);
   fixture.componentRef.setInput('entry', e);

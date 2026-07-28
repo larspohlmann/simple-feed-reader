@@ -4,7 +4,14 @@
   }
   @if (showSource()) {
     <app-favicon [url]="entry().faviconUrl" [size]="faviconSize()" />
-    <span class="source">{{ entry().source }}</span>
+    <a
+      class="source"
+      [routerLink]="[]"
+      [queryParams]="{ subscription: entry().subscriptionId, view: null, tag: null, entry: null }"
+      queryParamsHandling="merge"
+      (click)="$event.stopPropagation()"
+      >{{ entry().source }}</a
+    >
     <span class="separator" aria-hidden="true">·</span>
   }
   <span class="when">{{ when() }}</span>

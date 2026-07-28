@@ -31,24 +31,6 @@
             {{ (mode() === 'reader' ? 'reader.readerView' : 'reader.original') | transloco }}
           </button>
         }
-        <button
-          class="prev"
-          type="button"
-          [attr.aria-label]="'reader.previous' | transloco"
-          [disabled]="!hasPrev()"
-          (click)="prev.emit()"
-        >
-          <app-icon name="chevron_left" size="md" />
-        </button>
-        <button
-          class="next"
-          type="button"
-          [attr.aria-label]="'reader.next' | transloco"
-          [disabled]="!hasNext()"
-          (click)="next.emit()"
-        >
-          <app-icon name="chevron_right" size="md" />
-        </button>
       </div>
     </div>
     <article>
@@ -56,7 +38,13 @@
         <h1 class="title" #titleHeading tabindex="-1">{{ e.title }}</h1>
       </div>
       <p class="meta">
-        <app-favicon [url]="e.faviconUrl" [size]="16" />{{ e.source }}
+        <app-favicon [url]="e.faviconUrl" [size]="16" /><a
+          class="source-link"
+          [routerLink]="[]"
+          [queryParams]="{ subscription: e.subscriptionId, view: null, tag: null, entry: null }"
+          queryParamsHandling="merge"
+          >{{ e.source }}</a
+        >
         @if (e.author) {
           · {{ e.author }}
         }

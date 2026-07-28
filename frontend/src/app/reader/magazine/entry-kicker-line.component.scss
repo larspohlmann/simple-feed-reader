@@ -23,11 +23,20 @@
   color: var(--text-muted);
 }
 
+/* A link to the feed's own list. It keeps the muted kicker colour rather than
+   taking a link accent — it should read as the source name, only revealing its
+   clickability on hover. */
 .source {
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  color: inherit;
+  text-decoration: none;
+}
+
+.source:hover {
+  text-decoration: underline;
 }
 
 /* Both sit after the elastic source, so both must refuse to shrink — a

@@ -1,4 +1,5 @@
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { of, Subject } from 'rxjs';
 import { ReaderViewComponent } from './reader-view.component';
@@ -28,11 +29,9 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
 
 let loadMock: jest.Mock;
 
-function mount(e: EntryDto | null, hasPrev = true, hasNext = true) {
+function mount(e: EntryDto | null) {
   const f = TestBed.createComponent(ReaderViewComponent);
   f.componentRef.setInput('entry', e);
-  f.componentRef.setInput('hasPrev', hasPrev);
-  f.componentRef.setInput('hasNext', hasNext);
   f.detectChanges();
   return f;
 }
@@ -57,7 +56,10 @@ describe('ReaderViewComponent', () => {
     loadMock = jest.fn(() => of<ReaderContent>({ status: 'failed', reason: 'fetch', url: null }));
     TestBed.configureTestingModule({
       imports: [ReaderViewComponent, provideTranslocoTesting()],
-      providers: [{ provide: ReaderContentService, useValue: { load: loadMock } }],
+      providers: [
+        provideRouter([]),
+        { provide: ReaderContentService, useValue: { load: loadMock } },
+      ],
     });
   });
 
@@ -265,9 +267,9 @@ describe('ReaderViewComponent', () => {
     });
   });
 
-  it('emits favorite/keep/read/prev/next/close', () => {
+  it('emits favorite/keep/read/close', () => {
     const f = mount(entry());
-    const c = { favorite: 0, keep: 0, read: 0, prev: 0, next: 0, close: 0 };
+    const c = { favorite: 0, keep: 0, read: 0, close: 0 };
     (Object.keys(c) as (keyof typeof c)[]).forEach((k) =>
       f.componentInstance[k].subscribe(() => c[k]++),
     );
@@ -275,10 +277,8 @@ describe('ReaderViewComponent', () => {
     (el.querySelector('[aria-label="Favorite"]') as HTMLButtonElement).click();
     (el.querySelector('[aria-label="Keep"]') as HTMLButtonElement).click();
     (el.querySelector('[aria-label="Toggle read"]') as HTMLButtonElement).click();
-    (el.querySelector('.prev') as HTMLButtonElement).click();
-    (el.querySelector('.next') as HTMLButtonElement).click();
     (el.querySelector('.close') as HTMLButtonElement).click();
-    expect(c).toEqual({ favorite: 1, keep: 1, read: 1, prev: 1, next: 1, close: 1 });
+    expect(c).toEqual({ favorite: 1, keep: 1, read: 1, close: 1 });
   });
 
   it('carries the full-screen back button in its own toolbar, sliding out before close', () => {
@@ -370,12 +370,6 @@ describe('ReaderViewComponent', () => {
       scrollHostTo(f, 500);
       expect(bar.classList).not.toContain('hidden');
     });
-  });
-
-  it('disables prev/next at the ends', () => {
-    const el = mount(entry(), false, false).nativeElement as HTMLElement;
-    expect((el.querySelector('.prev') as HTMLButtonElement).disabled).toBe(true);
-    expect((el.querySelector('.next') as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('renders extracted reader content when extraction succeeds', () => {

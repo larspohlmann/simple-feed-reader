@@ -35,7 +35,7 @@ export type MagazineBlock =
  *  they need only be right relative to each other. */
 export const BLOCK_HEIGHT: Record<EntryKind, number> = {
   hero: 463,
-  wide: 260,
+  wide: 321,
   quote: 180,
   split: 150,
   kicker: 140,

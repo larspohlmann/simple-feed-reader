@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { EntryQuoteComponent } from './entry-quote.component';
 import { EntryDto } from '../models';
@@ -25,7 +26,10 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
 });
 
 function mount(e: EntryDto) {
-  TestBed.configureTestingModule({ imports: [EntryQuoteComponent, provideTranslocoTesting()] });
+  TestBed.configureTestingModule({
+    imports: [EntryQuoteComponent, provideTranslocoTesting()],
+    providers: [provideRouter([])],
+  });
   const f = TestBed.createComponent(EntryQuoteComponent);
   f.componentRef.setInput('entry', e);
   f.detectChanges();

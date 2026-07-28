@@ -25,6 +25,17 @@
   color: var(--text-primary);
 }
 
+/* Links to the source's own list. Reads as the heading it sits in — same
+   colour and weight — and only underlines on hover to show it is clickable. */
+.gsource {
+  color: inherit;
+  text-decoration: none;
+}
+
+.gsource:hover {
+  text-decoration: underline;
+}
+
 /* An inline run, not a flex row, so the favicon aligns by type metrics:
    `vertical-align: middle` centres it on the x-height, which against 18px
    heading type leaves it sitting below the letters' optical centre. Lift it

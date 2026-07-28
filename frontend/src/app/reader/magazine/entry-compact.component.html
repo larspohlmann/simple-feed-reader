@@ -3,6 +3,7 @@
   role="button"
   tabindex="0"
   [class.read]="entry().isRead"
+  [class.no-source]="!showSource()"
   (click)="open.emit(entry())"
   (keydown.enter)="open.emit(entry())"
   (keydown.space)="$event.preventDefault(); open.emit(entry())"
