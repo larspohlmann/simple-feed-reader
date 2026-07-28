@@ -196,6 +196,7 @@
   "reader": {
     "toggleSidebar": "Seitenleiste umschalten",
     "refresh": "Aktualisieren",
+    "refreshing": "Aktualisiere…",
     "lastRefreshed": "Zuletzt aktualisiert",
     "fetchingFeeds": "Feeds werden geladen – {{done}} von {{total}}",
     "fetchFailed": "Einige Feeds konnten nicht geladen werden.",

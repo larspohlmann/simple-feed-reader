@@ -196,6 +196,7 @@
   "reader": {
     "toggleSidebar": "Toggle sidebar",
     "refresh": "Refresh",
+    "refreshing": "Refreshing…",
     "lastRefreshed": "Last refreshed",
     "fetchingFeeds": "Fetching your feeds — {{done}} of {{total}}",
     "fetchFailed": "Some feeds could not be fetched.",
