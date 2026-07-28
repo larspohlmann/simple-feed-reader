@@ -200,15 +200,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private readonly markedOnOpen = new Set<number>();
 
-  private readonly index = computed(() =>
-    this.entries.entries().findIndex((e) => e.id === this.entryId()),
-  );
-  readonly hasPrev = computed(() => this.index() > 0);
-  readonly hasNext = computed(() => {
-    const i = this.index();
-    return i >= 0 && i < this.entries.entries().length - 1;
-  });
-
   constructor() {
     // Reload the list whenever the selection (not the open entry) changes.
     effect(() => {
@@ -488,15 +479,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       queryParamsHandling: 'merge',
     });
   }
-  onPrev(): void {
-    const i = this.index();
-    if (i > 0) this.onOpen(this.entries.entries()[i - 1]);
-  }
-  onNext(): void {
-    const i = this.index();
-    if (i >= 0 && i < this.entries.entries().length - 1) this.onOpen(this.entries.entries()[i + 1]);
-  }
-
   onMarkAllRead(): void {
     const t = markReadTarget(this.selection());
     if (!t) return;

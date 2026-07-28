@@ -90,8 +90,6 @@ function slugify(text: string): string {
 export class ReaderViewComponent {
   readonly entry = input.required<EntryDto | null>();
   readonly tags = input<SubscriptionTagDto[]>([]);
-  readonly hasPrev = input(false);
-  readonly hasNext = input(false);
   /** Full-screen reading (the mobile overlay) as opposed to the split pane.
    *  The article is its own layer there: the toolbar rides the overlay with
    *  its own hide-on-scroll, the back button plays the slide-out, and the
@@ -102,8 +100,6 @@ export class ReaderViewComponent {
   readonly favorite = output<void>();
   readonly keep = output<void>();
   readonly read = output<void>();
-  readonly prev = output<void>();
-  readonly next = output<void>();
   // Semantic "back to list" output; not a DOM element's close event.
   // eslint-disable-next-line @angular-eslint/no-output-native
   readonly close = output<void>();
@@ -224,9 +220,9 @@ export class ReaderViewComponent {
       this.readerMode.reset();
       this.cancelRestore();
       // A new article starts at the top, with a fresh, collapsed contents list
-      // and its toolbar presented — prev/next reuse this instance, and a bar
-      // the previous article's reading retracted must not open the next one
-      // headless.
+      // and its toolbar presented — opening another entry reuses this instance,
+      // and a bar the previous article's reading retracted must not open the
+      // next one headless.
       this.toc.set([]);
       this.tocOpen.set(false);
       this.showToTop.set(false);

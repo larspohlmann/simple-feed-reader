@@ -31,24 +31,6 @@
             {{ (mode() === 'reader' ? 'reader.readerView' : 'reader.original') | transloco }}
           </button>
         }
-        <button
-          class="prev"
-          type="button"
-          [attr.aria-label]="'reader.previous' | transloco"
-          [disabled]="!hasPrev()"
-          (click)="prev.emit()"
-        >
-          <app-icon name="chevron_left" size="md" />
-        </button>
-        <button
-          class="next"
-          type="button"
-          [attr.aria-label]="'reader.next' | transloco"
-          [disabled]="!hasNext()"
-          (click)="next.emit()"
-        >
-          <app-icon name="chevron_right" size="md" />
-        </button>
       </div>
     </div>
     <article>

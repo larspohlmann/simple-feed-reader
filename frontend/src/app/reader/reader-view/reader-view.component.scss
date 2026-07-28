@@ -147,11 +147,6 @@ app-to-top-button {
   cursor: pointer;
 }
 
-.bar button:disabled {
-  color: var(--text-muted);
-  cursor: default;
-}
-
 article {
   /* The anchor for the wide layout's back button: the column the reader's eye
      follows, not the pane. See the container query below. */

@@ -106,13 +106,9 @@
         <app-reader-view
           [entry]="openEntry()"
           [tags]="openEntryTags()"
-          [hasPrev]="hasPrev()"
-          [hasNext]="hasNext()"
           (favorite)="withOpen(onFavorite)"
           (keep)="withOpen(onKeep)"
           (read)="withOpen(onToggleRead)"
-          (prev)="onPrev()"
-          (next)="onNext()"
           (close)="onCloseReader()"
         />
       </section>
@@ -154,13 +150,9 @@
             [entry]="openEntry()"
             [tags]="openEntryTags()"
             [fullscreen]="!screen.isWide()"
-            [hasPrev]="hasPrev()"
-            [hasNext]="hasNext()"
             (favorite)="withOpen(onFavorite)"
             (keep)="withOpen(onKeep)"
             (read)="withOpen(onToggleRead)"
-            (prev)="onPrev()"
-            (next)="onNext()"
             (close)="onCloseReader()"
           />
         </div>
