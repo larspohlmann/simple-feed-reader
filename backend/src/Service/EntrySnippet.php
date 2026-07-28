@@ -43,10 +43,9 @@ final class EntrySnippet
         $withoutImages = preg_replace('/<img\b[^>]*>/i', ' ', $html) ?? $html;
         $withBlockBoundariesAsSpace = preg_replace(self::BLOCK_BOUNDARY_PATTERN, ' ', $withoutImages)
             ?? $withoutImages;
-        $text = trim(html_entity_decode(strip_tags($withBlockBoundariesAsSpace), ENT_QUOTES | ENT_HTML5));
-        $text = trim((string) preg_replace('/\s+/u', ' ', $text));
+        $text = PlainText::from($withBlockBoundariesAsSpace);
 
-        if ($text === '' || \in_array(mb_strtolower($text), self::JUNK, true)) {
+        if ($text === null || \in_array(mb_strtolower($text), self::JUNK, true)) {
             return null;
         }
 

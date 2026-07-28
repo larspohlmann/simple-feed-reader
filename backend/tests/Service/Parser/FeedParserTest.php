@@ -41,7 +41,12 @@ final class FeedParserTest extends TestCase
 
         $first = $feed->entries[0];
         self::assertSame('tag:blog.example.com,2026:announcement', $first->guid);
-        self::assertSame('Big <Announcement> & More', $first->title);
+        // Titles are reduced to plain text: feeds ship entity-escaped HTML in
+        // <title> far more often than literal angle brackets, and the two are
+        // indistinguishable once the XML is decoded, so "<Announcement>" is
+        // stripped along with the "<em>" markup that would otherwise leak into
+        // the reader. The literal "&" survives as itself.
+        self::assertSame('Big & More', $first->title);
         self::assertSame('https://blog.example.com/announcement', $first->url);
         self::assertSame('Jane Doe', $first->author);
         self::assertSame('Short teaser text.', $first->summary);

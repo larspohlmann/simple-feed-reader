@@ -58,4 +58,34 @@ final class Atom10ParserTest extends TestCase
         self::assertSame('https://e/inline.jpg', $feed->entries[2]->image?->url);
         self::assertNull($feed->entries[3]->image);
     }
+
+    public function testTitlesAreReducedToPlainText(): void
+    {
+        $xml = <<<'XML'
+            <?xml version="1.0" encoding="utf-8"?>
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>The &lt;em&gt;Weekly&lt;/em&gt; Review</title>
+              <link href="https://atom.example.com/" rel="alternate"/>
+              <entry>
+                <title>An &lt;em&gt;Odyssey&lt;/em&gt; for Our Own Time</title>
+                <link rel="alternate" href="https://e/odyssey"/>
+                <id>urn:uuid:odyssey</id>
+              </entry>
+              <entry>
+                <title>&amp;#8220;Datatype&amp;#8221; is an OpenType variable font</title>
+                <link rel="alternate" href="https://e/datatype"/>
+                <id>urn:uuid:datatype</id>
+              </entry>
+            </feed>
+            XML;
+
+        $feed = $this->parse($xml);
+
+        self::assertSame('The Weekly Review', $feed->title);
+        self::assertSame('An Odyssey for Our Own Time', $feed->entries[0]->title);
+        self::assertSame(
+            "\u{201C}Datatype\u{201D} is an OpenType variable font",
+            $feed->entries[1]->title,
+        );
+    }
 }

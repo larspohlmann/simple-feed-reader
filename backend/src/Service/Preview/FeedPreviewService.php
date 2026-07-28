@@ -11,6 +11,7 @@ use App\Service\Fetch\FeedFetcherInterface;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
 use App\Service\Parser\ParsedEntry;
+use App\Service\PlainText;
 use App\Service\Scraper\HtmlItemExtractor;
 
 /**
@@ -130,15 +131,7 @@ final readonly class FeedPreviewService
 
     private function plainText(ParsedEntry $entry): string
     {
-        $html = $entry->contentHtml ?? $entry->summary;
-        if ($html === null || $html === '') {
-            return '';
-        }
-
-        $decoded = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5);
-        $collapsed = preg_replace('/\s+/u', ' ', $decoded) ?? $decoded;
-
-        return trim($collapsed);
+        return PlainText::from($entry->contentHtml ?? $entry->summary) ?? '';
     }
 
     private function snippet(string $text): string
