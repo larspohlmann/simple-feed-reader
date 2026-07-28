@@ -545,6 +545,18 @@ describe('EntryListComponent', () => {
       expect(el.querySelector('.pull-indicator')).not.toBeNull();
       expect(el.querySelector('.pull-indicator .label')).not.toBeNull();
     });
+
+    it('does not paint the tray over the skeleton while a refresh runs during the initial load', () => {
+      const el = mount({ loading: true, entries: [], refreshing: true })
+        .nativeElement as HTMLElement;
+      expect(el.querySelector('.pull-indicator')).toBeNull();
+    });
+
+    it('does not paint the tray over the empty state while a refresh runs', () => {
+      const el = mount({ loading: false, entries: [], refreshing: true })
+        .nativeElement as HTMLElement;
+      expect(el.querySelector('.pull-indicator')).toBeNull();
+    });
   });
 
   describe('refresh reveal under prefers-reduced-motion', () => {

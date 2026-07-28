@@ -146,6 +146,17 @@ export class EntryListComponent implements OnDestroy {
     if (this.dragging()) return rubberBand(this.pulled(), MAX_PULL);
     return this.refreshing() ? REFRESH_REVEAL : 0;
   });
+  /** The transform applied to both the scroller and the tray. Extracted so the
+   *  three bindings can't drift apart. */
+  readonly revealTransform = computed(() => `translateY(${this.revealOffset()}px)`);
+
+  /** The reveal only makes sense over the real list scroller. The skeleton and
+   *  empty states have no content to slide, so a refresh started from those (e.g.
+   *  tapping Refresh while the first load still spins, or refreshing an empty
+   *  feed) must not paint the tray over them. */
+  readonly revealVisible = computed(
+    () => this.revealOffset() > 0 && !this.loading() && this.entries().length > 0,
+  );
   private pullStartY = 0;
   private pullTracking = false;
 

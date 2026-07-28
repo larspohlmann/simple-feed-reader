@@ -70,12 +70,12 @@
   </div>
 </header>
 
-@if (revealOffset() > 0) {
+@if (revealVisible()) {
   <div
     class="pull-indicator"
     [class.armed]="pullArmed()"
     [class.dragging]="dragging()"
-    [style.transform]="'translateY(' + revealOffset() + 'px)'"
+    [style.transform]="revealTransform()"
     aria-hidden="true"
   >
     <div class="pill">
@@ -111,7 +111,7 @@
     class="rows magazine"
     [class.after-banner]="!!error()"
     [class.dragging]="dragging()"
-    [style.transform]="'translateY(' + revealOffset() + 'px)'"
+    [style.transform]="revealTransform()"
     #rows
     (scroll)="onRowsScroll($event)"
   >
@@ -200,7 +200,7 @@
     class="rows"
     [class.after-banner]="!!error()"
     [class.dragging]="dragging()"
-    [style.transform]="'translateY(' + revealOffset() + 'px)'"
+    [style.transform]="revealTransform()"
     #rows
     (scroll)="onRowsScroll($event)"
   >
