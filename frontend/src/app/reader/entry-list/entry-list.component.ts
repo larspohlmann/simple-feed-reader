@@ -127,10 +127,11 @@ export class EntryListComponent implements OnDestroy {
   // article's motion affordances — under prefers-reduced-motion.
   private readonly reduceMotion =
     typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // Two values, deliberately: `pull` is the damped offset the indicator is drawn
-  // at, `pulled` the finger's actual travel. Arming off the damped offset made
-  // the threshold a function of the indicator's ceiling — and against a ceiling
-  // of 100 it took ~400px of pull to arm, so the gesture never fired (#105).
+  // `pulled` is the finger's raw travel; `pullArmed` and the trigger check below
+  // arm off THIS, never off the rubber-banded revealOffset. Arming off the
+  // damped value made the threshold a function of the indicator's ceiling — and
+  // against a ceiling of 100 it took ~400px of pull to arm, so the gesture never
+  // fired (#105).
   private readonly pulled = signal(0);
   /** True only during an active downward drag. Drives the no-transition class so
    *  the content tracks the finger, and gates the pull branch of revealOffset. */
