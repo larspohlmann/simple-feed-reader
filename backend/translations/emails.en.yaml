@@ -9,3 +9,7 @@ approved:
 reset:
     subject: 'Reset your password'
     body: "Someone requested a password reset for your Simple Feed Reader\naccount.\n\nChoose a new password here:\n\n%link%\n\nThe link is valid for 24 hours and can be used once. If you did\nnot request this, ignore this message — your password is unchanged."
+admin_pending_approval:
+    subject: 'A new user is awaiting approval'
+    body: "A new user has registered and needs your approval.\n\nEmail: %applicant_email%\nSigned up via: %method%\nUsers awaiting approval: %pending_count%\n\nReview and approve them here:\n\n%review_url%"
+    method_email_password: 'email and password'
