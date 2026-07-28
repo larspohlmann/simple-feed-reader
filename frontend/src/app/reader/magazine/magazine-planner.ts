@@ -106,7 +106,7 @@ export function planMagazine(input: MagazinePlanInput): MagazineBlock[] {
     // Ending the page at the run start lets the run open its own iteration.
     const naturalLength = Math.min(template.length, remaining);
     const take = collapseEnabled
-      ? cappedBeforeCollapsingRun(ordered, index, naturalLength, complete)
+      ? cappedBeforeLongRun(ordered, index, naturalLength)
       : naturalLength;
     const slice = ordered.slice(index, index + take);
     blocks.push(...layOutPage(template, slice, page));
@@ -158,28 +158,25 @@ function distinctSources(entries: EntryDto[]): number {
   return sources.size;
 }
 
-/** Whether the run beginning at `start` is one the main loop resolves specially
- *  — collapsing it, or deferring it until its trailing flank loads — rather than
- *  laying it out flat. Mirrors the loop's own gate, so an ordinary page can be
- *  stopped before such a run instead of straddling its head. */
-function startsCollapsibleRun(ordered: EntryDto[], start: number, complete: boolean): boolean {
-  const run = detectRun(ordered, start);
-  if (run.sourceEntries.length < RUN_MIN) return false;
-  if (!complete && ordered.length - run.end < TRAILING_FLANK) return true;
-  return trailingDiverse(ordered, run.end, run.source);
+/** Whether a genuinely new same-source run — long enough that the main loop may
+ *  collapse or defer it — begins exactly at `start`. An ordinary page stops
+ *  short of such a run so it opens its own iteration rather than being straddled.
+ *  Deliberately independent of `complete`/trailing-diversity: partial and full
+ *  renders must cap at identical points, or the pre-run page reflows between
+ *  them. The source-boundary guard keeps this from firing inside a run's own
+ *  continuation (which would shred a non-collapsing run into one-entry pages).
+ *  Precondition: `start >= 1`, guaranteed by the sole caller's `ahead >= 1`. */
+function startsLongRun(ordered: EntryDto[], start: number): boolean {
+  if (ordered[start - 1].subscriptionId === ordered[start].subscriptionId) return false;
+  return detectRun(ordered, start).sourceEntries.length >= RUN_MIN;
 }
 
 /** How many entries an ordinary page may take from `index` before it reaches the
- *  head of a collapsing run — that run must open its own iteration, so the page
- *  stops short of it rather than absorbing its first entries as flat blocks. */
-function cappedBeforeCollapsingRun(
-  ordered: EntryDto[],
-  index: number,
-  naturalLength: number,
-  complete: boolean,
-): number {
+ *  head of a long run — that run must open its own iteration, so the page stops
+ *  short of it rather than absorbing its first entries as flat blocks. */
+function cappedBeforeLongRun(ordered: EntryDto[], index: number, naturalLength: number): number {
   for (let ahead = 1; ahead < naturalLength; ahead++) {
-    if (startsCollapsibleRun(ordered, index + ahead, complete)) return ahead;
+    if (startsLongRun(ordered, index + ahead)) return ahead;
   }
   return naturalLength;
 }
@@ -401,7 +398,9 @@ function toBlock(kind: EntryKind, entry: EntryDto, page: number, position: numbe
 }
 
 /** A widget owning a run's whole tail; the component previews `previewCount`
- *  rows and expands the rest in place. */
+ *  rows and expands the rest in place. `tail` is a run's entries past the
+ *  featured lead; RUN_MIN (8) > FEATURED_LEAD (3) guarantees it is non-empty, so
+ *  `tail[0]` is always defined. */
 function digest(tail: EntryDto[]): MagazineBlock {
   return {
     kind: 'group',

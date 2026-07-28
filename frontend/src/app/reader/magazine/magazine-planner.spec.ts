@@ -367,4 +367,23 @@ describe('planMagazine', () => {
     // 6 + 5 + 1 (bridged X) + 5 + 8 = 25 entries, all surfaced exactly once.
     expect(entryCount(blocks)).toBe(25);
   });
+
+  it('is prefix-stable when a non-diverse long run straddles the load boundary', () => {
+    // Regression: a run whose head is loaded but whose (single-source, non-diverse)
+    // tail is not must resolve the SAME way in the partial prefix as in the full
+    // render — else the page just before the run reflows. Partial defers the run;
+    // full lays it flat. The page ending at the run head must be identical in both.
+    const entries = [
+      ...many(12, (i) => big(i, { subscriptionId: (i % 6) + 2 })),
+      ...many(8, (i) => big(100 + i, { subscriptionId: 1, source: 'Dom' })),
+      ...many(12, (i) => big(200 + i, { subscriptionId: 2, source: 'Solo' })),
+    ];
+    const partial = planMagazine({
+      entries: entries.slice(0, 20),
+      grouping: true,
+      complete: false,
+    });
+    const full = planMagazine({ entries, grouping: true, complete: true });
+    expect(kinds(full).slice(0, partial.length)).toEqual(kinds(partial));
+  });
 });
