@@ -172,39 +172,52 @@
   }
 }
 
-/* Rubber-banded pull-to-refresh chip. Parks 44px above the first row and is
-   drawn down into view by the inline translateY as the user pulls; `pull() > 0`
-   gates its rendering so it never shows at rest. It emerges from *behind* the
-   list header, hence the z-index below that bar's.
-
-   The offset has to be measured from the bars, not from the host's top edge:
-   since #87 the bars float and the host starts at the viewport top, underneath
-   the app bar, so a plain `top: -44px` parked the chip behind it. Clearing it
-   would have taken more pull than the rubber band's ceiling allows, which is
-   why nothing whatsoever appeared while pulling (#105). */
+/* Pull-to-refresh / refresh reveal tray. A full-width row centring a pill
+   (spinner + "Refreshing…" label). Parked one --refresh-reveal above the bars and
+   drawn down by the inline translateY as the content slides — on a mobile pull, and
+   on a header/sidebar Refresh (both drive revealOffset off `refreshing()`). It
+   emerges from *behind* the list header, hence the z-index below that bar's. The
+   offset is measured from the bars, not the host's top edge: since #87 the bars
+   float and the host starts at the viewport top, so a plain negative top would park
+   the tray behind the app bar and clearing it would take more pull than the rubber
+   band allows (#105). */
 .pull-indicator {
   position: absolute;
-
-  /* The trailing `- 44px` is the park offset described above — how far the
-     chip hides above the bars — not a tap target, despite sharing the number
-     with --tap-target. */
-  top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) - 44px);
-  left: 50%;
+  top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) - var(--refresh-reveal));
+  left: 0;
+  right: 0;
+  height: var(--refresh-reveal);
   z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: var(--space-6);
-  height: var(--space-6);
-  margin-left: calc(var(--space-4) * -1);
-  border-radius: 50%;
+  pointer-events: none;
+  transition: transform 0.2s ease;
+}
+
+/* No transition while the finger is down: the tray tracks the pull 1:1. */
+.pull-indicator.dragging {
+  transition: none;
+}
+
+.pull-indicator .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
   background: var(--surface-1);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-1, 0 1px 4px rgb(0 0 0 / 15%));
   color: var(--text-secondary);
+  font-size: var(--fs-sm);
 }
 
-.pull-indicator.armed {
+.pull-indicator .label {
+  white-space: nowrap;
+}
+
+.pull-indicator.armed .pill {
   color: var(--accent);
   border-color: var(--accent);
 }
@@ -233,11 +246,19 @@
   min-height: 0;
   overflow: auto;
 
+  /* Animates the reveal open/closed (snap-back, and the button-driven slide);
+     removed under .dragging so the content tracks the finger 1:1. */
+  transition: transform 0.2s ease;
+
   /* Reserves both floating bars. Constant: it tracks neither the app bar's
      hidden state nor this list's collapsed one, so the rows never move (#87).
      They pass behind the bars instead, which is what makes retracting them
      actually give the reader more to look at. */
   padding-top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
+}
+
+.rows.dragging {
+  transition: none;
 }
 
 /* An error banner sits above the scroller in the flow and takes the reservation
@@ -324,6 +345,11 @@
 
   .refresh.spinning app-icon {
     animation: none;
+  }
+
+  .rows,
+  .pull-indicator {
+    transition: none;
   }
 }
 

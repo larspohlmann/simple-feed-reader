@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { provideRouter } from '@angular/router';
-import { EntryListComponent } from './entry-list.component';
+import { EntryListComponent, REFRESH_REVEAL } from './entry-list.component';
 import { ListScrollMemory } from '../list-scroll-memory';
 import { CatalogStore } from '../../discover/catalog.store';
 import { prefetchMargin } from '../paging';
@@ -252,6 +252,14 @@ describe('EntryListComponent', () => {
       f.componentInstance.refresh.subscribe(() => hits++);
       pullBy(f, 140);
       expect(hits).toBe(0);
+    });
+
+    it('shows the spinner but no label during the pull (the label is for the running refresh)', () => {
+      const f = mount();
+      pullBy(f, 140, false);
+      const chip = (f.nativeElement as HTMLElement).querySelector('.pull-indicator')!;
+      expect(chip).not.toBeNull();
+      expect(chip.querySelector('.label')).toBeNull();
     });
   });
 
@@ -517,6 +525,55 @@ describe('EntryListComponent', () => {
 
       f.componentInstance.scrollToTop();
       expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
+    });
+  });
+
+  describe('refresh reveal', () => {
+    it('holds the reveal open while a refresh runs and closes it after', () => {
+      const f = mount({ refreshing: true });
+      expect(f.componentInstance.revealOffset()).toBe(REFRESH_REVEAL);
+
+      f.componentRef.setInput('refreshing', false);
+      f.detectChanges();
+      expect(f.componentInstance.revealOffset()).toBe(0);
+    });
+
+    it('opens the reveal from a button refresh with no pull, and labels it', () => {
+      // The list-header button and the sidebar button both just flip refreshing();
+      // the reveal reads that, not the gesture, so no pull is involved here.
+      const el = mount({ refreshing: true }).nativeElement as HTMLElement;
+      expect(el.querySelector('.pull-indicator')).not.toBeNull();
+      expect(el.querySelector('.pull-indicator .label')).not.toBeNull();
+    });
+  });
+
+  describe('refresh reveal under prefers-reduced-motion', () => {
+    const realMatchMedia = window.matchMedia;
+
+    beforeEach(() => {
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        value: (query: string) => ({
+          matches: query.includes('prefers-reduced-motion'),
+          media: query,
+          onchange: null,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+          addListener: () => undefined,
+          removeListener: () => undefined,
+          dispatchEvent: () => false,
+        }),
+      });
+    });
+
+    afterEach(() => {
+      Object.defineProperty(window, 'matchMedia', { writable: true, value: realMatchMedia });
+    });
+
+    it('does not reveal, even while refreshing', () => {
+      const f = mount({ refreshing: true });
+      expect(f.componentInstance.revealOffset()).toBe(0);
+      expect((f.nativeElement as HTMLElement).querySelector('.pull-indicator')).toBeNull();
     });
   });
 });
