@@ -21,11 +21,18 @@ function pickImage(html: string | null): string | null {
   return null;
 }
 
+/** A body that is nothing but a serialised null. Python feed generators emit
+ *  "None" for an absent field, JS ones "null"/"undefined"; Die Zeit ships the
+ *  first after its image. Such a body carries no copy, so a preview treats it as
+ *  empty and falls back to title-only. */
+const NULL_LEAK = /^(none|null|undefined)$/i;
+
 /** Plain-text snippet from HTML, whitespace-collapsed. */
 export function textSnippet(html: string | null): string {
   if (!html) return '';
   const doc = new DOMParser().parseFromString(html, 'text/html');
-  return (doc.body.textContent ?? '').replace(/\s+/g, ' ').trim();
+  const text = (doc.body.textContent ?? '').replace(/\s+/g, ' ').trim();
+  return NULL_LEAK.test(text) ? '' : text;
 }
 
 export interface EntryImage {
