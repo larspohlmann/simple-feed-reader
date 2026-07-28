@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { EntrySplitComponent } from './entry-split.component';
 import { EntryDto } from '../models';
@@ -25,7 +26,10 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
 });
 
 function mount(e: EntryDto, side: 'left' | 'right' = 'right') {
-  TestBed.configureTestingModule({ imports: [EntrySplitComponent, provideTranslocoTesting()] });
+  TestBed.configureTestingModule({
+    imports: [EntrySplitComponent, provideTranslocoTesting()],
+    providers: [provideRouter([])],
+  });
   const f = TestBed.createComponent(EntrySplitComponent);
   f.componentRef.setInput('entry', e);
   f.componentRef.setInput('imageSide', side);

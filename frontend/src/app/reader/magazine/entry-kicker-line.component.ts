@@ -1,5 +1,6 @@
 // src/app/reader/magazine/entry-kicker-line.component.ts
 import { Component, computed, inject, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { EntryDto } from '../models';
 import { relativeTime } from '../format';
 import { LanguageService } from '../../core/language.service';
@@ -14,7 +15,7 @@ import { FaviconComponent } from '../../shared/favicon/favicon.component';
  */
 @Component({
   selector: 'app-entry-kicker-line',
-  imports: [FaviconComponent],
+  imports: [FaviconComponent, RouterLink],
   templateUrl: './entry-kicker-line.component.html',
   styleUrl: './entry-kicker-line.component.scss',
 })

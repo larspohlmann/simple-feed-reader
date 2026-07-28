@@ -13,6 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { Subscription, timeout } from 'rxjs';
+import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
@@ -80,6 +81,7 @@ function slugify(text: string): string {
     SpinnerComponent,
     SourceTagsComponent,
     ToTopButtonComponent,
+    RouterLink,
     TranslocoPipe,
   ],
   templateUrl: './reader-view.component.html',

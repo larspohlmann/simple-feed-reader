@@ -33,7 +33,10 @@ const entry: EntryDto = {
 
 describe('EntryCompactComponent', () => {
   function mount() {
-    TestBed.configureTestingModule({ imports: [EntryCompactComponent, provideTranslocoTesting()] });
+    TestBed.configureTestingModule({
+      imports: [EntryCompactComponent, provideTranslocoTesting()],
+      providers: [provideRouter([])],
+    });
     const f = TestBed.createComponent(EntryCompactComponent);
     f.componentRef.setInput('entry', entry);
     f.detectChanges();

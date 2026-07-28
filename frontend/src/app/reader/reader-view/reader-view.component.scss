@@ -187,6 +187,17 @@ article {
   text-decoration: none;
 }
 
+/* The source name is a link to the feed's list, but it names the source rather
+   than inviting an action, so it keeps the muted meta colour instead of the
+   accent the "open original" link takes, underlining only on hover. */
+.meta a.source-link {
+  color: inherit;
+}
+
+.meta a.source-link:hover {
+  text-decoration: underline;
+}
+
 /* The only icon in the app that sits in a genuine run of text rather than in a
    flex row, so it is the only place vertical alignment is visible at all. It
    reads as a superscript mark on the link -- like a footnote marker -- rather

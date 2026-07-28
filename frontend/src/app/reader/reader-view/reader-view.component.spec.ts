@@ -1,4 +1,5 @@
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { of, Subject } from 'rxjs';
 import { ReaderViewComponent } from './reader-view.component';
@@ -57,7 +58,10 @@ describe('ReaderViewComponent', () => {
     loadMock = jest.fn(() => of<ReaderContent>({ status: 'failed', reason: 'fetch', url: null }));
     TestBed.configureTestingModule({
       imports: [ReaderViewComponent, provideTranslocoTesting()],
-      providers: [{ provide: ReaderContentService, useValue: { load: loadMock } }],
+      providers: [
+        provideRouter([]),
+        { provide: ReaderContentService, useValue: { load: loadMock } },
+      ],
     });
   });
 
