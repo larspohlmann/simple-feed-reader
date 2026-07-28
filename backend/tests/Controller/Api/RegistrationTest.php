@@ -371,8 +371,18 @@ final class RegistrationTest extends WebTestCase
 
     public function testEachActiveAdminIsNotifiedInTheirOwnLanguage(): void
     {
-        $this->factory()->create('en-boss@example.com', status: UserStatus::Active, roles: ['ROLE_ADMIN'], locale: 'en');
-        $this->factory()->create('de-boss@example.com', status: UserStatus::Active, roles: ['ROLE_ADMIN'], locale: 'de');
+        $this->factory()->create(
+            'en-boss@example.com',
+            status: UserStatus::Active,
+            roles: ['ROLE_ADMIN'],
+            locale: 'en',
+        );
+        $this->factory()->create(
+            'de-boss@example.com',
+            status: UserStatus::Active,
+            roles: ['ROLE_ADMIN'],
+            locale: 'de',
+        );
 
         $this->register();
         $this->post('/api/auth/verify-email', ['token' => $this->tokenFromMail()]);
