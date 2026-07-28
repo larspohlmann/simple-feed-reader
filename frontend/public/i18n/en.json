@@ -235,6 +235,7 @@
     "filterByTag": "Filter by {{name}}",
     "moreFrom": "More from {{source}}",
     "moreFromCount": "{{count}} more from {{source}}",
+    "showLess": "Show less",
     "backToList": "Back to list",
     "backToTop": "Back to top",
     "contents": "Contents",

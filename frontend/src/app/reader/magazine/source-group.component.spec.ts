@@ -79,4 +79,23 @@ describe('SourceGroupComponent', () => {
     (f.nativeElement.querySelector('.compact') as HTMLElement).click();
     expect(open).toHaveBeenCalled();
   });
+
+  it('expands to reveal the whole tail and collapses again', () => {
+    const f = mount([e(1), e(2), e(3), e(4), e(5), e(6), e(7)], 4);
+    const el = f.nativeElement as HTMLElement;
+    const button = el.querySelector('button.more') as HTMLButtonElement;
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    expect(el.querySelectorAll('app-entry-compact').length).toBe(4);
+
+    button.click();
+    f.detectChanges();
+    expect(el.querySelectorAll('app-entry-compact').length).toBe(7);
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(button.textContent).toContain('Show less');
+
+    button.click();
+    f.detectChanges();
+    expect(el.querySelectorAll('app-entry-compact').length).toBe(4);
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+  });
 });

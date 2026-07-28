@@ -19,8 +19,14 @@
     }
   </div>
   @if (hiddenCount() > 0) {
-    <p class="more">
-      {{ 'reader.moreFromCount' | transloco: { count: hiddenCount(), source: source() } }}
-    </p>
+    <button class="more" type="button" [attr.aria-expanded]="expanded()" (click)="toggle()">
+      @if (expanded()) {
+        {{ 'reader.showLess' | transloco }}
+        <app-icon name="expand_less" size="sm" />
+      } @else {
+        {{ 'reader.moreFromCount' | transloco: { count: hiddenCount(), source: source() } }}
+        <app-icon name="expand_more" size="sm" />
+      }
+    </button>
   }
 </div>
