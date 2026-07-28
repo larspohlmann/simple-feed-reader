@@ -220,7 +220,7 @@ final class AccountMailerTest extends TestCase
         yield 'admin pending approval' => [static function (AccountMailer $m) use ($user): void {
             $m->sendPendingApprovalNotice($user, new PendingApprovalNotice(
                 'newcomer@example.com',
-                \App\Enum\RegistrationMethod::EmailPassword,
+                RegistrationMethod::EmailPassword,
                 null,
                 'https://feeds.example.com/admin/users',
                 1,

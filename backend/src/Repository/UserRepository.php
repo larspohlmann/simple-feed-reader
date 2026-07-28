@@ -102,10 +102,14 @@ class UserRepository extends ServiceEntityRepository implements UserLoaderInterf
      *
      * The role check is done in PHP rather than in the query on purpose. `roles`
      * is a portable JSON-as-text column on both SQLite (tests) and MySQL (prod),
-     * and the active set is tiny — every account passes a human (see
-     * findForAdminList) — so loading it and inspecting the decoded roles is both
-     * correct across dialects and simpler than a `LIKE` that would still need
-     * this same in-PHP recheck to reject a `ROLE_ADMINISTRATOR` substring.
+     * so a portable role query would be a `LIKE` that STILL needs this same
+     * in-PHP recheck to reject a `ROLE_ADMINISTRATOR` substring. This loads the
+     * whole active userbase to pick out the handful of admins, which is the real
+     * cost — acceptable because a queue-entry is a rare event (a human approves
+     * every account, so there is no growth engine driving the active set; see
+     * findForAdminList) and this runs off the request's critical path. If that
+     * userbase ever outgrows memory, a `LIKE '%ROLE_ADMIN%'` prefilter narrows
+     * the hydration set while keeping the recheck.
      *
      * @return list<User>
      */

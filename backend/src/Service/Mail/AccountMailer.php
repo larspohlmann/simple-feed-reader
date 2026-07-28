@@ -14,7 +14,7 @@ use Symfony\Component\Mime\Email;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
- * The only three emails the application sends. Plain text on purpose: the API
+ * The account emails the application sends. Plain text on purpose: the API
  * renders no HTML anywhere else, and plain bodies survive every client. Subject
  * and body are translated into the recipient's own language (User::$locale).
  */
