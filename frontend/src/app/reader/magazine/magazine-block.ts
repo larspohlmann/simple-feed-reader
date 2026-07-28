@@ -27,8 +27,10 @@ export type MagazineBlock =
       kind: 'group';
       subscriptionId: number;
       source: string;
+      /** The run's whole owned tail — the widget previews some and expands the rest. */
       entries: EntryDto[];
-      moreCount: number;
+      /** How many rows the widget shows before "Show more". */
+      previewCount: number;
     };
 
 /** Measured at 390px viewport width. The planner's budget is in these units;

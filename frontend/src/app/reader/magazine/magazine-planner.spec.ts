@@ -41,7 +41,7 @@ const many = (n: number, make: (i: number) => EntryDto): EntryDto[] =>
 const kinds = (bs: MagazineBlock[]) => bs.map((b) => b.kind);
 
 const entryCount = (bs: MagazineBlock[]): number =>
-  bs.reduce((n, b) => n + (b.kind === 'group' ? b.entries.length + b.moreCount : 1), 0);
+  bs.reduce((n, b) => n + (b.kind === 'group' ? b.entries.length : 1), 0);
 
 const trigramEntropy = (ks: string[]): number => {
   const counts = new Map<string, number>();
@@ -175,14 +175,16 @@ describe('planMagazine', () => {
     expect(kinds(blocks)).not.toContain('thumb');
   });
 
-  it('does not group when one source dominates the view', () => {
+  it('does not collapse when the leading window is effectively single-source', () => {
+    // Fewer than MIN_VIEW_SOURCES distinct sources in the leading window ->
+    // collapse is disabled entirely, so a mono view renders flat and smooth.
     const entries = many(40, (i) => big(i, { subscriptionId: 1 }));
     const blocks = planMagazine({ entries, grouping: true, complete: true });
     expect(kinds(blocks)).not.toContain('group');
     expect(entryCount(blocks)).toBe(40);
   });
 
-  it('groups a minority source and bounds what the digest consumes', () => {
+  it('collapses a qualifying run into a featured lead plus a tail-owning widget', () => {
     const entries = [
       ...many(30, (i) => big(i, { subscriptionId: (i % 6) + 2 })),
       ...many(8, (i) => big(100 + i, { subscriptionId: 1, source: 'Burst' })),
@@ -191,7 +193,15 @@ describe('planMagazine', () => {
     const blocks = planMagazine({ entries, grouping: true, complete: true });
     const group = blocks.find((b) => b.kind === 'group');
     expect(group).toBeDefined();
-    expect(group!.kind === 'group' && group!.entries.length).toBeLessThanOrEqual(3);
+    // Widget owns the whole tail: run of 8, minus 3 featured, = 5 entries.
+    expect(group!.kind === 'group' && group!.entries.length).toBe(5);
+    expect(group!.kind === 'group' && group!.previewCount).toBe(4);
+    // The 3 newest of the run led as normal blocks, before the widget.
+    const groupIndex = blocks.indexOf(group!);
+    const featured = blocks
+      .slice(0, groupIndex)
+      .filter((b) => b.kind !== 'group' && b.entry.source === 'Burst');
+    expect(featured.length).toBe(3);
     expect(entryCount(blocks)).toBe(68);
   });
 
@@ -238,5 +248,123 @@ describe('planMagazine', () => {
     ids.forEach((id, position) => {
       expect(Math.abs(id - 1 - position)).toBeLessThanOrEqual(lookAhead);
     });
+  });
+
+  it('collapses a dominant source while the view stays mixed', () => {
+    const entries = [
+      ...many(6, (i) => big(i, { subscriptionId: i + 2, source: `s${i + 2}` })),
+      ...many(12, (i) => big(100 + i, { subscriptionId: 1, source: 'Dom' })),
+      ...many(6, (i) => big(200 + i, { subscriptionId: i + 2, source: `s${i + 2}` })),
+    ];
+    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const group = blocks.find((b) => b.kind === 'group');
+    expect(group).toBeDefined();
+    expect(group!.kind === 'group' && group!.entries.length).toBe(9); // 12 - 3 featured
+    expect(group!.kind === 'group' && group!.previewCount).toBe(4);
+    expect(entryCount(blocks)).toBe(24);
+  });
+
+  it('leaves a run flat when the trailing window lacks two other sources', () => {
+    // Only ONE other source ever follows the run -> not enough to surface.
+    const entries = [
+      ...many(6, (i) => big(i, { subscriptionId: i + 2, source: `s${i + 2}` })),
+      ...many(10, (i) => big(100 + i, { subscriptionId: 1, source: 'Dom' })),
+      ...many(10, (i) => big(200 + i, { subscriptionId: 2, source: 'Solo' })),
+    ];
+    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    expect(kinds(blocks)).not.toContain('group');
+    expect(entryCount(blocks)).toBe(26);
+  });
+
+  it('merges two same-source segments across a single foreign post', () => {
+    const entries = [
+      ...many(6, (i) => big(i, { subscriptionId: i + 2, source: `s${i + 2}` })),
+      ...many(6, (i) => big(100 + i, { subscriptionId: 1, source: 'Dom' })),
+      big(150, { subscriptionId: 9, source: 'Interloper' }),
+      ...many(6, (i) => big(160 + i, { subscriptionId: 1, source: 'Dom' })),
+      ...many(8, (i) => big(200 + i, { subscriptionId: i + 2, source: `s${i + 2}` })),
+    ];
+    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const group = blocks.find((b) => b.kind === 'group');
+    expect(group).toBeDefined();
+    // Both 6-entry segments merge into one run of 12, minus 3 featured = 9.
+    expect(group!.kind === 'group' && group!.entries.length).toBe(9);
+    // The bridged foreign post is surfaced as its own block AFTER the widget.
+    const groupIndex = blocks.indexOf(group!);
+    const surfaced = blocks
+      .slice(groupIndex + 1)
+      .find((b) => b.kind !== 'group' && b.entry.id === 150);
+    expect(surfaced).toBeDefined();
+    expect(entryCount(blocks)).toBe(27);
+  });
+
+  it('does not merge across a gap of two foreign posts', () => {
+    const entries = [
+      ...many(6, (i) => big(i, { subscriptionId: i + 2, source: `s${i + 2}` })),
+      ...many(8, (i) => big(100 + i, { subscriptionId: 1, source: 'Dom' })),
+      big(150, { subscriptionId: 9, source: 'A' }),
+      big(151, { subscriptionId: 10, source: 'B' }),
+      ...many(8, (i) => big(200 + i, { subscriptionId: i + 2, source: `s${i + 2}` })),
+    ];
+    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const group = blocks.find((b) => b.kind === 'group');
+    expect(group).toBeDefined();
+    // Run stops at the 2-post gap: 8 - 3 featured = 5, NOT merged past it.
+    expect(group!.kind === 'group' && group!.entries.length).toBe(5);
+    expect(entryCount(blocks)).toBe(24);
+  });
+
+  it('re-features each separate run of the same source', () => {
+    const entries = [
+      ...many(6, (i) => big(i, { subscriptionId: i + 2, source: `s${i + 2}` })),
+      ...many(8, (i) => big(100 + i, { subscriptionId: 1, source: 'Dom' })),
+      big(150, { subscriptionId: 9, source: 'A' }),
+      big(151, { subscriptionId: 10, source: 'B' }),
+      big(152, { subscriptionId: 11, source: 'C' }),
+      ...many(8, (i) => big(160 + i, { subscriptionId: 1, source: 'Dom' })),
+      ...many(6, (i) => big(200 + i, { subscriptionId: i + 2, source: `s${i + 2}` })),
+    ];
+    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const groups = blocks.filter((b) => b.kind === 'group');
+    expect(groups.length).toBe(2);
+    // 6 + 8 + 3 (A/B/C) + 8 + 6 = 31 entries, all surfaced exactly once.
+    expect(entryCount(blocks)).toBe(31);
+  });
+
+  it('holds a qualifying run back until its trailing window loads', () => {
+    const entries = [
+      ...many(6, (i) => big(i, { subscriptionId: i + 2, source: `s${i + 2}` })),
+      ...many(8, (i) => big(100 + i, { subscriptionId: 1, source: 'Dom' })),
+      big(200, { subscriptionId: 3, source: 's3' }),
+      big(201, { subscriptionId: 4, source: 's4' }),
+    ];
+    const held = planMagazine({ entries, grouping: true, complete: false });
+    const done = planMagazine({ entries, grouping: true, complete: true });
+    expect(held.some((b) => b.kind === 'group')).toBe(false);
+    expect(done.some((b) => b.kind === 'group')).toBe(true);
+  });
+
+  it('is prefix-stable when a collapsing run’s page grows', () => {
+    const entries = [
+      ...many(6, (i) => big(i, { subscriptionId: i + 2, source: `s${i + 2}` })),
+      ...many(12, (i) => big(100 + i, { subscriptionId: 1, source: 'Dom' })),
+      ...many(102, (i) => big(200 + i, { subscriptionId: (i % 6) + 2 })),
+    ];
+    const first = planMagazine({ entries: entries.slice(0, 60), grouping: true, complete: false });
+    const full = planMagazine({ entries, grouping: true, complete: true });
+    expect(kinds(full).slice(0, first.length)).toEqual(kinds(first));
+  });
+
+  it('emits every entry exactly once even when runs collapse and bridge', () => {
+    const entries = [
+      ...many(6, (i) => big(i, { subscriptionId: i + 2, source: `s${i + 2}` })),
+      ...many(5, (i) => big(100 + i, { subscriptionId: 1, source: 'Dom' })),
+      big(150, { subscriptionId: 9, source: 'X' }),
+      ...many(5, (i) => big(160 + i, { subscriptionId: 1, source: 'Dom' })),
+      ...many(8, (i) => big(200 + i, { subscriptionId: (i % 6) + 2 })),
+    ];
+    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    // 6 + 5 + 1 (bridged X) + 5 + 8 = 25 entries, all surfaced exactly once.
+    expect(entryCount(blocks)).toBe(25);
   });
 });
