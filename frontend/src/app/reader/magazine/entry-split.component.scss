@@ -39,6 +39,11 @@
   object-fit: cover;
   border-radius: var(--radius);
   display: block;
+
+  /* Drop the image onto the top of the kicker's written text, not its line-box
+     top. `align-items: flex-start` pins it to the line box, which sits ~0.35em
+     above where the letters actually begin, leaving the image looking too high. */
+  margin-top: 0.35em;
 }
 
 .body {
