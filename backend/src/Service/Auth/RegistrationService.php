@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Auth;
 
 use App\Entity\User;
+use App\Enum\RegistrationMethod;
 use App\Enum\TokenPurpose;
 use App\Enum\UserStatus;
+use App\Event\UserAwaitingApproval;
 use App\Repository\UserRepository;
 use App\Security\PasswordWorkEqualizerInterface;
 use App\Service\Mail\AccountMailer;
@@ -14,6 +16,7 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 final readonly class RegistrationService
 {
@@ -25,6 +28,7 @@ final readonly class RegistrationService
         private AccountMailer $mailer,
         private ClockInterface $clock,
         private PasswordWorkEqualizerInterface $work,
+        private EventDispatcherInterface $events,
     ) {
     }
 
@@ -106,6 +110,11 @@ final readonly class RegistrationService
         if (UserStatus::PendingVerification === $user->getStatus()) {
             $user->setStatus(UserStatus::PendingApproval);
             $this->em->flush();
+
+            // After the flush: the account is now persisted in the queue, so a
+            // listener that counts it sees the true number, and a failed flush
+            // above means no notification goes out.
+            $this->events->dispatch(new UserAwaitingApproval($user, RegistrationMethod::EmailPassword));
         }
 
         return $user->getStatus();

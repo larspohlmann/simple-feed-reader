@@ -31,11 +31,13 @@ final readonly class UserFactory
         string $password = 'correct-horse-battery',
         UserStatus $status = UserStatus::Active,
         array $roles = [],
+        string $locale = 'en',
     ): User {
         $createdAt = new \DateTimeImmutable('2026-07-01 10:00:00');
         $user = new User($email, $createdAt);
         $user->setStatus($status);
         $user->setRoles($roles);
+        $user->setLocale($locale);
         $user->setPasswordHash($this->hasher->hashPassword($user, $password), $createdAt);
 
         $this->em->persist($user);

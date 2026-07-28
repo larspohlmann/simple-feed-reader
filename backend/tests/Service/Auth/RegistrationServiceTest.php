@@ -12,6 +12,7 @@ use App\Service\Mail\AccountMailer;
 use App\Tests\DbTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class RegistrationServiceTest extends DbTestCase
@@ -51,6 +52,7 @@ final class RegistrationServiceTest extends DbTestCase
             $mailer,
             $clock,
             $work,
+            new EventDispatcher(),
         );
     }
 

@@ -346,6 +346,71 @@ final class RegistrationTest extends WebTestCase
         self::assertSame(UserStatus::PendingApproval, $user->getStatus());
     }
 
+    public function testVerificationNotifiesAnActiveAdmin(): void
+    {
+        $this->factory()->create('boss@example.com', status: UserStatus::Active, roles: ['ROLE_ADMIN']);
+
+        $this->register();
+        $token = $this->tokenFromMail();
+
+        $this->post('/api/auth/verify-email', ['token' => $token]);
+        self::assertResponseIsSuccessful();
+
+        // The kernel reboots between requests, so the only mail attributable to
+        // this verify-email request is the admin notification.
+        self::assertEmailCount(1);
+        $mail = self::getMailerMessage();
+        self::assertInstanceOf(Email::class, $mail);
+        self::assertSame('boss@example.com', $mail->getTo()[0]->getAddress());
+
+        $body = (string) $mail->getTextBody();
+        self::assertStringContainsString('newcomer@example.com', $body);
+        self::assertStringContainsString('/admin/users', $body);
+        self::assertStringContainsString('Users awaiting approval: 1', $body);
+    }
+
+    public function testEachActiveAdminIsNotifiedInTheirOwnLanguage(): void
+    {
+        $this->factory()->create('en-boss@example.com', status: UserStatus::Active, roles: ['ROLE_ADMIN'], locale: 'en');
+        $this->factory()->create('de-boss@example.com', status: UserStatus::Active, roles: ['ROLE_ADMIN'], locale: 'de');
+
+        $this->register();
+        $this->post('/api/auth/verify-email', ['token' => $this->tokenFromMail()]);
+
+        self::assertEmailCount(2);
+
+        $byRecipient = [];
+        foreach (self::getMailerMessages() as $message) {
+            self::assertInstanceOf(Email::class, $message);
+            $byRecipient[$message->getTo()[0]->getAddress()] = $message->getSubject();
+        }
+
+        self::assertSame('A new user is awaiting approval', $byRecipient['en-boss@example.com']);
+        self::assertSame('Ein neuer Nutzer wartet auf Freischaltung', $byRecipient['de-boss@example.com']);
+    }
+
+    public function testInactiveAdminsAndNonAdminsAreNotNotified(): void
+    {
+        $this->factory()->create('suspended-boss@example.com', status: UserStatus::Suspended, roles: ['ROLE_ADMIN']);
+        $this->factory()->create('plain-user@example.com', status: UserStatus::Active);
+
+        $this->register();
+        $this->post('/api/auth/verify-email', ['token' => $this->tokenFromMail()]);
+
+        self::assertEmailCount(0);
+    }
+
+    public function testVerificationWithNoActiveAdminSendsNothingAndDoesNotError(): void
+    {
+        $this->register();
+
+        $this->post('/api/auth/verify-email', ['token' => $this->tokenFromMail()]);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['status' => 'pending_approval'], $this->payload());
+        self::assertEmailCount(0);
+    }
+
     /**
      * A verification link is single-use. The second click - the one the SPA
      * causes by reloading the page - must fail closed, not silently succeed.
