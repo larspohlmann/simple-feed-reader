@@ -1,0 +1,11 @@
+<p class="kicker">
+  @if (showDot()) {
+    <span class="dot" [class.on]="!entry().isRead" aria-hidden="true"></span>
+  }
+  @if (showSource()) {
+    <app-favicon [url]="entry().faviconUrl" [size]="faviconSize()" />
+    <span class="source">{{ entry().source }}</span>
+    <span class="separator" aria-hidden="true">·</span>
+  }
+  <span class="when">{{ when() }}</span>
+</p>

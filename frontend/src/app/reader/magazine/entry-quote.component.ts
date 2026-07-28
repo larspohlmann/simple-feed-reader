@@ -1,13 +1,13 @@
 // src/app/reader/magazine/entry-quote.component.ts
 import { Component, computed } from '@angular/core';
 import { textSnippet } from '../preview-image';
-import { FaviconComponent } from '../../shared/favicon/favicon.component';
+import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
 import { EntryBlockBase } from './entry-block-base';
 
 @Component({
   selector: 'app-entry-quote',
-  imports: [FaviconComponent, SourceTagsComponent],
+  imports: [EntryKickerLineComponent, SourceTagsComponent],
   templateUrl: './entry-quote.component.html',
   styleUrl: './entry-quote.component.scss',
 })
