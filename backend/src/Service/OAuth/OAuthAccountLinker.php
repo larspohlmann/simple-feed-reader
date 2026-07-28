@@ -7,11 +7,14 @@ namespace App\Service\OAuth;
 use App\Dto\OAuth\OAuthIdentity;
 use App\Entity\User;
 use App\Entity\UserIdentity;
+use App\Enum\RegistrationMethod;
 use App\Enum\UserStatus;
+use App\Event\UserAwaitingApproval;
 use App\Repository\UserIdentityRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Turns a provider-verified identity into the local user it belongs to,
@@ -39,6 +42,7 @@ final readonly class OAuthAccountLinker
         private UserRepository $users,
         private UserIdentityRepository $identities,
         private ClockInterface $clock,
+        private EventDispatcherInterface $events,
     ) {
     }
 
@@ -53,10 +57,25 @@ final readonly class OAuthAccountLinker
             return $this->refresh($existing, $identity);
         }
 
-        $user = $this->findLinkTarget($identity) ?? $this->createUser($identity);
+        $linkTarget = $this->findLinkTarget($identity);
+
+        if (null === $linkTarget) {
+            $user = $this->createUser($identity);
+            $enteredApprovalQueue = true;
+        } else {
+            $user = $linkTarget;
+            $enteredApprovalQueue = $this->claimIfUnverified($linkTarget);
+        }
 
         $this->attach($user, $identity);
         $this->em->flush();
+
+        if ($enteredApprovalQueue) {
+            // After the flush, for the same reason RegistrationService dispatches
+            // after its own: the account is persisted in the queue before an
+            // admin is told to look at it.
+            $this->events->dispatch(new UserAwaitingApproval($user, RegistrationMethod::OAuth, $identity->provider));
+        }
 
         return $user;
     }
@@ -93,22 +112,8 @@ final readonly class OAuthAccountLinker
         }
 
         \assert(null !== $identity->email);
-        $user = $this->users->findOneByEmail($identity->email);
 
-        if (null === $user) {
-            return null;
-        }
-
-        if (UserStatus::PendingVerification === $user->getStatus()) {
-            $this->claimUnverifiedAccount($user);
-        }
-
-        // Every other status is returned untouched. OAuth proves an address; it
-        // does not overrule an admin, so linking never revives a rejected
-        // account, never unsuspends a suspended one, and never re-stamps an
-        // active account's password — that last one would revoke the live
-        // sessions of a user who did nothing but sign in a second way.
-        return $user;
+        return $this->users->findOneByEmail($identity->email);
     }
 
     /**
@@ -157,11 +162,25 @@ final readonly class OAuthAccountLinker
      * legitimate case, where the abandoned registration is the user's own.
      * Nothing is lost by claiming the row, because an unverified account holds
      * nothing but an address nobody has proven and a password nobody has used.
+     *
+     * Returns whether this call promoted the account into the approval queue, so
+     * resolve() knows when a fresh approval is now pending. Every status other
+     * than pending_verification is returned untouched: OAuth proves an address,
+     * it does not overrule an admin, so linking never revives a rejected
+     * account, never unsuspends a suspended one, and never re-stamps an active
+     * account's password — that last one would revoke the live sessions of a
+     * user who did nothing but sign in a second way.
      */
-    private function claimUnverifiedAccount(User $user): void
+    private function claimIfUnverified(User $user): bool
     {
+        if (UserStatus::PendingVerification !== $user->getStatus()) {
+            return false;
+        }
+
         $user->setStatus(UserStatus::PendingApproval);
         $user->setPasswordHash(null, $this->clock->now());
+
+        return true;
     }
 
     /**

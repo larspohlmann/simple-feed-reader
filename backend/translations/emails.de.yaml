@@ -9,3 +9,7 @@ approved:
 reset:
     subject: 'Setze dein Passwort zurück'
     body: "Für dein Simple-Feed-Reader-Konto wurde ein Zurücksetzen des\nPassworts angefordert.\n\nWähle hier ein neues Passwort:\n\n%link%\n\nDer Link ist 24 Stunden gültig und kann einmal verwendet werden. Falls du\ndies nicht angefordert hast, ignoriere diese Nachricht — dein Passwort bleibt unverändert."
+admin_pending_approval:
+    subject: 'Ein neuer Nutzer wartet auf Freischaltung'
+    body: "Ein neuer Nutzer hat sich registriert und benötigt deine Freischaltung.\n\nE-Mail: %applicant_email%\nRegistriert über: %method%\nNutzer, die auf Freischaltung warten: %pending_count%\n\nHier prüfen und freischalten:\n\n%review_url%"
+    method_email_password: 'E-Mail und Passwort'

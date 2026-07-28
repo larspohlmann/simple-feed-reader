@@ -93,4 +93,48 @@ class UserRepository extends ServiceEntityRepository implements UserLoaderInterf
 
         return $users;
     }
+
+    /**
+     * The admins to notify when a new account needs approving: those who can
+     * actually act on it. A suspended or rejected admin is not a working
+     * recipient, so active status gates the list the same way the firewall
+     * gates the admin API.
+     *
+     * The role check is done in PHP rather than in the query on purpose. `roles`
+     * is a portable JSON-as-text column on both SQLite (tests) and MySQL (prod),
+     * so a portable role query would be a `LIKE` that STILL needs this same
+     * in-PHP recheck to reject a `ROLE_ADMINISTRATOR` substring. This loads the
+     * whole active userbase to pick out the handful of admins, which is the real
+     * cost — acceptable because a queue-entry is a rare event (a human approves
+     * every account, so there is no growth engine driving the active set; see
+     * findForAdminList) and this runs off the request's critical path. If that
+     * userbase ever outgrows memory, a `LIKE '%ROLE_ADMIN%'` prefilter narrows
+     * the hydration set while keeping the recheck.
+     *
+     * @return list<User>
+     */
+    public function findActiveAdmins(): array
+    {
+        /** @var list<User> $active */
+        $active = $this->createQueryBuilder('u')
+            ->andWhere('u.status = :active')
+            ->setParameter('active', UserStatus::Active)
+            ->getQuery()
+            ->getResult();
+
+        return array_values(array_filter(
+            $active,
+            static fn (User $user): bool => \in_array('ROLE_ADMIN', $user->getRoles(), true),
+        ));
+    }
+
+    public function countByStatus(UserStatus $status): int
+    {
+        return (int) $this->createQueryBuilder('u')
+            ->select('COUNT(u.id)')
+            ->andWhere('u.status = :status')
+            ->setParameter('status', $status)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
 }
