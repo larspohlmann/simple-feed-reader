@@ -33,7 +33,7 @@ const e = (id: number): EntryDto => ({
 });
 
 describe('SourceGroupComponent', () => {
-  function mount(moreCount: number) {
+  function mount(entries: EntryDto[], previewCount: number) {
     TestBed.configureTestingModule({
       imports: [SourceGroupComponent, provideTranslocoTesting()],
       providers: [provideRouter([])],
@@ -41,37 +41,27 @@ describe('SourceGroupComponent', () => {
     const f = TestBed.createComponent(SourceGroupComponent);
     f.componentRef.setInput('source', 'heise');
     f.componentRef.setInput('subscriptionId', 7);
-    f.componentRef.setInput('entries', [e(1), e(2), e(3)]);
-    f.componentRef.setInput('moreCount', moreCount);
+    f.componentRef.setInput('entries', entries);
+    f.componentRef.setInput('previewCount', previewCount);
     f.componentRef.setInput('tags', []);
     f.detectChanges();
     return f;
   }
 
-  it('renders the source, three items, and a counted more link', () => {
-    const el = mount(4).nativeElement as HTMLElement;
+  it('previews previewCount rows and counts the hidden tail', () => {
+    const el = mount([e(1), e(2), e(3), e(4), e(5), e(6), e(7)], 4).nativeElement as HTMLElement;
     expect(el.textContent).toContain('heise');
-    expect(el.querySelectorAll('app-entry-compact').length).toBe(3);
-    expect(el.querySelector('.more')!.textContent).toContain('4 more from heise');
+    expect(el.querySelectorAll('app-entry-compact').length).toBe(4);
+    expect(el.querySelector('.more')!.textContent).toContain('3 more from heise');
   });
 
-  it('renders no more-link when nothing is held back', () => {
-    // The reworked planner shows every entry it plans, so a group with a zero
-    // remainder has nothing to link to — the digest is complete on the page.
-    const el = mount(0).nativeElement as HTMLElement;
+  it('renders no more indicator when the tail fits the preview', () => {
+    const el = mount([e(1), e(2), e(3)], 3).nativeElement as HTMLElement;
     expect(el.querySelector('.more')).toBeNull();
   });
 
   it('shows the feed tags as pills once, on the group header', () => {
-    TestBed.configureTestingModule({
-      imports: [SourceGroupComponent, provideTranslocoTesting()],
-      providers: [provideRouter([])],
-    });
-    const f = TestBed.createComponent(SourceGroupComponent);
-    f.componentRef.setInput('source', 'heise');
-    f.componentRef.setInput('subscriptionId', 7);
-    f.componentRef.setInput('entries', [e(1), e(2), e(3)]);
-    f.componentRef.setInput('moreCount', 1);
+    const f = mount([e(1), e(2), e(3), e(4), e(5)], 4);
     f.componentRef.setInput('tags', [tag(2, 'Tech')]);
     f.detectChanges();
     const el = f.nativeElement as HTMLElement;
@@ -83,10 +73,29 @@ describe('SourceGroupComponent', () => {
   });
 
   it('re-emits open from an inner item', () => {
-    const f = mount(1);
+    const f = mount([e(1), e(2), e(3), e(4), e(5)], 4);
     const open = jest.fn();
     f.componentInstance.open.subscribe(open);
     (f.nativeElement.querySelector('.compact') as HTMLElement).click();
     expect(open).toHaveBeenCalled();
+  });
+
+  it('expands to reveal the whole tail and collapses again', () => {
+    const f = mount([e(1), e(2), e(3), e(4), e(5), e(6), e(7)], 4);
+    const el = f.nativeElement as HTMLElement;
+    const button = el.querySelector('button.more') as HTMLButtonElement;
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    expect(el.querySelectorAll('app-entry-compact').length).toBe(4);
+
+    button.click();
+    f.detectChanges();
+    expect(el.querySelectorAll('app-entry-compact').length).toBe(7);
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(button.textContent).toContain('Show less');
+
+    button.click();
+    f.detectChanges();
+    expect(el.querySelectorAll('app-entry-compact').length).toBe(4);
+    expect(button.getAttribute('aria-expanded')).toBe('false');
   });
 });

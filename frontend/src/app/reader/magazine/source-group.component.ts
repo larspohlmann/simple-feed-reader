@@ -1,9 +1,9 @@
 // src/app/reader/magazine/source-group.component.ts
-import { Component, input, output } from '@angular/core';
+import { Component, computed, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import { EntryCompactComponent } from './entry-compact.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
 import { EntryDto, SubscriptionTagDto } from '../models';
@@ -12,8 +12,8 @@ import { EntryDto, SubscriptionTagDto } from '../models';
   selector: 'app-source-group',
   imports: [
     RouterLink,
-    IconComponent,
     FaviconComponent,
+    IconComponent,
     EntryCompactComponent,
     SourceTagsComponent,
     TranslocoPipe,
@@ -24,8 +24,22 @@ import { EntryDto, SubscriptionTagDto } from '../models';
 export class SourceGroupComponent {
   readonly source = input.required<string>();
   readonly subscriptionId = input.required<number>();
+  /** The run's whole owned tail. */
   readonly entries = input.required<EntryDto[]>();
-  readonly moreCount = input.required<number>();
+  /** How many rows to show before the tail is expanded. */
+  readonly previewCount = input.required<number>();
   readonly tags = input<SubscriptionTagDto[]>([]);
   readonly open = output<EntryDto>();
+
+  /** Ephemeral: the widget starts collapsed on every fresh render. Survives an
+   *  article open/close (the list stays mounted), resets on reload/reselect. */
+  readonly expanded = signal(false);
+  readonly visibleEntries = computed(() =>
+    this.expanded() ? this.entries() : this.entries().slice(0, this.previewCount()),
+  );
+  readonly hiddenCount = computed(() => this.entries().length - this.previewCount());
+
+  toggle(): void {
+    this.expanded.update((open) => !open);
+  }
 }
