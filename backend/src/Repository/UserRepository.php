@@ -93,4 +93,44 @@ class UserRepository extends ServiceEntityRepository implements UserLoaderInterf
 
         return $users;
     }
+
+    /**
+     * The admins to notify when a new account needs approving: those who can
+     * actually act on it. A suspended or rejected admin is not a working
+     * recipient, so active status gates the list the same way the firewall
+     * gates the admin API.
+     *
+     * The role check is done in PHP rather than in the query on purpose. `roles`
+     * is a portable JSON-as-text column on both SQLite (tests) and MySQL (prod),
+     * and the active set is tiny — every account passes a human (see
+     * findForAdminList) — so loading it and inspecting the decoded roles is both
+     * correct across dialects and simpler than a `LIKE` that would still need
+     * this same in-PHP recheck to reject a `ROLE_ADMINISTRATOR` substring.
+     *
+     * @return list<User>
+     */
+    public function findActiveAdmins(): array
+    {
+        /** @var list<User> $active */
+        $active = $this->createQueryBuilder('u')
+            ->andWhere('u.status = :active')
+            ->setParameter('active', UserStatus::Active)
+            ->getQuery()
+            ->getResult();
+
+        return array_values(array_filter(
+            $active,
+            static fn (User $user): bool => \in_array('ROLE_ADMIN', $user->getRoles(), true),
+        ));
+    }
+
+    public function countByStatus(UserStatus $status): int
+    {
+        return (int) $this->createQueryBuilder('u')
+            ->select('COUNT(u.id)')
+            ->andWhere('u.status = :status')
+            ->setParameter('status', $status)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
 }
