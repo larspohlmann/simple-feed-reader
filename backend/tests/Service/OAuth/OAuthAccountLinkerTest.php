@@ -7,10 +7,14 @@ namespace App\Tests\Service\OAuth;
 use App\Dto\OAuth\OAuthIdentity;
 use App\Entity\User;
 use App\Entity\UserIdentity;
+use App\Enum\RegistrationMethod;
 use App\Enum\UserStatus;
+use App\Event\UserAwaitingApproval;
 use App\Service\OAuth\OAuthAccountLinker;
 use App\Tests\DbTestCase;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Every case here is a rule about who gets handed which account, so a failure
@@ -258,14 +262,90 @@ final class OAuthAccountLinkerTest extends DbTestCase
         self::assertSame(UserStatus::Active, $victim->getStatus());
     }
 
-    private function linker(): OAuthAccountLinker
+    public function testANewOAuthAccountAnnouncesItselfToTheApprovalQueue(): void
+    {
+        $recording = $this->recordingDispatcher();
+        $events = $recording[0];
+        $captured = &$recording[1];
+
+        $this->linker($events)->resolve(new OAuthIdentity('google', 'sub-1', 'new@example.com', true));
+
+        self::assertCount(1, $captured);
+        self::assertSame(RegistrationMethod::OAuth, $captured[0]->method);
+        self::assertSame('google', $captured[0]->oauthProvider);
+        self::assertSame('new@example.com', $captured[0]->user->getEmail());
+    }
+
+    public function testClaimingAnUnverifiedAccountAnnouncesItToTheApprovalQueue(): void
+    {
+        $this->persistUser('bob@example.com', UserStatus::PendingVerification);
+        $recording = $this->recordingDispatcher();
+        $events = $recording[0];
+        $captured = &$recording[1];
+
+        $this->linker($events)->resolve(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+
+        self::assertCount(1, $captured);
+        self::assertSame(RegistrationMethod::OAuth, $captured[0]->method);
+    }
+
+    public function testAReturningIdentityAnnouncesNothing(): void
+    {
+        $user = $this->persistUser('bob@example.com', UserStatus::Active);
+        $this->em->persist(new UserIdentity($user, 'google', 'sub-1', $this->now()));
+        $this->em->flush();
+        $recording = $this->recordingDispatcher();
+        $events = $recording[0];
+        $captured = &$recording[1];
+
+        $this->linker($events)->resolve(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+
+        self::assertSame([], $captured);
+    }
+
+    public function testLinkingToAnAlreadyActiveAccountAnnouncesNothing(): void
+    {
+        $this->persistUser('bob@example.com', UserStatus::Active);
+        $recording = $this->recordingDispatcher();
+        $events = $recording[0];
+        $captured = &$recording[1];
+
+        $this->linker($events)->resolve(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+
+        self::assertSame([], $captured);
+    }
+
+    private function linker(?EventDispatcherInterface $events = null): OAuthAccountLinker
     {
         /** @var \App\Repository\UserRepository $users */
         $users = $this->em->getRepository(User::class);
         /** @var \App\Repository\UserIdentityRepository $identities */
         $identities = $this->em->getRepository(UserIdentity::class);
 
-        return new OAuthAccountLinker($this->em, $users, $identities, new MockClock(self::NOW));
+        return new OAuthAccountLinker(
+            $this->em,
+            $users,
+            $identities,
+            new MockClock(self::NOW),
+            $events ?? new EventDispatcher(),
+        );
+    }
+
+    /**
+     * @return array{EventDispatcher, list<UserAwaitingApproval>}
+     */
+    private function recordingDispatcher(): array
+    {
+        $captured = [];
+        $events = new EventDispatcher();
+        $events->addListener(
+            UserAwaitingApproval::class,
+            static function (UserAwaitingApproval $event) use (&$captured): void {
+                $captured[] = $event;
+            },
+        );
+
+        return [$events, &$captured];
     }
 
     private function persistUser(string $email, UserStatus $status): User
