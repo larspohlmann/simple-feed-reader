@@ -49,6 +49,11 @@ const MAX_SETTLE_FRAMES = 30;
 const SETTLE_STABLE_FRAMES = 3;
 // Ceiling the rubber-banded pull-to-refresh indicator approaches but never reaches.
 const MAX_PULL = 100;
+// How far (px) the content slides to reveal the spinner while a refresh runs — the
+// held-open offset shared by the mobile pull and the header/sidebar Refresh buttons.
+// Matches --space-7; published as --refresh-reveal so the stylesheet sizes the tray
+// and its park offset from the same number.
+export const REFRESH_REVEAL = 48;
 
 @Component({
   selector: 'app-entry-list',
@@ -122,13 +127,36 @@ export class EntryListComponent implements OnDestroy {
   // article's motion affordances — under prefers-reduced-motion.
   private readonly reduceMotion =
     typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // Two values, deliberately: `pull` is the damped offset the indicator is drawn
-  // at, `pulled` the finger's actual travel. Arming off the damped offset made
-  // the threshold a function of the indicator's ceiling — and against a ceiling
-  // of 100 it took ~400px of pull to arm, so the gesture never fired (#105).
-  readonly pull = signal(0);
+  // `pulled` is the finger's raw travel; `pullArmed` and the trigger check below
+  // arm off THIS, never off the rubber-banded revealOffset. Arming off the
+  // damped value made the threshold a function of the indicator's ceiling — and
+  // against a ceiling of 100 it took ~400px of pull to arm, so the gesture never
+  // fired (#105).
   private readonly pulled = signal(0);
+  /** True only during an active downward drag. Drives the no-transition class so
+   *  the content tracks the finger, and gates the pull branch of revealOffset. */
+  readonly dragging = signal(false);
   readonly pullArmed = computed(() => pullTriggersRefresh(this.pulled()));
+  /** How far the content and the reveal tray are pushed down, in px. One source
+   *  for three states: the finger during a drag, a fixed reveal while a refresh
+   *  runs (from ANY trigger — pull, header button, or sidebar button, all of
+   *  which set `refreshing()`), and 0 at rest. Suppressed under reduced motion. */
+  readonly revealOffset = computed(() => {
+    if (this.reduceMotion) return 0;
+    if (this.dragging()) return rubberBand(this.pulled(), MAX_PULL);
+    return this.refreshing() ? REFRESH_REVEAL : 0;
+  });
+  /** The transform applied to both the scroller and the tray. Extracted so the
+   *  three bindings can't drift apart. */
+  readonly revealTransform = computed(() => `translateY(${this.revealOffset()}px)`);
+
+  /** The reveal only makes sense over the real list scroller. The skeleton and
+   *  empty states have no content to slide, so a refresh started from those (e.g.
+   *  tapping Refresh while the first load still spins, or refreshing an empty
+   *  feed) must not paint the tray over them. */
+  readonly revealVisible = computed(
+    () => this.revealOffset() > 0 && !this.loading() && this.entries().length > 0,
+  );
   private pullStartY = 0;
   private pullTracking = false;
 
@@ -157,6 +185,7 @@ export class EntryListComponent implements OnDestroy {
     const host = this.host.nativeElement;
     host.addEventListener('wheel', this.onUserScrollIntent, { passive: true, capture: true });
     host.addEventListener('touchmove', this.onUserScrollIntent, { passive: true, capture: true });
+    host.style.setProperty('--refresh-reveal', `${REFRESH_REVEAL}px`);
   }
   // On a narrow layout the list header collapses to a slim tag-name-only bar as
   // you scroll down the list, expanding again on scroll up (same direction logic
@@ -342,16 +371,16 @@ export class EntryListComponent implements OnDestroy {
   onPullMove(e: TouchEvent, el: HTMLElement): void {
     if (!this.pullTracking || e.touches.length !== 1) return;
     const dy = e.touches[0].clientY - this.pullStartY;
-    // A downward pull that is still anchored at the top rubber-bands the
-    // indicator; anything else (upward, or the list has since scrolled) releases
-    // it and hands the gesture back to normal scrolling.
+    // A downward pull that is still anchored at the top rubber-bands the content;
+    // anything else (upward, or the list has since scrolled) releases it and hands
+    // the gesture back to normal scrolling.
     if (dy <= 0 || !atTop(el.scrollTop)) {
-      if (this.pull() !== 0) this.pull.set(0);
+      if (this.dragging()) this.dragging.set(false);
       if (this.pulled() !== 0) this.pulled.set(0);
       return;
     }
     this.pulled.set(dy);
-    this.pull.set(rubberBand(dy, MAX_PULL));
+    this.dragging.set(true);
     e.preventDefault();
   }
 
@@ -359,7 +388,11 @@ export class EntryListComponent implements OnDestroy {
     if (!this.pullTracking) return;
     this.pullTracking = false;
     const trigger = pullTriggersRefresh(this.pulled());
-    this.pull.set(0);
+    // Drop the drag: revealOffset now follows refreshing(). On an armed release the
+    // emit below flips refreshing() true synchronously (RefreshService.run sets
+    // running immediately, and the shell binds it as a plain signal), so the offset
+    // hands straight off from the pull value to REFRESH_REVEAL with no 0-frame.
+    this.dragging.set(false);
     this.pulled.set(0);
     if (trigger) this.refresh.emit();
   }

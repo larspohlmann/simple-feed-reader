@@ -17,21 +17,34 @@ export class EntriesStore {
   readonly loadedAt = signal<string>('');
 
   private query: EntryQuery | null = null;
+  /** Monotonic token stamped on every load/loadMore request. A response is
+   *  applied only if it still matches, so a slower, older request that lands
+   *  after a newer one can't overwrite the fresher result. A refresh fires
+   *  several overlapping reloads (one per slice, plus the run's onDone), and on
+   *  a slow server their responses arrive out of order — without this guard a
+   *  stale partial reload clobbered the just-fetched items back off the list
+   *  (#158). Mirrors the id-guard the shell uses for deep-link entry fetches. */
+  private loadSeq = 0;
 
   load(query: EntryQuery): void {
     this.query = query;
+    const seq = ++this.loadSeq;
     this.entries.set([]);
     this.nextCursor.set(null);
     this.loading.set(true);
+    // A fresh top-of-list load abandons any pagination still on the wire.
+    this.loadingMore.set(false);
     this.error.set(null);
     this.loadedAt.set(new Date().toISOString());
     this.api.entries(query).subscribe({
       next: (page) => {
+        if (seq !== this.loadSeq) return;
         this.entries.set(page.entries);
         this.nextCursor.set(page.nextCursor);
         this.loading.set(false);
       },
       error: (e: HttpErrorResponse) => {
+        if (seq !== this.loadSeq) return;
         this.error.set(parseProblem(e));
         this.loading.set(false);
       },
@@ -41,14 +54,17 @@ export class EntriesStore {
   loadMore(): void {
     const cursor = this.nextCursor();
     if (!cursor || !this.query || this.loading() || this.loadingMore()) return;
+    const seq = this.loadSeq;
     this.loadingMore.set(true);
     this.api.entries(this.query, cursor).subscribe({
       next: (page) => {
+        if (seq !== this.loadSeq) return; // a load() has since replaced the list
         this.entries.update((cur) => [...cur, ...page.entries]);
         this.nextCursor.set(page.nextCursor);
         this.loadingMore.set(false);
       },
       error: (e: HttpErrorResponse) => {
+        if (seq !== this.loadSeq) return;
         this.error.set(parseProblem(e));
         this.loadingMore.set(false);
       },

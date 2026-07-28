@@ -70,14 +70,20 @@
   </div>
 </header>
 
-@if (pull() > 0) {
+@if (revealVisible()) {
   <div
     class="pull-indicator"
     [class.armed]="pullArmed()"
-    [style.transform]="'translateY(' + pull() + 'px)'"
+    [class.dragging]="dragging()"
+    [style.transform]="revealTransform()"
     aria-hidden="true"
   >
-    <app-spinner [size]="20" [decorative]="true" [animate]="pullArmed()" />
+    <div class="pill">
+      <app-spinner [size]="20" [decorative]="true" [animate]="pullArmed() || refreshing()" />
+      @if (refreshing()) {
+        <span class="label">{{ 'reader.refreshing' | transloco }}</span>
+      }
+    </div>
   </div>
 }
 
@@ -101,7 +107,14 @@
     }
   </p>
 } @else if (layout() === 'magazine') {
-  <div class="rows magazine" [class.after-banner]="!!error()" #rows (scroll)="onRowsScroll($event)">
+  <div
+    class="rows magazine"
+    [class.after-banner]="!!error()"
+    [class.dragging]="dragging()"
+    [style.transform]="revealTransform()"
+    #rows
+    (scroll)="onRowsScroll($event)"
+  >
     @for (b of blocks(); track blockKey(b)) {
       @switch (b.kind) {
         @case ('hero') {
@@ -183,7 +196,14 @@
     }
   </div>
 } @else {
-  <div class="rows" [class.after-banner]="!!error()" #rows (scroll)="onRowsScroll($event)">
+  <div
+    class="rows"
+    [class.after-banner]="!!error()"
+    [class.dragging]="dragging()"
+    [style.transform]="revealTransform()"
+    #rows
+    (scroll)="onRowsScroll($event)"
+  >
     @for (e of entries(); track e.id) {
       <app-entry-row
         [entry]="e"
