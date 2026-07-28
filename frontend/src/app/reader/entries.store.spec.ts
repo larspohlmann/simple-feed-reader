@@ -99,6 +99,53 @@ describe('EntriesStore', () => {
     expect(store.entries().map((e) => e.id)).toEqual([9]);
   });
 
+  // #158: a refresh fires several overlapping load()s — the shell reloads on
+  // every refresh slice AND again in the run's onDone. On a slow server (Strato)
+  // their responses can arrive out of order. The store must apply only the
+  // newest load's result; an older, partial reload that lands late must not
+  // clobber the freshly-fetched items back off the list.
+  it('ignores a superseded load whose response arrives after a newer load', () => {
+    store.load({ view: 'unread' }); // an earlier reload (e.g. a partial slice)
+    store.load({ view: 'unread' }); // a newer reload supersedes it
+    const reqs = ctrl.match((r) => r.url === 'https://api.test/api/entries');
+    expect(reqs.length).toBe(2);
+
+    // The newer request returns first, with the full, fresh set...
+    reqs[1].flush({ entries: [entry(1), entry(2)], nextCursor: null });
+    // ...then the older request lands LATE with a stale, partial set.
+    reqs[0].flush({ entries: [entry(1)], nextCursor: 'C1' });
+
+    expect(store.entries().map((e) => e.id)).toEqual([1, 2]);
+    expect(store.nextCursor()).toBeNull();
+    expect(store.loading()).toBe(false);
+  });
+
+  // #158: the same race across the load/loadMore boundary — a fresh load()
+  // (a refresh reload) started while a loadMore page is still on the wire must
+  // win; the late page must not append stale entries onto the reloaded list.
+  it('drops an in-flight loadMore page once a fresh load has superseded it', () => {
+    store.load({ view: 'unread' });
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [entry(1)], nextCursor: 'C1' });
+
+    store.loadMore(); // page 2 goes on the wire
+    const more = ctrl.expectOne((r) => r.params.get('cursor') === 'C1');
+
+    // A refresh reloads the list from the top before page 2 comes back.
+    store.load({ view: 'unread' });
+    ctrl
+      .expectOne((r) => !r.params.get('cursor'))
+      .flush({ entries: [entry(3), entry(4)], nextCursor: null });
+
+    // The stale page 2 lands late — it must be ignored, not appended.
+    more.flush({ entries: [entry(2)], nextCursor: 'C2' });
+
+    expect(store.entries().map((e) => e.id)).toEqual([3, 4]);
+    expect(store.nextCursor()).toBeNull();
+    expect(store.loadingMore()).toBe(false);
+  });
+
   it('optimistically sets state and rolls back on error', () => {
     store.load({ view: 'all' });
     ctrl
