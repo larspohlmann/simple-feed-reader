@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Parser;
 
 use App\Service\Parser\Exception\FeedParseException;
+use App\Service\PlainText;
 
 final class Rss2Parser implements FeedFormatParserInterface
 {
@@ -32,7 +33,7 @@ final class Rss2Parser implements FeedFormatParserInterface
         }
 
         return new ParsedFeed(
-            XmlHelper::childText($channel, 'title'),
+            PlainText::from(XmlHelper::childText($channel, 'title')),
             XmlHelper::childText($channel, 'link'),
             XmlHelper::childText($channel, 'description'),
             $entries,
@@ -57,7 +58,7 @@ final class Rss2Parser implements FeedFormatParserInterface
         return new ParsedEntry(
             guid: GuidFallback::for(XmlHelper::childText($item, 'guid'), $link, $title),
             url: $link,
-            title: $title ?? '(untitled)',
+            title: PlainText::from($title) ?? '(untitled)',
             author: XmlHelper::childText($item, 'author') ?? XmlHelper::childText($item, 'creator', self::DC_NS),
             summary: $contentEncoded !== null ? $description : null,
             contentHtml: $contentEncoded ?? $description,

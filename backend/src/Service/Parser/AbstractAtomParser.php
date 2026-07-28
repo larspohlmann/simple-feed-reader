@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Parser;
 
 use App\Service\Parser\Exception\FeedParseException;
+use App\Service\PlainText;
 
 /**
  * Shared parsing for the Atom dialects. Everything but the namespace and a
@@ -67,7 +68,7 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
         }
 
         return new ParsedFeed(
-            $title,
+            PlainText::from($title),
             $this->alternateLink($root, $ns),
             XmlHelper::childText($root, $this->descriptionElement(), $ns),
             $entries,
@@ -90,7 +91,7 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
         return new ParsedEntry(
             guid: GuidFallback::for(XmlHelper::childText($entry, 'id', $ns), $link, $title),
             url: $link,
-            title: $title ?? '(untitled)',
+            title: PlainText::from($title) ?? '(untitled)',
             author: $this->authorName($entry, $ns),
             summary: XmlHelper::childText($entry, 'summary', $ns),
             contentHtml: $contentHtml,

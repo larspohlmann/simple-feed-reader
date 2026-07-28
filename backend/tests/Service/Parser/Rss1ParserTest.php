@@ -59,4 +59,36 @@ final class Rss1ParserTest extends TestCase
         self::assertSame('https://e/m.jpg', $feed->entries[1]->image?->url);
         self::assertNull($feed->entries[2]->image);
     }
+
+    public function testTitlesAreReducedToPlainText(): void
+    {
+        $xml = <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                     xmlns="http://purl.org/rss/1.0/">
+              <channel rdf:about="https://rss1.example.com/">
+                <title>The &lt;em&gt;Weekly&lt;/em&gt; Review</title>
+                <link>https://rss1.example.com/</link>
+                <description>desc</description>
+              </channel>
+              <item rdf:about="https://e/odyssey">
+                <title>An &lt;em&gt;Odyssey&lt;/em&gt; for Our Own Time</title>
+                <link>https://e/odyssey</link>
+              </item>
+              <item rdf:about="https://e/datatype">
+                <title>&amp;#8220;Datatype&amp;#8221; is an OpenType variable font</title>
+                <link>https://e/datatype</link>
+              </item>
+            </rdf:RDF>
+            XML;
+
+        $feed = (new Rss1Parser())->parse($this->document($xml));
+
+        self::assertSame('The Weekly Review', $feed->title);
+        self::assertSame('An Odyssey for Our Own Time', $feed->entries[0]->title);
+        self::assertSame(
+            "\u{201C}Datatype\u{201D} is an OpenType variable font",
+            $feed->entries[1]->title,
+        );
+    }
 }
