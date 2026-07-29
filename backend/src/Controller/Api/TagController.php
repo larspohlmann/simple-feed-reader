@@ -95,7 +95,7 @@ final readonly class TagController
      * feeds currently carrying the tag; each feed's per-tag position becomes its
      * index.
      */
-    #[Route('/{id}/feed-order', name: 'api_tags_feed_order', requirements: ['id' => '\d+'], methods: ['PATCH'])]
+    #[Route('/{id}/feed-order', name: 'api_tags_feed_order', methods: ['PATCH'], requirements: ['id' => '\d+'])]
     public function feedOrder(
         int $id,
         #[CurrentUser] User $user,
@@ -119,7 +119,7 @@ final readonly class TagController
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
-    #[Route('/{id}', name: 'api_tags_update', requirements: ['id' => '\d+'], methods: ['PATCH'])]
+    #[Route('/{id}', name: 'api_tags_update', methods: ['PATCH'], requirements: ['id' => '\d+'])]
     public function update(
         int $id,
         #[CurrentUser] User $user,
@@ -140,7 +140,7 @@ final readonly class TagController
         return new JsonResponse(['tag' => TagJson::one($tag)]);
     }
 
-    #[Route('/{id}', name: 'api_tags_delete', requirements: ['id' => '\d+'], methods: ['DELETE'])]
+    #[Route('/{id}', name: 'api_tags_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function delete(int $id, #[CurrentUser] User $user): JsonResponse
     {
         $tag = $this->tags->findOneOwnedBy($id, (int) $user->getId())

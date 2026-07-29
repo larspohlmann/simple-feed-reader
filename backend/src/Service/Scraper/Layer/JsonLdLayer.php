@@ -57,7 +57,7 @@ final class JsonLdLayer implements ScrapeLayerInterface
      * Appends into $items by reference (never spreads a growing array), so
      * collection stays O(N); each entry point bails once the cap is reached.
      *
-     * @param array             $node
+     * @param array<mixed>      $node
      * @param string            $baseUrl
      * @param list<ScrapedItem> $items
      */
@@ -92,7 +92,7 @@ final class JsonLdLayer implements ScrapeLayerInterface
     }
 
     /**
-     * @param array             $nodes
+     * @param array<mixed>      $nodes
      * @param string            $baseUrl
      * @param list<ScrapedItem> $items
      */
@@ -114,7 +114,7 @@ final class JsonLdLayer implements ScrapeLayerInterface
      * are not arrays (heise mixes bare URL strings into itemListElement) and
      * "item" references that are not article nodes are skipped silently.
      *
-     * @param array             $elements
+     * @param array<mixed>      $elements
      * @param string            $baseUrl
      * @param list<ScrapedItem> $items
      */
@@ -139,8 +139,8 @@ final class JsonLdLayer implements ScrapeLayerInterface
     }
 
     /**
-     * @param array  $node
-     * @param string ...$types
+     * @param array<mixed> $node
+     * @param string       ...$types
      *
      * @return bool
      */
@@ -156,8 +156,8 @@ final class JsonLdLayer implements ScrapeLayerInterface
     }
 
     /**
-     * @param array  $node
-     * @param string $baseUrl
+     * @param array<mixed> $node
+     * @param string       $baseUrl
      *
      * @return ScrapedItem|null
      */
@@ -183,7 +183,7 @@ final class JsonLdLayer implements ScrapeLayerInterface
     }
 
     /**
-     * @param array $node
+     * @param array<mixed> $node
      *
      * @return string|null
      */
@@ -202,7 +202,7 @@ final class JsonLdLayer implements ScrapeLayerInterface
     }
 
     /**
-     * @param array $node
+     * @param array<mixed> $node
      *
      * @return string|null
      */
@@ -221,7 +221,7 @@ final class JsonLdLayer implements ScrapeLayerInterface
     }
 
     /**
-     * @param array $node
+     * @param array<mixed> $node
      *
      * @return string|null
      */
@@ -245,7 +245,7 @@ final class JsonLdLayer implements ScrapeLayerInterface
      * Accepts every image shape schema.org allows here: a URL string, an
      * ImageObject with a url field, or a list of either.
      *
-     * @param array $node
+     * @param array<mixed> $node
      *
      * @return string|null
      */

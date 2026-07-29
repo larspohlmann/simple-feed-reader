@@ -157,7 +157,7 @@ final readonly class AdminUserController
      *
      * @throws TransportExceptionInterface
      */
-    #[Route('/{id}/approve', name: 'api_admin_users_approve', requirements: ['id' => '\d+'], methods: ['POST'])]
+    #[Route('/{id}/approve', name: 'api_admin_users_approve', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function approve(int $id): JsonResponse
     {
         $user = $this->requireUser($id);
@@ -178,7 +178,7 @@ final readonly class AdminUserController
         return new JsonResponse(['status' => $user->getStatus()->value]);
     }
 
-    #[Route('/{id}/reject', name: 'api_admin_users_reject', requirements: ['id' => '\d+'], methods: ['POST'])]
+    #[Route('/{id}/reject', name: 'api_admin_users_reject', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function reject(int $id, #[CurrentUser] User $admin): JsonResponse
     {
         $user = $this->requireNotSelf($id, $admin);
@@ -189,7 +189,7 @@ final readonly class AdminUserController
         return new JsonResponse(['status' => $user->getStatus()->value]);
     }
 
-    #[Route('/{id}/suspend', name: 'api_admin_users_suspend', requirements: ['id' => '\d+'], methods: ['POST'])]
+    #[Route('/{id}/suspend', name: 'api_admin_users_suspend', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function suspend(int $id, #[CurrentUser] User $admin): JsonResponse
     {
         $user = $this->requireNotSelf($id, $admin);

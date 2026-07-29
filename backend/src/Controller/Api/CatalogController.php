@@ -42,7 +42,7 @@ final readonly class CatalogController
      * The long max-age is safe because the URL is per-feed-id and the ETag
      * changes whenever the bytes do.
      */
-    #[Route('/feeds/{id}/favicon', name: 'api_catalog_favicon', requirements: ['id' => '\d+'], methods: ['GET'])]
+    #[Route('/feeds/{id}/favicon', name: 'api_catalog_favicon', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function favicon(int $id): Response
     {
         $feed = $this->catalogFeeds->find($id) ?? throw new NotFoundHttpException('No such catalog feed.');

@@ -16,7 +16,9 @@ use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FetchOutcome;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Parser\Exception\FeedParseException;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Exception\ORMException;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Psr\Log\LoggerInterface;
@@ -157,7 +159,22 @@ final class RefreshRunner
         BudgetedFeedQueue $queue,
         ?\DateTimeImmutable $cooldownCutoff,
     ): RefreshReport {
-        $this->resolveMissingFavicons($tally->faviconEligibleFeeds);
+        try {
+            $this->resolveMissingFavicons($tally->faviconEligibleFeeds);
+        } catch (UniqueConstraintViolationException | ORMException $e) {
+            $this->logger->error(
+                'Refresh aborted: persistence failed while resolving favicons',
+                ['exception' => $e],
+            );
+
+            return RefreshReport::aborted(
+                \count($feeds),
+                $tally->fetched,
+                $tally->notModified,
+                $tally->failed,
+                $queue->skippedCount(),
+            );
+        }
 
         return RefreshReport::finished(
             \count($feeds),
@@ -211,7 +228,19 @@ final class RefreshRunner
      */
     private function applyOutcome(Feed $feed, FetchOutcome $outcome): FeedOutcome
     {
-        return $this->persistOutcome($feed, $outcome);
+        try {
+            return $this->persistOutcome($feed, $outcome);
+        } catch (UniqueConstraintViolationException | ORMException $e) {
+            // A failed flush rolls back AND closes the EntityManager, so every
+            // later persist/flush would throw "EntityManager is closed".
+            // Stop here instead of cascading the failure across the batch.
+            $this->logger->error(
+                'Refresh aborted: persistence failed for {url}',
+                ['url' => $feed->getUrl(), 'exception' => $e],
+            );
+
+            return FeedOutcome::Aborted;
+        }
     }
 
     /**

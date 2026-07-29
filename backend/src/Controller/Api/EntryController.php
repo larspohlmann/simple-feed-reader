@@ -103,7 +103,7 @@ final readonly class EntryController
         ]);
     }
 
-    #[Route('/{id}', name: 'api_entries_get', requirements: ['id' => '\d+'], methods: ['GET'])]
+    #[Route('/{id}', name: 'api_entries_get', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function get(
         int $id,
         #[CurrentUser] User $user,
@@ -124,7 +124,7 @@ final readonly class EntryController
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
-    #[Route('/{id}/state', name: 'api_entries_state', requirements: ['id' => '\d+'], methods: ['PATCH'])]
+    #[Route('/{id}/state', name: 'api_entries_state', methods: ['PATCH'], requirements: ['id' => '\d+'])]
     public function updateState(
         int $id,
         #[CurrentUser] User $user,
@@ -161,7 +161,7 @@ final readonly class EntryController
         ]]);
     }
 
-    #[Route('/{id}/reader', name: 'api_entries_reader', requirements: ['id' => '\d+'], methods: ['GET'])]
+    #[Route('/{id}/reader', name: 'api_entries_reader', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function reader(
         int $id,
         #[CurrentUser] User $user,

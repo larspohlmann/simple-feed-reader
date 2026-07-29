@@ -61,7 +61,7 @@ final readonly class AdminCatalogCategoryController
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
-    #[Route('/{id}', name: 'api_admin_catalog_category_update', requirements: ['id' => '\d+'], methods: ['PATCH'])]
+    #[Route('/{id}', name: 'api_admin_catalog_category_update', methods: ['PATCH'], requirements: ['id' => '\d+'])]
     public function update(int $id, #[MapRequestPayload] CatalogCategoryRequest $request): JsonResponse
     {
         $category = $this->requireCategory($id);
@@ -75,7 +75,7 @@ final readonly class AdminCatalogCategoryController
         return new JsonResponse(['category' => AdminCatalogJson::category($category)]);
     }
 
-    #[Route('/{id}', name: 'api_admin_catalog_category_delete', requirements: ['id' => '\d+'], methods: ['DELETE'])]
+    #[Route('/{id}', name: 'api_admin_catalog_category_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function delete(int $id): JsonResponse
     {
         $category = $this->requireCategory($id);

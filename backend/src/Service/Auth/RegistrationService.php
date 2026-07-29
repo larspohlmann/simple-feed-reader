@@ -12,6 +12,7 @@ use App\Event\UserAwaitingApproval;
 use App\Repository\UserRepository;
 use App\Security\PasswordWorkEqualizerInterface;
 use App\Service\Mail\AccountMailer;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Random\RandomException;
@@ -67,7 +68,23 @@ final readonly class RegistrationService
 
         $this->em->persist($user);
 
-        $this->em->flush();
+        try {
+            $this->em->flush();
+        } catch (UniqueConstraintViolationException) {
+            // Lost a race: between the SELECT above and this INSERT, another
+            // request registered the same address. A double-clicked submit
+            // button is enough to cause it, and without this catch the loser
+            // gets an opaque 500 where the winner got a 202 — a broken user
+            // action, and a response that differs from the duplicate path and
+            // so leaks that a signup for this address was in flight.
+            //
+            // The winner has already sent the verification mail, so the right
+            // move is to say nothing at all. Doctrine closes the EntityManager
+            // on a failed flush, which is safe here only because this is the
+            // last database work in the request; the controller does nothing
+            // afterwards but serialise a fixed array.
+            return;
+        }
 
         $this->mailer->sendVerification(
             $user,

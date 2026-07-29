@@ -86,7 +86,7 @@ final class EntryPruner
 
         $deleted = 0;
         foreach ($feedIds as $feedId) {
-            $deleted += $this->deleteByIds($this->excessEntryIds($feedId));
+            $deleted += $this->deleteByIds($this->excessEntryIds((int) $feedId));
         }
 
         return $deleted;

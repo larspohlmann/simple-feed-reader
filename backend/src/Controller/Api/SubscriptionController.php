@@ -83,7 +83,7 @@ final readonly class SubscriptionController
         );
     }
 
-    #[Route('/{id}', name: 'api_subscriptions_update', requirements: ['id' => '\d+'], methods: ['PATCH'])]
+    #[Route('/{id}', name: 'api_subscriptions_update', methods: ['PATCH'], requirements: ['id' => '\d+'])]
     public function update(
         int $id,
         #[CurrentUser] User $user,
@@ -153,7 +153,7 @@ final readonly class SubscriptionController
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
-    #[Route('/{id}', name: 'api_subscriptions_delete', requirements: ['id' => '\d+'], methods: ['DELETE'])]
+    #[Route('/{id}', name: 'api_subscriptions_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function delete(int $id, #[CurrentUser] User $user): JsonResponse
     {
         $sub = $this->subscriptionRepo->findOneOwnedBy($id, (int) $user->getId())
