@@ -36,7 +36,11 @@ final class JsonLdLayer implements ScrapeLayerInterface
     {
         $items = [];
         foreach ($doc->querySelectorAll('script[type="application/ld+json"]') as $script) {
-            $decoded = json_decode($script->textContent ?? '', true);
+            try {
+                $decoded = json_decode($script->textContent ?? '', true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                continue;
+            }
             if (!\is_array($decoded)) {
                 continue;
             }
@@ -53,7 +57,8 @@ final class JsonLdLayer implements ScrapeLayerInterface
      * Appends into $items by reference (never spreads a growing array), so
      * collection stays O(N); each entry point bails once the cap is reached.
      *
-     * @param array<mixed> $node
+     * @param array             $node
+     * @param string            $baseUrl
      * @param list<ScrapedItem> $items
      */
     private function collectInto(array $node, string $baseUrl, array &$items): void
@@ -87,7 +92,8 @@ final class JsonLdLayer implements ScrapeLayerInterface
     }
 
     /**
-     * @param array<mixed> $nodes
+     * @param array             $nodes
+     * @param string            $baseUrl
      * @param list<ScrapedItem> $items
      */
     private function collectAllInto(array $nodes, string $baseUrl, array &$items): void
@@ -108,7 +114,8 @@ final class JsonLdLayer implements ScrapeLayerInterface
      * are not arrays (heise mixes bare URL strings into itemListElement) and
      * "item" references that are not article nodes are skipped silently.
      *
-     * @param array<mixed> $elements
+     * @param array             $elements
+     * @param string            $baseUrl
      * @param list<ScrapedItem> $items
      */
     private function listItemsInto(array $elements, string $baseUrl, array &$items): void
@@ -131,7 +138,12 @@ final class JsonLdLayer implements ScrapeLayerInterface
         }
     }
 
-    /** @param array<mixed> $node */
+    /**
+     * @param array  $node
+     * @param string ...$types
+     *
+     * @return bool
+     */
     private function hasType(array $node, string ...$types): bool
     {
         $declared = $node['@type'] ?? null;
@@ -143,7 +155,12 @@ final class JsonLdLayer implements ScrapeLayerInterface
         return array_intersect($types, array_filter($declared, \is_string(...))) !== [];
     }
 
-    /** @param array<mixed> $node */
+    /**
+     * @param array  $node
+     * @param string $baseUrl
+     *
+     * @return ScrapedItem|null
+     */
     private function article(array $node, string $baseUrl): ?ScrapedItem
     {
         $url = CardFields::httpUrl($this->url($node), $baseUrl);
@@ -165,7 +182,11 @@ final class JsonLdLayer implements ScrapeLayerInterface
         );
     }
 
-    /** @param array<mixed> $node */
+    /**
+     * @param array $node
+     *
+     * @return string|null
+     */
     private function url(array $node): ?string
     {
         $url = $node['url'] ?? null;
@@ -180,7 +201,11 @@ final class JsonLdLayer implements ScrapeLayerInterface
         return \is_string($main) ? $main : null;
     }
 
-    /** @param array<mixed> $node */
+    /**
+     * @param array $node
+     *
+     * @return string|null
+     */
     private function title(array $node): ?string
     {
         $raw = $node['headline'] ?? $node['name'] ?? null;
@@ -195,7 +220,11 @@ final class JsonLdLayer implements ScrapeLayerInterface
         return mb_substr($title, 0, CardFields::MAX_TITLE_LENGTH);
     }
 
-    /** @param array<mixed> $node */
+    /**
+     * @param array $node
+     *
+     * @return string|null
+     */
     private function teaser(array $node): ?string
     {
         // Most sites use "description"; heise ships its teasers as "abstract".
@@ -216,7 +245,9 @@ final class JsonLdLayer implements ScrapeLayerInterface
      * Accepts every image shape schema.org allows here: a URL string, an
      * ImageObject with a url field, or a list of either.
      *
-     * @param array<mixed> $node
+     * @param array $node
+     *
+     * @return string|null
      */
     private function imageCandidate(array $node): ?string
     {

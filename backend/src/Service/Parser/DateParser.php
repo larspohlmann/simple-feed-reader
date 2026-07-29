@@ -23,7 +23,7 @@ final class DateParser
         }
 
         try {
-            return (new \DateTimeImmutable(trim($value)))->setTimezone(new \DateTimeZone('UTC'));
+            return new \DateTimeImmutable(trim($value))->setTimezone(new \DateTimeZone('UTC'));
         } catch (\Exception) {
             return null;
         }

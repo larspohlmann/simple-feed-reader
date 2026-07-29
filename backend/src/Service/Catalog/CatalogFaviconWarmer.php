@@ -47,6 +47,9 @@ final readonly class CatalogFaviconWarmer
     ) {
     }
 
+    /**
+     * @throws \DateInvalidOperationException
+     */
     public function warm(int $budgetSeconds, ?int $limit = null): CatalogWarmReport
     {
         $now = $this->clock->now();
@@ -85,6 +88,7 @@ final readonly class CatalogFaviconWarmer
 
     /**
      * @return array{0: \DateTimeImmutable, 1: \DateTimeImmutable}
+     * @throws \DateInvalidOperationException
      */
     private function windows(\DateTimeImmutable $now): array
     {

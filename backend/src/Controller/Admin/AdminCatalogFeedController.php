@@ -30,13 +30,13 @@ use Symfony\Component\Routing\Attribute\Route;
  * import are unlocked, because the document already owns them.
  */
 #[Route('/api/admin/catalog/feeds')]
-final class AdminCatalogFeedController
+final readonly class AdminCatalogFeedController
 {
     public function __construct(
-        private readonly CatalogFeedRepository $feeds,
-        private readonly CatalogCategoryRepository $categories,
-        private readonly CatalogFaviconWarmer $warmer,
-        private readonly EntityManagerInterface $em,
+        private CatalogFeedRepository $feeds,
+        private CatalogCategoryRepository $categories,
+        private CatalogFaviconWarmer $warmer,
+        private EntityManagerInterface $em,
     ) {
     }
 
@@ -65,7 +65,7 @@ final class AdminCatalogFeedController
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
-    #[Route('/{id}', name: 'api_admin_catalog_feed_update', methods: ['PATCH'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}', name: 'api_admin_catalog_feed_update', requirements: ['id' => '\d+'], methods: ['PATCH'])]
     public function update(int $id, #[MapRequestPayload] CatalogFeedRequest $request): JsonResponse
     {
         $feed = $this->requireFeed($id);
@@ -80,7 +80,7 @@ final class AdminCatalogFeedController
         return new JsonResponse(['feed' => AdminCatalogJson::feed($feed)]);
     }
 
-    #[Route('/{id}', name: 'api_admin_catalog_feed_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}', name: 'api_admin_catalog_feed_delete', requirements: ['id' => '\d+'], methods: ['DELETE'])]
     public function delete(int $id): JsonResponse
     {
         $feed = $this->requireFeed($id);
@@ -95,7 +95,7 @@ final class AdminCatalogFeedController
      * A failed fetch is a recorded failure and a 200 — the same outcome the warm
      * command produces — not a 500.
      */
-    #[Route('/{id}/favicon', name: 'api_admin_catalog_feed_favicon', methods: ['POST'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}/favicon', name: 'api_admin_catalog_feed_favicon', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function refreshFavicon(int $id): JsonResponse
     {
         $feed = $this->requireFeed($id);

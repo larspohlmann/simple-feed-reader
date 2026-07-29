@@ -90,7 +90,7 @@ final class ClusterLayer implements ScrapeLayerInterface
         preg_match_all('/\S+/', $anchor->getAttribute('class') ?? '', $matches);
         $keys = [];
         foreach ($matches[0] as $token) {
-            $keys[] = 'a.' . strtolower((string) preg_replace('/--.*$/', '', $token));
+            $keys[] = 'a.' . strtolower(preg_replace('/--.*$/', '', $token));
         }
 
         return $keys === [] ? ['a.'] : array_values(array_unique($keys));

@@ -6,7 +6,9 @@ namespace App\Service\OAuth;
 
 use App\Dto\OAuth\OAuthStartState;
 use Psr\Cache\CacheItemPoolInterface;
+use Psr\Cache\InvalidArgumentException;
 use Psr\Clock\ClockInterface;
+use Random\RandomException;
 
 /**
  * Holds the per-flow secrets between the redirect to the provider and the
@@ -103,6 +105,10 @@ final readonly class OAuthStateStore
     ) {
     }
 
+    /**
+     * @throws InvalidArgumentException
+     * @throws RandomException
+     */
     public function start(string $provider): OAuthStartState
     {
         $state = self::randomToken();
@@ -149,7 +155,6 @@ final readonly class OAuthStateStore
      * Redeems a state value, destroying it. Returns null for every failure —
      * unknown, already used, expired, or presented by a browser that did not
      * start this flow — because the callback must not report which.
-     *
      * The binding failure is deliberately NOT distinguishable from the others.
      * Collapsing them into one null is the whole point: a caller who could tell
      * "wrong cookie" from "no such state" could probe for live states, and the
@@ -158,9 +163,10 @@ final readonly class OAuthStateStore
      * @param string|null $browserToken the flow cookie the callback arrived
      *                                  with, or null if it arrived with none —
      *                                  which is itself a failure, not a bypass
-     *
      * See the class docblock for what "single use" does and does not promise
      * when two callbacks arrive at once.
+     *
+     * @throws InvalidArgumentException
      */
     public function consume(string $state, ?string $browserToken): ?OAuthStartState
     {
@@ -285,6 +291,9 @@ final readonly class OAuthStateStore
         return hash('sha256', $value);
     }
 
+    /**
+     * @throws RandomException
+     */
     private static function randomToken(): string
     {
         return bin2hex(random_bytes(32));

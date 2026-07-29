@@ -12,6 +12,8 @@ use App\Repository\UserRepository;
 use App\Security\AccountStatusException;
 use App\Security\LoginUserChecker;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Psr\Cache\InvalidArgumentException;
+use Random\RandomException;
 
 /**
  * Turning a provider-verified identity into a session, in the two legs the
@@ -59,6 +61,8 @@ final readonly class OAuthSignIn
      * @param string $browserToken the flow binding this code is tied to, so it
      *                             can only be redeemed by the browser that
      *                             started the flow
+     * @throws InvalidArgumentException
+     * @throws RandomException
      */
     public function issueLoginCode(OAuthIdentity $identity, string $browserToken): string
     {
@@ -74,7 +78,6 @@ final readonly class OAuthSignIn
 
     /**
      * Leg two: spend the code and mint the JWT.
-     *
      * The first two failures below are ONE answer on purpose. An unknown code,
      * an already-spent one, an expired one, one presented by a browser that did
      * not complete the flow, and one naming an account deleted since the
@@ -88,6 +91,7 @@ final readonly class OAuthSignIn
      *                                  the check
      *
      * @return string the JWT for the signed-in user
+     * @throws InvalidArgumentException
      */
     public function redeemLoginCode(string $code, ?string $browserToken): string
     {

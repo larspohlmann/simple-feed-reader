@@ -15,6 +15,7 @@ use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -23,13 +24,13 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
  * security.yaml — the Angular route guard is UX only.
  */
 #[Route('/api/admin/users')]
-final class AdminUserController
+final readonly class AdminUserController
 {
     public function __construct(
-        private readonly UserRepository $users,
-        private readonly EntityManagerInterface $em,
-        private readonly AccountMailer $mailer,
-        private readonly ClockInterface $clock,
+        private UserRepository $users,
+        private EntityManagerInterface $em,
+        private AccountMailer $mailer,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -123,13 +124,11 @@ final class AdminUserController
     /**
      * Activates an account. The rule for the mail — do not "fix" the cases that
      * stay silent, they are deliberate:
-     *
      * The "your account has been approved" mail means "you have been granted
      * access for the first time". Classify any new status against that
      * sentence rather than against the list below — and check the claim, since
      * an earlier version of this comment got `rejected` wrong by grouping it
      * with suspended on the strength of the grouping rather than the sentence.
-     *
      * MAILS — the user has never had access, and now does:
      *   - pending_approval: verified their address, waited in the queue.
      *   - pending_verification: never confirmed their address; approving
@@ -140,27 +139,25 @@ final class AdminUserController
      *     case where the user is certainly waiting to hear, having applied and
      *     seen nothing happen. Silence here left them holding a working account
      *     they had no reason to try.
-     *
      * SILENT — nothing was granted that the user did not already have:
      *   - suspended: a genuine RESTORATION of access they used to have. This
      *     route is deliberately the only way back, rather than an /unsuspend
      *     endpoint for something an admin does once a year, but telling a
      *     returning user they were "approved" would only confuse.
      *   - active: a no-op, which is what makes a double-click safe.
-     *
      * Approving a pending_verification account overrides double opt-in: that
      * address was never confirmed, so the approval mail may go somewhere nobody
      * proved they control. That is a real admin decision, made deliberately —
      * the queue lists every status — and the mail itself is harmless.
-     *
      * approvedAt is stamped on every successful activation, reinstatement
      * included: it is the audit trail for when access was last granted, which
      * is more useful than preserving the date of the first one.
-     *
      * There is intentionally no self-guard here, unlike reject and suspend.
      * Activating an account cannot lock anybody out.
+     *
+     * @throws TransportExceptionInterface
      */
-    #[Route('/{id}/approve', name: 'api_admin_users_approve', methods: ['POST'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}/approve', name: 'api_admin_users_approve', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function approve(int $id): JsonResponse
     {
         $user = $this->requireUser($id);
@@ -181,7 +178,7 @@ final class AdminUserController
         return new JsonResponse(['status' => $user->getStatus()->value]);
     }
 
-    #[Route('/{id}/reject', name: 'api_admin_users_reject', methods: ['POST'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}/reject', name: 'api_admin_users_reject', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function reject(int $id, #[CurrentUser] User $admin): JsonResponse
     {
         $user = $this->requireNotSelf($id, $admin);
@@ -192,7 +189,7 @@ final class AdminUserController
         return new JsonResponse(['status' => $user->getStatus()->value]);
     }
 
-    #[Route('/{id}/suspend', name: 'api_admin_users_suspend', methods: ['POST'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}/suspend', name: 'api_admin_users_suspend', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function suspend(int $id, #[CurrentUser] User $admin): JsonResponse
     {
         $user = $this->requireNotSelf($id, $admin);

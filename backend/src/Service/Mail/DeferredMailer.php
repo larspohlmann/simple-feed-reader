@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Mail;
 
 use Symfony\Component\Mailer\Envelope;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\RawMessage;
 
@@ -61,6 +62,9 @@ final class DeferredMailer implements MailerInterface
         return $queued;
     }
 
+    /**
+     * @throws TransportExceptionInterface
+     */
     public function sendNow(RawMessage $message, ?Envelope $envelope): void
     {
         $this->mailer->send($message, $envelope);

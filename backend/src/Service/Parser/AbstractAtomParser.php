@@ -169,7 +169,7 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
             if ($child->getAttribute('type') === 'xhtml') {
                 $html = '';
                 foreach ($child->childNodes as $inner) {
-                    $html .= (string) $child->ownerDocument?->saveXML($inner);
+                    $html .= $child->ownerDocument?->saveXML($inner);
                 }
                 $html = trim($html);
 

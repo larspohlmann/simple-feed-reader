@@ -19,12 +19,12 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[Route('/api/feeds')]
-final class FeedPreviewController
+final readonly class FeedPreviewController
 {
     public function __construct(
-        private readonly FeedPreviewService $previews,
-        private readonly RateLimiterFactoryInterface $feedPreviewLimiter,
-        private readonly ClockInterface $clock,
+        private FeedPreviewService $previews,
+        private RateLimiterFactoryInterface $feedPreviewLimiter,
+        private ClockInterface $clock,
     ) {
     }
 

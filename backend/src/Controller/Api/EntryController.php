@@ -31,16 +31,16 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[Route('/api/entries')]
-final class EntryController
+final readonly class EntryController
 {
     public function __construct(
-        private readonly EntryRepository $entries,
-        private readonly EntryStateRepository $states,
-        private readonly EntityManagerInterface $em,
-        private readonly ClockInterface $clock,
-        private readonly MarkReadService $markRead,
-        private readonly ArticleExtractorInterface $extractor,
-        private readonly RateLimiterFactoryInterface $readerLimiter,
+        private EntryRepository $entries,
+        private EntryStateRepository $states,
+        private EntityManagerInterface $em,
+        private ClockInterface $clock,
+        private MarkReadService $markRead,
+        private ArticleExtractorInterface $extractor,
+        private RateLimiterFactoryInterface $readerLimiter,
     ) {
     }
 
@@ -103,7 +103,7 @@ final class EntryController
         ]);
     }
 
-    #[Route('/{id}', name: 'api_entries_get', methods: ['GET'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}', name: 'api_entries_get', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function get(
         int $id,
         #[CurrentUser] User $user,
@@ -124,7 +124,7 @@ final class EntryController
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
-    #[Route('/{id}/state', name: 'api_entries_state', methods: ['PATCH'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}/state', name: 'api_entries_state', requirements: ['id' => '\d+'], methods: ['PATCH'])]
     public function updateState(
         int $id,
         #[CurrentUser] User $user,
@@ -161,7 +161,7 @@ final class EntryController
         ]]);
     }
 
-    #[Route('/{id}/reader', name: 'api_entries_reader', methods: ['GET'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}/reader', name: 'api_entries_reader', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function reader(
         int $id,
         #[CurrentUser] User $user,

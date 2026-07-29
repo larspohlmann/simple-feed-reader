@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Service\OAuth;
 
 use Psr\Cache\CacheItemPoolInterface;
+use Psr\Cache\InvalidArgumentException;
 use Psr\Clock\ClockInterface;
+use Random\RandomException;
 
 /**
  * The handover between the provider callback and the SPA.
@@ -92,6 +94,9 @@ final readonly class LoginCodeStore
     /**
      * @param string $browserToken the flow binding the callback arrived with —
      *                             the same value consume() will require back
+     *
+     * @throws RandomException
+     * @throws InvalidArgumentException
      */
     public function issue(int $userId, string $browserToken): string
     {
@@ -121,9 +126,9 @@ final readonly class LoginCodeStore
      * @return int|null the user id, or null if the code is unknown, spent,
      *                  expired, or presented by a browser that did not complete
      *                  the flow — the caller must not distinguish those
-     *
      * See the class docblock for what "single use" does and does not promise
      * when two exchanges arrive at once.
+     * @throws InvalidArgumentException
      */
     public function consume(string $code, ?string $browserToken): ?int
     {

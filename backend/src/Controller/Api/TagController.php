@@ -25,13 +25,13 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[Route('/api/tags')]
-final class TagController
+final readonly class TagController
 {
     public function __construct(
-        private readonly TagRepository $tags,
-        private readonly SubscriptionRepository $subscriptions,
-        private readonly SubscriptionTagRepository $subscriptionTags,
-        private readonly EntityManagerInterface $em,
+        private TagRepository $tags,
+        private SubscriptionRepository $subscriptions,
+        private SubscriptionTagRepository $subscriptionTags,
+        private EntityManagerInterface $em,
     ) {
     }
 
@@ -86,7 +86,7 @@ final class TagController
         $this->em->flush();
 
         return new JsonResponse([
-            'tags' => array_map(fn (int $id): array => TagJson::one($byId[$id]), $request->tagIds),
+            'tags' => array_map(static fn (int $id): array => TagJson::one($byId[$id]), $request->tagIds),
         ]);
     }
 
@@ -95,7 +95,7 @@ final class TagController
      * feeds currently carrying the tag; each feed's per-tag position becomes its
      * index.
      */
-    #[Route('/{id}/feed-order', name: 'api_tags_feed_order', methods: ['PATCH'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}/feed-order', name: 'api_tags_feed_order', requirements: ['id' => '\d+'], methods: ['PATCH'])]
     public function feedOrder(
         int $id,
         #[CurrentUser] User $user,
@@ -119,7 +119,7 @@ final class TagController
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
-    #[Route('/{id}', name: 'api_tags_update', methods: ['PATCH'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}', name: 'api_tags_update', requirements: ['id' => '\d+'], methods: ['PATCH'])]
     public function update(
         int $id,
         #[CurrentUser] User $user,
@@ -140,7 +140,7 @@ final class TagController
         return new JsonResponse(['tag' => TagJson::one($tag)]);
     }
 
-    #[Route('/{id}', name: 'api_tags_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}', name: 'api_tags_delete', requirements: ['id' => '\d+'], methods: ['DELETE'])]
     public function delete(int $id, #[CurrentUser] User $user): JsonResponse
     {
         $tag = $this->tags->findOneOwnedBy($id, (int) $user->getId())

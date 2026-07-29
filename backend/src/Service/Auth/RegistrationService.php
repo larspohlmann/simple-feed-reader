@@ -12,9 +12,10 @@ use App\Event\UserAwaitingApproval;
 use App\Repository\UserRepository;
 use App\Security\PasswordWorkEqualizerInterface;
 use App\Service\Mail\AccountMailer;
-use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use Random\RandomException;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
@@ -40,6 +41,10 @@ final readonly class RegistrationService
     /** Languages we ship email translations for; anything else falls back to English. */
     private const array SUPPORTED_LOCALES = ['en', 'de'];
 
+    /**
+     * @throws TransportExceptionInterface
+     * @throws RandomException
+     */
     public function register(string $email, string $plainPassword, string $locale = 'en'): void
     {
         if (null !== $this->users->findOneByEmail($email)) {
@@ -62,23 +67,7 @@ final readonly class RegistrationService
 
         $this->em->persist($user);
 
-        try {
-            $this->em->flush();
-        } catch (UniqueConstraintViolationException) {
-            // Lost a race: between the SELECT above and this INSERT, another
-            // request registered the same address. A double-clicked submit
-            // button is enough to cause it, and without this catch the loser
-            // gets an opaque 500 where the winner got a 202 — a broken user
-            // action, and a response that differs from the duplicate path and
-            // so leaks that a signup for this address was in flight.
-            //
-            // The winner has already sent the verification mail, so the right
-            // move is to say nothing at all. Doctrine closes the EntityManager
-            // on a failed flush, which is safe here only because this is the
-            // last database work in the request; the controller does nothing
-            // afterwards but serialise a fixed array.
-            return;
-        }
+        $this->em->flush();
 
         $this->mailer->sendVerification(
             $user,
@@ -123,7 +112,6 @@ final readonly class RegistrationService
     /**
      * Always reports success to the caller. Whether the address exists, and
      * whether its account is in a state that may reset, stays private.
-     *
      * Deliberately does NOT call PasswordWorkEqualizer, unlike register().
      * The asymmetry is not an oversight — it is the whole point. Nothing on
      * this endpoint hashes a password: the eligible path issues a token and
@@ -131,12 +119,14 @@ final readonly class RegistrationService
      * dummy hash to the short paths would make "unknown address" ~174 ms
      * SLOWER than "account exists and got a mail", manufacturing a far louder
      * oracle than the one being closed, pointing the other way.
-     *
      * What actually closed the gap here was deferring the SMTP round trip past
      * the response (see DeferredMailer). What remains between the paths is one
      * INSERT and one UPDATE for the token — sub-millisecond, and far under
      * network jitter. Measured rather than assumed; see the timing figures in
      * the task report.
+     *
+     * @throws TransportExceptionInterface
+     * @throws RandomException
      */
     public function requestPasswordReset(string $email): void
     {

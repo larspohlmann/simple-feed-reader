@@ -16,9 +16,9 @@ use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FetchOutcome;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Parser\Exception\FeedParseException;
-use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Exception\ORMException;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Lock\LockFactory;
@@ -64,6 +64,14 @@ final class RefreshRunner
     ) {
     }
 
+    /**
+     * @param RefreshRequest $request
+     *
+     * @return RefreshReport
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     * @throws \DateMalformedStringException
+     */
     public function run(RefreshRequest $request): RefreshReport
     {
         $lock = $this->lockFactory->createLock(self::LOCK_NAME, self::LOCK_TTL_SECONDS);
@@ -78,6 +86,14 @@ final class RefreshRunner
         }
     }
 
+    /**
+     * @param RefreshRequest $request
+     *
+     * @return RefreshReport
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     * @throws \DateMalformedStringException
+     */
     private function refresh(RefreshRequest $request): RefreshReport
     {
         $now = $this->clock->now();
@@ -131,6 +147,8 @@ final class RefreshRunner
      * branch for.
      *
      * @param list<Feed> $feeds
+     *
+     * @throws \DateMalformedStringException
      */
     private function resolveFaviconsAndReport(
         RefreshRequest $request,
@@ -139,22 +157,7 @@ final class RefreshRunner
         BudgetedFeedQueue $queue,
         ?\DateTimeImmutable $cooldownCutoff,
     ): RefreshReport {
-        try {
-            $this->resolveMissingFavicons($tally->faviconEligibleFeeds);
-        } catch (UniqueConstraintViolationException | ORMException $e) {
-            $this->logger->error(
-                'Refresh aborted: persistence failed while resolving favicons',
-                ['exception' => $e],
-            );
-
-            return RefreshReport::aborted(
-                \count($feeds),
-                $tally->fetched,
-                $tally->notModified,
-                $tally->failed,
-                $queue->skippedCount(),
-            );
-        }
+        $this->resolveMissingFavicons($tally->faviconEligibleFeeds);
 
         return RefreshReport::finished(
             \count($feeds),
@@ -171,7 +174,13 @@ final class RefreshRunner
      * Drives the concurrent fetch and applies each result serially as it lands.
      * Breaking out of the loop cancels whatever is still in flight.
      *
-     * @param list<Feed> $feeds
+     * @param list<Feed>        $feeds
+     * @param BudgetedFeedQueue $queue
+     *
+     * @return RefreshTally
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     * @throws \DateMalformedStringException
      */
     private function processOutcomes(array $feeds, BudgetedFeedQueue $queue): RefreshTally
     {
@@ -195,21 +204,14 @@ final class RefreshRunner
         return $tally;
     }
 
+    /**
+     * @throws \DateMalformedStringException
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
     private function applyOutcome(Feed $feed, FetchOutcome $outcome): FeedOutcome
     {
-        try {
-            return $this->persistOutcome($feed, $outcome);
-        } catch (UniqueConstraintViolationException | ORMException $e) {
-            // A failed flush rolls back AND closes the EntityManager, so every
-            // later persist/flush would throw "EntityManager is closed".
-            // Stop here instead of cascading the failure across the batch.
-            $this->logger->error(
-                'Refresh aborted: persistence failed for {url}',
-                ['url' => $feed->getUrl(), 'exception' => $e],
-            );
-
-            return FeedOutcome::Aborted;
-        }
+        return $this->persistOutcome($feed, $outcome);
     }
 
     /**
@@ -233,6 +235,11 @@ final class RefreshRunner
         );
     }
 
+    /**
+     * @throws \DateMalformedStringException
+     * @throws NotFoundExceptionInterface
+     * @throws ContainerExceptionInterface
+     */
     private function persistOutcome(Feed $feed, FetchOutcome $outcome): FeedOutcome
     {
         try {

@@ -8,7 +8,9 @@ use App\Entity\Feed;
 use App\Enum\SourceFormat;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\ParsedFeed;
+use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
 /**
@@ -25,6 +27,10 @@ final readonly class FeedBodyParser
     ) {
     }
 
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
     public function parse(Feed $feed, string $body): ParsedFeed
     {
         $format = $feed->getSourceFormat();
@@ -51,6 +57,10 @@ final readonly class FeedBodyParser
         }
     }
 
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
     private function resolve(string $format): FeedBodyParserInterface
     {
         $parser = $this->parsers->get($format);

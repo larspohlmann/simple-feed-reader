@@ -26,11 +26,11 @@ use Symfony\Component\Routing\Attribute\Route;
  * an import are unlocked, because the document already owns them.
  */
 #[Route('/api/admin/catalog/categories')]
-final class AdminCatalogCategoryController
+final readonly class AdminCatalogCategoryController
 {
     public function __construct(
-        private readonly CatalogCategoryRepository $categories,
-        private readonly EntityManagerInterface $em,
+        private CatalogCategoryRepository $categories,
+        private EntityManagerInterface $em,
     ) {
     }
 
@@ -61,7 +61,7 @@ final class AdminCatalogCategoryController
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
-    #[Route('/{id}', name: 'api_admin_catalog_category_update', methods: ['PATCH'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}', name: 'api_admin_catalog_category_update', requirements: ['id' => '\d+'], methods: ['PATCH'])]
     public function update(int $id, #[MapRequestPayload] CatalogCategoryRequest $request): JsonResponse
     {
         $category = $this->requireCategory($id);
@@ -75,7 +75,7 @@ final class AdminCatalogCategoryController
         return new JsonResponse(['category' => AdminCatalogJson::category($category)]);
     }
 
-    #[Route('/{id}', name: 'api_admin_catalog_category_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}', name: 'api_admin_catalog_category_delete', requirements: ['id' => '\d+'], methods: ['DELETE'])]
     public function delete(int $id): JsonResponse
     {
         $category = $this->requireCategory($id);

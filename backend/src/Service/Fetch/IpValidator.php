@@ -76,7 +76,7 @@ final class IpValidator
         }
 
         $fullBytes = intdiv($bits, 8);
-        if (substr($binaryIp, 0, $fullBytes) !== substr($binaryNetwork, 0, $fullBytes)) {
+        if (!str_starts_with($binaryIp, substr($binaryNetwork, 0, $fullBytes))) {
             return false;
         }
 

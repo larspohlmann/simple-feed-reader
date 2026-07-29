@@ -26,15 +26,15 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[Route('/api/subscriptions')]
-final class SubscriptionController
+final readonly class SubscriptionController
 {
     public function __construct(
-        private readonly SubscriptionService $subscriptions,
-        private readonly SubscriptionRepository $subscriptionRepo,
-        private readonly SubscriptionTagRepository $subscriptionTags,
-        private readonly TagRepository $tags,
-        private readonly EntryStateRepository $entryStates,
-        private readonly EntityManagerInterface $em,
+        private SubscriptionService $subscriptions,
+        private SubscriptionRepository $subscriptionRepo,
+        private SubscriptionTagRepository $subscriptionTags,
+        private TagRepository $tags,
+        private EntryStateRepository $entryStates,
+        private EntityManagerInterface $em,
     ) {
     }
 
@@ -83,7 +83,7 @@ final class SubscriptionController
         );
     }
 
-    #[Route('/{id}', name: 'api_subscriptions_update', methods: ['PATCH'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}', name: 'api_subscriptions_update', requirements: ['id' => '\d+'], methods: ['PATCH'])]
     public function update(
         int $id,
         #[CurrentUser] User $user,
@@ -153,7 +153,7 @@ final class SubscriptionController
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
-    #[Route('/{id}', name: 'api_subscriptions_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}', name: 'api_subscriptions_delete', requirements: ['id' => '\d+'], methods: ['DELETE'])]
     public function delete(int $id, #[CurrentUser] User $user): JsonResponse
     {
         $sub = $this->subscriptionRepo->findOneOwnedBy($id, (int) $user->getId())

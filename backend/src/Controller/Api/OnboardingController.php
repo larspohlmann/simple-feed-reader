@@ -15,10 +15,10 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[Route('/api/onboarding')]
-final class OnboardingController
+final readonly class OnboardingController
 {
     public function __construct(
-        private readonly CatalogSubscriber $subscriber,
+        private CatalogSubscriber $subscriber,
     ) {
     }
 

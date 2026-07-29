@@ -11,6 +11,6 @@ final class TextNormalizer
     {
         $text = str_replace("\u{00AD}", '', $text);
 
-        return trim((string) preg_replace('/\s+/u', ' ', $text));
+        return trim(preg_replace('/\s+/u', ' ', $text));
     }
 }

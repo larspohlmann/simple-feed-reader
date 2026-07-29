@@ -21,12 +21,12 @@ use Symfony\Component\Routing\Attribute\Route;
  * firewall, consistent with the other admin controllers.
  */
 #[Route('/api/admin/catalog')]
-final class AdminCatalogImportController
+final readonly class AdminCatalogImportController
 {
     public function __construct(
-        private readonly CatalogImporter $importer,
-        private readonly CatalogDocument $parser,
-        private readonly BundledCatalog $bundled,
+        private CatalogImporter $importer,
+        private CatalogDocument $parser,
+        private BundledCatalog $bundled,
     ) {
     }
 

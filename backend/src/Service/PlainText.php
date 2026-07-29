@@ -26,7 +26,7 @@ final class PlainText
         }
 
         $decoded = html_entity_decode(strip_tags($value), ENT_QUOTES | ENT_HTML5);
-        $collapsed = trim((string) preg_replace('/\s+/u', ' ', $decoded));
+        $collapsed = trim(preg_replace('/\s+/u', ' ', $decoded));
 
         return $collapsed === '' ? null : $collapsed;
     }

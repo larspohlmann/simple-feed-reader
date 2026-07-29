@@ -10,6 +10,7 @@ use App\Enum\TokenPurpose;
 use App\Repository\ActionTokenRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use Random\RandomException;
 
 /**
  * Issues and redeems the single-use tokens behind email verification and
@@ -28,6 +29,7 @@ final readonly class ActionTokenService
 
     /**
      * @return string the plaintext token — the only time it is ever available
+     * @throws RandomException
      */
     public function issue(User $user, TokenPurpose $purpose): string
     {

@@ -82,7 +82,7 @@ final class RefreshFeedsCommand extends Command
         }
 
         foreach ($report->toArray() as $key => $value) {
-            $io->writeln(sprintf('%-18s %s', $key, (string) $value));
+            $io->writeln(sprintf('%-18s %s', $key, $value));
         }
 
         if ($report->status === 'aborted') {

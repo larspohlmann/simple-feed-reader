@@ -27,14 +27,14 @@ final class AccountStatusException extends SymfonyAccountStatusException
      * carried explicitly - otherwise it stays uninitialised after a round trip
      * and reading it throws.
      *
-     * @return array{string, array<mixed>}
+     * @return array{string, array}
      */
     public function __serialize(): array
     {
         return [$this->accountStatus, parent::__serialize()];
     }
 
-    /** @param array{string, array<mixed>} $data */
+    /** @param array{string, array} $data */
     public function __unserialize(array $data): void
     {
         [$this->accountStatus, $parentData] = $data;

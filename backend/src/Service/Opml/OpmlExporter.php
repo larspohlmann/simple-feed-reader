@@ -20,6 +20,9 @@ final readonly class OpmlExporter
     ) {
     }
 
+    /**
+     * @throws \DOMException
+     */
     public function export(User $user): string
     {
         $subs = $this->subscriptions->findForUserWithTags((int) $user->getId());
@@ -42,8 +45,8 @@ final readonly class OpmlExporter
 
         foreach ($byTag as $tagName => $group) {
             $outline = $doc->createElement('outline');
-            $outline->setAttribute('text', (string) $tagName);
-            $outline->setAttribute('title', (string) $tagName);
+            $outline->setAttribute('text', $tagName);
+            $outline->setAttribute('title', $tagName);
             foreach ($group as $sub) {
                 $outline->appendChild($this->feedOutline($doc, $sub));
             }
@@ -80,6 +83,9 @@ final readonly class OpmlExporter
         return [$byTag, $untagged];
     }
 
+    /**
+     * @throws \DOMException
+     */
     private function feedOutline(\DOMDocument $doc, Subscription $sub): \DOMElement
     {
         $feed = $sub->getFeed();

@@ -21,10 +21,10 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationFailureHandlerI
  * unknown email deliberately produce the identical response - distinguishing
  * them would turn the endpoint into an account-enumeration oracle.
  */
-final class LoginFailureHandler implements AuthenticationFailureHandlerInterface
+final readonly class LoginFailureHandler implements AuthenticationFailureHandlerInterface
 {
     public function __construct(
-        private readonly LoginTimingEqualizer $timingEqualizer,
+        private LoginTimingEqualizer $timingEqualizer,
     ) {
     }
 

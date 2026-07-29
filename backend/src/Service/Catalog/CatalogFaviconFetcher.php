@@ -9,6 +9,9 @@ use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Fetch\UrlResolver;
+use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -57,7 +60,13 @@ final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInter
     {
         try {
             [$bytes, $contentType] = $this->fetchFollowingRedirects($iconUrl);
-        } catch (FetchException | TransportExceptionInterface $e) {
+        } catch (
+            FetchException |
+            TransportExceptionInterface |
+            ClientExceptionInterface |
+            RedirectionExceptionInterface |
+            ServerExceptionInterface $e
+        ) {
             throw new FaviconUnavailableException($e->getMessage(), 0, $e);
         }
 
@@ -73,7 +82,13 @@ final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInter
      * because it would resolve DNS itself and never consult the guard, letting a
      * redirect to a private address slip the SSRF boundary entirely.
      *
+     * @param string $url
+     *
      * @return array{0: string, 1: string} the body bytes and their content type
+     * @throws ClientExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ServerExceptionInterface
+     * @throws TransportExceptionInterface
      */
     private function fetchFollowingRedirects(string $url): array
     {
@@ -91,6 +106,9 @@ final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInter
         throw new FaviconUnavailableException('Icon exceeded ' . self::MAX_REDIRECTS . ' redirects.');
     }
 
+    /**
+     * @throws TransportExceptionInterface
+     */
     private function requestGuarded(string $url): ResponseInterface
     {
         $guarded = $this->urlGuard->assertSafe($url);
@@ -114,6 +132,12 @@ final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInter
         ]);
     }
 
+    /**
+     * @throws TransportExceptionInterface
+     * @throws ServerExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ClientExceptionInterface
+     */
     private function redirectLocation(ResponseInterface $response): string
     {
         return $response->getHeaders(false)['location'][0]
@@ -121,7 +145,14 @@ final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInter
     }
 
     /**
+     * @param ResponseInterface $response
+     * @param int               $status
+     *
      * @return array{0: string, 1: string}
+     * @throws TransportExceptionInterface
+     * @throws ClientExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ServerExceptionInterface
      */
     private function readSuccessfulResponse(ResponseInterface $response, int $status): array
     {
