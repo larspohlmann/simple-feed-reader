@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Auth;
 
 use Psr\Cache\CacheItemPoolInterface;
+use Psr\Cache\InvalidArgumentException;
 use Psr\Clock\ClockInterface;
+use Random\RandomException;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
@@ -75,6 +77,9 @@ final readonly class AltchaService
     ) {
     }
 
+    /**
+     * @throws RandomException
+     */
     public function createChallenge(): AltchaChallenge
     {
         $expires = $this->clock->now()->getTimestamp() + self::TTL_SECONDS;
@@ -92,7 +97,10 @@ final readonly class AltchaService
         );
     }
 
-    /** @param string $payload base64-encoded JSON produced by the widget */
+    /**
+     * @param string $payload base64-encoded JSON produced by the widget
+     * @throws InvalidArgumentException
+     */
     public function verify(string $payload): bool
     {
         $solution = $this->decode($payload);
@@ -202,6 +210,8 @@ final readonly class AltchaService
     /**
      * A valid solution is worth exactly one use. The signature identifies the
      * challenge uniquely, so remembering it until expiry blocks replay.
+     *
+     * @throws InvalidArgumentException
      */
     private function claimOnce(string $signature): bool
     {

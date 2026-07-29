@@ -26,11 +26,11 @@ use Symfony\Component\Routing\Attribute\Route;
  * an import are unlocked, because the document already owns them.
  */
 #[Route('/api/admin/catalog/categories')]
-final class AdminCatalogCategoryController
+final readonly class AdminCatalogCategoryController
 {
     public function __construct(
-        private readonly CatalogCategoryRepository $categories,
-        private readonly EntityManagerInterface $em,
+        private CatalogCategoryRepository $categories,
+        private EntityManagerInterface $em,
     ) {
     }
 

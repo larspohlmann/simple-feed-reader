@@ -30,7 +30,7 @@ class Entry
     private string $guidHash;
 
     #[ORM\Column(length: 2048, nullable: true)]
-    private ?string $url = null;
+    private ?string $url;
 
     #[ORM\Column(length: 1024)]
     private string $title;

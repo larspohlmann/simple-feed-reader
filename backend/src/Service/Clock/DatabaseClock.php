@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Clock;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Exception;
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Symfony\Component\Clock\ClockInterface;
 
@@ -20,6 +21,9 @@ final readonly class DatabaseClock implements ClockInterface
 {
     private \DateTimeZone $timeZone;
 
+    /**
+     * @throws \DateInvalidTimeZoneException
+     */
     public function __construct(
         private Connection $connection,
         \DateTimeZone|string $timeZone = 'UTC',
@@ -27,6 +31,10 @@ final readonly class DatabaseClock implements ClockInterface
         $this->timeZone = \is_string($timeZone) ? new \DateTimeZone($timeZone) : $timeZone;
     }
 
+    /**
+     * @throws \DateMalformedStringException
+     * @throws Exception
+     */
     public function now(): \DateTimeImmutable
     {
         $utc = new \DateTimeImmutable($this->readDatabaseUtc(), new \DateTimeZone('UTC'));
@@ -41,11 +49,17 @@ final readonly class DatabaseClock implements ClockInterface
         usleep((int) round($seconds * 1_000_000));
     }
 
+    /**
+     * @throws \DateInvalidTimeZoneException
+     */
     public function withTimeZone(\DateTimeZone|string $timezone): static
     {
         return new self($this->connection, $timezone);
     }
 
+    /**
+     * @throws Exception
+     */
     private function readDatabaseUtc(): string
     {
         // MySQL's CURRENT_TIMESTAMP is session-local (the production DB session is

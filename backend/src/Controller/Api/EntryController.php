@@ -31,16 +31,16 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[Route('/api/entries')]
-final class EntryController
+final readonly class EntryController
 {
     public function __construct(
-        private readonly EntryRepository $entries,
-        private readonly EntryStateRepository $states,
-        private readonly EntityManagerInterface $em,
-        private readonly ClockInterface $clock,
-        private readonly MarkReadService $markRead,
-        private readonly ArticleExtractorInterface $extractor,
-        private readonly RateLimiterFactoryInterface $readerLimiter,
+        private EntryRepository $entries,
+        private EntryStateRepository $states,
+        private EntityManagerInterface $em,
+        private ClockInterface $clock,
+        private MarkReadService $markRead,
+        private ArticleExtractorInterface $extractor,
+        private RateLimiterFactoryInterface $readerLimiter,
     ) {
     }
 

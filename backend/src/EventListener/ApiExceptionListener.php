@@ -48,7 +48,7 @@ final readonly class ApiExceptionListener
          * problem fields. Kept separate from ApiProblem, which models the
          * standard document and nothing else.
          *
-         * @var array<string, mixed>
+         * @var array<string, mixed> $extensions
          */
         $extensions = [];
 

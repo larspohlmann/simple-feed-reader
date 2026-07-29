@@ -25,6 +25,9 @@ final class FeedScheduler
     {
     }
 
+    /**
+     * @throws \DateMalformedStringException
+     */
     public function recordSuccess(Feed $feed, int $newEntryCount): void
     {
         // The floor applies to both branches: without it a stored interval of
@@ -46,6 +49,9 @@ final class FeedScheduler
         $feed->setNextFetchAt($now->modify(sprintf('+%d minutes', $interval)));
     }
 
+    /**
+     * @throws \DateMalformedStringException
+     */
     public function recordFailure(Feed $feed, string $message): void
     {
         $failures = $feed->getConsecutiveFailures() + 1;

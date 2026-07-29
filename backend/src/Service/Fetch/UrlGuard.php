@@ -12,11 +12,11 @@ use App\Service\Fetch\Exception\SsrfBlockedException;
  * resolved IP is returned so the HTTP client can pin the connection to it
  * (closes the DNS-rebinding window).
  */
-final class UrlGuard
+final readonly class UrlGuard
 {
     public function __construct(
-        private readonly DnsResolverInterface $dnsResolver,
-        private readonly IpValidator $ipValidator,
+        private DnsResolverInterface $dnsResolver,
+        private IpValidator $ipValidator,
     ) {
     }
 

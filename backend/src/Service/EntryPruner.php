@@ -44,11 +44,17 @@ final class EntryPruner
     ) {
     }
 
+    /**
+     * @throws \DateMalformedStringException
+     */
     public function prune(): int
     {
         return $this->pruneByAge() + $this->pruneByFeedCap();
     }
 
+    /**
+     * @throws \DateMalformedStringException
+     */
     private function pruneByAge(): int
     {
         $cutoff = $this->clock->now()->modify(sprintf('-%d days', self::RETENTION_DAYS));

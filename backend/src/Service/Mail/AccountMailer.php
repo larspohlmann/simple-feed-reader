@@ -8,6 +8,7 @@ use App\Dto\Mail\PendingApprovalNotice;
 use App\Entity\User;
 use App\Enum\RegistrationMethod;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
@@ -32,21 +33,33 @@ final readonly class AccountMailer
     ) {
     }
 
+    /**
+     * @throws TransportExceptionInterface
+     */
     public function sendVerification(User $user, string $plainToken): void
     {
         $this->send($user, 'verify', ['%link%' => $this->link('/verify-email', $plainToken)]);
     }
 
+    /**
+     * @throws TransportExceptionInterface
+     */
     public function sendApproved(User $user): void
     {
         $this->send($user, 'approved', ['%url%' => rtrim($this->frontendUrl, '/')]);
     }
 
+    /**
+     * @throws TransportExceptionInterface
+     */
     public function sendPasswordReset(User $user, string $plainToken): void
     {
         $this->send($user, 'reset', ['%link%' => $this->link('/reset-password', $plainToken)]);
     }
 
+    /**
+     * @throws TransportExceptionInterface
+     */
     public function sendPendingApprovalNotice(User $admin, PendingApprovalNotice $notice): void
     {
         $this->send($admin, 'admin_pending_approval', [
@@ -73,7 +86,10 @@ final readonly class AccountMailer
         return $this->translator->trans('admin_pending_approval.method_email_password', [], 'emails', $locale);
     }
 
-    /** @param array<string, string> $params */
+    /**
+     * @param array<string, string> $params
+     * @throws TransportExceptionInterface
+     */
     private function send(User $user, string $key, array $params): void
     {
         $locale = $user->getLocale();
@@ -81,7 +97,7 @@ final readonly class AccountMailer
         $body = $this->translator->trans("$key.body", $params, 'emails', $locale);
 
         $this->mailer->send(
-            (new Email())
+            new Email()
                 ->from(new Address($this->fromAddress, $this->fromName))
                 ->to($user->getEmail())
                 ->subject($subject)

@@ -12,6 +12,7 @@ use App\Service\Mail\AccountMailer;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 /**
  * Tells the admins who can act on it that a new account is waiting. One mail per
@@ -30,6 +31,9 @@ final readonly class NotifyAdminsOfPendingApproval
     ) {
     }
 
+    /**
+     * @throws TransportExceptionInterface
+     */
     public function __invoke(UserAwaitingApproval $event): void
     {
         $admins = $this->users->findActiveAdmins();

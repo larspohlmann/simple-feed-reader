@@ -24,7 +24,7 @@ final class EntrySanitizer
 
     public function __construct()
     {
-        $config = (new HtmlSanitizerConfig())
+        $config = new HtmlSanitizerConfig()
             ->allowSafeElements()
             ->allowElement('img', ['src', 'alt', 'title', 'width', 'height', 'loading'])
             ->forceAttribute('a', 'rel', 'noopener noreferrer')

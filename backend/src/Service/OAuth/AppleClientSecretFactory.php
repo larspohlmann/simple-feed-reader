@@ -91,7 +91,7 @@ final readonly class AppleClientSecretFactory
         $now = $this->clock->now();
 
         try {
-            return (new Builder(new JoseEncoder(), ChainedFormatter::withUnixTimestampDates()))
+            return new Builder(new JoseEncoder(), ChainedFormatter::withUnixTimestampDates())
                 // withUnixTimestampDates(), NOT ChainedFormatter::default().
                 //
                 // The default formatter renders date claims through

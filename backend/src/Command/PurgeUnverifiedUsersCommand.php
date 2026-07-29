@@ -36,6 +36,9 @@ final class PurgeUnverifiedUsersCommand extends Command
         parent::__construct();
     }
 
+    /**
+     * @throws \DateInvalidOperationException
+     */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);

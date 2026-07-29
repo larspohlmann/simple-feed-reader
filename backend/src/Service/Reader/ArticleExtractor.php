@@ -47,7 +47,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
             return ExtractionResult::failed($url, 'unextractable');
         }
 
-        if (!$article->hasContent() || $article->content === null) {
+        if ($article->content === null || !$article->hasContent()) {
             return ExtractionResult::failed($url, 'empty');
         }
         if (mb_strlen(trim((string) $article->textContent)) < self::MIN_CONTENT_LENGTH) {

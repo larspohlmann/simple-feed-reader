@@ -14,8 +14,9 @@ use App\Service\Discovery\FeedDiscoveryResult;
 final readonly class SubscribeOutcome
 {
     /**
+     * @param Subscription|null   $subscription
      * @param list<FeedCandidate> $candidates
-     * @param ScrapeFailureReason|null $scrapeFailureReason
+     * @param string|null         $scrapeFailureReason
      */
     private function __construct(
         public ?Subscription $subscription,
@@ -35,7 +36,9 @@ final readonly class SubscribeOutcome
      * never answered, or had no extractable article list).
      *
      * @param list<FeedCandidate> $candidates
-     * @param ScrapeFailureReason|null $scrapeFailureReason
+     * @param string|null         $scrapeFailureReason
+     *
+     * @return SubscribeOutcome
      */
     public static function candidates(array $candidates, ?string $scrapeFailureReason = null): self
     {

@@ -26,15 +26,15 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[Route('/api/subscriptions')]
-final class SubscriptionController
+final readonly class SubscriptionController
 {
     public function __construct(
-        private readonly SubscriptionService $subscriptions,
-        private readonly SubscriptionRepository $subscriptionRepo,
-        private readonly SubscriptionTagRepository $subscriptionTags,
-        private readonly TagRepository $tags,
-        private readonly EntryStateRepository $entryStates,
-        private readonly EntityManagerInterface $em,
+        private SubscriptionService $subscriptions,
+        private SubscriptionRepository $subscriptionRepo,
+        private SubscriptionTagRepository $subscriptionTags,
+        private TagRepository $tags,
+        private EntryStateRepository $entryStates,
+        private EntityManagerInterface $em,
     ) {
     }
 

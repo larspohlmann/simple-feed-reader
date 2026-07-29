@@ -85,7 +85,7 @@ final readonly class HtmlItemExtractor
         $self = rtrim($baseUrl, '/');
         $unique = [];
         foreach ($items as $item) {
-            if (rtrim($item->url, '/') === $self || isset($unique[$item->url])) {
+            if (isset($unique[$item->url]) || rtrim($item->url, '/') === $self) {
                 continue;
             }
             $unique[$item->url] = $item;

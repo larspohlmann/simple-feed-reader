@@ -11,8 +11,10 @@ use App\Service\OAuth\LoginCodeStore;
 use App\Service\OAuth\OAuthProviderRegistry;
 use App\Service\OAuth\OAuthSignIn;
 use App\Service\OAuth\OAuthStateStore;
+use Psr\Cache\InvalidArgumentException;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
+use Random\RandomException;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -172,15 +174,15 @@ final class OAuthController
 
     /**
      * Step 2: the provider sends the browser back.
-     *
      * GET and POST. Google returns a GET with a query string; Apple returns a
      * cross-site POST with a form body, because we request a scope and Apple
      * then requires `response_mode=form_post`.
-     *
      * Every failure below leaves as a redirect to the SPA carrying an error
      * code, never as problem+json. The caller here is a browser following a
      * redirect chain — a JSON error body would be a dead end showing raw JSON
      * in the address bar instead of a login page saying what went wrong.
+     *
+     * @throws InvalidArgumentException
      */
     #[Route(
         '/{provider}/callback',
@@ -272,6 +274,9 @@ final class OAuthController
      *
      * Declared LAST: `/{provider}` is the catch-all of this controller and
      * would shadow every literal route above it. See the class docblock.
+     *
+     * @throws InvalidArgumentException
+     * @throws RandomException
      */
     #[Route(
         '/{provider}',
@@ -340,8 +345,6 @@ final class OAuthController
             ->withExpires($this->clock->now()->getTimestamp() + self::FLOW_COOKIE_LIFETIME)
             ->withPath('/')
             ->withDomain(null)
-            ->withSecure(true)
-            ->withHttpOnly(true)
             ->withSameSite(Cookie::SAMESITE_NONE);
     }
 

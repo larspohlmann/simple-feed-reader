@@ -17,13 +17,13 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[Route('/api/catalog')]
-final class CatalogController
+final readonly class CatalogController
 {
     public function __construct(
-        private readonly CatalogCategoryRepository $categories,
-        private readonly FeedRepository $feeds,
-        private readonly CatalogFeedRepository $catalogFeeds,
-        private readonly MonogramFavicon $monogram,
+        private CatalogCategoryRepository $categories,
+        private FeedRepository $feeds,
+        private CatalogFeedRepository $catalogFeeds,
+        private MonogramFavicon $monogram,
     ) {
     }
 

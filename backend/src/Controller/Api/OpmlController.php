@@ -15,14 +15,17 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[Route('/api/opml')]
-final class OpmlController
+final readonly class OpmlController
 {
     public function __construct(
-        private readonly OpmlExporter $exporter,
-        private readonly OpmlImporter $importer,
+        private OpmlExporter $exporter,
+        private OpmlImporter $importer,
     ) {
     }
 
+    /**
+     * @throws \DOMException
+     */
     #[Route('/export', name: 'api_opml_export', methods: ['GET'])]
     public function export(#[CurrentUser] User $user): Response
     {

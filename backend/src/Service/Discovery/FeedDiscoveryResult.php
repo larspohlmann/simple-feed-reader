@@ -10,7 +10,9 @@ namespace App\Service\Discovery;
 final readonly class FeedDiscoveryResult
 {
     /**
-     * @param list<FeedCandidate> $candidates
+     * @param bool                     $isDirectFeed
+     * @param string|null              $feedUrl
+     * @param list<FeedCandidate>      $candidates
      * @param ScrapeFailureReason|null $scrapeFailureReason
      */
     private function __construct(
@@ -41,6 +43,8 @@ final readonly class FeedDiscoveryResult
      * not an error condition.
      *
      * @param ScrapeFailureReason $reason
+     *
+     * @return FeedDiscoveryResult
      */
     public static function scrapeFailed(string $reason): self
     {

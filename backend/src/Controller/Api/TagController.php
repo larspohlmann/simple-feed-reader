@@ -25,13 +25,13 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[Route('/api/tags')]
-final class TagController
+final readonly class TagController
 {
     public function __construct(
-        private readonly TagRepository $tags,
-        private readonly SubscriptionRepository $subscriptions,
-        private readonly SubscriptionTagRepository $subscriptionTags,
-        private readonly EntityManagerInterface $em,
+        private TagRepository $tags,
+        private SubscriptionRepository $subscriptions,
+        private SubscriptionTagRepository $subscriptionTags,
+        private EntityManagerInterface $em,
     ) {
     }
 
@@ -86,7 +86,7 @@ final class TagController
         $this->em->flush();
 
         return new JsonResponse([
-            'tags' => array_map(fn (int $id): array => TagJson::one($byId[$id]), $request->tagIds),
+            'tags' => array_map(static fn (int $id): array => TagJson::one($byId[$id]), $request->tagIds),
         ]);
     }
 

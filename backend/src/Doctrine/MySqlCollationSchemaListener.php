@@ -6,6 +6,7 @@ namespace App\Doctrine;
 
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Exception;
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\ORM\Tools\Event\GenerateSchemaTableEventArgs;
 use Doctrine\ORM\Tools\ToolEvents;
@@ -74,6 +75,9 @@ final readonly class MySqlCollationSchemaListener
     {
     }
 
+    /**
+     * @throws Exception
+     */
     public function postGenerateSchemaTable(GenerateSchemaTableEventArgs $args): void
     {
         if ($this->connection->getDatabasePlatform() instanceof AbstractMySQLPlatform) {

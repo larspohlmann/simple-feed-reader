@@ -13,23 +13,26 @@ use App\Exception\RateLimitedException;
 use App\Exception\ValidationException;
 use App\Service\Auth\AltchaService;
 use App\Service\Auth\RegistrationService;
+use Psr\Cache\InvalidArgumentException;
 use Psr\Clock\ClockInterface;
+use Random\RandomException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api/auth')]
-final class AuthController
+final readonly class AuthController
 {
     public function __construct(
-        private readonly RegistrationService $registration,
-        private readonly AltchaService $altcha,
-        private readonly ClockInterface $clock,
-        private readonly RateLimiterFactoryInterface $registrationLimiter,
-        private readonly RateLimiterFactoryInterface $passwordResetRequestLimiter,
+        private RegistrationService $registration,
+        private AltchaService $altcha,
+        private ClockInterface $clock,
+        private RateLimiterFactoryInterface $registrationLimiter,
+        private RateLimiterFactoryInterface $passwordResetRequestLimiter,
     ) {
     }
 
@@ -82,12 +85,20 @@ final class AuthController
         throw new \LogicException('Handled by the json_login listener.');
     }
 
+    /**
+     * @throws RandomException
+     */
     #[Route('/altcha-challenge', name: 'api_auth_altcha_challenge', methods: ['GET'])]
     public function altchaChallenge(): JsonResponse
     {
         return new JsonResponse($this->altcha->createChallenge()->toArray());
     }
 
+    /**
+     * @throws RandomException
+     * @throws TransportExceptionInterface
+     * @throws InvalidArgumentException
+     */
     #[Route('/register', name: 'api_auth_register', methods: ['POST'])]
     public function register(#[MapRequestPayload] RegisterRequest $request, Request $httpRequest): JsonResponse
     {
@@ -122,6 +133,11 @@ final class AuthController
         return new JsonResponse(['status' => $status->value]);
     }
 
+    /**
+     * @throws TransportExceptionInterface
+     * @throws RandomException
+     * @throws InvalidArgumentException
+     */
     #[Route('/password-reset-request', name: 'api_auth_password_reset_request', methods: ['POST'])]
     public function passwordResetRequest(
         #[MapRequestPayload] PasswordResetRequest $request,

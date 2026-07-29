@@ -36,8 +36,8 @@ final readonly class RegisterRequest
         // who re-authorises and arrives with a `sub` and nothing else.
         #[Assert\Regex(
             pattern: '/\.invalid$/i',
-            match: false,
             message: 'That address is not a deliverable one.',
+            match: false,
         )]
         public string $email = '',
         // 12 chars with no composition rules: length beats character classes,

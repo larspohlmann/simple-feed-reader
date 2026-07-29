@@ -19,6 +19,8 @@ use App\Service\Parser\Exception\FeedParseException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Lock\LockFactory;
@@ -64,6 +66,14 @@ final class RefreshRunner
     ) {
     }
 
+    /**
+     * @param RefreshRequest $request
+     *
+     * @return RefreshReport
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     * @throws \DateMalformedStringException
+     */
     public function run(RefreshRequest $request): RefreshReport
     {
         $lock = $this->lockFactory->createLock(self::LOCK_NAME, self::LOCK_TTL_SECONDS);
@@ -78,6 +88,14 @@ final class RefreshRunner
         }
     }
 
+    /**
+     * @param RefreshRequest $request
+     *
+     * @return RefreshReport
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     * @throws \DateMalformedStringException
+     */
     private function refresh(RefreshRequest $request): RefreshReport
     {
         $now = $this->clock->now();
@@ -131,6 +149,8 @@ final class RefreshRunner
      * branch for.
      *
      * @param list<Feed> $feeds
+     *
+     * @throws \DateMalformedStringException
      */
     private function resolveFaviconsAndReport(
         RefreshRequest $request,
@@ -171,7 +191,13 @@ final class RefreshRunner
      * Drives the concurrent fetch and applies each result serially as it lands.
      * Breaking out of the loop cancels whatever is still in flight.
      *
-     * @param list<Feed> $feeds
+     * @param list<Feed>        $feeds
+     * @param BudgetedFeedQueue $queue
+     *
+     * @return RefreshTally
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     * @throws \DateMalformedStringException
      */
     private function processOutcomes(array $feeds, BudgetedFeedQueue $queue): RefreshTally
     {
@@ -195,6 +221,11 @@ final class RefreshRunner
         return $tally;
     }
 
+    /**
+     * @throws \DateMalformedStringException
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
     private function applyOutcome(Feed $feed, FetchOutcome $outcome): FeedOutcome
     {
         try {
@@ -233,6 +264,11 @@ final class RefreshRunner
         );
     }
 
+    /**
+     * @throws \DateMalformedStringException
+     * @throws NotFoundExceptionInterface
+     * @throws ContainerExceptionInterface
+     */
     private function persistOutcome(Feed $feed, FetchOutcome $outcome): FeedOutcome
     {
         try {

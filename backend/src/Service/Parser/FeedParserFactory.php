@@ -40,7 +40,7 @@ final readonly class FeedParserFactory
             sprintf(
                 'No parser for feed root <%s> in namespace "%s"',
                 $root->localName,
-                (string) $root->namespaceURI,
+                $root->namespaceURI,
             ),
         );
     }

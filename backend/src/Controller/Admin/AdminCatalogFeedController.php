@@ -30,13 +30,13 @@ use Symfony\Component\Routing\Attribute\Route;
  * import are unlocked, because the document already owns them.
  */
 #[Route('/api/admin/catalog/feeds')]
-final class AdminCatalogFeedController
+final readonly class AdminCatalogFeedController
 {
     public function __construct(
-        private readonly CatalogFeedRepository $feeds,
-        private readonly CatalogCategoryRepository $categories,
-        private readonly CatalogFaviconWarmer $warmer,
-        private readonly EntityManagerInterface $em,
+        private CatalogFeedRepository $feeds,
+        private CatalogCategoryRepository $categories,
+        private CatalogFaviconWarmer $warmer,
+        private EntityManagerInterface $em,
     ) {
     }
 
