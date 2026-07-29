@@ -298,8 +298,8 @@ describe('EntryListComponent', () => {
   it('renders planned magazine blocks when layout is magazine', () => {
     // The grouped run must not sit at the very start — the planner leads with
     // featured blocks, never a group. Lead with distinct sources so the
-    // collapse-enable gate (>= MIN_VIEW_SOURCES) is on, keep the run >= RUN_MIN,
-    // and give it a diverse tail so the trailing-diversity guard fires.
+    // collapse-enable gate (>= MIN_VIEW_SOURCES active within 24h) is on, and
+    // keep the run >= RUN_MIN so it collapses.
     const lead = [1, 2, 3, 4, 5, 6].map((id) =>
       entry(id, { subscriptionId: id, source: `lead${id}` }),
     );

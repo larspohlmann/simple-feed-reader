@@ -12,21 +12,19 @@ export interface MagazinePlanInput {
   complete: boolean;
 }
 
-/** Collapse decisions are judged over a fixed leading window, never the whole
- *  loaded set: a source's share shifts as more pages load, which would flip a
- *  decision and reshuffle already-rendered blocks. The window is far smaller
- *  than one API page (PAGE_SIZE = 100), so every render past the first samples
- *  the identical leading entries — the plan stays a stable prefix. */
+/** The fixed leading window sampled for the template-FAMILY choice
+ *  (isImageRich/isTextRich). Judged over a fixed prefix, never the whole loaded
+ *  set, so the family — and thus the plan — stays a stable prefix as more pages
+ *  load. Collapse diversity is judged separately, over ACTIVE_WINDOW_MS. */
 const LEADING_WINDOW = 24;
-/** Run-collapse is enabled only when the leading window is genuinely mixed:
- *  collapsing one source must leave enough OTHER recent content to fill the
- *  space, and a near-mono view must render flat — and, crucially, without
- *  deferring an unterminated run page after page. Three distinct sources means
- *  at least two remain besides any one source that collapses. */
+/** Run-collapse is enabled only when the view is genuinely mixed: at least this
+ *  many distinct sources active within ACTIVE_WINDOW_MS. Collapsing one source
+ *  must leave enough OTHER recent content to surface — three means at least two
+ *  remain besides any one that collapses — and a near-mono view stays flat. */
 const MIN_VIEW_SOURCES = 3;
 /** The text-forward family is chosen only when the leading window is image-poor
  *  AND text-rich (see isImageRich/isTextRich). Both shares are judged over the
- *  same fixed window as the gate, for the same prefix-stability. */
+ *  same fixed LEADING_WINDOW, for prefix-stability. */
 const IMAGE_RICH_SHARE = 0.35;
 const TEXT_RICH_SHARE = 0.4;
 /** A same-source run collapses once it reaches this many entries in a row.
@@ -37,11 +35,11 @@ const RUN_MIN = 8;
 const FEATURED_LEAD = 3;
 /** How many rows the collapsed widget previews before "Show more". */
 const WIDGET_PREVIEW = 4;
-/** A run collapses only if the entries immediately AFTER it carry enough other
- *  recent sources to surface once it folds up. Judged over this trailing window;
- *  an unterminated run whose flank isn't loaded yet is deferred, not resolved. */
-const TRAILING_FLANK = 8;
-const MIN_OTHER_SOURCES = 2;
+/** The diversity window. Collapse is judged over the sources ACTIVE in the last
+ *  day of the view's content — not a fixed count of leading entries, which two
+ *  high-frequency sources bursting back-to-back can monopolize, disabling
+ *  collapse on exactly the mixed views it exists for (see #168). */
+const ACTIVE_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** The largest slot may reach this far ahead for an entry that fits it. */
 const LOOK_AHEAD = 2;
 /** How far back the opener may reach for an image to lead with when the newest
@@ -65,7 +63,7 @@ export function planMagazine(input: MagazinePlanInput): MagazineBlock[] {
   const { entries, grouping, complete } = input;
   const blocks: MagazineBlock[] = [];
   const sample = entries.slice(0, LEADING_WINDOW);
-  const collapseEnabled = grouping && distinctSources(sample) >= MIN_VIEW_SOURCES;
+  const collapseEnabled = grouping && activeSourceCount(entries) >= MIN_VIEW_SOURCES;
   const useTextFamily = !isImageRich(sample) && isTextRich(sample);
   const templates = useTextFamily ? TEXT_TEMPLATES : IMAGE_TEMPLATES;
   // Land the reader on a picture: the image family pulls the nearest image entry
@@ -80,18 +78,19 @@ export function planMagazine(input: MagazinePlanInput): MagazineBlock[] {
     if (collapseEnabled) {
       const run = detectRun(ordered, index);
       if (run.sourceEntries.length >= RUN_MIN) {
-        // The trailing window must be loaded to judge diversity. Holding an
-        // unterminated run back — rather than rendering it flat and regrouping
-        // it on the next page — is what keeps the plan a stable prefix.
-        if (!complete && ordered.length - run.end < TRAILING_FLANK) break;
-        if (trailingDiverse(ordered, run.end, run.source)) {
-          // Featured lead comes FIRST, so a group block never opens the list.
-          page = emitFeaturedLead(blocks, run.sourceEntries, templates, page);
-          blocks.push(digest(run.sourceEntries.slice(FEATURED_LEAD)));
-          page = emitInterlopers(blocks, run.interlopers, templates, page);
-          index = run.end;
-          continue;
-        }
+        // Defer only while the run's OWN membership is still undetermined: a run
+        // reaching the loaded boundary might grow, and a lone trailing foreign
+        // entry might turn out to be a bridged interloper once the next entry
+        // loads. Once it has terminated (a real gap or a foreign entry with a
+        // successor), it collapses — no diversity window to wait for. This keeps
+        // the plan a stable prefix.
+        if (!complete && run.end >= ordered.length - 1) break;
+        // Featured lead comes FIRST, so a group block never opens the list.
+        page = emitFeaturedLead(blocks, run.sourceEntries, templates, page);
+        blocks.push(digest(run.sourceEntries.slice(FEATURED_LEAD)));
+        page = emitInterlopers(blocks, run.interlopers, templates, page);
+        index = run.end;
+        continue;
       }
     }
 
@@ -140,22 +139,32 @@ function detectRun(ordered: EntryDto[], start: number): DetectedRun {
   return { source, sourceEntries, interlopers, end: index };
 }
 
-/** Whether the entries just after a run carry at least MIN_OTHER_SOURCES
- *  distinct sources other than the run's own — the recent content that would
- *  surface once the run folds up. */
-function trailingDiverse(ordered: EntryDto[], runEnd: number, source: number): boolean {
-  const others = new Set<number>();
-  const limit = Math.min(ordered.length, runEnd + TRAILING_FLANK);
-  for (let position = runEnd; position < limit; position++) {
-    if (ordered[position].subscriptionId !== source) others.add(ordered[position].subscriptionId);
-  }
-  return others.size >= MIN_OTHER_SOURCES;
-}
-
 function distinctSources(entries: EntryDto[]): number {
   const sources = new Set<number>();
   for (const entry of entries) sources.add(entry.subscriptionId);
   return sources.size;
+}
+
+/** An entry's effective instant, matching the API's ordering key: its published
+ *  time, or its fetch time when the feed supplied none. NaN when unparseable,
+ *  which the window comparison below treats as "outside every window". */
+function effectiveTime(entry: EntryDto): number {
+  return Date.parse(entry.publishedAt ?? entry.createdAt);
+}
+
+/** Distinct sources whose effective time falls within ACTIVE_WINDOW_MS of the
+ *  newest entry in the view. Measured from the newest entry, not the wall clock:
+ *  it is deterministic — prefix-stable as older pages load, since an older entry
+ *  can only ADD a source, never remove one — and a long-untouched tag still
+ *  groups by its last active day. */
+function activeSourceCount(entries: EntryDto[]): number {
+  let newest = -Infinity;
+  for (const entry of entries) {
+    const time = effectiveTime(entry);
+    if (time > newest) newest = time;
+  }
+  const cutoff = newest - ACTIVE_WINDOW_MS;
+  return distinctSources(entries.filter((entry) => effectiveTime(entry) >= cutoff));
 }
 
 /** Whether a genuinely new same-source run — long enough that the main loop may
