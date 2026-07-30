@@ -7,7 +7,7 @@ export const SWIPE_BACK_MIN_X = 70;
 /** The swipe must be this many times more horizontal than vertical to count. */
 export const SWIPE_AXIS_RATIO = 1.5;
 /** Minimum rubber-banded pull (px) past the article's end to return to the list. */
-export const OVERSCROLL_BACK_MIN = 90;
+export const OVERSCROLL_BACK_MIN = 50;
 /**
  * Minimum finger travel (px) past the list's top to trigger a refresh.
  *
