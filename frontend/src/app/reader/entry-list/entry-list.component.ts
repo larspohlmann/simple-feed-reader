@@ -1,6 +1,7 @@
 // src/app/reader/entry-list/entry-list.component.ts
 import {
   Component,
+  DestroyRef,
   ElementRef,
   OnDestroy,
   computed,
@@ -23,6 +24,7 @@ import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { EntryHeroComponent } from '../magazine/entry-hero.component';
 import { EntryCompactComponent } from '../magazine/entry-compact.component';
 import { SourceGroupComponent } from '../magazine/source-group.component';
+import { focusOpacity } from '../reading-focus';
 import { EntrySplitComponent } from '../magazine/entry-split.component';
 import { EntryWideComponent } from '../magazine/entry-wide.component';
 import { EntryThumbComponent } from '../magazine/entry-thumb.component';
@@ -172,6 +174,7 @@ export class EntryListComponent implements OnDestroy {
   private readonly scroll = inject(ListScrollMemory);
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly catalog = inject(CatalogStore);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** True only once the catalog has been resolved AND has no entries.
    *  Unresolved reads as not-empty, so the /discover link is never hidden on a
@@ -186,12 +189,19 @@ export class EntryListComponent implements OnDestroy {
     host.addEventListener('wheel', this.onUserScrollIntent, { passive: true, capture: true });
     host.addEventListener('touchmove', this.onUserScrollIntent, { passive: true, capture: true });
     host.style.setProperty('--refresh-reveal', `${REFRESH_REVEAL}px`);
+
+    const onResize = () => this.scheduleFocus();
+    window.addEventListener('resize', onResize, { passive: true });
+    this.destroyRef.onDestroy(() => {
+      window.removeEventListener('resize', onResize);
+    });
   }
   // On a narrow layout the list header collapses to a slim tag-name-only bar as
   // you scroll down the list, expanding again on scroll up (same direction logic
   // as the app header's hide-on-scroll). Always expanded on wide screens.
   readonly collapsed = signal(false);
   private lastScrollTop = 0;
+  private focusRaf = 0;
   /** Drives the corner back-to-top button; set from the scroll handler. */
   readonly showToTop = signal(false);
 
@@ -233,6 +243,11 @@ export class EntryListComponent implements OnDestroy {
     this.lastScrollTop = 0;
   });
 
+  private readonly _rescheduleFocus = effect(() => {
+    this.screen.isWide();
+    this.scheduleFocus();
+  });
+
   onRowsScroll(e: Event): void {
     const el = e.target as HTMLElement | null;
     if (!el || typeof el.scrollTop !== 'number') return;
@@ -243,9 +258,41 @@ export class EntryListComponent implements OnDestroy {
     this.lastScrollTop = top;
     this.showToTop.set(top > BACK_TO_TOP_AFTER_PX);
     this.scrolled.emit(top);
+    this.scheduleFocus();
     // Remember where the user is so a browser resume-reload (iOS/Brave discard the
     // tab and reload it) can drop them back here rather than at the top.
     this.scroll.save(this.selection(), top);
+  }
+
+  /** Coalesce reading-focus recomputes to one per animation frame. */
+  private scheduleFocus(): void {
+    if (this.reduceMotion || this.focusRaf) return;
+    this.focusRaf = requestAnimationFrame(() => {
+      this.focusRaf = 0;
+      this.applyFocus();
+    });
+  }
+
+  /** Dim each list entry by its distance from the scroll viewport's centre.
+   *  Only active on the narrow (mobile) layout — on wide screens any residual
+   *  inline opacities are cleared. */
+  private applyFocus(): void {
+    const rows = this.rows()?.nativeElement;
+    if (!rows) return;
+    if (this.screen.isWide()) {
+      for (const child of Array.from(rows.children) as HTMLElement[]) {
+        child.style.opacity = '';
+      }
+      return;
+    }
+    const viewport = rows.clientHeight;
+    const rowsTop = rows.getBoundingClientRect().top;
+    for (const child of Array.from(rows.children) as HTMLElement[]) {
+      if (child.classList.contains('foot')) continue;
+      const rect = child.getBoundingClientRect();
+      const center = rect.top - rowsTop + rect.height / 2;
+      child.style.opacity = String(focusOpacity(center, viewport));
+    }
   }
 
   /**
@@ -489,6 +536,9 @@ export class EntryListComponent implements OnDestroy {
   private readonly onUserScrollIntent = (): void => this.cancelSettle();
 
   ngOnDestroy(): void {
+    if (this.focusRaf && typeof cancelAnimationFrame !== 'undefined') {
+      cancelAnimationFrame(this.focusRaf);
+    }
     this.observer?.disconnect();
     this.headerObs?.disconnect();
     this.pullCleanup?.();

@@ -257,6 +257,12 @@
   padding-top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
 }
 
+@media (width < bp.$bp-lg) {
+  .rows > * {
+    transition: opacity 0.2s ease-out;
+  }
+}
+
 .rows.dragging {
   transition: none;
 }
@@ -349,6 +355,10 @@
 
   .rows,
   .pull-indicator {
+    transition: none;
+  }
+
+  .rows > * {
     transition: none;
   }
 }
