@@ -35,33 +35,84 @@ export class ManageActions {
   }
 
   /** Fire a drag-and-drop write, then re-sync the affected store whether it
-   *  succeeds OR fails: there is no optimistic store mutation, so a rejected
-   *  write (e.g. a concurrent change) is corrected from the server. */
+   *  succeeds OR fails: a rejected write (e.g. a concurrent change) is
+   *  corrected from the server. */
   private reloadAfter(write$: Observable<unknown>, reload: () => void): void {
     write$.subscribe({ next: reload, error: reload });
   }
 
-  /** Replace a subscription's whole tag set (used by sidebar drag-and-drop).
-   *  The PATCH endpoint replaces tags, so callers pass the final id list. */
+  /** Apply an optimistic update to the subscription's tags so the sidebar
+   *  reflects the new tag set immediately, then reconcile with the server. */
   retag(sub: SubscriptionDto, tagIds: number[]): void {
+    this.subs.subscriptions.update((current) =>
+      current.map((s) => {
+        if (s.id !== sub.id) return s;
+        return {
+          ...s,
+          tags: tagIds.map((id, i) => {
+            const existing = s.tags.find((t) => t.id === id);
+            if (existing) return { ...existing, position: i };
+            const tag = this.tags.tags().find((t) => t.id === id);
+            return {
+              id,
+              name: tag?.name ?? '',
+              color: tag?.color ?? null,
+              icon: tag?.icon ?? null,
+              position: i,
+            };
+          }),
+        };
+      }),
+    );
     this.reloadAfter(
       this.api.updateSubscription(sub.id, { customTitle: sub.customTitle, tagIds }),
       () => this.subs.load(),
     );
   }
 
-  /** Persist a new sidebar tag order (drag-and-drop); tag order lives in TagsStore. */
+  /** Persist a new sidebar tag order (drag-and-drop); tag order lives in
+   *  TagsStore. Optimistic: reorder immediately, reconcile on response. */
   reorderTags(tagIds: number[]): void {
+    this.tags.tags.update((current) => {
+      const byId = new Map(current.map((t) => [t.id, t]));
+      return tagIds.map((id, i) => {
+        const tag = byId.get(id);
+        return tag
+          ? { ...tag, position: i }
+          : { id, name: '', color: null, icon: null, position: i };
+      });
+    });
     this.reloadAfter(this.api.reorderTags(tagIds), () => this.tags.load());
   }
 
-  /** Persist a new order for the untagged "Feeds" list. */
+  /** Persist a new order for the untagged "Feeds" list. Optimistic: update
+   *  positions immediately, reconcile on response. */
   reorderUntagged(subscriptionIds: number[]): void {
+    this.subs.subscriptions.update((current) =>
+      current.map((s) => {
+        const idx = subscriptionIds.indexOf(s.id);
+        if (idx >= 0) return { ...s, position: idx };
+        return s;
+      }),
+    );
     this.reloadAfter(this.api.reorderSubscriptions(subscriptionIds), () => this.subs.load());
   }
 
-  /** Persist a new order for the feeds within one tag. */
+  /** Persist a new order for the feeds within one tag. Optimistic: update
+   *  per-tag positions immediately, reconcile on response. */
   reorderTagFeeds(tagId: number, subscriptionIds: number[]): void {
+    this.subs.subscriptions.update((current) =>
+      current.map((s) => {
+        const tagEntry = s.tags.find((t) => t.id === tagId);
+        if (!tagEntry) return s;
+        const idx = subscriptionIds.indexOf(s.id);
+        if (idx < 0) return s;
+        return {
+          ...s,
+          tags: s.tags.map((t) => (t.id === tagId ? { ...t, position: idx } : t)),
+        };
+      }),
+    );
     this.reloadAfter(this.api.setTagFeedOrder(tagId, subscriptionIds), () => this.subs.load());
   }
 
