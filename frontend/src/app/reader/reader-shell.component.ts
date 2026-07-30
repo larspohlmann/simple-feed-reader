@@ -15,6 +15,7 @@ import {
 import { ActivatedRoute, Router, RouterLink, convertToParamMap } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Dialog } from '@angular/cdk/dialog';
+import { Title } from '@angular/platform-browser';
 import { AuthService } from '../core/auth.service';
 import { ReaderApi } from './reader-api';
 import { SubscriptionsStore } from './subscriptions.store';
@@ -71,6 +72,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly screen = inject(LayoutService);
   private readonly skip = inject(OnboardingSkip);
   private readonly catalog = inject(CatalogStore);
+  private readonly titleService = inject(Title);
+  private readonly baseTitle = 'simple feed reader';
 
   /** Is the picker worth showing at all? Nothing seeds the catalog — it arrives
    *  by admin import — so a deployment without one must not redirect anybody
@@ -243,6 +246,20 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
           },
         });
       });
+    });
+
+    // Set the document title to reflect the current selection or open article.
+    effect(() => {
+      const entry = this.openEntry();
+      const name = this.title();
+      const page = entry
+        ? entry.title.length > 60
+          ? entry.title.slice(0, 60) + '…'
+          : entry.title
+        : name;
+      this.titleService.setTitle(
+        page === this.baseTitle ? this.baseTitle : `${page} | ${this.baseTitle}`,
+      );
     });
 
     // Nothing to read and nothing skipped: send the user to the picker. Purely
