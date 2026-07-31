@@ -156,6 +156,15 @@
       "name": "Name",
       "colour": "Colour",
       "icon": "Icon"
+    },
+    "feedDialog": {
+      "newTitle": "New feed",
+      "editTitle": "Edit feed",
+      "title": "Title",
+      "url": "Feed URL",
+      "siteUrl": "Site URL",
+      "description": "Description",
+      "category": "Category"
     }
   },
   "auth": {
