@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Dto\Admin\UserFootprint;
+use App\Entity\Subscription;
+use App\Entity\Tag;
 use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Enum\UserStatus;
@@ -11,6 +14,7 @@ use App\Exception\ValidationException;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Repository\UserRepository;
+use App\Service\Admin\UserStatistics;
 use App\Service\Mail\AccountMailer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -35,6 +39,7 @@ final readonly class AdminUserController
         private EntityManagerInterface $em,
         private AccountMailer $mailer,
         private ClockInterface $clock,
+        private UserStatistics $statistics,
     ) {
     }
 
@@ -87,6 +92,126 @@ final readonly class AdminUserController
                 $users,
             ),
         ]);
+    }
+
+    /**
+     * Everything the admin detail screen shows about one account.
+     *
+     * Hand-built like list(), and for the same reason: a column added to User
+     * later must not reach an admin's browser merely because it exists. Note
+     * what is absent — the password hash and every token column.
+     */
+    #[Route('/{id}', name: 'api_admin_users_detail', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function detail(int $id): JsonResponse
+    {
+        $user = $this->users->find($id);
+
+        if (!$user instanceof User) {
+            throw new NotFoundHttpException('No such user.');
+        }
+
+        $footprint = $this->statistics->forUser($user);
+        $userId = (int) $user->getId();
+
+        return new JsonResponse([
+            'user' => $this->accountRow($user, $userId),
+            'footprint' => $this->footprintRow($footprint),
+            'tags' => $this->tagRows($userId),
+            'subscriptions' => $this->subscriptionRows($userId),
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function accountRow(User $user, int $userId): array
+    {
+        return [
+            'id' => $user->getId(),
+            'email' => $user->getEmail(),
+            'status' => $user->getStatus()->value,
+            'roles' => $user->getRoles(),
+            'locale' => $user->getLocale(),
+            'createdAt' => $user->getCreatedAt()->format(\DateTimeInterface::ATOM),
+            'approvedAt' => $user->getApprovedAt()?->format(\DateTimeInterface::ATOM),
+            'lastLoginAt' => $user->getLastLoginAt()?->format(\DateTimeInterface::ATOM),
+            'identities' => $this->providersByUserId([$user])[$userId] ?? [],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function footprintRow(UserFootprint $footprint): array
+    {
+        return [
+            'feedsCount' => $footprint->feedsCount,
+            'tagsCount' => $footprint->tagsCount,
+            'feedsLimit' => $footprint->feedsLimit,
+            'staleFeedsCount' => $footprint->staleFeedsCount,
+            'lastRefreshAt' => $footprint->lastRefreshAt?->format(\DateTimeInterface::ATOM),
+            'dormant' => $footprint->dormant,
+        ];
+    }
+
+    /**
+     * The account's tags in the order its owner arranged them, each with how
+     * many of that account's feeds carry it.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function tagRows(int $userId): array
+    {
+        $feedsPerTag = [];
+        foreach ($this->subscriptions->findForUserWithTags($userId) as $subscription) {
+            foreach ($subscription->getTags() as $tag) {
+                $tagId = (int) $tag->getId();
+                $feedsPerTag[$tagId] = ($feedsPerTag[$tagId] ?? 0) + 1;
+            }
+        }
+
+        return array_map(
+            static fn (Tag $tag): array => [
+                'id' => $tag->getId(),
+                'name' => $tag->getName(),
+                'color' => $tag->getColor(),
+                'icon' => $tag->getIcon(),
+                'position' => $tag->getPosition(),
+                'feedsCount' => $feedsPerTag[(int) $tag->getId()] ?? 0,
+            ],
+            $this->tags->findForUser($userId),
+        );
+    }
+
+    /**
+     * The account's subscriptions in its owner's order, each with the tags it
+     * carries and the freshness of the underlying feed.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function subscriptionRows(int $userId): array
+    {
+        return array_map(
+            static fn (Subscription $subscription): array => [
+                'id' => $subscription->getId(),
+                'title' => $subscription->getFeed()->getTitle(),
+                'customTitle' => $subscription->getCustomTitle(),
+                'url' => $subscription->getFeed()->getUrl(),
+                'position' => $subscription->getPosition(),
+                'createdAt' => $subscription->getCreatedAt()->format(\DateTimeInterface::ATOM),
+                'lastFetchedAt' => $subscription->getFeed()->getLastFetchedAt()
+                    ?->format(\DateTimeInterface::ATOM),
+                'tags' => array_map(
+                    static fn (Tag $tag): array => [
+                        'id' => $tag->getId(),
+                        'name' => $tag->getName(),
+                        'color' => $tag->getColor(),
+                    ],
+                    $subscription->getTags()->toArray(),
+                ),
+            ],
+            $this->subscriptions->findForUserWithTags($userId),
+        );
     }
 
     /**

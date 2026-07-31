@@ -79,6 +79,23 @@ final class AdminUserControllerTest extends WebTestCase
     }
 
     /**
+     * A named top-level section of a decoded payload — 'user' or 'footprint'
+     * on the detail response — narrowed from mixed so nested keys can be read.
+     *
+     * @param array<string, mixed> $body
+     *
+     * @return array<string, mixed>
+     */
+    private function section(array $body, string $key): array
+    {
+        $section = $body[$key];
+        self::assertIsArray($section);
+
+        /** @var array<string, mixed> $section */
+        return $section;
+    }
+
+    /**
      * The row for one address, from a decoded list payload.
      *
      * @return array<string, mixed>
@@ -161,6 +178,7 @@ final class AdminUserControllerTest extends WebTestCase
     public static function adminRoutes(): iterable
     {
         yield 'list' => ['GET', self::LIST];
+        yield 'detail' => ['GET', self::LIST . '/%d'];
         yield 'approve' => ['POST', self::LIST . '/%d/approve'];
         yield 'reject' => ['POST', self::LIST . '/%d/reject'];
         yield 'suspend' => ['POST', self::LIST . '/%d/suspend'];
@@ -665,6 +683,179 @@ final class AdminUserControllerTest extends WebTestCase
 
         return [
             'feeds' => \count($recorder->queriesMatching('from subscription')),
+            'tags' => \count($recorder->queriesMatching('from tag')),
+        ];
+    }
+
+    public function testTheDetailEndpointReturnsTheAccountItsFootprintAndItsLists(): void
+    {
+        $admin = $this->admin();
+        $token = $this->tokenFor($admin);
+        $user = $this->factory()->create(
+            'detailed@example.com',
+            lastLoginAt: new \DateTimeImmutable('2026-07-29 09:00:00'),
+        );
+
+        $this->call('GET', '/api/admin/users/' . $user->getId(), $token);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload();
+        $account = $this->section($body, 'user');
+        $footprint = $this->section($body, 'footprint');
+
+        self::assertSame('detailed@example.com', $account['email']);
+        self::assertIsString($account['lastLoginAt']);
+        self::assertStringStartsWith('2026-07-29T09:00:00', $account['lastLoginAt']);
+        self::assertSame(0, $footprint['feedsCount']);
+        self::assertSame(0, $footprint['tagsCount']);
+        self::assertFalse($footprint['dormant']);
+        self::assertSame([], $body['tags']);
+        self::assertSame([], $body['subscriptions']);
+    }
+
+    public function testTheDetailEndpointNeverLeaksThePasswordHash(): void
+    {
+        $admin = $this->admin();
+        $token = $this->tokenFor($admin);
+        $user = $this->factory()->create('secretive@example.com');
+
+        $this->call('GET', '/api/admin/users/' . $user->getId(), $token);
+
+        self::assertResponseIsSuccessful();
+        $raw = (string) $this->client->getResponse()->getContent();
+        self::assertStringNotContainsString('passwordHash', $raw);
+        self::assertStringNotContainsString('$2y$', $raw);
+    }
+
+    public function testAnUnknownUserIsANotFoundProblem(): void
+    {
+        $admin = $this->admin();
+        $token = $this->tokenFor($admin);
+
+        $this->call('GET', '/api/admin/users/999999', $token);
+
+        self::assertResponseStatusCodeSame(404);
+        self::assertResponseHeaderSame('content-type', 'application/problem+json');
+    }
+
+    /**
+     * The full tag and subscription rows, with mutually distinct non-zero
+     * figures throughout — a mis-keyed map or a field swap between the two
+     * lists fails loudly here rather than staying green under an all-zero
+     * fixture.
+     */
+    public function testTheDetailListsCarryTheFullTagAndSubscriptionRows(): void
+    {
+        $admin = $this->admin();
+        $token = $this->tokenFor($admin);
+        $user = $this->factory()->create('librarian@example.com');
+
+        /** @var EntityManagerInterface $em */
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+
+        $tagOne = new Tag($user, 'reading');
+        $tagOne->setColor('#ff0000');
+        $tagOne->setPosition(1);
+        $tagTwo = new Tag($user, 'archive');
+        $tagTwo->setColor('#00ff00');
+        $tagTwo->setPosition(0);
+        $em->persist($tagOne);
+        $em->persist($tagTwo);
+
+        $feed = new Feed('https://example.com/librarian.xml');
+        $feed->setTitle('Librarian Weekly');
+        $em->persist($feed);
+
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-05 12:00:00'));
+        $subscription->setCustomTitle('My Weekly Read');
+        $subscription->addTag($tagTwo, 0);
+        $subscription->addTag($tagOne, 1);
+        $em->persist($subscription);
+        $em->flush();
+
+        $this->call('GET', '/api/admin/users/' . $user->getId(), $token);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload();
+        $footprint = $this->section($body, 'footprint');
+
+        self::assertSame(1, $footprint['feedsCount']);
+        self::assertSame(2, $footprint['tagsCount']);
+
+        $tags = $body['tags'];
+        self::assertIsArray($tags);
+        self::assertSame(['archive', 'reading'], array_column($tags, 'name'));
+        self::assertSame([1, 1], array_column($tags, 'feedsCount'));
+
+        $subscriptions = $body['subscriptions'];
+        self::assertIsArray($subscriptions);
+        self::assertCount(1, $subscriptions);
+        $row = $subscriptions[0];
+        self::assertIsArray($row);
+        self::assertSame('Librarian Weekly', $row['title']);
+        self::assertSame('My Weekly Read', $row['customTitle']);
+        self::assertSame('https://example.com/librarian.xml', $row['url']);
+        $rowTags = $row['tags'];
+        self::assertIsArray($rowTags);
+        self::assertSame(['archive', 'reading'], array_column($rowTags, 'name'));
+    }
+
+    /**
+     * The N+1 guard for the detail screen. Each subscription in the fixture
+     * carries its own genuinely-attached tag — not just a tag present
+     * somewhere on the account — so a per-subscription tag lookup would show
+     * up as growth here. A fixed count at one fixture size cannot tell
+     * "batched" apart from "batched because there happen to be exactly this
+     * many rows"; asserting equality across two very different sizes can.
+     */
+    public function testTheDetailListsCostTheSameNumberOfQueriesHoweverManySubscriptionsAndTagsExist(): void
+    {
+        $admin = $this->admin();
+        $token = $this->tokenFor($admin);
+
+        $smallReads = $this->detailReadCountsForFreshUser($token, count: 2);
+        $largeReads = $this->detailReadCountsForFreshUser($token, count: 11);
+
+        self::assertSame(
+            $smallReads,
+            $largeReads,
+            'the batched subscription/tag reads must not grow with how many rows the user owns',
+        );
+    }
+
+    /**
+     * Creates a fresh user with $count subscriptions, each carrying its own
+     * attached tag, requests the detail screen, and returns how many queries
+     * touched each table.
+     *
+     * @return array{subscriptions: int, tags: int}
+     */
+    private function detailReadCountsForFreshUser(string $token, int $count): array
+    {
+        /** @var EntityManagerInterface $em */
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        $user = $this->factory()->create(sprintf('detail-%d@example.com', $count));
+
+        for ($i = 0; $i < $count; ++$i) {
+            $feed = new Feed(sprintf('https://example.com/detail-%d-%d.xml', (int) $user->getId(), $i));
+            $em->persist($feed);
+            $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00'));
+            $tag = new Tag($user, sprintf('detail-tag-%d-%d', (int) $user->getId(), $i));
+            $em->persist($tag);
+            $subscription->addTag($tag);
+            $em->persist($subscription);
+        }
+        $em->flush();
+
+        $this->call('GET', self::LIST . '/' . (int) $user->getId(), $token);
+
+        self::assertResponseIsSuccessful();
+
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+
+        return [
+            'subscriptions' => \count($recorder->queriesMatching('from subscription')),
             'tags' => \count($recorder->queriesMatching('from tag')),
         ];
     }
