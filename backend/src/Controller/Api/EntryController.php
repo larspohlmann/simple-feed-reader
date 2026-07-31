@@ -8,7 +8,6 @@ use App\Dto\Entry\MarkReadRequest;
 use App\Dto\Entry\UpdateEntryStateRequest;
 use App\Entity\EntryState;
 use App\Entity\User;
-use App\Exception\RateLimitedException;
 use App\Exception\ValidationException;
 use App\Http\EntryCursor;
 use App\Http\EntryJson;
@@ -16,6 +15,7 @@ use App\Http\ReaderJson;
 use App\Repository\EntryQuery;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
+use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Reader\ArticleExtractorInterface;
 use App\Service\Reader\ExtractionResult;
 use App\Service\Reader\MarkReadService;
@@ -40,6 +40,7 @@ final readonly class EntryController
         private ClockInterface $clock,
         private MarkReadService $markRead,
         private ArticleExtractorInterface $extractor,
+        private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $readerLimiter,
     ) {
     }
@@ -171,7 +172,7 @@ final readonly class EntryController
         $entry = $this->entries->findOneSubscribedByUser($id, (int) $user->getId())
             ?? throw new NotFoundHttpException('No such entry.');
 
-        $this->enforceReaderLimit($user);
+        $this->rateLimitGuard->enforceForUser($this->readerLimiter, $user);
 
         $url = $entry->getUrl();
         $result = $url === null || $url === ''
@@ -179,17 +180,5 @@ final readonly class EntryController
             : $this->extractor->extract($url);
 
         return new JsonResponse(ReaderJson::one($result, $this->clock->now()));
-    }
-
-    private function enforceReaderLimit(User $user): void
-    {
-        $limit = $this->readerLimiter->create('user-' . $user->getId())->consume();
-        if ($limit->isAccepted()) {
-            return;
-        }
-
-        throw new RateLimitedException(
-            max(1, $limit->getRetryAfter()->getTimestamp() - $this->clock->now()->getTimestamp()),
-        );
     }
 }
