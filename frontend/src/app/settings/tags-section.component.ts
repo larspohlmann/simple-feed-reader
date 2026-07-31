@@ -3,6 +3,7 @@ import { Component, OnInit, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList } from '@angular/cdk/drag-drop';
 import { IconComponent } from '../shared/icon/icon.component';
+import { TagGlyphComponent } from '../shared/tag-glyph/tag-glyph.component';
 import { TagsStore } from '../reader/tags.store';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { ManageActions } from '../reader/manage/manage-actions.service';
@@ -17,6 +18,7 @@ import { TagDto } from '../reader/models';
   imports: [
     ButtonComponent,
     IconComponent,
+    TagGlyphComponent,
     TranslocoPipe,
     SettingsCardComponent,
     SkeletonComponent,

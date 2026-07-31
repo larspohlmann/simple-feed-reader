@@ -1,13 +1,18 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
+import { By } from '@angular/platform-browser';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { TagsSectionComponent } from './tags-section.component';
 import { TagsStore } from '../reader/tags.store';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { ManageActions } from '../reader/manage/manage-actions.service';
+import { TagGlyphComponent } from '../shared/tag-glyph/tag-glyph.component';
 import { Problem } from '../core/problem';
 import { TagDto, SubscriptionDto } from '../reader/models';
+import { API_BASE_URL } from '../core/api';
 import en from '../../../public/i18n/en.json';
 
 const tag = (id: number, name: string): TagDto => ({
@@ -200,5 +205,87 @@ describe('TagsSectionComponent', () => {
     fixture.detectChanges();
 
     expect(el.querySelectorAll('.drag-handle')).toHaveLength(1);
+  });
+
+  it('renders the tag glyph tinted with the tag colour for a tag with an icon, and no separate dot', async () => {
+    const { fixture, el } = await render();
+    tags.set([{ id: 1, name: 'Tech', color: '#3f8676', icon: 'label', position: 0 }]);
+    fixture.detectChanges();
+
+    const glyphDebug = fixture.debugElement.query(By.css('app-tag-glyph'));
+    expect(glyphDebug).not.toBeNull();
+    const glyph = glyphDebug.componentInstance as TagGlyphComponent;
+    expect(glyph.name()).toBe('label');
+    expect(glyph.color()).toBe('#3f8676');
+    expect(el.querySelector('.tag .dot')).toBeNull();
+  });
+
+  it('still renders the tag glyph for a tag without an icon', async () => {
+    const { fixture, el } = await render();
+    tags.set([{ id: 1, name: 'Tech', color: null, icon: null, position: 0 }]);
+    fixture.detectChanges();
+
+    expect(el.querySelector('app-tag-glyph')).not.toBeNull();
+  });
+});
+
+/** Drives the real ManageActions.reorderTags() -> ReaderApi -> TagsStore path
+ *  (no stub in between) so a rejected write's reconcile-from-server behaviour
+ *  is genuinely exercised, not merely assumed from ManageActions' own spec
+ *  (which only ever flushes success responses). */
+describe('TagsSectionComponent reorder reconciliation', () => {
+  let ctrl: HttpTestingController;
+  let tagsStore: TagsStore;
+  let fixture: ReturnType<typeof TestBed.createComponent<TagsSectionComponent>>;
+
+  const serverTags: TagDto[] = [
+    { id: 1, name: 'Tech', color: null, icon: null, position: 0 },
+    { id: 2, name: 'News', color: null, icon: null, position: 1 },
+    { id: 3, name: 'Fun', color: null, icon: null, position: 2 },
+  ];
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TagsSectionComponent, provideTranslocoTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
+        {
+          provide: SubscriptionsStore,
+          useValue: { subscriptions: signal<SubscriptionDto[]>([]), load: jest.fn() },
+        },
+      ],
+    });
+
+    ctrl = TestBed.inject(HttpTestingController);
+    tagsStore = TestBed.inject(TagsStore);
+    fixture = TestBed.createComponent(TagsSectionComponent);
+    fixture.detectChanges();
+
+    // Satisfy the ngOnInit load() the real TagsStore issues.
+    ctrl.expectOne('https://api.test/api/tags').flush({ tags: serverTags });
+    fixture.detectChanges();
+  });
+
+  afterEach(() => ctrl.verify());
+
+  it('reconciles to the server order when the reorder request is rejected', () => {
+    fixture.componentInstance.onTagDrop({
+      previousIndex: 2,
+      currentIndex: 0,
+    } as CdkDragDrop<TagDto[]>);
+
+    // Optimistic reorder applied immediately, before the server responds.
+    expect(tagsStore.tags().map((t) => t.id)).toEqual([3, 1, 2]);
+
+    ctrl
+      .expectOne('https://api.test/api/tags/reorder')
+      .flush('nope', { status: 500, statusText: 'Server Error' });
+
+    // ManageActions.reloadAfter() re-syncs from the server on error.
+    ctrl.expectOne('https://api.test/api/tags').flush({ tags: serverTags });
+
+    expect(tagsStore.tags().map((t) => t.id)).toEqual([1, 2, 3]);
   });
 });
