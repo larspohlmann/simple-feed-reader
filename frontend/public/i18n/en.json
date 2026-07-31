@@ -165,6 +165,21 @@
       "siteUrl": "Site URL",
       "description": "Description",
       "category": "Category"
+    },
+    "edit": "Edit",
+    "addCategory": "Add category",
+    "addFeed": "Add feed",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "refreshFavicon": "Refresh icon",
+    "inactive": "inactive",
+    "feedCountOne": "{{count}} feed",
+    "feedCountOther": "{{count}} feeds",
+    "confirmDelete": {
+      "categoryTitle": "Delete category",
+      "categoryMessage": "Delete \"{{name}}\" and every feed in it?",
+      "feedTitle": "Delete feed",
+      "feedMessage": "Delete \"{{title}}\"?"
     }
   },
   "auth": {

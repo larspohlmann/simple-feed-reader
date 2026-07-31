@@ -165,6 +165,21 @@
       "siteUrl": "Website-URL",
       "description": "Beschreibung",
       "category": "Kategorie"
+    },
+    "edit": "Bearbeiten",
+    "addCategory": "Kategorie hinzufügen",
+    "addFeed": "Feed hinzufügen",
+    "moveUp": "Nach oben",
+    "moveDown": "Nach unten",
+    "refreshFavicon": "Icon aktualisieren",
+    "inactive": "inaktiv",
+    "feedCountOne": "{{count}} Feed",
+    "feedCountOther": "{{count}} Feeds",
+    "confirmDelete": {
+      "categoryTitle": "Kategorie löschen",
+      "categoryMessage": "„{{name}}“ samt aller Feeds darin löschen?",
+      "feedTitle": "Feed löschen",
+      "feedMessage": "„{{title}}“ löschen?"
     }
   },
   "auth": {

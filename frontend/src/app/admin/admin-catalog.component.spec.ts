@@ -1,10 +1,14 @@
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
+import { Dialog } from '@angular/cdk/dialog';
+import { Subject } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { API_BASE_URL } from '../core/api';
 import { AdminCatalogComponent } from './admin-catalog.component';
+import { CategoryFormDialogComponent } from './category-form-dialog.component';
+import { FeedFormDialogComponent } from './feed-form-dialog.component';
 
 const PAYLOAD = {
   categories: [
@@ -38,33 +42,44 @@ const PAYLOAD = {
 };
 
 describe('AdminCatalogComponent', () => {
-  let fixture: ComponentFixture<AdminCatalogComponent>;
-  let http: HttpTestingController;
+  let ctrl: HttpTestingController;
+  let dialogClosed: Subject<unknown>;
+  const dialogOpen = jest.fn(() => ({ closed: dialogClosed }));
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
+  // Mounts the component, provides the Dialog stub, and flushes the two
+  // requests ngOnInit fires (catalog + bundled-catalog info) so every test
+  // starts from a loaded list.
+  function mountLoaded(payload = PAYLOAD) {
+    TestBed.configureTestingModule({
       imports: [AdminCatalogComponent, provideTranslocoTesting()],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
+        { provide: Dialog, useValue: { open: dialogOpen } },
       ],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(AdminCatalogComponent);
-    http = TestBed.inject(HttpTestingController);
+    });
+    const fixture = TestBed.createComponent(AdminCatalogComponent);
+    ctrl = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
-    http.expectOne('https://api.test/api/admin/catalog').flush(PAYLOAD);
-    http
+    ctrl.expectOne('https://api.test/api/admin/catalog').flush(payload);
+    ctrl
       .expectOne('https://api.test/api/admin/catalog/bundled')
       .flush({ available: true, categories: 13, feeds: 111 });
     fixture.detectChanges();
+    return fixture;
+  }
+
+  beforeEach(() => {
+    dialogClosed = new Subject<unknown>();
+    dialogOpen.mockClear();
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => ctrl.verify());
 
   it('lists categories and their feeds', () => {
+    const fixture = mountLoaded();
     expect(fixture.nativeElement.querySelectorAll('[data-testid="admin-category"]')).toHaveLength(
       1,
     );
@@ -72,28 +87,16 @@ describe('AdminCatalogComponent', () => {
   });
 
   it('refreshes a favicon on demand', () => {
+    const fixture = mountLoaded();
     fixture.nativeElement.querySelector('[data-testid="refresh-favicon"]').click();
 
-    const req = http.expectOne('https://api.test/api/admin/catalog/feeds/10/favicon');
+    const req = ctrl.expectOne('https://api.test/api/admin/catalog/feeds/10/favicon');
     expect(req.request.method).toBe('POST');
     req.flush({ feed: { ...PAYLOAD.feeds[0], faviconFetchedAt: '2026-07-26T10:00:00+00:00' } });
   });
 
-  it('marks a locked feed as such and can toggle it', () => {
-    const row = fixture.nativeElement.querySelector('[data-testid="admin-feed"]');
-    const lock: HTMLInputElement = row.querySelector('[data-testid="feed-locked"]');
-    expect(lock.checked).toBe(false);
-
-    lock.click();
-    row.querySelector('[data-testid="feed-save"]').click();
-
-    const req = http.expectOne('https://api.test/api/admin/catalog/feeds/10');
-    expect(req.request.method).toBe('PATCH');
-    expect(req.request.body.locked).toBe(true);
-    req.flush({ feed: { ...PAYLOAD.feeds[0], locked: true } });
-  });
-
   it('imports the bundled document without transferring a file', () => {
+    const fixture = mountLoaded();
     const button: HTMLButtonElement = fixture.nativeElement.querySelector(
       '[data-testid="import-bundled"]',
     );
@@ -101,7 +104,7 @@ describe('AdminCatalogComponent', () => {
 
     button.click();
 
-    const req = http.expectOne('https://api.test/api/admin/catalog/import/bundled');
+    const req = ctrl.expectOne('https://api.test/api/admin/catalog/import/bundled');
     expect(req.request.body).toEqual({ mode: 'merge' });
     req.flush({
       categoriesCreated: 13,
@@ -113,19 +116,20 @@ describe('AdminCatalogComponent', () => {
       lockedSkipped: 0,
     });
 
-    http.expectOne('https://api.test/api/admin/catalog').flush(PAYLOAD);
+    ctrl.expectOne('https://api.test/api/admin/catalog').flush(PAYLOAD);
 
     // A freshly imported catalog has no icons, so warming starts on its own —
     // this is what makes icons work without any deployment-specific step.
-    http
+    ctrl
       .expectOne('https://api.test/api/admin/catalog/favicons/warm')
       .flush({ warmed: 25, failed: 0, remaining: 86 });
-    http
+    ctrl
       .expectOne('https://api.test/api/admin/catalog/favicons/warm')
       .flush({ warmed: 86, failed: 0, remaining: 0 });
   });
 
   it('posts a chosen document with the selected mode and reloads afterwards', async () => {
+    const fixture = mountLoaded();
     const document =
       '<opml version="2.0"><head/><body>' +
       '<outline text="Technology" key="technology" icon="memory" color="#3b82f6"/>' +
@@ -148,7 +152,7 @@ describe('AdminCatalogComponent', () => {
 
     fixture.nativeElement.querySelector('[data-testid="import-run"]').click();
 
-    const req = http.expectOne('https://api.test/api/admin/catalog/import');
+    const req = ctrl.expectOne('https://api.test/api/admin/catalog/import');
     expect(req.request.body).toEqual({ mode: 'replace', document });
     req.flush({
       categoriesCreated: 0,
@@ -161,6 +165,85 @@ describe('AdminCatalogComponent', () => {
     });
 
     // The lists are stale after an import, so the component refetches them.
-    http.expectOne('https://api.test/api/admin/catalog').flush(PAYLOAD);
+    ctrl.expectOne('https://api.test/api/admin/catalog').flush(PAYLOAD);
+  });
+
+  it('upserts the category a closed dialog returns', () => {
+    const fixture = mountLoaded();
+    fixture.componentInstance.openCategoryDialog(null);
+    expect(dialogOpen).toHaveBeenCalled();
+
+    dialogClosed.next({
+      id: 9,
+      key: '',
+      name: 'Fresh',
+      icon: '',
+      color: '#112233',
+      position: 5,
+      enabled: true,
+      locked: false,
+    });
+    expect(fixture.componentInstance.categories().some((c) => c.id === 9)).toBe(true);
+  });
+
+  it('ignores a cancelled dialog', () => {
+    const fixture = mountLoaded();
+    const before = fixture.componentInstance.categories();
+    fixture.componentInstance.openCategoryDialog(null);
+    dialogClosed.next(undefined);
+    expect(fixture.componentInstance.categories()).toEqual(before);
+  });
+
+  it('deletes a feed only after confirmation', () => {
+    const fixture = mountLoaded();
+    fixture.componentInstance.confirmDeleteFeed(fixture.componentInstance.feeds()[0]);
+    ctrl.expectNone('https://api.test/api/admin/catalog/feeds/10');
+
+    dialogClosed.next(true);
+    ctrl.expectOne('https://api.test/api/admin/catalog/feeds/10').flush({});
+    expect(fixture.componentInstance.feeds().length).toBe(0);
+  });
+
+  it('deletes a category only after confirmation', () => {
+    const fixture = mountLoaded();
+    fixture.componentInstance.confirmDeleteCategory(fixture.componentInstance.categories()[0]);
+    ctrl.expectNone('https://api.test/api/admin/catalog/categories/1');
+
+    dialogClosed.next(true);
+    ctrl.expectOne('https://api.test/api/admin/catalog/categories/1').flush({});
+    expect(fixture.componentInstance.categories().length).toBe(0);
+  });
+
+  it('opens the category and feed dialogs with the right data from their buttons', () => {
+    const fixture = mountLoaded();
+    const root: HTMLElement = fixture.nativeElement;
+
+    root.querySelector<HTMLElement>('[data-testid="add-category"]')!.click();
+    expect(dialogOpen).toHaveBeenLastCalledWith(
+      CategoryFormDialogComponent,
+      expect.objectContaining({ data: null }),
+    );
+
+    root.querySelector<HTMLElement>('[data-testid="category-edit"]')!.click();
+    expect(dialogOpen).toHaveBeenLastCalledWith(
+      CategoryFormDialogComponent,
+      expect.objectContaining({ data: PAYLOAD.categories[0] }),
+    );
+
+    root.querySelector<HTMLElement>('[data-testid="add-feed"]')!.click();
+    expect(dialogOpen).toHaveBeenLastCalledWith(
+      FeedFormDialogComponent,
+      expect.objectContaining({
+        data: { feed: null, categories: PAYLOAD.categories, categoryId: 1 },
+      }),
+    );
+
+    root.querySelector<HTMLElement>('[data-testid="feed-edit"]')!.click();
+    expect(dialogOpen).toHaveBeenLastCalledWith(
+      FeedFormDialogComponent,
+      expect.objectContaining({
+        data: { feed: PAYLOAD.feeds[0], categories: PAYLOAD.categories, categoryId: 1 },
+      }),
+    );
   });
 });
