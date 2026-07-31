@@ -522,6 +522,31 @@ mark only animates while a refresh is actually running.
 
 ---
 
+### `<app-skeleton>`
+
+Placeholder rows for a list that is still loading. Sized from the comfortable
+row-density tokens, so the layout does not shift when the real rows arrive.
+
+| Input | Type | Default |
+|---|---|---|
+| `label` | `string` (required) | — |
+| `rows` | `number` | `3` |
+
+```html
+@if (store.loading()) {
+  <app-skeleton [label]="'settings.tags.loading' | transloco" [rows]="4" />
+}
+```
+
+`label` takes an already-translated string, not an i18n key. The placeholder
+rows are `aria-hidden`; the `role="status"` label is what gets announced. The
+pulse animation is disabled under `prefers-reduced-motion`.
+
+**Not for:** a non-list fetch — use `<app-spinner>`, which does not pretend to
+know the shape of what is coming.
+
+---
+
 ## 3. Conventions
 
 ### Density
