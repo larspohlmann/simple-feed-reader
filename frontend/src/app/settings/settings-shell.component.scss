@@ -1,0 +1,84 @@
+// src/app/settings/settings-shell.component.scss
+@use '../theme/breakpoints' as bp;
+
+.bar {
+  height: var(--bar-h);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+h1 {
+  font-size: var(--fs-lg);
+  margin: 0;
+}
+
+.layout {
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned page measure (rail + gap + the 820px content column), not spacing. */
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-6);
+}
+
+.layout.wide {
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned page measure for the admin catalog's dense rows, not spacing. */
+  max-width: 1440px;
+}
+
+.rail {
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned rail measure, not a spacing value. */
+  width: 220px;
+  flex-shrink: 0;
+  position: sticky;
+  top: var(--space-5);
+  align-self: flex-start;
+  max-height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     the pre-#180 settings page measure, kept for the regular sections. */
+  max-width: 820px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.layout.wide .content {
+  max-width: none;
+}
+
+@media (width <= bp.$bp-lg) {
+  .rail {
+    display: none;
+  }
+
+  .layout {
+    padding: var(--space-4) var(--space-3);
+  }
+
+  .content {
+    max-width: none;
+  }
+}

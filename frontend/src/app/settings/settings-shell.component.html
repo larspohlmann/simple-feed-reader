@@ -1,0 +1,13 @@
+<!-- src/app/settings/settings-shell.component.html -->
+<header class="bar">
+  <a class="back" [routerLink]="backTarget()">
+    <app-icon name="arrow_back" size="sm" /> {{ backLabelKey() | transloco }}
+  </a>
+  <h1>{{ 'settings.title' | transloco }}</h1>
+</header>
+<div class="layout" [class.wide]="wideSection()">
+  <app-settings-nav class="rail" variant="rail" />
+  <main class="content">
+    <router-outlet />
+  </main>
+</div>
