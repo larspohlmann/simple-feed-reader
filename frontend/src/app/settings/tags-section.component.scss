@@ -99,6 +99,15 @@
   min-width: 0;
 }
 
+// Matches tag-form-dialog's .lbl -- style encapsulation means that rule
+// doesn't reach here even though the markup was copied from it, so the
+// Colour and Icon labels rendered at body size until this was added.
+.lbl {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
 .tag:has(.editor) {
   align-items: flex-start;
 }
