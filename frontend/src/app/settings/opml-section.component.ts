@@ -1,17 +1,17 @@
 // src/app/settings/opml-section.component.ts
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { parseProblem } from '../core/problem';
 import { ReaderApi } from '../reader/reader-api';
 import { RefreshService } from '../reader/refresh.service';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { OpmlImportResult } from '../reader/models';
 import { ButtonComponent } from '../shared/button/button.component';
+import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
+import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
 
 @Component({
   selector: 'app-opml-section',
-  imports: [ButtonComponent, TranslocoPipe],
+  imports: [ButtonComponent, ErrorBannerComponent, SettingsCardComponent, TranslocoPipe],
   templateUrl: './opml-section.component.html',
   styleUrl: './opml-section.component.scss',
 })
@@ -25,8 +25,8 @@ export class OpmlSectionComponent {
   readonly exporting = signal(false);
   readonly importing = signal(false);
   readonly result = signal<OpmlImportResult | null>(null);
-  readonly exportError = signal<string | null>(null);
-  readonly importError = signal<string | null>(null);
+  readonly exportFailed = signal(false);
+  readonly importFailed = signal(false);
 
   value(e: Event): string {
     return (e.target as HTMLTextAreaElement).value;
@@ -34,15 +34,15 @@ export class OpmlSectionComponent {
 
   exportOpml(): void {
     this.exporting.set(true);
-    this.exportError.set(null);
+    this.exportFailed.set(false);
     this.api.exportOpml().subscribe({
       next: (xml) => {
         this.exporting.set(false);
         this.download(xml);
       },
-      error: (e: HttpErrorResponse) => {
+      error: () => {
         this.exporting.set(false);
-        this.exportError.set(parseProblem(e).title);
+        this.exportFailed.set(true);
       },
     });
   }
@@ -63,7 +63,7 @@ export class OpmlSectionComponent {
     const body = this.text().trim();
     if (!body) return;
     this.importing.set(true);
-    this.importError.set(null);
+    this.importFailed.set(false);
     this.result.set(null);
     this.api.importOpml(body).subscribe({
       next: (r) => {
@@ -77,9 +77,9 @@ export class OpmlSectionComponent {
           this.refresh.run(() => this.subs.load());
         }
       },
-      error: (e: HttpErrorResponse) => {
+      error: () => {
         this.importing.set(false);
-        this.importError.set(parseProblem(e).detail ?? parseProblem(e).title);
+        this.importFailed.set(true);
       },
     });
   }

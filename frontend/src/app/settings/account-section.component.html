@@ -1,5 +1,4 @@
-<section>
-  <h2>{{ 'settings.account.title' | transloco }}</h2>
+<app-settings-card [heading]="'settings.account.title' | transloco">
   @if (auth.user(); as u) {
     <div class="who">
       <app-user-avatar [email]="u.email" [size]="48" />
@@ -13,4 +12,4 @@
       {{ 'settings.account.signOut' | transloco }}
     </app-button>
   }
-</section>
+</app-settings-card>

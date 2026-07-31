@@ -29,6 +29,15 @@ describe('AboutSectionComponent', () => {
     return fixture.nativeElement.textContent ?? '';
   }
 
+  async function renderWhileLoading(): Promise<HTMLElement> {
+    return mount(null).nativeElement;
+  }
+
+  async function renderLoaded(): Promise<HTMLElement> {
+    Object.assign(buildVersion, { version: 'v0.5.0-dev.3', commit: 'a1b2c3d', builtAt: '' });
+    return mount({ version: 'v0.5.0-dev.3', commit: 'a1b2c3d', builtAt: '' }).nativeElement;
+  }
+
   beforeEach(() => load.mockReset());
   afterEach(() => Object.assign(buildVersion, bakedIn));
 
@@ -90,5 +99,15 @@ describe('AboutSectionComponent', () => {
     const f = mount({ version: 'v0.5.0-dev.3', commit: 'a1b2c3d', builtAt: '' });
 
     expect(f.nativeElement.querySelector('.stale')).toBeNull();
+  });
+
+  it('shows a spinner while the version is loading', async () => {
+    const el = await renderWhileLoading();
+    expect(el.querySelector('app-spinner')).not.toBeNull();
+  });
+
+  it('renders inside a settings card', async () => {
+    const el = await renderLoaded();
+    expect(el.querySelector('app-settings-card')).not.toBeNull();
   });
 });

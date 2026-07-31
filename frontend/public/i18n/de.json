@@ -9,6 +9,8 @@
     "backReader": "Reader",
     "nav": { "admin": "Administration" },
     "preferences": "Voreinstellungen",
+    "loadingVersion": "Versionsinformationen werden geladen",
+    "opmlError": "Import oder Export ist fehlgeschlagen.",
     "feeds": {
       "title": "Feeds",
       "none": "Noch keine Feeds – füge einen im Reader hinzu.",

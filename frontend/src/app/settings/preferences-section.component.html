@@ -1,7 +1,6 @@
-<section>
-  <h2>{{ 'settings.preferences' | transloco }}</h2>
+<app-settings-card [heading]="'settings.preferences' | transloco">
   <div class="row">
     <span>{{ 'lang.label' | transloco }}</span>
     <app-language-switcher />
   </div>
-</section>
+</app-settings-card>

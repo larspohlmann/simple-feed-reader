@@ -26,6 +26,17 @@ describe('OpmlSectionComponent', () => {
     return f;
   }
 
+  function renderAfterFailedImport(): HTMLElement {
+    const f = mount();
+    f.componentInstance.text.set('<opml/>');
+    f.componentInstance.importText();
+    ctrl
+      .expectOne('https://api.test/api/opml/import')
+      .flush('failure', { status: 500, statusText: 'Server Error' });
+    f.detectChanges();
+    return f.nativeElement;
+  }
+
   beforeEach(() => {
     load.mockReset();
     // jsdom lacks these:
@@ -84,5 +95,12 @@ describe('OpmlSectionComponent', () => {
     c.text.set('   ');
     c.importText();
     ctrl.expectNone('https://api.test/api/opml/import');
+  });
+
+  it('reports a failed import through the shared error banner', async () => {
+    const el = await renderAfterFailedImport();
+    const banner = el.querySelector('app-error-banner');
+    expect(banner).not.toBeNull();
+    expect(el.querySelector('p.error')).toBeNull();
   });
 });
