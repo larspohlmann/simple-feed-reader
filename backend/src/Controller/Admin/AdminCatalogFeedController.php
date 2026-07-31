@@ -6,7 +6,6 @@ namespace App\Controller\Admin;
 
 use App\Dto\Admin\CatalogFeedRequest;
 use App\Dto\Admin\ReorderRequest;
-use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Http\AdminCatalogJson;
 use App\Repository\CatalogCategoryRepository;
@@ -16,7 +15,6 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
@@ -43,7 +41,7 @@ final readonly class AdminCatalogFeedController
     #[Route('', name: 'api_admin_catalog_feed_create', methods: ['POST'])]
     public function create(#[MapRequestPayload] CatalogFeedRequest $request): JsonResponse
     {
-        $category = $this->requireCategory($request->categoryId);
+        $category = $this->categories->getById($request->categoryId);
 
         $feed = new CatalogFeed($category, $request->title, $request->url);
         $this->applyFeed($feed, $request);
@@ -58,7 +56,7 @@ final readonly class AdminCatalogFeedController
     public function reorder(#[MapRequestPayload] ReorderRequest $request): JsonResponse
     {
         foreach ($request->ids as $index => $id) {
-            $this->requireFeed($id)->setPosition($index);
+            $this->feeds->getById($id)->setPosition($index);
         }
         $this->em->flush();
 
@@ -68,8 +66,8 @@ final readonly class AdminCatalogFeedController
     #[Route('/{id}', name: 'api_admin_catalog_feed_update', methods: ['PATCH'], requirements: ['id' => '\d+'])]
     public function update(int $id, #[MapRequestPayload] CatalogFeedRequest $request): JsonResponse
     {
-        $feed = $this->requireFeed($id);
-        $category = $this->requireCategory($request->categoryId);
+        $feed = $this->feeds->getById($id);
+        $category = $this->categories->getById($request->categoryId);
 
         $feed->setCategory($category);
         $feed->setTitle($request->title);
@@ -83,7 +81,7 @@ final readonly class AdminCatalogFeedController
     #[Route('/{id}', name: 'api_admin_catalog_feed_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function delete(int $id): JsonResponse
     {
-        $feed = $this->requireFeed($id);
+        $feed = $this->feeds->getById($id);
         $this->em->remove($feed);
         $this->em->flush();
 
@@ -98,7 +96,7 @@ final readonly class AdminCatalogFeedController
     #[Route('/{id}/favicon', name: 'api_admin_catalog_feed_favicon', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function refreshFavicon(int $id): JsonResponse
     {
-        $feed = $this->requireFeed($id);
+        $feed = $this->feeds->getById($id);
 
         // The warmer resolves, downloads, records the outcome and flushes. A dead
         // icon is a recorded failure, not a 500 — so refresh() never throws here.
@@ -114,15 +112,5 @@ final readonly class AdminCatalogFeedController
         $feed->setSourceFormat($request->sourceFormat);
         $feed->setEnabled($request->enabled);
         $feed->setLocked($request->locked);
-    }
-
-    private function requireFeed(int $id): CatalogFeed
-    {
-        return $this->feeds->find($id) ?? throw new NotFoundHttpException('No such feed.');
-    }
-
-    private function requireCategory(int $id): CatalogCategory
-    {
-        return $this->categories->find($id) ?? throw new NotFoundHttpException('No such category.');
     }
 }

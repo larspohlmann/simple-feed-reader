@@ -13,7 +13,6 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
@@ -54,7 +53,7 @@ final readonly class AdminCatalogCategoryController
     public function reorder(#[MapRequestPayload] ReorderRequest $request): JsonResponse
     {
         foreach ($request->ids as $index => $id) {
-            $this->requireCategory($id)->setPosition($index);
+            $this->categories->getById($id)->setPosition($index);
         }
         $this->em->flush();
 
@@ -64,7 +63,7 @@ final readonly class AdminCatalogCategoryController
     #[Route('/{id}', name: 'api_admin_catalog_category_update', methods: ['PATCH'], requirements: ['id' => '\d+'])]
     public function update(int $id, #[MapRequestPayload] CatalogCategoryRequest $request): JsonResponse
     {
-        $category = $this->requireCategory($id);
+        $category = $this->categories->getById($id);
         $category->setName($request->name);
         $category->setIcon($request->icon);
         $category->setColor($request->color);
@@ -78,17 +77,12 @@ final readonly class AdminCatalogCategoryController
     #[Route('/{id}', name: 'api_admin_catalog_category_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function delete(int $id): JsonResponse
     {
-        $category = $this->requireCategory($id);
+        $category = $this->categories->getById($id);
         // Its feeds go with it via the FK's ON DELETE CASCADE. Subscriptions a
         // user already made are untouched: they are Feed rows, not catalog rows.
         $this->em->remove($category);
         $this->em->flush();
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
-    }
-
-    private function requireCategory(int $id): CatalogCategory
-    {
-        return $this->categories->find($id) ?? throw new NotFoundHttpException('No such category.');
     }
 }

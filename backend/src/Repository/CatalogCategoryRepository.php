@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\CatalogCategory;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * @extends ServiceEntityRepository<CatalogCategory>
@@ -16,6 +17,16 @@ class CatalogCategoryRepository extends ServiceEntityRepository
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, CatalogCategory::class);
+    }
+
+    /**
+     * Fetch by id or fail with a 404. Throwing the HTTP exception here keeps the
+     * lookup-or-404 guard out of every admin controller that needs it, including
+     * the reorder paths that look ids up from the request body, not the route.
+     */
+    public function getById(int $id): CatalogCategory
+    {
+        return $this->find($id) ?? throw new NotFoundHttpException('No such category.');
     }
 
     /**
