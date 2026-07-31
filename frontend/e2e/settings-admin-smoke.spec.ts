@@ -78,3 +78,121 @@ test('settings shell navigates sections; admin pages live inside it', async ({ p
   await expect(page.getByRole('heading', { name: 'Tags' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Feeds' })).toBeVisible();
 });
+
+/**
+ * Deletes a tag by its current visible name through the real UI flow (Delete
+ * button, then the destructive confirm dialog) so a run of this test never
+ * leaves fixture debris behind for the next one — stray "…edited" tags from
+ * a prior run once collided with the `/edit/i` button-name match below.
+ */
+async function deleteTagByName(page: Page, name: string): Promise<void> {
+  const row = page.locator('.tag').filter({ has: page.locator('.name', { hasText: name }) });
+  if ((await row.count()) === 0) return;
+  await row
+    .first()
+    .getByRole('button', { name: /^(delete|löschen)$/i })
+    .click();
+  const confirmDialog = page.getByRole('alertdialog');
+  await confirmDialog.getByRole('button', { name: /^(delete|löschen)$/i }).click();
+  await expect(confirmDialog).toBeHidden();
+}
+
+test('a tag can be reordered and renamed from settings', async ({ page }) => {
+  const signedIn = await signInAsAdmin(page);
+  test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
+
+  await page.goto('/settings/tags');
+
+  const rows = page.locator('.tag');
+  // The section loads before it has anything to show — wait past the
+  // skeleton for either the empty state or the list rather than assuming
+  // rows exist yet.
+  await expect(page.locator('app-skeleton')).toHaveCount(0);
+
+  // The seeded fixture is not guaranteed to carry two tags (it may carry
+  // none at all). Create them through the real "New tag" dialog rather than
+  // weakening the assertions below to fit whatever the fixture happens to
+  // hold. Names created here are deleted again in `finally` below so repeat
+  // runs never accumulate fixture debris.
+  const ownedNames: string[] = [];
+  while ((await rows.count()) < 2) {
+    const name = `E2E reorder tag ${Date.now()}-${ownedNames.length}`;
+    await page.getByRole('button', { name: 'New tag' }).click();
+    const newDialog = page.getByRole('dialog', { name: 'New tag' });
+    await newDialog.locator('#tag-name').fill(name);
+    await newDialog.getByRole('button', { name: 'Save' }).click();
+    await expect(newDialog).toBeHidden();
+    // Wait for this exact tag to render before the next count check — the
+    // dialog closing does not imply the list has re-rendered yet, and
+    // without this wait the loop outraces the store update and keeps
+    // creating tags long past two.
+    await expect(
+      page.locator('.tag').filter({ has: page.locator('.name', { hasText: name }) }),
+    ).toBeVisible();
+    ownedNames.push(name);
+  }
+
+  try {
+    await expect(rows.first()).toBeVisible();
+    const firstName = await rows.first().locator('.name').innerText();
+    const secondName = await rows.nth(1).locator('.name').innerText();
+
+    // Reorder: drag the first row's handle below the second. CDK drag only
+    // starts once the pointer has actually moved past a threshold, so this
+    // steps the mouse rather than jumping straight from hover to hover.
+    const handleBox = await rows.first().locator('.drag-handle').boundingBox();
+    const targetBox = await rows.nth(1).boundingBox();
+    if (!handleBox || !targetBox) throw new Error('drag geometry unavailable');
+    const handleX = handleBox.x + handleBox.width / 2;
+    const handleY = handleBox.y + handleBox.height / 2;
+    await page.mouse.move(handleX, handleY);
+    await page.mouse.down();
+    await page.mouse.move(handleX, handleY + 10, { steps: 5 });
+    await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height - 4, {
+      steps: 10,
+    });
+    await page.mouse.up();
+
+    await expect(rows.first().locator('.name')).not.toHaveText(firstName);
+    await expect(rows.first().locator('.name')).toHaveText(secondName);
+
+    // The new order is the server's, not just a local list splice — reload
+    // and check it stuck.
+    await page.reload();
+    const rowsAfterReload = page.locator('.tag');
+    await expect(rowsAfterReload.first().locator('.name')).toHaveText(secondName);
+
+    // Inline edit: the editor opens on the row, not in a dialog. Anchored so
+    // it never matches the drag handle's "Reorder <name>" label when <name>
+    // itself contains the substring "edit".
+    await rowsAfterReload
+      .first()
+      .getByRole('button', { name: /^(edit|bearbeiten)$/i })
+      .click();
+    await expect(rowsAfterReload.first().locator('.editor')).toBeVisible();
+    await expect(page.locator('.app-dialog')).toHaveCount(0);
+
+    // Actually change the name, not merely open the editor, and confirm the
+    // save both updates the row and survives a reload.
+    const renamedTo = `${secondName} edited`;
+    await rowsAfterReload.first().locator('.editor app-field input').fill(renamedTo);
+    await rowsAfterReload
+      .first()
+      .getByRole('button', { name: /^(save|speichern)$/i })
+      .click();
+    await expect(rowsAfterReload.first().locator('.editor')).toBeHidden();
+    await expect(rowsAfterReload.first().locator('.name')).toHaveText(renamedTo);
+
+    await page.reload();
+    await expect(page.locator('.tag').first().locator('.name')).toHaveText(renamedTo);
+
+    // Track the tag under its final (renamed) name for cleanup below.
+    if (ownedNames.includes(secondName)) {
+      ownedNames[ownedNames.indexOf(secondName)] = renamedTo;
+    }
+  } finally {
+    for (const name of ownedNames) {
+      await deleteTagByName(page, name);
+    }
+  }
+});
