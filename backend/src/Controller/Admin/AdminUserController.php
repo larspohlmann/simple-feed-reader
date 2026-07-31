@@ -13,13 +13,13 @@ use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Repository\UserIdentityRepository;
 use App\Repository\UserRepository;
+use App\Service\Admin\SelfActionGuard;
 use App\Service\Admin\UserStatistics;
 use App\Service\Mail\AccountMailer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -40,6 +40,7 @@ final readonly class AdminUserController
         private AccountMailer $mailer,
         private ClockInterface $clock,
         private UserStatistics $statistics,
+        private SelfActionGuard $selfActionGuard,
     ) {
     }
 
@@ -84,7 +85,7 @@ final readonly class AdminUserController
     #[Route('/{id}', name: 'api_admin_users_detail', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function detail(int $id): JsonResponse
     {
-        $user = $this->requireUser($id);
+        $user = $this->users->getById($id);
         $userId = (int) $user->getId();
 
         // Loaded once and threaded through every mapper below, rather than
@@ -144,7 +145,7 @@ final readonly class AdminUserController
     #[Route('/{id}/approve', name: 'api_admin_users_approve', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function approve(int $id): JsonResponse
     {
-        $user = $this->requireUser($id);
+        $user = $this->users->getById($id);
         $isFirstTimeGrant = \in_array(
             $user->getStatus(),
             [UserStatus::PendingApproval, UserStatus::PendingVerification, UserStatus::Rejected],
@@ -165,7 +166,8 @@ final readonly class AdminUserController
     #[Route('/{id}/reject', name: 'api_admin_users_reject', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function reject(int $id, #[CurrentUser] User $admin): JsonResponse
     {
-        $user = $this->requireNotSelf($id, $admin);
+        $user = $this->users->getById($id);
+        $this->selfActionGuard->ensureNotSelf($user, $admin);
 
         $user->setStatus(UserStatus::Rejected);
         $this->em->flush();
@@ -176,33 +178,12 @@ final readonly class AdminUserController
     #[Route('/{id}/suspend', name: 'api_admin_users_suspend', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function suspend(int $id, #[CurrentUser] User $admin): JsonResponse
     {
-        $user = $this->requireNotSelf($id, $admin);
+        $user = $this->users->getById($id);
+        $this->selfActionGuard->ensureNotSelf($user, $admin);
 
         $user->setStatus(UserStatus::Suspended);
         $this->em->flush();
 
         return new JsonResponse(['status' => $user->getStatus()->value]);
-    }
-
-    private function requireUser(int $id): User
-    {
-        return $this->users->find($id) ?? throw new NotFoundHttpException('User not found.');
-    }
-
-    /**
-     * Guards against an admin removing their own access. The admin UI is the
-     * only way back in, so this is not recoverable without database access.
-     *
-     * approve() deliberately has no such guard — see the note there.
-     */
-    private function requireNotSelf(int $id, User $admin): User
-    {
-        $user = $this->requireUser($id);
-
-        if ($user->getId() === $admin->getId()) {
-            throw new ValidationException(['id' => ['You cannot change your own account status.']]);
-        }
-
-        return $user;
     }
 }

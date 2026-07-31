@@ -40,14 +40,6 @@ final readonly class ThinControllerRule implements Rule
      * @var array<string, string>
      */
     private const array ALLOW_LIST = [
-        // #190 — entity lookup guards, two of them byte-identical across two
-        // controllers, so they do not qualify for the trivial-helper exception.
-        'App\Controller\Admin\AdminCatalogCategoryController::requireCategory' => 'duplicate lookup guard; #190',
-        'App\Controller\Admin\AdminCatalogFeedController::requireFeed' => 'lookup guard; #190',
-        'App\Controller\Admin\AdminCatalogFeedController::requireCategory' => 'duplicate lookup guard; #190',
-        'App\Controller\Admin\AdminUserController::requireUser' => 'lookup guard; #190',
-        'App\Controller\Admin\AdminUserController::requireNotSelf' => 'self-lockout guard; #190',
-
         // #191 — validation, entity mutation and a security decision, each of
         // which belongs in a service.
         'App\Controller\Admin\AdminCatalogFeedController::applyFeed' => 'entity mutation; #191',
