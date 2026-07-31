@@ -34,4 +34,9 @@ describe('AccountSectionComponent', () => {
     (f.nativeElement.querySelector('.signout') as HTMLButtonElement).click();
     expect(logout).toHaveBeenCalled();
   });
+
+  it('renders inside a settings card', () => {
+    const f = mount(user);
+    expect((f.nativeElement as HTMLElement).querySelector('app-settings-card')).not.toBeNull();
+  });
 });
