@@ -103,6 +103,7 @@ final readonly class AdminUserController
             footprint: AdminUserJson::footprint($footprint),
             tags: AdminUserJson::tags($tags, $subscriptions),
             subscriptions: AdminUserJson::subscriptions($subscriptions),
+            limits: AdminUserJson::limits($user),
         ));
     }
 

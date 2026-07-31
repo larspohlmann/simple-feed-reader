@@ -7,6 +7,7 @@ namespace App\Http;
 use App\Dto\Admin\AdminSubscriptionTag;
 use App\Dto\Admin\AdminUserAccount;
 use App\Dto\Admin\AdminUserFootprint;
+use App\Dto\Admin\AdminUserLimits;
 use App\Dto\Admin\AdminUserSubscription;
 use App\Dto\Admin\AdminUserTag;
 use App\Dto\Admin\UserFootprint;
@@ -62,6 +63,8 @@ final class AdminUserJson
                 'feedsCount' => $feedCounts[$user->getId()] ?? 0,
                 'tagsCount' => $tagCounts[$user->getId()] ?? 0,
                 'lastLoginAt' => $user->getLastLoginAt()?->format(\DateTimeInterface::ATOM),
+                'trialEndsAt' => $user->getTrialEndsAt()?->format(\DateTimeInterface::ATOM),
+                'maxSubscriptions' => $user->getMaxSubscriptions(),
             ],
             $users,
         );
@@ -103,6 +106,14 @@ final class AdminUserJson
             approvedAt: $user->getApprovedAt()?->format(\DateTimeInterface::ATOM),
             lastLoginAt: $user->getLastLoginAt()?->format(\DateTimeInterface::ATOM),
             identities: $identities,
+        );
+    }
+
+    public static function limits(User $user): AdminUserLimits
+    {
+        return new AdminUserLimits(
+            trialEndsAt: $user->getTrialEndsAt()?->format(\DateTimeInterface::ATOM),
+            maxSubscriptions: $user->getMaxSubscriptions(),
         );
     }
 
