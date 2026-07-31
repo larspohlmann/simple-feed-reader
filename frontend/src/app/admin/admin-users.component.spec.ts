@@ -23,6 +23,8 @@ const user = (id: number, over: Partial<AdminUserDto> = {}): AdminUserDto => ({
   feedsCount: 0,
   tagsCount: 0,
   lastLoginAt: null,
+  trialEndsAt: null,
+  maxSubscriptions: null,
   ...over,
 });
 
