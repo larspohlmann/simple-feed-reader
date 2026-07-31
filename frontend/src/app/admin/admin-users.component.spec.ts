@@ -1,4 +1,6 @@
 import { TestBed } from '@angular/core/testing';
+import { Dialog } from '@angular/cdk/dialog';
+import { Subject } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -21,6 +23,8 @@ const user = (id: number, over: Partial<AdminUserDto> = {}): AdminUserDto => ({
 
 describe('AdminUsersComponent', () => {
   let ctrl: HttpTestingController;
+  let dialogClosed: Subject<boolean | undefined>;
+  const dialogOpen = jest.fn(() => ({ closed: dialogClosed }));
 
   function mount(currentId = 99) {
     TestBed.configureTestingModule({
@@ -31,6 +35,7 @@ describe('AdminUsersComponent', () => {
         provideRouter([]),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
         { provide: AuthService, useValue: { user: () => ({ id: currentId }) } },
+        { provide: Dialog, useValue: { open: dialogOpen } },
       ],
     });
     const f = TestBed.createComponent(AdminUsersComponent);
@@ -38,6 +43,11 @@ describe('AdminUsersComponent', () => {
     ctrl = TestBed.inject(HttpTestingController);
     return f;
   }
+
+  beforeEach(() => {
+    dialogClosed = new Subject<boolean | undefined>();
+    dialogOpen.mockClear();
+  });
 
   afterEach(() => ctrl.verify());
 
@@ -112,5 +122,33 @@ describe('AdminUsersComponent', () => {
           r.url === 'https://api.test/api/admin/users' && r.params.get('status') === 'suspended',
       )
       .flush({ users: [] });
+  });
+
+  it('suspends only after the confirm dialog is confirmed', () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users').flush({
+      users: [user(1, { status: 'active' })],
+    });
+    f.detectChanges();
+
+    f.componentInstance.confirmThenAct(user(1, { status: 'active' }), 'suspend');
+    expect(dialogOpen).toHaveBeenCalled();
+    ctrl.expectNone('https://api.test/api/admin/users/1/suspend');
+
+    dialogClosed.next(true);
+    ctrl.expectOne('https://api.test/api/admin/users/1/suspend').flush({});
+    ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [] });
+  });
+
+  it('does nothing when the confirm dialog is cancelled', () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users').flush({
+      users: [user(1, { status: 'active' })],
+    });
+    f.detectChanges();
+
+    f.componentInstance.confirmThenAct(user(1, { status: 'active' }), 'suspend');
+    dialogClosed.next(false);
+    ctrl.expectNone('https://api.test/api/admin/users/1/suspend');
   });
 });

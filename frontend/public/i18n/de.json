@@ -143,6 +143,12 @@
       "active": "Aktiv",
       "rejected": "Abgelehnt",
       "suspended": "Gesperrt"
+    },
+    "confirm": {
+      "rejectTitle": "Benutzer ablehnen",
+      "rejectMessage": "{{email}} ablehnen? Eine Anmeldung ist dann nicht möglich.",
+      "suspendTitle": "Benutzer sperren",
+      "suspendMessage": "{{email}} sperren? Der Zugang ist bis zur erneuten Freigabe blockiert."
     }
   },
   "auth": {

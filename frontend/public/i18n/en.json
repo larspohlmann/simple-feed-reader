@@ -143,6 +143,12 @@
       "active": "Active",
       "rejected": "Rejected",
       "suspended": "Suspended"
+    },
+    "confirm": {
+      "rejectTitle": "Reject user",
+      "rejectMessage": "Reject {{email}}? They will not be able to sign in.",
+      "suspendTitle": "Suspend user",
+      "suspendMessage": "Suspend {{email}}? Their access is blocked until re-approved."
     }
   },
   "auth": {

@@ -1,29 +1,13 @@
-:host {
-  display: block;
+@use '../theme/breakpoints' as bp;
 
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     tuned component dimension, not a spacing value. */
-  max-width: 820px;
-  margin: 0 auto;
-  padding: var(--space-4);
-}
-
-.bar {
+section {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-4);
 }
 
-.back {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--text-secondary);
-  text-decoration: none;
-}
-
-h1 {
-  font-size: var(--fs-xl);
+h2 {
+  font-size: var(--fs-lg);
   margin: 0;
 }
 
@@ -31,53 +15,49 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
-  margin: var(--space-4) 0;
 }
 
 .filters button {
-  padding: var(--space-1) var(--space-3);
+  padding: var(--row-pad-y) var(--row-pad-x);
+  font-size: var(--fs-sm);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-1);
+  border-radius: var(--radius-pill);
+  background: none;
   color: var(--text-secondary);
   cursor: pointer;
 }
 
 .filters button.active {
-  background: var(--accent-soft);
-  color: var(--accent);
   border-color: var(--accent);
+  color: var(--accent);
 }
 
 .users {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
 }
 
 .users li {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-3);
   padding: var(--row-pad-comfy-y) var(--row-pad-comfy-x);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
 }
 
 .who {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-0);
-  min-width: 0;
+  gap: var(--space-1);
 }
 
 .email {
-  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .meta {
@@ -85,7 +65,7 @@ h1 {
   align-items: center;
   gap: var(--space-2);
   font-size: var(--fs-sm);
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .badge {
@@ -109,27 +89,18 @@ h1 {
 .acts {
   display: flex;
   gap: var(--space-2);
-  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 
-.acts button {
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius);
-  border: 1px solid var(--border-strong);
-  background: var(--surface-1);
-  color: var(--text-primary);
-  cursor: pointer;
-}
+@media (width <= bp.$bp-sm) {
+  .users li {
+    flex-direction: column;
+    align-items: stretch;
+  }
 
-.acts button.ok {
-  background: var(--accent);
-  color: var(--on-accent);
-  border-color: var(--accent);
-}
-
-.acts button.warn {
-  color: var(--danger);
-  border-color: var(--danger);
+  .acts {
+    justify-content: flex-end;
+  }
 }
 
 .banner {
