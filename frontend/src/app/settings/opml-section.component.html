@@ -5,9 +5,7 @@
       {{ (exporting() ? 'settings.opml.preparing' : 'settings.opml.export') | transloco }}
     </app-button>
     @if (exportError(); as problem) {
-      <app-error-banner
-        [message]="problem.detail || problem.title || ('settings.opmlError' | transloco)"
-      />
+      <app-error-banner [message]="problem.detail || problem.title" />
     }
   </div>
 
@@ -29,9 +27,7 @@
       {{ (importing() ? 'settings.opml.importing' : 'settings.opml.import') | transloco }}
     </app-button>
     @if (importError(); as problem) {
-      <app-error-banner
-        [message]="problem.detail || problem.title || ('settings.opmlError' | transloco)"
-      />
+      <app-error-banner [message]="problem.detail || problem.title" />
     }
     @if (result(); as r) {
       <p class="result">

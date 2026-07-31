@@ -11,7 +11,6 @@
     "preferences": "Preferences",
     "languageSaveFailed": "The language changed on this device, but could not be saved to your account.",
     "loadingVersion": "Loading version information",
-    "opmlError": "Import or export failed.",
     "feeds": {
       "title": "Feeds",
       "none": "No feeds yet — add one from the reader.",
@@ -36,13 +35,11 @@
       "edit": "Edit",
       "delete": "Delete",
       "loading": "Loading tags",
-      "loadFailed": "Could not load your tags.",
       "retry": "Try again",
       "reorder": "Reorder {{name}}",
       "save": "Save",
       "cancel": "Cancel",
-      "editing": "Editing {{name}}",
-      "saveFailed": "Could not save the tag."
+      "editing": "Editing {{name}}"
     },
     "opml": {
       "title": "Import & export",

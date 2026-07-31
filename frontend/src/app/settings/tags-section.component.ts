@@ -50,10 +50,9 @@ export class TagsSectionComponent implements OnInit {
   readonly draftName = signal('');
   readonly draftColor = signal<string | null>(null);
   readonly draftIcon = signal<string | null>(null);
-  /** The raw problem from a failed save, resolved to text in the template the
-   *  same way settings.tags.loadFailed is: `detail || title || the i18n
-   *  fallback`, so the banner never shows a fixed string when the server has
-   *  something more specific to say. */
+  /** The raw problem from a failed save, resolved to text in the template as
+   *  `errors['name'][0] || detail || title` -- parseProblem always returns a
+   *  non-empty title, so there is no further fallback to reach for. */
   readonly saveError = signal<Problem | null>(null);
 
   /** feed count per tag id, derived from the subscription list. */

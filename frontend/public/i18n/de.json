@@ -11,7 +11,6 @@
     "preferences": "Voreinstellungen",
     "languageSaveFailed": "Die Sprache wurde auf diesem Gerät geändert, konnte aber nicht in deinem Konto gespeichert werden.",
     "loadingVersion": "Versionsinformationen werden geladen",
-    "opmlError": "Import oder Export ist fehlgeschlagen.",
     "feeds": {
       "title": "Feeds",
       "none": "Noch keine Feeds – füge einen im Reader hinzu.",
@@ -36,13 +35,11 @@
       "edit": "Bearbeiten",
       "delete": "Löschen",
       "loading": "Tags werden geladen",
-      "loadFailed": "Deine Tags konnten nicht geladen werden.",
       "retry": "Erneut versuchen",
       "reorder": "{{name}} verschieben",
       "save": "Speichern",
       "cancel": "Abbrechen",
-      "editing": "{{name}} wird bearbeitet",
-      "saveFailed": "Der Tag konnte nicht gespeichert werden."
+      "editing": "{{name}} wird bearbeitet"
     },
     "opml": {
       "title": "Import & Export",

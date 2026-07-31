@@ -111,16 +111,13 @@ describe('TagsSectionComponent', () => {
     });
     fixture.detectChanges();
 
-    expect(el.querySelector('app-error-banner')).not.toBeNull();
+    const banner = el.querySelector('app-error-banner');
+    expect(banner).not.toBeNull();
+    // The server-provided detail, not a fixed i18n string -- parseProblem
+    // always resolves a usable title, so `problem.detail || problem.title`
+    // is the whole story; there is no further fallback for this to reach.
+    expect(banner!.textContent).toContain('Could not load your tags.');
     expect(el.textContent).not.toContain(en.settings.tags.none);
-  });
-
-  it('falls back to the generic message when the problem carries no title or detail', async () => {
-    const { fixture, el } = await render();
-    error.set({ type: 'about:blank', title: '', status: 500 });
-    fixture.detectChanges();
-
-    expect(el.textContent).toContain(en.settings.tags.loadFailed);
   });
 
   it('renders the section inside the shared settings card', async () => {
@@ -449,29 +446,6 @@ describe('TagsSectionComponent', () => {
     expect(banner).not.toBeNull();
     expect(banner!.textContent).toContain('Name is already taken.');
     expect(fixture.componentInstance.editingId()).toBe(1);
-  });
-
-  it('falls back to the generic saveFailed message when the problem carries no usable text', async () => {
-    const failingUpdate = jest.fn(() =>
-      throwError(
-        () =>
-          new HttpErrorResponse({
-            status: 500,
-            error: { type: 'about:blank', title: '' },
-          }),
-      ),
-    );
-    const { fixture, el } = await render([], [], failingUpdate);
-    tags.set([TAG]);
-    fixture.detectChanges();
-
-    fixture.componentInstance.startEdit(TAG);
-    fixture.componentInstance.saveEdit();
-    fixture.detectChanges();
-
-    const banner = el.querySelector('.editor app-error-banner');
-    expect(banner).not.toBeNull();
-    expect(banner!.textContent).toContain(en.settings.tags.saveFailed);
   });
 });
 

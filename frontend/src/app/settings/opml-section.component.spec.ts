@@ -115,4 +115,15 @@ describe('OpmlSectionComponent', () => {
     });
     expect(el.textContent).toContain('Line 4: unexpected element <foo>.');
   });
+
+  it('reports a failed export through the shared error banner', () => {
+    const f = mount();
+    f.componentInstance.exportOpml();
+    ctrl
+      .expectOne('https://api.test/api/opml/export')
+      .flush('server error', { status: 500, statusText: 'Server Error' });
+    f.detectChanges();
+
+    expect((f.nativeElement as HTMLElement).querySelector('app-error-banner')).not.toBeNull();
+  });
 });
