@@ -487,6 +487,18 @@ component lives in `shared/` and must not hardcode a feature's translation keys.
 Extracted in #180 Phase 4, when five card/panel treatments had accumulated
 across seven stylesheets.
 
+**`cardActions` content must be a direct child of `<app-settings-card>`.**
+Angular's content projection only looks one `@if` level deep to find a
+projectable node; wrap it in two (e.g. an outer `@else if (data(); as d)`
+around an inner `@if (hasActions())`) and the block silently stops being
+projected — it renders mid-body below the heading instead of beside it,
+with no error anywhere. If the actions depend on data that only exists once
+loaded, compute a single boolean (or resolve what you need from a signal
+directly) so the `cardActions` element itself sits one level below
+`<app-settings-card>`, not nested inside another control-flow block first.
+This bit `admin-user-detail.component.html` once already — see its
+`hasActions` computed for the shape.
+
 **A card wraps a section, not a row.** Rows stay plain rows inside one card.
 Giving each row its own border reads as nested cards — that is what the tags
 list did before this component existed.

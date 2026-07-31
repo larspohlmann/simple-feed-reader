@@ -106,6 +106,13 @@ export class AdminUserDetailComponent {
     return !this.isSelf() && this.detail()?.user.status === 'active';
   }
 
+  /** Whether the heading row has anything to project into `cardActions`.
+   *  Kept as one condition, rather than three separate `@if`s each wrapping
+   *  their own button, so the projected content stays a single block one
+   *  level below `<app-settings-card>` — see docs/design-language.md's
+   *  `<app-settings-card>` entry for why that depth matters. */
+  readonly hasActions = computed(() => this.canApprove() || this.canReject() || this.canSuspend());
+
   act(action: AdminAction): void {
     this.actionError.set(null);
     this.api.act(this.id, action).subscribe({
