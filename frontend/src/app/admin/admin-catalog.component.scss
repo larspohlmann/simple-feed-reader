@@ -14,13 +14,17 @@
   margin: var(--space-1) 0 var(--space-4);
 }
 
+// A panel nested inside the settings card, which is itself --surface-1 --
+// so this needs its own background and a border to still read as a panel,
+// not the card's own surface colour again.
 .import {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-1);
+  background: var(--surface-0);
   margin-bottom: var(--space-4);
 }
 
@@ -80,7 +84,6 @@ app-skeleton {
 
 .category {
   border: 1px solid var(--border);
-  overflow: hidden;
 }
 
 .row {
