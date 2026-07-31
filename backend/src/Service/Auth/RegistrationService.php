@@ -6,6 +6,7 @@ namespace App\Service\Auth;
 
 use App\Entity\User;
 use App\Enum\RegistrationMethod;
+use App\Enum\SupportedLocale;
 use App\Enum\TokenPurpose;
 use App\Enum\UserStatus;
 use App\Event\UserAwaitingApproval;
@@ -38,11 +39,7 @@ final readonly class RegistrationService
      * Silently does nothing when the address is already registered. The caller
      * returns the same 202 either way — a different response here would let
      * anyone test which addresses hold accounts.
-     */
-    /** Languages we ship email translations for; anything else falls back to English. */
-    private const array SUPPORTED_LOCALES = ['en', 'de'];
-
-    /**
+     *
      * @throws TransportExceptionInterface
      * @throws RandomException
      */
@@ -63,7 +60,7 @@ final readonly class RegistrationService
         $now = $this->clock->now();
         $user = new User($email, $now);
         $user->setStatus(UserStatus::PendingVerification);
-        $user->setLocale(\in_array($locale, self::SUPPORTED_LOCALES, true) ? $locale : 'en');
+        $user->setLocale(\in_array($locale, SupportedLocale::ALL, true) ? $locale : SupportedLocale::ENGLISH);
         $user->setPasswordHash($this->hasher->hashPassword($user, $plainPassword), $now);
 
         $this->em->persist($user);
