@@ -460,6 +460,68 @@ that occupies layout where it renders, not an overlay.
 
 ---
 
+### `<app-settings-card>`
+
+The one surface a settings or admin section sits in: a heading, an optional
+description line, and the section's own projected content. A `cardActions`
+slot puts a control (a "New tag" button, a filter) on the heading row.
+
+| Input | Type | Default |
+|---|---|---|
+| `heading` | `string` (required) | — |
+| `description` | `string \| null` | `null` — omits the line |
+
+```html
+<app-settings-card [heading]="'settings.tags.title' | transloco">
+  <app-button cardActions size="sm" variant="primary" (click)="manage.createTag()">
+    {{ 'settings.tags.new' | transloco }}
+  </app-button>
+  <ul class="list">
+    …
+  </ul>
+</app-settings-card>
+```
+
+`heading` and `description` take already-translated strings, not i18n keys — the
+component lives in `shared/` and must not hardcode a feature's translation keys.
+Extracted in #180 Phase 4, when five card/panel treatments had accumulated
+across seven stylesheets.
+
+**A card wraps a section, not a row.** Rows stay plain rows inside one card.
+Giving each row its own border reads as nested cards — that is what the tags
+list did before this component existed.
+
+**Not for:** a dialog surface (use the CDK dialog with `panelClass: 'app-dialog'`)
+or an overlay (`<app-overlay-panel>`).
+
+---
+
+### `<app-spinner>`
+
+The RSS mark, animating, as the app's loading indicator. Used for a fetch whose
+result is not a list — a list should show `<app-skeleton>` instead, so the
+layout does not jump when rows arrive.
+
+| Input | Type | Default |
+|---|---|---|
+| `size` | `number` (px) | `18` |
+| `decorative` | `boolean` | `false` — keeps `role="status"` and the "Loading" label |
+| `animate` | `boolean` | `true` |
+
+```html
+@if (loading()) {
+  <app-spinner />
+}
+```
+
+`decorative` is for the brand mark in the top bar, which is not announcing a
+load. `animate: false` holds the mark still in the signal colour — the brand
+mark only animates while a refresh is actually running.
+
+**Not for:** a list load. Use `<app-skeleton>`.
+
+---
+
 ## 3. Conventions
 
 ### Density

@@ -1,0 +1,11 @@
+<!-- src/app/shared/settings-card/settings-card.component.html -->
+<section class="card">
+  <header class="head">
+    <h2>{{ heading() }}</h2>
+    <ng-content select="[cardActions]" />
+  </header>
+  @if (description(); as text) {
+    <p class="description">{{ text }}</p>
+  }
+  <ng-content />
+</section>
