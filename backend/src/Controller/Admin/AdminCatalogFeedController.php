@@ -11,6 +11,7 @@ use App\Http\AdminCatalogJson;
 use App\Repository\CatalogCategoryRepository;
 use App\Repository\CatalogFeedRepository;
 use App\Service\Catalog\CatalogFaviconWarmer;
+use App\Service\Catalog\CatalogFeedWriter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -34,6 +35,7 @@ final readonly class AdminCatalogFeedController
         private CatalogFeedRepository $feeds,
         private CatalogCategoryRepository $categories,
         private CatalogFaviconWarmer $warmer,
+        private CatalogFeedWriter $feedWriter,
         private EntityManagerInterface $em,
     ) {
     }
@@ -44,7 +46,7 @@ final readonly class AdminCatalogFeedController
         $category = $this->categories->getById($request->categoryId);
 
         $feed = new CatalogFeed($category, $request->title, $request->url);
-        $this->applyFeed($feed, $request);
+        $this->feedWriter->apply($feed, $request);
         $feed->setPosition($this->feeds->nextPositionInCategory((int) $category->getId()));
         $this->em->persist($feed);
         $this->em->flush();
@@ -72,7 +74,7 @@ final readonly class AdminCatalogFeedController
         $feed->setCategory($category);
         $feed->setTitle($request->title);
         $feed->setUrl($request->url);
-        $this->applyFeed($feed, $request);
+        $this->feedWriter->apply($feed, $request);
         $this->em->flush();
 
         return new JsonResponse(['feed' => AdminCatalogJson::feed($feed)]);
@@ -103,14 +105,5 @@ final readonly class AdminCatalogFeedController
         $this->warmer->refresh($feed);
 
         return new JsonResponse(['feed' => AdminCatalogJson::feed($feed)]);
-    }
-
-    private function applyFeed(CatalogFeed $feed, CatalogFeedRequest $request): void
-    {
-        $feed->setSiteUrl($request->siteUrl);
-        $feed->setDescription($request->description);
-        $feed->setSourceFormat($request->sourceFormat);
-        $feed->setEnabled($request->enabled);
-        $feed->setLocked($request->locked);
     }
 }

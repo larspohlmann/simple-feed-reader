@@ -40,12 +40,6 @@ final readonly class ThinControllerRule implements Rule
      * @var array<string, string>
      */
     private const array ALLOW_LIST = [
-        // #191 — validation, entity mutation and a security decision, each of
-        // which belongs in a service.
-        'App\Controller\Admin\AdminCatalogFeedController::applyFeed' => 'entity mutation; #191',
-        'App\Controller\Api\TagController::assertExactSet' => 'validation rule; #191',
-        'App\Controller\MaintenanceController::isAuthorized' => 'security decision; #191',
-
         // #192 — the OAuth cookie and redirect lifecycle. Moved to
         // Service/OAuth/FlowCookie and Service/OAuth/OAuthRedirectFactory.
         'App\Controller\Api\OAuthController::flowCookie' => 'cookie lifecycle; #192',
