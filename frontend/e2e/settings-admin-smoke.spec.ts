@@ -68,4 +68,13 @@ test('settings shell navigates sections; admin pages live inside it', async ({ p
   await expect(categoryDialog).toBeVisible();
   await categoryDialog.getByRole('button', { name: 'Cancel' }).click();
   await expect(categoryDialog).toBeHidden();
+
+  // The admin can open one account's detail page from the list.
+  await page.goto('/settings/admin/users');
+  const firstUser = page.locator('a[href^="/settings/admin/users/"]').first();
+  await expect(firstUser).toBeVisible();
+  await firstUser.click();
+  await expect(page).toHaveURL(/\/settings\/admin\/users\/\d+$/);
+  await expect(page.getByRole('heading', { name: 'Tags' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Feeds' })).toBeVisible();
 });

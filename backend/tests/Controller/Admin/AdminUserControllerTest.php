@@ -743,6 +743,52 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertSame([], $body['subscriptions']);
     }
 
+    /**
+     * The counterpart to the empty case above: a feed that HAS been fetched,
+     * and fetched long enough ago to be stale. Proved by mutation:
+     * hard-wiring AdminUserController::footprintRow()'s lastRefreshAt to null
+     * and staleFeedsCount to 0, and subscriptionRows()'s lastFetchedAt to
+     * null, left every other test in this class green — no other fixture
+     * here ever calls Feed::setLastFetchedAt(), so the null/zero branch was
+     * the only one ever pinned.
+     */
+    public function testTheFootprintAndSubscriptionRowCarryARealFetchTimestamp(): void
+    {
+        $admin = $this->admin();
+        $token = $this->tokenFor($admin);
+        $user = $this->factory()->create('stale-fetcher@example.com');
+
+        /** @var EntityManagerInterface $em */
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+
+        $feed = new Feed('https://example.com/stale-fetcher.xml');
+        $feed->setTitle('Stale Fetcher Weekly');
+        $lastFetch = new \DateTimeImmutable('-10 days');
+        $feed->setLastFetchedAt($lastFetch);
+        $em->persist($feed);
+
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('-30 days'));
+        $em->persist($subscription);
+        $em->flush();
+
+        $this->call('GET', '/api/admin/users/' . $user->getId(), $token);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload();
+        $footprint = $this->section($body, 'footprint');
+        $expectedFetchStamp = $lastFetch->format(\DateTimeInterface::ATOM);
+
+        self::assertSame(1, $footprint['staleFeedsCount']);
+        self::assertSame($expectedFetchStamp, $footprint['lastRefreshAt']);
+
+        $subscriptions = $body['subscriptions'];
+        self::assertIsArray($subscriptions);
+        self::assertCount(1, $subscriptions);
+        $row = $subscriptions[0];
+        self::assertIsArray($row);
+        self::assertSame($expectedFetchStamp, $row['lastFetchedAt']);
+    }
+
     public function testTheDetailEndpointNeverLeaksThePasswordHash(): void
     {
         $admin = $this->admin();
