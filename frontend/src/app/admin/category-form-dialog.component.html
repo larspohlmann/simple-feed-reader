@@ -1,0 +1,38 @@
+<!-- src/app/admin/category-form-dialog.component.html -->
+<!-- The form wraps the panel: Save is projected into the panel's footer, and a
+     submit button only submits a form it is a DOM descendant of. -->
+<form [formGroup]="form" (ngSubmit)="submit()" cdkTrapFocus>
+  <app-overlay-panel [heading]="titleKey | transloco">
+    <div class="fields">
+      <app-field [label]="'admin.categoryDialog.name' | transloco" [required]="true">
+        <input id="category-name" formControlName="name" maxlength="100" cdkFocusInitial />
+      </app-field>
+
+      <p class="lbl">{{ 'admin.categoryDialog.colour' | transloco }}</p>
+      <app-color-field [value]="color()" [clearable]="false" (valueChange)="applyColor($event)" />
+
+      <p class="lbl">{{ 'admin.categoryDialog.icon' | transloco }}</p>
+      <app-icon-picker inline [value]="icon()" (valueChange)="icon.set($event)" [color]="color()" />
+
+      <label class="check">
+        <input type="checkbox" formControlName="enabled" />
+        {{ 'admin.status.active' | transloco }}
+      </label>
+      <label class="check">
+        <input type="checkbox" formControlName="locked" />
+        {{ 'admin.locked' | transloco }}
+      </label>
+
+      @if (error()) {
+        <p class="error" role="alert">{{ error() }}</p>
+      }
+    </div>
+
+    <app-button footer (click)="ref.close()">
+      {{ 'dialog.cancel' | transloco }}
+    </app-button>
+    <app-button footer type="submit" variant="primary" [disabled]="loading()">
+      {{ 'common.save' | transloco }}
+    </app-button>
+  </app-overlay-panel>
+</form>

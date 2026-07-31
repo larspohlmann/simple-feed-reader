@@ -1,0 +1,39 @@
+// src/app/admin/category-form-dialog.component.scss
+// The frame is app-overlay-panel's; only the width is this dialog's to choose.
+// `display: contents` on both the host and the form removes the two boxes that
+// would otherwise sit between the CDK's dialog container and the panel, neither
+// of which the CDK knows how to centre or stretch.
+:host {
+  display: contents;
+
+  --panel-w: 460px;
+}
+
+form {
+  display: contents;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.lbl {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+}
+
+.error {
+  margin: var(--space-2) 0 0;
+  color: var(--danger);
+  font-size: var(--fs-sm);
+}

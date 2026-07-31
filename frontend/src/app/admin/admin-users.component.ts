@@ -1,24 +1,27 @@
 // src/app/admin/admin-users.component.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { Dialog } from '@angular/cdk/dialog';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
 import { AuthService } from '../core/auth.service';
-import { IconComponent } from '../shared/icon/icon.component';
+import { ButtonComponent } from '../shared/button/button.component';
 import { SpinnerComponent } from '../shared/spinner/spinner.component';
+import { ConfirmData, ConfirmDialogComponent } from '../reader/manage/confirm-dialog.component';
 import { AdminApi } from './admin-api';
 import { AdminAction, AdminUserDto, AdminUserStatus } from './admin.models';
 
 @Component({
   selector: 'app-admin-users',
-  imports: [RouterLink, IconComponent, SpinnerComponent, TranslocoPipe],
+  imports: [ButtonComponent, SpinnerComponent, TranslocoPipe],
   templateUrl: './admin-users.component.html',
   styleUrl: './admin-users.component.scss',
 })
 export class AdminUsersComponent implements OnInit {
   private readonly api = inject(AdminApi);
   private readonly auth = inject(AuthService);
+  private readonly dialog = inject(Dialog);
+  private readonly i18n = inject(TranslocoService);
 
   // The label for each entry comes from the `admin.status.<key>` translation key
   // ('all' for the no-filter option).
@@ -89,5 +92,27 @@ export class AdminUsersComponent implements OnInit {
   }
   canSuspend(u: AdminUserDto): boolean {
     return !this.isSelf(u) && u.status === 'active';
+  }
+
+  /** Rejecting or suspending cuts off a person's access — that is a
+   *  destructive action and gets the two-step treatment: an initiating
+   *  danger-outline button, then the filled-danger confirm. */
+  confirmThenAct(user: AdminUserDto, action: 'reject' | 'suspend'): void {
+    const data: ConfirmData = {
+      title: this.i18n.translate(`admin.confirm.${action}Title`),
+      message: this.i18n.translate(`admin.confirm.${action}Message`, { email: user.email }),
+      confirmLabel: this.i18n.translate(`admin.${action}`),
+      danger: true,
+    };
+    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
+      data,
+      // A destructive confirmation is an alert, not a plain dialog; the role
+      // belongs on the CDK's modal container.
+      role: 'alertdialog',
+      panelClass: 'app-dialog',
+    });
+    ref.closed.subscribe((confirmed) => {
+      if (confirmed) this.act(user, action);
+    });
   }
 }

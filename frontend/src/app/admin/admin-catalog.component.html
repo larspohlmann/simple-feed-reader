@@ -1,227 +1,235 @@
-<header class="bar">
-  <a class="back" routerLink="/">
-    <app-icon name="arrow_back" size="sm" /> {{ 'settings.backReader' | transloco }}
-  </a>
-  <h1>{{ 'admin.catalog' | transloco }}</h1>
-</header>
+<section>
+  <h2>{{ 'admin.catalog' | transloco }}</h2>
 
-@if (actionError()) {
-  <div class="banner" role="alert">
-    {{ actionError()!.detail || actionError()!.title }}
-    <button (click)="actionError.set(null)">{{ 'admin.dismiss' | transloco }}</button>
-  </div>
-}
-
-@if (loading()) {
-  <div class="pad"><app-spinner /></div>
-} @else if (error()) {
-  <div class="banner" role="alert">
-    {{ error()!.detail || error()!.title }}
-    <button (click)="load()">{{ 'admin.retry' | transloco }}</button>
-  </div>
-} @else {
-  @if (!hasFeeds()) {
-    <p class="notice">{{ 'admin.catalogEmpty' | transloco }}</p>
+  @if (actionError()) {
+    <div class="banner" role="alert">
+      {{ actionError()!.detail || actionError()!.title }}
+      <button (click)="actionError.set(null)">{{ 'admin.dismiss' | transloco }}</button>
+    </div>
   }
 
-  <section class="import">
-    @if (bundled()?.available) {
-      <app-button variant="primary" data-testid="import-bundled" (click)="importBundled()">
-        {{
-          'admin.importBundled'
-            | transloco: { categories: bundled()!.categories, feeds: bundled()!.feeds }
-        }}
-      </app-button>
-    }
-
-    <div class="upload">
-      <app-field [label]="'admin.importUpload' | transloco">
-        <input
-          #fileInput
-          type="file"
-          accept=".opml,.xml"
-          data-testid="import-file"
-          (change)="onFileSelected($event)"
-        />
-      </app-field>
-      <app-field [label]="'admin.importMode' | transloco">
-        <select data-testid="import-mode" (change)="setMode($event)">
-          <option value="merge" [selected]="importMode() === 'merge'">
-            {{ 'admin.importModeMerge' | transloco }}
-          </option>
-          <option value="replace" [selected]="importMode() === 'replace'">
-            {{ 'admin.importModeReplace' | transloco }}
-          </option>
-        </select>
-      </app-field>
-      <app-button
-        variant="primary"
-        data-testid="import-run"
-        [disabled]="pendingDocument() === null"
-        (click)="importUpload()"
-      >
-        {{ 'admin.importUpload' | transloco }}
-      </app-button>
+  @if (loading()) {
+    <div class="pad"><app-spinner /></div>
+  } @else if (error()) {
+    <div class="banner" role="alert">
+      {{ error()!.detail || error()!.title }}
+      <button (click)="load()">{{ 'admin.retry' | transloco }}</button>
     </div>
-
-    @if (importError()) {
-      <p class="banner" role="alert">{{ importError()!.detail || importError()!.title }}</p>
+  } @else {
+    @if (!hasFeeds()) {
+      <p class="notice">{{ 'admin.catalogEmpty' | transloco }}</p>
     }
 
-    @if (importCounts(); as counts) {
-      <p class="counts">
-        {{
-          'admin.importDone'
-            | transloco
-              : {
-                  categoriesCreated: counts.categoriesCreated,
-                  categoriesUpdated: counts.categoriesUpdated,
-                  categoriesRemoved: counts.categoriesRemoved,
-                  feedsCreated: counts.feedsCreated,
-                  feedsUpdated: counts.feedsUpdated,
-                  feedsRemoved: counts.feedsRemoved,
-                }
-        }}
-        @if (counts.lockedSkipped > 0) {
-          — {{ 'admin.importLockedSkipped' | transloco: { count: counts.lockedSkipped } }}
-        }
-      </p>
-    }
-
-    <div class="warm">
-      <app-button [disabled]="warming()" (click)="warm()">
-        {{ 'admin.warmIcons' | transloco }}
-      </app-button>
-      @if (warming()) {
-        <span class="progress">
-          {{ 'admin.warmingIcons' | transloco: { remaining: warmRemaining() } }}
-        </span>
-      } @else if (warmReport(); as report) {
-        <span class="progress">
-          {{ 'admin.warmDone' | transloco: { warmed: report.warmed, failed: report.failed } }}
-        </span>
+    <section class="import">
+      @if (bundled()?.available) {
+        <app-button variant="primary" data-testid="import-bundled" (click)="importBundled()">
+          {{
+            'admin.importBundled'
+              | transloco: { categories: bundled()!.categories, feeds: bundled()!.feeds }
+          }}
+        </app-button>
       }
-    </div>
-  </section>
 
-  <p class="hint">{{ 'admin.lockedHint' | transloco }}</p>
-
-  <ul class="categories">
-    @for (category of categories(); track category.id; let ci = $index) {
-      <li class="category" data-testid="admin-category">
-        <div class="row">
-          <span class="swatch" [style.background]="category.color"></span>
-          @if (category.locked) {
-            <app-icon class="lock" name="lock" size="sm" />
-          }
-          <input class="grow" [(ngModel)]="category.name" [attr.aria-label]="'name'" />
-          <app-icon-picker [(value)]="category.icon" [color]="category.color" />
-          <app-color-field
-            [value]="category.color"
-            [clearable]="false"
-            (valueChange)="applyCategoryColor(category, $event)"
+      <div class="upload">
+        <app-field [label]="'admin.importUpload' | transloco">
+          <input
+            #fileInput
+            type="file"
+            accept=".opml,.xml"
+            data-testid="import-file"
+            (change)="onFileSelected($event)"
           />
-          <label class="check">
-            <input type="checkbox" [(ngModel)]="category.enabled" />
-            {{ 'admin.status.active' | transloco }}
-          </label>
-          <label class="check">
-            <input type="checkbox" [(ngModel)]="category.locked" />
-            {{ 'admin.locked' | transloco }}
-          </label>
-          <div class="acts">
-            <button (click)="moveCategory(ci, -1)" aria-label="up">
-              <app-icon name="keyboard_arrow_up" size="md" />
-            </button>
-            <button (click)="moveCategory(ci, 1)" aria-label="down">
-              <app-icon name="keyboard_arrow_down" size="md" />
-            </button>
-            <button class="ok" (click)="saveCategory(category)">
-              {{ 'common.save' | transloco }}
-            </button>
-            <button class="warn" (click)="deleteCategory(category)">
-              {{ 'common.delete' | transloco }}
-            </button>
-          </div>
-        </div>
+        </app-field>
+        <app-field [label]="'admin.importMode' | transloco">
+          <select data-testid="import-mode" (change)="setMode($event)">
+            <option value="merge" [selected]="importMode() === 'merge'">
+              {{ 'admin.importModeMerge' | transloco }}
+            </option>
+            <option value="replace" [selected]="importMode() === 'replace'">
+              {{ 'admin.importModeReplace' | transloco }}
+            </option>
+          </select>
+        </app-field>
+        <app-button
+          variant="primary"
+          data-testid="import-run"
+          [disabled]="pendingDocument() === null"
+          (click)="importUpload()"
+        >
+          {{ 'admin.importUpload' | transloco }}
+        </app-button>
+      </div>
 
-        <ul class="feeds">
-          @for (feed of feedsFor(category.id); track feed.id) {
-            <li class="feed" data-testid="admin-feed">
-              @if (feed.locked) {
-                <app-icon class="lock" name="lock" size="sm" />
-              }
-              <input class="grow" [(ngModel)]="feed.title" [attr.aria-label]="'title'" />
-              <input class="grow" [(ngModel)]="feed.url" [attr.aria-label]="'url'" />
-              <input
-                class="grow"
-                [ngModel]="feed.siteUrl"
-                (ngModelChange)="feed.siteUrl = $event"
-                [attr.aria-label]="'siteUrl'"
-              />
-              <input
-                class="grow"
-                [ngModel]="feed.description"
-                (ngModelChange)="feed.description = $event"
-                [attr.aria-label]="'description'"
-              />
-              <select [(ngModel)]="feed.categoryId" [attr.aria-label]="'category'">
-                @for (option of categories(); track option.id) {
-                  <option [ngValue]="option.id">{{ option.name }}</option>
-                }
-              </select>
-              <label class="check">
-                <input type="checkbox" [(ngModel)]="feed.enabled" />
-                {{ 'admin.status.active' | transloco }}
-              </label>
-              <label class="check">
-                <input type="checkbox" data-testid="feed-locked" [(ngModel)]="feed.locked" />
-                {{ 'admin.locked' | transloco }}
-              </label>
-              <div class="acts">
-                <button (click)="moveFeed(feed, -1)" aria-label="up">
-                  <app-icon name="keyboard_arrow_up" size="md" />
-                </button>
-                <button (click)="moveFeed(feed, 1)" aria-label="down">
-                  <app-icon name="keyboard_arrow_down" size="md" />
-                </button>
-                <button data-testid="refresh-favicon" (click)="refreshFavicon(feed)">
-                  <app-icon name="refresh" size="md" />
-                </button>
-                <button class="ok" data-testid="feed-save" (click)="saveFeed(feed)">
-                  {{ 'common.save' | transloco }}
-                </button>
-                <button class="warn" (click)="deleteFeed(feed)">
-                  {{ 'common.delete' | transloco }}
-                </button>
-              </div>
-            </li>
+      @if (importError()) {
+        <p class="banner" role="alert">{{ importError()!.detail || importError()!.title }}</p>
+      }
+
+      @if (importCounts(); as counts) {
+        <p class="counts">
+          {{
+            'admin.importDone'
+              | transloco
+                : {
+                    categoriesCreated: counts.categoriesCreated,
+                    categoriesUpdated: counts.categoriesUpdated,
+                    categoriesRemoved: counts.categoriesRemoved,
+                    feedsCreated: counts.feedsCreated,
+                    feedsUpdated: counts.feedsUpdated,
+                    feedsRemoved: counts.feedsRemoved,
+                  }
+          }}
+          @if (counts.lockedSkipped > 0) {
+            — {{ 'admin.importLockedSkipped' | transloco: { count: counts.lockedSkipped } }}
           }
+        </p>
+      }
 
-          <li class="feed add">
-            <input class="grow" [(ngModel)]="newFeed().title" placeholder="title" />
-            <input class="grow" [(ngModel)]="newFeed().url" placeholder="url" />
-            <select [(ngModel)]="newFeed().categoryId">
-              @for (option of categories(); track option.id) {
-                <option [ngValue]="option.id">{{ option.name }}</option>
-              }
-            </select>
-            <button class="ok" (click)="addFeed()">{{ 'common.add' | transloco }}</button>
-          </li>
-        </ul>
-      </li>
-    }
+      <div class="warm">
+        <app-button [disabled]="warming()" (click)="warm()">
+          {{ 'admin.warmIcons' | transloco }}
+        </app-button>
+        @if (warming()) {
+          <span class="progress">
+            {{ 'admin.warmingIcons' | transloco: { remaining: warmRemaining() } }}
+          </span>
+        } @else if (warmReport(); as report) {
+          <span class="progress">
+            {{ 'admin.warmDone' | transloco: { warmed: report.warmed, failed: report.failed } }}
+          </span>
+        }
+      </div>
+    </section>
 
-    <li class="category add">
-      <span class="swatch" [style.background]="newCategory().color"></span>
-      <input class="grow" [(ngModel)]="newCategory().name" placeholder="name" />
-      <app-icon-picker [(value)]="newCategory().icon" [color]="newCategory().color" />
-      <app-color-field
-        [value]="newCategory().color"
-        [clearable]="false"
-        (valueChange)="applyCategoryColor(newCategory(), $event)"
-      />
-      <button class="ok" (click)="addCategory()">{{ 'common.add' | transloco }}</button>
-    </li>
-  </ul>
-}
+    <p class="hint">{{ 'admin.lockedHint' | transloco }}</p>
+
+    <div class="list-head">
+      <app-button
+        size="sm"
+        variant="primary"
+        data-testid="add-category"
+        (click)="openCategoryDialog(null)"
+      >
+        <app-icon name="add" size="sm" /> {{ 'admin.addCategory' | transloco }}
+      </app-button>
+    </div>
+
+    <ul class="categories">
+      @for (category of categories(); track category.id; let ci = $index) {
+        <li class="category" data-testid="admin-category">
+          <div class="row">
+            <span class="swatch" [style.background]="category.color"></span>
+            @if (category.icon) {
+              <app-icon [name]="category.icon" size="sm" />
+            }
+            <span class="name">{{ category.name }}</span>
+            @if (category.locked) {
+              <app-icon class="lock" name="lock" size="sm" />
+            }
+            @if (!category.enabled) {
+              <span class="badge">{{ 'admin.inactive' | transloco }}</span>
+            }
+            <span class="count">
+              {{
+                (feedsFor(category.id).length === 1 ? 'admin.feedCountOne' : 'admin.feedCountOther')
+                  | transloco: { count: feedsFor(category.id).length }
+              }}
+            </span>
+            <span class="acts">
+              <button
+                class="icon-act"
+                (click)="moveCategory(ci, -1)"
+                [attr.aria-label]="'admin.moveUp' | transloco"
+              >
+                <app-icon name="keyboard_arrow_up" size="md" />
+              </button>
+              <button
+                class="icon-act"
+                (click)="moveCategory(ci, 1)"
+                [attr.aria-label]="'admin.moveDown' | transloco"
+              >
+                <app-icon name="keyboard_arrow_down" size="md" />
+              </button>
+              <app-button
+                size="sm"
+                data-testid="category-edit"
+                (click)="openCategoryDialog(category)"
+              >
+                {{ 'admin.edit' | transloco }}
+              </app-button>
+              <app-button
+                size="sm"
+                variant="danger-outline"
+                (click)="confirmDeleteCategory(category)"
+              >
+                {{ 'common.delete' | transloco }}
+              </app-button>
+            </span>
+          </div>
+
+          <ul class="feeds">
+            @for (feed of feedsFor(category.id); track feed.id) {
+              <li class="feed" data-testid="admin-feed">
+                <span class="ident">
+                  <span class="title">
+                    {{ feed.title }}
+                    @if (feed.locked) {
+                      <app-icon class="lock" name="lock" size="text" />
+                    }
+                    @if (!feed.enabled) {
+                      <span class="badge">{{ 'admin.inactive' | transloco }}</span>
+                    }
+                  </span>
+                  <span class="url">{{ feed.url }}</span>
+                </span>
+                <span class="acts">
+                  <button
+                    class="icon-act"
+                    (click)="moveFeed(feed, -1)"
+                    [attr.aria-label]="'admin.moveUp' | transloco"
+                  >
+                    <app-icon name="keyboard_arrow_up" size="md" />
+                  </button>
+                  <button
+                    class="icon-act"
+                    (click)="moveFeed(feed, 1)"
+                    [attr.aria-label]="'admin.moveDown' | transloco"
+                  >
+                    <app-icon name="keyboard_arrow_down" size="md" />
+                  </button>
+                  <button
+                    class="icon-act"
+                    data-testid="refresh-favicon"
+                    (click)="refreshFavicon(feed)"
+                    [attr.aria-label]="'admin.refreshFavicon' | transloco"
+                  >
+                    <app-icon name="refresh" size="md" />
+                  </button>
+                  <app-button
+                    size="sm"
+                    data-testid="feed-edit"
+                    (click)="openFeedDialog(feed, feed.categoryId)"
+                  >
+                    {{ 'admin.edit' | transloco }}
+                  </app-button>
+                  <app-button size="sm" variant="danger-outline" (click)="confirmDeleteFeed(feed)">
+                    {{ 'common.delete' | transloco }}
+                  </app-button>
+                </span>
+              </li>
+            }
+
+            <li class="feed-add">
+              <app-button
+                size="sm"
+                data-testid="add-feed"
+                (click)="openFeedDialog(null, category.id)"
+              >
+                <app-icon name="add" size="sm" /> {{ 'admin.addFeed' | transloco }}
+              </app-button>
+            </li>
+          </ul>
+        </li>
+      }
+    </ul>
+  }
+</section>

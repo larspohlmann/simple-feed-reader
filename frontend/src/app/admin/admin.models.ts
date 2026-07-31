@@ -16,6 +16,9 @@ export type AdminAction = 'approve' | 'reject' | 'suspend';
 
 export type ImportMode = 'merge' | 'replace';
 
+/** The colour a brand-new category starts with (also the pre-#180 default). */
+export const DEFAULT_CATEGORY_COLOR = '#3b82f6';
+
 export interface AdminCatalogCategoryDto {
   id: number;
   key: string;

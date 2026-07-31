@@ -1,0 +1,18 @@
+<nav [class]="variant()" [attr.aria-label]="'settings.title' | transloco">
+  @for (group of groups(); track group.labelKey) {
+    @if (group.labelKey; as labelKey) {
+      <p class="group">{{ labelKey | transloco }}</p>
+    }
+    <ul>
+      @for (s of group.sections; track s.path) {
+        <li>
+          <a [routerLink]="'/settings/' + s.path" routerLinkActive="active">
+            <app-icon [name]="s.icon" size="sm" />
+            <span class="label">{{ s.labelKey | transloco }}</span>
+            <app-icon class="chev" name="chevron_right" size="sm" />
+          </a>
+        </li>
+      }
+    </ul>
+  }
+</nav>

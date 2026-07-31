@@ -1,6 +1,5 @@
 // src/app/app.routes.ts
 import { Routes } from '@angular/router';
-import { adminGuard } from './core/admin.guard';
 import { authGuard, guestGuard } from './core/auth.guard';
 
 export const routes: Routes = [
@@ -43,19 +42,10 @@ export const routes: Routes = [
   {
     path: 'settings',
     canActivate: [authGuard],
-    loadComponent: () => import('./settings/settings.component').then((m) => m.SettingsComponent),
+    loadChildren: () => import('./settings/settings.routes').then((m) => m.SETTINGS_ROUTES),
   },
-  {
-    path: 'admin/users',
-    canActivate: [authGuard, adminGuard],
-    loadComponent: () => import('./admin/admin-users.component').then((m) => m.AdminUsersComponent),
-  },
-  {
-    path: 'admin/catalog',
-    canActivate: [authGuard, adminGuard],
-    loadComponent: () =>
-      import('./admin/admin-catalog.component').then((m) => m.AdminCatalogComponent),
-  },
+  { path: 'admin/users', redirectTo: 'settings/admin/users' },
+  { path: 'admin/catalog', redirectTo: 'settings/admin/catalog' },
   {
     path: 'discover',
     canActivate: [authGuard],
