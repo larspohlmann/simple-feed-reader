@@ -10,6 +10,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
+use App\Service\Admin\Exception\UnpersistedUserException;
 use App\Service\Admin\UserStatistics;
 use App\Service\Subscription\SubscriptionService;
 use PHPUnit\Framework\TestCase;
@@ -19,14 +20,25 @@ final class UserStatisticsTest extends TestCase
 {
     private const string NOW = '2026-07-31 12:00:00';
 
+    /**
+     * A user as UserStatistics expects to receive it: already persisted, so
+     * it carries an id. Doctrine assigns that id only on flush, which a unit
+     * test never does, so it is stamped in here via reflection instead.
+     */
     private function user(?string $lastLoginAt, string $createdAt = '2026-01-01 09:00:00'): User
     {
         $user = new User('someone@example.com', new \DateTimeImmutable($createdAt));
+        $this->assignId($user, 42);
         if (null !== $lastLoginAt) {
             $user->setLastLoginAt(new \DateTimeImmutable($lastLoginAt));
         }
 
         return $user;
+    }
+
+    private function assignId(User $user, int $id): void
+    {
+        (new \ReflectionProperty(User::class, 'id'))->setValue($user, $id);
     }
 
     /**
@@ -46,10 +58,9 @@ final class UserStatisticsTest extends TestCase
 
         $tagRepository = $this->createStub(TagRepository::class);
         $tagRepository->method('findForUser')->willReturn(
-            array_map(
-                static fn (int $i): Tag => new Tag($user, 'tag' . $i),
-                range(1, max(0, $tagCount)),
-            ),
+            0 === $tagCount
+                ? []
+                : array_map(static fn (int $i): Tag => new Tag($user, 'tag' . $i), range(1, $tagCount)),
         );
 
         return new UserStatistics(
@@ -90,6 +101,7 @@ final class UserStatisticsTest extends TestCase
         self::assertNull($footprint->lastRefreshAt);
         self::assertSame(0, $footprint->feedsCount);
         self::assertSame(0, $footprint->staleFeedsCount);
+        self::assertSame(0, $footprint->tagsCount);
     }
 
     public function testAFeedCountsAsStaleAfterSevenDaysAndANeverFetchedFeedAlways(): void
@@ -109,9 +121,20 @@ final class UserStatisticsTest extends TestCase
     {
         $recent = $this->user('2026-07-01 08:00:00');
         $stale = $this->user('2026-04-01 08:00:00');
+        // NOW minus exactly 90 days: the dormant threshold is "older than 90
+        // days", so this is not yet dormant.
+        $exactlyNinetyDays = $this->user('2026-05-02 12:00:00');
+        // One second further back: now it is dormant.
+        $ninetyDaysAndOneSecond = $this->user('2026-05-02 11:59:59');
 
         self::assertFalse($this->statisticsFor($recent, [], 0)->forUser($recent)->dormant);
         self::assertTrue($this->statisticsFor($stale, [], 0)->forUser($stale)->dormant);
+        self::assertFalse(
+            $this->statisticsFor($exactlyNinetyDays, [], 0)->forUser($exactlyNinetyDays)->dormant,
+        );
+        self::assertTrue(
+            $this->statisticsFor($ninetyDaysAndOneSecond, [], 0)->forUser($ninetyDaysAndOneSecond)->dormant,
+        );
     }
 
     public function testAnAccountThatNeverSignedInIsDormantOnlyOnceItIsOldEnough(): void
@@ -121,5 +144,14 @@ final class UserStatisticsTest extends TestCase
 
         self::assertFalse($this->statisticsFor($young, [], 0)->forUser($young)->dormant);
         self::assertTrue($this->statisticsFor($abandoned, [], 0)->forUser($abandoned)->dormant);
+    }
+
+    public function testForUserRejectsAUserThatWasNeverPersisted(): void
+    {
+        $user = new User('someone@example.com', new \DateTimeImmutable('2026-01-01 09:00:00'));
+
+        $this->expectException(UnpersistedUserException::class);
+
+        $this->statisticsFor($user, [], 0)->forUser($user);
     }
 }

@@ -9,6 +9,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
+use App\Service\Admin\Exception\UnpersistedUserException;
 use App\Service\Subscription\SubscriptionService;
 use Psr\Clock\ClockInterface;
 
@@ -36,12 +37,13 @@ final readonly class UserStatistics
 
     public function forUser(User $user): UserFootprint
     {
-        $subscriptions = $this->subscriptions->findForUserWithTags((int) $user->getId());
+        $userId = $user->getId() ?? throw UnpersistedUserException::forUser();
+        $subscriptions = $this->subscriptions->findForUserWithTags($userId);
         $now = $this->clock->now();
 
         return new UserFootprint(
             feedsCount: \count($subscriptions),
-            tagsCount: \count($this->tags->findForUser((int) $user->getId())),
+            tagsCount: \count($this->tags->findForUser($userId)),
             feedsLimit: SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER,
             staleFeedsCount: $this->countStale($subscriptions, $now),
             lastRefreshAt: $this->newestFetch($subscriptions),
@@ -61,6 +63,9 @@ final readonly class UserStatistics
             $fetchedAt = $subscription->getFeed()->getLastFetchedAt();
 
             // A feed that was never fetched is stale by definition, not fresh.
+            // Stale is inclusive ("7 OR MORE days"): exactly 7 days counts.
+            // Intentionally asymmetric with the dormant threshold below — per
+            // spec, do not harmonise the two operators.
             if (null === $fetchedAt || $fetchedAt <= $cutoff) {
                 ++$stale;
             }
@@ -95,6 +100,9 @@ final readonly class UserStatistics
     {
         $cutoff = $now->modify(\sprintf('-%d days', self::DORMANT_AFTER_DAYS));
 
+        // Dormant is exclusive ("OLDER THAN 90 days"): exactly 90 days is not
+        // yet dormant. Intentionally asymmetric with the stale threshold
+        // above — per spec, do not harmonise the two operators.
         return ($user->getLastLoginAt() ?? $user->getCreatedAt()) < $cutoff;
     }
 }
