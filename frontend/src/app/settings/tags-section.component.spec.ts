@@ -1,14 +1,16 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
+import { of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { TagsSectionComponent } from './tags-section.component';
 import { TagsStore } from '../reader/tags.store';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { ManageActions } from '../reader/manage/manage-actions.service';
+import { ReaderApi } from '../reader/reader-api';
 import { TagGlyphComponent } from '../shared/tag-glyph/tag-glyph.component';
 import { Problem } from '../core/problem';
 import { TagDto, SubscriptionDto } from '../reader/models';
@@ -22,6 +24,8 @@ const tag = (id: number, name: string): TagDto => ({
   icon: 'label',
   position: 0,
 });
+
+const TAG: TagDto = { id: 1, name: 'Tech', color: '#ff8800', icon: 'memory', position: 0 };
 
 describe('TagsSectionComponent', () => {
   let tags: ReturnType<typeof signal<TagDto[]>>;
@@ -45,7 +49,11 @@ describe('TagsSectionComponent', () => {
     subLoad.mockReset();
   });
 
-  async function render(initialTags: TagDto[] = [], initialSubs: SubscriptionDto[] = []) {
+  async function render(
+    initialTags: TagDto[] = [],
+    initialSubs: SubscriptionDto[] = [],
+    updateTag: jest.Mock = jest.fn(() => of({ tag: TAG })),
+  ) {
     tags = signal<TagDto[]>(initialTags);
     loading = signal(false);
     error = signal<Problem | null>(null);
@@ -57,6 +65,7 @@ describe('TagsSectionComponent', () => {
         { provide: TagsStore, useValue: { tags, loading, error, load: tagLoad } },
         { provide: SubscriptionsStore, useValue: { subscriptions, load: subLoad } },
         { provide: ManageActions, useValue: { createTag, editTag, deleteTag, reorderTags } },
+        { provide: ReaderApi, useValue: { updateTag } },
       ],
     }).compileComponents();
 
@@ -156,14 +165,22 @@ describe('TagsSectionComponent', () => {
     expect(el.textContent).toContain('1 feed');
   });
 
-  it('wires New / Edit / Delete to ManageActions', async () => {
-    const { el } = await render([tag(1, 'Tech')]);
+  it('wires New / Delete to ManageActions, and Edit to the inline editor instead of the dialog', async () => {
+    const { fixture, el } = await render([tag(1, 'Tech')]);
     (el.querySelector('.new') as HTMLButtonElement).click();
     const rowButtons = el.querySelectorAll('.tag .acts button');
     (rowButtons[0] as HTMLButtonElement).click(); // edit
-    (rowButtons[1] as HTMLButtonElement).click(); // delete
+    fixture.detectChanges();
+
+    expect(el.querySelector('.tag .editor')).not.toBeNull();
+    expect(editTag).not.toHaveBeenCalled();
+
+    fixture.componentInstance.cancelEdit();
+    fixture.detectChanges();
+    const deleteButton = el.querySelectorAll('.tag .acts button')[1] as HTMLButtonElement;
+    deleteButton.click();
+
     expect(createTag).toHaveBeenCalled();
-    expect(editTag).toHaveBeenCalledWith(tag(1, 'Tech'));
     expect(deleteTag).toHaveBeenCalledWith(tag(1, 'Tech'));
   });
 
@@ -226,6 +243,125 @@ describe('TagsSectionComponent', () => {
     fixture.detectChanges();
 
     expect(el.querySelector('app-tag-glyph')).not.toBeNull();
+  });
+
+  it('opens an inline editor on the row and not the dialog', async () => {
+    const { fixture, el } = await render();
+    tags.set([TAG]);
+    fixture.detectChanges();
+
+    fixture.componentInstance.startEdit(TAG);
+    fixture.detectChanges();
+
+    expect(el.querySelector('.tag .editor')).not.toBeNull();
+    expect(TestBed.inject(ManageActions).editTag).not.toHaveBeenCalled();
+  });
+
+  it('saves through updateTag and reloads', async () => {
+    const { fixture } = await render();
+    tags.set([TAG]);
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    component.startEdit(TAG);
+    component.draftName.set('Technology');
+    component.saveEdit();
+
+    expect(TestBed.inject(ReaderApi).updateTag).toHaveBeenCalledWith(1, {
+      name: 'Technology',
+      color: '#ff8800',
+      icon: 'memory',
+    });
+    expect(component.editingId()).toBeNull();
+    expect(tagLoad).toHaveBeenCalled();
+    expect(subLoad).toHaveBeenCalled();
+  });
+
+  it('cancels without saving', async () => {
+    const { fixture, el } = await render();
+    tags.set([TAG]);
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    component.startEdit(TAG);
+    component.draftName.set('Technology');
+    fixture.detectChanges();
+    component.cancelEdit();
+    fixture.detectChanges();
+
+    expect(TestBed.inject(ReaderApi).updateTag).not.toHaveBeenCalled();
+    expect(component.editingId()).toBeNull();
+    expect(el.querySelector('.tag .editor')).toBeNull();
+  });
+
+  it('cancels on Escape from the name field', async () => {
+    const { fixture, el } = await render();
+    tags.set([TAG]);
+    fixture.detectChanges();
+
+    fixture.componentInstance.startEdit(TAG);
+    fixture.detectChanges();
+
+    const input = el.querySelector('.editor input') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.editingId()).toBeNull();
+    expect(TestBed.inject(ReaderApi).updateTag).not.toHaveBeenCalled();
+  });
+
+  it('edits only one row at a time', async () => {
+    const { fixture, el } = await render();
+    const second: TagDto = { id: 2, name: 'News', color: null, icon: null, position: 1 };
+    tags.set([TAG, second]);
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    component.startEdit(TAG);
+    component.startEdit(second);
+    fixture.detectChanges();
+
+    expect(component.editingId()).toBe(2);
+    expect(el.querySelectorAll('.editor')).toHaveLength(1);
+  });
+
+  it('refuses to save an empty name', async () => {
+    const { fixture } = await render();
+    tags.set([TAG]);
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    component.startEdit(TAG);
+    component.draftName.set('   ');
+    component.saveEdit();
+
+    expect(TestBed.inject(ReaderApi).updateTag).not.toHaveBeenCalled();
+    expect(component.editingId()).toBe(1);
+  });
+
+  it('shows the server-provided message when the save request fails', async () => {
+    const failingUpdate = jest.fn(() =>
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 422,
+            error: { type: 'about:blank', title: 'bad', detail: 'Name is already taken.' },
+          }),
+      ),
+    );
+    const { fixture, el } = await render([], [], failingUpdate);
+    tags.set([TAG]);
+    fixture.detectChanges();
+
+    fixture.componentInstance.startEdit(TAG);
+    fixture.componentInstance.saveEdit();
+    fixture.detectChanges();
+
+    const banner = el.querySelector('.editor app-error-banner');
+    expect(banner).not.toBeNull();
+    expect(banner!.textContent).toContain('Name is already taken.');
+    expect(fixture.componentInstance.editingId()).toBe(1);
   });
 });
 

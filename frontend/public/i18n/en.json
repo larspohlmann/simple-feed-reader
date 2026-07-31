@@ -37,7 +37,11 @@
       "loading": "Loading tags",
       "loadFailed": "Could not load your tags.",
       "retry": "Try again",
-      "reorder": "Reorder {{name}}"
+      "reorder": "Reorder {{name}}",
+      "save": "Save",
+      "cancel": "Cancel",
+      "editing": "Editing {{name}}",
+      "saveFailed": "Could not save the tag."
     },
     "opml": {
       "title": "Import & export",

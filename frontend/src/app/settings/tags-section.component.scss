@@ -90,3 +90,15 @@
   border-radius: var(--radius);
   padding: var(--row-pad-comfy-y) var(--row-pad-comfy-x);
 }
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tag:has(.editor) {
+  align-items: flex-start;
+}

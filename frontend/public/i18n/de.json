@@ -37,7 +37,11 @@
       "loading": "Tags werden geladen",
       "loadFailed": "Deine Tags konnten nicht geladen werden.",
       "retry": "Erneut versuchen",
-      "reorder": "{{name}} verschieben"
+      "reorder": "{{name}} verschieben",
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "editing": "{{name}} wird bearbeitet",
+      "saveFailed": "Der Tag konnte nicht gespeichert werden."
     },
     "opml": {
       "title": "Import & Export",

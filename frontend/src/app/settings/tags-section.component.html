@@ -25,24 +25,65 @@
           >
             <app-icon name="drag_indicator" size="sm" />
           </button>
-          <span class="ident">
-            <app-tag-glyph [name]="t.icon" [color]="t.color" size="sm" />
-            <span class="name">{{ t.name }}</span>
-            <span class="count">{{
-              ((usage()[t.id] || 0) === 1
-                ? 'settings.tags.feedCountOne'
-                : 'settings.tags.feedCountOther'
-              ) | transloco: { count: usage()[t.id] || 0 }
-            }}</span>
-          </span>
-          <span class="acts">
-            <app-button size="sm" (click)="manage.editTag(t)">
-              <app-icon name="edit" size="sm" /> {{ 'settings.tags.edit' | transloco }}
-            </app-button>
-            <app-button size="sm" variant="danger-outline" (click)="manage.deleteTag(t)">
-              <app-icon name="delete" size="sm" /> {{ 'settings.tags.delete' | transloco }}
-            </app-button>
-          </span>
+          @if (editingId() === t.id) {
+            <div
+              class="editor"
+              [attr.aria-label]="'settings.tags.editing' | transloco: { name: t.name }"
+            >
+              <app-field [label]="'dialog.tagForm.name' | transloco">
+                <input
+                  [value]="draftName()"
+                  maxlength="100"
+                  (input)="draftName.set($any($event.target).value)"
+                  (keydown.escape)="cancelEdit()"
+                  (keydown.enter)="saveEdit()"
+                />
+              </app-field>
+
+              <p class="lbl">{{ 'dialog.tagForm.colour' | transloco }}</p>
+              <app-color-field [value]="draftColor()" (valueChange)="draftColor.set($event)">
+                {{ 'dialog.tagForm.none' | transloco }}
+              </app-color-field>
+
+              <p class="lbl">{{ 'dialog.tagForm.icon' | transloco }}</p>
+              <app-icon-picker
+                inline
+                [value]="draftIcon() ?? ''"
+                (valueChange)="draftIcon.set($event || null)"
+              />
+
+              @if (saveError(); as message) {
+                <app-error-banner [message]="message" />
+              }
+              <span class="acts">
+                <app-button size="sm" variant="primary" (click)="saveEdit()">
+                  {{ 'settings.tags.save' | transloco }}
+                </app-button>
+                <app-button size="sm" (click)="cancelEdit()">
+                  {{ 'settings.tags.cancel' | transloco }}
+                </app-button>
+              </span>
+            </div>
+          } @else {
+            <span class="ident">
+              <app-tag-glyph [name]="t.icon" [color]="t.color" size="sm" />
+              <span class="name">{{ t.name }}</span>
+              <span class="count">{{
+                ((usage()[t.id] || 0) === 1
+                  ? 'settings.tags.feedCountOne'
+                  : 'settings.tags.feedCountOther'
+                ) | transloco: { count: usage()[t.id] || 0 }
+              }}</span>
+            </span>
+            <span class="acts">
+              <app-button size="sm" (click)="startEdit(t)">
+                <app-icon name="edit" size="sm" /> {{ 'settings.tags.edit' | transloco }}
+              </app-button>
+              <app-button size="sm" variant="danger-outline" (click)="manage.deleteTag(t)">
+                <app-icon name="delete" size="sm" /> {{ 'settings.tags.delete' | transloco }}
+              </app-button>
+            </span>
+          }
         </li>
       }
     </ul>
