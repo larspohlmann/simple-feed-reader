@@ -83,6 +83,15 @@ Non-negotiables:
   the standard: they justify a defensive branch or record a decision. Delete
   commented-out code.
 - **DRY.** Third occurrence is a refactor, not a copy.
+- **Controllers hold no private methods that carry responsibility.** An action
+  reads the request, delegates, and returns a response. Querying, response
+  assembly, validation, entity mutation and security decisions belong in a
+  service, a repository, or an `src/Http/*Json.php` mapper — never in a private
+  method on the controller. Enforced by `ThinControllerRule` (PHPStan). The one
+  permitted exception is a trivial single-expression helper used by exactly one
+  action in exactly one controller; add it to the rule's allow-list with a
+  comment that says why. The same helper in a second controller is duplication,
+  and the exception no longer applies.
 - **Tests are production code** — same naming, same structure, same standards.
 
 Enforced mechanically by `composer check` and `composer md`:
@@ -90,6 +99,9 @@ Enforced mechanically by `composer check` and `composer md`:
 - **PSR-12** (`phpcs.xml.dist`), `declare(strict_types=1)` in every file.
 - **PHPStan level max** over `src` and `tests` — no new baselines, no
   `@phpstan-ignore` without a comment saying why.
+- **`ThinControllerRule`** (`tests/PhpStan/ThinControllerRule.php`, run by
+  `composer stan`) — controllers carry no private method that does real work; the
+  allow-list of permitted trivial helpers lives in the rule and only ever shrinks.
 - **PHPMD codesize** — cyclomatic/NPath complexity, method and class length,
   parameter/field counts. **Standing rule: every `src` file you touch must be
   PHPMD-clean before commit**, not merely free of *new* findings. Fix the design

@@ -7,4 +7,7 @@
     <rule ref="PSR12"/>
     <file>src</file>
     <file>tests</file>
+    <!-- PHPStan rule fixtures deliberately break PSR-12 (several classes per file,
+         controllers with private methods) to exercise ThinControllerRule. -->
+    <exclude-pattern>tests/PhpStan/data/*</exclude-pattern>
 </ruleset>

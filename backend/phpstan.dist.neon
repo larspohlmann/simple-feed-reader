@@ -8,5 +8,15 @@ parameters:
     paths:
         - src
         - tests
+    excludePaths:
+        # Fixtures for ThinControllerRuleTest: deliberate rule violations in the
+        # App\Controller namespace, analysed only by the rule's own RuleTestCase.
+        - tests/PhpStan/data/*
     symfony:
         containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
+
+services:
+    -
+        class: App\Tests\PhpStan\ThinControllerRule
+        tags:
+            - phpstan.rules.rule
