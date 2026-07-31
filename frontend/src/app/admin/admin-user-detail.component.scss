@@ -102,6 +102,22 @@ dd {
   font-size: var(--fs-sm);
 }
 
+.limit-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+// The control row lays its field and buttons out horizontally and supplies
+// its own rhythm through `gap`, so the field's stacking margin would only
+// drop the buttons out of line with the input it belongs to.
+.limit-control app-field {
+  margin-bottom: 0;
+  max-width: 8rem;
+}
+
 .rows {
   list-style: none;
   margin: 0 0 var(--space-4);

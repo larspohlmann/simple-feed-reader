@@ -36,6 +36,10 @@ const detail = {
     dormant: false,
   },
   tags: [{ id: 3, name: 'Tech', color: '#112233', icon: 'memory', position: 0, feedsCount: 2 }],
+  limits: {
+    trialEndsAt: null,
+    maxSubscriptions: null,
+  },
   subscriptions: [
     {
       id: 5,
@@ -138,7 +142,7 @@ describe('AdminUserDetailComponent', () => {
     expect(footprintPs[1]?.textContent?.trim()).toBe('1 tags');
     expect(footprintPs[2]?.textContent?.trim()).toBe('1 not refreshed recently');
     expect(el.textContent).toContain('Limits');
-    expect(el.textContent).toContain('No per-user limits set');
+    expect(el.textContent).toContain('No trial');
 
     // The feed row: name, tag chip and a labelled, non-dash freshness date.
     // The label must be real (visually hidden) TEXT in the accessible content
@@ -307,6 +311,86 @@ describe('AdminUserDetailComponent', () => {
     const text = f.nativeElement.textContent as string;
     expect(text).toContain('This account has no tags.');
     expect(text).toContain('This account has no feeds.');
+  });
+
+  it('shows an active trial with the days remaining', () => {
+    const trialEndsAt = new Date(Date.now() + 5 * 86_400_000).toISOString();
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush({
+      ...detail,
+      limits: { ...detail.limits, trialEndsAt },
+    });
+    f.detectChanges();
+
+    const line = f.nativeElement.querySelector('.card.footprint') as HTMLElement;
+    expect(line.textContent).toContain('days left');
+    expect(line.textContent).toContain('5');
+  });
+
+  it('shows that a suspended account was ended by its trial', () => {
+    const trialEndsAt = new Date(Date.now() - 86_400_000).toISOString();
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush({
+      ...detail,
+      user: { ...detail.user, status: 'suspended' },
+      limits: { ...detail.limits, trialEndsAt },
+    });
+    f.detectChanges();
+
+    const flagLine = f.nativeElement.querySelector('.card.footprint .flag') as HTMLElement;
+    expect(flagLine).not.toBeNull();
+    expect(flagLine.textContent).toContain('Suspended');
+    expect(flagLine.textContent).toContain('trial ended');
+  });
+
+  it('starts a trial through the API', () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
+    f.detectChanges();
+
+    const daysInput = f.nativeElement.querySelectorAll(
+      '.limit-control input[type="number"]',
+    )[0] as HTMLInputElement;
+    daysInput.value = '30';
+    daysInput.dispatchEvent(new Event('input'));
+    f.detectChanges();
+
+    const startButton = Array.from(f.nativeElement.querySelectorAll('.limit-control button')).find(
+      (b) => (b as HTMLElement).textContent?.trim() === 'Start trial',
+    ) as HTMLButtonElement;
+    startButton.click();
+
+    const req = ctrl.expectOne('https://api.test/api/admin/users/7/trial');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ days: 30 });
+    req.flush({ status: 'active', trialEndsAt: null });
+
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
+  });
+
+  it('saves a max-feeds override through the API', () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
+    f.detectChanges();
+
+    const maxFeedsInput = f.nativeElement.querySelectorAll(
+      '.limit-control input[type="number"]',
+    )[1] as HTMLInputElement;
+    maxFeedsInput.value = '42';
+    maxFeedsInput.dispatchEvent(new Event('input'));
+    f.detectChanges();
+
+    const saveButton = Array.from(f.nativeElement.querySelectorAll('.limit-control button')).find(
+      (b) => (b as HTMLElement).textContent?.trim() === 'Save',
+    ) as HTMLButtonElement;
+    saveButton.click();
+
+    const req = ctrl.expectOne('https://api.test/api/admin/users/7/subscription-limit');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ maxSubscriptions: 42 });
+    req.flush({ maxSubscriptions: 42 });
+
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
   });
 
   it('formats every date in the active UI language via Intl, not a fixed locale', () => {

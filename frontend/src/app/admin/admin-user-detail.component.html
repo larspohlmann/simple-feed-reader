@@ -97,7 +97,67 @@
           </p>
         }
         <p class="limits-label">{{ 'admin.detail.limits' | transloco }}</p>
-        <p class="muted">{{ 'admin.detail.limitsUnset' | transloco }}</p>
+
+        @switch (trialState()) {
+          @case ('none') {
+            <p class="muted">{{ 'admin.detail.trialNone' | transloco }}</p>
+          }
+          @case ('active') {
+            <p>
+              {{
+                'admin.detail.trialActive'
+                  | transloco: { date: formatDate(d.limits.trialEndsAt!), days: trialDaysLeft() }
+              }}
+            </p>
+          }
+          @case ('expired') {
+            <p [class.flag]="suspendedByTrial()">
+              {{
+                (suspendedByTrial() ? 'admin.detail.trialSuspended' : 'admin.detail.trialExpired')
+                  | transloco: { date: formatDate(d.limits.trialEndsAt!) }
+              }}
+            </p>
+          }
+        }
+
+        <div class="limit-control">
+          <app-field [label]="'admin.detail.trialDays' | transloco">
+            <input
+              type="number"
+              min="1"
+              max="3650"
+              [value]="trialDays()"
+              (input)="trialDays.set(+$any($event.target).value)"
+            />
+          </app-field>
+          <app-button size="sm" (click)="startTrial()">
+            {{ 'admin.detail.startTrial' | transloco }}
+          </app-button>
+          @if (trialState() !== 'none') {
+            <app-button size="sm" variant="danger-outline" (click)="clearTrial()">
+              {{ 'admin.detail.makePermanent' | transloco }}
+            </app-button>
+          }
+        </div>
+
+        <div class="limit-control">
+          <app-field [label]="'admin.detail.maxFeeds' | transloco">
+            <input
+              type="number"
+              min="1"
+              [placeholder]="
+                'admin.detail.maxFeedsDefault' | transloco: { limit: d.footprint.feedsLimit }
+              "
+              [value]="maxFeeds() ?? ''"
+              (input)="
+                maxFeeds.set($any($event.target).value === '' ? null : +$any($event.target).value)
+              "
+            />
+          </app-field>
+          <app-button size="sm" (click)="saveMaxFeeds()">
+            {{ 'admin.detail.saveLimit' | transloco }}
+          </app-button>
+        </div>
       </div>
     </div>
 
