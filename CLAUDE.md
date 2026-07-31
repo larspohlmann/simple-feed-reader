@@ -4,6 +4,13 @@ Multi-user RSS/Atom reader. **Symfony 7.4 LTS JSON API** in `backend/` (PHP 8.4)
 **Angular 20 SPA** in `frontend/` (Node 22). MySQL in production and Docker,
 SQLite for the native test run.
 
+## Response language
+
+Write all prose replies in **ASD-STE100 Simplified Technical English**: active
+voice, short sentences, one instruction per sentence, approved words only, no
+synonyms, no slang or idioms. This applies to prose only — do not change code,
+code comments, commit messages, file contents, or command output.
+
 ## Commands
 
 Backend (from `backend/`):
