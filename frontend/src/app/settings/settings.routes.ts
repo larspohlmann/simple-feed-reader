@@ -43,6 +43,12 @@ export const SETTINGS_ROUTES: Routes = [
           import('../admin/admin-users.component').then((m) => m.AdminUsersComponent),
       },
       {
+        path: 'admin/users/:id',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('../admin/admin-user-detail.component').then((m) => m.AdminUserDetailComponent),
+      },
+      {
         path: 'admin/catalog',
         canActivate: [adminGuard],
         loadComponent: () =>
