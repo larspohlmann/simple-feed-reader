@@ -82,6 +82,28 @@ dd {
   font-size: var(--fs-sm);
 }
 
+.badge {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius);
+  background: var(--surface-0);
+  color: var(--text-secondary);
+}
+
+.badge[data-s='active'] {
+  background: var(--bg-success);
+  color: var(--success);
+}
+
+.badge[data-s='suspended'],
+.badge[data-s='rejected'] {
+  background: var(--bg-danger);
+  color: var(--danger);
+}
+
+.age {
+  color: var(--text-muted);
+}
+
 .muted {
   color: var(--text-muted);
   font-size: var(--fs-sm);
@@ -119,7 +141,9 @@ dd {
   white-space: nowrap;
 }
 
-.url {
+.url,
+.original,
+.subscribed {
   font-size: var(--fs-sm);
   color: var(--text-muted);
   overflow: hidden;
@@ -148,24 +172,6 @@ dd {
   color: var(--text-muted);
   white-space: nowrap;
   margin-left: auto;
-}
-
-.banner {
-  padding: var(--space-3);
-  border-radius: var(--radius);
-  background: var(--bg-danger);
-  color: var(--danger);
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.banner button {
-  background: none;
-  border: none;
-  color: var(--danger);
-  cursor: pointer;
-  text-decoration: underline;
 }
 
 .pad {

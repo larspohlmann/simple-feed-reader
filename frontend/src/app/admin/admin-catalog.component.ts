@@ -4,6 +4,7 @@ import { Component, ElementRef, OnInit, computed, inject, signal, viewChild } fr
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
+import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { IconComponent } from '../shared/icon/icon.component';
 import { SpinnerComponent } from '../shared/spinner/spinner.component';
 import { FieldComponent } from '../shared/field/field.component';
@@ -23,7 +24,14 @@ import {
 
 @Component({
   selector: 'app-admin-catalog',
-  imports: [FieldComponent, ButtonComponent, IconComponent, SpinnerComponent, TranslocoPipe],
+  imports: [
+    FieldComponent,
+    ButtonComponent,
+    ErrorBannerComponent,
+    IconComponent,
+    SpinnerComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './admin-catalog.component.html',
   styleUrl: './admin-catalog.component.scss',
 })

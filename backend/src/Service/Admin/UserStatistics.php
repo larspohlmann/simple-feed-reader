@@ -8,9 +8,6 @@ use App\Dto\Admin\UserFootprint;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Repository\SubscriptionRepository;
-use App\Repository\TagRepository;
-use App\Service\Admin\Exception\UnpersistedUserException;
 use App\Service\Subscription\SubscriptionService;
 use Psr\Clock\ClockInterface;
 
@@ -30,41 +27,20 @@ final readonly class UserStatistics
     private const int STALE_AFTER_DAYS = 7;
 
     public function __construct(
-        private SubscriptionRepository $subscriptions,
-        private TagRepository $tags,
         private ClockInterface $clock,
     ) {
     }
 
     /**
-     * Loads the account's own subscriptions and tags and computes its
-     * footprint. The one production caller that does not already hold those
-     * two lists for its own purposes — a caller that does (the admin detail
-     * controller) should call {@see self::footprintFor()} directly instead,
-     * so the same rows are not read from the database twice.
-     */
-    public function forUser(User $user): UserFootprint
-    {
-        $userId = $user->getId() ?? throw UnpersistedUserException::forUser();
-
-        return $this->footprintFor(
-            $user,
-            $this->subscriptions->findForUserWithTags($userId),
-            $this->tags->findForUser($userId),
-        );
-    }
-
-    /**
-     * The same calculation as {@see self::forUser()}, but over
-     * already-loaded rows — for a caller (the admin detail controller) that
-     * needs those same subscriptions and tags for its own response anyway,
-     * and would otherwise pay for the subscription/tag join set twice on the
-     * one endpoint that loads a whole library.
+     * The account's footprint over its own already-loaded subscriptions and
+     * tags — the caller (the admin detail controller) needs those same rows
+     * for its own response anyway, so this takes them rather than querying
+     * again for the subscription/tag join set.
      *
      * @param list<Subscription> $subscriptions the user's own subscriptions
      * @param list<Tag> $tags the user's own tags
      */
-    public function footprintFor(User $user, array $subscriptions, array $tags): UserFootprint
+    public function forUser(User $user, array $subscriptions, array $tags): UserFootprint
     {
         $now = $this->clock->now();
 

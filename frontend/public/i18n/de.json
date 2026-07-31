@@ -149,6 +149,8 @@
       "limitsUnset": "Keine benutzerbezogenen Limits gesetzt",
       "noTags": "Dieses Konto hat keine Tags.",
       "noFeeds": "Dieses Konto hat keine Feeds.",
+      "originalTitle": "Ursprünglich",
+      "subscribedOn": "Abonniert seit",
       "backToUsers": "Benutzer"
     },
     "catalog": "Feed-Katalog",

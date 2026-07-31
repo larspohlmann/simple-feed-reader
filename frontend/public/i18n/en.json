@@ -149,6 +149,8 @@
       "limitsUnset": "No per-user limits set",
       "noTags": "This account has no tags.",
       "noFeeds": "This account has no feeds.",
+      "originalTitle": "Originally",
+      "subscribedOn": "Subscribed",
       "backToUsers": "Users"
     },
     "catalog": "Feed catalog",

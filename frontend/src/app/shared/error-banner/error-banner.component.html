@@ -1,0 +1,7 @@
+<!-- src/app/shared/error-banner/error-banner.component.html -->
+<div class="banner" role="alert">
+  {{ message() }}
+  @if (actionLabel(); as label) {
+    <button type="button" (click)="action.emit()">{{ label }}</button>
+  }
+</div>

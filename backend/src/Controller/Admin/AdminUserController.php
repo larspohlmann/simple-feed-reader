@@ -120,7 +120,7 @@ final readonly class AdminUserController
         // AdminUserControllerTest::testTheDetailListsCostTheSameNumberOfQueriesHoweverManySubscriptionsAndTagsExist.
         $subscriptions = $this->positionOrdered($this->subscriptions->findForUserWithTags($userId));
         $tags = $this->tags->findForUser($userId);
-        $footprint = $this->statistics->footprintFor($user, $subscriptions, $tags);
+        $footprint = $this->statistics->forUser($user, $subscriptions, $tags);
 
         return new JsonResponse(new AdminUserDetail(
             user: $this->accountRow($user),

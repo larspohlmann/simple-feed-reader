@@ -168,6 +168,25 @@ describe('AdminCatalogComponent', () => {
     ctrl.expectOne('https://api.test/api/admin/catalog').flush(PAYLOAD);
   });
 
+  it('shows a message-only error banner, with no action button, when an import fails', () => {
+    const fixture = mountLoaded();
+    fixture.componentInstance.importBundled();
+    ctrl
+      .expectOne('https://api.test/api/admin/catalog/import/bundled')
+      .flush(
+        { type: 'about:blank', title: 'Malformed document', status: 422 },
+        { status: 422, statusText: 'Unprocessable' },
+      );
+    fixture.detectChanges();
+
+    const alerts = fixture.nativeElement.querySelectorAll('[role="alert"]');
+    const importAlert = Array.from(alerts).find((el) =>
+      (el as HTMLElement).textContent?.includes('Malformed document'),
+    ) as HTMLElement | undefined;
+    expect(importAlert).toBeDefined();
+    expect(importAlert!.querySelector('button')).toBeNull();
+  });
+
   it('upserts the category a closed dialog returns', () => {
     const fixture = mountLoaded();
     fixture.componentInstance.openCategoryDialog(null);

@@ -8,9 +8,10 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
 import { AuthService } from '../core/auth.service';
 import { LanguageService } from '../core/language.service';
-import { formatLongDate } from '../reader/format';
+import { formatDateOr, formatLongDate, relativeTime } from '../reader/format';
 import { ConfirmData, ConfirmDialogComponent } from '../reader/manage/confirm-dialog.component';
 import { ButtonComponent } from '../shared/button/button.component';
+import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { IconComponent } from '../shared/icon/icon.component';
 import { SpinnerComponent } from '../shared/spinner/spinner.component';
 import { TagGlyphComponent } from '../shared/tag-glyph/tag-glyph.component';
@@ -24,6 +25,7 @@ import { AdminAction, AdminUserDetailDto } from './admin.models';
   selector: 'app-admin-user-detail',
   imports: [
     ButtonComponent,
+    ErrorBannerComponent,
     IconComponent,
     RouterLink,
     SpinnerComponent,
@@ -130,10 +132,38 @@ export class AdminUserDetailComponent {
     return formatLongDate(iso, this.language.lang());
   }
 
-  /** A feed's own freshness. `null` means the underlying feed has never been
-   *  fetched — an explicit localised "never", the same convention the
-   *  Activity card's `lastRefresh` row uses, never a bare dash. */
+  /** How long ago a date was, e.g. "6 months ago" — the age half of the
+   *  identity card's "created date with age" field. */
+  ageLabel(iso: string): string {
+    return relativeTime(iso, this.language.lang());
+  }
+
+  /** The account's approval date, or an explicit localised "never" when it
+   *  has not yet been approved. Shares {@link formatDateOr} with every other
+   *  "date, or never" field on this page, so the fallback convention cannot
+   *  drift between them. */
+  approvedLabel(iso: string | null): string {
+    return formatDateOr(
+      iso,
+      this.language.lang(),
+      this.i18n.translate('admin.detail.neverApproved'),
+    );
+  }
+
+  /** The account's last sign-in, or "never" — the Activity card's mirror of
+   *  the users list's own lastLogin column. */
+  loginLabel(iso: string | null): string {
+    return formatDateOr(iso, this.language.lang(), this.i18n.translate('admin.neverLoggedIn'));
+  }
+
+  /** The newest fetch across the account's feeds (Activity card) or a single
+   *  feed's own freshness (a Feeds-list row) — both are "never" when nothing
+   *  has been fetched, so both share this one label. */
   lastFetchedLabel(iso: string | null): string {
-    return iso ? this.formatDate(iso) : this.i18n.translate('admin.detail.neverRefreshed');
+    return formatDateOr(
+      iso,
+      this.language.lang(),
+      this.i18n.translate('admin.detail.neverRefreshed'),
+    );
   }
 }

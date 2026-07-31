@@ -100,6 +100,29 @@ describe('AdminUsersComponent', () => {
     expect(c.actionError()?.title).toBe('Gone');
     expect(c.error()).toBeNull();
     expect(c.users().length).toBe(1);
+
+    f.detectChanges();
+    const dismiss = f.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement;
+    expect(dismiss.textContent?.trim()).toBe('Dismiss');
+    dismiss.click();
+    expect(c.actionError()).toBeNull();
+  });
+
+  it('retries the load when the load-error banner action is clicked', () => {
+    const f = mount();
+    ctrl
+      .expectOne('https://api.test/api/admin/users')
+      .flush(
+        { type: 'about:blank', title: 'Down', status: 500 },
+        { status: 500, statusText: 'Server Error' },
+      );
+    f.detectChanges();
+
+    const retry = f.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement;
+    expect(retry.textContent?.trim()).toBe('Retry');
+    retry.click();
+
+    ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [] });
   });
 
   it('offers only Suspend for an active user', () => {

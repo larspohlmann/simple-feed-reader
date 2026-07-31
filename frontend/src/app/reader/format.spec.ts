@@ -1,5 +1,5 @@
 // format.spec.ts
-import { formatLongDate, relativeTime } from './format';
+import { formatDateOr, formatLongDate, relativeTime } from './format';
 
 describe('relativeTime', () => {
   const now = new Date('2026-07-22T12:00:00Z');
@@ -28,5 +28,15 @@ describe('formatLongDate', () => {
     expect(formatLongDate('2026-07-22T12:00:00Z', 'en')).toContain('2026');
     expect(formatLongDate('2026-07-22T12:00:00Z', 'de')).toContain('2026');
     expect(formatLongDate('nope', 'en')).toBe('');
+  });
+});
+
+describe('formatDateOr', () => {
+  it('renders the localised date when one is present', () => {
+    expect(formatDateOr('2026-07-22T12:00:00Z', 'en', 'never')).toContain('2026');
+  });
+
+  it('renders the given fallback, not the date formatter’s own empty string, when there is none', () => {
+    expect(formatDateOr(null, 'en', 'never')).toBe('never');
   });
 });

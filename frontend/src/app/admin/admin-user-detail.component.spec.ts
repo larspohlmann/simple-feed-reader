@@ -110,9 +110,19 @@ describe('AdminUserDetailComponent', () => {
     expect(accountDds[0]?.textContent?.trim()).toBe('Active');
     expect(accountDds[1]?.textContent?.trim()).toBe('ROLE_USER');
     expect(accountDds[2]?.textContent?.trim()).toBe('en');
-    expect(accountDds[3]?.textContent?.trim()).toBe('January 1, 2026');
+    // Created carries the date AND its age, e.g. "January 1, 2026 (211 days
+    // ago)" — the day count moves with the clock, so only the stable parts
+    // are pinned here.
+    expect(accountDds[3]?.textContent).toContain('January 1, 2026');
+    expect(accountDds[3]?.textContent).toContain('ago');
     expect(accountDds[4]?.textContent?.trim()).toBe('January 2, 2026');
     expect(accountDds[5]?.textContent?.trim()).toBe('google');
+
+    // The status dt/dd pair renders as a badge keyed by status, matching the
+    // list page's own status badge, not bare text.
+    const statusBadge = accountDds[0]?.querySelector('.badge') as HTMLElement;
+    expect(statusBadge).not.toBeNull();
+    expect(statusBadge.getAttribute('data-s')).toBe('active');
 
     // Activity card: a present login next to an absent refresh — proves the
     // two date fields, and their "never" fallbacks, are not interchangeable.
@@ -200,6 +210,43 @@ describe('AdminUserDetailComponent', () => {
     expect(name.textContent?.trim()).toBe('https://example.test/never-fetched.xml');
   });
 
+  it('shows the custom title as the name and the real feed title alongside it, when both exist', () => {
+    const renamed = {
+      ...detail,
+      subscriptions: [{ ...detail.subscriptions[0], customTitle: 'My Ars Feed' }],
+    };
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(renamed);
+    f.detectChanges();
+
+    const row = f.nativeElement.querySelector('.rows li.feed') as HTMLElement;
+    expect(row.querySelector('.name')?.textContent?.trim()).toBe('My Ars Feed');
+    // The real feed title must still be visible somewhere in the row — not
+    // just carried in data and dropped from the render, which is the bug
+    // this test guards against.
+    expect(row.querySelector('.original')?.textContent).toContain('Ars Technica');
+  });
+
+  it('does not render an "original title" row when the feed has no custom title', () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
+    f.detectChanges();
+
+    const row = f.nativeElement.querySelector('.rows li.feed') as HTMLElement;
+    expect(row.querySelector('.original')).toBeNull();
+  });
+
+  it('renders the subscribed-on date for every feed row', () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
+    f.detectChanges();
+
+    const row = f.nativeElement.querySelector('.rows li.feed') as HTMLElement;
+    const subscribed = row.querySelector('.subscribed') as HTMLElement;
+    // subscriptions[0].createdAt is 2026-02-01T09:00:00+00:00 in the fixture.
+    expect(subscribed.textContent).toContain('February 1, 2026');
+  });
+
   it("renders a subscription's tag chip with the tag's own icon, matching the Tags list above it", () => {
     const f = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
@@ -269,7 +316,8 @@ describe('AdminUserDetailComponent', () => {
     const el = f.nativeElement as HTMLElement;
 
     const accountDds = el.querySelectorAll('.card.account dd');
-    expect(accountDds[3]?.textContent?.trim()).toBe('1. Januar 2026');
+    expect(accountDds[3]?.textContent).toContain('1. Januar 2026');
+    expect(accountDds[3]?.textContent).toContain('vor');
     expect(accountDds[4]?.textContent?.trim()).toBe('2. Januar 2026');
     const activityDds = el.querySelectorAll('.card.activity dd');
     expect(activityDds[0]?.textContent?.trim()).toBe('29. Juli 2026');
@@ -294,6 +342,48 @@ describe('AdminUserDetailComponent', () => {
     expect(f.nativeElement.querySelector('[role="alert"]')).not.toBeNull();
   });
 
+  it('retries the load when the load-error banner action is clicked', () => {
+    const f = mount(99, '404404');
+    ctrl
+      .expectOne('https://api.test/api/admin/users/404404')
+      .flush(
+        { type: 'about:blank', title: 'Not found', status: 404 },
+        { status: 404, statusText: 'Not Found' },
+      );
+    f.detectChanges();
+
+    const retry = f.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement;
+    expect(retry.textContent?.trim()).toBe('Retry');
+    retry.click();
+
+    ctrl.expectOne('https://api.test/api/admin/users/404404').flush(detail);
+  });
+
+  it('dismisses the action-error banner when its action is clicked', () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush({
+      ...detail,
+      user: { ...detail.user, status: 'pending_approval' },
+    });
+    f.detectChanges();
+
+    f.componentInstance.act('approve');
+    ctrl
+      .expectOne('https://api.test/api/admin/users/7/approve')
+      .flush(
+        { type: 'about:blank', title: 'Gone', status: 422 },
+        { status: 422, statusText: 'Unprocessable' },
+      );
+    f.detectChanges();
+
+    const dismiss = f.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement;
+    expect(dismiss.textContent?.trim()).toBe('Dismiss');
+    dismiss.click();
+    f.detectChanges();
+
+    expect(f.nativeElement.querySelector('[role="alert"]')).toBeNull();
+  });
+
   it('offers Approve and Reject for a pending account, and reloads after approving', () => {
     const f = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush({
@@ -301,6 +391,12 @@ describe('AdminUserDetailComponent', () => {
       user: { ...detail.user, status: 'pending_approval' },
     });
     f.detectChanges();
+
+    // The badge tracks the real status, not a value hardcoded from the other
+    // fixture (which is 'active') -- a static badge would still pass every
+    // other assertion in this file.
+    const statusBadge = f.nativeElement.querySelector('.card.account .badge') as HTMLElement;
+    expect(statusBadge.getAttribute('data-s')).toBe('pending_approval');
 
     const approveButton = Array.from(f.nativeElement.querySelectorAll('.acts button')).find(
       (b) => (b as HTMLElement).textContent?.trim() === 'Approve',
