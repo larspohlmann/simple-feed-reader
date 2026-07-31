@@ -6,10 +6,10 @@ namespace App\Controller\Admin;
 
 use App\Dto\Admin\CatalogImportModeRequest;
 use App\Dto\Admin\CatalogImportRequest;
+use App\Http\AdminCatalogJson;
 use App\Service\Catalog\BundledCatalog;
 use App\Service\Catalog\CatalogDocument;
 use App\Service\Catalog\CatalogImporter;
-use App\Service\Catalog\CatalogImportResult;
 use App\Service\Catalog\Exception\InvalidCatalogDocumentException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -67,10 +67,10 @@ final readonly class AdminCatalogImportController
             throw new UnprocessableEntityHttpException($e->getMessage(), $e);
         }
 
-        return $this->respond($this->importer->import(
+        return new JsonResponse(AdminCatalogJson::importResult($this->importer->import(
             $document,
             $request->mode ?? throw new UnprocessableEntityHttpException('A mode is required.'),
-        ));
+        )));
     }
 
     #[Route('/import', name: 'api_admin_catalog_import', methods: ['POST'])]
@@ -84,22 +84,9 @@ final readonly class AdminCatalogImportController
             throw new UnprocessableEntityHttpException($e->getMessage(), $e);
         }
 
-        return $this->respond($this->importer->import(
+        return new JsonResponse(AdminCatalogJson::importResult($this->importer->import(
             $document,
             $request->mode ?? throw new UnprocessableEntityHttpException('A mode is required.'),
-        ));
-    }
-
-    private function respond(CatalogImportResult $result): JsonResponse
-    {
-        return new JsonResponse([
-            'categoriesCreated' => $result->categoriesCreated,
-            'categoriesUpdated' => $result->categoriesUpdated,
-            'categoriesRemoved' => $result->categoriesRemoved,
-            'feedsCreated' => $result->feedsCreated,
-            'feedsUpdated' => $result->feedsUpdated,
-            'feedsRemoved' => $result->feedsRemoved,
-            'lockedSkipped' => $result->lockedSkipped,
-        ]);
+        )));
     }
 }

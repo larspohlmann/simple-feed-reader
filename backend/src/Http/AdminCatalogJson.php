@@ -6,6 +6,7 @@ namespace App\Http;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
+use App\Service\Catalog\CatalogImportResult;
 
 /**
  * The admin view of the catalog: every row, enabled or not, plus the favicon
@@ -49,6 +50,22 @@ final class AdminCatalogJson
             'locked' => $feed->isLocked(),
             'faviconFetchedAt' => $feed->getFaviconFetchedAt()?->format(\DATE_ATOM),
             'faviconFailedAt' => $feed->getFaviconFailedAt()?->format(\DATE_ATOM),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function importResult(CatalogImportResult $result): array
+    {
+        return [
+            'categoriesCreated' => $result->categoriesCreated,
+            'categoriesUpdated' => $result->categoriesUpdated,
+            'categoriesRemoved' => $result->categoriesRemoved,
+            'feedsCreated' => $result->feedsCreated,
+            'feedsUpdated' => $result->feedsUpdated,
+            'feedsRemoved' => $result->feedsRemoved,
+            'lockedSkipped' => $result->lockedSkipped,
         ];
     }
 }

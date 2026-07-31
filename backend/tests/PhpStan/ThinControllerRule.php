@@ -40,17 +40,6 @@ final readonly class ThinControllerRule implements Rule
      * @var array<string, string>
      */
     private const array ALLOW_LIST = [
-        // #189 — a raw DQL query and six response builders that map entities to
-        // DTOs/arrays. Moved to UserIdentityRepository and src/Http/*Json.php mappers.
-        'App\Controller\Admin\AdminUserController::providersByUserId' => 'raw DQL query; #189',
-        'App\Controller\Admin\AdminUserController::positionOrdered' => 'response assembly; #189',
-        'App\Controller\Admin\AdminUserController::accountRow' => 'maps entity to DTO; #189',
-        'App\Controller\Admin\AdminUserController::footprintRow' => 'maps entity to DTO; #189',
-        'App\Controller\Admin\AdminUserController::tagRows' => 'maps entities to DTOs; #189',
-        'App\Controller\Admin\AdminUserController::subscriptionRows' => 'maps entities to DTOs; #189',
-        'App\Controller\Admin\AdminCatalogImportController::respond' => 'assembles response array; #189',
-        'App\Controller\Api\MeController::profile' => 'maps entity to response array; #189',
-
         // #190 — entity lookup guards, two of them byte-identical across two
         // controllers, so they do not qualify for the trivial-helper exception.
         'App\Controller\Admin\AdminCatalogCategoryController::requireCategory' => 'duplicate lookup guard; #190',
