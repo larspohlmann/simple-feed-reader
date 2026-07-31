@@ -9,6 +9,8 @@
     "backReader": "Reader",
     "nav": { "admin": "Administration" },
     "preferences": "Voreinstellungen",
+    "languageSaveFailed": "Die Sprache wurde auf diesem Gerät geändert, konnte aber nicht in deinem Konto gespeichert werden.",
+    "loadingVersion": "Versionsinformationen werden geladen",
     "feeds": {
       "title": "Feeds",
       "none": "Noch keine Feeds – füge einen im Reader hinzu.",
@@ -31,7 +33,13 @@
       "feedCountOne": "{{count}} Feed",
       "feedCountOther": "{{count}} Feeds",
       "edit": "Bearbeiten",
-      "delete": "Löschen"
+      "delete": "Löschen",
+      "loading": "Tags werden geladen",
+      "retry": "Erneut versuchen",
+      "reorder": "{{name}} verschieben",
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "editing": "{{name}} wird bearbeitet"
     },
     "opml": {
       "title": "Import & Export",
@@ -127,7 +135,11 @@
     "lastLogin": "Letzte Anmeldung",
     "neverLoggedIn": "nie",
     "openDetail": "Details ansehen",
+    "loadingUsers": "Benutzer werden geladen",
+    "loadingCatalog": "Katalog wird geladen",
+    "loadingUser": "Konto wird geladen",
     "detail": {
+      "title": "Kontodetails",
       "account": "Konto",
       "activity": "Aktivität",
       "footprint": "Nutzung",

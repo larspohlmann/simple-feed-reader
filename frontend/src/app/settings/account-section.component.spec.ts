@@ -10,6 +10,7 @@ const user: CurrentUser = {
   roles: ['ROLE_USER'],
   status: 'active',
   createdAt: '2026-01-01T00:00:00Z',
+  locale: 'en',
 };
 
 describe('AccountSectionComponent', () => {
@@ -33,5 +34,10 @@ describe('AccountSectionComponent', () => {
     expect((f.nativeElement as HTMLElement).textContent).toContain('me@x');
     (f.nativeElement.querySelector('.signout') as HTMLButtonElement).click();
     expect(logout).toHaveBeenCalled();
+  });
+
+  it('renders inside a settings card', () => {
+    const f = mount(user);
+    expect((f.nativeElement as HTMLElement).querySelector('app-settings-card')).not.toBeNull();
   });
 });

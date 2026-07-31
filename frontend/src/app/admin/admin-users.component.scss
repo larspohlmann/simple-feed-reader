@@ -1,20 +1,19 @@
 @use '../theme/breakpoints' as bp;
 
-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-h2 {
-  font-size: var(--fs-lg);
-  margin: 0;
-}
-
 .filters {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+// The card's own content is no longer wrapped in a flex column with a gap
+// (the `<section>` that carried it was replaced by the shared card), so the
+// banner and skeleton/list block below the filters need their own spacing.
+app-error-banner,
+app-skeleton {
+  display: block;
+  margin-bottom: var(--space-4);
 }
 
 .filters button {

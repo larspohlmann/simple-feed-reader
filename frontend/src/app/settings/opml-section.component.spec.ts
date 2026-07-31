@@ -26,6 +26,19 @@ describe('OpmlSectionComponent', () => {
     return f;
   }
 
+  function renderAfterFailedImport(
+    problem: Record<string, unknown> = { type: 'about:blank', title: 'Import failed', status: 400 },
+  ): HTMLElement {
+    const f = mount();
+    f.componentInstance.text.set('<opml/>');
+    f.componentInstance.importText();
+    ctrl
+      .expectOne('https://api.test/api/opml/import')
+      .flush(problem, { status: 400, statusText: 'Bad Request' });
+    f.detectChanges();
+    return f.nativeElement;
+  }
+
   beforeEach(() => {
     load.mockReset();
     // jsdom lacks these:
@@ -84,5 +97,33 @@ describe('OpmlSectionComponent', () => {
     c.text.set('   ');
     c.importText();
     ctrl.expectNone('https://api.test/api/opml/import');
+  });
+
+  it('reports a failed import through the shared error banner', () => {
+    const el = renderAfterFailedImport();
+    const banner = el.querySelector('app-error-banner');
+    expect(banner).not.toBeNull();
+    expect(el.querySelector('p.error')).toBeNull();
+  });
+
+  it('shows the server-provided detail in the failed-import banner', () => {
+    const el = renderAfterFailedImport({
+      type: 'about:blank',
+      title: 'Invalid OPML',
+      detail: 'Line 4: unexpected element <foo>.',
+      status: 400,
+    });
+    expect(el.textContent).toContain('Line 4: unexpected element <foo>.');
+  });
+
+  it('reports a failed export through the shared error banner', () => {
+    const f = mount();
+    f.componentInstance.exportOpml();
+    ctrl
+      .expectOne('https://api.test/api/opml/export')
+      .flush('server error', { status: 500, statusText: 'Server Error' });
+    f.detectChanges();
+
+    expect((f.nativeElement as HTMLElement).querySelector('app-error-banner')).not.toBeNull();
   });
 });

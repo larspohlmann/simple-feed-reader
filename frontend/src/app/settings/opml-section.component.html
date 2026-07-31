@@ -1,17 +1,15 @@
-<section>
-  <h2>{{ 'settings.opml.title' | transloco }}</h2>
-
-  <div class="block">
+<app-settings-card [heading]="'settings.opml.title' | transloco">
+  <div class="group">
     <p class="lead">{{ 'settings.opml.exportLead' | transloco }}</p>
     <app-button [disabled]="exporting()" (click)="exportOpml()">
       {{ (exporting() ? 'settings.opml.preparing' : 'settings.opml.export') | transloco }}
     </app-button>
-    @if (exportError()) {
-      <p class="error" role="alert">{{ exportError() }}</p>
+    @if (exportError(); as problem) {
+      <app-error-banner [message]="problem.detail || problem.title" />
     }
   </div>
 
-  <div class="block">
+  <div class="group">
     <p class="lead">{{ 'settings.opml.importLead' | transloco }}</p>
     <input type="file" accept=".opml,.xml,text/xml,text/x-opml" (change)="onFile($event)" />
     <textarea
@@ -28,8 +26,8 @@
     >
       {{ (importing() ? 'settings.opml.importing' : 'settings.opml.import') | transloco }}
     </app-button>
-    @if (importError()) {
-      <p class="error" role="alert">{{ importError() }}</p>
+    @if (importError(); as problem) {
+      <app-error-banner [message]="problem.detail || problem.title" />
     }
     @if (result(); as r) {
       <p class="result">
@@ -46,4 +44,4 @@
       </p>
     }
   </div>
-</section>
+</app-settings-card>

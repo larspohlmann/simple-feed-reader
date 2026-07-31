@@ -2,16 +2,18 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { parseProblem } from '../core/problem';
+import { Problem, parseProblem } from '../core/problem';
 import { ReaderApi } from '../reader/reader-api';
 import { RefreshService } from '../reader/refresh.service';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { OpmlImportResult } from '../reader/models';
 import { ButtonComponent } from '../shared/button/button.component';
+import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
+import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
 
 @Component({
   selector: 'app-opml-section',
-  imports: [ButtonComponent, TranslocoPipe],
+  imports: [ButtonComponent, ErrorBannerComponent, SettingsCardComponent, TranslocoPipe],
   templateUrl: './opml-section.component.html',
   styleUrl: './opml-section.component.scss',
 })
@@ -25,8 +27,8 @@ export class OpmlSectionComponent {
   readonly exporting = signal(false);
   readonly importing = signal(false);
   readonly result = signal<OpmlImportResult | null>(null);
-  readonly exportError = signal<string | null>(null);
-  readonly importError = signal<string | null>(null);
+  readonly exportError = signal<Problem | null>(null);
+  readonly importError = signal<Problem | null>(null);
 
   value(e: Event): string {
     return (e.target as HTMLTextAreaElement).value;
@@ -42,7 +44,7 @@ export class OpmlSectionComponent {
       },
       error: (e: HttpErrorResponse) => {
         this.exporting.set(false);
-        this.exportError.set(parseProblem(e).title);
+        this.exportError.set(parseProblem(e));
       },
     });
   }
@@ -79,7 +81,7 @@ export class OpmlSectionComponent {
       },
       error: (e: HttpErrorResponse) => {
         this.importing.set(false);
-        this.importError.set(parseProblem(e).detail ?? parseProblem(e).title);
+        this.importError.set(parseProblem(e));
       },
     });
   }

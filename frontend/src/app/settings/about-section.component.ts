@@ -5,6 +5,8 @@ import { ReleaseVersion, VersionService } from '../core/version.service';
 import { LanguageService } from '../core/language.service';
 import { formatLongDate } from '../reader/format';
 import { DEVELOPMENT_VERSION, buildVersion } from '../../environments/version';
+import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
+import { SpinnerComponent } from '../shared/spinner/spinner.component';
 
 /** One line of the About table: which half of the app, and what it reports. */
 interface VersionRow {
@@ -14,7 +16,7 @@ interface VersionRow {
 
 @Component({
   selector: 'app-about-section',
-  imports: [TranslocoPipe],
+  imports: [SettingsCardComponent, SpinnerComponent, TranslocoPipe],
   templateUrl: './about-section.component.html',
   styleUrl: './about-section.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -24,6 +26,11 @@ export class AboutSectionComponent implements OnInit {
   private readonly language = inject(LanguageService);
 
   readonly unavailable = this.versions.unavailable;
+
+  /** True until the API version arrives or the endpoint is confirmed unreachable.
+   *  The baked-in app version is always available, so only the API half can be
+   *  pending. */
+  readonly loading = computed(() => this.versions.apiVersion() === null && !this.unavailable());
 
   /** Empty for a development build, which has no build date to show. */
   buildDate(iso: string): string {

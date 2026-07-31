@@ -1,28 +1,22 @@
 @use '../theme/breakpoints' as bp;
 
-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-h2 {
-  font-size: var(--fs-lg);
-  margin: 0;
-}
-
 .notice {
   padding: var(--space-3);
   border-radius: var(--radius);
   background: var(--accent-soft);
   color: var(--text-primary);
+  margin-bottom: var(--space-4);
 }
 
 .hint {
   color: var(--text-muted);
   font-size: var(--fs-sm);
+  margin: var(--space-1) 0 var(--space-4);
 }
 
+// A panel nested inside the settings card, which is itself --surface-1 --
+// so this needs its own background and a border to still read as a panel,
+// not the card's own surface colour again.
 .import {
   display: flex;
   flex-direction: column;
@@ -30,7 +24,8 @@ h2 {
   padding: var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-1);
+  background: var(--surface-0);
+  margin-bottom: var(--space-4);
 }
 
 .upload {
@@ -63,14 +58,19 @@ h2 {
   font-size: var(--fs-sm);
 }
 
-.pad {
-  padding: var(--space-5);
-  text-align: center;
+// The card's own content is no longer wrapped in a flex column with a gap
+// (the `<section>` that carried it was replaced by the shared card), so the
+// banner and skeleton need their own spacing.
+app-error-banner,
+app-skeleton {
+  display: block;
+  margin-bottom: var(--space-4);
 }
 
 .list-head {
   display: flex;
   justify-content: flex-end;
+  margin-bottom: var(--space-4);
 }
 
 .categories {
@@ -84,8 +84,6 @@ h2 {
 
 .category {
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
 }
 
 .row {

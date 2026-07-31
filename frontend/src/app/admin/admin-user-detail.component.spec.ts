@@ -444,4 +444,38 @@ describe('AdminUserDetailComponent', () => {
     dialogClosed.next(false);
     ctrl.expectNone('https://api.test/api/admin/users/7/suspend');
   });
+
+  it('shows skeleton rows instead of a spinner while the account loads', () => {
+    const f = mount();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('app-skeleton')).not.toBeNull();
+    expect(el.querySelector('app-spinner')).toBeNull();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
+  });
+
+  it('renders the account inside a settings card', () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
+    f.detectChanges();
+    expect((f.nativeElement as HTMLElement).querySelector('app-settings-card')).not.toBeNull();
+  });
+
+  it("projects the account actions into the card's heading row, not its body", () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush({
+      ...detail,
+      user: { ...detail.user, status: 'pending_approval' },
+    });
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+
+    // `cardActions` only projects from a direct child of app-settings-card:
+    // one `@if` level deep is tolerated, two silently drops the content out
+    // of `.head` and into the body instead. Asserting the buttons live
+    // inside `.head .acts` -- not merely that `.acts` exists somewhere on
+    // the page -- is what catches that regression.
+    const actionsInHead = el.querySelectorAll('.head .acts app-button');
+    expect(actionsInHead.length).toBeGreaterThan(0);
+    expect(el.querySelector('.head .acts')?.textContent).toContain('Approve');
+  });
 });

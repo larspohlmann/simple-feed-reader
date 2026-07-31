@@ -1,6 +1,4 @@
-<section>
-  <h2>{{ 'admin.title' | transloco }}</h2>
-
+<app-settings-card [heading]="'admin.title' | transloco">
   <div class="filters" role="group" [attr.aria-label]="'admin.filterByStatus' | transloco">
     @for (f of filters; track f.status) {
       <button [class.active]="filter() === f.status" (click)="setFilter(f.status)">
@@ -18,7 +16,7 @@
   }
 
   @if (loading()) {
-    <div class="pad"><app-spinner /></div>
+    <app-skeleton [label]="'admin.loadingUsers' | transloco" [rows]="5" />
   } @else if (error()) {
     <app-error-banner
       [message]="error()!.detail || error()!.title"
@@ -77,4 +75,4 @@
       }
     </ul>
   }
-</section>
+</app-settings-card>

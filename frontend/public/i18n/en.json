@@ -9,6 +9,8 @@
     "backReader": "Reader",
     "nav": { "admin": "Admin" },
     "preferences": "Preferences",
+    "languageSaveFailed": "The language changed on this device, but could not be saved to your account.",
+    "loadingVersion": "Loading version information",
     "feeds": {
       "title": "Feeds",
       "none": "No feeds yet — add one from the reader.",
@@ -31,7 +33,13 @@
       "feedCountOne": "{{count}} feed",
       "feedCountOther": "{{count}} feeds",
       "edit": "Edit",
-      "delete": "Delete"
+      "delete": "Delete",
+      "loading": "Loading tags",
+      "retry": "Try again",
+      "reorder": "Reorder {{name}}",
+      "save": "Save",
+      "cancel": "Cancel",
+      "editing": "Editing {{name}}"
     },
     "opml": {
       "title": "Import & export",
@@ -127,7 +135,11 @@
     "lastLogin": "Last login",
     "neverLoggedIn": "never",
     "openDetail": "View details",
+    "loadingUsers": "Loading users",
+    "loadingCatalog": "Loading the catalog",
+    "loadingUser": "Loading the account",
     "detail": {
+      "title": "Account details",
       "account": "Account",
       "activity": "Activity",
       "footprint": "Footprint",

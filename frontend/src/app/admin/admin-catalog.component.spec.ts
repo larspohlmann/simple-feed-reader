@@ -265,4 +265,34 @@ describe('AdminCatalogComponent', () => {
       }),
     );
   });
+
+  it('shows skeleton rows instead of a spinner while the catalog loads', () => {
+    TestBed.configureTestingModule({
+      imports: [AdminCatalogComponent, provideTranslocoTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
+        { provide: Dialog, useValue: { open: dialogOpen } },
+      ],
+    });
+    const fixture = TestBed.createComponent(AdminCatalogComponent);
+    ctrl = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('app-skeleton')).not.toBeNull();
+    expect(el.querySelector('app-spinner')).toBeNull();
+
+    ctrl.expectOne('https://api.test/api/admin/catalog').flush(PAYLOAD);
+    ctrl
+      .expectOne('https://api.test/api/admin/catalog/bundled')
+      .flush({ available: true, categories: 13, feeds: 111 });
+  });
+
+  it('renders the catalog inside a settings card', () => {
+    const fixture = mountLoaded();
+    expect(fixture.nativeElement.querySelector('app-settings-card')).not.toBeNull();
+  });
 });

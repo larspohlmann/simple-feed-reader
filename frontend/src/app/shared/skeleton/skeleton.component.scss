@@ -1,0 +1,32 @@
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.row {
+  /* Matches a comfortable list row: two padding steps plus a line of text. */
+  height: calc(var(--row-pad-comfy-y) * 2 + var(--fs-base));
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* A pulsing block is exactly the kind of motion that triggers vestibular
+   symptoms; hold it still when the reader asks for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .row {
+    animation: none;
+  }
+}

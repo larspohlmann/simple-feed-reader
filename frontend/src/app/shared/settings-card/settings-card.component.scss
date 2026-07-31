@@ -1,0 +1,28 @@
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+h2 {
+  font-size: var(--fs-lg);
+  margin: 0;
+}
+
+.description {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+
+  /* The description sits under the heading, so the heading's own bottom margin
+     would double up with it. */
+  margin: calc(var(--space-3) * -1 + var(--space-2)) 0 var(--space-3);
+}

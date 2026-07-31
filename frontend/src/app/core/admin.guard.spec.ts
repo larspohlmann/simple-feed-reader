@@ -4,12 +4,15 @@ import { firstValueFrom, isObservable, of, throwError } from 'rxjs';
 import { adminGuard } from './admin.guard';
 import { AuthService, CurrentUser } from './auth.service';
 
+// `locale` is a required field on CurrentUser (Task 9); the guard itself
+// doesn't read it — AuthService.loadMe() adopts it in one place now.
 const admin: CurrentUser = {
   id: 1,
   email: 'a',
   roles: ['ROLE_ADMIN', 'ROLE_USER'],
   status: 'active',
   createdAt: 'x',
+  locale: 'en',
 };
 const plain: CurrentUser = { ...admin, roles: ['ROLE_USER'] };
 

@@ -1,6 +1,4 @@
-<section>
-  <h2>{{ 'admin.catalog' | transloco }}</h2>
-
+<app-settings-card [heading]="'admin.catalog' | transloco">
   @if (actionError()) {
     <app-error-banner
       [message]="actionError()!.detail || actionError()!.title"
@@ -10,7 +8,7 @@
   }
 
   @if (loading()) {
-    <div class="pad"><app-spinner /></div>
+    <app-skeleton [label]="'admin.loadingCatalog' | transloco" [rows]="5" />
   } @else if (error()) {
     <app-error-banner
       [message]="error()!.detail || error()!.title"
@@ -234,4 +232,4 @@
       }
     </ul>
   }
-</section>
+</app-settings-card>

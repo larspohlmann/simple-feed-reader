@@ -14,8 +14,10 @@ import { firstValueFrom } from 'rxjs';
 import { routes } from './app.routes';
 import { API_BASE_URL } from './core/api';
 import { authInterceptor } from './core/auth.interceptor';
+import { HttpLocaleWriter } from './core/http-locale-writer';
 import { HttpTranslocoLoader } from './core/transloco-loader';
 import { LanguageService } from './core/language.service';
+import { LOCALE_WRITER } from './core/locale-writer';
 import { environment } from '../environments/environment';
 
 export const appConfig: ApplicationConfig = {
@@ -25,6 +27,10 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(withInterceptors([authInterceptor])),
     { provide: API_BASE_URL, useValue: environment.apiBaseUrl },
+    // LOCALE_WRITER defaults to a no-op (see locale-writer.ts) so most of the
+    // app never needs HttpClient just to construct LanguageService; the running
+    // app overrides it here with the real, HttpClient-backed writer.
+    { provide: LOCALE_WRITER, useExisting: HttpLocaleWriter },
     provideTransloco({
       config: {
         availableLangs: ['en', 'de'],

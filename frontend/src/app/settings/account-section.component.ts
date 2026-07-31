@@ -6,10 +6,11 @@ import { AuthService } from '../core/auth.service';
 import { LanguageService } from '../core/language.service';
 import { formatLongDate } from '../reader/format';
 import { ButtonComponent } from '../shared/button/button.component';
+import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
 
 @Component({
   selector: 'app-account-section',
-  imports: [ButtonComponent, TranslocoPipe, UserAvatarComponent],
+  imports: [ButtonComponent, SettingsCardComponent, TranslocoPipe, UserAvatarComponent],
   templateUrl: './account-section.component.html',
   styleUrl: './account-section.component.scss',
 })

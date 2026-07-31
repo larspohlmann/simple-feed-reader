@@ -11,7 +11,8 @@ import { formatDateOr } from '../reader/format';
 import { ButtonComponent } from '../shared/button/button.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { IconComponent } from '../shared/icon/icon.component';
-import { SpinnerComponent } from '../shared/spinner/spinner.component';
+import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
+import { SkeletonComponent } from '../shared/skeleton/skeleton.component';
 import { ConfirmData, ConfirmDialogComponent } from '../reader/manage/confirm-dialog.component';
 import { AdminApi } from './admin-api';
 import { AdminAction, AdminUserDto, AdminUserStatus } from './admin.models';
@@ -21,7 +22,8 @@ import { AdminAction, AdminUserDto, AdminUserStatus } from './admin.models';
   imports: [
     ButtonComponent,
     ErrorBannerComponent,
-    SpinnerComponent,
+    SettingsCardComponent,
+    SkeletonComponent,
     TranslocoPipe,
     IconComponent,
     RouterLink,

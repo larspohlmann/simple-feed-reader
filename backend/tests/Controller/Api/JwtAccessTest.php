@@ -6,13 +6,11 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
 use App\Enum\UserStatus;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * The `api` firewall's behaviour, asserted through GET /api/me — a real
@@ -20,7 +18,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  * actually ships. The ROLE_ADMIN rule is asserted through GET /api/admin/users,
  * which replaced the test-only probe route once the admin queue existed.
  */
-final class JwtAccessTest extends WebTestCase
+final class JwtAccessTest extends ApiTestCase
 {
     private const PROTECTED = '/api/me';
 
@@ -33,16 +31,6 @@ final class JwtAccessTest extends WebTestCase
         $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
         $rateLimiterCache->clear();
         self::ensureKernelShutdown();
-    }
-
-    private function factory(): UserFactory
-    {
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-
-        return new UserFactory($em, $hasher);
     }
 
     private function tokenFor(KernelBrowser $client, string $email): string
@@ -215,7 +203,7 @@ final class JwtAccessTest extends WebTestCase
         self::assertIsArray($payload);
 
         self::assertSame(
-            ['createdAt', 'email', 'id', 'roles', 'status'],
+            ['createdAt', 'email', 'id', 'locale', 'roles', 'status'],
             $this->sortedKeys($payload),
             'GET /api/me must expose exactly these fields — adding one is a deliberate act, not a side effect.',
         );
