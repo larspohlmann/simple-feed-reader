@@ -28,7 +28,7 @@ final class UserCheckerTest extends TestCase
     private function guard(): TrialExpiryGuard
     {
         return new TrialExpiryGuard(
-            $this->createMock(EntityManagerInterface::class),
+            $this->createStub(EntityManagerInterface::class),
             new MockClock('2026-07-21T09:00:00Z'),
         );
     }
