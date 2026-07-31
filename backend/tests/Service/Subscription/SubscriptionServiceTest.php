@@ -9,9 +9,11 @@ use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Exception\AlreadySubscribedException;
+use App\Exception\SubscriptionLimitReachedException;
 use App\Service\Discovery\FeedCandidate;
 use App\Service\Discovery\FeedDiscoveryInterface;
 use App\Service\Discovery\FeedDiscoveryResult;
+use App\Service\Subscription\SubscriptionLimitResolver;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -52,6 +54,7 @@ final class SubscriptionServiceTest extends DbTestCase
             $this->em->getRepository(SubscriptionTag::class),
             $this->em,
             new MockClock('2026-06-01T00:00:00Z'),
+            new SubscriptionLimitResolver(),
         );
     }
 
@@ -263,5 +266,18 @@ final class SubscriptionServiceTest extends DbTestCase
         /** @var \App\Repository\SubscriptionRepository $repo */
         $repo = $this->em->getRepository(Subscription::class);
         self::assertSame(0, $repo->countForUser((int) $user->getId()));
+    }
+
+    public function testPerUserCapOverridesTheGlobalDefault(): void
+    {
+        $user = $this->factory()->create('capped@example.com', maxSubscriptions: 1);
+        $service = $this->service($this->discoveryReturning(
+            FeedDiscoveryResult::directFeed('https://example.com/a.xml'),
+        ));
+
+        $service->subscribe($user, 'https://example.com/a.xml');
+
+        $this->expectException(SubscriptionLimitReachedException::class);
+        $service->subscribe($user, 'https://example.com/b.xml');
     }
 }

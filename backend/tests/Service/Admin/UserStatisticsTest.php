@@ -9,6 +9,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Admin\UserStatistics;
+use App\Service\Subscription\SubscriptionLimitResolver;
 use App\Service\Subscription\SubscriptionService;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
@@ -56,7 +57,7 @@ final class UserStatisticsTest extends TestCase
 
     private function statistics(): UserStatistics
     {
-        return new UserStatistics(new MockClock(new \DateTimeImmutable(self::NOW)));
+        return new UserStatistics(new MockClock(new \DateTimeImmutable(self::NOW)), new SubscriptionLimitResolver());
     }
 
     public function testItCountsTheFootprintAgainstTheGlobalCap(): void
