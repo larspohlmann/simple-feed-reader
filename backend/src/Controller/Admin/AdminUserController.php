@@ -135,10 +135,9 @@ final readonly class AdminUserController
      * Subscription::position, assigned on every create path and rewritten
      * wholesale by the reorder endpoint. Sorted here, in the admin layer,
      * rather than in SubscriptionRepository::findForUserWithTags() itself:
-     * that method has four other call sites (the reader's own subscription
-     * list, MarkReadService, OpmlExporter, UserStatistics) whose ordering
-     * needs were not part of this change, so its existing createdAt/id order
-     * is left alone for them.
+     * that method has three other call sites (the reader's own subscription
+     * list, MarkReadService, OpmlExporter) whose ordering needs were not part
+     * of this change, so its existing createdAt/id order is left alone for them.
      *
      * @param list<Subscription> $subscriptions
      *
