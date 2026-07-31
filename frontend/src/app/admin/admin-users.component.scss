@@ -68,6 +68,23 @@ h2 {
   color: var(--text-secondary);
 }
 
+.footprint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+a.email {
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+a.email:hover {
+  text-decoration: underline;
+}
+
 .badge {
   padding: 0 var(--space-2);
   border-radius: var(--radius);

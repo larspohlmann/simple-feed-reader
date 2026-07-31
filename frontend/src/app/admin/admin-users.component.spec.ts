@@ -154,4 +154,36 @@ describe('AdminUsersComponent', () => {
     dialogClosed.next(false);
     ctrl.expectNone('https://api.test/api/admin/users/1/suspend');
   });
+
+  it('shows the footprint counts and links each row to the detail page', () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users').flush({
+      users: [
+        user(1, {
+          status: 'active',
+          feedsCount: 12,
+          tagsCount: 3,
+          lastLoginAt: '2026-07-29T09:00:00+00:00',
+        }),
+      ],
+    });
+    f.detectChanges();
+
+    const text = f.nativeElement.textContent as string;
+    expect(text).toContain('12');
+    expect(text).toContain('3');
+
+    const link = f.nativeElement.querySelector('a[href="/settings/admin/users/1"]');
+    expect(link).not.toBeNull();
+  });
+
+  it('renders an account that never signed in as never', () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users').flush({
+      users: [user(1, { status: 'active', feedsCount: 0, tagsCount: 0, lastLoginAt: null })],
+    });
+    f.detectChanges();
+
+    expect(f.nativeElement.textContent).toContain('never');
+  });
 });

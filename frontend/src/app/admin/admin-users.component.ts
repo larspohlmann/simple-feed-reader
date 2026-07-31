@@ -1,6 +1,8 @@
 // src/app/admin/admin-users.component.ts
+import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
@@ -13,7 +15,7 @@ import { AdminAction, AdminUserDto, AdminUserStatus } from './admin.models';
 
 @Component({
   selector: 'app-admin-users',
-  imports: [ButtonComponent, SpinnerComponent, TranslocoPipe],
+  imports: [ButtonComponent, SpinnerComponent, TranslocoPipe, DatePipe, RouterLink],
   templateUrl: './admin-users.component.html',
   styleUrl: './admin-users.component.scss',
 })

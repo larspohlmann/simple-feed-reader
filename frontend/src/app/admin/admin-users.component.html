@@ -30,7 +30,7 @@
       @for (u of users(); track u.id) {
         <li>
           <div class="who">
-            <span class="email">{{ u.email }}</span>
+            <a class="email" [routerLink]="['/settings/admin/users', u.id]">{{ u.email }}</a>
             <span class="meta">
               <span class="badge" [attr.data-s]="u.status">{{
                 'admin.status.' + u.status | transloco
@@ -38,6 +38,18 @@
               @if (u.identities.length) {
                 <span class="prov">{{ u.identities.join(', ') }}</span>
               }
+            </span>
+            <span class="footprint">
+              <span>{{ u.feedsCount }} {{ 'admin.feedsLabel' | transloco }}</span>
+              <span>{{ u.tagsCount }} {{ 'admin.tagsLabel' | transloco }}</span>
+              <span>
+                {{ 'admin.lastLogin' | transloco }}:
+                {{
+                  u.lastLoginAt
+                    ? (u.lastLoginAt | date: 'mediumDate')
+                    : ('admin.neverLoggedIn' | transloco)
+                }}
+              </span>
             </span>
           </div>
           <div class="acts">
