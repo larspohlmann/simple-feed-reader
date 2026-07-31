@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -58,5 +59,48 @@ class EntryStateRepository extends ServiceEntityRepository
             'favorites' => (int) $row['favorites'],
             'kept' => (int) $row['kept'],
         ];
+    }
+
+    /**
+     * Unread entry counts keyed by subscription id, in one query across all the
+     * user's subscriptions. Unread = no explicit state and above the watermark,
+     * OR an explicit isRead=false row. Subscriptions with zero unread are absent
+     * from the map (the caller defaults them to 0).
+     *
+     * Lives here rather than on SubscriptionRepository: the subject of the query
+     * is read state, and it already shares this class's pattern of joining
+     * Subscription in purely to scope the result to the user's live feeds — see
+     * favoriteAndKeptCountsForUser() above.
+     *
+     * @return array<int, int>
+     */
+    public function unreadCountsForUser(int $userId): array
+    {
+        /** @var list<array{subscriptionId: int, unreadCount: int}> $rows */
+        $rows = $this->getEntityManager()->createQuery(sprintf(
+            'SELECT s.id AS subscriptionId, COUNT(e.id) AS unreadCount
+             FROM %s s
+             JOIN %s e ON e.feed = s.feed
+             LEFT JOIN %s es ON es.entry = e AND es.user = s.user
+             WHERE s.user = :user AND (
+                 es.isRead = :false
+                 OR (es.isRead IS NULL AND (s.markedReadUntil IS NULL
+                     OR COALESCE(e.publishedAt, e.createdAt) > s.markedReadUntil))
+             )
+             GROUP BY s.id',
+            Subscription::class,
+            Entry::class,
+            EntryState::class,
+        ))
+            ->setParameter('user', $userId)
+            ->setParameter('false', false, Types::BOOLEAN)
+            ->getResult();
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int) $row['subscriptionId']] = (int) $row['unreadCount'];
+        }
+
+        return $map;
     }
 }

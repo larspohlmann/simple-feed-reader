@@ -121,4 +121,36 @@ class TagRepository extends ServiceEntityRepository
 
         return $tag;
     }
+
+    /**
+     * How many tags each of the given users owns, in ONE query. A user with no
+     * tags is absent from the result, not zero-valued — callers default a miss
+     * to 0. See SubscriptionRepository::countsByUserIds() for why this is
+     * batched and query-count tested.
+     *
+     * @param list<int> $userIds
+     *
+     * @return array<int, int>
+     */
+    public function countsByUserIds(array $userIds): array
+    {
+        if ([] === $userIds) {
+            return [];
+        }
+
+        /** @var list<array{userId: int|string, total: int|string}> $rows */
+        $rows = $this->createQueryBuilder('t')
+            ->select('IDENTITY(t.user) AS userId', 'COUNT(t.id) AS total')
+            ->andWhere('t.user IN (:userIds)')->setParameter('userIds', $userIds)
+            ->groupBy('t.user')
+            ->getQuery()
+            ->getResult();
+
+        $counts = [];
+        foreach ($rows as $row) {
+            $counts[(int) $row['userId']] = (int) $row['total'];
+        }
+
+        return $counts;
+    }
 }

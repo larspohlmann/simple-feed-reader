@@ -186,7 +186,10 @@ final class AdminUserControllerTest extends WebTestCase
         foreach ($payload['users'] as $entry) {
             self::assertIsArray($entry);
             self::assertSame(
-                ['id', 'email', 'status', 'roles', 'createdAt', 'approvedAt', 'identities'],
+                [
+                    'id', 'email', 'status', 'roles', 'createdAt', 'approvedAt', 'identities',
+                    'feedsCount', 'tagsCount', 'lastLoginAt',
+                ],
                 array_keys($entry),
             );
         }
@@ -534,5 +537,69 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('POST', self::LIST . '/' . (int) $admin->getId() . '/reject', $this->tokenFor($admin));
 
         self::assertResponseStatusCodeSame(422);
+    }
+
+    public function testTheListCarriesFootprintCountsAndTheLastLoginStamp(): void
+    {
+        $admin = $this->admin();
+        $token = $this->tokenFor($admin);
+
+        $this->factory()->create(
+            'busy@example.com',
+            lastLoginAt: new \DateTimeImmutable('2026-07-29 09:00:00'),
+        );
+
+        $this->call('GET', self::LIST, $token);
+
+        self::assertResponseIsSuccessful();
+        $row = $this->rowFor('busy@example.com');
+        self::assertSame(0, $row['feedsCount']);
+        self::assertSame(0, $row['tagsCount']);
+        self::assertIsString($row['lastLoginAt']);
+        self::assertStringStartsWith('2026-07-29T09:00:00', $row['lastLoginAt']);
+    }
+
+    public function testAnAccountThatNeverSignedInReportsANullStamp(): void
+    {
+        $admin = $this->admin();
+        $token = $this->tokenFor($admin);
+        $this->factory()->create('fresh@example.com');
+
+        $this->call('GET', self::LIST, $token);
+
+        self::assertResponseIsSuccessful();
+        self::assertNull($this->rowFor('fresh@example.com')['lastLoginAt']);
+    }
+
+    public function testTheFootprintCountsCostOneQueryEachHoweverManyUsersAreListed(): void
+    {
+        $admin = $this->admin();
+        $token = $this->tokenFor($admin);
+
+        for ($i = 0; $i < 8; ++$i) {
+            $this->factory()->create(\sprintf('counted%d@example.com', $i));
+        }
+
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+
+        $this->call('GET', self::LIST, $token);
+
+        self::assertResponseIsSuccessful();
+
+        $feedReads = $recorder->queriesMatching('from subscription');
+        self::assertCount(
+            1,
+            $feedReads,
+            "the feed count must be one batched read, got:\n" . implode("\n", $feedReads),
+        );
+
+        $tagReads = $recorder->queriesMatching('from tag');
+        self::assertCount(
+            1,
+            $tagReads,
+            "the tag count must be one batched read, got:\n" . implode("\n", $tagReads),
+        );
     }
 }

@@ -8,6 +8,8 @@ use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Enum\UserStatus;
 use App\Exception\ValidationException;
+use App\Repository\SubscriptionRepository;
+use App\Repository\TagRepository;
 use App\Repository\UserRepository;
 use App\Service\Mail\AccountMailer;
 use Doctrine\ORM\EntityManagerInterface;
@@ -28,6 +30,8 @@ final readonly class AdminUserController
 {
     public function __construct(
         private UserRepository $users,
+        private SubscriptionRepository $subscriptions,
+        private TagRepository $tags,
         private EntityManagerInterface $em,
         private AccountMailer $mailer,
         private ClockInterface $clock,
@@ -51,6 +55,13 @@ final readonly class AdminUserController
         $users = $this->users->findForAdminList($statuses);
         $providersByUserId = $this->providersByUserId($users);
 
+        $userIds = array_values(array_filter(array_map(
+            static fn (User $user): ?int => $user->getId(),
+            $users,
+        )));
+        $feedCounts = $this->subscriptions->countsByUserIds($userIds);
+        $tagCounts = $this->tags->countsByUserIds($userIds);
+
         return new JsonResponse([
             'users' => array_map(
                 // Hand-built, like GET /api/me: a column added later must not
@@ -67,6 +78,11 @@ final readonly class AdminUserController
                     // synthetic <provider>-<hash>@oauth.invalid address, and
                     // both of those read as anomalies without this column.
                     'identities' => $providersByUserId[$user->getId()] ?? [],
+                    // Footprint at a glance. A user with none of either is
+                    // absent from the batched counts, hence the ?? 0.
+                    'feedsCount' => $feedCounts[$user->getId()] ?? 0,
+                    'tagsCount' => $tagCounts[$user->getId()] ?? 0,
+                    'lastLoginAt' => $user->getLastLoginAt()?->format(\DateTimeInterface::ATOM),
                 ],
                 $users,
             ),
