@@ -115,6 +115,12 @@ export class AdminUsersComponent implements OnInit {
     return `${u.email} — ${this.i18n.translate('admin.openDetail')}`;
   }
 
+  /** True when the account's trial end date is in the past — the account is
+   *  (or will be, on its next request) suspended by the trial. */
+  trialExpired(user: AdminUserDto): boolean {
+    return user.trialEndsAt !== null && new Date(user.trialEndsAt).getTime() <= Date.now();
+  }
+
   canApprove(u: AdminUserDto): boolean {
     return u.status !== 'active';
   }

@@ -114,6 +114,13 @@ a.email:hover .email-text {
   color: var(--danger);
 }
 
+.trial-expired {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius);
+  background: var(--bg-danger);
+  color: var(--danger);
+}
+
 .acts {
   display: flex;
   gap: var(--space-2);

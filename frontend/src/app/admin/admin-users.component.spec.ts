@@ -276,4 +276,17 @@ describe('AdminUsersComponent', () => {
     f.detectChanges();
     expect((f.nativeElement as HTMLElement).querySelector('app-settings-card')).not.toBeNull();
   });
+
+  it('flags a row whose trial has expired', () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users').flush({
+      users: [
+        user(1, { trialEndsAt: new Date(Date.now() - 86_400_000).toISOString() }),
+        user(2, { trialEndsAt: null }),
+      ],
+    });
+    f.detectChanges();
+
+    expect(f.nativeElement.querySelectorAll('.trial-expired').length).toBe(1);
+  });
 });
