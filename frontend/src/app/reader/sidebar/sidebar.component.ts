@@ -20,6 +20,7 @@ import { SubscriptionDto, TagDto } from '../models';
 import { RefreshService } from '../refresh.service';
 import { AuthService } from '../../core/auth.service';
 import { buildVersion } from '../../../environments/version';
+import { trialDaysRemaining } from '../format';
 
 /** What a sidebar drop target represents: a tag to add, or the untagged bucket. */
 export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
@@ -85,13 +86,9 @@ export class SidebarComponent {
   /** Whole days left in the current trial, or null when the account has no
    *  active trial. Expired trials read as null here — the account is suspended
    *  by then and never reaches this view. */
-  readonly trialDaysLeft = computed<number | null>(() => {
-    const endsAt = this.auth.user()?.trialEndsAt;
-    if (!endsAt) return null;
-    const remainingMs = new Date(endsAt).getTime() - Date.now();
-    if (remainingMs <= 0) return null;
-    return Math.ceil(remainingMs / 86_400_000);
-  });
+  readonly trialDaysLeft = computed<number | null>(() =>
+    trialDaysRemaining(this.auth.user()?.trialEndsAt ?? null),
+  );
 
   /** The last stretch of a trial is emphasised. */
   readonly trialEndingSoon = computed(() => {

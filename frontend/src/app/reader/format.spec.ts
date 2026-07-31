@@ -1,5 +1,11 @@
 // format.spec.ts
-import { formatDateOr, formatLongDate, relativeTime } from './format';
+import {
+  formatDateOr,
+  formatLongDate,
+  relativeTime,
+  trialDaysRemaining,
+  trialExpired,
+} from './format';
 
 describe('relativeTime', () => {
   const now = new Date('2026-07-22T12:00:00Z');
@@ -38,5 +44,47 @@ describe('formatDateOr', () => {
 
   it('renders the given fallback, not the date formatter’s own empty string, when there is none', () => {
     expect(formatDateOr(null, 'en', 'never')).toBe('never');
+  });
+});
+
+describe('trialExpired', () => {
+  const now = new Date('2026-07-22T12:00:00Z').getTime();
+
+  it('is false when there is no trial at all', () => {
+    expect(trialExpired(null, now)).toBe(false);
+  });
+
+  it('is true once the trial end date has passed', () => {
+    expect(trialExpired('2026-07-22T11:59:59Z', now)).toBe(true);
+  });
+
+  it('is true at the exact moment the trial ends', () => {
+    expect(trialExpired('2026-07-22T12:00:00Z', now)).toBe(true);
+  });
+
+  it('is false while the trial is still running', () => {
+    expect(trialExpired('2026-07-23T12:00:00Z', now)).toBe(false);
+  });
+});
+
+describe('trialDaysRemaining', () => {
+  const now = new Date('2026-07-22T12:00:00Z').getTime();
+
+  it('is null when there is no trial at all', () => {
+    expect(trialDaysRemaining(null, now)).toBeNull();
+  });
+
+  it('is null once the trial end date has passed', () => {
+    expect(trialDaysRemaining('2026-07-22T11:59:59Z', now)).toBeNull();
+  });
+
+  it('rounds up to whole days for a still-running trial', () => {
+    const endsAt = new Date(now + 2.5 * 86_400_000).toISOString();
+    expect(trialDaysRemaining(endsAt, now)).toBe(3);
+  });
+
+  it('reads exactly one day left as 1, not 0', () => {
+    const endsAt = new Date(now + 86_400_000).toISOString();
+    expect(trialDaysRemaining(endsAt, now)).toBe(1);
   });
 });

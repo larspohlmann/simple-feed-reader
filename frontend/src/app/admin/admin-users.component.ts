@@ -7,7 +7,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
 import { AuthService } from '../core/auth.service';
 import { LanguageService } from '../core/language.service';
-import { formatDateOr } from '../reader/format';
+import { formatDateOr, trialExpired } from '../reader/format';
 import { ButtonComponent } from '../shared/button/button.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { IconComponent } from '../shared/icon/icon.component';
@@ -118,7 +118,7 @@ export class AdminUsersComponent implements OnInit {
   /** True when the account's trial end date is in the past — the account is
    *  (or will be, on its next request) suspended by the trial. */
   trialExpired(user: AdminUserDto): boolean {
-    return user.trialEndsAt !== null && new Date(user.trialEndsAt).getTime() <= Date.now();
+    return trialExpired(user.trialEndsAt);
   }
 
   canApprove(u: AdminUserDto): boolean {

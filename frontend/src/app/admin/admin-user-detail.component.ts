@@ -8,7 +8,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
 import { AuthService } from '../core/auth.service';
 import { LanguageService } from '../core/language.service';
-import { formatDateOr, formatLongDate, relativeTime } from '../reader/format';
+import { formatDateOr, formatLongDate, relativeTime, trialDaysRemaining } from '../reader/format';
 import { ConfirmData, ConfirmDialogComponent } from '../reader/manage/confirm-dialog.component';
 import { ButtonComponent } from '../shared/button/button.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
@@ -148,18 +148,15 @@ export class AdminUserDetailComponent {
 
   /** The trial's high-level state, derived from the end date and status. */
   readonly trialState = computed<'none' | 'active' | 'expired'>(() => {
-    const endsAt = this.detail()?.limits.trialEndsAt;
-    if (!endsAt) return 'none';
-    return new Date(endsAt).getTime() > Date.now() ? 'active' : 'expired';
+    const endsAt = this.detail()?.limits.trialEndsAt ?? null;
+    if (endsAt === null) return 'none';
+    return trialDaysRemaining(endsAt) !== null ? 'active' : 'expired';
   });
 
   /** Whole days left in an active trial (0 when not active). */
-  readonly trialDaysLeft = computed(() => {
-    const endsAt = this.detail()?.limits.trialEndsAt;
-    if (!endsAt) return 0;
-    const remainingMs = new Date(endsAt).getTime() - Date.now();
-    return remainingMs > 0 ? Math.ceil(remainingMs / 86_400_000) : 0;
-  });
+  readonly trialDaysLeft = computed(
+    () => trialDaysRemaining(this.detail()?.limits.trialEndsAt ?? null) ?? 0,
+  );
 
   /** True when the account is suspended and its trial end date is in the past —
    *  i.e. the suspension came from the trial, not from a manual admin action. */

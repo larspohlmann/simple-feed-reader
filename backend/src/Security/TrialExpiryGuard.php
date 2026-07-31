@@ -44,6 +44,10 @@ final readonly class TrialExpiryGuard
             $this->entityManager->flush();
         }
 
+        // Always Suspended, never Pending/Rejected: startTrial() reactivates any
+        // non-active account to Active, and no firewall accepts a token for an
+        // account that isn't Active, so a trial-bearing account reaching this
+        // point can only be Active (handled above) or already Suspended.
         throw new AccountStatusException(UserStatus::Suspended->value);
     }
 }
