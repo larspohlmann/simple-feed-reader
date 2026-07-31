@@ -894,8 +894,13 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertSame(['archive', 'reading'], array_column($weeklyTags, 'name'));
         foreach ($weeklyTags as $tagOnSubscription) {
             self::assertIsArray($tagOnSubscription);
-            self::assertSame(['id', 'name', 'color'], array_keys($tagOnSubscription));
+            self::assertSame(['id', 'name', 'color', 'icon'], array_keys($tagOnSubscription));
         }
+        // The subscription's own tag chips carry the same icon as the
+        // account's tag list, so the admin UI can render one glyph
+        // consistently instead of a plain dot on this row and the real
+        // glyph on the tags list above.
+        self::assertSame(['archive-icon', 'book-icon'], array_column($weeklyTags, 'icon'));
     }
 
     /**

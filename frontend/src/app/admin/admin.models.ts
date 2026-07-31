@@ -68,7 +68,10 @@ export interface AdminUserSubscriptionDto {
   createdAt: string;
   /** null when the underlying feed has never been fetched. */
   lastFetchedAt: string | null;
-  tags: { id: number; name: string; color: string | null }[];
+  /** Carries `icon` alongside `color` so a subscription's tag chips render the
+   *  same glyph the account's own tag list shows for it, rather than falling
+   *  back to a plain colour dot. */
+  tags: { id: number; name: string; color: string | null; icon: string | null }[];
 }
 
 export interface AdminUserDetailDto {

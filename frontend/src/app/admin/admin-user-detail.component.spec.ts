@@ -8,6 +8,8 @@ import { Subject, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { API_BASE_URL } from '../core/api';
 import { AuthService } from '../core/auth.service';
+import { Lang } from '../core/language';
+import { LanguageService } from '../core/language.service';
 import { AdminUserDetailComponent } from './admin-user-detail.component';
 
 const detail = {
@@ -27,7 +29,10 @@ const detail = {
     tagsCount: 1,
     feedsLimit: 500,
     staleFeedsCount: 1,
-    lastRefreshAt: '2026-07-30T06:00:00+00:00',
+    // null on purpose: the main render test exercises the "never" fallback
+    // for lastRefresh while lastLoginAt (above) is present, so the two
+    // date/never fields cannot be satisfied by one shared assertion.
+    lastRefreshAt: null,
     dormant: false,
   },
   tags: [{ id: 3, name: 'Tech', color: '#112233', icon: 'memory', position: 0, feedsCount: 2 }],
@@ -40,7 +45,7 @@ const detail = {
       position: 0,
       createdAt: '2026-02-01T09:00:00+00:00',
       lastFetchedAt: '2026-07-30T06:00:00+00:00',
-      tags: [{ id: 3, name: 'Tech', color: '#112233' }],
+      tags: [{ id: 3, name: 'Tech', color: '#112233', icon: 'memory' }],
     },
   ],
 };
@@ -50,16 +55,30 @@ describe('AdminUserDetailComponent', () => {
   let dialogClosed: Subject<boolean | undefined>;
   const dialogOpen = jest.fn(() => ({ closed: dialogClosed }));
 
-  function mount(currentId = 99, id = '7') {
+  function mount(currentId = 99, id = '7', lang: Lang = 'en') {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      imports: [provideTranslocoTesting()],
+      imports: [
+        // The active Transloco language must move together with the
+        // LanguageService stub below: the "never"/"nie" text below comes from
+        // the `transloco` pipe, while the dates come from `LanguageService`
+        // feeding `Intl` directly — both need to agree for the German test to
+        // exercise the real translated output, not just the date formatting.
+        provideTranslocoTesting({
+          translocoConfig: {
+            availableLangs: ['en', 'de'],
+            defaultLang: lang,
+            reRenderOnLangChange: true,
+          },
+        }),
+      ],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
         { provide: AuthService, useValue: { user: () => ({ id: currentId }) } },
+        { provide: LanguageService, useValue: { lang: () => lang } },
         { provide: Dialog, useValue: { open: dialogOpen } },
         { provide: ActivatedRoute, useValue: { paramMap: of({ get: () => id }) } },
       ],
@@ -77,23 +96,146 @@ describe('AdminUserDetailComponent', () => {
 
   afterEach(() => ctrl.verify());
 
-  it('renders the account, its footprint and both lists', () => {
+  it('renders the identity, activity and footprint fields in their own labelled slots', () => {
     const f = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
     f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
 
-    const text = f.nativeElement.textContent as string;
-    expect(text).toContain('detailed@example.com');
-    expect(text).toContain('Ars Technica');
-    expect(text).toContain('Tech');
-    expect(text).toContain('500');
+    expect(el.querySelector('h2')?.textContent).toContain('detailed@example.com');
+
+    // Account card: status and roles are two DISTINCT dt/dd pairs, not one
+    // pair carrying both — a status-as-term regression collapses them.
+    const accountDds = el.querySelectorAll('.card.account dd');
+    expect(accountDds[0]?.textContent?.trim()).toBe('Active');
+    expect(accountDds[1]?.textContent?.trim()).toBe('ROLE_USER');
+    expect(accountDds[2]?.textContent?.trim()).toBe('en');
+    expect(accountDds[3]?.textContent?.trim()).toBe('January 1, 2026');
+    expect(accountDds[4]?.textContent?.trim()).toBe('January 2, 2026');
+    expect(accountDds[5]?.textContent?.trim()).toBe('google');
+
+    // Activity card: a present login next to an absent refresh — proves the
+    // two date fields, and their "never" fallbacks, are not interchangeable.
+    const activityDds = el.querySelectorAll('.card.activity dd');
+    expect(activityDds[0]?.textContent?.trim()).toBe('July 29, 2026');
+    expect(activityDds[1]?.textContent?.trim()).toBe('never');
+    expect(el.querySelector('.card.activity .flag')).toBeNull();
+
+    // Footprint card: feedsCount (2) and tagsCount (1) are different numbers
+    // on purpose, so a swap between them is visible.
+    const footprintPs = el.querySelectorAll('.card.footprint p');
+    expect(footprintPs[0]?.textContent?.trim()).toBe('2 of 500 feeds');
+    expect(footprintPs[1]?.textContent?.trim()).toBe('1 tags');
+    expect(footprintPs[2]?.textContent?.trim()).toBe('1 not refreshed recently');
+    expect(el.textContent).toContain('Limits');
+    expect(el.textContent).toContain('No per-user limits set');
+
+    // The feed row: name, tag chip and a labelled, non-dash freshness date.
+    const feedRow = el.querySelector('.rows li.feed') as HTMLElement;
+    expect(feedRow.querySelector('.name')?.textContent).toContain('Ars Technica');
+    expect(feedRow.querySelector('.chip')?.textContent).toContain('Tech');
+    const freshness = feedRow.querySelector('.count') as HTMLElement;
+    expect(freshness.textContent?.trim()).toBe('July 30, 2026');
+    expect(freshness.getAttribute('aria-label')).toBe('Last refresh: July 30, 2026');
+  });
+
+  it('renders dormant only when the server says so', () => {
+    const dormantDetail = { ...detail, footprint: { ...detail.footprint, dormant: true } };
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(dormantDetail);
+    f.detectChanges();
+
+    const flag = f.nativeElement.querySelector('.card.activity .flag');
+    expect(flag).not.toBeNull();
+    expect(flag.textContent).toContain('Dormant');
+  });
+
+  it('renders a feed that has never been fetched with an explicit "never", not a dash', () => {
+    const neverFetched = {
+      ...detail,
+      subscriptions: [{ ...detail.subscriptions[0], lastFetchedAt: null }],
+    };
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(neverFetched);
+    f.detectChanges();
+
+    const freshness = f.nativeElement.querySelector('.rows li.feed .count') as HTMLElement;
+    expect(freshness.textContent?.trim()).toBe('never');
+    expect(freshness.textContent?.trim()).not.toBe('—');
+  });
+
+  it('falls back to the feed URL when neither the feed title nor a custom title is set', () => {
+    const untitled = {
+      ...detail,
+      subscriptions: [
+        {
+          ...detail.subscriptions[0],
+          title: null,
+          customTitle: null,
+          url: 'https://example.test/never-fetched.xml',
+        },
+      ],
+    };
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(untitled);
+    f.detectChanges();
+
+    const name = f.nativeElement.querySelector('.rows li.feed .name') as HTMLElement;
+    expect(name.textContent?.trim()).toBe('https://example.test/never-fetched.xml');
+  });
+
+  it("renders a subscription's tag chip with the tag's own icon, matching the Tags list above it", () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+
+    // Both the Tags-list glyph and the feed-row chip glyph must render the
+    // icon (a <span class="material-symbols-outlined">memory</span>), not a
+    // plain colour dot — they describe the same tag and must look the same.
+    const tagsListGlyph = el.querySelector('.rows li .material-symbols-outlined');
+    const feedChipGlyph = el.querySelector('.rows li.feed .chip .material-symbols-outlined');
+    expect(tagsListGlyph?.textContent?.trim()).toBe('memory');
+    expect(feedChipGlyph?.textContent?.trim()).toBe('memory');
+  });
+
+  it('keeps the tags and subscriptions in the order the API returned them', () => {
+    const scrambled = {
+      ...detail,
+      tags: [
+        { id: 3, name: 'Zulu', color: '#112233', icon: null, position: 0, feedsCount: 2 },
+        { id: 4, name: 'Anemone', color: '#445566', icon: null, position: 1, feedsCount: 1 },
+      ],
+      subscriptions: [
+        { ...detail.subscriptions[0], id: 5, title: 'Second Shelf', tags: [] },
+        { ...detail.subscriptions[0], id: 6, title: 'Aardvark Weekly', tags: [] },
+      ],
+    };
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(scrambled);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+
+    // Neither name is alphabetically first in both lists at once, so a stray
+    // sort — or a reversal — of either list changes what is asserted here.
+    const tagNames = Array.from(el.querySelectorAll('.rows li .name')).map((n) =>
+      n.textContent?.trim(),
+    );
+    expect(tagNames[0]).toBe('Zulu');
+    expect(tagNames[1]).toBe('Anemone');
+
+    const feedNames = Array.from(el.querySelectorAll('.rows li.feed .name')).map((n) =>
+      n.textContent?.trim(),
+    );
+    expect(feedNames[0]).toBe('Second Shelf');
+    expect(feedNames[1]).toBe('Aardvark Weekly');
   });
 
   it('renders empty states when the account has no tags and no feeds', () => {
     const f = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush({
       ...detail,
-      footprint: { ...detail.footprint, feedsCount: 0, tagsCount: 0, lastRefreshAt: null },
+      footprint: { ...detail.footprint, feedsCount: 0, tagsCount: 0 },
       tags: [],
       subscriptions: [],
     });
@@ -104,17 +246,21 @@ describe('AdminUserDetailComponent', () => {
     expect(text).toContain('This account has no feeds.');
   });
 
-  it('renders "never" for an account that has never signed in or been refreshed', () => {
-    const f = mount();
-    ctrl.expectOne('https://api.test/api/admin/users/7').flush({
-      ...detail,
-      user: { ...detail.user, lastLoginAt: null },
-      footprint: { ...detail.footprint, lastRefreshAt: null },
-    });
+  it('formats every date in the active UI language via Intl, not a fixed locale', () => {
+    const f = mount(99, '7', 'de');
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
     f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
 
-    const text = f.nativeElement.textContent as string;
-    expect(text).toContain('never');
+    const accountDds = el.querySelectorAll('.card.account dd');
+    expect(accountDds[3]?.textContent?.trim()).toBe('1. Januar 2026');
+    expect(accountDds[4]?.textContent?.trim()).toBe('2. Januar 2026');
+    const activityDds = el.querySelectorAll('.card.activity dd');
+    expect(activityDds[0]?.textContent?.trim()).toBe('29. Juli 2026');
+    // The German "never" is a different string from the English one, so this
+    // also proves the fallback branch (not just formatDate) follows the
+    // active language, rather than merely being an untranslated literal.
+    expect(activityDds[1]?.textContent?.trim()).toBe('nie');
   });
 
   it('shows an error banner instead of a blank screen when the account does not exist', () => {
@@ -140,23 +286,33 @@ describe('AdminUserDetailComponent', () => {
     });
     f.detectChanges();
 
+    const approveButton = Array.from(f.nativeElement.querySelectorAll('.acts button')).find(
+      (b) => (b as HTMLElement).textContent?.trim() === 'Approve',
+    ) as HTMLButtonElement | undefined;
+    expect(approveButton).toBeDefined();
+
     f.componentInstance.act('approve');
     ctrl.expectOne('https://api.test/api/admin/users/7/approve').flush({ status: 'active' });
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
   });
 
-  it('suspends only after the confirm dialog is confirmed, and hides the action on the admin’s own row', () => {
-    const f = mount(7); // currentId === detail.user.id
+  it("hides every status action on the admin's own row, even though the DOM would otherwise show one", () => {
+    const f = mount(7); // currentId === detail.user.id, status 'active'
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
     f.detectChanges();
 
-    expect(f.componentInstance.canSuspend()).toBe(false);
+    expect(f.nativeElement.querySelectorAll('.acts button').length).toBe(0);
   });
 
-  it('suspends after confirmation for another account', () => {
+  it('suspends only after the confirm dialog is confirmed, for an account that is not the admin', () => {
     const f = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
     f.detectChanges();
+
+    const suspendButton = Array.from(f.nativeElement.querySelectorAll('.acts button')).find(
+      (b) => (b as HTMLElement).textContent?.trim() === 'Suspend',
+    ) as HTMLButtonElement | undefined;
+    expect(suspendButton).toBeDefined();
 
     f.componentInstance.confirmThenAct('suspend');
     expect(dialogOpen).toHaveBeenCalled();
@@ -165,5 +321,15 @@ describe('AdminUserDetailComponent', () => {
     dialogClosed.next(true);
     ctrl.expectOne('https://api.test/api/admin/users/7/suspend').flush({ status: 'suspended' });
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
+  });
+
+  it('does nothing when the confirm dialog is cancelled', () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
+    f.detectChanges();
+
+    f.componentInstance.confirmThenAct('suspend');
+    dialogClosed.next(false);
+    ctrl.expectNone('https://api.test/api/admin/users/7/suspend');
   });
 });

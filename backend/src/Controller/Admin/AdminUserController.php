@@ -240,6 +240,7 @@ final readonly class AdminUserController
                         id: (int) $tag->getId(),
                         name: $tag->getName(),
                         color: $tag->getColor(),
+                        icon: $tag->getIcon(),
                     ),
                     array_values($subscription->getTags()->toArray()),
                 ),

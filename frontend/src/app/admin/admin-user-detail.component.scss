@@ -87,6 +87,11 @@ dd {
   font-size: var(--fs-sm);
 }
 
+.limits-label {
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
 .rows {
   list-style: none;
   margin: 0;
@@ -183,7 +188,7 @@ dd {
     align-items: stretch;
   }
 
-  .count {
+  .rows li.feed .count {
     margin-left: 0;
   }
 }

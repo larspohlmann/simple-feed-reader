@@ -41,10 +41,12 @@
     }
 
     <div class="cards">
-      <div class="card">
+      <div class="card account">
         <h3>{{ 'admin.detail.account' | transloco }}</h3>
         <dl>
-          <dt>{{ 'admin.status.' + d.user.status | transloco }}</dt>
+          <dt>{{ 'admin.detail.status' | transloco }}</dt>
+          <dd>{{ 'admin.status.' + d.user.status | transloco }}</dd>
+          <dt>{{ 'admin.detail.roles' | transloco }}</dt>
           <dd>{{ d.user.roles.join(', ') }}</dd>
           <dt>{{ 'admin.detail.locale' | transloco }}</dt>
           <dd>{{ d.user.locale }}</dd>
@@ -59,7 +61,7 @@
         </dl>
       </div>
 
-      <div class="card">
+      <div class="card activity">
         <h3>{{ 'admin.detail.activity' | transloco }}</h3>
         <dl>
           <dt>{{ 'admin.lastLogin' | transloco }}</dt>
@@ -84,7 +86,7 @@
         }
       </div>
 
-      <div class="card">
+      <div class="card footprint">
         <h3>{{ 'admin.detail.footprint' | transloco }}</h3>
         <p>
           {{
@@ -98,6 +100,7 @@
             {{ 'admin.detail.staleFeeds' | transloco: { count: d.footprint.staleFeedsCount } }}
           </p>
         }
+        <p class="limits-label">{{ 'admin.detail.limits' | transloco }}</p>
         <p class="muted">{{ 'admin.detail.limitsUnset' | transloco }}</p>
       </div>
     </div>
@@ -125,19 +128,27 @@
         @for (sub of d.subscriptions; track sub.id) {
           <li class="feed">
             <span class="ident">
-              <span class="name">{{ sub.customTitle || sub.title }}</span>
+              <span class="name">{{ sub.customTitle || sub.title || sub.url }}</span>
               <span class="url">{{ sub.url }}</span>
             </span>
             <span class="tags">
               @for (tag of sub.tags; track tag.id) {
                 <span class="chip">
-                  <app-tag-glyph [color]="tag.color" size="xs" />
+                  <app-tag-glyph [name]="tag.icon" [color]="tag.color" size="xs" />
                   {{ tag.name }}
                 </span>
               }
             </span>
-            <span class="count">
-              {{ sub.lastFetchedAt ? formatDate(sub.lastFetchedAt) : '—' }}
+            <span
+              class="count"
+              [attr.title]="'admin.detail.lastRefresh' | transloco"
+              [attr.aria-label]="
+                ('admin.detail.lastRefresh' | transloco) +
+                ': ' +
+                lastFetchedLabel(sub.lastFetchedAt)
+              "
+            >
+              {{ lastFetchedLabel(sub.lastFetchedAt) }}
             </span>
           </li>
         }

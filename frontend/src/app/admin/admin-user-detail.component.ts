@@ -1,6 +1,7 @@
 // src/app/admin/admin-user-detail.component.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -52,7 +53,7 @@ export class AdminUserDetailComponent {
   private id = 0;
 
   constructor() {
-    this.route.paramMap.subscribe((params) => {
+    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       this.id = Number(params.get('id'));
       this.load();
     });
@@ -127,5 +128,12 @@ export class AdminUserDetailComponent {
    *  `LOCALE_ID` (which `DatePipe` reads) can't follow that. */
   formatDate(iso: string): string {
     return formatLongDate(iso, this.language.lang());
+  }
+
+  /** A feed's own freshness. `null` means the underlying feed has never been
+   *  fetched — an explicit localised "never", the same convention the
+   *  Activity card's `lastRefresh` row uses, never a bare dash. */
+  lastFetchedLabel(iso: string | null): string {
+    return iso ? this.formatDate(iso) : this.i18n.translate('admin.detail.neverRefreshed');
   }
 }

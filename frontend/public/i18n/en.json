@@ -133,6 +133,8 @@
       "footprint": "Footprint",
       "tagsTitle": "Tags",
       "feedsTitle": "Feeds",
+      "status": "Status",
+      "roles": "Roles",
       "locale": "Language",
       "created": "Registered",
       "approved": "Approved",
