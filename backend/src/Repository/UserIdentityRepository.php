@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\User;
 use App\Entity\UserIdentity;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -46,5 +47,52 @@ class UserIdentityRepository extends ServiceEntityRepository
             'provider' => $provider,
             'providerUserId' => $providerUserId,
         ]);
+    }
+
+    /**
+     * The sign-in providers of every given user, read in ONE query and indexed
+     * by user id.
+     *
+     * User holds no ORM association to UserIdentity — Plan 1 kept that
+     * relationship one-directional and lets the database FK cascade the deletes
+     * — so there is nothing to traverse, and the obvious per-row lookup would
+     * be an N+1 that no assertion on the response body could ever catch. It is
+     * pinned by a query count instead: see
+     * AdminUserControllerTest::testTheProviderColumnCostsOneQueryHoweverManyUsersAreListed.
+     *
+     * Only the provider NAME is selected. The row also holds the address the
+     * provider last reported, and that is deliberately left out: it is a second
+     * address for the same person, of no use in deciding an approval, and the
+     * hand-built admin row exists precisely to keep columns from reaching an
+     * admin's browser merely because they exist.
+     *
+     * @param list<User> $users
+     *
+     * @return array<int, list<string>>
+     */
+    public function providersByUserId(array $users): array
+    {
+        // An empty IN () is a syntax error on both engines, and there is
+        // nothing to ask about anyway — a status filter matching nobody is an
+        // ordinary outcome, not an edge case.
+        if ([] === $users) {
+            return [];
+        }
+
+        /** @var list<array{userId: int|string, provider: string}> $rows */
+        $rows = $this->createQueryBuilder('i')
+            ->select('IDENTITY(i.user) AS userId', 'i.provider')
+            ->andWhere('i.user IN (:users)')
+            ->setParameter('users', $users)
+            ->orderBy('i.id', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+
+        $byUser = [];
+        foreach ($rows as $row) {
+            $byUser[(int) $row['userId']][] = $row['provider'];
+        }
+
+        return $byUser;
     }
 }

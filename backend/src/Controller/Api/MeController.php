@@ -6,6 +6,7 @@ namespace App\Controller\Api;
 
 use App\Dto\Me\UpdateLocaleRequest;
 use App\Entity\User;
+use App\Http\MeJson;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -13,9 +14,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 /**
- * The client's view of its own account. Deliberately hand-built rather than
- * serialised from the entity, so a column added later (a password hash, a
- * token, an internal flag) cannot leak into the response by default.
+ * The client's view of its own account. The response shape is hand-built in
+ * {@see MeJson}, not serialised from the entity — see the note there.
  */
 final readonly class MeController
 {
@@ -26,7 +26,7 @@ final readonly class MeController
     #[Route('/api/me', name: 'api_me', methods: ['GET'])]
     public function show(#[CurrentUser] User $user): JsonResponse
     {
-        return new JsonResponse($this->profile($user));
+        return new JsonResponse(MeJson::profile($user));
     }
 
     /**
@@ -43,21 +43,6 @@ final readonly class MeController
         $user->setLocale($request->locale);
         $this->entityManager->flush();
 
-        return new JsonResponse($this->profile($user));
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function profile(User $user): array
-    {
-        return [
-            'id' => $user->getId(),
-            'email' => $user->getEmail(),
-            'roles' => $user->getRoles(),
-            'status' => $user->getStatus()->value,
-            'createdAt' => $user->getCreatedAt()->format(\DateTimeInterface::ATOM),
-            'locale' => $user->getLocale(),
-        ];
+        return new JsonResponse(MeJson::profile($user));
     }
 }
