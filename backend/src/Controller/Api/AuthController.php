@@ -9,12 +9,11 @@ use App\Dto\Auth\PasswordResetRequest;
 use App\Dto\Auth\RegisterRequest;
 use App\Dto\Auth\VerifyEmailRequest;
 use App\Exception\InvalidTokenException;
-use App\Exception\RateLimitedException;
 use App\Exception\ValidationException;
 use App\Service\Auth\AltchaService;
 use App\Service\Auth\RegistrationService;
+use App\Service\RateLimit\RateLimitGuard;
 use Psr\Cache\InvalidArgumentException;
-use Psr\Clock\ClockInterface;
 use Random\RandomException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -30,48 +29,10 @@ final readonly class AuthController
     public function __construct(
         private RegistrationService $registration,
         private AltchaService $altcha,
-        private ClockInterface $clock,
+        private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $registrationLimiter,
         private RateLimiterFactoryInterface $passwordResetRequestLimiter,
     ) {
-    }
-
-    /**
-     * Caps the two anonymous, email-sending endpoints per client IP.
-     *
-     * Called before the ALTCHA check, not after: the limit is on requests, not
-     * on successes. Capping only accepted solutions would leave an attacker
-     * free to hammer the endpoint with junk, and — worse — would make the
-     * limiter itself an oracle, since only requests that got as far as the
-     * mailer would count against a budget an attacker can probe.
-     *
-     * Note what the key is, and is not. getClientIp() returns REMOTE_ADDR
-     * unless the request came from a trusted proxy, and nothing configures
-     * trusted_proxies yet (deployment is Plan 6). That is the safe default —
-     * a spoofed X-Forwarded-For cannot buy a fresh budget — but it means that
-     * the day this app is put behind a CDN or reverse proxy, every request
-     * arrives wearing the proxy's address and all callers share one bucket.
-     * Whoever configures that proxy must set framework.trusted_proxies at the
-     * same time, or this limiter silently becomes a global 5-per-15-minutes.
-     */
-    private function enforceLimit(RateLimiterFactoryInterface $limiter, Request $request): void
-    {
-        // A null IP (unusual, but possible for non-HTTP-ish transports) collapses
-        // every such caller into one shared bucket. That fails closed, which is
-        // the direction to fail in.
-        $limit = $limiter->create($request->getClientIp())->consume();
-
-        if ($limit->isAccepted()) {
-            return;
-        }
-
-        // The listener turns this into 429 problem+json with a Retry-After
-        // header. max(1, ...) because a retryAfter that has just elapsed would
-        // otherwise render as "Retry-After: 0", which clients read as "now".
-        throw new RateLimitedException(max(
-            1,
-            $limit->getRetryAfter()->getTimestamp() - $this->clock->now()->getTimestamp(),
-        ));
     }
 
     /**
@@ -102,7 +63,11 @@ final readonly class AuthController
     #[Route('/register', name: 'api_auth_register', methods: ['POST'])]
     public function register(#[MapRequestPayload] RegisterRequest $request, Request $httpRequest): JsonResponse
     {
-        $this->enforceLimit($this->registrationLimiter, $httpRequest);
+        // Limit before the ALTCHA check, not after: the cap is on requests, not
+        // successes. Capping only accepted solutions would leave an attacker free
+        // to hammer the endpoint with junk, and — worse — would make the limiter
+        // an oracle, since only requests that reached the mailer would count.
+        $this->rateLimitGuard->enforceForClient($this->registrationLimiter, $httpRequest);
 
         if (!$this->altcha->verify($request->altcha)) {
             throw new ValidationException(['altcha' => ['The anti-spam challenge was not solved correctly.']]);
@@ -143,7 +108,9 @@ final readonly class AuthController
         #[MapRequestPayload] PasswordResetRequest $request,
         Request $httpRequest,
     ): JsonResponse {
-        $this->enforceLimit($this->passwordResetRequestLimiter, $httpRequest);
+        // Limit before the ALTCHA check, for the same oracle-avoidance reason as
+        // register().
+        $this->rateLimitGuard->enforceForClient($this->passwordResetRequestLimiter, $httpRequest);
 
         if (!$this->altcha->verify($request->altcha)) {
             throw new ValidationException(['altcha' => ['The anti-spam challenge was not solved correctly.']]);

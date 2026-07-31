@@ -40,14 +40,6 @@ final readonly class ThinControllerRule implements Rule
      * @var array<string, string>
      */
     private const array ALLOW_LIST = [
-        // #188 — rate-limit guard duplicated across five controllers; each builds
-        // the same RateLimitedException. Extracted to Service/RateLimit/RateLimitGuard.
-        'App\Controller\Api\AuthController::enforceLimit' => 'duplicate rate-limit guard; #188',
-        'App\Controller\Api\EntryController::enforceReaderLimit' => 'duplicate rate-limit guard; #188',
-        'App\Controller\Api\FeedPreviewController::enforceLimit' => 'duplicate rate-limit guard; #188',
-        'App\Controller\Api\RefreshController::enforceLimit' => 'duplicate rate-limit guard; #188',
-        'App\Controller\Api\OAuthController::enforceStartLimit' => 'duplicate rate-limit guard; #188',
-
         // #189 — a raw DQL query and six response builders that map entities to
         // DTOs/arrays. Moved to UserIdentityRepository and src/Http/*Json.php mappers.
         'App\Controller\Admin\AdminUserController::providersByUserId' => 'raw DQL query; #189',

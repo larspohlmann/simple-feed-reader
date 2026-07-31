@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\User;
-use App\Exception\RateLimitedException;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
+use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Refresh\RefreshRequest;
 use App\Service\Refresh\RefreshRunner;
-use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -37,7 +36,7 @@ final class RefreshController
         private readonly RefreshRunner $refreshRunner,
         private readonly SubscriptionRepository $subscriptions,
         private readonly TagRepository $tags,
-        private readonly ClockInterface $clock,
+        private readonly RateLimitGuard $rateLimitGuard,
         private readonly RateLimiterFactoryInterface $refreshLimiter,
     ) {
     }
@@ -48,7 +47,7 @@ final class RefreshController
         #[MapQueryParameter] ?int $feedId = null,
         #[MapQueryParameter] ?int $tag = null,
     ): JsonResponse {
-        $this->enforceLimit($user);
+        $this->rateLimitGuard->enforceForUser($this->refreshLimiter, $user);
 
         $userId = (int) $user->getId();
 
@@ -73,20 +72,5 @@ final class RefreshController
         }
 
         return new JsonResponse($this->refreshRunner->run($request)->toArray());
-    }
-
-    private function enforceLimit(User $user): void
-    {
-        $limit = $this->refreshLimiter->create('user-' . $user->getId())->consume();
-        if ($limit->isAccepted()) {
-            return;
-        }
-
-        // The listener turns this into 429 problem+json with a Retry-After
-        // header. max(1, ...) guards against a just-elapsed retryAfter rendering
-        // as "Retry-After: 0", which clients read as "now".
-        throw new RateLimitedException(
-            max(1, $limit->getRetryAfter()->getTimestamp() - $this->clock->now()->getTimestamp()),
-        );
     }
 }

@@ -6,11 +6,11 @@ namespace App\Controller\Api;
 
 use App\Dto\OAuth\OAuthExchangeRequest;
 use App\Exception\OAuth\OAuthFailedException;
-use App\Exception\RateLimitedException;
 use App\Service\OAuth\LoginCodeStore;
 use App\Service\OAuth\OAuthProviderRegistry;
 use App\Service\OAuth\OAuthSignIn;
 use App\Service\OAuth\OAuthStateStore;
+use App\Service\RateLimit\RateLimitGuard;
 use Psr\Cache\InvalidArgumentException;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
@@ -111,6 +111,7 @@ final class OAuthController
         private readonly OAuthSignIn $signIn,
         private readonly ClockInterface $clock,
         private readonly LoggerInterface $logger,
+        private readonly RateLimitGuard $rateLimitGuard,
         private readonly RateLimiterFactoryInterface $oauthStartLimiter,
         #[Autowire('%env(APP_FRONTEND_URL)%')] private readonly string $frontendUrl,
     ) {
@@ -286,7 +287,13 @@ final class OAuthController
     )]
     public function start(string $provider, Request $request): RedirectResponse
     {
-        $this->enforceStartLimit($request);
+        // Only start() is capped. The callback cannot be replayed (its state is
+        // single-use) and the exchange cannot be guessed (a 32-byte code that
+        // lives 30 seconds), so a limiter on either would spend cache writes
+        // defending something already closed — while a limiter on start() bounds
+        // a scripted redirect loop that would otherwise fill the state pool for
+        // free.
+        $this->rateLimitGuard->enforceForClient($this->oauthStartLimiter, $request);
 
         // Throws UnknownProviderException (404 problem+json) for a name this
         // deployment does not offer. That is the right shape here: nothing has
@@ -428,30 +435,5 @@ final class OAuthController
         $value = $request->query->get($name) ?? $request->request->get($name);
 
         return \is_string($value) && '' !== $value ? $value : null;
-    }
-
-    /**
-     * Mirrors AuthController::enforceLimit(). See its docblock for why the
-     * limit is applied before anything else, and for what the key is and is not
-     * once this app sits behind a proxy.
-     *
-     * Only start() is capped. The callback cannot be replayed (its state is
-     * single-use) and the exchange cannot be guessed (a 32-byte code that lives
-     * 30 seconds), so a limiter on either would spend cache writes defending
-     * something already closed — while a limiter on start() bounds a scripted
-     * redirect loop that would otherwise fill the state pool for free.
-     */
-    private function enforceStartLimit(Request $request): void
-    {
-        $limit = $this->oauthStartLimiter->create($request->getClientIp())->consume();
-
-        if ($limit->isAccepted()) {
-            return;
-        }
-
-        throw new RateLimitedException(max(
-            1,
-            $limit->getRetryAfter()->getTimestamp() - $this->clock->now()->getTimestamp(),
-        ));
     }
 }

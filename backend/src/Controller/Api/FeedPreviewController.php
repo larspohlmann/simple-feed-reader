@@ -8,10 +8,9 @@ use App\Dto\Feed\PreviewFeedRequest;
 use App\Entity\User;
 use App\Exception\FeedPreviewApiException;
 use App\Exception\FeedPreviewException;
-use App\Exception\RateLimitedException;
 use App\Http\FeedPreviewJson;
 use App\Service\Preview\FeedPreviewService;
-use Psr\Clock\ClockInterface;
+use App\Service\RateLimit\RateLimitGuard;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
@@ -23,8 +22,8 @@ final readonly class FeedPreviewController
 {
     public function __construct(
         private FeedPreviewService $previews,
+        private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $feedPreviewLimiter,
-        private ClockInterface $clock,
     ) {
     }
 
@@ -33,7 +32,7 @@ final readonly class FeedPreviewController
         #[CurrentUser] User $user,
         #[MapRequestPayload] PreviewFeedRequest $request,
     ): JsonResponse {
-        $this->enforceLimit($user);
+        $this->rateLimitGuard->enforceForUser($this->feedPreviewLimiter, $user);
 
         try {
             $preview = $this->previews->preview($request->url, $request->format);
@@ -46,17 +45,5 @@ final readonly class FeedPreviewController
         }
 
         return new JsonResponse(FeedPreviewJson::one($preview));
-    }
-
-    private function enforceLimit(User $user): void
-    {
-        $limit = $this->feedPreviewLimiter->create('user-' . $user->getId())->consume();
-        if ($limit->isAccepted()) {
-            return;
-        }
-
-        throw new RateLimitedException(
-            max(1, $limit->getRetryAfter()->getTimestamp() - $this->clock->now()->getTimestamp()),
-        );
     }
 }
