@@ -69,7 +69,7 @@ h1 {
   max-width: none;
 }
 
-@media (width <= bp.$bp-lg) {
+@media (width < bp.$bp-lg) {
   .rail {
     display: none;
   }
