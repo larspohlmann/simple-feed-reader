@@ -13,15 +13,23 @@ use Symfony\Component\Security\Core\User\UserInterface;
 /**
  * Runs on every authenticated request (the Doctrine provider reloads the user
  * from the DB anyway), which is what makes suspension effective immediately
- * instead of when the 7-day token expires.
+ * instead of when the 7-day token expires. It is also where an expired trial
+ * takes effect: TrialExpiryGuard flips the account to Suspended here, on the
+ * account's own next request.
  */
-final class UserChecker implements UserCheckerInterface
+final readonly class UserChecker implements UserCheckerInterface
 {
+    public function __construct(private TrialExpiryGuard $trialExpiryGuard)
+    {
+    }
+
     public function checkPreAuth(UserInterface $user): void
     {
         if (!$user instanceof User) {
             return;
         }
+
+        $this->trialExpiryGuard->enforce($user);
 
         if (UserStatus::Active !== $user->getStatus()) {
             throw new AccountStatusException($user->getStatus()->value);

@@ -29,8 +29,12 @@ use Symfony\Component\Security\Core\User\UserInterface;
  * password to verify on a JWT request, and preAuth is what makes revocation
  * take effect on the very next request.
  */
-final class LoginUserChecker implements UserCheckerInterface
+final readonly class LoginUserChecker implements UserCheckerInterface
 {
+    public function __construct(private TrialExpiryGuard $trialExpiryGuard)
+    {
+    }
+
     /**
      * Deliberately empty — see the class docblock. Moving the status check here
      * would reopen the enumeration oracle.
@@ -47,6 +51,8 @@ final class LoginUserChecker implements UserCheckerInterface
         if (!$user instanceof User) {
             return;
         }
+
+        $this->trialExpiryGuard->enforce($user);
 
         if (UserStatus::Active !== $user->getStatus()) {
             throw new AccountStatusException($user->getStatus()->value);

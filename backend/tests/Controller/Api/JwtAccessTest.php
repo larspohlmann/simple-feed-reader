@@ -359,4 +359,55 @@ final class JwtAccessTest extends ApiTestCase
 
         $this->assertUnauthorizedProblem($client);
     }
+
+    /**
+     * An expired trial blocks the account on its next request and — the lazy
+     * transition — flips the stored status to Suspended. Asserted through the
+     * firewall, not by invoking the checker: only the real wiring proves the
+     * guard actually runs on a JWT request.
+     *
+     * The trial is minted as still-active and only expired afterwards, through
+     * the EntityManager directly, for the same reason
+     * testSuspendingAUserRejectsTheirExistingToken re-fetches through the
+     * current kernel's EntityManager rather than flipping status before login:
+     * LoginUserChecker now runs this same guard in checkPostAuth, so logging in
+     * with an already-expired trial would be refused before a token ever
+     * existed to test the API firewall with.
+     */
+    public function testExpiredTrialBlocksTheRequestAndFlipsStatusToSuspended(): void
+    {
+        $client = self::createClient();
+        $this->factory()->create(
+            'expired-trial@example.com',
+            trialEndsAt: new \DateTimeImmutable('+7 days'),
+        );
+        $token = $this->tokenFor($client, 'expired-trial@example.com');
+
+        /** @var EntityManagerInterface $em */
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        $user = $em->getRepository(User::class)->findOneBy(['email' => 'expired-trial@example.com']);
+        self::assertInstanceOf(User::class, $user);
+        $user->setTrialEndsAt(new \DateTimeImmutable('-1 day'));
+        $em->flush();
+
+        $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $this->assertUnauthorizedProblem($client);
+
+        $user = $em->getRepository(User::class)->findOneBy(['email' => 'expired-trial@example.com']);
+        self::assertInstanceOf(User::class, $user);
+        self::assertSame(UserStatus::Suspended, $user->getStatus());
+    }
+
+    public function testActiveTrialInTheFutureIsAllowed(): void
+    {
+        $client = self::createClient();
+        $this->factory()->create(
+            'active-trial@example.com',
+            trialEndsAt: new \DateTimeImmutable('+7 days'),
+        );
+        $token = $this->tokenFor($client, 'active-trial@example.com');
+
+        $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        self::assertResponseIsSuccessful();
+    }
 }
