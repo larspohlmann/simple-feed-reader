@@ -7,6 +7,7 @@
   "settings": {
     "title": "Settings",
     "backReader": "Reader",
+    "nav": { "admin": "Admin" },
     "preferences": "Preferences",
     "feeds": {
       "title": "Feeds",

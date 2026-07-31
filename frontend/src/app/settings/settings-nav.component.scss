@@ -1,0 +1,67 @@
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-primary);
+  text-decoration: none;
+  border-radius: var(--radius);
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.group {
+  margin: var(--space-4) 0 var(--space-1);
+  padding: 0 var(--row-pad-x);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+/* rail: compact rows, active section highlighted, no chevrons */
+.rail a {
+  padding: var(--row-pad-y) var(--row-pad-x);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.rail a:hover {
+  background: var(--surface-1);
+}
+
+.rail a.active {
+  background: var(--surface-1);
+  color: var(--accent);
+}
+
+.rail .chev {
+  display: none;
+}
+
+/* hub: comfortable full-width rows with chevrons, iOS-settings style */
+.hub a {
+  padding: var(--row-pad-comfy-y) var(--row-pad-comfy-x);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  min-height: var(--tap-target);
+}
+
+.hub .chev {
+  color: var(--text-muted);
+}
+
+.hub .group {
+  padding: 0 var(--row-pad-comfy-x);
+}
