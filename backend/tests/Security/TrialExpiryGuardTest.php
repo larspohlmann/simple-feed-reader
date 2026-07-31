@@ -34,7 +34,6 @@ final class TrialExpiryGuardTest extends TestCase
         $em->expects(self::never())->method('flush');
 
         $this->guard($em)->enforce($this->user(null));
-        $this->expectNotToPerformAssertions();
     }
 
     public function testActiveTrialInTheFutureIsANoOp(): void
@@ -43,7 +42,6 @@ final class TrialExpiryGuardTest extends TestCase
         $em->expects(self::never())->method('flush');
 
         $this->guard($em)->enforce($this->user(new \DateTimeImmutable('2026-07-20T00:00:00Z')));
-        $this->expectNotToPerformAssertions();
     }
 
     public function testExpiredTrialFlipsActiveUserToSuspendedThenThrows(): void
