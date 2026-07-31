@@ -5,13 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
-use App\Repository\UserRepository;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * The account's own view of, and write path onto, its locale. Tokens are
@@ -19,7 +16,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  * /api/auth/login, so these cases never touch the login throttler's
  * filesystem pool and cannot be poisoned by it.
  */
-final class MeControllerTest extends WebTestCase
+final class MeControllerTest extends ApiTestCase
 {
     private function entityManager(): EntityManagerInterface
     {
@@ -27,22 +24,6 @@ final class MeControllerTest extends WebTestCase
         $em = self::getContainer()->get(EntityManagerInterface::class);
 
         return $em;
-    }
-
-    private function users(): UserRepository
-    {
-        /** @var UserRepository $repository */
-        $repository = self::getContainer()->get(UserRepository::class);
-
-        return $repository;
-    }
-
-    private function factory(): UserFactory
-    {
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-
-        return new UserFactory($this->entityManager(), $hasher);
     }
 
     /** Attaches a bearer token to every subsequent request this client makes. */
@@ -55,16 +36,6 @@ final class MeControllerTest extends WebTestCase
         $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
 
         $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $manager->create($user));
-    }
-
-    /** @return array<string, mixed> */
-    private function payload(KernelBrowser $client): array
-    {
-        $decoded = json_decode((string) $client->getResponse()->getContent(), true);
-        self::assertIsArray($decoded);
-
-        /** @var array<string, mixed> $decoded */
-        return $decoded;
     }
 
     public function testTheProfileCarriesTheAccountLocale(): void

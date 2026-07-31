@@ -7,23 +7,19 @@ namespace App\Tests\Controller\Api;
 use App\Entity\User;
 use App\Enum\TokenPurpose;
 use App\Enum\UserStatus;
-use App\Repository\UserRepository;
 use App\Service\Auth\ActionTokenService;
 use App\Service\Auth\AltchaService;
 use App\Tests\Support\AltchaSolver;
-use App\Tests\Support\UserFactory;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Tests\Support\ApiTestCase;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Mime\Email;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * Runtime note: every registration here solves a real ALTCHA proof-of-work
  * (~60 ms). This file is deliberately slower than the rest of the suite.
  */
-final class RegistrationTest extends WebTestCase
+final class RegistrationTest extends ApiTestCase
 {
     private KernelBrowser $client;
 
@@ -87,33 +83,6 @@ final class RegistrationTest extends WebTestCase
         );
     }
 
-    /** @return array<mixed> */
-    private function payload(): array
-    {
-        $decoded = json_decode((string) $this->client->getResponse()->getContent(), true);
-        self::assertIsArray($decoded);
-
-        return $decoded;
-    }
-
-    private function users(): UserRepository
-    {
-        /** @var UserRepository $repository */
-        $repository = self::getContainer()->get(UserRepository::class);
-
-        return $repository;
-    }
-
-    private function factory(): UserFactory
-    {
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-
-        return new UserFactory($em, $hasher);
-    }
-
     private function tokens(): ActionTokenService
     {
         /** @var ActionTokenService $tokens */
@@ -140,7 +109,7 @@ final class RegistrationTest extends WebTestCase
         $this->client->request('GET', '/api/auth/altcha-challenge');
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload();
+        $payload = $this->payload($this->client);
         self::assertArrayHasKey('challenge', $payload);
         self::assertArrayHasKey('maxnumber', $payload);
         self::assertArrayHasKey('salt', $payload);
@@ -152,7 +121,7 @@ final class RegistrationTest extends WebTestCase
         $this->register();
 
         self::assertResponseStatusCodeSame(202);
-        self::assertSame(['status' => 'pending_verification'], $this->payload());
+        self::assertSame(['status' => 'pending_verification'], $this->payload($this->client));
 
         $user = $this->users()->findOneByEmail('newcomer@example.com');
         self::assertInstanceOf(User::class, $user);
@@ -172,7 +141,7 @@ final class RegistrationTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(422);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
-        $payload = $this->payload();
+        $payload = $this->payload($this->client);
         self::assertSame('validation_error', $payload['type']);
         self::assertArrayHasKey('errors', $payload);
         self::assertIsArray($payload['errors']);
@@ -202,7 +171,7 @@ final class RegistrationTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(422);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
-        $payload = $this->payload();
+        $payload = $this->payload($this->client);
         self::assertSame('validation_error', $payload['type']);
         self::assertIsArray($payload['errors']);
         self::assertArrayHasKey('email', $payload['errors']);
@@ -221,7 +190,7 @@ final class RegistrationTest extends WebTestCase
         $this->register(['email' => 'someone@whatever.invalid', 'altcha' => 'unused']);
 
         self::assertResponseStatusCodeSame(422);
-        $payload = $this->payload();
+        $payload = $this->payload($this->client);
         self::assertIsArray($payload['errors']);
         self::assertArrayHasKey('email', $payload['errors']);
     }
@@ -258,7 +227,7 @@ final class RegistrationTest extends WebTestCase
         $this->register(['email' => 'not-an-email', 'password' => 'short', 'altcha' => 'unused']);
 
         self::assertResponseStatusCodeSame(422);
-        $payload = $this->payload();
+        $payload = $this->payload($this->client);
         self::assertSame('validation_error', $payload['type']);
         self::assertIsArray($payload['errors']);
         self::assertArrayHasKey('email', $payload['errors']);
@@ -339,7 +308,7 @@ final class RegistrationTest extends WebTestCase
         $this->post('/api/auth/verify-email', ['token' => $token]);
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['status' => 'pending_approval'], $this->payload());
+        self::assertSame(['status' => 'pending_approval'], $this->payload($this->client));
 
         $user = $this->users()->findOneByEmail('newcomer@example.com');
         self::assertInstanceOf(User::class, $user);
@@ -417,7 +386,7 @@ final class RegistrationTest extends WebTestCase
         $this->post('/api/auth/verify-email', ['token' => $this->tokenFromMail()]);
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['status' => 'pending_approval'], $this->payload());
+        self::assertSame(['status' => 'pending_approval'], $this->payload($this->client));
         self::assertEmailCount(0);
     }
 
@@ -435,7 +404,7 @@ final class RegistrationTest extends WebTestCase
 
         $this->post('/api/auth/verify-email', ['token' => $token]);
         self::assertResponseStatusCodeSame(400);
-        self::assertSame('invalid_token', $this->payload()['type']);
+        self::assertSame('invalid_token', $this->payload($this->client)['type']);
     }
 
     public function testUnknownTokenIsRejected(): void
@@ -444,7 +413,7 @@ final class RegistrationTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(400);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
-        self::assertSame('invalid_token', $this->payload()['type']);
+        self::assertSame('invalid_token', $this->payload($this->client)['type']);
     }
 
     /**
@@ -456,7 +425,7 @@ final class RegistrationTest extends WebTestCase
         $this->post('/api/auth/verify-email', ['token' => str_repeat('a', 129)]);
 
         self::assertResponseStatusCodeSame(422);
-        self::assertSame('validation_error', $this->payload()['type']);
+        self::assertSame('validation_error', $this->payload($this->client)['type']);
     }
 
     /**
@@ -474,7 +443,7 @@ final class RegistrationTest extends WebTestCase
         ]);
 
         self::assertResponseStatusCodeSame(403);
-        $payload = $this->payload();
+        $payload = $this->payload($this->client);
         self::assertSame('account_not_active', $payload['type']);
         self::assertSame('pending_approval', $payload['accountStatus']);
     }
@@ -512,7 +481,7 @@ final class RegistrationTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(429);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
-        self::assertSame('rate_limited', $this->payload()['type']);
+        self::assertSame('rate_limited', $this->payload($this->client)['type']);
 
         $retryAfter = $this->client->getResponse()->headers->get('Retry-After');
         self::assertNotNull($retryAfter);
@@ -589,6 +558,6 @@ final class RegistrationTest extends WebTestCase
         self::assertSame(UserStatus::Active, $user->getStatus());
         // Must report what is true, not the usual case: this user can sign in
         // now, and telling them to wait for an admin would be a lie.
-        self::assertSame(['status' => 'active'], $this->payload());
+        self::assertSame(['status' => 'active'], $this->payload($this->client));
     }
 }
