@@ -1,13 +1,14 @@
 <app-settings-card [heading]="'settings.opml.title' | transloco">
-  @if (exportFailed() || importFailed()) {
-    <app-error-banner [message]="'settings.opmlError' | transloco" />
-  }
-
   <div class="group">
     <p class="lead">{{ 'settings.opml.exportLead' | transloco }}</p>
     <app-button [disabled]="exporting()" (click)="exportOpml()">
       {{ (exporting() ? 'settings.opml.preparing' : 'settings.opml.export') | transloco }}
     </app-button>
+    @if (exportError(); as problem) {
+      <app-error-banner
+        [message]="problem.detail || problem.title || ('settings.opmlError' | transloco)"
+      />
+    }
   </div>
 
   <div class="group">
@@ -27,6 +28,11 @@
     >
       {{ (importing() ? 'settings.opml.importing' : 'settings.opml.import') | transloco }}
     </app-button>
+    @if (importError(); as problem) {
+      <app-error-banner
+        [message]="problem.detail || problem.title || ('settings.opmlError' | transloco)"
+      />
+    }
     @if (result(); as r) {
       <p class="result">
         {{

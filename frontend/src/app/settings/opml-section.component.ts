@@ -1,6 +1,8 @@
 // src/app/settings/opml-section.component.ts
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { Problem, parseProblem } from '../core/problem';
 import { ReaderApi } from '../reader/reader-api';
 import { RefreshService } from '../reader/refresh.service';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
@@ -25,8 +27,8 @@ export class OpmlSectionComponent {
   readonly exporting = signal(false);
   readonly importing = signal(false);
   readonly result = signal<OpmlImportResult | null>(null);
-  readonly exportFailed = signal(false);
-  readonly importFailed = signal(false);
+  readonly exportError = signal<Problem | null>(null);
+  readonly importError = signal<Problem | null>(null);
 
   value(e: Event): string {
     return (e.target as HTMLTextAreaElement).value;
@@ -34,15 +36,15 @@ export class OpmlSectionComponent {
 
   exportOpml(): void {
     this.exporting.set(true);
-    this.exportFailed.set(false);
+    this.exportError.set(null);
     this.api.exportOpml().subscribe({
       next: (xml) => {
         this.exporting.set(false);
         this.download(xml);
       },
-      error: () => {
+      error: (e: HttpErrorResponse) => {
         this.exporting.set(false);
-        this.exportFailed.set(true);
+        this.exportError.set(parseProblem(e));
       },
     });
   }
@@ -63,7 +65,7 @@ export class OpmlSectionComponent {
     const body = this.text().trim();
     if (!body) return;
     this.importing.set(true);
-    this.importFailed.set(false);
+    this.importError.set(null);
     this.result.set(null);
     this.api.importOpml(body).subscribe({
       next: (r) => {
@@ -77,9 +79,9 @@ export class OpmlSectionComponent {
           this.refresh.run(() => this.subs.load());
         }
       },
-      error: () => {
+      error: (e: HttpErrorResponse) => {
         this.importing.set(false);
-        this.importFailed.set(true);
+        this.importError.set(parseProblem(e));
       },
     });
   }
