@@ -1,11 +1,11 @@
 <!-- src/app/admin/admin-user-detail.component.html -->
-<section>
-  <a class="back" routerLink="/settings/admin/users">
-    <app-icon name="arrow_back" size="sm" /> {{ 'admin.detail.backToUsers' | transloco }}
-  </a>
+<a class="back" routerLink="/settings/admin/users">
+  <app-icon name="arrow_back" size="sm" /> {{ 'admin.detail.backToUsers' | transloco }}
+</a>
 
+<app-settings-card [heading]="cardHeading()">
   @if (loading()) {
-    <div class="pad"><app-spinner /></div>
+    <app-skeleton [label]="'admin.loadingUser' | transloco" [rows]="5" />
   } @else if (error()) {
     <app-error-banner
       [message]="error()!.detail || error()!.title"
@@ -13,9 +13,8 @@
       (action)="load()"
     />
   } @else if (detail(); as d) {
-    <div class="head">
-      <h2>{{ d.user.email }}</h2>
-      <div class="acts">
+    @if (canApprove() || canReject() || canSuspend()) {
+      <div cardActions class="acts">
         @if (canApprove()) {
           <app-button size="sm" (click)="act('approve')">
             {{ 'admin.approve' | transloco }}
@@ -32,7 +31,7 @@
           </app-button>
         }
       </div>
-    </div>
+    }
 
     @if (actionError()) {
       <app-error-banner
@@ -155,4 +154,4 @@
       </ul>
     }
   }
-</section>
+</app-settings-card>

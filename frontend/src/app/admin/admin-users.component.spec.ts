@@ -259,4 +259,19 @@ describe('AdminUsersComponent', () => {
     expect(label).toContain('u1@x');
     expect(label).toContain('View details');
   });
+
+  it('shows skeleton rows instead of a spinner while the list loads', () => {
+    const f = mount();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('app-skeleton')).not.toBeNull();
+    expect(el.querySelector('app-spinner')).toBeNull();
+    ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [] });
+  });
+
+  it('renders the list inside a settings card', () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [user(1)] });
+    f.detectChanges();
+    expect((f.nativeElement as HTMLElement).querySelector('app-settings-card')).not.toBeNull();
+  });
 });

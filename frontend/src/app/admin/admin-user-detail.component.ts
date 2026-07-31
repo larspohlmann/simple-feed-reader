@@ -13,7 +13,8 @@ import { ConfirmData, ConfirmDialogComponent } from '../reader/manage/confirm-di
 import { ButtonComponent } from '../shared/button/button.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { IconComponent } from '../shared/icon/icon.component';
-import { SpinnerComponent } from '../shared/spinner/spinner.component';
+import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
+import { SkeletonComponent } from '../shared/skeleton/skeleton.component';
 import { TagGlyphComponent } from '../shared/tag-glyph/tag-glyph.component';
 import { AdminApi } from './admin-api';
 import { AdminAction, AdminUserDetailDto } from './admin.models';
@@ -28,7 +29,8 @@ import { AdminAction, AdminUserDetailDto } from './admin.models';
     ErrorBannerComponent,
     IconComponent,
     RouterLink,
-    SpinnerComponent,
+    SettingsCardComponent,
+    SkeletonComponent,
     TagGlyphComponent,
     TranslocoPipe,
   ],
@@ -76,6 +78,15 @@ export class AdminUserDetailComponent {
       },
     });
   }
+
+  /** The card's heading: the account's own email once it has loaded, so the
+   *  page title names the account you are looking at, exactly like the list
+   *  page's row already does. Before that — while loading, or after a load
+   *  error — there is no email to show yet, so the card falls back to a
+   *  generic title rather than rendering an empty heading. */
+  readonly cardHeading = computed(
+    () => this.detail()?.user.email ?? this.i18n.translate('admin.detail.title'),
+  );
 
   /** null while the account is still loading, since none of the action
    *  affordances below have anything to key off before that. */

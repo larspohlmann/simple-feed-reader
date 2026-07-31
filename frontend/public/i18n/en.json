@@ -129,7 +129,11 @@
     "lastLogin": "Last login",
     "neverLoggedIn": "never",
     "openDetail": "View details",
+    "loadingUsers": "Loading users",
+    "loadingCatalog": "Loading the catalog",
+    "loadingUser": "Loading the account",
     "detail": {
+      "title": "Account details",
       "account": "Account",
       "activity": "Activity",
       "footprint": "Footprint",

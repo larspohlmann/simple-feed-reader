@@ -129,7 +129,11 @@
     "lastLogin": "Letzte Anmeldung",
     "neverLoggedIn": "nie",
     "openDetail": "Details ansehen",
+    "loadingUsers": "Benutzer werden geladen",
+    "loadingCatalog": "Katalog wird geladen",
+    "loadingUser": "Konto wird geladen",
     "detail": {
+      "title": "Kontodetails",
       "account": "Konto",
       "activity": "Aktivität",
       "footprint": "Nutzung",
