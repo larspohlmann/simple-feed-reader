@@ -8,10 +8,11 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
 import { AuthService } from '../core/auth.service';
 import { LanguageService } from '../core/language.service';
-import { formatDateOr, formatLongDate, relativeTime } from '../reader/format';
+import { formatDateOr, formatLongDate, relativeTime, trialDaysRemaining } from '../reader/format';
 import { ConfirmData, ConfirmDialogComponent } from '../reader/manage/confirm-dialog.component';
 import { ButtonComponent } from '../shared/button/button.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
+import { FieldComponent } from '../shared/field/field.component';
 import { IconComponent } from '../shared/icon/icon.component';
 import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
 import { SkeletonComponent } from '../shared/skeleton/skeleton.component';
@@ -27,6 +28,7 @@ import { AdminAction, AdminUserDetailDto } from './admin.models';
   imports: [
     ButtonComponent,
     ErrorBannerComponent,
+    FieldComponent,
     IconComponent,
     RouterLink,
     SettingsCardComponent,
@@ -70,6 +72,7 @@ export class AdminUserDetailComponent {
     this.api.userDetail(this.id).subscribe({
       next: (detail) => {
         this.detail.set(detail);
+        this.maxFeeds.set(detail.limits.maxSubscriptions);
         this.loading.set(false);
       },
       error: (failure: HttpErrorResponse) => {
@@ -140,6 +143,51 @@ export class AdminUserDetailComponent {
     });
     ref.closed.subscribe((confirmed) => {
       if (confirmed) this.act(action);
+    });
+  }
+
+  /** The trial's high-level state, derived from the end date and status. */
+  readonly trialState = computed<'none' | 'active' | 'expired'>(() => {
+    const endsAt = this.detail()?.limits.trialEndsAt ?? null;
+    if (endsAt === null) return 'none';
+    return trialDaysRemaining(endsAt) !== null ? 'active' : 'expired';
+  });
+
+  /** Whole days left in an active trial (0 when not active). */
+  readonly trialDaysLeft = computed(
+    () => trialDaysRemaining(this.detail()?.limits.trialEndsAt ?? null) ?? 0,
+  );
+
+  /** True when the account is suspended and its trial end date is in the past —
+   *  i.e. the suspension came from the trial, not from a manual admin action. */
+  readonly suspendedByTrial = computed(
+    () => this.detail()?.user.status === 'suspended' && this.trialState() === 'expired',
+  );
+
+  readonly trialDays = signal(14);
+  readonly maxFeeds = signal<number | null>(null);
+
+  startTrial(): void {
+    this.actionError.set(null);
+    this.api.startTrial(this.id, this.trialDays()).subscribe({
+      next: () => this.load(),
+      error: (failure: HttpErrorResponse) => this.actionError.set(parseProblem(failure)),
+    });
+  }
+
+  clearTrial(): void {
+    this.actionError.set(null);
+    this.api.clearTrial(this.id).subscribe({
+      next: () => this.load(),
+      error: (failure: HttpErrorResponse) => this.actionError.set(parseProblem(failure)),
+    });
+  }
+
+  saveMaxFeeds(): void {
+    this.actionError.set(null);
+    this.api.setSubscriptionLimit(this.id, this.maxFeeds()).subscribe({
+      next: () => this.load(),
+      error: (failure: HttpErrorResponse) => this.actionError.set(parseProblem(failure)),
     });
   }
 

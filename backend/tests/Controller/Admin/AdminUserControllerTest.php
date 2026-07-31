@@ -233,7 +233,7 @@ final class AdminUserControllerTest extends WebTestCase
             self::assertSame(
                 [
                     'id', 'email', 'status', 'roles', 'createdAt', 'approvedAt', 'identities',
-                    'feedsCount', 'tagsCount', 'lastLoginAt',
+                    'feedsCount', 'tagsCount', 'lastLoginAt', 'trialEndsAt', 'maxSubscriptions',
                 ],
                 array_keys($entry),
             );
@@ -741,6 +741,37 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertFalse($footprint['dormant']);
         self::assertSame([], $body['tags']);
         self::assertSame([], $body['subscriptions']);
+
+        $limits = $this->section($body, 'limits');
+        self::assertSame(['trialEndsAt', 'maxSubscriptions'], array_keys($limits));
+        self::assertNull($limits['trialEndsAt']);
+        self::assertNull($limits['maxSubscriptions']);
+    }
+
+    /**
+     * The non-null case for the section above: an admin-set trial and cap
+     * both reach the detail screen under their own 'limits' key, distinct
+     * from the account section that testTheDetailEndpointReturnsTheAccount...
+     * pins.
+     */
+    public function testTheDetailEndpointIncludesTrialAndSubscriptionLimits(): void
+    {
+        $admin = $this->admin();
+        $token = $this->tokenFor($admin);
+        $user = $this->factory()->create(
+            'limited@example.com',
+            trialEndsAt: new \DateTimeImmutable('2026-08-15 00:00:00'),
+            maxSubscriptions: 7,
+        );
+
+        $this->call('GET', '/api/admin/users/' . $user->getId(), $token);
+
+        self::assertResponseIsSuccessful();
+        $limits = $this->section($this->payload(), 'limits');
+
+        self::assertIsString($limits['trialEndsAt']);
+        self::assertStringStartsWith('2026-08-15T00:00:00', $limits['trialEndsAt']);
+        self::assertSame(7, $limits['maxSubscriptions']);
     }
 
     /**

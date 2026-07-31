@@ -33,6 +33,8 @@ final readonly class UserFactory
         array $roles = [],
         string $locale = 'en',
         ?\DateTimeImmutable $lastLoginAt = null,
+        ?\DateTimeImmutable $trialEndsAt = null,
+        ?int $maxSubscriptions = null,
     ): User {
         $createdAt = new \DateTimeImmutable('2026-07-01 10:00:00');
         $user = new User($email, $createdAt);
@@ -44,6 +46,9 @@ final readonly class UserFactory
         if (null !== $lastLoginAt) {
             $user->setLastLoginAt($lastLoginAt);
         }
+
+        $user->setTrialEndsAt($trialEndsAt);
+        $user->setMaxSubscriptions($maxSubscriptions);
 
         $this->em->persist($user);
         $this->em->flush();

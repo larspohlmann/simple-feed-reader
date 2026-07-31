@@ -54,4 +54,35 @@ describe('AdminApi', () => {
 
     expect(received).toEqual({ user: { id: 7 }, footprint: {}, tags: [], subscriptions: [] });
   });
+
+  it('POSTs to start a trial', () => {
+    api.startTrial(7, 14).subscribe();
+    const req = ctrl.expectOne('https://api.test/api/admin/users/7/trial');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ days: 14 });
+    req.flush({ status: 'active', trialEndsAt: '2026-08-01T00:00:00+00:00' });
+  });
+
+  it('DELETEs to clear a trial', () => {
+    api.clearTrial(7).subscribe();
+    const req = ctrl.expectOne('https://api.test/api/admin/users/7/trial');
+    expect(req.request.method).toBe('DELETE');
+    req.flush({ status: 'active', trialEndsAt: null });
+  });
+
+  it('PUTs the subscription limit', () => {
+    api.setSubscriptionLimit(7, 42).subscribe();
+    const req = ctrl.expectOne('https://api.test/api/admin/users/7/subscription-limit');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ maxSubscriptions: 42 });
+    req.flush({ maxSubscriptions: 42 });
+  });
+
+  it('PUTs a null subscription limit to clear it', () => {
+    api.setSubscriptionLimit(7, null).subscribe();
+    const req = ctrl.expectOne('https://api.test/api/admin/users/7/subscription-limit');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ maxSubscriptions: null });
+    req.flush({ maxSubscriptions: null });
+  });
 });

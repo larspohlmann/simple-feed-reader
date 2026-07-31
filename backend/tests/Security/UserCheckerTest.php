@@ -7,9 +7,12 @@ namespace App\Tests\Security;
 use App\Entity\User;
 use App\Enum\UserStatus;
 use App\Security\AccountStatusException;
+use App\Security\TrialExpiryGuard;
 use App\Security\UserChecker;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Security\Core\User\InMemoryUser;
 
 final class UserCheckerTest extends TestCase
@@ -22,11 +25,19 @@ final class UserCheckerTest extends TestCase
         return $user;
     }
 
+    private function guard(): TrialExpiryGuard
+    {
+        return new TrialExpiryGuard(
+            $this->createStub(EntityManagerInterface::class),
+            new MockClock('2026-07-21T09:00:00Z'),
+        );
+    }
+
     public function testActiveUserPasses(): void
     {
         $this->expectNotToPerformAssertions();
 
-        (new UserChecker())->checkPreAuth($this->user(UserStatus::Active));
+        (new UserChecker($this->guard()))->checkPreAuth($this->user(UserStatus::Active));
     }
 
     /** @return iterable<string, array{UserStatus}> */
@@ -43,13 +54,13 @@ final class UserCheckerTest extends TestCase
     {
         $this->expectException(AccountStatusException::class);
 
-        (new UserChecker())->checkPreAuth($this->user($status));
+        (new UserChecker($this->guard()))->checkPreAuth($this->user($status));
     }
 
     public function testTheRejectionNamesTheStatus(): void
     {
         try {
-            (new UserChecker())->checkPreAuth($this->user(UserStatus::Suspended));
+            (new UserChecker($this->guard()))->checkPreAuth($this->user(UserStatus::Suspended));
             self::fail('Expected AccountStatusException');
         } catch (AccountStatusException $exception) {
             self::assertSame('suspended', $exception->accountStatus);
@@ -60,14 +71,23 @@ final class UserCheckerTest extends TestCase
     {
         $this->expectNotToPerformAssertions();
 
-        (new UserChecker())->checkPreAuth(new InMemoryUser('someone', null));
+        (new UserChecker($this->guard()))->checkPreAuth(new InMemoryUser('someone', null));
     }
 
     public function testCheckPostAuthLeavesEveryoneAlone(): void
     {
         $this->expectNotToPerformAssertions();
 
-        (new UserChecker())->checkPostAuth($this->user(UserStatus::Suspended));
+        (new UserChecker($this->guard()))->checkPostAuth($this->user(UserStatus::Suspended));
+    }
+
+    public function testExpiredTrialIsRejectedEvenWhenStoredStatusIsStillActive(): void
+    {
+        $user = $this->user(UserStatus::Active);
+        $user->setTrialEndsAt(new \DateTimeImmutable('2026-07-20T09:00:00Z'));
+
+        $this->expectException(AccountStatusException::class);
+        (new UserChecker($this->guard()))->checkPreAuth($user);
     }
 
     /**

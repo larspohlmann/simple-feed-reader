@@ -42,6 +42,9 @@
               <span class="badge" [attr.data-s]="u.status">{{
                 'admin.status.' + u.status | transloco
               }}</span>
+              @if (trialExpired(u)) {
+                <span class="trial-expired">{{ 'admin.trialExpiredBadge' | transloco }}</span>
+              }
               @if (u.identities.length) {
                 <span class="prov">{{ u.identities.join(', ') }}</span>
               }

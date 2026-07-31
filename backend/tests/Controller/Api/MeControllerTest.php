@@ -111,4 +111,31 @@ final class MeControllerTest extends ApiTestCase
 
         self::assertResponseStatusCodeSame(401);
     }
+
+    public function testTrialEndsAtIsExposedWhenSet(): void
+    {
+        $client = static::createClient();
+        $this->factory()->create(
+            'has-trial@example.test',
+            trialEndsAt: new \DateTimeImmutable('2026-09-01T00:00:00Z'),
+        );
+        $this->authenticate($client, 'has-trial@example.test');
+
+        $client->request('GET', '/api/me');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('2026-09-01T00:00:00+00:00', $this->payload($client)['trialEndsAt']);
+    }
+
+    public function testTrialEndsAtIsNullWhenUnset(): void
+    {
+        $client = static::createClient();
+        $this->factory()->create('no-trial@example.test');
+        $this->authenticate($client, 'no-trial@example.test');
+
+        $client->request('GET', '/api/me');
+
+        self::assertResponseIsSuccessful();
+        self::assertNull($this->payload($client)['trialEndsAt']);
+    }
 }

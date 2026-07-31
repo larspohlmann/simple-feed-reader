@@ -47,6 +47,7 @@ final readonly class BulkSubscriber
         private SubscriptionTagRepository $subscriptionTags,
         private TagRepository $tags,
         private ClockInterface $clock,
+        private SubscriptionLimitResolver $subscriptionLimits,
     ) {
     }
 
@@ -93,7 +94,7 @@ final readonly class BulkSubscriber
         if (null !== $feed && $this->subscriptions->existsForUserAndFeed((int) $user->getId(), (int) $feed->getId())) {
             return $result->with(alreadySubscribed: 1);
         }
-        if ($state->existing >= SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER) {
+        if ($state->existing >= $this->subscriptionLimits->resolve($user)) {
             return $result->with(skippedOverLimit: 1);
         }
 

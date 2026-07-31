@@ -21,6 +21,7 @@ final readonly class AdminUserDetail
         public AdminUserFootprint $footprint,
         public array $tags,
         public array $subscriptions,
+        public AdminUserLimits $limits,
     ) {
     }
 }

@@ -29,6 +29,7 @@ final readonly class SubscriptionService
         private SubscriptionTagRepository $subscriptionTags,
         private EntityManagerInterface $em,
         private ClockInterface $clock,
+        private SubscriptionLimitResolver $subscriptionLimits,
     ) {
     }
 
@@ -76,8 +77,9 @@ final readonly class SubscriptionService
     private function createSubscription(User $user, string $feedUrl, string $sourceFormat, array $tags): Subscription
     {
         $userId = (int) $user->getId();
-        if ($this->subscriptions->countForUser($userId) >= self::MAX_SUBSCRIPTIONS_PER_USER) {
-            throw new SubscriptionLimitReachedException(self::MAX_SUBSCRIPTIONS_PER_USER);
+        $limit = $this->subscriptionLimits->resolve($user);
+        if ($this->subscriptions->countForUser($userId) >= $limit) {
+            throw new SubscriptionLimitReachedException($limit);
         }
 
         $feed = $this->feeds->findOneBy(['url' => $feedUrl]);

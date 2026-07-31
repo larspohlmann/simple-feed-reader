@@ -8,7 +8,7 @@ use App\Dto\Admin\UserFootprint;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Subscription\SubscriptionService;
+use App\Service\Subscription\SubscriptionLimitResolver;
 use Psr\Clock\ClockInterface;
 
 /**
@@ -28,6 +28,7 @@ final readonly class UserStatistics
 
     public function __construct(
         private ClockInterface $clock,
+        private SubscriptionLimitResolver $subscriptionLimits,
     ) {
     }
 
@@ -47,7 +48,7 @@ final readonly class UserStatistics
         return new UserFootprint(
             feedsCount: \count($subscriptions),
             tagsCount: \count($tags),
-            feedsLimit: SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER,
+            feedsLimit: $this->subscriptionLimits->resolve($user),
             staleFeedsCount: $this->countStale($subscriptions, $now),
             lastRefreshAt: $this->newestFetch($subscriptions),
             dormant: $this->isDormant($user, $now),

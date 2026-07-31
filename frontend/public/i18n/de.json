@@ -135,6 +135,7 @@
     "lastLogin": "Letzte Anmeldung",
     "neverLoggedIn": "nie",
     "openDetail": "Details ansehen",
+    "trialExpiredBadge": "Testphase abgelaufen",
     "loadingUsers": "Benutzer werden geladen",
     "loadingCatalog": "Katalog wird geladen",
     "loadingUser": "Konto wird geladen",
@@ -158,7 +159,16 @@
       "staleFeeds": "{{count}} länger nicht aktualisiert",
       "feedsOfLimit": "{{used}} von {{limit}} Feeds",
       "limits": "Limits",
-      "limitsUnset": "Keine benutzerbezogenen Limits gesetzt",
+      "trialNone": "Keine Testphase",
+      "trialActive": "Testphase endet am {{date}} (noch {{days}} Tage)",
+      "trialExpired": "Testphase am {{date}} abgelaufen",
+      "trialSuspended": "Gesperrt — Testphase am {{date}} beendet",
+      "trialDays": "Testphase (Tage)",
+      "startTrial": "Testphase starten",
+      "makePermanent": "Dauerhaft freischalten",
+      "maxFeeds": "Max. Feeds",
+      "maxFeedsDefault": "Standard ({{limit}})",
+      "saveLimit": "Speichern",
       "noTags": "Dieses Konto hat keine Tags.",
       "noFeeds": "Dieses Konto hat keine Feeds.",
       "originalTitle": "Ursprünglich",
@@ -336,7 +346,9 @@
       "dark": "Dunkel",
       "system": "System"
     },
-    "versionLabel": "Version {{version}} — Einstellungen öffnen"
+    "versionLabel": "Version {{version}} — Einstellungen öffnen",
+    "trialDaysLeft": "Testphase · noch {{days}} Tage",
+    "trialDayLeft": "Testphase · noch 1 Tag"
   },
   "common": {
     "save": "Speichern",

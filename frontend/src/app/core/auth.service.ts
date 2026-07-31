@@ -14,6 +14,7 @@ export interface CurrentUser {
   status: string;
   createdAt: string;
   locale: string;
+  trialEndsAt: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

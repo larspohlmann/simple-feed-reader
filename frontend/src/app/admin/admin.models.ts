@@ -15,6 +15,10 @@ export interface AdminUserDto {
   tagsCount: number;
   /** null means the account has never signed in. */
   lastLoginAt: string | null;
+  /** ISO 8601, or null when the account has no trial. */
+  trialEndsAt: string | null;
+  /** Per-user subscription cap, or null to use the global default. */
+  maxSubscriptions: number | null;
 }
 
 /**
@@ -40,7 +44,8 @@ export interface AdminUserAccountDto {
 export interface AdminUserFootprintDto {
   feedsCount: number;
   tagsCount: number;
-  /** The cap the subscribe path enforces today; per-user caps arrive with #66. */
+  /** The effective per-user cap: the account's own `maxSubscriptions` when
+   *  set, otherwise the global default. */
   feedsLimit: number;
   staleFeedsCount: number;
   /** Newest fetch across the account's feeds; null when it has no feeds. */
@@ -74,11 +79,23 @@ export interface AdminUserSubscriptionDto {
   tags: { id: number; name: string; color: string | null; icon: string | null }[];
 }
 
+/** The account's trial and subscription-cap overrides, as the admin detail
+ *  screen's own section — kept off {@link AdminUserAccountDto} because the
+ *  backend detail response carries it as a sibling `limits` object, not a
+ *  field on `user`. Mirrors backend `AdminUserLimits` field-for-field. */
+export interface AdminUserLimitsDto {
+  /** ISO 8601, or null when the account has no trial. */
+  trialEndsAt: string | null;
+  /** Per-user subscription cap, or null to use the global default. */
+  maxSubscriptions: number | null;
+}
+
 export interface AdminUserDetailDto {
   user: AdminUserAccountDto;
   footprint: AdminUserFootprintDto;
   tags: AdminUserTagDto[];
   subscriptions: AdminUserSubscriptionDto[];
+  limits: AdminUserLimitsDto;
 }
 
 export type AdminAction = 'approve' | 'reject' | 'suspend';

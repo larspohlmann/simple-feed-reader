@@ -79,6 +79,25 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 5, options: ['default' => 'en'])]
     private string $locale = 'en';
 
+    /**
+     * When this account's trial period ends. Null means the account has no
+     * trial and no expiry — the state of every account created before this
+     * column. App\Security\TrialExpiryGuard blocks the account (and flips its
+     * status to Suspended on the next request) once this is in the past; the
+     * date is retained after expiry so the admin can see the suspension came
+     * from the trial rather than from a manual action.
+     */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $trialEndsAt = null;
+
+    /**
+     * A per-user override of the global subscription cap. Null means "fall back
+     * to SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER" — resolved in exactly
+     * one place, App\Service\Subscription\SubscriptionLimitResolver.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?int $maxSubscriptions = null;
+
     public function __construct(string $email, \DateTimeImmutable $createdAt)
     {
         $email = self::normalizeEmail($email);
@@ -209,6 +228,26 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setLocale(string $locale): void
     {
         $this->locale = $locale;
+    }
+
+    public function getTrialEndsAt(): ?\DateTimeImmutable
+    {
+        return $this->trialEndsAt;
+    }
+
+    public function setTrialEndsAt(?\DateTimeImmutable $trialEndsAt): void
+    {
+        $this->trialEndsAt = $trialEndsAt;
+    }
+
+    public function getMaxSubscriptions(): ?int
+    {
+        return $this->maxSubscriptions;
+    }
+
+    public function setMaxSubscriptions(?int $maxSubscriptions): void
+    {
+        $this->maxSubscriptions = $maxSubscriptions;
     }
 
     /**

@@ -155,6 +155,20 @@ final class LoginTest extends WebTestCase
         self::assertSame('suspended', $this->payload($client)['accountStatus']);
     }
 
+    public function testExpiredTrialLoginIs403AndNamesSuspended(): void
+    {
+        $client = self::createClient();
+        $this->factory()->create(
+            'trial-login@example.com',
+            trialEndsAt: new \DateTimeImmutable('-1 day'),
+        );
+
+        $this->login($client, 'trial-login@example.com', 'correct-horse-battery');
+
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame('suspended', $this->payload($client)['accountStatus']);
+    }
+
     /**
      * Brute-force defence is invisible when it silently is not wired: the
      * config would still look correct. This pins that the 6th attempt inside

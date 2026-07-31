@@ -38,6 +38,32 @@ export class AdminApi {
     return this.http.get<AdminUserDetailDto>(`${this.base}/api/admin/users/${id}`);
   }
 
+  startTrial(
+    id: number,
+    days: number,
+  ): Observable<{ status: AdminUserStatus; trialEndsAt: string | null }> {
+    return this.http.post<{ status: AdminUserStatus; trialEndsAt: string | null }>(
+      `${this.base}/api/admin/users/${id}/trial`,
+      { days },
+    );
+  }
+
+  clearTrial(id: number): Observable<{ status: AdminUserStatus; trialEndsAt: string | null }> {
+    return this.http.delete<{ status: AdminUserStatus; trialEndsAt: string | null }>(
+      `${this.base}/api/admin/users/${id}/trial`,
+    );
+  }
+
+  setSubscriptionLimit(
+    id: number,
+    maxSubscriptions: number | null,
+  ): Observable<{ maxSubscriptions: number | null }> {
+    return this.http.put<{ maxSubscriptions: number | null }>(
+      `${this.base}/api/admin/users/${id}/subscription-limit`,
+      { maxSubscriptions },
+    );
+  }
+
   catalog(): Observable<{
     categories: AdminCatalogCategoryDto[];
     feeds: AdminCatalogFeedDto[];
