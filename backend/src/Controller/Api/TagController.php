@@ -15,12 +15,12 @@ use App\Http\TagJson;
 use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionTagRepository;
 use App\Repository\TagRepository;
+use App\Service\Reader\ExactSetGuard;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -32,6 +32,7 @@ final readonly class TagController
         private SubscriptionRepository $subscriptions,
         private SubscriptionTagRepository $subscriptionTags,
         private EntityManagerInterface $em,
+        private ExactSetGuard $exactSet,
     ) {
     }
 
@@ -78,7 +79,7 @@ final readonly class TagController
             $byId[(int) $tag->getId()] = $tag;
         }
 
-        $this->assertExactSet($request->tagIds, array_keys($byId), 'tagIds must list exactly your tags.');
+        $this->exactSet->assertPermutation($request->tagIds, array_keys($byId), 'tagIds must list exactly your tags.');
 
         foreach ($request->tagIds as $index => $tagId) {
             $byId[$tagId]->setPosition($index);
@@ -105,7 +106,7 @@ final readonly class TagController
             ?? throw new NotFoundHttpException('No such tag.');
 
         $joinsBySubId = $this->subscriptionTags->forTagBySubscriptionId($tag);
-        $this->assertExactSet(
+        $this->exactSet->assertPermutation(
             $request->subscriptionIds,
             array_keys($joinsBySubId),
             "subscriptionIds must list exactly this tag's feeds.",
@@ -154,26 +155,5 @@ final readonly class TagController
         $this->em->flush();
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
-    }
-
-    /**
-     * A reorder must be a permutation of the exact set it reorders — no missing,
-     * extra, or duplicate ids — otherwise the resulting positions are ambiguous.
-     *
-     * @param list<int> $requested
-     * @param list<int> $owned
-     */
-    private function assertExactSet(array $requested, array $owned, string $message): void
-    {
-        // $owned comes from map keys (unique), so once both are sorted a plain
-        // equality rejects missing ids, extras, AND duplicates in $requested.
-        $req = array_map('intval', $requested);
-        sort($req);
-        $own = array_map('intval', $owned);
-        sort($own);
-
-        if ($req !== $own) {
-            throw new UnprocessableEntityHttpException($message);
-        }
     }
 }

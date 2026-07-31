@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Service\Maintenance\MaintenanceTokenGuard;
 use App\Service\Refresh\RefreshRequest;
 use App\Service\Refresh\RefreshRunner;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,21 +18,20 @@ use Symfony\Component\Routing\Attribute\Route;
  * Actions pinger or any external cron service — there is no crontab on the
  * production host.
  */
-final class MaintenanceController
+final readonly class MaintenanceController
 {
     private const int REFRESH_BUDGET_SECONDS = 20;
 
     public function __construct(
-        #[Autowire('%env(MAINTENANCE_TOKEN)%')]
-        private readonly string $maintenanceToken,
-        private readonly RefreshRunner $refreshRunner,
+        private MaintenanceTokenGuard $tokenGuard,
+        private RefreshRunner $refreshRunner,
     ) {
     }
 
     #[Route('/maintenance/refresh', name: 'maintenance_refresh', methods: ['POST'])]
     public function refresh(Request $request): JsonResponse
     {
-        if (!$this->isAuthorized($request)) {
+        if (!$this->tokenGuard->isAuthorized($request)) {
             return new JsonResponse(['error' => 'forbidden'], Response::HTTP_FORBIDDEN);
         }
 
@@ -45,23 +44,5 @@ final class MaintenanceController
         };
 
         return new JsonResponse($report->toArray(), $status);
-    }
-
-    /**
-     * Prefer the header: a query-string token ends up in Apache access logs,
-     * proxy logs, and Referer headers. The query parameter stays supported for
-     * callers that cannot set headers, but the scheduled pinger should use the
-     * header form.
-     */
-    private function isAuthorized(Request $request): bool
-    {
-        if ($this->maintenanceToken === '') {
-            return false;
-        }
-
-        $provided = $request->headers->get('X-Maintenance-Token')
-            ?? $request->query->get('token');
-
-        return \is_string($provided) && hash_equals($this->maintenanceToken, $provided);
     }
 }
