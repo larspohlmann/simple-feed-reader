@@ -6,21 +6,19 @@ namespace App\Controller\Api;
 
 use App\Dto\OAuth\OAuthExchangeRequest;
 use App\Exception\OAuth\OAuthFailedException;
-use App\Service\OAuth\LoginCodeStore;
+use App\Service\OAuth\CallbackParameters;
+use App\Service\OAuth\FlowCookie;
 use App\Service\OAuth\OAuthProviderRegistry;
+use App\Service\OAuth\OAuthRedirectFactory;
 use App\Service\OAuth\OAuthSignIn;
 use App\Service\OAuth\OAuthStateStore;
 use App\Service\RateLimit\RateLimitGuard;
 use Psr\Cache\InvalidArgumentException;
-use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Random\RandomException;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -69,35 +67,12 @@ use Symfony\Component\Routing\Attribute\Route;
 final class OAuthController
 {
     /**
-     * The cookie that binds a flow to the browser that started it.
-     *
-     * `__Host-` is a browser-enforced prefix: a browser rejects the cookie
-     * outright unless it is `Secure`, `Path=/` and carries NO `Domain`
-     * attribute. The last of those is the security-relevant one here — with no
-     * `Domain`, no other host in the registrable domain can write this cookie
-     * into the backend's origin, so a compromised sibling cannot pin the
-     * binding to a value it knows.
-     *
-     * Public because OAuthFlowTest asserts against it. A test that hard-coded
-     * the string would keep passing if this were renamed and the cookie
-     * silently stopped being set.
+     * The name of the browser-binding cookie, re-exported from the collaborator
+     * that owns its whole lifecycle. Kept public because OAuthFlowTest asserts
+     * against it; see {@see FlowCookie::NAME} for why the `__Host-` prefix and
+     * every other attribute are load-bearing.
      */
-    public const string FLOW_COOKIE = '__Host-oauth_flow';
-
-    /**
-     * The state's life plus the login code's, because the cookie now has to
-     * survive both legs — and a session cookie would outlive them for as long
-     * as the browser stayed open.
-     *
-     * The sum is not padding. A callback may legitimately arrive in the final
-     * second of the state's ten minutes, and the code it mints then lives a
-     * further thirty; a cookie expiring with the state alone would leave that
-     * sign-in unable to exchange, failing with what looks exactly like a bad
-     * code. Computed from the two stores rather than written as a number, so
-     * changing either lifetime cannot silently reopen that gap.
-     */
-    private const int FLOW_COOKIE_LIFETIME = OAuthStateStore::LIFETIME_SECONDS
-        + LoginCodeStore::LIFETIME_SECONDS;
+    public const string FLOW_COOKIE = FlowCookie::NAME;
 
     /**
      * Bounds the `{provider}` segment to something that could plausibly name a
@@ -109,11 +84,11 @@ final class OAuthController
         private readonly OAuthProviderRegistry $providers,
         private readonly OAuthStateStore $stateStore,
         private readonly OAuthSignIn $signIn,
-        private readonly ClockInterface $clock,
         private readonly LoggerInterface $logger,
         private readonly RateLimitGuard $rateLimitGuard,
         private readonly RateLimiterFactoryInterface $oauthStartLimiter,
-        #[Autowire('%env(APP_FRONTEND_URL)%')] private readonly string $frontendUrl,
+        private readonly FlowCookie $flowCookie,
+        private readonly OAuthRedirectFactory $oauthRedirect,
     ) {
     }
 
@@ -170,7 +145,7 @@ final class OAuthController
         // nothing left to bind. Not cleared when redeeming throws: the response
         // is then the exception listener's rather than ours — and the cookie
         // expires with the flow's ten minutes regardless.
-        return $this->clearFlowCookie(new JsonResponse(['token' => $token]));
+        return $this->flowCookie->clearFrom(new JsonResponse(['token' => $token]));
     }
 
     /**
@@ -195,15 +170,15 @@ final class OAuthController
     {
         // Apple and Google both report a declined consent screen this way. It
         // is the single most common non-success outcome and is not an error.
-        if (null !== self::param($request, 'error')) {
-            return $this->failure('access_denied');
+        if (null !== CallbackParameters::read($request, 'error')) {
+            return $this->oauthRedirect->failure('access_denied');
         }
 
-        $state = self::param($request, 'state');
-        $code = self::param($request, 'code');
+        $state = CallbackParameters::read($request, 'state');
+        $code = CallbackParameters::read($request, 'code');
 
         if (null === $state || null === $code) {
-            return $this->failure('invalid_request');
+            return $this->oauthRedirect->failure('invalid_request');
         }
 
         // The binding cookie, read straight off the request. `null` when the
@@ -232,7 +207,7 @@ final class OAuthController
         // endpoint — and, worse, would let whoever chose the URL decide which
         // provider's answer is trusted for a flow they did not start.
         if (null === $started || $started->provider !== $provider) {
-            return $this->failure('invalid_state');
+            return $this->oauthRedirect->failure('invalid_state');
         }
 
         try {
@@ -246,7 +221,7 @@ final class OAuthController
                 'exception' => $e->getPrevious(),
             ]);
 
-            return $this->failure('exchange_failed');
+            return $this->oauthRedirect->failure('exchange_failed');
         }
 
         // consume() above refuses a null token outright, so reaching this line
@@ -263,11 +238,7 @@ final class OAuthController
         // Note that a suspended or pending user reaches this line too, and
         // leaves with a working code — see OAuthSignIn::issueLoginCode() for why
         // the status gate deliberately sits at the exchange instead.
-        return new RedirectResponse(\sprintf(
-            '%s/auth/callback?code=%s',
-            $this->frontendBaseUrl(),
-            urlencode($this->signIn->issueLoginCode($identity, $browserToken)),
-        ));
+        return $this->oauthRedirect->success($this->signIn->issueLoginCode($identity, $browserToken));
     }
 
     /**
@@ -314,126 +285,8 @@ final class OAuthController
         // legitimately from their own account — could spend them in somebody
         // else's browser. See OAuthStateStore's docblock for the full attack.
         \assert(null !== $state->browserToken);
-        $response->headers->setCookie($this->flowCookie($state->browserToken));
+        $response->headers->setCookie($this->flowCookie->issue($state->browserToken));
 
         return $response;
-    }
-
-    /**
-     * The flow-binding cookie, and every attribute is load-bearing.
-     *
-     * `SameSite=None` is REQUIRED, not a relaxation. Apple returns its callback
-     * as a cross-site POST (`response_mode=form_post`), and a `Lax` cookie is
-     * not sent on a cross-site POST — so `Lax` here would leave Google signing
-     * in perfectly while every Apple sign-in failed with `invalid_state`. That
-     * is the worst kind of bug to diagnose, because the code looks stricter and
-     * only half the users are affected. `None` in turn requires `Secure`.
-     *
-     * Nothing is lost by not having `SameSite` protect this cookie: it carries
-     * no authority on its own. It names no user, grants nothing, and is useful
-     * only to whoever also holds the matching unspent `state`.
-     *
-     * `Secure` on a deployment served over plain HTTP would mean the cookie is
-     * never sent and OAuth never completes — which is the correct failure, and
-     * the reason there is no flag to turn it off. Local development on
-     * `http://localhost:8000` is unaffected: browsers treat `localhost` as a
-     * trustworthy origin and accept `Secure` (and `__Host-`) cookies there.
-     * Verified in Chromium against this exact attribute string rather than
-     * assumed; Firefox has done the same since 75.
-     *
-     * `httpOnly` because no script has any reason to read it, and `raw: false`
-     * so the value is URL-encoded — belt and braces for a value that is already
-     * hex.
-     */
-    private function flowCookie(string $browserToken): Cookie
-    {
-        return Cookie::create(self::FLOW_COOKIE)
-            ->withValue($browserToken)
-            ->withExpires($this->clock->now()->getTimestamp() + self::FLOW_COOKIE_LIFETIME)
-            ->withPath('/')
-            ->withDomain(null)
-            ->withSameSite(Cookie::SAMESITE_NONE);
-    }
-
-    /**
-     * Removes the binding once it has nothing left to bind.
-     *
-     * That is every FAILURE exit from the callback, and the SUCCESS exit from
-     * the exchange — not the callback's success exit, which has just issued a
-     * login code bound to this very value. Leaving the cookie in the browser
-     * beyond that would be a durable value set by an unauthenticated endpoint
-     * and serving no purpose, which is the shape of a tracking cookie even when
-     * the contents are meaningless.
-     *
-     * The attributes must match the ones it was set with, or the browser treats
-     * this as a different cookie and clears nothing. That is the reason there
-     * is one flowCookie() and one clearFlowCookie() rather than a second
-     * binding minted at code-issue time: two set-cookie sites are two places
-     * for these six attributes to drift apart, and the drift fails silently.
-     *
-     * @template T of Response
-     *
-     * @param T $response
-     *
-     * @return T
-     */
-    private function clearFlowCookie(Response $response): Response
-    {
-        $response->headers->clearCookie(
-            self::FLOW_COOKIE,
-            '/',
-            null,
-            secure: true,
-            httpOnly: true,
-            sameSite: Cookie::SAMESITE_NONE,
-        );
-
-        return $response;
-    }
-
-    /**
-     * A redirect back to the SPA carrying a reason code instead of a session.
-     *
-     * Note what does not appear in the URL, on this path or the success path: a
-     * JWT, an authorization code, a state value, or anything else the caller
-     * supplied. `$reason` is one of a fixed set of literals in this file, and
-     * the host comes from APP_FRONTEND_URL — a deployment-time value nobody can
-     * influence over HTTP. That is what keeps this from being an open redirect
-     * that hands the attacker's page a fresh login code.
-     *
-     * Called only from callback(), which is why clearing the flow cookie
-     * belongs here: it puts the clear on all four failure exits at once, so a
-     * fifth added later cannot forget it.
-     */
-    private function failure(string $reason): RedirectResponse
-    {
-        return $this->clearFlowCookie(new RedirectResponse(\sprintf(
-            '%s/auth/callback?error=%s',
-            $this->frontendBaseUrl(),
-            urlencode($reason),
-        )));
-    }
-
-    private function frontendBaseUrl(): string
-    {
-        return rtrim($this->frontendUrl, '/');
-    }
-
-    /**
-     * Reads a callback parameter from the query string or the form body, and
-     * from nowhere else.
-     *
-     * Explicitly NOT Request::get(): that also searches the request attributes,
-     * which is where the router puts `{provider}` and `_route`. A callback
-     * parameter must come from the provider, not from the routing table, and a
-     * reader that can silently fall back to an attribute is one added route
-     * placeholder away from surprising. Blank is treated as absent, so `?code=`
-     * cannot pass a non-empty-string check by being a string.
-     */
-    private static function param(Request $request, string $name): ?string
-    {
-        $value = $request->query->get($name) ?? $request->request->get($name);
-
-        return \is_string($value) && '' !== $value ? $value : null;
     }
 }

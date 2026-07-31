@@ -40,13 +40,10 @@ final readonly class ThinControllerRule implements Rule
      * @var array<string, string>
      */
     private const array ALLOW_LIST = [
-        // #192 — the OAuth cookie and redirect lifecycle. Moved to
-        // Service/OAuth/FlowCookie and Service/OAuth/OAuthRedirectFactory.
-        'App\Controller\Api\OAuthController::flowCookie' => 'cookie lifecycle; #192',
-        'App\Controller\Api\OAuthController::clearFlowCookie' => 'cookie lifecycle; #192',
-        'App\Controller\Api\OAuthController::failure' => 'redirect assembly; #192',
-        'App\Controller\Api\OAuthController::frontendBaseUrl' => 'redirect assembly; #192',
-        'App\Controller\Api\OAuthController::param' => 'request parameter reader; #192',
+        // Empty: #186 removed every seeded violation, and no genuine
+        // trivial-single-expression helper has needed the exception yet. A new
+        // entry here must name exactly one action in exactly one controller and
+        // carry a comment justifying it under the rule above.
     ];
 
     /**
