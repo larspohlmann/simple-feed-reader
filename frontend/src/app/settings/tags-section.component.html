@@ -14,9 +14,17 @@
   } @else if (tagsStore.tags().length === 0) {
     <p class="muted">{{ 'settings.tags.none' | transloco }}</p>
   } @else {
-    <ul class="list">
+    <ul class="list" cdkDropList (cdkDropListDropped)="onTagDrop($event)">
       @for (t of tagsStore.tags(); track t.id) {
-        <li class="tag">
+        <li class="tag" cdkDrag [cdkDragData]="t">
+          <button
+            type="button"
+            class="drag-handle"
+            cdkDragHandle
+            [attr.aria-label]="'settings.tags.reorder' | transloco: { name: t.name }"
+          >
+            <app-icon name="drag_indicator" size="sm" />
+          </button>
           <span class="ident">
             <span class="dot" [style.background]="t.color || 'var(--text-muted)'"></span>
             @if (t.icon) {

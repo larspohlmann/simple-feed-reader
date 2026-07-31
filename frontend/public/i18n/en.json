@@ -36,7 +36,8 @@
       "delete": "Delete",
       "loading": "Loading tags",
       "loadFailed": "Could not load your tags.",
-      "retry": "Try again"
+      "retry": "Try again",
+      "reorder": "Reorder {{name}}"
     },
     "opml": {
       "title": "Import & export",

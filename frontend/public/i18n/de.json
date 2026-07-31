@@ -36,7 +36,8 @@
       "delete": "Löschen",
       "loading": "Tags werden geladen",
       "loadFailed": "Deine Tags konnten nicht geladen werden.",
-      "retry": "Erneut versuchen"
+      "retry": "Erneut versuchen",
+      "reorder": "{{name}} verschieben"
     },
     "opml": {
       "title": "Import & Export",

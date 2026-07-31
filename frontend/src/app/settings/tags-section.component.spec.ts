@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
+import { CdkDragDrop } from '@angular/cdk/drag-drop';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { TagsSectionComponent } from './tags-section.component';
 import { TagsStore } from '../reader/tags.store';
@@ -26,6 +27,7 @@ describe('TagsSectionComponent', () => {
   const createTag = jest.fn();
   const editTag = jest.fn();
   const deleteTag = jest.fn();
+  const reorderTags = jest.fn();
   const tagLoad = jest.fn();
   const subLoad = jest.fn();
 
@@ -33,6 +35,7 @@ describe('TagsSectionComponent', () => {
     createTag.mockReset();
     editTag.mockReset();
     deleteTag.mockReset();
+    reorderTags.mockReset();
     tagLoad.mockReset();
     subLoad.mockReset();
   });
@@ -48,7 +51,7 @@ describe('TagsSectionComponent', () => {
       providers: [
         { provide: TagsStore, useValue: { tags, loading, error, load: tagLoad } },
         { provide: SubscriptionsStore, useValue: { subscriptions, load: subLoad } },
-        { provide: ManageActions, useValue: { createTag, editTag, deleteTag } },
+        { provide: ManageActions, useValue: { createTag, editTag, deleteTag, reorderTags } },
       ],
     }).compileComponents();
 
@@ -157,5 +160,45 @@ describe('TagsSectionComponent', () => {
     expect(createTag).toHaveBeenCalled();
     expect(editTag).toHaveBeenCalledWith(tag(1, 'Tech'));
     expect(deleteTag).toHaveBeenCalledWith(tag(1, 'Tech'));
+  });
+
+  it('persists the new order when a row is dropped', async () => {
+    const { fixture } = await render();
+    tags.set([
+      { id: 1, name: 'Tech', color: null, icon: null, position: 0 },
+      { id: 2, name: 'News', color: null, icon: null, position: 1 },
+      { id: 3, name: 'Fun', color: null, icon: null, position: 2 },
+    ]);
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    component.onTagDrop({ previousIndex: 2, currentIndex: 0 } as CdkDragDrop<TagDto[]>);
+
+    const manage = TestBed.inject(ManageActions);
+    expect(manage.reorderTags).toHaveBeenCalledWith([3, 1, 2]);
+  });
+
+  it('ignores a drop that does not move the row', async () => {
+    const { fixture } = await render();
+    tags.set([
+      { id: 1, name: 'Tech', color: null, icon: null, position: 0 },
+      { id: 2, name: 'News', color: null, icon: null, position: 1 },
+    ]);
+    fixture.detectChanges();
+
+    fixture.componentInstance.onTagDrop({
+      previousIndex: 1,
+      currentIndex: 1,
+    } as CdkDragDrop<TagDto[]>);
+
+    expect(TestBed.inject(ManageActions).reorderTags).not.toHaveBeenCalled();
+  });
+
+  it('gives every row a drag handle', async () => {
+    const { fixture, el } = await render();
+    tags.set([{ id: 1, name: 'Tech', color: null, icon: null, position: 0 }]);
+    fixture.detectChanges();
+
+    expect(el.querySelectorAll('.drag-handle')).toHaveLength(1);
   });
 });

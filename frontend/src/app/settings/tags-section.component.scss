@@ -63,3 +63,27 @@
     justify-content: flex-end;
   }
 }
+
+.drag-handle {
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--text-muted);
+  cursor: grab;
+  flex: 0 0 auto;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+/* The CDK clones the row into an overlay while dragging; without a matching
+   surface the clone renders transparent over the page. */
+.tag.cdk-drag-preview {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--row-pad-comfy-y) var(--row-pad-comfy-x);
+}
