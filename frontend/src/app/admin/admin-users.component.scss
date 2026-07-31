@@ -54,7 +54,9 @@ h2 {
   gap: var(--space-1);
 }
 
-.email {
+.email-text {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -66,6 +68,33 @@ h2 {
   gap: var(--space-2);
   font-size: var(--fs-sm);
   color: var(--text-secondary);
+}
+
+.footprint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+a.email {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  max-width: 100%;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+a.email:hover .email-text {
+  text-decoration: underline;
+}
+
+.chev {
+  flex-shrink: 0;
+  color: var(--text-muted);
 }
 
 .badge {
@@ -101,24 +130,6 @@ h2 {
   .acts {
     justify-content: flex-end;
   }
-}
-
-.banner {
-  padding: var(--space-3);
-  border-radius: var(--radius);
-  background: var(--bg-danger);
-  color: var(--danger);
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.banner button {
-  background: none;
-  border: none;
-  color: var(--danger);
-  cursor: pointer;
-  text-decoration: underline;
 }
 
 .pad {

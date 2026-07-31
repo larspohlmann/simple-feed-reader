@@ -24,3 +24,14 @@ export function formatLongDate(iso: string, locale = 'en'): string {
   if (Number.isNaN(d.getTime())) return '';
   return new Intl.DateTimeFormat(locale, { dateStyle: 'long' }).format(d);
 }
+
+/**
+ * A localised long date, or an explicit fallback when there is no date at
+ * all -- the one idiom behind every "date, or 'never'" field on the admin
+ * screens (a login, a refresh, an approval). `fallback` is an
+ * already-translated string, not a key: this module has no Transloco
+ * dependency, so the caller resolves the key and passes the result in.
+ */
+export function formatDateOr(iso: string | null, locale: string, fallback: string): string {
+  return iso ? formatLongDate(iso, locale) : fallback;
+}

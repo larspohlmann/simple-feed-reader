@@ -1,11 +1,16 @@
 // src/app/admin/admin-users.component.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
 import { AuthService } from '../core/auth.service';
+import { LanguageService } from '../core/language.service';
+import { formatDateOr } from '../reader/format';
 import { ButtonComponent } from '../shared/button/button.component';
+import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
+import { IconComponent } from '../shared/icon/icon.component';
 import { SpinnerComponent } from '../shared/spinner/spinner.component';
 import { ConfirmData, ConfirmDialogComponent } from '../reader/manage/confirm-dialog.component';
 import { AdminApi } from './admin-api';
@@ -13,7 +18,14 @@ import { AdminAction, AdminUserDto, AdminUserStatus } from './admin.models';
 
 @Component({
   selector: 'app-admin-users',
-  imports: [ButtonComponent, SpinnerComponent, TranslocoPipe],
+  imports: [
+    ButtonComponent,
+    ErrorBannerComponent,
+    SpinnerComponent,
+    TranslocoPipe,
+    IconComponent,
+    RouterLink,
+  ],
   templateUrl: './admin-users.component.html',
   styleUrl: './admin-users.component.scss',
 })
@@ -22,6 +34,7 @@ export class AdminUsersComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly dialog = inject(Dialog);
   private readonly i18n = inject(TranslocoService);
+  private readonly language = inject(LanguageService);
 
   // The label for each entry comes from the `admin.status.<key>` translation key
   // ('all' for the no-filter option).
@@ -80,6 +93,24 @@ export class AdminUsersComponent implements OnInit {
 
   private isSelf(u: AdminUserDto): boolean {
     return u.id === this.selfId();
+  }
+
+  /** The active UI language drives the date format (via Intl), not `LOCALE_ID` —
+   *  Transloco switches language at runtime, and a static `LOCALE_ID` can't follow
+   *  that. Falls back to the "never" translation when the account has no login. */
+  lastLoginLabel(u: AdminUserDto): string {
+    return formatDateOr(
+      u.lastLoginAt,
+      this.language.lang(),
+      this.i18n.translate('admin.neverLoggedIn'),
+    );
+  }
+
+  /** The link's visible text stays the email address; the accessible name adds
+   *  what activating it does, since the persistent chevron affordance is
+   *  decorative-only (icons render `aria-hidden`). */
+  emailLinkLabel(u: AdminUserDto): string {
+    return `${u.email} — ${this.i18n.translate('admin.openDetail')}`;
   }
 
   canApprove(u: AdminUserDto): boolean {

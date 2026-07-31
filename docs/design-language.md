@@ -176,6 +176,16 @@ Stylelint's `media-feature-name-unit-allowed-list: { "width": [] }` forbids any
 unit inside a `width` media feature, so a literal `@media (width <= 720px)` is a
 lint failure. The variable is the only way through.
 
+### Utility classes
+
+Global, non-token CSS declared in `frontend/src/app/theme/_utilities.scss`
+(`@use`d once from `src/styles.scss`, so it applies everywhere) rather than in
+any one component's stylesheet.
+
+| Class | For |
+|---|---|
+| `.sr-only` | Visually hides an element while keeping it in the accessibility tree — for a label assistive tech must expose that has no visible slot of its own (e.g. the freshness label on the admin user-detail feed rows: `<span class="sr-only">Last refresh:</span>` before the visible date). `aria-label`/`title` on a plain element are not a substitute: ARIA forbids naming a `role=generic` node, so most screen readers ignore both attributes on a bare `<span>`/`<div>`. |
+
 ---
 
 ## 2. Component catalog
@@ -416,6 +426,37 @@ of one. `danger-outline` only *initiates* one: the Delete sitting on every row o
 a list, which opens a confirmation rather than destroying anything itself.
 Flattening the two would make every Delete in a list shout as loudly as the
 confirmation.
+
+### `<app-error-banner>`
+
+The app's one error banner: a message in a `role="alert"` region, and an
+optional single action button — retry a failed load, dismiss a failed row
+action, or neither for a plain inline failure message.
+
+| Input / output | Type | Default |
+|---|---|---|
+| `message` | `string` (required) | — |
+| `actionLabel` | `string \| null` | `null` — omits the button |
+| `action` | `output<void>` | — |
+
+```html
+@if (error()) {
+  <app-error-banner
+    [message]="error()!.detail || error()!.title"
+    [actionLabel]="'admin.retry' | transloco"
+    (action)="load()"
+  />
+}
+```
+
+`actionLabel` takes an already-translated string, not an i18n key — the
+component lives in `shared/` and must not hardcode a feature's translation
+keys (`admin.retry` / `admin.dismiss` today). Extracted in #180 when the
+markup and styles behind three admin screens' error banners had drifted into
+byte-identical copies.
+
+**Not for:** a toast or a non-blocking notification — this is a static block
+that occupies layout where it renders, not an overlay.
 
 ---
 

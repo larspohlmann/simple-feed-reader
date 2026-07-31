@@ -7,6 +7,7 @@ import {
   AdminAction,
   AdminCatalogCategoryDto,
   AdminCatalogFeedDto,
+  AdminUserDetailDto,
   AdminUserDto,
   AdminUserStatus,
   BundledCatalogInfo,
@@ -31,6 +32,10 @@ export class AdminApi {
       `${this.base}/api/admin/users/${id}/${action}`,
       {},
     );
+  }
+
+  userDetail(id: number): Observable<AdminUserDetailDto> {
+    return this.http.get<AdminUserDetailDto>(`${this.base}/api/admin/users/${id}`);
   }
 
   catalog(): Observable<{

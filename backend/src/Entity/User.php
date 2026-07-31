@@ -41,6 +41,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?\DateTimeImmutable $approvedAt = null;
 
     /**
+     * When this account last had a token issued to it. Null means "never
+     * signed in", which the admin list renders as such and the dormancy rule
+     * treats as an account that was created and then abandoned.
+     */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $lastLoginAt = null;
+
+    /**
      * When the password hash last changed. This is what binds an issued JWT to
      * a password, and it exists because nothing else did.
      *
@@ -181,6 +189,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setApprovedAt(?\DateTimeImmutable $approvedAt): void
     {
         $this->approvedAt = $approvedAt;
+    }
+
+    public function getLastLoginAt(): ?\DateTimeImmutable
+    {
+        return $this->lastLoginAt;
+    }
+
+    public function setLastLoginAt(\DateTimeImmutable $lastLoginAt): void
+    {
+        $this->lastLoginAt = $lastLoginAt;
     }
 
     public function getLocale(): string

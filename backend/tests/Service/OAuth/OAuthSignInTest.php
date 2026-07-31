@@ -97,6 +97,27 @@ final class OAuthSignInTest extends DbTestCase
         self::assertCount(3, explode('.', $token));
     }
 
+    /**
+     * Proves App\EventListener\StampLastLoginOnTokenIssue actually fires on
+     * this path: redeemLoginCode() mints the token through the real
+     * JwtManager/dispatcher, exactly as the HTTP endpoint does, so a direct
+     * call to the listener could never stand in for this.
+     */
+    public function testRedeemingTheCodeStampsTheAccountsLastLoginAt(): void
+    {
+        $user = $this->persistUser('bob@example.com', UserStatus::Active);
+        self::assertNull($user->getLastLoginAt());
+        $signIn = $this->signIn();
+        $code = $signIn->issueLoginCode($this->identity(), self::BROWSER);
+
+        $signIn->redeemLoginCode($code, self::BROWSER);
+
+        $this->em->clear();
+        $reloaded = $this->findUser('bob@example.com');
+        self::assertInstanceOf(User::class, $reloaded);
+        self::assertNotNull($reloaded->getLastLoginAt());
+    }
+
     public function testALoginCodeCannotBeUsedTwice(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);

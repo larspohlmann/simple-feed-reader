@@ -32,6 +32,7 @@ final readonly class UserFactory
         UserStatus $status = UserStatus::Active,
         array $roles = [],
         string $locale = 'en',
+        ?\DateTimeImmutable $lastLoginAt = null,
     ): User {
         $createdAt = new \DateTimeImmutable('2026-07-01 10:00:00');
         $user = new User($email, $createdAt);
@@ -39,6 +40,10 @@ final readonly class UserFactory
         $user->setRoles($roles);
         $user->setLocale($locale);
         $user->setPasswordHash($this->hasher->hashPassword($user, $password), $createdAt);
+
+        if (null !== $lastLoginAt) {
+            $user->setLastLoginAt($lastLoginAt);
+        }
 
         $this->em->persist($user);
         $this->em->flush();

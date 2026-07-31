@@ -42,7 +42,7 @@ final readonly class SubscriptionController
     public function list(#[CurrentUser] User $user): JsonResponse
     {
         $rows = $this->subscriptionRepo->findForUserWithTags((int) $user->getId());
-        $counts = $this->subscriptionRepo->unreadCountsForUser((int) $user->getId());
+        $counts = $this->entryStates->unreadCountsForUser((int) $user->getId());
         $flags = $this->entryStates->favoriteAndKeptCountsForUser((int) $user->getId());
 
         return new JsonResponse([

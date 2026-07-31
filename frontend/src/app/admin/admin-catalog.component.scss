@@ -63,24 +63,6 @@ h2 {
   font-size: var(--fs-sm);
 }
 
-.banner {
-  padding: var(--space-3);
-  border-radius: var(--radius);
-  background: var(--bg-danger);
-  color: var(--danger);
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.banner button {
-  background: none;
-  border: none;
-  color: var(--danger);
-  cursor: pointer;
-  text-decoration: underline;
-}
-
 .pad {
   padding: var(--space-5);
   text-align: center;

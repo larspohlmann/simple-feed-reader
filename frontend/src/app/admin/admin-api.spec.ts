@@ -43,4 +43,15 @@ describe('AdminApi', () => {
     expect(req.request.method).toBe('POST');
     req.flush({ status: 'active' });
   });
+
+  it('reads one user from the detail endpoint', () => {
+    let received: unknown = null;
+    api.userDetail(7).subscribe((detail) => (received = detail));
+
+    const req = ctrl.expectOne('https://api.test/api/admin/users/7');
+    expect(req.request.method).toBe('GET');
+    req.flush({ user: { id: 7 }, footprint: {}, tags: [], subscriptions: [] });
+
+    expect(received).toEqual({ user: { id: 7 }, footprint: {}, tags: [], subscriptions: [] });
+  });
 });

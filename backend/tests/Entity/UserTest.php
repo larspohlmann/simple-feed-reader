@@ -72,4 +72,22 @@ final class UserTest extends DbTestCase
         $this->expectException(UniqueConstraintViolationException::class);
         $this->em->flush();
     }
+
+    public function testANewAccountHasNeverLoggedIn(): void
+    {
+        $user = new User('nobody@example.com', new \DateTimeImmutable('2026-07-01 10:00:00'));
+
+        // null is the "never" the admin UI renders — not epoch, not createdAt.
+        self::assertNull($user->getLastLoginAt());
+    }
+
+    public function testTheLastLoginStampIsRecorded(): void
+    {
+        $user = new User('nobody@example.com', new \DateTimeImmutable('2026-07-01 10:00:00'));
+        $stamp = new \DateTimeImmutable('2026-07-30 08:15:00');
+
+        $user->setLastLoginAt($stamp);
+
+        self::assertEquals($stamp, $user->getLastLoginAt());
+    }
 }

@@ -9,15 +9,15 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Repository\SubscriptionRepository;
+use App\Repository\EntryStateRepository;
 use App\Tests\DbTestCase;
 
 final class UnreadCountsTest extends DbTestCase
 {
-    private function repo(): SubscriptionRepository
+    private function repo(): EntryStateRepository
     {
-        $repo = $this->em->getRepository(Subscription::class);
-        self::assertInstanceOf(SubscriptionRepository::class, $repo);
+        $repo = $this->em->getRepository(EntryState::class);
+        self::assertInstanceOf(EntryStateRepository::class, $repo);
 
         return $repo;
     }

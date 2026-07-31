@@ -10,6 +10,75 @@ export interface AdminUserDto {
   createdAt: string;
   approvedAt: string | null;
   identities: string[];
+  /** How many feeds this account subscribes to. */
+  feedsCount: number;
+  tagsCount: number;
+  /** null means the account has never signed in. */
+  lastLoginAt: string | null;
+}
+
+/**
+ * The account identity fields on the admin detail screen. A narrower sibling
+ * of {@link AdminUserDto}, not an extension of it: the detail endpoint's
+ * `user` object carries `locale` but not the list row's `feedsCount` /
+ * `tagsCount` — those live on {@link AdminUserFootprintDto} instead. Mirrors
+ * backend `AdminUserAccount` field-for-field.
+ */
+export interface AdminUserAccountDto {
+  id: number;
+  email: string;
+  status: AdminUserStatus;
+  roles: string[];
+  locale: string;
+  createdAt: string;
+  approvedAt: string | null;
+  /** null means the account has never signed in. */
+  lastLoginAt: string | null;
+  identities: string[];
+}
+
+export interface AdminUserFootprintDto {
+  feedsCount: number;
+  tagsCount: number;
+  /** The cap the subscribe path enforces today; per-user caps arrive with #66. */
+  feedsLimit: number;
+  staleFeedsCount: number;
+  /** Newest fetch across the account's feeds; null when it has no feeds. */
+  lastRefreshAt: string | null;
+  dormant: boolean;
+}
+
+export interface AdminUserTagDto {
+  id: number;
+  name: string;
+  color: string | null;
+  icon: string | null;
+  position: number;
+  /** How many of this account's feeds carry the tag. */
+  feedsCount: number;
+}
+
+export interface AdminUserSubscriptionDto {
+  id: number;
+  /** The feed's own title; null until the first successful fetch. */
+  title: string | null;
+  customTitle: string | null;
+  url: string;
+  position: number;
+  createdAt: string;
+  /** null when the underlying feed has never been fetched. */
+  lastFetchedAt: string | null;
+  /** Carries `icon` alongside `color` so a subscription's tag chips render the
+   *  same glyph the account's own tag list shows for it, rather than falling
+   *  back to a plain colour dot. */
+  tags: { id: number; name: string; color: string | null; icon: string | null }[];
+}
+
+export interface AdminUserDetailDto {
+  user: AdminUserAccountDto;
+  footprint: AdminUserFootprintDto;
+  tags: AdminUserTagDto[];
+  subscriptions: AdminUserSubscriptionDto[];
 }
 
 export type AdminAction = 'approve' | 'reject' | 'suspend';

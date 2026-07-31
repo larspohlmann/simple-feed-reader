@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Entity\Entry;
-use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -139,44 +136,6 @@ class SubscriptionRepository extends ServiceEntityRepository
     }
 
     /**
-     * Unread entry counts keyed by subscription id, in one query across all the
-     * user's subscriptions. Unread = no explicit state and above the watermark,
-     * OR an explicit isRead=false row. Subscriptions with zero unread are absent
-     * from the map (the caller defaults them to 0).
-     *
-     * @return array<int, int>
-     */
-    public function unreadCountsForUser(int $userId): array
-    {
-        /** @var list<array{subscriptionId: int, unreadCount: int}> $rows */
-        $rows = $this->getEntityManager()->createQuery(sprintf(
-            'SELECT s.id AS subscriptionId, COUNT(e.id) AS unreadCount
-             FROM %s s
-             JOIN %s e ON e.feed = s.feed
-             LEFT JOIN %s es ON es.entry = e AND es.user = s.user
-             WHERE s.user = :user AND (
-                 es.isRead = :false
-                 OR (es.isRead IS NULL AND (s.markedReadUntil IS NULL
-                     OR COALESCE(e.publishedAt, e.createdAt) > s.markedReadUntil))
-             )
-             GROUP BY s.id',
-            Subscription::class,
-            Entry::class,
-            EntryState::class,
-        ))
-            ->setParameter('user', $userId)
-            ->setParameter('false', false, Types::BOOLEAN)
-            ->getResult();
-
-        $map = [];
-        foreach ($rows as $row) {
-            $map[(int) $row['subscriptionId']] = (int) $row['unreadCount'];
-        }
-
-        return $map;
-    }
-
-    /**
      * Subscriptions carrying a given tag — used to detach the tag before it is
      * deleted (portable: does not rely on join-table FK cascade behaviour).
      *
@@ -192,5 +151,42 @@ class SubscriptionRepository extends ServiceEntityRepository
             ->getResult();
 
         return $rows;
+    }
+
+    /**
+     * How many feeds each of the given users is subscribed to, in ONE query.
+     *
+     * A user with no subscriptions is absent from the result rather than
+     * present with a zero — GROUP BY has no row to return for them — so
+     * callers must default a miss to 0. The obvious per-user countForUser()
+     * loop would be an N+1 that no assertion on the response body could catch,
+     * which is why AdminUserControllerTest counts the queries.
+     *
+     * @param list<int> $userIds
+     *
+     * @return array<int, int>
+     */
+    public function countsByUserIds(array $userIds): array
+    {
+        // An empty IN () is a syntax error on both engines, and there is
+        // nothing to ask about anyway.
+        if ([] === $userIds) {
+            return [];
+        }
+
+        /** @var list<array{userId: int|string, total: int|string}> $rows */
+        $rows = $this->createQueryBuilder('s')
+            ->select('IDENTITY(s.user) AS userId', 'COUNT(s.id) AS total')
+            ->andWhere('s.user IN (:userIds)')->setParameter('userIds', $userIds)
+            ->groupBy('s.user')
+            ->getQuery()
+            ->getResult();
+
+        $counts = [];
+        foreach ($rows as $row) {
+            $counts[(int) $row['userId']] = (int) $row['total'];
+        }
+
+        return $counts;
     }
 }
