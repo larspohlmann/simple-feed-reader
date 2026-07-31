@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Admin;
 
+use App\Entity\Feed;
+use App\Entity\Subscription;
+use App\Entity\Tag;
 use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Enum\UserStatus;
@@ -102,6 +105,29 @@ final class AdminUserControllerTest extends WebTestCase
         /** @var EntityManagerInterface $em */
         $em = self::getContainer()->get(EntityManagerInterface::class);
         $em->persist(new UserIdentity($user, $provider, $providerUserId, new \DateTimeImmutable()));
+        $em->flush();
+    }
+
+    /**
+     * Gives the user real subscriptions and tags — deliberately different
+     * counts, so a field swap between the two batched reads fails as loudly as
+     * a keying miss does.
+     */
+    private function seedFootprint(User $user, int $subscriptionCount, int $tagCount): void
+    {
+        /** @var EntityManagerInterface $em */
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+
+        for ($i = 0; $i < $subscriptionCount; ++$i) {
+            $feed = new Feed(sprintf('https://example.com/footprint-%d-%d.xml', (int) $user->getId(), $i));
+            $em->persist($feed);
+            $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
+        }
+
+        for ($i = 0; $i < $tagCount; ++$i) {
+            $em->persist(new Tag($user, sprintf('footprint-tag-%d-%d', (int) $user->getId(), $i)));
+        }
+
         $em->flush();
     }
 
@@ -544,19 +570,36 @@ final class AdminUserControllerTest extends WebTestCase
         $admin = $this->admin();
         $token = $this->tokenFor($admin);
 
-        $this->factory()->create(
+        $user = $this->factory()->create(
             'busy@example.com',
             lastLoginAt: new \DateTimeImmutable('2026-07-29 09:00:00'),
         );
+        // 2 and 3, not equal and not zero: a keying miss reports 0/0 and a
+        // swapped feedsCount/tagsCount reports 3/2, so both fail loudly.
+        $this->seedFootprint($user, subscriptionCount: 2, tagCount: 3);
 
         $this->call('GET', self::LIST, $token);
 
         self::assertResponseIsSuccessful();
         $row = $this->rowFor('busy@example.com');
-        self::assertSame(0, $row['feedsCount']);
-        self::assertSame(0, $row['tagsCount']);
+        self::assertSame(2, $row['feedsCount']);
+        self::assertSame(3, $row['tagsCount']);
         self::assertIsString($row['lastLoginAt']);
         self::assertStringStartsWith('2026-07-29T09:00:00', $row['lastLoginAt']);
+    }
+
+    public function testAUserWithNoFeedsOrTagsReportsZeroForBoth(): void
+    {
+        $admin = $this->admin();
+        $token = $this->tokenFor($admin);
+        $this->factory()->create('fresh@example.com');
+
+        $this->call('GET', self::LIST, $token);
+
+        self::assertResponseIsSuccessful();
+        $row = $this->rowFor('fresh@example.com');
+        self::assertSame(0, $row['feedsCount']);
+        self::assertSame(0, $row['tagsCount']);
     }
 
     public function testAnAccountThatNeverSignedInReportsANullStamp(): void
@@ -571,35 +614,58 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertNull($this->rowFor('fresh@example.com')['lastLoginAt']);
     }
 
-    public function testTheFootprintCountsCostOneQueryEachHoweverManyUsersAreListed(): void
+    /**
+     * Pins the property, not a magic number: the same request costs the same
+     * number of footprint reads whether it lists a handful of users or a
+     * dozen. A fixed assertCount(1, ...) at one fixture size cannot tell "one
+     * query, however many users" apart from "one query, because there happen
+     * to be exactly this many users" — asserting equality across two sizes
+     * can.
+     */
+    public function testTheFootprintCountsCostTheSameNumberOfQueriesHoweverManyUsersAreListed(): void
     {
         $admin = $this->admin();
         $token = $this->tokenFor($admin);
 
-        for ($i = 0; $i < 8; ++$i) {
-            $this->factory()->create(\sprintf('counted%d@example.com', $i));
-        }
+        $smallReads = $this->footprintReadCountsAfterListing($token, additionalUsers: 3);
+        $largeReads = $this->footprintReadCountsAfterListing($token, additionalUsers: 12);
 
-        /** @var QueryRecorder $recorder */
-        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
-        $recorder->reset();
+        self::assertSame(
+            $smallReads,
+            $largeReads,
+            'the batched feed/tag reads must not grow with the number of listed users',
+        );
+    }
+
+    /**
+     * Adds $additionalUsers fresh users, lists them all, and returns how many
+     * queries touched each footprint table.
+     *
+     * The recorder is fetched AFTER the request, not before. Every request
+     * reboots the kernel, and DoctrineBundle builds a brand new
+     * QueryRecorder instance — already empty of any earlier request's
+     * queries — for the rebooted container. A reference fetched and reset()
+     * beforehand is bound to the PREVIOUS boot and records nothing for the
+     * request that follows it.
+     *
+     * @return array{feeds: int, tags: int}
+     */
+    private function footprintReadCountsAfterListing(string $token, int $additionalUsers): array
+    {
+        for ($i = 0; $i < $additionalUsers; ++$i) {
+            $this->factory()->create(\sprintf('counted%d-%d@example.com', $additionalUsers, $i));
+        }
 
         $this->call('GET', self::LIST, $token);
 
         self::assertResponseIsSuccessful();
 
-        $feedReads = $recorder->queriesMatching('from subscription');
-        self::assertCount(
-            1,
-            $feedReads,
-            "the feed count must be one batched read, got:\n" . implode("\n", $feedReads),
-        );
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
 
-        $tagReads = $recorder->queriesMatching('from tag');
-        self::assertCount(
-            1,
-            $tagReads,
-            "the tag count must be one batched read, got:\n" . implode("\n", $tagReads),
-        );
+        return [
+            'feeds' => \count($recorder->queriesMatching('from subscription')),
+            'tags' => \count($recorder->queriesMatching('from tag')),
+        ];
     }
 }

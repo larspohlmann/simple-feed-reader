@@ -67,10 +67,11 @@ class EntryStateRepository extends ServiceEntityRepository
      * OR an explicit isRead=false row. Subscriptions with zero unread are absent
      * from the map (the caller defaults them to 0).
      *
-     * Lives here rather than on SubscriptionRepository: the subject of the query
-     * is read state, and it already shares this class's pattern of joining
-     * Subscription in purely to scope the result to the user's live feeds — see
-     * favoriteAndKeptCountsForUser() above.
+     * Lives here rather than on SubscriptionRepository because its subject is
+     * read state, not the subscription itself — it happens to be rooted on
+     * Subscription with EntryState LEFT JOINed in (the opposite shape from
+     * favoriteAndKeptCountsForUser() above, which is why it cannot be built
+     * with $this->createQueryBuilder() the way that method is).
      *
      * @return array<int, int>
      */

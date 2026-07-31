@@ -55,10 +55,10 @@ final readonly class AdminUserController
         $users = $this->users->findForAdminList($statuses);
         $providersByUserId = $this->providersByUserId($users);
 
-        $userIds = array_values(array_filter(array_map(
-            static fn (User $user): ?int => $user->getId(),
-            $users,
-        )));
+        $userIds = array_values(array_filter(
+            array_map(static fn (User $user): ?int => $user->getId(), $users),
+            static fn (?int $id): bool => null !== $id,
+        ));
         $feedCounts = $this->subscriptions->countsByUserIds($userIds);
         $tagCounts = $this->tags->countsByUserIds($userIds);
 
