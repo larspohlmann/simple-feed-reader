@@ -33,7 +33,10 @@
       "feedCountOne": "{{count}} feed",
       "feedCountOther": "{{count}} feeds",
       "edit": "Edit",
-      "delete": "Delete"
+      "delete": "Delete",
+      "loading": "Loading tags",
+      "loadFailed": "Could not load your tags.",
+      "retry": "Try again"
     },
     "opml": {
       "title": "Import & export",

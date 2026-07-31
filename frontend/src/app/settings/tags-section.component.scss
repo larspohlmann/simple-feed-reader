@@ -1,17 +1,5 @@
 @use '../theme/breakpoints' as bp;
 
-.head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-3);
-}
-
-h2 {
-  font-size: var(--fs-lg);
-  margin: 0;
-}
-
 .muted {
   color: var(--text-muted);
 }
@@ -31,9 +19,6 @@ h2 {
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--row-pad-comfy-y) var(--row-pad-comfy-x);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-1);
 }
 
 .ident {
