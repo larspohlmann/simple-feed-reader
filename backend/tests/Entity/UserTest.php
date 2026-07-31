@@ -90,4 +90,38 @@ final class UserTest extends DbTestCase
 
         self::assertEquals($stamp, $user->getLastLoginAt());
     }
+
+    private function trialUser(): User
+    {
+        return new User('reader@example.com', new \DateTimeImmutable('2026-07-01 10:00:00'));
+    }
+
+    public function testTrialEndsAtDefaultsToNull(): void
+    {
+        self::assertNull($this->trialUser()->getTrialEndsAt());
+    }
+
+    public function testTrialEndsAtRoundTrips(): void
+    {
+        $user = $this->trialUser();
+        $ends = new \DateTimeImmutable('2026-08-01 10:00:00');
+        $user->setTrialEndsAt($ends);
+        self::assertSame($ends, $user->getTrialEndsAt());
+        $user->setTrialEndsAt(null);
+        self::assertNull($user->getTrialEndsAt());
+    }
+
+    public function testMaxSubscriptionsDefaultsToNull(): void
+    {
+        self::assertNull($this->trialUser()->getMaxSubscriptions());
+    }
+
+    public function testMaxSubscriptionsRoundTrips(): void
+    {
+        $user = $this->trialUser();
+        $user->setMaxSubscriptions(25);
+        self::assertSame(25, $user->getMaxSubscriptions());
+        $user->setMaxSubscriptions(null);
+        self::assertNull($user->getMaxSubscriptions());
+    }
 }
