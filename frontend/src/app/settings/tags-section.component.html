@@ -7,7 +7,7 @@
     <app-skeleton [label]="'settings.tags.loading' | transloco" [rows]="4" />
   } @else if (tagsStore.error(); as problem) {
     <app-error-banner
-      [message]="problem.detail || problem.title"
+      [message]="problem.detail || problem.title || ('settings.tags.loadFailed' | transloco)"
       [actionLabel]="'settings.tags.retry' | transloco"
       (action)="tagsStore.load()"
     />

@@ -98,6 +98,28 @@ describe('TagsSectionComponent', () => {
     expect(el.textContent).not.toContain(en.settings.tags.none);
   });
 
+  it('falls back to the generic message when the problem carries no title or detail', async () => {
+    const { fixture, el } = await render();
+    error.set({ type: 'about:blank', title: '', status: 500 });
+    fixture.detectChanges();
+
+    expect(el.textContent).toContain(en.settings.tags.loadFailed);
+  });
+
+  it('renders the section inside the shared settings card', async () => {
+    const { el } = await render();
+
+    expect(el.querySelector('app-settings-card')).not.toBeNull();
+  });
+
+  it('projects the New tag button into the card actions slot', async () => {
+    const { el } = await render();
+
+    const card = el.querySelector('app-settings-card');
+    expect(card).not.toBeNull();
+    expect(card!.querySelector('header.head .new')).not.toBeNull();
+  });
+
   it('loads tags and subscriptions on init', async () => {
     await render([]);
     expect(tagLoad).toHaveBeenCalled();
