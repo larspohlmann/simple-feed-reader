@@ -15,14 +15,11 @@ const user: CurrentUser = {
 describe('AccountSectionComponent', () => {
   const logout = jest.fn();
 
-  function mount(u: CurrentUser | null, admin = false) {
+  function mount(u: CurrentUser | null) {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
-      providers: [
-        provideRouter([]),
-        { provide: AuthService, useValue: { user: () => u, isAdmin: () => admin, logout } },
-      ],
+      providers: [provideRouter([]), { provide: AuthService, useValue: { user: () => u, logout } }],
     });
     const f = TestBed.createComponent(AccountSectionComponent);
     f.detectChanges();
@@ -36,14 +33,5 @@ describe('AccountSectionComponent', () => {
     expect((f.nativeElement as HTMLElement).textContent).toContain('me@x');
     (f.nativeElement.querySelector('.signout') as HTMLButtonElement).click();
     expect(logout).toHaveBeenCalled();
-  });
-
-  it('shows an Admin link only for admins', () => {
-    expect(
-      (mount(user, false).nativeElement as HTMLElement).querySelector('a[href="/admin/users"]'),
-    ).toBeNull();
-    expect(
-      (mount(user, true).nativeElement as HTMLElement).querySelector('a[href="/admin/users"]'),
-    ).not.toBeNull();
   });
 });

@@ -1,8 +1,6 @@
 // src/app/settings/account-section.component.ts
 import { Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { IconComponent } from '../shared/icon/icon.component';
 import { UserAvatarComponent } from '../shared/user-avatar/user-avatar.component';
 import { AuthService } from '../core/auth.service';
 import { LanguageService } from '../core/language.service';
@@ -11,7 +9,7 @@ import { ButtonComponent } from '../shared/button/button.component';
 
 @Component({
   selector: 'app-account-section',
-  imports: [ButtonComponent, RouterLink, IconComponent, TranslocoPipe, UserAvatarComponent],
+  imports: [ButtonComponent, TranslocoPipe, UserAvatarComponent],
   templateUrl: './account-section.component.html',
   styleUrl: './account-section.component.scss',
 })

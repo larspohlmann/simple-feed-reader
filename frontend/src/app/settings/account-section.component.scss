@@ -35,17 +35,6 @@ dd {
   color: var(--text-primary);
 }
 
-.admin {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--accent);
-  text-decoration: none;
-  margin-bottom: var(--space-3);
-}
-
-// Its own line under the admin links, which are inline-flex and would
-// otherwise sit beside it; still only as wide as its label.
 .signout {
   display: flex;
   width: fit-content;

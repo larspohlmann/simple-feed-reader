@@ -634,7 +634,7 @@ describe('ReaderShellComponent', () => {
         '[data-testid="catalog-empty-warning"]',
       );
       expect(warning).not.toBeNull();
-      expect(warning!.querySelector('a')!.getAttribute('href')).toBe('/admin/catalog');
+      expect(warning!.querySelector('a')!.getAttribute('href')).toBe('/settings/admin/catalog');
     });
 
     it('shows an admin no warning once a catalog exists', async () => {

@@ -19,15 +19,21 @@ describe('TagsSectionComponent', () => {
   const editTag = jest.fn();
   const deleteTag = jest.fn();
 
+  const tagLoad = jest.fn();
+  const subLoad = jest.fn();
+
   function mount(tags: TagDto[], subs: SubscriptionDto[] = []) {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
         {
           provide: TagsStore,
-          useValue: { tags: () => tags, loading: () => false, error: () => null },
+          useValue: { load: tagLoad, tags: () => tags, loading: () => false, error: () => null },
         },
-        { provide: SubscriptionsStore, useValue: { subscriptions: () => subs } },
+        {
+          provide: SubscriptionsStore,
+          useValue: { load: subLoad, subscriptions: () => subs },
+        },
         { provide: ManageActions, useValue: { createTag, editTag, deleteTag } },
       ],
     });
@@ -40,6 +46,14 @@ describe('TagsSectionComponent', () => {
     createTag.mockReset();
     editTag.mockReset();
     deleteTag.mockReset();
+    tagLoad.mockReset();
+    subLoad.mockReset();
+  });
+
+  it('loads tags and subscriptions on init', () => {
+    mount([]);
+    expect(tagLoad).toHaveBeenCalled();
+    expect(subLoad).toHaveBeenCalled();
   });
 
   it('lists tags and a feed-usage count', () => {

@@ -1,5 +1,5 @@
 // src/app/settings/tags-section.component.ts
-import { Component, computed, inject } from '@angular/core';
+import { Component, OnInit, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../shared/icon/icon.component';
 import { TagsStore } from '../reader/tags.store';
@@ -13,7 +13,7 @@ import { ButtonComponent } from '../shared/button/button.component';
   templateUrl: './tags-section.component.html',
   styleUrl: './tags-section.component.scss',
 })
-export class TagsSectionComponent {
+export class TagsSectionComponent implements OnInit {
   readonly tagsStore = inject(TagsStore);
   private readonly subs = inject(SubscriptionsStore);
   readonly manage = inject(ManageActions);
@@ -26,4 +26,11 @@ export class TagsSectionComponent {
     }
     return map;
   });
+
+  ngOnInit(): void {
+    // The deleted SettingsComponent used to preload these for all sections;
+    // with per-route sections, the one section that needs them loads them.
+    this.tagsStore.load();
+    this.subs.load();
+  }
 }
