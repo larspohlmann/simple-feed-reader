@@ -3,7 +3,12 @@ import { signal } from '@angular/core';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { AboutSectionComponent } from './about-section.component';
 import { ReleaseVersion, VersionService } from '../core/version.service';
+import { LanguageService } from '../core/language.service';
 import { buildVersion } from '../../environments/version';
+
+// LanguageService now depends on AuthService (for the account write-through) —
+// stub it so this test doesn't need the HttpClient chain.
+const language = { lang: signal<'en' | 'de'>('en') };
 
 describe('AboutSectionComponent', () => {
   const bakedIn = { ...buildVersion };
@@ -18,6 +23,7 @@ describe('AboutSectionComponent', () => {
           provide: VersionService,
           useValue: { load, apiVersion: signal(api), unavailable: signal(unavailable) },
         },
+        { provide: LanguageService, useValue: language },
       ],
     });
     const f = TestBed.createComponent(AboutSectionComponent);

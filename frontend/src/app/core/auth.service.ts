@@ -12,6 +12,7 @@ export interface CurrentUser {
   roles: string[];
   status: string;
   createdAt: string;
+  locale: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -31,6 +32,12 @@ export class AuthService {
 
   loadMe(): Observable<CurrentUser> {
     return this.http.get<CurrentUser>(`${this.base}/api/me`).pipe(tap((u) => this.user.set(u)));
+  }
+
+  updateLocale(locale: string): Observable<CurrentUser> {
+    return this.http
+      .patch<CurrentUser>(`${this.base}/api/me`, { locale })
+      .pipe(tap((u) => this.user.set(u)));
   }
 
   logout(): void {

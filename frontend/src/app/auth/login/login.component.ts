@@ -6,6 +6,7 @@ import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { API_BASE_URL } from '../../core/api';
 import { AuthService } from '../../core/auth.service';
+import { LanguageService } from '../../core/language.service';
 import { parseProblem } from '../../core/problem';
 import { adoptAutofilledValues } from '../autofill';
 import { AuthShellComponent } from '../auth-shell/auth-shell.component';
@@ -30,6 +31,7 @@ import { FieldComponent } from '../../shared/field/field.component';
 export class LoginComponent implements OnInit {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly auth = inject(AuthService);
+  private readonly language = inject(LanguageService);
   private readonly http = inject(HttpClient);
   private readonly base = inject(API_BASE_URL);
   private readonly router = inject(Router);
@@ -71,7 +73,10 @@ export class LoginComponent implements OnInit {
     this.auth.login(email, password).subscribe({
       next: () =>
         this.auth.loadMe().subscribe({
-          next: () => void this.router.navigate(['/']),
+          next: (user) => {
+            this.language.adopt(user.locale);
+            void this.router.navigate(['/']);
+          },
           error: () => void this.router.navigate(['/']),
         }),
       error: (e: HttpErrorResponse) => {

@@ -47,10 +47,18 @@ describe('OAuthCallbackComponent', () => {
     expect(req.request.body).toEqual({ code: 'one-time' });
     req.flush({ token: 'jwt-oauth' });
     expect(tokens.token()).toBe('jwt-oauth');
-    ctrl
-      .expectOne('https://api.test/api/me')
-      .flush({ id: 1, email: 'a@b.c', roles: [], status: 'active', createdAt: 'x' });
+    ctrl.expectOne('https://api.test/api/me').flush({
+      id: 1,
+      email: 'a@b.c',
+      roles: [],
+      status: 'active',
+      createdAt: 'x',
+      locale: 'de',
+    });
     expect(navigate).toHaveBeenCalledWith(['/']);
+    // Proves the account's locale, not the cached one, drives the UI after login.
+    expect(document.documentElement.lang).toBe('de');
+    expect(localStorage.getItem('sfr.lang')).toBe('de');
   });
 
   it('shows the error and does not call exchange when the provider returned ?error', () => {

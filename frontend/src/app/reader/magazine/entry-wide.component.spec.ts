@@ -1,8 +1,14 @@
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { EntryWideComponent } from './entry-wide.component';
+import { LanguageService } from '../../core/language.service';
 import { EntryDto } from '../models';
+
+// LanguageService now depends on AuthService (for the account write-through) —
+// stub it so this test doesn't need the HttpClient chain.
+const language = { lang: signal<'en' | 'de'>('en') };
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -28,7 +34,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
 function mount(e: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryWideComponent, provideTranslocoTesting()],
-    providers: [provideRouter([])],
+    providers: [provideRouter([]), { provide: LanguageService, useValue: language }],
   });
   const f = TestBed.createComponent(EntryWideComponent);
   f.componentRef.setInput('entry', e);

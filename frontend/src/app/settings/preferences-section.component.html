@@ -3,4 +3,7 @@
     <span>{{ 'lang.label' | transloco }}</span>
     <app-language-switcher />
   </div>
+  @if (language.saveFailed()) {
+    <app-error-banner [message]="'settings.languageSaveFailed' | transloco" />
+  }
 </app-settings-card>

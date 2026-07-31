@@ -1,7 +1,13 @@
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { EntryRowComponent } from './entry-row.component';
+import { LanguageService } from '../../core/language.service';
 import { EntryDto } from '../models';
+
+// LanguageService now depends on AuthService (for the account write-through) —
+// stub it so this test doesn't need the HttpClient chain.
+const language = { lang: signal<'en' | 'de'>('en') };
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -32,7 +38,10 @@ function mount(e: EntryDto) {
 
 describe('EntryRowComponent', () => {
   beforeEach(() =>
-    TestBed.configureTestingModule({ imports: [EntryRowComponent, provideTranslocoTesting()] }),
+    TestBed.configureTestingModule({
+      imports: [EntryRowComponent, provideTranslocoTesting()],
+      providers: [{ provide: LanguageService, useValue: language }],
+    }),
   );
 
   it('renders title, source, snippet and the https thumbnail', () => {

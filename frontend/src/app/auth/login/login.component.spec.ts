@@ -44,10 +44,18 @@ describe('LoginComponent', () => {
     f.componentInstance.form.setValue({ email: 'a@b.c', password: 'password12345' });
     f.componentInstance.submit();
     ctrl.expectOne('https://api.test/api/auth/login').flush({ token: 'jwt' });
-    ctrl
-      .expectOne('https://api.test/api/me')
-      .flush({ id: 1, email: 'a@b.c', roles: [], status: 'active', createdAt: 'x' });
+    ctrl.expectOne('https://api.test/api/me').flush({
+      id: 1,
+      email: 'a@b.c',
+      roles: [],
+      status: 'active',
+      createdAt: 'x',
+      locale: 'de',
+    });
     expect(navigate).toHaveBeenCalledWith(['/']);
+    // Proves the account's locale, not the cached one, drives the UI after login.
+    expect(document.documentElement.lang).toBe('de');
+    expect(localStorage.getItem('sfr.lang')).toBe('de');
   });
 
   it('renders the problem detail on a failed login', () => {

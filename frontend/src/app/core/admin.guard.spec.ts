@@ -3,6 +3,7 @@ import { UrlTree, provideRouter } from '@angular/router';
 import { firstValueFrom, isObservable, of, throwError } from 'rxjs';
 import { adminGuard } from './admin.guard';
 import { AuthService, CurrentUser } from './auth.service';
+import { LanguageService } from './language.service';
 
 const admin: CurrentUser = {
   id: 1,
@@ -10,6 +11,7 @@ const admin: CurrentUser = {
   roles: ['ROLE_ADMIN', 'ROLE_USER'],
   status: 'active',
   createdAt: 'x',
+  locale: 'en',
 };
 const plain: CurrentUser = { ...admin, roles: ['ROLE_USER'] };
 
@@ -23,10 +25,12 @@ describe('adminGuard', () => {
   let userSignal: () => CurrentUser | null;
   let loadMe: jest.Mock;
   let isAdmin: jest.Mock;
+  let adopt: jest.Mock;
 
   beforeEach(() => {
     loadMe = jest.fn();
     isAdmin = jest.fn();
+    adopt = jest.fn();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -38,6 +42,7 @@ describe('adminGuard', () => {
             isAdmin: () => isAdmin(),
           },
         },
+        { provide: LanguageService, useValue: { adopt: (locale: string | null) => adopt(locale) } },
       ],
     });
   });
@@ -63,6 +68,7 @@ describe('adminGuard', () => {
     const res = run();
     expect(isObservable(res)).toBe(true);
     await expect(firstValueFrom(res as never)).resolves.toBe(true);
+    expect(adopt).toHaveBeenCalledWith('en');
   });
 
   it('redirects to / when loadMe fails', async () => {

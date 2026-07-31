@@ -9,6 +9,7 @@
     "backReader": "Reader",
     "nav": { "admin": "Admin" },
     "preferences": "Preferences",
+    "languageSaveFailed": "The language changed on this device, but could not be saved to your account.",
     "loadingVersion": "Loading version information",
     "opmlError": "Import or export failed.",
     "feeds": {

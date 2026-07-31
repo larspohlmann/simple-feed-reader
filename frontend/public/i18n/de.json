@@ -9,6 +9,7 @@
     "backReader": "Reader",
     "nav": { "admin": "Administration" },
     "preferences": "Voreinstellungen",
+    "languageSaveFailed": "Die Sprache wurde auf diesem Gerät geändert, konnte aber nicht in deinem Konto gespeichert werden.",
     "loadingVersion": "Versionsinformationen werden geladen",
     "opmlError": "Import oder Export ist fehlgeschlagen.",
     "feeds": {

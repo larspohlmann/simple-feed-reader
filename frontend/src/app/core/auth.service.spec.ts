@@ -45,8 +45,25 @@ describe('AuthService', () => {
       roles: ['ROLE_USER'],
       status: 'active',
       createdAt: '2026-07-01T00:00:00+00:00',
+      locale: 'en',
     });
     expect(svc.user()?.email).toBe('a@b.c');
+  });
+
+  it('updateLocale PATCHes /api/me and refreshes the current-user signal', () => {
+    svc.updateLocale('de').subscribe();
+    const req = ctrl.expectOne('https://api.test/api/me');
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ locale: 'de' });
+    req.flush({
+      id: 1,
+      email: 'a@b.c',
+      roles: ['ROLE_USER'],
+      status: 'active',
+      createdAt: '2026-07-01T00:00:00+00:00',
+      locale: 'de',
+    });
+    expect(svc.user()?.locale).toBe('de');
   });
 
   it('logout clears token and user and routes to /login', () => {

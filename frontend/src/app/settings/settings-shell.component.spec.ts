@@ -4,6 +4,7 @@ import { Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { AuthService } from '../core/auth.service';
+import { LanguageService } from '../core/language.service';
 import { LayoutService } from '../reader/layout.service';
 import { SettingsShellComponent } from './settings-shell.component';
 
@@ -12,7 +13,8 @@ class BlankComponent {}
 
 describe('SettingsShellComponent', () => {
   const isWide = signal(true);
-  const loadMe = jest.fn(() => of({}));
+  const loadMe = jest.fn(() => of({ locale: 'de' }));
+  const adopt = jest.fn();
   let currentUser: object | null = null;
 
   function mount() {
@@ -27,6 +29,7 @@ describe('SettingsShellComponent', () => {
           provide: AuthService,
           useValue: { user: () => currentUser, loadMe, isAdmin: () => false },
         },
+        { provide: LanguageService, useValue: { adopt } },
       ],
     }).overrideComponent(SettingsShellComponent, {
       set: { imports: [], template: '<h1>Settings</h1>', schemas: [] },
@@ -38,6 +41,7 @@ describe('SettingsShellComponent', () => {
 
   beforeEach(() => {
     loadMe.mockClear();
+    adopt.mockClear();
     currentUser = null;
     isWide.set(true);
   });
@@ -49,6 +53,7 @@ describe('SettingsShellComponent', () => {
   it('fetches the current user when none is loaded (deep link)', () => {
     mount();
     expect(loadMe).toHaveBeenCalled();
+    expect(adopt).toHaveBeenCalledWith('de');
   });
 
   it('does not re-fetch an already-loaded user', () => {

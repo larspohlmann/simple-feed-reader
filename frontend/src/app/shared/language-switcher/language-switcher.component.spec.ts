@@ -1,14 +1,22 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TranslocoService } from '@jsverse/transloco';
 import { LanguageSwitcherComponent } from './language-switcher.component';
 import { LanguageService } from '../../core/language.service';
+import { API_BASE_URL } from '../../core/api';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 
 function mount() {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     imports: [LanguageSwitcherComponent, provideTranslocoTesting()],
-    providers: [LanguageService],
+    providers: [
+      LanguageService,
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      { provide: API_BASE_URL, useValue: '' },
+    ],
   });
   const f = TestBed.createComponent(LanguageSwitcherComponent);
   f.detectChanges();

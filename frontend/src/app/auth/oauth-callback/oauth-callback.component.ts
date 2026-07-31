@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { API_BASE_URL } from '../../core/api';
 import { AuthService } from '../../core/auth.service';
+import { LanguageService } from '../../core/language.service';
 import { TokenStore } from '../../core/token.store';
 import { AuthShellComponent } from '../auth-shell/auth-shell.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
@@ -22,6 +23,7 @@ export class OAuthCallbackComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly tokens = inject(TokenStore);
   private readonly auth = inject(AuthService);
+  private readonly language = inject(LanguageService);
   readonly state = signal<'loading' | 'error'>('loading');
 
   ngOnInit(): void {
@@ -44,7 +46,10 @@ export class OAuthCallbackComponent implements OnInit {
           next: (res) => {
             this.tokens.set(res.token);
             this.auth.loadMe().subscribe({
-              next: () => void this.router.navigate(['/']),
+              next: (user) => {
+                this.language.adopt(user.locale);
+                void this.router.navigate(['/']);
+              },
               error: () => void this.router.navigate(['/']),
             });
           },

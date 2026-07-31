@@ -1,11 +1,17 @@
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { of, Subject } from 'rxjs';
 import { ReaderViewComponent } from './reader-view.component';
 import { ReaderContentService } from '../reader-content.service';
+import { LanguageService } from '../../core/language.service';
 import { entryScrollKey } from '../list-scroll-memory';
 import { EntryDto, ReaderContent } from '../models';
+
+// LanguageService now depends on AuthService (for the account write-through) —
+// stub it so this test doesn't need the HttpClient chain.
+const language = { lang: signal<'en' | 'de'>('en') };
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -59,6 +65,7 @@ describe('ReaderViewComponent', () => {
       providers: [
         provideRouter([]),
         { provide: ReaderContentService, useValue: { load: loadMock } },
+        { provide: LanguageService, useValue: language },
       ],
     });
   });

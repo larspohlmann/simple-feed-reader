@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { EntryListComponent, REFRESH_REVEAL } from './entry-list.component';
 import { ListScrollMemory } from '../list-scroll-memory';
 import { CatalogStore } from '../../discover/catalog.store';
+import { LanguageService } from '../../core/language.service';
 import { prefetchMargin } from '../paging';
 import { EntryDto } from '../models';
 
@@ -12,6 +13,10 @@ const memory = { save: jest.fn(), read: jest.fn().mockReturnValue(0) };
 // A stub for the two signals `catalogEmpty` reads — keeps the real CatalogStore
 // (and its HttpClient chain) out of this component's unit test.
 const catalog = { resolved: signal(false), hasEntries: signal(false) };
+// LanguageService now depends on AuthService (for the account write-through) —
+// stub it here too, for the same reason: this test cares about entry-list
+// behaviour, not the account's HttpClient chain.
+const language = { lang: signal<'en' | 'de'>('en') };
 
 const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   id,
@@ -44,6 +49,7 @@ function mount(over: Record<string, unknown> = {}) {
       provideRouter([]),
       { provide: ListScrollMemory, useValue: memory },
       { provide: CatalogStore, useValue: catalog },
+      { provide: LanguageService, useValue: language },
     ],
   });
   const f = TestBed.createComponent(EntryListComponent);

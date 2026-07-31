@@ -10,6 +10,7 @@ const user: CurrentUser = {
   roles: ['ROLE_USER'],
   status: 'active',
   createdAt: '2026-01-01T00:00:00Z',
+  locale: 'en',
 };
 
 describe('AccountSectionComponent', () => {
