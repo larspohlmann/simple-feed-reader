@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Dto\Admin\AdminSubscriptionTag;
+use App\Dto\Admin\AdminUserAccount;
+use App\Dto\Admin\AdminUserDetail;
+use App\Dto\Admin\AdminUserFootprint;
+use App\Dto\Admin\AdminUserSubscription;
+use App\Dto\Admin\AdminUserTag;
 use App\Dto\Admin\UserFootprint;
 use App\Entity\Subscription;
 use App\Entity\Tag;
@@ -104,66 +110,91 @@ final readonly class AdminUserController
     #[Route('/{id}', name: 'api_admin_users_detail', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function detail(int $id): JsonResponse
     {
-        $user = $this->users->find($id);
-
-        if (!$user instanceof User) {
-            throw new NotFoundHttpException('No such user.');
-        }
-
-        $footprint = $this->statistics->forUser($user);
+        $user = $this->requireUser($id);
         $userId = (int) $user->getId();
 
-        return new JsonResponse([
-            'user' => $this->accountRow($user, $userId),
-            'footprint' => $this->footprintRow($footprint),
-            'tags' => $this->tagRows($userId),
-            'subscriptions' => $this->subscriptionRows($userId),
-        ]);
+        // Loaded once and threaded through every row builder below, rather
+        // than re-read per section: findForUserWithTags() is this endpoint's
+        // heaviest query (the subscription x tag join set), and this is the
+        // one screen that loads a whole library. See
+        // AdminUserControllerTest::testTheDetailListsCostTheSameNumberOfQueriesHoweverManySubscriptionsAndTagsExist.
+        $subscriptions = $this->positionOrdered($this->subscriptions->findForUserWithTags($userId));
+        $tags = $this->tags->findForUser($userId);
+        $footprint = $this->statistics->footprintFor($user, $subscriptions, $tags);
+
+        return new JsonResponse(new AdminUserDetail(
+            user: $this->accountRow($user),
+            footprint: $this->footprintRow($footprint),
+            tags: $this->tagRows($tags, $subscriptions),
+            subscriptions: $this->subscriptionRows($subscriptions),
+        ));
     }
 
     /**
-     * @return array<string, mixed>
+     * The user's own arrangement of their untagged/tagged "Feeds" list —
+     * Subscription::position, assigned on every create path and rewritten
+     * wholesale by the reorder endpoint. Sorted here, in the admin layer,
+     * rather than in SubscriptionRepository::findForUserWithTags() itself:
+     * that method has four other call sites (the reader's own subscription
+     * list, MarkReadService, OpmlExporter, UserStatistics) whose ordering
+     * needs were not part of this change, so its existing createdAt/id order
+     * is left alone for them.
+     *
+     * @param list<Subscription> $subscriptions
+     *
+     * @return list<Subscription>
      */
-    private function accountRow(User $user, int $userId): array
+    private function positionOrdered(array $subscriptions): array
     {
-        return [
-            'id' => $user->getId(),
-            'email' => $user->getEmail(),
-            'status' => $user->getStatus()->value,
-            'roles' => $user->getRoles(),
-            'locale' => $user->getLocale(),
-            'createdAt' => $user->getCreatedAt()->format(\DateTimeInterface::ATOM),
-            'approvedAt' => $user->getApprovedAt()?->format(\DateTimeInterface::ATOM),
-            'lastLoginAt' => $user->getLastLoginAt()?->format(\DateTimeInterface::ATOM),
-            'identities' => $this->providersByUserId([$user])[$userId] ?? [],
-        ];
+        $ordered = $subscriptions;
+        usort($ordered, static fn (Subscription $a, Subscription $b): int => $a->getPosition() <=> $b->getPosition());
+
+        return $ordered;
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function footprintRow(UserFootprint $footprint): array
+    private function accountRow(User $user): AdminUserAccount
     {
-        return [
-            'feedsCount' => $footprint->feedsCount,
-            'tagsCount' => $footprint->tagsCount,
-            'feedsLimit' => $footprint->feedsLimit,
-            'staleFeedsCount' => $footprint->staleFeedsCount,
-            'lastRefreshAt' => $footprint->lastRefreshAt?->format(\DateTimeInterface::ATOM),
-            'dormant' => $footprint->dormant,
-        ];
+        $userId = (int) $user->getId();
+
+        return new AdminUserAccount(
+            id: $userId,
+            email: $user->getEmail(),
+            status: $user->getStatus()->value,
+            roles: $user->getRoles(),
+            locale: $user->getLocale(),
+            createdAt: $user->getCreatedAt()->format(\DateTimeInterface::ATOM),
+            approvedAt: $user->getApprovedAt()?->format(\DateTimeInterface::ATOM),
+            lastLoginAt: $user->getLastLoginAt()?->format(\DateTimeInterface::ATOM),
+            identities: $this->providersByUserId([$user])[$userId] ?? [],
+        );
+    }
+
+    private function footprintRow(UserFootprint $footprint): AdminUserFootprint
+    {
+        return new AdminUserFootprint(
+            feedsCount: $footprint->feedsCount,
+            tagsCount: $footprint->tagsCount,
+            feedsLimit: $footprint->feedsLimit,
+            staleFeedsCount: $footprint->staleFeedsCount,
+            lastRefreshAt: $footprint->lastRefreshAt?->format(\DateTimeInterface::ATOM),
+            dormant: $footprint->dormant,
+        );
     }
 
     /**
      * The account's tags in the order its owner arranged them, each with how
-     * many of that account's feeds carry it.
+     * many of that account's feeds carry it. Pure: takes the rows the caller
+     * already loaded rather than querying — see the note on detail().
      *
-     * @return list<array<string, mixed>>
+     * @param list<Tag> $tags
+     * @param list<Subscription> $subscriptions
+     *
+     * @return list<AdminUserTag>
      */
-    private function tagRows(int $userId): array
+    private function tagRows(array $tags, array $subscriptions): array
     {
         $feedsPerTag = [];
-        foreach ($this->subscriptions->findForUserWithTags($userId) as $subscription) {
+        foreach ($subscriptions as $subscription) {
             foreach ($subscription->getTags() as $tag) {
                 $tagId = (int) $tag->getId();
                 $feedsPerTag[$tagId] = ($feedsPerTag[$tagId] ?? 0) + 1;
@@ -171,46 +202,49 @@ final readonly class AdminUserController
         }
 
         return array_map(
-            static fn (Tag $tag): array => [
-                'id' => $tag->getId(),
-                'name' => $tag->getName(),
-                'color' => $tag->getColor(),
-                'icon' => $tag->getIcon(),
-                'position' => $tag->getPosition(),
-                'feedsCount' => $feedsPerTag[(int) $tag->getId()] ?? 0,
-            ],
-            $this->tags->findForUser($userId),
+            static fn (Tag $tag): AdminUserTag => new AdminUserTag(
+                id: (int) $tag->getId(),
+                name: $tag->getName(),
+                color: $tag->getColor(),
+                icon: $tag->getIcon(),
+                position: $tag->getPosition(),
+                feedsCount: $feedsPerTag[(int) $tag->getId()] ?? 0,
+            ),
+            $tags,
         );
     }
 
     /**
-     * The account's subscriptions in its owner's order, each with the tags it
-     * carries and the freshness of the underlying feed.
+     * The account's subscriptions in its owner's own position order, each
+     * with the tags it carries and the freshness of the underlying feed.
+     * Pure: takes the rows the caller already loaded rather than querying —
+     * see the note on detail().
      *
-     * @return list<array<string, mixed>>
+     * @param list<Subscription> $subscriptions
+     *
+     * @return list<AdminUserSubscription>
      */
-    private function subscriptionRows(int $userId): array
+    private function subscriptionRows(array $subscriptions): array
     {
         return array_map(
-            static fn (Subscription $subscription): array => [
-                'id' => $subscription->getId(),
-                'title' => $subscription->getFeed()->getTitle(),
-                'customTitle' => $subscription->getCustomTitle(),
-                'url' => $subscription->getFeed()->getUrl(),
-                'position' => $subscription->getPosition(),
-                'createdAt' => $subscription->getCreatedAt()->format(\DateTimeInterface::ATOM),
-                'lastFetchedAt' => $subscription->getFeed()->getLastFetchedAt()
-                    ?->format(\DateTimeInterface::ATOM),
-                'tags' => array_map(
-                    static fn (Tag $tag): array => [
-                        'id' => $tag->getId(),
-                        'name' => $tag->getName(),
-                        'color' => $tag->getColor(),
-                    ],
-                    $subscription->getTags()->toArray(),
+            static fn (Subscription $subscription): AdminUserSubscription => new AdminUserSubscription(
+                id: (int) $subscription->getId(),
+                title: $subscription->getFeed()->getTitle(),
+                customTitle: $subscription->getCustomTitle(),
+                url: $subscription->getFeed()->getUrl(),
+                position: $subscription->getPosition(),
+                createdAt: $subscription->getCreatedAt()->format(\DateTimeInterface::ATOM),
+                lastFetchedAt: $subscription->getFeed()->getLastFetchedAt()?->format(\DateTimeInterface::ATOM),
+                tags: array_map(
+                    static fn (Tag $tag): AdminSubscriptionTag => new AdminSubscriptionTag(
+                        id: (int) $tag->getId(),
+                        name: $tag->getName(),
+                        color: $tag->getColor(),
+                    ),
+                    array_values($subscription->getTags()->toArray()),
                 ),
-            ],
-            $this->subscriptions->findForUserWithTags($userId),
+            ),
+            $subscriptions,
         );
     }
 

@@ -6,6 +6,7 @@ namespace App\Service\Admin;
 
 use App\Dto\Admin\UserFootprint;
 use App\Entity\Subscription;
+use App\Entity\Tag;
 use App\Entity\User;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
@@ -35,15 +36,41 @@ final readonly class UserStatistics
     ) {
     }
 
+    /**
+     * Loads the account's own subscriptions and tags and computes its
+     * footprint. The one production caller that does not already hold those
+     * two lists for its own purposes — a caller that does (the admin detail
+     * controller) should call {@see self::footprintFor()} directly instead,
+     * so the same rows are not read from the database twice.
+     */
     public function forUser(User $user): UserFootprint
     {
         $userId = $user->getId() ?? throw UnpersistedUserException::forUser();
-        $subscriptions = $this->subscriptions->findForUserWithTags($userId);
+
+        return $this->footprintFor(
+            $user,
+            $this->subscriptions->findForUserWithTags($userId),
+            $this->tags->findForUser($userId),
+        );
+    }
+
+    /**
+     * The same calculation as {@see self::forUser()}, but over
+     * already-loaded rows — for a caller (the admin detail controller) that
+     * needs those same subscriptions and tags for its own response anyway,
+     * and would otherwise pay for the subscription/tag join set twice on the
+     * one endpoint that loads a whole library.
+     *
+     * @param list<Subscription> $subscriptions the user's own subscriptions
+     * @param list<Tag> $tags the user's own tags
+     */
+    public function footprintFor(User $user, array $subscriptions, array $tags): UserFootprint
+    {
         $now = $this->clock->now();
 
         return new UserFootprint(
             feedsCount: \count($subscriptions),
-            tagsCount: \count($this->tags->findForUser($userId)),
+            tagsCount: \count($tags),
             feedsLimit: SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER,
             staleFeedsCount: $this->countStale($subscriptions, $now),
             lastRefreshAt: $this->newestFetch($subscriptions),

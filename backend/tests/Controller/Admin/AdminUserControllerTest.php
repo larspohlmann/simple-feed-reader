@@ -10,6 +10,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Enum\UserStatus;
+use App\Service\Subscription\SubscriptionService;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -687,12 +688,21 @@ final class AdminUserControllerTest extends WebTestCase
         ];
     }
 
+    /**
+     * The empty case, with COMPLETE key coverage on both the account and the
+     * footprint section — not a handful of spot-checked fields. Proved by
+     * mutation: before this test asserted array_keys(), renaming
+     * feedsLimit -> feedLimit or user.identities -> user.providers in the
+     * controller left every test in this class green.
+     */
     public function testTheDetailEndpointReturnsTheAccountItsFootprintAndItsLists(): void
     {
         $admin = $this->admin();
         $token = $this->tokenFor($admin);
         $user = $this->factory()->create(
             'detailed@example.com',
+            roles: ['ROLE_ADMIN'],
+            locale: 'de',
             lastLoginAt: new \DateTimeImmutable('2026-07-29 09:00:00'),
         );
 
@@ -703,11 +713,31 @@ final class AdminUserControllerTest extends WebTestCase
         $account = $this->section($body, 'user');
         $footprint = $this->section($body, 'footprint');
 
+        self::assertSame(
+            ['id', 'email', 'status', 'roles', 'locale', 'createdAt', 'approvedAt', 'lastLoginAt', 'identities'],
+            array_keys($account),
+        );
+        self::assertSame($user->getId(), $account['id']);
         self::assertSame('detailed@example.com', $account['email']);
+        self::assertSame('active', $account['status']);
+        self::assertSame(['ROLE_ADMIN', 'ROLE_USER'], $account['roles']);
+        self::assertSame('de', $account['locale']);
+        self::assertIsString($account['createdAt']);
+        self::assertStringStartsWith('2026-07-01T10:00:00', $account['createdAt']);
+        self::assertNull($account['approvedAt']);
         self::assertIsString($account['lastLoginAt']);
         self::assertStringStartsWith('2026-07-29T09:00:00', $account['lastLoginAt']);
+        self::assertSame([], $account['identities']);
+
+        self::assertSame(
+            ['feedsCount', 'tagsCount', 'feedsLimit', 'staleFeedsCount', 'lastRefreshAt', 'dormant'],
+            array_keys($footprint),
+        );
         self::assertSame(0, $footprint['feedsCount']);
         self::assertSame(0, $footprint['tagsCount']);
+        self::assertSame(SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER, $footprint['feedsLimit']);
+        self::assertSame(0, $footprint['staleFeedsCount']);
+        self::assertNull($footprint['lastRefreshAt']);
         self::assertFalse($footprint['dormant']);
         self::assertSame([], $body['tags']);
         self::assertSame([], $body['subscriptions']);
@@ -739,10 +769,18 @@ final class AdminUserControllerTest extends WebTestCase
     }
 
     /**
-     * The full tag and subscription rows, with mutually distinct non-zero
-     * figures throughout — a mis-keyed map or a field swap between the two
-     * lists fails loudly here rather than staying green under an all-zero
-     * fixture.
+     * The full tag and subscription rows: complete key coverage on every row
+     * shape (a renamed or dropped field fails here even though its value type
+     * is unchanged — proved by mutation: renaming tag `icon` -> `iconName`
+     * used to leave this class green), mutually distinct non-zero figures
+     * throughout (archive sits on both subscriptions, reading on only one, so
+     * a count swap between the two tags is caught — a single shared
+     * subscription can only ever produce 0 or 1 and cannot catch a swap), and
+     * insertion order that does NOT match position order on both the
+     * subscription list and the tags-within-a-subscription list — proved by
+     * mutation: sorting SubscriptionRepository::findForUserWithTags() by
+     * `s.id DESC` instead of position left this class green before these
+     * order assertions existed.
      */
     public function testTheDetailListsCarryTheFullTagAndSubscriptionRows(): void
     {
@@ -753,24 +791,42 @@ final class AdminUserControllerTest extends WebTestCase
         /** @var EntityManagerInterface $em */
         $em = self::getContainer()->get(EntityManagerInterface::class);
 
-        $tagOne = new Tag($user, 'reading');
-        $tagOne->setColor('#ff0000');
-        $tagOne->setPosition(1);
-        $tagTwo = new Tag($user, 'archive');
-        $tagTwo->setColor('#00ff00');
-        $tagTwo->setPosition(0);
-        $em->persist($tagOne);
-        $em->persist($tagTwo);
+        $tagArchive = new Tag($user, 'archive');
+        $tagArchive->setColor('#00ff00');
+        $tagArchive->setIcon('archive-icon');
+        $tagArchive->setPosition(0);
+        $tagReading = new Tag($user, 'reading');
+        $tagReading->setColor('#ff0000');
+        $tagReading->setIcon('book-icon');
+        $tagReading->setPosition(1);
+        $em->persist($tagArchive);
+        $em->persist($tagReading);
 
-        $feed = new Feed('https://example.com/librarian.xml');
-        $feed->setTitle('Librarian Weekly');
-        $em->persist($feed);
+        $feedOne = new Feed('https://example.com/librarian-one.xml');
+        $feedOne->setTitle('Librarian Weekly');
+        $em->persist($feedOne);
+        $feedTwo = new Feed('https://example.com/librarian-two.xml');
+        $feedTwo->setTitle('Second Shelf');
+        $em->persist($feedTwo);
 
-        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-05 12:00:00'));
-        $subscription->setCustomTitle('My Weekly Read');
-        $subscription->addTag($tagTwo, 0);
-        $subscription->addTag($tagOne, 1);
-        $em->persist($subscription);
+        // Inserted FIRST but placed SECOND by position — a return to
+        // createdAt/insertion ordering is caught. Its two tags are also
+        // attached in the REVERSE of their position order (reading, then
+        // archive), so orderedSubscriptionTags()'s sort is actually
+        // exercised rather than merely echoing insertion order.
+        $subscriptionOne = new Subscription($user, $feedOne, new \DateTimeImmutable('2026-07-05 12:00:00'));
+        $subscriptionOne->setCustomTitle('My Weekly Read');
+        $subscriptionOne->setPosition(1);
+        $subscriptionOne->addTag($tagReading, 1);
+        $subscriptionOne->addTag($tagArchive, 0);
+        $em->persist($subscriptionOne);
+
+        // Inserted SECOND but placed FIRST by position.
+        $subscriptionTwo = new Subscription($user, $feedTwo, new \DateTimeImmutable('2026-07-06 12:00:00'));
+        $subscriptionTwo->setPosition(0);
+        $subscriptionTwo->addTag($tagArchive, 0);
+        $em->persist($subscriptionTwo);
+
         $em->flush();
 
         $this->call('GET', '/api/admin/users/' . $user->getId(), $token);
@@ -779,34 +835,82 @@ final class AdminUserControllerTest extends WebTestCase
         $body = $this->payload();
         $footprint = $this->section($body, 'footprint');
 
-        self::assertSame(1, $footprint['feedsCount']);
+        self::assertSame(2, $footprint['feedsCount']);
         self::assertSame(2, $footprint['tagsCount']);
 
         $tags = $body['tags'];
         self::assertIsArray($tags);
+        self::assertCount(2, $tags);
+        foreach ($tags as $tagRow) {
+            self::assertIsArray($tagRow);
+            self::assertSame(['id', 'name', 'color', 'icon', 'position', 'feedsCount'], array_keys($tagRow));
+        }
         self::assertSame(['archive', 'reading'], array_column($tags, 'name'));
-        self::assertSame([1, 1], array_column($tags, 'feedsCount'));
+        self::assertSame(['#00ff00', '#ff0000'], array_column($tags, 'color'));
+        self::assertSame(['archive-icon', 'book-icon'], array_column($tags, 'icon'));
+        self::assertSame([0, 1], array_column($tags, 'position'));
+        // Distinct and non-zero: archive is on both subscriptions, reading on
+        // only one — a swap between the two rows would show up as [1, 2].
+        self::assertSame([2, 1], array_column($tags, 'feedsCount'));
 
         $subscriptions = $body['subscriptions'];
         self::assertIsArray($subscriptions);
-        self::assertCount(1, $subscriptions);
-        $row = $subscriptions[0];
-        self::assertIsArray($row);
-        self::assertSame('Librarian Weekly', $row['title']);
-        self::assertSame('My Weekly Read', $row['customTitle']);
-        self::assertSame('https://example.com/librarian.xml', $row['url']);
-        $rowTags = $row['tags'];
-        self::assertIsArray($rowTags);
-        self::assertSame(['archive', 'reading'], array_column($rowTags, 'name'));
+        self::assertCount(2, $subscriptions);
+        foreach ($subscriptions as $subscriptionRow) {
+            self::assertIsArray($subscriptionRow);
+            self::assertSame(
+                ['id', 'title', 'customTitle', 'url', 'position', 'createdAt', 'lastFetchedAt', 'tags'],
+                array_keys($subscriptionRow),
+            );
+        }
+
+        // Position order (0, 1) — NOT insertion/createdAt order, under which
+        // "Librarian Weekly" (created first) would come first.
+        self::assertSame(['Second Shelf', 'Librarian Weekly'], array_column($subscriptions, 'title'));
+        self::assertSame([0, 1], array_column($subscriptions, 'position'));
+
+        $secondShelfRow = $subscriptions[0];
+        self::assertIsArray($secondShelfRow);
+        self::assertSame($subscriptionTwo->getId(), $secondShelfRow['id']);
+        self::assertNull($secondShelfRow['customTitle']);
+        self::assertSame('https://example.com/librarian-two.xml', $secondShelfRow['url']);
+        self::assertIsString($secondShelfRow['createdAt']);
+        self::assertStringStartsWith('2026-07-06T12:00:00', $secondShelfRow['createdAt']);
+        self::assertNull($secondShelfRow['lastFetchedAt']);
+        $secondShelfTags = $secondShelfRow['tags'];
+        self::assertIsArray($secondShelfTags);
+        self::assertSame(['archive'], array_column($secondShelfTags, 'name'));
+
+        $weeklyRow = $subscriptions[1];
+        self::assertIsArray($weeklyRow);
+        self::assertSame($subscriptionOne->getId(), $weeklyRow['id']);
+        self::assertSame('Librarian Weekly', $weeklyRow['title']);
+        self::assertSame('My Weekly Read', $weeklyRow['customTitle']);
+        self::assertSame('https://example.com/librarian-one.xml', $weeklyRow['url']);
+        // Attached [reading, archive] but returned in POSITION order
+        // [archive(0), reading(1)].
+        $weeklyTags = $weeklyRow['tags'];
+        self::assertIsArray($weeklyTags);
+        self::assertSame(['archive', 'reading'], array_column($weeklyTags, 'name'));
+        foreach ($weeklyTags as $tagOnSubscription) {
+            self::assertIsArray($tagOnSubscription);
+            self::assertSame(['id', 'name', 'color'], array_keys($tagOnSubscription));
+        }
     }
 
     /**
-     * The N+1 guard for the detail screen. Each subscription in the fixture
-     * carries its own genuinely-attached tag — not just a tag present
-     * somewhere on the account — so a per-subscription tag lookup would show
-     * up as growth here. A fixed count at one fixture size cannot tell
-     * "batched" apart from "batched because there happen to be exactly this
-     * many rows"; asserting equality across two very different sizes can.
+     * The N+1 guard for the detail screen, pinned to the exact counts the
+     * single-load refactor promises: ONE read of the subscription x tag join
+     * set and ONE read of the tag list, however many rows the user owns —
+     * not the three and two respectively that a version re-querying inside
+     * tagRows()/subscriptionRows() would cost. Each subscription in the
+     * fixture carries its own genuinely-attached tag — not just a tag present
+     * somewhere on the account — so a per-subscription tag lookup, or the
+     * join-fetch being dropped from findForUserWithTags(), would show up as
+     * growth between the two sizes. A fixed count at one fixture size cannot
+     * tell "batched" apart from "batched because there happen to be exactly
+     * this many rows"; asserting equality across two very different sizes
+     * can.
      */
     public function testTheDetailListsCostTheSameNumberOfQueriesHoweverManySubscriptionsAndTagsExist(): void
     {
@@ -816,6 +920,8 @@ final class AdminUserControllerTest extends WebTestCase
         $smallReads = $this->detailReadCountsForFreshUser($token, count: 2);
         $largeReads = $this->detailReadCountsForFreshUser($token, count: 11);
 
+        $expected = ['subscriptions' => 1, 'tags' => 1];
+        self::assertSame($expected, $smallReads, 'two rows should already cost exactly one read per table');
         self::assertSame(
             $smallReads,
             $largeReads,
