@@ -52,8 +52,15 @@
                 (valueChange)="draftIcon.set($event || null)"
               />
 
-              @if (saveError(); as message) {
-                <app-error-banner [message]="message" />
+              @if (saveError(); as problem) {
+                <app-error-banner
+                  [message]="
+                    problem.errors?.['name']?.[0] ||
+                    problem.detail ||
+                    problem.title ||
+                    ('settings.tags.saveFailed' | transloco)
+                  "
+                />
               }
               <span class="acts">
                 <app-button size="sm" variant="primary" (click)="saveEdit()">

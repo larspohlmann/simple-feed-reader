@@ -16,7 +16,7 @@ import { FieldComponent } from '../shared/field/field.component';
 import { ColorFieldComponent } from '../shared/color-field/color-field.component';
 import { IconPickerComponent } from '../shared/icon-picker/icon-picker.component';
 import { ReaderApi } from '../reader/reader-api';
-import { parseProblem } from '../core/problem';
+import { Problem, parseProblem } from '../core/problem';
 import { TagDto } from '../reader/models';
 
 @Component({
@@ -50,9 +50,11 @@ export class TagsSectionComponent implements OnInit {
   readonly draftName = signal('');
   readonly draftColor = signal<string | null>(null);
   readonly draftIcon = signal<string | null>(null);
-  /** The server's own message for a failed save, so the banner never shows a
-   *  fixed string instead of what actually went wrong. */
-  readonly saveError = signal<string | null>(null);
+  /** The raw problem from a failed save, resolved to text in the template the
+   *  same way settings.tags.loadFailed is: `detail || title || the i18n
+   *  fallback`, so the banner never shows a fixed string when the server has
+   *  something more specific to say. */
+  readonly saveError = signal<Problem | null>(null);
 
   /** feed count per tag id, derived from the subscription list. */
   readonly usage = computed<Record<number, number>>(() => {
@@ -97,8 +99,7 @@ export class TagsSectionComponent implements OnInit {
         this.subs.load(); // the embedded tag colour and name on each feed changed too
       },
       error: (e: HttpErrorResponse) => {
-        const problem = parseProblem(e);
-        this.saveError.set(problem.errors?.['name']?.[0] ?? problem.detail ?? problem.title);
+        this.saveError.set(parseProblem(e));
       },
     });
   }

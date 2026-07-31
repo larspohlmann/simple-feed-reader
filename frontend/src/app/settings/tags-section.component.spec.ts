@@ -311,6 +311,93 @@ describe('TagsSectionComponent', () => {
     expect(TestBed.inject(ReaderApi).updateTag).not.toHaveBeenCalled();
   });
 
+  it('saves on Enter from the name field', async () => {
+    const { fixture, el } = await render();
+    tags.set([TAG]);
+    fixture.detectChanges();
+
+    fixture.componentInstance.startEdit(TAG);
+    fixture.detectChanges();
+
+    const input = el.querySelector('.editor input') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    fixture.detectChanges();
+
+    expect(TestBed.inject(ReaderApi).updateTag).toHaveBeenCalledWith(1, {
+      name: TAG.name,
+      color: TAG.color,
+      icon: TAG.icon,
+    });
+  });
+
+  it('changes the colour through the real app-color-field and saves it', async () => {
+    const { fixture, el } = await render();
+    tags.set([TAG]);
+    fixture.detectChanges();
+
+    fixture.componentInstance.startEdit(TAG);
+    fixture.detectChanges();
+
+    const swatches = el.querySelectorAll('.editor app-color-field .swatch');
+    expect(swatches.length).toBeGreaterThan(0);
+    (swatches[0] as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    fixture.componentInstance.saveEdit();
+
+    expect(TestBed.inject(ReaderApi).updateTag).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ color: '#3f8676' }),
+    );
+  });
+
+  it('changes the icon through the real app-icon-picker and saves it', async () => {
+    const { fixture, el } = await render();
+    tags.set([TAG]);
+    fixture.detectChanges();
+
+    fixture.componentInstance.startEdit(TAG);
+    fixture.detectChanges();
+
+    const starOption = el.querySelector(
+      '.editor app-icon-picker .opt[aria-label="star"]',
+    ) as HTMLButtonElement;
+    expect(starOption).not.toBeNull();
+    starOption.click();
+    fixture.detectChanges();
+
+    fixture.componentInstance.saveEdit();
+
+    expect(TestBed.inject(ReaderApi).updateTag).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ icon: 'star' }),
+    );
+  });
+
+  it('maps the icon picker "no icon" choice to null, not an empty string', async () => {
+    const { fixture, el } = await render();
+    tags.set([TAG]);
+    fixture.detectChanges();
+
+    fixture.componentInstance.startEdit(TAG);
+    fixture.detectChanges();
+
+    const noneOption = el.querySelector(
+      '.editor app-icon-picker .opt[aria-label="No icon"]',
+    ) as HTMLButtonElement;
+    expect(noneOption).not.toBeNull();
+    noneOption.click();
+    fixture.detectChanges();
+
+    fixture.componentInstance.saveEdit();
+
+    expect(TestBed.inject(ReaderApi).updateTag).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ icon: null }),
+    );
+  });
+
   it('edits only one row at a time', async () => {
     const { fixture, el } = await render();
     const second: TagDto = { id: 2, name: 'News', color: null, icon: null, position: 1 };
@@ -362,6 +449,29 @@ describe('TagsSectionComponent', () => {
     expect(banner).not.toBeNull();
     expect(banner!.textContent).toContain('Name is already taken.');
     expect(fixture.componentInstance.editingId()).toBe(1);
+  });
+
+  it('falls back to the generic saveFailed message when the problem carries no usable text', async () => {
+    const failingUpdate = jest.fn(() =>
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 500,
+            error: { type: 'about:blank', title: '' },
+          }),
+      ),
+    );
+    const { fixture, el } = await render([], [], failingUpdate);
+    tags.set([TAG]);
+    fixture.detectChanges();
+
+    fixture.componentInstance.startEdit(TAG);
+    fixture.componentInstance.saveEdit();
+    fixture.detectChanges();
+
+    const banner = el.querySelector('.editor app-error-banner');
+    expect(banner).not.toBeNull();
+    expect(banner!.textContent).toContain(en.settings.tags.saveFailed);
   });
 });
 
