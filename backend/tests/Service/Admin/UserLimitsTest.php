@@ -78,6 +78,20 @@ final class UserLimitsTest extends DbTestCase
         self::assertSame(UserStatus::Active, $user->getStatus());
     }
 
+    public function testClearTrialDoesNotReactivateASuspendedUserWhoseTrialHasNotExpired(): void
+    {
+        $user = $this->factory()->create(
+            't6@example.com',
+            status: UserStatus::Suspended,
+            trialEndsAt: new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+        );
+
+        $this->service()->clearTrial($user);
+
+        self::assertNull($user->getTrialEndsAt());
+        self::assertSame(UserStatus::Suspended, $user->getStatus());
+    }
+
     public function testSetSubscriptionLimitSetsAndClears(): void
     {
         $user = $this->factory()->create('t5@example.com');
