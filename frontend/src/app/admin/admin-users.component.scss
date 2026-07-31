@@ -54,7 +54,9 @@ h2 {
   gap: var(--space-1);
 }
 
-.email {
+.email-text {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -77,12 +79,22 @@ h2 {
 }
 
 a.email {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  max-width: 100%;
   color: var(--text-primary);
   text-decoration: none;
 }
 
-a.email:hover {
+a.email:hover .email-text {
   text-decoration: underline;
+}
+
+.chev {
+  flex-shrink: 0;
+  color: var(--text-muted);
 }
 
 .badge {

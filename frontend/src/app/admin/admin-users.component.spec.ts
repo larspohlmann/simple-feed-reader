@@ -7,6 +7,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { API_BASE_URL } from '../core/api';
 import { AuthService } from '../core/auth.service';
+import { Lang } from '../core/language';
+import { LanguageService } from '../core/language.service';
 import { AdminUsersComponent } from './admin-users.component';
 import { AdminUserDto } from './admin.models';
 
@@ -29,7 +31,8 @@ describe('AdminUsersComponent', () => {
   let dialogClosed: Subject<boolean | undefined>;
   const dialogOpen = jest.fn(() => ({ closed: dialogClosed }));
 
-  function mount(currentId = 99) {
+  function mount(currentId = 99, lang: Lang = 'en') {
+    TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -38,6 +41,7 @@ describe('AdminUsersComponent', () => {
         provideRouter([]),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
         { provide: AuthService, useValue: { user: () => ({ id: currentId }) } },
+        { provide: LanguageService, useValue: { lang: () => lang } },
         { provide: Dialog, useValue: { open: dialogOpen } },
       ],
     });
@@ -169,9 +173,11 @@ describe('AdminUsersComponent', () => {
     });
     f.detectChanges();
 
+    // Full rendered substrings, not bare numbers: a dropped or typo'd i18n key
+    // (e.g. `admin.feedsLabel` → `admin.zzzA`) must fail this test.
     const text = f.nativeElement.textContent as string;
-    expect(text).toContain('12');
-    expect(text).toContain('3');
+    expect(text).toContain('12 feeds');
+    expect(text).toContain('3 tags');
 
     const link = f.nativeElement.querySelector('a[href="/settings/admin/users/1"]');
     expect(link).not.toBeNull();
@@ -185,5 +191,49 @@ describe('AdminUsersComponent', () => {
     f.detectChanges();
 
     expect(f.nativeElement.textContent).toContain('never');
+  });
+
+  it('does not run adjacent counts together in the rendered text', () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users').flush({
+      users: [user(1, { status: 'active', feedsCount: 12, tagsCount: 3 })],
+    });
+    f.detectChanges();
+
+    const text = f.nativeElement.textContent as string;
+    expect(text).not.toContain('feeds3');
+  });
+
+  it('formats the last-login date in the active UI language via Intl, not a fixed locale', () => {
+    const en = mount(99, 'en');
+    ctrl.expectOne('https://api.test/api/admin/users').flush({
+      users: [user(1, { status: 'active', lastLoginAt: '2026-07-29T09:00:00+00:00' })],
+    });
+    en.detectChanges();
+    const enText = en.nativeElement.textContent as string;
+    expect(enText).toContain('July 29, 2026');
+
+    const de = mount(99, 'de');
+    ctrl.expectOne('https://api.test/api/admin/users').flush({
+      users: [user(1, { status: 'active', lastLoginAt: '2026-07-29T09:00:00+00:00' })],
+    });
+    de.detectChanges();
+    const deText = de.nativeElement.textContent as string;
+    expect(deText).toContain('29. Juli 2026');
+
+    // The two locales must actually render differently — this is what a static
+    // LOCALE_ID (which DatePipe reads, and which this app never sets) cannot do.
+    expect(enText).not.toBe(deText);
+  });
+
+  it("uses the openDetail translation as the row link's accessible name, alongside the email", () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [user(1)] });
+    f.detectChanges();
+
+    const link = f.nativeElement.querySelector('a[href="/settings/admin/users/1"]');
+    const label = link.getAttribute('aria-label') as string;
+    expect(label).toContain('u1@x');
+    expect(label).toContain('View details');
   });
 });
