@@ -3,8 +3,9 @@ import { UrlTree, provideRouter } from '@angular/router';
 import { firstValueFrom, isObservable, of, throwError } from 'rxjs';
 import { adminGuard } from './admin.guard';
 import { AuthService, CurrentUser } from './auth.service';
-import { LanguageService } from './language.service';
 
+// `locale` is a required field on CurrentUser (Task 9); the guard itself
+// doesn't read it — AuthService.loadMe() adopts it in one place now.
 const admin: CurrentUser = {
   id: 1,
   email: 'a',
@@ -25,12 +26,10 @@ describe('adminGuard', () => {
   let userSignal: () => CurrentUser | null;
   let loadMe: jest.Mock;
   let isAdmin: jest.Mock;
-  let adopt: jest.Mock;
 
   beforeEach(() => {
     loadMe = jest.fn();
     isAdmin = jest.fn();
-    adopt = jest.fn();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -42,7 +41,6 @@ describe('adminGuard', () => {
             isAdmin: () => isAdmin(),
           },
         },
-        { provide: LanguageService, useValue: { adopt: (locale: string | null) => adopt(locale) } },
       ],
     });
   });
@@ -68,7 +66,6 @@ describe('adminGuard', () => {
     const res = run();
     expect(isObservable(res)).toBe(true);
     await expect(firstValueFrom(res as never)).resolves.toBe(true);
-    expect(adopt).toHaveBeenCalledWith('en');
   });
 
   it('redirects to / when loadMe fails', async () => {

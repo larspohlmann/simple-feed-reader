@@ -17,7 +17,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { Dialog } from '@angular/cdk/dialog';
 import { Title } from '@angular/platform-browser';
 import { AuthService } from '../core/auth.service';
-import { LanguageService } from '../core/language.service';
 import { ReaderApi } from './reader-api';
 import { SubscriptionsStore } from './subscriptions.store';
 import { TagsStore } from './tags.store';
@@ -62,7 +61,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly dialog = inject(Dialog);
   private readonly api = inject(ReaderApi);
   private readonly auth = inject(AuthService);
-  private readonly language = inject(LanguageService);
   private readonly hostRef = inject(ElementRef<HTMLElement>);
 
   readonly manage = inject(ManageActions);
@@ -330,12 +328,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit(): void {
     this.subs.load();
     this.tags.load(); // the sidebar tag tree (order, empty tags) reads TagsStore
-    if (!this.auth.user()) {
-      this.auth.loadMe().subscribe({
-        next: (user) => this.language.adopt(user.locale),
-        error: () => undefined,
-      });
-    }
+    if (!this.auth.user()) this.auth.loadMe().subscribe({ error: () => undefined });
   }
 
   ngAfterViewInit(): void {

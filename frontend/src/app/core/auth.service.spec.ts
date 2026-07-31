@@ -3,9 +3,13 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
+import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { API_BASE_URL } from './api';
 import { TokenStore } from './token.store';
 import { AuthService } from './auth.service';
+import { LanguageService } from './language.service';
+import { LOCALE_WRITER } from './locale-writer';
+import { HttpLocaleWriter } from './http-locale-writer';
 
 describe('AuthService', () => {
   let svc: AuthService;
@@ -16,11 +20,16 @@ describe('AuthService', () => {
   beforeEach(() => {
     localStorage.clear();
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
         { provide: Router, useValue: { navigate } },
+        // Wire the real, HttpClient-backed writer rather than LOCALE_WRITER's
+        // no-op default: the "no write-through on adopt" test below needs an
+        // actual PATCH to *not* happen, which only the real writer can prove.
+        { provide: LOCALE_WRITER, useExisting: HttpLocaleWriter },
       ],
     });
     svc = TestBed.inject(AuthService);
@@ -37,7 +46,7 @@ describe('AuthService', () => {
     expect(tokens.token()).toBe('jwt-xyz');
   });
 
-  it('loadMe populates the current-user signal', () => {
+  it('loadMe populates the current-user signal and adopts the account locale, without writing it back', () => {
     svc.loadMe().subscribe();
     ctrl.expectOne('https://api.test/api/me').flush({
       id: 1,
@@ -45,25 +54,15 @@ describe('AuthService', () => {
       roles: ['ROLE_USER'],
       status: 'active',
       createdAt: '2026-07-01T00:00:00+00:00',
-      locale: 'en',
-    });
-    expect(svc.user()?.email).toBe('a@b.c');
-  });
-
-  it('updateLocale PATCHes /api/me and refreshes the current-user signal', () => {
-    svc.updateLocale('de').subscribe();
-    const req = ctrl.expectOne('https://api.test/api/me');
-    expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ locale: 'de' });
-    req.flush({
-      id: 1,
-      email: 'a@b.c',
-      roles: ['ROLE_USER'],
-      status: 'active',
-      createdAt: '2026-07-01T00:00:00+00:00',
       locale: 'de',
     });
-    expect(svc.user()?.locale).toBe('de');
+
+    expect(svc.user()?.email).toBe('a@b.c');
+    // The one place the account's locale is adopted into the UI.
+    expect(TestBed.inject(LanguageService).lang()).toBe('de');
+    // A value that just arrived from the server must never be PATCHed
+    // straight back to it.
+    ctrl.expectNone({ method: 'PATCH', url: 'https://api.test/api/me' });
   });
 
   it('logout clears token and user and routes to /login', () => {

@@ -1,14 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { provideRouter } from '@angular/router';
 import { EntryCompactComponent } from './entry-compact.component';
-import { LanguageService } from '../../core/language.service';
 import { EntryDto, SubscriptionTagDto } from '../models';
-
-// LanguageService now depends on AuthService (for the account write-through) —
-// stub it so this test doesn't need the HttpClient chain.
-const language = { lang: signal<'en' | 'de'>('en') };
 
 const tag = (id: number, name: string): SubscriptionTagDto => ({
   id,
@@ -41,7 +35,7 @@ describe('EntryCompactComponent', () => {
   function mount() {
     TestBed.configureTestingModule({
       imports: [EntryCompactComponent, provideTranslocoTesting()],
-      providers: [provideRouter([]), { provide: LanguageService, useValue: language }],
+      providers: [provideRouter([])],
     });
     const f = TestBed.createComponent(EntryCompactComponent);
     f.componentRef.setInput('entry', entry);
@@ -56,10 +50,7 @@ describe('EntryCompactComponent', () => {
   });
 
   it('hides the source when showSource is false', () => {
-    TestBed.configureTestingModule({
-      imports: [EntryCompactComponent, provideTranslocoTesting()],
-      providers: [{ provide: LanguageService, useValue: language }],
-    });
+    TestBed.configureTestingModule({ imports: [EntryCompactComponent, provideTranslocoTesting()] });
     const f = TestBed.createComponent(EntryCompactComponent);
     f.componentRef.setInput('entry', entry);
     f.componentRef.setInput('showSource', false);
@@ -72,7 +63,7 @@ describe('EntryCompactComponent', () => {
   it('shows tag pills when standalone', () => {
     TestBed.configureTestingModule({
       imports: [EntryCompactComponent, provideTranslocoTesting()],
-      providers: [provideRouter([]), { provide: LanguageService, useValue: language }],
+      providers: [provideRouter([])],
     });
     const f = TestBed.createComponent(EntryCompactComponent);
     f.componentRef.setInput('entry', entry);
@@ -84,7 +75,7 @@ describe('EntryCompactComponent', () => {
   it('hides tag pills inside a source group (showSource=false)', () => {
     TestBed.configureTestingModule({
       imports: [EntryCompactComponent, provideTranslocoTesting()],
-      providers: [provideRouter([]), { provide: LanguageService, useValue: language }],
+      providers: [provideRouter([])],
     });
     const f = TestBed.createComponent(EntryCompactComponent);
     f.componentRef.setInput('entry', entry);

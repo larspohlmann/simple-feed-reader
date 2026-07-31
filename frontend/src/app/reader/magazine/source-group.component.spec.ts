@@ -1,14 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { provideRouter } from '@angular/router';
 import { SourceGroupComponent } from './source-group.component';
-import { LanguageService } from '../../core/language.service';
 import { EntryDto, SubscriptionTagDto } from '../models';
-
-// LanguageService now depends on AuthService (for the account write-through) —
-// stub it so this test doesn't need the HttpClient chain.
-const language = { lang: signal<'en' | 'de'>('en') };
 
 const tag = (id: number, name: string): SubscriptionTagDto => ({
   id,
@@ -42,7 +36,7 @@ describe('SourceGroupComponent', () => {
   function mount(entries: EntryDto[], previewCount: number) {
     TestBed.configureTestingModule({
       imports: [SourceGroupComponent, provideTranslocoTesting()],
-      providers: [provideRouter([]), { provide: LanguageService, useValue: language }],
+      providers: [provideRouter([])],
     });
     const f = TestBed.createComponent(SourceGroupComponent);
     f.componentRef.setInput('source', 'heise');

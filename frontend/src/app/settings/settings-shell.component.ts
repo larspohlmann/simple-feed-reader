@@ -4,7 +4,6 @@ import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router
 import { TranslocoPipe } from '@jsverse/transloco';
 import { filter, map } from 'rxjs';
 import { AuthService } from '../core/auth.service';
-import { LanguageService } from '../core/language.service';
 import { LayoutService } from '../reader/layout.service';
 import { IconComponent } from '../shared/icon/icon.component';
 import { SettingsNavComponent } from './settings-nav.component';
@@ -22,7 +21,6 @@ import { SETTINGS_SECTIONS } from './settings-sections';
 })
 export class SettingsShellComponent implements OnInit {
   private readonly auth = inject(AuthService);
-  private readonly language = inject(LanguageService);
   private readonly layout = inject(LayoutService);
   private readonly router = inject(Router);
 
@@ -54,10 +52,7 @@ export class SettingsShellComponent implements OnInit {
     // A deep link lands here without a loaded user, and the nav needs it to
     // decide on the admin group. authGuard has already ensured a token exists.
     if (this.auth.user() === null) {
-      this.auth.loadMe().subscribe({
-        next: (user) => this.language.adopt(user.locale),
-        error: () => undefined,
-      });
+      this.auth.loadMe().subscribe({ error: () => undefined });
     }
   }
 }

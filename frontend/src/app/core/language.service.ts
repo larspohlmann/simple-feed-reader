@@ -1,7 +1,7 @@
 // src/app/core/language.service.ts
 import { Injectable, inject, signal } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
-import { AuthService } from './auth.service';
+import { LOCALE_WRITER } from './locale-writer';
 import { Lang, LANG_KEY, asLang, detectLang } from './language';
 
 /**
@@ -14,7 +14,7 @@ import { Lang, LANG_KEY, asLang, detectLang } from './language';
 @Injectable({ providedIn: 'root' })
 export class LanguageService {
   private readonly transloco = inject(TranslocoService);
-  private readonly auth = inject(AuthService);
+  private readonly writer = inject(LOCALE_WRITER);
 
   readonly lang = signal<Lang>(this.initial());
 
@@ -34,15 +34,17 @@ export class LanguageService {
     this.cache(lang);
     this.saveFailed.set(false);
 
-    this.auth.updateLocale(lang).subscribe({
-      error: () => this.saveFailed.set(true),
+    this.writer.write(lang).subscribe((ok) => {
+      if (!ok) this.saveFailed.set(true);
     });
   }
 
   /**
-   * Take the account's language after login. An unsupported value is ignored
-   * rather than applied: an old or hand-edited locale must not leave the UI
-   * with no translations.
+   * Take the account's language, typically right after `AuthService.loadMe()`.
+   * Caches only -- it never writes back, so a value that just arrived from the
+   * server is never PATCHed straight back to it. An unsupported value is
+   * ignored rather than applied: an old or hand-edited locale must not leave
+   * the UI with no translations.
    */
   adopt(locale: string | null): void {
     const lang = asLang(locale);
