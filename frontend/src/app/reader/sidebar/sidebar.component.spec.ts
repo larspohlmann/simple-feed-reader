@@ -2,7 +2,9 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { API_BASE_URL } from '../../core/api';
+import { AuthService, CurrentUser } from '../../core/auth.service';
 import { RefreshService } from '../refresh.service';
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
 import { DropData, SidebarComponent } from './sidebar.component';
@@ -11,6 +13,18 @@ import { Selection } from '../query';
 import { SubscriptionDto, TagDto } from '../models';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { buildVersion } from '../../../environments/version';
+
+const account = (trialEndsAt: string | null): CurrentUser => ({
+  id: 1,
+  email: 'me@x',
+  roles: ['ROLE_USER'],
+  status: 'active',
+  createdAt: '2026-01-01T00:00:00Z',
+  locale: 'en',
+  trialEndsAt,
+});
+
+const inDays = (days: number): string => new Date(Date.now() + days * 86_400_000).toISOString();
 
 const sub = (id: number, unread = 0): SubscriptionDto => ({
   id,
@@ -34,6 +48,7 @@ function mount(
     favoritesCount: number;
     keptCount: number;
     selection: Selection;
+    user: CurrentUser | null;
   }> = {},
 ) {
   TestBed.configureTestingModule({
@@ -43,6 +58,7 @@ function mount(
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: API_BASE_URL, useValue: 'https://api.test' },
+      { provide: AuthService, useValue: { user: signal(over.user ?? account(null)) } },
     ],
   });
   const f = TestBed.createComponent(SidebarComponent);
@@ -402,5 +418,21 @@ describe('SidebarComponent', () => {
 
     expect(version?.textContent?.trim()).toBe(buildVersion.version);
     expect(version?.getAttribute('href')).toBe('/settings');
+  });
+
+  it('shows the trial countdown when a trial is active', () => {
+    const f = mount({ user: account(inDays(5)) });
+    const el = f.nativeElement.querySelector('.trial');
+    expect(el?.textContent).toContain('5');
+  });
+
+  it('hides the trial countdown when there is no trial', () => {
+    const f = mount({ user: account(null) });
+    expect(f.nativeElement.querySelector('.trial')).toBeNull();
+  });
+
+  it('hides the trial countdown when the trial is already past', () => {
+    const f = mount({ user: account(inDays(-1)) });
+    expect(f.nativeElement.querySelector('.trial')).toBeNull();
   });
 });

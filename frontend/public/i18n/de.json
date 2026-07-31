@@ -336,7 +336,9 @@
       "dark": "Dunkel",
       "system": "System"
     },
-    "versionLabel": "Version {{version}} — Einstellungen öffnen"
+    "versionLabel": "Version {{version}} — Einstellungen öffnen",
+    "trialDaysLeft": "Testphase · noch {{days}} Tage",
+    "trialDayLeft": "Testphase · noch 1 Tag"
   },
   "common": {
     "save": "Speichern",

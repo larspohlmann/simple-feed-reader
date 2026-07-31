@@ -269,6 +269,15 @@
 
   <app-view-controls class="controls" />
 
+  @if (trialDaysLeft(); as days) {
+    <p class="trial" [class.soon]="trialEndingSoon()">
+      <app-icon name="schedule" size="sm" />
+      <span>{{
+        (days === 1 ? 'reader.trialDayLeft' : 'reader.trialDaysLeft') | transloco: { days }
+      }}</span>
+    </p>
+  }
+
   <a
     class="version"
     routerLink="/settings"

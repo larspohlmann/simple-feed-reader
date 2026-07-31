@@ -13,6 +13,7 @@ const admin: CurrentUser = {
   status: 'active',
   createdAt: 'x',
   locale: 'en',
+  trialEndsAt: null,
 };
 const plain: CurrentUser = { ...admin, roles: ['ROLE_USER'] };
 

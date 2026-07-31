@@ -1,5 +1,5 @@
 // src/app/reader/sidebar/sidebar.component.ts
-import { Component, inject, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
   CdkDrag,
@@ -18,6 +18,7 @@ import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
 import { SubscriptionDto, TagDto } from '../models';
 import { RefreshService } from '../refresh.service';
+import { AuthService } from '../../core/auth.service';
 import { buildVersion } from '../../../environments/version';
 
 /** What a sidebar drop target represents: a tag to add, or the untagged bucket. */
@@ -77,8 +78,26 @@ export class SidebarComponent {
   readonly acceptOnTagHead = (): boolean => true;
 
   readonly refreshSvc = inject(RefreshService);
+  private readonly auth = inject(AuthService);
   readonly expanded = signal<Set<number>>(new Set());
   readonly menuFor = signal<string | null>(null);
+
+  /** Whole days left in the current trial, or null when the account has no
+   *  active trial. Expired trials read as null here — the account is suspended
+   *  by then and never reaches this view. */
+  readonly trialDaysLeft = computed<number | null>(() => {
+    const endsAt = this.auth.user()?.trialEndsAt;
+    if (!endsAt) return null;
+    const remainingMs = new Date(endsAt).getTime() - Date.now();
+    if (remainingMs <= 0) return null;
+    return Math.ceil(remainingMs / 86_400_000);
+  });
+
+  /** The last stretch of a trial is emphasised. */
+  readonly trialEndingSoon = computed(() => {
+    const daysLeft = this.trialDaysLeft();
+    return daysLeft !== null && daysLeft <= 3;
+  });
 
   /** True while a feed row is being dragged (reveals the empty Feeds drop zone). */
   readonly dragging = signal(false);

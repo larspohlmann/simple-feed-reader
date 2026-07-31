@@ -20,6 +20,19 @@
 }
 
 /* Rides along under the controls, which already carry the margin-top: auto. */
+.trial {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2) 0;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.trial.soon {
+  color: var(--danger);
+}
+
 .version {
   padding: var(--space-1) var(--space-2) 0;
   color: var(--text-muted);

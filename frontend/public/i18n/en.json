@@ -336,7 +336,9 @@
       "dark": "Dark",
       "system": "System"
     },
-    "versionLabel": "Version {{version}} — open settings"
+    "versionLabel": "Version {{version}} — open settings",
+    "trialDaysLeft": "Trial · {{days}} days left",
+    "trialDayLeft": "Trial · 1 day left"
   },
   "common": {
     "save": "Save",
