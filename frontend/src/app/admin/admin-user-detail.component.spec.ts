@@ -322,9 +322,11 @@ describe('AdminUserDetailComponent', () => {
     });
     f.detectChanges();
 
-    const line = f.nativeElement.querySelector('.card.footprint') as HTMLElement;
-    expect(line.textContent).toContain('days left');
-    expect(line.textContent).toContain('5');
+    const line = f.nativeElement.querySelector('[data-testid="trial-status"]') as HTMLElement;
+    // Pinned to the exact interpolated fragment, not a bare "5" — the
+    // footprint card also renders "2 of 500 feeds", and toContain('5') would
+    // pass off that "500" alone, hiding an off-by-one in trialDaysLeft().
+    expect(line.textContent).toContain('(5 days left)');
   });
 
   it('shows that a suspended account was ended by its trial', () => {

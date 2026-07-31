@@ -100,10 +100,12 @@
 
         @switch (trialState()) {
           @case ('none') {
-            <p class="muted">{{ 'admin.detail.trialNone' | transloco }}</p>
+            <p class="muted" data-testid="trial-status">
+              {{ 'admin.detail.trialNone' | transloco }}
+            </p>
           }
           @case ('active') {
-            <p>
+            <p data-testid="trial-status">
               {{
                 'admin.detail.trialActive'
                   | transloco: { date: formatDate(d.limits.trialEndsAt!), days: trialDaysLeft() }
@@ -111,7 +113,7 @@
             </p>
           }
           @case ('expired') {
-            <p [class.flag]="suspendedByTrial()">
+            <p [class.flag]="suspendedByTrial()" data-testid="trial-status">
               {{
                 (suspendedByTrial() ? 'admin.detail.trialSuspended' : 'admin.detail.trialExpired')
                   | transloco: { date: formatDate(d.limits.trialEndsAt!) }
