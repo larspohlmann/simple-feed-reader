@@ -28,32 +28,44 @@ async function signInAsAdmin(page: Page): Promise<boolean> {
   return sidebar.isVisible();
 }
 
-test('settings page renders and the tag dialog opens; admin queue loads', async ({ page }) => {
+test('settings shell navigates sections; admin pages live inside it', async ({ page }) => {
   const signedIn = await signInAsAdmin(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
-  // Open Settings from the account menu. The button carries an avatar and is
-  // named by its aria-label; it stopped rendering the email in #39, which is
-  // what left this spec timing out on a `/@/` locator (#93).
+  // Open Settings from the account menu. On the desktop viewport the bare
+  // /settings url forwards to the first section.
   await page.getByRole('button', { name: 'Account' }).click();
   await page.getByRole('menuitem', { name: 'Settings' }).click();
+  await expect(page).toHaveURL(/\/settings\/tags$/);
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
-  // The sections that exist. #39 also deleted the Feeds section — subscriptions
-  // are managed from the sidebar — so asserting a "Feeds" heading here pinned
-  // behaviour the app had already dropped.
   await expect(page.getByRole('heading', { name: 'Tags' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Import & export' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Account' })).toBeVisible();
 
-  // The New-tag dialog opens and closes (no network write).
+  // The rail navigates between sections.
+  const nav = page.getByRole('navigation', { name: 'Settings' });
+  await nav.getByRole('link', { name: 'Import & export' }).click();
+  await expect(page).toHaveURL(/\/settings\/import$/);
+  await expect(page.getByRole('heading', { name: 'Import & export' })).toBeVisible();
+
+  // The New-tag dialog still opens from the tags section (no network write).
+  await nav.getByRole('link', { name: 'Tags' }).click();
   await page.getByRole('button', { name: 'New tag' }).click();
   const dialog = page.getByRole('dialog', { name: 'New tag' });
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', { name: 'Cancel' }).click();
   await expect(dialog).toBeHidden();
 
-  // The admin queue renders (the seeded account is an admin).
+  // Pre-#180 admin urls redirect into the shell.
   await page.goto('/admin/users');
+  await expect(page).toHaveURL(/\/settings\/admin\/users$/);
   await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible();
   await expect(page.getByRole('group', { name: 'Filter by status' })).toBeVisible();
+
+  // The catalog renders read-only rows and its category dialog opens (no write).
+  await page.goto('/settings/admin/catalog');
+  await expect(page.getByTestId('add-category')).toBeVisible();
+  await page.getByTestId('add-category').click();
+  const categoryDialog = page.getByRole('dialog', { name: 'New category' });
+  await expect(categoryDialog).toBeVisible();
+  await categoryDialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(categoryDialog).toBeHidden();
 });
