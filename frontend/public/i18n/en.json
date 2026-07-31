@@ -149,6 +149,13 @@
       "rejectMessage": "Reject {{email}}? They will not be able to sign in.",
       "suspendTitle": "Suspend user",
       "suspendMessage": "Suspend {{email}}? Their access is blocked until re-approved."
+    },
+    "categoryDialog": {
+      "newTitle": "New category",
+      "editTitle": "Edit category",
+      "name": "Name",
+      "colour": "Colour",
+      "icon": "Icon"
     }
   },
   "auth": {
