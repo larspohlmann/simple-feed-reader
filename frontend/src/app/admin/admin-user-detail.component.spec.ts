@@ -131,12 +131,16 @@ describe('AdminUserDetailComponent', () => {
     expect(el.textContent).toContain('No per-user limits set');
 
     // The feed row: name, tag chip and a labelled, non-dash freshness date.
+    // The label must be real (visually hidden) TEXT in the accessible content
+    // — not an aria-label/title attribute on a plain <span>, which ARIA
+    // forbids naming (role=generic) and most screen readers ignore.
     const feedRow = el.querySelector('.rows li.feed') as HTMLElement;
     expect(feedRow.querySelector('.name')?.textContent).toContain('Ars Technica');
     expect(feedRow.querySelector('.chip')?.textContent).toContain('Tech');
     const freshness = feedRow.querySelector('.count') as HTMLElement;
-    expect(freshness.textContent?.trim()).toBe('July 30, 2026');
-    expect(freshness.getAttribute('aria-label')).toBe('Last refresh: July 30, 2026');
+    const freshnessLabel = freshness.querySelector('.sr-only') as HTMLElement;
+    expect(freshnessLabel.textContent?.trim()).toBe('Last refresh:');
+    expect(freshness.textContent?.replace(/\s+/g, ' ').trim()).toBe('Last refresh: July 30, 2026');
   });
 
   it('renders dormant only when the server says so', () => {
@@ -160,8 +164,20 @@ describe('AdminUserDetailComponent', () => {
     f.detectChanges();
 
     const freshness = f.nativeElement.querySelector('.rows li.feed .count') as HTMLElement;
-    expect(freshness.textContent?.trim()).toBe('never');
-    expect(freshness.textContent?.trim()).not.toBe('—');
+    const normalised = freshness.textContent?.replace(/\s+/g, ' ').trim();
+    expect(normalised).toBe('Last refresh: never');
+    expect(normalised).not.toContain('—');
+  });
+
+  it('renders "never" instead of a dash when the account has not yet been approved', () => {
+    const neverApproved = { ...detail, user: { ...detail.user, approvedAt: null } };
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(neverApproved);
+    f.detectChanges();
+
+    const approvedDd = f.nativeElement.querySelectorAll('.card.account dd')[4] as HTMLElement;
+    expect(approvedDd.textContent?.trim()).toBe('never');
+    expect(approvedDd.textContent?.trim()).not.toBe('—');
   });
 
   it('falls back to the feed URL when neither the feed title nor a custom title is set', () => {

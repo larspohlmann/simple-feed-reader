@@ -138,6 +138,7 @@
       "locale": "Sprache",
       "created": "Registriert",
       "approved": "Freigegeben",
+      "neverApproved": "nie",
       "identities": "Anmeldemethode",
       "lastRefresh": "Letzte Aktualisierung",
       "neverRefreshed": "nie",

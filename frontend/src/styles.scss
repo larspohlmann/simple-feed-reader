@@ -8,6 +8,7 @@
 @use '@angular/cdk/overlay-prebuilt.css';
 @use './app/theme/breakpoints' as bp;
 @use './app/theme/tokens';
+@use './app/theme/utilities';
 @use './styles/reset';
 @use './styles/base';
 @use './styles/controls';

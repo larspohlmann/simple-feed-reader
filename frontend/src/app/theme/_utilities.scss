@@ -1,0 +1,30 @@
+// src/app/theme/_utilities.scss
+// Global utility classes that belong beside the tokens, not any one
+// component's stylesheet.
+
+/* Visually hides an element while keeping it in the accessibility tree.
+   `aria-label` / `title` on a plain, unstyled element are not a reliable
+   substitute: ARIA forbids naming a `role=generic` node (the implicit role of
+   a bare <span> or <div>), so most screen readers announce only the visible
+   text and ignore both attributes. A label that assistive tech must expose
+   belongs in real text, hidden this way, not in an attribute.
+
+   The 1px box (not 0) and `clip-path` (not `display: none` or `visibility:
+   hidden`) are the standard technique, not an oversight: a zero-size or
+   display:none node drops out of the accessibility tree in some browsers,
+   which would defeat the point. `clip-path: inset(50%)` is the modern
+   replacement for the long-standing `clip: rect(0 0 0 0)` recipe, which is
+   deprecated. This is a rendering technique with a fixed, well-known shape,
+   not a spacing value, which is why it sits here in theme/ rather than
+   trying to force it onto the --space-* scale. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

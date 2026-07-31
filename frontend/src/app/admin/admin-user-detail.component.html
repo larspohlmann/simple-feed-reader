@@ -53,7 +53,13 @@
           <dt>{{ 'admin.detail.created' | transloco }}</dt>
           <dd>{{ formatDate(d.user.createdAt) }}</dd>
           <dt>{{ 'admin.detail.approved' | transloco }}</dt>
-          <dd>{{ d.user.approvedAt ? formatDate(d.user.approvedAt) : '—' }}</dd>
+          <dd>
+            {{
+              d.user.approvedAt
+                ? formatDate(d.user.approvedAt)
+                : ('admin.detail.neverApproved' | transloco)
+            }}
+          </dd>
           @if (d.user.identities.length) {
             <dt>{{ 'admin.detail.identities' | transloco }}</dt>
             <dd>{{ d.user.identities.join(', ') }}</dd>
@@ -139,15 +145,8 @@
                 </span>
               }
             </span>
-            <span
-              class="count"
-              [attr.title]="'admin.detail.lastRefresh' | transloco"
-              [attr.aria-label]="
-                ('admin.detail.lastRefresh' | transloco) +
-                ': ' +
-                lastFetchedLabel(sub.lastFetchedAt)
-              "
-            >
+            <span class="count">
+              <span class="sr-only">{{ 'admin.detail.lastRefresh' | transloco }}: </span>
               {{ lastFetchedLabel(sub.lastFetchedAt) }}
             </span>
           </li>

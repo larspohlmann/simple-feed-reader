@@ -138,6 +138,7 @@
       "locale": "Language",
       "created": "Registered",
       "approved": "Approved",
+      "neverApproved": "never",
       "identities": "Sign-in method",
       "lastRefresh": "Last refresh",
       "neverRefreshed": "never",
