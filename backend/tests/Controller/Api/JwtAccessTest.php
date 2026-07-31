@@ -215,7 +215,7 @@ final class JwtAccessTest extends WebTestCase
         self::assertIsArray($payload);
 
         self::assertSame(
-            ['createdAt', 'email', 'id', 'roles', 'status'],
+            ['createdAt', 'email', 'id', 'locale', 'roles', 'status'],
             $this->sortedKeys($payload),
             'GET /api/me must expose exactly these fields — adding one is a deliberate act, not a side effect.',
         );
