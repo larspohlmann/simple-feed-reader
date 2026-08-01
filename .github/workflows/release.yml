@@ -91,10 +91,14 @@ jobs:
         id: previous
         run: |
           set -euo pipefail
+          # The || true is what makes the first release possible: with no
+          # earlier vX.Y.Z tag the grep matches nothing and exits 1, and under
+          # pipefail that status would abort the step through the command
+          # substitution. Same rescue latest_release_tag in scripts/lib.sh uses.
           previous="$(git tag --list 'v*' \
             | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
             | grep -vFx "${GITHUB_REF_NAME}" \
-            | sort -V | tail -n 1)"
+            | sort -V | tail -n 1 || true)"
           echo "previous=${previous}" >> "${GITHUB_OUTPUT}"
           if [ -n "${previous}" ]; then
             echo "==> previous release: ${previous}"
