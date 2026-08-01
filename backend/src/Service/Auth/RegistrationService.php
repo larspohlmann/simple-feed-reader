@@ -12,7 +12,7 @@ use App\Enum\UserStatus;
 use App\Event\UserAwaitingApproval;
 use App\Repository\UserRepository;
 use App\Security\PasswordWorkEqualizerInterface;
-use App\Service\Mail\AccountMailer;
+use App\Service\Mail\AccountMailerInterface;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -28,7 +28,7 @@ final readonly class RegistrationService
         private UserRepository $users,
         private UserPasswordHasherInterface $hasher,
         private ActionTokenService $tokens,
-        private AccountMailer $mailer,
+        private AccountMailerInterface $mailer,
         private ClockInterface $clock,
         private PasswordWorkEqualizerInterface $work,
         private EventDispatcherInterface $events,

@@ -15,7 +15,7 @@ use App\Repository\UserIdentityRepository;
 use App\Repository\UserRepository;
 use App\Service\Admin\SelfActionGuard;
 use App\Service\Admin\UserStatistics;
-use App\Service\Mail\AccountMailer;
+use App\Service\Mail\AccountMailerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -37,7 +37,7 @@ final readonly class AdminUserController
         private TagRepository $tags,
         private UserIdentityRepository $identities,
         private EntityManagerInterface $em,
-        private AccountMailer $mailer,
+        private AccountMailerInterface $mailer,
         private ClockInterface $clock,
         private UserStatistics $statistics,
         private SelfActionGuard $selfActionGuard,

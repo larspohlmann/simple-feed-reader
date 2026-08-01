@@ -22,6 +22,16 @@ services:
         alias: App\Service\Reader\ArticleExtractor
         public: true
 
+    # MailGatedAccountMailerWiringTest fetches this to prove the container
+    # resolves the interface to the decorator (MailGatedAccountMailer), not the
+    # plain AccountMailer it wraps — the ambiguity that made the explicit alias
+    # in services.yaml necessary in the first place. `self::getContainer()->
+    # get(...)` refuses a private service, so this needs the same public
+    # override as the aliases above. Test environment only.
+    App\Service\Mail\AccountMailerInterface:
+        alias: App\Service\Mail\AccountMailer
+        public: true
+
     # Tests acquire the refresh lock up front to assert the "busy" path.
     Symfony\Component\Lock\LockFactory:
         alias: lock.default.factory
