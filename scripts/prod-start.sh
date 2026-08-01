@@ -46,9 +46,12 @@ prod_compose up -d --build
 # certificates in (or removing them) changes the host files but not the
 # compose service definition -- `up -d --build` above sees nothing to
 # recreate and leaves the container serving whatever mode it already picked.
-# Force it to re-evaluate on every run so this script is really "the way to
-# switch to TLS" the comment at the top of this file promises.
-prod_compose up -d --force-recreate web
+# A restart re-runs /docker-entrypoint.d/ (including the mode-selection
+# script) exactly like a recreate would, without destroying and rebuilding
+# the container object on every routine run -- the lighter primitive so this
+# script is really "the way to switch to TLS" the comment at the top of this
+# file promises.
+prod_compose restart web
 
 wait_for_php_ready
 
