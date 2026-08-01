@@ -32,13 +32,16 @@ const inDays = (days: number): string => new Date(Date.now() + days * 86_400_000
 
 const sub = (id: number, unread = 0): SubscriptionDto => ({
   id,
+  feedId: id * 10,
   title: `s${id}`,
+  faviconUrl: null,
   customTitle: null,
   feedUrl: `https://f/${id}`,
   siteUrl: null,
   status: 'active',
   sourceFormat: 'xml',
   createdAt: 'x',
+  lastFetchedAt: null,
   position: 0,
   tags: [],
   unreadCount: unread,

@@ -26,6 +26,7 @@ const entry: EntryDto = {
   createdAt: 'x',
   subscriptionId: 1,
   source: 'Golem',
+  faviconUrl: null,
   isRead: false,
   isFavorite: false,
   isKept: false,

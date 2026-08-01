@@ -1,12 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { UrlTree } from '@angular/router';
+import { GuardResult, MaybeAsync, UrlTree } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { runInInjectionContext, EnvironmentInjector } from '@angular/core';
 import { firstValueFrom, isObservable } from 'rxjs';
 import { SetupService } from './setup.service';
 import { requireSetupGuard, setupRedirectGuard } from './setup.guard';
 
-function resolve(result: boolean | UrlTree | ReturnType<typeof of>): Promise<boolean | UrlTree> {
+function resolve(result: MaybeAsync<GuardResult>): Promise<GuardResult> {
   return isObservable(result) ? firstValueFrom(result) : Promise.resolve(result);
 }
 

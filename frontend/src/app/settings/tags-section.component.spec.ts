@@ -144,13 +144,16 @@ describe('TagsSectionComponent', () => {
     const subs: SubscriptionDto[] = [
       {
         id: 1,
+        feedId: 10,
         title: 'A',
+        faviconUrl: null,
         customTitle: null,
         feedUrl: 'u',
         siteUrl: null,
         status: 'active',
         sourceFormat: 'xml',
         createdAt: 'x',
+        lastFetchedAt: null,
         position: 0,
         tags: [tag(1, 'Tech')],
         unreadCount: 0,

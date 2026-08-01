@@ -5,7 +5,7 @@ import { of, Subject } from 'rxjs';
 import { ReaderViewComponent } from './reader-view.component';
 import { ReaderContentService } from '../reader-content.service';
 import { entryScrollKey } from '../list-scroll-memory';
-import { EntryDto, ReaderContent } from '../models';
+import { EntryDto, ReaderArticle, ReaderContent } from '../models';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -21,6 +21,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   createdAt: 'x',
   subscriptionId: 5,
   source: 'Ars',
+  faviconUrl: null,
   isRead: false,
   isFavorite: false,
   isKept: false,
@@ -36,7 +37,7 @@ function mount(e: EntryDto | null) {
   return f;
 }
 
-const okContent = (over: Partial<ReaderContent> = {}): ReaderContent => ({
+const okContent = (over: Partial<ReaderArticle> = {}): ReaderArticle => ({
   status: 'ok',
   contentHtml: '<p>READER</p>',
   url: '',
