@@ -6,6 +6,7 @@ namespace App\Controller\Api;
 
 use App\Dto\Setup\SetupAdminRequest;
 use App\Repository\UserRepository;
+use App\Service\Auth\RegistrationPolicy;
 use App\Service\Auth\WebAdminSetup;
 use App\Service\RateLimit\RateLimitGuard;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -23,13 +24,17 @@ final readonly class SetupController
         private WebAdminSetup $setup,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $setupLimiter,
+        private RegistrationPolicy $policy,
     ) {
     }
 
     #[Route('/status', name: 'api_setup_status', methods: ['GET'])]
     public function status(): JsonResponse
     {
-        return new JsonResponse(['needsSetup' => !$this->users->hasAnyAdmin()]);
+        return new JsonResponse([
+            'needsSetup' => !$this->users->hasAnyAdmin(),
+            'mailEnabled' => $this->policy->mailEnabled(),
+        ]);
     }
 
     #[Route('/admin', name: 'api_setup_admin', methods: ['POST'])]

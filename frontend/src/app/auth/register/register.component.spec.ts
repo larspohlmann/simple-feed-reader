@@ -42,7 +42,7 @@ describe('RegisterComponent', () => {
     });
     reg.flush({ status: 'pending_verification' }, { status: 202, statusText: 'Accepted' });
     await done;
-    expect(c.done()).toBe(true);
+    expect(c.resultStatus()).toBe('pending_verification');
   });
 
   it('surfaces a field error from validation_error', async () => {
@@ -121,9 +121,53 @@ describe('RegisterComponent — a submit that cannot proceed must say so', () =>
     const req = ctrl.expectOne('https://api.test/api/auth/register');
     expect(req.request.body.email).toBe('filled@example.com');
     expect(req.request.body.password).toBe('autofilled-secret');
-    req.flush({}, { status: 202, statusText: 'Accepted' });
+    req.flush({ status: 'pending_verification' }, { status: 202, statusText: 'Accepted' });
     await done;
 
-    expect(c.done()).toBe(true);
+    expect(c.resultStatus()).toBe('pending_verification');
+  });
+
+  it('shows the check-email message for a pending_verification result', async () => {
+    const f = TestBed.createComponent(RegisterComponent);
+    const c = f.componentInstance;
+    f.detectChanges();
+    const ctrl = TestBed.inject(HttpTestingController);
+    c.form.setValue({ email: 'a@b.c', password: 'password12345' });
+    const done = c.submit();
+    ctrl
+      .expectOne('https://api.test/api/auth/altcha-challenge')
+      .flush({ algorithm: 'SHA-256', challenge: 'c', salt: 's', signature: 'x', maxnumber: 5 });
+    await new Promise((r) => setTimeout(r));
+    ctrl
+      .expectOne('https://api.test/api/auth/register')
+      .flush({ status: 'pending_verification' }, { status: 202, statusText: 'Accepted' });
+    await done;
+    f.detectChanges();
+
+    expect(c.resultStatus()).toBe('pending_verification');
+    expect((f.nativeElement as HTMLElement).textContent).toContain(
+      'Check your email for a confirmation link.',
+    );
+  });
+
+  it('shows the ready-now message for an active result', async () => {
+    const f = TestBed.createComponent(RegisterComponent);
+    const c = f.componentInstance;
+    f.detectChanges();
+    const ctrl = TestBed.inject(HttpTestingController);
+    c.form.setValue({ email: 'a@b.c', password: 'password12345' });
+    const done = c.submit();
+    ctrl
+      .expectOne('https://api.test/api/auth/altcha-challenge')
+      .flush({ algorithm: 'SHA-256', challenge: 'c', salt: 's', signature: 'x', maxnumber: 5 });
+    await new Promise((r) => setTimeout(r));
+    ctrl
+      .expectOne('https://api.test/api/auth/register')
+      .flush({ status: 'active' }, { status: 202, statusText: 'Accepted' });
+    await done;
+    f.detectChanges();
+
+    expect(c.resultStatus()).toBe('active');
+    expect((f.nativeElement as HTMLElement).textContent).toContain('You can sign in now.');
   });
 });

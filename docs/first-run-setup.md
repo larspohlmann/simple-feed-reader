@@ -57,3 +57,27 @@ for hosts where you configure the environment yourself:
 
 The endpoint returns 404 whenever the secret is unset or an admin already
 exists, and it is rate-limited (5 attempts per 15 minutes per IP).
+
+## The registration gates, and running without mail
+
+Once an administrator exists, two independent toggles decide what a new
+sign-up needs before it can use the app. Both default to on. An
+administrator reads and sets them with the admin settings endpoint,
+`GET`/`PUT /api/admin/settings` (`ROLE_ADMIN`):
+
+- **Require email confirmation** — a new email/password account must open
+  the link in a confirmation mail before it can sign in.
+- **Require admin approval** — every new account, however it was created
+  (email/password or OAuth), sits as `pending_approval` until an
+  administrator approves it — the same queue the bootstrap admin above
+  bypasses.
+
+Some instances are set up to send no mail at all. The installer's mail
+question offers **"4) No mail"** for exactly that (see
+[docker-production.md](docker-production.md) §5, "Running without mail").
+On a mailless instance, "require email confirmation" is forced off no
+matter how it is set — nothing can deliver the confirmation link — while
+"require admin approval" is untouched, since an administrator can still
+approve an account by hand. The settings endpoint's response includes
+`mailEnabled` so a caller can tell the two apart: the stored toggle versus
+the effective, mail-forced value.

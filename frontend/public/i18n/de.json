@@ -66,6 +66,16 @@
       "loading": "wird geprüft…",
       "unavailable": "nicht verfügbar",
       "stale": "Dein Browser führt einen älteren Build aus als der Server. Lade die Seite neu."
+    },
+    "instance": {
+      "title": "Instanzeinstellungen",
+      "loading": "Instanzeinstellungen werden geladen",
+      "retry": "Erneut versuchen",
+      "requireEmailConfirmation": "E-Mail-Bestätigung erforderlich",
+      "requireEmailConfirmationHint": "Neue Konten müssen ihre E-Mail-Adresse bestätigen, bevor sie sich anmelden können.",
+      "requireApproval": "Admin-Freigabe erforderlich",
+      "requireApprovalHint": "Neue Konten bleiben ausstehend, bis ein Admin sie freigibt.",
+      "mailDisabledHint": "Diese Instanz versendet keine E-Mails, daher kann die E-Mail-Bestätigung nicht laufen — gib Konten stattdessen manuell frei."
     }
   },
   "dialog": {
@@ -253,7 +263,9 @@
     "register": {
       "title": "Konto erstellen",
       "subtitle": "Registrieren und anschließend die E-Mail bestätigen.",
-      "done": "Prüfe deine E-Mails auf einen Bestätigungslink. Nach der Bestätigung prüft ein Administrator dein Konto, bevor du dich anmelden kannst.",
+      "checkEmail": "Prüfe deine E-Mails auf einen Bestätigungslink. Nach der Bestätigung prüft ein Administrator dein Konto, bevor du dich anmelden kannst.",
+      "awaitingApproval": "Ein Administrator muss dein Konto freigeben, bevor du dich anmelden kannst.",
+      "activeNow": "Dein Konto ist bereit. Du kannst dich jetzt anmelden.",
       "passwordLabel": "Passwort (mindestens 12 Zeichen)",
       "submit": "Konto erstellen",
       "haveAccount": "Schon ein Konto?",
@@ -272,7 +284,8 @@
       "requestNew": "Neuen Link anfordern",
       "failed": "Passwort konnte nicht zurückgesetzt werden. Fordere einen neuen Link an.",
       "requestInvalidInput": "Bitte gib eine gültige E-Mail-Adresse ein.",
-      "newInvalidInput": "Bitte gib ein Passwort mit mindestens 12 Zeichen ein."
+      "newInvalidInput": "Bitte gib ein Passwort mit mindestens 12 Zeichen ein.",
+      "unavailable": "Passwort-Zurücksetzen ist auf dieser Instanz nicht verfügbar. Bitte wende dich an deine Administratorin oder deinen Administrator, um dein Passwort zurückzusetzen."
     },
     "verify": {
       "title": "E-Mail bestätigen",

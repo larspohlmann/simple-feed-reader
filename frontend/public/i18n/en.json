@@ -66,6 +66,16 @@
       "loading": "checking…",
       "unavailable": "unavailable",
       "stale": "Your browser is running an older build than the server. Reload the page to update."
+    },
+    "instance": {
+      "title": "Instance settings",
+      "loading": "Loading instance settings",
+      "retry": "Retry",
+      "requireEmailConfirmation": "Require email confirmation",
+      "requireEmailConfirmationHint": "New accounts must confirm their email address before they can sign in.",
+      "requireApproval": "Require admin approval",
+      "requireApprovalHint": "New accounts stay pending until an admin approves them.",
+      "mailDisabledHint": "This instance sends no mail, so email confirmation cannot run — approve accounts by hand instead."
     }
   },
   "dialog": {
@@ -253,7 +263,9 @@
     "register": {
       "title": "Create account",
       "subtitle": "Register, then confirm your email.",
-      "done": "Check your email for a confirmation link. After you confirm, an administrator reviews your account before you can sign in.",
+      "checkEmail": "Check your email for a confirmation link. After you confirm, an administrator reviews your account before you can sign in.",
+      "awaitingApproval": "An administrator needs to approve your account before you can sign in.",
+      "activeNow": "Your account is ready. You can sign in now.",
       "passwordLabel": "Password (at least 12 characters)",
       "submit": "Create account",
       "haveAccount": "Already have an account?",
@@ -272,7 +284,8 @@
       "requestNew": "Request a new link",
       "failed": "Could not reset the password. Request a new link.",
       "requestInvalidInput": "Enter a valid email address.",
-      "newInvalidInput": "Enter a password of at least 12 characters."
+      "newInvalidInput": "Enter a password of at least 12 characters.",
+      "unavailable": "Password reset is unavailable on this instance. Ask your administrator to reset your password."
     },
     "verify": {
       "title": "Confirm email",

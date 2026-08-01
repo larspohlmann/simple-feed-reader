@@ -8,7 +8,7 @@ use App\Dto\Mail\PendingApprovalNotice;
 use App\Enum\UserStatus;
 use App\Event\UserAwaitingApproval;
 use App\Repository\UserRepository;
-use App\Service\Mail\AccountMailer;
+use App\Service\Mail\AccountMailerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
@@ -24,7 +24,7 @@ final readonly class NotifyAdminsOfPendingApproval
 {
     public function __construct(
         private UserRepository $users,
-        private AccountMailer $mailer,
+        private AccountMailerInterface $mailer,
         private LoggerInterface $logger,
         #[Autowire('%env(APP_FRONTEND_URL)%')]
         private string $frontendUrl,

@@ -22,6 +22,16 @@ services:
         alias: App\Service\Reader\ArticleExtractor
         public: true
 
+    # MailGatedAccountMailerWiringTest fetches this to prove the container
+    # resolves the interface to the decorator (MailGatedAccountMailer), not the
+    # plain AccountMailer it wraps — the ambiguity that made the explicit alias
+    # in services.yaml necessary in the first place. `self::getContainer()->
+    # get(...)` refuses a private service, so this needs the same public
+    # override as the aliases above. Test environment only.
+    App\Service\Mail\AccountMailerInterface:
+        alias: App\Service\Mail\AccountMailer
+        public: true
+
     # Tests acquire the refresh lock up front to assert the "busy" path.
     Symfony\Component\Lock\LockFactory:
         alias: lock.default.factory
@@ -214,5 +224,28 @@ services:
     # would inline it away and the test container could not fetch it. Same
     # `autowire` caveat as above.
     App\Service\Auth\BootstrapAdminProvisioner:
+        autowire: true
+        public: true
+
+    # MailCapabilityWiringTest fetches this to prove the service actually
+    # resolves through the real container: %env(string:default::MAIL_DISABLED)%
+    # must build a non-null string even when the var is unset, or every future
+    # caller (guards, the mail-disabled DTO flag, etc.) breaks with a TypeError
+    # on first request in the default "mail on" configuration. A test that
+    # constructs MailCapability by hand cannot catch that — it bypasses env
+    # resolution entirely. No production caller exists yet, so the compiler
+    # would otherwise inline it away and the test container could not fetch
+    # it. Same `autowire` caveat as above.
+    App\Service\Mail\MailCapability:
+        autowire: true
+        public: true
+
+    # InstanceSettingsTest drives update()/requireEmailConfirmation()/
+    # requireApproval() directly to prove the "no row yet" default and the
+    # single-row create-or-update behaviour. Production callers (Registration
+    # Policy, the admin settings endpoint) arrive in later tasks, so until then
+    # the compiler would inline this away and the test container could not
+    # fetch it. Same `autowire` caveat as above.
+    App\Service\Settings\InstanceSettings:
         autowire: true
         public: true

@@ -56,6 +56,15 @@ services:
     App\Service\Reader\ArticleExtractorInterface: '@App\Service\Reader\ArticleExtractor'
     App\Service\Version\ReleaseVersionReader: '@App\Service\Version\FileReleaseVersionReader'
 
+    # Two classes implement AccountMailerInterface (AccountMailer and its
+    # #[AsDecorator] MailGatedAccountMailer below), so the container will not
+    # auto-create an interface alias for it — ambiguous. This alias resolves the
+    # interface to the AccountMailer service id, which decoration then swaps for
+    # the decorator: the alias target's id does not change, only what it builds.
+    # Every consumer that typehints the interface therefore gets the mail gate
+    # for free. MailGatedAccountMailerWiringTest pins this.
+    App\Service\Mail\AccountMailerInterface: '@App\Service\Mail\AccountMailer'
+
     # The refresh pipeline reads and writes time through the database clock, not
     # the PHP process clock. The FastCGI web tier was observed running ~1 h fast,
     # and a last_fetched_at in the future freezes a feed out of the force-refresh

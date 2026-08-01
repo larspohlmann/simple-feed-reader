@@ -13,11 +13,9 @@ use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Repository\UserIdentityRepository;
 use App\Repository\UserRepository;
-use App\Service\Admin\SelfActionGuard;
 use App\Service\Admin\UserStatistics;
-use App\Service\Mail\AccountMailer;
-use Doctrine\ORM\EntityManagerInterface;
-use Psr\Clock\ClockInterface;
+use App\Service\Admin\UserStatusChanger;
+use App\Service\Auth\PasswordResetter;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
@@ -36,11 +34,9 @@ final readonly class AdminUserController
         private SubscriptionRepository $subscriptions,
         private TagRepository $tags,
         private UserIdentityRepository $identities,
-        private EntityManagerInterface $em,
-        private AccountMailer $mailer,
-        private ClockInterface $clock,
         private UserStatistics $statistics,
-        private SelfActionGuard $selfActionGuard,
+        private UserStatusChanger $statusChanger,
+        private PasswordResetter $passwordResetter,
     ) {
     }
 
@@ -108,38 +104,10 @@ final readonly class AdminUserController
     }
 
     /**
-     * Activates an account. The rule for the mail — do not "fix" the cases that
-     * stay silent, they are deliberate:
-     * The "your account has been approved" mail means "you have been granted
-     * access for the first time". Classify any new status against that
-     * sentence rather than against the list below — and check the claim, since
-     * an earlier version of this comment got `rejected` wrong by grouping it
-     * with suspended on the strength of the grouping rather than the sentence.
-     * MAILS — the user has never had access, and now does:
-     *   - pending_approval: verified their address, waited in the queue.
-     *   - pending_verification: never confirmed their address; approving
-     *     overrides double opt-in (see below), but the grant is just as real.
-     *   - rejected: an admin declined them and has now changed their mind.
-     *     Rejection is only reachable FROM pending_approval, so a rejected user
-     *     has never once had access — this is a first-time grant, and the one
-     *     case where the user is certainly waiting to hear, having applied and
-     *     seen nothing happen. Silence here left them holding a working account
-     *     they had no reason to try.
-     * SILENT — nothing was granted that the user did not already have:
-     *   - suspended: a genuine RESTORATION of access they used to have. This
-     *     route is deliberately the only way back, rather than an /unsuspend
-     *     endpoint for something an admin does once a year, but telling a
-     *     returning user they were "approved" would only confuse.
-     *   - active: a no-op, which is what makes a double-click safe.
-     * Approving a pending_verification account overrides double opt-in: that
-     * address was never confirmed, so the approval mail may go somewhere nobody
-     * proved they control. That is a real admin decision, made deliberately —
-     * the queue lists every status — and the mail itself is harmless.
-     * approvedAt is stamped on every successful activation, reinstatement
-     * included: it is the audit trail for when access was last granted, which
-     * is more useful than preserving the date of the first one.
-     * There is intentionally no self-guard here, unlike reject and suspend.
-     * Activating an account cannot lock anybody out.
+     * Activates an account — first-time grant, silent reinstatement, or silent
+     * no-op depending on the account's current status. The mail rule and the
+     * reasoning behind each case live on UserStatusChanger::approve(), which
+     * owns the decision.
      *
      * @throws TransportExceptionInterface
      */
@@ -147,19 +115,7 @@ final readonly class AdminUserController
     public function approve(int $id): JsonResponse
     {
         $user = $this->users->getById($id);
-        $isFirstTimeGrant = \in_array(
-            $user->getStatus(),
-            [UserStatus::PendingApproval, UserStatus::PendingVerification, UserStatus::Rejected],
-            true,
-        );
-
-        $user->setStatus(UserStatus::Active);
-        $user->setApprovedAt($this->clock->now());
-        $this->em->flush();
-
-        if ($isFirstTimeGrant) {
-            $this->mailer->sendApproved($user);
-        }
+        $this->statusChanger->approve($user);
 
         return new JsonResponse(['status' => $user->getStatus()->value]);
     }
@@ -168,10 +124,7 @@ final readonly class AdminUserController
     public function reject(int $id, #[CurrentUser] User $admin): JsonResponse
     {
         $user = $this->users->getById($id);
-        $this->selfActionGuard->ensureNotSelf($user, $admin);
-
-        $user->setStatus(UserStatus::Rejected);
-        $this->em->flush();
+        $this->statusChanger->reject($user, $admin);
 
         return new JsonResponse(['status' => $user->getStatus()->value]);
     }
@@ -180,11 +133,28 @@ final readonly class AdminUserController
     public function suspend(int $id, #[CurrentUser] User $admin): JsonResponse
     {
         $user = $this->users->getById($id);
-        $this->selfActionGuard->ensureNotSelf($user, $admin);
-
-        $user->setStatus(UserStatus::Suspended);
-        $this->em->flush();
+        $this->statusChanger->suspend($user, $admin);
 
         return new JsonResponse(['status' => $user->getStatus()->value]);
+    }
+
+    /**
+     * No SelfActionGuard: unlike reject/suspend, generating oneself a new
+     * password cannot lock anybody out — the admin ends up with a working
+     * account either way.
+     */
+    #[Route(
+        '/{id}/reset-password',
+        name: 'api_admin_users_reset_password',
+        methods: ['POST'],
+        requirements: ['id' => '\d+'],
+    )]
+    public function resetPassword(int $id): JsonResponse
+    {
+        $user = $this->users->getById($id);
+
+        // Returned once, in the response body only, for the admin to relay out of
+        // band. The supported recovery path when the instance sends no mail.
+        return new JsonResponse(['password' => $this->passwordResetter->generateAndSet($user)]);
     }
 }

@@ -38,6 +38,12 @@ services:
       # No default and no fallback: null:// discards mail and reports success,
       # and InsecureProductionConfigGuard 500s every request while it is set.
       MAILER_DSN: ${MAILER_DSN:?set a real mail transport in .env.prod}
+      # Deliberate "no mail" mode (#230). When 1, InsecureProductionConfigGuard
+      # accepts MAILER_DSN=null://null instead of 500ing. MAILER_DSN stays
+      # required above, so a FORGOTTEN mailer still fails compose at start; the
+      # installer's "No mail" choice writes both MAIL_DISABLED=1 and
+      # MAILER_DSN=null://null together.
+      MAIL_DISABLED: ${MAIL_DISABLED:-}
       MAIL_FROM: ${MAIL_FROM:?set it in .env.prod}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Simple Feed Reader}
       APP_SECRET: ${APP_SECRET:?set it in .env.prod}

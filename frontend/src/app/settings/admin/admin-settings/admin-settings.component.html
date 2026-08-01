@@ -1,0 +1,39 @@
+<app-settings-card [heading]="'settings.instance.title' | transloco">
+  @if (loading()) {
+    <app-skeleton [label]="'settings.instance.loading' | transloco" [rows]="2" />
+  } @else if (error()) {
+    <app-error-banner
+      [message]="error()!.detail || error()!.title"
+      [actionLabel]="'settings.instance.retry' | transloco"
+      (action)="load()"
+    />
+  } @else {
+    <div class="toggle">
+      <label class="check" [class.disabled]="!mailEnabled()">
+        <input
+          type="checkbox"
+          [checked]="requireEmailConfirmation()"
+          [disabled]="!mailEnabled()"
+          (change)="toggleEmailConfirmation()"
+        />
+        {{ 'settings.instance.requireEmailConfirmation' | transloco }}
+      </label>
+      <p class="hint">
+        {{
+          (mailEnabled()
+            ? 'settings.instance.requireEmailConfirmationHint'
+            : 'settings.instance.mailDisabledHint'
+          ) | transloco
+        }}
+      </p>
+    </div>
+
+    <div class="toggle">
+      <label class="check">
+        <input type="checkbox" [checked]="requireApproval()" (change)="toggleApproval()" />
+        {{ 'settings.instance.requireApproval' | transloco }}
+      </label>
+      <p class="hint">{{ 'settings.instance.requireApprovalHint' | transloco }}</p>
+    </div>
+  }
+</app-settings-card>

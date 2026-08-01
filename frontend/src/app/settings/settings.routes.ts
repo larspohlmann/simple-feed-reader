@@ -54,6 +54,14 @@ export const SETTINGS_ROUTES: Routes = [
         loadComponent: () =>
           import('../admin/admin-catalog.component').then((m) => m.AdminCatalogComponent),
       },
+      {
+        path: 'admin/settings',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./admin/admin-settings/admin-settings.component').then(
+            (m) => m.AdminSettingsComponent,
+          ),
+      },
     ],
   },
 ];

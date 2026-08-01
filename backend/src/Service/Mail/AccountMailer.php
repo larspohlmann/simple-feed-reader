@@ -19,7 +19,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  * renders no HTML anywhere else, and plain bodies survive every client. Subject
  * and body are translated into the recipient's own language (User::$locale).
  */
-final readonly class AccountMailer
+final readonly class AccountMailer implements AccountMailerInterface
 {
     public function __construct(
         private MailerInterface $mailer,

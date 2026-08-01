@@ -133,7 +133,49 @@ relay.
 file; the production stack cannot reach it, and no production configuration
 should ever point at it.
 
-## 5. Update
+## 5. Running without mail
+
+A private or single-operator instance may not want a mail transport at all.
+Set `MAIL_DISABLED=1` together with `MAILER_DSN=null://null` in `.env.prod`
+to opt in — both are required. The installer's mail question offers this as
+choice **"4) No mail"** (at install, or later via
+`./scripts/prod-configure.sh` — see §7) and sets both automatically, along
+with a placeholder `MAIL_FROM` derived from `PUBLIC_URL` if none is set yet
+(it is never actually sent).
+
+A merely *forgotten* mailer still fails loud, on purpose:
+`docker-compose.prod.yml` keeps `MAILER_DSN` a required variable (empty
+refuses to start), and the runtime guard answers every request with 500 if
+it sees the null transport (`null://null`) without `MAIL_DISABLED=1` set
+alongside it. Mailless is a deliberate opt-in, never something an instance
+falls into by leaving a field blank.
+
+Consequences, once mailless is on:
+
+- **Email confirmation is forced off.** New users skip the verification
+  step entirely, so an account can go active with an address that was never
+  proven to receive mail (a typo, or someone else's inbox — weigh that
+  against the convenience before enabling it on a public instance).
+- **Password reset by email is unavailable.** Recover an account from the
+  shell instead:
+
+  ```bash
+  docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod \
+    exec -u www-data php bin/console app:user:reset-password you@example.com --generate
+  ```
+
+  `--generate` mints a random password and prints it once, for you to relay
+  to the user out of band; omit the flag to type one at a hidden prompt
+  instead. The equivalent also exists as an admin API call —
+  `POST /api/admin/users/{id}/reset-password` (`ROLE_ADMIN`) — which returns
+  a freshly generated password once, in the response body.
+
+The two admin toggles that decide whether email confirmation and admin
+approval are required in the first place — both on by default — are
+covered in [first-run-setup.md](first-run-setup.md); mailless mode forces
+the email-confirmation one off regardless of how it is set.
+
+## 6. Update
 
 ```bash
 cd simple-feed-reader && ./scripts/update.sh
@@ -143,7 +185,7 @@ This checks out the newest release and re-runs the production bring-up
 (rebuild, migrate, health check). Data is kept. `prod-start.sh` is
 idempotent — running it again is always safe.
 
-## 6. Reconfigure
+## 7. Reconfigure
 
 To change the public URL or the mail settings later, re-run the installer's
 questions against the existing install; changing the URL's port re-publishes
@@ -161,7 +203,7 @@ passwords already initialized the database volume. Ports and optional
 values are a hand edit in `.env.prod` (the comments in `.env.prod.example`
 explain each one), applied with `./scripts/prod-start.sh`.
 
-## 7. Backup
+## 8. Backup
 
 Everything worth keeping lives in three named volumes: the database
 (`mysql-data`), logs and cache pools (`php-var`), and the JWT signing keys
@@ -175,7 +217,7 @@ docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file 
 Losing `jwt-keys` is not fatal — new keys are generated on the next start —
 but it signs every user out.
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 - **Compose refuses to start and names a variable** — that value is empty in
   `.env.prod`. The comments in `.env.prod.example` explain each one.

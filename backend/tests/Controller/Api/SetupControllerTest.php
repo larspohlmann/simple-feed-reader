@@ -112,6 +112,18 @@ final class SetupControllerTest extends WebTestCase
         self::assertFalse($this->body($client)['needsSetup']);
     }
 
+    public function testStatusReportsMailEnabled(): void
+    {
+        $client = self::createClient();
+        $client->request('GET', '/api/setup/status');
+
+        self::assertResponseIsSuccessful();
+        $body = $this->body($client);
+        self::assertIsBool($body['needsSetup']);
+        self::assertIsBool($body['mailEnabled']);
+        self::assertTrue($body['mailEnabled']);
+    }
+
     public function testCreatesAdminWithTheCorrectSecret(): void
     {
         $this->enableSecret();
