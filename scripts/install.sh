@@ -34,21 +34,6 @@ fi
 say() { printf '%s\n' "${_b_blue}==>${_b_reset} $*"; }
 die() { printf '%s\n' "${_b_red}error:${_b_reset} $*" >&2; exit 1; }
 
-# Ask a yes/no question. Reads from the terminal, not stdin, because stdin is
-# the script itself when this runs through `curl | bash`.
-confirm() {
-  local prompt="$1" answer
-  if [ ! -r /dev/tty ]; then
-    return 1
-  fi
-  printf '%s [y/N] ' "${prompt}" >/dev/tty
-  read -r answer </dev/tty || return 1
-  case "${answer}" in
-    [yY] | [yY][eE][sS]) return 0 ;;
-    *) return 1 ;;
-  esac
-}
-
 # --- 1. prerequisites -------------------------------------------------------
 say 'Checking prerequisites ...'
 
@@ -97,52 +82,8 @@ env_prod_set MYSQL_ROOT_PASSWORD "$(generate_secret)"
 env_prod_set MYSQL_PASSWORD "$(generate_secret)"
 
 # --- 5. the values only the operator knows ----------------------------------
-public_url=$(prompt_with_default 'Public URL of this instance (as users will reach it)' 'http://localhost')
-public_url=${public_url%/}
-env_prod_set PUBLIC_URL "${public_url}"
-
-# Derive a plausible From: domain from the public URL for the prompt default.
-mail_host=${public_url#*://}
-mail_host=${mail_host%%/*}
-mail_host=${mail_host%%:*}
-
-mail_choice='3'
-if [ -r /dev/tty ]; then
-  say 'How should the app send mail? Registration and password reset depend on it.'
-  printf '  1) An SMTP relay (your mail provider): host, port, user, password\n' >/dev/tty
-  printf "  2) This server's own MTA (postfix/exim listening on localhost:25)\n" >/dev/tty
-  printf '  3) Later: I will edit .env.prod myself\n' >/dev/tty
-  mail_choice=$(prompt_with_default 'Choice' '1')
-fi
-
-case "${mail_choice}" in
-  1)
-    smtp_host=$(prompt_value 'SMTP host (e.g. smtp.example.org)')
-    smtp_port=$(prompt_with_default 'SMTP port' '587')
-    smtp_user=$(prompt_value 'SMTP username')
-    smtp_password=$(prompt_secret_value 'SMTP password (not echoed)')
-    if [ -n "${smtp_host}" ] && [ -n "${smtp_user}" ] && [ -n "${smtp_password}" ]; then
-      env_prod_set MAILER_DSN "smtp://$(url_encode "${smtp_user}"):$(url_encode "${smtp_password}")@${smtp_host}:${smtp_port}"
-    else
-      warn 'Incomplete SMTP details -- leaving MAILER_DSN for you to fill in.'
-    fi
-    ;;
-  2)
-    env_prod_set MAILER_DSN 'smtp://host.docker.internal:25'
-    say 'Using the MTA on this machine. Delivery is only as good as its setup'
-    say '(SPF, DKIM, reverse DNS) -- watch the first real mail.'
-    ;;
-  *)
-    : # configure later -- the two-step fallback below handles it
-    ;;
-esac
-
-if [ "${mail_choice}" = "1" ] || [ "${mail_choice}" = "2" ]; then
-  mail_from=$(prompt_with_default 'From: address for account mail' "simple-feed-reader@${mail_host}")
-  if [ -n "${mail_from}" ]; then
-    env_prod_set MAIL_FROM "${mail_from}"
-  fi
-fi
+configure_public_url
+configure_mail
 
 # --- 6. start, or explain how to --------------------------------------------
 missing=$(env_prod_missing)
@@ -152,22 +93,13 @@ if [ -n "${missing}" ]; then
     printf '    %s\n' "${name}" >&2
   done <<< "${missing}"
   say "Finish the setup in two steps:"
-  say "  1. Edit ${TARGET_DIR}/.env.prod (the comments explain every value)."
-  say "  2. Run:  cd ${TARGET_DIR} && ./scripts/prod-start.sh"
+  say "  1. Run:  cd ${TARGET_DIR} && ./scripts/prod-configure.sh   (asks again, then starts)"
+  say "     or edit ${TARGET_DIR}/.env.prod by hand (the comments explain every value)."
+  say "  2. Hand-edited? Then run:  cd ${TARGET_DIR} && ./scripts/prod-start.sh"
   exit 0
 fi
 
 "${REPO_ROOT}/scripts/prod-start.sh"
 
 # --- 7. verify mail delivery ------------------------------------------------
-# A wrong relay password should surface NOW, not at the first lost
-# registration. mailer:test uses the real configured transport.
-if [ "${mail_choice}" = "1" ] || [ "${mail_choice}" = "2" ]; then
-  if confirm 'Send a test mail now to verify delivery?'; then
-    recipient=$(prompt_value 'Recipient address')
-    if [ -n "${recipient}" ]; then
-      prod_compose exec -T -u www-data php bin/console mailer:test "${recipient}"
-      ok "Test mail handed to the transport. Check the ${recipient} inbox (and its spam folder)."
-    fi
-  fi
-fi
+offer_mail_check

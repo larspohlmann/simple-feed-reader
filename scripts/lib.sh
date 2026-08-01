@@ -350,3 +350,129 @@ print_prod_summary() {
   printf '  Update to a new release:        see docs/docker-production.md\n'
   printf '\n'
 }
+
+# Ask a yes/no question on the terminal. Named distinctly from the
+# installers' own bootstrap confirm() (defined before lib.sh is available,
+# and still the only definition install-dev.sh has post-source) so sourcing
+# this file never shadows theirs -- a same-named redefinition would leave
+# their local confirm() dead code, and install-dev.sh is a byte-copy that
+# cannot be edited to react to it.
+prompt_confirm() {
+  local prompt="$1" answer
+  if [ ! -r /dev/tty ]; then
+    return 1
+  fi
+  printf '%s [y/N] ' "${prompt}" >/dev/tty
+  read -r answer </dev/tty || return 1
+  case "${answer}" in
+    [yY] | [yY][eE][sS]) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# A DSN safe to print: the password between the userinfo ':' and the '@' is
+# replaced with ***. DSNs without credentials pass through unchanged.
+mask_dsn_password() {
+  local dsn=$1 scheme rest userinfo hostpart
+  case "${dsn}" in
+    *://*@*)
+      scheme=${dsn%%://*}
+      rest=${dsn#*://}
+      userinfo=${rest%@*}
+      hostpart=${rest##*@}
+      case "${userinfo}" in
+        *:*) userinfo="${userinfo%%:*}:***" ;;
+      esac
+      printf '%s://%s@%s' "${scheme}" "${userinfo}" "${hostpart}"
+      ;;
+    *)
+      printf '%s' "${dsn}"
+      ;;
+  esac
+}
+
+# The interactive configuration the installer and prod-configure.sh share.
+# Each question defaults to the CURRENT .env.prod value where one exists and
+# writes the answer back with env_prod_set. Without a terminal the prompts
+# degrade to their defaults (configure_mail changes nothing at all), so the
+# installer's two-step fallback keeps working.
+
+configure_public_url() {
+  local current public_url
+  current=$(env_prod_get PUBLIC_URL)
+  public_url=$(prompt_with_default 'Public URL of this instance (as users will reach it)' "${current:-http://localhost}")
+  env_prod_set PUBLIC_URL "${public_url%/}"
+}
+
+# Which transport the last configure_mail round set: 1 relay, 2 host MTA,
+# empty = left as it was. offer_mail_check reads it.
+CONFIGURED_MAIL_CHOICE=''
+
+configure_mail() {
+  local current_dsn choice smtp_host smtp_port smtp_user smtp_password
+  local public_url mail_host current_from mail_from
+  CONFIGURED_MAIL_CHOICE=''
+  if [ ! -r /dev/tty ]; then
+    return 0
+  fi
+  current_dsn=$(env_prod_get MAILER_DSN)
+  say 'How should the app send mail? Registration and password reset depend on it.'
+  if [ -n "${current_dsn}" ]; then
+    say "Currently: $(mask_dsn_password "${current_dsn}")"
+  fi
+  printf '  1) An SMTP relay (your mail provider): host, port, user, password\n' >/dev/tty
+  printf "  2) This server's own MTA (postfix/exim listening on localhost:25)\n" >/dev/tty
+  printf '  3) Skip: leave the mail transport as it is\n' >/dev/tty
+  choice=$(prompt_with_default 'Choice' '1')
+  case "${choice}" in
+    1)
+      smtp_host=$(prompt_value 'SMTP host (e.g. smtp.example.org)')
+      smtp_port=$(prompt_with_default 'SMTP port' '587')
+      smtp_user=$(prompt_value 'SMTP username')
+      smtp_password=$(prompt_secret_value 'SMTP password (not echoed)')
+      if [ -n "${smtp_host}" ] && [ -n "${smtp_user}" ] && [ -n "${smtp_password}" ]; then
+        env_prod_set MAILER_DSN "smtp://$(url_encode "${smtp_user}"):$(url_encode "${smtp_password}")@${smtp_host}:${smtp_port}"
+        CONFIGURED_MAIL_CHOICE=1
+      else
+        warn 'Incomplete SMTP details -- leaving MAILER_DSN unchanged.'
+      fi
+      ;;
+    2)
+      env_prod_set MAILER_DSN 'smtp://host.docker.internal:25'
+      CONFIGURED_MAIL_CHOICE=2
+      say 'Using the MTA on this machine. Delivery is only as good as its setup'
+      say '(SPF, DKIM, reverse DNS) -- watch the first real mail.'
+      ;;
+    *)
+      : # keep the current transport
+      ;;
+  esac
+  if [ -n "${CONFIGURED_MAIL_CHOICE}" ]; then
+    public_url=$(env_prod_get PUBLIC_URL)
+    mail_host=${public_url#*://}
+    mail_host=${mail_host%%/*}
+    mail_host=${mail_host%%:*}
+    current_from=$(env_prod_get MAIL_FROM)
+    mail_from=$(prompt_with_default 'From: address for account mail' "${current_from:-simple-feed-reader@${mail_host}}")
+    if [ -n "${mail_from}" ]; then
+      env_prod_set MAIL_FROM "${mail_from}"
+    fi
+  fi
+}
+
+# Offer a live delivery check when configure_mail just set a transport. A
+# wrong relay password should surface NOW, not at the first lost mail.
+offer_mail_check() {
+  local recipient
+  if [ -z "${CONFIGURED_MAIL_CHOICE}" ]; then
+    return 0
+  fi
+  if ! prompt_confirm 'Send a test mail now to verify delivery?'; then
+    return 0
+  fi
+  recipient=$(prompt_value 'Recipient address')
+  if [ -n "${recipient}" ]; then
+    prod_compose exec -T -u www-data php bin/console mailer:test "${recipient}"
+    ok "Test mail handed to the transport. Check the ${recipient} inbox (and its spam folder)."
+  fi
+}

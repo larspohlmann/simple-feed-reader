@@ -122,7 +122,24 @@ This checks out the newest release and re-runs the production bring-up
 (rebuild, migrate, health check). Data is kept. `prod-start.sh` is
 idempotent — running it again is always safe.
 
-## 6. Backup
+## 6. Reconfigure
+
+To change the public URL or the mail settings later, re-run the installer's
+questions against the existing install:
+
+```bash
+cd simple-feed-reader && ./scripts/prod-configure.sh
+```
+
+Each question defaults to the current value; the script applies the answers
+(the same idempotent bring-up as an update) and offers the mail check from
+§4. Secrets and passwords are deliberately not touched: regenerating
+`JWT_PASSPHRASE` would lock the existing signing key, and the MySQL
+passwords already initialized the database volume. Ports and optional
+values are a hand edit in `.env.prod` (the comments in `.env.prod.example`
+explain each one), applied with `./scripts/prod-start.sh`.
+
+## 7. Backup
 
 Everything worth keeping lives in three named volumes: the database
 (`mysql-data`), logs and cache pools (`php-var`), and the JWT signing keys
@@ -136,7 +153,7 @@ docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file 
 Losing `jwt-keys` is not fatal — new keys are generated on the next start —
 but it signs every user out.
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 - **Compose refuses to start and names a variable** — that value is empty in
   `.env.prod`. The comments in `.env.prod.example` explain each one.

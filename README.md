@@ -52,6 +52,7 @@ Run these from inside the `simple-feed-reader` directory:
 |---|---|
 | Update to the latest release (prod and/or dev) | `./scripts/update.sh` |
 | Start / stop the production stack | `./scripts/prod-start.sh` / `./scripts/prod-stop.sh` |
+| Change the public URL / mail settings | `./scripts/prod-configure.sh` |
 | Start / stop the dev frontend (:4200) | `./scripts/frontend-start.sh` / `./scripts/frontend-stop.sh` |
 | Stop the dev stack (keeps your data) | `docker compose down` |
 

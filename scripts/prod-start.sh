@@ -27,7 +27,7 @@ if [ -n "${missing}" ]; then
   while IFS= read -r name; do
     printf '    %s\n' "${name}" >&2
   done <<< "${missing}"
-  die 'Fill them in (see the comments in .env.prod.example), then re-run.'
+  die 'Fill them in: run ./scripts/prod-configure.sh, or edit .env.prod (see .env.prod.example), then re-run.'
 fi
 
 if prod_certs_present; then
