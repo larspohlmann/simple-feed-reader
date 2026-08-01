@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
+use App\Service\Mail\MailCapability;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
@@ -30,6 +31,12 @@ use Symfony\Component\HttpKernel\KernelEvents;
  *    never fills because nobody can verify, password reset silently does
  *    nothing, and every user concludes the site is broken while the logs stay
  *    clean.
+ *
+ * null://null is not always that mistake. MAIL_DISABLED=1 (App\Service\Mail\
+ * MailCapability, issue #230) makes "no mail" a deliberate, opt-in instance
+ * state, and this guard accepts null://null only under that flag. A bare
+ * null://null with mail still enabled remains the forgotten-config failure
+ * described above.
  *
  * Both fail OPEN. This guard makes them fail closed, which is the stance
  * App\Controller\MaintenanceController::isAuthorized() already takes when its
@@ -79,6 +86,7 @@ final readonly class InsecureProductionConfigGuard
         private string $altchaHmacKey,
         #[Autowire('%env(MAILER_DSN)%')]
         private string $mailerDsn,
+        private MailCapability $mail,
     ) {
     }
 
@@ -124,10 +132,11 @@ final readonly class InsecureProductionConfigGuard
                 . '/password-reset-request is void.';
         }
 
-        if (self::NULL_MAILER_DSN === $this->mailerDsn) {
-            $problems[] = 'Set MAILER_DSN to a real transport; it is still null://null, which '
-                . 'discards every message and reports success, so verification and '
-                . 'password-reset mail is silently lost and nothing logs an error.';
+        if (self::NULL_MAILER_DSN === $this->mailerDsn && $this->mail->isEnabled()) {
+            $problems[] = 'Set MAILER_DSN to a real transport, or set MAIL_DISABLED=1 to run '
+                . 'this instance without mail; it is still null://null with mail enabled, which '
+                . 'discards every message and reports success, so verification and password-reset '
+                . 'mail is silently lost and nothing logs an error.';
         }
 
         return $problems;

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\EventListener;
 
 use App\EventListener\InsecureProductionConfigGuard;
+use App\Service\Mail\MailCapability;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
@@ -19,7 +20,7 @@ final class InsecureProductionConfigGuardTest extends TestCase
 
     private function guard(string $environment, string $altchaKey, string $mailerDsn): InsecureProductionConfigGuard
     {
-        return new InsecureProductionConfigGuard($environment, $altchaKey, $mailerDsn);
+        return new InsecureProductionConfigGuard($environment, $altchaKey, $mailerDsn, new MailCapability(''));
     }
 
     private function request(InsecureProductionConfigGuard $guard, int $type = HttpKernelInterface::MAIN_REQUEST): void
@@ -53,6 +54,30 @@ final class InsecureProductionConfigGuardTest extends TestCase
 
         self::assertCount(1, $problems);
         self::assertStringContainsString('MAILER_DSN', $problems[0]);
+    }
+
+    public function testNullMailerIsAllowedWhenMailIsDeliberatelyDisabled(): void
+    {
+        $guard = new InsecureProductionConfigGuard(
+            'prod',
+            self::SAFE_KEY,
+            InsecureProductionConfigGuard::NULL_MAILER_DSN,
+            new MailCapability('1'),
+        );
+
+        self::assertSame([], $guard->problems());
+    }
+
+    public function testNullMailerStillFailsWhenMailIsNotDisabled(): void
+    {
+        $guard = new InsecureProductionConfigGuard(
+            'prod',
+            self::SAFE_KEY,
+            InsecureProductionConfigGuard::NULL_MAILER_DSN,
+            new MailCapability(''),
+        );
+
+        self::assertCount(1, $guard->problems());
     }
 
     /**
