@@ -105,6 +105,39 @@ class UserRepository extends ServiceEntityRepository implements UserLoaderInterf
     }
 
     /**
+     * The throwaway accounts the e2e suites leave behind. The backend suite
+     * mints `e2e-…@example.com` and the Playwright onboarding journey registers
+     * `onboarding-…@example.com`, and neither removes its own rows — so the dev
+     * database accumulates them run after run (#184). Both patterns end in
+     * `@example.com`, so a real address can never match.
+     *
+     * $protectedAdminEmail is excluded by name: the seeded admin shares the
+     * `e2e-` prefix but the suites log in with it, so it is a fixture to keep,
+     * not litter to collect.
+     *
+     * @return list<User>
+     */
+    public function findE2eFixtureAccounts(string $protectedAdminEmail): array
+    {
+        $qb = $this->createQueryBuilder('u');
+
+        /** @var list<User> $fixtures */
+        $fixtures = $qb
+            ->andWhere($qb->expr()->orX(
+                $qb->expr()->like('u.email', ':backendPattern'),
+                $qb->expr()->like('u.email', ':playwrightPattern'),
+            ))
+            ->andWhere($qb->expr()->neq('u.email', ':protectedAdmin'))
+            ->setParameter('backendPattern', 'e2e-%@example.com')
+            ->setParameter('playwrightPattern', 'onboarding-%@example.com')
+            ->setParameter('protectedAdmin', User::normalizeEmail($protectedAdminEmail))
+            ->getQuery()
+            ->getResult();
+
+        return $fixtures;
+    }
+
+    /**
      * The admins to notify when a new account needs approving: those who can
      * actually act on it. A suspended or rejected admin is not a working
      * recipient, so active status gates the list the same way the firewall
