@@ -74,7 +74,10 @@
 }
 
 .organise[aria-checked='true'] .knob {
-  transform: translateX(100%);
+  /* Travel = track (32px) minus knob (12px) minus both 2px insets = 16px.
+     `100%` would move the knob only its own 12px width and park it 4px short
+     of the right edge, reading as a half-on switch. */
+  transform: translateX(var(--space-4));
 }
 
 @media (prefers-reduced-motion: reduce) {

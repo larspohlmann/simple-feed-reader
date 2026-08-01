@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
@@ -541,6 +541,7 @@ describe('organise mode', () => {
     f.detectChanges();
     expect(el.querySelector('.tagfeeds')).not.toBeNull();
     expect(el.querySelector('.chevzone')!.getAttribute('aria-expanded')).toBe('true');
+    expect(TestBed.inject(Router).url).toBe('/'); // expand must not select the tag
   });
 
   it('organise rows carry a drag handle and expand via the row body', () => {
@@ -549,8 +550,10 @@ describe('organise mode', () => {
     expect(el.querySelector('.tag .handle')).not.toBeNull();
     expect(el.querySelector('.tag .nav.grow')).toBeNull();
     expect(el.querySelector('.chevzone')).toBeNull();
+    expect(el.querySelector('.tag .rowbody')!.getAttribute('aria-expanded')).toBe('false');
     el.querySelector<HTMLElement>('.tag .rowbody')!.click();
     f.detectChanges();
+    expect(el.querySelector('.tag .rowbody')!.getAttribute('aria-expanded')).toBe('true');
     expect(el.querySelector('.tagfeeds')).not.toBeNull();
     expect(el.querySelector('.tagfeeds .handle')).not.toBeNull();
   });
@@ -585,6 +588,84 @@ describe('organise mode', () => {
       ],
     });
     expect(edited).toHaveBeenCalledWith(expect.objectContaining({ id: 9 }));
+  });
+
+  it('routes the tag edit choice to editTag and only that', () => {
+    const f = mount({ coarse: true, organising: true, tagTree: tree, sheetChoice: 'edit' });
+    const edited = jest.fn();
+    const deleted = jest.fn();
+    f.componentInstance.editTag.subscribe(edited);
+    f.componentInstance.deleteTag.subscribe(deleted);
+    f.nativeElement.querySelector('.tag .dots').click();
+    expect(edited).toHaveBeenCalledWith(tag);
+    expect(deleted).not.toHaveBeenCalled();
+  });
+
+  it('routes the feed unsubscribe choice to unsubscribe and only that', () => {
+    const f = mount({
+      coarse: true,
+      organising: true,
+      untagged: [sub(9)],
+      sheetChoice: 'unsubscribe',
+    });
+    const unsubscribed = jest.fn();
+    const edited = jest.fn();
+    f.componentInstance.unsubscribe.subscribe(unsubscribed);
+    f.componentInstance.editFeed.subscribe(edited);
+    f.nativeElement.querySelector('.feedrow .dots').click();
+    expect(unsubscribed).toHaveBeenCalledWith(expect.objectContaining({ id: 9 }));
+    expect(edited).not.toHaveBeenCalled();
+  });
+
+  it('a dismissed sheet emits nothing', () => {
+    const f = mount({ coarse: true, organising: true, tagTree: tree, sheetChoice: undefined });
+    const emitted = jest.fn();
+    f.componentInstance.editTag.subscribe(emitted);
+    f.componentInstance.deleteTag.subscribe(emitted);
+    f.nativeElement.querySelector('.tag .dots').click();
+    expect(TestBed.inject(ActionSheet).open).toHaveBeenCalled();
+    expect(emitted).not.toHaveBeenCalled();
+  });
+
+  it('keeps the foot order: organise, view controls, trial, version', () => {
+    const el = mount({ coarse: true, user: account(inDays(5)) }).nativeElement as HTMLElement;
+    const order = Array.from(el.querySelector('.foot')!.children).map(
+      (child) => child.classList[0],
+    );
+    expect(order).toEqual(['organise', 'controls', 'trial', 'version']);
+  });
+
+  it('resets organising when the pointer stops being coarse', () => {
+    const isCoarse = signal(true);
+    TestBed.configureTestingModule({
+      imports: [SidebarComponent, provideTranslocoTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
+        { provide: AuthService, useValue: { user: signal(account(null)) } },
+        { provide: LayoutService, useValue: { isCoarse } },
+        { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
+      ],
+    });
+    const f = TestBed.createComponent(SidebarComponent);
+    f.componentRef.setInput('tagTree', tree);
+    f.componentRef.setInput('untagged', []);
+    f.componentRef.setInput('totalUnread', 0);
+    f.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
+    f.componentRef.setInput('loading', false);
+    f.componentRef.setInput('organising', true);
+    f.detectChanges();
+    expect((f.nativeElement as HTMLElement).querySelector('.tag .handle')).not.toBeNull();
+
+    isCoarse.set(false);
+    f.detectChanges();
+    // The exit switch only renders on coarse pointers, so a stuck true would
+    // leave the organise DOM with no way out — the component resets instead.
+    expect(f.componentInstance.organising()).toBe(false);
+    expect((f.nativeElement as HTMLElement).querySelector('.tag .handle')).toBeNull();
+    expect((f.nativeElement as HTMLElement).querySelector('.expand')).not.toBeNull();
   });
 
   it('locks dragging in coarse navigation mode and frees it while organising', () => {

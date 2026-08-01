@@ -53,6 +53,34 @@ describe('ActionSheet', () => {
     open().subscribe();
     expect(container.querySelector('.cdk-overlay-pane.app-action-sheet')).not.toBeNull();
   });
+
+  it('keeps the title outside the menu — role=menu children are menu items only', () => {
+    open().subscribe();
+    expect(container.querySelector('[role=menu] .title')).toBeNull();
+    expect(container.querySelector('.title')!.textContent).toContain('News');
+    const menuChildren = Array.from(container.querySelector('[role=menu]')!.children);
+    expect(menuChildren.length).toBeGreaterThan(0);
+    for (const child of menuChildren) {
+      expect(child.getAttribute('role')).toBe('menuitem');
+    }
+  });
+
+  it('walks the items with the arrow keys, wrapping at both ends', () => {
+    open().subscribe();
+    const key = (name: string) =>
+      container
+        .querySelector('app-action-sheet')!
+        .dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true }));
+
+    key('ArrowDown');
+    expect(document.activeElement).toBe(items()[0]);
+    key('ArrowDown');
+    expect(document.activeElement).toBe(items()[1]);
+    key('ArrowDown'); // wraps
+    expect(document.activeElement).toBe(items()[0]);
+    key('ArrowUp'); // wraps back
+    expect(document.activeElement).toBe(items()[1]);
+  });
 });
 
 describe('ActionSheetComponent swipe dismiss', () => {

@@ -600,6 +600,14 @@ pairs in [§1](#row-density) — never from raw `--space-*`, and never from a
 literal. If a new surface genuinely fits neither, that is a design conversation,
 not a third pair invented in a component stylesheet.
 
+**Touch density is a pointer decision, applied locally.** The reader sidebar
+raises its rows and hit zones to `--tap-target` (44px) under
+`@media (pointer: coarse)` in its own stylesheet (#185). The compact density
+tokens themselves never grow — they are shared by the discover rails and the
+admin catalog, which stay compact. A new touch surface repeats the pattern
+locally: key on `pointer: coarse` (capability), never on viewport width
+(presentation), and size hit areas with `--tap-target`.
+
 ### Sticky and scroll
 
 **Stickiness lives on the flex-child host, never on an inner wrapper.** A sticky

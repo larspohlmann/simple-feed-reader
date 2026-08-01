@@ -1,5 +1,17 @@
 // src/app/reader/sidebar/sidebar.component.ts
-import { Component, computed, inject, input, model, output, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  input,
+  model,
+  output,
+  signal,
+  untracked,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import {
   CdkDrag,
@@ -86,6 +98,14 @@ export class SidebarComponent {
   private readonly auth = inject(AuthService);
   readonly screen = inject(LayoutService);
   readonly organising = model(false);
+
+  /** A convertible losing its coarse pointer (docked keyboard, DevTools touch
+   *  emulation off) must not strand Organise mode: the switch that exits it
+   *  only renders on coarse pointers, so a stuck `true` would render the
+   *  organise row DOM with no way out. Reset instead. */
+  private readonly exitOrganiseOnFinePointer = effect(() => {
+    if (!this.screen.isCoarse()) untracked(() => this.organising.set(false));
+  });
   readonly expanded = signal<Set<number>>(new Set());
   readonly menuFor = signal<string | null>(null);
 
@@ -116,6 +136,7 @@ export class SidebarComponent {
 
   private readonly sheet = inject(ActionSheet);
   private readonly transloco = inject(TranslocoService);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** Coarse pointers may drag only in Organise mode; navigation is read-only. */
   readonly dragLocked = computed(() => this.screen.isCoarse() && !this.organising());
@@ -130,6 +151,9 @@ export class SidebarComponent {
           { id: 'delete', label: this.transloco.translate('reader.deleteTag'), danger: true },
         ],
       })
+      // A sheet can outlive the sidebar (e.g. the shell unmounts); a late
+      // choice must not emit into destroyed outputs.
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
         if (choice === 'edit') this.editTag.emit(tag);
         if (choice === 'delete') this.deleteTag.emit(tag);
@@ -150,6 +174,7 @@ export class SidebarComponent {
           },
         ],
       })
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
         if (choice === 'edit') this.editFeed.emit(subscription);
         if (choice === 'unsubscribe') this.unsubscribe.emit(subscription);

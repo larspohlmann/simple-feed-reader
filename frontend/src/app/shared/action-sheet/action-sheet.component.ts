@@ -1,5 +1,5 @@
 // src/app/shared/action-sheet/action-sheet.component.ts
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 
 /** One choice on the sheet. `label` arrives already translated — this lives in
@@ -25,14 +25,32 @@ export interface ActionSheetData {
     '(touchstart)': 'onTouchStart($event)',
     '(touchmove)': 'onTouchMove($event)',
     '(touchend)': 'onTouchEnd()',
+    '(keydown)': 'onKeydown($event)',
   },
 })
 export class ActionSheetComponent {
   readonly data = inject<ActionSheetData>(DIALOG_DATA);
   readonly ref = inject<DialogRef<string>>(DialogRef);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   private startY = 0;
   private dy = 0;
+
+  /** role=menu's keyboard contract: Arrow keys walk the items, wrapping. The
+   *  CDK dialog already owns Tab (focus trap) and Escape (dismiss). */
+  onKeydown(event: KeyboardEvent): void {
+    const step = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
+    if (step === 0) return;
+    event.preventDefault();
+    const items = Array.from(
+      this.host.nativeElement.querySelectorAll<HTMLElement>('[role="menuitem"]'),
+    );
+    if (items.length === 0) return;
+    const active = items.indexOf(document.activeElement as HTMLElement);
+    // From outside the items, ArrowDown enters at the first, ArrowUp at the last.
+    const from = active === -1 ? (step === 1 ? -1 : 0) : active;
+    items[(from + step + items.length) % items.length].focus();
+  }
 
   onTouchStart(event: TouchEvent): void {
     if (event.touches.length !== 1) return;
