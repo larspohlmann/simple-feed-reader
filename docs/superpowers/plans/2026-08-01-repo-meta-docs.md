@@ -431,8 +431,12 @@ Adds the standard meta files for a public repository, per the approved design
 - CONTRIBUTING.md (issue-first workflow, git-flow conventions, quality gate)
 - CODE_OF_CONDUCT.md (Contributor Covenant 2.1)
 - SECURITY.md (GitHub private vulnerability reporting; enabled on the repo)
-- CHANGELOG.md (Keep a Changelog, starts empty) + release-step wiring
+- CHANGELOG.md (Keep a Changelog, starts empty)
 - README: CI badge, UI screenshots, meta-file links
+- Release automation: .github/workflows/release.yml turns a vX.Y.Z tag on
+  main into a published GitHub Release and (after the first release) an
+  auto-committed CHANGELOG.md section, backed by a tested helper script;
+  docs/releasing.md rewritten to match.
 
 Skipped by decision: issue templates, PR template, license badge.
 
@@ -444,3 +448,416 @@ EOF
 - [ ] **Step 4: Verify the PR renders correctly**
 
 Open the PR's "Files changed" view: the README badge resolves (may show "no runs" until CI runs on the branch), both screenshot images render, and GitHub shows "MIT license" in the repo sidebar once merged.
+
+---
+
+> **Execution order note (added 2026-08-01):** Tasks 8 and 9 below were added
+> after the original plan, to add release automation. Run them **before**
+> Task 7, so the PR that Task 7 opens already contains the release workflow.
+
+---
+
+### Task 8: `changelog-insert-release.sh` and its golden-file test
+
+**Files:**
+- Create: `scripts/changelog-insert-release.sh`
+- Create: `scripts/test/changelog-insert-release.test.sh`
+- Create: `scripts/test/fixtures/changelog-before.md`
+- Create: `scripts/test/fixtures/changelog-expected.md`
+- Create: `scripts/test/fixtures/notes.md`
+
+**Interfaces:**
+- Produces: an executable `scripts/changelog-insert-release.sh` that Task 9's workflow calls. Contract: `changelog-insert-release.sh <version-tag> <iso-date>`, release notes on stdin, `CHANGELOG.md` path overridable with the `CHANGELOG_FILE` env var (defaults to the repo-root `CHANGELOG.md`). It inserts a `## [<tag>] - <date>` section, then the notes, immediately after the `## [Unreleased]` line. Exits non-zero if the file lacks an `## [Unreleased]` line, or already has a section for `<tag>`.
+
+This is TDD: write the test and fixtures first, watch it fail, then write the script.
+
+- [ ] **Step 1: Write the fixtures**
+
+`scripts/test/fixtures/changelog-before.md`:
+
+```markdown
+# Changelog
+
+Intro line.
+
+## [Unreleased]
+```
+
+`scripts/test/fixtures/notes.md`:
+
+```markdown
+## What's Changed
+* Add a thing by @octocat in #1
+
+**Full Changelog**: https://example.test/compare/v0.0.0...v1.0.0
+```
+
+`scripts/test/fixtures/changelog-expected.md` (the result of inserting `v1.0.0` / `2026-01-02`):
+
+```markdown
+# Changelog
+
+Intro line.
+
+## [Unreleased]
+
+## [v1.0.0] - 2026-01-02
+
+## What's Changed
+* Add a thing by @octocat in #1
+
+**Full Changelog**: https://example.test/compare/v0.0.0...v1.0.0
+```
+
+- [ ] **Step 2: Write the failing test**
+
+`scripts/test/changelog-insert-release.test.sh`:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Golden-file test for changelog-insert-release.sh. The script's output is
+# auto-committed to main by the release workflow, so its exact shape is a
+# contract, not an implementation detail.
+
+_dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+script="${_dir}/../changelog-insert-release.sh"
+fixtures="${_dir}/fixtures"
+
+fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
+
+# Case 1: a normal insert matches the golden file exactly.
+work=$(mktemp)
+trap 'rm -f "${work}"' EXIT
+cp "${fixtures}/changelog-before.md" "${work}"
+CHANGELOG_FILE="${work}" "${script}" v1.0.0 2026-01-02 < "${fixtures}/notes.md"
+diff -u "${fixtures}/changelog-expected.md" "${work}" || fail 'output does not match the golden file'
+
+# Case 2: inserting the same version twice is refused (idempotence guard).
+if CHANGELOG_FILE="${work}" "${script}" v1.0.0 2026-01-02 < "${fixtures}/notes.md" 2>/dev/null; then
+  fail 'a duplicate version insert should exit non-zero'
+fi
+
+# Case 3: a changelog with no Unreleased anchor is refused.
+no_anchor=$(mktemp)
+printf '# Changelog\n\nNothing here.\n' > "${no_anchor}"
+if CHANGELOG_FILE="${no_anchor}" "${script}" v1.0.0 2026-01-02 < "${fixtures}/notes.md" 2>/dev/null; then
+  rm -f "${no_anchor}"; fail 'a missing Unreleased anchor should exit non-zero'
+fi
+rm -f "${no_anchor}"
+
+printf 'ok: changelog-insert-release.sh\n'
+```
+
+- [ ] **Step 3: Run it, watch it fail**
+
+Run: `chmod +x scripts/test/changelog-insert-release.test.sh && scripts/test/changelog-insert-release.test.sh`
+Expected: fails — the script does not exist yet.
+
+- [ ] **Step 4: Write the script**
+
+`scripts/changelog-insert-release.sh`:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Insert a released version section into CHANGELOG.md.
+#
+#   scripts/changelog-insert-release.sh <version-tag> <iso-date> < notes.md
+#
+# The release notes body is read from stdin and placed under a new
+#
+#   ## [<tag>] - <date>
+#
+# heading, inserted immediately after the "## [Unreleased]" line. The release
+# workflow runs this and commits CHANGELOG.md to main, so the output shape is a
+# tested contract (see scripts/test/changelog-insert-release.test.sh).
+
+usage() { printf 'usage: %s <version-tag> <iso-date> < notes\n' "$0" >&2; exit 2; }
+
+version=${1:-}
+date=${2:-}
+[ -n "${version}" ] && [ -n "${date}" ] || usage
+
+_dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+changelog="${CHANGELOG_FILE:-${_dir}/../CHANGELOG.md}"
+
+[ -f "${changelog}" ] || { printf 'error: no changelog at %s\n' "${changelog}" >&2; exit 1; }
+
+anchor='## [Unreleased]'
+grep -qF "${anchor}" "${changelog}" \
+  || { printf "error: no '%s' line in %s\n" "${anchor}" "${changelog}" >&2; exit 1; }
+
+# Idempotence: never insert the same version twice.
+if grep -qF "## [${version}]" "${changelog}"; then
+  printf 'error: %s already has a section for %s\n' "${changelog}" "${version}" >&2
+  exit 1
+fi
+
+section=$(mktemp)
+trap 'rm -f "${section}"' EXIT
+{
+  printf '\n## [%s] - %s\n\n' "${version}" "${date}"
+  cat
+} > "${section}"
+
+# Print every line; right after the Unreleased anchor, splice in the section.
+awk -v anchor="${anchor}" -v section="${section}" '
+  { print }
+  $0 == anchor && !spliced {
+    while ((getline line < section) > 0) print line
+    close(section)
+    spliced = 1
+  }
+' "${changelog}" > "${changelog}.tmp"
+mv "${changelog}.tmp" "${changelog}"
+```
+
+- [ ] **Step 5: Run the test, watch it pass**
+
+Run: `scripts/test/changelog-insert-release.test.sh`
+Expected: `ok: changelog-insert-release.sh`. Also run `shellcheck scripts/changelog-insert-release.sh scripts/test/changelog-insert-release.test.sh` if shellcheck is installed; fix any warnings.
+
+- [ ] **Step 6: Commit**
+
+```bash
+chmod +x scripts/changelog-insert-release.sh scripts/test/changelog-insert-release.test.sh
+git add scripts/changelog-insert-release.sh scripts/test/
+git commit -m "feat(#67): tested changelog-insert-release helper for release automation"
+```
+
+---
+
+### Task 9: release workflow, releasing.md rewrite, changelog reset
+
+**Files:**
+- Create: `.github/workflows/release.yml`
+- Rewrite: `docs/releasing.md`
+- Modify: `CHANGELOG.md` (reset the Unreleased section, drop the manual-curation content)
+- Modify: `CODE_OF_CONDUCT.md` (drop the leading blank line — cosmetic, from the final review)
+
+**Interfaces:**
+- Consumes: `scripts/changelog-insert-release.sh` (Task 8) and `scripts/test/changelog-insert-release.test.sh`.
+
+- [ ] **Step 1: Write `.github/workflows/release.yml`**
+
+```yaml
+# Publishes a GitHub Release when a plain vX.Y.Z tag is pushed on main, and
+# writes the release notes back into CHANGELOG.md.
+#
+# Like the Strato deploy, a tag push proves nothing on its own: it can name any
+# commit, and CI does not run on tags. Two guard steps supply what the trigger
+# cannot -- the commit is on main, and CI went green on that exact SHA -- before
+# anything is published or committed back to main.
+#
+# A push event on a tag runs THIS FILE AS IT EXISTS AT THAT TAG, so the helper
+# script and its test are the versions shipped with the release.
+name: Release
+
+on:
+  push:
+    # GitHub filter patterns, not regex: '.' is literal and '+' means "one or
+    # more of the preceding character". This matches vX.Y.Z and nothing else;
+    # the vX.Y.Z-dev.N deploy tags are deliberately unmatched, so the two lanes
+    # stay separate.
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+
+# One release at a time.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+# Create the release, and push the changelog commit to main.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Publish release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.repository == 'larspohlmann/simple-feed-reader'
+
+    steps:
+      # fetch-depth: 0 populates origin/main (guard 1) and all tags (previous-tag
+      # lookup). Credentials are persisted on purpose here: the changelog step
+      # pushes back to main.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # The changelog helper's output is auto-committed to main below, so verify
+      # it before trusting it -- at the tagged commit's version of the script.
+      - name: Verify the changelog helper
+        run: scripts/test/changelog-insert-release.test.sh
+
+      # GUARD 1 of 2: the tagged commit must be on main.
+      - name: Check the tagged commit is on main
+        run: |
+          set -euo pipefail
+          if ! git rev-parse --verify --quiet refs/remotes/origin/main >/dev/null; then
+            echo "!!! origin/main is not in this checkout; fix fetch-depth, do not drop the check." >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" refs/remotes/origin/main; then
+            echo "!!! ${GITHUB_REF_NAME} points at ${GITHUB_SHA}, which is not on main. Refusing to release." >&2
+            echo "!!!   git tag -d ${GITHUB_REF_NAME} && git push origin :${GITHUB_REF_NAME}" >&2
+            exit 1
+          fi
+          echo "==> ${GITHUB_SHA} is on main"
+
+      # GUARD 2 of 2: CI must be green for this commit. Absence is failure.
+      - name: Check CI passed for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          conclusions="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${GITHUB_SHA}&status=completed" \
+            --jq '.workflow_runs[] | select(.event == "push") | .conclusion')"
+          if [ -z "${conclusions}" ]; then
+            echo "!!! no completed CI run found for ${GITHUB_SHA}. Refusing to release." >&2
+            exit 1
+          fi
+          failed=0
+          while IFS= read -r conclusion; do
+            echo "    ${conclusion}"
+            [ "${conclusion}" = "success" ] || failed=1
+          done <<< "${conclusions}"
+          [ "${failed}" -eq 0 ] || { echo "!!! CI is not green for ${GITHUB_SHA}." >&2; exit 1; }
+          echo "==> CI is green for ${GITHUB_SHA}"
+
+      # The previous release is the highest plain-semver tag below this one. The
+      # grep is the same load-bearing filter scripts/lib.sh uses: it keeps the
+      # vX.Y.Z-dev.N deploy tags out of the release line. Empty means this is the
+      # first release.
+      - name: Determine the previous release
+        id: previous
+        run: |
+          set -euo pipefail
+          previous="$(git tag --list 'v*' \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+            | grep -vFx "${GITHUB_REF_NAME}" \
+            | sort -V | tail -n 1)"
+          echo "previous=${previous}" >> "${GITHUB_OUTPUT}"
+          if [ -n "${previous}" ]; then
+            echo "==> previous release: ${previous}"
+          else
+            echo "==> no previous release; this is the first"
+          fi
+
+      # First release: a plain body, no generated dump of every past PR.
+      # Later releases: notes from the PRs merged since the previous tag.
+      - name: Build the release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          previous='${{ steps.previous.outputs.previous }}'
+          if [ -z "${previous}" ]; then
+            printf 'Initial release.\n' > "${RUNNER_TEMP}/notes.md"
+          else
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+              -f tag_name="${GITHUB_REF_NAME}" \
+              -f previous_tag_name="${previous}" \
+              --jq .body > "${RUNNER_TEMP}/notes.md"
+          fi
+
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file "${RUNNER_TEMP}/notes.md" \
+            --latest \
+            --verify-tag
+
+      # Only for later releases: write the notes into CHANGELOG.md and push to
+      # main as the actions bot. Skipped for the first release (empty previous).
+      - name: Update CHANGELOG.md on main
+        if: steps.previous.outputs.previous != ''
+        run: |
+          set -euo pipefail
+          git checkout main
+          git merge --ff-only "${GITHUB_SHA}"
+          scripts/changelog-insert-release.sh "${GITHUB_REF_NAME}" "$(date -u +%Y-%m-%d)" \
+            < "${RUNNER_TEMP}/notes.md"
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "==> CHANGELOG.md unchanged; nothing to commit"
+            exit 0
+          fi
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add CHANGELOG.md
+          git commit -m "docs: changelog for ${GITHUB_REF_NAME} [skip ci]"
+          git push origin main
+```
+
+- [ ] **Step 2: Reset `CHANGELOG.md`**
+
+Replace the entire current content of `CHANGELOG.md` with this. It drops the hand-curated Unreleased entry and the reference-style compare links (version sections now come from the workflow, and the generated notes carry their own compare links):
+
+```markdown
+# Changelog
+
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Version sections below are generated automatically when a release tag is pushed;
+see [docs/releasing.md](docs/releasing.md). History before the first release
+lives in the git log and the merged pull requests.
+
+## [Unreleased]
+```
+
+- [ ] **Step 3: Rewrite `docs/releasing.md`**
+
+Read `docs/releasing.md` in full first. It currently opens by asserting a
+release is "a plain version tag `vX.Y.Z` on `main` — nothing more. There is
+no GitHub Release object to create and no separate artifact to upload." That
+is now false. Rewrite the document so it states:
+
+- A `vX.Y.Z` tag on `main` is still the single release action.
+- Pushing that tag now also triggers `.github/workflows/release.yml`, which
+  (a) guards that the commit is on `main` and CI is green, (b) publishes a
+  GitHub Release marked latest, and (c) for every release after the first,
+  writes the notes into `CHANGELOG.md` and commits that to `main` as the
+  actions bot.
+- The first release publishes a GitHub Release with an `Initial release.`
+  body and does not write a changelog section.
+- Keep the existing, still-correct material: the `vX.Y.Z` vs `vX.Y.Z-dev.N`
+  tag-family table, the load-bearing plain-semver rule (a release tag must
+  never carry a suffix), the version-number guidance, and the "what a
+  release must contain" note.
+- Remove any instruction telling the releaser to edit `CHANGELOG.md` by hand
+  before tagging — the workflow owns the changelog now. (The one-line manual
+  step added earlier in this branch must go.)
+- Under "Not in scope", drop the line that says automating releases /
+  generated changelogs is a possible later addition — it now exists.
+
+Keep the document's voice and structure; this is a content correction, not a
+new document.
+
+- [ ] **Step 4: Drop the leading blank line in `CODE_OF_CONDUCT.md`**
+
+The canonical download left a blank first line before the `# Contributor
+Covenant Code of Conduct` heading. Remove that single leading blank line so
+the H1 is line 1. Change nothing else in the file.
+
+- [ ] **Step 5: Verify**
+
+Run: `scripts/test/changelog-insert-release.test.sh && head -1 CODE_OF_CONDUCT.md && grep -c 'no GitHub Release object' docs/releasing.md`
+Expected: the test prints `ok:`, the code-of-conduct first line is the `# Contributor Covenant...` heading, and the grep count is `0` (the stale sentence is gone). If a YAML linter (`actionlint`) is available, run it on `.github/workflows/release.yml` and fix any finding.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add .github/workflows/release.yml docs/releasing.md CHANGELOG.md CODE_OF_CONDUCT.md
+git commit -m "feat(#67): release workflow publishes a GitHub Release and updates the changelog"
+```
