@@ -13,10 +13,78 @@
   margin-bottom: var(--space-1);
 }
 
-/* Pin the layout/theme controls to the bottom of the sidebar. */
-.controls {
+/* Meta controls grouped at the drawer's foot: Organise, then layout/theme,
+   then trial and version. The wrapper takes the old margin-top: auto. */
+.foot {
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.controls {
   padding-top: var(--space-3);
+}
+
+.organise {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.organise .track {
+  position: relative;
+  display: inline-block;
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned switch-track measure, not a spacing value. */
+  width: 32px;
+  height: var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--border-strong);
+  transition: background 0.15s;
+}
+
+.organise .knob {
+  position: absolute;
+  top: var(--space-0);
+  left: var(--space-0);
+  width: var(--space-3);
+  height: var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  transition: transform 0.15s;
+}
+
+.organise[aria-checked='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.organise[aria-checked='true'] .track {
+  background: var(--accent);
+}
+
+.organise[aria-checked='true'] .knob {
+  /* Travel = track (32px) minus knob (12px) minus both 2px insets = 16px.
+     `100%` would move the knob only its own 12px width and park it 4px short
+     of the right edge, reading as a half-on switch. */
+  transform: translateX(var(--space-4));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .organise .track,
+  .organise .knob {
+    transition: none;
+  }
 }
 
 /* Rides along under the controls, which already carry the margin-top: auto. */
@@ -179,6 +247,81 @@
   align-items: center;
 }
 
+/* Organise-mode drag handle: the ONLY drag origin there (cdkDragHandle), so a
+   plain touch on the row body scrolls or expands without competing. */
+.handle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target);
+  align-self: stretch;
+  color: var(--text-muted);
+  cursor: grab;
+}
+
+/* Organise-mode row body: the expand/collapse target across its whole width. */
+.rowbody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--row-pad-y) 0;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rowbody .name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Coarse navigation: the dedicated expand zone at the row's trailing edge. */
+.chevzone {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+/* Organise-mode tagged feeds indent to sit under the tag name, visualising
+   the hierarchy (#185). Navigation mode uses .tag-sub for the same indent. */
+.tagfeeds.organising {
+  padding-left: var(--space-6);
+}
+
+/* Organise-mode feed name: inert (navigation is off), but still truncates. */
+.feedname {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--row-pad-y) 0;
+}
+
+.feedname > span {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .feedrow .nav {
   flex: 1;
   min-width: 0;
@@ -336,4 +479,34 @@
 
 .pop button:hover {
   background: var(--surface-0);
+}
+
+/* Touch density: 44px targets for coarse pointers only (#185). Scoped here
+   deliberately — the compact row tokens are shared by the discover rails and
+   the admin catalog and must not grow (design-language §1). The desktop keeps
+   compact rows; a coarse-pointer tablet gets this even in the column layout,
+   which is the point of keying on pointer, not width. */
+@media (pointer: coarse) {
+  .nav,
+  .rowbody,
+  .feedname {
+    min-height: var(--tap-target);
+  }
+
+  .act,
+  .organise {
+    min-height: var(--tap-target);
+  }
+
+  .dots {
+    width: var(--tap-target);
+    height: var(--tap-target);
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .pop button {
+    min-height: var(--tap-target);
+  }
 }

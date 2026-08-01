@@ -1,18 +1,22 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { API_BASE_URL } from '../../core/api';
 import { AuthService, CurrentUser } from '../../core/auth.service';
 import { RefreshService } from '../refresh.service';
-import { CdkDragDrop } from '@angular/cdk/drag-drop';
+import { CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { DropData, SidebarComponent } from './sidebar.component';
 import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
 import { SubscriptionDto, TagDto } from '../models';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { buildVersion } from '../../../environments/version';
+import { LayoutService } from '../layout.service';
+import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
+import { of } from 'rxjs';
+import { By } from '@angular/platform-browser';
 
 const account = (trialEndsAt: string | null): CurrentUser => ({
   id: 1,
@@ -49,6 +53,9 @@ function mount(
     keptCount: number;
     selection: Selection;
     user: CurrentUser | null;
+    coarse: boolean;
+    organising: boolean;
+    sheetChoice?: string;
   }> = {},
 ) {
   TestBed.configureTestingModule({
@@ -59,6 +66,8 @@ function mount(
       provideHttpClientTesting(),
       { provide: API_BASE_URL, useValue: 'https://api.test' },
       { provide: AuthService, useValue: { user: signal(over.user ?? account(null)) } },
+      { provide: LayoutService, useValue: { isCoarse: signal(over.coarse ?? false) } },
+      { provide: ActionSheet, useValue: { open: jest.fn(() => of(over.sheetChoice)) } },
     ],
   });
   const f = TestBed.createComponent(SidebarComponent);
@@ -69,6 +78,7 @@ function mount(
   f.componentRef.setInput('keptCount', over.keptCount ?? 0);
   f.componentRef.setInput('selection', over.selection ?? { kind: 'all', id: null, unread: true });
   f.componentRef.setInput('loading', false);
+  f.componentRef.setInput('organising', over.organising ?? false);
   f.detectChanges();
   return f;
 }
@@ -434,5 +444,275 @@ describe('SidebarComponent', () => {
   it('hides the trial countdown when the trial is already past', () => {
     const f = mount({ user: account(inDays(-1)) });
     expect(f.nativeElement.querySelector('.trial')).toBeNull();
+  });
+});
+
+describe('organise mode', () => {
+  const tag: TagDto = { id: 1, name: 'News', color: null, icon: null, position: 0 };
+  const tree: TagNode[] = [{ tag, subscriptions: [sub(5)], unreadCount: 3 }];
+
+  it('offers the Organise switch on coarse pointers only', () => {
+    const isCoarse = signal(false);
+    TestBed.configureTestingModule({
+      imports: [SidebarComponent, provideTranslocoTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
+        { provide: AuthService, useValue: { user: signal(account(null)) } },
+        { provide: LayoutService, useValue: { isCoarse } },
+      ],
+    });
+    const f = TestBed.createComponent(SidebarComponent);
+    f.componentRef.setInput('tagTree', []);
+    f.componentRef.setInput('untagged', []);
+    f.componentRef.setInput('totalUnread', 0);
+    f.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
+    f.componentRef.setInput('loading', false);
+    f.componentRef.setInput('organising', false);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.organise')).toBeNull();
+
+    isCoarse.set(true);
+    f.detectChanges();
+    const organiseSwitch = el.querySelector('.organise')!;
+    expect(organiseSwitch.getAttribute('role')).toBe('switch');
+    expect(organiseSwitch.getAttribute('aria-checked')).toBe('false');
+    expect(organiseSwitch.textContent).toContain('Organise');
+  });
+
+  it('clicking the switch flips the organising model', () => {
+    const f = mount({ coarse: true });
+    (f.nativeElement as HTMLElement).querySelector<HTMLElement>('.organise')!.click();
+    f.detectChanges();
+    expect(f.componentInstance.organising()).toBe(true);
+    expect(
+      (f.nativeElement as HTMLElement).querySelector('.organise')!.getAttribute('aria-checked'),
+    ).toBe('true');
+  });
+
+  it('organising hides the actions, global views, view controls and trial line', () => {
+    const el = mount({
+      coarse: true,
+      organising: true,
+      tagTree: tree,
+      user: account(inDays(5)),
+    }).nativeElement as HTMLElement;
+    expect(el.querySelector('.actions')).toBeNull();
+    expect(el.querySelector('.nav.all')).toBeNull();
+    expect(el.querySelector('app-view-controls')).toBeNull();
+    expect(el.querySelector('.trial')).toBeNull();
+    expect(el.querySelector('.version')).not.toBeNull();
+    expect(el.querySelector('.tags')).not.toBeNull();
+  });
+
+  it('navigation mode keeps all of them', () => {
+    const el = mount({
+      coarse: true,
+      tagTree: tree,
+      user: account(inDays(5)),
+    }).nativeElement as HTMLElement;
+    expect(el.querySelector('.actions')).not.toBeNull();
+    expect(el.querySelector('.nav.all')).not.toBeNull();
+    expect(el.querySelector('app-view-controls')).not.toBeNull();
+    expect(el.querySelector('.trial')).not.toBeNull();
+  });
+
+  it('organising always shows the Feeds label as the untag drop target', () => {
+    const el = mount({ coarse: true, organising: true, untagged: [] }).nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Feeds');
+  });
+
+  it('coarse navigation trades the leading chevron for a 44px trailing zone', () => {
+    const el = mount({ coarse: true, tagTree: tree }).nativeElement as HTMLElement;
+    expect(el.querySelector('.expand')).toBeNull();
+    const zone = el.querySelector('.chevzone')!;
+    expect(zone.getAttribute('aria-expanded')).toBe('false');
+    expect(el.querySelector('.tag .nav.grow')).not.toBeNull();
+    expect(el.querySelector('.dots')).toBeNull();
+  });
+
+  it('the chevron zone expands the tag without navigating', () => {
+    const f = mount({ coarse: true, tagTree: tree });
+    const el = f.nativeElement as HTMLElement;
+    el.querySelector<HTMLElement>('.chevzone')!.click();
+    f.detectChanges();
+    expect(el.querySelector('.tagfeeds')).not.toBeNull();
+    expect(el.querySelector('.chevzone')!.getAttribute('aria-expanded')).toBe('true');
+    expect(TestBed.inject(Router).url).toBe('/'); // expand must not select the tag
+  });
+
+  it('organise rows carry a drag handle and expand via the row body', () => {
+    const f = mount({ coarse: true, organising: true, tagTree: tree });
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.tag .handle')).not.toBeNull();
+    expect(el.querySelector('.tag .nav.grow')).toBeNull();
+    expect(el.querySelector('.chevzone')).toBeNull();
+    expect(el.querySelector('.tag .rowbody')!.getAttribute('aria-expanded')).toBe('false');
+    el.querySelector<HTMLElement>('.tag .rowbody')!.click();
+    f.detectChanges();
+    expect(el.querySelector('.tag .rowbody')!.getAttribute('aria-expanded')).toBe('true');
+    expect(el.querySelector('.tagfeeds')).not.toBeNull();
+    expect(el.querySelector('.tagfeeds .handle')).not.toBeNull();
+  });
+
+  it('the tag dots open the action sheet and route the choice', () => {
+    const f = mount({ coarse: true, organising: true, tagTree: tree, sheetChoice: 'delete' });
+    const deleted = jest.fn();
+    f.componentInstance.deleteTag.subscribe(deleted);
+    f.nativeElement.querySelector('.tag .dots').click();
+    const sheet = TestBed.inject(ActionSheet);
+    expect(sheet.open).toHaveBeenCalledWith({
+      title: 'News',
+      actions: [
+        { id: 'edit', label: 'Edit tag' },
+        { id: 'delete', label: 'Delete tag', danger: true },
+      ],
+    });
+    expect(deleted).toHaveBeenCalledWith(tag);
+  });
+
+  it('the feed dots offer edit and unsubscribe', () => {
+    const f = mount({ coarse: true, organising: true, untagged: [sub(9)], sheetChoice: 'edit' });
+    const edited = jest.fn();
+    f.componentInstance.editFeed.subscribe(edited);
+    f.nativeElement.querySelector('.feedrow .dots').click();
+    const sheet = TestBed.inject(ActionSheet);
+    expect(sheet.open).toHaveBeenCalledWith({
+      title: 's9',
+      actions: [
+        { id: 'edit', label: 'Edit feed' },
+        { id: 'unsubscribe', label: 'Unsubscribe', danger: true },
+      ],
+    });
+    expect(edited).toHaveBeenCalledWith(expect.objectContaining({ id: 9 }));
+  });
+
+  it('routes the tag edit choice to editTag and only that', () => {
+    const f = mount({ coarse: true, organising: true, tagTree: tree, sheetChoice: 'edit' });
+    const edited = jest.fn();
+    const deleted = jest.fn();
+    f.componentInstance.editTag.subscribe(edited);
+    f.componentInstance.deleteTag.subscribe(deleted);
+    f.nativeElement.querySelector('.tag .dots').click();
+    expect(edited).toHaveBeenCalledWith(tag);
+    expect(deleted).not.toHaveBeenCalled();
+  });
+
+  it('routes the feed unsubscribe choice to unsubscribe and only that', () => {
+    const f = mount({
+      coarse: true,
+      organising: true,
+      untagged: [sub(9)],
+      sheetChoice: 'unsubscribe',
+    });
+    const unsubscribed = jest.fn();
+    const edited = jest.fn();
+    f.componentInstance.unsubscribe.subscribe(unsubscribed);
+    f.componentInstance.editFeed.subscribe(edited);
+    f.nativeElement.querySelector('.feedrow .dots').click();
+    expect(unsubscribed).toHaveBeenCalledWith(expect.objectContaining({ id: 9 }));
+    expect(edited).not.toHaveBeenCalled();
+  });
+
+  it('a dismissed sheet emits nothing', () => {
+    const f = mount({ coarse: true, organising: true, tagTree: tree, sheetChoice: undefined });
+    const emitted = jest.fn();
+    f.componentInstance.editTag.subscribe(emitted);
+    f.componentInstance.deleteTag.subscribe(emitted);
+    f.nativeElement.querySelector('.tag .dots').click();
+    expect(TestBed.inject(ActionSheet).open).toHaveBeenCalled();
+    expect(emitted).not.toHaveBeenCalled();
+  });
+
+  it('keeps the foot order: organise, view controls, trial, version', () => {
+    const el = mount({ coarse: true, user: account(inDays(5)) }).nativeElement as HTMLElement;
+    const order = Array.from(el.querySelector('.foot')!.children).map(
+      (child) => child.classList[0],
+    );
+    expect(order).toEqual(['organise', 'controls', 'trial', 'version']);
+  });
+
+  it('resets organising when the pointer stops being coarse', () => {
+    const isCoarse = signal(true);
+    TestBed.configureTestingModule({
+      imports: [SidebarComponent, provideTranslocoTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
+        { provide: AuthService, useValue: { user: signal(account(null)) } },
+        { provide: LayoutService, useValue: { isCoarse } },
+        { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
+      ],
+    });
+    const f = TestBed.createComponent(SidebarComponent);
+    f.componentRef.setInput('tagTree', tree);
+    f.componentRef.setInput('untagged', []);
+    f.componentRef.setInput('totalUnread', 0);
+    f.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
+    f.componentRef.setInput('loading', false);
+    f.componentRef.setInput('organising', true);
+    f.detectChanges();
+    expect((f.nativeElement as HTMLElement).querySelector('.tag .handle')).not.toBeNull();
+
+    isCoarse.set(false);
+    f.detectChanges();
+    // The exit switch only renders on coarse pointers, so a stuck true would
+    // leave the organise DOM with no way out — the component resets instead.
+    expect(f.componentInstance.organising()).toBe(false);
+    expect((f.nativeElement as HTMLElement).querySelector('.tag .handle')).toBeNull();
+    expect((f.nativeElement as HTMLElement).querySelector('.expand')).not.toBeNull();
+  });
+
+  it('locks dragging in coarse navigation mode and frees it while organising', () => {
+    function mountWithLayout(coarse: boolean, organising: boolean) {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [SidebarComponent, provideTranslocoTesting()],
+        providers: [
+          provideRouter([]),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
+          { provide: AuthService, useValue: { user: signal(account(null)) } },
+          { provide: LayoutService, useValue: { isCoarse: signal(coarse) } },
+          { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
+        ],
+      });
+      const f = TestBed.createComponent(SidebarComponent);
+      f.componentRef.setInput('tagTree', tree);
+      f.componentRef.setInput('untagged', []);
+      f.componentRef.setInput('totalUnread', 0);
+      f.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
+      f.componentRef.setInput('loading', false);
+      f.componentRef.setInput('organising', organising);
+      f.detectChanges();
+      return f;
+    }
+
+    const nav = mountWithLayout(true, false);
+    expect(nav.debugElement.query(By.directive(CdkDrag)).injector.get(CdkDrag).disabled).toBe(true);
+    const org = mountWithLayout(true, true);
+    expect(org.debugElement.query(By.directive(CdkDrag)).injector.get(CdkDrag).disabled).toBe(
+      false,
+    );
+    expect(org.componentInstance.dragDelay()).toBe(0);
+    const desktop = mountWithLayout(false, false);
+    expect(desktop.debugElement.query(By.directive(CdkDrag)).injector.get(CdkDrag).disabled).toBe(
+      false,
+    );
+    expect(desktop.componentInstance.dragDelay()).toEqual({ touch: 180, mouse: 0 });
+  });
+
+  it('desktop keeps the leading chevron, inline menu and popover', () => {
+    const el = mount({ tagTree: tree }).nativeElement as HTMLElement;
+    expect(el.querySelector('.expand')).not.toBeNull();
+    expect(el.querySelector('.chevzone')).toBeNull();
+    expect(el.querySelector('.handle')).toBeNull();
+    expect(el.querySelector('.rowmenu .dots')).not.toBeNull();
   });
 });

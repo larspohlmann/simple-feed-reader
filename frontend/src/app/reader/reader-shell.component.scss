@@ -210,36 +210,35 @@ app-reader-header.hidden {
   padding: 0;
 }
 
-@media (width <= bp.$bp-md) {
-  /* `top` here and on .backdrop is the pre-measurement fallback only: the shell
-     binds the measured header height inline, so the drawer starts below the bar
-     whether or not the tag row is present. Opening the drawer also forces the
-     header back into view, so this offset is never applied to a hidden one. */
-  .sidebar {
-    position: fixed;
-    top: var(--bar-h);
-    bottom: 0;
-    padding-top: 0; /* the fixed `top` above places it; see the column rule */
-    left: 0;
-    z-index: 20;
+/* The drawer presentation. Keyed to the `is-narrow` class the shell binds from
+   LayoutService.isNarrow() — NOT to a media query — so the 720px boundary is
+   declared exactly once, in NARROW_QUERY (#185). The comments from the old
+   media block still apply: `top` is the pre-measurement fallback; opening the
+   drawer forces the header visible, so the offset never meets a hidden bar. */
+.body.is-narrow .sidebar {
+  position: fixed;
+  top: var(--bar-h);
+  bottom: 0;
+  padding-top: 0; /* the fixed `top` above places it; see the column rule */
+  left: 0;
+  z-index: 20;
 
-    /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-       tuned drawer measure, not a spacing value. */
-    width: 260px;
-    max-width: 82vw;
-    transform: translateX(-100%);
-    transition: transform 0.2s ease;
-  }
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned drawer measure, not a spacing value. */
+  width: 260px;
+  max-width: 82vw;
+  transform: translateX(-100%);
+  transition: transform 0.2s ease;
+}
 
-  .sidebar.open {
-    transform: translateX(0);
-  }
+.body.is-narrow .sidebar.open {
+  transform: translateX(0);
+}
 
-  .backdrop {
-    display: block;
-    position: fixed;
-    inset: var(--bar-h) 0 0;
-    z-index: 15;
-    background: rgb(0 0 0 / 40%);
-  }
+.body.is-narrow .backdrop {
+  display: block;
+  position: fixed;
+  inset: var(--bar-h) 0 0;
+  z-index: 15;
+  background: rgb(0 0 0 / 40%);
 }

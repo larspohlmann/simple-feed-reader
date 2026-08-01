@@ -1,14 +1,27 @@
 // src/app/reader/sidebar/sidebar.component.ts
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  input,
+  model,
+  output,
+  signal,
+  untracked,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import {
   CdkDrag,
   CdkDragDrop,
+  CdkDragHandle,
   CdkDropList,
   CdkDropListGroup,
   moveItemInArray,
 } from '@angular/cdk/drag-drop';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
@@ -19,6 +32,8 @@ import { Selection } from '../query';
 import { SubscriptionDto, TagDto } from '../models';
 import { RefreshService } from '../refresh.service';
 import { AuthService } from '../../core/auth.service';
+import { LayoutService } from '../layout.service';
+import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { buildVersion } from '../../../environments/version';
 import { trialDaysRemaining } from '../format';
 
@@ -37,6 +52,7 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
     CdkDropListGroup,
     CdkDropList,
     CdkDrag,
+    CdkDragHandle,
     DismissOnOutsideDirective,
   ],
   templateUrl: './sidebar.component.html',
@@ -80,6 +96,16 @@ export class SidebarComponent {
 
   readonly refreshSvc = inject(RefreshService);
   private readonly auth = inject(AuthService);
+  readonly screen = inject(LayoutService);
+  readonly organising = model(false);
+
+  /** A convertible losing its coarse pointer (docked keyboard, DevTools touch
+   *  emulation off) must not strand Organise mode: the switch that exits it
+   *  only renders on coarse pointers, so a stuck `true` would render the
+   *  organise row DOM with no way out. Reset instead. */
+  private readonly exitOrganiseOnFinePointer = effect(() => {
+    if (!this.screen.isCoarse()) untracked(() => this.organising.set(false));
+  });
   readonly expanded = signal<Set<number>>(new Set());
   readonly menuFor = signal<string | null>(null);
 
@@ -103,8 +129,57 @@ export class SidebarComponent {
   readonly dragKind = signal<'tag' | 'feed' | null>(null);
   /** Key of the drop target currently under the pointer, for the hover outline. */
   readonly dropHover = signal<string | null>(null);
-  /** Hold-to-drag on touch so a normal swipe still scrolls the sidebar. */
-  readonly dragDelay = { touch: 180, mouse: 0 };
+  /** Hold-to-drag on touch so a normal swipe still scrolls the sidebar. Desktop
+   *  keeps the long-press guard; while organising, drags start from the explicit
+   *  handle so no guard is needed. */
+  readonly dragDelay = computed(() => (this.organising() ? 0 : { touch: 180, mouse: 0 }));
+
+  private readonly sheet = inject(ActionSheet);
+  private readonly transloco = inject(TranslocoService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  /** Coarse pointers may drag only in Organise mode; navigation is read-only. */
+  readonly dragLocked = computed(() => this.screen.isCoarse() && !this.organising());
+
+  /** ⋯ on a tag row (coarse): sheet with the tag's actions. */
+  openTagSheet(tag: TagDto): void {
+    this.sheet
+      .open({
+        title: tag.name,
+        actions: [
+          { id: 'edit', label: this.transloco.translate('reader.editTag') },
+          { id: 'delete', label: this.transloco.translate('reader.deleteTag'), danger: true },
+        ],
+      })
+      // A sheet can outlive the sidebar (e.g. the shell unmounts); a late
+      // choice must not emit into destroyed outputs.
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((choice) => {
+        if (choice === 'edit') this.editTag.emit(tag);
+        if (choice === 'delete') this.deleteTag.emit(tag);
+      });
+  }
+
+  /** ⋯ on a feed row (coarse): sheet with the subscription's actions. */
+  openFeedSheet(subscription: SubscriptionDto): void {
+    this.sheet
+      .open({
+        title: subscription.title,
+        actions: [
+          { id: 'edit', label: this.transloco.translate('reader.editFeed') },
+          {
+            id: 'unsubscribe',
+            label: this.transloco.translate('reader.unsubscribe'),
+            danger: true,
+          },
+        ],
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((choice) => {
+        if (choice === 'edit') this.editFeed.emit(subscription);
+        if (choice === 'unsubscribe') this.unsubscribe.emit(subscription);
+      });
+  }
   /** Stable drop-target for the untagged bucket. */
   readonly untaggedDrop: DropData = { kind: 'untagged' };
   /** Typed drop-target for a tag (a template literal wouldn't narrow to DropData). */

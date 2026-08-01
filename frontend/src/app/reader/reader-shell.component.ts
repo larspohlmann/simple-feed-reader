@@ -190,6 +190,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private resizeObs?: ResizeObserver;
   /** Mobile drawer state; the sidebar is a fixed overlay below 720px. */
   readonly sidebarOpen = signal(false);
+  /** Mirror of the sidebar's Organise model. Owned here so closing the drawer
+   *  can reset it, and so the close-swipe pauses while a drag is possible. */
+  readonly sidebarOrganising = signal(false);
 
   readonly title = computed(() => {
     const s = this.selection();
@@ -394,6 +397,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    */
   setSidebarOpen(open: boolean): void {
     this.headerHidden.set(open ? false : this.restingHeaderHidden());
+    if (!open) this.sidebarOrganising.set(false);
     this.sidebarOpen.set(open);
   }
 

@@ -176,6 +176,13 @@ Stylelint's `media-feature-name-unit-allowed-list: { "width": [] }` forbids any
 unit inside a `width` media feature, so a literal `@media (width <= 720px)` is a
 lint failure. The variable is the only way through.
 
+**The reader drawer's 720px boundary is class-driven, not media-driven.**
+`LayoutService.NARROW_QUERY` is its single declaration; the shell binds
+`.is-narrow` from that signal and `reader-shell.component.scss` keys the drawer
+rules to the class. Do not add a `bp.$bp-md` media block for the drawer — that
+would restore the two-sources drift #185 removed. `bp.$bp-*` remains correct
+for purely presentational media queries that have no TS twin.
+
 ### Utility classes
 
 Global, non-token CSS declared in `frontend/src/app/theme/_utilities.scss`
@@ -508,6 +515,31 @@ or an overlay (`<app-overlay-panel>`).
 
 ---
 
+### `<app-action-sheet>` (via the `ActionSheet` service)
+
+The row-menu surface for coarse pointers: a sheet pinned to the bottom of the
+viewport, titled with the row it acts on. Opened through the `ActionSheet`
+service — never instantiated in a template — because the open drawer carries a
+transform, which would re-anchor any `position: fixed` child; the CDK overlay
+escapes that.
+
+```ts
+this.sheet
+  .open({ title: tag.name, actions: [{ id: 'edit', label: editLabel }] })
+  .subscribe((choice) => { /* undefined on dismiss */ });
+```
+
+Labels and title are **already-translated strings** (shared component, no
+feature keys). `danger: true` renders the action in the danger colour.
+Dismissed by backdrop tap, Escape, or a downward swipe — all resolve
+`undefined`.
+
+**Not for:** fine-pointer surfaces (the sidebar keeps its inline `.pop`
+popover on desktop) or anything with form controls — that is a dialog in
+`<app-overlay-panel>`.
+
+---
+
 ### `<app-spinner>`
 
 The RSS mark, animating, as the app's loading indicator. Used for a fetch whose
@@ -567,6 +599,14 @@ Every list, rail and picker row derives its padding from one of the two token
 pairs in [§1](#row-density) — never from raw `--space-*`, and never from a
 literal. If a new surface genuinely fits neither, that is a design conversation,
 not a third pair invented in a component stylesheet.
+
+**Touch density is a pointer decision, applied locally.** The reader sidebar
+raises its rows and hit zones to `--tap-target` (44px) under
+`@media (pointer: coarse)` in its own stylesheet (#185). The compact density
+tokens themselves never grow — they are shared by the discover rails and the
+admin catalog, which stay compact. A new touch surface repeats the pattern
+locally: key on `pointer: coarse` (capability), never on viewport width
+(presentation), and size hit areas with `--tap-target`.
 
 ### Sticky and scroll
 
