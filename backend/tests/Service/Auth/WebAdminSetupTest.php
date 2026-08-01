@@ -69,4 +69,13 @@ final class WebAdminSetupTest extends DbTestCase
         $this->buildWebAdminSetup(self::SECRET)
             ->createFirstAdmin('root@example.com', 'a-strong-password-123', 'wrong-secret');
     }
+
+    public function testAdminExistsWinsOverWrongSecret(): void
+    {
+        $this->seedAdmin();
+
+        $this->expectException(SetupUnavailableException::class);
+        $this->buildWebAdminSetup(self::SECRET)
+            ->createFirstAdmin('root@example.com', 'a-strong-password-123', 'wrong-secret');
+    }
 }
