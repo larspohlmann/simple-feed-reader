@@ -284,7 +284,8 @@
       "requestNew": "Neuen Link anfordern",
       "failed": "Passwort konnte nicht zurückgesetzt werden. Fordere einen neuen Link an.",
       "requestInvalidInput": "Bitte gib eine gültige E-Mail-Adresse ein.",
-      "newInvalidInput": "Bitte gib ein Passwort mit mindestens 12 Zeichen ein."
+      "newInvalidInput": "Bitte gib ein Passwort mit mindestens 12 Zeichen ein.",
+      "unavailable": "Passwort-Zurücksetzen ist auf dieser Instanz nicht verfügbar. Bitte wende dich an deine Administratorin oder deinen Administrator, um dein Passwort zurückzusetzen."
     },
     "verify": {
       "title": "E-Mail bestätigen",

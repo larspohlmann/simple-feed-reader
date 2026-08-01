@@ -284,7 +284,8 @@
       "requestNew": "Request a new link",
       "failed": "Could not reset the password. Request a new link.",
       "requestInvalidInput": "Enter a valid email address.",
-      "newInvalidInput": "Enter a password of at least 12 characters."
+      "newInvalidInput": "Enter a password of at least 12 characters.",
+      "unavailable": "Password reset is unavailable on this instance. Ask your administrator to reset your password."
     },
     "verify": {
       "title": "Confirm email",

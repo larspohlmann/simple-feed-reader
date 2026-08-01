@@ -13,6 +13,7 @@ import { AuthShellComponent } from '../auth-shell/auth-shell.component';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { FormErrorComponent } from '../../shared/form-error/form-error.component';
 import { FieldComponent } from '../../shared/field/field.component';
+import { SetupService } from '../../setup/setup.service';
 
 @Component({
   selector: 'app-reset-request',
@@ -35,10 +36,12 @@ export class ResetRequestComponent {
   private readonly altcha = inject(AltchaService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly i18n = inject(TranslocoService);
+  private readonly setup = inject(SetupService);
 
   readonly form = this.fb.group({ email: ['', [Validators.required, Validators.email]] });
   readonly loading = signal(false);
   readonly done = signal(false);
+  readonly mailEnabled = this.setup.mailEnabled;
   /** Only ever holds a client-side validation message. The request itself stays
    *  deliberately neutral -- see the catch below -- so nothing here can leak
    *  whether an address exists. */
