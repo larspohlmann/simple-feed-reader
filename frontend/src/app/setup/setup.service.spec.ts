@@ -31,5 +31,6 @@ describe('SetupService', () => {
     service.markComplete();
 
     expect(service.needsSetup()).toBe(false);
+    expect(status).toHaveBeenCalledTimes(0);
   });
 });
