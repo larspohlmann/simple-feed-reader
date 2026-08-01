@@ -1,7 +1,16 @@
 # simple-feed-reader
 
+[![CI](https://github.com/larspohlmann/simple-feed-reader/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/larspohlmann/simple-feed-reader/actions/workflows/ci.yml)
+
 A multi-user RSS/Atom feed reader. Symfony 7.4 LTS JSON API in `backend/`, with
 the Angular 20 SPA that delivers the reader UI and auth in `frontend/`.
+
+![The reader: entry list and reader pane side by side](docs/screenshots/desktop-reader.png)
+
+<p>
+  <img src="docs/screenshots/desktop-cards.png" alt="Card view on desktop" width="66%">
+  <img src="docs/screenshots/mobile.png" alt="Mobile view" width="29%">
+</p>
 
 ## Quick start (Docker)
 
@@ -60,3 +69,6 @@ gotchas — lives in [docs/local-docker.md](docs/local-docker.md).
   the version the install and update scripts hand to users.
 - [Design spec](docs/superpowers/specs/2026-07-21-simple-feed-reader-design.md)
 - [Implementation plans](docs/superpowers/plans/)
+- [Contributing](CONTRIBUTING.md) — issue-first workflow, branch conventions,
+  and the quality gate. Licensed under the [MIT license](LICENSE); notable
+  changes land in the [changelog](CHANGELOG.md).
