@@ -184,7 +184,9 @@ env_prod_get() {
 env_prod_set() {
   local key=$1 value=$2 tmp replaced=0 line
   tmp=$(mktemp)
-  while IFS= read -r line; do
+  # The `|| [ -n "${line}" ]` keeps a final line that has no trailing newline:
+  # plain `while read` drops it, since read fails (empty $line) at EOF.
+  while IFS= read -r line || [ -n "${line}" ]; do
     case "${line}" in
       "${key}="*)
         printf '%s=%s\n' "${key}" "${value}"
@@ -232,11 +234,19 @@ generate_secret() {
 # DSN truncates it silently, which is why the installer never asks for one.
 url_encode() {
   local raw=$1 out='' ch i
+  # Force the C locale for this function: with a multibyte locale, ${#raw} and
+  # ${raw:i:1} index by glyph instead of byte, and bracket ranges like [a-z]
+  # match by collation instead of byte value -- both let non-ASCII bytes slip
+  # through unescaped. Under C, indexing is per-byte and the range is literal.
+  local LC_ALL=C
   for (( i = 0; i < ${#raw}; i++ )); do
     ch=${raw:i:1}
     case "${ch}" in
       [a-zA-Z0-9.~_-]) out="${out}${ch}" ;;
-      *) out="${out}$(printf '%%%02X' "'${ch}")" ;;
+      # "'${ch}" yields the byte's ordinal, sign-extended to a negative number
+      # for bytes >= 0x80 (signed char); masking with 255 folds it back into
+      # an unsigned byte before formatting.
+      *) out="${out}$(printf '%%%02X' "$(( $(printf '%d' "'${ch}") & 255 ))")" ;;
     esac
   done
   printf '%s' "${out}"
