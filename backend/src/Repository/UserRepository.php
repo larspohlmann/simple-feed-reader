@@ -138,6 +138,33 @@ class UserRepository extends ServiceEntityRepository implements UserLoaderInterf
         ));
     }
 
+    /**
+     * The bootstrap invariant: does an administrator exist yet? Any status
+     * counts — gating on Active only would let a hijacker re-open first-run
+     * setup by getting the sole admin suspended.
+     *
+     * `roles` is portable JSON-as-text on SQLite and MySQL, so the LIKE narrows
+     * the hydration set but STILL needs the in-PHP recheck to reject a
+     * `ROLE_ADMINISTRATOR` substring — the same reasoning as findActiveAdmins().
+     */
+    public function hasAnyAdmin(): bool
+    {
+        /** @var list<User> $candidates */
+        $candidates = $this->createQueryBuilder('u')
+            ->where('u.roles LIKE :role')
+            ->setParameter('role', '%ROLE_ADMIN%')
+            ->getQuery()
+            ->getResult();
+
+        foreach ($candidates as $candidate) {
+            if (\in_array('ROLE_ADMIN', $candidate->getRoles(), true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function countByStatus(UserStatus $status): int
     {
         return (int) $this->createQueryBuilder('u')

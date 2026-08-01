@@ -61,4 +61,30 @@ final class UserRepositoryTest extends DbTestCase
         self::assertSame(1, $this->users()->countByStatus(UserStatus::Active));
         self::assertSame(0, $this->users()->countByStatus(UserStatus::Rejected));
     }
+
+    public function testEmptyInstanceHasNoAdmin(): void
+    {
+        self::assertFalse($this->users()->hasAnyAdmin());
+    }
+
+    public function testAPlainActiveUserIsNotAnAdmin(): void
+    {
+        $this->persist('plain@example.com', UserStatus::Active);
+
+        self::assertFalse($this->users()->hasAnyAdmin());
+    }
+
+    public function testASuspendedAdminStillCounts(): void
+    {
+        $this->persist('boss@example.com', UserStatus::Suspended, 'ROLE_ADMIN');
+
+        self::assertTrue($this->users()->hasAnyAdmin());
+    }
+
+    public function testARoleAdministratorSubstringDoesNotCount(): void
+    {
+        $this->persist('fake@example.com', UserStatus::Active, 'ROLE_ADMINISTRATOR');
+
+        self::assertFalse($this->users()->hasAnyAdmin());
+    }
 }
