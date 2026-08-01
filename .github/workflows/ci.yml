@@ -155,5 +155,6 @@ jobs:
 
       # ubuntu-latest ships shellcheck. The helper scripts (installer, updater,
       # frontend start/stop) are user-facing, so a lint break should fail CI.
+      # The two container entrypoints share the same bash-3.2-safe standard.
       - name: ShellCheck
-        run: shellcheck scripts/*.sh
+        run: shellcheck scripts/*.sh docker/php/entrypoint-prod.sh docker/web/10-select-mode.sh

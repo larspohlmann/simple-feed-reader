@@ -15,6 +15,9 @@ docker/certs
 docker/certs-prod
 .env.prod
 backend/config/jwt
+backend/.env.local
+backend/.env.*.local
+backend/config/secrets
 
 # Host-side build products; the images install/build their own.
 backend/var

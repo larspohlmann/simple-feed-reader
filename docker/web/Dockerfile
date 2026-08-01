@@ -24,3 +24,6 @@ COPY --from=build /app/dist/frontend/browser /usr/share/nginx/html
 COPY docker/web/tls.conf /etc/nginx/available/tls.conf
 COPY docker/web/http.conf /etc/nginx/available/http.conf
 COPY docker/web/10-select-mode.sh /docker-entrypoint.d/10-select-mode.sh
+# nginx's entrypoint silently skips non-executable drop-ins, which would
+# serve the stock welcome page instead of selecting HTTP/TLS mode.
+RUN chmod +x /docker-entrypoint.d/10-select-mode.sh

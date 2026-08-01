@@ -68,6 +68,9 @@ release_tag=$(latest_release_tag)
 say "Checking out the latest release: ${release_tag}"
 git -C "${REPO_ROOT}" checkout --quiet "${release_tag}"
 
+[ -f "${REPO_ROOT}/.env.prod.example" ] \
+  || die "Release ${release_tag} predates the Docker production path -- update the release, or use scripts/install-dev.sh."
+
 # --- 4. write .env.prod -----------------------------------------------------
 if [ -f "${ENV_PROD_FILE}" ]; then
   die '.env.prod already exists in the fresh clone -- refusing to overwrite it.'

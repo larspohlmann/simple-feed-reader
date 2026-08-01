@@ -79,8 +79,8 @@ fi
 
 if [ "${updated_any}" -eq 0 ]; then
   warn 'No installed stack found (no .env.prod, no dev containers).'
-  say 'The checkout is now on the new release; start a stack with'
-  say './scripts/prod-start.sh (production) or ./scripts/install-dev.sh (development).'
+  say "The checkout is now on ${latest}."
+  say 'Start a stack with ./scripts/prod-start.sh (production) or ./scripts/install-dev.sh (development).'
+else
+  ok "Updated ${current} -> ${latest}."
 fi
-
-ok "Updated ${current} -> ${latest}."

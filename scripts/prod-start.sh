@@ -30,12 +30,26 @@ if [ -n "${missing}" ]; then
   die 'Fill them in: run ./scripts/prod-configure.sh, or edit .env.prod (see .env.prod.example), then re-run.'
 fi
 
-if prod_certs_present; then
-  say 'TLS mode: certificates found in docker/certs-prod/.'
+mode=$(prod_web_mode)
+if [ "${mode}" = tls ]; then
+  if prod_certs_present; then
+    say 'TLS mode: certificates found in docker/certs-prod/.'
+  else
+    warn 'WEB_MODE=tls but no certificates in docker/certs-prod/ -- nginx will refuse to start.'
+    warn 'Add fullchain.pem and privkey.pem to docker/certs-prod/, or set WEB_MODE=auto/http.'
+  fi
 else
-  say 'HTTP mode: no certificates in docker/certs-prod/ -- serving plain HTTP.'
-  say 'Either put a TLS reverse proxy in front, or add fullchain.pem and'
-  say 'privkey.pem to docker/certs-prod/ and re-run this script.'
+  say 'HTTP mode: serving plain HTTP.'
+  if ! prod_certs_present; then
+    say 'Either put a TLS reverse proxy in front, or add fullchain.pem and'
+    say 'privkey.pem to docker/certs-prod/ and re-run this script.'
+  fi
+fi
+
+http_port=$(env_prod_get WEB_HTTP_PORT); http_port=${http_port:-80}
+tls_port=$(env_prod_get WEB_TLS_PORT); tls_port=${tls_port:-443}
+if ! check_ports_free "${http_port}" "${tls_port}"; then
+  warn 'Both ports are published regardless of mode, so docker will fail to publish them while busy.'
 fi
 
 say 'Building and starting the production stack (the first build takes a few minutes) ...'

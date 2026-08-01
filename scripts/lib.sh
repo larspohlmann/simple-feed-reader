@@ -2,11 +2,12 @@
 #
 # Shared helpers for the simple-feed-reader helper scripts.
 #
-# This file is sourced, never run directly: by scripts/update.sh and the four
-# frontend start/stop scripts, and by scripts/install.sh once it has cloned the
-# repository. Every function is safe to call from any working directory —
-# REPO_ROOT is derived from this file's own location, and compose() always runs
-# from there.
+# This file is sourced, never run directly: by the two frontend start/stop
+# scripts, the three prod scripts (prod-start.sh, prod-stop.sh,
+# prod-configure.sh), update.sh, and by install.sh and install-dev.sh once
+# each has cloned the repository. Every function is safe to call from any
+# working directory -- REPO_ROOT is derived from this file's own location,
+# and compose() always runs from there.
 
 # --- coloured output --------------------------------------------------------
 # Colour only when stdout is a terminal, so piped and CI output stay plain.
@@ -173,6 +174,9 @@ env_prod_get() {
   local line
   line=$(grep -E "^$1=" "${ENV_PROD_FILE}" 2>/dev/null | tail -n 1 || true)
   line=${line#*=}
+  # A CRLF-edited .env.prod leaves a trailing \r on every value, which is
+  # non-empty and would slip a blank-looking value past env_prod_missing.
+  line=${line%$'\r'}
   line=${line#\"}
   line=${line%\"}
   printf '%s' "${line}"
@@ -292,11 +296,22 @@ prod_certs_present() {
     && [ -f "${REPO_ROOT}/docker/certs-prod/privkey.pem" ]
 }
 
+# The mode the web container will actually select: WEB_MODE override first,
+# certificate presence otherwise. Mirrors docker/web/10-select-mode.sh.
+prod_web_mode() {
+  local mode
+  mode=$(env_prod_get WEB_MODE)
+  case "${mode}" in
+    tls | http) printf '%s' "${mode}" ;;
+    *) if prod_certs_present; then printf 'tls'; else printf 'http'; fi ;;
+  esac
+}
+
 # The local base URL of the running prod stack (for probes and the summary).
 # This is the LOCAL view; the public origin is PUBLIC_URL and may differ.
 prod_base_url() {
   local port
-  if prod_certs_present; then
+  if [ "$(prod_web_mode)" = tls ]; then
     port=$(env_prod_get WEB_TLS_PORT)
     port=${port:-443}
     if [ "${port}" = "443" ]; then
@@ -402,6 +417,10 @@ configure_public_url() {
   current=$(env_prod_get PUBLIC_URL)
   public_url=$(prompt_with_default 'Public URL of this instance (as users will reach it)' "${current:-http://localhost}")
   public_url=${public_url%/}
+  case "${public_url}" in
+    http://* | https://*) ;;
+    *) die 'The public URL must start with http:// or https:// (e.g. https://reader.example.org).' ;;
+  esac
   env_prod_set PUBLIC_URL "${public_url}"
 
   # The port in that URL is the port the browser uses, so it is also the
@@ -451,7 +470,7 @@ configure_mail() {
   fi
   printf '  1) An SMTP relay (your mail provider): host, port, user, password\n' >/dev/tty
   printf "  2) This server's own MTA (postfix/exim listening on localhost:25)\n" >/dev/tty
-  printf '  3) Skip: leave the mail transport as it is\n' >/dev/tty
+  printf '  3) Later: finish mail by hand, or re-run ./scripts/prod-configure.sh\n' >/dev/tty
   choice=$(prompt_with_default 'Choice' '1')
   case "${choice}" in
     1)

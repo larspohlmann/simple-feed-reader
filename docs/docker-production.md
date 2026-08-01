@@ -63,7 +63,10 @@ when you do not:
   `docker/certs-prod/` empty; the stack serves plain HTTP on port 80. In
   `.env.prod`, move the port off 80 (`WEB_HTTP_PORT=8080`) and bind it to
   loopback (`WEB_BIND_ADDRESS=127.0.0.1`) so only the proxy on this machine
-  can reach it. Example Caddyfile:
+  can reach it. The stack publishes `WEB_TLS_PORT` as well even in this mode
+  (both ports are always published — see the comment in `.env.prod.example`),
+  so also set it to a free port (e.g. `WEB_TLS_PORT=8443`) or the container
+  will fail to start if 443 is already taken on the host. Example Caddyfile:
 
   ```
   reader.example.org {
@@ -73,6 +76,9 @@ when you do not:
 
 Either way, set `PUBLIC_URL` in `.env.prod` to the HTTPS origin users
 actually use — mail links and OAuth redirects are built from it.
+
+`WEB_MODE=tls|http` in `.env.prod` overrides the automatic certificate
+detection above; `auto` (the default) is almost always right.
 
 ## 3. First admin
 
@@ -149,7 +155,7 @@ Everything worth keeping lives in three named volumes: the database
 
 ```bash
 docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod \
-  exec mysql sh -c 'exec mysqldump -ufeedreader -p"$MYSQL_PASSWORD" feedreader' > backup.sql
+  exec mysql sh -c 'exec mysqldump -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' > backup.sql
 ```
 
 Losing `jwt-keys` is not fatal — new keys are generated on the next start —
@@ -162,7 +168,7 @@ but it signs every user out.
 - **Every request answers 500** — the runtime guard refuses to serve while a
   committed placeholder is in use (`ALTCHA_HMAC_KEY`, `MAILER_DSN`). The log
   names the variable:
-  `docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod exec php tail -n 50 var/log/prod.log`
+  `docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod exec php sh -c 'tail -n 50 var/log/prod-*.log'`
 - **Mail says sent but never arrives** — run the `mailer:test` check above;
   then check the spam folder, then the transport's own logs. With the
   host-MTA DSN, check the host's mail queue (`mailq`).
