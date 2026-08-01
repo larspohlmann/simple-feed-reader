@@ -229,3 +229,13 @@ services:
     App\Service\Mail\MailCapability:
         autowire: true
         public: true
+
+    # InstanceSettingsTest drives update()/requireEmailConfirmation()/
+    # requireApproval() directly to prove the "no row yet" default and the
+    # single-row create-or-update behaviour. Production callers (Registration
+    # Policy, the admin settings endpoint) arrive in later tasks, so until then
+    # the compiler would inline this away and the test container could not
+    # fetch it. Same `autowire` caveat as above.
+    App\Service\Settings\InstanceSettings:
+        autowire: true
+        public: true
