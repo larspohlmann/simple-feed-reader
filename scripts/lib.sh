@@ -487,13 +487,25 @@ configure_public_url() {
   say 'Behind a reverse proxy, set WEB_HTTP_PORT and WEB_BIND_ADDRESS in .env.prod by hand instead.'
 }
 
+# The host part of PUBLIC_URL (scheme, path and port stripped) -- the default
+# mail domain both the transport branches and the no-mail placeholder derive
+# MAIL_FROM from.
+mail_host_from_public_url() {
+  local public_url host
+  public_url=$(env_prod_get PUBLIC_URL)
+  host=${public_url#*://}
+  host=${host%%/*}
+  host=${host%%:*}
+  printf '%s' "${host}"
+}
+
 # Which transport the last configure_mail round set: 1 relay, 2 host MTA,
 # empty = left as it was. offer_mail_check reads it.
 CONFIGURED_MAIL_CHOICE=''
 
 configure_mail() {
   local current_dsn choice smtp_host smtp_port smtp_user smtp_password
-  local public_url mail_host current_from mail_from
+  local mail_host current_from mail_from
   CONFIGURED_MAIL_CHOICE=''
   if [ ! -r /dev/tty ]; then
     return 0
@@ -532,6 +544,11 @@ configure_mail() {
     4)
       env_prod_set MAIL_DISABLED 1
       env_prod_set MAILER_DSN 'null://null'
+      if [ -z "$(env_prod_get MAIL_FROM)" ]; then
+        mail_host=$(mail_host_from_public_url)
+        env_prod_set MAIL_FROM "simple-feed-reader@${mail_host}"
+        say "Mail is disabled -- set a placeholder From address (never sent): simple-feed-reader@${mail_host}"
+      fi
       say 'Running without mail. Email confirmation and password-reset email are off.'
       say 'Recover a password with: docker compose ... exec php bin/console app:user:reset-password <email> --generate'
       ;;
@@ -540,10 +557,7 @@ configure_mail() {
       ;;
   esac
   if [ -n "${CONFIGURED_MAIL_CHOICE}" ]; then
-    public_url=$(env_prod_get PUBLIC_URL)
-    mail_host=${public_url#*://}
-    mail_host=${mail_host%%/*}
-    mail_host=${mail_host%%:*}
+    mail_host=$(mail_host_from_public_url)
     current_from=$(env_prod_get MAIL_FROM)
     mail_from=$(prompt_with_default 'From: address for account mail' "${current_from:-simple-feed-reader@${mail_host}}")
     if [ -n "${mail_from}" ]; then
