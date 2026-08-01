@@ -16,5 +16,10 @@ if [ "${mode}" = "auto" ]; then
     fi
 fi
 
-cp "/etc/nginx/available/${mode}.conf" /etc/nginx/conf.d/default.conf
+tls_port="${WEB_TLS_PORT:-443}"
+suffix=''
+if [ "${tls_port}" != "443" ]; then
+    suffix=":${tls_port}"
+fi
+sed "s/__TLS_PORT_SUFFIX__/${suffix}/g" "/etc/nginx/available/${mode}.conf" > /etc/nginx/conf.d/default.conf
 echo "simple-feed-reader web: ${mode} mode"

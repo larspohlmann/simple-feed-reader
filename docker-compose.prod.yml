@@ -79,6 +79,9 @@ services:
       dockerfile: docker/web/Dockerfile
     environment:
       WEB_MODE: ${WEB_MODE:-auto}
+      # The EXTERNAL TLS port, for the http->https redirect target. The
+      # container itself always listens on 443; the mapping publishes it.
+      WEB_TLS_PORT: ${WEB_TLS_PORT:-443}
     ports:
       # The ONLY published ports of the whole stack -- mysql and php-fpm stay
       # on the internal network. Behind a local reverse proxy, set

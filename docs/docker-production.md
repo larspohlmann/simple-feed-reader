@@ -32,7 +32,8 @@ values only you know:
 
 - **The public URL** — how users reach the instance. `http://localhost` (the
   default) is fine for a local or LAN instance. For OAuth sign-in, and for
-  Safari, use a real HTTPS origin.
+  Safari, use a real HTTPS origin. The port in the URL becomes the published
+  port.
 - **How to send mail** — an SMTP relay (your mail provider's host, port,
   username, password), or the machine's own MTA if it runs one. There is no
   default: a feed reader that cannot send mail cannot register users or
@@ -125,7 +126,8 @@ idempotent — running it again is always safe.
 ## 6. Reconfigure
 
 To change the public URL or the mail settings later, re-run the installer's
-questions against the existing install:
+questions against the existing install; changing the URL's port re-publishes
+the stack on the new port:
 
 ```bash
 cd simple-feed-reader && ./scripts/prod-configure.sh

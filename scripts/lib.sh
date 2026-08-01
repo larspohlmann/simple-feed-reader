@@ -398,10 +398,38 @@ mask_dsn_password() {
 # installer's two-step fallback keeps working.
 
 configure_public_url() {
-  local current public_url
+  local current public_url scheme hostport derived_port
   current=$(env_prod_get PUBLIC_URL)
   public_url=$(prompt_with_default 'Public URL of this instance (as users will reach it)' "${current:-http://localhost}")
-  env_prod_set PUBLIC_URL "${public_url%/}"
+  public_url=${public_url%/}
+  env_prod_set PUBLIC_URL "${public_url}"
+
+  # The port in that URL is the port the browser uses, so it is also the
+  # port this stack publishes. A reverse proxy in between is the exception,
+  # and there WEB_HTTP_PORT / WEB_BIND_ADDRESS stay a hand edit in .env.prod.
+  scheme=${public_url%%://*}
+  hostport=${public_url#*://}
+  hostport=${hostport%%/*}
+  derived_port=''
+  case "${hostport}" in
+    *:*) derived_port=${hostport##*:} ;;
+  esac
+  case "${derived_port}" in
+    '' | *[!0-9]*)
+      if [ "${scheme}" = "https" ]; then
+        derived_port=443
+      else
+        derived_port=80
+      fi
+      ;;
+  esac
+  if [ "${scheme}" = "https" ]; then
+    env_prod_set WEB_TLS_PORT "${derived_port}"
+  else
+    env_prod_set WEB_HTTP_PORT "${derived_port}"
+  fi
+  say "The app will serve on port ${derived_port} (taken from that URL)."
+  say 'Behind a reverse proxy, set WEB_HTTP_PORT and WEB_BIND_ADDRESS in .env.prod by hand instead.'
 }
 
 # Which transport the last configure_mail round set: 1 relay, 2 host MTA,
