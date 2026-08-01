@@ -408,6 +408,7 @@ configure_public_url() {
   # port this stack publishes. A reverse proxy in between is the exception,
   # and there WEB_HTTP_PORT / WEB_BIND_ADDRESS stay a hand edit in .env.prod.
   scheme=${public_url%%://*}
+  scheme=$(printf '%s' "${scheme}" | tr '[:upper:]' '[:lower:]')
   hostport=${public_url#*://}
   hostport=${hostport%%/*}
   derived_port=''
