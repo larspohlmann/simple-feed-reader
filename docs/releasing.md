@@ -34,16 +34,21 @@ must never carry a `-dev.N` (or any other) suffix.**
 From an up-to-date checkout, with CI green on the `develop` commit you want to
 ship:
 
+Before merging, update [CHANGELOG.md](../CHANGELOG.md) on `develop`: rename
+the `## [Unreleased]` section to the new version with the date
+(`## [vX.Y.Z] - YYYY-MM-DD`), add its compare link at the bottom, and start a
+fresh empty `## [Unreleased]` section above it.
+
 ```bash
-# 1. Merge develop into main (git-flow: main only ever fast-forwards from develop).
+# 2. Merge develop into main (git-flow: main only ever fast-forwards from develop).
 git checkout main
 git pull --ff-only
 git merge --ff-only develop
 
-# 2. Tag the release. Pick the next version (see below). Annotated tag.
+# 3. Tag the release. Pick the next version (see below). Annotated tag.
 git tag -a v0.5.0 -m 'Release v0.5.0'
 
-# 3. Publish.
+# 4. Publish.
 git push origin main
 git push origin v0.5.0
 ```
