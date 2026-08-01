@@ -8,6 +8,8 @@ import { map } from 'rxjs';
 export const WIDE_QUERY = '(min-width: 900px)';
 /** True below this width, where the sidebar is a swipe-in drawer, not a column. */
 export const NARROW_QUERY = '(max-width: 720px)';
+/** True on devices whose primary pointer is coarse (touch), not fine (mouse/trackpad). */
+export const COARSE_QUERY = '(pointer: coarse)';
 
 @Injectable({ providedIn: 'root' })
 export class LayoutService {
@@ -17,5 +19,8 @@ export class LayoutService {
   });
   readonly isNarrow = toSignal(this.bp.observe(NARROW_QUERY).pipe(map((s) => s.matches)), {
     initialValue: typeof window !== 'undefined' ? window.matchMedia(NARROW_QUERY).matches : false,
+  });
+  readonly isCoarse = toSignal(this.bp.observe(COARSE_QUERY).pipe(map((s) => s.matches)), {
+    initialValue: typeof window !== 'undefined' ? window.matchMedia(COARSE_QUERY).matches : false,
   });
 }
