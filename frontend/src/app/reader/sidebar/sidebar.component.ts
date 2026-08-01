@@ -1,5 +1,5 @@
 // src/app/reader/sidebar/sidebar.component.ts
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, model, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
   CdkDrag,
@@ -19,6 +19,7 @@ import { Selection } from '../query';
 import { SubscriptionDto, TagDto } from '../models';
 import { RefreshService } from '../refresh.service';
 import { AuthService } from '../../core/auth.service';
+import { LayoutService } from '../layout.service';
 import { buildVersion } from '../../../environments/version';
 import { trialDaysRemaining } from '../format';
 
@@ -80,6 +81,8 @@ export class SidebarComponent {
 
   readonly refreshSvc = inject(RefreshService);
   private readonly auth = inject(AuthService);
+  readonly screen = inject(LayoutService);
+  readonly organising = model(false);
   readonly expanded = signal<Set<number>>(new Set());
   readonly menuFor = signal<string | null>(null);
 

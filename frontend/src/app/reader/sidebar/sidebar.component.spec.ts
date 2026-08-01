@@ -13,6 +13,7 @@ import { Selection } from '../query';
 import { SubscriptionDto, TagDto } from '../models';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { buildVersion } from '../../../environments/version';
+import { LayoutService } from '../layout.service';
 
 const account = (trialEndsAt: string | null): CurrentUser => ({
   id: 1,
@@ -49,6 +50,8 @@ function mount(
     keptCount: number;
     selection: Selection;
     user: CurrentUser | null;
+    coarse: boolean;
+    organising: boolean;
   }> = {},
 ) {
   TestBed.configureTestingModule({
@@ -59,6 +62,7 @@ function mount(
       provideHttpClientTesting(),
       { provide: API_BASE_URL, useValue: 'https://api.test' },
       { provide: AuthService, useValue: { user: signal(over.user ?? account(null)) } },
+      { provide: LayoutService, useValue: { isCoarse: signal(over.coarse ?? false) } },
     ],
   });
   const f = TestBed.createComponent(SidebarComponent);
@@ -69,6 +73,7 @@ function mount(
   f.componentRef.setInput('keptCount', over.keptCount ?? 0);
   f.componentRef.setInput('selection', over.selection ?? { kind: 'all', id: null, unread: true });
   f.componentRef.setInput('loading', false);
+  f.componentRef.setInput('organising', over.organising ?? false);
   f.detectChanges();
   return f;
 }
@@ -434,5 +439,84 @@ describe('SidebarComponent', () => {
   it('hides the trial countdown when the trial is already past', () => {
     const f = mount({ user: account(inDays(-1)) });
     expect(f.nativeElement.querySelector('.trial')).toBeNull();
+  });
+});
+
+describe('organise mode', () => {
+  const tag: TagDto = { id: 1, name: 'News', color: null, icon: null, position: 0 };
+  const tree: TagNode[] = [{ tag, subscriptions: [sub(5)], unreadCount: 3 }];
+
+  it('offers the Organise switch on coarse pointers only', () => {
+    const isCoarse = signal(false);
+    TestBed.configureTestingModule({
+      imports: [SidebarComponent, provideTranslocoTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
+        { provide: AuthService, useValue: { user: signal(account(null)) } },
+        { provide: LayoutService, useValue: { isCoarse } },
+      ],
+    });
+    const f = TestBed.createComponent(SidebarComponent);
+    f.componentRef.setInput('tagTree', []);
+    f.componentRef.setInput('untagged', []);
+    f.componentRef.setInput('totalUnread', 0);
+    f.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
+    f.componentRef.setInput('loading', false);
+    f.componentRef.setInput('organising', false);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.organise')).toBeNull();
+
+    isCoarse.set(true);
+    f.detectChanges();
+    const organiseSwitch = el.querySelector('.organise')!;
+    expect(organiseSwitch.getAttribute('role')).toBe('switch');
+    expect(organiseSwitch.getAttribute('aria-checked')).toBe('false');
+    expect(organiseSwitch.textContent).toContain('Organise');
+  });
+
+  it('clicking the switch flips the organising model', () => {
+    const f = mount({ coarse: true });
+    (f.nativeElement as HTMLElement).querySelector<HTMLElement>('.organise')!.click();
+    f.detectChanges();
+    expect(f.componentInstance.organising()).toBe(true);
+    expect(
+      (f.nativeElement as HTMLElement).querySelector('.organise')!.getAttribute('aria-checked'),
+    ).toBe('true');
+  });
+
+  it('organising hides the actions, global views, view controls and trial line', () => {
+    const el = mount({
+      coarse: true,
+      organising: true,
+      tagTree: tree,
+      user: account(inDays(5)),
+    }).nativeElement as HTMLElement;
+    expect(el.querySelector('.actions')).toBeNull();
+    expect(el.querySelector('.nav.all')).toBeNull();
+    expect(el.querySelector('app-view-controls')).toBeNull();
+    expect(el.querySelector('.trial')).toBeNull();
+    expect(el.querySelector('.version')).not.toBeNull();
+    expect(el.querySelector('.tags')).not.toBeNull();
+  });
+
+  it('navigation mode keeps all of them', () => {
+    const el = mount({
+      coarse: true,
+      tagTree: tree,
+      user: account(inDays(5)),
+    }).nativeElement as HTMLElement;
+    expect(el.querySelector('.actions')).not.toBeNull();
+    expect(el.querySelector('.nav.all')).not.toBeNull();
+    expect(el.querySelector('app-view-controls')).not.toBeNull();
+    expect(el.querySelector('.trial')).not.toBeNull();
+  });
+
+  it('organising always shows the Feeds label as the untag drop target', () => {
+    const el = mount({ coarse: true, organising: true, untagged: [] }).nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Feeds');
   });
 });

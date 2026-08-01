@@ -13,10 +13,75 @@
   margin-bottom: var(--space-1);
 }
 
-/* Pin the layout/theme controls to the bottom of the sidebar. */
-.controls {
+/* Meta controls grouped at the drawer's foot: Organise, then layout/theme,
+   then trial and version. The wrapper takes the old margin-top: auto. */
+.foot {
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.controls {
   padding-top: var(--space-3);
+}
+
+.organise {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.organise .track {
+  position: relative;
+  display: inline-block;
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned switch-track measure, not a spacing value. */
+  width: 32px;
+  height: var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--border-strong);
+  transition: background 0.15s;
+}
+
+.organise .knob {
+  position: absolute;
+  top: var(--space-0);
+  left: var(--space-0);
+  width: var(--space-3);
+  height: var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  transition: transform 0.15s;
+}
+
+.organise[aria-checked='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.organise[aria-checked='true'] .track {
+  background: var(--accent);
+}
+
+.organise[aria-checked='true'] .knob {
+  transform: translateX(100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .organise .track,
+  .organise .knob {
+    transition: none;
+  }
 }
 
 /* Rides along under the controls, which already carry the margin-top: auto. */

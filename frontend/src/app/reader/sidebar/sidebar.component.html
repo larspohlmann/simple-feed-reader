@@ -1,63 +1,65 @@
 <nav class="sidebar" [attr.aria-label]="'reader.feeds' | transloco" cdkDropListGroup>
-  <div class="actions">
-    <button
-      class="act"
-      type="button"
-      [attr.aria-label]="'reader.refresh' | transloco"
-      [disabled]="refreshSvc.running()"
-      (click)="refresh.emit()"
-    >
-      <app-icon name="refresh" size="sm" /><span>{{ 'reader.refresh' | transloco }}</span>
-    </button>
-    <button
-      class="act"
-      type="button"
-      [attr.aria-label]="'reader.addFeed' | transloco"
-      (click)="addFeed.emit()"
-    >
-      <app-icon name="add" size="sm" /><span>{{ 'reader.addFeed' | transloco }}</span>
-    </button>
-  </div>
-  @if (refreshSvc.running()) {
-    <span class="prog"><i [style.width.%]="refreshSvc.progress() * 100"></i></span>
-  }
+  @if (!organising()) {
+    <div class="actions">
+      <button
+        class="act"
+        type="button"
+        [attr.aria-label]="'reader.refresh' | transloco"
+        [disabled]="refreshSvc.running()"
+        (click)="refresh.emit()"
+      >
+        <app-icon name="refresh" size="sm" /><span>{{ 'reader.refresh' | transloco }}</span>
+      </button>
+      <button
+        class="act"
+        type="button"
+        [attr.aria-label]="'reader.addFeed' | transloco"
+        (click)="addFeed.emit()"
+      >
+        <app-icon name="add" size="sm" /><span>{{ 'reader.addFeed' | transloco }}</span>
+      </button>
+    </div>
+    @if (refreshSvc.running()) {
+      <span class="prog"><i [style.width.%]="refreshSvc.progress() * 100"></i></span>
+    }
 
-  <a
-    class="nav all"
-    [class.active]="selection().kind === 'all'"
-    [routerLink]="[]"
-    [queryParams]="{ view: null, tag: null, subscription: null, entry: null }"
-    queryParamsHandling="merge"
-  >
-    <app-icon name="inbox" size="sm" /><span>{{ 'reader.allItems' | transloco }}</span>
-    @if (totalUnread() > 0) {
-      <span class="count">{{ totalUnread() }}</span>
-    }
-  </a>
-  <a
-    class="nav"
-    [class.active]="selection().kind === 'favorites'"
-    [routerLink]="[]"
-    [queryParams]="{ view: 'favorites', tag: null, subscription: null, entry: null }"
-    queryParamsHandling="merge"
-  >
-    <app-icon name="star" size="sm" /><span>{{ 'reader.favorites' | transloco }}</span>
-    @if (favoritesCount() > 0) {
-      <span class="count">{{ favoritesCount() }}</span>
-    }
-  </a>
-  <a
-    class="nav"
-    [class.active]="selection().kind === 'kept'"
-    [routerLink]="[]"
-    [queryParams]="{ view: 'kept', tag: null, subscription: null, entry: null }"
-    queryParamsHandling="merge"
-  >
-    <app-icon name="bookmark" size="sm" /><span>{{ 'reader.kept' | transloco }}</span>
-    @if (keptCount() > 0) {
-      <span class="count">{{ keptCount() }}</span>
-    }
-  </a>
+    <a
+      class="nav all"
+      [class.active]="selection().kind === 'all'"
+      [routerLink]="[]"
+      [queryParams]="{ view: null, tag: null, subscription: null, entry: null }"
+      queryParamsHandling="merge"
+    >
+      <app-icon name="inbox" size="sm" /><span>{{ 'reader.allItems' | transloco }}</span>
+      @if (totalUnread() > 0) {
+        <span class="count">{{ totalUnread() }}</span>
+      }
+    </a>
+    <a
+      class="nav"
+      [class.active]="selection().kind === 'favorites'"
+      [routerLink]="[]"
+      [queryParams]="{ view: 'favorites', tag: null, subscription: null, entry: null }"
+      queryParamsHandling="merge"
+    >
+      <app-icon name="star" size="sm" /><span>{{ 'reader.favorites' | transloco }}</span>
+      @if (favoritesCount() > 0) {
+        <span class="count">{{ favoritesCount() }}</span>
+      }
+    </a>
+    <a
+      class="nav"
+      [class.active]="selection().kind === 'kept'"
+      [routerLink]="[]"
+      [queryParams]="{ view: 'kept', tag: null, subscription: null, entry: null }"
+      queryParamsHandling="merge"
+    >
+      <app-icon name="bookmark" size="sm" /><span>{{ 'reader.kept' | transloco }}</span>
+      @if (keptCount() > 0) {
+        <span class="count">{{ keptCount() }}</span>
+      }
+    </a>
+  }
 
   @if (tagTree().length) {
     <p class="label">{{ 'reader.tags' | transloco }}</p>
@@ -204,7 +206,7 @@
     </div>
   }
 
-  @if (untagged().length || dragging()) {
+  @if (untagged().length || dragging() || organising()) {
     <p class="label">{{ 'reader.feeds' | transloco }}</p>
   }
   <div
@@ -267,21 +269,35 @@
     }
   </div>
 
-  <app-view-controls class="controls" />
-
-  @if (trialDaysLeft(); as days) {
-    <p class="trial" [class.soon]="trialEndingSoon()">
-      <app-icon name="schedule" size="sm" />
-      <span>{{
-        (days === 1 ? 'reader.trialDayLeft' : 'reader.trialDaysLeft') | transloco: { days }
-      }}</span>
-    </p>
-  }
-
-  <a
-    class="version"
-    routerLink="/settings"
-    [attr.aria-label]="'reader.versionLabel' | transloco: { version }"
-    >{{ version }}</a
-  >
+  <div class="foot">
+    @if (screen.isCoarse()) {
+      <button
+        class="organise"
+        type="button"
+        role="switch"
+        [attr.aria-checked]="organising()"
+        (click)="organising.set(!organising())"
+      >
+        <span>{{ 'reader.organise' | transloco }}</span>
+        <span class="track" aria-hidden="true"><span class="knob"></span></span>
+      </button>
+    }
+    @if (!organising()) {
+      <app-view-controls class="controls" />
+      @if (trialDaysLeft(); as days) {
+        <p class="trial" [class.soon]="trialEndingSoon()">
+          <app-icon name="schedule" size="sm" />
+          <span>{{
+            (days === 1 ? 'reader.trialDayLeft' : 'reader.trialDaysLeft') | transloco: { days }
+          }}</span>
+        </p>
+      }
+    }
+    <a
+      class="version"
+      routerLink="/settings"
+      [attr.aria-label]="'reader.versionLabel' | transloco: { version }"
+      >{{ version }}</a
+    >
+  </div>
 </nav>
