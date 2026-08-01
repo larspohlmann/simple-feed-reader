@@ -35,6 +35,9 @@ anyone, and nothing logs an error.
    running the real prod stack locally with mkcert certificates.
 5. **The PR #209 helper scripts are adjusted** to drive the new path, and all
    user documentation is updated in the same change.
+6. **`install.sh` installs production.** The `curl | bash` one-liner becomes
+   the prod installer (interactive prompts, two-step fallback); a new
+   `install-dev.sh` takes over the current dev-stack install.
 
 ## Design
 
@@ -131,22 +134,54 @@ reverse-proxy snippet and the note that the public origin must be HTTPS (the
 
 ### 5. Scripts — the PR #209 set, adjusted
 
+**`install.sh` becomes the production installer.** The `curl | bash` one-liner
+now yields a production instance:
+
+1. Prerequisites: git, docker (+ compose). mkcert is **not** required — it
+   moves to the dev installer.
+2. Clone, check out the latest release tag (unchanged mechanics).
+3. Write `.env.prod` from `.env.prod.example`, **auto-generating** every
+   generatable secret: `APP_SECRET`, `ALTCHA_HMAC_KEY`, `JWT_PASSPHRASE`,
+   `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD` (`openssl rand -hex 32`, with a
+   `/dev/urandom` fallback).
+4. **Prompt on `/dev/tty`** for the operator-only values: the public URL (one
+   answer fills `APP_FRONTEND_URL`, `APP_BACKEND_URL`, `DEFAULT_URI`),
+   `MAILER_DSN`, `MAIL_FROM` (+ optional `MAIL_FROM_NAME`).
+5. **Two-step fallback:** without a TTY, or when the operator skips a prompt,
+   the placeholders stay in `.env.prod` and the installer stops with exact
+   instructions: edit `.env.prod`, then run `./scripts/prod-start.sh`.
+   (`prod-start.sh` refuses to start while a required value is a placeholder —
+   compose's `${VAR:?}` enforces it.)
+6. Hand off to `prod-start.sh` (below), report the TLS/HTTP mode, print the
+   prod summary.
+
+A fresh clone has no certificates, so a fresh install starts in **HTTP mode**;
+the summary and the guide explain both ways out: drop `fullchain.pem` +
+`privkey.pem` into `docker/certs-prod/` and re-run `prod-start.sh`, or put a
+reverse proxy in front.
+
+**New `install-dev.sh`** — the current dev install, verbatim (mkcert checks,
+dev stack, dev summary). The README's developer section points here.
+
 - **New `scripts/prod-start.sh`** — the prod lifecycle, idempotent:
   1. refuse without `.env.prod`, pointing at `.env.prod.example`;
   2. report which mode (TLS / HTTP) the certs imply;
   3. `docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml
      --env-file .env.prod up -d --build`;
   4. run migrations; generate the JWT keypair if missing;
-  5. health-check; print a prod summary including the first-admin command
-     (`docs/first-run-setup.md`) and the mail verification command (§6).
+  5. health-check (against the mode-appropriate local port); print a prod
+     summary including the first-admin command (`docs/first-run-setup.md`) and
+     the mail verification command (§6).
 - **New `scripts/prod-stop.sh`** — stop the prod stack, data kept.
 - **Deleted:** `frontend-prod-start.sh`, `frontend-prod-stop.sh`, the
   `frontend-prod` service, `docker/frontend/`.
 - `lib.sh` gains shared prod helpers (project name, compose wrapper, env-file
-  check) and its dev summary drops the preview lines.
-- **Update path:** `prod-start.sh` is idempotent, so updating = check out the
-  newer release tag, run it again (rebuilds, migrates). Documented;
-  `update.sh` stays dev-only and says so.
+  check, secret generation, placeholder detection) and its dev summary drops
+  the preview lines.
+- **`update.sh` follows the flip:** check out the newest release, then update
+  what is installed — `.env.prod` present → re-run `prod-start.sh` (rebuilds,
+  migrates); dev stack running → the existing dev update steps. Both may apply
+  on a developer machine.
 
 CI's `shellcheck scripts/*.sh` picks the new scripts up automatically.
 
@@ -167,15 +202,18 @@ prod stack.
 ### 7. Documentation sweep (user-facing docs stay current)
 
 - **New `docs/docker-production.md`** — the install guide: prerequisites →
-  clone + release checkout → `.env.prod` → certificates or reverse proxy →
-  `prod-start.sh` → first admin (links `first-run-setup.md`) → verify mail →
-  update → backup note (`mysqldump` before major updates).
-- **`README.md`** — Quick start table: preview rows out, prod script rows in;
-  a "Running in production" pointer to the new guide; Mailpit row marked
-  dev-only.
-- **`docs/local-docker.md`** — §1/§2 (service list, ports) drop :8444; §8
-  "Extension points" updates (prod image now delivered); §9's preview section
-  is replaced by a short pointer to `docker-production.md`.
+  the one-liner (or manual clone + release checkout) → `.env.prod` →
+  certificates or reverse proxy → `prod-start.sh` → first admin (links
+  `first-run-setup.md`) → verify mail → update → backup note (`mysqldump`
+  before major updates).
+- **`README.md`** — Quick start becomes the **production** install (the
+  one-liner now installs prod); a "Developing" subsection points at
+  `install-dev.sh` and `local-docker.md`; the script table swaps preview rows
+  for prod rows; Mailpit row marked dev-only.
+- **`docs/local-docker.md`** — §1/§2 (service list, ports) drop :8444; §3's
+  "easy path" one-liner switches to `install-dev.sh`; §8 "Extension points"
+  updates (prod image now delivered); §9's preview section is replaced by a
+  short pointer to `docker-production.md`.
 - **`docs/first-run-setup.md`** — the `docker compose exec` invocation gets
   the prod-stack variant (`-p simple-feed-reader-prod -f docker-compose.prod.yml`).
 - **`scripts/lib.sh`** summaries and `install.sh` closing summary mention the
@@ -186,7 +224,10 @@ prod stack.
 - **Backend suite untouched** — no PHP code changes are expected; the prod
   image runs the same source. If the entrypoint needs a Symfony change (none
   anticipated), it gets tests then.
-- **Shell:** `shellcheck` (CI) + `bash -n` on all touched scripts.
+- **Shell:** `shellcheck` (CI) + `bash -n` on all touched scripts. The
+  installer's two-step fallback is exercised by piping it without a TTY and
+  asserting it stops with instructions instead of starting a half-configured
+  stack.
 - **Compose:** `docker compose -f docker-compose.prod.yml config` with a
   filled sample env validates interpolation; with a missing `MAILER_DSN` it
   must fail naming the variable.
