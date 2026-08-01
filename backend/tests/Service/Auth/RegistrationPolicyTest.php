@@ -44,6 +44,11 @@ final class RegistrationPolicyTest extends KernelTestCase
         self::assertTrue($policy->approvalRequired());
     }
 
+    public function testStoredEmailConfirmationRequiredReflectsTheRawToggleEvenWithMailOff(): void
+    {
+        self::assertTrue($this->policy(mailOn: false, confirm: true, approve: true)->storedEmailConfirmationRequired());
+    }
+
     public function testProspectiveStatusMatrix(): void
     {
         self::assertSame(

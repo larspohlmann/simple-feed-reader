@@ -36,6 +36,17 @@ final readonly class RegistrationPolicy
         return $this->settings->requireEmailConfirmation() && $this->mailEnabled();
     }
 
+    /**
+     * The stored toggle, unmodified by mail capability. Distinct from
+     * {@see self::emailConfirmationRequired()}: the admin settings UI must show
+     * what the admin set, and let mailEnabled() explain any divergence, rather
+     * than silently showing the mail-forced effective value.
+     */
+    public function storedEmailConfirmationRequired(): bool
+    {
+        return $this->settings->requireEmailConfirmation();
+    }
+
     public function approvalRequired(): bool
     {
         return $this->settings->requireApproval();
