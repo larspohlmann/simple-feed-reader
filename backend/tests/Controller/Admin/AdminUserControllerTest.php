@@ -183,6 +183,7 @@ final class AdminUserControllerTest extends WebTestCase
         yield 'approve' => ['POST', self::LIST . '/%d/approve'];
         yield 'reject' => ['POST', self::LIST . '/%d/reject'];
         yield 'suspend' => ['POST', self::LIST . '/%d/suspend'];
+        yield 'reset-password' => ['POST', self::LIST . '/%d/reset-password'];
     }
 
     #[\PHPUnit\Framework\Attributes\DataProvider('adminRoutes')]
