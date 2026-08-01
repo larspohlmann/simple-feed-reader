@@ -14,6 +14,7 @@ import { EntryListComponent } from './entry-list/entry-list.component';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { RefreshService } from './refresh.service';
 import { LayoutService } from './layout.service';
+import { DrawerSwipeDirective } from './drawer-swipe.directive';
 
 describe('ReaderShellComponent', () => {
   let ctrl: HttpTestingController;
@@ -703,6 +704,58 @@ describe('ReaderShellComponent', () => {
       (narrow as import('@angular/core').WritableSignal<boolean>).set(false);
       f.detectChanges();
       expect(body.classList).not.toContain('is-narrow');
+    });
+  });
+
+  describe('sidebar organising', () => {
+    beforeEach(() => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [ReaderShellComponent, provideTranslocoTesting()],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          provideRouter([]),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
+          { provide: ActivatedRoute, useValue: { queryParamMap: qp.asObservable() } },
+          { provide: AuthService, useValue: auth },
+        ],
+      });
+      TestBed.overrideProvider(LayoutService, {
+        useValue: { isNarrow: signal(true), isWide: signal(false), isCoarse: signal(true) },
+      });
+    });
+
+    it('pauses the drawer swipe while organising', () => {
+      const c = TestBed.inject(HttpTestingController);
+      const f = TestBed.createComponent(ReaderShellComponent);
+      f.detectChanges();
+      c.match(() => true).forEach((req) =>
+        req.flush({ subscriptions: [], tags: [], entries: [], favoritesCount: 0, keptCount: 0, nextCursor: null }),
+      );
+      f.detectChanges();
+
+      const swipe = f.debugElement
+        .query(By.directive(DrawerSwipeDirective))
+        .injector.get(DrawerSwipeDirective);
+      expect(swipe.disabled()).toBe(false);
+
+      f.componentInstance.sidebarOrganising.set(true);
+      f.detectChanges();
+      expect(swipe.disabled()).toBe(true);
+    });
+
+    it('resets organising when the drawer closes', () => {
+      const c = TestBed.inject(HttpTestingController);
+      const f = TestBed.createComponent(ReaderShellComponent);
+      f.detectChanges();
+      c.match(() => true).forEach((req) =>
+        req.flush({ subscriptions: [], tags: [], entries: [], favoritesCount: 0, keptCount: 0, nextCursor: null }),
+      );
+      f.componentInstance.setSidebarOpen(true);
+      f.componentInstance.sidebarOrganising.set(true);
+      f.componentInstance.setSidebarOpen(false);
+      expect(f.componentInstance.sidebarOrganising()).toBe(false);
     });
   });
 });
