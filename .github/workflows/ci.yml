@@ -54,6 +54,12 @@ jobs:
       - name: PHPStan
         run: composer stan
 
+      # PHPMD codesize was a local-only discipline gate and silently broke once
+      # (pdepend could not parse PHP 8.4 syntax, #183) — so the sweep now runs
+      # here too. It is a static check, unaffected by the database matrix leg.
+      - name: PHPMD (codesize)
+        run: composer md
+
       # Both DSNs are chosen here, in one place. MIGRATION_DATABASE_URL is
       # deliberately a different database from the one PHPUnit uses, so the
       # migration check below cannot disturb the suite: it also runs in dev,

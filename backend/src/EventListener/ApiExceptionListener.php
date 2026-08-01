@@ -8,6 +8,7 @@ use App\Exception\AccountNotActiveException;
 use App\Exception\ApiException;
 use App\Exception\RateLimitedException;
 use App\Http\ApiProblem;
+use App\Http\ResolvedProblem;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
@@ -40,46 +41,34 @@ final readonly class ApiExceptionListener
             return;
         }
 
-        $exception = $event->getThrowable();
-        $headers = [];
+        $resolved = $this->resolve($event->getThrowable(), $path);
 
-        /**
-         * RFC 7807 extension members — keys added ALONGSIDE the standard
-         * problem fields. Kept separate from ApiProblem, which models the
-         * standard document and nothing else.
-         *
-         * @var array<string, mixed> $extensions
-         */
-        $extensions = [];
+        // array_merge, not `+`: on a key collision the union operator keeps the
+        // LEFT value, so an HttpException carrying its own Content-Type would
+        // silently downgrade the problem document to text/html. Our header must
+        // win, while pass-through headers (WWW-Authenticate, Retry-After)
+        // survive. Placing ours last also beats case-variant keys, because
+        // HeaderBag lowercases names and the later entry wins.
+        $event->setResponse(new JsonResponse(
+            array_merge($resolved->problem->toArray(), $resolved->extensions),
+            $resolved->problem->status,
+            array_merge($resolved->headers, ['Content-Type' => 'application/problem+json']),
+        ));
+    }
 
+    private function resolve(\Throwable $exception, string $path): ResolvedProblem
+    {
         if ($exception instanceof ApiException) {
-            $problem = new ApiProblem(
-                $exception->type,
-                $exception->title,
-                $exception->status,
-                $exception->detail,
-                $exception->errors,
-            );
+            return $this->resolveApiException($exception);
+        }
 
-            if ($exception instanceof RateLimitedException) {
-                $headers['Retry-After'] = (string) $exception->retryAfterSeconds;
-            }
+        if ($exception instanceof HttpExceptionInterface) {
+            return new ResolvedProblem($this->fromHttpException($exception), $exception->getHeaders());
+        }
 
-            if ($exception instanceof AccountNotActiveException) {
-                // The client shows a different message per status, so the
-                // status travels in the payload rather than only in $detail's
-                // prose. LoginFailureHandler adds the identical key for the
-                // password login — it cannot use this listener, because the
-                // firewall short-circuits before kernel.exception — so the two
-                // sign-in paths report a blocked account in one shape.
-                $extensions['accountStatus'] = $exception->accountStatus;
-            }
-        } elseif ($exception instanceof HttpExceptionInterface) {
-            $problem = $this->fromHttpException($exception);
-            $headers = $exception->getHeaders();
-        } elseif ($exception instanceof AuthenticationException) {
+        if ($exception instanceof AuthenticationException) {
             // The firewall's own exceptions do NOT implement
-            // HttpExceptionInterface, so without these two branches they would
+            // HttpExceptionInterface, so without this branch they would
             // fall through to the opaque 500 below — turning "not logged in"
             // into "server broken". Covers subclasses such as
             // BadCredentialsException and InsufficientAuthenticationException.
@@ -104,49 +93,68 @@ final readonly class ApiExceptionListener
             // A corollary of the real behaviour: an early-return guard here for
             // an already-set response would be unreachable dead code, not a
             // behaviour change. There is nothing to guard against.
-            $problem = new ApiProblem(
+            return new ResolvedProblem(new ApiProblem(
                 'unauthorized',
                 'Unauthorized',
                 Response::HTTP_UNAUTHORIZED,
                 'Authentication is required to access this resource.',
-            );
-        } elseif ($exception instanceof AccessDeniedException) {
+            ));
+        }
+
+        if ($exception instanceof AccessDeniedException) {
             // Security\Core\Exception\AccessDeniedException — distinct from
             // HttpKernel's AccessDeniedHttpException, which the
             // HttpExceptionInterface branch above already covers.
-            $problem = new ApiProblem(
+            return new ResolvedProblem(new ApiProblem(
                 'forbidden',
                 'Forbidden',
                 Response::HTTP_FORBIDDEN,
                 'You do not have permission to access this resource.',
-            );
-        } else {
-            // Unexpected: the message may contain connection strings, tokens or
-            // row data, so it goes to the log and never to the client.
-            $this->logger->error('Unhandled API exception', [
-                'exception' => $exception,
-                'path' => $path,
-            ]);
-
-            $problem = new ApiProblem(
-                'internal_error',
-                'Internal server error',
-                Response::HTTP_INTERNAL_SERVER_ERROR,
-                $this->debug ? $exception->getMessage() : null,
-            );
+            ));
         }
 
-        // array_merge, not `+`: on a key collision the union operator keeps the
-        // LEFT value, so an HttpException carrying its own Content-Type would
-        // silently downgrade the problem document to text/html. Our header must
-        // win, while pass-through headers (WWW-Authenticate, Retry-After)
-        // survive. Placing ours last also beats case-variant keys, because
-        // HeaderBag lowercases names and the later entry wins.
-        $event->setResponse(new JsonResponse(
-            array_merge($problem->toArray(), $extensions),
-            $problem->status,
-            array_merge($headers, ['Content-Type' => 'application/problem+json']),
+        // Unexpected: the message may contain connection strings, tokens or
+        // row data, so it goes to the log and never to the client.
+        $this->logger->error('Unhandled API exception', [
+            'exception' => $exception,
+            'path' => $path,
+        ]);
+
+        return new ResolvedProblem(new ApiProblem(
+            'internal_error',
+            'Internal server error',
+            Response::HTTP_INTERNAL_SERVER_ERROR,
+            $this->debug ? $exception->getMessage() : null,
         ));
+    }
+
+    private function resolveApiException(ApiException $exception): ResolvedProblem
+    {
+        $problem = new ApiProblem(
+            $exception->type,
+            $exception->title,
+            $exception->status,
+            $exception->detail,
+            $exception->errors,
+        );
+
+        $headers = [];
+        if ($exception instanceof RateLimitedException) {
+            $headers['Retry-After'] = (string) $exception->retryAfterSeconds;
+        }
+
+        $extensions = [];
+        if ($exception instanceof AccountNotActiveException) {
+            // The client shows a different message per status, so the
+            // status travels in the payload rather than only in $detail's
+            // prose. LoginFailureHandler adds the identical key for the
+            // password login — it cannot use this listener, because the
+            // firewall short-circuits before kernel.exception — so the two
+            // sign-in paths report a blocked account in one shape.
+            $extensions['accountStatus'] = $exception->accountStatus;
+        }
+
+        return new ResolvedProblem($problem, $headers, $extensions);
     }
 
     private function fromHttpException(HttpExceptionInterface $exception): ApiProblem

@@ -22,6 +22,19 @@ final readonly class UrlGuard
 
     public function assertSafe(string $url): GuardedUrl
     {
+        $host = $this->parseAllowedHost($url);
+        $ips = $this->resolveToPublicIps($host);
+
+        // Every record was validated above, so pinning the first is safe.
+        return new GuardedUrl($host, $ips[0]);
+    }
+
+    /**
+     * Rejects malformed URLs, embedded credentials and non-HTTP schemes, then
+     * returns the normalised host (lowercased, IPv6 brackets stripped).
+     */
+    private function parseAllowedHost(string $url): string
+    {
         $parts = parse_url($url);
         if ($parts === false || !isset($parts['scheme'], $parts['host'])) {
             throw new SsrfBlockedException(sprintf('Malformed URL "%s"', $url));
@@ -35,8 +48,17 @@ final readonly class UrlGuard
             throw new SsrfBlockedException(sprintf('Scheme "%s" is not allowed', $scheme));
         }
 
-        $host = strtolower(trim($parts['host'], '[]'));
+        return strtolower(trim($parts['host'], '[]'));
+    }
 
+    /**
+     * Resolves the host to its target addresses and rejects the whole URL if
+     * any record is a private/reserved address. An IP literal skips DNS.
+     *
+     * @return non-empty-list<string>
+     */
+    private function resolveToPublicIps(string $host): array
+    {
         $ips = filter_var($host, FILTER_VALIDATE_IP) !== false
             ? [$host]
             : $this->dnsResolver->resolve($host);
@@ -51,7 +73,6 @@ final readonly class UrlGuard
             }
         }
 
-        // Every record was validated above, so pinning the first is safe.
-        return new GuardedUrl($host, $ips[0]);
+        return $ips;
     }
 }
