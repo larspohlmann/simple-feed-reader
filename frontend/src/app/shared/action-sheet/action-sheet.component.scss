@@ -1,0 +1,64 @@
+:host {
+  display: block;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  padding: var(--space-2) var(--space-2) var(--space-4);
+  animation: sheet-enter 0.2s ease-out;
+}
+
+.grabber {
+  width: var(--space-6);
+  height: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--border-strong);
+  margin: 0 auto var(--space-2);
+}
+
+.title {
+  margin: 0 var(--space-3) var(--space-1);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+nav button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--tap-target);
+  padding: var(--row-pad-y) var(--row-pad-x);
+  background: none;
+  border: none;
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-size: var(--fs-base);
+  text-align: left;
+  cursor: pointer;
+}
+
+nav button:hover,
+nav button:focus-visible {
+  background: var(--surface-0);
+}
+
+nav button.danger {
+  color: var(--danger);
+}
+
+@keyframes sheet-enter {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host {
+    animation: none;
+  }
+}

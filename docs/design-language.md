@@ -508,6 +508,31 @@ or an overlay (`<app-overlay-panel>`).
 
 ---
 
+### `<app-action-sheet>` (via the `ActionSheet` service)
+
+The row-menu surface for coarse pointers: a sheet pinned to the bottom of the
+viewport, titled with the row it acts on. Opened through the `ActionSheet`
+service — never instantiated in a template — because the open drawer carries a
+transform, which would re-anchor any `position: fixed` child; the CDK overlay
+escapes that.
+
+```ts
+this.sheet
+  .open({ title: tag.name, actions: [{ id: 'edit', label: editLabel }] })
+  .subscribe((choice) => { /* undefined on dismiss */ });
+```
+
+Labels and title are **already-translated strings** (shared component, no
+feature keys). `danger: true` renders the action in the danger colour.
+Dismissed by backdrop tap, Escape, or a downward swipe — all resolve
+`undefined`.
+
+**Not for:** fine-pointer surfaces (the sidebar keeps its inline `.pop`
+popover on desktop) or anything with form controls — that is a dialog in
+`<app-overlay-panel>`.
+
+---
+
 ### `<app-spinner>`
 
 The RSS mark, animating, as the app's loading indicator. Used for a fetch whose
