@@ -1,0 +1,25 @@
+# Keep build contexts small and secrets out of images. Both the php and the
+# web image build from the repo root (they must see backend/ and frontend/).
+.git
+.idea
+.claude
+.superpowers
+.playwright-mcp
+docs
+deploy
+scripts
+.github
+
+# Local TLS material and operator secrets must never enter an image.
+docker/certs
+docker/certs-prod
+.env.prod
+backend/config/jwt
+
+# Host-side build products; the images install/build their own.
+backend/var
+backend/vendor
+frontend/node_modules
+frontend/dist
+frontend/test-results
+frontend/playwright-report

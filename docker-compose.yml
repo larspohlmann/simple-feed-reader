@@ -28,7 +28,12 @@ services:
       retries: 20
 
   php:
-    build: ./docker/php
+    build:
+      # Repo-root context shared with the prod target (docker/php/Dockerfile
+      # is multi-stage); the root .dockerignore keeps the context small.
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: dev
     volumes:
       - ./backend:/app
     environment:
