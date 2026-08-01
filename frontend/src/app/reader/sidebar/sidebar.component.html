@@ -86,62 +86,106 @@
             class="tag"
             cdkDrag
             [cdkDragData]="node.tag"
-            [cdkDragStartDelay]="dragDelay"
+            [cdkDragDisabled]="dragLocked()"
+            [cdkDragStartDelay]="dragDelay()"
             (cdkDragStarted)="onDragStart('tag')"
             (cdkDragEnded)="onDragEnd()"
           >
-            <button
-              class="expand"
-              type="button"
-              [attr.aria-expanded]="expanded().has(node.tag.id)"
-              [attr.aria-label]="'reader.toggleTag' | transloco: { name: node.tag.name }"
-              (click)="toggle(node.tag.id)"
-            >
-              <app-icon
-                [name]="expanded().has(node.tag.id) ? 'expand_more' : 'chevron_right'"
-                size="sm"
-              />
-            </button>
-            <a
-              class="nav grow"
-              [class.active]="selection().kind === 'tag' && selection().id === node.tag.id"
-              [routerLink]="[]"
-              [queryParams]="{ tag: node.tag.id, view: null, subscription: null, entry: null }"
-              queryParamsHandling="merge"
-            >
-              <span class="lead">
-                <app-tag-glyph [name]="node.tag.icon" [color]="node.tag.color" size="sm" />
+            @if (organising()) {
+              <span class="handle" cdkDragHandle aria-hidden="true">
+                <app-icon name="drag_indicator" size="sm" />
               </span>
-              <span>{{ node.tag.name }}</span>
-              @if (node.unreadCount > 0) {
-                <span class="count">{{ node.unreadCount }}</span>
-              }
-            </a>
-            @let tagMenuKey = 'tag-' + node.tag.id;
-            <div
-              class="rowmenu"
-              [appDismissOnOutside]="menuFor() === tagMenuKey"
-              (dismiss)="closeMenu()"
-            >
+              <button
+                class="rowbody"
+                type="button"
+                [attr.aria-expanded]="expanded().has(node.tag.id)"
+                [attr.aria-label]="'reader.toggleTag' | transloco: { name: node.tag.name }"
+                (click)="toggle(node.tag.id)"
+              >
+                <span class="lead">
+                  <app-tag-glyph [name]="node.tag.icon" [color]="node.tag.color" size="sm" />
+                </span>
+                <span class="name">{{ node.tag.name }}</span>
+              </button>
               <button
                 class="dots"
                 type="button"
                 [attr.aria-label]="'reader.manage' | transloco: { name: node.tag.name }"
-                (click)="toggleMenu(tagMenuKey, $event)"
+                (click)="openTagSheet(node.tag)"
               >
                 <app-icon name="more_horiz" size="sm" />
               </button>
-              @if (menuFor() === tagMenuKey) {
-                <div class="pop" role="menu">
-                  <button role="menuitem" (click)="editTag.emit(node.tag); closeMenu()">
-                    {{ 'reader.editTag' | transloco }}
+            } @else {
+              @if (!screen.isCoarse()) {
+                <button
+                  class="expand"
+                  type="button"
+                  [attr.aria-expanded]="expanded().has(node.tag.id)"
+                  [attr.aria-label]="'reader.toggleTag' | transloco: { name: node.tag.name }"
+                  (click)="toggle(node.tag.id)"
+                >
+                  <app-icon
+                    [name]="expanded().has(node.tag.id) ? 'expand_more' : 'chevron_right'"
+                    size="sm"
+                  />
+                </button>
+              }
+              <a
+                class="nav grow"
+                [class.active]="selection().kind === 'tag' && selection().id === node.tag.id"
+                [routerLink]="[]"
+                [queryParams]="{ tag: node.tag.id, view: null, subscription: null, entry: null }"
+                queryParamsHandling="merge"
+              >
+                <span class="lead">
+                  <app-tag-glyph [name]="node.tag.icon" [color]="node.tag.color" size="sm" />
+                </span>
+                <span>{{ node.tag.name }}</span>
+                @if (node.unreadCount > 0) {
+                  <span class="count">{{ node.unreadCount }}</span>
+                }
+              </a>
+              @if (screen.isCoarse()) {
+                <button
+                  class="chevzone"
+                  type="button"
+                  [attr.aria-expanded]="expanded().has(node.tag.id)"
+                  [attr.aria-label]="'reader.toggleTag' | transloco: { name: node.tag.name }"
+                  (click)="toggle(node.tag.id)"
+                >
+                  <app-icon
+                    [name]="expanded().has(node.tag.id) ? 'expand_more' : 'chevron_right'"
+                    size="sm"
+                  />
+                </button>
+              } @else {
+                @let tagMenuKey = 'tag-' + node.tag.id;
+                <div
+                  class="rowmenu"
+                  [appDismissOnOutside]="menuFor() === tagMenuKey"
+                  (dismiss)="closeMenu()"
+                >
+                  <button
+                    class="dots"
+                    type="button"
+                    [attr.aria-label]="'reader.manage' | transloco: { name: node.tag.name }"
+                    (click)="toggleMenu(tagMenuKey, $event)"
+                  >
+                    <app-icon name="more_horiz" size="sm" />
                   </button>
-                  <button role="menuitem" (click)="deleteTag.emit(node.tag); closeMenu()">
-                    {{ 'reader.deleteTag' | transloco }}
-                  </button>
+                  @if (menuFor() === tagMenuKey) {
+                    <div class="pop" role="menu">
+                      <button role="menuitem" (click)="editTag.emit(node.tag); closeMenu()">
+                        {{ 'reader.editTag' | transloco }}
+                      </button>
+                      <button role="menuitem" (click)="deleteTag.emit(node.tag); closeMenu()">
+                        {{ 'reader.deleteTag' | transloco }}
+                      </button>
+                    </div>
+                  }
                 </div>
               }
-            </div>
+            }
           </div>
         </div>
         @if (expanded().has(node.tag.id)) {
@@ -157,47 +201,65 @@
                 class="feedrow"
                 cdkDrag
                 [cdkDragData]="s"
-                [cdkDragStartDelay]="dragDelay"
+                [cdkDragDisabled]="dragLocked()"
+                [cdkDragStartDelay]="dragDelay()"
                 (cdkDragStarted)="onDragStart('feed')"
                 (cdkDragEnded)="onDragEnd()"
               >
-                <a
-                  class="nav tag-sub"
-                  [class.active]="selection().kind === 'subscription' && selection().id === s.id"
-                  [routerLink]="[]"
-                  [queryParams]="{ subscription: s.id, view: null, tag: null, entry: null }"
-                  queryParamsHandling="merge"
-                >
-                  <app-favicon [url]="s.faviconUrl" /><span>{{ s.title }}</span>
-                  @if (s.unreadCount > 0) {
-                    <span class="count">{{ s.unreadCount }}</span>
-                  }
-                </a>
-                @let taggedFeedMenuKey = 'sub-' + node.tag.id + '-' + s.id;
-                <div
-                  class="rowmenu"
-                  [appDismissOnOutside]="menuFor() === taggedFeedMenuKey"
-                  (dismiss)="closeMenu()"
-                >
+                @if (organising()) {
+                  <span class="handle" cdkDragHandle aria-hidden="true">
+                    <app-icon name="drag_indicator" size="sm" />
+                  </span>
+                  <span class="feedname"><app-favicon [url]="s.faviconUrl" /><span>{{ s.title }}</span></span>
                   <button
                     class="dots"
                     type="button"
                     [attr.aria-label]="'reader.manage' | transloco: { name: s.title }"
-                    (click)="toggleMenu(taggedFeedMenuKey, $event)"
+                    (click)="openFeedSheet(s)"
                   >
                     <app-icon name="more_horiz" size="sm" />
                   </button>
-                  @if (menuFor() === taggedFeedMenuKey) {
-                    <div class="pop" role="menu">
-                      <button role="menuitem" (click)="editFeed.emit(s); closeMenu()">
-                        {{ 'reader.editFeed' | transloco }}
+                } @else {
+                  <a
+                    class="nav tag-sub"
+                    [class.active]="selection().kind === 'subscription' && selection().id === s.id"
+                    [routerLink]="[]"
+                    [queryParams]="{ subscription: s.id, view: null, tag: null, entry: null }"
+                    queryParamsHandling="merge"
+                  >
+                    <app-favicon [url]="s.faviconUrl" /><span>{{ s.title }}</span>
+                    @if (s.unreadCount > 0) {
+                      <span class="count">{{ s.unreadCount }}</span>
+                    }
+                  </a>
+                  @if (!screen.isCoarse()) {
+                    @let taggedFeedMenuKey = 'sub-' + node.tag.id + '-' + s.id;
+                    <div
+                      class="rowmenu"
+                      [appDismissOnOutside]="menuFor() === taggedFeedMenuKey"
+                      (dismiss)="closeMenu()"
+                    >
+                      <button
+                        class="dots"
+                        type="button"
+                        [attr.aria-label]="'reader.manage' | transloco: { name: s.title }"
+                        (click)="toggleMenu(taggedFeedMenuKey, $event)"
+                      >
+                        <app-icon name="more_horiz" size="sm" />
                       </button>
-                      <button role="menuitem" (click)="unsubscribe.emit(s); closeMenu()">
-                        {{ 'reader.unsubscribe' | transloco }}
-                      </button>
+                      @if (menuFor() === taggedFeedMenuKey) {
+                        <div class="pop" role="menu">
+                          <button role="menuitem" (click)="editFeed.emit(s); closeMenu()">
+                            {{ 'reader.editFeed' | transloco }}
+                          </button>
+                          <button role="menuitem" (click)="unsubscribe.emit(s); closeMenu()">
+                            {{ 'reader.unsubscribe' | transloco }}
+                          </button>
+                        </div>
+                      }
                     </div>
                   }
-                </div>
+                }
               </div>
             }
           </div>
@@ -221,47 +283,65 @@
         class="feedrow"
         cdkDrag
         [cdkDragData]="s"
-        [cdkDragStartDelay]="dragDelay"
+        [cdkDragDisabled]="dragLocked()"
+        [cdkDragStartDelay]="dragDelay()"
         (cdkDragStarted)="onDragStart('feed')"
         (cdkDragEnded)="onDragEnd()"
       >
-        <a
-          class="nav"
-          [class.active]="selection().kind === 'subscription' && selection().id === s.id"
-          [routerLink]="[]"
-          [queryParams]="{ subscription: s.id, view: null, tag: null, entry: null }"
-          queryParamsHandling="merge"
-        >
-          <app-favicon [url]="s.faviconUrl" /><span>{{ s.title }}</span>
-          @if (s.unreadCount > 0) {
-            <span class="count">{{ s.unreadCount }}</span>
-          }
-        </a>
-        @let untaggedFeedMenuKey = 'sub-' + s.id;
-        <div
-          class="rowmenu"
-          [appDismissOnOutside]="menuFor() === untaggedFeedMenuKey"
-          (dismiss)="closeMenu()"
-        >
+        @if (organising()) {
+          <span class="handle" cdkDragHandle aria-hidden="true">
+            <app-icon name="drag_indicator" size="sm" />
+          </span>
+          <span class="feedname"><app-favicon [url]="s.faviconUrl" /><span>{{ s.title }}</span></span>
           <button
             class="dots"
             type="button"
             [attr.aria-label]="'reader.manage' | transloco: { name: s.title }"
-            (click)="toggleMenu(untaggedFeedMenuKey, $event)"
+            (click)="openFeedSheet(s)"
           >
             <app-icon name="more_horiz" size="sm" />
           </button>
-          @if (menuFor() === untaggedFeedMenuKey) {
-            <div class="pop" role="menu">
-              <button role="menuitem" (click)="editFeed.emit(s); closeMenu()">
-                {{ 'reader.editFeed' | transloco }}
+        } @else {
+          <a
+            class="nav"
+            [class.active]="selection().kind === 'subscription' && selection().id === s.id"
+            [routerLink]="[]"
+            [queryParams]="{ subscription: s.id, view: null, tag: null, entry: null }"
+            queryParamsHandling="merge"
+          >
+            <app-favicon [url]="s.faviconUrl" /><span>{{ s.title }}</span>
+            @if (s.unreadCount > 0) {
+              <span class="count">{{ s.unreadCount }}</span>
+            }
+          </a>
+          @if (!screen.isCoarse()) {
+            @let untaggedFeedMenuKey = 'sub-' + s.id;
+            <div
+              class="rowmenu"
+              [appDismissOnOutside]="menuFor() === untaggedFeedMenuKey"
+              (dismiss)="closeMenu()"
+            >
+              <button
+                class="dots"
+                type="button"
+                [attr.aria-label]="'reader.manage' | transloco: { name: s.title }"
+                (click)="toggleMenu(untaggedFeedMenuKey, $event)"
+              >
+                <app-icon name="more_horiz" size="sm" />
               </button>
-              <button role="menuitem" (click)="unsubscribe.emit(s); closeMenu()">
-                {{ 'reader.unsubscribe' | transloco }}
-              </button>
+              @if (menuFor() === untaggedFeedMenuKey) {
+                <div class="pop" role="menu">
+                  <button role="menuitem" (click)="editFeed.emit(s); closeMenu()">
+                    {{ 'reader.editFeed' | transloco }}
+                  </button>
+                  <button role="menuitem" (click)="unsubscribe.emit(s); closeMenu()">
+                    {{ 'reader.unsubscribe' | transloco }}
+                  </button>
+                </div>
+              }
             </div>
           }
-        </div>
+        }
       </div>
     }
     @if (dragging() && untagged().length === 0) {

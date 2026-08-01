@@ -244,6 +244,75 @@
   align-items: center;
 }
 
+/* Organise-mode drag handle: the ONLY drag origin there (cdkDragHandle), so a
+   plain touch on the row body scrolls or expands without competing. */
+.handle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target);
+  align-self: stretch;
+  color: var(--text-muted);
+  cursor: grab;
+}
+
+/* Organise-mode row body: the expand/collapse target across its whole width. */
+.rowbody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--row-pad-y) 0;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rowbody .name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Coarse navigation: the dedicated expand zone at the row's trailing edge. */
+.chevzone {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+/* Organise-mode feed name: inert (navigation is off), but still truncates. */
+.feedname {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--row-pad-y) 0;
+}
+
+.feedname > span {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .feedrow .nav {
   flex: 1;
   min-width: 0;

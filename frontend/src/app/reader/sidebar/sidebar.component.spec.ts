@@ -6,7 +6,7 @@ import { signal } from '@angular/core';
 import { API_BASE_URL } from '../../core/api';
 import { AuthService, CurrentUser } from '../../core/auth.service';
 import { RefreshService } from '../refresh.service';
-import { CdkDragDrop } from '@angular/cdk/drag-drop';
+import { CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { DropData, SidebarComponent } from './sidebar.component';
 import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
@@ -14,6 +14,9 @@ import { SubscriptionDto, TagDto } from '../models';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { buildVersion } from '../../../environments/version';
 import { LayoutService } from '../layout.service';
+import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
+import { of } from 'rxjs';
+import { By } from '@angular/platform-browser';
 
 const account = (trialEndsAt: string | null): CurrentUser => ({
   id: 1,
@@ -52,6 +55,7 @@ function mount(
     user: CurrentUser | null;
     coarse: boolean;
     organising: boolean;
+    sheetChoice?: string;
   }> = {},
 ) {
   TestBed.configureTestingModule({
@@ -63,6 +67,7 @@ function mount(
       { provide: API_BASE_URL, useValue: 'https://api.test' },
       { provide: AuthService, useValue: { user: signal(over.user ?? account(null)) } },
       { provide: LayoutService, useValue: { isCoarse: signal(over.coarse ?? false) } },
+      { provide: ActionSheet, useValue: { open: jest.fn(() => of(over.sheetChoice)) } },
     ],
   });
   const f = TestBed.createComponent(SidebarComponent);
@@ -518,5 +523,113 @@ describe('organise mode', () => {
   it('organising always shows the Feeds label as the untag drop target', () => {
     const el = mount({ coarse: true, organising: true, untagged: [] }).nativeElement as HTMLElement;
     expect(el.textContent).toContain('Feeds');
+  });
+
+  it('coarse navigation trades the leading chevron for a 44px trailing zone', () => {
+    const el = mount({ coarse: true, tagTree: tree }).nativeElement as HTMLElement;
+    expect(el.querySelector('.expand')).toBeNull();
+    const zone = el.querySelector('.chevzone')!;
+    expect(zone.getAttribute('aria-expanded')).toBe('false');
+    expect(el.querySelector('.tag .nav.grow')).not.toBeNull();
+    expect(el.querySelector('.dots')).toBeNull();
+  });
+
+  it('the chevron zone expands the tag without navigating', () => {
+    const f = mount({ coarse: true, tagTree: tree });
+    const el = f.nativeElement as HTMLElement;
+    el.querySelector<HTMLElement>('.chevzone')!.click();
+    f.detectChanges();
+    expect(el.querySelector('.tagfeeds')).not.toBeNull();
+    expect(el.querySelector('.chevzone')!.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('organise rows carry a drag handle and expand via the row body', () => {
+    const f = mount({ coarse: true, organising: true, tagTree: tree });
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.tag .handle')).not.toBeNull();
+    expect(el.querySelector('.tag .nav.grow')).toBeNull();
+    expect(el.querySelector('.chevzone')).toBeNull();
+    el.querySelector<HTMLElement>('.tag .rowbody')!.click();
+    f.detectChanges();
+    expect(el.querySelector('.tagfeeds')).not.toBeNull();
+    expect(el.querySelector('.tagfeeds .handle')).not.toBeNull();
+  });
+
+  it('the tag dots open the action sheet and route the choice', () => {
+    const f = mount({ coarse: true, organising: true, tagTree: tree, sheetChoice: 'delete' });
+    const deleted = jest.fn();
+    f.componentInstance.deleteTag.subscribe(deleted);
+    f.nativeElement.querySelector('.tag .dots').click();
+    const sheet = TestBed.inject(ActionSheet);
+    expect(sheet.open).toHaveBeenCalledWith({
+      title: 'News',
+      actions: [
+        { id: 'edit', label: 'Edit tag' },
+        { id: 'delete', label: 'Delete tag', danger: true },
+      ],
+    });
+    expect(deleted).toHaveBeenCalledWith(tag);
+  });
+
+  it('the feed dots offer edit and unsubscribe', () => {
+    const f = mount({ coarse: true, organising: true, untagged: [sub(9)], sheetChoice: 'edit' });
+    const edited = jest.fn();
+    f.componentInstance.editFeed.subscribe(edited);
+    f.nativeElement.querySelector('.feedrow .dots').click();
+    const sheet = TestBed.inject(ActionSheet);
+    expect(sheet.open).toHaveBeenCalledWith({
+      title: 's9',
+      actions: [
+        { id: 'edit', label: 'Edit feed' },
+        { id: 'unsubscribe', label: 'Unsubscribe', danger: true },
+      ],
+    });
+    expect(edited).toHaveBeenCalledWith(expect.objectContaining({ id: 9 }));
+  });
+
+  it('locks dragging in coarse navigation mode and frees it while organising', () => {
+    function mountWithLayout(coarse: boolean, organising: boolean) {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [SidebarComponent, provideTranslocoTesting()],
+        providers: [
+          provideRouter([]),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
+          { provide: AuthService, useValue: { user: signal(account(null)) } },
+          { provide: LayoutService, useValue: { isCoarse: signal(coarse) } },
+          { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
+        ],
+      });
+      const f = TestBed.createComponent(SidebarComponent);
+      f.componentRef.setInput('tagTree', tree);
+      f.componentRef.setInput('untagged', []);
+      f.componentRef.setInput('totalUnread', 0);
+      f.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
+      f.componentRef.setInput('loading', false);
+      f.componentRef.setInput('organising', organising);
+      f.detectChanges();
+      return f;
+    }
+
+    const nav = mountWithLayout(true, false);
+    expect(nav.debugElement.query(By.directive(CdkDrag)).injector.get(CdkDrag).disabled).toBe(true);
+    const org = mountWithLayout(true, true);
+    expect(org.debugElement.query(By.directive(CdkDrag)).injector.get(CdkDrag).disabled).toBe(false);
+    expect(org.componentInstance.dragDelay()).toBe(0);
+    const desktop = mountWithLayout(false, false);
+    expect(
+      desktop.debugElement.query(By.directive(CdkDrag)).injector.get(CdkDrag).disabled,
+    ).toBe(false);
+    expect(desktop.componentInstance.dragDelay()).toEqual({ touch: 180, mouse: 0 });
+  });
+
+  it('desktop keeps the leading chevron, inline menu and popover', () => {
+    const el = mount({ tagTree: tree }).nativeElement as HTMLElement;
+    expect(el.querySelector('.expand')).not.toBeNull();
+    expect(el.querySelector('.chevzone')).toBeNull();
+    expect(el.querySelector('.handle')).toBeNull();
+    expect(el.querySelector('.rowmenu .dots')).not.toBeNull();
   });
 });
