@@ -94,3 +94,14 @@ framework:
             limit: 60
             interval: '5 minutes'
             cache_pool: cache.rate_limiter
+
+        # The web first-admin bootstrap. Anonymous, so keyed on client IP like
+        # registration. Brute-forcing a 32-byte secret is infeasible anyway;
+        # this bounds scripted probing and matches the login/registration story
+        # of "five tries a quarter hour, per IP". Same sliding window and pool
+        # as its neighbours, for the reasons documented above.
+        setup:
+            policy: 'sliding_window'
+            limit: 5
+            interval: '15 minutes'
+            cache_pool: cache.rate_limiter

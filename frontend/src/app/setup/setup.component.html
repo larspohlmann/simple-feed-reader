@@ -1,0 +1,23 @@
+<app-auth-shell [title]="'setup.title' | transloco" [subtitle]="'setup.subtitle' | transloco">
+  <form [formGroup]="form">
+    <app-field [label]="'auth.email' | transloco">
+      <input type="email" formControlName="email" name="email" autocomplete="email" />
+    </app-field>
+    <app-field [label]="'auth.password' | transloco">
+      <input
+        type="password"
+        formControlName="password"
+        name="password"
+        autocomplete="new-password"
+      />
+    </app-field>
+    <app-field [label]="'setup.secret' | transloco">
+      <input type="password" formControlName="secret" name="secret" autocomplete="off" />
+    </app-field>
+    <p class="hint">{{ 'setup.secretHint' | transloco }}</p>
+    <app-form-error [message]="error()" />
+    <app-button block variant="primary" [loading]="loading()" (click)="submit()">{{
+      'setup.submit' | transloco
+    }}</app-button>
+  </form>
+</app-auth-shell>
