@@ -12,31 +12,37 @@ the Angular 20 SPA that delivers the reader UI and auth in `frontend/`.
   <img src="docs/screenshots/mobile.png" alt="Mobile view" width="29%">
 </p>
 
-## Quick start (Docker)
+## Run it (Docker)
 
-Run the whole app on your own machine with one command. You need three tools
-first: [Docker](https://docs.docker.com/get-docker/) (running),
-[git](https://git-scm.com/downloads), and
-[mkcert](https://github.com/FiloSottile/mkcert#installation) (`brew install
-mkcert` on macOS). Then:
+Run your own instance with one command. You need
+[Docker](https://docs.docker.com/get-docker/) (running) and
+[git](https://git-scm.com/downloads). Then:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/main/scripts/install.sh | bash
 ```
 
 The installer clones the project into `./simple-feed-reader`, checks out the
-latest release, creates a local HTTPS certificate, and starts every service.
-When it finishes, open these:
-
-| What | Where |
-|---|---|
-| Reader app (dev server) | http://localhost:4200 |
-| API health check | https://localhost:8443/api/health |
-| Mailpit inbox (sent mail) | http://localhost:8025 |
+latest release, generates the secrets it can, asks for the two things only
+you know (your public URL and how to send mail), and starts the production
+stack. The full guide — TLS, reverse proxies, mail verification, backups —
+is [docs/docker-production.md](docs/docker-production.md).
 
 > **Read before you pipe to bash.** You can inspect exactly what runs at
-> [scripts/install.sh](scripts/install.sh). The installer never deletes data and
-> asks before it changes your system trust store.
+> [scripts/install.sh](scripts/install.sh). The installer never deletes data.
+
+### Developing
+
+For the development stack — live-reloading frontend, xdebug, and
+[Mailpit](https://mailpit.axllent.org/) catching all outgoing mail locally —
+use the dev installer instead (it additionally needs
+[mkcert](https://github.com/FiloSottile/mkcert#installation)):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/main/scripts/install-dev.sh | bash
+```
+
+The manual walkthrough lives in [docs/local-docker.md](docs/local-docker.md).
 
 ### Everyday scripts
 
@@ -44,15 +50,10 @@ Run these from inside the `simple-feed-reader` directory:
 
 | Task | Command |
 |---|---|
-| Update to the latest release | `./scripts/update.sh` |
-| Start the dev frontend (:4200) | `./scripts/frontend-start.sh` |
-| Stop the dev frontend | `./scripts/frontend-stop.sh` |
-| Start the production preview (:8444) | `./scripts/frontend-prod-start.sh` |
-| Stop the production preview | `./scripts/frontend-prod-stop.sh` |
-| Stop everything (keeps your data) | `docker compose down` |
-
-The full manual walkthrough — what each service is, step debugging, and the
-gotchas — lives in [docs/local-docker.md](docs/local-docker.md).
+| Update to the latest release (prod and/or dev) | `./scripts/update.sh` |
+| Start / stop the production stack | `./scripts/prod-start.sh` / `./scripts/prod-stop.sh` |
+| Start / stop the dev frontend (:4200) | `./scripts/frontend-start.sh` / `./scripts/frontend-stop.sh` |
+| Stop the dev stack (keeps your data) | `docker compose down` |
 
 ## Documentation
 
@@ -65,6 +66,8 @@ gotchas — lives in [docs/local-docker.md](docs/local-docker.md).
   operators, and the redirect/exchange contract for the SPA.
 - [Local Docker environment](docs/local-docker.md) — run the whole stack
   (MySQL, PHP, nginx with TLS, Mailpit) in Docker.
+- [Running in production (Docker)](docs/docker-production.md) — the prod
+  stack: real mail transport, TLS or reverse proxy, updates, backups.
 - **First-run setup:** creating the initial admin — see [docs/first-run-setup.md](docs/first-run-setup.md).
 - [Cutting a release](docs/releasing.md) — how a `vX.Y.Z` tag on `main` becomes
   the version the install and update scripts hand to users.
