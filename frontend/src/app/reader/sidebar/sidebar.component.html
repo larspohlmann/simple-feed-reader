@@ -194,6 +194,7 @@
             cdkDropList
             [cdkDropListData]="tagDrop(node.tag)"
             [cdkDropListEnterPredicate]="isFeedDrag"
+            [class.organising]="organising()"
             (cdkDropListDropped)="onDrop($event)"
           >
             @for (s of node.subscriptions; track s.id) {

@@ -295,6 +295,12 @@
   cursor: pointer;
 }
 
+/* Organise-mode tagged feeds indent to sit under the tag name, visualising
+   the hierarchy (#185). Navigation mode uses .tag-sub for the same indent. */
+.tagfeeds.organising {
+  padding-left: var(--space-6);
+}
+
 /* Organise-mode feed name: inert (navigation is off), but still truncates. */
 .feedname {
   flex: 1;
