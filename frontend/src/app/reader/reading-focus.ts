@@ -2,7 +2,7 @@
 // the fade curve is unit-testable (jsdom can't measure layout for the DOM part).
 
 /** Opacity of a block sitting a half-viewport or more from the reading center. */
-export const FOCUS_MIN_OPACITY = 0.55;
+export const FOCUS_MIN_OPACITY = 0.2;
 
 /** Generic containers we descend through to reach the real reading blocks. */
 const WRAPPER_TAGS = new Set(['DIV', 'SECTION', 'ARTICLE', 'MAIN', 'ASIDE', 'HEADER', 'FOOTER']);
