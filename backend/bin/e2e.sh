@@ -3,9 +3,14 @@
 #
 #   composer e2e            # from backend/
 #
-# Steps: verify the stack is up, seed the fixtures admin, reset the per-IP
-# limiter and ALTCHA-replay pools (so repeated runs do not trip rate limits),
-# then run the e2e testsuite from the host against the public TLS endpoint.
+# Steps: verify the stack is up, purge the throwaway accounts a previous run
+# left behind, seed the fixtures admin, reset the per-IP limiter and
+# ALTCHA-replay pools (so repeated runs do not trip rate limits), then run the
+# e2e testsuite from the host against the public TLS endpoint.
+#
+# The purge runs before the suite, not after: an interrupted or failed run then
+# still gets cleaned up on the next one, and a failed run leaves its data in
+# place for inspection.
 set -euo pipefail
 
 # Resolve repo root so docker compose finds compose.yml regardless of CWD.
@@ -19,6 +24,9 @@ if ! curl -fsS -o /dev/null "$BASE_URL/api/health"; then
   echo "Start the stack first:  (cd '$REPO_ROOT' && docker compose up -d)" >&2
   exit 1
 fi
+
+echo "==> Purging leftover e2e fixture accounts ..."
+docker compose -f "$REPO_ROOT/docker-compose.yml" exec -T php bin/console app:e2e:purge-users
 
 echo "==> Seeding fixtures admin ..."
 docker compose -f "$REPO_ROOT/docker-compose.yml" exec -T php bin/console app:e2e:seed-admin
