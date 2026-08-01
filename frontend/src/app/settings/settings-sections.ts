@@ -28,4 +28,10 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     group: 'admin',
     wide: true,
   },
+  {
+    path: 'admin/settings',
+    icon: 'toggle_on',
+    labelKey: 'settings.instance.title',
+    group: 'admin',
+  },
 ];

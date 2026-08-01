@@ -66,6 +66,16 @@
       "loading": "checking…",
       "unavailable": "unavailable",
       "stale": "Your browser is running an older build than the server. Reload the page to update."
+    },
+    "instance": {
+      "title": "Instance settings",
+      "loading": "Loading instance settings",
+      "retry": "Retry",
+      "requireEmailConfirmation": "Require email confirmation",
+      "requireEmailConfirmationHint": "New accounts must confirm their email address before they can sign in.",
+      "requireApproval": "Require admin approval",
+      "requireApprovalHint": "New accounts stay pending until an admin approves them.",
+      "mailDisabledHint": "This instance sends no mail, so email confirmation cannot run — approve accounts by hand instead."
     }
   },
   "dialog": {

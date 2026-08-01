@@ -66,6 +66,16 @@
       "loading": "wird geprüft…",
       "unavailable": "nicht verfügbar",
       "stale": "Dein Browser führt einen älteren Build aus als der Server. Lade die Seite neu."
+    },
+    "instance": {
+      "title": "Instanzeinstellungen",
+      "loading": "Instanzeinstellungen werden geladen",
+      "retry": "Erneut versuchen",
+      "requireEmailConfirmation": "E-Mail-Bestätigung erforderlich",
+      "requireEmailConfirmationHint": "Neue Konten müssen ihre E-Mail-Adresse bestätigen, bevor sie sich anmelden können.",
+      "requireApproval": "Admin-Freigabe erforderlich",
+      "requireApprovalHint": "Neue Konten bleiben ausstehend, bis ein Admin sie freigibt.",
+      "mailDisabledHint": "Diese Instanz versendet keine E-Mails, daher kann die E-Mail-Bestätigung nicht laufen — gib Konten stattdessen manuell frei."
     }
   },
   "dialog": {
