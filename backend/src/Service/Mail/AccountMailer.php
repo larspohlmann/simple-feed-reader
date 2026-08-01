@@ -97,7 +97,10 @@ final readonly class AccountMailer
         $body = $this->translator->trans("$key.body", $params, 'emails', $locale);
 
         $this->mailer->send(
-            new Email()
+            // Parenthesised for PDepend 2.16.2 (composer md), which cannot parse
+            // the PHP 8.4 "new without parentheses" chain yet — keep the parens.
+            // See #183.
+            (new Email())
                 ->from(new Address($this->fromAddress, $this->fromName))
                 ->to($user->getEmail())
                 ->subject($subject)

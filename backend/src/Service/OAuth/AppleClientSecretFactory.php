@@ -91,7 +91,9 @@ final readonly class AppleClientSecretFactory
         $now = $this->clock->now();
 
         try {
-            return new Builder(new JoseEncoder(), ChainedFormatter::withUnixTimestampDates())
+            // Outer parens for PDepend 2.16.2 (composer md), which cannot parse
+            // the PHP 8.4 "new without parentheses" chain yet — keep them. See #183.
+            return (new Builder(new JoseEncoder(), ChainedFormatter::withUnixTimestampDates()))
                 // withUnixTimestampDates(), NOT ChainedFormatter::default().
                 //
                 // The default formatter renders date claims through

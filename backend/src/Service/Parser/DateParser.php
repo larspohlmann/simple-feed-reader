@@ -23,7 +23,10 @@ final class DateParser
         }
 
         try {
-            return new \DateTimeImmutable(trim($value))->setTimezone(new \DateTimeZone('UTC'));
+            // Parenthesised for PDepend 2.16.2 (composer md), which cannot parse
+            // the PHP 8.4 "new without parentheses" chain yet — keep the parens.
+            // See #183.
+            return (new \DateTimeImmutable(trim($value)))->setTimezone(new \DateTimeZone('UTC'));
         } catch (\Exception) {
             return null;
         }

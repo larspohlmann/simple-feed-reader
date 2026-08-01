@@ -24,7 +24,9 @@ final class EntrySanitizer
 
     public function __construct()
     {
-        $config = new HtmlSanitizerConfig()
+        // Parenthesised for PDepend 2.16.2 (composer md), which cannot parse the
+        // PHP 8.4 "new without parentheses" chain yet — keep the parens. See #183.
+        $config = (new HtmlSanitizerConfig())
             ->allowSafeElements()
             ->allowElement('img', ['src', 'alt', 'title', 'width', 'height', 'loading'])
             ->forceAttribute('a', 'rel', 'noopener noreferrer')
