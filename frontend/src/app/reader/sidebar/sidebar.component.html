@@ -378,11 +378,20 @@
         </p>
       }
     }
-    <a
-      class="version"
-      routerLink="/settings"
-      [attr.aria-label]="'reader.versionLabel' | transloco: { version }"
-      >{{ version }}</a
-    >
+    <div class="meta">
+      <a
+        class="version"
+        routerLink="/settings"
+        [attr.aria-label]="'reader.versionLabel' | transloco: { version }"
+        >{{ version }}</a
+      >
+      <a
+        class="feedback"
+        href="https://github.com/larspohlmann/simple-feed-reader/issues"
+        target="_blank"
+        rel="noopener noreferrer"
+        >Feedback</a
+      >
+    </div>
   </div>
 </nav>

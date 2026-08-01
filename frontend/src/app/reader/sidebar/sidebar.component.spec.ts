@@ -627,12 +627,23 @@ describe('organise mode', () => {
     expect(emitted).not.toHaveBeenCalled();
   });
 
-  it('keeps the foot order: organise, view controls, trial, version', () => {
+  it('keeps the foot order: organise, view controls, trial, meta', () => {
     const el = mount({ coarse: true, user: account(inDays(5)) }).nativeElement as HTMLElement;
     const order = Array.from(el.querySelector('.foot')!.children).map(
       (child) => child.classList[0],
     );
-    expect(order).toEqual(['organise', 'controls', 'trial', 'version']);
+    expect(order).toEqual(['organise', 'controls', 'trial', 'meta']);
+  });
+
+  it('links Feedback to the public issue tracker in a new tab', () => {
+    const feedback = (mount().nativeElement as HTMLElement).querySelector('.feedback');
+
+    expect(feedback?.textContent?.trim()).toBe('Feedback');
+    expect(feedback?.getAttribute('href')).toBe(
+      'https://github.com/larspohlmann/simple-feed-reader/issues',
+    );
+    expect(feedback?.getAttribute('target')).toBe('_blank');
+    expect(feedback?.getAttribute('rel')).toBe('noopener noreferrer');
   });
 
   it('resets organising when the pointer stops being coarse', () => {

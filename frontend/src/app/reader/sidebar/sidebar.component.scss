@@ -101,14 +101,24 @@
   color: var(--danger);
 }
 
-.version {
+/* Version and Feedback share the foot's final row. */
+.meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.version,
+.feedback {
   padding: var(--space-1) var(--space-2) 0;
   color: var(--text-muted);
   font-size: var(--fs-sm);
   text-decoration: none;
 }
 
-.version:hover {
+.version:hover,
+.feedback:hover {
   color: var(--text-secondary);
 }
 
