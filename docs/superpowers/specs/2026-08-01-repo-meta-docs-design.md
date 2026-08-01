@@ -19,7 +19,7 @@ every new file consistent with the workflow that `CLAUDE.md`,
 | Code of conduct | Contributor Covenant 2.1, contact `lars.pohlmann@googlemail.com` |
 | Issue templates | Skipped |
 | PR template | Skipped |
-| README extras | CI badge, screenshot, CHANGELOG link (no license badge) |
+| README extras | CI badge, screenshots (supplied by Lars), CHANGELOG link (no license badge) |
 | Changelog | "Keep a Changelog" format, starts empty from now |
 | Contribution stance | Open or claim an issue first, then send a PR |
 
@@ -74,10 +74,10 @@ move `Unreleased` items into a new version section when a release is cut.
 ## README changes
 
 - CI status badge for `.github/workflows/ci.yml` on `develop`, at the top.
-- A screenshot of the reader UI, stored at `docs/images/reader.png`,
-  referenced near the top of the README. Capture process: start the Docker
-  stack, sign in with seeded demo data, capture with Playwright. Lars approves
-  the image before it lands.
+- Screenshots of the reader UI, supplied by Lars in `docs/screenshots/`:
+  `desktop-reader.png` (split view with reader pane) as the main image near
+  the top, with `desktop-cards.png` (card view) and `mobile.png` (mobile
+  view) in a small gallery below it.
 - Links to CONTRIBUTING.md, LICENSE, and CHANGELOG.md in the documentation
   section.
 
@@ -93,6 +93,6 @@ move `Unreleased` items into a new version section when a release is cut.
 - [ ] LICENSE (MIT) added
 - [ ] CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md added
 - [ ] CHANGELOG.md added; releasing docs updated
-- [ ] README: CI badge, screenshot, meta-file links
+- [ ] README: CI badge, screenshots, meta-file links
 - [ ] Private vulnerability reporting enabled on the repo
 - [ ] New docs consistent with `docs/local-docker.md` and the real workflow
