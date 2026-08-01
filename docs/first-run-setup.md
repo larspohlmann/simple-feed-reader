@@ -30,9 +30,17 @@ created active, with the admin role, and can immediately reach `/api/admin`.
 Re-running refuses once an admin exists; `--force` overrides for recovery.
 
 Leave `ADMIN_SETUP_SECRET` unset in this case — the web setup endpoint then does
-not exist at all.
+not exist at all. (Exception: the Docker production stack's `prod-start.sh`
+sets one automatically so Option 2 works out of the box; the endpoint still
+self-disables the moment the first admin exists, whichever way it was created.)
 
-## Option 2 — no shell (cheap Docker hosts)
+## Option 2 — the web setup screen
+
+**On the Docker production stack this is automatic:** `scripts/prod-start.sh`
+generates an `ADMIN_SETUP_SECRET` when the value is empty and prints it in its
+summary while no administrator exists — see
+[docker-production.md](docker-production.md) §3. The manual steps below are
+for hosts where you configure the environment yourself:
 
 1. Generate a high-entropy secret:
 

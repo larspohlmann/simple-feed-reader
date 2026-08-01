@@ -82,14 +82,28 @@ detection above; `auto` (the default) is almost always right.
 
 ## 3. First admin
 
-A fresh instance has no administrator. Create the first one over the shell:
+A fresh instance has no administrator. The easiest path is the browser:
+`prod-start.sh` generates an `ADMIN_SETUP_SECRET` automatically and prints it
+in its end-of-run summary for as long as no administrator exists. Open the
+public URL — the one-time setup screen appears instead of login — and enter
+your email, a password, and that secret. Afterwards, remove
+`ADMIN_SETUP_SECRET` from `.env.prod` (the endpoint self-disables once an
+admin exists, but a dead secret has no business staying on disk).
+
+The secret is not shown anymore? Read it from the file:
+
+```bash
+grep '^ADMIN_SETUP_SECRET=' .env.prod
+```
+
+Prefer the shell instead:
 
 ```bash
 docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod \
   exec -u www-data php bin/console app:admin:create you@example.com
 ```
 
-The alternatives (and why the path is gated) are in
+Why the path is gated either way is explained in
 [first-run-setup.md](first-run-setup.md).
 
 ## 4. Verify mail delivery

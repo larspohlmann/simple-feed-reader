@@ -30,6 +30,11 @@ if [ -n "${missing}" ]; then
   die 'Fill them in: run ./scripts/prod-configure.sh, or edit .env.prod (see .env.prod.example), then re-run.'
 fi
 
+# The browser-based first-admin setup needs a secret only the operator holds;
+# generate one when it is still empty so a fresh install can be finished
+# without a shell round-trip. The summary prints it while no admin exists.
+ensure_admin_setup_secret
+
 mode=$(prod_web_mode)
 if [ "${mode}" = tls ]; then
   if prod_certs_present; then
