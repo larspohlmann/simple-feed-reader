@@ -17,7 +17,9 @@ usage() { printf 'usage: %s <version-tag> <iso-date> < notes\n' "$0" >&2; exit 2
 
 version=${1:-}
 date=${2:-}
-[ -n "${version}" ] && [ -n "${date}" ] || usage
+if [ -z "${version}" ] || [ -z "${date}" ]; then
+  usage
+fi
 
 _dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 changelog="${CHANGELOG_FILE:-${_dir}/../CHANGELOG.md}"
