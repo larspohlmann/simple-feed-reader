@@ -390,5 +390,14 @@
   "colorField": {
     "swatch": "Colour {{colour}}",
     "custom": "Custom colour"
+  },
+  "setup": {
+    "title": "Set up this instance",
+    "subtitle": "Create the first administrator account.",
+    "secret": "Setup secret",
+    "secretHint": "Paste the ADMIN_SETUP_SECRET you configured in the environment. Prefer a shell? Run bin/console app:admin:create instead.",
+    "submit": "Create administrator",
+    "invalidInput": "Enter a valid email, a password of at least 12 characters, and the setup secret.",
+    "failed": "Setup failed. Check the secret and try again."
   }
 }

@@ -1,18 +1,24 @@
 // src/app/app.routes.ts
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from './core/auth.guard';
+import { requireSetupGuard, setupRedirectGuard } from './setup/setup.guard';
 
 export const routes: Routes = [
   {
     path: 'login',
-    canActivate: [guestGuard],
+    canActivate: [setupRedirectGuard, guestGuard],
     loadComponent: () => import('./auth/login/login.component').then((m) => m.LoginComponent),
   },
   {
     path: 'register',
-    canActivate: [guestGuard],
+    canActivate: [setupRedirectGuard, guestGuard],
     loadComponent: () =>
       import('./auth/register/register.component').then((m) => m.RegisterComponent),
+  },
+  {
+    path: 'setup',
+    canActivate: [requireSetupGuard],
+    loadComponent: () => import('./setup/setup.component').then((m) => m.SetupComponent),
   },
   {
     path: 'verify-email',

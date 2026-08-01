@@ -390,5 +390,14 @@
   "colorField": {
     "swatch": "Farbe {{colour}}",
     "custom": "Eigene Farbe"
+  },
+  "setup": {
+    "title": "Diese Instanz einrichten",
+    "subtitle": "Erstellen Sie das erste Administratorkonto.",
+    "secret": "Einrichtungsgeheimnis",
+    "secretHint": "Fügen Sie das in der Umgebung konfigurierte ADMIN_SETUP_SECRET ein. Lieber per Shell? Führen Sie stattdessen bin/console app:admin:create aus.",
+    "submit": "Administrator erstellen",
+    "invalidInput": "Geben Sie eine gültige E-Mail-Adresse, ein Passwort mit mindestens 12 Zeichen und das Einrichtungsgeheimnis ein.",
+    "failed": "Einrichtung fehlgeschlagen. Prüfen Sie das Geheimnis und versuchen Sie es erneut."
   }
 }
