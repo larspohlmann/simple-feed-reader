@@ -206,3 +206,13 @@ services:
     App\Service\Catalog\CatalogSubscriber:
         autowire: true
         public: true
+
+    # BootstrapAdminProvisionerTest drives provision() directly to assert the
+    # Active + ROLE_ADMIN + approvedAt shape and the idempotent-by-email
+    # behaviour. Its production callers (the app:admin:create command and the
+    # web setup endpoint) arrive in later tasks, so until then the compiler
+    # would inline it away and the test container could not fetch it. Same
+    # `autowire` caveat as above.
+    App\Service\Auth\BootstrapAdminProvisioner:
+        autowire: true
+        public: true
