@@ -13,6 +13,7 @@ import { ReaderShellComponent } from './reader-shell.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { RefreshService } from './refresh.service';
+import { LayoutService } from './layout.service';
 
 describe('ReaderShellComponent', () => {
   let ctrl: HttpTestingController;
@@ -662,6 +663,46 @@ describe('ReaderShellComponent', () => {
         (f.nativeElement as HTMLElement).querySelector('[data-testid="catalog-empty-warning"]'),
       ).toBeNull();
       expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
+    });
+  });
+
+  describe('drawer breakpoint driven by class, not media query', () => {
+    beforeEach(() => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [ReaderShellComponent, provideTranslocoTesting()],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          provideRouter([]),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
+          { provide: ActivatedRoute, useValue: { queryParamMap: qp.asObservable() } },
+          { provide: AuthService, useValue: auth },
+        ],
+      });
+      TestBed.overrideProvider(LayoutService, {
+        useValue: { isNarrow: signal(true), isWide: signal(false), isCoarse: signal(true) },
+      });
+    });
+
+    it('adds is-narrow to .body when isNarrow is true and removes it when false', () => {
+      const narrow = TestBed.inject(LayoutService).isNarrow as import('@angular/core').Signal<boolean>;
+      sessionStorage.clear();
+      auth.isAdmin.mockReturnValue(false);
+      qp.next(convertToParamMap({}));
+      const c = TestBed.inject(HttpTestingController);
+      const f = TestBed.createComponent(ReaderShellComponent);
+      f.detectChanges();
+      c.match(() => true).forEach((req) =>
+        req.flush({ subscriptions: [], tags: [], entries: [], favoritesCount: 0, keptCount: 0, nextCursor: null }),
+      );
+      f.detectChanges();
+
+      const body = (f.nativeElement as HTMLElement).querySelector('.body')!;
+      expect(body.classList).toContain('is-narrow');
+      (narrow as import('@angular/core').WritableSignal<boolean>).set(false);
+      f.detectChanges();
+      expect(body.classList).not.toContain('is-narrow');
     });
   });
 });

@@ -35,6 +35,7 @@
      (#87). Only the in-flow sidebar takes the offset, in the stylesheet. -->
 <div
   class="body"
+  [class.is-narrow]="screen.isNarrow()"
   appDrawerSwipe
   [appDrawerSwipeOpen]="sidebarOpen()"
   [appDrawerSwipeDisabled]="!screen.isNarrow() || articleFullscreen()"
