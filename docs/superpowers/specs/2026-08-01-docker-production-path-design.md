@@ -150,14 +150,23 @@ now yields a production instance:
      working local/LAN instance. One answer fills `APP_FRONTEND_URL`,
      `APP_BACKEND_URL`, `DEFAULT_URI`. The docs note the caveat: OAuth
      sign-in and Safari's Secure-cookie handling want a real HTTPS origin.
-   - **Mail, as SMTP parts, not DSN syntax**: host, port (default 587),
-     username, password — the installer assembles
-     `smtp://user:pass@host:port` itself and URL-encodes the credentials (a
-     `#` or `@` in a hand-written DSN is a classic silent breakage). Plus
-     `MAIL_FROM` (+ optional `MAIL_FROM_NAME`). An "I'll configure mail
-     later" answer drops to the two-step fallback — there is **no** working
-     mail default; every candidate (`null://`, sendmail without an MTA,
-     bundled direct-to-MX postfix) is a silent black hole, which is the exact
+   - **Mail, a three-way choice** (plus `MAIL_FROM`, optional
+     `MAIL_FROM_NAME`):
+     1. **SMTP relay** — prompts for host, port (default 587), username,
+        password; the installer assembles `smtp://user:pass@host:port` itself
+        and URL-encodes the credentials (a `#` or `@` in a hand-written DSN
+        is a classic silent breakage). The normal case.
+     2. **This server's own MTA** — one keypress writes
+        `smtp://host.docker.internal:25` (the prod compose file carries the
+        `host-gateway` extra_host, as the dev file already does). The Docker
+        equivalent of "just use sendmail": same trust model, no credentials.
+        Documented caveat: delivery is only as good as that MTA's setup.
+     3. **Later** — drops to the two-step fallback.
+
+     There is **no** mail default: the container ships no MTA (`sendmail://`
+     fails at send time, after the 202), it cannot call the host's sendmail
+     binary, and a baked-in direct-to-MX MTA sends from an anonymous IP that
+     receivers reject — every candidate is a silent black hole, the exact
      failure mode #65 exists to kill. `MAILER_DSN` stays required.
 5. **Two-step fallback:** without a TTY, or when the operator skips a required
    prompt, the placeholders stay in `.env.prod` and the installer stops with
@@ -210,8 +219,8 @@ docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml \
 
 `mailer:test` sends through the real configured transport. The docs give
 `MAILER_DSN` examples for common setups (authenticated SMTP relay on 587,
-provider DSNs) and state the Mailpit rule: dev-only, never reachable from the
-prod stack.
+provider DSNs, `smtp://host.docker.internal:25` for a host-local MTA) and
+state the Mailpit rule: dev-only, never reachable from the prod stack.
 
 ### 7. Documentation sweep (user-facing docs stay current)
 
