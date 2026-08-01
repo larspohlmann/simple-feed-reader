@@ -449,6 +449,46 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(401);
     }
 
+    /**
+     * The mailless-instance recovery path (#230): the admin relays this value
+     * out of band, so the response is the only place it ever appears.
+     */
+    public function testResetPasswordReturnsAFreshGeneratedSecretOnce(): void
+    {
+        $admin = $this->admin();
+        $target = $this->factory()->create('resettable@example.com');
+        $id = (int) $target->getId();
+        $originalChangedAt = $target->getPasswordChangedAt();
+
+        $this->call('POST', self::LIST . '/' . $id . '/reset-password', $this->tokenFor($admin));
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload();
+        self::assertIsString($payload['password']);
+        self::assertNotSame('', $payload['password']);
+
+        $reloaded = $this->reload($id);
+        /** @var UserPasswordHasherInterface $hasher */
+        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+        self::assertTrue($hasher->isPasswordValid($reloaded, $payload['password']));
+        self::assertNotNull($reloaded->getPasswordChangedAt());
+        self::assertGreaterThan($originalChangedAt, $reloaded->getPasswordChangedAt());
+    }
+
+    public function testResetPasswordIsAdminOnly(): void
+    {
+        $plain = $this->factory()->create('plain@example.com');
+        $target = $this->factory()->create('target@example.com');
+
+        $this->call(
+            'POST',
+            self::LIST . '/' . (int) $target->getId() . '/reset-password',
+            $this->tokenFor($plain),
+        );
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
     public function testUnknownUserIsNotFound(): void
     {
         $admin = $this->admin();
