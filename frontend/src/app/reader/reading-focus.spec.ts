@@ -59,7 +59,7 @@ describe('focusOpacityForSpan', () => {
     // A tall block sitting just below the centre: its geometric centre is a full
     // viewport away (the old curve would clamp it to the minimum), but its top
     // edge is only 100px past the centre, so it stays close to opaque.
-    expect(focusOpacityForSpan(600, 1600, 1000)).toBe(0.91); // 1 - (100/500)*0.45
+    expect(focusOpacityForSpan(600, 1600, 1000)).toBe(0.84); // 1 - (100/500)*(1 - 0.2)
   });
 
   it('fades to the minimum once the nearest edge is a half-viewport away', () => {
