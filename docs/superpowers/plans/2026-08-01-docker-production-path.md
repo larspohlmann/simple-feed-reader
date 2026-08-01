@@ -1597,6 +1597,287 @@ git commit -m "docs(#65): user docs follow the prod path -- README, local-docker
 
 ---
 
+### Task 12: `prod-configure.sh` — reconfigure the installer's answers
+
+**Execution order note:** added mid-plan at the user's request; executes after Task 9 and BEFORE Tasks 10–11 (the live verification and PR must include it).
+
+**Files:**
+- Create: `scripts/prod-configure.sh`
+- Modify: `scripts/lib.sh` (shared configure functions; `confirm`)
+- Modify: `scripts/install.sh` (sections 5 and 7 now call the shared functions)
+- Modify: `scripts/prod-start.sh` (missing-values message mentions the new script)
+- Modify: `docs/docker-production.md` (new Reconfigure section), `README.md` (script table row)
+- NOT touched: `scripts/install-dev.sh` (stays a byte-copy of the old installer apart from its header)
+
+**Interfaces:**
+- Consumes: `env_prod_get/set`, `prompt_*`, `url_encode`, `prod_compose`, `ENV_PROD_FILE`, `say/ok/warn/die` from lib.sh; `scripts/prod-start.sh`.
+- Produces: lib.sh functions `configure_public_url`, `configure_mail` (sets `CONFIGURED_MAIL_CHOICE`), `offer_mail_check`, `confirm`, `mask_dsn_password` — used by both `install.sh` and `prod-configure.sh`.
+
+**Scope guard (deliberate):** the script re-asks only the operator values (public URL, mail transport, From: address), each defaulting to the current `.env.prod` value. Secrets are NOT touched: regenerating `JWT_PASSPHRASE` would lock the existing signing key, and the MySQL passwords already initialized the database volume. Ports/optional values stay hand-edits.
+
+- [ ] **Step 1: Add the shared configure functions to `scripts/lib.sh`** (append to the prod-helper section):
+
+```bash
+# Ask a yes/no question on the terminal. Mirrors the installers' bootstrap
+# helper so post-clone code can rely on it via lib.sh alone.
+confirm() {
+  local prompt="$1" answer
+  if [ ! -r /dev/tty ]; then
+    return 1
+  fi
+  printf '%s [y/N] ' "${prompt}" >/dev/tty
+  read -r answer </dev/tty || return 1
+  case "${answer}" in
+    [yY] | [yY][eE][sS]) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# A DSN safe to print: the password between the userinfo ':' and the '@' is
+# replaced with ***. DSNs without credentials pass through unchanged.
+mask_dsn_password() {
+  local dsn=$1 scheme rest userinfo hostpart
+  case "${dsn}" in
+    *://*@*)
+      scheme=${dsn%%://*}
+      rest=${dsn#*://}
+      userinfo=${rest%@*}
+      hostpart=${rest##*@}
+      case "${userinfo}" in
+        *:*) userinfo="${userinfo%%:*}:***" ;;
+      esac
+      printf '%s://%s@%s' "${scheme}" "${userinfo}" "${hostpart}"
+      ;;
+    *)
+      printf '%s' "${dsn}"
+      ;;
+  esac
+}
+
+# The interactive configuration the installer and prod-configure.sh share.
+# Each question defaults to the CURRENT .env.prod value where one exists and
+# writes the answer back with env_prod_set. Without a terminal the prompts
+# degrade to their defaults (configure_mail changes nothing at all), so the
+# installer's two-step fallback keeps working.
+
+configure_public_url() {
+  local current public_url
+  current=$(env_prod_get PUBLIC_URL)
+  public_url=$(prompt_with_default 'Public URL of this instance (as users will reach it)' "${current:-http://localhost}")
+  env_prod_set PUBLIC_URL "${public_url%/}"
+}
+
+# Which transport the last configure_mail round set: 1 relay, 2 host MTA,
+# empty = left as it was. offer_mail_check reads it.
+CONFIGURED_MAIL_CHOICE=''
+
+configure_mail() {
+  local current_dsn choice smtp_host smtp_port smtp_user smtp_password
+  local public_url mail_host current_from mail_from
+  CONFIGURED_MAIL_CHOICE=''
+  if [ ! -r /dev/tty ]; then
+    return 0
+  fi
+  current_dsn=$(env_prod_get MAILER_DSN)
+  say 'How should the app send mail? Registration and password reset depend on it.'
+  if [ -n "${current_dsn}" ]; then
+    say "Currently: $(mask_dsn_password "${current_dsn}")"
+  fi
+  printf '  1) An SMTP relay (your mail provider): host, port, user, password\n' >/dev/tty
+  printf "  2) This server's own MTA (postfix/exim listening on localhost:25)\n" >/dev/tty
+  printf '  3) Skip: leave the mail transport as it is\n' >/dev/tty
+  choice=$(prompt_with_default 'Choice' '1')
+  case "${choice}" in
+    1)
+      smtp_host=$(prompt_value 'SMTP host (e.g. smtp.example.org)')
+      smtp_port=$(prompt_with_default 'SMTP port' '587')
+      smtp_user=$(prompt_value 'SMTP username')
+      smtp_password=$(prompt_secret_value 'SMTP password (not echoed)')
+      if [ -n "${smtp_host}" ] && [ -n "${smtp_user}" ] && [ -n "${smtp_password}" ]; then
+        env_prod_set MAILER_DSN "smtp://$(url_encode "${smtp_user}"):$(url_encode "${smtp_password}")@${smtp_host}:${smtp_port}"
+        CONFIGURED_MAIL_CHOICE=1
+      else
+        warn 'Incomplete SMTP details -- leaving MAILER_DSN unchanged.'
+      fi
+      ;;
+    2)
+      env_prod_set MAILER_DSN 'smtp://host.docker.internal:25'
+      CONFIGURED_MAIL_CHOICE=2
+      say 'Using the MTA on this machine. Delivery is only as good as its setup'
+      say '(SPF, DKIM, reverse DNS) -- watch the first real mail.'
+      ;;
+    *)
+      : # keep the current transport
+      ;;
+  esac
+  if [ -n "${CONFIGURED_MAIL_CHOICE}" ]; then
+    public_url=$(env_prod_get PUBLIC_URL)
+    mail_host=${public_url#*://}
+    mail_host=${mail_host%%/*}
+    mail_host=${mail_host%%:*}
+    current_from=$(env_prod_get MAIL_FROM)
+    mail_from=$(prompt_with_default 'From: address for account mail' "${current_from:-simple-feed-reader@${mail_host}}")
+    if [ -n "${mail_from}" ]; then
+      env_prod_set MAIL_FROM "${mail_from}"
+    fi
+  fi
+}
+
+# Offer a live delivery check when configure_mail just set a transport. A
+# wrong relay password should surface NOW, not at the first lost mail.
+offer_mail_check() {
+  local recipient
+  if [ -z "${CONFIGURED_MAIL_CHOICE}" ]; then
+    return 0
+  fi
+  if ! confirm 'Send a test mail now to verify delivery?'; then
+    return 0
+  fi
+  recipient=$(prompt_value 'Recipient address')
+  if [ -n "${recipient}" ]; then
+    prod_compose exec -T -u www-data php bin/console mailer:test "${recipient}"
+    ok "Test mail handed to the transport. Check the ${recipient} inbox (and its spam folder)."
+  fi
+}
+```
+
+- [ ] **Step 2: Create `scripts/prod-configure.sh`** (executable):
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Reconfigure an existing production install: re-ask the questions
+# scripts/install.sh asked -- the public URL, how mail is sent, the From:
+# address -- each defaulting to the current .env.prod value, then apply by
+# re-running prod-start.sh and offer the same mail-delivery check.
+#
+# Secrets and passwords are deliberately NOT touched. Regenerating
+# JWT_PASSPHRASE would lock the existing signing key, and the MySQL
+# passwords initialized the database volume -- changing them here would not
+# change them inside MySQL. Ports and optional values are a hand edit in
+# .env.prod (see .env.prod.example), applied with ./scripts/prod-start.sh.
+
+_dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+# shellcheck source=scripts/lib.sh
+source "${_dir}/lib.sh"
+
+ensure_docker
+
+if [ ! -f "${ENV_PROD_FILE}" ]; then
+  die 'No .env.prod found -- nothing to reconfigure. Run scripts/install.sh first, or copy .env.prod.example to .env.prod.'
+fi
+
+if [ ! -r /dev/tty ]; then
+  die 'prod-configure.sh is interactive and needs a terminal.'
+fi
+
+configure_public_url
+configure_mail
+
+say 'Applying the configuration ...'
+"${REPO_ROOT}/scripts/prod-start.sh"
+
+offer_mail_check
+```
+
+- [ ] **Step 3: Refactor `scripts/install.sh` onto the shared functions.** Replace section 5 (everything from `# --- 5. the values only the operator knows` up to but excluding `# --- 6.`) with:
+
+```bash
+# --- 5. the values only the operator knows ----------------------------------
+configure_public_url
+configure_mail
+```
+
+In section 6, replace the two-step instruction lines with:
+
+```bash
+  say "Finish the setup in two steps:"
+  say "  1. Run:  cd ${TARGET_DIR} && ./scripts/prod-configure.sh   (asks again, then starts)"
+  say "     or edit ${TARGET_DIR}/.env.prod by hand (the comments explain every value)."
+  say "  2. Hand-edited? Then run:  cd ${TARGET_DIR} && ./scripts/prod-start.sh"
+```
+
+Replace section 7 (everything from `# --- 7. verify mail delivery` to the end) with:
+
+```bash
+# --- 7. verify mail delivery ------------------------------------------------
+offer_mail_check
+```
+
+The bootstrap `confirm()` at the top of install.sh stays (needed pre-clone; lib.sh's identical definition takes over after sourcing). The now-unused `mail_choice`/`mail_host` locals disappear with section 5.
+
+- [ ] **Step 4: `scripts/prod-start.sh` message.** Change the missing-values `die` line to:
+
+```bash
+  die 'Fill them in: run ./scripts/prod-configure.sh, or edit .env.prod (see .env.prod.example), then re-run.'
+```
+
+- [ ] **Step 5: Docs.** In `docs/docker-production.md`, insert after the `## 5. Update` section:
+
+````markdown
+## 6. Reconfigure
+
+To change the public URL or the mail settings later, re-run the installer's
+questions against the existing install:
+
+```bash
+cd simple-feed-reader && ./scripts/prod-configure.sh
+```
+
+Each question defaults to the current value; the script applies the answers
+(the same idempotent bring-up as an update) and offers the mail check from
+§4. Secrets and passwords are deliberately not touched: regenerating
+`JWT_PASSPHRASE` would lock the existing signing key, and the MySQL
+passwords already initialized the database volume. Ports and optional
+values are a hand edit in `.env.prod` (the comments in `.env.prod.example`
+explain each one), applied with `./scripts/prod-start.sh`.
+````
+
+Renumber the following sections (Backup → 7, Troubleshooting → 8). In `README.md`'s Everyday-scripts table, add after the prod start/stop row:
+
+```markdown
+| Change the public URL / mail settings | `./scripts/prod-configure.sh` |
+```
+
+- [ ] **Step 6: Verify**
+
+Run: `bash -n scripts/*.sh && shellcheck scripts/*.sh`
+Expected: clean at every severity.
+
+Run (refusal without .env.prod — none exists in the checkout): `./scripts/prod-configure.sh; echo "exit=$?"`
+Expected: `error: No .env.prod found -- nothing to reconfigure...` and `exit=1`.
+
+Run (shared-function unit checks, from the repo root):
+
+```bash
+bash -c '
+  set -euo pipefail
+  source scripts/lib.sh
+  [ "$(mask_dsn_password "smtp://user:secret@smtp.example.org:587")" = "smtp://user:***@smtp.example.org:587" ]
+  [ "$(mask_dsn_password "smtp://host.docker.internal:25")" = "smtp://host.docker.internal:25" ]
+  ENV_PROD_FILE=$(mktemp)
+  printf "PUBLIC_URL=\nMAILER_DSN=\n" > "${ENV_PROD_FILE}"
+  configure_public_url </dev/null
+  [ "$(env_prod_get PUBLIC_URL)" = "http://localhost" ] || [ -n "$(env_prod_get PUBLIC_URL)" ]
+  echo CONFIGURE-HELPERS-OK
+'
+```
+
+Expected: `CONFIGURE-HELPERS-OK`. (Note: with a readable /dev/tty this test would prompt; if it does, answer with Enter — the assertion accepts the default or a typed value. In a non-TTY run it passes silently.)
+
+Run (`install-dev.sh` untouched): `git diff --stat HEAD -- scripts/install-dev.sh`
+Expected: no output.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add scripts/lib.sh scripts/prod-configure.sh scripts/install.sh scripts/prod-start.sh docs/docker-production.md README.md
+git commit -m "feat(#65): prod-configure.sh reconfigures URL and mail; shared prompt flow in lib.sh"
+```
+
+---
+
 ### Task 10: Live verification of the whole path
 
 No new files — this task proves the stack on the running Docker host and cleans up after itself. It needs the Docker daemon and takes several minutes (two image builds).
@@ -1730,6 +2011,6 @@ rm -f .env.prod docker/certs-prod/fullchain.pem docker/certs-prod/privkey.pem
 
 ### Task 11: PR
 
-- [ ] **Step 1:** Push the branch and open a PR against `develop` titled `feat(#65): genuine Docker production path — prod image, prod stack, prod installer`. Body: what changed (the table of new/deleted files), the #65 acceptance-criteria mapping from the spec, the verification evidence from Task 10, and the **release-lag note**: the rewritten `install.sh`/`update.sh` resolve the latest release tag, so the one-liner delivers the prod path only after the next `vX.Y.Z` release is cut from a `main` that contains it. Include `Closes #65`.
+- [ ] **Step 1:** Push the branch and open a PR against `develop` titled `feat(#65): genuine Docker production path — prod image, prod stack, prod installer`. Body: what changed (the table of new/deleted files, including `prod-configure.sh` from Task 12), the #65 acceptance-criteria mapping from the spec, the verification evidence from Task 10, and the **release-lag note**: the rewritten `install.sh`/`update.sh` resolve the latest release tag — and NO plain `vX.Y.Z` release exists yet (only `-dev.N` deploy tags), so the one-liner delivers the prod path only after the FIRST release is cut from a `main` that contains it. Include `Closes #65`.
 
 - [ ] **Step 2:** Wait for CI (Backend sqlite, Backend mysql, Frontend, Shell scripts) — re-read the conclusions, do not trust `gh run watch --exit-status`.

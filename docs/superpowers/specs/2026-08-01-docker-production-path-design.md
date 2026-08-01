@@ -204,6 +204,15 @@ dev stack, dev summary). The README's developer section points here.
      summary including the first-admin command (`docs/first-run-setup.md`) and
      the mail verification command (§6).
 - **New `scripts/prod-stop.sh`** — stop the prod stack, data kept.
+- **New `scripts/prod-configure.sh`** — re-ask the installer's operator
+  questions against an existing install: public URL, the three-way mail
+  choice, the From: address — each defaulting to the current `.env.prod`
+  value — then apply by re-running `prod-start.sh` and offer the
+  `mailer:test` check. Secrets are deliberately out of scope: regenerating
+  `JWT_PASSPHRASE` would lock the existing signing key, and the MySQL
+  passwords already initialized the database volume; both stay hand-edit
+  territory, documented. The prompt flow is shared `lib.sh` code used by
+  both the installer and this script (DRY).
 - **Deleted:** `frontend-prod-start.sh`, `frontend-prod-stop.sh`, the
   `frontend-prod` service, `docker/frontend/`.
 - `lib.sh` gains shared prod helpers (project name, compose wrapper, env-file
