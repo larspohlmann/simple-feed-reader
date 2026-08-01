@@ -32,6 +32,7 @@ final readonly class RegistrationService
         private ClockInterface $clock,
         private PasswordWorkEqualizerInterface $work,
         private EventDispatcherInterface $events,
+        private RegistrationPolicy $policy,
     ) {
     }
 
@@ -39,6 +40,9 @@ final readonly class RegistrationService
      * Silently does nothing when the address is already registered. The caller
      * returns the same 202 either way — a different response here would let
      * anyone test which addresses hold accounts.
+     *
+     * The resulting status follows RegistrationPolicy::prospectiveStatusForEmailSignup(),
+     * not a hardcoded value — see that method for the confirm/approve rules.
      *
      * @throws TransportExceptionInterface
      * @throws RandomException
@@ -59,34 +63,46 @@ final readonly class RegistrationService
 
         $now = $this->clock->now();
         $user = new User($email, $now);
-        $user->setStatus(UserStatus::PendingVerification);
         $user->setLocale(\in_array($locale, SupportedLocale::ALL, true) ? $locale : SupportedLocale::ENGLISH);
         $user->setPasswordHash($this->hasher->hashPassword($user, $plainPassword), $now);
+
+        $status = $this->policy->prospectiveStatusForEmailSignup();
+        $user->setStatus($status);
+        if (UserStatus::Active === $status) {
+            $user->setApprovedAt($now);
+        }
 
         $this->em->persist($user);
 
         try {
             $this->em->flush();
         } catch (UniqueConstraintViolationException) {
-            // Lost a race: between the SELECT above and this INSERT, another
-            // request registered the same address. A double-clicked submit
-            // button is enough to cause it, and without this catch the loser
-            // gets an opaque 500 where the winner got a 202 — a broken user
-            // action, and a response that differs from the duplicate path and
-            // so leaks that a signup for this address was in flight.
-            //
-            // The winner has already sent the verification mail, so the right
-            // move is to say nothing at all. Doctrine closes the EntityManager
-            // on a failed flush, which is safe here only because this is the
-            // last database work in the request; the controller does nothing
-            // afterwards but serialise a fixed array.
+            // Lost a race with a concurrent signup for the same address; the
+            // winner has already done the post-flush work. Saying nothing keeps
+            // this path's response identical to the duplicate path above. (See
+            // the original comment for the full reasoning.)
             return;
         }
 
-        $this->mailer->sendVerification(
-            $user,
-            $this->tokens->issue($user, TokenPurpose::VerifyEmail),
-        );
+        $this->completeRegistration($user, $status);
+    }
+
+    /**
+     * The one post-flush side effect that each resulting status implies. Active
+     * needs none — the account can log in already.
+     */
+    private function completeRegistration(User $user, UserStatus $status): void
+    {
+        match ($status) {
+            UserStatus::PendingVerification => $this->mailer->sendVerification(
+                $user,
+                $this->tokens->issue($user, TokenPurpose::VerifyEmail),
+            ),
+            UserStatus::PendingApproval => $this->events->dispatch(
+                new UserAwaitingApproval($user, RegistrationMethod::EmailPassword),
+            ),
+            default => null,
+        };
     }
 
     /**

@@ -9,6 +9,7 @@ use App\Enum\TokenPurpose;
 use App\Enum\UserStatus;
 use App\Service\Auth\ActionTokenService;
 use App\Service\Auth\AltchaService;
+use App\Service\Settings\InstanceSettings;
 use App\Tests\Support\AltchaSolver;
 use App\Tests\Support\ApiTestCase;
 use Psr\Cache\CacheItemPoolInterface;
@@ -242,14 +243,47 @@ final class RegistrationTest extends ApiTestCase
      */
     public function testDuplicateRegistrationIsByteIdentical(): void
     {
-        $this->register();
+        $this->assertRegisterIsByteIdenticalForFreshAndDuplicateAddress('newcomer@example.com');
+
+        self::assertCount(1, $this->users()->findBy(['email' => 'newcomer@example.com']));
+    }
+
+    /**
+     * The same guarantee, restated at the policy level: a fresh and a
+     * duplicate address must be indistinguishable not only under the default
+     * policy (email confirmation required) but also under the fully-open one
+     * (both gates off, so a fresh signup lands straight in Active). Those are
+     * the two poles of RegistrationPolicy::prospectiveStatusForEmailSignup();
+     * a divergence under either would let a caller tell new from duplicate by
+     * watching the response, which is the one thing the register endpoint
+     * must never leak.
+     */
+    public function testRegisterResponseStaysIdenticalAcrossPolicies(): void
+    {
+        $this->assertRegisterIsByteIdenticalForFreshAndDuplicateAddress('policy-default@example.com');
+
+        $this->instanceSettings()->update(requireEmailConfirmation: false, requireApproval: false);
+        $this->assertRegisterIsByteIdenticalForFreshAndDuplicateAddress('policy-open@example.com');
+    }
+
+    private function instanceSettings(): InstanceSettings
+    {
+        /** @var InstanceSettings $settings */
+        $settings = self::getContainer()->get(InstanceSettings::class);
+
+        return $settings;
+    }
+
+    private function assertRegisterIsByteIdenticalForFreshAndDuplicateAddress(string $email): void
+    {
+        $this->register(['email' => $email]);
         self::assertResponseStatusCodeSame(202);
         $first = $this->client->getResponse();
         $firstStatus = $first->getStatusCode();
         $firstBody = (string) $first->getContent();
         $firstHeaders = $first->headers->all();
 
-        $this->register();
+        $this->register(['email' => $email]);
         $second = $this->client->getResponse();
 
         self::assertSame($firstStatus, $second->getStatusCode());
@@ -259,8 +293,6 @@ final class RegistrationTest extends ApiTestCase
         $secondHeaders = $second->headers->all();
         unset($secondHeaders['date']);
         self::assertSame($firstHeaders, $secondHeaders);
-
-        self::assertCount(1, $this->users()->findBy(['email' => 'newcomer@example.com']));
     }
 
     /**

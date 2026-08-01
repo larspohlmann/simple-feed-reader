@@ -11,6 +11,7 @@ use App\Dto\Auth\VerifyEmailRequest;
 use App\Exception\InvalidTokenException;
 use App\Exception\ValidationException;
 use App\Service\Auth\AltchaService;
+use App\Service\Auth\RegistrationPolicy;
 use App\Service\Auth\RegistrationService;
 use App\Service\RateLimit\RateLimitGuard;
 use Psr\Cache\InvalidArgumentException;
@@ -28,6 +29,7 @@ final readonly class AuthController
 {
     public function __construct(
         private RegistrationService $registration,
+        private RegistrationPolicy $policy,
         private AltchaService $altcha,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $registrationLimiter,
@@ -75,10 +77,12 @@ final readonly class AuthController
 
         $this->registration->register($request->email, $request->password, $request->locale);
 
-        // 202, not 201: the account exists but is not usable until verified
-        // and approved. The body is identical for a duplicate address.
+        // The status a new signup receives under the current policy. Instance-
+        // wide and identical for a duplicate address, so it never becomes an
+        // existence oracle. 202: the account may still need verification or
+        // approval before it can log in.
         return new JsonResponse(
-            ['status' => 'pending_verification'],
+            ['status' => $this->policy->prospectiveStatusForEmailSignup()->value],
             Response::HTTP_ACCEPTED,
         );
     }
