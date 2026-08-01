@@ -110,7 +110,7 @@ check_ports_free 4200 8080 8443 8025 \
 bring_up_stack
 
 # --- 6. verify and report ---------------------------------------------------
-if wait_for_health; then
+if wait_for_health "${DEV_HEALTH_URL}"; then
   ok "Installed ${release_tag}."
 else
   warn 'The API did not report healthy in time. It may still be starting.'

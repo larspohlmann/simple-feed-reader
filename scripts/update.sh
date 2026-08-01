@@ -68,7 +68,7 @@ if [ -n "$(compose ps -aq php 2>/dev/null)" ]; then
   say 'Applying database migrations ...'
   compose exec -T php bin/console doctrine:migrations:migrate --no-interaction
 
-  if wait_for_health; then
+  if wait_for_health "${DEV_HEALTH_URL}"; then
     ok "Development stack updated."
   else
     warn 'The API did not report healthy in time. Check:  docker compose logs -f php nginx'

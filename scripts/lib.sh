@@ -118,12 +118,17 @@ bring_up_stack() {
   compose exec -T php bin/console doctrine:migrations:migrate --no-interaction
 }
 
+# The dev stack's health probe; prod callers pass their own URL. Exported so
+# lint does not flag it unused here -- every reference lives in a script that
+# only sources this file (install-dev.sh, update.sh).
+export DEV_HEALTH_URL='https://localhost:8443/api/health'
+
 # Poll the API health endpoint until it reports ok, or time out after two
 # minutes. Uses curl -k on purpose: this is a liveness probe, so whether curl's
 # CA bundle trusts the mkcert certificate is irrelevant, and -k avoids a
 # confusing TLS error while the stack is still warming up.
 wait_for_health() {
-  local url="${1:-https://localhost:8443/api/health}"
+  local url="$1"
   local deadline=$(( SECONDS + 120 ))
   say "Waiting for the API at ${url} ..."
   while [ "${SECONDS}" -lt "${deadline}" ]; do
