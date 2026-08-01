@@ -5,9 +5,9 @@ set -euo pipefail
 #
 #   ./scripts/update.sh
 #
-# It checks out the newest release tag, rebuilds the containers, re-installs
-# dependencies, and runs database migrations. It never deletes data and never
-# touches a working tree that has uncommitted changes.
+# It checks out the newest release tag, then updates the production stack, the
+# development stack, or both -- whichever is installed. It never deletes data
+# and never touches a working tree that has uncommitted changes.
 
 _dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 # shellcheck source=scripts/lib.sh
@@ -37,25 +37,50 @@ lockfile_before=$(lockfile_blob)
 git -C "${REPO_ROOT}" checkout --quiet "${latest}"
 lockfile_after=$(lockfile_blob)
 
-say 'Rebuilding images where their definitions changed ...'
-compose up -d --build
+updated_any=0
 
-# Reinstall the frontend packages only when the lockfile actually changed; the
-# install runs into a named volume and is the slow part of an update.
-if [ "${lockfile_before}" != "${lockfile_after}" ]; then
-  say 'Frontend lockfile changed — refreshing node_modules ...'
-  compose run --rm frontend npm ci
+# --- production stack -------------------------------------------------------
+# A .env.prod marks a production install; prod-start.sh is idempotent and is
+# exactly the update procedure (rebuild, migrate, health check).
+if [ -f "${ENV_PROD_FILE}" ]; then
+  say 'Updating the production stack ...'
+  "${REPO_ROOT}/scripts/prod-start.sh"
+  updated_any=1
 fi
 
-say 'Installing backend dependencies ...'
-compose exec -T php composer install --no-interaction
-say 'Applying database migrations ...'
-compose exec -T php bin/console doctrine:migrations:migrate --no-interaction
+# --- development stack ------------------------------------------------------
+# Any php container (running or stopped) under the dev project marks a dev
+# install. Both stacks can exist on a developer machine; update both.
+if [ -n "$(compose ps -aq php 2>/dev/null)" ]; then
+  say 'Updating the development stack ...'
+  say 'Rebuilding images where their definitions changed ...'
+  compose up -d --build
 
-if wait_for_health; then
-  ok "Updated ${current} -> ${latest}."
+  # Reinstall the frontend packages only when the lockfile actually changed;
+  # the install runs into a named volume and is the slow part of an update.
+  if [ "${lockfile_before}" != "${lockfile_after}" ]; then
+    say 'Frontend lockfile changed -- refreshing node_modules ...'
+    compose run --rm frontend npm ci
+  fi
+
+  say 'Installing backend dependencies ...'
+  compose exec -T php composer install --no-interaction
+  say 'Applying database migrations ...'
+  compose exec -T php bin/console doctrine:migrations:migrate --no-interaction
+
+  if wait_for_health "${DEV_HEALTH_URL}"; then
+    ok "Development stack updated."
+  else
+    warn 'The API did not report healthy in time. Check:  docker compose logs -f php nginx'
+  fi
+  print_summary
+  updated_any=1
+fi
+
+if [ "${updated_any}" -eq 0 ]; then
+  warn 'No installed stack found (no .env.prod, no dev containers).'
+  say "The checkout is now on ${latest}."
+  say 'Start a stack with ./scripts/prod-start.sh (production) or ./scripts/install-dev.sh (development).'
 else
-  warn 'The API did not report healthy in time. Check:  docker compose logs -f php nginx'
+  ok "Updated ${current} -> ${latest}."
 fi
-
-print_summary

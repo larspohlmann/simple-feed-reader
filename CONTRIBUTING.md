@@ -16,8 +16,9 @@ conventions, and a surprise PR is likely to conflict with them.
 
 The whole stack (MySQL, PHP-FPM, nginx with TLS, Mailpit) runs in Docker.
 [docs/local-docker.md](docs/local-docker.md) is the full walkthrough; the
-one-line installer in the [README](README.md#quick-start-docker) is the fast
-path. The frontend dev server runs natively:
+one-line dev installer (`scripts/install-dev.sh`) in the
+[README](README.md#developing) is the fast path. The frontend dev server runs
+natively:
 
 ```bash
 cd frontend && npm ci && npm start   # http://localhost:4200

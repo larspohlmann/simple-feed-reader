@@ -34,15 +34,13 @@ SPA is served same-origin with the backend, so requests are relative.
 You don't need Node on the host at all — the [Docker stack](../docs/local-docker.md)
 runs the frontend too. `docker compose up -d` (from the repo root) starts the
 Angular dev server at http://localhost:4200 with live reload alongside the backend.
-A `prod` profile previews the production bundle served same-origin on
-`https://localhost:8444`:
 
-```bash
-docker compose --profile prod up -d --build frontend-prod
-```
+The **production stack** serves the compiled bundle same-origin behind nginx —
+see [docs/docker-production.md](../docs/docker-production.md); it can be run
+locally with mkcert certificates to preview the production topology.
 
 See [§9 of the Docker guide](../docs/local-docker.md#9-frontend-in-docker) for the
-node_modules-volume refresh, the npm-11 pin, and the OAuth caveat on the preview.
+node_modules-volume refresh and the npm-11 pin.
 
 ## The gate
 

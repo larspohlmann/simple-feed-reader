@@ -18,10 +18,6 @@ Five services, started with one command from the repository root:
 | Mailpit web inbox | http://localhost:8025 |
 | MySQL 8.4 | 127.0.0.1:33306 (user/password `feedreader`/`feedreader`, root `root`) |
 
-A sixth service — a production preview of the SPA served same-origin on
-`https://localhost:8444` — is opt-in behind the `prod` profile and does not start
-with a plain `up`. See [§9 Frontend in Docker](#9-frontend-in-docker).
-
 Every host port is bound to loopback only — nothing on your LAN can reach the
 stack. MySQL sits on 33306 so a natively installed MySQL never collides.
 
@@ -40,8 +36,7 @@ host are live immediately; no rebuild, no sync step.
 - **Docker Desktop** (or a compatible Docker Engine with the compose plugin),
   running before you start the First run steps.
 - Free host ports **4200**, **8080**, **8443**, and **8025** (MySQL's 33306 is
-  non-standard precisely to avoid collisions; the `prod` profile also uses
-  **8444**).
+  non-standard precisely to avoid collisions).
 - **mkcert**, for a locally trusted TLS certificate:
 
   ```bash
@@ -60,18 +55,18 @@ host are live immediately; no rebuild, no sync step.
 
 ## 3. First run
 
-> **The easy path.** If you just want the app running, use the one-line
-> installer instead of the manual steps below — it does exactly this sequence
-> for you, against the latest release:
+> **The easy path.** If you just want the development stack running, use the
+> one-line dev installer instead of the manual steps below — it does exactly
+> this sequence for you, against the latest release:
 >
 > ```bash
-> curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/main/scripts/install.sh | bash
+> curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/main/scripts/install-dev.sh | bash
 > ```
 >
 > The steps below are the same commands spelled out, for when you want to run
 > them yourself or understand what the installer does. See also
 > [`scripts/`](../scripts/): `update.sh` moves an install to the newest release,
-> and the four `frontend-*.sh` scripts start/stop the dev and prod frontends.
+> and the two `frontend-*.sh` scripts start/stop the dev frontend.
 
 From the repository root, in order:
 
@@ -184,13 +179,13 @@ work in one browser and silently fail in another, which is exactly the kind of
 Choices here were made so later plans can build on this stack without redoing
 it:
 
-- **Production image.** `docker/php/Dockerfile` is a dev image; a future
-  containerized production adds a multi-stage `prod` target (no dev deps,
-  baked-in source, tuned opcache) to the same file.
+- **Production image.** Delivered — `docker/php/Dockerfile` has a `prod`
+  target (no dev deps, baked-in source, tuned opcache) driven by
+  `docker-compose.prod.yml`. See [docker-production.md](docker-production.md).
 - **Angular frontend.** Delivered — see [§9](#9-frontend-in-docker). The dev
   service runs cross-origin on `:4200` (bearer JWT, so no auth cookie to keep
-  same-site); the `prod` profile serves the built SPA same-origin on `:8444`,
-  the topology this stack was designed to allow ([docs/oauth-sign-in.md](oauth-sign-in.md)).
+  same-site); the production stack serves the built SPA same-origin, the
+  topology this stack was designed to allow ([docs/oauth-sign-in.md](oauth-sign-in.md)).
 - **Worker / cron container.** The feed-fetch pipeline and the deployment plan
   will add a container that runs console commands on a schedule; it reuses the
   php image and the same env injection.
@@ -226,24 +221,16 @@ docker compose down && docker volume rm simple-feed-reader_frontend-node-modules
 > but the lockfile was authored by npm 11; npm 10 mis-resolves a transitive dep
 > and rejects the lock. The same pin is in the CI frontend job and the prod image.
 
-### Production preview (`prod` profile)
+### Previewing the production topology
 
-To preview the **production build** served same-origin (no CORS, closest to how
-production serves the SPA):
-
-```bash
-docker compose --profile prod up -d --build frontend-prod
-```
-
-nginx serves the built bundle on https://localhost:8444 and proxies `/api` to the
-same PHP-FPM backend, so the production build's relative API calls resolve
-same-origin. Client-side routes fall back to `index.html`. It reuses the mkcert
-certs, so `__Host-` cookies work. Stop it with
-`docker compose --profile prod stop frontend-prod`.
-
-**OAuth caveat.** The backend redirects OAuth to `APP_FRONTEND_URL` (`:4200`), so
-on the `:8444` preview the OAuth round-trip lands back on the dev origin. The
-preview is for the built bundle plus same-origin password/API flows; to exercise
-OAuth on `:8444`, override `APP_FRONTEND_URL` on the `php` service.
+The old `prod` profile (a production bundle served over the dev backend)
+is gone. To preview the real thing, run the actual production stack
+locally — [docker-production.md](docker-production.md) — with mkcert
+certificates: `mkcert -cert-file docker/certs-prod/fullchain.pem
+-key-file docker/certs-prod/privkey.pem localhost 127.0.0.1 ::1`, a
+`.env.prod` with test values (ports moved off 80/443 to avoid clashing
+with the dev stack), then `./scripts/prod-start.sh`. Unlike the old
+preview, this exercises the production PHP runtime too — `APP_ENV=prod`,
+no Mailpit, no xdebug.
 
 Design and rationale: [docs/superpowers/specs/2026-07-22-frontend-docker-services-design.md](superpowers/specs/2026-07-22-frontend-docker-services-design.md).

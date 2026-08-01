@@ -1,18 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# One-line installer for simple-feed-reader.
+# One-line PRODUCTION installer for simple-feed-reader.
 #
 #   curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/main/scripts/install.sh | bash
 #
-# It clones the repository, checks out the latest release, and brings the whole
-# Docker stack up: MySQL, the PHP API, nginx with a locally trusted certificate,
-# Mailpit, and the Angular dev server. Nothing here deletes data.
+# It clones the repository, checks out the latest release, writes .env.prod
+# with freshly generated secrets, asks for the few values only you know (the
+# public URL and how to send mail), and starts the production stack: MySQL,
+# the production PHP image, and nginx serving the built app. Nothing here
+# deletes data.
+#
+# Without a terminal (or when you skip the mail question) it stops after
+# writing .env.prod and tells you exactly how to finish: edit the file, then
+# run ./scripts/prod-start.sh.
+#
+# Looking for the DEVELOPMENT stack (live reload, xdebug, Mailpit)? Use
+# scripts/install-dev.sh instead.
 #
 # Optional: pass a target directory. Default is ./simple-feed-reader.
 #   curl -fsSL <url> | bash -s -- my-folder
 
-REPO_URL='https://github.com/larspohlmann/simple-feed-reader.git'
+REPO_URL="${SFR_REPO_URL:-https://github.com/larspohlmann/simple-feed-reader.git}"
 TARGET_DIR="${1:-simple-feed-reader}"
 
 # Minimal output helpers for the bootstrap phase, before lib.sh is available.
@@ -25,21 +34,6 @@ fi
 say() { printf '%s\n' "${_b_blue}==>${_b_reset} $*"; }
 die() { printf '%s\n' "${_b_red}error:${_b_reset} $*" >&2; exit 1; }
 
-# Ask a yes/no question. Reads from the terminal, not stdin, because stdin is the
-# script itself when this runs through `curl | bash`.
-confirm() {
-  local prompt="$1" answer
-  if [ ! -r /dev/tty ]; then
-    return 1
-  fi
-  printf '%s [y/N] ' "${prompt}" >/dev/tty
-  read -r answer </dev/tty || return 1
-  case "${answer}" in
-    [yY] | [yY][eE][sS]) return 0 ;;
-    *) return 1 ;;
-  esac
-}
-
 # --- 1. prerequisites -------------------------------------------------------
 say 'Checking prerequisites ...'
 
@@ -47,19 +41,11 @@ command -v git >/dev/null 2>&1 \
   || die 'git is not installed. Install it from https://git-scm.com/downloads and try again.'
 
 command -v docker >/dev/null 2>&1 \
-  || die 'Docker is not installed. Install Docker Desktop: https://docs.docker.com/get-docker/'
+  || die 'Docker is not installed. Install Docker: https://docs.docker.com/get-docker/'
 docker compose version >/dev/null 2>&1 \
-  || die 'The Docker Compose plugin is missing. Update Docker Desktop, or install the compose plugin.'
+  || die 'The Docker Compose plugin is missing. Update Docker, or install the compose plugin.'
 docker info >/dev/null 2>&1 \
-  || die 'Docker is installed but not running. Start Docker Desktop (or the Docker daemon) and try again.'
-
-if ! command -v mkcert >/dev/null 2>&1; then
-  case "$(uname -s)" in
-    Darwin) die 'mkcert is not installed. Install it with:  brew install mkcert' ;;
-    Linux)  die 'mkcert is not installed. Install it with your package manager, e.g.  sudo apt install mkcert' ;;
-    *)      die 'mkcert is not installed. See https://github.com/FiloSottile/mkcert#installation' ;;
-  esac
-fi
+  || die 'Docker is installed but not running. Start the Docker daemon and try again.'
 
 # --- 2. clone ---------------------------------------------------------------
 if [ -e "${TARGET_DIR}" ]; then
@@ -82,37 +68,41 @@ release_tag=$(latest_release_tag)
 say "Checking out the latest release: ${release_tag}"
 git -C "${REPO_ROOT}" checkout --quiet "${release_tag}"
 
-# --- 4. local certificate authority -----------------------------------------
-# Generating the certificate never touches the system trust store. Installing
-# the mkcert CA does, so ask first.
-caroot=$(mkcert -CAROOT 2>/dev/null || true)
-if [ -n "${caroot}" ] && [ -f "${caroot}/rootCA.pem" ]; then
-  ok "mkcert local CA already present (${caroot})."
-else
-  say 'mkcert can install a local certificate authority into your system trust store.'
-  say 'That is what makes your browser trust https://localhost with no warning.'
-  if confirm 'Install the mkcert local CA now?'; then
-    mkcert -install
-  else
-    warn 'Skipped. The stack still runs, but your browser will warn about the certificate.'
-  fi
+[ -f "${REPO_ROOT}/.env.prod.example" ] \
+  || die "Release ${release_tag} predates the Docker production path -- update the release, or use scripts/install-dev.sh."
+
+# --- 4. write .env.prod -----------------------------------------------------
+if [ -f "${ENV_PROD_FILE}" ]; then
+  die '.env.prod already exists in the fresh clone -- refusing to overwrite it.'
 fi
 
-say 'Generating the local TLS certificate ...'
-generate_certificate
+say 'Writing .env.prod with freshly generated secrets ...'
+cp "${REPO_ROOT}/.env.prod.example" "${ENV_PROD_FILE}"
+env_prod_set APP_SECRET "$(generate_secret)"
+env_prod_set ALTCHA_HMAC_KEY "$(generate_secret)"
+env_prod_set JWT_PASSPHRASE "$(generate_secret)"
+env_prod_set MYSQL_ROOT_PASSWORD "$(generate_secret)"
+env_prod_set MYSQL_PASSWORD "$(generate_secret)"
 
-# --- 5. bring the stack up --------------------------------------------------
-check_ports_free 4200 8080 8443 8025 \
-  || warn 'Free the ports listed above (or stop what is using them); docker will fail otherwise.'
+# --- 5. the values only the operator knows ----------------------------------
+configure_public_url
+configure_mail
 
-bring_up_stack
-
-# --- 6. verify and report ---------------------------------------------------
-if wait_for_health; then
-  ok "Installed ${release_tag}."
-else
-  warn 'The API did not report healthy in time. It may still be starting.'
-  warn 'Check the logs with:  docker compose logs -f php nginx'
+# --- 6. start, or explain how to --------------------------------------------
+missing=$(env_prod_missing)
+if [ -n "${missing}" ]; then
+  warn 'These required values in .env.prod are still empty:'
+  while IFS= read -r name; do
+    printf '    %s\n' "${name}" >&2
+  done <<< "${missing}"
+  say "Finish the setup in two steps:"
+  say "  1. Run:  cd ${TARGET_DIR} && ./scripts/prod-configure.sh   (asks again, then starts)"
+  say "     or edit ${TARGET_DIR}/.env.prod by hand (the comments explain every value)."
+  say "  2. Hand-edited? Then run:  cd ${TARGET_DIR} && ./scripts/prod-start.sh"
+  exit 0
 fi
 
-print_summary
+"${REPO_ROOT}/scripts/prod-start.sh"
+
+# --- 7. verify mail delivery ------------------------------------------------
+offer_mail_check

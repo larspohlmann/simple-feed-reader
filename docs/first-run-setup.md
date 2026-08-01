@@ -18,6 +18,13 @@ first person to *register* is never promoted to admin.
 docker compose exec php bin/console app:admin:create you@example.com
 ```
 
+On the production stack the same command needs the prod project's flags:
+
+```bash
+docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod \
+  exec -u www-data php bin/console app:admin:create you@example.com
+```
+
 Enter a password (at least 12 characters) at the hidden prompt. The account is
 created active, with the admin role, and can immediately reach `/api/admin`.
 Re-running refuses once an admin exists; `--force` overrides for recovery.

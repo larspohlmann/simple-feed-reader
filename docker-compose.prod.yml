@@ -1,0 +1,99 @@
+# The PRODUCTION stack. Deliberately a standalone file, not an overlay on
+# docker-compose.yml: an overlay would inherit the dev file's
+# MAILER_DSN=smtp://mailpit:1025 -- the exact silent mail black hole issue #65
+# exists to kill. Nothing here defaults to a dev service.
+#
+# Run it through the helper scripts (scripts/prod-start.sh reads .env.prod):
+#   docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod ...
+#
+# Every ${VAR:?} below makes compose refuse to start with a message naming the
+# missing variable -- fail loud at start, never fail open at runtime. See
+# .env.prod.example for what each variable means.
+
+name: simple-feed-reader-prod
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set it in .env.prod}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-feedreader}
+      MYSQL_USER: ${MYSQL_USER:-feedreader}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set it in .env.prod}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  php:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: prod
+    environment:
+      DATABASE_URL: "mysql://${MYSQL_USER:-feedreader}:${MYSQL_PASSWORD:?set it in .env.prod}@mysql:3306/${MYSQL_DATABASE:-feedreader}?serverVersion=8.4&charset=utf8mb4"
+      # No default and no fallback: null:// discards mail and reports success,
+      # and InsecureProductionConfigGuard 500s every request while it is set.
+      MAILER_DSN: ${MAILER_DSN:?set a real mail transport in .env.prod}
+      MAIL_FROM: ${MAIL_FROM:?set it in .env.prod}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Simple Feed Reader}
+      APP_SECRET: ${APP_SECRET:?set it in .env.prod}
+      ALTCHA_HMAC_KEY: ${ALTCHA_HMAC_KEY:?set it in .env.prod}
+      JWT_PASSPHRASE: ${JWT_PASSPHRASE:?set it in .env.prod}
+      # One public origin fills all three URL roles (SPA links in mail, OAuth
+      # redirect base, CLI-generated URLs).
+      APP_FRONTEND_URL: ${PUBLIC_URL:?set it in .env.prod}
+      APP_BACKEND_URL: ${PUBLIC_URL:?set it in .env.prod}
+      DEFAULT_URI: ${PUBLIC_URL:?set it in .env.prod}
+      # Pools live OUTSIDE var/cache/prod so the entrypoint's cache rebuild
+      # never resets rate limits or ALTCHA replay protection. The php-var
+      # volume makes them survive container recreates.
+      CACHE_DIRECTORY: /app/var/cache-pools/app
+      ADMIN_SETUP_SECRET: ${ADMIN_SETUP_SECRET:-}
+      MAINTENANCE_TOKEN: ${MAINTENANCE_TOKEN:-}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+      APPLE_OAUTH_CLIENT_ID: ${APPLE_OAUTH_CLIENT_ID:-}
+      APPLE_OAUTH_TEAM_ID: ${APPLE_OAUTH_TEAM_ID:-}
+      APPLE_OAUTH_KEY_ID: ${APPLE_OAUTH_KEY_ID:-}
+      APPLE_OAUTH_PRIVATE_KEY: ${APPLE_OAUTH_PRIVATE_KEY:-}
+    extra_hosts:
+      # Lets MAILER_DSN=smtp://host.docker.internal:25 reach an MTA on the
+      # host; harmless when unused. Works on Docker Engine variants where
+      # host.docker.internal is not built in.
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Logs and cache pools outlive the container; JWT keys outlive rebuilds.
+      - php-var:/app/var
+      - jwt-keys:/app/config/jwt
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web/Dockerfile
+    environment:
+      WEB_MODE: ${WEB_MODE:-auto}
+      # The EXTERNAL TLS port, for the http->https redirect target. The
+      # container itself always listens on 443; the mapping publishes it.
+      WEB_TLS_PORT: ${WEB_TLS_PORT:-443}
+    ports:
+      # The ONLY published ports of the whole stack -- mysql and php-fpm stay
+      # on the internal network. Behind a local reverse proxy, set
+      # WEB_BIND_ADDRESS=127.0.0.1 so nothing but the proxy can reach these.
+      - "${WEB_BIND_ADDRESS:-0.0.0.0}:${WEB_HTTP_PORT:-80}:80"
+      - "${WEB_BIND_ADDRESS:-0.0.0.0}:${WEB_TLS_PORT:-443}:443"
+    volumes:
+      - ./docker/certs-prod:/etc/nginx/certs:ro
+    depends_on:
+      - php
+
+volumes:
+  mysql-data:
+  php-var:
+  jwt-keys:

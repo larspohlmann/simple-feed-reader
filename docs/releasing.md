@@ -89,3 +89,8 @@ The install one-liner is fetched from `main`
 `scripts/` directory and this document — otherwise the one-liner would fetch a
 script that immediately fails to find a release to install. After that first
 release the chicken-and-egg is gone.
+
+The same applies to the Docker production path: every release tag must
+include `docker-compose.prod.yml`, `.env.prod.example`, and the `scripts/prod-*.sh`
+scripts — `scripts/install.sh` checks for `.env.prod.example` right after
+checkout and refuses to continue against a release tag that predates them.
