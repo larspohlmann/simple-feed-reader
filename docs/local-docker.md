@@ -60,6 +60,19 @@ host are live immediately; no rebuild, no sync step.
 
 ## 3. First run
 
+> **The easy path.** If you just want the app running, use the one-line
+> installer instead of the manual steps below — it does exactly this sequence
+> for you, against the latest release:
+>
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/main/scripts/install.sh | bash
+> ```
+>
+> The steps below are the same commands spelled out, for when you want to run
+> them yourself or understand what the installer does. See also
+> [`scripts/`](../scripts/): `update.sh` moves an install to the newest release,
+> and the four `frontend-*.sh` scripts start/stop the dev and prod frontends.
+
 From the repository root, in order:
 
 ```bash
