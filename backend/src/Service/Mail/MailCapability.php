@@ -19,7 +19,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 final readonly class MailCapability
 {
     public function __construct(
-        #[Autowire('%env(default::MAIL_DISABLED)%')]
+        #[Autowire('%env(string:default::MAIL_DISABLED)%')]
         private string $disabledFlag,
     ) {
     }
