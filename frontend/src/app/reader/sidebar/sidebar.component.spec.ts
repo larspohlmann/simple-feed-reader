@@ -616,12 +616,14 @@ describe('organise mode', () => {
     const nav = mountWithLayout(true, false);
     expect(nav.debugElement.query(By.directive(CdkDrag)).injector.get(CdkDrag).disabled).toBe(true);
     const org = mountWithLayout(true, true);
-    expect(org.debugElement.query(By.directive(CdkDrag)).injector.get(CdkDrag).disabled).toBe(false);
+    expect(org.debugElement.query(By.directive(CdkDrag)).injector.get(CdkDrag).disabled).toBe(
+      false,
+    );
     expect(org.componentInstance.dragDelay()).toBe(0);
     const desktop = mountWithLayout(false, false);
-    expect(
-      desktop.debugElement.query(By.directive(CdkDrag)).injector.get(CdkDrag).disabled,
-    ).toBe(false);
+    expect(desktop.debugElement.query(By.directive(CdkDrag)).injector.get(CdkDrag).disabled).toBe(
+      false,
+    );
     expect(desktop.componentInstance.dragDelay()).toEqual({ touch: 180, mouse: 0 });
   });
 

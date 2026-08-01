@@ -143,7 +143,11 @@ export class SidebarComponent {
         title: subscription.title,
         actions: [
           { id: 'edit', label: this.transloco.translate('reader.editFeed') },
-          { id: 'unsubscribe', label: this.transloco.translate('reader.unsubscribe'), danger: true },
+          {
+            id: 'unsubscribe',
+            label: this.transloco.translate('reader.unsubscribe'),
+            danger: true,
+          },
         ],
       })
       .subscribe((choice) => {

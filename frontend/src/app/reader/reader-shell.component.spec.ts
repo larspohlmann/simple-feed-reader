@@ -687,7 +687,8 @@ describe('ReaderShellComponent', () => {
     });
 
     it('adds is-narrow to .body when isNarrow is true and removes it when false', () => {
-      const narrow = TestBed.inject(LayoutService).isNarrow as import('@angular/core').Signal<boolean>;
+      const narrow = TestBed.inject(LayoutService)
+        .isNarrow as import('@angular/core').Signal<boolean>;
       sessionStorage.clear();
       auth.isAdmin.mockReturnValue(false);
       qp.next(convertToParamMap({}));
@@ -695,7 +696,14 @@ describe('ReaderShellComponent', () => {
       const f = TestBed.createComponent(ReaderShellComponent);
       f.detectChanges();
       c.match(() => true).forEach((req) =>
-        req.flush({ subscriptions: [], tags: [], entries: [], favoritesCount: 0, keptCount: 0, nextCursor: null }),
+        req.flush({
+          subscriptions: [],
+          tags: [],
+          entries: [],
+          favoritesCount: 0,
+          keptCount: 0,
+          nextCursor: null,
+        }),
       );
       f.detectChanges();
 
@@ -731,7 +739,14 @@ describe('ReaderShellComponent', () => {
       const f = TestBed.createComponent(ReaderShellComponent);
       f.detectChanges();
       c.match(() => true).forEach((req) =>
-        req.flush({ subscriptions: [], tags: [], entries: [], favoritesCount: 0, keptCount: 0, nextCursor: null }),
+        req.flush({
+          subscriptions: [],
+          tags: [],
+          entries: [],
+          favoritesCount: 0,
+          keptCount: 0,
+          nextCursor: null,
+        }),
       );
       f.detectChanges();
 
@@ -750,7 +765,14 @@ describe('ReaderShellComponent', () => {
       const f = TestBed.createComponent(ReaderShellComponent);
       f.detectChanges();
       c.match(() => true).forEach((req) =>
-        req.flush({ subscriptions: [], tags: [], entries: [], favoritesCount: 0, keptCount: 0, nextCursor: null }),
+        req.flush({
+          subscriptions: [],
+          tags: [],
+          entries: [],
+          favoritesCount: 0,
+          keptCount: 0,
+          nextCursor: null,
+        }),
       );
       f.componentInstance.setSidebarOpen(true);
       f.componentInstance.sidebarOrganising.set(true);
