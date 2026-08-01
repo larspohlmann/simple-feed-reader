@@ -10,7 +10,10 @@ use App\Entity\UserIdentity;
 use App\Enum\RegistrationMethod;
 use App\Enum\UserStatus;
 use App\Event\UserAwaitingApproval;
+use App\Service\Auth\RegistrationPolicy;
+use App\Service\Mail\MailCapability;
 use App\Service\OAuth\OAuthAccountLinker;
+use App\Service\Settings\InstanceSettings;
 use App\Tests\DbTestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\EventDispatcher\EventDispatcher;
@@ -315,8 +318,47 @@ final class OAuthAccountLinkerTest extends DbTestCase
         self::assertSame([], $captured);
     }
 
-    private function linker(?EventDispatcherInterface $events = null): OAuthAccountLinker
+    public function testNewOAuthUserWithApprovalOffIsActiveWithNoEvent(): void
     {
+        $recording = $this->recordingDispatcher();
+        $events = $recording[0];
+        $captured = &$recording[1];
+
+        $resolved = $this->linker($events, $this->policy(approve: false))
+            ->resolve(new OAuthIdentity('google', 'sub-1', 'new@example.com', true));
+
+        self::assertSame(UserStatus::Active, $resolved->getStatus());
+        self::assertEquals($this->now(), $resolved->getApprovedAt());
+        self::assertSame([], $captured);
+    }
+
+    public function testClaimUnverifiedWithApprovalOffActivatesAndWipesPasswordNoEvent(): void
+    {
+        $planted = $this->persistUser('bob@example.com', UserStatus::PendingVerification);
+        $planted->setPasswordHash('an-attackers-hash', new \DateTimeImmutable('2020-01-01 00:00:00'));
+        $this->em->flush();
+        $recording = $this->recordingDispatcher();
+        $events = $recording[0];
+        $captured = &$recording[1];
+
+        $resolved = $this->linker($events, $this->policy(approve: false))
+            ->resolve(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+
+        self::assertSame($planted->getId(), $resolved->getId());
+        self::assertSame(UserStatus::Active, $resolved->getStatus());
+        self::assertEquals($this->now(), $resolved->getApprovedAt());
+        // Still a security control regardless of the approval toggle: the
+        // credential belongs to whoever planted the unverified registration,
+        // not to the party OAuth just proved owns the address.
+        self::assertNull($resolved->getPasswordHash());
+        self::assertEquals($this->now(), $resolved->getPasswordChangedAt());
+        self::assertSame([], $captured);
+    }
+
+    private function linker(
+        ?EventDispatcherInterface $events = null,
+        ?RegistrationPolicy $policy = null,
+    ): OAuthAccountLinker {
         /** @var \App\Repository\UserRepository $users */
         $users = $this->em->getRepository(User::class);
         /** @var \App\Repository\UserIdentityRepository $identities */
@@ -328,7 +370,23 @@ final class OAuthAccountLinkerTest extends DbTestCase
             $identities,
             new MockClock(self::NOW),
             $events ?? new EventDispatcher(),
+            $policy ?? $this->policy(approve: true),
         );
+    }
+
+    /**
+     * Drives the real InstanceSettings service (final, so it cannot be
+     * doubled — see RegistrationServiceTest for the same workaround) and
+     * pairs it with a MailCapability that always reports mail as enabled, so
+     * only the approval toggle decides the outcome.
+     */
+    private function policy(bool $approve): RegistrationPolicy
+    {
+        /** @var InstanceSettings $settings */
+        $settings = self::getContainer()->get(InstanceSettings::class);
+        $settings->update(true, $approve);
+
+        return new RegistrationPolicy(new MailCapability(''), $settings);
     }
 
     /**

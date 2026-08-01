@@ -12,6 +12,7 @@ use App\Enum\UserStatus;
 use App\Event\UserAwaitingApproval;
 use App\Repository\UserIdentityRepository;
 use App\Repository\UserRepository;
+use App\Service\Auth\RegistrationPolicy;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
@@ -29,7 +30,8 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
  *     full stop. Nothing about the address can change the answer.
  *  2. The identity's address is linkable — provider-verified and not a private
  *     relay — and an account holds it: link to that account.
- *  3. Otherwise: a brand new account, in pending_approval, with no password.
+ *  3. Otherwise: a brand new account, with no password, in pending_approval —
+ *     or active immediately when the admin-approval toggle is off.
  *
  * The ordering matters. Rule 1 before rule 2 means a returning user whose
  * provider address has since changed still lands on their own account instead
@@ -43,6 +45,7 @@ final readonly class OAuthAccountLinker
         private UserIdentityRepository $identities,
         private ClockInterface $clock,
         private EventDispatcherInterface $events,
+        private RegistrationPolicy $policy,
     ) {
     }
 
@@ -61,7 +64,7 @@ final readonly class OAuthAccountLinker
 
         if (null === $linkTarget) {
             $user = $this->createUser($identity);
-            $enteredApprovalQueue = true;
+            $enteredApprovalQueue = $this->policy->approvalRequired();
         } else {
             $user = $linkTarget;
             $enteredApprovalQueue = $this->claimIfUnverified($linkTarget);
@@ -163,11 +166,19 @@ final readonly class OAuthAccountLinker
      * Nothing is lost by claiming the row, because an unverified account holds
      * nothing but an address nobody has proven and a password nobody has used.
      *
-     * Returns whether this call promoted the account into the approval queue, so
-     * resolve() knows when a fresh approval is now pending. Every status other
-     * than pending_verification is returned untouched: OAuth proves an address,
-     * it does not overrule an admin, so linking never revives a rejected
-     * account, never unsuspends a suspended one, and never re-stamps an active
+     * When admin approval is off, the account is promoted straight to active
+     * (with approvedAt stamped) instead of into the queue, and the password is
+     * still wiped for the reasoning above — that wipe is a security control
+     * over an unproven credential, not a step in the approval workflow, so the
+     * approval toggle has no say over it.
+     *
+     * Returns whether this call put the account into the approval queue, so
+     * resolve() knows when a fresh approval is now pending — false both when
+     * nothing was claimed and when it was claimed but approval is off, which
+     * is exactly the "no dispatch" cases. Every status other than
+     * pending_verification is returned untouched: OAuth proves an address, it
+     * does not overrule an admin, so linking never revives a rejected account,
+     * never unsuspends a suspended one, and never re-stamps an active
      * account's password — that last one would revoke the live sessions of a
      * user who did nothing but sign in a second way.
      */
@@ -177,25 +188,43 @@ final readonly class OAuthAccountLinker
             return false;
         }
 
-        $user->setStatus(UserStatus::PendingApproval);
-        $user->setPasswordHash(null, $this->clock->now());
+        $now = $this->clock->now();
+        if ($this->policy->approvalRequired()) {
+            $user->setStatus(UserStatus::PendingApproval);
+        } else {
+            $user->setStatus(UserStatus::Active);
+            $user->setApprovedAt($now);
+        }
+        $user->setPasswordHash(null, $now);
 
-        return true;
+        return $this->policy->approvalRequired();
     }
 
     /**
      * A first sign-in with no matching local account.
      *
-     * Lands in pending_approval, skipping pending_verification: the double
-     * opt-in mail exists to prove the address belongs to the person signing
-     * up, and the provider has already proved exactly that. Membership is
-     * still the admin's call — OAuth verifies identity, humans decide access.
+     * Skips pending_verification unconditionally: the double opt-in mail
+     * exists to prove the address belongs to the person signing up, and the
+     * provider has already proved exactly that. This is true regardless of
+     * the email-confirmation toggle, which governs the local registration
+     * form and has no say over an address OAuth already verified.
+     *
+     * Lands in pending_approval when admin approval is on — membership is
+     * still the admin's call, OAuth verifies identity, humans decide access.
+     * When approval is off, the account is active immediately and
+     * approvedAt is stamped.
      */
     private function createUser(OAuthIdentity $identity): User
     {
         $now = $this->clock->now();
         $user = new User($this->loginIdentifierFor($identity), $now);
-        $user->setStatus(UserStatus::PendingApproval);
+
+        if ($this->policy->approvalRequired()) {
+            $user->setStatus(UserStatus::PendingApproval);
+        } else {
+            $user->setStatus(UserStatus::Active);
+            $user->setApprovedAt($now);
+        }
 
         $this->em->persist($user);
 
