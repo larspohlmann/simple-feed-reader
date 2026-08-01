@@ -34,6 +34,14 @@
 
 .name {
   color: var(--text-primary);
+
+  /* The name is the only flexible part of the row. Without these a long tag —
+     a German compound is enough — can neither shrink nor break, so it overruns
+     the identity column and drags the feed count off the mobile viewport (#212).
+     min-width lets the flex child shrink past its content; overflow-wrap breaks
+     the offending token instead of overflowing. */
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .count {
