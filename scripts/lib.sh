@@ -506,9 +506,11 @@ configure_mail() {
   printf '  1) An SMTP relay (your mail provider): host, port, user, password\n' >/dev/tty
   printf "  2) This server's own MTA (postfix/exim listening on localhost:25)\n" >/dev/tty
   printf '  3) Later: finish mail by hand, or re-run ./scripts/prod-configure.sh\n' >/dev/tty
+  printf '  4) No mail: run without outgoing mail (registration/reset email off)\n' >/dev/tty
   choice=$(prompt_with_default 'Choice' '1')
   case "${choice}" in
     1)
+      env_prod_set MAIL_DISABLED ''
       smtp_host=$(prompt_value 'SMTP host (e.g. smtp.example.org)')
       smtp_port=$(prompt_with_default 'SMTP port' '587')
       smtp_user=$(prompt_value 'SMTP username')
@@ -521,10 +523,17 @@ configure_mail() {
       fi
       ;;
     2)
+      env_prod_set MAIL_DISABLED ''
       env_prod_set MAILER_DSN 'smtp://host.docker.internal:25'
       CONFIGURED_MAIL_CHOICE=2
       say 'Using the MTA on this machine. Delivery is only as good as its setup'
       say '(SPF, DKIM, reverse DNS) -- watch the first real mail.'
+      ;;
+    4)
+      env_prod_set MAIL_DISABLED 1
+      env_prod_set MAILER_DSN 'null://null'
+      say 'Running without mail. Email confirmation and password-reset email are off.'
+      say 'Recover a password with: docker compose ... exec php bin/console app:user:reset-password <email> --generate'
       ;;
     *)
       : # keep the current transport
