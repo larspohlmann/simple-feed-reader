@@ -1,6 +1,5 @@
 import {
   FOCUS_MIN_OPACITY,
-  focusOpacity,
   focusOpacityForSpan,
   needsReadingTail,
   readingBlocks,
@@ -21,41 +20,31 @@ describe('needsReadingTail', () => {
   });
 });
 
-describe('focusOpacity', () => {
-  it('is fully opaque at the viewport center', () => {
-    expect(focusOpacity(500, 1000)).toBe(1);
-  });
-
-  it('fades to the minimum a half-viewport away from center', () => {
-    expect(focusOpacity(0, 1000)).toBe(FOCUS_MIN_OPACITY);
-    expect(focusOpacity(1000, 1000)).toBe(FOCUS_MIN_OPACITY);
-  });
-
-  it('fades symmetrically and monotonically with distance from center', () => {
-    const near = focusOpacity(600, 1000); // 100px from center
-    const far = focusOpacity(800, 1000); // 300px from center
-    expect(near).toBeLessThan(1);
-    expect(near).toBeGreaterThan(far);
-    expect(focusOpacity(400, 1000)).toBeCloseTo(near, 5); // mirror above center
-  });
-
-  it('clamps blocks beyond a half-viewport to the minimum, never below', () => {
-    expect(focusOpacity(-500, 1000)).toBe(FOCUS_MIN_OPACITY);
-    expect(focusOpacity(5000, 1000)).toBe(FOCUS_MIN_OPACITY);
-  });
-
-  it('degrades to fully opaque when the viewport has no measured height', () => {
-    expect(focusOpacity(0, 0)).toBe(1);
-  });
-});
-
 describe('focusOpacityForSpan', () => {
-  it('matches focusOpacity for a zero-height block, whatever its position', () => {
-    // A short list row degenerates to a point, so the span curve must not change
-    // the behaviour the article view already had.
-    expect(focusOpacityForSpan(500, 500, 1000)).toBe(focusOpacity(500, 1000));
-    expect(focusOpacityForSpan(600, 600, 1000)).toBe(focusOpacity(600, 1000));
-    expect(focusOpacityForSpan(0, 0, 1000)).toBe(focusOpacity(0, 1000));
+  // A short reading block — a list row or a paragraph — degenerates to a point:
+  // its top and bottom coincide, so these cases are the plain centre fade.
+  describe('a short block (top and bottom coincide)', () => {
+    it('is fully opaque at the viewport centre', () => {
+      expect(focusOpacityForSpan(500, 500, 1000)).toBe(1);
+    });
+
+    it('fades to the minimum a half-viewport away from the centre', () => {
+      expect(focusOpacityForSpan(0, 0, 1000)).toBe(FOCUS_MIN_OPACITY);
+      expect(focusOpacityForSpan(1000, 1000, 1000)).toBe(FOCUS_MIN_OPACITY);
+    });
+
+    it('fades symmetrically and monotonically with distance from the centre', () => {
+      const near = focusOpacityForSpan(600, 600, 1000); // 100px from centre
+      const far = focusOpacityForSpan(800, 800, 1000); // 300px from centre
+      expect(near).toBeLessThan(1);
+      expect(near).toBeGreaterThan(far);
+      expect(focusOpacityForSpan(400, 400, 1000)).toBeCloseTo(near, 5); // mirror above centre
+    });
+
+    it('clamps blocks beyond a half-viewport to the minimum, never below', () => {
+      expect(focusOpacityForSpan(-500, -500, 1000)).toBe(FOCUS_MIN_OPACITY);
+      expect(focusOpacityForSpan(5000, 5000, 1000)).toBe(FOCUS_MIN_OPACITY);
+    });
   });
 
   it('keeps a block fully opaque while its span covers the reading centre', () => {
@@ -68,11 +57,9 @@ describe('focusOpacityForSpan', () => {
 
   it('fades a block clear of the centre by its nearest edge, not its centre', () => {
     // A tall block sitting just below the centre: its geometric centre is a full
-    // viewport away (would clamp to the minimum), but its top edge is near, so it
-    // stays close to opaque.
-    const nearEdge = focusOpacityForSpan(600, 1600, 1000); // top 100px below centre
-    expect(nearEdge).toBe(focusOpacity(600, 1000));
-    expect(nearEdge).toBeGreaterThan(FOCUS_MIN_OPACITY);
+    // viewport away (the old curve would clamp it to the minimum), but its top
+    // edge is only 100px past the centre, so it stays close to opaque.
+    expect(focusOpacityForSpan(600, 1600, 1000)).toBe(0.91); // 1 - (100/500)*0.45
   });
 
   it('fades to the minimum once the nearest edge is a half-viewport away', () => {
