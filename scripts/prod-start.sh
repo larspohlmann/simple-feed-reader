@@ -41,6 +41,15 @@ fi
 say 'Building and starting the production stack (the first build takes a few minutes) ...'
 prod_compose up -d --build
 
+# The web entrypoint picks HTTP or TLS mode by checking docker/certs-prod/
+# once, at container start. That directory is a bind mount, so dropping
+# certificates in (or removing them) changes the host files but not the
+# compose service definition -- `up -d --build` above sees nothing to
+# recreate and leaves the container serving whatever mode it already picked.
+# Force it to re-evaluate on every run so this script is really "the way to
+# switch to TLS" the comment at the top of this file promises.
+prod_compose up -d --force-recreate web
+
 wait_for_php_ready
 
 say 'Ensuring JWT signing keys exist ...'
