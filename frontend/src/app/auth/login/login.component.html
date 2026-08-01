@@ -33,6 +33,8 @@
 
   <p class="links">
     <a routerLink="/register">{{ 'auth.login.createAccount' | transloco }}</a>
-    <a routerLink="/reset-password-request">{{ 'auth.login.forgotPassword' | transloco }}</a>
+    @if (mailEnabled() !== false) {
+      <a routerLink="/reset-password-request">{{ 'auth.login.forgotPassword' | transloco }}</a>
+    }
   </p>
 </app-auth-shell>

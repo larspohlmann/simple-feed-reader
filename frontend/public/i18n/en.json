@@ -253,7 +253,9 @@
     "register": {
       "title": "Create account",
       "subtitle": "Register, then confirm your email.",
-      "done": "Check your email for a confirmation link. After you confirm, an administrator reviews your account before you can sign in.",
+      "checkEmail": "Check your email for a confirmation link. After you confirm, an administrator reviews your account before you can sign in.",
+      "awaitingApproval": "An administrator needs to approve your account before you can sign in.",
+      "activeNow": "Your account is ready. You can sign in now.",
       "passwordLabel": "Password (at least 12 characters)",
       "submit": "Create account",
       "haveAccount": "Already have an account?",

@@ -11,6 +11,7 @@ export class SetupService {
   private readonly api = inject(SetupApi);
   private cached: boolean | null = null;
   readonly needsSetup = signal<boolean | null>(null);
+  readonly mailEnabled = signal<boolean | null>(null);
 
   ensureLoaded(): Observable<boolean> {
     if (this.cached !== null) return of(this.cached);
@@ -18,6 +19,7 @@ export class SetupService {
       tap((r) => {
         this.cached = r.needsSetup;
         this.needsSetup.set(r.needsSetup);
+        this.mailEnabled.set(r.mailEnabled);
       }),
       map((r) => r.needsSetup),
     );

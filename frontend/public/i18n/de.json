@@ -253,7 +253,9 @@
     "register": {
       "title": "Konto erstellen",
       "subtitle": "Registrieren und anschließend die E-Mail bestätigen.",
-      "done": "Prüfe deine E-Mails auf einen Bestätigungslink. Nach der Bestätigung prüft ein Administrator dein Konto, bevor du dich anmelden kannst.",
+      "checkEmail": "Prüfe deine E-Mails auf einen Bestätigungslink. Nach der Bestätigung prüft ein Administrator dein Konto, bevor du dich anmelden kannst.",
+      "awaitingApproval": "Ein Administrator muss dein Konto freigeben, bevor du dich anmelden kannst.",
+      "activeNow": "Dein Konto ist bereit. Du kannst dich jetzt anmelden.",
       "passwordLabel": "Passwort (mindestens 12 Zeichen)",
       "submit": "Konto erstellen",
       "haveAccount": "Schon ein Konto?",

@@ -8,6 +8,7 @@ import { API_BASE_URL } from '../../core/api';
 import { AuthService } from '../../core/auth.service';
 import { parseProblem } from '../../core/problem';
 import { adoptAutofilledValues } from '../autofill';
+import { SetupService } from '../../setup/setup.service';
 import { AuthShellComponent } from '../auth-shell/auth-shell.component';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { FormErrorComponent } from '../../shared/form-error/form-error.component';
@@ -35,6 +36,7 @@ export class LoginComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly i18n = inject(TranslocoService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly setup = inject(SetupService);
 
   readonly form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -43,6 +45,7 @@ export class LoginComponent implements OnInit {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly providers = signal<string[]>([]);
+  readonly mailEnabled = this.setup.mailEnabled;
 
   ngOnInit(): void {
     this.http.get<{ providers: string[] }>(`${this.base}/api/auth/oauth/providers`).subscribe({

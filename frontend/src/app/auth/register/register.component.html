@@ -2,8 +2,20 @@
   [title]="'auth.register.title' | transloco"
   [subtitle]="'auth.register.subtitle' | transloco"
 >
-  @if (done()) {
-    <p class="ok">{{ 'auth.register.done' | transloco }}</p>
+  @if (resultStatus()) {
+    <p class="ok">
+      @switch (resultStatus()) {
+        @case ('pending_verification') {
+          {{ 'auth.register.checkEmail' | transloco }}
+        }
+        @case ('pending_approval') {
+          {{ 'auth.register.awaitingApproval' | transloco }}
+        }
+        @case ('active') {
+          {{ 'auth.register.activeNow' | transloco }}
+        }
+      }
+    </p>
     <a routerLink="/login">{{ 'auth.backToSignIn' | transloco }}</a>
   } @else {
     <form (ngSubmit)="submit()" [formGroup]="form">

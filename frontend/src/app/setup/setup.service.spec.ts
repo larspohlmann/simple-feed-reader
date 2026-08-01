@@ -12,7 +12,7 @@ describe('SetupService', () => {
   }
 
   it('fetches status once and caches it', (done) => {
-    const status = jest.fn().mockReturnValue(of({ needsSetup: true }));
+    const status = jest.fn().mockReturnValue(of({ needsSetup: true, mailEnabled: true }));
     const service = configure(status);
 
     service.ensureLoaded().subscribe(() => {
@@ -25,12 +25,22 @@ describe('SetupService', () => {
   });
 
   it('markComplete flips needsSetup to false without another call', () => {
-    const status = jest.fn().mockReturnValue(of({ needsSetup: true }));
+    const status = jest.fn().mockReturnValue(of({ needsSetup: true, mailEnabled: true }));
     const service = configure(status);
 
     service.markComplete();
 
     expect(service.needsSetup()).toBe(false);
     expect(status).toHaveBeenCalledTimes(0);
+  });
+
+  it('exposes mailEnabled from the status response', (done) => {
+    const status = jest.fn().mockReturnValue(of({ needsSetup: false, mailEnabled: false }));
+    const service = configure(status);
+
+    service.ensureLoaded().subscribe(() => {
+      expect(service.mailEnabled()).toBe(false);
+      done();
+    });
   });
 });

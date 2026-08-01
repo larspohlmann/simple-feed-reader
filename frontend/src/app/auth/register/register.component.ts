@@ -43,7 +43,7 @@ export class RegisterComponent {
   });
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
-  readonly done = signal(false);
+  readonly resultStatus = signal<string | null>(null);
 
   async submit(): Promise<void> {
     if (this.loading()) return;
@@ -65,8 +65,8 @@ export class RegisterComponent {
       const challenge = await firstValueFrom(this.altcha.challenge());
       const solution = await solveAltcha(challenge);
       const { email, password } = this.form.getRawValue();
-      await firstValueFrom(
-        this.http.post(`${this.base}/api/auth/register`, {
+      const response = await firstValueFrom(
+        this.http.post<{ status: string }>(`${this.base}/api/auth/register`, {
           email,
           password,
           altcha: solution,
@@ -74,7 +74,7 @@ export class RegisterComponent {
           locale: this.i18n.getActiveLang(),
         }),
       );
-      this.done.set(true);
+      this.resultStatus.set(response.status);
     } catch (e) {
       const p = parseProblem(e as HttpErrorResponse);
       const firstFieldError = p.errors ? Object.values(p.errors)[0]?.[0] : undefined;
