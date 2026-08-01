@@ -219,6 +219,70 @@ final class RegistrationServiceTest extends DbTestCase
         self::assertSame([], $captured);
     }
 
+    public function testVerifyEmailWithApprovalOnQueuesForApprovalAndDispatches(): void
+    {
+        $policy = $this->policy(confirm: true, approve: true);
+
+        $capturedToken = null;
+        $mailer = $this->createStub(AccountMailerInterface::class);
+        $mailer->method('sendVerification')
+            ->willReturnCallback(function (User $user, string $token) use (&$capturedToken): void {
+                $capturedToken = $token;
+            });
+
+        $recording = $this->recordingDispatcher();
+        $events = $recording[0];
+        $captured = &$recording[1];
+
+        $service = $this->serviceUnderPolicy($policy, $mailer, $events);
+        $service->register('verifier-approval-on@example.com', 'correct-horse-battery');
+
+        self::assertIsString($capturedToken);
+        $status = $service->verifyEmail($capturedToken);
+
+        self::assertSame(UserStatus::PendingApproval, $status);
+
+        $user = $this->users()->findOneByEmail('verifier-approval-on@example.com');
+        self::assertInstanceOf(User::class, $user);
+        self::assertSame(UserStatus::PendingApproval, $user->getStatus());
+        self::assertNull($user->getApprovedAt());
+
+        self::assertCount(1, $captured);
+        self::assertSame($user, $captured[0]->user);
+        self::assertSame(RegistrationMethod::EmailPassword, $captured[0]->method);
+    }
+
+    public function testVerifyEmailWithApprovalOffActivatesDirectlyWithoutEvent(): void
+    {
+        $policy = $this->policy(confirm: true, approve: false);
+
+        $capturedToken = null;
+        $mailer = $this->createStub(AccountMailerInterface::class);
+        $mailer->method('sendVerification')
+            ->willReturnCallback(function (User $user, string $token) use (&$capturedToken): void {
+                $capturedToken = $token;
+            });
+
+        $recording = $this->recordingDispatcher();
+        $events = $recording[0];
+        $captured = &$recording[1];
+
+        $service = $this->serviceUnderPolicy($policy, $mailer, $events);
+        $service->register('verifier-approval-off@example.com', 'correct-horse-battery');
+
+        self::assertIsString($capturedToken);
+        $status = $service->verifyEmail($capturedToken);
+
+        self::assertSame(UserStatus::Active, $status);
+
+        $user = $this->users()->findOneByEmail('verifier-approval-off@example.com');
+        self::assertInstanceOf(User::class, $user);
+        self::assertSame(UserStatus::Active, $user->getStatus());
+        self::assertNotNull($user->getApprovedAt());
+
+        self::assertSame([], $captured);
+    }
+
     private function users(): UserRepository
     {
         /** @var UserRepository $repository */

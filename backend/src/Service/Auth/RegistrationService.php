@@ -127,13 +127,19 @@ final readonly class RegistrationService
         // Re-verifying an already-approved account must not demote it back to
         // the admin queue.
         if (UserStatus::PendingVerification === $user->getStatus()) {
-            $user->setStatus(UserStatus::PendingApproval);
-            $this->em->flush();
+            if ($this->policy->approvalRequired()) {
+                $user->setStatus(UserStatus::PendingApproval);
+                $this->em->flush();
 
-            // After the flush: the account is now persisted in the queue, so a
-            // listener that counts it sees the true number, and a failed flush
-            // above means no notification goes out.
-            $this->events->dispatch(new UserAwaitingApproval($user, RegistrationMethod::EmailPassword));
+                // After the flush: the account is now persisted in the queue, so
+                // a listener that counts it sees the true number, and a failed
+                // flush above means no notification goes out.
+                $this->events->dispatch(new UserAwaitingApproval($user, RegistrationMethod::EmailPassword));
+            } else {
+                $user->setStatus(UserStatus::Active);
+                $user->setApprovedAt($this->clock->now());
+                $this->em->flush();
+            }
         }
 
         return $user->getStatus();
