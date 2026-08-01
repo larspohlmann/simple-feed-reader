@@ -24,7 +24,7 @@ import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { EntryHeroComponent } from '../magazine/entry-hero.component';
 import { EntryCompactComponent } from '../magazine/entry-compact.component';
 import { SourceGroupComponent } from '../magazine/source-group.component';
-import { focusOpacity } from '../reading-focus';
+import { focusOpacityForSpan } from '../reading-focus';
 import { EntrySplitComponent } from '../magazine/entry-split.component';
 import { EntryWideComponent } from '../magazine/entry-wide.component';
 import { EntryThumbComponent } from '../magazine/entry-thumb.component';
@@ -290,8 +290,11 @@ export class EntryListComponent implements OnDestroy {
     for (const child of Array.from(rows.children) as HTMLElement[]) {
       if (child.classList.contains('foot')) continue;
       const rect = child.getBoundingClientRect();
-      const center = rect.top - rowsTop + rect.height / 2;
-      child.style.opacity = String(focusOpacity(center, viewport));
+      const top = rect.top - rowsTop;
+      // Fade by the row's span, not its centre: a source group taller than the
+      // viewport must stay bright while it fills the screen, not dim to the
+      // minimum because its off-screen centre is a viewport away (#213).
+      child.style.opacity = String(focusOpacityForSpan(top, top + rect.height, viewport));
     }
   }
 

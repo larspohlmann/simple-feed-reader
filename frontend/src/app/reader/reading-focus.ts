@@ -87,18 +87,27 @@ export function needsReadingTail(contentBottom: number, viewportHeight: number):
 }
 
 /**
- * Opacity for a block whose vertical center is `blockCenter` px from the top of
- * a `viewportHeight`-tall scroll viewport. The block nearest the viewport centre
- * is fully opaque (1) and fades linearly to `min` for blocks a half-viewport or
- * more away, so the paragraph you are reading stands out from the rest.
+ * Opacity for a reading block whose top and bottom edges sit `blockTop` and
+ * `blockBottom` px from the top of a `viewportHeight`-tall scroll viewport.
+ *
+ * The fade is measured from the block's nearest edge to the reading centre, not
+ * from its geometric centre: a block whose span covers the centre line is fully
+ * opaque however tall it is, and a block clear of the centre fades linearly to
+ * `min` by the edge that faces it, reaching `min` a half-viewport away. So the
+ * block you are reading stands out, and a source group of many entries stays
+ * bright while it fills the screen instead of dimming because its off-screen
+ * centre is a viewport away (#213). For a short block, top and bottom coincide
+ * and this is a plain distance-from-centre fade.
  */
-export function focusOpacity(
-  blockCenter: number,
+export function focusOpacityForSpan(
+  blockTop: number,
+  blockBottom: number,
   viewportHeight: number,
   min = FOCUS_MIN_OPACITY,
 ): number {
   if (viewportHeight <= 0) return 1;
   const center = viewportHeight / 2;
-  const ratio = Math.min(Math.abs(blockCenter - center) / center, 1);
+  const distanceFromCenter = Math.max(blockTop - center, center - blockBottom, 0);
+  const ratio = Math.min(distanceFromCenter / center, 1);
   return +(1 - ratio * (1 - min)).toFixed(3);
 }

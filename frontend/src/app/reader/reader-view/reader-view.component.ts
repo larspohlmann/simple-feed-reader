@@ -29,7 +29,7 @@ import { ReaderModeService } from '../reader-mode.service';
 import { LanguageService } from '../../core/language.service';
 import { ListScrollMemory } from '../list-scroll-memory';
 import { nextHeaderHidden } from '../header-scroll';
-import { focusOpacity, needsReadingTail, readingBlocks } from '../reading-focus';
+import { focusOpacityForSpan, needsReadingTail, readingBlocks } from '../reading-focus';
 import {
   AXIS_LOCK_MIN,
   atBottom,
@@ -529,8 +529,11 @@ export class ReaderViewComponent {
     const hostTop = scroller.getBoundingClientRect().top;
     for (const block of readingBlocks(content)) {
       const rect = block.getBoundingClientRect();
-      const center = rect.top - hostTop + rect.height / 2;
-      block.style.opacity = String(focusOpacity(center, viewport));
+      const top = rect.top - hostTop;
+      // Fade by the block's span, not its centre, so a block taller than the
+      // viewport — a wide table, a code listing, a long paragraph — stays bright
+      // while it fills the screen instead of dimming from its off-screen centre.
+      block.style.opacity = String(focusOpacityForSpan(top, top + rect.height, viewport));
     }
   }
 
