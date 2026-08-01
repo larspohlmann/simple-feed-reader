@@ -144,16 +144,30 @@ now yields a production instance:
    generatable secret: `APP_SECRET`, `ALTCHA_HMAC_KEY`, `JWT_PASSPHRASE`,
    `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD` (`openssl rand -hex 32`, with a
    `/dev/urandom` fallback).
-4. **Prompt on `/dev/tty`** for the operator-only values: the public URL (one
-   answer fills `APP_FRONTEND_URL`, `APP_BACKEND_URL`, `DEFAULT_URI`),
-   `MAILER_DSN`, `MAIL_FROM` (+ optional `MAIL_FROM_NAME`).
-5. **Two-step fallback:** without a TTY, or when the operator skips a prompt,
-   the placeholders stay in `.env.prod` and the installer stops with exact
-   instructions: edit `.env.prod`, then run `./scripts/prod-start.sh`.
+4. **Prompt on `/dev/tty`** for the operator-only values:
+   - **Public URL**, default **`http://localhost`** — the origin a fresh
+     install actually serves (HTTP mode, port 80), so plain Enter yields a
+     working local/LAN instance. One answer fills `APP_FRONTEND_URL`,
+     `APP_BACKEND_URL`, `DEFAULT_URI`. The docs note the caveat: OAuth
+     sign-in and Safari's Secure-cookie handling want a real HTTPS origin.
+   - **Mail, as SMTP parts, not DSN syntax**: host, port (default 587),
+     username, password — the installer assembles
+     `smtp://user:pass@host:port` itself and URL-encodes the credentials (a
+     `#` or `@` in a hand-written DSN is a classic silent breakage). Plus
+     `MAIL_FROM` (+ optional `MAIL_FROM_NAME`). An "I'll configure mail
+     later" answer drops to the two-step fallback — there is **no** working
+     mail default; every candidate (`null://`, sendmail without an MTA,
+     bundled direct-to-MX postfix) is a silent black hole, which is the exact
+     failure mode #65 exists to kill. `MAILER_DSN` stays required.
+5. **Two-step fallback:** without a TTY, or when the operator skips a required
+   prompt, the placeholders stay in `.env.prod` and the installer stops with
+   exact instructions: edit `.env.prod`, then run `./scripts/prod-start.sh`.
    (`prod-start.sh` refuses to start while a required value is a placeholder —
    compose's `${VAR:?}` enforces it.)
 6. Hand off to `prod-start.sh` (below), report the TLS/HTTP mode, print the
-   prod summary.
+   prod summary. When mail was configured interactively, offer to run the
+   `mailer:test` verification (§6) right away, so a bad relay password
+   surfaces during the install and not at the first lost registration.
 
 A fresh clone has no certificates, so a fresh install starts in **HTTP mode**;
 the summary and the guide explain both ways out: drop `fullchain.pem` +
