@@ -65,6 +65,7 @@ gotchas — lives in [docs/local-docker.md](docs/local-docker.md).
   operators, and the redirect/exchange contract for the SPA.
 - [Local Docker environment](docs/local-docker.md) — run the whole stack
   (MySQL, PHP, nginx with TLS, Mailpit) in Docker.
+- **First-run setup:** creating the initial admin — see [docs/first-run-setup.md](docs/first-run-setup.md).
 - [Cutting a release](docs/releasing.md) — how a `vX.Y.Z` tag on `main` becomes
   the version the install and update scripts hand to users.
 - [Design spec](docs/superpowers/specs/2026-07-21-simple-feed-reader-design.md)
