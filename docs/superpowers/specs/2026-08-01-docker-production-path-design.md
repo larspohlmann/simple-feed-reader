@@ -158,6 +158,15 @@ now yields a production instance:
      working local/LAN instance. One answer fills `APP_FRONTEND_URL`,
      `APP_BACKEND_URL`, `DEFAULT_URI`. The docs note the caveat: OAuth
      sign-in and Safari's Secure-cookie handling want a real HTTPS origin.
+     **The port in that URL is the port the browser uses, so the configure
+     flow derives the published port from it**: `http://localhost:8080` →
+     `WEB_HTTP_PORT=8080`; `https://host:8443` → `WEB_TLS_PORT=8443`; no
+     explicit port → the scheme default. Reverse-proxy setups (public URL
+     ≠ the stack's own port) keep hand-editing `WEB_*_PORT` /
+     `WEB_BIND_ADDRESS`, and the flow says so. Consequence handled with it:
+     the TLS-mode 80→443 redirect must carry the external TLS port when it
+     is not 443 (nginx's `$host` strips ports), so the web entrypoint
+     renders the redirect target from `WEB_TLS_PORT`.
    - **Mail, a three-way choice** (plus `MAIL_FROM`, optional
      `MAIL_FROM_NAME`):
      1. **SMTP relay** — prompts for host, port (default 587), username,

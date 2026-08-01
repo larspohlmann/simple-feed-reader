@@ -1878,6 +1878,173 @@ git commit -m "feat(#65): prod-configure.sh reconfigures URL and mail; shared pr
 
 ---
 
+### Task 13: Browser port follows the public URL
+
+**Execution order note:** added mid-plan at the user's request; executes after Task 12 and BEFORE Task 11 (the PR). The user wants the browser-facing port to be first-class prod configuration.
+
+**Files:**
+- Modify: `scripts/lib.sh` (`configure_public_url` derives and writes the published port)
+- Modify: `docker/web/10-select-mode.sh` + `docker/web/tls.conf` (redirect carries the external TLS port)
+- Modify: `docker-compose.prod.yml` (web service gets `WEB_TLS_PORT` in its environment)
+- Modify: `.env.prod.example`, `docs/docker-production.md` (document the derivation)
+
+**Design:** the port is part of the URL the user already enters, so `configure_public_url` derives it instead of asking a second question: explicit port in the URL wins; otherwise the scheme default (443/https, 80/http). The value lands in `WEB_TLS_PORT` (https scheme) or `WEB_HTTP_PORT` (http scheme), and the flow prints what it derived plus the reverse-proxy escape hatch (hand-edit `WEB_*_PORT`/`WEB_BIND_ADDRESS`). Latent defect fixed with it: `tls.conf`'s `return 301 https://$host$request_uri` silently drops a non-443 external port (`$host` strips ports), so the mode-select entrypoint now renders the redirect target from `WEB_TLS_PORT`.
+
+- [ ] **Step 1: `scripts/lib.sh` — extend `configure_public_url`.** Replace the function with:
+
+```bash
+configure_public_url() {
+  local current public_url scheme hostport derived_port
+  current=$(env_prod_get PUBLIC_URL)
+  public_url=$(prompt_with_default 'Public URL of this instance (as users will reach it)' "${current:-http://localhost}")
+  public_url=${public_url%/}
+  env_prod_set PUBLIC_URL "${public_url}"
+
+  # The port in that URL is the port the browser uses, so it is also the
+  # port this stack publishes. A reverse proxy in between is the exception,
+  # and there WEB_HTTP_PORT / WEB_BIND_ADDRESS stay a hand edit in .env.prod.
+  scheme=${public_url%%://*}
+  hostport=${public_url#*://}
+  hostport=${hostport%%/*}
+  derived_port=''
+  case "${hostport}" in
+    *:*) derived_port=${hostport##*:} ;;
+  esac
+  case "${derived_port}" in
+    '' | *[!0-9]*)
+      if [ "${scheme}" = "https" ]; then
+        derived_port=443
+      else
+        derived_port=80
+      fi
+      ;;
+  esac
+  if [ "${scheme}" = "https" ]; then
+    env_prod_set WEB_TLS_PORT "${derived_port}"
+  else
+    env_prod_set WEB_HTTP_PORT "${derived_port}"
+  fi
+  say "The app will serve on port ${derived_port} (taken from that URL)."
+  say 'Behind a reverse proxy, set WEB_HTTP_PORT and WEB_BIND_ADDRESS in .env.prod by hand instead.'
+}
+```
+
+- [ ] **Step 2: redirect carries the external TLS port.** In `docker/web/tls.conf`, change the port-80 server block's redirect line to the placeholder form:
+
+```nginx
+    return 301 https://$host__TLS_PORT_SUFFIX__$request_uri;
+```
+
+with a comment above it:
+
+```nginx
+    # __TLS_PORT_SUFFIX__ is rendered by 10-select-mode.sh: empty on 443,
+    # ":<port>" otherwise -- $host strips the port the browser used, so the
+    # redirect must carry the external TLS port explicitly.
+```
+
+In `docker/web/10-select-mode.sh`, replace the plain `cp` with rendering:
+
+```sh
+tls_port="${WEB_TLS_PORT:-443}"
+suffix=''
+if [ "${tls_port}" != "443" ]; then
+    suffix=":${tls_port}"
+fi
+sed "s/__TLS_PORT_SUFFIX__/${suffix}/g" "/etc/nginx/available/${mode}.conf" > /etc/nginx/conf.d/default.conf
+```
+
+(`http.conf` contains no placeholder, so the `sed` is a plain copy for it — one code path for both modes.)
+
+- [ ] **Step 3: `docker-compose.prod.yml`** — add to the `web` service's `environment:`, under `WEB_MODE`:
+
+```yaml
+      # The EXTERNAL TLS port, for the http->https redirect target. The
+      # container itself always listens on 443; the mapping publishes it.
+      WEB_TLS_PORT: ${WEB_TLS_PORT:-443}
+```
+
+- [ ] **Step 4: docs.** In `.env.prod.example`, extend the ports comment's first line to: `# Published ports -- the installer and prod-configure.sh derive these from the public URL; edit by hand for reverse-proxy setups.` (keep the rest). In `docs/docker-production.md` §1, extend the Public-URL bullet with one sentence: the port in the URL becomes the published port. In §6 (Reconfigure), extend the first paragraph: changing the URL's port re-publishes the stack on the new port.
+
+- [ ] **Step 5: Verify**
+
+Static: `bash -n scripts/*.sh && shellcheck scripts/*.sh` — clean.
+
+Unit (non-TTY derivation, from the repo root):
+
+```bash
+bash -c '
+  set -euo pipefail
+  source scripts/lib.sh
+  ENV_PROD_FILE=$(mktemp)
+  printf "PUBLIC_URL=https://localhost:8443\nWEB_HTTP_PORT=80\nWEB_TLS_PORT=443\n" > "${ENV_PROD_FILE}"
+  configure_public_url </dev/null >/dev/null
+  [ "$(env_prod_get WEB_TLS_PORT)" = "8443" ]
+  printf "PUBLIC_URL=http://localhost:8080\nWEB_HTTP_PORT=80\nWEB_TLS_PORT=443\n" > "${ENV_PROD_FILE}"
+  configure_public_url </dev/null >/dev/null
+  [ "$(env_prod_get WEB_HTTP_PORT)" = "8080" ]
+  printf "PUBLIC_URL=http://localhost\n" > "${ENV_PROD_FILE}"
+  configure_public_url </dev/null >/dev/null
+  [ "$(env_prod_get WEB_HTTP_PORT)" = "80" ]
+  echo PORT-DERIVE-OK
+'
+```
+
+Expected: `PORT-DERIVE-OK`.
+
+Rendered-redirect check (build the web image, render both ways; mkcert into a temp dir first):
+
+```bash
+docker build -f docker/web/Dockerfile -t sfr-web-portcheck .
+certdir=$(mktemp -d)
+mkcert -cert-file "${certdir}/fullchain.pem" -key-file "${certdir}/privkey.pem" localhost >/dev/null 2>&1
+docker run --rm -e WEB_TLS_PORT=8445 -v "${certdir}:/etc/nginx/certs:ro" sfr-web-portcheck \
+  sh -c '/docker-entrypoint.d/10-select-mode.sh >/dev/null && grep "return 301" /etc/nginx/conf.d/default.conf'
+docker run --rm -v "${certdir}:/etc/nginx/certs:ro" sfr-web-portcheck \
+  sh -c '/docker-entrypoint.d/10-select-mode.sh >/dev/null && grep "return 301" /etc/nginx/conf.d/default.conf'
+rm -rf "${certdir}"
+```
+
+Expected: first grep prints `return 301 https://$host:8445$request_uri;`, second prints `return 301 https://$host$request_uri;` (no suffix).
+
+Live redirect smoke (stand the stack briefly, then tear down — same pattern as Task 10, no mail catcher needed):
+
+```bash
+cat > .env.prod <<EOF
+PUBLIC_URL=https://localhost:8445
+MAILER_DSN=smtp://host.docker.internal:11025
+MAIL_FROM=prod-smoke@example.org
+MYSQL_ROOT_PASSWORD=$(openssl rand -hex 16)
+MYSQL_PASSWORD=$(openssl rand -hex 16)
+APP_SECRET=$(openssl rand -hex 32)
+ALTCHA_HMAC_KEY=$(openssl rand -hex 32)
+JWT_PASSPHRASE=$(openssl rand -hex 32)
+WEB_HTTP_PORT=8081
+WEB_TLS_PORT=8445
+WEB_BIND_ADDRESS=127.0.0.1
+EOF
+mkcert -cert-file docker/certs-prod/fullchain.pem -key-file docker/certs-prod/privkey.pem localhost 127.0.0.1 ::1
+./scripts/prod-start.sh
+curl -fsk -o /dev/null -w '%{http_code} %{redirect_url}\n' http://localhost:8081/api/health
+```
+
+Expected: `301 https://localhost:8445/api/health` — the configured browser port survives the redirect. Then clean up:
+
+```bash
+./scripts/prod-stop.sh
+docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod down -v
+rm -f .env.prod docker/certs-prod/fullchain.pem docker/certs-prod/privkey.pem
+```
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add scripts/lib.sh docker/web/tls.conf docker/web/10-select-mode.sh docker-compose.prod.yml .env.prod.example docs/docker-production.md
+git commit -m "feat(#65): browser port follows the public URL; TLS redirect keeps the external port"
+```
+
+---
+
 ### Task 10: Live verification of the whole path
 
 No new files — this task proves the stack on the running Docker host and cleans up after itself. It needs the Docker daemon and takes several minutes (two image builds).
