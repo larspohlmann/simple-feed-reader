@@ -5,6 +5,7 @@ import { provideRouter, Router } from '@angular/router';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { API_BASE_URL } from '../core/api';
 import { CatalogStore } from './catalog.store';
+import { CatalogCategoryDto } from './catalog.models';
 import { DiscoverComponent } from './discover.component';
 
 const CATALOG = {
@@ -113,7 +114,9 @@ describe('DiscoverComponent', () => {
   /** The catalog store is app-wide, so a test needing a different catalog has to
    *  reset it and mount its own component — the same path the scroll-spy test
    *  below uses to reach the genuine first-visit state. */
-  const mountWith = (catalog: unknown): ComponentFixture<DiscoverComponent> => {
+  const mountWith = (catalog: {
+    categories: CatalogCategoryDto[];
+  }): ComponentFixture<DiscoverComponent> => {
     TestBed.inject(CatalogStore).invalidate();
     const local = TestBed.createComponent(DiscoverComponent);
     local.detectChanges();
@@ -250,7 +253,7 @@ describe('DiscoverComponent', () => {
       // Drive an intersection through the captured callback and confirm it
       // flows into ActiveCategory.
       capturedCallback!(
-        [{ isIntersecting: true, target: observed[0] } as IntersectionObserverEntry],
+        [{ isIntersecting: true, target: observed[0] } as unknown as IntersectionObserverEntry],
         {} as IntersectionObserver,
       );
       expect(local.componentInstance.active.activeId()).toBe(1);

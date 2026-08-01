@@ -9,13 +9,16 @@ import { SubscriptionDto } from '../models';
 
 const sub: SubscriptionDto = {
   id: 5,
+  feedId: 50,
   title: 'Heise',
+  faviconUrl: null,
   customTitle: null,
   feedUrl: 'https://heise.de/rss',
   siteUrl: 'https://heise.de',
   status: 'active',
   sourceFormat: 'xml',
   createdAt: 'x',
+  lastFetchedAt: null,
   position: 0,
   tags: [{ id: 1, name: 'Tech', color: null, icon: null, position: 0 }],
   unreadCount: 3,

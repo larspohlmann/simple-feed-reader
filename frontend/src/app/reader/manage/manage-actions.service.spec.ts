@@ -12,13 +12,16 @@ import { SubscriptionDto, TagDto } from '../models';
 
 const sub: SubscriptionDto = {
   id: 5,
+  feedId: 50,
   title: 'Heise',
+  faviconUrl: null,
   customTitle: null,
   feedUrl: 'u',
   siteUrl: null,
   status: 'active',
   sourceFormat: 'xml',
   createdAt: 'x',
+  lastFetchedAt: null,
   position: 0,
   tags: [],
   unreadCount: 0,
