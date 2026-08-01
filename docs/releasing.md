@@ -1,9 +1,25 @@
 # Cutting a release
 
-A **release is a plain version tag `vX.Y.Z` on `main`** — nothing more. There is
-no GitHub Release object to create and no separate artifact to upload. The
-`scripts/install.sh` and `scripts/update.sh` helpers resolve "the latest
-release" straight from git: the highest `vX.Y.Z` tag reachable from `main`.
+A **release is a plain version tag `vX.Y.Z` on `main`** — that tag push is
+still the single release action; nothing else needs preparing by hand. Pushing
+it also triggers [`.github/workflows/release.yml`](../.github/workflows/release.yml),
+which:
+
+- guards that the tagged commit is on `main` and that CI went green on that
+  exact SHA (a tag push proves neither on its own — the workflow's comments
+  explain why),
+- publishes a GitHub Release for the tag, marked latest, and
+- for every release after the first, writes the generated release notes into
+  [CHANGELOG.md](../CHANGELOG.md) and commits that to `main` as
+  `github-actions[bot]`.
+
+The first release — the one with no earlier `vX.Y.Z` tag to diff against —
+publishes a GitHub Release with an `Initial release.` body and does not touch
+`CHANGELOG.md`; there is nothing to generate notes from yet.
+
+The `scripts/install.sh` and `scripts/update.sh` helpers do not depend on the
+GitHub Release object or on `CHANGELOG.md`. They resolve "the latest release"
+straight from git: the highest `vX.Y.Z` tag reachable from `main`.
 
 This is deliberately separate from the two tag families the project already has:
 
@@ -34,27 +50,25 @@ must never carry a `-dev.N` (or any other) suffix.**
 From an up-to-date checkout, with CI green on the `develop` commit you want to
 ship:
 
-Before merging, update [CHANGELOG.md](../CHANGELOG.md) on `develop`: rename
-the `## [Unreleased]` section to the new version with the date
-(`## [vX.Y.Z] - YYYY-MM-DD`), add its compare link at the bottom, and start a
-fresh empty `## [Unreleased]` section above it.
-
 ```bash
-# 2. Merge develop into main (git-flow: main only ever fast-forwards from develop).
+# 1. Merge develop into main (git-flow: main only ever fast-forwards from develop).
 git checkout main
 git pull --ff-only
 git merge --ff-only develop
 
-# 3. Tag the release. Pick the next version (see below). Annotated tag.
+# 2. Tag the release. Pick the next version (see below). Annotated tag.
 git tag -a v0.5.0 -m 'Release v0.5.0'
 
-# 4. Publish.
+# 3. Publish.
 git push origin main
 git push origin v0.5.0
 ```
 
-Within a minute the one-line installer resolves to the new tag, and every
-existing install moves to it with `./scripts/update.sh`.
+The tag push takes it from there: `.github/workflows/release.yml` guards the
+commit, publishes the GitHub Release, and (after the first release) commits
+the changelog section back to `main`. Within a minute the one-line installer
+also resolves to the new tag, and every existing install moves to it with
+`./scripts/update.sh`.
 
 ## Choosing the version number
 
@@ -75,9 +89,3 @@ The install one-liner is fetched from `main`
 `scripts/` directory and this document — otherwise the one-liner would fetch a
 script that immediately fails to find a release to install. After that first
 release the chicken-and-egg is gone.
-
-## Not in scope
-
-Automating releases (a workflow that tags on merge, generated changelogs) is a
-possible later addition. For now the steps above are done by hand, which keeps
-the release moment an explicit, reviewed decision.

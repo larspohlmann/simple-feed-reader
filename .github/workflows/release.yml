@@ -1,0 +1,152 @@
+# Publishes a GitHub Release when a plain vX.Y.Z tag is pushed on main, and
+# writes the release notes back into CHANGELOG.md.
+#
+# Like the Strato deploy, a tag push proves nothing on its own: it can name any
+# commit, and CI does not run on tags. Two guard steps supply what the trigger
+# cannot -- the commit is on main, and CI went green on that exact SHA -- before
+# anything is published or committed back to main.
+#
+# A push event on a tag runs THIS FILE AS IT EXISTS AT THAT TAG, so the helper
+# script and its test are the versions shipped with the release.
+name: Release
+
+on:
+  push:
+    # GitHub filter patterns, not regex: '.' is literal and '+' means "one or
+    # more of the preceding character". This matches vX.Y.Z and nothing else;
+    # the vX.Y.Z-dev.N deploy tags are deliberately unmatched, so the two lanes
+    # stay separate.
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+
+# One release at a time.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+# Create the release, and push the changelog commit to main.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Publish release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.repository == 'larspohlmann/simple-feed-reader'
+
+    steps:
+      # fetch-depth: 0 populates origin/main (guard 1) and all tags (previous-tag
+      # lookup). Credentials are persisted on purpose here: the changelog step
+      # pushes back to main.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # The changelog helper's output is auto-committed to main below, so verify
+      # it before trusting it -- at the tagged commit's version of the script.
+      - name: Verify the changelog helper
+        run: scripts/test/changelog-insert-release.test.sh
+
+      # GUARD 1 of 2: the tagged commit must be on main.
+      - name: Check the tagged commit is on main
+        run: |
+          set -euo pipefail
+          if ! git rev-parse --verify --quiet refs/remotes/origin/main >/dev/null; then
+            echo "!!! origin/main is not in this checkout; fix fetch-depth, do not drop the check." >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" refs/remotes/origin/main; then
+            echo "!!! ${GITHUB_REF_NAME} points at ${GITHUB_SHA}, which is not on main. Refusing to release." >&2
+            echo "!!!   git tag -d ${GITHUB_REF_NAME} && git push origin :${GITHUB_REF_NAME}" >&2
+            exit 1
+          fi
+          echo "==> ${GITHUB_SHA} is on main"
+
+      # GUARD 2 of 2: CI must be green for this commit. Absence is failure.
+      - name: Check CI passed for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          conclusions="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${GITHUB_SHA}&status=completed" \
+            --jq '.workflow_runs[] | select(.event == "push") | .conclusion')"
+          if [ -z "${conclusions}" ]; then
+            echo "!!! no completed CI run found for ${GITHUB_SHA}. Refusing to release." >&2
+            exit 1
+          fi
+          failed=0
+          while IFS= read -r conclusion; do
+            echo "    ${conclusion}"
+            [ "${conclusion}" = "success" ] || failed=1
+          done <<< "${conclusions}"
+          [ "${failed}" -eq 0 ] || { echo "!!! CI is not green for ${GITHUB_SHA}." >&2; exit 1; }
+          echo "==> CI is green for ${GITHUB_SHA}"
+
+      # The previous release is the highest plain-semver tag below this one. The
+      # grep is the same load-bearing filter scripts/lib.sh uses: it keeps the
+      # vX.Y.Z-dev.N deploy tags out of the release line. Empty means this is the
+      # first release.
+      - name: Determine the previous release
+        id: previous
+        run: |
+          set -euo pipefail
+          previous="$(git tag --list 'v*' \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+            | grep -vFx "${GITHUB_REF_NAME}" \
+            | sort -V | tail -n 1)"
+          echo "previous=${previous}" >> "${GITHUB_OUTPUT}"
+          if [ -n "${previous}" ]; then
+            echo "==> previous release: ${previous}"
+          else
+            echo "==> no previous release; this is the first"
+          fi
+
+      # First release: a plain body, no generated dump of every past PR.
+      # Later releases: notes from the PRs merged since the previous tag.
+      - name: Build the release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          previous='${{ steps.previous.outputs.previous }}'
+          if [ -z "${previous}" ]; then
+            printf 'Initial release.\n' > "${RUNNER_TEMP}/notes.md"
+          else
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+              -f tag_name="${GITHUB_REF_NAME}" \
+              -f previous_tag_name="${previous}" \
+              --jq .body > "${RUNNER_TEMP}/notes.md"
+          fi
+
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file "${RUNNER_TEMP}/notes.md" \
+            --latest \
+            --verify-tag
+
+      # Only for later releases: write the notes into CHANGELOG.md and push to
+      # main as the actions bot. Skipped for the first release (empty previous).
+      - name: Update CHANGELOG.md on main
+        if: steps.previous.outputs.previous != ''
+        run: |
+          set -euo pipefail
+          git checkout main
+          git merge --ff-only "${GITHUB_SHA}"
+          scripts/changelog-insert-release.sh "${GITHUB_REF_NAME}" "$(date -u +%Y-%m-%d)" \
+            < "${RUNNER_TEMP}/notes.md"
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "==> CHANGELOG.md unchanged; nothing to commit"
+            exit 0
+          fi
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add CHANGELOG.md
+          git commit -m "docs: changelog for ${GITHUB_REF_NAME} [skip ci]"
+          git push origin main
