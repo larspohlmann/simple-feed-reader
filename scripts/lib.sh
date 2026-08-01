@@ -238,6 +238,18 @@ generate_secret() {
   printf '\n'
 }
 
+# Make the web first-admin setup usable out of the box: generate
+# ADMIN_SETUP_SECRET when it is still empty, so a fresh install can be
+# finished in the browser without a shell round-trip. Carrying the secret
+# after the first admin exists is inert -- the setup endpoint self-disables
+# on hasAnyAdmin -- and print_prod_summary only shows it while the API
+# still reports that setup is needed.
+ensure_admin_setup_secret() {
+  if [ -z "$(env_prod_get ADMIN_SETUP_SECRET)" ]; then
+    env_prod_set ADMIN_SETUP_SECRET "$(generate_secret)"
+  fi
+}
+
 # Percent-encode for safe embedding in a DSN: RFC 3986 unreserved characters
 # pass through, everything else becomes %XX. A raw '#' or '@' in a hand-typed
 # DSN truncates it silently, which is why the installer never asks for one.
@@ -351,14 +363,32 @@ wait_for_php_ready() {
 }
 
 print_prod_summary() {
-  local base_url public_url
+  local base_url public_url setup_status admin_setup_secret
   base_url=$(prod_base_url)
   public_url=$(env_prod_get PUBLIC_URL)
   printf '\n%s\n\n' "${_c_bold}simple-feed-reader (production) is running${_c_reset}"
   printf '  Public URL ........  %s\n' "${public_url}"
   printf '  Local health ......  %s/api/health\n' "${base_url}"
   printf '\n'
-  printf '  Create the first admin (docs/first-run-setup.md):\n'
+  # Show the setup secret ONLY while the instance still has no administrator
+  # (the API is authoritative); printing it on every later run would put a
+  # live-looking secret into scrollback for no benefit. If the status probe
+  # fails the block is skipped -- the console command below always works.
+  setup_status=$(curl -fsk --max-time 5 "${base_url}/api/setup/status" 2>/dev/null || true)
+  admin_setup_secret=$(env_prod_get ADMIN_SETUP_SECRET)
+  if [ -n "${admin_setup_secret}" ]; then
+    case "${setup_status}" in
+      *'"needsSetup":true'*)
+        printf '  No administrator exists yet. Create the first one in the browser:\n'
+        printf '    1. Open %s -- the one-time setup screen appears instead of login.\n' "${public_url}"
+        printf '    2. Enter your email, a password, and this setup secret:\n'
+        printf '         %s\n' "${admin_setup_secret}"
+        printf '    3. Afterwards, remove ADMIN_SETUP_SECRET from .env.prod.\n'
+        printf '\n'
+        ;;
+    esac
+  fi
+  printf '  Create the first admin over the shell instead (docs/first-run-setup.md):\n'
   printf '    docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod \\\n'
   printf '      exec -u www-data php bin/console app:admin:create you@example.com\n'
   printf '\n'
