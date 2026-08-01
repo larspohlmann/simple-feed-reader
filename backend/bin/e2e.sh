@@ -4,9 +4,10 @@
 #   composer e2e            # from backend/
 #
 # Steps: verify the stack is up, purge the throwaway accounts a previous run
-# left behind, seed the fixtures admin, reset the per-IP limiter and
-# ALTCHA-replay pools (so repeated runs do not trip rate limits), then run the
-# e2e testsuite from the host against the public TLS endpoint.
+# left behind, seed the fixtures admin and give it a subscription (so the reader
+# shell renders instead of redirecting to onboarding — #222), reset the per-IP
+# limiter and ALTCHA-replay pools (so repeated runs do not trip rate limits),
+# then run the e2e testsuite from the host against the public TLS endpoint.
 #
 # The purge runs before the suite, not after: an interrupted or failed run then
 # still gets cleaned up on the next one, and a failed run leaves its data in
@@ -30,6 +31,9 @@ docker compose -f "$REPO_ROOT/docker-compose.yml" exec -T php bin/console app:e2
 
 echo "==> Seeding fixtures admin ..."
 docker compose -f "$REPO_ROOT/docker-compose.yml" exec -T php bin/console app:e2e:seed-admin
+
+echo "==> Ensuring the fixtures admin has a subscription ..."
+docker compose -f "$REPO_ROOT/docker-compose.yml" exec -T php bin/console app:e2e:seed-admin-subscription
 
 echo "==> Resetting rate-limiter and ALTCHA-replay pools ..."
 docker compose -f "$REPO_ROOT/docker-compose.yml" exec -T php \
