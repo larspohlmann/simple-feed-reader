@@ -9,3 +9,8 @@
 
 # Per-machine agent config — absolute paths to memory files, etc.
 AGENTS.local.md
+
+# Operator secrets and TLS material for the production stack -- never commit.
+/.env.prod
+/docker/certs-prod/*
+!/docker/certs-prod/.gitkeep
