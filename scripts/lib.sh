@@ -122,7 +122,7 @@ bring_up_stack() {
 # CA bundle trusts the mkcert certificate is irrelevant, and -k avoids a
 # confusing TLS error while the stack is still warming up.
 wait_for_health() {
-  local url='https://localhost:8443/api/health'
+  local url="${1:-https://localhost:8443/api/health}"
   local deadline=$(( SECONDS + 120 ))
   say "Waiting for the API at ${url} ..."
   while [ "${SECONDS}" -lt "${deadline}" ]; do
@@ -147,10 +147,196 @@ print_summary() {
 
   Everyday commands (run from the simple-feed-reader directory):
     ./scripts/frontend-stop.sh         stop the dev frontend
-    ./scripts/frontend-prod-start.sh   build & start the production preview (:8444)
+    ./scripts/prod-start.sh            run the production stack (docs/docker-production.md)
     ./scripts/update.sh                update to the latest release
     docker compose logs -f frontend    watch the first-run npm install
     docker compose down                stop everything (your data is kept)
 
 SUMMARY
+}
+
+# --- production stack -------------------------------------------------------
+# The prod stack is a standalone compose file under its own project name, so
+# it can never collide with (or inherit from) the dev stack. All three flags
+# travel together -- always go through prod_compose.
+ENV_PROD_FILE="${REPO_ROOT}/.env.prod"
+
+prod_compose() {
+  ( cd -- "${REPO_ROOT}" \
+      && docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml \
+           --env-file .env.prod "$@" )
+}
+
+# The value of KEY in .env.prod, '' when absent. Surrounding double quotes are
+# stripped, matching how docker compose reads the file.
+env_prod_get() {
+  local line
+  line=$(grep -E "^$1=" "${ENV_PROD_FILE}" 2>/dev/null | tail -n 1 || true)
+  line=${line#*=}
+  line=${line#\"}
+  line=${line%\"}
+  printf '%s' "${line}"
+}
+
+# Set KEY to VALUE in .env.prod, replacing the existing line or appending.
+# Pure shell on purpose: sed -i differs between BSD and GNU, and awk -v
+# mangles backslashes in values.
+env_prod_set() {
+  local key=$1 value=$2 tmp replaced=0 line
+  tmp=$(mktemp)
+  while IFS= read -r line; do
+    case "${line}" in
+      "${key}="*)
+        printf '%s=%s\n' "${key}" "${value}"
+        replaced=1
+        ;;
+      *)
+        printf '%s\n' "${line}"
+        ;;
+    esac
+  done < "${ENV_PROD_FILE}" > "${tmp}"
+  if [ "${replaced}" -eq 0 ]; then
+    printf '%s=%s\n' "${key}" "${value}" >> "${tmp}"
+  fi
+  mv "${tmp}" "${ENV_PROD_FILE}"
+}
+
+# The .env.prod values docker-compose.prod.yml refuses to start without.
+# Keep in step with the ${VAR:?} interpolations there.
+ENV_PROD_REQUIRED='PUBLIC_URL MAILER_DSN MAIL_FROM MYSQL_ROOT_PASSWORD MYSQL_PASSWORD APP_SECRET ALTCHA_HMAC_KEY JWT_PASSPHRASE'
+
+# Names of required values that are still empty, one per line. Empty output
+# means the file is complete.
+env_prod_missing() {
+  local key
+  for key in ${ENV_PROD_REQUIRED}; do
+    if [ -z "$(env_prod_get "${key}")" ]; then
+      printf '%s\n' "${key}"
+    fi
+  done
+}
+
+# 64 hex characters of real randomness -- the same shape `openssl rand -hex 32`
+# produces everywhere else in this project's docs.
+generate_secret() {
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 32
+    return 0
+  fi
+  od -An -tx1 -N32 /dev/urandom | tr -d ' \n'
+  printf '\n'
+}
+
+# Percent-encode for safe embedding in a DSN: RFC 3986 unreserved characters
+# pass through, everything else becomes %XX. A raw '#' or '@' in a hand-typed
+# DSN truncates it silently, which is why the installer never asks for one.
+url_encode() {
+  local raw=$1 out='' ch i
+  for (( i = 0; i < ${#raw}; i++ )); do
+    ch=${raw:i:1}
+    case "${ch}" in
+      [a-zA-Z0-9.~_-]) out="${out}${ch}" ;;
+      *) out="${out}$(printf '%%%02X' "'${ch}")" ;;
+    esac
+  done
+  printf '%s' "${out}"
+}
+
+# Interactive prompts. All read from /dev/tty, never stdin -- stdin is the
+# script itself under `curl | bash`. Without a terminal they return the
+# default (or nothing), so callers degrade to the two-step flow.
+prompt_with_default() {
+  local question=$1 default=$2 answer
+  if [ ! -r /dev/tty ]; then
+    printf '%s' "${default}"
+    return 0
+  fi
+  printf '%s [%s]: ' "${question}" "${default}" >/dev/tty
+  IFS= read -r answer </dev/tty || answer=''
+  printf '%s' "${answer:-${default}}"
+}
+
+prompt_value() {
+  local question=$1 answer
+  if [ ! -r /dev/tty ]; then
+    return 0
+  fi
+  printf '%s: ' "${question}" >/dev/tty
+  IFS= read -r answer </dev/tty || answer=''
+  printf '%s' "${answer}"
+}
+
+prompt_secret_value() {
+  local question=$1 answer
+  if [ ! -r /dev/tty ]; then
+    return 0
+  fi
+  printf '%s: ' "${question}" >/dev/tty
+  IFS= read -rs answer </dev/tty || answer=''
+  printf '\n' >/dev/tty
+  printf '%s' "${answer}"
+}
+
+prod_certs_present() {
+  [ -f "${REPO_ROOT}/docker/certs-prod/fullchain.pem" ] \
+    && [ -f "${REPO_ROOT}/docker/certs-prod/privkey.pem" ]
+}
+
+# The local base URL of the running prod stack (for probes and the summary).
+# This is the LOCAL view; the public origin is PUBLIC_URL and may differ.
+prod_base_url() {
+  local port
+  if prod_certs_present; then
+    port=$(env_prod_get WEB_TLS_PORT)
+    port=${port:-443}
+    if [ "${port}" = "443" ]; then
+      printf 'https://localhost'
+    else
+      printf 'https://localhost:%s' "${port}"
+    fi
+    return 0
+  fi
+  port=$(env_prod_get WEB_HTTP_PORT)
+  port=${port:-80}
+  if [ "${port}" = "80" ]; then
+    printf 'http://localhost'
+  else
+    printf 'http://localhost:%s' "${port}"
+  fi
+}
+
+# The prod php entrypoint writes var/.ready after the cache warmup; console
+# commands (migrations, key generation) must not race it.
+wait_for_php_ready() {
+  local deadline=$(( SECONDS + 180 ))
+  say 'Waiting for the PHP runtime ...'
+  while [ "${SECONDS}" -lt "${deadline}" ]; do
+    if prod_compose exec -T php test -f var/.ready 2>/dev/null; then
+      ok 'PHP runtime is ready.'
+      return 0
+    fi
+    sleep 2
+  done
+  die 'The PHP container did not become ready. Check:  docker compose -p simple-feed-reader-prod logs php'
+}
+
+print_prod_summary() {
+  local base_url public_url
+  base_url=$(prod_base_url)
+  public_url=$(env_prod_get PUBLIC_URL)
+  printf '\n%s\n\n' "${_c_bold}simple-feed-reader (production) is running${_c_reset}"
+  printf '  Public URL ........  %s\n' "${public_url}"
+  printf '  Local health ......  %s/api/health\n' "${base_url}"
+  printf '\n'
+  printf '  Create the first admin (docs/first-run-setup.md):\n'
+  printf '    docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod \\\n'
+  printf '      exec -u www-data php bin/console app:admin:create you@example.com\n'
+  printf '\n'
+  printf '  Verify mail delivery (docs/docker-production.md):\n'
+  printf '    docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod \\\n'
+  printf '      exec -u www-data php bin/console mailer:test you@example.com\n'
+  printf '\n'
+  printf '  Stop the stack (data is kept):  ./scripts/prod-stop.sh\n'
+  printf '  Update to a new release:        see docs/docker-production.md\n'
+  printf '\n'
 }
