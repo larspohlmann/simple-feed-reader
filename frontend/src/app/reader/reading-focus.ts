@@ -97,8 +97,30 @@ export function focusOpacity(
   viewportHeight: number,
   min = FOCUS_MIN_OPACITY,
 ): number {
+  return focusOpacityForSpan(blockCenter, blockCenter, viewportHeight, min);
+}
+
+/**
+ * Opacity for a reading block whose top and bottom edges sit `blockTop` and
+ * `blockBottom` px from the top of a `viewportHeight`-tall scroll viewport.
+ *
+ * The fade is measured from the block's nearest edge to the reading centre, not
+ * from its geometric centre: a block whose span covers the centre line is fully
+ * opaque however tall it is, and a block clear of the centre fades by the edge
+ * that faces it. A source group of many entries stays bright while it fills the
+ * screen, instead of dimming to `min` because its off-screen centre is a
+ * viewport away (#213). For a short block, top and bottom coincide and this is
+ * the plain centre fade `focusOpacity` gives.
+ */
+export function focusOpacityForSpan(
+  blockTop: number,
+  blockBottom: number,
+  viewportHeight: number,
+  min = FOCUS_MIN_OPACITY,
+): number {
   if (viewportHeight <= 0) return 1;
   const center = viewportHeight / 2;
-  const ratio = Math.min(Math.abs(blockCenter - center) / center, 1);
+  const distanceFromCenter = Math.max(blockTop - center, center - blockBottom, 0);
+  const ratio = Math.min(distanceFromCenter / center, 1);
   return +(1 - ratio * (1 - min)).toFixed(3);
 }

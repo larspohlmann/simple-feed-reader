@@ -1,4 +1,10 @@
-import { FOCUS_MIN_OPACITY, focusOpacity, needsReadingTail, readingBlocks } from './reading-focus';
+import {
+  FOCUS_MIN_OPACITY,
+  focusOpacity,
+  focusOpacityForSpan,
+  needsReadingTail,
+  readingBlocks,
+} from './reading-focus';
 
 describe('needsReadingTail', () => {
   it('gives an article taller than the viewport room to scroll on', () => {
@@ -40,6 +46,42 @@ describe('focusOpacity', () => {
 
   it('degrades to fully opaque when the viewport has no measured height', () => {
     expect(focusOpacity(0, 0)).toBe(1);
+  });
+});
+
+describe('focusOpacityForSpan', () => {
+  it('matches focusOpacity for a zero-height block, whatever its position', () => {
+    // A short list row degenerates to a point, so the span curve must not change
+    // the behaviour the article view already had.
+    expect(focusOpacityForSpan(500, 500, 1000)).toBe(focusOpacity(500, 1000));
+    expect(focusOpacityForSpan(600, 600, 1000)).toBe(focusOpacity(600, 1000));
+    expect(focusOpacityForSpan(0, 0, 1000)).toBe(focusOpacity(0, 1000));
+  });
+
+  it('keeps a block fully opaque while its span covers the reading centre', () => {
+    // A source group taller than the viewport whose centre is far off-screen: it
+    // still straddles the centre line, so it is what the reader is reading (#213).
+    expect(focusOpacityForSpan(-400, 600, 1000)).toBe(1);
+    expect(focusOpacityForSpan(0, 5000, 1000)).toBe(1);
+    expect(focusOpacityForSpan(500, 500, 1000)).toBe(1); // edge touching the centre
+  });
+
+  it('fades a block clear of the centre by its nearest edge, not its centre', () => {
+    // A tall block sitting just below the centre: its geometric centre is a full
+    // viewport away (would clamp to the minimum), but its top edge is near, so it
+    // stays close to opaque.
+    const nearEdge = focusOpacityForSpan(600, 1600, 1000); // top 100px below centre
+    expect(nearEdge).toBe(focusOpacity(600, 1000));
+    expect(nearEdge).toBeGreaterThan(FOCUS_MIN_OPACITY);
+  });
+
+  it('fades to the minimum once the nearest edge is a half-viewport away', () => {
+    expect(focusOpacityForSpan(1000, 2000, 1000)).toBe(FOCUS_MIN_OPACITY); // top at centre+half
+    expect(focusOpacityForSpan(-2000, 0, 1000)).toBe(FOCUS_MIN_OPACITY); // bottom at centre-half
+  });
+
+  it('degrades to fully opaque when the viewport has no measured height', () => {
+    expect(focusOpacityForSpan(0, 400, 0)).toBe(1);
   });
 });
 
