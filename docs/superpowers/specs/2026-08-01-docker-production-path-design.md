@@ -55,8 +55,14 @@ Services:
 | Service | What |
 |---|---|
 | `mysql` | `mysql:8.4`, own data volume, credentials from the env file, **no host port published** |
-| `php` | the new multi-stage `prod` image (§2) |
+| `php` | the new multi-stage `prod` image (§2), **no host port published** |
 | `web` | one nginx container: serves the built SPA and proxies `/api` to php-fpm, same-origin (the topology the preview proved) |
+
+**Minimal port surface.** The `web` container is the stack's only published
+surface — at most two TCP ports (80/443, both overridable), each with a
+configurable bind address (`WEB_BIND_ADDRESS`, default `0.0.0.0`; a
+reverse-proxy setup binds `127.0.0.1` so only the proxy can reach it). MySQL
+and PHP-FPM are reachable solely on the internal Docker network.
 
 **No Mailpit.** Mailpit exists only in the dev compose file.
 
@@ -127,10 +133,12 @@ start:
   plainly, for an operator's reverse proxy (Caddy, Traefik, nginx) in front.
 
 Selection is automatic (cert files exist or not); `WEB_MODE` overrides it
-explicitly. Compose publishes `${WEB_TLS_PORT:-443}` → 443 and
-`${WEB_HTTP_PORT:-80}` → 80. The docs cover both modes, including a sample
-reverse-proxy snippet and the note that the public origin must be HTTPS (the
-`__Host-` OAuth cookie requires it).
+explicitly. Compose publishes
+`${WEB_BIND_ADDRESS:-0.0.0.0}:${WEB_TLS_PORT:-443}` → 443 and the same for
+`${WEB_HTTP_PORT:-80}` → 80 — the stack's entire host surface. The docs cover
+both modes, including a sample reverse-proxy snippet (with
+`WEB_BIND_ADDRESS=127.0.0.1`) and the note that the public origin must be
+HTTPS (the `__Host-` OAuth cookie requires it).
 
 ### 5. Scripts — the PR #209 set, adjusted
 
