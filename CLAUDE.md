@@ -169,8 +169,9 @@ control, not ceremony — do not "simplify" it away, and do not delete
   `main`. Every merge to `develop` is shippable.
 - **Branch names embed the GitHub issue number**: `feature/114-tag-triggered-deploy`,
   `fix/112-arbitrary-join-on`.
-- Because PRs target `develop`, GitHub does **not** auto-close the issue —
-  **close it manually when the PR merges.**
+- `develop` is the repository's **default branch**, so a PR whose body says
+  `Closes #NN` **auto-closes the issue on merge**. Keep writing `Closes #NN`;
+  after a merge, verify the issue closed rather than closing it by hand.
 - **Deploys are tag-triggered**: pushing a `vX.Y.Z-dev.N` tag on a `develop` commit
   runs `.github/workflows/deploy-strato.yml`, which requires that the commit is on
   `develop` and that CI was green on that exact SHA. A tag push runs the workflow
