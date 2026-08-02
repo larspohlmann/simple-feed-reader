@@ -1,7 +1,8 @@
 // src/app/shared/toggle/toggle.component.scss
 // Track/thumb measurements mirror the sidebar's organise switch
 // (reader/sidebar/sidebar.component.scss) -- the only other on/off switch in
-// the app: 32px track, 12px thumb, 2px inset, 16px travel.
+// the app: var(--space-6) (32px) track, var(--space-3) (12px) thumb,
+// var(--space-0) (2px) inset, var(--space-4) (16px) travel.
 .toggle {
   display: inline-flex;
   align-items: center;
@@ -20,10 +21,7 @@
 .track {
   position: relative;
   display: inline-block;
-
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     tuned switch-track measure, not a spacing value. */
-  width: 32px;
+  width: var(--space-6);
   height: var(--space-4);
   border-radius: var(--radius-pill);
   background: var(--border-strong);
@@ -46,7 +44,8 @@
 }
 
 .toggle input:checked + .track .thumb {
-  /* Travel = track (32px) minus thumb (12px) minus both 2px insets = 16px. */
+  /* Travel = track (var(--space-6), 32px) minus thumb (var(--space-3), 12px)
+     minus both insets (var(--space-0), 2px each) = 16px. */
   transform: translateX(var(--space-4));
 }
 
