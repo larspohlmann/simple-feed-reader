@@ -63,9 +63,9 @@
       "adminQueue": "Admin – Benutzerliste",
       "signOut": "Abmelden",
       "delete": "Mein Konto löschen",
-      "deleteTitle": "Ihr Konto löschen?",
-      "deleteNote": "Das Löschen Ihres Kontos entfernt Ihre Abonnements, Tags und Lesezustände dauerhaft. Exportieren Sie Ihre Feeds vorher, wenn Sie sie behalten möchten.",
-      "deleteMessage": "Dies löscht Ihr Konto dauerhaft, mit allen Abonnements, Tags und Lesezuständen. Das kann nicht rückgängig gemacht werden."
+      "deleteTitle": "Dein Konto löschen?",
+      "deleteNote": "Das Löschen deines Kontos entfernt deine Abonnements, Tags und Lesezustände dauerhaft. Exportiere deine Feeds vorher, wenn du sie behalten möchtest.",
+      "deleteMessage": "Dies löscht dein Konto dauerhaft, mit allen Abonnements, Tags und Lesezuständen. Das kann nicht rückgängig gemacht werden."
     },
     "about": {
       "title": "Über",
@@ -88,7 +88,7 @@
   },
   "dialog": {
     "cancel": "Abbrechen",
-    "typeToConfirm": "Tippen Sie {{text}}, um zu bestätigen",
+    "typeToConfirm": "Tippe {{text}}, um zu bestätigen",
     "addFeed": {
       "title": "Feed hinzufügen",
       "urlLabel": "Feed- oder Seiten-URL",
