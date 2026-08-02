@@ -26,6 +26,9 @@ final class MeJson
             'createdAt' => $user->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'locale' => $user->getLocale(),
             'trialEndsAt' => $user->getTrialEndsAt()?->format(\DateTimeInterface::ATOM),
+            'preferences' => [
+                'scrapeFallbackEnabled' => $user->getPreferences()->isScrapeFallbackEnabled(),
+            ],
         ];
     }
 }
