@@ -62,7 +62,7 @@ final class EntryPruner
         /** @var list<int> $ids */
         $ids = $this->em->createQuery(sprintf(
             'SELECT e.id FROM %s e
-             WHERE COALESCE(e.publishedAt, e.createdAt) < :cutoff
+             WHERE e.effectiveDate < :cutoff
              AND %s',
             Entry::class,
             $this->notProtectedDql(),
@@ -101,15 +101,12 @@ final class EntryPruner
      */
     private function excessEntryIds(int $feedId): array
     {
-        // COALESCE can't sit in ORDER BY directly; expose it as a HIDDEN alias
-        // (excluded from hydration, so getSingleColumnResult still yields ids).
         /** @var list<int> $ids */
         $ids = $this->em->createQuery(sprintf(
-            'SELECT e.id, COALESCE(e.publishedAt, e.createdAt) AS HIDDEN effectiveDate
-             FROM %s e
+            'SELECT e.id FROM %s e
              WHERE e.feed = :feed
              AND %s
-             ORDER BY effectiveDate DESC, e.id DESC',
+             ORDER BY e.effectiveDate DESC, e.id DESC',
             Entry::class,
             $this->notProtectedDql(),
         ))
