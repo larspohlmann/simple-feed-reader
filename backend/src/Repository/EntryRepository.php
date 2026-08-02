@@ -92,8 +92,7 @@ class EntryRepository extends ServiceEntityRepository
         $limit = max(1, min($query->limit, EntryQuery::MAX_LIMIT));
 
         $qb = $this->rowQueryBuilder($query->userId)
-            ->addSelect('COALESCE(e.publishedAt, e.createdAt) AS HIDDEN effectiveDate')
-            ->orderBy('effectiveDate', 'DESC')
+            ->orderBy('e.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($limit);
 
@@ -184,7 +183,7 @@ class EntryRepository extends ServiceEntityRepository
                 $qb->andWhere(
                     'es.isRead = :readFalse '
                     . 'OR (es.isRead IS NULL AND (s.markedReadUntil IS NULL '
-                    . 'OR COALESCE(e.publishedAt, e.createdAt) > s.markedReadUntil))',
+                    . 'OR e.effectiveDate > s.markedReadUntil))',
                 )->setParameter('readFalse', false, Types::BOOLEAN);
                 break;
             case 'favorites':
@@ -206,8 +205,8 @@ class EntryRepository extends ServiceEntityRepository
         }
 
         $qb->andWhere(
-            '(COALESCE(e.publishedAt, e.createdAt) < :curDate '
-            . 'OR (COALESCE(e.publishedAt, e.createdAt) = :curDate AND e.id < :curId))',
+            '(e.effectiveDate < :curDate '
+            . 'OR (e.effectiveDate = :curDate AND e.id < :curId))',
         )
             ->setParameter('curDate', $cursor->date, Types::DATETIME_IMMUTABLE)
             ->setParameter('curId', $cursor->id);
@@ -250,10 +249,9 @@ class EntryRepository extends ServiceEntityRepository
         }
 
         $markedReadUntil = $row['markedReadUntil'];
-        $effectiveDate = $entry->getPublishedAt() ?? $entry->getCreatedAt();
 
         return $markedReadUntil instanceof \DateTimeInterface
-            && $effectiveDate <= $markedReadUntil;
+            && $entry->getEffectiveDate() <= $markedReadUntil;
     }
 
     /**
