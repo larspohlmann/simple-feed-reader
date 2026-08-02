@@ -588,6 +588,13 @@ final class SubscriptionControllerTest extends WebTestCase
         );
 
         self::assertResponseStatusCodeSame(204);
+        // Same identity-map trap as the sibling test above: a single-request
+        // test never reboots the kernel, so $em is still the exact instance
+        // the controller used. Without clearing it, find() would return the
+        // pre-request Feed object straight out of the identity map and this
+        // assertion would pass even if reclaim() wrongly deleted the row —
+        // proving nothing about the guard this test exists to cover.
+        $em->clear();
         self::assertNotNull($em->getRepository(Feed::class)->find($feedId));
     }
 }
