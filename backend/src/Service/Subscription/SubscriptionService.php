@@ -15,6 +15,7 @@ use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionTagRepository;
 use App\Service\Discovery\FeedDiscoveryInterface;
+use App\Service\Discovery\ScrapeFallbackPolicy;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
@@ -30,6 +31,7 @@ final readonly class SubscriptionService
         private EntityManagerInterface $em,
         private ClockInterface $clock,
         private SubscriptionLimitResolver $subscriptionLimits,
+        private ScrapeFallbackPolicy $scrapeFallbackPolicy,
     ) {
     }
 
@@ -54,7 +56,7 @@ final readonly class SubscriptionService
             );
         }
 
-        $result = $this->discovery->discover($url);
+        $result = $this->discovery->discover($url, $this->scrapeFallbackPolicy->forUser($user));
 
         if (!$result->isDirectFeed) {
             return SubscribeOutcome::candidates($result->candidates, $result->scrapeFailureReason);

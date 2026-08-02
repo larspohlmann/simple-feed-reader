@@ -7,6 +7,7 @@ namespace App\Tests\Controller\Api;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
+use App\Entity\User;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
@@ -54,6 +55,20 @@ final class SubscriptionControllerTest extends WebTestCase
     private function installFetcher(StubFeedFetcher $stub): void
     {
         self::getContainer()->set(FeedFetcherInterface::class, $stub);
+    }
+
+    /**
+     * The scrape fallback defaults to OFF for every new account; only the test
+     * that specifically exercises the scraped-candidate outcome needs it ON.
+     */
+    private function enableScrapeFallback(string $email): void
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $user = $em->getRepository(User::class)->findOneBy(['email' => User::normalizeEmail($email)]);
+        self::assertInstanceOf(User::class, $user);
+        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        $em->flush();
     }
 
     public function testAnonymousIsRejected(): void
@@ -285,6 +300,7 @@ final class SubscriptionControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $headers = $this->authHeader('feedless@example.com');
+        $this->enableScrapeFallback('feedless@example.com');
 
         $stub = new StubFeedFetcher();
         $stub->willReturn(

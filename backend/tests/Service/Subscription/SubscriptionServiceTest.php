@@ -8,11 +8,13 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
+use App\Enum\ScrapeFallback;
 use App\Exception\AlreadySubscribedException;
 use App\Exception\SubscriptionLimitReachedException;
 use App\Service\Discovery\FeedCandidate;
 use App\Service\Discovery\FeedDiscoveryInterface;
 use App\Service\Discovery\FeedDiscoveryResult;
+use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Subscription\SubscriptionLimitResolver;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
@@ -38,7 +40,7 @@ final class SubscriptionServiceTest extends DbTestCase
             {
             }
 
-            public function discover(string $url): FeedDiscoveryResult
+            public function discover(string $url, ScrapeFallback $fallback): FeedDiscoveryResult
             {
                 return $this->result;
             }
@@ -55,6 +57,7 @@ final class SubscriptionServiceTest extends DbTestCase
             $this->em,
             new MockClock('2026-06-01T00:00:00Z'),
             new SubscriptionLimitResolver(),
+            new ScrapeFallbackPolicy(),
         );
     }
 

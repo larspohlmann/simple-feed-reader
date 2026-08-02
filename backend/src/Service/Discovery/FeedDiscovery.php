@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Discovery;
 
+use App\Enum\ScrapeFallback;
 use App\Enum\SourceFormat;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
@@ -36,7 +37,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
     ) {
     }
 
-    public function discover(string $url): FeedDiscoveryResult
+    public function discover(string $url, ScrapeFallback $fallback): FeedDiscoveryResult
     {
         try {
             $response = $this->fetcher->fetch($url);
@@ -51,7 +52,9 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
 
         $body = $response->body ?? '';
         if ('' === trim($body)) {
-            return FeedDiscoveryResult::scrapeFailed('not_scrapable');
+            return ScrapeFallback::Enabled === $fallback
+                ? FeedDiscoveryResult::scrapeFailed('not_scrapable')
+                : FeedDiscoveryResult::candidates([]);
         }
 
         try {
@@ -64,7 +67,9 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
 
         $candidates = $this->scanHtml($body, $response->finalUrl);
         if ([] === $candidates) {
-            return $this->scrapeFallback($body, $response->finalUrl);
+            return ScrapeFallback::Enabled === $fallback
+                ? $this->scrapeFallback($body, $response->finalUrl)
+                : FeedDiscoveryResult::candidates([]);
         }
 
         return FeedDiscoveryResult::candidates($candidates);
