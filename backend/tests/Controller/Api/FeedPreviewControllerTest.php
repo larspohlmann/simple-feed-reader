@@ -202,11 +202,14 @@ final class FeedPreviewControllerTest extends WebTestCase
             content: json_encode(['url' => self::PAGE_URL, 'format' => 'scraped'], \JSON_THROW_ON_ERROR),
         );
 
-        self::assertResponseStatusCodeSame(422);
+        // Identical status and type to SubscriptionController's refusal: a
+        // client needs one machine-readable signal for "scraping is off",
+        // not a different one per endpoint.
+        self::assertResponseStatusCodeSame(403);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
-        self::assertSame('feed_preview_failed', $body['type']);
+        self::assertSame('scraping_disabled', $body['type']);
         self::assertSame('Website scraping is turned off for this account.', $body['detail']);
     }
 
