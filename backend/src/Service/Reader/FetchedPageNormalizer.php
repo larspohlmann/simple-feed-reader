@@ -24,7 +24,7 @@ namespace App\Service\Reader;
 final readonly class FetchedPageNormalizer
 {
     /** Class-name fragments that mark an element as visible to screen readers only. */
-    private const string HIDDEN_CLASS_PATTERN = '/(?:visually-?hidden|sr-only|screen-reader)/i';
+    private const string HIDDEN_CLASS_PATTERN = '/visually-?hidden|sr-only|screen-reader/i';
 
     public function normalize(string $html): string
     {
