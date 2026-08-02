@@ -31,6 +31,13 @@ Read these before starting; they are why the tasks look the way they do.
 - **`catalog_feed` holds no FK to `feed`.** It matches by URL. Deleting an orphaned feed leaves the catalog suggestion intact.
 - **`prune` is true only on `RefreshRequest::allDue()`**, which only `RefreshFeedsCommand` builds when it is given neither `--user` nor `--feed`. A user-triggered refresh through `RefreshController` never prunes. The sweep therefore rides on the maintenance refresh; the immediate path in Task 2 is what keeps the database clean between them. This is deliberate — do not widen `prune`.
 - **`SubscriptionController::delete()` currently calls `$this->em->remove($sub)` in the action.** Adding an orphan check there would fail `ThinControllerRule`. Task 2 moves it.
+- **Entity constructor signatures, read off the entities — use these verbatim in fixtures:**
+  `new Feed(string $url)`,
+  `new User(string $email, \DateTimeImmutable $createdAt)`,
+  `new Subscription(User $user, Feed $feed, \DateTimeImmutable $createdAt)`,
+  `new Entry(Feed $feed, string $guid, ?string $url, string $title, \DateTimeImmutable $createdAt)`.
+  Note `Entry`'s `$url` comes **before** `$title`, and `Subscription` takes a `createdAt`.
+- **`DbTestCase` (`tests/DbTestCase.php`) boots the kernel and exposes `$this->em`; it does not reset data.** Isolation comes from `dama/doctrine-test-bundle`, which wraps each test in a rolled-back transaction — so a query counting every row in a table sees only the current test's rows.
 - **`ConfirmDialogComponent` lives at `frontend/src/app/reader/manage/confirm-dialog.component.ts`** and is already imported by `admin-user-detail.component.ts` and `admin-users.component.ts`. It has no typed-confirmation input. Task 7 moves it to `shared/` and adds one.
 
 ---
@@ -51,7 +58,7 @@ The core unit. Nothing wires it up yet; this task proves the deletion and the ra
 
 - [ ] **Step 1: Write the failing test**
 
-Create `backend/tests/Service/OrphanedFeedReclaimerTest.php`. `DbTestCase` gives a booted kernel and an `$this->em` against the ORM-metadata schema — copy the setup shape from `backend/tests/Service/EntryPrunerTest.php`.
+**This file is already written** at `backend/tests/Service/OrphanedFeedReclaimerTest.php` (uncommitted), with the real constructor signatures. Read it, confirm it matches the intent below, and change it only if something is actually wrong. The listing below is the intent, not a second copy to paste.
 
 ```php
 <?php
@@ -98,7 +105,13 @@ final class OrphanedFeedReclaimerTest extends DbTestCase
     public function testReclaimTakesTheFeedsEntriesWithIt(): void
     {
         $feed = $this->feed('https://withentries.example.com/rss');
-        $this->em->persist(new Entry($feed, 'guid-1', 'Title', 'https://withentries.example.com/1'));
+        $this->em->persist(new Entry(
+            $feed,
+            'guid-1',
+            'https://withentries.example.com/1',
+            'Title',
+            new \DateTimeImmutable(self::NOW),
+        ));
         $this->em->flush();
 
         $this->reclaimer->reclaim((int) $feed->getId());
@@ -150,13 +163,13 @@ final class OrphanedFeedReclaimerTest extends DbTestCase
 
     private function subscribe(User $user, Feed $feed): void
     {
-        $this->em->persist(new Subscription($user, $feed));
+        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable(self::NOW)));
         $this->em->flush();
     }
 }
 ```
 
-Before running, open `backend/src/Entity/Feed.php`, `Entry.php`, `Subscription.php` and `User.php` and match the real constructor signatures. If `new Entry(...)` or `new Subscription(...)` takes different arguments, fix the helpers here — do not change the entities.
+The committed file uses the real signatures from the Facts section: `new Entry($feed, $guid, $url, $title, $createdAt)` and `new Subscription($user, $feed, $createdAt)`. Do not change the entities to fit a fixture.
 
 - [ ] **Step 2: Run the test to verify it fails**
 
@@ -555,6 +568,8 @@ use App\Tests\Support\UserFactory;
 
 final class AccountDeleterTest extends DbTestCase
 {
+    private const string NOW = '2026-07-01 10:00:00';
+
     private AccountDeleter $deleter;
     private UserFactory $users;
 
@@ -587,7 +602,7 @@ final class AccountDeleterTest extends DbTestCase
         $target = $this->users->create('target-2@example.com');
         $feed = new Feed('https://only-theirs.example.com/rss');
         $this->em->persist($feed);
-        $this->em->persist(new Subscription($target, $feed));
+        $this->em->persist(new Subscription($target, $feed, new \DateTimeImmutable(self::NOW)));
         $this->em->flush();
         $feedId = (int) $feed->getId();
 
@@ -607,8 +622,8 @@ final class AccountDeleterTest extends DbTestCase
         $stayer = $this->users->create('stayer@example.com');
         $feed = new Feed('https://shared-2.example.com/rss');
         $this->em->persist($feed);
-        $this->em->persist(new Subscription($target, $feed));
-        $this->em->persist(new Subscription($stayer, $feed));
+        $this->em->persist(new Subscription($target, $feed, new \DateTimeImmutable(self::NOW)));
+        $this->em->persist(new Subscription($stayer, $feed, new \DateTimeImmutable(self::NOW)));
         $this->em->flush();
         $feedId = (int) $feed->getId();
 
