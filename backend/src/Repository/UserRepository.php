@@ -207,4 +207,27 @@ class UserRepository extends ServiceEntityRepository implements UserLoaderInterf
             ->getQuery()
             ->getSingleScalarResult();
     }
+
+    /**
+     * How many administrators exist, any status. Status-blind on purpose, the same
+     * reasoning as hasAnyAdmin(): counting only Active admins would let a
+     * suspension turn a two-admin instance into a deletable one-admin instance.
+     *
+     * The LIKE narrows the hydration set but STILL needs the in-PHP recheck to
+     * reject a `ROLE_ADMINISTRATOR` substring match.
+     */
+    public function countAdmins(): int
+    {
+        /** @var list<User> $candidates */
+        $candidates = $this->createQueryBuilder('u')
+            ->where('u.roles LIKE :role')
+            ->setParameter('role', '%ROLE_ADMIN%')
+            ->getQuery()
+            ->getResult();
+
+        return \count(array_filter(
+            $candidates,
+            static fn (User $candidate): bool => \in_array('ROLE_ADMIN', $candidate->getRoles(), true),
+        ));
+    }
 }
