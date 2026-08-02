@@ -120,15 +120,45 @@ describe('AccountSectionComponent', () => {
 
     f.componentInstance.confirmThenDelete();
 
+    // The real document AccountDeleter's guard sends, verbatim from
+    // LastAdminException / ApiProblem::toArray() (backend/src/Exception/
+    // LastAdminException.php): `type` is a bare slug, never a URL -- see
+    // ApiProblem's own docblock -- and `detail` is present, which is the
+    // half of `error.detail || error.title` production actually renders.
+    httpMock.expectOne(`${base}/api/me`).flush(
+      {
+        type: 'last_admin',
+        title: 'Last administrator',
+        status: 409,
+        detail: 'This is the only administrator account. Promote another account first.',
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
+    f.detectChanges();
+
+    expect(logoutSpy).not.toHaveBeenCalled();
+    expect((f.nativeElement as HTMLElement).textContent).toContain(
+      'This is the only administrator account. Promote another account first.',
+    );
+  });
+
+  it('falls back to the problem title when the response has no detail', () => {
+    const f = mount(user);
+    dialogStub.open.mockReturnValue({ closed: of(true) });
+
+    f.componentInstance.confirmThenDelete();
+
+    // No `detail` field at all -- exercises the `|| error.title` half of the
+    // template expression, which the fixture above never touches.
     httpMock
       .expectOne(`${base}/api/me`)
       .flush(
-        { type: 'https://example.test/last_admin', title: 'Last admin', status: 409 },
-        { status: 409, statusText: 'Conflict' },
+        { type: 'about:blank', title: 'Something went wrong', status: 500 },
+        { status: 500, statusText: 'Internal Server Error' },
       );
     f.detectChanges();
 
     expect(logoutSpy).not.toHaveBeenCalled();
-    expect((f.nativeElement as HTMLElement).textContent).toContain('Last admin');
+    expect((f.nativeElement as HTMLElement).textContent).toContain('Something went wrong');
   });
 });
