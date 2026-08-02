@@ -15,7 +15,7 @@
 ## Global Constraints
 
 - Every PHP file starts with `declare(strict_types=1);`.
-- PHP classes are `final`, and `final readonly` with constructor promotion where the class is a service or a value object. Entities are not readonly.
+- PHP classes are `final`, and `final readonly` with constructor promotion where the class is a service or a value object. **Doctrine entities are the exception: they are neither `final` nor `readonly`** — all 12 existing entities in `src/Entity/` are plain `class`, and `Preferences` must match them.
 - No boolean flag parameters. Use an enum.
 - Errors are typed exceptions in `Service/*/Exception/`, never `null` or a magic value.
 - Controllers have no private methods that carry responsibility (`ThinControllerRule` in PHPStan).
@@ -526,6 +526,23 @@ Add to `backend/tests/Controller/Api/MeControllerTest.php`, matching the file's 
 
         self::assertResponseStatusCodeSame(422);
     }
+
+    public function testAnEmptyBodyIsRejectedRatherThanSilentlyDisablingScraping(): void
+    {
+        $client = static::createClient();
+        $user = $this->factory()->create('prefs-empty@example.com');
+        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        self::getContainer()->get('doctrine')->getManager()->flush();
+
+        $client->request(
+            'PATCH',
+            '/api/me/preferences',
+            server: $this->authHeader($user->getEmail()),
+            content: json_encode([], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(422);
+    }
 ```
 
 Add `use App\Entity\User;` to the test file's imports if it is not already there.
@@ -549,20 +566,25 @@ namespace App\Dto\Me;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * The payload is required rather than defaulted, for the same reason
+ * The value is required, with no default, for the same reason
  * UpdateLocaleRequest refuses an unsupported locale: a preference that
- * degrades quietly to a default is indistinguishable from one the user set.
+ * degrades quietly to a default is indistinguishable from one the user set,
+ * and an empty body must not be able to turn the feature off silently.
+ *
+ * No validation attributes: the promoted `bool` type plus MapRequestPayload's
+ * denormalization already reject a missing or non-boolean value with a 422
+ * before the validator runs, so an Assert here would be dead decoration.
  */
 final readonly class UpdatePreferencesRequest
 {
     public function __construct(
-        #[Assert\NotNull]
-        #[Assert\Type('bool')]
-        public bool $scrapeFallbackEnabled = false,
+        public bool $scrapeFallbackEnabled,
     ) {
     }
 }
 ```
+
+Drop the `use Symfony\Component\Validator\Constraints as Assert;` import — nothing uses it.
 
 - [ ] **Step 4: Add the action**
 
