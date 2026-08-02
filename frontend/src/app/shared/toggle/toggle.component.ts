@@ -14,6 +14,8 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 export class ToggleComponent {
   readonly checked = input(false);
   readonly label = input.required<string>();
+  /** Optional: lets a caller's own `<label for>` reach the native checkbox. */
+  readonly inputId = input<string>();
   readonly toggled = output<boolean>();
 
   onChange(event: Event): void {

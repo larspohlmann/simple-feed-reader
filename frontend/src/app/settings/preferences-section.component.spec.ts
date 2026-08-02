@@ -68,4 +68,17 @@ describe('PreferencesSectionComponent', () => {
 
     expect(preferences.scrapeFallbackEnabled()).toBe(true);
   });
+
+  it('toggles the control when the visible label text is clicked, not only the switch', () => {
+    const fixture = mount();
+    const el = fixture.nativeElement as HTMLElement;
+    const label = el.querySelector('label.setting-label') as HTMLLabelElement;
+    const input = el.querySelector('app-toggle input[type="checkbox"]') as HTMLInputElement;
+
+    expect(label.htmlFor).toBe(input.id);
+    label.click();
+    fixture.detectChanges();
+
+    expect(preferences.scrapeFallbackEnabled()).toBe(true);
+  });
 });

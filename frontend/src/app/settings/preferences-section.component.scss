@@ -17,11 +17,14 @@
   gap: var(--space-1);
 }
 
+// A <label for> now, not a <span>, so clicking the text toggles the control
+// the same way clicking the switch itself does.
 .setting-label {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   color: var(--text-primary);
+  cursor: pointer;
 }
 
 .setting-hint {

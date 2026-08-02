@@ -34,4 +34,15 @@ describe('ToggleComponent', () => {
   it('labels the control for assistive technology', () => {
     expect(input().getAttribute('aria-label')).toBe('Enable scraping');
   });
+
+  it('carries no id by default', () => {
+    expect(input().hasAttribute('id')).toBe(false);
+  });
+
+  it('exposes the given id on the native checkbox, so an external label can target it', () => {
+    fixture.componentRef.setInput('inputId', 'scrape-fallback-toggle');
+    fixture.detectChanges();
+
+    expect(input().id).toBe('scrape-fallback-toggle');
+  });
 });
