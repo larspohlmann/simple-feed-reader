@@ -10,6 +10,7 @@ import { AuthService } from './auth.service';
 import { LanguageService } from './language.service';
 import { LOCALE_WRITER } from './locale-writer';
 import { HttpLocaleWriter } from './http-locale-writer';
+import { PreferencesService } from './preferences.service';
 
 describe('AuthService', () => {
   let svc: AuthService;
@@ -71,5 +72,15 @@ describe('AuthService', () => {
     expect(tokens.token()).toBeNull();
     expect(svc.user()).toBeNull();
     expect(navigate).toHaveBeenCalledWith(['/login']);
+  });
+
+  it('logout resets the cached preferences, so the next account never sees a stale toggle', () => {
+    const preferences = TestBed.inject(PreferencesService);
+    preferences.setScrapeFallbackEnabled(true);
+    expect(preferences.scrapeFallbackEnabled()).toBe(true);
+
+    svc.logout();
+
+    expect(preferences.scrapeFallbackEnabled()).toBe(false);
   });
 });

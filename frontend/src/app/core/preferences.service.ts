@@ -12,6 +12,18 @@ import { PREFERENCES_WRITER } from './preferences-writer';
 export class PreferencesService {
   private readonly writer = inject(PREFERENCES_WRITER);
 
+  /**
+   * No "not loaded yet" state: a deep link to /settings renders this at its
+   * `false` default before `AuthService.loadMe()` resolves and `adopt()`
+   * overwrites it (settings-shell.component.ts only fetches when
+   * `auth.user()` is null, so that window is real, not hypothetical). Benign
+   * today only because `false` happens to be the safe default for THIS
+   * preference. The next preference added here must not assume that: if its
+   * safe default is `true`, a click during the loading window would apply and
+   * PATCH the wrong value before the real one ever arrived. Give it (or this
+   * one, if that is simpler) a proper loaded/unloaded state rather than
+   * repeating this coincidence.
+   */
   readonly scrapeFallbackEnabled = signal(false);
 
   /** True when the value applied locally but the account write failed. */
@@ -33,5 +45,17 @@ export class PreferencesService {
    */
   adopt(user: CurrentUser): void {
     this.scrapeFallbackEnabled.set(user.preferences.scrapeFallbackEnabled);
+  }
+
+  /**
+   * Drops the signed-out account's cached preference. Unlike `LanguageService`
+   * -- language is a deliberate per-device cache that outlives a session --
+   * this preference is per-account: leaving it set would let the next signed-in
+   * account see a stale value until its own `loadMe()` resolves, or forever if
+   * that request fails.
+   */
+  reset(): void {
+    this.scrapeFallbackEnabled.set(false);
+    this.saveFailed.set(false);
   }
 }

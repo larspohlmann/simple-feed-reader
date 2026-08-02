@@ -57,6 +57,10 @@ export class AuthService {
   logout(): void {
     this.tokens.clear();
     this.user.set(null);
+    // Per-account, unlike locale: leaving it set would let the next signed-in
+    // account see the previous one's toggle state until (or unless) its own
+    // loadMe() resolves.
+    this.preferences.reset();
     void this.router.navigate(['/login']);
   }
 
