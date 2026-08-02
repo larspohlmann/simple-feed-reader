@@ -322,6 +322,27 @@ article {
   color: var(--text-primary);
 }
 
+/* An h2 opens a new section, so it carries a divider: extra air plus a short
+   hairline rule above. h3+ are subordinate and keep the plain heading margin. */
+.content ::ng-deep h2 {
+  margin-top: var(--space-7);
+}
+
+.content ::ng-deep h2::before {
+  content: '';
+  display: block;
+  border-top: 1px solid var(--border);
+  margin-bottom: var(--space-4);
+}
+
+/* The first paragraph is the article's lead; a slightly larger size gives the
+   entry point some weight. The class is set by the component's post-render
+   pass — a pure CSS :first-of-type cannot reach it through the wrapper
+   elements feeds and readability emit. */
+.content ::ng-deep p.lead {
+  font-size: 1.0625em;
+}
+
 /* Article headings are sized in `em`, against `.content`'s own type size, not
    picked off the UI type scale: that scale has five steps, and h2 and h3 would
    both land on the same one — a flattened hierarchy in the one place the
@@ -356,11 +377,68 @@ article {
   color: var(--text-muted);
 }
 
+/* A quiet card rather than a bare indent: the surface fill and radius set the
+   quote apart from the body without shouting. */
 .content ::ng-deep blockquote {
   margin: var(--space-5) 0;
-  padding: var(--space-1) 0 var(--space-1) var(--space-4);
+  padding: var(--space-3) var(--space-4);
   border-left: 3px solid var(--border-strong);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--surface-1);
   color: var(--text-secondary);
+}
+
+.content ::ng-deep blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* Tables arrive unstyled from the sanitizer; give them the article's rhythm
+   and let a wide one scroll inside the column instead of stretching it. */
+.content ::ng-deep table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: var(--space-5) 0;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+
+.content ::ng-deep :is(th, td) {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.content ::ng-deep th {
+  border-bottom-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.content ::ng-deep mark {
+  padding: 0 0.15em;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: inherit;
+}
+
+/* Keep super- and subscripts from opening up the line they sit in. */
+.content ::ng-deep :is(sub, sup) {
+  line-height: 0;
+}
+
+.content ::ng-deep dl {
+  margin: 0 0 var(--space-4);
+}
+
+.content ::ng-deep dt {
+  font-weight: 650;
+  color: var(--text-primary);
+}
+
+.content ::ng-deep dd {
+  margin: 0 0 var(--space-2) var(--space-4);
 }
 
 .content ::ng-deep figure {

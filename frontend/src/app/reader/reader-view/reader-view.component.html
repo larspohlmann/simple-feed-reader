@@ -49,6 +49,9 @@
           · {{ e.author }}
         }
         · {{ when(e) }}
+        @if (readingMinutes(); as minutes) {
+          · {{ 'reader.readingTime' | transloco: { minutes } }}
+        }
         @if (e.url) {
           ·
           <a [href]="e.url" target="_blank" rel="noopener noreferrer"
