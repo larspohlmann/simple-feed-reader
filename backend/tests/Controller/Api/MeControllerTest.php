@@ -164,7 +164,9 @@ final class MeControllerTest extends ApiTestCase
     public function testANonBooleanPreferenceIsRejected(): void
     {
         $client = static::createClient();
-        $this->factory()->create('prefs-invalid@example.com');
+        $user = $this->factory()->create('prefs-invalid@example.com');
+        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        $this->entityManager()->flush();
         $this->authenticate($client, 'prefs-invalid@example.com');
 
         $client->request(
@@ -175,6 +177,11 @@ final class MeControllerTest extends ApiTestCase
         );
 
         self::assertResponseStatusCodeSame(422);
+
+        $this->entityManager()->clear();
+        $unchanged = $this->users()->find($user->getId());
+        self::assertInstanceOf(User::class, $unchanged);
+        self::assertTrue($unchanged->getPreferences()->isScrapeFallbackEnabled());
     }
 
     public function testAnEmptyBodyIsRejectedRatherThanSilentlyDisablingScraping(): void
@@ -193,6 +200,11 @@ final class MeControllerTest extends ApiTestCase
         );
 
         self::assertResponseStatusCodeSame(422);
+
+        $this->entityManager()->clear();
+        $unchanged = $this->users()->find($user->getId());
+        self::assertInstanceOf(User::class, $unchanged);
+        self::assertTrue($unchanged->getPreferences()->isScrapeFallbackEnabled());
     }
 
     public function testTheProfileCarriesPreferencesWithScrapingOffByDefault(): void
