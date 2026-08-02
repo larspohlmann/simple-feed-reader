@@ -9,7 +9,9 @@ use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\ArticleExtractor;
+use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
+use App\Service\Reader\LeadingTitleRemover;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -38,7 +40,12 @@ final class ArticleExtractorTest extends TestCase
 
         $fetcher = new HtmlPageFetcher(new MockHttpClient($responses), new UrlGuard($resolver, new IpValidator()));
 
-        return new ArticleExtractor($fetcher, new EntrySanitizer());
+        return new ArticleExtractor(
+            $fetcher,
+            new FetchedPageNormalizer(),
+            new LeadingTitleRemover(),
+            new EntrySanitizer(),
+        );
     }
 
     public function testExtractsAndAbsolutisesImages(): void
@@ -94,7 +101,12 @@ final class ArticleExtractorTest extends TestCase
             }
         };
         $fetcher = new HtmlPageFetcher(new MockHttpClient(), new UrlGuard($resolver, new IpValidator()));
-        $extractor = new ArticleExtractor($fetcher, new EntrySanitizer());
+        $extractor = new ArticleExtractor(
+            $fetcher,
+            new FetchedPageNormalizer(),
+            new LeadingTitleRemover(),
+            new EntrySanitizer(),
+        );
 
         $result = $extractor->extract('http://169.254.169.254/');
 
@@ -110,5 +122,24 @@ final class ArticleExtractorTest extends TestCase
 
         self::assertFalse($result->ok);
         self::assertContains($result->reason, ['unextractable', 'empty']);
+    }
+
+    public function testKeepsHeadingsAndImagesOnBlockComponentPages(): void
+    {
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-block-components.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post', 'Block Component Headline');
+
+        self::assertTrue($result->ok);
+        // Subheadings and the figure survive the wrapper-chain layout.
+        self::assertStringContainsString('First Section', (string) $result->contentHtml);
+        self::assertStringContainsString('Second Section', (string) $result->contentHtml);
+        self::assertStringContainsString('<img', (string) $result->contentHtml);
+        // The body headline duplicates the entry title, so it is dropped …
+        self::assertStringNotContainsString('Block Component Headline', (string) $result->contentHtml);
+        // … and screen-reader-only labels never reach the client.
+        self::assertStringNotContainsString('Image source,', (string) $result->contentHtml);
+        self::assertStringContainsString('A caption line', (string) $result->contentHtml);
     }
 }

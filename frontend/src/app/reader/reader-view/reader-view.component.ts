@@ -38,6 +38,8 @@ import {
   rubberBand,
 } from '../reader-gestures';
 import { relativeTime } from '../format';
+import { markLeadParagraph } from '../lead-paragraph';
+import { estimateReadingMinutes } from '../reading-time';
 
 /** Give up on a hung extraction and fall back to feed content (backend caps a
  *  fetch at ~20s; this is the client-side backstop for a stalled connection). */
@@ -197,6 +199,9 @@ export class ReaderViewComponent {
     this.mode() === 'reader' ? (this.article()?.leadImage ?? null) : null,
   );
 
+  /** Estimated minutes to read the displayed text; null hides the meta chip. */
+  readonly readingMinutes = computed(() => estimateReadingMinutes(this.displayHtml()));
+
   readonly displayHtml = computed(() => {
     const e = this.entry();
     if (!e) return '';
@@ -280,6 +285,7 @@ export class ReaderViewComponent {
             a.rel = 'noopener noreferrer';
           }
         }
+        markLeadParagraph(host);
         this.buildToc(host);
         this.scheduleFocus();
         this.measureTail();

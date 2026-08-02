@@ -85,6 +85,22 @@ describe('ReaderViewComponent', () => {
     expect((anchors[1] as HTMLAnchorElement).target).toBe('_blank'); // external decorated
   });
 
+  describe('reading time', () => {
+    const longBody = `<p>${Array.from({ length: 660 }, (_, i) => `w${i}`).join(' ')}</p>`;
+
+    it('shows the estimate for a long article', () => {
+      const f = mount(entry({ contentHtml: longBody }));
+
+      expect(f.nativeElement.querySelector('.meta')?.textContent).toContain('≈ 3 min');
+    });
+
+    it('hides the estimate for a short article', () => {
+      const f = mount(entry({ contentHtml: '<p>Tiny.</p>' }));
+
+      expect(f.nativeElement.querySelector('.meta')?.textContent).not.toContain('≈');
+    });
+  });
+
   describe('table of contents', () => {
     const threeHeadings = '<h2>Alpha</h2><p>a</p><h2>Beta</h2><p>b</p><h3>Gamma</h3>';
 
