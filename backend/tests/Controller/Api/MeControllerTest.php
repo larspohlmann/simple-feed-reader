@@ -218,4 +218,41 @@ final class MeControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         self::assertSame(['scrapeFallbackEnabled' => false], $this->payload($client)['preferences']);
     }
+
+    public function testAUserDeletesTheirOwnAccount(): void
+    {
+        $client = static::createClient();
+        $user = $this->factory()->create('bye@example.com');
+        $userId = (int) $user->getId();
+        $this->authenticate($client, 'bye@example.com');
+
+        $client->request('DELETE', '/api/me');
+        self::assertResponseStatusCodeSame(204);
+
+        // The JWT is stateless: this proves the token stops authenticating
+        // because the user row is gone, not because anything was revoked.
+        $client->request('GET', '/api/me');
+        self::assertResponseStatusCodeSame(401);
+
+        self::assertNull($this->users()->find($userId));
+    }
+
+    public function testTheSoleAdminCannotDeleteTheirOwnAccount(): void
+    {
+        $client = static::createClient();
+        $this->factory()->create('last-admin@example.com', roles: ['ROLE_ADMIN']);
+        $this->authenticate($client, 'last-admin@example.com');
+
+        $client->request('DELETE', '/api/me');
+
+        self::assertResponseStatusCodeSame(409);
+    }
+
+    public function testDeletingTheAccountNeedsAToken(): void
+    {
+        $client = static::createClient();
+        $client->request('DELETE', '/api/me');
+
+        self::assertResponseStatusCodeSame(401);
+    }
 }
