@@ -37,6 +37,14 @@ export class ButtonComponent {
   readonly loading = input(false);
   readonly disabled = input(false);
 
+  /**
+   * Accessible name for the real `<button>`. Only needed when the visible label
+   * is hidden — an action that collapses to its leading icon on narrow screens
+   * still has to announce itself. A `<button>` carries the `button` role, so
+   * `aria-label` names it reliably here (unlike a bare generic node).
+   */
+  readonly ariaLabel = input<string>();
+
   /** Stretch to the container's width instead of hugging the label. */
   readonly block = input(false, { transform: booleanAttribute });
 

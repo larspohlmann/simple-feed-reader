@@ -35,18 +35,22 @@
 .name {
   color: var(--text-primary);
 
-  /* The name is the only flexible part of the row. Without these a long tag —
-     a German compound is enough — can neither shrink nor break, so it overruns
-     the identity column and drags the feed count off the mobile viewport (#212).
-     min-width lets the flex child shrink past its content; overflow-wrap breaks
-     the offending token instead of overflowing. */
+  /* The name is the only elastic part of the row: hold it to one line and
+     truncate. A long tag — a German compound is enough — otherwise crushes the
+     feed count and overruns the mobile viewport (#212). min-width lets the flex
+     child shrink past its content so the ellipsis can take over. */
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .count {
   font-size: var(--fs-sm);
   color: var(--text-muted);
+
+  /* Never give: the name absorbs all the truncation, the count stays whole. */
+  flex: 0 0 auto;
 }
 
 .acts {
@@ -55,23 +59,14 @@
   flex: 0 0 auto;
 }
 
-/* Stack the row on narrow screens so the tag name and its feed count aren't
-   crushed by the Edit/Delete buttons (worse with longer localised labels). */
+/* Narrow screens keep every row on one line by collapsing Edit/Delete to their
+   icons — the same move the reader header makes with its controls. The label
+   lives on as each button's aria-label, so an icon-only control still announces
+   itself. The earlier answer, stacking the three parts into a column, scattered
+   the row and floated the buttons off on their own line instead (#212). */
 @media (width <= bp.$bp-sm) {
-  .tag {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-2);
-  }
-
-  /* In column mode the cross axis is horizontal, and .tag's align-items:
-     stretch would otherwise stretch the handle to the row's full width. */
-  .drag-handle {
-    align-self: flex-start;
-  }
-
-  .acts {
-    justify-content: flex-end;
+  .acts .txt {
+    display: none;
   }
 }
 

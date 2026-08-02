@@ -78,11 +78,22 @@
               }}</span>
             </span>
             <span class="acts">
-              <app-button size="sm" (click)="startEdit(t)">
-                <app-icon name="edit" size="sm" /> {{ 'settings.tags.edit' | transloco }}
+              <app-button
+                size="sm"
+                [ariaLabel]="'settings.tags.edit' | transloco"
+                (click)="startEdit(t)"
+              >
+                <app-icon name="edit" size="sm" />
+                <span class="txt">{{ 'settings.tags.edit' | transloco }}</span>
               </app-button>
-              <app-button size="sm" variant="danger-outline" (click)="manage.deleteTag(t)">
-                <app-icon name="delete" size="sm" /> {{ 'settings.tags.delete' | transloco }}
+              <app-button
+                size="sm"
+                variant="danger-outline"
+                [ariaLabel]="'settings.tags.delete' | transloco"
+                (click)="manage.deleteTag(t)"
+              >
+                <app-icon name="delete" size="sm" />
+                <span class="txt">{{ 'settings.tags.delete' | transloco }}</span>
               </app-button>
             </span>
           }
