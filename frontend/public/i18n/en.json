@@ -146,6 +146,7 @@
     "approve": "Approve",
     "reject": "Reject",
     "suspend": "Suspend",
+    "delete": "Delete account",
     "feedsLabel": "feeds",
     "tagsLabel": "tags",
     "lastLogin": "Last login",
@@ -217,7 +218,9 @@
       "rejectTitle": "Reject user",
       "rejectMessage": "Reject {{email}}? They will not be able to sign in.",
       "suspendTitle": "Suspend user",
-      "suspendMessage": "Suspend {{email}}? Their access is blocked until re-approved."
+      "suspendMessage": "Suspend {{email}}? Their access is blocked until re-approved.",
+      "deleteTitle": "Delete this account?",
+      "deleteMessage": "This permanently deletes {{email}} with all subscriptions, tags and read state. Feeds nobody else reads are deleted too. This cannot be undone."
     },
     "categoryDialog": {
       "newTitle": "New category",

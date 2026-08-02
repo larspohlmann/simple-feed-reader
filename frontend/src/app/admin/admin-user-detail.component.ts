@@ -2,7 +2,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
@@ -48,6 +48,7 @@ export class AdminUserDetailComponent {
   private readonly dialog = inject(Dialog);
   private readonly i18n = inject(TranslocoService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   readonly language = inject(LanguageService);
 
@@ -146,6 +147,36 @@ export class AdminUserDetailComponent {
     });
     ref.closed.subscribe((confirmed) => {
       if (confirmed) this.act(action);
+    });
+  }
+
+  /** Deletion is irreversible and takes the account's content with it, so it
+   *  gets the strongest treatment the app has: a danger-outline initiator, and
+   *  a confirm the admin must type the target's email address to enable. */
+  confirmThenDelete(): void {
+    const email = this.detail()?.user.email ?? '';
+    const data: ConfirmData = {
+      title: this.i18n.translate('admin.confirm.deleteTitle'),
+      message: this.i18n.translate('admin.confirm.deleteMessage', { email }),
+      confirmLabel: this.i18n.translate('admin.delete'),
+      danger: true,
+      requireText: email,
+    };
+    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
+      data,
+      role: 'alertdialog',
+      panelClass: 'app-dialog',
+    });
+    ref.closed.subscribe((confirmed) => {
+      if (confirmed) this.deleteAccount();
+    });
+  }
+
+  private deleteAccount(): void {
+    this.actionError.set(null);
+    this.api.deleteUser(this.id).subscribe({
+      next: () => void this.router.navigate(['/admin/users']),
+      error: (failure: HttpErrorResponse) => this.actionError.set(parseProblem(failure)),
     });
   }
 
