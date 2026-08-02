@@ -1,6 +1,8 @@
 // Pure math for the article reading-focus effect, kept out of the component so
 // the fade curve is unit-testable (jsdom can't measure layout for the DOM part).
 
+import { articleOverflowsViewport } from './reading-progress';
+
 /** Opacity of a block sitting a half-viewport or more from the reading center. */
 export const FOCUS_MIN_OPACITY = 0.2;
 
@@ -83,7 +85,7 @@ export function readingBlocks(root: Element): HTMLElement[] {
  * gesture that is otherwise available right away.
  */
 export function needsReadingTail(contentBottom: number, viewportHeight: number): boolean {
-  return viewportHeight > 0 && contentBottom > viewportHeight;
+  return articleOverflowsViewport(contentBottom, viewportHeight);
 }
 
 /**

@@ -630,6 +630,22 @@ when the categories outrun it:
 }
 ```
 
+**A sticky box only travels inside its containing block's _content_ box, so
+padding on the parent strands it early.** The article's progress bar is sticky to
+the bottom of the reading pane, and the reading tail used to add half a viewport
+of `padding-bottom` to that same parent: the bar therefore ran out of containing
+block half a screen above the true bottom and scrolled out of sight over the
+tail, exactly where the reader was finishing the article (#238). The fix is to
+put the space in flow instead — the tail moved onto the `<article>`, which leaves
+the parent's height identical and gives the sticky child the whole range.
+
+**A scroll cue on a pane is sticky, never fixed.** `position: fixed` resolves
+against the viewport, so a bar meant for one pane runs on under its neighbours on
+the split layout — and any transformed ancestor re-anchors it to that ancestor
+instead (the trap #100 documents for the back-to-top button, and the reading pane
+carries a transform through its return gestures). Sticky is scoped to the pane by
+construction and immune to both.
+
 **Every internal scroller gets `overscroll-behavior: contain`.** Reaching the end
 of a rail must not hand the wheel to the panel body behind it — the sections
 would scroll and the rail would appear to jump to a category the reader never

@@ -124,6 +124,14 @@
         <app-spinner [size]="22" />
       </div>
     }
+    @if (showProgress()) {
+      <!-- Decorative: a visual stand-in for the scrollbar a phone withholds, so
+           it carries no progressbar role — a screen reader already reports the
+           reading position, and announcing every scroll frame would be noise. -->
+      <div class="progress" aria-hidden="true">
+        <i [style.width.%]="progressPercent()"></i>
+      </div>
+    }
   </div>
   @if (showToTop()) {
     <app-to-top-button (activate)="scrollToTop()" />

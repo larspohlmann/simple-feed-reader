@@ -30,6 +30,7 @@ import { LanguageService } from '../../core/language.service';
 import { ListScrollMemory } from '../list-scroll-memory';
 import { nextHeaderHidden } from '../header-scroll';
 import { focusOpacityForSpan, needsReadingTail, readingBlocks } from '../reading-focus';
+import { articleOverflowsViewport, readingProgress } from '../reading-progress';
 import {
   AXIS_LOCK_MIN,
   atBottom,
@@ -184,8 +185,28 @@ export class ReaderViewComponent {
   readonly toolbarHidden = signal(false);
   private lastToolbarScrollTop = 0;
 
-  /** Whether the article carries tail space below it — see measureTail(). */
-  readonly hasTail = signal(false);
+  // The article's scroll range, re-measured whenever the content or the pane
+  // changes size — see measureScrollRange(). The reading tail and the progress
+  // bar are both derived from it rather than measuring the DOM for themselves.
+  private readonly contentBottom = signal(0);
+  private readonly viewportHeight = signal(0);
+  private readonly scrollTop = signal(0);
+
+  /** Whether the article carries tail space below it. */
+  readonly hasTail = computed(() => needsReadingTail(this.contentBottom(), this.viewportHeight()));
+
+  /**
+   * The article's length-and-position cue. On a phone it is the only one there
+   * is: the shell locks the page and scrolls an inner container, and a mobile
+   * browser paints no persistent scrollbar for a nested scroller, so the reader
+   * had no way to judge how long an article was (#238).
+   */
+  readonly showProgress = computed(() =>
+    articleOverflowsViewport(this.contentBottom(), this.viewportHeight()),
+  );
+  readonly progressPercent = computed(
+    () => readingProgress(this.scrollTop(), this.viewportHeight(), this.contentBottom()) * 100,
+  );
 
   readonly loading = computed(() => this.state().status === 'loading');
   readonly failed = computed(() => this.state().status === 'failed');
@@ -233,6 +254,7 @@ export class ReaderViewComponent {
       this.showToTop.set(false);
       this.toolbarHidden.set(false);
       this.lastToolbarScrollTop = 0;
+      this.scrollTop.set(0);
       if (!e) {
         this.pendingRestore = null;
         this.state.set({ status: 'idle' });
@@ -288,7 +310,7 @@ export class ReaderViewComponent {
         markLeadParagraph(host);
         this.buildToc(host);
         this.scheduleFocus();
-        this.measureTail();
+        this.measureScrollRange();
         // Content just (re-)rendered — re-seat a pending scroll restore. Runs on
         // the original render and again when the reader content swaps in.
         if (this.pendingRestore?.id === this.entry()?.id) this.startRestore();
@@ -300,7 +322,7 @@ export class ReaderViewComponent {
     // one, and a viewport resize changes whether the article still needs it.
     const onResize = () => {
       this.scheduleFocus();
-      this.measureTail();
+      this.measureScrollRange();
     };
     window.addEventListener('resize', onResize, { passive: true });
     this.destroyRef.onDestroy(() => {
@@ -315,7 +337,7 @@ export class ReaderViewComponent {
       this.contentObs?.disconnect();
       this.contentObs = undefined;
       if (!el || typeof ResizeObserver === 'undefined') return;
-      const obs = new ResizeObserver(() => this.measureTail());
+      const obs = new ResizeObserver(() => this.measureScrollRange());
       obs.observe(el);
       this.contentObs = obs;
     });
@@ -431,6 +453,7 @@ export class ReaderViewComponent {
   protected onScroll(): void {
     this.scheduleFocus();
     const scrollTop = this.host.nativeElement.scrollTop;
+    this.scrollTop.set(scrollTop);
     this.showToTop.set(scrollTop > BACK_TO_TOP_AFTER_PX);
     if (this.fullscreen()) {
       // `isWide` is false by definition here: full-screen reading only exists
@@ -501,20 +524,21 @@ export class ReaderViewComponent {
   }
 
   /**
-   * Decide whether the article carries tail space below it. Measures the
-   * article's own content box against the pane — never the panel's, which
-   * already includes the tail and would feed the measurement back into itself.
+   * Measure how far the article reaches inside its pane. Takes the article's own
+   * content box — never the panel's, which already includes the tail and would
+   * feed the measurement back into itself.
    */
-  private measureTail(): void {
+  private measureScrollRange(): void {
+    const host = this.host.nativeElement;
+    this.viewportHeight.set(host.clientHeight);
     const content = this.content()?.nativeElement;
     if (!content) {
-      this.hasTail.set(false);
+      this.contentBottom.set(0);
       return;
     }
-    const host = this.host.nativeElement;
-    const bottom =
-      content.getBoundingClientRect().bottom - host.getBoundingClientRect().top + host.scrollTop;
-    this.hasTail.set(needsReadingTail(bottom, host.clientHeight));
+    this.contentBottom.set(
+      content.getBoundingClientRect().bottom - host.getBoundingClientRect().top + host.scrollTop,
+    );
   }
 
   /** Coalesce focus recomputes to one per animation frame. */
