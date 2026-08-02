@@ -62,7 +62,7 @@ final readonly class MarkReadService
                  WHERE es.user = :user AND es.isRead = :false
                  AND es.entry IN (
                      SELECT e.id FROM %s e
-                     WHERE e.feed IN (:feeds) AND COALESCE(e.publishedAt, e.createdAt) <= :until
+                     WHERE e.feed IN (:feeds) AND e.effectiveDate <= :until
                  )',
                 EntryState::class,
                 Entry::class,

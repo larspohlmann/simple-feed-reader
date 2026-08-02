@@ -86,7 +86,7 @@ class EntryStateRepository extends ServiceEntityRepository
              WHERE s.user = :user AND (
                  es.isRead = :false
                  OR (es.isRead IS NULL AND (s.markedReadUntil IS NULL
-                     OR COALESCE(e.publishedAt, e.createdAt) > s.markedReadUntil))
+                     OR e.effectiveDate > s.markedReadUntil))
              )
              GROUP BY s.id',
             Subscription::class,
