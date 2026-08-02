@@ -38,6 +38,7 @@ import {
   rubberBand,
 } from '../reader-gestures';
 import { relativeTime } from '../format';
+import { markLeadParagraph } from '../lead-paragraph';
 import { estimateReadingMinutes } from '../reading-time';
 
 /** Give up on a hung extraction and fall back to feed content (backend caps a
@@ -284,7 +285,7 @@ export class ReaderViewComponent {
             a.rel = 'noopener noreferrer';
           }
         }
-        this.markLeadParagraph(host);
+        markLeadParagraph(host);
         this.buildToc(host);
         this.scheduleFocus();
         this.measureTail();
@@ -539,22 +540,6 @@ export class ReaderViewComponent {
       // viewport — a wide table, a code listing, a long paragraph — stays bright
       // while it fills the screen instead of dimming from its off-screen centre.
       block.style.opacity = String(focusOpacityForSpan(top, top + rect.height, viewport));
-    }
-  }
-
-  /** Tag the article's first real paragraph as the lead, so the stylesheet can
-   *  give it a little more weight. Done here because wrapper elements from
-   *  feeds and readability sit between the container and the paragraphs, which
-   *  puts the lead out of reach of a plain CSS sibling selector. */
-  private markLeadParagraph(host: HTMLElement): void {
-    for (const p of Array.from(host.querySelectorAll('p'))) {
-      p.classList.remove('lead');
-    }
-    for (const p of Array.from(host.querySelectorAll('p'))) {
-      if ((p.textContent ?? '').trim() !== '') {
-        p.classList.add('lead');
-        return;
-      }
     }
   }
 
