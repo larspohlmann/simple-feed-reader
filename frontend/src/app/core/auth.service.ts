@@ -5,7 +5,12 @@ import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 import { API_BASE_URL } from './api';
 import { LanguageService } from './language.service';
+import { PreferencesService } from './preferences.service';
 import { TokenStore } from './token.store';
+
+export interface UserPreferences {
+  scrapeFallbackEnabled: boolean;
+}
 
 export interface CurrentUser {
   id: number;
@@ -15,6 +20,7 @@ export interface CurrentUser {
   createdAt: string;
   locale: string;
   trialEndsAt: string | null;
+  preferences: UserPreferences;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -24,6 +30,7 @@ export class AuthService {
   private readonly tokens = inject(TokenStore);
   private readonly router = inject(Router);
   private readonly language = inject(LanguageService);
+  private readonly preferences = inject(PreferencesService);
 
   readonly user = signal<CurrentUser | null>(null);
 
@@ -42,6 +49,7 @@ export class AuthService {
       tap((u) => {
         this.user.set(u);
         this.language.adopt(u.locale);
+        this.preferences.adopt(u);
       }),
     );
   }
@@ -49,6 +57,10 @@ export class AuthService {
   logout(): void {
     this.tokens.clear();
     this.user.set(null);
+    // Per-account, unlike locale: leaving it set would let the next signed-in
+    // account see the previous one's toggle state until (or unless) its own
+    // loadMe() resolves.
+    this.preferences.reset();
     void this.router.navigate(['/login']);
   }
 

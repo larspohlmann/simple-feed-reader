@@ -7,6 +7,7 @@ namespace App\Tests\Controller\Api;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
+use App\Entity\User;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
@@ -54,6 +55,20 @@ final class SubscriptionControllerTest extends WebTestCase
     private function installFetcher(StubFeedFetcher $stub): void
     {
         self::getContainer()->set(FeedFetcherInterface::class, $stub);
+    }
+
+    /**
+     * The scrape fallback defaults to OFF for every new account; only the test
+     * that specifically exercises the scraped-candidate outcome needs it ON.
+     */
+    private function enableScrapeFallback(string $email): void
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $user = $em->getRepository(User::class)->findOneBy(['email' => User::normalizeEmail($email)]);
+        self::assertInstanceOf(User::class, $user);
+        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        $em->flush();
     }
 
     public function testAnonymousIsRejected(): void
@@ -285,6 +300,7 @@ final class SubscriptionControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $headers = $this->authHeader('feedless@example.com');
+        $this->enableScrapeFallback('feedless@example.com');
 
         $stub = new StubFeedFetcher();
         $stub->willReturn(
@@ -318,6 +334,43 @@ final class SubscriptionControllerTest extends WebTestCase
         );
     }
 
+    /**
+     * The scrape fallback defaults to OFF, so this user's preference is left
+     * untouched — a DI wiring regression that never consults
+     * ScrapeFallbackPolicy would offer the scraped candidate anyway and this
+     * test would catch it.
+     */
+    public function testAFeedlessPageOffersNoScrapedCandidateWhenTheFallbackIsDisabled(): void
+    {
+        $client = self::createClient();
+        $headers = $this->authHeader('feedlessdisabled@example.com');
+
+        $stub = new StubFeedFetcher();
+        $stub->willReturn(
+            'https://www.heise.de',
+            FetchResponse::fetched(
+                'https://www.heise.de/',
+                permanentRedirect: false,
+                body: $this->scrapedFixture('heise-2026-07-23.html'),
+                etag: null,
+                lastModified: null,
+            ),
+        );
+        $this->installFetcher($stub);
+
+        $client->request(
+            'POST',
+            '/api/subscriptions',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['url' => 'https://www.heise.de'], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(200);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        // 'not_scrapable' here would leak the disabled feature into the UI —
+        // the key must be entirely absent, not merely null.
+        self::assertSame(['candidates' => []], $body);
+    }
+
     public function testBlockedSiteReportsReasonWithEmptyCandidates(): void
     {
         $client = self::createClient();
@@ -344,6 +397,7 @@ final class SubscriptionControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $headers = $this->authHeader('scraper@example.com');
+        $this->enableScrapeFallback('scraper@example.com');
 
         // No stubbed URLs at all: the scraped-format path re-posts a candidate
         // URL discovery itself just produced, so ANY fetch here is a bug and
@@ -381,6 +435,7 @@ final class SubscriptionControllerTest extends WebTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $em);
 
         $user = $this->userFactory()->create('atcap@example.com');
+        $user->getPreferences()->setScrapeFallbackEnabled(true);
         $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         for ($i = 0; $i < SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER; $i++) {
             $feed = new Feed(sprintf('https://seed%d.example.com/feed.xml', $i));
@@ -409,6 +464,37 @@ final class SubscriptionControllerTest extends WebTestCase
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
         self::assertSame('subscription_limit_reached', $body['type']);
+    }
+
+    /**
+     * The bypass Task 6 closes: a hand-made request setting format 'scraped'
+     * must be refused for an account with the preference off, exactly as
+     * discovery already refuses to OFFER such a candidate to that account.
+     * Nothing is stubbed on the fetcher, so a regression that lets the
+     * request reach discovery or the extractor fails loudly here rather than
+     * silently creating a subscription.
+     */
+    public function testScrapedFormatSubscribeIsRefusedWhenScrapingIsDisabled(): void
+    {
+        $client = self::createClient();
+        $headers = $this->authHeader('scrapedisabled@example.com');
+        $this->installFetcher(new StubFeedFetcher());
+
+        $client->request(
+            'POST',
+            '/api/subscriptions',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['url' => 'https://www.heise.de/', 'format' => 'scraped'], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(403);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('scraping_disabled', $body['type']);
+
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        self::assertNull($em->getRepository(Feed::class)->findOneBy(['url' => 'https://www.heise.de/']));
     }
 
     public function testCannotUpdateAnotherUsersSubscription(): void

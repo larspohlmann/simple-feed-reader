@@ -1,0 +1,10 @@
+<label class="toggle">
+  <input
+    type="checkbox"
+    [checked]="checked()"
+    [attr.id]="inputId() || null"
+    [attr.aria-label]="label()"
+    (change)="onChange($event)"
+  />
+  <span class="track" aria-hidden="true"><span class="thumb"></span></span>
+</label>

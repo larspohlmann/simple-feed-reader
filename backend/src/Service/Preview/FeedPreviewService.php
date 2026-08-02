@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Preview;
 
+use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Exception\FeedPreviewException;
+use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcherInterface;
 use App\Service\Parser\Exception\FeedParseException;
@@ -32,11 +34,19 @@ final readonly class FeedPreviewService
         private FeedFetcherInterface $fetcher,
         private FeedParser $parser,
         private HtmlItemExtractor $extractor,
+        private ScrapeFallbackPolicy $scrapeFallbackPolicy,
     ) {
     }
 
-    public function preview(string $url, ?string $format = null): FeedPreview
+    public function preview(User $user, string $url, ?string $format = null): FeedPreview
     {
+        // Mirrors the guard in SubscriptionService::subscribe(): a preview
+        // request asserting 'scraped' is the same hand-made bypass discovery's
+        // gate (Task 5) cannot see, since discovery never runs on this path.
+        if (SourceFormat::SCRAPED === $format) {
+            $this->scrapeFallbackPolicy->assertMayScrape($user);
+        }
+
         try {
             $response = $this->fetcher->fetch($url);
         } catch (FetchException $e) {

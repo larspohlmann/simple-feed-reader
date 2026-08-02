@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Discovery;
 
+use App\Enum\ScrapeFallback;
 use App\Service\Discovery\FeedDiscovery;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
@@ -46,7 +47,7 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $fetcher = $this->fetcherReturning('https://example.com/feed', 'https://example.com/feed.xml', $xml);
 
-        $result = $this->discovery($fetcher)->discover('https://example.com/feed');
+        $result = $this->discovery($fetcher)->discover('https://example.com/feed', ScrapeFallback::Enabled);
 
         self::assertTrue($result->isDirectFeed);
         self::assertSame('https://example.com/feed.xml', $result->feedUrl);
@@ -65,7 +66,7 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $fetcher = $this->fetcherReturning('https://example.com/blog', 'https://example.com/blog/', $html);
 
-        $result = $this->discovery($fetcher)->discover('https://example.com/blog');
+        $result = $this->discovery($fetcher)->discover('https://example.com/blog', ScrapeFallback::Enabled);
 
         self::assertFalse($result->isDirectFeed);
         self::assertNull($result->scrapeFailureReason);
@@ -98,7 +99,7 @@ final class FeedDiscoveryTest extends KernelTestCase
             $this->scrapedFixture('heise-2026-07-23.html'),
         );
 
-        $result = $this->discovery($fetcher)->discover('https://www.heise.de');
+        $result = $this->discovery($fetcher)->discover('https://www.heise.de', ScrapeFallback::Enabled);
 
         self::assertFalse($result->isDirectFeed);
         self::assertNull($result->scrapeFailureReason);
@@ -113,7 +114,7 @@ final class FeedDiscoveryTest extends KernelTestCase
         $fetcher = new StubFeedFetcher();
         $fetcher->willThrow('https://forbidden.example.com', new FeedUnreachableException('x: HTTP 403', 403));
 
-        $result = $this->discovery($fetcher)->discover('https://forbidden.example.com');
+        $result = $this->discovery($fetcher)->discover('https://forbidden.example.com', ScrapeFallback::Enabled);
 
         self::assertFalse($result->isDirectFeed);
         self::assertSame('blocked', $result->scrapeFailureReason);
@@ -125,7 +126,7 @@ final class FeedDiscoveryTest extends KernelTestCase
         $fetcher = new StubFeedFetcher();
         $fetcher->willThrow('https://nxdomain.example.com', new FeedUnreachableException('DNS', null));
 
-        $result = $this->discovery($fetcher)->discover('https://nxdomain.example.com');
+        $result = $this->discovery($fetcher)->discover('https://nxdomain.example.com', ScrapeFallback::Enabled);
 
         self::assertSame('unreachable', $result->scrapeFailureReason);
         self::assertSame([], $result->candidates);
@@ -136,7 +137,7 @@ final class FeedDiscoveryTest extends KernelTestCase
         $fetcher = new StubFeedFetcher();
         $fetcher->willThrow('https://internal.example.com', new SsrfBlockedException('private address'));
 
-        $result = $this->discovery($fetcher)->discover('https://internal.example.com');
+        $result = $this->discovery($fetcher)->discover('https://internal.example.com', ScrapeFallback::Enabled);
 
         self::assertSame('unreachable', $result->scrapeFailureReason);
         self::assertSame([], $result->candidates);
@@ -150,7 +151,7 @@ final class FeedDiscoveryTest extends KernelTestCase
             $this->scrapedFixture('nav-only.html'),
         );
 
-        $result = $this->discovery($fetcher)->discover('https://example.com/plain');
+        $result = $this->discovery($fetcher)->discover('https://example.com/plain', ScrapeFallback::Enabled);
 
         self::assertFalse($result->isDirectFeed);
         self::assertSame('not_scrapable', $result->scrapeFailureReason);
@@ -161,9 +162,46 @@ final class FeedDiscoveryTest extends KernelTestCase
     {
         $fetcher = $this->fetcherReturning('https://example.com/empty', 'https://example.com/empty', '   ');
 
-        $result = $this->discovery($fetcher)->discover('https://example.com/empty');
+        $result = $this->discovery($fetcher)->discover('https://example.com/empty', ScrapeFallback::Enabled);
 
         self::assertSame('not_scrapable', $result->scrapeFailureReason);
         self::assertSame([], $result->candidates);
+    }
+
+    public function testAScrapablePageOffersNoCandidateWhenTheFallbackIsDisabled(): void
+    {
+        $fetcher = $this->fetcherReturning(
+            'https://example.com/blog',
+            'https://example.com/blog',
+            $this->scrapedFixture('heise-2026-07-23.html'),
+        );
+
+        $result = $this->discovery($fetcher)->discover('https://example.com/blog', ScrapeFallback::Disabled);
+
+        self::assertFalse($result->isDirectFeed);
+        self::assertSame([], $result->candidates);
+        // A null reason is what makes the dialog render its plain "no feed
+        // found" state instead of a scrape-flavoured warning.
+        self::assertNull($result->scrapeFailureReason);
+    }
+
+    public function testAnEmptyBodyReportsNoReasonWhenTheFallbackIsDisabled(): void
+    {
+        $fetcher = $this->fetcherReturning('https://example.com/blank', 'https://example.com/blank', '   ');
+
+        $result = $this->discovery($fetcher)->discover('https://example.com/blank', ScrapeFallback::Disabled);
+
+        self::assertSame([], $result->candidates);
+        self::assertNull($result->scrapeFailureReason);
+    }
+
+    public function testAnUnreachableSiteStillReportsItsReasonWhenTheFallbackIsDisabled(): void
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willThrow('https://example.com/gone', new FeedUnreachableException('gone', 404));
+
+        $result = $this->discovery($fetcher)->discover('https://example.com/gone', ScrapeFallback::Disabled);
+
+        self::assertSame('unreachable', $result->scrapeFailureReason);
     }
 }

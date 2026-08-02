@@ -1,9 +1,28 @@
 <app-settings-card [heading]="'settings.preferences' | transloco">
   <div class="row">
-    <span>{{ 'lang.label' | transloco }}</span>
+    <span class="lang-label">{{ 'lang.label' | transloco }}</span>
     <app-language-switcher />
   </div>
   @if (language.saveFailed()) {
     <app-error-banner [message]="'settings.languageSaveFailed' | transloco" />
+  }
+
+  <div class="row">
+    <span class="setting">
+      <label class="setting-label" for="scrape-fallback-toggle">
+        {{ 'settings.scraping' | transloco }}
+        <span class="badge">{{ 'settings.experimental' | transloco }}</span>
+      </label>
+      <span class="setting-hint">{{ 'settings.scrapingHint' | transloco }}</span>
+    </span>
+    <app-toggle
+      inputId="scrape-fallback-toggle"
+      [checked]="preferences.scrapeFallbackEnabled()"
+      [label]="'settings.scraping' | transloco"
+      (toggled)="preferences.setScrapeFallbackEnabled($event)"
+    />
+  </div>
+  @if (preferences.saveFailed()) {
+    <app-error-banner [message]="'settings.scrapingSaveFailed' | transloco" />
   }
 </app-settings-card>

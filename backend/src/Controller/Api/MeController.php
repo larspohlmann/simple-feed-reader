@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Dto\Me\UpdateLocaleRequest;
+use App\Dto\Me\UpdatePreferencesRequest;
 use App\Entity\User;
 use App\Http\MeJson;
 use Doctrine\ORM\EntityManagerInterface;
@@ -41,6 +42,23 @@ final readonly class MeController
         #[MapRequestPayload] UpdateLocaleRequest $request,
     ): JsonResponse {
         $user->setLocale($request->locale);
+        $this->entityManager->flush();
+
+        return new JsonResponse(MeJson::profile($user));
+    }
+
+    /**
+     * Per-account settings. Separate from the locale PATCH because
+     * UpdateLocaleRequest requires a non-blank locale: folding preferences into
+     * it would force every preference write to resend the language, or cost the
+     * locale its 422-on-unsupported-value guarantee (#180).
+     */
+    #[Route('/api/me/preferences', name: 'api_me_update_preferences', methods: ['PATCH'])]
+    public function updatePreferences(
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] UpdatePreferencesRequest $request,
+    ): JsonResponse {
+        $user->getPreferences()->setScrapeFallbackEnabled($request->scrapeFallbackEnabled);
         $this->entityManager->flush();
 
         return new JsonResponse(MeJson::profile($user));

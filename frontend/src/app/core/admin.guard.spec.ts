@@ -14,6 +14,7 @@ const admin: CurrentUser = {
   createdAt: 'x',
   locale: 'en',
   trialEndsAt: null,
+  preferences: { scrapeFallbackEnabled: false },
 };
 const plain: CurrentUser = { ...admin, roles: ['ROLE_USER'] };
 

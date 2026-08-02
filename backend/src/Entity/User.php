@@ -98,6 +98,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(nullable: true)]
     private ?int $maxSubscriptions = null;
 
+    /**
+     * Per-account settings. The constructor creates the row, so every creation
+     * path gets one without knowing about preferences.
+     *
+     * Nullable only because Doctrine hydration bypasses the constructor: a
+     * hydrated row without preferences is a corrupt row, not a supported
+     * state, and getPreferences() says so.
+     */
+    #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist'], orphanRemoval: true)]
+    private ?Preferences $preferences = null;
+
     public function __construct(string $email, \DateTimeImmutable $createdAt)
     {
         $email = self::normalizeEmail($email);
@@ -108,6 +119,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
         $this->email = $email;
         $this->createdAt = $createdAt;
+        $this->preferences = new Preferences($this);
     }
 
     /**
@@ -248,6 +260,20 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setMaxSubscriptions(?int $maxSubscriptions): void
     {
         $this->maxSubscriptions = $maxSubscriptions;
+    }
+
+    /**
+     * Mirrors the getUserIdentifier() guard: the invariant is set in the
+     * constructor, and Doctrine hydration bypasses it, so it is re-checked
+     * here where callers actually depend on it.
+     */
+    public function getPreferences(): Preferences
+    {
+        if (null === $this->preferences) {
+            throw new \LogicException('User has no preferences row; the stored row is corrupt.');
+        }
+
+        return $this->preferences;
     }
 
     /**

@@ -10,6 +10,10 @@
     "nav": { "admin": "Administration" },
     "preferences": "Voreinstellungen",
     "languageSaveFailed": "Die Sprache wurde auf diesem Gerät geändert, konnte aber nicht in deinem Konto gespeichert werden.",
+    "experimental": "Experimentell",
+    "scraping": "Webseiten ohne Feed auslesen",
+    "scrapingHint": "Wenn eine Seite keinen Feed anbietet, die Seite selbst als Quelle anbieten. Die Qualität hängt von der Seite ab, und die Funktion kann jederzeit ohne Vorwarnung ausfallen.",
+    "scrapingSaveFailed": "Die Einstellung wurde auf diesem Gerät geändert, konnte aber nicht in deinem Konto gespeichert werden.",
     "loadingVersion": "Versionsinformationen werden geladen",
     "feeds": {
       "title": "Feeds",
@@ -89,6 +93,7 @@
       "withImages": "Mit Bildern",
       "noImages": "Ohne Bilder",
       "scrapedHint": "Kein Feed gefunden – aus der Artikelliste der Seite generiert.",
+      "experimental": "Experimentell",
       "loadingPreview": "Vorschau wird geladen…",
       "noRecentItems": "Keine aktuellen Einträge",
       "subscribe": "Abonnieren",

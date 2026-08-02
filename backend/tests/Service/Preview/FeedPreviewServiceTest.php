@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Preview;
 
+use App\Entity\User;
+use App\Enum\SourceFormat;
 use App\Exception\FeedPreviewException;
+use App\Service\Discovery\Exception\ScrapingDisabledException;
+use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Parser\FeedParser;
@@ -27,7 +31,21 @@ final class FeedPreviewServiceTest extends KernelTestCase
         $extractor = self::getContainer()->get(HtmlItemExtractor::class);
         self::assertInstanceOf(HtmlItemExtractor::class, $extractor);
 
-        return new FeedPreviewService($fetcher, $parser, $extractor);
+        return new FeedPreviewService($fetcher, $parser, $extractor, new ScrapeFallbackPolicy());
+    }
+
+    /** These tests never touch the database, so a User is built inline rather than through a factory. */
+    private function user(): User
+    {
+        return new User('preview@example.com', new \DateTimeImmutable('2026-08-02 10:00:00'));
+    }
+
+    private function userWithScrapingEnabled(): User
+    {
+        $user = new User('preview-scraper@example.com', new \DateTimeImmutable('2026-08-02 10:00:00'));
+        $user->getPreferences()->setScrapeFallbackEnabled(true);
+
+        return $user;
     }
 
     private function fetcherWithBody(string $xml): StubFeedFetcher
@@ -80,7 +98,7 @@ final class FeedPreviewServiceTest extends KernelTestCase
         }
 
         $fetcher = $this->fetcherWithBody($this->rss($items));
-        $preview = $this->service($fetcher)->preview(self::URL);
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL);
 
         self::assertSame('Example Feed', $preview->title);
         self::assertSame(5, $preview->itemCount);
@@ -105,7 +123,7 @@ final class FeedPreviewServiceTest extends KernelTestCase
         }
 
         $fetcher = $this->fetcherWithBody($this->rss($items));
-        $preview = $this->service($fetcher)->preview(self::URL);
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL);
 
         self::assertSame('summary', $preview->content);
         self::assertSame(3, $preview->itemCount);
@@ -125,7 +143,7 @@ final class FeedPreviewServiceTest extends KernelTestCase
         }
 
         $fetcher = $this->fetcherWithBody($this->rss($items));
-        $preview = $this->service($fetcher)->preview(self::URL);
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL);
 
         self::assertSame('title-only', $preview->content);
         self::assertSame(0, $preview->items[0]->textLength);
@@ -138,7 +156,7 @@ final class FeedPreviewServiceTest extends KernelTestCase
         // A channel with a title but no items parses fine; the verdict must fall
         // back to 'title-only' rather than the richest tier.
         $fetcher = $this->fetcherWithBody($this->rss(''));
-        $preview = $this->service($fetcher)->preview(self::URL);
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL);
 
         self::assertSame(0, $preview->itemCount);
         self::assertSame('title-only', $preview->content);
@@ -166,7 +184,7 @@ final class FeedPreviewServiceTest extends KernelTestCase
 
         $xml = $this->rss($items, ' xmlns:media="http://search.yahoo.com/mrss/"');
         $fetcher = $this->fetcherWithBody($xml);
-        $preview = $this->service($fetcher)->preview(self::URL);
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL);
 
         self::assertTrue($preview->hasImages);
         self::assertTrue($preview->items[0]->hasImage);
@@ -192,7 +210,7 @@ final class FeedPreviewServiceTest extends KernelTestCase
             XML;
 
         $fetcher = $this->fetcherWithBody($this->rss($items));
-        $preview = $this->service($fetcher)->preview(self::URL);
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL);
 
         $longSnippet = $preview->items[0]->snippet;
         self::assertStringEndsWith('…', $longSnippet);
@@ -209,7 +227,7 @@ final class FeedPreviewServiceTest extends KernelTestCase
         $fetcher->willThrow(self::URL, new FeedUnreachableException('blocked'));
 
         $this->expectException(FeedPreviewException::class);
-        $this->service($fetcher)->preview(self::URL);
+        $this->service($fetcher)->preview($this->user(), self::URL);
     }
 
     public function testUnparseableBodyBecomesFeedPreviewException(): void
@@ -217,7 +235,7 @@ final class FeedPreviewServiceTest extends KernelTestCase
         $fetcher = $this->fetcherWithBody('<html>nope');
 
         $this->expectException(FeedPreviewException::class);
-        $this->service($fetcher)->preview(self::URL);
+        $this->service($fetcher)->preview($this->user(), self::URL);
     }
 
     public function testEmptyBodyBecomesFeedPreviewException(): void
@@ -225,7 +243,7 @@ final class FeedPreviewServiceTest extends KernelTestCase
         $fetcher = $this->fetcherWithBody('   ');
 
         $this->expectException(FeedPreviewException::class);
-        $this->service($fetcher)->preview(self::URL);
+        $this->service($fetcher)->preview($this->user(), self::URL);
     }
 
     /**
@@ -240,6 +258,15 @@ final class FeedPreviewServiceTest extends KernelTestCase
 
         $this->expectException(FeedPreviewException::class);
         $this->expectExceptionMessage('No article list was detected on the page.');
-        $this->service($fetcher)->preview(self::URL, 'scraped');
+        $this->service($fetcher)->preview($this->userWithScrapingEnabled(), self::URL, 'scraped');
+    }
+
+    public function testAScrapedPreviewIsRefusedWhenTheUserHasScrapingDisabled(): void
+    {
+        $user = new User('preview-off@example.com', new \DateTimeImmutable('2026-08-02 10:00:00'));
+
+        $this->expectException(ScrapingDisabledException::class);
+
+        $this->service(new StubFeedFetcher())->preview($user, 'https://example.com/blog', SourceFormat::SCRAPED);
     }
 }

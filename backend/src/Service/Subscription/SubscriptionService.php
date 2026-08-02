@@ -15,6 +15,7 @@ use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionTagRepository;
 use App\Service\Discovery\FeedDiscoveryInterface;
+use App\Service\Discovery\ScrapeFallbackPolicy;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
@@ -30,6 +31,7 @@ final readonly class SubscriptionService
         private EntityManagerInterface $em,
         private ClockInterface $clock,
         private SubscriptionLimitResolver $subscriptionLimits,
+        private ScrapeFallbackPolicy $scrapeFallbackPolicy,
     ) {
     }
 
@@ -49,12 +51,18 @@ final readonly class SubscriptionService
         // a hand-typed variant merely becomes its own row that counts against
         // this user's cap and converges via applyPermanentRedirect on refresh.
         if (SourceFormat::SCRAPED === $format) {
+            // Discovery never offers a scraped candidate to an account with the
+            // preference off, so a request that reaches here with it off is a
+            // hand-made one — refuse it rather than let this shortcut become
+            // the bypass discovery's own gate (Task 5) cannot see.
+            $this->scrapeFallbackPolicy->assertMayScrape($user);
+
             return SubscribeOutcome::subscribed(
                 $this->createSubscription($user, $url, SourceFormat::SCRAPED, $tags),
             );
         }
 
-        $result = $this->discovery->discover($url);
+        $result = $this->discovery->discover($url, $this->scrapeFallbackPolicy->forUser($user));
 
         if (!$result->isDirectFeed) {
             return SubscribeOutcome::candidates($result->candidates, $result->scrapeFailureReason);

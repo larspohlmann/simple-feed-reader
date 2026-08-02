@@ -1,0 +1,62 @@
+// src/app/shared/toggle/toggle.component.scss
+// Track/thumb measurements mirror the sidebar's organise switch
+// (reader/sidebar/sidebar.component.scss) -- the only other on/off switch in
+// the app: var(--space-6) (32px) track, var(--space-3) (12px) thumb,
+// var(--space-0) (2px) inset, var(--space-4) (16px) travel.
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+// Visually hidden but still focusable: opacity (never display/visibility)
+// keeps the checkbox in the tab order and reachable by assistive technology.
+.toggle input {
+  position: absolute;
+  width: var(--space-1);
+  height: var(--space-1);
+  opacity: 0;
+}
+
+.track {
+  position: relative;
+  display: inline-block;
+  width: var(--space-6);
+  height: var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--border-strong);
+  transition: background 0.15s;
+}
+
+.thumb {
+  position: absolute;
+  top: var(--space-0);
+  left: var(--space-0);
+  width: var(--space-3);
+  height: var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  transition: transform 0.15s;
+}
+
+.toggle input:checked + .track {
+  background: var(--accent);
+}
+
+.toggle input:checked + .track .thumb {
+  /* Travel = track (var(--space-6), 32px) minus thumb (var(--space-3), 12px)
+     minus both insets (var(--space-0), 2px each) = 16px. */
+  transform: translateX(var(--space-4));
+}
+
+.toggle input:focus-visible + .track {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track,
+  .thumb {
+    transition: none;
+  }
+}

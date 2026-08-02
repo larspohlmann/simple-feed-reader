@@ -139,7 +139,11 @@ final class FeedPreviewControllerTest extends WebTestCase
     public function testScrapedFormatPreviewsTheHtmlPageAsAFeed(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('preview-scraped@example.com');
+        [$headers, $user] = $this->auth('preview-scraped@example.com');
+        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $em->flush();
 
         $fetcher = new StubFeedFetcher();
         $fetcher->willReturn(
@@ -178,10 +182,45 @@ final class FeedPreviewControllerTest extends WebTestCase
         self::assertNotSame('', $item['title']);
     }
 
+    /**
+     * The same hand-made-request bypass SubscriptionController closes: without
+     * this guard, a scraped preview would run the extractor for an account that
+     * never sees a scraped candidate offered to it. No fetcher is stubbed, so a
+     * regression that lets the request reach the fetcher fails loudly here
+     * rather than silently returning a preview.
+     */
+    public function testScrapedFormatPreviewReturnsProblemWhenScrapingIsDisabled(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('preview-disabled@example.com');
+        $this->installFetcher(new StubFeedFetcher());
+
+        $client->request(
+            'POST',
+            '/api/feeds/preview',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['url' => self::PAGE_URL, 'format' => 'scraped'], \JSON_THROW_ON_ERROR),
+        );
+
+        // Identical status and type to SubscriptionController's refusal: a
+        // client needs one machine-readable signal for "scraping is off",
+        // not a different one per endpoint.
+        self::assertResponseStatusCodeSame(403);
+        self::assertResponseHeaderSame('content-type', 'application/problem+json');
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('scraping_disabled', $body['type']);
+        self::assertSame('Website scraping is turned off for this account.', $body['detail']);
+    }
+
     public function testScrapedFormatOnAnArticleFreePageReturns422(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('preview-navonly@example.com');
+        [$headers, $user] = $this->auth('preview-navonly@example.com');
+        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $em->flush();
 
         $fetcher = new StubFeedFetcher();
         $fetcher->willReturn(
