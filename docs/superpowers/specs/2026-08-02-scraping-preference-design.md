@@ -131,8 +131,10 @@ The controller stays thin — read payload, delegate, return — per
 
 ## The gate
 
-Two independent paths reach the scraper. Both must be closed. Gating only the
-first leaves the feature reachable by a hand-made request.
+Two independent paths let an ordinary user reach the scraper. Both must be
+closed. Gating only the first leaves the feature reachable by a hand-made
+request. (A third path, admin-curated catalog feeds, also reaches the scraper
+and is deliberately left open — see "Out of scope".)
 
 ### Path 1 — discovery
 
@@ -171,8 +173,10 @@ creates the subscription **without running discovery**. `FeedPreviewService::pre
 runs the extractor for a scraped preview on the same terms.
 
 Both must refuse a scraped format when the preference is off, with a typed
-exception namespaced next to its service (`Service/Subscription/Exception/`),
-surfaced as `application/problem+json`.
+exception namespaced next to `ScrapeFallbackPolicy` (`Service/Discovery/Exception/`,
+the collaborator both services already inject), surfaced as
+`application/problem+json`. The refusal itself lives in one place,
+`ScrapeFallbackPolicy::assertMayScrape()`, so the two call sites cannot drift.
 
 ### Where the preference is resolved
 
@@ -261,6 +265,16 @@ marker on a scraped candidate.
 - Retro-active handling of subscriptions that were already created as `scraped`
   before this change. They keep working; the preference gates creation and
   preview, not refresh of an existing subscription.
+- Gating admin-curated catalog feeds. `CatalogFeedRequest` permits
+  `sourceFormat: scraped` (`backend/src/Dto/Admin/CatalogFeedRequest.php`), and
+  `CatalogSubscriber`/`BulkSubscriber` write it with no `ScrapeFallbackPolicy`
+  check. This is deliberate, not an oversight: a catalog feed *declares* its
+  format — an admin already decided the URL is scraped, verified and durable —
+  rather than *discovering* one from an arbitrary user-submitted URL, and the
+  content behind it is admin-vetted rather than an unknown third party's page.
+  The preference protects a user from unknowingly depending on fragile
+  extraction of a page they picked; it is not a control over what an admin may
+  curate for everyone.
 
 ## Definition of done
 
