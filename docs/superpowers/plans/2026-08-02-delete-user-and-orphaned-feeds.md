@@ -929,7 +929,7 @@ public function testAnAdminCannotDeleteThemselvesThroughTheAdminApi(): void
     self::assertResponseStatusCodeSame(422);
 }
 
-public function testDeletingTheLastAdminIsRefused(): void
+public function testAnAdminDeletedByAnotherAdminCanNoLongerAuthenticate(): void
 {
     $factory = $this->factory();
     $soleAdmin = $factory->create('sole-admin@example.com', roles: ['ROLE_ADMIN']);
@@ -961,7 +961,9 @@ public function testANonAdminCannotDeleteAnAccount(): void
 }
 ```
 
-`testDeletingTheLastAdminIsRefused` expects `404` on the second call because `$deputy` deleted themselves out of existence in the first — their token now authenticates nobody. If the firewall answers `401` instead, assert `401`; either is correct, and the point of the case is that the sole remaining admin survives. Add the surviving-admin assertion explicitly:
+**Correction, established during implementation:** `LastAdminException` is structurally UNREACHABLE through `deleteAsAdmin()`. Reaching `^/api/admin/` requires `ROLE_ADMIN`, so the caller always holds it; a different admin target therefore means `countAdmins() >= 2`, and a same-account target trips the 422 self-delete guard first. The 409 is reachable only through `DELETE /api/me` (Task 6), which is where its coverage belongs. `ensureNotTheLastAdmin()` stays as defence-in-depth on the private method both entry points share — do not remove it.
+
+The observed status for the deleted admin's token is `401`: the JWT user provider fails to reload the deleted user before access control runs. Name this test for what it actually proves — that an admin deleted by another admin can no longer authenticate, and that the surviving admin is unaffected — not for a refusal it cannot trigger. Add the surviving-admin assertion explicitly:
 
 ```php
     self::assertNotNull(
