@@ -33,8 +33,17 @@
    pull-past-the-bottom return gesture.
 
    `dvh`, like the shell's own height, so a mobile browser's retracting toolbar
-   doesn't leave the tail short; the `vh` line is the fallback. */
-.reader.with-tail {
+   doesn't leave the tail short; the `vh` line is the fallback.
+
+   The tail hangs off the ARTICLE rather than off `.reader` itself, which is
+   where it used to sit. `.reader` is the containing block of the sticky progress
+   bar below, and a sticky box may only travel within its containing block's
+   *content* box — padding excluded. Left on `.reader`, the tail therefore ended
+   the bar's travel half a viewport early and it scrolled away over the tail's
+   blank space, exactly where the reader is finishing the last paragraph (#238).
+   Inside the article the same space is in flow, so the bar reaches the true
+   bottom. `.reader`'s total height is unchanged either way. */
+.reader.with-tail article {
   /* stylelint-disable-next-line declaration-property-unit-allowed-list --
      a deliberate share of the viewport, not a spacing value; see above. */
   padding-bottom: 50vh;
@@ -42,6 +51,37 @@
   /* stylelint-disable-next-line declaration-property-unit-allowed-list --
      a deliberate share of the viewport, not a spacing value; see above. */
   padding-bottom: 50dvh;
+}
+
+/* The article's length-and-position cue, and on a phone the only one there is:
+   the shell locks the page at `100dvh` and scrolls an inner container instead
+   (see reader-shell), and a mobile browser paints no persistent scrollbar for a
+   nested scroller — so an article's length was invisible there while desktop
+   showed an ordinary scrollbar (#238).
+
+   Sticky, not fixed: `.reader` carries a transform through the return gestures,
+   which re-anchors a `position: fixed` child to this pane instead of the
+   viewport — the same trap #100 documents for the back-to-top button. Sticky
+   also keeps the bar inside the reading pane on the split layout, where a
+   viewport-fixed bar would run on under the list. */
+.progress {
+  position: sticky;
+  bottom: 0;
+
+  /* Reading-focus sets an inline `opacity` on every article block, and an
+     element with opacity < 1 paints as if it were at z-index 0 — so a dimmed
+     paragraph would cover this bar, exactly as it would the toolbar (see .bar). */
+  z-index: 2;
+  height: var(--space-0);
+  background: var(--border);
+}
+
+/* No width transition: the bar reports the scroll position and has to track the
+   finger. Easing it would leave it lagging behind the text through every swipe. */
+.progress i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
 }
 
 /* Split pane: the shell's bar floats over this panel, so the panel reserves
