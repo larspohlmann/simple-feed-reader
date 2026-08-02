@@ -24,7 +24,7 @@ final class FakeArticleExtractor implements ArticleExtractorInterface
         $this->result = $result;
     }
 
-    public function extract(string $url): ExtractionResult
+    public function extract(string $url, ?string $entryTitle = null): ExtractionResult
     {
         $this->calls[] = $url;
 

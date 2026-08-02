@@ -177,7 +177,7 @@ final readonly class EntryController
         $url = $entry->getUrl();
         $result = $url === null || $url === ''
             ? ExtractionResult::failed(null, 'no_url')
-            : $this->extractor->extract($url);
+            : $this->extractor->extract($url, $entry->getTitle());
 
         return new JsonResponse(ReaderJson::one($result, $this->clock->now()));
     }

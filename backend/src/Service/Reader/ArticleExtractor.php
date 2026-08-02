@@ -12,8 +12,9 @@ use fivefilters\Readability\Readability;
 
 /**
  * Turns an article URL into clean, sanitized, distraction-free HTML:
- * fetch (SSRF-guarded) → readability extraction → EntrySanitizer (the same XSS
- * barrier feed HTML crosses). Never throws for an ordinary failure — returns a
+ * fetch (SSRF-guarded) → page normalization → readability extraction →
+ * duplicate-title removal → EntrySanitizer (the same XSS barrier feed HTML
+ * crosses). Never throws for an ordinary failure — returns a
  * `failed` ExtractionResult with a machine reason so the endpoint stays 200 and
  * the client can fall back to feed content.
  */
@@ -24,11 +25,13 @@ final class ArticleExtractor implements ArticleExtractorInterface
 
     public function __construct(
         private readonly HtmlPageFetcher $fetcher,
+        private readonly FetchedPageNormalizer $normalizer,
+        private readonly LeadingTitleRemover $titleRemover,
         private readonly EntrySanitizer $sanitizer,
     ) {
     }
 
-    public function extract(string $url): ExtractionResult
+    public function extract(string $url, ?string $entryTitle = null): ExtractionResult
     {
         try {
             $page = $this->fetcher->fetch($url);
@@ -42,7 +45,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         ));
 
         try {
-            $article = $readability->parse($page->html);
+            $article = $readability->parse($this->normalizer->normalize($page->html));
         } catch (ParseException) {
             return ExtractionResult::failed($url, 'unextractable');
         }
@@ -54,7 +57,8 @@ final class ArticleExtractor implements ArticleExtractorInterface
             return ExtractionResult::failed($url, 'empty');
         }
 
-        $clean = $this->sanitizer->sanitize($article->content);
+        $withoutTitle = $this->titleRemover->remove($article->content, [$article->title, $entryTitle]);
+        $clean = $this->sanitizer->sanitize($withoutTitle);
         if ($clean === null) {
             return ExtractionResult::failed($url, 'empty');
         }
