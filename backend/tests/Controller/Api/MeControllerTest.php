@@ -18,21 +18,6 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
  */
 final class MeControllerTest extends ApiTestCase
 {
-    /** @return array<string, string> */
-    private function authHeader(string $email): array
-    {
-        $user = $this->users()->findOneByEmail($email);
-        self::assertInstanceOf(User::class, $user);
-
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        return [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $manager->create($user),
-            'CONTENT_TYPE' => 'application/json',
-        ];
-    }
-
     private function entityManager(): EntityManagerInterface
     {
         /** @var EntityManagerInterface $em */
@@ -157,13 +142,12 @@ final class MeControllerTest extends ApiTestCase
     public function testTheProfileCarriesPreferencesWithScrapingOffByDefault(): void
     {
         $client = static::createClient();
-        $user = $this->factory()->create('prefs-default@example.com');
+        $this->factory()->create('prefs-default@example.com');
+        $this->authenticate($client, 'prefs-default@example.com');
 
-        $client->request('GET', '/api/me', server: $this->authHeader($user->getEmail()));
+        $client->request('GET', '/api/me');
 
         self::assertResponseIsSuccessful();
-        $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, \JSON_THROW_ON_ERROR);
-        self::assertIsArray($payload);
-        self::assertSame(['scrapeFallbackEnabled' => false], $payload['preferences']);
+        self::assertSame(['scrapeFallbackEnabled' => false], $this->payload($client)['preferences']);
     }
 }
