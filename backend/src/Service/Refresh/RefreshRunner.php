@@ -17,6 +17,7 @@ use App\Service\Fetch\FetchOutcome;
 use App\Service\Fetch\FetchResponse;
 use App\Service\OrphanedFeedReclaimer;
 use App\Service\Parser\Exception\FeedParseException;
+use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
@@ -234,10 +235,16 @@ final class RefreshRunner
     {
         try {
             return $this->persistOutcome($feed, $outcome);
-        } catch (UniqueConstraintViolationException | ORMException $e) {
+        } catch (UniqueConstraintViolationException | ForeignKeyConstraintViolationException | ORMException $e) {
             // A failed flush rolls back AND closes the EntityManager, so every
             // later persist/flush would throw "EntityManager is closed".
             // Stop here instead of cascading the failure across the batch.
+            //
+            // ForeignKeyConstraintViolationException is reachable here since
+            // #246: the feed row backing an in-flight fetch can vanish
+            // mid-run (unsubscribe -> OrphanedFeedReclaimer::reclaim() holds
+            // no lock), and the ensuing UPDATE/INSERT against the gone row
+            // throws this rather than UniqueConstraintViolationException.
             $this->logger->error(
                 'Refresh aborted: persistence failed for {url}',
                 ['url' => $feed->getUrl(), 'exception' => $e],

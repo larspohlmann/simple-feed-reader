@@ -36,6 +36,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Service\Scraper\ScrapedFixtures;
 use App\Tests\Support\StubFeedFetcher;
 use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
+use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\NullLogger;
@@ -864,6 +865,37 @@ final class RefreshRunnerTest extends DbTestCase
         // phase failed, so that outcome is not lost.
         self::assertSame(1, $report->fetched);
         self::assertSame(0, $report->pruned);
+    }
+
+    /**
+     * The scenario a plain UniqueConstraintViolationException does not cover
+     * (#246): a feed vanishes mid-run because its last subscriber unsubscribes
+     * while the runner is mid-fetch — OrphanedFeedReclaimer::reclaim() holds no
+     * lock, only the runner's own `feed-refresh` lock does. The flush that
+     * follows then fails on the FK, not a unique key, so this must degrade to
+     * `aborted` exactly like the unique-constraint case rather than letting a
+     * DBAL exception escape run().
+     */
+    public function testForeignKeyViolationFromAVanishedFeedAbortsTheRunWithoutThrowing(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->em->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
+        );
+
+        $failingEm = $this->createStub(EntityManagerInterface::class);
+        $failingEm->method('flush')->willThrowException(new ForeignKeyConstraintViolationException(
+            new class ('a foreign key constraint fails', '23000', 1452) extends DriverAbstractException {
+            },
+            null,
+        ));
+
+        $report = $this->runner($failingEm)->run(RefreshRequest::allDue(300));
+
+        self::assertSame('aborted', $report->status);
+        self::assertSame(1, $report->total);
     }
 
     public function testLockIsReleasedAfterAnAbortedRun(): void
