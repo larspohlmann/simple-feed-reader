@@ -24,14 +24,20 @@ expense is self-inflicted; fix the query instead.
 
 ## Decision
 
-### An entity-maintained column, not a set-once value
+### Retire the published-date repair path first
 
-`publishedAt` is **not** immutable: `EntryIngestor::correctPublishedDates` is a
-standing repair path (#48/#50) that rewrites it from a fresh parse, and the e2e
-seed command sets it too. A column written "once at ingest" would silently
-drift after a repair.
+`EntryIngestor::correctPublishedDates` and `BackfillPublishedDatesCommand`
+were a one-time repair for rows ingested before feed dates were normalised to
+UTC (#48/#50). The repair has run; the path is dead weight and it is the only
+thing that ever rewrites `publishedAt` after insert. Both are removed, along
+with `CorrectPublishedDatesTest`. Nothing else references them.
 
-So `Entry` owns the invariant:
+### An entity-maintained column
+
+With the repair path gone, `publishedAt` is written only at creation time —
+by ingest and by the e2e seed command, both via `setPublishedAt()`. `Entry`
+still owns the invariant, because it costs nothing and prevents any future
+writer from causing drift:
 
 - New non-null column `entry.effective_date` (`DateTimeImmutable`, naive UTC
   like every other datetime).
@@ -40,8 +46,8 @@ So `Entry` owns the invariant:
 - There is **no** public `setEffectiveDate()`. The column cannot be written
   directly, so it cannot disagree with its sources.
 
-Every existing writer — ingest, the published-date repair, the e2e seed — goes
-through `setPublishedAt()` and stays correct without being touched.
+Both remaining writers — ingest and the e2e seed — go through
+`setPublishedAt()` and stay correct without being touched.
 
 ### Two indexes, replacing one
 
@@ -65,6 +71,12 @@ marked read by a watermark yet sort as unread. One column, one meaning.
 `publishedAt ?? createdAt`, which is exactly `effective_date`.
 
 ## Scope
+
+### Removals
+
+- `backend/src/Service/EntryIngestor.php` — delete `correctPublishedDates()`.
+- `backend/src/Command/BackfillPublishedDatesCommand.php` — delete.
+- `backend/tests/Service/CorrectPublishedDatesTest.php` — delete.
 
 ### `backend/src/Entity/Entry.php`
 
@@ -106,9 +118,6 @@ marked read by a watermark yet sort as unread. One column, one meaning.
   identical.
 - `publishedAt` and `createdAt` columns and their meanings.
 - The refresh flow, and no cache of any kind is introduced.
-- Reordering after a published-date repair behaves as today: the live
-  `COALESCE` already reflected repairs immediately; the maintained column
-  does too.
 
 ## Verification
 
