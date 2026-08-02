@@ -6,7 +6,7 @@ namespace App\Service\Account;
 
 use App\Entity\User;
 use App\Exception\LastAdminException;
-use App\Repository\SubscriptionRepository;
+use App\Repository\FeedRepository;
 use App\Repository\UserRepository;
 use App\Service\Admin\SelfActionGuard;
 use App\Service\OrphanedFeedReclaimer;
@@ -33,7 +33,7 @@ final readonly class AccountDeleter
     public function __construct(
         private EntityManagerInterface $entityManager,
         private UserRepository $users,
-        private SubscriptionRepository $subscriptions,
+        private FeedRepository $feeds,
         private OrphanedFeedReclaimer $orphanedFeeds,
         private SelfActionGuard $selfActionGuard,
     ) {
@@ -54,7 +54,7 @@ final readonly class AccountDeleter
     {
         $this->ensureNotTheLastAdmin($user);
 
-        $feedIds = $this->subscriptions->feedIdsForUser((int) $user->getId());
+        $feedIds = $this->feeds->idsSubscribedByUser((int) $user->getId());
 
         $this->entityManager->remove($user);
         $this->entityManager->flush();

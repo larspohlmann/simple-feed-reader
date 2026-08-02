@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Subscription;
+use App\Entity\Tag;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -116,6 +117,43 @@ class SubscriptionRepository extends ServiceEntityRepository
     }
 
     /**
+     * The user's subscriptions carrying a given tag (feed eager-loaded).
+     *
+     * @return list<Subscription>
+     */
+    public function findForUserByTagId(int $userId, int $tagId): array
+    {
+        /** @var list<Subscription> $rows */
+        $rows = $this->createQueryBuilder('s')
+            ->leftJoin('s.feed', 'f')->addSelect('f')
+            ->innerJoin('s.subscriptionTags', 'st')->innerJoin('st.tag', 't')
+            ->andWhere('s.user = :user')->setParameter('user', $userId)
+            ->andWhere('t.id = :tagId')->setParameter('tagId', $tagId)
+            ->getQuery()
+            ->getResult();
+
+        return $rows;
+    }
+
+    /**
+     * Subscriptions carrying a given tag — used to detach the tag before it is
+     * deleted (portable: does not rely on join-table FK cascade behaviour).
+     *
+     * @return list<Subscription>
+     */
+    public function findByTag(Tag $tag): array
+    {
+        /** @var list<Subscription> $rows */
+        $rows = $this->createQueryBuilder('s')
+            ->innerJoin('s.subscriptionTags', 'st')->innerJoin('st.tag', 't')
+            ->andWhere('t = :tag')->setParameter('tag', $tag)
+            ->getQuery()
+            ->getResult();
+
+        return $rows;
+    }
+
+    /**
      * How many feeds each of the given users is subscribed to, in ONE query.
      *
      * A user with no subscriptions is absent from the result rather than
@@ -150,24 +188,5 @@ class SubscriptionRepository extends ServiceEntityRepository
         }
 
         return $counts;
-    }
-
-    /**
-     * The feeds this user subscribes to, as ids. Read before deleting the account:
-     * once the subscription rows cascade away there is nothing left to ask.
-     *
-     * @return list<int>
-     */
-    public function feedIdsForUser(int $userId): array
-    {
-        /** @var list<int> $feedIds */
-        $feedIds = $this->createQueryBuilder('s')
-            ->select('IDENTITY(s.feed)')
-            ->where('s.user = :userId')
-            ->setParameter('userId', $userId)
-            ->getQuery()
-            ->getSingleColumnResult();
-
-        return array_map(intval(...), $feedIds);
     }
 }

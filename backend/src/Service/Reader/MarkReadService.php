@@ -10,7 +10,6 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Exception\ValidationException;
 use App\Repository\SubscriptionRepository;
-use App\Repository\SubscriptionTagRepository;
 use App\Repository\TagRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
@@ -30,7 +29,6 @@ final readonly class MarkReadService
     public function __construct(
         private EntityManagerInterface $em,
         private SubscriptionRepository $subscriptions,
-        private SubscriptionTagRepository $subscriptionTags,
         private TagRepository $tags,
         private ClockInterface $clock,
     ) {
@@ -89,10 +87,7 @@ final readonly class MarkReadService
         return match ($scope) {
             'all' => $this->subscriptions->findForUserWithTags($userId),
             'feed' => [$this->requireSubscription($id, $userId)],
-            'tag' => $this->subscriptionTags->findSubscriptionsForUserByTagId(
-                $userId,
-                $this->requireTag($id, $userId),
-            ),
+            'tag' => $this->subscriptions->findForUserByTagId($userId, $this->requireTag($id, $userId)),
             default => throw new BadRequestHttpException(sprintf('Unknown scope "%s".', $scope)),
         };
     }

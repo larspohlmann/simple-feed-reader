@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -55,51 +54,5 @@ class SubscriptionTagRepository extends ServiceEntityRepository
         }
 
         return $byId;
-    }
-
-    /**
-     * The user's subscriptions carrying a given tag (feed eager-loaded). Rooted
-     * at Subscription via the entity manager directly — this repository's own
-     * createQueryBuilder() roots at SubscriptionTag, which DQL will not let a
-     * query select through without also selecting the root — so the two ends of
-     * the join↔tag relationship are queried from here on purpose, keeping them
-     * beside forTagBySubscriptionId() rather than back on SubscriptionRepository.
-     *
-     * @return list<Subscription>
-     */
-    public function findSubscriptionsForUserByTagId(int $userId, int $tagId): array
-    {
-        /** @var list<Subscription> $rows */
-        $rows = $this->getEntityManager()->createQueryBuilder()
-            ->select('s')->addSelect('f')
-            ->from(Subscription::class, 's')
-            ->leftJoin('s.feed', 'f')
-            ->innerJoin('s.subscriptionTags', 'st')->innerJoin('st.tag', 't')
-            ->andWhere('s.user = :user')->setParameter('user', $userId)
-            ->andWhere('t.id = :tagId')->setParameter('tagId', $tagId)
-            ->getQuery()
-            ->getResult();
-
-        return $rows;
-    }
-
-    /**
-     * Subscriptions carrying a given tag — used to detach the tag before it is
-     * deleted (portable: does not rely on join-table FK cascade behaviour).
-     *
-     * @return list<Subscription>
-     */
-    public function findSubscriptionsByTag(Tag $tag): array
-    {
-        /** @var list<Subscription> $rows */
-        $rows = $this->getEntityManager()->createQueryBuilder()
-            ->select('s')
-            ->from(Subscription::class, 's')
-            ->innerJoin('s.subscriptionTags', 'st')->innerJoin('st.tag', 't')
-            ->andWhere('t = :tag')->setParameter('tag', $tag)
-            ->getQuery()
-            ->getResult();
-
-        return $rows;
     }
 }

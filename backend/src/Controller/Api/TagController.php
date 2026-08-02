@@ -12,6 +12,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Exception\TagNameTakenException;
 use App\Http\TagJson;
+use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionTagRepository;
 use App\Repository\TagRepository;
 use App\Service\Reader\ExactSetGuard;
@@ -28,6 +29,7 @@ final readonly class TagController
 {
     public function __construct(
         private TagRepository $tags,
+        private SubscriptionRepository $subscriptions,
         private SubscriptionTagRepository $subscriptionTags,
         private EntityManagerInterface $em,
         private ExactSetGuard $exactSet,
@@ -146,7 +148,7 @@ final readonly class TagController
             ?? throw new NotFoundHttpException('No such tag.');
 
         // Detach from every subscription first (portable across SQLite/MySQL).
-        foreach ($this->subscriptionTags->findSubscriptionsByTag($tag) as $sub) {
+        foreach ($this->subscriptions->findByTag($tag) as $sub) {
             $sub->removeTag($tag);
         }
         $this->em->remove($tag);
