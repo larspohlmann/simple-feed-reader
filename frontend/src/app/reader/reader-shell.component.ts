@@ -176,6 +176,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     const s = this.selection();
     return s.kind === 'tag' ? (s.id ?? null) : null;
   });
+  readonly allItemsActive = computed(() => this.selection().kind === 'all');
 
   // Mobile hide-on-scroll app bar — the LIST's chrome, driven exclusively by
   // the entry list's typed `scrolled` output. A full-screen article is a layer

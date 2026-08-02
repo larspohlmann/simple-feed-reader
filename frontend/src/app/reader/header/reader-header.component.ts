@@ -36,6 +36,10 @@ export class ReaderHeaderComponent {
    *  CSS hides it regardless). */
   readonly tags = input<TagDto[]>([]);
   readonly activeTagId = input<number | null>(null);
+  /** Whether the list currently shows All Items, for the leading pill's highlight.
+   *  The bar cannot derive this: `activeTagId` is null for Favorites, Kept and a
+   *  single feed as well, so only the shell knows. */
+  readonly allItemsActive = input(false);
 
   readonly toggleSidebar = output<void>();
   /** The empty middle of the bar was tapped — scroll the list back to the top. */

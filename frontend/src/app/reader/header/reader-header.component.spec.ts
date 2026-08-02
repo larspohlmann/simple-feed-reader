@@ -71,11 +71,46 @@ describe('ReaderHeaderComponent', () => {
     ]);
     f.componentRef.setInput('activeTagId', 2);
     f.detectChanges();
-    const chips = (f.nativeElement as HTMLElement).querySelectorAll('.tagrow .chip');
+    const chips = (f.nativeElement as HTMLElement).querySelectorAll('.tagrow .chip:not(.all)');
     expect(chips.length).toBe(2);
     expect(chips[0].getAttribute('href')).toContain('tag=1');
     expect(chips[0].textContent).toContain('News');
     expect(chips[1].classList).toContain('active');
+  });
+
+  describe('the All Items pill that leads the mobile tag row', () => {
+    function withTags() {
+      const f = create();
+      f.componentRef.setInput('tags', [
+        { id: 1, name: 'News', color: null, icon: null, position: 0 },
+      ]);
+      f.detectChanges();
+      return f;
+    }
+
+    it('comes first and links to the list with every filter cleared', () => {
+      const chips = (withTags().nativeElement as HTMLElement).querySelectorAll('.tagrow .chip');
+      expect(chips[0].classList).toContain('all');
+      expect(chips[0].textContent).toContain('All items');
+      expect(chips[0].getAttribute('href')).not.toContain('tag=');
+    });
+
+    // activeTagId alone cannot drive this: it is null for Favorites, Kept and a
+    // single feed too, none of which is the All Items list.
+    it('is marked active only when the shell reports the All Items selection', () => {
+      const f = withTags();
+      const pill = () => (f.nativeElement as HTMLElement).querySelector('.tagrow .chip.all')!;
+      expect(pill().classList).not.toContain('active');
+
+      f.componentRef.setInput('allItemsActive', true);
+      f.detectChanges();
+      expect(pill().classList).toContain('active');
+    });
+
+    it('does not bring the row back when the user has no tags', () => {
+      const el = create().nativeElement as HTMLElement;
+      expect(el.querySelector('.tagrow')).toBeNull();
+    });
   });
 
   it('shows a Settings link, and Admin only for admins', () => {
