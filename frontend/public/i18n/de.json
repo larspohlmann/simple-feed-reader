@@ -309,6 +309,8 @@
     "lastRefreshed": "Zuletzt aktualisiert",
     "fetchingFeeds": "Feeds werden geladen – {{done}} von {{total}}",
     "fetchFailed": "Einige Feeds konnten nicht geladen werden.",
+    "refreshBusy": "Eine andere Aktualisierung läuft bereits. Bitte gleich noch einmal versuchen.",
+    "refreshAborted": "Die Aktualisierung wurde vorzeitig beendet. Einige Feeds sind noch fällig.",
     "retryFetch": "Erneut versuchen",
     "addFeed": "Feed hinzufügen",
     "allItems": "Alle Einträge",

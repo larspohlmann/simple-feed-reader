@@ -22,6 +22,7 @@ import { SubscriptionsStore } from './subscriptions.store';
 import { TagsStore } from './tags.store';
 import { EntriesStore } from './entries.store';
 import { RefreshService } from './refresh.service';
+import { refreshFailureKey } from './refresh-message';
 import { ReadingLayoutService } from './reading-layout.service';
 import { LayoutService } from './layout.service';
 import { RefreshScope, markReadTarget, queryFromSelection, selectionFromParams } from './query';
@@ -112,10 +113,19 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /** The counted banner belongs to the post-onboarding sweep only. Every other
    *  refresh has the hairline, which is enough context for a user who already
-   *  knows what their reader looks like. Within the sweep window `sweeping` is
-   *  true exactly while the sweep runs or has errored; the template's inner
-   *  branch picks counting vs. the error+retry message. */
-  readonly showFetchBanner = computed(() => this.sweeping());
+   *  knows what their reader looks like. A failure takes the strip over, so the
+   *  two never compete for it. */
+  readonly showFetchProgress = computed(
+    () => this.sweeping() && this.refreshSvc.failure() === null,
+  );
+
+  /** What to tell the user about a refresh that fetched nothing, from ANY
+   *  refresh — not just the sweep. Gating this on the sweep window is what left
+   *  a failed sidebar refresh, scoped refresh or add-feed silent (#119). */
+  readonly fetchFailureKey = computed(() => {
+    const failure = this.refreshSvc.failure();
+    return failure ? refreshFailureKey(failure) : null;
+  });
 
   readonly fetchProgress = computed(() => {
     const report = this.refreshSvc.report();
@@ -305,7 +315,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     // and RefreshService.run()'s onDone fires on both success and failure, which
     // is why the clear is expressed as state here rather than in that callback.
     effect(() => {
-      if (this.sweeping() && !this.refreshSvc.running() && this.refreshSvc.error() === null) {
+      if (this.sweeping() && !this.refreshSvc.running() && this.refreshSvc.failure() === null) {
         untracked(() => this.sweeping.set(false));
       }
     });

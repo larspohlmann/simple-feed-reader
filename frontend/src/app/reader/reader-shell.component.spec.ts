@@ -1,7 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  TestRequest,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { BehaviorSubject, of } from 'rxjs';
@@ -618,6 +622,72 @@ describe('ReaderShellComponent', () => {
       ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
       f.detectChanges();
       expect((f.nativeElement as HTMLElement).querySelector('.fetch-banner')).toBeNull();
+    });
+  });
+
+  describe('refresh failures', () => {
+    /** Boot a reader whose feeds have all been fetched before -- so no
+     *  onboarding sweep fires -- then refresh and answer that refresh with
+     *  `respond`. Every test here therefore covers the ORDINARY refresh path:
+     *  the sidebar button, a scoped refresh, add-feed. That path told the user
+     *  nothing at all before #119, whatever went wrong. */
+    const refreshAnsweredWith = (respond: (request: TestRequest) => void) => {
+      const fixture = bootWith([
+        { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' },
+      ]);
+      fixture.componentInstance.onRefresh();
+      fixture.detectChanges();
+      respond(ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh'));
+      fixture.detectChanges();
+      return {
+        fixture,
+        banner: () => (fixture.nativeElement as HTMLElement).querySelector('.fetch-banner'),
+      };
+    };
+
+    const serverError = (request: TestRequest) =>
+      request.flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+
+    it('tells the user a refresh failed, outside the onboarding sweep', () => {
+      const { banner } = refreshAnsweredWith(serverError);
+
+      expect(banner()?.textContent).toContain('Some feeds could not be fetched.');
+    });
+
+    // The whole point of the banner: the user must be able to act on it.
+    it('refreshes again when the failure banner is retried', () => {
+      const { fixture, banner } = refreshAnsweredWith(serverError);
+
+      (banner()!.querySelector('button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
+      fixture.detectChanges();
+
+      expect(banner()).toBeNull(); // a clean retry clears it
+    });
+
+    // An aborted sweep left feeds unfetched and still due. It shared the
+    // `completed` branch, so it presented exactly like a clean run.
+    it('says a sweep stopped early rather than showing it as finished', () => {
+      const { banner } = refreshAnsweredWith((request) =>
+        request.flush({ ...refreshDone, status: 'aborted', total: 10, remaining: 7, fetched: 3 }),
+      );
+
+      expect(banner()?.textContent).toContain('The refresh stopped early.');
+    });
+
+    it('marks the failure as an alert, not a status update', () => {
+      const { banner } = refreshAnsweredWith((request) =>
+        request.flush({ ...refreshDone, status: 'aborted', remaining: 4 }),
+      );
+
+      expect(banner()?.getAttribute('role')).toBe('alert');
+    });
+
+    it('stays silent when the refresh completes', () => {
+      const { banner } = refreshAnsweredWith((request) => request.flush(refreshDone));
+
+      expect(banner()).toBeNull();
     });
   });
 
