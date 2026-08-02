@@ -249,12 +249,3 @@ services:
     App\Service\Settings\InstanceSettings:
         autowire: true
         public: true
-
-    # AccountDeleterTest drives deleteAsAdmin()/deleteSelf() directly to prove
-    # the cascade, the orphan reclaim and both guards. Its production callers
-    # (the admin delete-user endpoint and the self-delete endpoint) arrive in
-    # later tasks, so until then the compiler would inline it away and the test
-    # container could not fetch it. Same `autowire` caveat as above.
-    App\Service\Account\AccountDeleter:
-        autowire: true
-        public: true
