@@ -51,14 +51,22 @@ Both remaining writers — ingest and the e2e seed — go through
 
 ### Two indexes, replacing one
 
-- **`(effective_date, id)`** serves the default cross-feed list: MySQL walks
-  the index newest-first, probes the subscription join per row, and stops at
-  `LIMIT`. This is the top-N pattern that eliminates the filesort for the
-  common "all subscribed feeds" views.
-- **`(feed_id, effective_date)`** replaces `idx_entry_feed_published`. It
-  serves the single-subscription list, the pruner's per-feed keep-newest
-  ordering, and the mark-all-read watermark update. Nothing queries
-  `published_at` directly, so the old index goes.
+- **`(effective_date, id)`** serves cursor pages of the cross-feed list. A
+  cursor adds the predicate `effective_date < :cursor`. MySQL walks the index
+  backward from that point and stops at `LIMIT`. Measured against a Docker
+  MySQL copy (36 subscriptions, 10,136 entries): page 2 and later show a
+  `Backward index scan`, no `Using temporary`, and no `Using filesort`.
+  The first page has no cursor predicate. There the optimizer drives from
+  `subscription` instead, and the plan still filesorts. `FORCE INDEX` and
+  `STRAIGHT_JOIN` show the index can serve that ordering too; at this data
+  volume the optimizer costs the subscription-first plan lower. Whether that
+  choice changes at production scale is not tested. The first page filesorted
+  before this change too, so this is not a regression.
+- **`(feed_id, effective_date)`** replaces `idx_entry_feed_published`.
+  Measured the same way, it serves the single-subscription list with a
+  backward index scan and no filesort. It also serves the pruner's per-feed
+  keep-newest ordering and the mark-all-read watermark update. Nothing
+  queries `published_at` directly, so the old index goes.
 
 ### Replace the expression everywhere
 
@@ -134,6 +142,7 @@ marked read by a watermark yet sort as unread. One column, one meaning.
 - Migration: the CI migration leg (migrate from empty on SQLite and MySQL,
   then `doctrine:schema:validate`).
 - `EXPLAIN` the generated list SQL against the Docker MySQL with seeded data:
-  before shows `Using filesort`; after shows an index-backed walk with no
-  filesort for the default view.
+  a cursor page shows an index-backed backward scan with no filesort; the
+  first page of the default cross-feed view still filesorts, as it did
+  before this change.
 - `composer check`, `composer md`, PhpStorm inspections on touched files.

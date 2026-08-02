@@ -24,8 +24,11 @@ use Doctrine\Migrations\AbstractMigration;
  * The epoch DEFAULT exists only because SQLite cannot ADD a NOT NULL column
  * without one (and has no MODIFY COLUMN to tighten one afterwards); MySQL takes
  * the identical DDL so both platforms match the ORM metadata, which declares
- * the same default. No row ever keeps it: the backfill below rewrites every
- * pre-existing row, and Entry assigns the real value on construction.
+ * the same default. The backfill below rewrites every pre-existing row, and
+ * Entry assigns the real value on construction. A narrow window remains: code
+ * still running without this migration's ORM metadata can insert a row that
+ * keeps the epoch default. Such a row is older than the 90-day retention
+ * cutoff, so EntryPruner removes it at the next refresh.
  *
  * The backfill runs OUTSIDE the column guard and is idempotent (rewriting a
  * correct row with the same COALESCE is a no-op): isTransactional() is false
