@@ -248,6 +248,28 @@ final class MeControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(409);
     }
 
+    /**
+     * The lockout chain the status-blind countAdmins() used to miss: two
+     * active admins both count, but suspending one leaves only one admin able
+     * to act at all. countActiveAdmins() must refuse the remaining admin's
+     * self-delete here, or the instance is left with a suspended admin nobody
+     * can reinstate (approve sits behind ROLE_ADMIN on ^/api/admin/).
+     */
+    public function testTheLastActiveAdminCannotSelfDeleteAfterSuspendingTheOtherAdmin(): void
+    {
+        $client = static::createClient();
+        $remaining = $this->factory()->create('remaining-admin@example.com', roles: ['ROLE_ADMIN']);
+        $suspended = $this->factory()->create('to-be-suspended-admin@example.com', roles: ['ROLE_ADMIN']);
+        $this->authenticate($client, 'remaining-admin@example.com');
+
+        $client->request('POST', '/api/admin/users/' . $suspended->getId() . '/suspend');
+        self::assertResponseIsSuccessful();
+
+        $client->request('DELETE', '/api/me');
+
+        self::assertResponseStatusCodeSame(409);
+    }
+
     public function testDeletingTheAccountNeedsAToken(): void
     {
         $client = static::createClient();

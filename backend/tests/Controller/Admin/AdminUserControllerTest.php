@@ -1116,15 +1116,15 @@ final class AdminUserControllerTest extends WebTestCase
     }
 
     /**
-     * NOT a test of the 409 last-admin refusal — that refusal is unreachable
-     * through this route. deleteAsAdmin() runs the self-delete guard before
-     * the last-admin guard, and ^/api/admin/ requires ROLE_ADMIN on the
-     * caller: if $target is the system's only admin, the only account that
-     * could call this endpoint against $target IS $target, so the 422
-     * self-delete guard always fires first. If the caller is a distinct
-     * admin, countAdmins() is at least 2 and the last-admin guard has nothing
-     * to refuse. The 409 path is only reachable through deleteSelf(), i.e.
-     * DELETE /api/me (Task 6).
+     * NOT a test of the 409 last-admin refusal. $soleAdmin and $deputy are
+     * both Active (the factory default), so ensureNotTheLastAdmin($deputy)
+     * sees countActiveAdmins() >= 2 — $deputy and $soleAdmin both count — and
+     * the guard has nothing to refuse; the self-delete guard (422) is also
+     * moot, since the caller and target are distinct here. countActiveAdmins()
+     * being status-aware DOES make the 409 reachable through this route in
+     * general (deleting a non-Active admin while the caller is the sole
+     * remaining Active admin refuses with 409), just not through the two
+     * Active admins this test constructs.
      *
      * What this test actually proves: $soleAdmin deletes $deputy (204), and
      * $deputy's now-stale token can no longer authenticate anything (401) —
@@ -1154,6 +1154,30 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertNotNull(
             self::getContainer()->get(\App\Repository\UserRepository::class)->find($soleAdmin->getId()),
         );
+    }
+
+    /**
+     * The 409 path this route's other delete tests deliberately do not cover
+     * (see the docblock above testAnAdminDeletedByAnotherAdminCanNoLongerAuthenticate):
+     * countActiveAdmins() is status-aware, so deleting a non-Active admin
+     * while the caller is the sole remaining Active admin refuses too, not
+     * only self-delete through DELETE /api/me.
+     */
+    public function testDeletingASuspendedAdminIsRefusedWhenTheCallerIsTheSoleActiveAdmin(): void
+    {
+        $factory = $this->factory();
+        $caller = $factory->create('sole-active-admin@example.com', roles: ['ROLE_ADMIN']);
+        $suspended = $factory->create(
+            'suspended-admin@example.com',
+            roles: ['ROLE_ADMIN'],
+            status: UserStatus::Suspended,
+        );
+
+        $this->client->request('DELETE', self::LIST . '/' . $suspended->getId(), server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($caller),
+        ]);
+
+        self::assertResponseStatusCodeSame(409);
     }
 
     public function testANonAdminCannotDeleteAnAccount(): void

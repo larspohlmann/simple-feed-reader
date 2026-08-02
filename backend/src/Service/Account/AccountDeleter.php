@@ -70,7 +70,7 @@ final readonly class AccountDeleter
             return;
         }
 
-        if ($this->users->countAdmins() > 1) {
+        if ($this->users->countActiveAdmins() > 1) {
             return;
         }
 
