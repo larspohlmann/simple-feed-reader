@@ -1116,16 +1116,26 @@ final class AdminUserControllerTest extends WebTestCase
     }
 
     /**
-     * $deputy deletes $soleAdmin's would-be deleter first, so the second
-     * request authenticates with a token for an account that no longer
-     * exists. Observed to come back 401, not 404: the api firewall's JWT
-     * provider fails to reload the user before access_control or the
-     * controller ever run, so the request never reaches the last-admin guard
-     * at all. The assertion that actually matters is the one below — the sole
-     * remaining admin must still exist, which would fail if
-     * AccountDeleter's last-admin guard were removed.
+     * NOT a test of the 409 last-admin refusal — that refusal is unreachable
+     * through this route. deleteAsAdmin() runs the self-delete guard before
+     * the last-admin guard, and ^/api/admin/ requires ROLE_ADMIN on the
+     * caller: if $target is the system's only admin, the only account that
+     * could call this endpoint against $target IS $target, so the 422
+     * self-delete guard always fires first. If the caller is a distinct
+     * admin, countAdmins() is at least 2 and the last-admin guard has nothing
+     * to refuse. The 409 path is only reachable through deleteSelf(), i.e.
+     * DELETE /api/me (Task 6).
+     *
+     * What this test actually proves: $soleAdmin deletes $deputy (204), and
+     * $deputy's now-stale token can no longer authenticate anything (401) —
+     * the api firewall's JWT provider fails to reload a deleted user before
+     * access_control or the controller ever run, so a second delete attempt
+     * with that token cannot reach AccountDeleter at all. The final
+     * assertion — $soleAdmin still exists — confirms the first deletion did
+     * not take out the wrong account; it says nothing about the last-admin
+     * guard, since that guard was never exercised by this request.
      */
-    public function testDeletingTheLastAdminIsRefused(): void
+    public function testAnAdminDeletedByAnotherAdminCanNoLongerAuthenticate(): void
     {
         $factory = $this->factory();
         $soleAdmin = $factory->create('sole-admin@example.com', roles: ['ROLE_ADMIN']);
