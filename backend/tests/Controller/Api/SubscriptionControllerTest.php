@@ -334,6 +334,43 @@ final class SubscriptionControllerTest extends WebTestCase
         );
     }
 
+    /**
+     * The scrape fallback defaults to OFF, so this user's preference is left
+     * untouched — a DI wiring regression that never consults
+     * ScrapeFallbackPolicy would offer the scraped candidate anyway and this
+     * test would catch it.
+     */
+    public function testAFeedlessPageOffersNoScrapedCandidateWhenTheFallbackIsDisabled(): void
+    {
+        $client = self::createClient();
+        $headers = $this->authHeader('feedlessdisabled@example.com');
+
+        $stub = new StubFeedFetcher();
+        $stub->willReturn(
+            'https://www.heise.de',
+            FetchResponse::fetched(
+                'https://www.heise.de/',
+                permanentRedirect: false,
+                body: $this->scrapedFixture('heise-2026-07-23.html'),
+                etag: null,
+                lastModified: null,
+            ),
+        );
+        $this->installFetcher($stub);
+
+        $client->request(
+            'POST',
+            '/api/subscriptions',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['url' => 'https://www.heise.de'], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(200);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        // 'not_scrapable' here would leak the disabled feature into the UI —
+        // the key must be entirely absent, not merely null.
+        self::assertSame(['candidates' => []], $body);
+    }
+
     public function testBlockedSiteReportsReasonWithEmptyCandidates(): void
     {
         $client = self::createClient();
