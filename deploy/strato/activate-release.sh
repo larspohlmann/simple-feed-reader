@@ -157,6 +157,20 @@ echo "==> Flipping current"
 ln -sfn "${RELEASE}" "${ROOT}/current.tmp"
 mv -Tf "${ROOT}/current.tmp" "${ROOT}/current"
 
+echo "==> Backfilling missing user preferences"
+# Deliberately AFTER the flip, for the same reason as the favicon warm below:
+# migrations run against the new schema while `current` still served the OLD
+# code (see the migrations comment above), and the old User::__construct never
+# created a Preferences row. An account created in that window is otherwise
+# broken forever -- the migration's own backfill already ran and will not run
+# again, so this is its only remaining chance to heal. Non-fatal: a healing
+# step must never take a live, already-flipped site down.
+if ! console app:preferences:backfill; then
+    echo "!!! Preferences backfill failed; the release is live and serving." >&2
+    echo "!!! Any account created during the migration/flip window may still" >&2
+    echo "!!! be missing its preferences row until this is re-run by hand." >&2
+fi
+
 echo "==> Warming catalog favicons"
 # A convenience for this server, not a requirement of the app: the admin UI warms
 # icons after an import on any deployment, and a cold cache renders monograms,

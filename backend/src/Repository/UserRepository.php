@@ -198,6 +198,26 @@ class UserRepository extends ServiceEntityRepository implements UserLoaderInterf
         return false;
     }
 
+    /**
+     * Accounts with no `user_preferences` row. Feeds the healing command: a
+     * user created while a deploy's migration step had already added the
+     * table but `current` still served the old `User::__construct` (which
+     * never created the row) ends up here, and needs one written by hand.
+     *
+     * @return list<User>
+     */
+    public function findAllWithoutPreferences(): array
+    {
+        /** @var list<User> $users */
+        $users = $this->createQueryBuilder('u')
+            ->leftJoin('u.preferences', 'p')
+            ->andWhere('p.id IS NULL')
+            ->getQuery()
+            ->getResult();
+
+        return $users;
+    }
+
     public function countByStatus(UserStatus $status): int
     {
         return (int) $this->createQueryBuilder('u')
