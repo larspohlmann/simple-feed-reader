@@ -80,41 +80,6 @@ final class EntryIngestor
     }
 
     /**
-     * Rewrite existing entries' publishedAt from a fresh parse, matching by guid
-     * hash. A one-off repair for rows ingested before feed dates were normalised
-     * to UTC (#48/#50): only entries whose stored instant differs from the
-     * re-parsed one are touched. Caller flushes. Returns the number updated.
-     */
-    public function correctPublishedDates(Feed $feed, ParsedFeed $parsed): int
-    {
-        if ($parsed->entries === []) {
-            return 0;
-        }
-
-        $hashes = $this->guidHashesOf($parsed->entries);
-        $existing = $this->entryRepository->findByFeedIndexedByGuidHash($feed, $hashes);
-
-        $updated = 0;
-        foreach ($parsed->entries as $parsedEntry) {
-            if ($parsedEntry->publishedAt === null) {
-                continue;
-            }
-            $entry = $existing[self::guidHash($parsedEntry->guid)] ?? null;
-            if ($entry === null) {
-                continue;
-            }
-            $current = $entry->getPublishedAt();
-            if ($current !== null && $current->getTimestamp() === $parsedEntry->publishedAt->getTimestamp()) {
-                continue;
-            }
-            $entry->setPublishedAt($parsedEntry->publishedAt);
-            $updated++;
-        }
-
-        return $updated;
-    }
-
-    /**
      * Fill in the image on entries ingested before the feed's image was
      * persisted (#148), matching by guid hash against a fresh parse.
      *

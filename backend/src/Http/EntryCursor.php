@@ -7,8 +7,9 @@ namespace App\Http;
 /**
  * Opaque keyset-pagination cursor for the entry list: base64url of
  * "<effectiveDate ISO8601>|<id>". The client treats it as a token; the format
- * is ours to change. `date` is the entry's publishedAt ?? createdAt — the same
- * value the list orders by — and `id` is the tie-breaker for equal timestamps.
+ * is ours to change. `date` is the entry's effectiveDate (publishedAt when the
+ * feed supplied one, createdAt otherwise) — the same value the list orders by
+ * — and `id` is the tie-breaker for equal timestamps.
  */
 final readonly class EntryCursor
 {

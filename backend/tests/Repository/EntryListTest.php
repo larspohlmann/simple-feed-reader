@@ -177,7 +177,7 @@ final class EntryListTest extends DbTestCase
         self::assertSame('e2', $page1[1]->entry->getGuid());
 
         $cursor = new EntryCursor(
-            $page1[1]->entry->getPublishedAt() ?? $page1[1]->entry->getCreatedAt(),
+            $page1[1]->entry->getEffectiveDate(),
             $page1[1]->entry->getId() ?? 0,
         );
         $page2 = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0, cursor: $cursor, limit: 2));

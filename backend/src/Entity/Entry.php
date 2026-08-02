@@ -11,7 +11,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: EntryRepository::class)]
 #[ORM\Table(name: 'entry')]
 #[ORM\UniqueConstraint(name: 'uniq_entry_feed_guid', columns: ['feed_id', 'guid_hash'])]
-#[ORM\Index(name: 'idx_entry_feed_published', columns: ['feed_id', 'published_at'])]
+#[ORM\Index(name: 'idx_entry_effective', columns: ['effective_date', 'id'])]
+#[ORM\Index(name: 'idx_entry_feed_effective', columns: ['feed_id', 'effective_date'])]
 class Entry
 {
     #[ORM\Id]
@@ -60,6 +61,18 @@ class Entry
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
+    /**
+     * The list-sort instant: publishedAt when the feed supplied one, createdAt
+     * otherwise. Materialized (rather than COALESCE'd in queries) so an index
+     * can serve the reader's newest-first sort. Maintained exclusively by the
+     * constructor and setPublishedAt() — no public setter — so it cannot drift
+     * from its sources. The column default exists only for the migration on
+     * SQLite, which cannot add a NOT NULL column without one; every real row
+     * is written by this class or backfilled by the migration.
+     */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, options: ['default' => '1970-01-01 00:00:00'])]
+    private \DateTimeImmutable $effectiveDate;
+
     public function __construct(
         Feed $feed,
         string $guid,
@@ -73,6 +86,7 @@ class Entry
         $this->url = $url;
         $this->title = $title;
         $this->createdAt = $createdAt;
+        $this->effectiveDate = $createdAt;
     }
 
     public function getId(): ?int
@@ -170,6 +184,12 @@ class Entry
     public function setPublishedAt(?\DateTimeImmutable $publishedAt): void
     {
         $this->publishedAt = $publishedAt;
+        $this->effectiveDate = $publishedAt ?? $this->createdAt;
+    }
+
+    public function getEffectiveDate(): \DateTimeImmutable
+    {
+        return $this->effectiveDate;
     }
 
     public function getCreatedAt(): \DateTimeImmutable
