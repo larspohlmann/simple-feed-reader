@@ -152,6 +152,13 @@ form {
   letter-spacing: 0.03em;
 }
 
+.badge.experimental {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
 .samples {
   list-style: disc;
   margin: 0;

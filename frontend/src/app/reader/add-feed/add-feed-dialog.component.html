@@ -52,6 +52,11 @@
                       | transloco
                   }}</span>
                 }
+                @if (c.format === 'scraped') {
+                  <span class="badge experimental">{{
+                    'dialog.addFeed.experimental' | transloco
+                  }}</span>
+                }
               </div>
               @if (c.format === 'scraped') {
                 <p class="muted scraped-hint">{{ 'dialog.addFeed.scrapedHint' | transloco }}</p>

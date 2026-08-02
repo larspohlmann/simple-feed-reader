@@ -189,6 +189,24 @@ describe('AddFeedDialogComponent', () => {
     expect(close).toHaveBeenCalledWith({ id: 7 });
   });
 
+  it('marks a scraped candidate as experimental', () => {
+    const f = create();
+    f.componentInstance.form.setValue({ url: 'https://page.example/' });
+    f.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      candidates: [{ url: 'https://page.example/', title: 'Page', format: 'scraped' }],
+    });
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url.endsWith('/api/feeds/preview'))
+      .flush('x', { status: 500, statusText: 'err' });
+    f.detectChanges();
+
+    const badges = (f.nativeElement as HTMLElement).querySelectorAll('.badge');
+    const text = Array.from(badges, (b) => (b as HTMLElement).textContent?.trim());
+    expect(text).toContain('Experimental');
+  });
+
   it('warns when the site blocks scraping and hides the footer submit', () => {
     const f = create();
     f.componentInstance.form.setValue({ url: 'https://blocked.example' });
@@ -328,6 +346,21 @@ describe('AddFeedDialogComponent', () => {
       'No feeds found',
     );
     expect(close).not.toHaveBeenCalled();
+  });
+
+  it('says nothing about scraping when scraping is off and nothing was found', () => {
+    // With scraping off, the backend sends candidates: [] and no
+    // scrapeFailureReason — this pins the plain "no feeds found" wording so a
+    // future refactor cannot quietly reintroduce a scraping mention here.
+    const f = create();
+    f.componentInstance.form.setValue({ url: 'https://example.com' });
+    f.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({ candidates: [] });
+    f.detectChanges();
+
+    const text = (f.nativeElement as HTMLElement).textContent!.toLowerCase();
+    expect(text).toContain('no feeds found');
+    expect(text).not.toContain('scrap');
   });
 
   it('shows a field error on 422', () => {

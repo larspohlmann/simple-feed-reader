@@ -93,6 +93,7 @@
       "withImages": "With images",
       "noImages": "No images",
       "scrapedHint": "No feed found — generated from the page's article list.",
+      "experimental": "Experimental",
       "loadingPreview": "Loading preview…",
       "noRecentItems": "No recent items",
       "subscribe": "Subscribe",
