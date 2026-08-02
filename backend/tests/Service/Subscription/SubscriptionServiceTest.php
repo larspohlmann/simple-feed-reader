@@ -9,12 +9,14 @@ use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Enum\ScrapeFallback;
+use App\Enum\SourceFormat;
 use App\Exception\AlreadySubscribedException;
 use App\Exception\SubscriptionLimitReachedException;
 use App\Service\Discovery\FeedCandidate;
 use App\Service\Discovery\FeedDiscoveryInterface;
 use App\Service\Discovery\FeedDiscoveryResult;
 use App\Service\Discovery\ScrapeFallbackPolicy;
+use App\Service\Subscription\Exception\ScrapingDisabledException;
 use App\Service\Subscription\SubscriptionLimitResolver;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
@@ -160,6 +162,7 @@ final class SubscriptionServiceTest extends DbTestCase
     public function testScrapedSubscribeNeverDowngradesAnXmlFeed(): void
     {
         $user = $this->factory()->create('downgrader@example.com');
+        $user->getPreferences()->setScrapeFallbackEnabled(true);
         $feed = new Feed('https://example.com/feed.xml'); // sourceFormat defaults to 'xml'
         $this->em->persist($feed);
         $this->em->flush();
@@ -205,6 +208,7 @@ final class SubscriptionServiceTest extends DbTestCase
     public function testScrapedSubscribeAttachesTheGivenTags(): void
     {
         $user = $this->factory()->create('scrapedtagger@example.com');
+        $user->getPreferences()->setScrapeFallbackEnabled(true);
         $blog = new Tag($user, 'Blogs');
         $this->em->persist($blog);
         $this->em->flush();
@@ -220,6 +224,32 @@ final class SubscriptionServiceTest extends DbTestCase
             ['Blogs'],
             array_map(static fn (Tag $t): string => $t->getName(), $outcome->subscription->getTags()->toArray()),
         );
+    }
+
+    /**
+     * Discovery never offers a scraped candidate to an account with the
+     * preference off, so a 'scraped' subscribe reaching here at all is a
+     * hand-made request — exactly the bypass this guard exists to close.
+     */
+    public function testAScrapedSubscribeIsRefusedWhenTheUserHasScrapingDisabled(): void
+    {
+        $user = $this->factory()->create('scrape-off@example.com');
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResult::candidates([])));
+
+        $this->expectException(ScrapingDisabledException::class);
+
+        $service->subscribe($user, 'https://example.com/blog', SourceFormat::SCRAPED);
+    }
+
+    public function testAScrapedSubscribeSucceedsWhenTheUserHasScrapingEnabled(): void
+    {
+        $user = $this->factory()->create('scrape-on@example.com');
+        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResult::candidates([])));
+
+        $outcome = $service->subscribe($user, 'https://example.com/blog', SourceFormat::SCRAPED);
+
+        self::assertNotNull($outcome->subscription);
     }
 
     /**

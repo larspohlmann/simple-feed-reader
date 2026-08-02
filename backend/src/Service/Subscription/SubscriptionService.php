@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\ScrapeFallback;
 use App\Enum\SourceFormat;
 use App\Exception\AlreadySubscribedException;
 use App\Exception\SubscriptionLimitReachedException;
@@ -16,6 +17,7 @@ use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionTagRepository;
 use App\Service\Discovery\FeedDiscoveryInterface;
 use App\Service\Discovery\ScrapeFallbackPolicy;
+use App\Service\Subscription\Exception\ScrapingDisabledException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
@@ -51,6 +53,14 @@ final readonly class SubscriptionService
         // a hand-typed variant merely becomes its own row that counts against
         // this user's cap and converges via applyPermanentRedirect on refresh.
         if (SourceFormat::SCRAPED === $format) {
+            // Discovery never offers a scraped candidate to an account with the
+            // preference off, so a request that reaches here with it off is a
+            // hand-made one — refuse it rather than let this shortcut become
+            // the bypass discovery's own gate (Task 5) cannot see.
+            if (ScrapeFallback::Enabled !== $this->scrapeFallbackPolicy->forUser($user)) {
+                throw new ScrapingDisabledException();
+            }
+
             return SubscribeOutcome::subscribed(
                 $this->createSubscription($user, $url, SourceFormat::SCRAPED, $tags),
             );

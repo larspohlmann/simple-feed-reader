@@ -11,6 +11,7 @@ use App\Exception\FeedPreviewException;
 use App\Http\FeedPreviewJson;
 use App\Service\Preview\FeedPreviewService;
 use App\Service\RateLimit\RateLimitGuard;
+use App\Service\Subscription\Exception\ScrapingDisabledException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
@@ -35,7 +36,9 @@ final readonly class FeedPreviewController
         $this->rateLimitGuard->enforceForUser($this->feedPreviewLimiter, $user);
 
         try {
-            $preview = $this->previews->preview($request->url, $request->format);
+            $preview = $this->previews->preview($user, $request->url, $request->format);
+        } catch (ScrapingDisabledException $e) {
+            throw new FeedPreviewApiException($e->getMessage(), $e);
         } catch (FeedPreviewException $e) {
             // Rethrow as an ApiException so the listener keeps the message: a
             // scraped failure carries the extractor's own diagnosis, an xml

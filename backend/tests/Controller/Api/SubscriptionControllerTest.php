@@ -397,6 +397,7 @@ final class SubscriptionControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $headers = $this->authHeader('scraper@example.com');
+        $this->enableScrapeFallback('scraper@example.com');
 
         // No stubbed URLs at all: the scraped-format path re-posts a candidate
         // URL discovery itself just produced, so ANY fetch here is a bug and
@@ -434,6 +435,7 @@ final class SubscriptionControllerTest extends WebTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $em);
 
         $user = $this->userFactory()->create('atcap@example.com');
+        $user->getPreferences()->setScrapeFallbackEnabled(true);
         $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         for ($i = 0; $i < SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER; $i++) {
             $feed = new Feed(sprintf('https://seed%d.example.com/feed.xml', $i));
@@ -462,6 +464,37 @@ final class SubscriptionControllerTest extends WebTestCase
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
         self::assertSame('subscription_limit_reached', $body['type']);
+    }
+
+    /**
+     * The bypass Task 6 closes: a hand-made request setting format 'scraped'
+     * must be refused for an account with the preference off, exactly as
+     * discovery already refuses to OFFER such a candidate to that account.
+     * Nothing is stubbed on the fetcher, so a regression that lets the
+     * request reach discovery or the extractor fails loudly here rather than
+     * silently creating a subscription.
+     */
+    public function testScrapedFormatSubscribeIsRefusedWhenScrapingIsDisabled(): void
+    {
+        $client = self::createClient();
+        $headers = $this->authHeader('scrapedisabled@example.com');
+        $this->installFetcher(new StubFeedFetcher());
+
+        $client->request(
+            'POST',
+            '/api/subscriptions',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['url' => 'https://www.heise.de/', 'format' => 'scraped'], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(403);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('scraping_disabled', $body['type']);
+
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        self::assertNull($em->getRepository(Feed::class)->findOneBy(['url' => 'https://www.heise.de/']));
     }
 
     public function testCannotUpdateAnotherUsersSubscription(): void
