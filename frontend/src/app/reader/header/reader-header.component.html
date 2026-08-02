@@ -74,6 +74,18 @@
 
 @if (tags().length) {
   <nav class="tagrow" [attr.aria-label]="'reader.tags' | transloco">
+    <!-- Clears the tag filter — the row's counterpart to the sidebar's All Items
+         entry, which is otherwise two taps away behind the drawer. Label only:
+         no glyph competes with the tag pills' own icons. -->
+    <a
+      class="chip all"
+      [class.active]="allItemsActive()"
+      [routerLink]="[]"
+      [queryParams]="{ view: null, tag: null, subscription: null, entry: null }"
+      queryParamsHandling="merge"
+    >
+      {{ 'reader.allItems' | transloco }}
+    </a>
     @for (t of tags(); track t.id) {
       <a
         class="chip"
