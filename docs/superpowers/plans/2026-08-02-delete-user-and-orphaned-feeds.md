@@ -532,7 +532,7 @@ The domain unit for deleting a user. No HTTP yet.
 - Create: `backend/src/Exception/LastAdminException.php`
 - Modify: `backend/src/Service/Admin/SelfActionGuard.php`
 - Modify: `backend/src/Repository/UserRepository.php` (add `countAdmins()`)
-- Modify: `backend/src/Repository/SubscriptionRepository.php` (add `feedIdsForUser()`)
+- Modify: `backend/src/Repository/FeedRepository.php` (add `idsSubscribedByUser()`)
 - Create: `backend/tests/Service/Account/AccountDeleterTest.php`
 
 **Interfaces:**
@@ -543,7 +543,7 @@ The domain unit for deleting a user. No HTTP yet.
   - `App\Exception\LastAdminException` (409, type `last_admin`)
   - `App\Service\Admin\SelfActionGuard::ensureNotSelfDeletion(User $target, User $admin): void`
   - `App\Repository\UserRepository::countAdmins(): int`
-  - `App\Repository\SubscriptionRepository::feedIdsForUser(int $userId): array` returning `list<int>`
+  - `App\Repository\FeedRepository::idsSubscribedByUser(int $userId): array` returning `list<int>`
 
   Tasks 5 and 6 call the two `AccountDeleter` methods and nothing else.
 
@@ -742,9 +742,9 @@ public function countAdmins(): int
 }
 ```
 
-- [ ] **Step 5: Add `feedIdsForUser()` to `SubscriptionRepository`**
+- [ ] **Step 5: Add `idsSubscribedByUser()` to `FeedRepository`**
 
-The ids must be collected **before** the user is deleted; afterwards the subscription rows are gone. Append to `backend/src/Repository/SubscriptionRepository.php`:
+The ids must be collected **before** the user is deleted; afterwards the subscription rows are gone. It belongs on `FeedRepository`, next to its precedent `subscribedUrlSetForUser()` — feed ids are that repository's own entity's identifiers, so no boundary is crossed and `SubscriptionRepository`'s public-method count never rises. Append to `backend/src/Repository/FeedRepository.php`:
 
 ```php
 /**
@@ -753,7 +753,7 @@ The ids must be collected **before** the user is deleted; afterwards the subscri
  *
  * @return list<int>
  */
-public function feedIdsForUser(int $userId): array
+public function idsSubscribedByUser(int $userId): array
 {
     /** @var list<int> $feedIds */
     $feedIds = $this->createQueryBuilder('s')
@@ -793,7 +793,7 @@ namespace App\Service\Account;
 
 use App\Entity\User;
 use App\Exception\LastAdminException;
-use App\Repository\SubscriptionRepository;
+use App\Repository\FeedRepository;
 use App\Repository\UserRepository;
 use App\Service\Admin\SelfActionGuard;
 use App\Service\OrphanedFeedReclaimer;
@@ -820,7 +820,7 @@ final readonly class AccountDeleter
     public function __construct(
         private EntityManagerInterface $entityManager,
         private UserRepository $users,
-        private SubscriptionRepository $subscriptions,
+        private FeedRepository $feeds,
         private OrphanedFeedReclaimer $orphanedFeeds,
         private SelfActionGuard $selfActionGuard,
     ) {
@@ -841,7 +841,7 @@ final readonly class AccountDeleter
     {
         $this->ensureNotTheLastAdmin($user);
 
-        $feedIds = $this->subscriptions->feedIdsForUser((int) $user->getId());
+        $feedIds = $this->feeds->idsSubscribedByUser((int) $user->getId());
 
         $this->entityManager->remove($user);
         $this->entityManager->flush();
