@@ -17,6 +17,7 @@ use App\Service\Discovery\FeedCandidate;
 use App\Service\Discovery\FeedDiscoveryInterface;
 use App\Service\Discovery\FeedDiscoveryResult;
 use App\Service\Discovery\ScrapeFallbackPolicy;
+use App\Service\OrphanedFeedReclaimer;
 use App\Service\Subscription\SubscriptionLimitResolver;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
@@ -60,6 +61,7 @@ final class SubscriptionServiceTest extends DbTestCase
             new MockClock('2026-06-01T00:00:00Z'),
             new SubscriptionLimitResolver(),
             new ScrapeFallbackPolicy(),
+            new OrphanedFeedReclaimer($this->em),
         );
     }
 

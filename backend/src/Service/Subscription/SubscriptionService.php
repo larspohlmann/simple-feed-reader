@@ -16,6 +16,7 @@ use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionTagRepository;
 use App\Service\Discovery\FeedDiscoveryInterface;
 use App\Service\Discovery\ScrapeFallbackPolicy;
+use App\Service\OrphanedFeedReclaimer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
@@ -32,7 +33,24 @@ final readonly class SubscriptionService
         private ClockInterface $clock,
         private SubscriptionLimitResolver $subscriptionLimits,
         private ScrapeFallbackPolicy $scrapeFallbackPolicy,
+        private OrphanedFeedReclaimer $orphanedFeeds,
     ) {
+    }
+
+    /**
+     * Removes one subscription and reclaims the feed if that was the last one.
+     * The removal is flushed before the reclaim so the DELETE's no-subscriber
+     * guard sees the row is gone; reclaim() is a no-op when anybody else still
+     * subscribes.
+     */
+    public function unsubscribe(Subscription $subscription): void
+    {
+        $feedId = (int) $subscription->getFeed()->getId();
+
+        $this->em->remove($subscription);
+        $this->em->flush();
+
+        $this->orphanedFeeds->reclaim($feedId);
     }
 
     /**
