@@ -2,6 +2,7 @@
   [type]="type()"
   [disabled]="loading() || disabled()"
   [class]="variant() + ' ' + size()"
+  [attr.aria-label]="ariaLabel() ?? null"
   [attr.cdkFocusInitial]="focusInitial() ? '' : null"
 >
   @if (loading()) {

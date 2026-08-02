@@ -111,9 +111,17 @@ test.describe('Settings tags on mobile', () => {
     // View state: nothing escapes the viewport.
     expect(await pageOverflows(page)).toBe(false);
 
+    // The row stays on one line: the Edit action sits beside the name, not
+    // stacked onto a line of its own. Its label collapses to an icon here, so
+    // it must keep its accessible name to stay reachable.
+    const editButton = longRow.getByRole('button', { name: 'Edit' });
+    const nameBox = (await longRow.locator('.name').boundingBox())!;
+    const editBox = (await editButton.boundingBox())!;
+    expect(Math.abs(editBox.y - nameBox.y)).toBeLessThan(nameBox.height);
+
     // Inline-edit state: the name field, colour picker and icon grid must fit
     // the same width.
-    await longRow.getByRole('button', { name: 'Edit' }).click();
+    await editButton.click();
     await expect(longRow.getByRole('button', { name: 'Save' })).toBeVisible();
     await settle(page);
     expect(await pageOverflows(page)).toBe(false);

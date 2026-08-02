@@ -4,11 +4,14 @@ import { ButtonComponent, ButtonVariant } from './button.component';
 
 @Component({
   imports: [ButtonComponent],
-  template: `<app-button [variant]="variant()" [loading]="loading()">Save</app-button>`,
+  template: `<app-button [variant]="variant()" [loading]="loading()" [ariaLabel]="label()"
+    >Save</app-button
+  >`,
 })
 class Host {
   readonly variant = signal<ButtonVariant>('default');
   readonly loading = signal(false);
+  readonly label = signal<string | undefined>(undefined);
 }
 
 describe('ButtonComponent', () => {
@@ -44,6 +47,19 @@ describe('ButtonComponent', () => {
     fixture.detectChanges();
     expect(button().classList.contains('danger-outline')).toBe(true);
     expect(button().classList.contains('danger')).toBe(false);
+  });
+
+  // An icon-only action (Edit/Delete collapsed on a narrow screen) hides its
+  // text, so the accessible name has to come from aria-label instead. Absent by
+  // default so a labelled button is named by its own text, not a duplicate.
+  it('names the button from ariaLabel only when one is given', async () => {
+    const fixture = await mount();
+    const button = () => fixture.nativeElement.querySelector('button') as HTMLElement;
+    expect(button().getAttribute('aria-label')).toBeNull();
+
+    fixture.componentInstance.label.set('Edit');
+    fixture.detectChanges();
+    expect(button().getAttribute('aria-label')).toBe('Edit');
   });
 
   it('swaps the label for a spinner and disables while loading', async () => {
