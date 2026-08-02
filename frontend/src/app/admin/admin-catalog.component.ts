@@ -10,7 +10,10 @@ import { SettingsCardComponent } from '../shared/settings-card/settings-card.com
 import { SkeletonComponent } from '../shared/skeleton/skeleton.component';
 import { FieldComponent } from '../shared/field/field.component';
 import { ButtonComponent } from '../shared/button/button.component';
-import { ConfirmData, ConfirmDialogComponent } from '../reader/manage/confirm-dialog.component';
+import {
+  ConfirmData,
+  ConfirmDialogComponent,
+} from '../shared/confirm-dialog/confirm-dialog.component';
 import { AdminApi } from './admin-api';
 import { CategoryFormDialogComponent } from './category-form-dialog.component';
 import { FeedFormDialogComponent, FeedFormData } from './feed-form-dialog.component';

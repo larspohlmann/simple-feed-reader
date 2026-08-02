@@ -1,10 +1,10 @@
-// src/app/reader/manage/confirm-dialog.component.ts
+// src/app/shared/confirm-dialog/confirm-dialog.component.ts
 import { Component, inject } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { ButtonComponent } from '../../shared/button/button.component';
-import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
+import { ButtonComponent } from '../button/button.component';
+import { OverlayPanelComponent } from '../overlay-panel/overlay-panel.component';
 
 export interface ConfirmData {
   title: string;

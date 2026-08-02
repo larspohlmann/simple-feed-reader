@@ -9,7 +9,10 @@ import { Problem, parseProblem } from '../core/problem';
 import { AuthService } from '../core/auth.service';
 import { LanguageService } from '../core/language.service';
 import { formatDateOr, formatLongDate, relativeTime, trialDaysRemaining } from '../reader/format';
-import { ConfirmData, ConfirmDialogComponent } from '../reader/manage/confirm-dialog.component';
+import {
+  ConfirmData,
+  ConfirmDialogComponent,
+} from '../shared/confirm-dialog/confirm-dialog.component';
 import { ButtonComponent } from '../shared/button/button.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../shared/field/field.component';
