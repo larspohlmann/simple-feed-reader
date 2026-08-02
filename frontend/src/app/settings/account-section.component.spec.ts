@@ -12,6 +12,7 @@ const user: CurrentUser = {
   createdAt: '2026-01-01T00:00:00Z',
   locale: 'en',
   trialEndsAt: null,
+  preferences: { scrapeFallbackEnabled: false },
 };
 
 describe('AccountSectionComponent', () => {

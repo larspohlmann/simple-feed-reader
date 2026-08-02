@@ -15,9 +15,11 @@ import { routes } from './app.routes';
 import { API_BASE_URL } from './core/api';
 import { authInterceptor } from './core/auth.interceptor';
 import { HttpLocaleWriter } from './core/http-locale-writer';
+import { HttpPreferencesWriter } from './core/http-preferences-writer';
 import { HttpTranslocoLoader } from './core/transloco-loader';
 import { LanguageService } from './core/language.service';
 import { LOCALE_WRITER } from './core/locale-writer';
+import { PREFERENCES_WRITER } from './core/preferences-writer';
 import { environment } from '../environments/environment';
 
 export const appConfig: ApplicationConfig = {
@@ -31,6 +33,9 @@ export const appConfig: ApplicationConfig = {
     // app never needs HttpClient just to construct LanguageService; the running
     // app overrides it here with the real, HttpClient-backed writer.
     { provide: LOCALE_WRITER, useExisting: HttpLocaleWriter },
+    // PREFERENCES_WRITER defaults to a no-op (see preferences-writer.ts) for the
+    // same reason LOCALE_WRITER does; the running app overrides it here too.
+    { provide: PREFERENCES_WRITER, useExisting: HttpPreferencesWriter },
     provideTransloco({
       config: {
         availableLangs: ['en', 'de'],
