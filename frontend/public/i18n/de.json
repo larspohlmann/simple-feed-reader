@@ -84,6 +84,7 @@
   },
   "dialog": {
     "cancel": "Abbrechen",
+    "typeToConfirm": "Tippen Sie {{text}}, um zu bestätigen",
     "addFeed": {
       "title": "Feed hinzufügen",
       "urlLabel": "Feed- oder Seiten-URL",

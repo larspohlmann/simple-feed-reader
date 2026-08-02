@@ -376,6 +376,41 @@ subscription), 460px (tag form, and the component default), 1040px (discover).
 **Not for:** a non-modal popover or dropdown menu. The panel declares
 `role="dialog" aria-modal="true"`.
 
+### `<app-confirm-dialog>` (via `Dialog.open(ConfirmDialogComponent, { data })`)
+
+The app's one confirmation prompt: a title, a message and a Cancel/confirm pair,
+built on `<app-overlay-panel>`. Every destructive action that isn't a delete-tag-
+from-a-row-menu case routes through this rather than growing its own dialog.
+
+| `ConfirmData` field | Type | Default |
+|---|---|---|
+| `title` | `string` (required) | — |
+| `message` | `string` (required) | — |
+| `confirmLabel` | `string` (required) | — |
+| `danger` | `boolean` | `false` — weights the confirm button `danger` instead of `primary` |
+| `requireText` | `string` | `undefined` — see below |
+
+```ts
+const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
+  data: { title, message, confirmLabel, danger: true, requireText: user.email },
+  role: 'alertdialog',
+  panelClass: 'app-dialog',
+});
+```
+
+`requireText` gates the confirm button behind a typed match: the dialog renders a
+text field under the message, and the button stays disabled until the field's
+value equals `requireText` exactly (case-sensitive, no prefix match). Use it for
+a deletion that takes content with it and cannot be undone — account deletion,
+not a single tag. A click is cheap; typing the thing you are about to lose is
+not. `focusInitial` moves from the confirm button to this field when it is
+present, because a disabled button cannot hold initial focus — without the move,
+the dialog opens with focus on nothing.
+
+**Not for:** confirmations that leave the door open to undo, or where the cost of
+a wrong click is low (reordering, unpinning). Those take a plain `ConfirmData`
+with no `requireText` and keep the one-click confirm.
+
 ### `<app-button>`
 
 The app's one ordinary button: a label, optionally a leading icon, one of five

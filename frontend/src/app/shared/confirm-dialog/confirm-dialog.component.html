@@ -1,12 +1,31 @@
 <app-overlay-panel [heading]="data.title" cdkTrapFocus>
   <p class="msg">{{ data.message }}</p>
 
+  @if (data.requireText) {
+    <label class="confirm-field">
+      <span class="confirm-field__label">
+        {{ 'dialog.typeToConfirm' | transloco: { text: data.requireText } }}
+      </span>
+      <input
+        class="confirm-field__input"
+        type="text"
+        autocomplete="off"
+        spellcheck="false"
+        cdkFocusInitial
+        [ngModel]="typed()"
+        (ngModelChange)="typed.set($event)"
+      />
+    </label>
+  }
+
   <app-button footer (click)="ref.close(false)">
     {{ 'dialog.cancel' | transloco }}
   </app-button>
   <app-button
     footer
-    focusInitial
+    [focusInitial]="!data.requireText"
+    data-testid="confirm"
+    [disabled]="!canConfirm()"
     [variant]="data.danger ? 'danger' : 'primary'"
     (click)="ref.close(true)"
   >

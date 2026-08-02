@@ -84,6 +84,7 @@
   },
   "dialog": {
     "cancel": "Cancel",
+    "typeToConfirm": "Type {{text}} to confirm",
     "addFeed": {
       "title": "Add a feed",
       "urlLabel": "Feed or site URL",
