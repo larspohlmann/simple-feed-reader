@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { HttpTranslocoLoader } from './transloco-loader';
+import { buildVersion } from '../../environments/version';
 
 describe('HttpTranslocoLoader', () => {
   let loader: HttpTranslocoLoader;
@@ -23,8 +24,20 @@ describe('HttpTranslocoLoader', () => {
   it('requests the dictionary relative to the base href', () => {
     loader.getTranslation('de').subscribe();
 
-    const req = ctrl.expectOne('i18n/de.json');
+    const req = ctrl.expectOne((request) => request.url === 'i18n/de.json');
     expect(req.request.url.startsWith('/')).toBe(false);
+    req.flush({});
+  });
+
+  // The dictionaries live at a path that never changes, so a browser that
+  // cached the previous release keeps serving it and renders every key added
+  // since as its raw name (#141). The version turns each release into a URL no
+  // cache can already hold.
+  it('carries the build version, so a new release cannot hit a cached copy', () => {
+    loader.getTranslation('en').subscribe();
+
+    const req = ctrl.expectOne(`i18n/en.json?v=${buildVersion.version}`);
+    expect(req.request.params.get('v')).toBe(buildVersion.version);
     req.flush({});
   });
 });
