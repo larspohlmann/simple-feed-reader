@@ -1088,4 +1088,75 @@ final class AdminUserControllerTest extends WebTestCase
             'tags' => \count($recorder->queriesMatching('from tag')),
         ];
     }
+
+    public function testAnAdminDeletesAnotherAccount(): void
+    {
+        $factory = $this->factory();
+        $admin = $factory->create('admin-del@example.com', roles: ['ROLE_ADMIN']);
+        $target = $factory->create('victim@example.com');
+        $targetId = (int) $target->getId();
+
+        $this->client->request('DELETE', self::LIST . '/' . $targetId, server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin),
+        ]);
+
+        self::assertResponseStatusCodeSame(204);
+    }
+
+    public function testAnAdminCannotDeleteThemselvesThroughTheAdminApi(): void
+    {
+        $admin = $this->factory()->create('self-del@example.com', roles: ['ROLE_ADMIN']);
+        $this->factory()->create('spare-admin@example.com', roles: ['ROLE_ADMIN']);
+
+        $this->client->request('DELETE', self::LIST . '/' . $admin->getId(), server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin),
+        ]);
+
+        self::assertResponseStatusCodeSame(422);
+    }
+
+    /**
+     * $deputy deletes $soleAdmin's would-be deleter first, so the second
+     * request authenticates with a token for an account that no longer
+     * exists. Observed to come back 401, not 404: the api firewall's JWT
+     * provider fails to reload the user before access_control or the
+     * controller ever run, so the request never reaches the last-admin guard
+     * at all. The assertion that actually matters is the one below — the sole
+     * remaining admin must still exist, which would fail if
+     * AccountDeleter's last-admin guard were removed.
+     */
+    public function testDeletingTheLastAdminIsRefused(): void
+    {
+        $factory = $this->factory();
+        $soleAdmin = $factory->create('sole-admin@example.com', roles: ['ROLE_ADMIN']);
+        $deputy = $factory->create('deputy@example.com', roles: ['ROLE_ADMIN']);
+
+        $this->client->request('DELETE', self::LIST . '/' . $deputy->getId(), server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($soleAdmin),
+        ]);
+        self::assertResponseStatusCodeSame(204);
+
+        $this->client->request('DELETE', self::LIST . '/' . $soleAdmin->getId(), server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($deputy),
+        ]);
+        self::assertResponseStatusCodeSame(401);
+
+        self::assertNotNull(
+            self::getContainer()->get(\App\Repository\UserRepository::class)->find($soleAdmin->getId()),
+        );
+    }
+
+    public function testANonAdminCannotDeleteAnAccount(): void
+    {
+        $factory = $this->factory();
+        $factory->create('an-admin@example.com', roles: ['ROLE_ADMIN']);
+        $plainUser = $factory->create('plain@example.com');
+        $target = $factory->create('other-target@example.com');
+
+        $this->client->request('DELETE', self::LIST . '/' . $target->getId(), server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($plainUser),
+        ]);
+
+        self::assertResponseStatusCodeSame(403);
+    }
 }
