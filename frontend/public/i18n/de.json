@@ -10,6 +10,10 @@
     "nav": { "admin": "Administration" },
     "preferences": "Voreinstellungen",
     "languageSaveFailed": "Die Sprache wurde auf diesem Gerät geändert, konnte aber nicht in deinem Konto gespeichert werden.",
+    "experimental": "Experimentell",
+    "scraping": "Webseiten ohne Feed auslesen",
+    "scrapingHint": "Wenn eine Seite keinen Feed anbietet, die Seite selbst als Quelle anbieten. Die Qualität hängt von der Seite ab und kann jederzeit nicht mehr funktionieren.",
+    "scrapingSaveFailed": "Die Einstellung wurde auf diesem Gerät geändert, konnte aber nicht in deinem Konto gespeichert werden.",
     "loadingVersion": "Versionsinformationen werden geladen",
     "feeds": {
       "title": "Feeds",

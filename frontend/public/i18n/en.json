@@ -10,6 +10,10 @@
     "nav": { "admin": "Admin" },
     "preferences": "Preferences",
     "languageSaveFailed": "The language changed on this device, but could not be saved to your account.",
+    "experimental": "Experimental",
+    "scraping": "Scrape websites without a feed",
+    "scrapingHint": "When a page offers no feed, offer the page itself as a source. Quality depends on the site and can break without notice.",
+    "scrapingSaveFailed": "The setting changed on this device, but could not be saved to your account.",
     "loadingVersion": "Loading version information",
     "feeds": {
       "title": "Feeds",
