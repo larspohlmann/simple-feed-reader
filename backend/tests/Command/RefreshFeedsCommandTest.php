@@ -25,9 +25,10 @@ final class RefreshFeedsCommandTest extends DbTestCase
     }
 
     /**
-     * Subscribed, not just persisted: `app:feeds:refresh` always prunes
-     * (#246), so an unsubscribed feed would be swept before this test's
-     * fetcher stub ever sees it.
+     * Subscribed, not just persisted: every invocation in this file omits
+     * `--feed`, `--user` and `--no-prune`, so RefreshFeedsCommand builds an
+     * allDue() request with prune: true (#246) and an unsubscribed feed
+     * would be swept before this test's fetcher stub ever sees it.
      */
     private function dueFeed(string $url): Feed
     {
