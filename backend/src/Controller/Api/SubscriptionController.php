@@ -16,7 +16,7 @@ use App\Repository\EntryStateRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionTagRepository;
 use App\Repository\TagRepository;
-use App\Service\Subscription\Exception\ScrapingDisabledException;
+use App\Service\Discovery\Exception\ScrapingDisabledException;
 use App\Service\Subscription\SubscriptionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;

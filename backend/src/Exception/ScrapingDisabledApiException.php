@@ -7,7 +7,7 @@ namespace App\Exception;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * The client-facing form of Service\Subscription\Exception\ScrapingDisabledException.
+ * The client-facing form of Service\Discovery\Exception\ScrapingDisabledException.
  * SubscriptionController rethrows the service's internal refusal as this so
  * ApiExceptionListener renders a problem+json document instead of the opaque
  * 500 a bare RuntimeException would otherwise produce.

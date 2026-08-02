@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Preview;
 
 use App\Entity\User;
-use App\Enum\ScrapeFallback;
 use App\Enum\SourceFormat;
 use App\Exception\FeedPreviewException;
 use App\Service\Discovery\ScrapeFallbackPolicy;
@@ -16,7 +15,6 @@ use App\Service\Parser\FeedParser;
 use App\Service\Parser\ParsedEntry;
 use App\Service\PlainText;
 use App\Service\Scraper\HtmlItemExtractor;
-use App\Service\Subscription\Exception\ScrapingDisabledException;
 
 /**
  * Fetches a feed URL and summarizes its content shape — how many items it has,
@@ -45,11 +43,8 @@ final readonly class FeedPreviewService
         // Mirrors the guard in SubscriptionService::subscribe(): a preview
         // request asserting 'scraped' is the same hand-made bypass discovery's
         // gate (Task 5) cannot see, since discovery never runs on this path.
-        if (
-            SourceFormat::SCRAPED === $format
-            && ScrapeFallback::Enabled !== $this->scrapeFallbackPolicy->forUser($user)
-        ) {
-            throw new ScrapingDisabledException();
+        if (SourceFormat::SCRAPED === $format) {
+            $this->scrapeFallbackPolicy->assertMayScrape($user);
         }
 
         try {
