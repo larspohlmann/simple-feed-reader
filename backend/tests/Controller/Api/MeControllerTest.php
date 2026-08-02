@@ -139,6 +139,62 @@ final class MeControllerTest extends ApiTestCase
         self::assertNull($this->payload($client)['trialEndsAt']);
     }
 
+    public function testScrapeFallbackCanBeEnabled(): void
+    {
+        $client = static::createClient();
+        $user = $this->factory()->create('prefs-enable@example.com');
+        $this->authenticate($client, 'prefs-enable@example.com');
+
+        $client->request(
+            'PATCH',
+            '/api/me/preferences',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['scrapeFallbackEnabled' => true], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['scrapeFallbackEnabled' => true], $this->payload($client)['preferences']);
+
+        $this->entityManager()->clear();
+        $reloaded = $this->users()->find($user->getId());
+        self::assertInstanceOf(User::class, $reloaded);
+        self::assertTrue($reloaded->getPreferences()->isScrapeFallbackEnabled());
+    }
+
+    public function testANonBooleanPreferenceIsRejected(): void
+    {
+        $client = static::createClient();
+        $this->factory()->create('prefs-invalid@example.com');
+        $this->authenticate($client, 'prefs-invalid@example.com');
+
+        $client->request(
+            'PATCH',
+            '/api/me/preferences',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['scrapeFallbackEnabled' => 'yes'], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(422);
+    }
+
+    public function testAnEmptyBodyIsRejectedRatherThanSilentlyDisablingScraping(): void
+    {
+        $client = static::createClient();
+        $user = $this->factory()->create('prefs-empty@example.com');
+        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        $this->entityManager()->flush();
+        $this->authenticate($client, 'prefs-empty@example.com');
+
+        $client->request(
+            'PATCH',
+            '/api/me/preferences',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode([], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(422);
+    }
+
     public function testTheProfileCarriesPreferencesWithScrapingOffByDefault(): void
     {
         $client = static::createClient();
