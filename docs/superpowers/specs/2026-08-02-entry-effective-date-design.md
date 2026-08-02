@@ -105,10 +105,13 @@ marked read by a watermark yet sort as unread. One column, one meaning.
 
 ### `backend/migrations/`
 
-- One migration: add the column nullable, backfill with
+- One migration: add the column `NOT NULL DEFAULT '1970-01-01 00:00:00'`
+  (SQLite cannot add a `NOT NULL` column without a default and has no
+  `MODIFY COLUMN` to tighten one afterwards; MySQL takes the identical DDL so
+  both platforms match the ORM metadata, which declares the same default),
+  backfill unconditionally with
   `UPDATE entry SET effective_date = COALESCE(published_at, created_at)`,
-  tighten to `NOT NULL`, drop `idx_entry_feed_published`, create the two new
-  indexes. Must run from empty and on a populated database, on both MySQL and
+  drop `idx_entry_feed_published`, create the two new indexes. Must run from empty and on a populated database, on both MySQL and
   SQLite — the dedicated CI migration leg is the real check, because the test
   bootstrap builds schema from ORM metadata and never executes migrations.
 
