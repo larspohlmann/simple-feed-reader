@@ -105,9 +105,48 @@ describe('RefreshService', () => {
       .expectOne('https://api.test/api/refresh')
       .flush(report({ status: 'completed', remaining: 0 }));
     expect(svc.running()).toBe(false);
+    expect(svc.failure()).toBeNull();
   }));
 
-  it('stops and records a problem on error (e.g. 429)', () => {
+  // Retrying longer is not the fix: a CLI sweep holds the lock for its whole
+  // budget. The user has to be told, or the spinner just stops (#119).
+  it('records a busy failure once the retry budget is spent', fakeAsync(() => {
+    const done = jest.fn();
+    svc.run(done);
+    const busy = report({ status: 'busy', total: 0, remaining: 0 });
+
+    // The first call plus MAX_BUSY_RETRIES more, all answered busy.
+    for (let attempt = 0; attempt <= 5; attempt++) {
+      ctrl.expectOne('https://api.test/api/refresh').flush(busy);
+      tick(1500);
+    }
+
+    ctrl.verify(); // the loop gave up rather than polling on
+    expect(svc.running()).toBe(false);
+    expect(svc.failure()).toEqual({ kind: 'busy' });
+    expect(done).toHaveBeenCalledTimes(1);
+  }));
+
+  // An aborted sweep left feeds unfetched and still due. Sharing the
+  // `completed` branch made it present as a clean run (#119).
+  it('records an aborted sweep rather than reporting it as finished', () => {
+    svc.run();
+    ctrl
+      .expectOne('https://api.test/api/refresh')
+      .flush(report({ status: 'aborted', total: 10, remaining: 7, fetched: 3 }));
+    expect(svc.running()).toBe(false);
+    expect(svc.failure()).toEqual({ kind: 'aborted' });
+  });
+
+  it('reports a completed sweep as no failure at all', () => {
+    svc.run();
+    ctrl
+      .expectOne('https://api.test/api/refresh')
+      .flush(report({ status: 'completed', remaining: 0, fetched: 10 }));
+    expect(svc.failure()).toBeNull();
+  });
+
+  it('stops and records the problem on error (e.g. 429)', () => {
     svc.run();
     ctrl
       .expectOne('https://api.test/api/refresh')
@@ -116,6 +155,20 @@ describe('RefreshService', () => {
         { status: 429, statusText: 'Too Many Requests' },
       );
     expect(svc.running()).toBe(false);
-    expect(svc.error()?.status).toBe(429);
+    const failure = svc.failure();
+    expect(failure?.kind).toBe('http');
+    expect(failure).toMatchObject({ problem: { status: 429, type: 'rate_limited' } });
+  });
+
+  it('clears a previous failure when a new run starts', () => {
+    svc.run();
+    ctrl
+      .expectOne('https://api.test/api/refresh')
+      .flush(report({ status: 'aborted', remaining: 4 }));
+    expect(svc.failure()).not.toBeNull();
+
+    svc.run();
+    expect(svc.failure()).toBeNull();
+    ctrl.expectOne('https://api.test/api/refresh').flush(report({ status: 'completed' }));
   });
 });
