@@ -67,4 +67,10 @@ export class AuthService {
   isAdmin(): boolean {
     return this.user()?.roles.includes('ROLE_ADMIN') ?? false;
   }
+
+  /** Deliberately does not call `logout()` itself: the caller decides what to
+   *  do with a failure (e.g. show it inline), and `logout()` navigates. */
+  deleteAccount(): Observable<void> {
+    return this.http.delete<void>(`${this.base}/api/me`);
+  }
 }

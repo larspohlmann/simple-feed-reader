@@ -61,7 +61,11 @@
       "email": "E-Mail",
       "memberSince": "Mitglied seit",
       "adminQueue": "Admin – Benutzerliste",
-      "signOut": "Abmelden"
+      "signOut": "Abmelden",
+      "delete": "Mein Konto löschen",
+      "deleteTitle": "Ihr Konto löschen?",
+      "deleteNote": "Das Löschen Ihres Kontos entfernt Ihre Abonnements, Tags und Lesezustände dauerhaft. Exportieren Sie Ihre Feeds vorher, wenn Sie sie behalten möchten.",
+      "deleteMessage": "Dies löscht Ihr Konto dauerhaft, mit allen Abonnements, Tags und Lesezuständen. Das kann nicht rückgängig gemacht werden."
     },
     "about": {
       "title": "Über",

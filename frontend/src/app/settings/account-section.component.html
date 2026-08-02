@@ -11,5 +11,14 @@
     <app-button class="signout" (click)="auth.logout()">
       {{ 'settings.account.signOut' | transloco }}
     </app-button>
+    <div class="danger-zone">
+      <p class="danger-zone__note">{{ 'settings.account.deleteNote' | transloco }}</p>
+      <app-button variant="danger-outline" (click)="confirmThenDelete()">
+        {{ 'settings.account.delete' | transloco }}
+      </app-button>
+      @if (deleteError(); as error) {
+        <app-error-banner [message]="error.detail || error.title" />
+      }
+    </div>
   }
 </app-settings-card>

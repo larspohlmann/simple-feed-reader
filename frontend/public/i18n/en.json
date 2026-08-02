@@ -61,7 +61,11 @@
       "email": "Email",
       "memberSince": "Member since",
       "adminQueue": "Admin — user queue",
-      "signOut": "Sign out"
+      "signOut": "Sign out",
+      "delete": "Delete my account",
+      "deleteTitle": "Delete your account?",
+      "deleteNote": "Deleting your account removes your subscriptions, tags and read state permanently. Export your feeds first if you want to keep them.",
+      "deleteMessage": "This permanently deletes your account with all subscriptions, tags and read state. This cannot be undone."
     },
     "about": {
       "title": "About",
