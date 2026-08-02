@@ -19,6 +19,7 @@ use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FetchResponse;
+use App\Service\OrphanedFeedReclaimer;
 use App\Service\Parser\Atom03Parser;
 use App\Service\Parser\Atom10Parser;
 use App\Service\Parser\FeedParser;
@@ -51,6 +52,7 @@ final class RefreshRunnerTest extends DbTestCase
     private StubFeedFetcher $fetcher;
     private StubFeedFetcher $faviconFetcher;
     private LockFactory $lockFactory;
+    private User $subscriber;
 
     protected function setUp(): void
     {
@@ -61,6 +63,13 @@ final class RefreshRunnerTest extends DbTestCase
         // pollute assertions on which FEEDS the runner fetched.
         $this->faviconFetcher = new StubFeedFetcher();
         $this->lockFactory = new LockFactory(new InMemoryStore());
+        // dueFeed() subscribes every fixture feed to this user so the #246
+        // orphan sweep (wired into every allDue() request) never deletes a
+        // feed a test is trying to fetch. Orphan behaviour itself is covered
+        // by RefreshRunnerOrphanSweepTest, which persists feeds with no
+        // subscriber on purpose.
+        $this->subscriber = new User('fixture-subscriber@example.com', $this->clock->now());
+        $this->em->persist($this->subscriber);
     }
 
     private function runner(?EntityManagerInterface $runnerEm = null): RefreshRunner
@@ -79,6 +88,7 @@ final class RefreshRunnerTest extends DbTestCase
             new FaviconResolver($this->faviconFetcher, new NullLogger()),
             new FeedScheduler($this->clock),
             new EntryPruner($this->em, $this->clock),
+            new OrphanedFeedReclaimer($this->em),
             $this->lockFactory,
             $this->clock,
             new NullLogger(),
@@ -120,6 +130,7 @@ final class RefreshRunnerTest extends DbTestCase
         $feed = new Feed($url);
         $feed->setNextFetchAt($this->clock->now()->modify('-1 hour'));
         $this->em->persist($feed);
+        $this->em->persist(new Subscription($this->subscriber, $feed, $this->clock->now()));
 
         // Every due feed starts without a favicon, so a successful refresh
         // always triggers phase two's homepage fetch for it. Stub a bland

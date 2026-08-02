@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Command;
 
 use App\Entity\Feed;
+use App\Entity\Subscription;
+use App\Entity\User;
 use App\Service\Fetch\BatchFeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
 use App\Tests\DbTestCase;
@@ -22,11 +24,19 @@ final class RefreshFeedsCommandTest extends DbTestCase
         return new CommandTester($application->find('app:feeds:refresh'));
     }
 
+    /**
+     * Subscribed, not just persisted: `app:feeds:refresh` always prunes
+     * (#246), so an unsubscribed feed would be swept before this test's
+     * fetcher stub ever sees it.
+     */
     private function dueFeed(string $url): Feed
     {
         $feed = new Feed($url);
         $feed->setNextFetchAt(new \DateTimeImmutable('-1 hour'));
         $this->em->persist($feed);
+        $subscriber = new User('cli-fixture-subscriber@example.com', new \DateTimeImmutable());
+        $this->em->persist($subscriber);
+        $this->em->persist(new Subscription($subscriber, $feed, new \DateTimeImmutable()));
         $this->em->flush();
 
         return $feed;
