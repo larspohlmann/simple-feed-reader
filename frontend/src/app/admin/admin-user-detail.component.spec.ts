@@ -532,7 +532,7 @@ describe('AdminUserDetailComponent', () => {
     ctrl.expectNone('https://api.test/api/admin/users/7/suspend');
   });
 
-  it('offers Delete in the action row, even for an account with no status actions available', () => {
+  it('offers Delete in the action row for a rejected account', () => {
     const f = mount();
     // 'rejected' leaves canApprove() true (status !== 'active'), so this also
     // proves Delete does not depend on any one status action being offered.
