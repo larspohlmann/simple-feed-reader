@@ -105,6 +105,21 @@ jobs:
           set -euo pipefail
           docker compose exec -T php bin/console doctrine:migrations:migrate --no-interaction
 
+      # LexikJWTAuthenticationBundle signs every login with this keypair, and
+      # backend/config/jwt/*.pem is git-ignored on purpose -- it is a secret,
+      # not a fixture. Every developer machine has one because it was
+      # generated once and forgotten; a fresh CI checkout has an empty
+      # directory instead, so /api/login 500s the moment it tries to sign a
+      # token, while unauthenticated routes like /api/health stay green and
+      # give no warning. --skip-if-exists keeps this harmless if a keypair
+      # ever does exist. Run inside the container, not on the runner: it has
+      # the working %kernel.project_dir% and reads the passphrase from
+      # backend/.env, which is committed.
+      - name: Generate the JWT keypair
+        run: |
+          set -euo pipefail
+          docker compose exec -T php bin/console lexik:jwt:generate-keypair --skip-if-exists
+
       # An unreachable API is the failure this whole workflow is built to
       # notice, so it fails loudly here rather than letting every spec skip its
       # way to green further down.
