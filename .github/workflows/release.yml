@@ -154,3 +154,36 @@ jobs:
           git add CHANGELOG.md
           git commit -m "docs: changelog for ${GITHUB_REF_NAME} [skip ci]"
           git push origin main
+
+      # Carry that same commit onto develop. Without this main ends every
+      # release one commit ahead, and docs/releasing.md's step 1
+      # (`git merge --ff-only develop`) cannot work at the NEXT release --
+      # which is exactly what stranded v0.5.2 (#266).
+      #
+      # A merge, deliberately. Cherry-picking main's commit, or re-running the
+      # insert script against develop's own CHANGELOG, would give develop an
+      # equivalent commit with a different SHA. That does not make main an
+      # ancestor of develop, so --ff-only would still refuse: same content is
+      # not same history.
+      - name: Carry the changelog commit onto develop
+        if: steps.previous.outputs.previous != ''
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin +refs/heads/develop:refs/remotes/origin/develop
+          git checkout -B changelog-sync origin/develop
+          # Identity is set again here on purpose: the step above returns early
+          # when the changelog needed no commit, and never reaches its config.
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # Fast-forward when develop has not moved since the release commit --
+          # the normal case, which leaves the two branches identical. A real
+          # merge otherwise, and a CHANGELOG conflict there is genuine: develop
+          # added Unreleased entries after the tag. Surface it, never paper over.
+          if ! git merge --no-edit main; then
+            echo "!!! could not merge main into develop. The release IS already published;" >&2
+            echo "!!! only this sync failed. Recover by hand, then nothing else is needed:" >&2
+            echo "!!!   git checkout develop && git merge main && git push origin develop" >&2
+            exit 1
+          fi
+          git push origin HEAD:develop
+          echo "==> develop now contains the ${GITHUB_REF_NAME} changelog commit"

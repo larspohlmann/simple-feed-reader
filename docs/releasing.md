@@ -8,10 +8,17 @@ which:
 - guards that the tagged commit is on `main` and that CI went green on that
   exact SHA (a tag push proves neither on its own — the workflow's comments
   explain why),
-- publishes a GitHub Release for the tag, marked latest, and
+- publishes a GitHub Release for the tag, marked latest,
 - for every release after the first, writes the generated release notes into
   [CHANGELOG.md](../CHANGELOG.md) and commits that to `main` as
-  `github-actions[bot]`.
+  `github-actions[bot]`, and
+- merges that commit onto `develop` as well.
+
+That last step is what keeps step 1 below working. The changelog commit is made
+on `main`, so without carrying it over, `main` would end every release one
+commit ahead of `develop` and the next release's `git merge --ff-only develop`
+would refuse. v0.5.2 hit exactly that and needed a manual back-merge
+([#266](https://github.com/larspohlmann/simple-feed-reader/issues/266)).
 
 The first release — the one with no earlier `vX.Y.Z` tag to diff against —
 publishes a GitHub Release with an `Initial release.` body and does not touch
