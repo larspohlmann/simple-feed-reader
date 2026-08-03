@@ -297,6 +297,14 @@ prompt_value() {
   printf '%s' "${answer}"
 }
 
+# Prose that belongs to a question rather than to the script's output. It goes
+# to the terminal, so it never lands in the stdout that a caller may be
+# capturing with $( ), and it is dropped when there is no terminal -- a piped
+# install has nobody to read it.
+tell() {
+  { printf '%s\n' "$*" >/dev/tty; } 2>/dev/null || true
+}
+
 prompt_secret_value() {
   local question=$1 answer
   if [ ! -r /dev/tty ]; then
@@ -447,56 +455,264 @@ mask_dsn_password() {
 # degrade to their defaults (configure_mail changes nothing at all), so the
 # installer's two-step fallback keeps working.
 
+# The public origin is three independent decisions, so it is three questions:
+# how users reach the instance, under which hostname, on which port. They were
+# one "Public URL" prompt until issue #252, and packing them together meant a
+# typo in any of them aborted the installer after the clone, an https:// answer
+# with no certificate on disk produced an instance that served plain HTTP, and
+# the reverse-proxy case -- the normal one on a host that already publishes
+# port 80 -- could not be answered at all.
 configure_public_url() {
-  local current public_url scheme hostport derived_port
-  current=$(env_prod_get PUBLIC_URL)
-  public_url=$(prompt_with_default 'Public URL of this instance (as users will reach it)' "${current:-http://localhost}")
-  public_url=${public_url%/}
-  case "${public_url}" in
-    http://* | https://*) ;;
-    *) die 'The public URL must start with http:// or https:// (e.g. https://reader.example.org).' ;;
-  esac
-  env_prod_set PUBLIC_URL "${public_url}"
-
-  # The port in that URL is the port the browser uses, so it is also the
-  # port this stack publishes. A reverse proxy in between is the exception,
-  # and there WEB_HTTP_PORT / WEB_BIND_ADDRESS stay a hand edit in .env.prod.
-  scheme=${public_url%%://*}
-  scheme=$(printf '%s' "${scheme}" | tr '[:upper:]' '[:lower:]')
-  hostport=${public_url#*://}
-  hostport=${hostport%%/*}
-  derived_port=''
-  case "${hostport}" in
-    *:*) derived_port=${hostport##*:} ;;
-  esac
-  case "${derived_port}" in
-    '' | *[!0-9]*)
-      if [ "${scheme}" = "https" ]; then
-        derived_port=443
-      else
-        derived_port=80
-      fi
-      ;;
-  esac
-  if [ "${scheme}" = "https" ]; then
-    env_prod_set WEB_TLS_PORT "${derived_port}"
-  else
-    env_prod_set WEB_HTTP_PORT "${derived_port}"
-  fi
-  say "The app will serve on port ${derived_port} (taken from that URL)."
-  say 'Behind a reverse proxy, set WEB_HTTP_PORT and WEB_BIND_ADDRESS in .env.prod by hand instead.'
+  local topology hostname port
+  topology=$(prompt_topology)
+  hostname=$(prompt_hostname)
+  port=$(prompt_port "${topology}")
+  apply_public_origin "${topology}" "${hostname}" "${port}"
 }
 
-# The host part of PUBLIC_URL (scheme, path and port stripped) -- the default
-# mail domain both the transport branches and the no-mail placeholder derive
-# MAIL_FROM from.
+# --- question 1: how users reach the instance -------------------------------
+# The topology .env.prod currently describes, so a re-run can offer it back. It
+# is not a stored value: a loopback bind address only ever comes from the proxy
+# answer, and the scheme decides the rest.
+current_topology() {
+  if [ "$(env_prod_get WEB_BIND_ADDRESS)" = '127.0.0.1' ]; then
+    printf 'proxy'
+    return 0
+  fi
+  case "$(env_prod_get PUBLIC_URL)" in
+    https://*) printf 'tls' ;;
+    *) printf 'http' ;;
+  esac
+}
+
+topology_choice() {
+  case "$1" in
+    tls) printf '2' ;;
+    proxy) printf '3' ;;
+    *) printf '1' ;;
+  esac
+}
+
+prompt_topology() {
+  local answer
+  tell ''
+  tell 'How do users reach this instance?'
+  tell '  1) Plain HTTP, direct -- a private instance, or a LAN'
+  tell '  2) HTTPS, this stack serves the certificate'
+  tell '  3) HTTPS, a reverse proxy in front terminates TLS (Caddy, Traefik, nginx)'
+  while :; do
+    answer=$(prompt_with_default 'Choice' "$(topology_choice "$(current_topology)")")
+    case "${answer}" in
+      1) printf 'http' ; return 0 ;;
+      2) printf 'tls' ; return 0 ;;
+      3) printf 'proxy' ; return 0 ;;
+    esac
+    tell 'Answer 1, 2 or 3.'
+  done
+}
+
+# --- question 2: the hostname -----------------------------------------------
+# The bare host of a URL: scheme, path and port removed.
+host_from_url() {
+  local value=$1
+  value=${value#*://}
+  value=${value%%/*}
+  value=${value%%:*}
+  printf '%s' "${value}"
+}
+
+# The question this replaced asked for a whole URL, so a pasted scheme, path or
+# port is the expected answer here, not a reason to stop. Reduce it instead:
+# question 1 owns the scheme and question 3 owns the port.
+prompt_hostname() {
+  local current answer
+  current=$(host_from_url "$(env_prod_get PUBLIC_URL)")
+  while :; do
+    answer=$(host_from_url "$(prompt_with_default 'Hostname users type' "${current:-localhost}")")
+    if [ -n "${answer}" ]; then
+      printf '%s' "${answer}"
+      return 0
+    fi
+    tell 'That is not a hostname. Enter a name such as reader.example.org, or localhost.'
+  done
+}
+
+# --- question 3: the port ---------------------------------------------------
+# The port behind a proxy is the one the proxy connects to, never the one users
+# type, so the question says so.
+port_question() {
+  if [ "$1" = 'proxy' ]; then
+    printf 'Port this stack listens on for the proxy (not the public port)'
+    return 0
+  fi
+  printf 'Port users connect to'
+}
+
+# The stored port is a sensible default only while the topology is unchanged:
+# a fresh .env.prod carries WEB_HTTP_PORT=80, and 80 is the wrong offer to make
+# to someone who just chose to put a proxy in front of it.
+default_port_for() {
+  local topology=$1 stored=''
+  if [ "${topology}" = "$(current_topology)" ]; then
+    case "${topology}" in
+      tls) stored=$(env_prod_get WEB_TLS_PORT) ;;
+      *) stored=$(env_prod_get WEB_HTTP_PORT) ;;
+    esac
+  fi
+  if [ -n "${stored}" ]; then
+    printf '%s' "${stored}"
+    return 0
+  fi
+  case "${topology}" in
+    tls) printf '443' ;;
+    proxy) printf '8080' ;;
+    *) printf '80' ;;
+  esac
+}
+
+is_port() {
+  case "$1" in
+    '' | *[!0-9]*) return 1 ;;
+  esac
+  [ "$1" -ge 1 ] && [ "$1" -le 65535 ]
+}
+
+# One host address publishes a port once, so on a machine that already runs
+# other web apps a busy port is the normal outcome, not an exotic one. Ask
+# again -- but accept the answer after three rounds, because check_ports_free
+# is a best-effort probe (it is a silent no-op without lsof) and docker gives
+# the authoritative error anyway.
+prompt_port() {
+  local topology=$1 default answer rounds=0
+  default=$(default_port_for "${topology}")
+  while :; do
+    answer=$(prompt_with_default "$(port_question "${topology}")" "${default}")
+    if ! is_port "${answer}"; then
+      tell 'A port is a number from 1 to 65535.'
+      continue
+    fi
+    rounds=$(( rounds + 1 ))
+    if check_ports_free "${answer}" || [ "${rounds}" -ge 3 ]; then
+      printf '%s' "${answer}"
+      return 0
+    fi
+    tell 'Choose a free port, or stop what is using that one.'
+  done
+}
+
+# --- applying the three answers ---------------------------------------------
+apply_public_origin() {
+  local topology=$1 hostname=$2 port=$3
+  case "${topology}" in
+    proxy)
+      apply_proxy_origin "${hostname}" "${port}"
+      ;;
+    tls)
+      apply_direct_origin https "${hostname}" "${port}"
+      ensure_prod_certificate "${hostname}"
+      ;;
+    *)
+      apply_direct_origin http "${hostname}" "${port}"
+      ;;
+  esac
+}
+
+# A URL that omits the scheme's own port. The spelling matters: an OAuth
+# redirect URI is compared as an exact string, so https://host and
+# https://host:443 are two different registrations, and no provider holds the
+# second one.
+public_url_for() {
+  local scheme=$1 hostname=$2 port=$3
+  if { [ "${scheme}" = 'http' ] && [ "${port}" = '80' ]; } \
+    || { [ "${scheme}" = 'https' ] && [ "${port}" = '443' ]; }; then
+    printf '%s://%s' "${scheme}" "${hostname}"
+    return 0
+  fi
+  printf '%s://%s:%s' "${scheme}" "${hostname}" "${port}"
+}
+
+# This stack faces the browser, so the port answered is both the published port
+# and the port in the URL. The bind address is reset because it may carry the
+# loopback value a previous proxy answer wrote, which would leave the app
+# reachable from nowhere.
+apply_direct_origin() {
+  local scheme=$1 hostname=$2 port=$3
+  env_prod_set PUBLIC_URL "$(public_url_for "${scheme}" "${hostname}" "${port}")"
+  if [ "${scheme}" = 'https' ]; then
+    env_prod_set WEB_TLS_PORT "${port}"
+  else
+    env_prod_set WEB_HTTP_PORT "${port}"
+  fi
+  env_prod_set WEB_BIND_ADDRESS '0.0.0.0'
+  say "The app will serve on port ${port}."
+}
+
+# The port the proxy connects to stays out of PUBLIC_URL -- users type the
+# proxy's port. WEB_TLS_PORT has to move off 443 as well: the compose file
+# publishes both ports in every mode, and 443 belongs to the proxy.
+apply_proxy_origin() {
+  local hostname=$1 port=$2 tls_port
+  env_prod_set PUBLIC_URL "https://${hostname}"
+  env_prod_set WEB_HTTP_PORT "${port}"
+  env_prod_set WEB_BIND_ADDRESS '127.0.0.1'
+  tls_port=$(env_prod_get WEB_TLS_PORT)
+  if [ "${tls_port}" = '443' ] || [ "${tls_port}" = "${port}" ]; then
+    if [ "${port}" = '8443' ]; then
+      env_prod_set WEB_TLS_PORT '8444'
+    else
+      env_prod_set WEB_TLS_PORT '8443'
+    fi
+  fi
+  say "This stack listens on 127.0.0.1:${port}, so only the proxy on this machine reaches it."
+  say 'Point the proxy at it. A Caddyfile needs two lines:'
+  # Printed bare, without the say() prefix: this is a snippet to copy.
+  printf '\n    %s {\n        reverse_proxy 127.0.0.1:%s\n    }\n\n' "${hostname}" "${port}"
+  say 'Runs the proxy on another machine? Set WEB_BIND_ADDRESS=0.0.0.0 in .env.prod.'
+}
+
+# --- the certificate for choice 2 -------------------------------------------
+# Choice 2 only serves HTTPS once a certificate is on disk: the web container
+# picks its mode from these two files (WEB_MODE=auto), so an HTTPS PUBLIC_URL
+# over an empty docker/certs-prod/ serves plain HTTP and still looks
+# configured. Say so, and offer mkcert where mkcert is the right tool.
+ensure_prod_certificate() {
+  local hostname=$1
+  if prod_certs_present; then
+    ok 'Certificate found in docker/certs-prod/.'
+    return 0
+  fi
+  if command -v mkcert >/dev/null 2>&1; then
+    tell ''
+    tell "mkcert can issue a certificate for ${hostname} right now. Only machines"
+    tell 'holding your mkcert root CA trust it: everyone else gets a browser warning,'
+    tell 'and OAuth providers refuse it. That fits a private instance. A public one'
+    tell 'needs a real certificate, or choice 3.'
+    if prompt_confirm "Generate a locally trusted certificate for ${hostname}?"; then
+      generate_prod_certificate "${hostname}"
+      ok 'Certificate written to docker/certs-prod/.'
+      return 0
+    fi
+  fi
+  warn 'No certificate in docker/certs-prod/ yet, so the stack serves plain HTTP.'
+  say 'Put these two files there, then run ./scripts/prod-start.sh again:'
+  say '    docker/certs-prod/fullchain.pem'
+  say '    docker/certs-prod/privkey.pem'
+}
+
+# The prod counterpart of generate_certificate: the names nginx expects, in the
+# directory the prod compose file mounts, for the hostname just answered.
+generate_prod_certificate() {
+  mkdir -p "${REPO_ROOT}/docker/certs-prod"
+  ( cd -- "${REPO_ROOT}" && mkcert \
+      -cert-file docker/certs-prod/fullchain.pem \
+      -key-file docker/certs-prod/privkey.pem \
+      "$1" )
+}
+
+# The host part of PUBLIC_URL -- the default mail domain both the transport
+# branches and the no-mail placeholder derive MAIL_FROM from.
 mail_host_from_public_url() {
-  local public_url host
-  public_url=$(env_prod_get PUBLIC_URL)
-  host=${public_url#*://}
-  host=${host%%/*}
-  host=${host%%:*}
-  printf '%s' "${host}"
+  host_from_url "$(env_prod_get PUBLIC_URL)"
 }
 
 # Which transport the last configure_mail round set: 1 relay, 2 host MTA,

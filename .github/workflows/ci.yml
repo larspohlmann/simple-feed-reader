@@ -157,4 +157,11 @@ jobs:
       # frontend start/stop) are user-facing, so a lint break should fail CI.
       # The two container entrypoints share the same bash-3.2-safe standard.
       - name: ShellCheck
-        run: shellcheck scripts/*.sh docker/php/entrypoint-prod.sh docker/web/10-select-mode.sh
+        run: shellcheck scripts/*.sh scripts/test/*.sh docker/php/entrypoint-prod.sh docker/web/10-select-mode.sh
+
+      # The installer's three public-origin questions decide PUBLIC_URL, and
+      # PUBLIC_URL is the OAuth redirect base and the link base in account
+      # mail. A wrong answer there is only visible after an install, so the
+      # mapping from answers to .env.prod values is tested here.
+      - name: configure_public_url
+        run: scripts/test/configure-public-url.test.sh
