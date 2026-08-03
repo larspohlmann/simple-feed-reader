@@ -333,6 +333,14 @@ jobs:
 
       # The HTML report and the raw logs are what makes a red run actionable a
       # week later. Kept only on failure; a green run has nothing to look at.
+      #
+      # frontend/test-results/ is not the HTML reporter's directory -- it is
+      # where Playwright writes its per-test failure attachments (notably
+      # error-context.md, an accessibility-tree snapshot of the page at the
+      # moment of failure) regardless of which reporter is active. This run's
+      # --reporter=list,json never produces frontend/playwright-report/, so
+      # without this line a red run had nothing but the pass/fail text to go
+      # on -- no evidence of what the page actually looked like.
       - name: Upload the reports
         if: failure() || steps.playwright.outcome == 'failure' || steps.playwright_guard.outcome == 'failure' || steps.backend.outcome == 'failure'
         uses: actions/upload-artifact@v4
@@ -342,5 +350,6 @@ jobs:
             ${{ runner.temp }}/*.log
             ${{ runner.temp }}/playwright-report.json
             frontend/playwright-report/
+            frontend/test-results/
           retention-days: 30
           if-no-files-found: ignore
