@@ -1,5 +1,11 @@
 import { convertToParamMap } from '@angular/router';
-import { canScopedRefresh, markReadTarget, queryFromSelection, selectionFromParams } from './query';
+import {
+  canScopedRefresh,
+  markReadTarget,
+  queryFromSelection,
+  sameSelection,
+  selectionFromParams,
+} from './query';
 
 const pm = (o: Record<string, string>) => convertToParamMap(o);
 
@@ -80,5 +86,34 @@ describe('canScopedRefresh', () => {
   it('is disallowed for the cross-feed saved views', () => {
     expect(canScopedRefresh({ kind: 'favorites', id: null, unread: false })).toBe(false);
     expect(canScopedRefresh({ kind: 'kept', id: null, unread: false })).toBe(false);
+  });
+});
+
+describe('sameSelection', () => {
+  it('matches two selections that name the same list', () => {
+    expect(
+      sameSelection({ kind: 'tag', id: 3, unread: true }, { kind: 'tag', id: 3, unread: true }),
+    ).toBe(true);
+  });
+  it('separates two tags', () => {
+    expect(
+      sameSelection({ kind: 'tag', id: 3, unread: true }, { kind: 'tag', id: 4, unread: true }),
+    ).toBe(false);
+  });
+  it('separates the same id under a different kind', () => {
+    expect(
+      sameSelection(
+        { kind: 'tag', id: 3, unread: true },
+        { kind: 'subscription', id: 3, unread: true },
+      ),
+    ).toBe(false);
+  });
+  it('separates the unread view from the all view', () => {
+    expect(
+      sameSelection(
+        { kind: 'all', id: null, unread: true },
+        { kind: 'all', id: null, unread: false },
+      ),
+    ).toBe(false);
   });
 });

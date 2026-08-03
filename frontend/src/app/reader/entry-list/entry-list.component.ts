@@ -10,6 +10,7 @@ import {
   input,
   output,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -34,7 +35,7 @@ import { MagazineBlock } from '../magazine/magazine-block';
 import { planMagazine } from '../magazine/magazine-planner';
 import { ReadingLayout } from '../reading-layout.service';
 import { EntryDto, SubscriptionTagDto } from '../models';
-import { Selection, canScopedRefresh } from '../query';
+import { Selection, canScopedRefresh, sameSelection } from '../query';
 import { atTop, pullTriggersRefresh, rubberBand } from '../reader-gestures';
 import { relativeTime } from '../format';
 import { LanguageService } from '../../core/language.service';
@@ -261,7 +262,17 @@ export class EntryListComponent implements OnDestroy {
     this.scheduleFocus();
     // Remember where the user is so a browser resume-reload (iOS/Brave discard the
     // tab and reload it) can drop them back here rather than at the top.
-    this.scroll.save(this.selection(), top);
+    if (this.rowsBelongToSelection()) this.scroll.save(this.selection(), top);
+  }
+
+  /** Whether the rows on screen are the ones the current selection asked for.
+   *  They are not between a view switch and the arrival of that view's page —
+   *  the outgoing list stays rendered meanwhile (#254) — and its scroll events
+   *  must not be written to the incoming view's key (#267). Null means the list
+   *  has never reloaded since mount, where the rows are the current view's. */
+  private rowsBelongToSelection(): boolean {
+    const rendered = this.renderedSelection;
+    return rendered === null || sameSelection(rendered, this.selection());
   }
 
   /** Coalesce reading-focus recomputes to one per animation frame. */
@@ -482,21 +493,39 @@ export class EntryListComponent implements OnDestroy {
     // then land the user back where they were before the page was reloaded.
     if (this.wasLoading && el) {
       this.wasLoading = false;
+      this.renderedSelection = this.selection();
       this.applyScroll(el, this.scroll.read(this.selection()));
     }
   });
 
+  /** The selection whose entries are on screen — see rowsBelongToSelection(). */
+  private renderedSelection: Selection | null = null;
+
+  // A view switch leaves the previous view's list (and its scroll offset) on
+  // screen until the new page lands. Hand the scroller the incoming view's own
+  // place right away, so the wait shows that view's window rather than the one
+  // the user left. The load-complete restore above then repeats it exactly.
+  private readonly _scrollOnSelectionChange = effect(() => {
+    const selection = this.selection();
+    untracked(() => {
+      const el = this.rows()?.nativeElement;
+      if (el) this.applyScroll(el, this.scroll.read(selection));
+    });
+  });
+
   private applyScroll(el: HTMLElement, top: number): void {
     this.cancelSettle();
+    // Assign even for 0. The scroller outlives a view switch (the outgoing list
+    // stays rendered, #254), so "this view has no remembered offset" has to put
+    // it back at the top rather than leave the previous view's offset in place
+    // (#267).
+    el.scrollTop = top; // immediate rough landing so the list never flashes at the top
     // Seed the hide-on-scroll baseline so the very next scroll compares against
     // the restored position, not 0.
-    if (top <= 0) {
-      this.lastScrollTop = el.scrollTop;
-      return;
-    }
-    el.scrollTop = top; // immediate rough landing so the list never flashes at the top
     this.lastScrollTop = el.scrollTop;
-    this.settleTo(el, top);
+    // Only a target below the fold can be nudged off by late layout; the top is
+    // where scroll-anchoring holds content anyway, so it needs no settle window.
+    if (top > 0) this.settleTo(el, top);
   }
 
   // A resume-reload re-renders the whole list from scratch, and block heights firm
