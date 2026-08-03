@@ -54,23 +54,40 @@ jobs:
                  -key-file docker/certs/localhost-key.pem \
                  localhost 127.0.0.1 ::1
 
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: intl, pdo_sqlite, pdo_mysql
+          coverage: none
+          # backend/bin/e2e.sh concatenates the system CA bundle with the mkcert
+          # root and points PHP at the result, keeping full peer verification.
+          # It reads the system bundle from this ini value, and setup-php leaves
+          # it empty by default -- which would silently reduce the bundle to the
+          # mkcert root alone and break every outbound HTTPS fetch in the suite.
+          ini-values: openssl.cafile=/etc/ssl/certs/ca-certificates.crt, curl.cainfo=/etc/ssl/certs/ca-certificates.crt
+
+      # The php service bind-mounts ./backend:/app, so whatever owns
+      # backend/vendor/ on the runner is exactly what the container sees -- a
+      # fresh checkout has no vendor/ at all, which would shadow the built
+      # image's dependencies with an empty tree. This has to run here, on the
+      # runner and before the stack boots: installing it later, inside the
+      # container, writes the tree as the container's root user, and a
+      # runner-side composer step after that (needed for `composer e2e` below)
+      # then fails to update `installed.php` with a permission error. Installing
+      # once, up front, as the runner user, means the bind mount simply carries
+      # that tree into the container and `bin/console` sees it too -- both
+      # sides are PHP 8.4 and these are pure-PHP packages, so one install
+      # satisfies both.
+      - name: Install backend dependencies
+        working-directory: backend
+        run: composer install --prefer-dist --no-progress
+
       # --wait blocks until every service is running and every service that
       # declares a healthcheck is healthy. Only mysql declares one, so the two
       # readiness gates below are not redundant with it.
       - name: Boot the stack
         run: docker compose up -d --wait
-
-      # The php service bind-mounts ./backend:/app. On a developer machine
-      # backend/vendor/ already exists from a host-side `composer install`, so
-      # the mount is invisible there -- it only ever bites a fresh CI checkout,
-      # which has no vendor/ at all and shadows the built image's dependencies
-      # with an empty tree. Installed inside the container, not on the runner,
-      # so Composer's platform check sees the extensions that will actually run
-      # the code.
-      - name: Install backend dependencies
-        run: |
-          set -euo pipefail
-          docker compose exec -T php composer install --prefer-dist --no-progress --no-interaction
 
       - name: Migrate the database
         run: |
@@ -119,23 +136,6 @@ jobs:
           echo "!!! http://localhost:4200 never answered." >&2
           docker compose logs --no-color frontend >&2
           exit 1
-
-      - name: Set up PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          extensions: intl, pdo_sqlite, pdo_mysql
-          coverage: none
-          # backend/bin/e2e.sh concatenates the system CA bundle with the mkcert
-          # root and points PHP at the result, keeping full peer verification.
-          # It reads the system bundle from this ini value, and setup-php leaves
-          # it empty by default -- which would silently reduce the bundle to the
-          # mkcert root alone and break every outbound HTTPS fetch in the suite.
-          ini-values: openssl.cafile=/etc/ssl/certs/ca-certificates.crt, curl.cainfo=/etc/ssl/certs/ca-certificates.crt
-
-      - name: Install backend dependencies
-        working-directory: backend
-        run: composer install --prefer-dist --no-progress
 
       # composer e2e is the documented entry point and does the fixture work
       # itself: purge leftover throwaway accounts, seed the admin and its
