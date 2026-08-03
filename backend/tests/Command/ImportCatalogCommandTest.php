@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Command;
 
 use App\Entity\CatalogFeed;
+use App\Service\Catalog\BundledCatalog;
 use App\Tests\DbTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
@@ -28,7 +29,12 @@ final class ImportCatalogCommandTest extends DbTestCase
 
         $em = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $em);
-        self::assertCount(111, $em->getRepository(CatalogFeed::class)->findAll());
+        $catalog = self::getContainer()->get(BundledCatalog::class);
+        self::assertInstanceOf(BundledCatalog::class, $catalog);
+
+        $shippedFeedCount = $catalog->document()->feedCount();
+        self::assertGreaterThan(0, $shippedFeedCount);
+        self::assertCount($shippedFeedCount, $em->getRepository(CatalogFeed::class)->findAll());
     }
 
     public function testAMissingFileIsAnError(): void

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Admin;
 
 use App\Entity\CatalogFeed;
+use App\Service\Catalog\BundledCatalog;
+use App\Service\Catalog\ParsedCatalog;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -152,9 +154,10 @@ final class AdminCatalogImportControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         $body = $this->responseBody($client);
 
+        $document = $this->bundledDocument();
         self::assertTrue($body['available']);
-        self::assertSame(13, $body['categories']);
-        self::assertSame(111, $body['feeds']);
+        self::assertSame(\count($document->categories), $body['categories']);
+        self::assertSame($document->feedCount(), $body['feeds']);
 
         $em = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $em);
@@ -176,7 +179,16 @@ final class AdminCatalogImportControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         $body = $this->responseBody($client);
 
-        self::assertSame(13, $body['categoriesCreated']);
-        self::assertSame(111, $body['feedsCreated']);
+        $document = $this->bundledDocument();
+        self::assertSame(\count($document->categories), $body['categoriesCreated']);
+        self::assertSame($document->feedCount(), $body['feedsCreated']);
+    }
+
+    private function bundledDocument(): ParsedCatalog
+    {
+        $catalog = self::getContainer()->get(BundledCatalog::class);
+        self::assertInstanceOf(BundledCatalog::class, $catalog);
+
+        return $catalog->document();
     }
 }

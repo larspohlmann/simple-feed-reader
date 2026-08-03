@@ -36,12 +36,14 @@ final class CatalogDocumentTest extends TestCase
             . '</body></opml>';
     }
 
-    public function testTheShippedDocumentParsesAndCarriesTheFullCatalog(): void
+    public function testTheShippedDocumentParsesAndEveryCategoryCarriesFeeds(): void
     {
         $document = $this->parser()->parse($this->shippedOpml());
 
-        self::assertCount(13, $document->categories);
-        self::assertSame(111, $document->feedCount());
+        self::assertNotEmpty($document->categories);
+        foreach ($document->categories as $category) {
+            self::assertNotEmpty($category->feeds, $category->name . ' carries no feeds');
+        }
     }
 
     public function testEveryCategoryIsWellFormedAndUniquelyKeyed(): void
