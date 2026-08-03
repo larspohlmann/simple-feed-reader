@@ -407,6 +407,96 @@ describe('EntryListComponent', () => {
     expect(apply).not.toHaveBeenCalled();
   });
 
+  // #267. The outgoing list stays on screen while the next query runs (#254), so
+  // the scroll container survives a view switch and carries the previous view's
+  // offset with it. Every case below is about handing the incoming view its own
+  // place instead of inheriting that one.
+  describe('scroll position across a view switch', () => {
+    /** jsdom has no layout, so its scrollTop is permanently 0. Give the scroller
+     *  a real one that starts where the previous view left it. */
+    function fakeScroller(f: ReturnType<typeof mount>, top: number): HTMLElement {
+      const rows = (f.nativeElement as HTMLElement).querySelector('.rows') as HTMLElement;
+      let offset = top;
+      Object.defineProperty(rows, 'scrollTop', {
+        configurable: true,
+        get: () => offset,
+        set: (v: number) => {
+          offset = v;
+        },
+      });
+      return rows;
+    }
+
+    /** Play a load through to completion, which is what marks the rendered rows
+     *  as belonging to the current selection. */
+    function completeLoad(f: ReturnType<typeof mount>): void {
+      f.componentRef.setInput('loading', true);
+      f.detectChanges();
+      f.componentRef.setInput('loading', false);
+      f.detectChanges();
+    }
+
+    it('returns to the top when the incoming view has no remembered offset', () => {
+      const f = mount();
+      const rows = fakeScroller(f, 900);
+      memory.read.mockReturnValue(0);
+
+      completeLoad(f);
+
+      expect(rows.scrollTop).toBe(0);
+    });
+
+    it('lands on the incoming view’s remembered offset', () => {
+      const f = mount();
+      const rows = fakeScroller(f, 900);
+      memory.read.mockReturnValue(420);
+
+      completeLoad(f);
+
+      expect(rows.scrollTop).toBe(420);
+    });
+
+    it('moves the retained list at once, without waiting for its page', () => {
+      const f = mount();
+      const rows = fakeScroller(f, 900);
+      memory.read.mockReturnValue(0);
+
+      f.componentRef.setInput('selection', { kind: 'tag', id: 4, unread: true });
+      f.componentRef.setInput('loading', true);
+      f.detectChanges();
+
+      expect(rows.scrollTop).toBe(0);
+    });
+
+    it('does not write the outgoing list’s scroll into the incoming view’s key', () => {
+      const f = mount();
+      completeLoad(f);
+      f.componentRef.setInput('selection', { kind: 'tag', id: 4, unread: true });
+      f.componentRef.setInput('loading', true);
+      f.detectChanges();
+      memory.save.mockClear();
+
+      f.componentInstance.onRowsScroll({ target: { scrollTop: 480 } } as unknown as Event);
+
+      expect(memory.save).not.toHaveBeenCalled();
+    });
+
+    // The guard above must not swallow a scroll during a refresh of the very
+    // same view: those rows are the user's own, and dropping the save would
+    // yank them back to the pre-refresh offset when the response lands.
+    it('keeps remembering the offset while the same view refreshes', () => {
+      const f = mount();
+      completeLoad(f);
+      f.componentRef.setInput('loading', true);
+      f.detectChanges();
+      memory.save.mockClear();
+
+      f.componentInstance.onRowsScroll({ target: { scrollTop: 480 } } as unknown as Event);
+
+      expect(memory.save).toHaveBeenCalledWith({ kind: 'all', id: null, unread: true }, 480);
+    });
+  });
+
   describe('back to top', () => {
     /** Stub the scroller: jsdom implements neither scrollTo nor real scrolling. */
     function stubScroller(f: ReturnType<typeof mount>) {

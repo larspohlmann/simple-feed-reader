@@ -16,6 +16,12 @@ export interface RefreshScope {
   tagId?: number;
 }
 
+/** Whether two selections name the same list. Selections are rebuilt from the
+ *  route on every navigation, so they are never reference-equal. */
+export function sameSelection(a: Selection, b: Selection): boolean {
+  return a.kind === b.kind && a.id === b.id && a.unread === b.unread;
+}
+
 /** Whether the current selection supports a scoped refresh — the cross-feed
  *  saved views (favorites/kept) don't map to any feed scope, so they can't. */
 export function canScopedRefresh(s: Selection): boolean {
