@@ -23,9 +23,10 @@ curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/mai
 ```
 
 The installer clones the project into `./simple-feed-reader`, checks out the
-latest release, generates the secrets it can, asks for the two things only
-you know (your public URL and how to send mail), and starts the production
-stack. The full guide — TLS, reverse proxies, mail verification, backups —
+latest release, generates the secrets it can, asks for the things only you
+know (how users reach the instance — plain HTTP, your own certificate, or a
+reverse proxy — under which hostname and port, and how to send mail), and
+starts the production stack. The full guide — TLS, reverse proxies, mail verification, backups —
 is [docs/docker-production.md](docs/docker-production.md).
 
 > **Read before you pipe to bash.** You can inspect exactly what runs at
@@ -52,7 +53,7 @@ Run these from inside the `simple-feed-reader` directory:
 |---|---|
 | Update to the latest release (prod and/or dev) | `./scripts/update.sh` |
 | Start / stop the production stack | `./scripts/prod-start.sh` / `./scripts/prod-stop.sh` |
-| Change the public URL / mail settings | `./scripts/prod-configure.sh` |
+| Change the public origin / mail settings | `./scripts/prod-configure.sh` |
 | Start / stop the dev frontend (:4200) | `./scripts/frontend-start.sh` / `./scripts/frontend-stop.sh` |
 | Stop the dev stack (keeps your data) | `docker compose down` |
 

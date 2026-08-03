@@ -2,9 +2,11 @@
 set -euo pipefail
 
 # Reconfigure an existing production install: re-ask the questions
-# scripts/install.sh asked -- the public URL, how mail is sent, the From:
-# address -- each defaulting to the current .env.prod value, then apply by
-# re-running prod-start.sh and offer the same mail-delivery check.
+# scripts/install.sh asked -- how users reach the instance, under which
+# hostname, on which port, how mail is sent, the From: address -- each
+# defaulting to the current .env.prod value, then apply by re-running
+# prod-start.sh and offer the same mail-delivery check. Answering every
+# question with return is a no-op.
 #
 # Secrets and passwords are deliberately NOT touched. Regenerating
 # JWT_PASSPHRASE would lock the existing signing key, and the MySQL

@@ -7,7 +7,7 @@ set -euo pipefail
 #
 # It clones the repository, checks out the latest release, writes .env.prod
 # with freshly generated secrets, asks for the few values only you know (the
-# public URL and how to send mail), and starts the production stack: MySQL,
+# public origin and how to send mail), and starts the production stack: MySQL,
 # the production PHP image, and nginx serving the built app. Nothing here
 # deletes data.
 #

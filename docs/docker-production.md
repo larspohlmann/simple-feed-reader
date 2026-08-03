@@ -30,10 +30,19 @@ The installer clones the project, checks out the latest release, generates
 every secret it can (database passwords, signing keys), and asks for the few
 values only you know:
 
-- **The public URL** — how users reach the instance. `http://localhost` (the
-  default) is fine for a local or LAN instance. For OAuth sign-in, and for
-  Safari, use a real HTTPS origin. The port in the URL becomes the published
-  port.
+- **How users reach the instance** — three questions, because this is three
+  decisions:
+  1. Plain HTTP, direct (the default); HTTPS with a certificate this stack
+     serves; or HTTPS behind a reverse proxy that terminates TLS. Choose the
+     third on a machine that already publishes port 80 — see §2.
+  2. The **hostname**, `localhost` by default. Paste a whole URL and the
+     installer reduces it to the host.
+  3. The **port**, which defaults to the one the first answer implies: 80,
+     443, or 8080 behind a proxy. The installer checks whether it is free and
+     asks again when it is not.
+
+  Together these become `PUBLIC_URL` and the published container ports. For
+  OAuth sign-in, and for Safari, use a real HTTPS origin.
 - **How to send mail** — an SMTP relay (your mail provider's host, port,
   username, password), or the machine's own MTA if it runs one. There is no
   default: a feed reader that cannot send mail cannot register users or
@@ -50,23 +59,31 @@ comments explain every value), and run `./scripts/prod-start.sh`.
 ## 2. TLS
 
 The stack serves TLS itself when you give it a certificate, and plain HTTP
-when you do not:
+when you do not. The installer's first question sets this up for you; what
+follows is what it writes, and how to do it by hand.
 
 - **Bring a certificate** (recommended when nothing else terminates TLS):
   put `fullchain.pem` and `privkey.pem` — the Let's Encrypt names — into
   `docker/certs-prod/`, then run `./scripts/prod-start.sh` again. Port 443
-  serves the app; port 80 redirects to it. After a certificate renewal,
+  serves the app; port 80 redirects to it. The installer offers to generate
+  these two files with `mkcert` when `mkcert` is installed. Take that offer
+  only for a private instance: a mkcert certificate is trusted solely on
+  machines holding your mkcert root CA, every other visitor gets a browser
+  warning, and OAuth providers refuse it. After a certificate renewal,
   re-run `./scripts/prod-start.sh` (or `docker compose -p
   simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod
   restart web`) to load the new files.
-- **Or put a reverse proxy in front** (Caddy, Traefik, nginx): leave
-  `docker/certs-prod/` empty; the stack serves plain HTTP on port 80. In
-  `.env.prod`, move the port off 80 (`WEB_HTTP_PORT=8080`) and bind it to
-  loopback (`WEB_BIND_ADDRESS=127.0.0.1`) so only the proxy on this machine
-  can reach it. The stack publishes `WEB_TLS_PORT` as well even in this mode
-  (both ports are always published — see the comment in `.env.prod.example`),
-  so also set it to a free port (e.g. `WEB_TLS_PORT=8443`) or the container
-  will fail to start if 443 is already taken on the host. Example Caddyfile:
+- **Or put a reverse proxy in front** (Caddy, Traefik, nginx) — the answer to
+  pick when this machine already publishes port 80, because one host address
+  publishes a port once. Leave `docker/certs-prod/` empty; the stack serves
+  plain HTTP. The installer then writes `WEB_HTTP_PORT=8080`,
+  `WEB_BIND_ADDRESS=127.0.0.1` so only the proxy on this machine can reach
+  it, and moves `WEB_TLS_PORT` to 8443 — the stack publishes that port even
+  in this mode (both ports are always published — see the comment in
+  `.env.prod.example`), so leaving it at 443 collides with the proxy.
+  `PUBLIC_URL` stays the origin users type, without the loopback port. Set
+  `WEB_BIND_ADDRESS=0.0.0.0` if the proxy runs on another machine. By hand,
+  write those four values into `.env.prod` yourself. Example Caddyfile:
 
   ```
   reader.example.org {
@@ -187,9 +204,11 @@ idempotent — running it again is always safe.
 
 ## 7. Reconfigure
 
-To change the public URL or the mail settings later, re-run the installer's
-questions against the existing install; changing the URL's port re-publishes
-the stack on the new port:
+To change the public origin or the mail settings later, re-run the
+installer's questions against the existing install. Every question offers the
+current value, so pressing return through all of them changes nothing;
+answering the port question differently re-publishes the stack on the new
+port:
 
 ```bash
 cd simple-feed-reader && ./scripts/prod-configure.sh
