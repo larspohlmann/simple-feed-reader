@@ -51,6 +51,42 @@ describe('EntriesStore', () => {
     expect(store.loadedAt()).not.toBe('');
   });
 
+  it('keeps the previous entries visible while a reload is on the wire', () => {
+    store.load({ view: 'unread' });
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [entry(1)], nextCursor: 'C1' });
+
+    store.load({ view: 'all' });
+    expect(store.loading()).toBe(true);
+    // The stale list stays on screen instead of a blank pane (#254); the next
+    // cursor is dropped so no pagination can extend the outgoing list.
+    expect(store.entries().map((e) => e.id)).toEqual([1]);
+    expect(store.nextCursor()).toBeNull();
+
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [entry(2)], nextCursor: null });
+    expect(store.entries().map((e) => e.id)).toEqual([2]);
+  });
+
+  it('drops the retained entries when the reload fails', () => {
+    store.load({ view: 'unread' });
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [entry(1)], nextCursor: 'C1' });
+
+    store.load({ view: 'all' });
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ title: 'nope' }, { status: 500, statusText: 'Server Error' });
+
+    // Loading is over, so the rows would un-dim and become interactive again —
+    // showing the previous view's entries under an error banner (#254).
+    expect(store.entries()).toEqual([]);
+    expect(store.error()).not.toBeNull();
+  });
+
   it('appends on loadMore and terminates on a null cursor', () => {
     store.load({ view: 'unread' });
     ctrl
@@ -87,13 +123,12 @@ describe('EntriesStore', () => {
     expect(store.loadingMore()).toBe(false);
   });
 
-  it('resets when the query changes', () => {
+  it('sends the changed query and replaces the list with its response', () => {
     store.load({ view: 'unread' });
     ctrl
       .expectOne((r) => r.url === 'https://api.test/api/entries')
       .flush({ entries: [entry(1)], nextCursor: 'C1' });
     store.load({ view: 'all' });
-    expect(store.entries()).toEqual([]);
     ctrl
       .expectOne((r) => r.params.get('view') === 'all')
       .flush({ entries: [entry(9)], nextCursor: null });

@@ -27,6 +27,16 @@ Options +FollowSymLinks
     </FilesMatch>
 </IfModule>
 
+<IfModule mod_deflate.c>
+    # Nothing was compressed before (#254): a 40-entry list ships ~67 KB of JSON
+    # over a link where transfer, not the 6 ms query, is the cost. Byte-type
+    # filtering rather than a blanket filter, so already-compressed responses
+    # (images, woff2) are not re-encoded for nothing.
+    AddOutputFilterByType DEFLATE application/json application/problem+json
+    AddOutputFilterByType DEFLATE application/javascript text/javascript text/css
+    AddOutputFilterByType DEFLATE text/html text/plain application/xml image/svg+xml
+</IfModule>
+
 <IfModule mod_headers.c>
     # The shell names the content-hashed bundles, so a cached copy pins the
     # browser to the previous release's JavaScript no matter how the assets
@@ -34,6 +44,14 @@ Options +FollowSymLinks
     <Files "index.html">
         Header set Cache-Control "no-cache, must-revalidate"
     </Files>
+
+    # Every build renames these with a fresh content hash, so a stale copy can
+    # never be served for changed content -- the URL itself changes. Anything
+    # NOT hashed (index.html above, i18n dictionaries, favicons) is excluded:
+    # those keep their names across releases and would pin a year-old copy.
+    <FilesMatch "-[A-Z0-9]{8}\.(js|mjs|css)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
 </IfModule>
 
 <IfModule mod_rewrite.c>
