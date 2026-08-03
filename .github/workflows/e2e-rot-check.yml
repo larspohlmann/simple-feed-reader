@@ -60,6 +60,18 @@ jobs:
       - name: Boot the stack
         run: docker compose up -d --wait
 
+      # The php service bind-mounts ./backend:/app. On a developer machine
+      # backend/vendor/ already exists from a host-side `composer install`, so
+      # the mount is invisible there -- it only ever bites a fresh CI checkout,
+      # which has no vendor/ at all and shadows the built image's dependencies
+      # with an empty tree. Installed inside the container, not on the runner,
+      # so Composer's platform check sees the extensions that will actually run
+      # the code.
+      - name: Install backend dependencies
+        run: |
+          set -euo pipefail
+          docker compose exec -T php composer install --prefer-dist --no-progress --no-interaction
+
       - name: Migrate the database
         run: |
           set -euo pipefail
