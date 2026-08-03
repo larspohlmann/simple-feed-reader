@@ -96,6 +96,46 @@ if ! printf '%s\n' "${rejection}" | grep -q 'malformed'; then
   fail 'the rejection must explain the malformed JSON'
 fi
 
+# --- zero-byte report (Playwright crashed before writing anything) -----------
+# A 0-byte file is one of the most plausible crash modes (OOM, timeout, signal).
+# The guard must reject it, not report success.
+zerobyte="${work}/zerobyte.json"
+touch "${zerobyte}"
+if "${guard}" "${zerobyte}" > /dev/null 2>&1; then
+  fail 'a zero-byte report must be rejected'
+fi
+
+# Verify it exits with exactly 1, not some other code.
+exit_code=0
+"${guard}" "${zerobyte}" > /dev/null 2>&1 || exit_code=$?
+if [ "${exit_code}" -ne 1 ]; then
+  fail "zero-byte report must exit 1, got ${exit_code}"
+fi
+
+# --- valid JSON but no stats key (report structure is wrong) -------------------
+# A report that parses but has no stats object is as bad as no report: there is
+# no evidence the run proved anything. The guard must reject it, not default to
+# 0 passed and 0 skipped.
+nostats="${work}/nostats.json"
+cat > "${nostats}" <<'JSON'
+{
+  "suites": [
+    { "title": "reader-smoke.spec.ts", "specs": [] }
+  ]
+}
+JSON
+
+if "${guard}" "${nostats}" > /dev/null 2>&1; then
+  fail 'a report with no stats must be rejected'
+fi
+
+# Verify it exits with exactly 1.
+exit_code=0
+"${guard}" "${nostats}" > /dev/null 2>&1 || exit_code=$?
+if [ "${exit_code}" -ne 1 ]; then
+  fail "report with no stats must exit 1, got ${exit_code}"
+fi
+
 # --- usage -------------------------------------------------------------------
 if "${guard}" > /dev/null 2>&1; then
   fail 'no argument must be a usage error'

@@ -37,6 +37,21 @@ fi
 expected=$(jq -r '.stats.expected // 0' "${report}")
 skipped=$(jq -r '.stats.skipped // 0' "${report}")
 
+# Fail fast if stats are not valid numbers. Empty or non-numeric values cause
+# silent failures in arithmetic comparisons. A report with missing or wrong-type
+# stats is as bad as a missing report: the run proved nothing.
+if ! [ "${expected}" -eq "${expected}" ] 2>/dev/null; then
+  echo "ERROR: Playwright JSON report stats.expected is not numeric." >&2
+  echo "ERROR: The report is malformed or Playwright crashed during the test run." >&2
+  exit 1
+fi
+
+if ! [ "${skipped}" -eq "${skipped}" ] 2>/dev/null; then
+  echo "ERROR: Playwright JSON report stats.skipped is not numeric." >&2
+  echo "ERROR: The report is malformed or Playwright crashed during the test run." >&2
+  exit 1
+fi
+
 echo "==> Playwright: ${expected} passed, ${skipped} skipped."
 
 status=0
