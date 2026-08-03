@@ -140,4 +140,47 @@ final class CatalogControllerTest extends WebTestCase
         self::assertIsArray($body['categories'][0]['feeds'][0]);
         self::assertTrue($body['categories'][0]['feeds'][0]['subscribed']);
     }
+
+    /**
+     * The `subscribed` flag is per-user, and the picker locks whatever carries
+     * it. #263 was reported as "a new account sees feeds marked subscribed";
+     * the cause turned out to be a client-side cache, but nothing here proved
+     * the server side, because no test had a second user in the database.
+     */
+    public function testAnotherUsersSubscriptionDoesNotMarkTheFeedSubscribed(): void
+    {
+        $client = self::createClient();
+        $headers = $this->authHeader('newcomer@example.com');
+
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
+        $clock = self::getContainer()->get(ClockInterface::class);
+        self::assertInstanceOf(ClockInterface::class, $clock);
+
+        $category = new CatalogCategory('technology', 'Technology', 'memory', '#3b82f6');
+        $catalogFeed = new CatalogFeed($category, 'The Verge', 'https://www.theverge.com/rss/index.xml');
+
+        $stranger = (new UserFactory($em, $hasher))->create('stranger@example.com');
+        $feed = new Feed('https://www.theverge.com/rss/index.xml');
+        $subscription = new Subscription($stranger, $feed, $clock->now());
+
+        foreach ([$category, $catalogFeed, $feed, $subscription] as $row) {
+            $em->persist($row);
+        }
+        $em->flush();
+        $em->clear();
+
+        $client->request('GET', '/api/catalog', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, 512, \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['categories']);
+        self::assertIsArray($body['categories'][0]);
+        self::assertIsArray($body['categories'][0]['feeds']);
+        self::assertIsArray($body['categories'][0]['feeds'][0]);
+        self::assertFalse($body['categories'][0]['feeds'][0]['subscribed']);
+    }
 }
