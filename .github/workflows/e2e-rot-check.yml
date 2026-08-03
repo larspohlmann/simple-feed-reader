@@ -168,10 +168,15 @@ jobs:
       # subscription, clear the rate-limiter and ALTCHA-replay pools, then run
       # the suite against https://localhost:8443 with verification on.
       #
-      # No skip guard here, unlike the Playwright leg. ReaderJourneyE2eTest
-      # skips when an external news homepage is unreachable, which is a real
-      # condition outside this repository's control -- failing on it would make
-      # the workflow red for someone else's outage.
+      # --exclude-group external-site drops ReaderJourneyE2eTest: every method
+      # in that class asserts against a real publisher homepage (heise,
+      # tagesschau, spiegel), and a GitHub-runner datacenter IP can get a
+      # different response than a developer's connection gets -- exactly the
+      # third-party hazard catalog-rot-check.yml already documents. A human
+      # runs `composer e2e` locally (with no exclusion) and can judge that
+      # kind of failure; the unattended weekly run cannot, so it would just
+      # turn red for an outage nobody here caused. bin/e2e.sh forwards "$@" to
+      # phpunit, so this reaches PHPUnit's own --exclude-group flag.
       #
       # `shell: bash` is load-bearing, not decoration. The default shell for a
       # `run:` block is `bash -e`, WITHOUT pipefail, so `composer e2e | tee`
@@ -183,7 +188,37 @@ jobs:
         continue-on-error: true
         shell: bash
         working-directory: backend
-        run: composer e2e 2>&1 | tee "${RUNNER_TEMP}/backend-e2e.log"
+        run: |
+          set +e
+          composer e2e -- --exclude-group external-site 2>&1 | tee "${RUNNER_TEMP}/backend-e2e.log"
+          suite_status="${PIPESTATUS[0]}"
+          set -e
+
+          # A floor, not just a read of the exit code: --exclude-group is
+          # exactly the kind of thing a later edit widens by one careless
+          # attribute, and PHPUnit reports success on a suite that ran almost
+          # nothing just as readily as on one that ran everything -- the same
+          # silent-green defect this workflow exists to catch, reintroduced by
+          # its own fix. Six is the non-external floor for the current
+          # line-up (HealthE2eTest, ErrorContractE2eTest x2,
+          # OAuthProvidersE2eTest, PasswordResetE2eTest, OnboardingJourneyE2eTest).
+          # The all-pass summary ("OK (N tests, ...)") and the mixed-result one
+          # ("Tests: N, ...") name the count differently; a from-scratch run
+          # that executed nothing produces neither, which the fallback of 0
+          # catches.
+          executed="$(grep -oE 'OK \([0-9]+ tests?,' "${RUNNER_TEMP}/backend-e2e.log" | grep -oE '[0-9]+' | tail -1)"
+          if [ -z "$executed" ]; then
+            executed="$(grep -oE 'Tests: [0-9]+' "${RUNNER_TEMP}/backend-e2e.log" | grep -oE '[0-9]+' | tail -1)"
+          fi
+          executed="${executed:-0}"
+
+          echo "==> PHPUnit executed ${executed} test(s)."
+          if [ "$executed" -lt 6 ]; then
+            echo "!!! Only ${executed} test(s) executed; expected at least 6." >&2
+            exit 1
+          fi
+
+          exit "$suite_status"
 
       # Runs only on a red suite, so a passing run stays quiet. dev.log is
       # where this project's convention says a swallowed exception surfaces --
