@@ -22,13 +22,13 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
 {
     private const float TIMEOUT_SECONDS = 10.0;
-    private const string USER_AGENT = 'SimpleFeedReader/1.0 (+https://github.com/larspohlmann/simple-feed-reader)';
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly UrlGuard $urlGuard,
         private readonly ResponseClassifier $classifier,
         private readonly int $concurrency,
+        private readonly string $userAgent,
     ) {
         // A cap below one opens no requests at all, and the engine would report
         // an empty run as a clean one: the sweep's `remaining` never decrements
@@ -231,7 +231,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
             // wire in on_progress) also bounds the buffered body — a compressed
             // response would otherwise decompress unbounded before the size check.
             'Accept-Encoding' => 'identity',
-            'User-Agent' => self::USER_AGENT,
+            'User-Agent' => $this->userAgent,
         ];
         if (null !== $ticket->etag) {
             $headers['If-None-Match'] = $ticket->etag;

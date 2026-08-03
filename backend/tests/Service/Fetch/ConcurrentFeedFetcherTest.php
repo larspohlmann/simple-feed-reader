@@ -42,6 +42,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             new UrlGuard($resolver, new IpValidator()),
             new ResponseClassifier(),
             $concurrency,
+            'TestAgent/1.0',
         );
     }
 

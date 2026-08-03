@@ -9,6 +9,25 @@ parameters:
     # config alone. Eight x the 5 MB response cap is 40 MB against a 512 MB limit.
     fetch_concurrency: 8
 
+    # The one User-Agent every outbound request to a publisher carries.
+    #
+    # It names NO host, and it must stay that way. The usual courtesy of a
+    # `(+https://project/url)` self-identification is what broke #255: Akamai Bot
+    # Manager rejects a User-Agent containing a domain-shaped token, and it does
+    # not answer 403 — it finishes the TLS handshake and then resets the HTTP/2
+    # stream. Nothing reaches the transport, so the reader can only report the
+    # site as unreachable and tell the user to check an address that was correct
+    # all along. An invented domain is blocked exactly like a real one, so there
+    # is no wording of the URL that survives. OutboundUserAgentWiringTest fails
+    # if a host-shaped token ever reappears here.
+    #
+    # A parameter rather than a class constant for two reasons: the catalog rot
+    # check must send the same string as the fetcher it is a probe for (a
+    # publisher blocking only one of them would leave the rot check reporting a
+    # healthy catalog nobody can subscribe to), and if another CDN objects later
+    # the value moves in config instead of in three classes.
+    outbound_user_agent: 'SimpleFeedReader/1.0'
+
 services:
     # default configuration for services in *this* file
     _defaults:
@@ -18,6 +37,12 @@ services:
             Psr\Cache\CacheItemPoolInterface $altchaReplayCache: '@altcha.replay.cache'
             Psr\Cache\CacheItemPoolInterface $oauthStateCache: '@oauth.state.cache'
             Psr\Cache\CacheItemPoolInterface $loginCodeCache: '@oauth.login_code.cache'
+            # A name-matched bind, unlike the $concurrency case further down: there
+            # the global match was the objection, here it is the point. Any service
+            # that asks for a $userAgent is talking to a publisher, and every one of
+            # them has to send the same string — see the parameter's comment for why
+            # a second agent string is a bug rather than a nicety.
+            string $userAgent: '%outbound_user_agent%'
 
     # Tags every OAuth provider so OAuthProviderRegistry's #[AutowireIterator]
     # can collect them.

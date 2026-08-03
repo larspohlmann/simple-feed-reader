@@ -24,11 +24,11 @@ final class HtmlPageFetcher
     private const int MAX_REDIRECTS = 5;
     private const int MAX_BYTES = 3_000_000;
     private const float TIMEOUT_SECONDS = 10.0;
-    private const string USER_AGENT = 'SimpleFeedReader/1.0 (+https://github.com/larspohlmann/simple-feed-reader)';
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly UrlGuard $urlGuard,
+        private readonly string $userAgent,
     ) {
     }
 
@@ -84,7 +84,7 @@ final class HtmlPageFetcher
                     // the DECOMPRESSED body whole before the post-read size check —
                     // a small gzip bomb could inflate to GB and OOM the worker.
                     'Accept-Encoding' => 'identity',
-                    'User-Agent' => self::USER_AGENT,
+                    'User-Agent' => $this->userAgent,
                 ],
                 'max_redirects' => 0,
                 'timeout' => self::TIMEOUT_SECONDS,

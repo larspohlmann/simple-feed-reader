@@ -45,6 +45,7 @@ final class HttpFeedFetcherTest extends TestCase
             new UrlGuard($resolver, new IpValidator()),
             new ResponseClassifier(),
             1,
+            'TestAgent/1.0',
         ));
     }
 
