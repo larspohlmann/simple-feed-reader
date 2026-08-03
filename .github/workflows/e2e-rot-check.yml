@@ -307,7 +307,7 @@ jobs:
       # once the root cause is confirmed and fixed.
       - name: Diagnostic - fixture entry state after the backend leg
         run: |
-          docker compose exec -T php bin/console dbal:run-sql "
+          docker compose exec -T mysql mysql -uroot -proot feedreader -e "
             SELECT f.id AS feed_id,
               (SELECT COUNT(*) FROM entry e WHERE e.feed_id = f.id) AS entry_count,
               s.marked_read_until,
@@ -332,7 +332,7 @@ jobs:
       # confirmed and fixed.
       - name: Diagnostic - fixture entry state before the Playwright leg
         run: |
-          docker compose exec -T php bin/console dbal:run-sql "
+          docker compose exec -T mysql mysql -uroot -proot feedreader -e "
             SELECT f.id AS feed_id,
               (SELECT COUNT(*) FROM entry e WHERE e.feed_id = f.id) AS entry_count,
               s.marked_read_until,
