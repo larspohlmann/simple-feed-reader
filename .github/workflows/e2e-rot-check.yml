@@ -79,9 +79,20 @@ jobs:
       # that tree into the container and `bin/console` sees it too -- both
       # sides are PHP 8.4 and these are pure-PHP packages, so one install
       # satisfies both.
+      #
+      # --no-scripts is load-bearing, not an optimisation. Composer's
+      # post-install-cmd runs Symfony's cache warmup, and that would compile
+      # backend/var/cache -- also bind-mounted -- on the RUNNER: baked with the
+      # runner's absolute /home/runner/.../backend path rather than the
+      # container's /app, and against the runner's .env rather than the
+      # container's DATABASE_URL override. The container then boots, answers
+      # /api/health, and 500s on the first real request that touches the
+      # mismatched compiled container. This suite only runs PHPUnit binaries
+      # from vendor/ on the host; it never boots a Symfony kernel here, so it
+      # never needed that cache in the first place.
       - name: Install backend dependencies
         working-directory: backend
-        run: composer install --prefer-dist --no-progress
+        run: composer install --prefer-dist --no-progress --no-scripts
 
       # --wait blocks until every service is running and every service that
       # declares a healthcheck is healthy. Only mysql declares one, so the two
@@ -158,3 +169,18 @@ jobs:
         shell: bash
         working-directory: backend
         run: composer e2e 2>&1 | tee "${RUNNER_TEMP}/backend-e2e.log"
+
+      # Runs only on a red suite, so a passing run stays quiet. dev.log is
+      # where this project's convention says a swallowed exception surfaces --
+      # the black-box HTTP assertions above only ever show "500", never the
+      # backend's own stack trace -- and the container/nginx logs show what
+      # each request actually did. Keeping this dump in the workflow, not just
+      # for one-off debugging, because the next red run deserves the same
+      # evidence without re-deriving it from scratch.
+      - name: Dump backend diagnostics on failure
+        if: steps.backend.outcome == 'failure'
+        run: |
+          echo "::group::backend/var/log/dev.log"
+          docker compose exec -T php cat var/log/dev.log || true
+          echo "::endgroup::"
+          docker compose logs --no-color php nginx
