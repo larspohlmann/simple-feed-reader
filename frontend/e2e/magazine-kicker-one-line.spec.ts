@@ -81,6 +81,11 @@ test('a long source never widens the page', async ({ page }) => {
         const overflowX = getComputedStyle(el).overflowX;
         return overflowX === 'auto' || overflowX === 'scroll';
       })
+      // x-axis scroll-snapping marks a deliberate swipe affordance (the mobile
+      // tag row). #155 was the opposite: an ancestor refusing to shrink. Keying
+      // on the CSS signal rather than a selector keeps document/body — and so a
+      // snap-scroller that does push the page sideways — still caught.
+      .filter((el) => !getComputedStyle(el).scrollSnapType.startsWith('x'))
       .map((el) => ({
         who: `${el.tagName.toLowerCase()}.${el.className}`,
         scrollWidth: el.scrollWidth,
