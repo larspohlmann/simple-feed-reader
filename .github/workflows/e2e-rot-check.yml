@@ -250,3 +250,65 @@ jobs:
           docker compose exec -T php cat var/log/dev.log || true
           echo "::endgroup::"
           docker compose logs --no-color php nginx
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # Same reason as ci.yml: node 22 ships npm 10.9.8, but the lockfile was
+      # authored by npm 11, and npm 10 mis-resolves chokidar and rejects it.
+      - name: Pin npm 11 (matches the lockfile author)
+        run: npm i -g npm@11
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      # The json reporter goes to a file (PLAYWRIGHT_JSON_OUTPUT_NAME), so the
+      # list reporter still gives a readable log. The guard below reads the file.
+      #
+      # This does NOT start a dev server: playwright.config.ts reuses the one
+      # the frontend container is already serving on :4200. Its globalSetup
+      # re-runs the same fixture commands composer e2e ran -- harmless, and it
+      # keeps the two suites on identical fixtures.
+      #
+      # `shell: bash` for pipefail, same reason as the backend step: the default
+      # `bash -e` would return tee's status and hide a failing suite.
+      - name: Playwright e2e
+        id: playwright
+        continue-on-error: true
+        shell: bash
+        working-directory: frontend
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/playwright-report.json
+        run: npm run e2e -- --reporter=list,json 2>&1 | tee "${RUNNER_TEMP}/playwright-e2e.log"
+
+      # Playwright exits 0 when every spec skipped, because nothing failed. For
+      # an unattended weekly check that is the worst possible outcome, so the
+      # verdict is re-decided here. See scripts/assert-playwright-ran.sh.
+      - name: Assert the Playwright suite verified something
+        id: playwright_guard
+        continue-on-error: true
+        shell: bash
+        run: scripts/assert-playwright-ran.sh "${RUNNER_TEMP}/playwright-report.json" 2>&1 | tee "${RUNNER_TEMP}/playwright-guard.log"
+
+      # The HTML report and the raw logs are what makes a red run actionable a
+      # week later. Kept only on failure; a green run has nothing to look at.
+      - name: Upload the reports
+        if: failure() || steps.playwright.outcome == 'failure' || steps.playwright_guard.outcome == 'failure' || steps.backend.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-reports
+          path: |
+            ${{ runner.temp }}/*.log
+            ${{ runner.temp }}/playwright-report.json
+            frontend/playwright-report/
+          retention-days: 30
+          if-no-files-found: ignore
