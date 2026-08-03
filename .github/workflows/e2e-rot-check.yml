@@ -301,30 +301,22 @@ jobs:
 
       # TEMPORARY -- diagnostic for #96 task 4. The magazine-kicker-one-line
       # specs fail against the fixture entry E2eSeedAdminSubscriptionCommand
-      # seeds: the reader mounts with the subscription visible but reports
-      # zero unread. The previous version of this query used a plain
-      # `LEFT JOIN subscription ON feed_id` and so could not tell "no
-      # watermark" from "no subscription row" apart, and never printed the
-      # entry's published_at/effective_date. This version scopes the
-      # subscription and entry_state joins to the seeded admin explicitly and
-      # prints both dates, so a single run's output can confirm or rule out
-      # both remaining candidates: a markedReadUntil watermark at or past the
-      # entry's effective date, or an unexpected effective_date. Remove once
-      # the root cause is confirmed and fixed.
+      # seeds; this prints whether the ENTRY row and its effective read state
+      # survive the backend leg, so the Playwright-leg reading below can be
+      # compared against a known-good baseline instead of guessed at. Remove
+      # once the root cause is confirmed and fixed.
       - name: Diagnostic - fixture entry state after the backend leg
         run: |
           docker compose exec -T mysql mysql -uroot -proot feedreader -e "
-            SELECT e.id AS entry_id, e.published_at, e.effective_date,
-              s.id AS subscription_id, s.marked_read_until,
-              es.is_read AS admin_is_read
+            SELECT f.id AS feed_id,
+              (SELECT COUNT(*) FROM entry e WHERE e.feed_id = f.id) AS entry_count,
+              s.marked_read_until,
+              (SELECT es.is_read FROM entry_state es
+                 JOIN entry e2 ON e2.id = es.entry_id
+                 JOIN app_user u ON u.id = es.user_id
+                WHERE e2.feed_id = f.id AND u.email = 'e2e-admin@example.com') AS admin_is_read
             FROM feed f
-            JOIN entry e ON e.feed_id = f.id
-            LEFT JOIN subscription s
-              ON s.feed_id = f.id
-              AND s.user_id = (SELECT id FROM app_user WHERE email = 'e2e-admin@example.com')
-            LEFT JOIN entry_state es
-              ON es.entry_id = e.id
-              AND es.user_id = (SELECT id FROM app_user WHERE email = 'e2e-admin@example.com')
+            LEFT JOIN subscription s ON s.feed_id = f.id
             WHERE f.url = 'https://fixtures.sfr-e2e.example/feed.xml'
           "
 
@@ -341,17 +333,15 @@ jobs:
       - name: Diagnostic - fixture entry state before the Playwright leg
         run: |
           docker compose exec -T mysql mysql -uroot -proot feedreader -e "
-            SELECT e.id AS entry_id, e.published_at, e.effective_date,
-              s.id AS subscription_id, s.marked_read_until,
-              es.is_read AS admin_is_read
+            SELECT f.id AS feed_id,
+              (SELECT COUNT(*) FROM entry e WHERE e.feed_id = f.id) AS entry_count,
+              s.marked_read_until,
+              (SELECT es.is_read FROM entry_state es
+                 JOIN entry e2 ON e2.id = es.entry_id
+                 JOIN app_user u ON u.id = es.user_id
+                WHERE e2.feed_id = f.id AND u.email = 'e2e-admin@example.com') AS admin_is_read
             FROM feed f
-            JOIN entry e ON e.feed_id = f.id
-            LEFT JOIN subscription s
-              ON s.feed_id = f.id
-              AND s.user_id = (SELECT id FROM app_user WHERE email = 'e2e-admin@example.com')
-            LEFT JOIN entry_state es
-              ON es.entry_id = e.id
-              AND es.user_id = (SELECT id FROM app_user WHERE email = 'e2e-admin@example.com')
+            LEFT JOIN subscription s ON s.feed_id = f.id
             WHERE f.url = 'https://fixtures.sfr-e2e.example/feed.xml'
           "
 
@@ -373,31 +363,6 @@ jobs:
         env:
           PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/playwright-report.json
         run: npm run e2e -- --reporter=list,json 2>&1 | tee "${RUNNER_TEMP}/playwright-e2e.log"
-
-      # TEMPORARY -- diagnostic for #96 task 4. The two checkpoints above only
-      # cover pre-suite state; if they show no watermark and no read marker
-      # yet the specs still fail, something during the 36-test, 2-worker run
-      # itself is what mutates the fixture's visibility -- a concurrency
-      # effect the pre-suite checkpoints cannot see. Always run (no `if:`),
-      # since a mutation caused by the run is exactly what a red run needs
-      # this to show. Remove once the root cause is confirmed and fixed.
-      - name: Diagnostic - fixture entry state after the Playwright leg
-        if: always()
-        run: |
-          docker compose exec -T mysql mysql -uroot -proot feedreader -e "
-            SELECT e.id AS entry_id, e.published_at, e.effective_date,
-              s.id AS subscription_id, s.marked_read_until,
-              es.is_read AS admin_is_read
-            FROM feed f
-            JOIN entry e ON e.feed_id = f.id
-            LEFT JOIN subscription s
-              ON s.feed_id = f.id
-              AND s.user_id = (SELECT id FROM app_user WHERE email = 'e2e-admin@example.com')
-            LEFT JOIN entry_state es
-              ON es.entry_id = e.id
-              AND es.user_id = (SELECT id FROM app_user WHERE email = 'e2e-admin@example.com')
-            WHERE f.url = 'https://fixtures.sfr-e2e.example/feed.xml'
-          "
 
       # Playwright exits 0 when every spec skipped, because nothing failed. For
       # an unattended weekly check that is the worst possible outcome, so the
