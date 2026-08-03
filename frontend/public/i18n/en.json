@@ -307,7 +307,13 @@
     },
     "oauth": {
       "title": "Signing you in",
-      "error": "Sign-in did not complete. Please try again."
+      "error": "Sign-in did not complete. Please try again.",
+      "blockedTitle": "Account not active",
+      "pendingApproval": "Your account was created. An administrator must approve it before you can sign in.",
+      "pendingVerification": "Confirm your email address before you sign in.",
+      "suspended": "This account is suspended. Ask your administrator for help.",
+      "rejected": "This account was rejected. Ask your administrator for help.",
+      "blocked": "This account cannot sign in. Ask your administrator for help."
     }
   },
   "reader": {

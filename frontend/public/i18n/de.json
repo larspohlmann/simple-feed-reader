@@ -307,7 +307,13 @@
     },
     "oauth": {
       "title": "Anmeldung läuft",
-      "error": "Die Anmeldung wurde nicht abgeschlossen. Bitte versuche es erneut."
+      "error": "Die Anmeldung wurde nicht abgeschlossen. Bitte versuche es erneut.",
+      "blockedTitle": "Konto nicht aktiv",
+      "pendingApproval": "Dein Konto wurde erstellt. Ein Administrator muss es freigeben, bevor du dich anmelden kannst.",
+      "pendingVerification": "Bestätige deine E-Mail-Adresse, bevor du dich anmeldest.",
+      "suspended": "Dieses Konto ist gesperrt. Wende dich an deinen Administrator.",
+      "rejected": "Dieses Konto wurde abgelehnt. Wende dich an deinen Administrator.",
+      "blocked": "Mit diesem Konto ist keine Anmeldung möglich. Wende dich an deinen Administrator."
     }
   },
   "reader": {

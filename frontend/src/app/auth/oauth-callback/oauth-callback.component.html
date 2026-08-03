@@ -1,7 +1,29 @@
-<app-auth-shell [title]="'auth.oauth.title' | transloco">
+<app-auth-shell [title]="title() | transloco">
   @switch (state()) {
     @case ('loading') {
       <app-spinner />
+    }
+    @case ('blocked') {
+      <p class="notice">
+        @switch (blockedStatus()) {
+          @case ('pending_approval') {
+            {{ 'auth.oauth.pendingApproval' | transloco }}
+          }
+          @case ('pending_verification') {
+            {{ 'auth.oauth.pendingVerification' | transloco }}
+          }
+          @case ('suspended') {
+            {{ 'auth.oauth.suspended' | transloco }}
+          }
+          @case ('rejected') {
+            {{ 'auth.oauth.rejected' | transloco }}
+          }
+          @default {
+            {{ 'auth.oauth.blocked' | transloco }}
+          }
+        }
+      </p>
+      <a routerLink="/login">{{ 'auth.backToSignIn' | transloco }}</a>
     }
     @case ('error') {
       <p class="err">{{ 'auth.oauth.error' | transloco }}</p>

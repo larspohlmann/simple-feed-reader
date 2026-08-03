@@ -2,3 +2,11 @@
   color: var(--danger);
   margin-bottom: var(--space-4);
 }
+
+// Deliberately not --danger: an account waiting on an approval is an outcome,
+// not a fault of the person reading it. Matches the register screen's own
+// post-submit notice.
+.notice {
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
+}
