@@ -35,7 +35,11 @@ final class HtmlPageFetcherTest extends TestCase
             }
         };
 
-        return new HtmlPageFetcher(new MockHttpClient($responses), new UrlGuard($resolver, new IpValidator()));
+        return new HtmlPageFetcher(
+            new MockHttpClient($responses),
+            new UrlGuard($resolver, new IpValidator()),
+            'TestAgent/1.0',
+        );
     }
 
     public function testReturnsBodyAndFinalUrlOnSuccess(): void

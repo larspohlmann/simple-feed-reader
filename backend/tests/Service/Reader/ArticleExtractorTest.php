@@ -38,7 +38,11 @@ final class ArticleExtractorTest extends TestCase
             }
         };
 
-        $fetcher = new HtmlPageFetcher(new MockHttpClient($responses), new UrlGuard($resolver, new IpValidator()));
+        $fetcher = new HtmlPageFetcher(
+            new MockHttpClient($responses),
+            new UrlGuard($resolver, new IpValidator()),
+            'TestAgent/1.0',
+        );
 
         return new ArticleExtractor(
             $fetcher,
@@ -100,7 +104,11 @@ final class ArticleExtractorTest extends TestCase
                 return [];
             }
         };
-        $fetcher = new HtmlPageFetcher(new MockHttpClient(), new UrlGuard($resolver, new IpValidator()));
+        $fetcher = new HtmlPageFetcher(
+            new MockHttpClient(),
+            new UrlGuard($resolver, new IpValidator()),
+            'TestAgent/1.0',
+        );
         $extractor = new ArticleExtractor(
             $fetcher,
             new FetchedPageNormalizer(),

@@ -32,6 +32,7 @@ final class CheckCatalogUrlsCommand extends Command
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly CatalogDocument $parser,
+        private readonly string $userAgent,
     ) {
         parent::__construct();
     }
@@ -100,7 +101,10 @@ final class CheckCatalogUrlsCommand extends Command
             $response = $this->httpClient->request('GET', $url, [
                 'timeout' => self::TIMEOUT_SECONDS,
                 'max_duration' => self::TIMEOUT_SECONDS,
-                'headers' => ['User-Agent' => 'simple-feed-reader catalog check'],
+                // The fetcher's agent, not one of its own: a publisher that blocks
+                // the reader but tolerates an unfamiliar checker would otherwise
+                // let this command report a healthy catalog nobody can subscribe to.
+                'headers' => ['User-Agent' => $this->userAgent],
             ]);
 
             if (200 !== $response->getStatusCode()) {

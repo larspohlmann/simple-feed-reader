@@ -147,6 +147,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
             new UrlGuard($resolver, new IpValidator()),
             new ResponseClassifier(),
             $concurrency,
+            'TestAgent/1.0',
         );
     }
 
