@@ -74,6 +74,28 @@ if "${guard}" "${work}/absent.json" > /dev/null 2>&1; then
   fail 'a missing report must be rejected'
 fi
 
+# --- malformed JSON file (Playwright crashed mid-write) -----------------------
+# If Playwright crashes during the test run (OOM, timeout, SIGKILL), the report
+# file may exist but be truncated or invalid JSON. That is as bad as no file.
+malformed="${work}/malformed.json"
+echo 'not json at all' > "${malformed}"
+if "${guard}" "${malformed}" > /dev/null 2>&1; then
+  fail 'a malformed JSON report must be rejected'
+fi
+
+# Verify it exits with exactly 1, not some other jq error code.
+exit_code=0
+"${guard}" "${malformed}" > /dev/null 2>&1 || exit_code=$?
+if [ "${exit_code}" -ne 1 ]; then
+  fail "malformed JSON must exit 1, got ${exit_code}"
+fi
+
+# Capture first, then grep. The rejection must explain the malformed state.
+rejection=$("${guard}" "${malformed}" 2>&1 || true)
+if ! printf '%s\n' "${rejection}" | grep -q 'malformed'; then
+  fail 'the rejection must explain the malformed JSON'
+fi
+
 # --- usage -------------------------------------------------------------------
 if "${guard}" > /dev/null 2>&1; then
   fail 'no argument must be a usage error'

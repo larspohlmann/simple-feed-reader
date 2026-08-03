@@ -25,6 +25,15 @@ if [ ! -f "${report}" ]; then
   exit 1
 fi
 
+# Validate the JSON is parseable before extracting fields. Playwright may crash
+# mid-write (OOM, timeout, signal), leaving a truncated file. That is the same
+# failure mode as a missing file: the run proved nothing and must be rejected.
+if ! jq empty "${report}" 2>/dev/null; then
+  echo "ERROR: Playwright JSON report at '${report}' is malformed." >&2
+  echo "ERROR: Playwright likely crashed during the test run." >&2
+  exit 1
+fi
+
 expected=$(jq -r '.stats.expected // 0' "${report}")
 skipped=$(jq -r '.stats.skipped // 0' "${report}")
 
