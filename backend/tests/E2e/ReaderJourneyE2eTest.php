@@ -6,6 +6,7 @@ namespace App\Tests\E2e;
 
 use App\Tests\E2e\Support\E2eTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -25,7 +26,17 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * Auth is the seeded `app:e2e:seed-admin` account, reused across the class (the
  * JWT TTL is a week), so the reader suite adds zero registrations to the tight
  * per-IP registration budget the README documents.
+ *
+ * Every test method in this class asserts against a site nobody here
+ * controls (directly, or via `discoverFeedCandidates()`/`isReachable()`
+ * reaching heise/tagesschau/spiegel), so the whole class carries
+ * `external-site`. The unattended weekly rot-check workflow excludes that
+ * group -- a datacenter IP getting a different response than a developer's
+ * connection would otherwise turn the check red for a reason that has
+ * nothing to do with this repository. A local `composer e2e` still runs
+ * everything, where a human is present to judge a failure.
  */
+#[Group('external-site')]
 final class ReaderJourneyE2eTest extends E2eTestCase
 {
     private const ADMIN_EMAIL = 'e2e-admin@example.com';

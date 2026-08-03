@@ -234,3 +234,31 @@ preview, this exercises the production PHP runtime too — `APP_ENV=prod`,
 no Mailpit, no xdebug.
 
 Design and rationale: [docs/superpowers/specs/2026-07-22-frontend-docker-services-design.md](superpowers/specs/2026-07-22-frontend-docker-services-design.md).
+
+## The weekly rot check
+
+Both e2e suites also run in GitHub Actions every Wednesday
+([.github/workflows/e2e-rot-check.yml](../.github/workflows/e2e-rot-check.yml)),
+against a stack the runner boots the same way this page describes — including
+its own mkcert certificate. It is deliberately **not** a pull-request check:
+booting the stack costs minutes, and issue #96 chose weekly reporting over
+per-PR gating.
+
+The runner starts from an empty database, so it also catches host dependencies
+a developer machine hides. The first runs found four: an untracked `vendor/`,
+an untracked LexikJWT keypair, an unseeded feed catalog, and a seed command
+that only created its fixture entry on the feed-creating branch.
+
+A Playwright run where every spec skipped exits 0, which for an unattended
+check is the worst outcome. `scripts/assert-playwright-ran.sh` re-decides that
+verdict and fails the job when nothing was verified.
+
+When a suite rots, the run opens a single issue labelled `e2e-rot` and comments
+on that issue on later failures rather than opening more. A red run does not
+block a deploy; the deploy guard still only reads `ci.yml`.
+
+Run it early with:
+
+```bash
+gh workflow run e2e-rot-check.yml
+```

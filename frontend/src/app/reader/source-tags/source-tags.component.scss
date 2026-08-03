@@ -1,14 +1,23 @@
+/* An unbreakable tag name has nothing to wrap on, so without a min-width: 0
+   chain from here down to .name it widened the card and pushed the magazine
+   list scroller sideways. Every link in that chain is load-bearing. */
+:host {
+  display: block;
+  min-width: 0;
+}
+
 .pills {
-  display: inline-flex;
+  display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
-  vertical-align: middle;
+  min-width: 0;
 }
 
 .pill {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  min-width: 0;
   padding: var(--space-0) var(--space-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
@@ -23,4 +32,12 @@
 .pill:hover {
   border-color: var(--border-strong);
   color: var(--text-primary);
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

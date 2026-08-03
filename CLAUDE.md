@@ -190,3 +190,11 @@ control, not ceremony — do not "simplify" it away, and do not delete
   functional test.
 - Frontend unit: `npm test` (Jest, jsdom). Playwright smokes need Docker and are
   deliberately outside the CI gate.
+- Both e2e suites run weekly in CI
+  (`.github/workflows/e2e-rot-check.yml`) and open an `e2e-rot` issue when they
+  break. Never give that workflow a `pull_request` trigger — the cost was
+  weighed in #96.
+- **An e2e spec must own the data it asserts on.** Reading whatever the seeded
+  account happens to hold passes on a developer machine and fails on a fresh
+  database; stub the route instead (see `frontend/e2e/magazine-kicker-one-line.spec.ts`),
+  and leave the fixture behind exactly as it was found.

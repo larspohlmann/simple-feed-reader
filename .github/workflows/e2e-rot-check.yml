@@ -1,0 +1,432 @@
+name: E2E rot check
+
+# Scheduled only, plus manual. NEVER a pull_request trigger: this boots the
+# whole Docker stack -- a MySQL image, a built PHP image, nginx, and an Angular
+# dev server that installs its own node_modules on first run -- which is minutes
+# of wall clock on top of every push. Issue #96 weighed that against the risk
+# and chose weekly reporting over per-PR gating (2026-08-03). A red run here
+# does not block a deploy; it opens an issue.
+on:
+  schedule:
+    - cron: '41 3 * * 3'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  e2e:
+    name: Both e2e suites against a real stack
+    runs-on: ubuntu-latest
+    # The stack build plus two suites; well clear of normal, tight enough that a
+    # wedged dev server cannot burn an hour.
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # The dev nginx config (docker/nginx/default.conf) reads these two exact
+      # filenames, and docker/certs is gitignored -- TLS keys never enter the
+      # repository, so the runner makes its own.
+      #
+      # mkcert rather than a bare openssl self-signed pair: `mkcert -install`
+      # puts the root in the runner's system trust store, and backend/bin/e2e.sh
+      # already builds PHP's CA bundle from `mkcert -CAROOT`. The runner then
+      # behaves exactly like a developer machine and no script needs a CI
+      # branch. libnss3-tools is what mkcert needs to reach the NSS store.
+      - name: Generate a locally trusted certificate
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y mkcert libnss3-tools
+          mkcert -install
+          mkdir -p docker/certs
+          mkcert -cert-file docker/certs/localhost.pem \
+                 -key-file docker/certs/localhost-key.pem \
+                 localhost 127.0.0.1 ::1
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: intl, pdo_sqlite, pdo_mysql
+          coverage: none
+          # backend/bin/e2e.sh concatenates the system CA bundle with the mkcert
+          # root and points PHP at the result, keeping full peer verification.
+          # It reads the system bundle from this ini value, and setup-php leaves
+          # it empty by default -- which would silently reduce the bundle to the
+          # mkcert root alone and break every outbound HTTPS fetch in the suite.
+          ini-values: openssl.cafile=/etc/ssl/certs/ca-certificates.crt, curl.cainfo=/etc/ssl/certs/ca-certificates.crt
+
+      # The php service bind-mounts ./backend:/app, so whatever owns
+      # backend/vendor/ on the runner is exactly what the container sees -- a
+      # fresh checkout has no vendor/ at all, which would shadow the built
+      # image's dependencies with an empty tree. This has to run here, on the
+      # runner and before the stack boots: installing it later, inside the
+      # container, writes the tree as the container's root user, and a
+      # runner-side composer step after that (needed for `composer e2e` below)
+      # then fails to update `installed.php` with a permission error. Installing
+      # once, up front, as the runner user, means the bind mount simply carries
+      # that tree into the container and `bin/console` sees it too -- both
+      # sides are PHP 8.4 and these are pure-PHP packages, so one install
+      # satisfies both.
+      #
+      # --no-scripts is load-bearing, not an optimisation. Composer's
+      # post-install-cmd runs Symfony's cache warmup, and that would compile
+      # backend/var/cache -- also bind-mounted -- on the RUNNER: baked with the
+      # runner's absolute /home/runner/.../backend path rather than the
+      # container's /app, and against the runner's .env rather than the
+      # container's DATABASE_URL override. The container then boots, answers
+      # /api/health, and 500s on the first real request that touches the
+      # mismatched compiled container. This suite only runs PHPUnit binaries
+      # from vendor/ on the host; it never boots a Symfony kernel here, so it
+      # never needed that cache in the first place.
+      - name: Install backend dependencies
+        working-directory: backend
+        run: composer install --prefer-dist --no-progress --no-scripts
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # Same reason as ci.yml: node 22 ships npm 10.9.8, but the lockfile was
+      # authored by npm 11, and npm 10 mis-resolves chokidar and rejects it.
+      - name: Pin npm 11 (matches the lockfile author)
+        run: npm i -g npm@11
+
+      # Same reasoning as "Install backend dependencies" above, and the same
+      # ordering requirement: docker-compose.yml mounts the named volume
+      # frontend-node-modules at /app/node_modules, inside the ./frontend:/app
+      # bind mount. To mount a volume at a path inside a bind mount, Docker
+      # first creates that path on the HOST, as root -- so a boot before this
+      # step ran would leave frontend/node_modules behind, root-owned and
+      # empty, and this npm ci would then fail with EACCES trying to write
+      # into it. Running it here, before the stack boots, means the directory
+      # already exists and is owned by the runner user when Docker looks for
+      # it, so Docker's volume-init copies these node_modules into the named
+      # volume instead of creating an empty root-owned one.
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      # --wait blocks until every service is running and every service that
+      # declares a healthcheck is healthy. Only mysql declares one, so the two
+      # readiness gates below are not redundant with it.
+      - name: Boot the stack
+        run: docker compose up -d --wait
+
+      - name: Migrate the database
+        run: |
+          set -euo pipefail
+          docker compose exec -T php bin/console doctrine:migrations:migrate --no-interaction
+
+      # The catalog lives in the database, not in a fixture the test suites
+      # seed themselves, and nothing populates it on a fresh environment --
+      # a developer's box has it because someone imported it once, through
+      # the admin UI or this same command, and never had to think about it
+      # again. A migrated-but-empty database leaves the catalog empty too,
+      # and that is not merely "less content": ReaderShellComponent renders
+      # a warning banner (showCatalogEmptyWarning) over the reader chrome
+      # whenever it is empty, which intercepts clicks meant for other
+      # elements and changes where onboarding routes to. Specs then fail on
+      # assertions that look unrelated to the catalog -- wrong element
+      # under a click, wrong post-onboarding URL -- with no mention of
+      # "catalog" anywhere in the failure. Must run before BOTH suites, so
+      # it sits here rather than nearer Playwright: the backend suite reads
+      # the same database. --mode merge and the bundled document are the
+      # command's own defaults (see ImportCatalogCommand::configure()), so
+      # no arguments are needed.
+      - name: Seed the feed catalog
+        run: |
+          set -euo pipefail
+          docker compose exec -T php bin/console app:catalog:import
+
+      # LexikJWTAuthenticationBundle signs every login with this keypair, and
+      # backend/config/jwt/*.pem is git-ignored on purpose -- it is a secret,
+      # not a fixture. Every developer machine has one because it was
+      # generated once and forgotten; a fresh CI checkout has an empty
+      # directory instead, so /api/login 500s the moment it tries to sign a
+      # token, while unauthenticated routes like /api/health stay green and
+      # give no warning. --skip-if-exists keeps this harmless if a keypair
+      # ever does exist. Run inside the container, not on the runner: it has
+      # the working %kernel.project_dir% and reads the passphrase from
+      # backend/.env, which is committed.
+      - name: Generate the JWT keypair
+        run: |
+          set -euo pipefail
+          docker compose exec -T php bin/console lexik:jwt:generate-keypair --skip-if-exists
+
+      # An unreachable API is the failure this whole workflow is built to
+      # notice, so it fails loudly here rather than letting every spec skip its
+      # way to green further down.
+      - name: Wait for the API
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 60); do
+            if curl -fsS -o /dev/null https://localhost:8443/api/health; then
+              echo "==> API is up."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "!!! https://localhost:8443/api/health never answered." >&2
+          docker compose logs --no-color nginx php >&2
+          exit 1
+
+      # The frontend container runs `npm ci` INSIDE itself on first boot, into a
+      # named volume the runner starts empty every time. That install dominates
+      # this wait, hence ten minutes rather than one.
+      #
+      # The container is not optional. frontend/proxy.conf.json proxies /api to
+      # https://nginx -- a compose-network hostname that does not resolve on the
+      # host -- and the dev build calls the API on a relative path, so an
+      # `ng serve` started on the runner would 404 every request. Playwright
+      # reuses this server because playwright.config.ts sets
+      # `reuseExistingServer: true` unconditionally. Do NOT change that to the
+      # usual `!process.env.CI`: it would make Playwright try to start a second
+      # dev server on a port already bound, and this job would never pass.
+      - name: Wait for the Angular dev server
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 120); do
+            if curl -fsS -o /dev/null http://localhost:4200; then
+              echo "==> Dev server is up."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "!!! http://localhost:4200 never answered." >&2
+          docker compose logs --no-color frontend >&2
+          exit 1
+
+      # composer e2e is the documented entry point and does the fixture work
+      # itself: purge leftover throwaway accounts, seed the admin and its
+      # subscription, clear the rate-limiter and ALTCHA-replay pools, then run
+      # the suite against https://localhost:8443 with verification on.
+      #
+      # --exclude-group external-site drops ReaderJourneyE2eTest: every method
+      # in that class asserts against a real publisher homepage (heise,
+      # tagesschau, spiegel), and a GitHub-runner datacenter IP can get a
+      # different response than a developer's connection gets -- exactly the
+      # third-party hazard catalog-rot-check.yml already documents. A human
+      # runs `composer e2e` locally (with no exclusion) and can judge that
+      # kind of failure; the unattended weekly run cannot, so it would just
+      # turn red for an outage nobody here caused. bin/e2e.sh forwards "$@" to
+      # phpunit, so this reaches PHPUnit's own --exclude-group flag.
+      #
+      # `shell: bash` is load-bearing, not decoration. The default shell for a
+      # `run:` block is `bash -e`, WITHOUT pipefail, so `composer e2e | tee`
+      # would report tee's exit status and a failing suite would read as a
+      # passing step -- the exact silent-green defect this workflow exists to
+      # end. `shell: bash` runs `bash --noprofile --norc -eo pipefail`.
+      - name: Backend black-box e2e
+        id: backend
+        continue-on-error: true
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          composer e2e -- --exclude-group external-site 2>&1 | tee "${RUNNER_TEMP}/backend-e2e.log"
+          suite_status="${PIPESTATUS[0]}"
+          set -e
+
+          # A floor, not just a read of the exit code: --exclude-group is
+          # exactly the kind of thing a later edit widens by one careless
+          # attribute, and PHPUnit reports success on a suite that ran almost
+          # nothing just as readily as on one that ran everything -- the same
+          # silent-green defect this workflow exists to catch, reintroduced by
+          # its own fix. Six is the non-external floor for the current
+          # line-up (HealthE2eTest, ErrorContractE2eTest x2,
+          # OAuthProvidersE2eTest, PasswordResetE2eTest, OnboardingJourneyE2eTest).
+          #
+          # PHPUnit names the count on "OK (N tests, ...)" only for a clean,
+          # skip-free pass; a skip, a failure, or an error all print
+          # "Tests: N, ..." instead, so both shapes are checked. Each grep's
+          # own "no match" exit (1) or "no such file" exit (2) is folded into
+          # `|| true` rather than left bare: under this step's `set -e`, a
+          # bare `x="$(pipeline)"` assignment aborts the script on the very
+          # line that finds nothing, which would make the "Tests: N" fallback
+          # below unreachable -- exactly the failure mode that turned a
+          # genuine pass (one with a skip) into a false-red step. A log that
+          # is missing, empty, or names neither shape leaves $executed empty,
+          # and the default below then fails closed as zero rather than
+          # silently passing.
+          executed="$(grep -oE 'OK \([0-9]+ tests?,' "${RUNNER_TEMP}/backend-e2e.log" 2>/dev/null | grep -oE '[0-9]+' | tail -1 || true)"
+          if [ -z "$executed" ]; then
+            executed="$(grep -oE 'Tests: [0-9]+' "${RUNNER_TEMP}/backend-e2e.log" 2>/dev/null | grep -oE '[0-9]+' | tail -1 || true)"
+          fi
+          executed="${executed:-0}"
+
+          echo "==> PHPUnit executed ${executed} test(s)."
+          floor_status=0
+          if [ "$executed" -lt 6 ]; then
+            echo "!!! Only ${executed} test(s) executed; expected at least 6." >&2
+            floor_status=1
+          fi
+
+          # The step's verdict is the OR of the two failure modes: a real
+          # suite failure must not be hidden by a satisfied floor, and a
+          # collapsed test count must not be hidden by an otherwise-green exit.
+          if [ "$suite_status" -ne 0 ] || [ "$floor_status" -ne 0 ]; then
+            exit 1
+          fi
+          exit 0
+
+      # Runs only on a red suite, so a passing run stays quiet. dev.log is
+      # where this project's convention says a swallowed exception surfaces --
+      # the black-box HTTP assertions above only ever show "500", never the
+      # backend's own stack trace -- and the container/nginx logs show what
+      # each request actually did. Keeping this dump in the workflow, not just
+      # for one-off debugging, because the next red run deserves the same
+      # evidence without re-deriving it from scratch.
+      - name: Dump backend diagnostics on failure
+        if: steps.backend.outcome == 'failure'
+        run: |
+          echo "::group::backend/var/log/dev.log"
+          docker compose exec -T php cat var/log/dev.log || true
+          echo "::endgroup::"
+          docker compose logs --no-color php nginx
+
+      - name: Install Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      # The json reporter goes to a file (PLAYWRIGHT_JSON_OUTPUT_NAME), so the
+      # list reporter still gives a readable log. The guard below reads the file.
+      #
+      # This does NOT start a dev server: playwright.config.ts reuses the one
+      # the frontend container is already serving on :4200. Its globalSetup
+      # re-runs the same fixture commands composer e2e ran -- harmless, and it
+      # keeps the two suites on identical fixtures.
+      #
+      # `shell: bash` for pipefail, same reason as the backend step: the default
+      # `bash -e` would return tee's status and hide a failing suite.
+      - name: Playwright e2e
+        id: playwright
+        continue-on-error: true
+        shell: bash
+        working-directory: frontend
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/playwright-report.json
+        run: npm run e2e -- --reporter=list,json 2>&1 | tee "${RUNNER_TEMP}/playwright-e2e.log"
+
+      # Playwright exits 0 when every spec skipped, because nothing failed. For
+      # an unattended weekly check that is the worst possible outcome, so the
+      # verdict is re-decided here. See scripts/assert-playwright-ran.sh.
+      - name: Assert the Playwright suite verified something
+        id: playwright_guard
+        continue-on-error: true
+        shell: bash
+        run: scripts/assert-playwright-ran.sh "${RUNNER_TEMP}/playwright-report.json" 2>&1 | tee "${RUNNER_TEMP}/playwright-guard.log"
+
+      # The HTML report and the raw logs are what makes a red run actionable a
+      # week later. Kept only on failure; a green run has nothing to look at.
+      #
+      # frontend/test-results/ is not the HTML reporter's directory -- it is
+      # where Playwright writes its per-test failure attachments (notably
+      # error-context.md, an accessibility-tree snapshot of the page at the
+      # moment of failure) regardless of which reporter is active. This run's
+      # --reporter=list,json never produces frontend/playwright-report/, so
+      # without this line a red run had nothing but the pass/fail text to go
+      # on -- no evidence of what the page actually looked like.
+      - name: Upload the reports
+        if: failure() || steps.playwright.outcome == 'failure' || steps.playwright_guard.outcome == 'failure' || steps.backend.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-reports
+          path: |
+            ${{ runner.temp }}/*.log
+            ${{ runner.temp }}/playwright-report.json
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 30
+          if-no-files-found: ignore
+
+      # One issue per rot episode, not one per week. A suite that stays broken
+      # for a month must produce a single issue with four comments, or the
+      # backlog becomes the noise that hides the signal.
+      - name: Open or update an issue when a suite rotted
+        if: steps.backend.outcome == 'failure' || steps.playwright.outcome == 'failure' || steps.playwright_guard.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BACKEND_OUTCOME: ${{ steps.backend.outcome }}
+          PLAYWRIGHT_OUTCOME: ${{ steps.playwright.outcome }}
+          GUARD_OUTCOME: ${{ steps.playwright_guard.outcome }}
+        run: |
+          set -euo pipefail
+
+          body="${RUNNER_TEMP}/body.md"
+          {
+            echo "The weekly e2e rot check failed. These suites are the only"
+            echo "coverage for defects that unit tests structurally cannot see:"
+            echo "Jest runs in jsdom, which applies no stylesheets at all."
+            echo
+            echo "| Suite | Result |"
+            echo "| --- | --- |"
+            echo "| Backend black-box (\`composer e2e\`) | ${BACKEND_OUTCOME} |"
+            echo "| Playwright (\`npm run e2e\`) | ${PLAYWRIGHT_OUTCOME} |"
+            echo "| Playwright verified something | ${GUARD_OUTCOME} |"
+            echo
+            echo "[Full run and reports](${RUN_URL})"
+            echo
+            if [ "${GUARD_OUTCOME}" = "failure" ]; then
+              echo "**The Playwright suite skipped specs.** A skip there means the"
+              echo "seeded admin was unavailable, so those assertions never ran."
+              echo "Playwright reports that as success; this check does not."
+              echo
+              echo '```'
+              cat "${RUNNER_TEMP}/playwright-guard.log"
+              echo '```'
+              echo
+            fi
+            echo "Reproduce locally with the stack up (\`docker compose up -d\`):"
+            echo
+            echo '```bash'
+            echo "cd backend && composer e2e"
+            echo "cd frontend && npm run e2e"
+            echo '```'
+          } > "${body}"
+
+          # The label is the deduplication handle. Creating it fails when it
+          # already exists, which is the normal case after the first run.
+          #
+          # The listing is captured before it is searched. Piping gh straight
+          # into `grep -q` lets grep exit early, kill gh with SIGPIPE, and hand
+          # pipefail a 141 even when the label WAS found -- which would send
+          # this into `gh label create` for a label that already exists, and
+          # `set -e` would abort the step.
+          labels="$(gh label list --json name --jq '.[].name')"
+          if ! printf '%s\n' "${labels}" | grep -qx 'e2e-rot'; then
+            gh label create e2e-rot \
+              --description 'The weekly e2e rot check is failing' \
+              --color 'B60205'
+          fi
+
+          existing="$(gh issue list --state open --label e2e-rot \
+            --limit 1 --json number --jq '.[0].number // empty')"
+
+          if [ -n "${existing}" ]; then
+            echo "==> Commenting on the open rot issue #${existing}."
+            gh issue comment "${existing}" --body-file "${body}"
+            exit 0
+          fi
+
+          echo "==> Opening a new rot issue."
+          gh issue create \
+            --title "E2E rot check: a suite is failing" \
+            --body-file "${body}" \
+            --label e2e-rot
+
+      # continue-on-error above kept the job green so the reporting step could
+      # run. The job's own verdict is restored here, so the Actions list and the
+      # failure email agree with the issue.
+      - name: Fail the job when a suite rotted
+        if: steps.backend.outcome == 'failure' || steps.playwright.outcome == 'failure' || steps.playwright_guard.outcome == 'failure'
+        run: |
+          echo "!!! An e2e suite failed. See the issue labelled e2e-rot." >&2
+          exit 1

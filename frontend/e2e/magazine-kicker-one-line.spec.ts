@@ -5,7 +5,71 @@ import { test, expect, Page } from '@playwright/test';
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
 
+/**
+ * The title that motivated #155: five clauses, no shortage of spaces to wrap
+ * on, and far wider than a 375px phone. The bug was that it pushed the time
+ * onto a third line instead of clipping itself.
+ */
+const LONG_SOURCE =
+  'NDR.de - Das Beste am Norden - Radio - Fernsehen - Nachrichten - Sport - Wetter';
+
+function entry(id: number, source: string) {
+  return {
+    id,
+    title: `Fixture entry ${id}`,
+    url: `https://fixtures.invalid/${id}`,
+    author: null,
+    summary: null,
+    contentHtml: '<p>Fixture body.</p>',
+    imageUrl: null,
+    imageWidth: null,
+    imageHeight: null,
+    publishedAt: '2026-08-01T12:50:34+00:00',
+    createdAt: '2026-08-01T12:50:34+00:00',
+    subscriptionId: 1,
+    source,
+    faviconUrl: null,
+    isRead: false,
+    isFavorite: false,
+    isKept: false,
+  };
+}
+
+/**
+ * The magazine renders several block shapes (hero, list, source group) and the
+ * kicker has to hold its one line in all of them, so this is a handful of
+ * entries rather than one.
+ */
+const ENTRIES = [
+  entry(1, LONG_SOURCE),
+  entry(2, LONG_SOURCE),
+  entry(3, 'Heise'),
+  entry(4, LONG_SOURCE),
+  entry(5, 'Tagesschau'),
+  entry(6, LONG_SOURCE),
+];
+
+/**
+ * Stub the entry list so these specs own the source name under test. They
+ * assert a CSS invariant, not a fetch: reading whatever the seeded account
+ * happens to hold made them depend on a fixture that renders on a developer
+ * machine and not on a fresh CI database, which is how they rotted (#96).
+ *
+ * Matched on the pathname so `/api/entries/{id}` and `/api/entries/{id}/state`
+ * still reach the real backend.
+ */
+async function stubEntries(page: Page): Promise<void> {
+  await page.route(
+    (url) => url.pathname === '/api/entries',
+    async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      await route.fulfill({ status: 200, json: { entries: ENTRIES, nextCursor: null } });
+    },
+  );
+}
+
 async function signInAsAdmin(page: Page): Promise<boolean> {
+  await stubEntries(page);
   await page.goto('/login');
   await page.locator('input[type=email]').fill(ADMIN_EMAIL);
   await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
@@ -19,10 +83,9 @@ async function signInAsAdmin(page: Page): Promise<boolean> {
 
 /**
  * The kicker line must occupy exactly one line in every magazine block, however
- * long the feed's title is — a five-clause title like "NDR.de - Das Beste am
- * Norden - Radio - Fernsehen - Nachrichten" used to push the time onto a third
- * line (#155). Measured, not eyeballed: the rendered row is compared against a
- * single line's height, and the source is asserted to be the part that clips.
+ * long the feed's title is — a five-clause title like `LONG_SOURCE` used to
+ * push the time onto a third line (#155). Measured, not eyeballed: the rendered
+ * row is compared against a single line's height.
  */
 test('the kicker line never wraps, at any viewport', async ({ page }) => {
   const signedIn = await signInAsAdmin(page);
@@ -38,22 +101,20 @@ test('the kicker line never wraps, at any viewport', async ({ page }) => {
     const lines = page.locator('app-entry-kicker-line .kicker');
     await expect(lines.first()).toBeVisible();
 
-    const overflowing = await lines.evaluateAll((rows) =>
-      rows
-        .map((row) => {
-          const style = getComputedStyle(row);
-          const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2;
-          // A wrapped row is at least two line-boxes tall. The favicon and dot
-          // are shorter than the text, so the row's own height is the ceiling.
-          return { height: row.getBoundingClientRect().height, lineHeight };
-        })
-        .filter(({ height, lineHeight }) => height > lineHeight * 1.8).length,
+    const overflowing = await lines.evaluateAll(
+      (rows) =>
+        rows
+          .map((row) => {
+            const style = getComputedStyle(row);
+            const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2;
+            // A wrapped row is at least two line-boxes tall. The favicon and dot
+            // are shorter than the text, so the row's own height is the ceiling.
+            return { height: row.getBoundingClientRect().height, lineHeight };
+          })
+          .filter(({ height, lineHeight }) => height > lineHeight * 1.8).length,
     );
 
-    expect(
-      overflowing,
-      `kicker lines wrapped at ${viewport.width}x${viewport.height}`,
-    ).toBe(0);
+    expect(overflowing, `kicker lines wrapped at ${viewport.width}x${viewport.height}`).toBe(0);
   }
 });
 
@@ -81,6 +142,11 @@ test('a long source never widens the page', async ({ page }) => {
         const overflowX = getComputedStyle(el).overflowX;
         return overflowX === 'auto' || overflowX === 'scroll';
       })
+      // x-axis scroll-snapping marks a deliberate swipe affordance (the mobile
+      // tag row). #155 was the opposite: an ancestor refusing to shrink. Keying
+      // on the CSS signal rather than a selector keeps document/body — and so a
+      // snap-scroller that does push the page sideways — still caught.
+      .filter((el) => !getComputedStyle(el).scrollSnapType.startsWith('x'))
       .map((el) => ({
         who: `${el.tagName.toLowerCase()}.${el.className}`,
         scrollWidth: el.scrollWidth,

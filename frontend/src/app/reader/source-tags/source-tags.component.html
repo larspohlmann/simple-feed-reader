@@ -10,7 +10,7 @@
         (click)="$event.stopPropagation()"
       >
         <app-tag-glyph [name]="t.icon" [color]="t.color" size="xs" />
-        {{ t.name }}
+        <span class="name">{{ t.name }}</span>
       </a>
     }
   </span>

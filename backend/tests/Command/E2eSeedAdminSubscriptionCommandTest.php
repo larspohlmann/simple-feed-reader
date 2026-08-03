@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Command;
 
 use App\Command\E2eSeedAdminSubscriptionCommand;
+use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\UserStatus;
+use App\Repository\EntryRepository;
+use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\UserRepository;
@@ -21,6 +25,7 @@ use Symfony\Component\Console\Tester\CommandTester;
 final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
 {
     private const string ADMIN_EMAIL = 'e2e-admin@example.com';
+    private const string FIXTURE_FEED_URL = 'https://fixtures.sfr-e2e.example/feed.xml';
 
     private function seedAdmin(): User
     {
@@ -55,7 +60,29 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
         return $subscriptions->countForUser((int) $user->getId());
     }
 
-    public function testGivesTheAdminOneSubscription(): void
+    private function fixtureFeed(): Feed
+    {
+        /** @var FeedRepository $feeds */
+        $feeds = self::getContainer()->get(FeedRepository::class);
+        $feed = $feeds->findOneBy(['url' => self::FIXTURE_FEED_URL]);
+
+        self::assertInstanceOf(Feed::class, $feed);
+
+        return $feed;
+    }
+
+    private function fixtureEntry(Feed $feed): Entry
+    {
+        /** @var EntryRepository $entries */
+        $entries = self::getContainer()->get(EntryRepository::class);
+        $entry = $entries->findOneBy(['feed' => $feed]);
+
+        self::assertInstanceOf(Entry::class, $entry);
+
+        return $entry;
+    }
+
+    public function testGivesTheAdminASubscription(): void
     {
         $admin = $this->seedAdmin();
 
@@ -63,7 +90,7 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
         self::assertSame(Command::SUCCESS, $tester->execute([]));
 
         self::assertSame(1, $this->subscriptionCountFor($admin));
-        self::assertStringContainsString('Subscribed', $tester->getDisplay());
+        self::assertStringContainsString('ready and visible', $tester->getDisplay());
     }
 
     /**
@@ -78,11 +105,7 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
 
         $this->tester()->execute([]);
 
-        /** @var FeedRepository $feeds */
-        $feeds = self::getContainer()->get(FeedRepository::class);
-        $feed = $feeds->findOneBy(['url' => 'https://fixtures.sfr-e2e.example/feed.xml']);
-
-        self::assertInstanceOf(Feed::class, $feed);
+        $feed = $this->fixtureFeed();
         self::assertNotSame('', (string) $feed->getTitle());
         self::assertNotNull($feed->getLastFetchedAt());
     }
@@ -102,7 +125,7 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
     }
 
     /**
-     * Idempotent: a second run finds the admin already subscribed and adds
+     * Idempotent: a second run finds everything already in place and adds
      * nothing, so repeated e2e runs never pile up fixture rows.
      */
     public function testIsIdempotentAcrossRepeatedRuns(): void
@@ -120,11 +143,12 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
     }
 
     /**
-     * "At least one" is the contract, not "exactly the fixture one". An admin
-     * that already owns a real subscription is left untouched — no fixture feed
-     * is created and no second row is added.
+     * An admin that already owns a real subscription still gets the fixture:
+     * "at least one subscription" used to be the whole contract, but the reader
+     * shell mounting is not enough — the #155 clip specs need THIS entry
+     * visible, so the fixture is unconditional and additive.
      */
-    public function testLeavesAnAdminThatAlreadyHasASubscriptionAlone(): void
+    public function testAddsTheFixtureAlongsideAnAdminsExistingSubscription(): void
     {
         $admin = $this->seedAdmin();
 
@@ -136,9 +160,86 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
         $tester = $this->tester();
         self::assertSame(Command::SUCCESS, $tester->execute([]));
 
-        self::assertSame(1, $this->subscriptionCountFor($admin));
-        self::assertSame(1, $this->countRows('feed'), 'no fixture feed when a subscription already exists');
-        self::assertStringContainsString('already owns', $tester->getDisplay());
+        self::assertSame(2, $this->subscriptionCountFor($admin));
+        self::assertInstanceOf(Feed::class, $this->fixtureFeed());
+    }
+
+    /**
+     * A feed can outlive its entry — nothing else in this codebase deletes an
+     * Entry without its Feed today, but the seed command must not assume that
+     * stays true forever. A feed row surviving without its entry reproduces
+     * the exact symptom of no fixture at all (an empty reader with the
+     * subscription still in the sidebar), so a re-run must repair it rather
+     * than trust the feed's mere existence.
+     */
+    public function testRecreatesTheEntryWhenTheFeedSurvivedWithoutIt(): void
+    {
+        $this->seedAdmin();
+        $this->tester()->execute([]);
+
+        $feed = $this->fixtureFeed();
+        $this->em->remove($this->fixtureEntry($feed));
+        $this->em->flush();
+        self::assertSame(0, $this->countRows('entry'));
+
+        $this->tester()->execute([]);
+
+        self::assertSame(1, $this->countRows('entry'));
+        self::assertSame(1, $this->countRows('feed'), 'the existing feed row is reused, not duplicated');
+    }
+
+    /**
+     * A subscription's markedReadUntil watermark hides every entry at or
+     * before it in the reader's default unread view — the same failure mode
+     * as a missing entry, from the UI's point of view. A re-run must clear it.
+     */
+    public function testClearsAMarkedReadUntilWatermarkThatWouldHideTheEntry(): void
+    {
+        $admin = $this->seedAdmin();
+        $this->tester()->execute([]);
+
+        /** @var SubscriptionRepository $subscriptions */
+        $subscriptions = self::getContainer()->get(SubscriptionRepository::class);
+        $feed = $this->fixtureFeed();
+        $subscription = $subscriptions->findOneBy(['user' => $admin, 'feed' => $feed]);
+        self::assertInstanceOf(Subscription::class, $subscription);
+        $subscription->setMarkedReadUntil(new \DateTimeImmutable('+1 hour'));
+        $this->em->flush();
+
+        $this->tester()->execute([]);
+
+        $this->em->clear();
+        /** @var SubscriptionRepository $subscriptions */
+        $subscriptions = self::getContainer()->get(SubscriptionRepository::class);
+        $reloaded = $subscriptions->findOneBy(['user' => $admin, 'feed' => $this->fixtureFeed()]);
+        self::assertInstanceOf(Subscription::class, $reloaded);
+        self::assertNull($reloaded->getMarkedReadUntil());
+    }
+
+    /**
+     * An entry_state row marking the fixture entry read hides it from the
+     * default unread view exactly as a missing entry would. A re-run must
+     * flip it back rather than leave a stale read marker behind.
+     */
+    public function testUnreadsTheEntryWhenAnEntryStateMarkedItRead(): void
+    {
+        $admin = $this->seedAdmin();
+        $this->tester()->execute([]);
+
+        $entry = $this->fixtureEntry($this->fixtureFeed());
+        $state = new EntryState($admin, $entry);
+        $state->setIsRead(true);
+        $this->em->persist($state);
+        $this->em->flush();
+
+        $this->tester()->execute([]);
+
+        $this->em->clear();
+        /** @var EntryStateRepository $entryStates */
+        $entryStates = self::getContainer()->get(EntryStateRepository::class);
+        $reloaded = $entryStates->findOneForUserEntry((int) $admin->getId(), (int) $entry->getId());
+        self::assertInstanceOf(EntryState::class, $reloaded);
+        self::assertFalse($reloaded->isRead());
     }
 
     public function testFailsWhenTheAdminDoesNotExistYet(): void
@@ -160,10 +261,23 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
         $subscriptions = self::getContainer()->get(SubscriptionRepository::class);
         /** @var FeedRepository $feeds */
         $feeds = self::getContainer()->get(FeedRepository::class);
+        /** @var EntryRepository $entries */
+        $entries = self::getContainer()->get(EntryRepository::class);
+        /** @var EntryStateRepository $entryStates */
+        $entryStates = self::getContainer()->get(EntryStateRepository::class);
         /** @var ClockInterface $clock */
         $clock = self::getContainer()->get(ClockInterface::class);
 
-        $command = new E2eSeedAdminSubscriptionCommand($users, $subscriptions, $feeds, $this->em, $clock, 'prod');
+        $command = new E2eSeedAdminSubscriptionCommand(
+            $users,
+            $subscriptions,
+            $feeds,
+            $entries,
+            $entryStates,
+            $this->em,
+            $clock,
+            'prod',
+        );
 
         $tester = new CommandTester($command);
         self::assertSame(Command::FAILURE, $tester->execute([]));

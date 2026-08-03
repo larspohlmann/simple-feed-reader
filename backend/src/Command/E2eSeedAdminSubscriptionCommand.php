@@ -9,6 +9,8 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SourceFormat;
+use App\Repository\EntryRepository;
+use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\UserRepository;
@@ -23,27 +25,37 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Ensures the seeded e2e admin owns at least one subscription. With zero
- * subscriptions and a populated catalog the reader shell redirects to the
- * onboarding picker instead of mounting, so every Playwright smoke that waits
- * for reader chrome times out (#222).
+ * Ensures the seeded e2e admin owns a VISIBLE subscription to the fixture
+ * feed. With zero subscriptions and a populated catalog the reader shell
+ * redirects to the onboarding picker instead of mounting, so every Playwright
+ * smoke that waits for reader chrome times out (#222).
  *
- * The subscription points at a reserved fixture feed that never resolves and so
- * is never fetched. The feed is pre-populated with one entry and a long,
- * multi-clause title: the reader shell mounts on subscription count alone, but
- * the magazine-kicker smokes measure a rendered row and need both an entry to
- * render and a source title long enough to exercise the one-line clip (#155).
- * The feed is marked already-fetched so the shell skips its post-onboarding
- * refresh sweep over a host that cannot answer.
+ * The subscription points at a reserved fixture feed that never resolves and
+ * so is never fetched. The feed is pre-populated with one entry and a long,
+ * multi-clause title: the reader shell mounts on subscription count alone,
+ * but the magazine-kicker smokes measure a rendered row and need both an
+ * entry to render and a source title long enough to exercise the one-line
+ * clip (#155). The feed is marked already-fetched so the shell skips its
+ * post-onboarding refresh sweep over a host that cannot answer.
+ *
+ * Every step is checked and repaired independently, rather than inferring all
+ * of them from one "does a subscription exist" guard: a feed can outlive its
+ * entry, and an entry can survive while becoming invisible in the default
+ * unread view (an entry_state read marker, a subscription markedReadUntil
+ * watermark past its effective date). Either failure reproduces the exact
+ * same symptom as no fixture at all — an empty reader with the subscription
+ * still showing in the sidebar — which silently disarms the three #155 clip
+ * specs while the suite still reports green. That is the precise failure
+ * mode this e2e workflow exists to catch, so this seed command must not trust
+ * a coarse guard to rule it out.
  *
  * Runs after app:e2e:seed-admin, which creates the admin this attaches to.
- * Idempotent: an admin that already owns any subscription is left untouched, so
- * repeated runs never duplicate the fixture. Refuses to run under
- * APP_ENV=prod, the same guard as its sibling app:e2e:seed-admin.
+ * Refuses to run under APP_ENV=prod, the same guard as its sibling
+ * app:e2e:seed-admin.
  */
 #[AsCommand(
     name: 'app:e2e:seed-admin-subscription',
-    description: 'Give the e2e admin one subscription so the reader shell renders (non-prod only).',
+    description: 'Give the e2e admin a visible subscription to the fixture feed (non-prod only).',
 )]
 final class E2eSeedAdminSubscriptionCommand extends Command
 {
@@ -66,6 +78,8 @@ final class E2eSeedAdminSubscriptionCommand extends Command
         private readonly UserRepository $users,
         private readonly SubscriptionRepository $subscriptions,
         private readonly FeedRepository $feeds,
+        private readonly EntryRepository $entries,
+        private readonly EntryStateRepository $entryStates,
         private readonly EntityManagerInterface $em,
         private readonly ClockInterface $clock,
         #[Autowire('%kernel.environment%')]
@@ -99,50 +113,98 @@ final class E2eSeedAdminSubscriptionCommand extends Command
             return Command::FAILURE;
         }
 
-        $existing = $this->subscriptions->countForUser((int) $admin->getId());
-        if ($existing > 0) {
-            $io->success(\sprintf('Admin %s already owns %d subscription(s); nothing to do.', $email, $existing));
+        $feed = $this->ensureFixtureFeed();
+        $entry = $this->ensureSampleEntry($feed);
+        $subscription = $this->ensureSubscribed($admin, $feed);
+        $this->ensureEntryVisible($admin, $subscription, $entry);
 
-            return Command::SUCCESS;
-        }
-
-        $this->subscribeToFixtureFeed($admin);
-
-        $io->success(\sprintf('Subscribed %s to the fixture feed.', $email));
+        $io->success(\sprintf('Fixture feed ready and visible for %s.', $email));
 
         return Command::SUCCESS;
     }
 
-    private function subscribeToFixtureFeed(User $admin): void
-    {
-        $subscription = new Subscription($admin, $this->fixtureFeed(), $this->clock->now());
-        $subscription->setPosition($this->subscriptions->nextPositionForUser((int) $admin->getId()));
-
-        $this->em->persist($subscription);
-        $this->em->flush();
-    }
-
-    private function fixtureFeed(): Feed
+    private function ensureFixtureFeed(): Feed
     {
         $feed = $this->feeds->findOneBy(['url' => self::FIXTURE_FEED_URL]);
         if (null !== $feed) {
             return $feed;
         }
 
-        $now = $this->clock->now();
-
         $feed = new Feed(self::FIXTURE_FEED_URL);
         $feed->setTitle(self::FIXTURE_FEED_TITLE);
         $feed->setSourceFormat(SourceFormat::XML);
         // Already fetched, so the reader skips its post-onboarding refresh sweep
         // over a host that never answers.
-        $feed->setLastFetchedAt($now);
+        $feed->setLastFetchedAt($this->clock->now());
 
         $this->em->persist($feed);
-        $this->em->persist($this->sampleEntry($feed, $now));
-        $this->em->flush(); // assign ids before the subscription references the feed
+        $this->em->flush(); // assign an id before anything references it
 
         return $feed;
+    }
+
+    /**
+     * Checked independently of feed creation: nothing else in this codebase
+     * deletes an Entry without its Feed today, but this command must not
+     * assume that stays true forever, and a re-run must repair a feed that
+     * somehow lost its entry just as readily as one that never had it.
+     */
+    private function ensureSampleEntry(Feed $feed): Entry
+    {
+        $entry = $this->entries->findOneBy(['feed' => $feed]);
+        if (null !== $entry) {
+            return $entry;
+        }
+
+        $entry = $this->sampleEntry($feed, $this->clock->now());
+        $this->em->persist($entry);
+        $this->em->flush();
+
+        return $entry;
+    }
+
+    private function ensureSubscribed(User $admin, Feed $feed): Subscription
+    {
+        $subscription = $this->subscriptions->findOneBy(['user' => $admin, 'feed' => $feed]);
+        if (null !== $subscription) {
+            return $subscription;
+        }
+
+        $subscription = new Subscription($admin, $feed, $this->clock->now());
+        $subscription->setPosition($this->subscriptions->nextPositionForUser((int) $admin->getId()));
+
+        $this->em->persist($subscription);
+        $this->em->flush();
+
+        return $subscription;
+    }
+
+    /**
+     * EntryRepository's unread filter (the reader's default view) hides an
+     * entry once the subscription's markedReadUntil watermark reaches its
+     * effective date, or once the caller's entry_state row marks it read.
+     * Both are cleared unconditionally rather than trusted from a prior run,
+     * because either one alone reproduces the same symptom as a missing
+     * entry: an empty reader with the subscription still in the sidebar.
+     */
+    private function ensureEntryVisible(User $admin, Subscription $subscription, Entry $entry): void
+    {
+        $needsFlush = false;
+
+        if (null !== $subscription->getMarkedReadUntil()) {
+            $subscription->setMarkedReadUntil(null);
+            $needsFlush = true;
+        }
+
+        $state = $this->entryStates->findOneForUserEntry((int) $admin->getId(), (int) $entry->getId());
+        if (null !== $state && $state->isRead()) {
+            $state->setIsRead(false);
+            $needsFlush = true;
+        }
+
+        if ($needsFlush) {
+            $this->em->flush();
+        }
     }
 
     private function sampleEntry(Feed $feed, \DateTimeImmutable $publishedAt): Entry

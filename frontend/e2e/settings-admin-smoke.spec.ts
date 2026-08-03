@@ -85,6 +85,24 @@ test('settings shell navigates sections; admin pages live inside it', async ({ p
  * leaves fixture debris behind for the next one — stray "…edited" tags from
  * a prior run once collided with the `/edit/i` button-name match below.
  */
+/**
+ * Renames the first tag row through the inline editor. The editor is expected
+ * to open on the row itself, so this also asserts no dialog opened.
+ */
+async function renameFirstRow(page: Page, to: string): Promise<void> {
+  const row = page.locator('.tag').first();
+  // Anchored so it never matches the drag handle's "Reorder <name>" label when
+  // <name> itself contains the substring "edit".
+  await row.getByRole('button', { name: /^(edit|bearbeiten)$/i }).click();
+  await expect(row.locator('.editor')).toBeVisible();
+  await expect(page.locator('.app-dialog')).toHaveCount(0);
+
+  await row.locator('.editor app-field input').fill(to);
+  await row.getByRole('button', { name: /^(save|speichern)$/i }).click();
+  await expect(row.locator('.editor')).toBeHidden();
+  await expect(row.locator('.name')).toHaveText(to);
+}
+
 async function deleteTagByName(page: Page, name: string): Promise<void> {
   const row = page.locator('.tag').filter({ has: page.locator('.name', { hasText: name }) });
   if ((await row.count()) === 0) return;
@@ -162,34 +180,18 @@ test('a tag can be reordered and renamed from settings', async ({ page }) => {
     const rowsAfterReload = page.locator('.tag');
     await expect(rowsAfterReload.first().locator('.name')).toHaveText(secondName);
 
-    // Inline edit: the editor opens on the row, not in a dialog. Anchored so
-    // it never matches the drag handle's "Reorder <name>" label when <name>
-    // itself contains the substring "edit".
-    await rowsAfterReload
-      .first()
-      .getByRole('button', { name: /^(edit|bearbeiten)$/i })
-      .click();
-    await expect(rowsAfterReload.first().locator('.editor')).toBeVisible();
-    await expect(page.locator('.app-dialog')).toHaveCount(0);
-
     // Actually change the name, not merely open the editor, and confirm the
     // save both updates the row and survives a reload.
-    const renamedTo = `${secondName} edited`;
-    await rowsAfterReload.first().locator('.editor app-field input').fill(renamedTo);
-    await rowsAfterReload
-      .first()
-      .getByRole('button', { name: /^(save|speichern)$/i })
-      .click();
-    await expect(rowsAfterReload.first().locator('.editor')).toBeHidden();
-    await expect(rowsAfterReload.first().locator('.name')).toHaveText(renamedTo);
-
+    const renamedTo = `E2E renamed ${Date.now()}`;
+    await renameFirstRow(page, renamedTo);
     await page.reload();
     await expect(page.locator('.tag').first().locator('.name')).toHaveText(renamedTo);
 
-    // Track the tag under its final (renamed) name for cleanup below.
-    if (ownedNames.includes(secondName)) {
-      ownedNames[ownedNames.indexOf(secondName)] = renamedTo;
-    }
+    // Put the original name back. The row here may be a fixture tag this test
+    // does not own and so never deletes; leaving it renamed made every run
+    // rename an already-renamed tag, until the name hit the server's 100-char
+    // cap and the save came back truncated.
+    await renameFirstRow(page, secondName);
   } finally {
     for (const name of ownedNames) {
       await deleteTagByName(page, name);

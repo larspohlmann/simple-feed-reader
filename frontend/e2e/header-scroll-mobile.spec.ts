@@ -70,6 +70,27 @@ async function settle(page: Page): Promise<void> {
   await page.waitForTimeout(300);
 }
 
+/**
+ * Wait for the header's 0.2s transform transition to end. A fixed sleep is
+ * animation time, not wall-clock: under parallel workers the compositor falls
+ * behind, the sample lands mid-transition, and it reads exactly like the #87
+ * regression this file guards. The timeout is a backstop for
+ * `prefers-reduced-motion`, where `transitionend` never fires.
+ */
+async function waitForHeaderTransitionEnd(page: Page): Promise<void> {
+  await page.locator('app-reader-header').evaluate(
+    (el) =>
+      new Promise<void>((resolve) => {
+        const finish = () => {
+          el.removeEventListener('transitionend', finish);
+          resolve();
+        };
+        el.addEventListener('transitionend', finish, { once: true });
+        setTimeout(finish, 2000);
+      }),
+  );
+}
+
 test.describe('Hide-on-scroll header on a phone', () => {
   test.use({ viewport: PHONE });
 
@@ -95,7 +116,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
     // Scroll far enough to retract the header, and let the 0.2s transition end.
     const before = (await anchor.boundingBox())!;
     await rows.evaluate((el) => el.scrollBy(0, 300));
-    await page.waitForTimeout(400);
+    await waitForHeaderTransitionEnd(page);
     const after = (await anchor.boundingBox())!;
 
     // The header really did retract — otherwise this test proves nothing.
@@ -122,13 +143,13 @@ test.describe('Hide-on-scroll header on a phone', () => {
     await expect(rows).toBeVisible();
     await settle(page);
     await rows.evaluate((el) => el.scrollBy(0, 400));
-    await page.waitForTimeout(400);
+    await waitForHeaderTransitionEnd(page);
 
     const anchor = page.getByText('Entry number 12', { exact: false }).first();
     const before = (await anchor.boundingBox())!;
     // Scrolling up expands the header again.
     await rows.evaluate((el) => el.scrollBy(0, -100));
-    await page.waitForTimeout(400);
+    await waitForHeaderTransitionEnd(page);
     const after = (await anchor.boundingBox())!;
 
     expect(after.y).toBeCloseTo(before.y + 100, 0);
@@ -178,7 +199,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
 
     const before = await height();
     await rows.evaluate((el) => el.scrollBy(0, 300));
-    await page.waitForTimeout(400);
+    await waitForHeaderTransitionEnd(page);
     expect(await height()).toBe(before);
   });
 
