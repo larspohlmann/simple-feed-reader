@@ -299,9 +299,51 @@ jobs:
           echo "::endgroup::"
           docker compose logs --no-color php nginx
 
+      # TEMPORARY -- diagnostic for #96 task 4. The magazine-kicker-one-line
+      # specs fail against the fixture entry E2eSeedAdminSubscriptionCommand
+      # seeds; this prints whether the ENTRY row and its effective read state
+      # survive the backend leg, so the Playwright-leg reading below can be
+      # compared against a known-good baseline instead of guessed at. Remove
+      # once the root cause is confirmed and fixed.
+      - name: Diagnostic - fixture entry state after the backend leg
+        run: |
+          docker compose exec -T php bin/console dbal:run-sql "
+            SELECT f.id AS feed_id,
+              (SELECT COUNT(*) FROM entry e WHERE e.feed_id = f.id) AS entry_count,
+              s.marked_read_until,
+              (SELECT es.is_read FROM entry_state es
+                 JOIN entry e2 ON e2.id = es.entry_id
+                 JOIN app_user u ON u.id = es.user_id
+                WHERE e2.feed_id = f.id AND u.email = 'e2e-admin@example.com') AS admin_is_read
+            FROM feed f
+            LEFT JOIN subscription s ON s.feed_id = f.id
+            WHERE f.url = 'https://fixtures.sfr-e2e.example/feed.xml'
+          "
+
       - name: Install Chromium
         working-directory: frontend
         run: npx playwright install --with-deps chromium
+
+      # TEMPORARY -- diagnostic for #96 task 4. Same query as above, taken
+      # immediately before the Playwright leg's own global-setup runs its
+      # purge/reseed, so a difference between the two readings isolates
+      # whether the backend leg or the Playwright leg's own fixture setup is
+      # where the entry's state changes. Remove once the root cause is
+      # confirmed and fixed.
+      - name: Diagnostic - fixture entry state before the Playwright leg
+        run: |
+          docker compose exec -T php bin/console dbal:run-sql "
+            SELECT f.id AS feed_id,
+              (SELECT COUNT(*) FROM entry e WHERE e.feed_id = f.id) AS entry_count,
+              s.marked_read_until,
+              (SELECT es.is_read FROM entry_state es
+                 JOIN entry e2 ON e2.id = es.entry_id
+                 JOIN app_user u ON u.id = es.user_id
+                WHERE e2.feed_id = f.id AND u.email = 'e2e-admin@example.com') AS admin_is_read
+            FROM feed f
+            LEFT JOIN subscription s ON s.feed_id = f.id
+            WHERE f.url = 'https://fixtures.sfr-e2e.example/feed.xml'
+          "
 
       # The json reporter goes to a file (PLAYWRIGHT_JSON_OUTPUT_NAME), so the
       # list reporter still gives a readable log. The guard below reads the file.
