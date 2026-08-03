@@ -93,7 +93,7 @@
   </div>
 }
 
-@if (loading()) {
+@if (loading() && entries().length === 0) {
   <div class="rows" [class.after-banner]="!!error()">
     @for (i of [1, 2, 3, 4, 5]; track i) {
       <div class="skeleton"></div>
@@ -109,6 +109,7 @@
 } @else if (layout() === 'magazine') {
   <div
     class="rows magazine"
+    [class.reloading]="loading()"
     [class.after-banner]="!!error()"
     [class.dragging]="dragging()"
     [style.transform]="revealTransform()"
@@ -198,6 +199,7 @@
 } @else {
   <div
     class="rows"
+    [class.reloading]="loading()"
     [class.after-banner]="!!error()"
     [class.dragging]="dragging()"
     [style.transform]="revealTransform()"

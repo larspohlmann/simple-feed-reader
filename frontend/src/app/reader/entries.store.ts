@@ -29,7 +29,9 @@ export class EntriesStore {
   load(query: EntryQuery): void {
     this.query = query;
     const seq = ++this.loadSeq;
-    this.entries.set([]);
+    // The outgoing list stays rendered until the response lands (#254) — a
+    // blank pane made every view switch feel like the full round trip. Only
+    // the cursor is dropped, so no pagination can extend the stale list.
     this.nextCursor.set(null);
     this.loading.set(true);
     // A fresh top-of-list load abandons any pagination still on the wire.

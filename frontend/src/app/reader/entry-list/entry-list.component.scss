@@ -261,6 +261,16 @@
   transition: none;
 }
 
+/* A reload keeps the outgoing list on screen (#254); dimming it is the only
+   signal that fresher content is on the way. Opacity joins transform in the
+   transition so the dim eases in rather than snapping. */
+.rows.reloading {
+  opacity: 0.6;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
 /* An error banner sits above the scroller in the flow and takes the reservation
    itself; the scroller must not add it a second time. */
 .rows.after-banner,

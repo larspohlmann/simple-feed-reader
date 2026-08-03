@@ -103,6 +103,15 @@ describe('EntryListComponent', () => {
     });
   });
 
+  it('keeps the current rows rendered and marks them reloading while a reload is on the wire', () => {
+    const el = mount({ loading: true, entries: [entry(1), entry(2)], layout: 'list' })
+      .nativeElement as HTMLElement;
+    expect(el.querySelector('.skeleton')).toBeNull();
+    const rows = el.querySelector('.rows')!;
+    expect(rows.classList).toContain('reloading');
+    expect(rows.querySelectorAll('app-entry-row').length).toBe(2);
+  });
+
   it('shows skeletons while loading and an empty state when empty', () => {
     expect(
       (mount({ loading: true, entries: [] }).nativeElement as HTMLElement).querySelector(

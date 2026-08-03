@@ -445,6 +445,7 @@ earlier review rounds had flagged as undiagnosable:
 | `AllowOverride` permits `Options` | **yes** — no 500; this was the biggest flagged risk |
 | `mod_rewrite` | yes — all four request shapes routed correctly |
 | `mod_headers` | yes — `Header set` reached the client |
+| `mod_deflate` | yes — probed 2026-08-03 with a throwaway directory carrying its own `AddOutputFilterByType DEFLATE`: the response came back `content-encoding: gzip` with `vary: Accept-Encoding`, 13,600 B → 108 B. `AllowOverride` therefore permits `FileInfo` too. Nothing on the host compressed before #254 because nothing asked it to. |
 | `mod_authz_core` | yes — dotfile denied with 403 |
 | Symlinked directory served over the web | **yes** — 200 through a symlink in the docroot |
 | Web-context PHP | **8.4.22**, cgi-fcgi — already correct, no panel change needed |
