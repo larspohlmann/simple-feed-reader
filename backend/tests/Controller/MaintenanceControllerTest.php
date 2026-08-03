@@ -13,6 +13,7 @@ use App\Tests\Support\StubFeedFetcher;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Lock\LockFactory;
 
 final class MaintenanceControllerTest extends WebTestCase
 {
@@ -63,7 +64,7 @@ final class MaintenanceControllerTest extends WebTestCase
         // same fetcher — stub the origin too, or it throws just as loudly.
         $stub->willReturn(
             'https://maint.example.com',
-            FetchResponse::fetched('https://maint.example.com', false, '<html></html>', null, null),
+            FetchResponse::fetched('https://maint.example.com', false, '<html lang="en"></html>', null, null),
         );
         self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
 
@@ -89,7 +90,7 @@ final class MaintenanceControllerTest extends WebTestCase
         // same fetcher — stub the origin too, or it throws just as loudly.
         $stub->willReturn(
             'https://maint.example.com',
-            FetchResponse::fetched('https://maint.example.com', false, '<html></html>', null, null),
+            FetchResponse::fetched('https://maint.example.com', false, '<html lang="en"></html>', null, null),
         );
         self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
 
@@ -123,8 +124,8 @@ final class MaintenanceControllerTest extends WebTestCase
         $client = self::createClient();
         $this->feedFor($client, 'https://maint.example.com/feed');
 
-        /** @var \Symfony\Component\Lock\LockFactory $lockFactory */
-        $lockFactory = self::getContainer()->get(\Symfony\Component\Lock\LockFactory::class);
+        /** @var LockFactory $lockFactory */
+        $lockFactory = self::getContainer()->get(LockFactory::class);
         $lock = $lockFactory->createLock('feed-refresh');
         self::assertTrue($lock->acquire());
 

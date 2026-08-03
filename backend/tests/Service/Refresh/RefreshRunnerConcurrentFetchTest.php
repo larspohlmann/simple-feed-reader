@@ -86,7 +86,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
         $origin = 'https://' . parse_url($url, \PHP_URL_HOST);
         $this->faviconFetcher->willReturn(
             $origin,
-            FetchResponse::fetched($origin, false, '<html></html>', null, null),
+            FetchResponse::fetched($origin, false, '<html lang="en"></html>', null, null),
         );
 
         return $feed;
@@ -153,7 +153,10 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
 
     private function rss(string $title, string $guid): string
     {
-        return <<<XML
+        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
+        // starts with whitespace and it wrongly flags the declaration. The
+        // closing marker strips that indentation before the parser sees it.
+        return /** @lang TEXT */ <<<XML
             <?xml version="1.0" encoding="UTF-8"?>
             <rss version="2.0"><channel><title>{$title}</title>
             <item><title>Post</title><link>https://example.com/p</link><guid>{$guid}</guid></item>

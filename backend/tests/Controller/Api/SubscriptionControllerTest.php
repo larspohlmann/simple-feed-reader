@@ -259,7 +259,10 @@ final class SubscriptionControllerTest extends WebTestCase
         $client = self::createClient();
         $headers = $this->authHeader('html@example.com');
 
-        $html = '<!doctype html><html><head>'
+        // `/rss.xml` is a deliberately fake path, because discovering it is what
+        // the test is about, so `@lang TEXT` stops PhpStorm injecting HTML here
+        // and reporting the target as unresolvable.
+        $html = /** @lang TEXT */ '<!doctype html><html><head>'
             . '<link rel="alternate" type="application/rss+xml" href="/rss.xml">'
             . '</head><body>x</body></html>';
 

@@ -12,11 +12,14 @@ final class ItemImageExtractorTest extends TestCase
     private function item(string $innerXml): \DOMElement
     {
         $doc = new \DOMDocument();
-        $doc->loadXML(
-            '<rss xmlns:media="http://search.yahoo.com/mrss/"><channel><item>'
+        // @lang TEXT: the `media` prefix is used by the `$innerXml` the callers
+        // splice in, which the XML PhpStorm injects here cannot see, so it
+        // reports the namespace declaration as unused.
+        /** @noinspection XmlUnusedNamespaceDeclaration */
+        $rss = '<rss xmlns:media="http://search.yahoo.com/mrss/"><channel><item>'
             . $innerXml
-            . '</item></channel></rss>',
-        );
+            . '</item></channel></rss>';
+        $doc->loadXML($rss);
         $item = $doc->getElementsByTagName('item')->item(0);
         self::assertInstanceOf(\DOMElement::class, $item);
 

@@ -14,8 +14,13 @@ if ($_SERVER['APP_DEBUG']) {
 // need a real keypair (Lexik signs with RS256), so generate one on demand.
 // The passphrase comes from .env — deliberately a throwaway in dev/test.
 $jwtDir = dirname(__DIR__) . '/config/jwt';
-if (!is_dir($jwtDir)) {
-    mkdir($jwtDir, 0o777, true);
+// The second is_dir() covers a concurrent run winning the race to create it.
+if (!is_dir($jwtDir) && !mkdir($jwtDir, 0o777, true) && !is_dir($jwtDir)) {
+    fwrite(STDERR, sprintf(
+        "\nCould not create the JWT key directory %s; aborting before tests run.\n",
+        $jwtDir,
+    ));
+    exit(1);
 }
 // Regenerate when *either* file is missing, and overwrite unconditionally: a
 // half-present pair would otherwise make the command refuse to write and wedge

@@ -317,7 +317,9 @@ final class EntryIngestorTest extends DbTestCase
                 title: 'One',
                 author: null,
                 summary: null,
-                contentHtml: '<a href="https://x"><img src="https://i/a.jpg"/></a> None',
+                // @lang TEXT: the `alt`-less image is the input under test — the
+                // ingestor has to reject this as a summary — so it stays as is.
+                contentHtml: /** @lang TEXT */ '<a href="https://x"><img src="https://i/a.jpg"/></a> None',
                 publishedAt: null,
             ),
         ]);

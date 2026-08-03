@@ -16,6 +16,7 @@ use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -187,7 +188,7 @@ final class AdminUserControllerTest extends WebTestCase
         yield 'reset-password' => ['POST', self::LIST . '/%d/reset-password'];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('adminRoutes')]
+    #[DataProvider('adminRoutes')]
     public function testNonAdminIsForbiddenOnEveryRoute(string $method, string $uriTemplate): void
     {
         $plain = $this->factory()->create('plain@example.com');
@@ -200,7 +201,7 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('adminRoutes')]
+    #[DataProvider('adminRoutes')]
     public function testAnonymousIsUnauthorizedOnEveryRoute(string $method, string $uriTemplate): void
     {
         $target = $this->factory()->create('target@example.com', status: UserStatus::PendingApproval);

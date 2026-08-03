@@ -92,7 +92,7 @@ final class RefreshControllerTest extends WebTestCase
         // this same fetcher — stub the origin too, or it throws just as loudly.
         $fetcher->willReturn(
             'https://example.com',
-            FetchResponse::fetched('https://example.com', false, '<html></html>', null, null),
+            FetchResponse::fetched('https://example.com', false, '<html lang="en"></html>', null, null),
         );
         self::getContainer()->set(BatchFeedFetcherInterface::class, $fetcher);
 
@@ -162,7 +162,7 @@ final class RefreshControllerTest extends WebTestCase
         // this same fetcher — stub the origin too, or it throws just as loudly.
         $fetcher->willReturn(
             'https://example.com',
-            FetchResponse::fetched('https://example.com', false, '<html></html>', null, null),
+            FetchResponse::fetched('https://example.com', false, '<html lang="en"></html>', null, null),
         );
         self::getContainer()->set(BatchFeedFetcherInterface::class, $fetcher);
 

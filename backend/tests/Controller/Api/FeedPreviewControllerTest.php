@@ -78,7 +78,10 @@ final class FeedPreviewControllerTest extends WebTestCase
 
     private function feedXml(): string
     {
-        return <<<'XML'
+        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
+        // starts with whitespace and it wrongly flags the declaration. The
+        // closing marker strips that indentation before the parser sees it.
+        return /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="UTF-8"?>
             <rss version="2.0"
                  xmlns:content="http://purl.org/rss/1.0/modules/content/"
@@ -258,7 +261,12 @@ final class FeedPreviewControllerTest extends WebTestCase
     {
         $client = self::createClient();
         [$headers] = $this->auth('preview-notfeed@example.com');
-        $this->installFetcher($this->fetcherWithBody('<html><body>Not a feed at all.</body></html>'));
+        // @lang TEXT: this body is the input under test — the preview must fail
+        // on it — so it stays exactly as written rather than growing a `lang`
+        // attribute to satisfy PhpStorm's injected-HTML check.
+        $this->installFetcher(
+            $this->fetcherWithBody(/** @lang TEXT */ '<html><body>Not a feed at all.</body></html>'),
+        );
 
         $client->request(
             'POST',

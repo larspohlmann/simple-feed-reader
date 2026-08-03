@@ -5,6 +5,11 @@ declare(strict_types=1);
 // Fixtures for ThinControllerRuleTest. These live in the App\Controller namespace
 // on purpose, so the rule considers them, and are excluded from `composer stan`
 // (see excludePaths in phpstan.dist.neon). Analysed only by the rule's RuleTestCase.
+//
+// That deliberate mismatch between namespace and path is exactly what the PSR-4
+// inspection objects to below; the file is never autoloaded, so the rule it
+// enforces does not apply here.
+/** @noinspection PhpIllegalPsrClassPathInspection */
 
 namespace App\Controller\Fixtures {
     final class ViolatingController
@@ -30,6 +35,8 @@ namespace App\Controller\Fixtures {
         }
     }
 }
+
+/** @noinspection PhpIllegalPsrClassPathInspection */
 
 namespace App\Service\Fixtures {
     final class NotAController

@@ -19,7 +19,10 @@ final class Rss2ParserTest extends TestCase
 
     public function testExtractsImageUrlFromMediaEnclosureOrInlineHtml(): void
     {
-        $xml = <<<'XML'
+        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
+        // starts with whitespace and it wrongly flags the declaration. The
+        // closing marker strips that indentation before the parser sees it.
+        $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0"?>
             <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
                 <channel>
@@ -60,7 +63,10 @@ final class Rss2ParserTest extends TestCase
         // markup and the &#8220;/&#8221; curly-quote references that real feeds
         // ship. The XML reader decodes those one level, leaving literal tags and
         // references that must not surface in the reader.
-        $xml = <<<'XML'
+        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
+        // starts with whitespace and it wrongly flags the declaration. The
+        // closing marker strips that indentation before the parser sees it.
+        $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0"?>
             <rss version="2.0">
                 <channel>

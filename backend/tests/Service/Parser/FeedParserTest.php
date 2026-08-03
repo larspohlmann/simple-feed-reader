@@ -110,7 +110,12 @@ final class FeedParserTest extends TestCase
 
     public function testRejectsEntityExpansionBomb(): void
     {
-        $bomb = '<?xml version="1.0"?><!DOCTYPE rss ['
+        // @lang TEXT: the bomb is spliced together from separate literals, so
+        // the XML PhpStorm injects never holds the declarations and their
+        // references at once and it reports every entity as unresolved. The
+        // fixture must stay exactly as it is — expanding it is what the parser
+        // has to refuse.
+        $bomb = /** @lang TEXT */ '<?xml version="1.0"?><!DOCTYPE rss ['
             . '<!ENTITY a "AAAAAAAAAA"><!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">'
             . '<!ENTITY c "&b;&b;&b;&b;&b;&b;&b;&b;&b;&b;"><!ENTITY d "&c;&c;&c;&c;&c;&c;&c;&c;&c;&c;">'
             . ']><rss version="2.0"><channel><title>&d;</title><link>x</link></channel></rss>';
@@ -131,7 +136,10 @@ final class FeedParserTest extends TestCase
     public function testRejectsUnknownRootElement(): void
     {
         $this->expectException(FeedParseException::class);
-        $this->parser()->parse('<?xml version="1.0"?><html><body>nope</body></html>');
+        // @lang TEXT: this document is the input under test — the parser must
+        // reject an html root — so it stays exactly as written rather than
+        // growing a `lang` attribute to satisfy PhpStorm's injected-HTML check.
+        $this->parser()->parse(/** @lang TEXT */ '<?xml version="1.0"?><html><body>nope</body></html>');
     }
 
     public function testParsesAtom(): void

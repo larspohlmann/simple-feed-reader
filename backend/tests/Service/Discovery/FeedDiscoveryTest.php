@@ -56,7 +56,10 @@ final class FeedDiscoveryTest extends KernelTestCase
 
     public function testHtmlPageReturnsResolvedCandidates(): void
     {
-        $html = <<<'HTML'
+        // @lang TEXT: `/rss.xml` and `/style.css` are deliberately fake paths —
+        // discovering and resolving them is what the test is about — so the
+        // injected-HTML "cannot resolve file" and missing-`lang` hints are wrong.
+        $html = /** @lang TEXT */ <<<'HTML'
             <!doctype html><html><head>
               <link rel="alternate" type="application/rss+xml" title="Main" href="/rss.xml">
               <link rel="alternate" type="application/atom+xml" href="https://cdn.example.com/atom">
