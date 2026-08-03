@@ -202,23 +202,39 @@ jobs:
           # its own fix. Six is the non-external floor for the current
           # line-up (HealthE2eTest, ErrorContractE2eTest x2,
           # OAuthProvidersE2eTest, PasswordResetE2eTest, OnboardingJourneyE2eTest).
-          # The all-pass summary ("OK (N tests, ...)") and the mixed-result one
-          # ("Tests: N, ...") name the count differently; a from-scratch run
-          # that executed nothing produces neither, which the fallback of 0
-          # catches.
-          executed="$(grep -oE 'OK \([0-9]+ tests?,' "${RUNNER_TEMP}/backend-e2e.log" | grep -oE '[0-9]+' | tail -1)"
+          #
+          # PHPUnit names the count on "OK (N tests, ...)" only for a clean,
+          # skip-free pass; a skip, a failure, or an error all print
+          # "Tests: N, ..." instead, so both shapes are checked. Each grep's
+          # own "no match" exit (1) or "no such file" exit (2) is folded into
+          # `|| true` rather than left bare: under this step's `set -e`, a
+          # bare `x="$(pipeline)"` assignment aborts the script on the very
+          # line that finds nothing, which would make the "Tests: N" fallback
+          # below unreachable -- exactly the failure mode that turned a
+          # genuine pass (one with a skip) into a false-red step. A log that
+          # is missing, empty, or names neither shape leaves $executed empty,
+          # and the default below then fails closed as zero rather than
+          # silently passing.
+          executed="$(grep -oE 'OK \([0-9]+ tests?,' "${RUNNER_TEMP}/backend-e2e.log" 2>/dev/null | grep -oE '[0-9]+' | tail -1 || true)"
           if [ -z "$executed" ]; then
-            executed="$(grep -oE 'Tests: [0-9]+' "${RUNNER_TEMP}/backend-e2e.log" | grep -oE '[0-9]+' | tail -1)"
+            executed="$(grep -oE 'Tests: [0-9]+' "${RUNNER_TEMP}/backend-e2e.log" 2>/dev/null | grep -oE '[0-9]+' | tail -1 || true)"
           fi
           executed="${executed:-0}"
 
           echo "==> PHPUnit executed ${executed} test(s)."
+          floor_status=0
           if [ "$executed" -lt 6 ]; then
             echo "!!! Only ${executed} test(s) executed; expected at least 6." >&2
-            exit 1
+            floor_status=1
           fi
 
-          exit "$suite_status"
+          # The step's verdict is the OR of the two failure modes: a real
+          # suite failure must not be hidden by a satisfied floor, and a
+          # collapsed test count must not be hidden by an otherwise-green exit.
+          if [ "$suite_status" -ne 0 ] || [ "$floor_status" -ne 0 ]; then
+            exit 1
+          fi
+          exit 0
 
       # Runs only on a red suite, so a passing run stays quiet. dev.log is
       # where this project's convention says a swallowed exception surfaces --
