@@ -165,3 +165,9 @@ jobs:
       # mapping from answers to .env.prod values is tested here.
       - name: configure_public_url
         run: scripts/test/configure-public-url.test.sh
+
+      # The all-skip guard for the weekly e2e rot check (#96). It decides
+      # whether a Playwright run that reported success actually verified
+      # anything, so it is exactly the kind of logic that must not rot itself.
+      - name: assert-playwright-ran
+        run: scripts/test/assert-playwright-ran.test.sh
