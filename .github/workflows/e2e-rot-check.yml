@@ -119,3 +119,42 @@ jobs:
           echo "!!! http://localhost:4200 never answered." >&2
           docker compose logs --no-color frontend >&2
           exit 1
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: intl, pdo_sqlite, pdo_mysql
+          coverage: none
+          # backend/bin/e2e.sh concatenates the system CA bundle with the mkcert
+          # root and points PHP at the result, keeping full peer verification.
+          # It reads the system bundle from this ini value, and setup-php leaves
+          # it empty by default -- which would silently reduce the bundle to the
+          # mkcert root alone and break every outbound HTTPS fetch in the suite.
+          ini-values: openssl.cafile=/etc/ssl/certs/ca-certificates.crt, curl.cainfo=/etc/ssl/certs/ca-certificates.crt
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: composer install --prefer-dist --no-progress
+
+      # composer e2e is the documented entry point and does the fixture work
+      # itself: purge leftover throwaway accounts, seed the admin and its
+      # subscription, clear the rate-limiter and ALTCHA-replay pools, then run
+      # the suite against https://localhost:8443 with verification on.
+      #
+      # No skip guard here, unlike the Playwright leg. ReaderJourneyE2eTest
+      # skips when an external news homepage is unreachable, which is a real
+      # condition outside this repository's control -- failing on it would make
+      # the workflow red for someone else's outage.
+      #
+      # `shell: bash` is load-bearing, not decoration. The default shell for a
+      # `run:` block is `bash -e`, WITHOUT pipefail, so `composer e2e | tee`
+      # would report tee's exit status and a failing suite would read as a
+      # passing step -- the exact silent-green defect this workflow exists to
+      # end. `shell: bash` runs `bash --noprofile --norc -eo pipefail`.
+      - name: Backend black-box e2e
+        id: backend
+        continue-on-error: true
+        shell: bash
+        working-directory: backend
+        run: composer e2e 2>&1 | tee "${RUNNER_TEMP}/backend-e2e.log"
