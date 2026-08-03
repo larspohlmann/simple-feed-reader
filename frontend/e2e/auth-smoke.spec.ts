@@ -7,7 +7,9 @@ test('login page loads and offers registration', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Create account' })).toBeVisible();
 });
 
-test('a wrong password shows the backend message (real cross-origin + problem+json)', async ({ page }) => {
+test('a wrong password shows the backend message (real cross-origin + problem+json)', async ({
+  page,
+}) => {
   await page.goto('/login');
   await page.locator('input[type=email]').fill('nobody@example.com');
   await page.locator('input[type=password]').fill('definitely-wrong-1');

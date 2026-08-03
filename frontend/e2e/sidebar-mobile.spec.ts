@@ -81,9 +81,7 @@ test.describe('Sidebar on a phone', () => {
   // the sidebar to touch density and reveals the Organise switch.
   test.use({ viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true });
 
-  test('drawer navigation, organise mode and the action sheet stay on-screen', async ({
-    page,
-  }) => {
+  test('drawer navigation, organise mode and the action sheet stay on-screen', async ({ page }) => {
     await stubSidebarData(page);
     const signedIn = await signInAsAdmin(page);
     test.skip(
