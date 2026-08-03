@@ -166,11 +166,10 @@ final readonly class SubscriptionController
     #[Route('/{id}', name: 'api_subscriptions_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function delete(int $id, #[CurrentUser] User $user): JsonResponse
     {
-        $sub = $this->subscriptionRepo->findOneOwnedBy($id, (int) $user->getId())
+        $subscription = $this->subscriptionRepo->findOneOwnedBy($id, (int) $user->getId())
             ?? throw new NotFoundHttpException('No such subscription.');
 
-        $this->em->remove($sub);
-        $this->em->flush();
+        $this->subscriptions->unsubscribe($subscription);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }

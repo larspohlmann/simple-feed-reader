@@ -61,7 +61,11 @@
       "email": "E-Mail",
       "memberSince": "Mitglied seit",
       "adminQueue": "Admin – Benutzerliste",
-      "signOut": "Abmelden"
+      "signOut": "Abmelden",
+      "delete": "Mein Konto löschen",
+      "deleteTitle": "Dein Konto löschen?",
+      "deleteNote": "Das Löschen deines Kontos entfernt deine Abonnements, Tags und Lesezustände dauerhaft. Exportiere deine Feeds vorher, wenn du sie behalten möchtest.",
+      "deleteMessage": "Dies löscht dein Konto dauerhaft, mit allen Abonnements, Tags und Lesezuständen. Das kann nicht rückgängig gemacht werden."
     },
     "about": {
       "title": "Über",
@@ -84,6 +88,7 @@
   },
   "dialog": {
     "cancel": "Abbrechen",
+    "typeToConfirm": "Tippe {{text}}, um zu bestätigen",
     "addFeed": {
       "title": "Feed hinzufügen",
       "urlLabel": "Feed- oder Seiten-URL",
@@ -145,6 +150,7 @@
     "approve": "Genehmigen",
     "reject": "Ablehnen",
     "suspend": "Sperren",
+    "delete": "Konto löschen",
     "feedsLabel": "Feeds",
     "tagsLabel": "Tags",
     "lastLogin": "Letzte Anmeldung",
@@ -216,7 +222,9 @@
       "rejectTitle": "Benutzer ablehnen",
       "rejectMessage": "{{email}} ablehnen? Eine Anmeldung ist dann nicht möglich.",
       "suspendTitle": "Benutzer sperren",
-      "suspendMessage": "{{email}} sperren? Der Zugang ist bis zur erneuten Freigabe blockiert."
+      "suspendMessage": "{{email}} sperren? Der Zugang ist bis zur erneuten Freigabe blockiert.",
+      "deleteTitle": "Dieses Konto löschen?",
+      "deleteMessage": "Dies löscht {{email}} dauerhaft, mit allen Abonnements, Tags und Lesezuständen. Feeds, die niemand sonst liest, werden ebenfalls gelöscht. Das kann nicht rückgängig gemacht werden."
     },
     "categoryDialog": {
       "newTitle": "Neue Kategorie",

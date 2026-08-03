@@ -10,6 +10,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Enum\UserStatus;
+use App\Repository\UserRepository;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\UserFactory;
@@ -1087,5 +1088,110 @@ final class AdminUserControllerTest extends WebTestCase
             'subscriptions' => \count($recorder->queriesMatching('from subscription')),
             'tags' => \count($recorder->queriesMatching('from tag')),
         ];
+    }
+
+    public function testAnAdminDeletesAnotherAccount(): void
+    {
+        $factory = $this->factory();
+        $admin = $factory->create('admin-del@example.com', roles: ['ROLE_ADMIN']);
+        $target = $factory->create('victim@example.com');
+        $targetId = (int) $target->getId();
+
+        $this->client->request('DELETE', self::LIST . '/' . $targetId, server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin),
+        ]);
+
+        self::assertResponseStatusCodeSame(204);
+    }
+
+    public function testAnAdminCannotDeleteThemselvesThroughTheAdminApi(): void
+    {
+        $admin = $this->factory()->create('self-del@example.com', roles: ['ROLE_ADMIN']);
+        $this->factory()->create('spare-admin@example.com', roles: ['ROLE_ADMIN']);
+
+        $this->client->request('DELETE', self::LIST . '/' . $admin->getId(), server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin),
+        ]);
+
+        self::assertResponseStatusCodeSame(422);
+    }
+
+    /**
+     * NOT a test of the 409 last-admin refusal. $soleAdmin and $deputy are
+     * both Active (the factory default), so ensureNotTheLastAdmin($deputy)
+     * sees countActiveAdmins() >= 2 — $deputy and $soleAdmin both count — and
+     * the guard has nothing to refuse; the self-delete guard (422) is also
+     * moot, since the caller and target are distinct here. countActiveAdmins()
+     * being status-aware DOES make the 409 reachable through this route in
+     * general (deleting a non-Active admin while the caller is the sole
+     * remaining Active admin refuses with 409), just not through the two
+     * Active admins this test constructs.
+     *
+     * What this test actually proves: $soleAdmin deletes $deputy (204), and
+     * $deputy's now-stale token can no longer authenticate anything (401) —
+     * the api firewall's JWT provider fails to reload a deleted user before
+     * access_control or the controller ever run, so a second delete attempt
+     * with that token cannot reach AccountDeleter at all. The final
+     * assertion — $soleAdmin still exists — confirms the first deletion did
+     * not take out the wrong account; it says nothing about the last-admin
+     * guard, since that guard was never exercised by this request.
+     */
+    public function testAnAdminDeletedByAnotherAdminCanNoLongerAuthenticate(): void
+    {
+        $factory = $this->factory();
+        $soleAdmin = $factory->create('sole-admin@example.com', roles: ['ROLE_ADMIN']);
+        $deputy = $factory->create('deputy@example.com', roles: ['ROLE_ADMIN']);
+
+        $this->client->request('DELETE', self::LIST . '/' . $deputy->getId(), server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($soleAdmin),
+        ]);
+        self::assertResponseStatusCodeSame(204);
+
+        $this->client->request('DELETE', self::LIST . '/' . $soleAdmin->getId(), server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($deputy),
+        ]);
+        self::assertResponseStatusCodeSame(401);
+
+        self::assertNotNull(
+            self::getContainer()->get(UserRepository::class)->find($soleAdmin->getId()),
+        );
+    }
+
+    /**
+     * The 409 path this route's other delete tests deliberately do not cover
+     * (see the docblock above testAnAdminDeletedByAnotherAdminCanNoLongerAuthenticate):
+     * countActiveAdmins() is status-aware, so deleting a non-Active admin
+     * while the caller is the sole remaining Active admin refuses too, not
+     * only self-delete through DELETE /api/me.
+     */
+    public function testDeletingASuspendedAdminIsRefusedWhenTheCallerIsTheSoleActiveAdmin(): void
+    {
+        $factory = $this->factory();
+        $caller = $factory->create('sole-active-admin@example.com', roles: ['ROLE_ADMIN']);
+        $suspended = $factory->create(
+            'suspended-admin@example.com',
+            roles: ['ROLE_ADMIN'],
+            status: UserStatus::Suspended,
+        );
+
+        $this->client->request('DELETE', self::LIST . '/' . $suspended->getId(), server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($caller),
+        ]);
+
+        self::assertResponseStatusCodeSame(409);
+    }
+
+    public function testANonAdminCannotDeleteAnAccount(): void
+    {
+        $factory = $this->factory();
+        $factory->create('an-admin@example.com', roles: ['ROLE_ADMIN']);
+        $plainUser = $factory->create('plain@example.com');
+        $target = $factory->create('other-target@example.com');
+
+        $this->client->request('DELETE', self::LIST . '/' . $target->getId(), server: [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($plainUser),
+        ]);
+
+        self::assertResponseStatusCodeSame(403);
     }
 }

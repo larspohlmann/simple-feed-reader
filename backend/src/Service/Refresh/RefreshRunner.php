@@ -15,7 +15,9 @@ use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FetchOutcome;
 use App\Service\Fetch\FetchResponse;
+use App\Service\OrphanedFeedReclaimer;
 use App\Service\Parser\Exception\FeedParseException;
+use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
@@ -34,7 +36,7 @@ use Symfony\Component\Lock\LockFactory;
  * ingest, flush — happens serially as each outcome arrives, so persistence
  * semantics are unchanged from the one-feed-at-a-time original.
  *
- * The eleven constructor collaborators are deliberate: the runner is the
+ * The twelve constructor collaborators are deliberate: the runner is the
  * refresh pipeline's composition root, and each one is a seam the tests swap
  * independently (fetcher, body parser, ingestor, scheduler, …). Bagging them
  * into a parameter object would hide that coupling, not reduce it.
@@ -60,6 +62,7 @@ final class RefreshRunner
         private readonly FaviconResolver $faviconResolver,
         private readonly FeedScheduler $scheduler,
         private readonly EntryPruner $pruner,
+        private readonly OrphanedFeedReclaimer $orphanedFeeds,
         private readonly LockFactory $lockFactory,
         private readonly ClockInterface $clock,
         private readonly LoggerInterface $logger,
@@ -98,6 +101,8 @@ final class RefreshRunner
      */
     private function refresh(RefreshRequest $request): RefreshReport
     {
+        $this->sweepOrphanedFeeds($request);
+
         $now = $this->clock->now();
         $cooldownCutoff = $request->force
             ? $now->modify(sprintf('-%d minutes', self::COOLDOWN_MINUTES))
@@ -230,16 +235,37 @@ final class RefreshRunner
     {
         try {
             return $this->persistOutcome($feed, $outcome);
-        } catch (UniqueConstraintViolationException | ORMException $e) {
+        } catch (UniqueConstraintViolationException | ForeignKeyConstraintViolationException | ORMException $e) {
             // A failed flush rolls back AND closes the EntityManager, so every
             // later persist/flush would throw "EntityManager is closed".
             // Stop here instead of cascading the failure across the batch.
+            //
+            // ForeignKeyConstraintViolationException is reachable here since
+            // #246: the feed row backing an in-flight fetch can vanish
+            // mid-run (unsubscribe -> OrphanedFeedReclaimer::reclaim() holds
+            // no lock), and the ensuing UPDATE/INSERT against the gone row
+            // throws this rather than UniqueConstraintViolationException.
             $this->logger->error(
                 'Refresh aborted: persistence failed for {url}',
                 ['url' => $feed->getUrl(), 'exception' => $e],
             );
 
             return FeedOutcome::Aborted;
+        }
+    }
+
+    // Before findDue(), not after: a feed nobody subscribes to must not cost the
+    // run an HTTP request. Gated on the same flag as the entry prune, so only the
+    // maintenance refresh sweeps — a user-triggered refresh stays fast.
+    private function sweepOrphanedFeeds(RefreshRequest $request): void
+    {
+        if (!$request->prune) {
+            return;
+        }
+
+        $reclaimed = $this->orphanedFeeds->reclaimAll();
+        if ($reclaimed > 0) {
+            $this->logger->info('Reclaimed orphaned feeds', ['count' => $reclaimed]);
         }
     }
 

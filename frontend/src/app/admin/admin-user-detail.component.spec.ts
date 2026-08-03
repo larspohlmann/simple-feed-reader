@@ -3,13 +3,14 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Dialog } from '@angular/cdk/dialog';
-import { ActivatedRoute, provideRouter } from '@angular/router';
+import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { Subject, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { API_BASE_URL } from '../core/api';
 import { AuthService } from '../core/auth.service';
 import { Lang } from '../core/language';
 import { LanguageService } from '../core/language.service';
+import { ConfirmData } from '../shared/confirm-dialog/confirm-dialog.component';
 import { AdminUserDetailComponent } from './admin-user-detail.component';
 
 const detail = {
@@ -529,6 +530,66 @@ describe('AdminUserDetailComponent', () => {
     f.componentInstance.confirmThenAct('suspend');
     dialogClosed.next(false);
     ctrl.expectNone('https://api.test/api/admin/users/7/suspend');
+  });
+
+  it('offers Delete in the action row for a rejected account', () => {
+    const f = mount();
+    // 'rejected' leaves canApprove() true (status !== 'active'), so this also
+    // proves Delete does not depend on any one status action being offered.
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush({
+      ...detail,
+      user: { ...detail.user, status: 'rejected' },
+    });
+    f.detectChanges();
+
+    const deleteButton = Array.from(f.nativeElement.querySelectorAll('.acts button')).find(
+      (b) => (b as HTMLElement).textContent?.trim() === 'Delete account',
+    ) as HTMLButtonElement | undefined;
+    expect(deleteButton).toBeDefined();
+  });
+
+  it('deletes the account and returns to the user list once confirmed', () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
+    f.detectChanges();
+
+    const router = TestBed.inject(Router);
+    const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    f.componentInstance.confirmThenDelete();
+    dialogClosed.next(true);
+
+    const request = ctrl.expectOne('https://api.test/api/admin/users/7');
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(navigate).toHaveBeenCalledWith(['/admin/users']);
+  });
+
+  it('passes the account email as the required confirmation text', () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
+    f.detectChanges();
+
+    f.componentInstance.confirmThenDelete();
+
+    // dialogOpen is declared with a no-argument implementation above (it only
+    // needs to return `{ closed }` for every other test), so its inferred
+    // mock-call type is the empty tuple; the config Dialog.open is actually
+    // called with is asserted through here instead.
+    const [, config] = dialogOpen.mock.calls.at(-1) as unknown as [unknown, { data: ConfirmData }];
+    expect(config.data.requireText).toBe('detailed@example.com');
+    expect(config.data.confirmLabel).toBe('Delete account');
+  });
+
+  it('does not delete the account when the confirm dialog is cancelled', () => {
+    const f = mount();
+    ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
+    f.detectChanges();
+
+    f.componentInstance.confirmThenDelete();
+    dialogClosed.next(false);
+    ctrl.expectNone('https://api.test/api/admin/users/7');
   });
 
   it('shows skeleton rows instead of a spinner while the account loads', () => {

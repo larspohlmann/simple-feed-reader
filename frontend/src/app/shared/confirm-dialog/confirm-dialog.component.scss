@@ -11,3 +11,19 @@
   margin: 0;
   color: var(--text-secondary);
 }
+
+.confirm-field {
+  display: block;
+  margin-block-start: var(--space-3);
+}
+
+.confirm-field__label {
+  display: block;
+  margin-block-end: var(--space-1);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.confirm-field__input {
+  width: 100%;
+}

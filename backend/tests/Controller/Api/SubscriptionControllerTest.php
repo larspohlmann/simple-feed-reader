@@ -524,4 +524,77 @@ final class SubscriptionControllerTest extends WebTestCase
         );
         self::assertResponseStatusCodeSame(404); // not 403 — do not reveal existence
     }
+
+    public function testUnsubscribingAsTheOnlySubscriberDeletesTheFeed(): void
+    {
+        $client = self::createClient();
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+
+        $user = $this->userFactory()->create('solo@example.com');
+        $feed = new Feed('https://solo.example.com/rss');
+        $em->persist($feed);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $em->persist($subscription);
+        $em->flush();
+        $feedId = (int) $feed->getId();
+
+        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
+        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
+        $headers = ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)];
+
+        $client->request(
+            'DELETE',
+            '/api/subscriptions/' . $subscription->getId(),
+            server: $headers,
+        );
+
+        self::assertResponseStatusCodeSame(204);
+        // A single-request test never reboots the kernel (KernelBrowser only
+        // reboots from the second request on), so this is still the SAME
+        // EntityManager the controller used. reclaim() deletes via bulk DQL,
+        // which bypasses the unit of work, so $em's identity map still holds
+        // the now-deleted Feed; find() would return it without ever touching
+        // the database unless the map is cleared first.
+        $em->clear();
+        self::assertNull($em->getRepository(Feed::class)->find($feedId));
+    }
+
+    public function testUnsubscribingKeepsAFeedAnotherUserStillReads(): void
+    {
+        $client = self::createClient();
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+
+        $factory = $this->userFactory();
+        $leaver = $factory->create('leaver@example.com');
+        $stayer = $factory->create('stayer@example.com');
+        $feed = new Feed('https://shared.example.com/rss');
+        $em->persist($feed);
+        $leaving = new Subscription($leaver, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $em->persist($leaving);
+        $em->persist(new Subscription($stayer, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z')));
+        $em->flush();
+        $feedId = (int) $feed->getId();
+
+        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
+        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
+        $headers = ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($leaver)];
+
+        $client->request(
+            'DELETE',
+            '/api/subscriptions/' . $leaving->getId(),
+            server: $headers,
+        );
+
+        self::assertResponseStatusCodeSame(204);
+        // Same identity-map trap as the sibling test above: a single-request
+        // test never reboots the kernel, so $em is still the exact instance
+        // the controller used. Without clearing it, find() would return the
+        // pre-request Feed object straight out of the identity map and this
+        // assertion would pass even if reclaim() wrongly deleted the row —
+        // proving nothing about the guard this test exists to cover.
+        $em->clear();
+        self::assertNotNull($em->getRepository(Feed::class)->find($feedId));
+    }
 }

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Entity\Feed;
+use App\Entity\Subscription;
+use App\Entity\User;
 use App\Service\Fetch\BatchFeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
 use App\Tests\Support\StubFeedFetcher;
@@ -14,6 +16,11 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 final class MaintenanceControllerTest extends WebTestCase
 {
+    /**
+     * Subscribed, not just persisted: `/maintenance/refresh` always prunes
+     * (#246), so an unsubscribed feed would be swept before this test's
+     * fetcher stub ever sees it.
+     */
     private function feedFor(KernelBrowser $client, string $url): Feed
     {
         /** @var EntityManagerInterface $em */
@@ -21,6 +28,9 @@ final class MaintenanceControllerTest extends WebTestCase
         $feed = new Feed($url);
         $feed->setNextFetchAt(new \DateTimeImmutable('-1 hour'));
         $em->persist($feed);
+        $subscriber = new User('maintenance-fixture-subscriber@example.com', new \DateTimeImmutable());
+        $em->persist($subscriber);
+        $em->persist(new Subscription($subscriber, $feed, new \DateTimeImmutable()));
         $em->flush();
 
         return $feed;

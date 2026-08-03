@@ -54,6 +54,10 @@ export class AdminApi {
     );
   }
 
+  deleteUser(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/api/admin/users/${id}`);
+  }
+
   setSubscriptionLimit(
     id: number,
     maxSubscriptions: number | null,

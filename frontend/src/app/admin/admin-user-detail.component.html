@@ -21,6 +21,9 @@
           {{ 'admin.suspend' | transloco }}
         </app-button>
       }
+      <app-button size="sm" variant="danger-outline" (click)="confirmThenDelete()">
+        {{ 'admin.delete' | transloco }}
+      </app-button>
     </div>
   }
 

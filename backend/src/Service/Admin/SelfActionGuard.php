@@ -24,4 +24,11 @@ final readonly class SelfActionGuard
             throw new ValidationException(['id' => ['You cannot change your own account status.']]);
         }
     }
+
+    public function ensureNotSelfDeletion(User $target, User $admin): void
+    {
+        if ($target->getId() === $admin->getId()) {
+            throw new ValidationException(['id' => ['You cannot delete your own account here. Use account settings.']]);
+        }
+    }
 }

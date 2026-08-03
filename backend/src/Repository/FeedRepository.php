@@ -93,6 +93,26 @@ class FeedRepository extends ServiceEntityRepository
         return $set;
     }
 
+    /**
+     * The ids of the feeds this user subscribes to. Read before deleting the
+     * account: once the subscription rows cascade away there is nothing left
+     * to ask.
+     *
+     * @return list<int>
+     */
+    public function idsSubscribedByUser(int $userId): array
+    {
+        /** @var list<array{id: int|string}> $rows */
+        $rows = $this->createQueryBuilder('f')
+            ->select('f.id AS id')
+            ->join(Subscription::class, 's', 'ON', 's.feed = f AND s.user = :userId')
+            ->setParameter('userId', $userId)
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_map(static fn (array $row): int => (int) $row['id'], $rows);
+    }
+
     private function dueQueryBuilder(
         \DateTimeImmutable $now,
         ?int $userId,

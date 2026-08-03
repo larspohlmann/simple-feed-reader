@@ -19,6 +19,7 @@ use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FetchResponse;
+use App\Service\OrphanedFeedReclaimer;
 use App\Service\Parser\Atom03Parser;
 use App\Service\Parser\Atom10Parser;
 use App\Service\Parser\FeedParser;
@@ -35,6 +36,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Service\Scraper\ScrapedFixtures;
 use App\Tests\Support\StubFeedFetcher;
 use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
+use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\NullLogger;
@@ -51,6 +53,7 @@ final class RefreshRunnerTest extends DbTestCase
     private StubFeedFetcher $fetcher;
     private StubFeedFetcher $faviconFetcher;
     private LockFactory $lockFactory;
+    private User $subscriber;
 
     protected function setUp(): void
     {
@@ -61,6 +64,13 @@ final class RefreshRunnerTest extends DbTestCase
         // pollute assertions on which FEEDS the runner fetched.
         $this->faviconFetcher = new StubFeedFetcher();
         $this->lockFactory = new LockFactory(new InMemoryStore());
+        // dueFeed() subscribes every fixture feed to this user so the #246
+        // orphan sweep (wired into every allDue() request) never deletes a
+        // feed a test is trying to fetch. Orphan behaviour itself is covered
+        // by RefreshRunnerOrphanSweepTest, which persists feeds with no
+        // subscriber on purpose.
+        $this->subscriber = new User('fixture-subscriber@example.com', $this->clock->now());
+        $this->em->persist($this->subscriber);
     }
 
     private function runner(?EntityManagerInterface $runnerEm = null): RefreshRunner
@@ -79,6 +89,7 @@ final class RefreshRunnerTest extends DbTestCase
             new FaviconResolver($this->faviconFetcher, new NullLogger()),
             new FeedScheduler($this->clock),
             new EntryPruner($this->em, $this->clock),
+            new OrphanedFeedReclaimer($this->em),
             $this->lockFactory,
             $this->clock,
             new NullLogger(),
@@ -120,6 +131,7 @@ final class RefreshRunnerTest extends DbTestCase
         $feed = new Feed($url);
         $feed->setNextFetchAt($this->clock->now()->modify('-1 hour'));
         $this->em->persist($feed);
+        $this->em->persist(new Subscription($this->subscriber, $feed, $this->clock->now()));
 
         // Every due feed starts without a favicon, so a successful refresh
         // always triggers phase two's homepage fetch for it. Stub a bland
@@ -853,6 +865,37 @@ final class RefreshRunnerTest extends DbTestCase
         // phase failed, so that outcome is not lost.
         self::assertSame(1, $report->fetched);
         self::assertSame(0, $report->pruned);
+    }
+
+    /**
+     * The scenario a plain UniqueConstraintViolationException does not cover
+     * (#246): a feed vanishes mid-run because its last subscriber unsubscribes
+     * while the runner is mid-fetch — OrphanedFeedReclaimer::reclaim() holds no
+     * lock, only the runner's own `feed-refresh` lock does. The flush that
+     * follows then fails on the FK, not a unique key, so this must degrade to
+     * `aborted` exactly like the unique-constraint case rather than letting a
+     * DBAL exception escape run().
+     */
+    public function testForeignKeyViolationFromAVanishedFeedAbortsTheRunWithoutThrowing(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->em->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
+        );
+
+        $failingEm = $this->createStub(EntityManagerInterface::class);
+        $failingEm->method('flush')->willThrowException(new ForeignKeyConstraintViolationException(
+            new class ('a foreign key constraint fails', '23000', 1452) extends DriverAbstractException {
+            },
+            null,
+        ));
+
+        $report = $this->runner($failingEm)->run(RefreshRequest::allDue(300));
+
+        self::assertSame('aborted', $report->status);
+        self::assertSame(1, $report->total);
     }
 
     public function testLockIsReleasedAfterAnAbortedRun(): void

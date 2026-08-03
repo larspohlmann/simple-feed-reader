@@ -8,8 +8,10 @@ use App\Dto\Me\UpdateLocaleRequest;
 use App\Dto\Me\UpdatePreferencesRequest;
 use App\Entity\User;
 use App\Http\MeJson;
+use App\Service\Account\AccountDeleter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -20,8 +22,10 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
  */
 final readonly class MeController
 {
-    public function __construct(private EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private EntityManagerInterface $entityManager,
+        private AccountDeleter $accountDeleter,
+    ) {
     }
 
     #[Route('/api/me', name: 'api_me', methods: ['GET'])]
@@ -62,5 +66,18 @@ final readonly class MeController
         $this->entityManager->flush();
 
         return new JsonResponse(MeJson::profile($user));
+    }
+
+    /**
+     * Self-service hard deletion. The typed confirmation is a client concern and
+     * deliberately not a request field: requiring one would put a browser-only
+     * input in the API contract, which the native-iOS constraint forbids.
+     */
+    #[Route('/api/me', name: 'api_me_delete', methods: ['DELETE'])]
+    public function delete(#[CurrentUser] User $user): JsonResponse
+    {
+        $this->accountDeleter->deleteSelf($user);
+
+        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 }

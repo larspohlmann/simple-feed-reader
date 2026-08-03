@@ -13,7 +13,10 @@ import { ErrorBannerComponent } from '../shared/error-banner/error-banner.compon
 import { IconComponent } from '../shared/icon/icon.component';
 import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
 import { SkeletonComponent } from '../shared/skeleton/skeleton.component';
-import { ConfirmData, ConfirmDialogComponent } from '../reader/manage/confirm-dialog.component';
+import {
+  ConfirmData,
+  ConfirmDialogComponent,
+} from '../shared/confirm-dialog/confirm-dialog.component';
 import { AdminApi } from './admin-api';
 import { AdminAction, AdminUserDto, AdminUserStatus } from './admin.models';
 

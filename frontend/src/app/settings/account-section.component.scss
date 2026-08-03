@@ -34,3 +34,15 @@ dd {
   display: flex;
   width: fit-content;
 }
+
+.danger-zone {
+  margin-block-start: var(--space-5);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--border);
+}
+
+.danger-zone__note {
+  margin-block-end: var(--space-3);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}

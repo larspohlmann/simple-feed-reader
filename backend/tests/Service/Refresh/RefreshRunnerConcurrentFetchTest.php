@@ -6,6 +6,8 @@ namespace App\Tests\Service\Refresh;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\Subscription;
+use App\Entity\User;
 use App\Repository\EntryRepository;
 use App\Repository\FeedRepository;
 use App\Service\EntryIngestor;
@@ -19,6 +21,7 @@ use App\Service\Fetch\FetchResponse;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
+use App\Service\OrphanedFeedReclaimer;
 use App\Service\Parser\Atom03Parser;
 use App\Service\Parser\Atom10Parser;
 use App\Service\Parser\FeedParser;
@@ -54,6 +57,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
     private MockClock $clock;
     private StubFeedFetcher $faviconFetcher;
     private LockFactory $lockFactory;
+    private User $subscriber;
 
     protected function setUp(): void
     {
@@ -65,6 +69,11 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
         // SSRF-guarded MockHttpClient wiring for homepage fetches too.
         $this->faviconFetcher = new StubFeedFetcher();
         $this->lockFactory = new LockFactory(new InMemoryStore());
+        // dueFeed() subscribes every fixture feed to this user so the #246
+        // orphan sweep (wired into every allDue() request) never deletes a
+        // feed this test is trying to fetch.
+        $this->subscriber = new User('fixture-subscriber@example.com', $this->clock->now());
+        $this->em->persist($this->subscriber);
     }
 
     private function dueFeed(string $url): Feed
@@ -72,6 +81,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
         $feed = new Feed($url);
         $feed->setNextFetchAt($this->clock->now()->modify('-1 hour'));
         $this->em->persist($feed);
+        $this->em->persist(new Subscription($this->subscriber, $feed, $this->clock->now()));
 
         $origin = 'https://' . parse_url($url, \PHP_URL_HOST);
         $this->faviconFetcher->willReturn(
@@ -112,6 +122,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
             new FaviconResolver($this->faviconFetcher, new NullLogger()),
             new FeedScheduler($this->clock),
             new EntryPruner($this->em, $this->clock),
+            new OrphanedFeedReclaimer($this->em),
             $this->lockFactory,
             $this->clock,
             new NullLogger(),

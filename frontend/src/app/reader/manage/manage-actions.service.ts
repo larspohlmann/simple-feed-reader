@@ -7,7 +7,10 @@ import { ReaderApi } from '../reader-api';
 import { SubscriptionsStore } from '../subscriptions.store';
 import { TagsStore } from '../tags.store';
 import { SubscriptionDto, TagDto } from '../models';
-import { ConfirmDialogComponent, ConfirmData } from './confirm-dialog.component';
+import {
+  ConfirmDialogComponent,
+  ConfirmData,
+} from '../../shared/confirm-dialog/confirm-dialog.component';
 import { EditSubscriptionDialogComponent } from './edit-subscription-dialog.component';
 import { TagFormDialogComponent } from './tag-form-dialog.component';
 

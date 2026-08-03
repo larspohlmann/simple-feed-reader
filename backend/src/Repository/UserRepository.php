@@ -207,4 +207,39 @@ class UserRepository extends ServiceEntityRepository implements UserLoaderInterf
             ->getQuery()
             ->getSingleScalarResult();
     }
+
+    /**
+     * How many administrators can actually act right now — the count the
+     * last-admin guard (AccountDeleter::ensureNotTheLastAdmin()) needs.
+     *
+     * Deliberately status-aware, unlike hasAnyAdmin(): that method protects a
+     * different invariant (whether first-run setup must stay closed) and a
+     * suspended admin still satisfies it, by design, so a hijacker cannot
+     * re-open setup by getting the sole admin suspended. This method instead
+     * protects "someone can act", and a suspended admin cannot act — nothing
+     * short of shell access can flip their status back, since `approve` sits
+     * behind ROLE_ADMIN on `^/api/admin/`. Counting all statuses here would
+     * let one admin suspend a co-admin and then delete their own account,
+     * leaving the instance with a suspended admin nobody can reinstate.
+     *
+     * The LIKE narrows the hydration set but STILL needs the in-PHP recheck to
+     * reject a `ROLE_ADMINISTRATOR` substring match — same reasoning as
+     * findActiveAdmins() and hasAnyAdmin().
+     */
+    public function countActiveAdmins(): int
+    {
+        /** @var list<User> $active */
+        $active = $this->createQueryBuilder('u')
+            ->where('u.roles LIKE :role')
+            ->andWhere('u.status = :active')
+            ->setParameter('role', '%ROLE_ADMIN%')
+            ->setParameter('active', UserStatus::Active)
+            ->getQuery()
+            ->getResult();
+
+        return \count(array_filter(
+            $active,
+            static fn (User $candidate): bool => \in_array('ROLE_ADMIN', $candidate->getRoles(), true),
+        ));
+    }
 }
