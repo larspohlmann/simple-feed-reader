@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Auth;
 
 use App\Service\Auth\AltchaService;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
@@ -164,7 +165,7 @@ final class AltchaServiceTest extends TestCase
         yield 'enormous' => [\PHP_INT_MAX];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('outOfRangeNumberProvider')]
+    #[DataProvider('outOfRangeNumberProvider')]
     public function testRejectsANumberOutsideTheDifficultyWindow(int $number): void
     {
         $challenge = $this->service->createChallenge();

@@ -20,10 +20,14 @@ final class FaviconResolverTest extends TestCase
 
     private function page(string $head): FetchResponse
     {
+        // @lang TEXT: every caller passes a deliberately fake icon path, because
+        // resolving those paths is what the tests are about. Turning the HTML
+        // injection off keeps PhpStorm from reporting them as unresolvable, and
+        // from asking for a `lang` attribute the fixture does not need.
         return FetchResponse::fetched(
             'https://blog.example.com/',
             permanentRedirect: false,
-            body: '<!doctype html><html><head>' . $head . '</head><body>x</body></html>',
+            body: /** @lang TEXT */ '<!doctype html><html><head>' . $head . '</head><body>x</body></html>',
             etag: null,
             lastModified: null,
         );
@@ -45,9 +49,11 @@ final class FaviconResolverTest extends TestCase
     public function testResolvesRelativeIconAgainstTheFinalUrl(): void
     {
         $fetcher = new StubFeedFetcher();
+        // @lang TEXT: deliberately fake icon paths — resolving them is what the
+        // test asserts — so the "cannot resolve file" hint is wrong here.
         $fetcher->willReturn(
             'https://blog.example.com',
-            $this->page('<link rel="shortcut icon" href="/assets/icon.png">'),
+            $this->page(/** @lang TEXT */ '<link rel="shortcut icon" href="/assets/icon.png">'),
         );
 
         $icons = $this->resolver($fetcher)->resolveAll([1 => 'https://blog.example.com/']);
@@ -58,6 +64,9 @@ final class FaviconResolverTest extends TestCase
     public function testPrefersTheLargestDeclaredSize(): void
     {
         $fetcher = new StubFeedFetcher();
+        // Deliberately fake icon paths — picking the larger of them is what the
+        // test asserts — so the "cannot resolve file" hint is wrong here.
+        /** @noinspection HtmlUnknownTarget */
         $fetcher->willReturn(
             'https://blog.example.com',
             $this->page(
@@ -114,7 +123,7 @@ final class FaviconResolverTest extends TestCase
         $fetcher->willReturn('https://news.example.com', FetchResponse::fetched(
             'https://news.example.com/',
             permanentRedirect: false,
-            body: '<!doctype html><html><head></head><body>x</body></html>',
+            body: '<!doctype html><html lang="en"><head></head><body>x</body></html>',
             etag: null,
             lastModified: null,
         ));
@@ -139,13 +148,21 @@ final class FaviconResolverTest extends TestCase
     public function testResolvesManySitesInOneBatch(): void
     {
         $fetcher = new StubFeedFetcher();
+        // @lang TEXT: `/a.png` must stay a fake path — resolving it is the point
+        // of the test — so the "cannot resolve file" hint is wrong here.
         $fetcher->willReturn(
             'https://one.example.com',
-            FetchResponse::fetched('https://one.example.com', false, '<link rel="icon" href="/a.png">', null, null),
+            FetchResponse::fetched(
+                'https://one.example.com',
+                false,
+                /** @lang TEXT */ '<link rel="icon" href="/a.png">',
+                null,
+                null,
+            ),
         );
         $fetcher->willReturn(
             'https://two.example.com',
-            FetchResponse::fetched('https://two.example.com', false, '<html></html>', null, null),
+            FetchResponse::fetched('https://two.example.com', false, '<html lang="en"></html>', null, null),
         );
 
         $icons = $this->resolver($fetcher)->resolveAll([

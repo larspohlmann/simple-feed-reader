@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Mail;
 
 use App\Service\Mail\MailCapability;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class MailCapabilityTest extends TestCase
@@ -25,7 +26,7 @@ final class MailCapabilityTest extends TestCase
         yield 'whitespace tolerated' => [' 1 ', false];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('provideFlags')]
+    #[DataProvider('provideFlags')]
     public function testReadsTheDisableFlag(string $flag, bool $expectedEnabled): void
     {
         self::assertSame($expectedEnabled, (new MailCapability($flag))->isEnabled());

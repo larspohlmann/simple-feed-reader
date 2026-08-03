@@ -9,6 +9,7 @@ use App\Enum\UserStatus;
 use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
@@ -244,7 +245,7 @@ final class JwtAccessTest extends ApiTestCase
         yield 'well after the change survives' => [10, true];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('issuedAtProvider')]
+    #[DataProvider('issuedAtProvider')]
     public function testTokensAreJudgedAgainstThePasswordChangeInstant(int $offsetSeconds, bool $shouldBeAccepted): void
     {
         $client = self::createClient();

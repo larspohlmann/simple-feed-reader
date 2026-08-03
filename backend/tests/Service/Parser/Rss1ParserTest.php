@@ -19,7 +19,10 @@ final class Rss1ParserTest extends TestCase
 
     public function testImageUrlComesFromContentEncodedThenMediaThenNull(): void
     {
-        $xml = <<<'XML'
+        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
+        // starts with whitespace and it wrongly flags the declaration. The
+        // closing marker strips that indentation before the parser sees it.
+        $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="UTF-8"?>
             <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
                      xmlns="http://purl.org/rss/1.0/"
@@ -62,7 +65,10 @@ final class Rss1ParserTest extends TestCase
 
     public function testTitlesAreReducedToPlainText(): void
     {
-        $xml = <<<'XML'
+        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
+        // starts with whitespace and it wrongly flags the declaration. The
+        // closing marker strips that indentation before the parser sees it.
+        $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="UTF-8"?>
             <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
                      xmlns="http://purl.org/rss/1.0/">

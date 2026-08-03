@@ -67,7 +67,10 @@ final class FeedPreviewServiceTest extends KernelTestCase
 
     private function rss(string $itemsXml, string $namespaces = ''): string
     {
-        return <<<XML
+        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
+        // starts with whitespace and it wrongly flags the declaration. The
+        // closing marker strips that indentation before the parser sees it.
+        return /** @lang TEXT */ <<<XML
             <?xml version="1.0" encoding="UTF-8"?>
             <rss version="2.0"
                  xmlns:content="http://purl.org/rss/1.0/modules/content/"
@@ -232,7 +235,10 @@ final class FeedPreviewServiceTest extends KernelTestCase
 
     public function testUnparseableBodyBecomesFeedPreviewException(): void
     {
-        $fetcher = $this->fetcherWithBody('<html>nope');
+        // @lang TEXT: this truncated body is the input under test — the preview
+        // must fail on it — so it stays exactly as written rather than growing a
+        // `lang` attribute to satisfy PhpStorm's injected-HTML check.
+        $fetcher = $this->fetcherWithBody(/** @lang TEXT */ '<html>nope');
 
         $this->expectException(FeedPreviewException::class);
         $this->service($fetcher)->preview($this->user(), self::URL);

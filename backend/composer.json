@@ -36,6 +36,7 @@
     },
     "require-dev": {
         "dama/doctrine-test-bundle": "^8.6",
+        "ext-openssl": "*",
         "phpmd/phpmd": "^2.15",
         "phpstan/phpstan": "^2.2.5",
         "phpstan/phpstan-doctrine": "^2.0.28",

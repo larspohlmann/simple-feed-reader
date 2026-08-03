@@ -141,7 +141,7 @@ final class RefreshRunnerTest extends DbTestCase
         $origin = 'https://' . (string) parse_url($url, \PHP_URL_HOST);
         $this->faviconFetcher->willReturn(
             $origin,
-            FetchResponse::fetched($origin, false, '<html></html>', null, null),
+            FetchResponse::fetched($origin, false, '<html lang="en"></html>', null, null),
         );
 
         return $feed;
@@ -149,7 +149,10 @@ final class RefreshRunnerTest extends DbTestCase
 
     private function rss(string $title, string $guid): string
     {
-        return <<<XML
+        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
+        // starts with whitespace and it wrongly flags the declaration. The
+        // closing marker strips that indentation before the parser sees it.
+        return /** @lang TEXT */ <<<XML
             <?xml version="1.0" encoding="UTF-8"?>
             <rss version="2.0"><channel><title>{$title}</title>
             <item><title>Post</title><link>https://example.com/p</link><guid>{$guid}</guid></item>
@@ -200,7 +203,10 @@ final class RefreshRunnerTest extends DbTestCase
         $this->em->flush();
         self::assertNull($stored->getImageUrl());
 
-        $body = <<<XML
+        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
+        // starts with whitespace and it wrongly flags the declaration. The
+        // closing marker strips that indentation before the parser sees it.
+        $body = /** @lang TEXT */ <<<XML
             <?xml version="1.0" encoding="UTF-8"?>
             <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>T</title>
             <item><title>Post</title><link>https://img.example.com/p</link><guid>has-image</guid>
@@ -305,10 +311,14 @@ final class RefreshRunnerTest extends DbTestCase
             FetchResponse::fetched($feed->getUrl(), false, $this->rss('Blog', 'b-1'), null, null),
         );
         // The site homepage (origin) advertises an icon; the favicon fetcher —
-        // not the feed fetcher — serves it.
+        // not the feed fetcher — serves it. `/icon.png` is a deliberately fake
+        // path, because resolving it is what the test is about, so `@lang TEXT`
+        // stops PhpStorm injecting HTML here and reporting the target as
+        // unresolvable.
         $this->faviconFetcher->willReturn('https://blog.example.com', FetchResponse::fetched(
             'https://blog.example.com/',
             false,
+            /** @lang TEXT */
             '<!doctype html><html><head><link rel="icon" href="/icon.png"></head><body>x</body></html>',
             null,
             null,
@@ -330,9 +340,12 @@ final class RefreshRunnerTest extends DbTestCase
             $feed->getUrl(),
             FetchResponse::notModified($feed->getUrl(), false, null, null),
         );
+        // `@lang TEXT` for the same reason as above: `/icon.png` must stay a
+        // fake path, so the injected-HTML "cannot resolve file" hint is wrong.
         $this->faviconFetcher->willReturn('https://blog.example.com', FetchResponse::fetched(
             'https://blog.example.com/',
             false,
+            /** @lang TEXT */
             '<!doctype html><html><head><link rel="icon" href="/icon.png"></head><body>x</body></html>',
             null,
             null,
@@ -351,9 +364,17 @@ final class RefreshRunnerTest extends DbTestCase
             $feed->getUrl(),
             FetchResponse::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
         );
+        // `@lang TEXT` for the same reason as above: `/i.png` must stay a fake
+        // path, so the injected-HTML "cannot resolve file" hint is wrong.
         $this->faviconFetcher->willReturn(
             'https://one.example.com',
-            FetchResponse::fetched('https://one.example.com', false, '<link rel="icon" href="/i.png">', null, null),
+            FetchResponse::fetched(
+                'https://one.example.com',
+                false,
+                /** @lang TEXT */ '<link rel="icon" href="/i.png">',
+                null,
+                null,
+            ),
         );
 
         $this->runner()->run(RefreshRequest::allDue(300));
@@ -527,7 +548,7 @@ final class RefreshRunnerTest extends DbTestCase
         // favicon homepage fetch targets the new origin, not the old one.
         $this->faviconFetcher->willReturn(
             'https://new.example.com',
-            FetchResponse::fetched('https://new.example.com', false, '<html></html>', null, null),
+            FetchResponse::fetched('https://new.example.com', false, '<html lang="en"></html>', null, null),
         );
 
         $this->runner()->run(RefreshRequest::allDue(300));
@@ -588,7 +609,7 @@ final class RefreshRunnerTest extends DbTestCase
         // favicon homepage fetch targets the new origin, not the old one.
         $this->faviconFetcher->willReturn(
             'https://new.example.com',
-            FetchResponse::fetched('https://new.example.com', false, '<html></html>', null, null),
+            FetchResponse::fetched('https://new.example.com', false, '<html lang="en"></html>', null, null),
         );
 
         $report = $this->runner()->run(RefreshRequest::allDue(300));

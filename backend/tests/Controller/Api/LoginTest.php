@@ -11,6 +11,7 @@ use App\Tests\Support\HashCountingWork;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -98,7 +99,7 @@ final class LoginTest extends WebTestCase
         yield 'registered lower, typed mixed' => ['plain2@example.com', 'Plain2@Example.Com'];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('casingProvider')]
+    #[DataProvider('casingProvider')]
     public function testLoginIsCaseInsensitiveOnTheEmail(string $registered, string $typed): void
     {
         $client = self::createClient();

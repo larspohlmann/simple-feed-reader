@@ -14,6 +14,7 @@ use App\Tests\Support\StubFeedFetcher;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
+use Symfony\Component\Lock\LockFactory;
 
 final class RefreshFeedsCommandTest extends DbTestCase
 {
@@ -53,7 +54,7 @@ final class RefreshFeedsCommandTest extends DbTestCase
         // same fetcher — stub the origin too, or it throws just as loudly.
         $stub->willReturn(
             'https://cli.example.com',
-            FetchResponse::fetched('https://cli.example.com', false, '<html></html>', null, null),
+            FetchResponse::fetched('https://cli.example.com', false, '<html lang="en"></html>', null, null),
         );
         self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
 
@@ -73,8 +74,8 @@ final class RefreshFeedsCommandTest extends DbTestCase
     {
         $this->dueFeed('https://cli.example.com/feed');
 
-        /** @var \Symfony\Component\Lock\LockFactory $lockFactory */
-        $lockFactory = self::getContainer()->get(\Symfony\Component\Lock\LockFactory::class);
+        /** @var LockFactory $lockFactory */
+        $lockFactory = self::getContainer()->get(LockFactory::class);
         $lock = $lockFactory->createLock('feed-refresh');
         self::assertTrue($lock->acquire());
 

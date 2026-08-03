@@ -8,9 +8,11 @@ use App\Dto\Mail\PendingApprovalNotice;
 use App\Entity\User;
 use App\Enum\RegistrationMethod;
 use App\Service\Mail\AccountMailer;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
+use Symfony\Component\Mime\Exception\InvalidArgumentException;
 use Symfony\Component\Translation\Loader\YamlFileLoader;
 use Symfony\Component\Translation\Translator;
 
@@ -229,7 +231,7 @@ final class AccountMailerTest extends TestCase
     }
 
     /** @param \Closure(AccountMailer): void $send */
-    #[\PHPUnit\Framework\Attributes\DataProvider('bodyProvider')]
+    #[DataProvider('bodyProvider')]
     public function testBodiesHaveNoLeadingIndentation(\Closure $send): void
     {
         $send($this->mailer);
@@ -260,7 +262,7 @@ final class AccountMailerTest extends TestCase
     {
         $user = new User("a@b.com\nBcc: victim@example.com", new \DateTimeImmutable('2026-07-21 12:00:00'));
 
-        $this->expectException(\Symfony\Component\Mime\Exception\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('control characters');
 
         $this->mailer->sendVerification($user, 'tok');

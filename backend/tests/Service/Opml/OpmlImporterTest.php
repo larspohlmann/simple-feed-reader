@@ -100,7 +100,10 @@ final class OpmlImporterTest extends DbTestCase
     {
         $user = $this->user('bad@example.com');
         $this->expectException(InvalidOpmlException::class);
-        $this->importer()->import($user, '<html><body>not opml</body></html>');
+        // @lang TEXT: this body is the input under test — the import must reject
+        // it — so it stays exactly as written rather than growing a `lang`
+        // attribute to satisfy PhpStorm's injected-HTML check.
+        $this->importer()->import($user, /** @lang TEXT */ '<html><body>not opml</body></html>');
     }
 
     public function testRejectsMalformedXml(): void

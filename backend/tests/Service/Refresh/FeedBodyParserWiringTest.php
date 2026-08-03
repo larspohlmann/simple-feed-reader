@@ -35,7 +35,10 @@ final class FeedBodyParserWiringTest extends KernelTestCase
     {
         $feed = new Feed('https://example.com/feed.xml'); // sourceFormat defaults to 'xml'
 
-        $rss = <<<'XML'
+        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
+        // starts with whitespace and it wrongly flags the declaration. The
+        // closing marker strips that indentation before the parser sees it.
+        $rss = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="UTF-8"?>
             <rss version="2.0"><channel><title>Wired</title>
             <item><title>Post</title><link>https://example.com/p</link><guid>w-1</guid></item>

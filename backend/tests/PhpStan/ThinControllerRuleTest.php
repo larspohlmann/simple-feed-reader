@@ -29,12 +29,12 @@ final class ThinControllerRuleTest extends RuleTestCase
             [__DIR__ . '/data/thin-controller-fixtures.php'],
             [
                 // A private method that carries responsibility is reported.
-                [$this->expectedMessage(self::FIXTURE_CONTROLLER, 'private', 'assembleResponse'), 17],
+                [$this->expectedMessage(self::FIXTURE_CONTROLLER, 'private', 'assembleResponse'), 22],
                 // A private *static* method is reported too — a plain "private function"
                 // grep would miss it, the rule does not.
-                [$this->expectedMessage(self::FIXTURE_CONTROLLER, 'private', 'readParameter'), 22],
-                // allowedHelper (line 27) is allow-listed, so it is not reported.
-                // NotAController::helper (line 42) is outside App\Controller, so it is ignored.
+                [$this->expectedMessage(self::FIXTURE_CONTROLLER, 'private', 'readParameter'), 27],
+                // allowedHelper (line 32) is allow-listed, so it is not reported.
+                // NotAController::helper (line 49) is outside App\Controller, so it is ignored.
             ],
         );
     }

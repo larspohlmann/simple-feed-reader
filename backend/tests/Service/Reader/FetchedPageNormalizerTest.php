@@ -18,6 +18,9 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testCollapsesSingleChildDivChains(): void
     {
+        // The fixture is the input under test, so it keeps its `lang`-less
+        // <html> instead of being edited to please the IDE.
+        /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div class="a"><div class="b"><div class="c"><p>Text</p></div></div></div></body></html>';
 
         $normalized = $this->normalizer->normalize($html);
@@ -31,6 +34,9 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testKeepsDivWithMultipleElementChildren(): void
     {
+        // The fixture is the input under test, so it keeps its `lang`-less
+        // <html> instead of being edited to please the IDE.
+        /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div class="keep"><div>one</div><div>two</div></div></body></html>';
 
         $normalized = $this->normalizer->normalize($html);
@@ -40,6 +46,9 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testKeepsDivWithOwnText(): void
     {
+        // The fixture is the input under test, so it keeps its `lang`-less
+        // <html> instead of being edited to please the IDE.
+        /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div class="keep">intro <div>nested</div></div></body></html>';
 
         $normalized = $this->normalizer->normalize($html);
@@ -49,6 +58,9 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testHeadingSurvivesWrapperCollapse(): void
     {
+        // The fixture is the input under test, so it keeps its `lang`-less
+        // <html> instead of being edited to please the IDE.
+        /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div><div><h2 id="s1">Section</h2></div></div></body></html>';
 
         $normalized = $this->normalizer->normalize($html);
@@ -58,6 +70,9 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testRemovesScreenReaderOnlyElements(): void
     {
+        // The fixture is the input under test, so it keeps its `lang`-less
+        // <html> instead of being edited to please the IDE.
+        /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body>'
             . '<span class="visually-hidden">Image source,</span>'
             . '<span class="ssrcss-1f39n02-VisuallyHidden e16en2lz0">Image caption,</span>'
@@ -81,6 +96,9 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testUmlautsSurviveNormalization(): void
     {
+        // The fixture is the input under test, so it keeps its `lang`-less
+        // <html> instead of being edited to please the IDE.
+        /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div><div><p>Grüße from Köln</p></div></div></body></html>';
 
         $normalized = $this->normalizer->normalize($html);

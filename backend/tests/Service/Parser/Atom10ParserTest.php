@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Service\Parser;
 
 use App\Service\Parser\Atom10Parser;
+use App\Service\Parser\ParsedFeed;
 use PHPUnit\Framework\TestCase;
 
 final class Atom10ParserTest extends TestCase
 {
-    private function parse(string $xml): \App\Service\Parser\ParsedFeed
+    private function parse(string $xml): ParsedFeed
     {
         $document = new \DOMDocument();
         $document->loadXML($xml);
@@ -19,7 +20,10 @@ final class Atom10ParserTest extends TestCase
 
     public function testEntryImageComesFromMediaThumbnailEnclosureOrInlineImg(): void
     {
-        $xml = <<<'XML'
+        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
+        // starts with whitespace and it wrongly flags the declaration. The
+        // closing marker strips that indentation before the parser sees it.
+        $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="utf-8"?>
             <feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
               <title>Atom Image Example</title>
@@ -61,7 +65,10 @@ final class Atom10ParserTest extends TestCase
 
     public function testTitlesAreReducedToPlainText(): void
     {
-        $xml = <<<'XML'
+        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
+        // starts with whitespace and it wrongly flags the declaration. The
+        // closing marker strips that indentation before the parser sees it.
+        $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="utf-8"?>
             <feed xmlns="http://www.w3.org/2005/Atom">
               <title>The &lt;em&gt;Weekly&lt;/em&gt; Review</title>

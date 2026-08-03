@@ -11,6 +11,7 @@ use App\Security\LoginTimingEqualizer;
 use App\Tests\Support\HashCountingWork;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Security\Core\Exception\BadCredentialsException;
+use Symfony\Component\Security\Core\Exception\TooManyLoginAttemptsAuthenticationException;
 use Symfony\Component\Security\Core\Exception\UserNotFoundException;
 
 /**
@@ -134,7 +135,7 @@ final class LoginTimingEqualizerTest extends TestCase
         $users->expects(self::never())->method('findOneByEmail');
 
         (new LoginTimingEqualizer($work, $users))->equalize(
-            new \Symfony\Component\Security\Core\Exception\TooManyLoginAttemptsAuthenticationException(),
+            new TooManyLoginAttemptsAuthenticationException(),
             'bob@example.com',
         );
 
