@@ -70,6 +70,23 @@ describe('EntriesStore', () => {
     expect(store.entries().map((e) => e.id)).toEqual([2]);
   });
 
+  it('drops the retained entries when the reload fails', () => {
+    store.load({ view: 'unread' });
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [entry(1)], nextCursor: 'C1' });
+
+    store.load({ view: 'all' });
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ title: 'nope' }, { status: 500, statusText: 'Server Error' });
+
+    // Loading is over, so the rows would un-dim and become interactive again —
+    // showing the previous view's entries under an error banner (#254).
+    expect(store.entries()).toEqual([]);
+    expect(store.error()).not.toBeNull();
+  });
+
   it('appends on loadMore and terminates on a null cursor', () => {
     store.load({ view: 'unread' });
     ctrl

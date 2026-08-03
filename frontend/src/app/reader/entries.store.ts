@@ -47,6 +47,9 @@ export class EntriesStore {
       },
       error: (e: HttpErrorResponse) => {
         if (seq !== this.loadSeq) return;
+        // Drop the retained rows: loading ends here, so they would un-dim and
+        // turn interactive again while belonging to a view the user has left.
+        this.entries.set([]);
         this.error.set(parseProblem(e));
         this.loading.set(false);
       },

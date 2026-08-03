@@ -110,6 +110,8 @@
   <div
     class="rows magazine"
     [class.reloading]="loading()"
+    [attr.inert]="loading() ? '' : null"
+    [attr.aria-busy]="loading() ? 'true' : null"
     [class.after-banner]="!!error()"
     [class.dragging]="dragging()"
     [style.transform]="revealTransform()"
@@ -200,6 +202,8 @@
   <div
     class="rows"
     [class.reloading]="loading()"
+    [attr.inert]="loading() ? '' : null"
+    [attr.aria-busy]="loading() ? 'true' : null"
     [class.after-banner]="!!error()"
     [class.dragging]="dragging()"
     [style.transform]="revealTransform()"

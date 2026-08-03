@@ -112,6 +112,23 @@ describe('EntryListComponent', () => {
     expect(rows.querySelectorAll('app-entry-row').length).toBe(2);
   });
 
+  it('makes the retained rows inert while a reload is on the wire', () => {
+    // Without this the stale rows stay clickable: a row click during a view
+    // switch opens the PREVIOUS view's entry and marks it read (#254).
+    const el = mount({ loading: true, entries: [entry(1), entry(2)], layout: 'list' })
+      .nativeElement as HTMLElement;
+    const rows = el.querySelector('.rows')!;
+    expect(rows.hasAttribute('inert')).toBe(true);
+    expect(rows.getAttribute('aria-busy')).toBe('true');
+  });
+
+  it('drops the inert guard once the rows are current', () => {
+    const el = mount({ loading: false, entries: [entry(1)], layout: 'list' })
+      .nativeElement as HTMLElement;
+    const rows = el.querySelector('.rows')!;
+    expect(rows.hasAttribute('inert')).toBe(false);
+  });
+
   it('shows skeletons while loading and an empty state when empty', () => {
     expect(
       (mount({ loading: true, entries: [] }).nativeElement as HTMLElement).querySelector(
