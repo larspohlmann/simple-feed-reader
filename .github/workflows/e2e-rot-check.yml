@@ -353,3 +353,88 @@ jobs:
             frontend/test-results/
           retention-days: 30
           if-no-files-found: ignore
+
+      # One issue per rot episode, not one per week. A suite that stays broken
+      # for a month must produce a single issue with four comments, or the
+      # backlog becomes the noise that hides the signal.
+      - name: Open or update an issue when a suite rotted
+        if: steps.backend.outcome == 'failure' || steps.playwright.outcome == 'failure' || steps.playwright_guard.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BACKEND_OUTCOME: ${{ steps.backend.outcome }}
+          PLAYWRIGHT_OUTCOME: ${{ steps.playwright.outcome }}
+          GUARD_OUTCOME: ${{ steps.playwright_guard.outcome }}
+        run: |
+          set -euo pipefail
+
+          body="${RUNNER_TEMP}/body.md"
+          {
+            echo "The weekly e2e rot check failed. These suites are the only"
+            echo "coverage for defects that unit tests structurally cannot see:"
+            echo "Jest runs in jsdom, which applies no stylesheets at all."
+            echo
+            echo "| Suite | Result |"
+            echo "| --- | --- |"
+            echo "| Backend black-box (\`composer e2e\`) | ${BACKEND_OUTCOME} |"
+            echo "| Playwright (\`npm run e2e\`) | ${PLAYWRIGHT_OUTCOME} |"
+            echo "| Playwright verified something | ${GUARD_OUTCOME} |"
+            echo
+            echo "[Full run and reports](${RUN_URL})"
+            echo
+            if [ "${GUARD_OUTCOME}" = "failure" ]; then
+              echo "**The Playwright suite skipped specs.** A skip there means the"
+              echo "seeded admin was unavailable, so those assertions never ran."
+              echo "Playwright reports that as success; this check does not."
+              echo
+              echo '```'
+              cat "${RUNNER_TEMP}/playwright-guard.log"
+              echo '```'
+              echo
+            fi
+            echo "Reproduce locally with the stack up (\`docker compose up -d\`):"
+            echo
+            echo '```bash'
+            echo "cd backend && composer e2e"
+            echo "cd frontend && npm run e2e"
+            echo '```'
+          } > "${body}"
+
+          # The label is the deduplication handle. Creating it fails when it
+          # already exists, which is the normal case after the first run.
+          #
+          # The listing is captured before it is searched. Piping gh straight
+          # into `grep -q` lets grep exit early, kill gh with SIGPIPE, and hand
+          # pipefail a 141 even when the label WAS found -- which would send
+          # this into `gh label create` for a label that already exists, and
+          # `set -e` would abort the step.
+          labels="$(gh label list --json name --jq '.[].name')"
+          if ! printf '%s\n' "${labels}" | grep -qx 'e2e-rot'; then
+            gh label create e2e-rot \
+              --description 'The weekly e2e rot check is failing' \
+              --color 'B60205'
+          fi
+
+          existing="$(gh issue list --state open --label e2e-rot \
+            --limit 1 --json number --jq '.[0].number // empty')"
+
+          if [ -n "${existing}" ]; then
+            echo "==> Commenting on the open rot issue #${existing}."
+            gh issue comment "${existing}" --body-file "${body}"
+            exit 0
+          fi
+
+          echo "==> Opening a new rot issue."
+          gh issue create \
+            --title "E2E rot check: a suite is failing" \
+            --body-file "${body}" \
+            --label e2e-rot
+
+      # continue-on-error above kept the job green so the reporting step could
+      # run. The job's own verdict is restored here, so the Actions list and the
+      # failure email agree with the issue.
+      - name: Fail the job when a suite rotted
+        if: steps.backend.outcome == 'failure' || steps.playwright.outcome == 'failure' || steps.playwright_guard.outcome == 'failure'
+        run: |
+          echo "!!! An e2e suite failed. See the issue labelled e2e-rot." >&2
+          exit 1
