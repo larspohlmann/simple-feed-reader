@@ -132,6 +132,27 @@ jobs:
           set -euo pipefail
           docker compose exec -T php bin/console doctrine:migrations:migrate --no-interaction
 
+      # The catalog lives in the database, not in a fixture the test suites
+      # seed themselves, and nothing populates it on a fresh environment --
+      # a developer's box has it because someone imported it once, through
+      # the admin UI or this same command, and never had to think about it
+      # again. A migrated-but-empty database leaves the catalog empty too,
+      # and that is not merely "less content": ReaderShellComponent renders
+      # a warning banner (showCatalogEmptyWarning) over the reader chrome
+      # whenever it is empty, which intercepts clicks meant for other
+      # elements and changes where onboarding routes to. Specs then fail on
+      # assertions that look unrelated to the catalog -- wrong element
+      # under a click, wrong post-onboarding URL -- with no mention of
+      # "catalog" anywhere in the failure. Must run before BOTH suites, so
+      # it sits here rather than nearer Playwright: the backend suite reads
+      # the same database. --mode merge and the bundled document are the
+      # command's own defaults (see ImportCatalogCommand::configure()), so
+      # no arguments are needed.
+      - name: Seed the feed catalog
+        run: |
+          set -euo pipefail
+          docker compose exec -T php bin/console app:catalog:import
+
       # LexikJWTAuthenticationBundle signs every login with this keypair, and
       # backend/config/jwt/*.pem is git-ignored on purpose -- it is a secret,
       # not a fixture. Every developer machine has one because it was
