@@ -1,0 +1,101 @@
+name: E2E rot check
+
+# Scheduled only, plus manual. NEVER a pull_request trigger: this boots the
+# whole Docker stack -- a MySQL image, a built PHP image, nginx, and an Angular
+# dev server that installs its own node_modules on first run -- which is minutes
+# of wall clock on top of every push. Issue #96 weighed that against the risk
+# and chose weekly reporting over per-PR gating (2026-08-03). A red run here
+# does not block a deploy; it opens an issue.
+on:
+  schedule:
+    - cron: '41 3 * * 3'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  e2e:
+    name: Both e2e suites against a real stack
+    runs-on: ubuntu-latest
+    # The stack build plus two suites; well clear of normal, tight enough that a
+    # wedged dev server cannot burn an hour.
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # The dev nginx config (docker/nginx/default.conf) reads these two exact
+      # filenames, and docker/certs is gitignored -- TLS keys never enter the
+      # repository, so the runner makes its own.
+      #
+      # mkcert rather than a bare openssl self-signed pair: `mkcert -install`
+      # puts the root in the runner's system trust store, and backend/bin/e2e.sh
+      # already builds PHP's CA bundle from `mkcert -CAROOT`. The runner then
+      # behaves exactly like a developer machine and no script needs a CI
+      # branch. libnss3-tools is what mkcert needs to reach the NSS store.
+      - name: Generate a locally trusted certificate
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y mkcert libnss3-tools
+          mkcert -install
+          mkdir -p docker/certs
+          mkcert -cert-file docker/certs/localhost.pem \
+                 -key-file docker/certs/localhost-key.pem \
+                 localhost 127.0.0.1 ::1
+
+      # --wait blocks until every service is running and every service that
+      # declares a healthcheck is healthy. Only mysql declares one, so the two
+      # readiness gates below are not redundant with it.
+      - name: Boot the stack
+        run: docker compose up -d --wait
+
+      - name: Migrate the database
+        run: |
+          set -euo pipefail
+          docker compose exec -T php bin/console doctrine:migrations:migrate --no-interaction
+
+      # An unreachable API is the failure this whole workflow is built to
+      # notice, so it fails loudly here rather than letting every spec skip its
+      # way to green further down.
+      - name: Wait for the API
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 60); do
+            if curl -fsS -o /dev/null https://localhost:8443/api/health; then
+              echo "==> API is up."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "!!! https://localhost:8443/api/health never answered." >&2
+          docker compose logs --no-color nginx php >&2
+          exit 1
+
+      # The frontend container runs `npm ci` INSIDE itself on first boot, into a
+      # named volume the runner starts empty every time. That install dominates
+      # this wait, hence ten minutes rather than one.
+      #
+      # The container is not optional. frontend/proxy.conf.json proxies /api to
+      # https://nginx -- a compose-network hostname that does not resolve on the
+      # host -- and the dev build calls the API on a relative path, so an
+      # `ng serve` started on the runner would 404 every request. Playwright
+      # reuses this server because playwright.config.ts sets
+      # `reuseExistingServer: true` unconditionally. Do NOT change that to the
+      # usual `!process.env.CI`: it would make Playwright try to start a second
+      # dev server on a port already bound, and this job would never pass.
+      - name: Wait for the Angular dev server
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 120); do
+            if curl -fsS -o /dev/null http://localhost:4200; then
+              echo "==> Dev server is up."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "!!! http://localhost:4200 never answered." >&2
+          docker compose logs --no-color frontend >&2
+          exit 1
