@@ -258,7 +258,7 @@ final class MeControllerTest extends ApiTestCase
     public function testTheLastActiveAdminCannotSelfDeleteAfterSuspendingTheOtherAdmin(): void
     {
         $client = static::createClient();
-        $remaining = $this->factory()->create('remaining-admin@example.com', roles: ['ROLE_ADMIN']);
+        $this->factory()->create('remaining-admin@example.com', roles: ['ROLE_ADMIN']);
         $suspended = $this->factory()->create('to-be-suspended-admin@example.com', roles: ['ROLE_ADMIN']);
         $this->authenticate($client, 'remaining-admin@example.com');
 

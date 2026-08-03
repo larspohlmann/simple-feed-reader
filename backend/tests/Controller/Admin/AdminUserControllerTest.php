@@ -10,6 +10,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Enum\UserStatus;
+use App\Repository\UserRepository;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\UserFactory;
@@ -1152,7 +1153,7 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(401);
 
         self::assertNotNull(
-            self::getContainer()->get(\App\Repository\UserRepository::class)->find($soleAdmin->getId()),
+            self::getContainer()->get(UserRepository::class)->find($soleAdmin->getId()),
         );
     }
 
