@@ -10,6 +10,28 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v0.5.2] - 2026-08-03
+
+## What's Changed
+* feat(#237): make website scraping an opt-in experimental preference by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/239
+* feat(#238): a reading-progress bar for the article view by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/240
+* feat(#241): an All Items pill in the mobile tag row by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/242
+* fix(#141): cache-bust the Transloco dictionaries with the release version by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/243
+* fix(#119): tell the user when a refresh accomplished nothing by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/244
+* fix(#245): materialize entry.effective_date and index the list sort by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/248
+* feat(#246): delete a user account with all of its content, and reclaim orphaned feeds by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/249
+* fix(#247): show the account status after an OAuth sign-in by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/251
+* feat(#252): split the installer's public-URL question into three by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/253
+* Run both e2e suites weekly in CI by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/258
+* Cover frontend/e2e with the Prettier check by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/259
+* fix(#255): drop the host from the outbound User-Agent by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/261
+* fix(#254): compress responses and keep the list rendered while it reloads by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/262
+* fix(#263): void per-user caches when the signed-in identity changes by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/264
+* chore: back-merge main into develop before cutting v0.5.2 by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/265
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v0.5.1...v0.5.2
+
 ### Changed
 
 - The production installer asks how users reach the instance, under which
