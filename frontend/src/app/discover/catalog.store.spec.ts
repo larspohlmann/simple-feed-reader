@@ -2,6 +2,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { API_BASE_URL } from '../core/api';
+import { TokenStore } from '../core/token.store';
 import { CatalogStore } from './catalog.store';
 
 const WITH_FEEDS = {
@@ -26,11 +27,19 @@ const WITH_FEEDS = {
   ],
 };
 
+/** The same catalog as seen by a user who is already subscribed to The Verge. */
+const SUBSCRIBED = {
+  categories: [{ ...WITH_FEEDS.categories[0], feeds: [{ ...WITH_FEEDS.categories[0].feeds[0] }] }],
+};
+SUBSCRIBED.categories[0].feeds[0].subscribed = true;
+
 describe('CatalogStore', () => {
   let store: CatalogStore;
   let http: HttpTestingController;
+  let tokens: TokenStore;
 
   beforeEach(() => {
+    localStorage.clear();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -38,6 +47,8 @@ describe('CatalogStore', () => {
         { provide: API_BASE_URL, useValue: 'https://api.test' },
       ],
     });
+    tokens = TestBed.inject(TokenStore);
+    tokens.set('user-a.jwt');
     store = TestBed.inject(CatalogStore);
     http = TestBed.inject(HttpTestingController);
   });
@@ -86,5 +97,65 @@ describe('CatalogStore', () => {
     expect(store.resolved()).toBe(true);
     expect(store.hasEntries()).toBe(false);
     expect(store.error()).not.toBeNull();
+  });
+
+  // #263. The `subscribed` flag is per-user, and this store outlives a logout:
+  // nothing reloads the page, so the root injector survives into the next
+  // user's session and the resolved() guard would serve them the previous
+  // user's subscription state.
+  describe('when the signed-in identity changes', () => {
+    it('drops the cached catalog', () => {
+      store.load();
+      http.expectOne('https://api.test/api/catalog').flush(SUBSCRIBED);
+      expect(store.resolved()).toBe(true);
+
+      tokens.clear();
+      TestBed.tick();
+
+      expect(store.resolved()).toBe(false);
+      expect(store.categories()).toEqual([]);
+    });
+
+    it('refetches, so the next user sees their own subscription state', () => {
+      store.load();
+      http.expectOne('https://api.test/api/catalog').flush(SUBSCRIBED);
+      expect(store.categories()[0].feeds[0].subscribed).toBe(true);
+
+      tokens.clear();
+      tokens.set('user-b.jwt');
+      TestBed.tick();
+
+      store.load();
+      http.expectOne('https://api.test/api/catalog').flush(WITH_FEEDS);
+      expect(store.categories()[0].feeds[0].subscribed).toBe(false);
+    });
+
+    // The 401 path in auth.interceptor.ts clears the token mid-flight, so a
+    // response issued for the previous user can still be on the wire.
+    it('abandons a request the previous user issued', () => {
+      store.load();
+      const stale = http.expectOne('https://api.test/api/catalog');
+
+      tokens.clear();
+      TestBed.tick();
+
+      // Cancelled, so its response can never resolve the store — and the guard
+      // is off, so the next user's load() issues a request of their own.
+      expect(stale.cancelled).toBe(true);
+      expect(store.loading()).toBe(false);
+      expect(store.resolved()).toBe(false);
+    });
+  });
+
+  // A reload rebuilds every service against the same stored token. Treating
+  // that as a new identity would throw away a catalog the reload should keep.
+  it('does not treat the token it started with as a change', () => {
+    store.load();
+    http.expectOne('https://api.test/api/catalog').flush(WITH_FEEDS);
+
+    TestBed.tick();
+
+    expect(store.resolved()).toBe(true);
+    expect(store.hasEntries()).toBe(true);
   });
 });

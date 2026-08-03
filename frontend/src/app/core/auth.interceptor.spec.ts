@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { API_BASE_URL } from './api';
 import { TokenStore } from './token.store';
 import { authInterceptor } from './auth.interceptor';
+import { CatalogStore } from '../discover/catalog.store';
 
 describe('authInterceptor', () => {
   let http: HttpClient;
@@ -52,5 +53,24 @@ describe('authInterceptor', () => {
       .flush(null, { status: 401, statusText: 'Unauthorized' });
     expect(tokens.token()).toBeNull();
     expect(navigate).toHaveBeenCalledWith(['/login']);
+  });
+
+  // This path never calls AuthService.logout(), so a per-user cache that reset
+  // itself there alone would survive an expired session into the next one
+  // (#263). The token is the trigger, so this path is covered too.
+  it('voids per-user caches on 401, the same as an explicit logout', () => {
+    tokens.set('jwt-abc');
+    const catalog = TestBed.inject(CatalogStore);
+    catalog.load();
+    ctrl.expectOne('https://api.test/api/catalog').flush({ categories: [] });
+    expect(catalog.resolved()).toBe(true);
+
+    http.get('https://api.test/api/me').subscribe({ error: () => undefined });
+    ctrl
+      .expectOne('https://api.test/api/me')
+      .flush(null, { status: 401, statusText: 'Unauthorized' });
+    TestBed.tick();
+
+    expect(catalog.resolved()).toBe(false);
   });
 });

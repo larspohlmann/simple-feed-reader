@@ -11,6 +11,7 @@ import { LanguageService } from './language.service';
 import { LOCALE_WRITER } from './locale-writer';
 import { HttpLocaleWriter } from './http-locale-writer';
 import { PreferencesService } from './preferences.service';
+import { CatalogStore } from '../discover/catalog.store';
 
 describe('AuthService', () => {
   let svc: AuthService;
@@ -82,5 +83,43 @@ describe('AuthService', () => {
     svc.logout();
 
     expect(preferences.scrapeFallbackEnabled()).toBe(false);
+  });
+
+  // Driven through the real logout() rather than through TokenStore, because
+  // the wiring under test IS "logout clears the token, and the token is what
+  // voids per-user caches" (#263).
+  it('logout voids the cached catalog, so the next account never sees its subscribed marks', () => {
+    tokens.set('jwt');
+    const catalog = TestBed.inject(CatalogStore);
+
+    catalog.load();
+    ctrl.expectOne('https://api.test/api/catalog').flush({
+      categories: [
+        {
+          id: 1,
+          key: 'technology',
+          name: 'Technology',
+          icon: 'memory',
+          color: '#3b82f6',
+          feeds: [
+            {
+              id: 10,
+              title: 'The Verge',
+              description: null,
+              siteUrl: null,
+              faviconUrl: '/f/10',
+              subscribed: true,
+            },
+          ],
+        },
+      ],
+    });
+    expect(catalog.resolved()).toBe(true);
+
+    svc.logout();
+    TestBed.tick();
+
+    expect(catalog.resolved()).toBe(false);
+    expect(catalog.categories()).toEqual([]);
   });
 });

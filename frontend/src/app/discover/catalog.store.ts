@@ -1,7 +1,9 @@
 // src/app/discover/catalog.store.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { Problem, parseProblem } from '../core/problem';
+import { onIdentityChange } from '../core/session-identity';
 import { CatalogApi } from './catalog-api';
 import { CatalogCategoryDto } from './catalog.models';
 
@@ -31,11 +33,21 @@ export class CatalogStore {
     this.categories().some((category) => category.feeds.length > 0),
   );
 
+  /** Held so that invalidate() can cancel it: a response issued for the
+   *  previous user must never land in the next user's store. */
+  private inFlight: Subscription | null = null;
+
+  constructor() {
+    // Every feed carries a per-user `subscribed` flag, so a change of identity
+    // does not make this cache stale — it makes it wrong (#263).
+    onIdentityChange(() => this.invalidate());
+  }
+
   load(): void {
     if (this.loading() || this.resolved()) return;
     this.loading.set(true);
     this.error.set(null);
-    this.api.load().subscribe({
+    this.inFlight = this.api.load().subscribe({
       next: (r) => {
         this.categories.set(r.categories);
         this.loading.set(false);
@@ -53,8 +65,12 @@ export class CatalogStore {
   }
 
   /** Forget the cached catalog so the next load() refetches — used after a
-   *  successful subscribe, since every picked feed is now `subscribed`. */
+   *  successful subscribe, since every picked feed is now `subscribed`, and
+   *  whenever the signed-in identity changes. */
   invalidate(): void {
+    this.inFlight?.unsubscribe();
+    this.inFlight = null;
+    this.loading.set(false);
     this.resolved.set(false);
     this.categories.set([]);
   }
