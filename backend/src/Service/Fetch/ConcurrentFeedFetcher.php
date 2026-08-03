@@ -42,6 +42,12 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     }
 
     /**
+     * The inspection only recognises a bare `yield`. This method delegates
+     * exclusively through `yield from`, which makes it a generator just the
+     * same, so the hint is wrong here.
+     *
+     * @noinspection PhpInconsistentReturnPointsInspection
+     *
      * @param iterable<int|string, FetchTicket> $tickets
      *
      * @return \Generator<int|string, FetchOutcome>
