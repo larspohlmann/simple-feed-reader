@@ -10,14 +10,6 @@ on:
   schedule:
     - cron: '41 3 * * 3'
   workflow_dispatch:
-  # TEMPORARY -- REMOVE BEFORE THE PR (#96, task 6).
-  # workflow_dispatch cannot reach a workflow that has never been registered on
-  # the default branch, so there is no way to exercise this file while it lives
-  # only on a feature branch. A push trigger scoped to this one branch gives a
-  # real run per push during development. It must not survive into develop: the
-  # whole point of #96 was that this suite is too slow to run per push.
-  push:
-    branches: [feature/96-e2e-rot-check]
 
 permissions:
   contents: read
