@@ -37,7 +37,9 @@ export default function globalSetup(): void {
       );
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
-      console.warn(`[global-setup] Skipping e2e fixture step "${consoleArgs.join(' ')}": ${reason}`);
+      console.warn(
+        `[global-setup] Skipping e2e fixture step "${consoleArgs.join(' ')}": ${reason}`,
+      );
     }
   }
 }
