@@ -10,6 +10,17 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v0.5.3] - 2026-08-04
+
+## What's Changed
+* fix(#250, #260): clear the PhpStorm ERROR findings in backend/src and backend/tests by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/268
+* fix(#267): give each list its own scroll position on a view switch by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/269
+* feat(#270): keep the article named while it scrolls by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/271
+* feat(#272): a production installer that survives a second install, and sets up the catalog it ships by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/273
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v0.5.2...v0.5.3
+
 ## [v0.5.2] - 2026-08-03
 
 ## What's Changed
