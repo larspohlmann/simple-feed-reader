@@ -7,8 +7,9 @@ set -euo pipefail
 #
 # It clones the repository, checks out the latest release, writes .env.prod
 # with freshly generated secrets, asks for the few values only you know (the
-# public origin and how to send mail), and starts the production stack: MySQL,
-# the production PHP image, and nginx serving the built app.
+# public origin, which database, and how to send mail), and starts the
+# production stack: the production PHP image, nginx serving the built app, and
+# MySQL unless you answer SQLite.
 #
 # It deletes data in exactly one case, and only after you say yes to it: an
 # earlier production install whose Docker volumes are still on this machine.
@@ -95,6 +96,7 @@ env_prod_set MYSQL_PASSWORD "$(generate_secret)"
 
 # --- 6. the values only the operator knows ----------------------------------
 configure_public_url
+configure_database
 configure_mail
 
 # --- 7. start, or explain how to --------------------------------------------

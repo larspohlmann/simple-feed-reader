@@ -13,8 +13,18 @@
 name: simple-feed-reader-prod
 
 services:
+  # The bundled database, behind a profile: a SQLite install runs two
+  # containers instead of three and never starts this one. prod_compose in
+  # scripts/lib.sh enables the profile exactly while DATABASE_URL in .env.prod
+  # is empty, which is what "use the bundled MySQL" means there.
+  #
+  # The interpolation below is still evaluated while the profile is off --
+  # compose resolves the whole file before it filters services -- so
+  # MYSQL_ROOT_PASSWORD stays a required value on every install, SQLite or not.
+  # scripts/install.sh generates both passwords either way.
   mysql:
     image: mysql:8.4
+    profiles: ["mysql"]
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set it in .env.prod}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-feedreader}
@@ -34,7 +44,16 @@ services:
       dockerfile: docker/php/Dockerfile
       target: prod
     environment:
-      DATABASE_URL: "mysql://${MYSQL_USER:-feedreader}:${MYSQL_PASSWORD:?set it in .env.prod}@mysql:3306/${MYSQL_DATABASE:-feedreader}?serverVersion=8.4&charset=utf8mb4"
+      # An empty DATABASE_URL means the bundled MySQL above, and the URL is
+      # assembled here so the MYSQL_* values stay the single source of those
+      # credentials. Every .env.prod written before the SQLite option leaves it
+      # empty, so an existing install keeps its database untouched.
+      #
+      # A SQLite install sets it to sqlite:///%kernel.project_dir%/var/data.db
+      # -- one file on the php-var volume, which already outlives the
+      # container. The default is only expanded when DATABASE_URL is empty, so
+      # MYSQL_PASSWORD is not required in that case.
+      DATABASE_URL: "${DATABASE_URL:-mysql://${MYSQL_USER:-feedreader}:${MYSQL_PASSWORD:?set it in .env.prod}@mysql:3306/${MYSQL_DATABASE:-feedreader}?serverVersion=8.4&charset=utf8mb4}"
       # No default and no fallback: null:// discards mail and reports success,
       # and InsecureProductionConfigGuard 500s every request while it is set.
       MAILER_DSN: ${MAILER_DSN:?set a real mail transport in .env.prod}
@@ -78,6 +97,9 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+        # A SQLite install leaves the mysql profile off, so the service is not
+        # part of the run at all and php has to start without it.
+        required: false
 
   web:
     build:

@@ -1,7 +1,8 @@
 # Running in production (Docker)
 
-The production stack is three containers — MySQL, the production PHP image,
-and nginx serving the compiled app with `/api` handled same-origin — defined
+The production stack is the production PHP image, nginx serving the compiled
+app with `/api` handled same-origin, and — unless you choose SQLite (§1) — a
+MySQL container beside them, defined
 in [`docker-compose.prod.yml`](../docker-compose.prod.yml). It is completely
 separate from the [development stack](local-docker.md): its own compose file,
 its own project name (`simple-feed-reader-prod`), its own volumes. Both can
@@ -43,6 +44,18 @@ values only you know:
 
   Together these become `PUBLIC_URL` and the published container ports. For
   OAuth sign-in, and for Safari, use a real HTTPS origin.
+- **Which database** — **MySQL by default**, in a container beside the app.
+  Answer SQLite for a personal instance: the whole database is then one file
+  inside the `php-var` volume, and no database container starts at all. The
+  schema, the migrations and every feature are the same either way; MySQL
+  handles several people writing at once better, SQLite costs an instance with
+  one or two users nothing.
+
+  Answer it **once**, at install time. Switching afterwards points the app at
+  an empty database — moving the rows from one engine to the other is a manual
+  job, so `./scripts/prod-configure.sh` deliberately never re-asks this
+  question. In `.env.prod` the answer is `DATABASE_URL`: empty means the
+  bundled MySQL.
 - **How to send mail** — an SMTP relay (your mail provider's host, port,
   username, password), or the machine's own MTA if it runs one. **The default
   is "no mail"** (§5): it is the answer that always works, and a private
@@ -254,6 +267,16 @@ Everything worth keeping lives in three named volumes: the database
 ```bash
 docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod \
   exec mysql sh -c 'exec mysqldump -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' > backup.sql
+```
+
+On a **SQLite** instance there is no `mysql-data` volume: the database is
+`var/data.db` inside `php-var`, and the backup is a copy of that file. Take it
+with the stack stopped, or the copy can catch a half-written transaction:
+
+```bash
+./scripts/prod-stop.sh
+docker run --rm -v simple-feed-reader-prod_php-var:/data alpine \
+  cat /data/data.db > backup.db
 ```
 
 Losing `jwt-keys` is not fatal — new keys are generated on the next start —

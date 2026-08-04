@@ -27,7 +27,7 @@
 Read these before starting; they are why the tasks look the way they do.
 
 - **The FK cascade already covers a user's children.** `ON DELETE CASCADE` is declared on `subscription.user_id`, `subscription.feed_id`, `tag.user_id`, `subscription_tag.subscription_id`, `subscription_tag.tag_id`, `entry_state.user_id`, `entry_state.entry_id`, `preferences.user_id`, `user_identity.user_id`, `action_token.user_id` and `entry.feed_id`. `PurgeUnverifiedUsersCommand` and `E2ePurgeUsersCommand` already depend on it.
-- **SQLite enforces those FKs in tests.** `src/Doctrine/SqliteForeignKeysMiddleware.php` issues `PRAGMA foreign_keys = ON` outside any transaction. Without it SQLite ignores FKs entirely; do not remove it, and do not add a redundant PRAGMA.
+- **SQLite enforces those FKs in tests.** `src/Doctrine/SqlitePragmaMiddleware.php` issues `PRAGMA foreign_keys = ON` outside any transaction. Without it SQLite ignores FKs entirely; do not remove it, and do not add a redundant PRAGMA.
 - **`catalog_feed` holds no FK to `feed`.** It matches by URL. Deleting an orphaned feed leaves the catalog suggestion intact.
 - **`prune` is true only on `RefreshRequest::allDue()`**, which only `RefreshFeedsCommand` builds when it is given neither `--user` nor `--feed`. A user-triggered refresh through `RefreshController` never prunes. The sweep therefore rides on the maintenance refresh; the immediate path in Task 2 is what keeps the database clean between them. This is deliberate — do not widen `prune`.
 - **`SubscriptionController::delete()` currently calls `$this->em->remove($sub)` in the action.** Adding an orphan check there would fail `ThinControllerRule`. Task 2 moves it.

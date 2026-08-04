@@ -69,7 +69,8 @@ Run these from inside the `simple-feed-reader` directory:
 - [Local Docker environment](docs/local-docker.md) — run the whole stack
   (MySQL, PHP, nginx with TLS, Mailpit) in Docker.
 - [Running in production (Docker)](docs/docker-production.md) — the prod
-  stack: real mail transport, TLS or reverse proxy, updates, backups.
+  stack: MySQL or SQLite, real mail transport, TLS or reverse proxy, updates,
+  backups.
 - **First-run setup:** creating the initial admin — see [docs/first-run-setup.md](docs/first-run-setup.md).
 - [Cutting a release](docs/releasing.md) — how a `vX.Y.Z` tag on `main` becomes
   the version the install and update scripts hand to users.

@@ -173,6 +173,12 @@ jobs:
       - name: piped-installer-not-truncated
         run: scripts/test/piped-installer-not-truncated.test.sh
 
+      # The database question (#277). Its answer decides which compose profile
+      # the stack runs with, so a wrong mapping either starts a MySQL container
+      # nobody talks to or leaves a MySQL install without a database.
+      - name: configure_database
+        run: scripts/test/configure-database.test.sh
+
       # The mail question, whose default decides whether a new instance can
       # send account mail at all. A wrong answer here is invisible until the
       # first registration nobody receives.
