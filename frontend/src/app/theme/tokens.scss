@@ -48,6 +48,12 @@
   --bar-h: 56px;
   --tap-target: 44px;
 
+  /* The full-screen article's standing nameplate (favicon + title, #270). Fixed
+     rather than measured, unlike --app-bar-h: the article's toolbar pins at
+     exactly this offset, and a strip of one line and one small icon has no
+     second content state that could disagree with it. */
+  --reader-mini-h: 28px;
+
   /* Icon sizes. Four steps because the same tag glyph is rendered from a
      12px pill up to a 20px sidebar lead; three steps would inflate the pill. */
   --icon-xs: 12px;

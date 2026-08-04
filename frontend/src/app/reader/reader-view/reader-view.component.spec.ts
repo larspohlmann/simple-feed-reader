@@ -291,9 +291,11 @@ describe('ReaderViewComponent', () => {
       f.componentInstance[k].subscribe(() => c[k]++),
     );
     const el = f.nativeElement as HTMLElement;
-    (el.querySelector('[aria-label="Favorite"]') as HTMLButtonElement).click();
-    (el.querySelector('[aria-label="Keep"]') as HTMLButtonElement).click();
-    (el.querySelector('[aria-label="Toggle read"]') as HTMLButtonElement).click();
+    // Scoped to the article's own row: the split pane's toolbar carries a
+    // second favourite/keep pair, and it comes first in the DOM.
+    (el.querySelector('.actions [aria-label="Favorite"]') as HTMLButtonElement).click();
+    (el.querySelector('.actions [aria-label="Keep"]') as HTMLButtonElement).click();
+    (el.querySelector('.actions [aria-label="Toggle read"]') as HTMLButtonElement).click();
     (el.querySelector('.close') as HTMLButtonElement).click();
     expect(c).toEqual({ favorite: 1, keep: 1, read: 1, close: 1 });
   });
@@ -386,6 +388,90 @@ describe('ReaderViewComponent', () => {
       scrollHostTo(f, 100);
       scrollHostTo(f, 500);
       expect(bar.classList).not.toContain('hidden');
+    });
+
+    it('keeps the mini header while the toolbar below it retracts', () => {
+      // The mini header is the only thing naming the article once the toolbar
+      // is gone, so it must survive the very scroll that retracts the toolbar.
+      const f = fullscreenMount();
+      const el = f.nativeElement as HTMLElement;
+      scrollHostTo(f, 400);
+
+      expect(el.querySelector('.bar')!.classList).toContain('hidden');
+      expect(el.querySelector('.mini')!.classList).not.toContain('hidden');
+      expect(el.querySelector('.mini .mini-title')!.textContent).toContain('Deep dive');
+      f.destroy();
+    });
+  });
+
+  describe('mini header', () => {
+    it('names the article with its favicon and title', () => {
+      const f = TestBed.createComponent(ReaderViewComponent);
+      f.componentRef.setInput('entry', entry({ faviconUrl: 'https://x/f.png' }));
+      f.componentRef.setInput('fullscreen', true);
+      f.detectChanges();
+
+      const el = f.nativeElement as HTMLElement;
+      expect(el.querySelector('.mini .mini-title')!.textContent).toContain('Deep dive');
+      expect(el.querySelector<HTMLImageElement>('.mini app-favicon img')!.src).toBe(
+        'https://x/f.png',
+      );
+      f.destroy();
+    });
+
+    it('hides itself from assistive technology, which reads the h1 instead', () => {
+      const f = TestBed.createComponent(ReaderViewComponent);
+      f.componentRef.setInput('entry', entry());
+      f.componentRef.setInput('fullscreen', true);
+      f.detectChanges();
+
+      expect(
+        (f.nativeElement as HTMLElement).querySelector('.mini')!.getAttribute('aria-hidden'),
+      ).toBe('true');
+      f.destroy();
+    });
+
+    it('rides inside the split pane’s toolbar instead of taking a strip of its own', () => {
+      const el = mount(entry({ faviconUrl: 'https://x/f.png' })).nativeElement as HTMLElement;
+      expect(el.querySelector('.mini')).toBeNull();
+      expect(el.querySelector('.bar .bar-title')!.textContent).toContain('Deep dive');
+      expect(el.querySelector<HTMLImageElement>('.bar app-favicon img')!.src).toBe(
+        'https://x/f.png',
+      );
+    });
+
+    it('offers favourite and keep in the split pane’s toolbar', () => {
+      const f = mount(entry({ isFavorite: true }));
+      const el = f.nativeElement as HTMLElement;
+      const favourite = el.querySelector<HTMLButtonElement>('.bar [aria-label="Favorite"]')!;
+      const keep = el.querySelector<HTMLButtonElement>('.bar [aria-label="Keep"]')!;
+
+      // The toolbar reports the entry's state, the way the article's action row does.
+      expect(favourite.classList).toContain('on');
+      expect(keep.classList).not.toContain('on');
+
+      const favouriteEmits = jest.fn();
+      const keepEmits = jest.fn();
+      f.componentInstance.favorite.subscribe(favouriteEmits);
+      f.componentInstance.keep.subscribe(keepEmits);
+      favourite.click();
+      keep.click();
+      expect(favouriteEmits).toHaveBeenCalled();
+      expect(keepEmits).toHaveBeenCalled();
+    });
+
+    it('leaves the full-screen toolbar to the back button and the mode toggle', () => {
+      // The strip already names the article there, and a retracting toolbar is
+      // no place for the actions — the article's own row carries them.
+      const f = TestBed.createComponent(ReaderViewComponent);
+      f.componentRef.setInput('entry', entry());
+      f.componentRef.setInput('fullscreen', true);
+      f.detectChanges();
+
+      const el = f.nativeElement as HTMLElement;
+      expect(el.querySelector('.bar .bar-title')).toBeNull();
+      expect(el.querySelector('.bar [aria-label="Favorite"]')).toBeNull();
+      f.destroy();
     });
   });
 

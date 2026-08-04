@@ -118,16 +118,84 @@ app-to-top-button {
   z-index: 20;
 }
 
+/* The full-screen article's standing nameplate. The headline and the meta line
+   scroll away with the body, and the toolbar retracts on top of that, so a
+   scrolled-down article used to carry nothing at all that named it (#270).
+   This strip does, and it never moves. (The split pane keeps its toolbar at all
+   times and carries the same nameplate inside it — see .bar-name.)
+
+   Sticky, never fixed: `.reader` carries a transform through the return
+   gestures, which re-anchors a fixed child to this pane instead of the viewport
+   — the same trap #100 documents for the back-to-top button.
+
+   A layer above the toolbar's own: the toolbar retracts *behind* this strip,
+   which is what keeps the retraction to one moving part instead of two. Hence
+   the opaque background — the toolbar passes directly under it. Being layered
+   at all is required for a second reason, the one .bar documents: reading-focus
+   sets an inline `opacity` on every article block, and an element with
+   opacity < 1 paints as if at z-index 0, so an un-layered strip would end up
+   beneath each dimmed paragraph. */
+.mini {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+
+  /* The token, not `min-height`: the toolbar pins at exactly this offset, so
+     the strip's box may not grow away from it. */
+  height: var(--reader-mini-h);
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+}
+
+/* The same nameplate on the split pane, where the toolbar is always there to
+   carry it. Flexible so it takes the width the back button and the actions
+   leave; `min-width: 0` so that width may also shrink — see .mini-title. */
+.bar-name {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 var(--space-3);
+}
+
+/* One line, cut with an ellipsis. `min-width: 0` because a flex item's floor is
+   its content width, and without it a long title pushes its row wide and
+   scrolls the pane sideways instead of truncating. */
+.mini-title,
+.bar-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Small enough to stay chrome on a phone; the split pane's toolbar is taller
+   and its nameplate carries the article at reading-UI size. */
+.mini-title {
+  font-size: var(--fs-sm);
+}
+
+.bar-title {
+  font-size: var(--fs-base);
+}
+
 .bar {
   position: sticky;
 
-  /* Full-screen the toolbar is the topmost chrome of its own layer, so it
-     sticks to the scroller's top edge and retracts on scroll like the list's
-     app bar does over the list (.hidden below). The split pane overrides the
-     offset: there the shell's bar floats above, and the reading pane passes
-     *under* it (#87), so `top: 0` would slide this toolbar — back button and
-     all — underneath that bar on the first scroll (#97). */
-  top: 0;
+  /* Full-screen the toolbar hangs directly beneath the nameplate above, which
+     is fixed-height by design so this offset can be a token rather than a
+     measurement — and retracts on scroll like the list's app bar does over the
+     list (.hidden below), sliding up behind that strip. The split pane
+     overrides the offset: there the shell's bar floats above, and the reading
+     pane passes *under* it (#87), so a smaller offset would slide this toolbar
+     — back button and all — underneath that bar on the first scroll (#97). */
+  top: var(--reader-mini-h);
   transition: transform 0.2s ease;
 
   /* Sticky alone does not win the paint order here. Reading-focus sets an inline
@@ -272,6 +340,7 @@ article {
   margin-bottom: var(--space-4);
 }
 
+.bar button.on,
 .actions button.on {
   color: var(--accent);
 }
