@@ -13,6 +13,9 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123
 const LONG_SOURCE =
   'NDR.de - Das Beste am Norden - Radio - Fernsehen - Nachrichten - Sport - Wetter';
 
+/** A phone in portrait, the width the kicker has least room at. */
+const PHONE = { width: 375, height: 812 };
+
 function entry(id: number, source: string) {
   return {
     id,
@@ -82,6 +85,28 @@ async function signInAsAdmin(page: Page): Promise<boolean> {
 }
 
 /**
+ * `setViewportSize` resizes the window; it does not wait for the app to lay out
+ * again. `LayoutService` learns the new width from a media-query listener, so
+ * the sidebar leaves the flow a frame later — and every element under test is
+ * already visible from the previous size, so no locator wait gates on that.
+ * Measuring inside that window reads the old layout at the new width: on a
+ * loaded CI runner the list pane was still sharing the row with the 260px
+ * sidebar column, a 115px pane no kicker line can fit (#274).
+ *
+ * The shell's `.is-narrow` is the settled signal — bound straight from
+ * `LayoutService.isNarrow` (`NARROW_QUERY`, `max-width: 720px`).
+ */
+async function resizeTo(page: Page, viewport: { width: number; height: number }): Promise<void> {
+  await page.setViewportSize(viewport);
+  const shell = page.locator('app-reader-shell > .body');
+  if (viewport.width <= 720) {
+    await expect(shell).toHaveClass(/is-narrow/);
+    return;
+  }
+  await expect(shell).not.toHaveClass(/is-narrow/);
+}
+
+/**
  * The kicker line must occupy exactly one line in every magazine block, however
  * long the feed's title is — a five-clause title like `LONG_SOURCE` used to
  * push the time onto a third line (#155). Measured, not eyeballed: the rendered
@@ -91,12 +116,8 @@ test('the kicker line never wraps, at any viewport', async ({ page }) => {
   const signedIn = await signInAsAdmin(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
-  for (const viewport of [
-    { width: 1280, height: 900 },
-    { width: 768, height: 1024 },
-    { width: 375, height: 812 },
-  ]) {
-    await page.setViewportSize(viewport);
+  for (const viewport of [{ width: 1280, height: 900 }, { width: 768, height: 1024 }, PHONE]) {
+    await resizeTo(page, viewport);
 
     const lines = page.locator('app-entry-kicker-line .kicker');
     await expect(lines.first()).toBeVisible();
@@ -118,75 +139,86 @@ test('the kicker line never wraps, at any viewport', async ({ page }) => {
   }
 });
 
-test('a long source never widens the page', async ({ page }) => {
-  const signedIn = await signInAsAdmin(page);
-  test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
+/**
+ * These two only ever measure the phone, so they start there instead of
+ * resizing into it — the resize is what let #274 measure a half-applied layout.
+ */
+test.describe('Magazine kicker on a phone', () => {
+  test.use({ viewport: PHONE });
 
-  await page.setViewportSize({ width: 375, height: 812 });
-  await expect(page.locator('app-entry-kicker-line .kicker').first()).toBeVisible();
+  test('a long source never widens the page', async ({ page }) => {
+    const signedIn = await signInAsAdmin(page);
+    test.skip(
+      !signedIn,
+      'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
+    );
 
-  // `nowrap` only shrinks when every ancestor is allowed to; one ancestor stuck
-  // at its default `min-width: auto` pushes the whole document sideways.
-  // The document is not the only box that can gain a sideways scroll: the list
-  // has its own scroller, and that is what shifted under the fixed header when
-  // this regressed. Check every element that can scroll horizontally.
-  const offenders = await page.evaluate(() => {
-    const scrollers = Array.from(document.querySelectorAll<HTMLElement>('body *'))
-      .concat(document.documentElement)
-      .filter((el) => el.scrollWidth > el.clientWidth + 1)
-      // A clipped element (an ellipsised source) always overflows its own box
-      // by design. Only a box that actually scrolls can shift what the reader
-      // sees, so ignore anything that merely clips.
-      .filter((el) => {
-        if (el === document.documentElement || el === document.body) return true;
-        const overflowX = getComputedStyle(el).overflowX;
-        return overflowX === 'auto' || overflowX === 'scroll';
-      })
-      // x-axis scroll-snapping marks a deliberate swipe affordance (the mobile
-      // tag row). #155 was the opposite: an ancestor refusing to shrink. Keying
-      // on the CSS signal rather than a selector keeps document/body — and so a
-      // snap-scroller that does push the page sideways — still caught.
-      .filter((el) => !getComputedStyle(el).scrollSnapType.startsWith('x'))
-      .map((el) => ({
-        who: `${el.tagName.toLowerCase()}.${el.className}`,
-        scrollWidth: el.scrollWidth,
-        clientWidth: el.clientWidth,
-      }));
+    await expect(page.locator('app-entry-kicker-line .kicker').first()).toBeVisible();
 
-    const viewport = document.documentElement.clientWidth;
-    const wider = Array.from(document.querySelectorAll<HTMLElement>('.rows.magazine *'))
-      .filter((el) => el.getBoundingClientRect().width > viewport)
-      .slice(0, 8)
-      .map(
-        (el) =>
-          `${el.tagName.toLowerCase()}.${el.className}=${Math.round(el.getBoundingClientRect().width)}`,
-      );
-    return { scrollers: scrollers.slice(0, 6), wider: wider.slice(0, 6) };
+    // `nowrap` only shrinks when every ancestor is allowed to; one ancestor stuck
+    // at its default `min-width: auto` pushes the whole document sideways.
+    // The document is not the only box that can gain a sideways scroll: the list
+    // has its own scroller, and that is what shifted under the fixed header when
+    // this regressed. Check every element that can scroll horizontally.
+    const offenders = await page.evaluate(() => {
+      const scrollers = Array.from(document.querySelectorAll<HTMLElement>('body *'))
+        .concat(document.documentElement)
+        .filter((el) => el.scrollWidth > el.clientWidth + 1)
+        // A clipped element (an ellipsised source) always overflows its own box
+        // by design. Only a box that actually scrolls can shift what the reader
+        // sees, so ignore anything that merely clips.
+        .filter((el) => {
+          if (el === document.documentElement || el === document.body) return true;
+          const overflowX = getComputedStyle(el).overflowX;
+          return overflowX === 'auto' || overflowX === 'scroll';
+        })
+        // x-axis scroll-snapping marks a deliberate swipe affordance (the mobile
+        // tag row). #155 was the opposite: an ancestor refusing to shrink. Keying
+        // on the CSS signal rather than a selector keeps document/body — and so a
+        // snap-scroller that does push the page sideways — still caught.
+        .filter((el) => !getComputedStyle(el).scrollSnapType.startsWith('x'))
+        .map((el) => ({
+          who: `${el.tagName.toLowerCase()}.${el.className}`,
+          scrollWidth: el.scrollWidth,
+          clientWidth: el.clientWidth,
+        }));
+
+      const viewport = document.documentElement.clientWidth;
+      const wider = Array.from(document.querySelectorAll<HTMLElement>('.rows.magazine *'))
+        .filter((el) => el.getBoundingClientRect().width > viewport)
+        .slice(0, 8)
+        .map(
+          (el) =>
+            `${el.tagName.toLowerCase()}.${el.className}=${Math.round(el.getBoundingClientRect().width)}`,
+        );
+      return { scrollers: scrollers.slice(0, 6), wider: wider.slice(0, 6) };
+    });
+
+    expect(
+      offenders.scrollers,
+      `sideways scroll: ${JSON.stringify(offenders.scrollers)} | wider than parent: ${offenders.wider.join(' | ')}`,
+    ).toEqual([]);
   });
 
-  expect(
-    offenders.scrollers,
-    `sideways scroll: ${JSON.stringify(offenders.scrollers)} | wider than parent: ${offenders.wider.join(' | ')}`,
-  ).toEqual([]);
-});
+  test('a source too long for the row is ellipsised, never the time', async ({ page }) => {
+    const signedIn = await signInAsAdmin(page);
+    test.skip(
+      !signedIn,
+      'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
+    );
 
-test('a source too long for the row is ellipsised, never the time', async ({ page }) => {
-  const signedIn = await signInAsAdmin(page);
-  test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
+    const line = page.locator('app-entry-kicker-line').first();
+    await expect(line).toBeVisible();
 
-  await page.setViewportSize({ width: 375, height: 812 });
+    // The time is the whole point of the row and must always render in full.
+    const when = line.locator('.when');
+    await expect(when).not.toBeEmpty();
+    const clipped = await when.evaluate((el) => el.scrollWidth > el.clientWidth + 1);
+    expect(clipped, 'the relative time was clipped instead of the source').toBe(false);
 
-  const line = page.locator('app-entry-kicker-line').first();
-  await expect(line).toBeVisible();
-
-  // The time is the whole point of the row and must always render in full.
-  const when = line.locator('.when');
-  await expect(when).not.toBeEmpty();
-  const clipped = await when.evaluate((el) => el.scrollWidth > el.clientWidth + 1);
-  expect(clipped, 'the relative time was clipped instead of the source').toBe(false);
-
-  // The source is the elastic one: it may clip, and must do so with an ellipsis.
-  const source = line.locator('.source');
-  await expect(source).toHaveCSS('text-overflow', 'ellipsis');
-  await expect(source).toHaveCSS('white-space', 'nowrap');
+    // The source is the elastic one: it may clip, and must do so with an ellipsis.
+    const source = line.locator('.source');
+    await expect(source).toHaveCSS('text-overflow', 'ellipsis');
+    await expect(source).toHaveCSS('white-space', 'nowrap');
+  });
 });
