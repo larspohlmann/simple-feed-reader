@@ -35,8 +35,16 @@ REPO_ROOT=$(CDPATH='' cd -- "${_lib_dir}/.." && pwd -P)
 
 # Run docker compose from the repository root, whatever the caller's CWD is.
 # The subshell keeps the caller's working directory unchanged.
+#
+# stdin is /dev/null for EVERY compose call, and that is load-bearing.
+# `docker compose exec` attaches the caller's stdin and drains it whole, even
+# when the command it runs never reads a byte. Under `curl ... | bash` the
+# caller's stdin IS the installer script that bash is still reading, so the
+# first exec swallowed the rest of it and bash exited 0 at the surprise EOF --
+# silently skipping every step after the first exec (issue #275). Nothing here
+# ever wants the caller's input: the prompts read /dev/tty.
 compose() {
-  ( cd -- "${REPO_ROOT}" && docker compose "$@" )
+  ( cd -- "${REPO_ROOT}" && docker compose "$@" ) < /dev/null
 }
 
 # --- environment checks -----------------------------------------------------
@@ -172,10 +180,12 @@ ENV_PROD_FILE="${REPO_ROOT}/.env.prod"
 # earlier install on this machine findable.
 PROD_PROJECT_NAME='simple-feed-reader-prod'
 
+# stdin is /dev/null here for the same reason as in compose() above -- see the
+# comment there before removing it.
 prod_compose() {
   ( cd -- "${REPO_ROOT}" \
       && docker compose -p "${PROD_PROJECT_NAME}" -f docker-compose.prod.yml \
-           --env-file .env.prod "$@" )
+           --env-file .env.prod "$@" ) < /dev/null
 }
 
 # --- what an earlier production install leaves behind -----------------------
