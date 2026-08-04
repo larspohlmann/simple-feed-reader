@@ -8,8 +8,12 @@ set -euo pipefail
 # It clones the repository, checks out the latest release, writes .env.prod
 # with freshly generated secrets, asks for the few values only you know (the
 # public origin and how to send mail), and starts the production stack: MySQL,
-# the production PHP image, and nginx serving the built app. Nothing here
-# deletes data.
+# the production PHP image, and nginx serving the built app.
+#
+# It deletes data in exactly one case, and only after you say yes to it: an
+# earlier production install whose Docker volumes are still on this machine.
+# Those volumes hold passwords this installer cannot reproduce, so it offers
+# to remove them and otherwise stops (issue #272).
 #
 # Without a terminal (or when you skip the mail question) it stops after
 # writing .env.prod and tells you exactly how to finish: edit the file, then
@@ -71,7 +75,12 @@ git -C "${REPO_ROOT}" checkout --quiet "${release_tag}"
 [ -f "${REPO_ROOT}/.env.prod.example" ] \
   || die "Release ${release_tag} predates the Docker production path -- update the release, or use scripts/install-dev.sh."
 
-# --- 4. write .env.prod -----------------------------------------------------
+# --- 4. an earlier install on this machine ----------------------------------
+# Before any secret is generated: the volumes of an earlier install outlive
+# its containers, and the secrets written below would not fit them (#272).
+handle_previous_prod_install
+
+# --- 5. write .env.prod -----------------------------------------------------
 if [ -f "${ENV_PROD_FILE}" ]; then
   die '.env.prod already exists in the fresh clone -- refusing to overwrite it.'
 fi
@@ -84,11 +93,11 @@ env_prod_set JWT_PASSPHRASE "$(generate_secret)"
 env_prod_set MYSQL_ROOT_PASSWORD "$(generate_secret)"
 env_prod_set MYSQL_PASSWORD "$(generate_secret)"
 
-# --- 5. the values only the operator knows ----------------------------------
+# --- 6. the values only the operator knows ----------------------------------
 configure_public_url
 configure_mail
 
-# --- 6. start, or explain how to --------------------------------------------
+# --- 7. start, or explain how to --------------------------------------------
 missing=$(env_prod_missing)
 if [ -n "${missing}" ]; then
   warn 'These required values in .env.prod are still empty:'
@@ -99,10 +108,21 @@ if [ -n "${missing}" ]; then
   say "  1. Run:  cd ${TARGET_DIR} && ./scripts/prod-configure.sh   (asks again, then starts)"
   say "     or edit ${TARGET_DIR}/.env.prod by hand (the comments explain every value)."
   say "  2. Hand-edited? Then run:  cd ${TARGET_DIR} && ./scripts/prod-start.sh"
+  # Step 8 below is what fills the onboarding catalog, and this path never
+  # reaches it. The admin area does the same thing with one click.
+  say '  3. Fill the onboarding catalog in the admin area, under Catalog.'
   exit 0
 fi
 
 "${REPO_ROOT}/scripts/prod-start.sh"
 
-# --- 7. verify mail delivery ------------------------------------------------
+# --- 8. fill the onboarding catalog -----------------------------------------
+# A new instance has an empty catalog, and an empty catalog makes the picker
+# the first user meets an empty screen. Seed it from the document this release
+# ships, then fetch the icons that go with it. Only the installer does this:
+# once an instance is running, the catalog is the admin's -- what they edit,
+# add and delete stays that way.
+seed_catalog
+
+# --- 9. verify mail delivery ------------------------------------------------
 offer_mail_check
