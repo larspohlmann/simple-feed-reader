@@ -166,6 +166,19 @@ jobs:
       - name: configure_public_url
         run: scripts/test/configure-public-url.test.sh
 
+      # The mail question, whose default decides whether a new instance can
+      # send account mail at all. A wrong answer here is invisible until the
+      # first registration nobody receives.
+      - name: configure_mail
+        run: scripts/test/configure-mail.test.sh
+
+      # What the installer does when an earlier production install is still on
+      # the machine (#272). Its volumes outlive their containers and hold
+      # passwords the installer cannot reproduce, so the choice between
+      # removing them and stopping has to be right every time.
+      - name: previous-prod-install
+        run: scripts/test/previous-prod-install.test.sh
+
       # The all-skip guard for the weekly e2e rot check (#96). It decides
       # whether a Playwright run that reported success actually verified
       # anything, so it is exactly the kind of logic that must not rot itself.

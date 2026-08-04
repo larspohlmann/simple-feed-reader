@@ -44,13 +44,35 @@ values only you know:
   Together these become `PUBLIC_URL` and the published container ports. For
   OAuth sign-in, and for Safari, use a real HTTPS origin.
 - **How to send mail** — an SMTP relay (your mail provider's host, port,
-  username, password), or the machine's own MTA if it runs one. There is no
-  default: a feed reader that cannot send mail cannot register users or
-  reset passwords, so this is asked up front. You can also answer "later";
-  the installer then stops and tells you how to finish by hand.
+  username, password), or the machine's own MTA if it runs one. **The default
+  is "no mail"** (§5): it is the answer that always works, and a private
+  instance needs no relay. Account mail is then off in the open —
+  `MAIL_DISABLED=1` — instead of silently lost behind a wrong relay password.
+  Answer 1 or 2 for an instance that registers users by email; answer 3 to
+  finish it by hand later. `./scripts/prod-configure.sh` asks again at any
+  time.
+
+Once the stack is up, the installer fills the **onboarding catalog** from the
+document this release ships and fetches an icon for every feed in it — a few
+minutes of requests, paid once and cached in the database. Only the installer
+does this: from then on the catalog is yours, and neither an update nor a
+restart re-applies the shipped document over your edits. A manual install
+does the same in one command:
+
+```bash
+docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod \
+  exec -u www-data php bin/console app:catalog:import --if-empty
+```
 
 At the end it offers to send a **test mail** — accept, and a wrong relay
 password surfaces immediately instead of at the first lost registration.
+
+**Installing a second time on the same machine?** Removing the containers of
+an earlier install does not remove its data — that is what makes a restart
+safe (§8). The installer therefore looks for the volumes of an earlier
+install before it generates anything, and offers to delete them. Say no and
+it stops, because the passwords in those volumes are the ones in the *old*
+`.env.prod` and cannot be guessed: see "Access denied for user" in §9.
 
 Prefer doing it manually? Clone the repository, check out the latest
 `vX.Y.Z` tag, copy `.env.prod.example` to `.env.prod`, fill it in (the
@@ -155,8 +177,9 @@ should ever point at it.
 A private or single-operator instance may not want a mail transport at all.
 Set `MAIL_DISABLED=1` together with `MAILER_DSN=null://null` in `.env.prod`
 to opt in — both are required. The installer's mail question offers this as
-choice **"4) No mail"** (at install, or later via
-`./scripts/prod-configure.sh` — see §7) and sets both automatically, along
+choice **"4) No mail"**, and that is the answer pressing return gives (at
+install, or later via `./scripts/prod-configure.sh` — see §7). It sets both
+automatically, along
 with a placeholder `MAIL_FROM` derived from `PUBLIC_URL` if none is set yet
 (it is never actually sent).
 
@@ -249,3 +272,15 @@ but it signs every user out.
   host-MTA DSN, check the host's mail queue (`mailq`).
 - **Port 80/443 already taken** — set `WEB_HTTP_PORT` / `WEB_TLS_PORT` in
   `.env.prod` and re-run `./scripts/prod-start.sh`.
+- **`Access denied for user 'feedreader'`** — the `.env.prod` in use is not
+  the one that created the database volume. MySQL creates its user only while
+  it initializes an *empty* data directory, so a volume that outlived an
+  earlier install keeps that install's `MYSQL_PASSWORD` forever. Either put
+  the old `.env.prod` back, or start over from an empty machine:
+
+  ```bash
+  docker volume ls -q --filter label=com.docker.compose.project=simple-feed-reader-prod
+  ```
+
+  Removing what that lists **deletes the database**. Stop the stack first —
+  docker refuses to remove a volume a container still claims.

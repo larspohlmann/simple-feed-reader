@@ -167,10 +167,102 @@ SUMMARY
 # travel together -- always go through prod_compose.
 ENV_PROD_FILE="${REPO_ROOT}/.env.prod"
 
+# The compose project the prod stack runs under. Docker stamps it on every
+# container, volume and network the stack creates, which is what makes an
+# earlier install on this machine findable.
+PROD_PROJECT_NAME='simple-feed-reader-prod'
+
 prod_compose() {
   ( cd -- "${REPO_ROOT}" \
-      && docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml \
+      && docker compose -p "${PROD_PROJECT_NAME}" -f docker-compose.prod.yml \
            --env-file .env.prod "$@" )
+}
+
+# --- what an earlier production install leaves behind -----------------------
+# Stopping the stack keeps its named volumes. That is deliberate -- the data
+# survives a restart -- but it turns a SECOND install into a trap. MySQL
+# creates its user only while it initialises an EMPTY data directory, so a
+# surviving mysql-data still holds the password of the first install while a
+# new install writes a freshly generated one into .env.prod. Nothing connects
+# after that, and the first sign of it is "Access denied for user" at the
+# migration step (issue #272).
+#
+# The lists are printed one name per line, and empty when the machine is
+# clean. Docker is queried by project label rather than by name, so the answer
+# stays right if a volume is ever added or renamed.
+prod_project_volumes() {
+  docker volume ls -q \
+    --filter "label=com.docker.compose.project=${PROD_PROJECT_NAME}" 2>/dev/null || true
+}
+
+prod_project_containers() {
+  docker ps -aq \
+    --filter "label=com.docker.compose.project=${PROD_PROJECT_NAME}" 2>/dev/null || true
+}
+
+# Delete everything the production project still owns here. Containers go
+# first: docker refuses to remove a volume that any container still claims,
+# including a stopped one.
+remove_previous_prod_install() {
+  local containers volumes
+  containers=$(prod_project_containers)
+  volumes=$(prod_project_volumes)
+  say 'Removing the previous production install ...'
+  if [ -n "${containers}" ]; then
+    # Both lists are deliberately split into separate arguments.
+    # shellcheck disable=SC2086
+    docker rm -f ${containers} >/dev/null
+  fi
+  if [ -n "${volumes}" ]; then
+    # shellcheck disable=SC2086
+    docker volume rm ${volumes} >/dev/null
+  fi
+  ok 'The previous production install is gone. Installing into a clean machine.'
+}
+
+report_previous_prod_install() {
+  local volume
+  warn 'A previous production install is still on this machine.'
+  say 'Docker kept its data when its containers went away:'
+  while IFS= read -r volume; do
+    printf '    %s\n' "${volume}"
+  done <<< "$1"
+  say 'A new install cannot use those volumes. MySQL keeps the password it was'
+  say 'first created with, and this installer generates a new one, so the app'
+  say 'would be refused with "Access denied for user" at its first query.'
+}
+
+# The two ways out that keep the data, printed before the install stops. This
+# is also the path a terminal-less install takes, so it never guesses.
+abort_for_previous_prod_install() {
+  local volumes_on_one_line
+  volumes_on_one_line=$(printf '%s' "$1" | tr '\n' ' ')
+  say 'Nothing was removed. To KEEP that data, copy the .env.prod of the previous'
+  say 'install into this directory and run ./scripts/prod-start.sh -- the passwords'
+  say 'in that file are the only ones those volumes accept.'
+  say 'To START OVER, stop the old stack if it still runs, then remove its data:'
+  printf '    docker volume rm %s\n' "${volumes_on_one_line}"
+  die 'Stopped. A previous production install is in the way.'
+}
+
+# Called by the installer before it generates a single secret. It either
+# leaves the machine clean and returns, or it stops the install -- it never
+# installs over volumes whose passwords it does not have.
+handle_previous_prod_install() {
+  local volumes
+  volumes=$(prod_project_volumes)
+  if [ -z "${volumes}" ]; then
+    return 0
+  fi
+  report_previous_prod_install "${volumes}"
+  if ! can_prompt; then
+    warn 'This install has no terminal to ask on.'
+    abort_for_previous_prod_install "${volumes}"
+  fi
+  if ! prompt_confirm 'Remove that install now? This DELETES its database.'; then
+    abort_for_previous_prod_install "${volumes}"
+  fi
+  remove_previous_prod_install
 }
 
 # The value of KEY in .env.prod, '' when absent. Surrounding double quotes are
@@ -276,9 +368,17 @@ url_encode() {
 # Interactive prompts. All read from /dev/tty, never stdin -- stdin is the
 # script itself under `curl | bash`. Without a terminal they return the
 # default (or nothing), so callers degrade to the two-step flow.
+
+# Whether there is a terminal to ask a question on. The single place that
+# decides it, so a caller that must behave differently without one asks the
+# same question the prompts themselves ask.
+can_prompt() {
+  [ -r /dev/tty ]
+}
+
 prompt_with_default() {
   local question=$1 default=$2 answer
-  if [ ! -r /dev/tty ]; then
+  if ! can_prompt; then
     printf '%s' "${default}"
     return 0
   fi
@@ -289,7 +389,7 @@ prompt_with_default() {
 
 prompt_value() {
   local question=$1 answer
-  if [ ! -r /dev/tty ]; then
+  if ! can_prompt; then
     return 0
   fi
   printf '%s: ' "${question}" >/dev/tty
@@ -307,7 +407,7 @@ tell() {
 
 prompt_secret_value() {
   local question=$1 answer
-  if [ ! -r /dev/tty ]; then
+  if ! can_prompt; then
     return 0
   fi
   printf '%s: ' "${question}" >/dev/tty
@@ -370,6 +470,31 @@ wait_for_php_ready() {
   die 'The PHP container did not become ready. Check:  docker compose -p simple-feed-reader-prod logs php'
 }
 
+# Fill the onboarding catalog of a NEW instance, and fetch the icons that go
+# with it. The installer calls this, and nothing else does: from the first
+# start onwards the catalog belongs to the admin, so an update must never
+# re-apply the shipped document over what they have made of it (#272).
+#
+# Neither step is worth failing an install that is already up and serving --
+# both are recoverable from the admin area with one click -- so a failure here
+# warns and returns.
+seed_catalog() {
+  say 'Importing the bundled catalog ...'
+  # --if-empty guards the case this script cannot see: an install pointed at a
+  # database that already holds a catalog.
+  if ! prod_compose exec -T -u www-data php bin/console app:catalog:import --if-empty; then
+    warn 'The bundled catalog was not imported. Import it in the admin area under Catalog.'
+    return 0
+  fi
+  # Minutes: one request per catalog feed, and the shipped document holds over
+  # a hundred. The icons are cached in the database, so this is paid once and
+  # survives every later update.
+  say 'Fetching the catalog favicons (this takes a few minutes) ...'
+  if ! prod_compose exec -T -u www-data php bin/console app:catalog:warm-favicons; then
+    warn 'Some catalog favicons are missing. The admin area can fetch them again later.'
+  fi
+}
+
 print_prod_summary() {
   local base_url public_url setup_status admin_setup_secret
   base_url=$(prod_base_url)
@@ -417,7 +542,7 @@ print_prod_summary() {
 # cannot be edited to react to it.
 prompt_confirm() {
   local prompt="$1" answer
-  if [ ! -r /dev/tty ]; then
+  if ! can_prompt; then
     return 1
   fi
   printf '%s [y/N] ' "${prompt}" >/dev/tty
@@ -723,7 +848,7 @@ configure_mail() {
   local current_dsn choice smtp_host smtp_port smtp_user smtp_password
   local mail_host current_from mail_from
   CONFIGURED_MAIL_CHOICE=''
-  if [ ! -r /dev/tty ]; then
+  if ! can_prompt; then
     return 0
   fi
   current_dsn=$(env_prod_get MAILER_DSN)
@@ -731,11 +856,15 @@ configure_mail() {
   if [ -n "${current_dsn}" ]; then
     say "Currently: $(mask_dsn_password "${current_dsn}")"
   fi
-  printf '  1) An SMTP relay (your mail provider): host, port, user, password\n' >/dev/tty
-  printf "  2) This server's own MTA (postfix/exim listening on localhost:25)\n" >/dev/tty
-  printf '  3) Later: finish mail by hand, or re-run ./scripts/prod-configure.sh\n' >/dev/tty
-  printf '  4) No mail: run without outgoing mail (registration/reset email off)\n' >/dev/tty
-  choice=$(prompt_with_default 'Choice' '1')
+  tell '  1) An SMTP relay (your mail provider): host, port, user, password'
+  tell "  2) This server's own MTA (postfix/exim listening on localhost:25)"
+  tell '  3) Later: finish mail by hand, or re-run ./scripts/prod-configure.sh'
+  tell '  4) No mail: run without outgoing mail (registration/reset email off)'
+  # No mail is the default because it is the answer that always works: a
+  # private instance needs no relay, and an operator who has one can say so.
+  # The opposite default asks four questions before the first start and turns
+  # a wrong relay password into a broken instance.
+  choice=$(prompt_with_default 'Choice' '4')
   case "${choice}" in
     1)
       env_prod_set MAIL_DISABLED ''

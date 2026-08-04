@@ -37,6 +37,47 @@ final class ImportCatalogCommandTest extends DbTestCase
         self::assertCount($shippedFeedCount, $em->getRepository(CatalogFeed::class)->findAll());
     }
 
+    /**
+     * The production start script runs the import on every start, so it passes
+     * --if-empty. On a fresh install that is an ordinary import.
+     */
+    public function testIfEmptySeedsACatalogThatHasNothingInIt(): void
+    {
+        $tester = $this->tester();
+        $tester->execute(['--if-empty' => true]);
+
+        self::assertSame(0, $tester->getStatusCode());
+
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        self::assertNotEmpty($em->getRepository(CatalogFeed::class)->findAll());
+    }
+
+    /**
+     * And on every start after that it must keep its hands off: the catalog in
+     * the database is the admin's, including the rows they deleted from it.
+     */
+    public function testIfEmptyLeavesAnExistingCatalogUntouched(): void
+    {
+        $this->tester()->execute([]);
+
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $feeds = $em->getRepository(CatalogFeed::class);
+        $deleted = $feeds->findAll()[0];
+        $deletedUrl = $deleted->getUrl();
+        $em->remove($deleted);
+        $em->flush();
+        $em->clear();
+
+        $tester = $this->tester();
+        $tester->execute(['--if-empty' => true]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertStringContainsString('imported nothing', $tester->getDisplay());
+        self::assertNull($feeds->findOneBy(['url' => $deletedUrl]));
+    }
+
     public function testAMissingFileIsAnError(): void
     {
         $tester = $this->tester();

@@ -67,6 +67,16 @@ class CatalogCategoryRepository extends ServiceEntityRepository
         return $rows;
     }
 
+    /**
+     * Whether the catalog holds nothing at all. Categories answer it for the
+     * whole catalog: a feed cannot exist without the category it belongs to,
+     * so no category means no feed either.
+     */
+    public function isEmpty(): bool
+    {
+        return 0 === $this->count();
+    }
+
     public function nextPosition(): int
     {
         $max = $this->createQueryBuilder('c')
