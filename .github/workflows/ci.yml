@@ -166,6 +166,13 @@ jobs:
       - name: configure_public_url
         run: scripts/test/configure-public-url.test.sh
 
+      # The installer is advertised as `curl ... | bash`, so bash reads it from
+      # stdin while running it. A child that reads stdin eats the rest of the
+      # script and the install stops early reporting success (#275). This
+      # pipes a script into bash and proves the wrappers cannot do that.
+      - name: piped-installer-not-truncated
+        run: scripts/test/piped-installer-not-truncated.test.sh
+
       # The mail question, whose default decides whether a new instance can
       # send account mail at all. A wrong answer here is invisible until the
       # first registration nobody receives.
