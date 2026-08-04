@@ -55,6 +55,12 @@ assert_runs_to_the_end() {
   write_piped_script "${wrapper}" "${script}"
   # `cat script | bash` is `curl ... | bash` with the network removed: bash's
   # stdin is a pipe carrying the script itself.
+  #
+  # The cat is load-bearing, so SC2002 does not apply here. `bash < file` hands
+  # bash a SEEKABLE stdin, and bash then rewinds it after each child -- which is
+  # the one case that never truncates. Replacing the pipe with a redirect would
+  # make this test pass no matter what the wrappers do.
+  # shellcheck disable=SC2002
   output=$(cat "${script}" | bash 2>&1) || fail "${wrapper}: the piped script failed: ${output}"
   case "${output}" in
     *'THE INSTALLER REACHED ITS LAST STEP'*) ;;
@@ -75,6 +81,7 @@ drains_stdin
 : 'padding padding padding padding padding padding padding padding padding'
 printf 'THIS LINE MUST NOT SURVIVE\n'
 SCRIPT
+# shellcheck disable=SC2002  # the pipe is the subject of the test, see above
 unprotected=$(cat "${work}/unprotected.sh" | bash 2>&1) || true
 case "${unprotected}" in
   *'THIS LINE MUST NOT SURVIVE'*)
