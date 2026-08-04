@@ -180,11 +180,37 @@ ENV_PROD_FILE="${REPO_ROOT}/.env.prod"
 # earlier install on this machine findable.
 PROD_PROJECT_NAME='simple-feed-reader-prod'
 
+# The DSN a SQLite install runs on: one file on the php-var volume, which
+# already outlives its container. Symfony resolves %kernel.project_dir%
+# (doctrine.yaml reads DATABASE_URL through env(resolve:)), the same form
+# backend/.env uses for the development database.
+PROD_SQLITE_DATABASE_URL='sqlite:///%kernel.project_dir%/var/data.db'
+
+# Whether the stack runs the bundled MySQL container. An EMPTY DATABASE_URL
+# means it does -- that is what docker-compose.prod.yml falls back to, and what
+# every .env.prod written before the SQLite option contains, so an existing
+# install keeps its database without editing anything. Any other value points
+# the app somewhere else (a SQLite file, an external server), and then the
+# bundled container has no reason to start.
+prod_uses_bundled_mysql() {
+  [ -z "$(env_prod_get DATABASE_URL)" ]
+}
+
+# The compose profiles the stack runs with: 'mysql' for the bundled database,
+# nothing at all otherwise. docker-compose.prod.yml puts the mysql service
+# behind that profile.
+prod_compose_profiles() {
+  if prod_uses_bundled_mysql; then
+    printf 'mysql'
+  fi
+}
+
 # stdin is /dev/null here for the same reason as in compose() above -- see the
 # comment there before removing it.
 prod_compose() {
   ( cd -- "${REPO_ROOT}" \
-      && docker compose -p "${PROD_PROJECT_NAME}" -f docker-compose.prod.yml \
+      && COMPOSE_PROFILES="$(prod_compose_profiles)" \
+         docker compose -p "${PROD_PROJECT_NAME}" -f docker-compose.prod.yml \
            --env-file .env.prod "$@" ) < /dev/null
 }
 
@@ -505,6 +531,16 @@ seed_catalog() {
   fi
 }
 
+# What the summary says the instance stores its data in. A backup needs the
+# right volume, so the answer names it.
+prod_database_description() {
+  if prod_uses_bundled_mysql; then
+    printf 'MySQL, in the mysql-data volume'
+    return 0
+  fi
+  printf 'SQLite, one file in the php-var volume'
+}
+
 print_prod_summary() {
   local base_url public_url setup_status admin_setup_secret
   base_url=$(prod_base_url)
@@ -512,6 +548,7 @@ print_prod_summary() {
   printf '\n%s\n\n' "${_c_bold}simple-feed-reader (production) is running${_c_reset}"
   printf '  Public URL ........  %s\n' "${public_url}"
   printf '  Local health ......  %s/api/health\n' "${base_url}"
+  printf '  Database ..........  %s\n' "$(prod_database_description)"
   printf '\n'
   # Show the setup secret ONLY while the instance still has no administrator
   # (the API is authoritative); printing it on every later run would put a
@@ -842,6 +879,44 @@ generate_prod_certificate() {
       -cert-file docker/certs-prod/fullchain.pem \
       -key-file docker/certs-prod/privkey.pem \
       "$1" )
+}
+
+# --- which database the instance runs on ------------------------------------
+# Asked by the installer, once. Switching afterwards means moving the data from
+# one engine to the other, which nothing here does -- so prod-configure.sh, the
+# script that re-asks the questions of an existing install, deliberately does
+# not ask this one.
+#
+# MySQL is the default: it is what every install ran on before this question
+# existed, and pressing return has to keep meaning that.
+configure_database() {
+  local choice
+  if ! can_prompt; then
+    return 0
+  fi
+  say 'Which database should this instance use?'
+  tell '  1) MySQL: a database container beside the app (best for several users)'
+  tell '  2) SQLite: a single file, no database container (fine for a personal instance)'
+  choice=$(prompt_with_default 'Choice' '1')
+  if [ "${choice}" = '2' ]; then
+    use_sqlite_database
+    return 0
+  fi
+  use_bundled_mysql_database
+}
+
+use_sqlite_database() {
+  env_prod_set DATABASE_URL "${PROD_SQLITE_DATABASE_URL}"
+  say 'Using SQLite. The database is one file on the php-var volume, and no'
+  say 'database container starts.'
+}
+
+# Writes the value rather than leaving the file alone. Choosing MySQL has to be
+# an answer even when the file already says something else -- a no-op here
+# would silently keep a hand-edited SQLite DSN over the answer just given.
+use_bundled_mysql_database() {
+  env_prod_set DATABASE_URL ''
+  say 'Using MySQL in a container beside the app.'
 }
 
 # The host part of PUBLIC_URL -- the default mail domain both the transport
