@@ -10,6 +10,14 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v0.5.4] - 2026-08-04
+
+## What's Changed
+* fix(#275): stop docker compose from eating a piped installer by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/276
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v0.5.3...v0.5.4
+
 ## [v0.5.3] - 2026-08-04
 
 ## What's Changed
