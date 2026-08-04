@@ -7,6 +7,16 @@
     [style.transform]="readerTransform()"
     [style.transition]="readerTransition()"
   >
+    @if (fullscreen()) {
+      <!-- The toolbar below retracts on scroll, so full-screen the nameplate
+           needs a strip of its own. aria-hidden: the h1 carries the same title
+           and the favicon is decorative, so announcing it would read the
+           headline twice. -->
+      <div class="mini" aria-hidden="true">
+        <app-favicon [url]="e.faviconUrl" [size]="14" />
+        <span class="mini-title">{{ e.title }}</span>
+      </div>
+    }
     <div class="bar" [class.hidden]="toolbarHidden()">
       <button
         class="close"
@@ -16,7 +26,34 @@
       >
         <app-icon name="arrow_back" size="md" />
       </button>
+      @if (!fullscreen()) {
+        <!-- The split pane's toolbar never retracts, so the nameplate rides
+             inside it rather than in a strip of its own. aria-hidden for the
+             same reason as .mini above. -->
+        <span class="bar-name" aria-hidden="true">
+          <app-favicon [url]="e.faviconUrl" [size]="18" />
+          <span class="bar-title">{{ e.title }}</span>
+        </span>
+      }
       <div class="nav">
+        @if (!fullscreen()) {
+          <button
+            type="button"
+            [attr.aria-label]="'reader.favorite' | transloco"
+            [class.on]="e.isFavorite"
+            (click)="favorite.emit()"
+          >
+            <app-icon name="star" size="md" />
+          </button>
+          <button
+            type="button"
+            [attr.aria-label]="'reader.keep' | transloco"
+            [class.on]="e.isKept"
+            (click)="keep.emit()"
+          >
+            <app-icon name="bookmark" size="md" />
+          </button>
+        }
         @if (readerMode.canToggle()) {
           <button
             class="mode"
