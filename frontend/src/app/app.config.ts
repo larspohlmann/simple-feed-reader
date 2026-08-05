@@ -10,13 +10,14 @@ import {
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TranslocoService, provideTransloco } from '@jsverse/transloco';
-import { firstValueFrom } from 'rxjs';
 import { routes } from './app.routes';
 import { API_BASE_URL } from './core/api';
 import { authInterceptor } from './core/auth.interceptor';
+import { preloadInitialLanguage } from './core/boot-language';
 import { HttpLocaleWriter } from './core/http-locale-writer';
 import { HttpPreferencesWriter } from './core/http-preferences-writer';
 import { HttpTranslocoLoader } from './core/transloco-loader';
+import { FALLBACK_LANG, LANGS } from './core/language';
 import { LanguageService } from './core/language.service';
 import { LOCALE_WRITER } from './core/locale-writer';
 import { PREFERENCES_WRITER } from './core/preferences-writer';
@@ -38,21 +39,24 @@ export const appConfig: ApplicationConfig = {
     { provide: PREFERENCES_WRITER, useExisting: HttpPreferencesWriter },
     provideTransloco({
       config: {
-        availableLangs: ['en', 'de'],
-        defaultLang: 'en',
-        fallbackLang: 'en',
+        availableLangs: [...LANGS],
+        defaultLang: FALLBACK_LANG,
+        fallbackLang: FALLBACK_LANG,
         reRenderOnLangChange: true,
         prodMode: !isDevMode(),
         missingHandler: { logMissingKey: isDevMode(), useFallbackTranslation: true },
       },
       loader: HttpTranslocoLoader,
     }),
-    // Resolve the persisted/detected language and preload its dictionary before the
-    // first render, so the app never flashes English before switching to German.
+    // Resolve the persisted/detected language and preload its dictionary before
+    // the first render, so the app never flashes English before switching to
+    // German. Bounded and non-fatal (#280): a failed or stalled dictionary
+    // request falls back to the bundled English instead of rejecting bootstrap
+    // and leaving a permanently blank page.
     provideAppInitializer(() => {
       const language = inject(LanguageService); // constructing it sets the active lang
       const transloco = inject(TranslocoService);
-      return firstValueFrom(transloco.load(language.lang()));
+      return preloadInitialLanguage(transloco, language.lang());
     }),
   ],
 };
