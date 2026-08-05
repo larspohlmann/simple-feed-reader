@@ -63,8 +63,10 @@
           // requested. So "a node appeared" is not "the app rendered": the
           // timer has to survive until something OTHER than the outlet exists,
           // or a stalled route chunk cancels the watchdog and still leaves a
-          // blank page (#282). If app.html ever gains static chrome, this
-          // condition must change with it.
+          // blank page (#282). app.html keeps its failure banner behind an @if
+          // for this reason (#285): a false @if renders only a comment anchor,
+          // which querySelector ignores. Static chrome there would disarm this
+          // watchdog ~70 ms into bootstrap and bring #282 back.
           new MutationObserver(function (mutations, observer) {
             if (!root.querySelector(':not(router-outlet)')) return;
             clearTimeout(timer);

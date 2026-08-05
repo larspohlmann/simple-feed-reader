@@ -14,7 +14,8 @@ import { routes } from './app.routes';
 import { API_BASE_URL } from './core/api';
 import { authInterceptor } from './core/auth.interceptor';
 import { preloadInitialLanguage } from './core/boot-language';
-import { revealBootErrorSurface } from './core/boot-error-surface';
+import { NavigationFailureReporter } from './core/navigation-failure';
+import { startNavigationWatchdog } from './core/navigation-watchdog';
 import { HttpLocaleWriter } from './core/http-locale-writer';
 import { HttpPreferencesWriter } from './core/http-preferences-writer';
 import { HttpTranslocoLoader } from './core/transloco-loader';
@@ -31,14 +32,13 @@ export const appConfig: ApplicationConfig = {
     // A lazy route chunk can fail or stall exactly like the dictionary fetch
     // (#280) — Brave's resume-reload serves main.js from the immutable cache
     // but a chunk evicted from the HTTP cache, or new since the last release,
-    // stalls on the reconnecting radio. The router then leaves the outlet
-    // permanently empty, which looks identical to a rejected bootstrap, so it
-    // gets the same static surface. This handler must not rely on anything
-    // the bundle still needs to fetch: by the time it fires, a chunk has
-    // already failed, so revealBootErrorSurface is deliberately DI-free.
+    // breaks on the reconnecting radio. A failure raises NavigationError and
+    // lands here; a stall raises nothing at all, which is what the navigation
+    // watchdog below exists for (#285). Both report to the same place, which
+    // decides between the static surface and an in-app banner.
     provideRouter(
       routes,
-      withNavigationErrorHandler((event) => revealBootErrorSurface(event.error)),
+      withNavigationErrorHandler((event) => inject(NavigationFailureReporter).report(event.error)),
     ),
     provideHttpClient(withInterceptors([authInterceptor])),
     { provide: API_BASE_URL, useValue: environment.apiBaseUrl },
@@ -70,5 +70,7 @@ export const appConfig: ApplicationConfig = {
       const transloco = inject(TranslocoService);
       return preloadInitialLanguage(transloco, language.lang());
     }),
+    // Must run in an injection context, and only once the router exists.
+    provideAppInitializer(() => startNavigationWatchdog()),
   ],
 };
