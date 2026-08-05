@@ -62,12 +62,19 @@ test('renders the login screen when the dictionary request stalls', async ({ pag
  * resume-reload with main.js served from cache but the route chunk evicted),
  * just past a different fetch. app.config.ts's `withNavigationErrorHandler`
  * is the fix; this proves it fires and that `#boot-error` genuinely becomes
- * visible, which had no coverage before.
+ * visible.
+ *
+ * The load is direct rather than an in-app hop, and that is the whole point
+ * since #285: the full-page surface is now only for a failure with nothing
+ * on screen yet. A chunk that fails *after* a page has rendered shows the
+ * retry banner and keeps the page — covered by navigation-watchdog.spec.ts,
+ * because replacing a working page with "The app could not start" was itself
+ * a defect.
  *
  * Scope, deliberately: this covers a chunk that FAILS, not one that STALLS.
- * A hung `import()` never rejects, so the router raises no NavigationError and
- * the handler never runs — that gap is #282, and it needs a bounded lazy load
- * or a pre-bootstrap watchdog, not another assertion here.
+ * A hung `import()` never rejects, so the router raises no NavigationError
+ * and this handler never runs — that is what the watchdogs are for (#282 at
+ * boot, #285 mid-session).
  *
  * Chunk filenames are content-hashed and change on every build, so the exact
  * URL is discovered live rather than hardcoded: load the register screen (its
@@ -77,11 +84,9 @@ test('renders the login screen when the dictionary request stalls', async ({ pag
  * login chunk from the shared initial bundle — a full reload would refetch
  * everything and defeat the isolation. That discovered URL is then aborted on
  * a fresh page (a fresh module graph, so the browser can't just serve the
- * chunk from the page that already fetched it) before repeating the same
- * navigation, so the assertions below exercise a genuinely broken fetch, not
- * the main bundle.
+ * chunk from the page that already fetched it).
  */
-test('reveals the boot error surface when a lazy route chunk fails to load', async ({
+test('reveals the boot error surface when the first route chunk fails to load', async ({
   page,
   context,
 }) => {
@@ -102,8 +107,10 @@ test('reveals the boot error surface when a lazy route chunk fails to load', asy
   const brokenPage = await context.newPage();
   await brokenPage.route(loginChunkUrl, (route) => route.abort('failed'));
 
-  await brokenPage.goto('/register');
-  await brokenPage.getByRole('link', { name: 'Already have an account?' }).click();
+  // Straight to /login: the chunk fails before any route has rendered, so
+  // there is no page worth keeping and the static surface is the only thing
+  // that can carry a message.
+  await brokenPage.goto('/login');
 
   await expect(brokenPage.locator('#boot-error')).toBeVisible({ timeout: 15_000 });
   expect((await brokenPage.locator('body').innerText()).trim()).not.toBe('');

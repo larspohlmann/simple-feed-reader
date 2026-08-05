@@ -393,7 +393,8 @@
     "close": "Close",
     "add": "Add",
     "loading": "Loading…",
-    "retry": "Retry"
+    "retry": "Retry",
+    "navigationFailed": "That page did not load."
   },
   "discover": {
     "title": "Discover feeds",

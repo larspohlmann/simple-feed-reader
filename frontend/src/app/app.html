@@ -1,1 +1,10 @@
+@if (navigation.failed()) {
+  <div class="failure">
+    <app-error-banner
+      [message]="'common.navigationFailed' | transloco"
+      [actionLabel]="'common.retry' | transloco"
+      (action)="reload()"
+    />
+  </div>
+}
 <router-outlet />
