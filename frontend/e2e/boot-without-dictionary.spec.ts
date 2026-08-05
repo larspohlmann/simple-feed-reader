@@ -4,8 +4,19 @@ import { test, expect, Page } from '@playwright/test';
 /**
  * #280: a mobile browser discards the backgrounded tab and resume-reloads on a
  * radio that is still reconnecting. Boot used to gate on the dictionary fetch,
- * so a failed or stalled request left a permanently blank page. The app must
- * now render — in the bundled English fallback — in both failure modes.
+ * so a failed or stalled request left a permanently blank page.
+ *
+ * The two tests below guard two different layers, and both are needed:
+ *
+ * - "request fails" guards the bundled English dictionary (`transloco-loader.ts`)
+ *   plus Transloco's own `fallbackLang` retry/catch. A hard HTTP error is an
+ *   error Transloco already recovers from on its own; delete the bundling and
+ *   this test still catches it, because `en.json` would then go over HTTP,
+ *   hit the same route stub, and fail the same way.
+ * - "request stalls" guards `preloadInitialLanguage` (`boot-language.ts`) and
+ *   its 3000 ms bound. A request that neither resolves nor rejects gives
+ *   Transloco's `catchError` nothing to fire on, so only the explicit timeout
+ *   rescues it — this is the one that reproduces the original #280 hang.
  *
  * The device persisted German, so boot genuinely needs the network-loaded
  * dictionary; English alone would never issue the request (it is bundled).
