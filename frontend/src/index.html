@@ -49,22 +49,29 @@
         // 15 s is long past any working load on a slow connection, yet still
         // reaches the user staring at a genuinely dead boot. A false positive
         // costs only a brief flash: the observer below re-hides the surface
-        // the moment a late render arrives.
+        // the moment real content arrives.
         var BOOT_DEADLINE_MS = 15000;
-        var surface = document.getElementById('boot-error');
-        var timer = setTimeout(function () {
-          console.error('Boot watchdog: nothing rendered within ' + BOOT_DEADLINE_MS + ' ms.');
-          surface.removeAttribute('hidden');
-        }, BOOT_DEADLINE_MS);
-        new MutationObserver(function (mutations, observer) {
-          for (var i = 0; i < mutations.length; i++) {
-            if (mutations[i].addedNodes.length === 0) continue;
+        try {
+          var surface = document.getElementById('boot-error');
+          var root = document.querySelector('app-root');
+          var timer = setTimeout(function () {
+            console.error('Boot watchdog: no content within ' + BOOT_DEADLINE_MS + ' ms.');
+            surface.removeAttribute('hidden');
+          }, BOOT_DEADLINE_MS);
+          // app.html holds nothing but <router-outlet>, which Angular appends
+          // ~70 ms into bootstrap — long before a lazy route chunk is even
+          // requested. So "a node appeared" is not "the app rendered": the
+          // timer has to survive until something OTHER than the outlet exists,
+          // or a stalled route chunk cancels the watchdog and still leaves a
+          // blank page (#282). If app.html ever gains static chrome, this
+          // condition must change with it.
+          new MutationObserver(function (mutations, observer) {
+            if (!root.querySelector(':not(router-outlet)')) return;
             clearTimeout(timer);
             surface.setAttribute('hidden', '');
             observer.disconnect();
-            return;
-          }
-        }).observe(document.querySelector('app-root'), { childList: true });
+          }).observe(root, { childList: true, subtree: true });
+        } catch (e) {}
       })();
     </script>
   </body>

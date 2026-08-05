@@ -80,4 +80,39 @@ test.describe('boot watchdog', () => {
 
     await expect(page.locator('#boot-error')).toBeHidden();
   });
+
+  /**
+   * #282's actual reproduction, and the one the other tests cannot reach: the
+   * main graph loads fine, Angular renders <router-outlet>, and only the LAZY
+   * route chunk stalls. Nothing rejects, so no handler fires; only a watchdog
+   * whose cancel condition means "route content", not "any node", survives to
+   * reveal the surface.
+   *
+   * Chunk filenames are content-hashed, so the URL is discovered live: load
+   * /register (its own chunk, already in) and follow its in-app link to /login,
+   * capturing the one new chunk request the client-side navigation triggers.
+   * That URL is then stalled on a fresh page — a fresh module graph, so the
+   * browser cannot serve it from the page that already fetched it.
+   */
+  test('reveals the surface when only the lazy route chunk stalls', async ({ page, context }) => {
+    await page.goto('/register');
+    await page.waitForLoadState('networkidle');
+
+    const [chunkRequest] = await Promise.all([
+      page.waitForRequest((request) => /\/chunk-[^/?]+\.js/.test(request.url())),
+      page.getByRole('link', { name: 'Already have an account?' }).click(),
+    ]);
+    const loginChunkUrl = chunkRequest.url();
+
+    const stalledPage = await context.newPage();
+    await stalledPage.route(loginChunkUrl, () => undefined);
+
+    await stalledPage.goto('/login', { waitUntil: 'commit' });
+
+    await expect(stalledPage.locator('#boot-error')).toBeVisible({
+      timeout: WATCHDOG_DEADLINE_MS + 5_000,
+    });
+
+    await stalledPage.close();
+  });
 });

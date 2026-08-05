@@ -27,10 +27,14 @@ with no app-side hook.
 1. On parse, start a `setTimeout` with a 15 000 ms deadline. On expiry,
    remove `hidden` from `#boot-error` and `console.error` a one-line
    explanation.
-2. A `MutationObserver` on `<app-root>`'s `childList` watches for the first
-   added node — the first real render. When it fires: cancel the timer,
-   re-add `hidden` to `#boot-error` (undoing a false-positive reveal if the
-   render arrived late), and disconnect.
+2. A `MutationObserver` on `<app-root>`'s subtree watches for route content —
+   any element other than `<router-outlet>`, not merely any added node.
+   Angular appends the outlet itself ~70 ms into bootstrap, long before a lazy
+   chunk is even requested, so cancelling on that node would defeat the
+   watchdog for #282's own reproduction (found by the final review,
+   2026-08-05). When route content appears: cancel the timer, re-add `hidden`
+   to `#boot-error` (undoing a false-positive reveal if the render arrived
+   late), and disconnect.
 3. The deadline is a named constant at the top of the script with a comment
    recording the trade-off (false-positive flash vs. time-to-help). It lives
    only in `index.html`: importing TS pre-bundle is impossible, and a copy
@@ -61,6 +65,12 @@ New e2e spec `frontend/e2e/boot-watchdog.spec.ts`:
   watchdog this times out blank (proven during the #281 review).
 - **Happy-path guard**: after a normal boot renders, `#boot-error` still
   has `hidden` — guards against the observer failing to cancel the timer.
+- **Lazy-chunk stall after a successful bootstrap** (the reproduction the
+  other tests cannot reach): boot completes normally, then only the
+  content-hashed login chunk discovered via an in-app navigation is stalled
+  on a fresh page; assert `#boot-error` becomes visible within ~20 s. This is
+  the one test that fails when the cancel condition is "any node" instead of
+  "route content".
 
 No Jest coverage is possible for an inline `index.html` script; e2e is the
 owning layer. The three existing tests in

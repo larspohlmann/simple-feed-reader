@@ -4,7 +4,7 @@
 
 **Goal:** A pre-bootstrap watchdog in `index.html` that reveals the static `#boot-error` surface when nothing has rendered 15 s after page parse, so a lazy route chunk that stalls during boot no longer leaves a permanent blank page.
 
-**Architecture:** A ~15-line inline `<script>` after the `#boot-error` div — it runs before any bundle loads, so it is immune to every failure mode the bundles have. A `setTimeout(15000)` reveals the surface; a `MutationObserver` on `<app-root>`'s `childList` cancels the timer on first render, re-hides the surface if the render arrived late, and disconnects. The #281 plumbing (`main.ts` catch, `withNavigationErrorHandler`, `boot-error-surface.ts`) stays: it gives immediate errors on rejections, including in-app ones the watchdog cannot see after it disconnects.
+**Architecture:** A ~15-line inline `<script>` after the `#boot-error` div — it runs before any bundle loads, so it is immune to every failure mode the bundles have. A `setTimeout(15000)` reveals the surface; a `MutationObserver` on `<app-root>`'s subtree cancels the timer on first route content — any element other than `<router-outlet>`, not merely any added node — re-hides the surface if the render arrived late, and disconnects. The distinction matters because Angular appends the outlet itself ~70 ms into bootstrap, long before a lazy chunk is even requested, so cancelling on "any node" would defeat the watchdog for #282's own reproduction. The #281 plumbing (`main.ts` catch, `withNavigationErrorHandler`, `boot-error-surface.ts`) stays: it gives immediate errors on rejections, including in-app ones the watchdog cannot see after it disconnects.
 
 **Tech Stack:** Plain ES5-style inline JS in `index.html` (matching the existing theme script), Playwright e2e.
 
