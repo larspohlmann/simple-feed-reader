@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Discovery;
 
 use App\Service\Fetch\UrlResolver;
+use App\Service\Scraper\TextNormalizer;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -31,12 +32,12 @@ final readonly class FeedLinkScanner
         'application/atom+xml' => 'atom',
     ];
 
-    /** rel="alternate" types a feed may carry without naming its dialect. */
-    private const array AMBIGUOUS_TYPES = [
-        'text/xml',
-        'application/xml',
-        'application/feed+json',
-    ];
+    /**
+     * rel="alternate" types a feed may carry without naming its dialect. No
+     * JSON Feed type: nothing in Service/Parser reads one, so such a candidate
+     * could only ever fail its preview.
+     */
+    private const array AMBIGUOUS_TYPES = ['text/xml', 'application/xml'];
 
     /**
      * The dialect of a guessed candidate is unknown until something parses it,
@@ -46,6 +47,9 @@ final readonly class FeedLinkScanner
 
     /** A footer rarely hides more than a couple of feeds; the rest of a match list is noise. */
     private const int MAX_GUESSES = 5;
+
+    /** A label is a card heading, not an article: anything longer is markup that leaked in. */
+    private const int MAX_LABEL_CHARS = 120;
 
     /** `/feed`, `/rss/`, `/atom` — but not `/feedback`. */
     private const string FEED_PATH = '#/(feed|rss|atom)s?(/|$)#i';
@@ -95,14 +99,15 @@ final readonly class FeedLinkScanner
         $candidates = [];
         foreach ($document->querySelectorAll('link[rel~="alternate" i][type]') as $link) {
             $format = self::ADVERTISED_TYPES[$this->attribute($link, 'type')] ?? null;
-            if (null === $format) {
+            $url = null === $format ? null : $this->subscribableUrl($link, $baseUrl);
+            if (null === $url || null === $format || isset($candidates[$url])) {
                 continue;
             }
 
-            $candidates[] = $this->candidate($link, $baseUrl, $format);
+            $candidates[$url] = new FeedCandidate($url, $this->label($link), $format);
         }
 
-        return $this->unique($candidates, $baseUrl);
+        return array_values($candidates);
     }
 
     /** @return list<FeedCandidate> */
@@ -110,49 +115,49 @@ final readonly class FeedLinkScanner
     {
         $candidates = [];
         foreach ($document->querySelectorAll('link[rel~="alternate" i][type], a[href]') as $link) {
-            if (!$this->looksLikeAFeed($link, $baseUrl)) {
+            $url = $this->subscribableUrl($link, $baseUrl);
+            if (null === $url || isset($candidates[$url])) {
                 continue;
             }
 
-            $candidates[] = $this->candidate($link, $baseUrl, self::GUESSED_FORMAT);
+            $label = $this->label($link);
+            if (!$this->looksLikeAFeed($link, $url, $label)) {
+                continue;
+            }
+
+            $candidates[$url] = new FeedCandidate($url, $label, self::GUESSED_FORMAT);
+            // A page carries hundreds of anchors; stop as soon as the list is
+            // full rather than resolving every one of them to throw it away.
+            if (\count($candidates) === self::MAX_GUESSES) {
+                break;
+            }
         }
 
-        return \array_slice($this->unique($candidates, $baseUrl), 0, self::MAX_GUESSES);
+        return array_values($candidates);
     }
 
-    private function looksLikeAFeed(Element $link, string $baseUrl): bool
+    private function looksLikeAFeed(Element $link, string $url, ?string $label): bool
     {
         if (\in_array($this->attribute($link, 'type'), self::AMBIGUOUS_TYPES, true)) {
             return true;
         }
 
-        $url = $this->resolvedUrl($link, $baseUrl);
-        if (null === $url) {
-            return false;
-        }
+        $parts = parse_url($url) ?: [];
 
-        $parts = parse_url($url);
-        $path = \is_array($parts) ? ($parts['path'] ?? '') : '';
-        $query = \is_array($parts) ? ($parts['query'] ?? '') : '';
-
-        return 1 === preg_match(self::FEED_PATH, $path)
-            || 1 === preg_match(self::FEED_FILE, $path)
-            || 1 === preg_match(self::FEED_QUERY, $query)
-            || 1 === preg_match(self::FEED_LABEL, $this->label($link) ?? '');
-    }
-
-    private function candidate(Element $link, string $baseUrl, string $format): ?FeedCandidate
-    {
-        $url = $this->resolvedUrl($link, $baseUrl);
-
-        return null === $url ? null : new FeedCandidate($url, $this->label($link), $format);
+        return 1 === preg_match(self::FEED_PATH, $parts['path'] ?? '')
+            || 1 === preg_match(self::FEED_FILE, $parts['path'] ?? '')
+            || 1 === preg_match(self::FEED_QUERY, $parts['query'] ?? '')
+            || 1 === preg_match(self::FEED_LABEL, $label ?? '');
     }
 
     /**
-     * Absolute http(s) URL of the link, or null when there is nothing to fetch:
-     * an empty href, a `javascript:` or `mailto:` action, a bare fragment.
+     * Absolute http(s) URL of the link, or null when there is nothing to
+     * subscribe to: an empty href, a `javascript:` or `mailto:` action, a bare
+     * fragment, or the page being scanned — offering a page as its own feed is
+     * how a "subscribe" anchor in a nav bar becomes a candidate that cannot
+     * work.
      */
-    private function resolvedUrl(Element $link, string $baseUrl): ?string
+    private function subscribableUrl(Element $link, string $baseUrl): ?string
     {
         $href = trim($link->getAttribute('href') ?? '');
         if ('' === $href || str_starts_with($href, '#')) {
@@ -160,17 +165,20 @@ final readonly class FeedLinkScanner
         }
 
         $resolved = UrlResolver::resolve($baseUrl, $href);
+        if (1 !== preg_match('#^https?://#i', $resolved)) {
+            return null;
+        }
 
-        return 1 === preg_match('#^https?://#i', $resolved) ? $resolved : null;
+        return rtrim($resolved, '/') === rtrim($baseUrl, '/') ? null : $resolved;
     }
 
     /** The link's own name: its title attribute, or the text a reader sees. */
     private function label(Element $link): ?string
     {
         foreach ([$link->getAttribute('title'), $link->getAttribute('aria-label'), $link->textContent] as $text) {
-            $trimmed = trim((string) $text);
-            if ('' !== $trimmed) {
-                return mb_substr($trimmed, 0, 120);
+            $normalized = TextNormalizer::normalize((string) $text);
+            if ('' !== $normalized) {
+                return mb_substr($normalized, 0, self::MAX_LABEL_CHARS);
             }
         }
 
@@ -180,27 +188,5 @@ final readonly class FeedLinkScanner
     private function attribute(Element $link, string $name): string
     {
         return strtolower(trim($link->getAttribute($name) ?? ''));
-    }
-
-    /**
-     * Drops the unresolvable links, the duplicates and any link back to the
-     * page being scanned — offering the page itself as its own feed is how a
-     * "subscribe" anchor in a nav bar turns into a candidate that cannot work.
-     *
-     * @param list<FeedCandidate|null> $candidates
-     *
-     * @return list<FeedCandidate>
-     */
-    private function unique(array $candidates, string $baseUrl): array
-    {
-        $byUrl = [];
-        foreach ($candidates as $candidate) {
-            if (null === $candidate || $candidate->url === $baseUrl || isset($byUrl[$candidate->url])) {
-                continue;
-            }
-            $byUrl[$candidate->url] = $candidate;
-        }
-
-        return array_values($byUrl);
     }
 }

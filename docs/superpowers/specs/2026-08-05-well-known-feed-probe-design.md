@@ -20,16 +20,24 @@ case. It runs whenever the site **answered** — a refusal (401/403/429) or any
 other error status, a 404 included — and whenever a page **arrived pointing at
 no feed at all**, where a real feed beats a synthesized one.
 
-It does not run when nothing answered at all: a null status code means DNS
-failure, refused connection or timeout, and asking a dead host six more
-questions costs six timeouts and can only fail. An answer, by contrast, is proof
-the host is alive and replies fast.
+It does not run when nothing answered at all (a null status code: DNS failure,
+refused connection, timeout) and not on a 5xx, where the server is currently
+answering nothing correctly. Either way the guesses would fail exactly as the
+page did, and each would cost a full timeout to prove it.
+
+The guesses go out **together**, over the same concurrent fetcher the refresh
+sweep uses. Sequentially the walk would cost up to six 10-second timeouts inside
+a request the user is waiting on; batched it costs one round trip, at the price
+of always making all six requests instead of stopping at the first hit. The
+first hit still wins — preference order is applied to the answers, not to the
+requests.
 
 Nothing found anywhere: the existing failure reasons, unchanged.
 
 ### The paths
 
-Appended to the entered URL's path, in this order, first hit wins:
+Appended to the entered URL's path; the earliest one that answers with a feed
+wins:
 
 `.rss`, `feed`, `rss`, `feed.xml`, `atom.xml`, `index.xml`
 
@@ -67,8 +75,7 @@ inline scan, moved out of `FeedDiscovery`: `<link rel="alternate">` with an RSS
 or Atom type, whose dialect is therefore known. The fuzzy pass runs only when
 the strict one found nothing, and accepts:
 
-- an `alternate` link with a vaguer type (`text/xml`, `application/xml`,
-  `application/feed+json`);
+- an `alternate` link with a vaguer type (`text/xml`, `application/xml`);
 - an anchor whose path looks like a feed (`/feed`, `/rss/`, `/index.atom`,
   `/feed.xml`) — but not `/feedback`;
 - an anchor whose query says so (`?feed=rss2`, `?format=atom`);
@@ -84,7 +91,7 @@ than as a bad subscription.
 | Unit | Responsibility |
 |---|---|
 | `Service/Discovery/FeedLinkScanner` | Read the feeds a page points at, exactly and then approximately. Pure: HTML in, candidates out. |
-| `Service/Discovery/WellKnownFeedProbe` | Build the conventional URLs, fetch them in order, return the first that parses. Knows nothing about discovery outcomes. |
+| `Service/Discovery/WellKnownFeedProbe` | Build the conventional URLs, fetch them in one batch, return the likeliest that parses. Knows nothing about discovery outcomes. |
 | `Service/Discovery/FeedDiscovery` | Order the four sources and map the winner to a `FeedDiscoveryResult`. |
 
 `WellKnownFeedProbe::probe(string $pageUrl): ?string` returns the canonical feed
@@ -92,22 +99,23 @@ URL, or `null` when no conventional path answered with a feed. Null is an
 absence here, not a failure signal: "this site has no feed under a conventional
 path" is an expected, ordinary outcome.
 
-Per-probe fetch failures (404, timeout, SSRF refusal) are swallowed and the next
-suffix is tried — a probe is a guess, and a wrong guess is not an error.
+Per-probe fetch failures (404, timeout, SSRF refusal) are swallowed — a probe is
+a guess, and a wrong guess is not an error.
 
 ## Frontend
 
-Discovery now costs more wall-clock time in the refusal case, so the dialog
-gains a live indicator instead of only a disabled button: while a subscribe is
-in flight the dialog body shows the app spinner next to "Looking for a feed…".
-Indeterminate by necessity — the work happens in one request and the browser
-cannot know which suffix the server is on.
+Discovery now costs more wall-clock time whenever a page names no feed, so the
+dialog gains a live indicator instead of only a disabled button: while a
+subscribe is in flight the body shows the app spinner next to "Looking for a
+feed…", and the footer button keeps its plain label rather than adding a second
+message for the same state. Indeterminate by necessity — the work happens in one
+request, and the browser cannot know which source the server is on.
 
 ## Testing
 
-- `WellKnownFeedProbeTest` — hit on the first suffix, hit on a later one, order
-  and stop-at-first-hit, non-feed bodies skipped, all-miss returns null,
-  fetch exceptions skipped, trailing-slash normalisation, query dropped, the
+- `WellKnownFeedProbeTest` — the URL shapes the walk is built from, the whole
+  walk going out at once, preference order among several hits, non-feed bodies
+  skipped, all-miss returns null, one failed probe not losing the others, the
   skip rule, and the redirect-canonical final URL.
 - `FeedLinkScannerTest` — the strict pass and its dialects, the footer icon, the
   feed-shaped addresses, the near-misses it must ignore, the cap, the
@@ -116,5 +124,5 @@ cannot know which suffix the server is on.
   404 that probes; a refused page whose probe misses still reports `blocked`; a
   page whose only hint is an anchor; a scrapable page that still prefers a
   conventional feed; an unreachable page that probes nothing.
-- `add-feed-dialog.component.spec.ts` and `e2e/add-feed-progress.spec.ts` — the
-  indicator shows while the request is in flight and disappears afterwards.
+- `add-feed-dialog.component.spec.ts` — the indicator shows while the request is
+  in flight and disappears afterwards.

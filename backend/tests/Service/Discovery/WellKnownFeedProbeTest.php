@@ -10,10 +10,20 @@ use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Parser\FeedParser;
 use App\Tests\Support\StubFeedFetcher;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class WellKnownFeedProbeTest extends KernelTestCase
 {
+    /** A site that serves nothing but the one URL a test stubs. */
+    private function fetcher(): StubFeedFetcher
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willThrowForEverythingElse(new FeedUnreachableException('x: HTTP 404', 404));
+
+        return $fetcher;
+    }
+
     private function probe(StubFeedFetcher $fetcher): WellKnownFeedProbe
     {
         $parser = self::getContainer()->get(FeedParser::class);
@@ -22,111 +32,86 @@ final class WellKnownFeedProbeTest extends KernelTestCase
         return new WellKnownFeedProbe($fetcher, $parser);
     }
 
-    private function feedXml(): string
+    private function feedAt(string $url, ?string $finalUrl = null): FetchResponse
     {
         $xml = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
         self::assertIsString($xml);
 
-        return $xml;
-    }
-
-    /** Answers every URL the probe can ask for, so no probe hits the stub's "not stubbed" guard. */
-    private function fetcherMissingEverything(string $pageUrl): StubFeedFetcher
-    {
-        $fetcher = new StubFeedFetcher();
-        foreach (WellKnownFeedProbe::SUFFIXES as $suffix) {
-            $fetcher->willThrow(
-                $this->directoryOf($pageUrl) . $suffix,
-                new FeedUnreachableException('x: HTTP 404', 404),
-            );
-        }
-
-        return $fetcher;
-    }
-
-    private function directoryOf(string $pageUrl): string
-    {
-        return str_ends_with($pageUrl, '/') ? $pageUrl : $pageUrl . '/';
-    }
-
-    public function testItSubscribesTheFeedRedditServesUnderTheRefusedPage(): void
-    {
-        $page = 'https://www.reddit.com/r/Bitwig/';
-        $fetcher = $this->fetcherMissingEverything($page);
-        $fetcher->willReturn($page . '.rss', FetchResponse::fetched(
-            $page . '.rss',
+        return FetchResponse::fetched(
+            $finalUrl ?? $url,
             permanentRedirect: false,
-            body: $this->feedXml(),
+            body: $xml,
             etag: null,
             lastModified: null,
-        ));
-
-        self::assertSame($page . '.rss', $this->probe($fetcher)->probe($page));
-        self::assertSame([$page . '.rss'], $fetcher->fetchedUrls);
+        );
     }
 
-    public function testItWalksTheSuffixesInOrderAndStopsAtTheFirstFeed(): void
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function pageUrls(): iterable
+    {
+        yield 'the #283 case' => [
+            'https://www.reddit.com/r/Bitwig/',
+            'https://www.reddit.com/r/Bitwig/.rss',
+        ];
+        // A section address is usually written without a trailing slash, and
+        // RFC 3986 would resolve `.rss` against it one level too high.
+        yield 'a path without a trailing slash' => [
+            'https://www.reddit.com/r/Bitwig',
+            'https://www.reddit.com/r/Bitwig/.rss',
+        ];
+        yield 'a query and a fragment' => [
+            'https://example.com/blog/?sort=new#top',
+            'https://example.com/blog/.rss',
+        ];
+        yield 'a bare host' => ['https://example.com', 'https://example.com/.rss'];
+    }
+
+    #[DataProvider('pageUrls')]
+    public function testItAsksForTheConventionalPathUnderTheEnteredUrl(string $page, string $feed): void
+    {
+        $fetcher = $this->fetcher();
+        $fetcher->willReturn($feed, $this->feedAt($feed));
+
+        self::assertSame($feed, $this->probe($fetcher)->probe($page));
+    }
+
+    public function testItPrefersTheLikelierSuffixWhenSeveralServeAFeed(): void
     {
         $page = 'https://blocked.example.com/blog/';
-        $fetcher = $this->fetcherMissingEverything($page);
-        $fetcher->willReturn($page . 'rss', FetchResponse::fetched(
+        $fetcher = $this->fetcher();
+        $fetcher->willReturn($page . 'rss', $this->feedAt($page . 'rss'));
+        $fetcher->willReturn($page . 'index.xml', $this->feedAt($page . 'index.xml'));
+        $fetcher->willReturn($page . 'feed', $this->feedAt($page . 'feed'));
+
+        self::assertSame($page . 'feed', $this->probe($fetcher)->probe($page));
+    }
+
+    public function testItAsksForEveryConventionalPathAtOnce(): void
+    {
+        $page = 'https://blocked.example.com/blog/';
+
+        $fetcher = $this->fetcher();
+        self::assertNull($this->probe($fetcher)->probe($page));
+
+        // The whole walk goes out together — one round trip, not six — so a
+        // slow host cannot hold the subscribe request for six timeouts.
+        self::assertSame([
+            $page . '.rss',
+            $page . 'feed',
             $page . 'rss',
-            permanentRedirect: false,
-            body: $this->feedXml(),
-            etag: null,
-            lastModified: null,
-        ));
-
-        self::assertSame($page . 'rss', $this->probe($fetcher)->probe($page));
-        self::assertSame(
-            [$page . '.rss', $page . 'feed', $page . 'rss'],
-            $fetcher->fetchedUrls,
-        );
-    }
-
-    public function testItTreatsTheEnteredUrlAsADirectory(): void
-    {
-        $page = 'https://www.reddit.com/r/Bitwig';
-        $fetcher = $this->fetcherMissingEverything($page);
-        $fetcher->willReturn('https://www.reddit.com/r/Bitwig/.rss', FetchResponse::fetched(
-            'https://www.reddit.com/r/Bitwig/.rss',
-            permanentRedirect: false,
-            body: $this->feedXml(),
-            etag: null,
-            lastModified: null,
-        ));
-
-        self::assertSame('https://www.reddit.com/r/Bitwig/.rss', $this->probe($fetcher)->probe($page));
-    }
-
-    public function testItDropsQueryAndFragment(): void
-    {
-        $fetcher = $this->fetcherMissingEverything('https://blocked.example.com/blog/');
-        $fetcher->willReturn('https://blocked.example.com/blog/.rss', FetchResponse::fetched(
-            'https://blocked.example.com/blog/.rss',
-            permanentRedirect: false,
-            body: $this->feedXml(),
-            etag: null,
-            lastModified: null,
-        ));
-
-        self::assertSame(
-            'https://blocked.example.com/blog/.rss',
-            $this->probe($fetcher)->probe('https://blocked.example.com/blog/?sort=new#top'),
-        );
+            $page . 'feed.xml',
+            $page . 'atom.xml',
+            $page . 'index.xml',
+        ], $fetcher->fetchedUrls);
     }
 
     public function testItReportsTheFinalUrlOfARedirectedProbe(): void
     {
         $page = 'https://blocked.example.com/blog/';
-        $fetcher = $this->fetcherMissingEverything($page);
-        $fetcher->willReturn($page . '.rss', FetchResponse::fetched(
-            'https://feeds.example.com/blog.xml',
-            permanentRedirect: true,
-            body: $this->feedXml(),
-            etag: null,
-            lastModified: null,
-        ));
+        $fetcher = $this->fetcher();
+        $fetcher->willReturn($page . '.rss', $this->feedAt($page . '.rss', 'https://feeds.example.com/blog.xml'));
 
         self::assertSame('https://feeds.example.com/blog.xml', $this->probe($fetcher)->probe($page));
     }
@@ -134,7 +119,7 @@ final class WellKnownFeedProbeTest extends KernelTestCase
     public function testItSkipsABodyThatIsNotAFeed(): void
     {
         $page = 'https://blocked.example.com/blog/';
-        $fetcher = $this->fetcherMissingEverything($page);
+        $fetcher = $this->fetcher();
         $fetcher->willReturn($page . '.rss', FetchResponse::fetched(
             $page . '.rss',
             permanentRedirect: false,
@@ -142,40 +127,24 @@ final class WellKnownFeedProbeTest extends KernelTestCase
             etag: null,
             lastModified: null,
         ));
-        $fetcher->willReturn($page . 'feed', FetchResponse::fetched(
-            $page . 'feed',
-            permanentRedirect: false,
-            body: $this->feedXml(),
-            etag: null,
-            lastModified: null,
-        ));
+        $fetcher->willReturn($page . 'feed', $this->feedAt($page . 'feed'));
 
         self::assertSame($page . 'feed', $this->probe($fetcher)->probe($page));
     }
 
-    public function testItKeepsProbingAfterAFetchFailure(): void
+    public function testItKeepsTheOtherAnswersWhenOneProbeFails(): void
     {
         $page = 'https://blocked.example.com/blog/';
-        $fetcher = $this->fetcherMissingEverything($page);
+        $fetcher = $this->fetcher();
         $fetcher->willThrow($page . '.rss', new SsrfBlockedException('private address'));
-        $fetcher->willReturn($page . 'feed', FetchResponse::fetched(
-            $page . 'feed',
-            permanentRedirect: false,
-            body: $this->feedXml(),
-            etag: null,
-            lastModified: null,
-        ));
+        $fetcher->willReturn($page . 'feed', $this->feedAt($page . 'feed'));
 
         self::assertSame($page . 'feed', $this->probe($fetcher)->probe($page));
     }
 
     public function testItFindsNothingWhenNoConventionalPathServesAFeed(): void
     {
-        $page = 'https://blocked.example.com/blog/';
-        $fetcher = $this->fetcherMissingEverything($page);
-
-        self::assertNull($this->probe($fetcher)->probe($page));
-        self::assertCount(\count(WellKnownFeedProbe::SUFFIXES), $fetcher->fetchedUrls);
+        self::assertNull($this->probe($this->fetcher())->probe('https://blocked.example.com/blog/'));
     }
 
     /**
@@ -185,7 +154,7 @@ final class WellKnownFeedProbeTest extends KernelTestCase
      */
     public function testItProbesNothingWhenTheUrlIsAlreadyAFeedAddress(): void
     {
-        $fetcher = new StubFeedFetcher();
+        $fetcher = $this->fetcher();
 
         self::assertNull($this->probe($fetcher)->probe('https://www.reddit.com/r/Bitwig/.rss'));
         self::assertSame([], $fetcher->fetchedUrls);
@@ -193,7 +162,7 @@ final class WellKnownFeedProbeTest extends KernelTestCase
 
     public function testItProbesNothingForAUrlWithoutAHost(): void
     {
-        $fetcher = new StubFeedFetcher();
+        $fetcher = $this->fetcher();
 
         self::assertNull($this->probe($fetcher)->probe('not-a-url'));
         self::assertSame([], $fetcher->fetchedUrls);

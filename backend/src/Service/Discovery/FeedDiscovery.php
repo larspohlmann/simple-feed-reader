@@ -72,52 +72,54 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
     /**
      * The page arrived and points at no feed at all. Before synthesizing one
      * from its article list, ask for the conventional paths: a real feed the
-     * page merely forgot to advertise beats anything the scraper can build, and
-     * the page is proof the host is answering.
+     * page merely forgot to advertise beats anything the scraper can build.
      */
     private function feedThePageNeverMentions(
         string $body,
         string $finalUrl,
         ScrapeFallback $fallback,
     ): FeedDiscoveryResult {
-        $feedUrl = $this->wellKnownFeeds->probe($finalUrl);
-        if (null !== $feedUrl) {
-            return FeedDiscoveryResult::directFeed($feedUrl);
-        }
-
-        return ScrapeFallback::Enabled === $fallback
-            ? $this->scrapeFallback($body, $finalUrl)
-            : FeedDiscoveryResult::candidates([]);
+        return $this->probedFeed($finalUrl)
+            ?? (ScrapeFallback::Enabled === $fallback
+                ? $this->scrapeFallback($body, $finalUrl)
+                : FeedDiscoveryResult::candidates([]));
     }
 
     /**
      * The page did not arrive, but the site may still serve a feed under it —
      * that page was the only way to LEARN the feed's address, so the probe
-     * guesses it instead. A hit is reported as a direct feed rather than as a
-     * candidate: the probe has already parsed the document, and a candidate
-     * would cost two more requests (preview, then subscribe) to a host that
-     * just turned one down.
+     * guesses it instead.
      *
-     * A missing status code means nothing answered at all — DNS failure,
-     * refused connection, timeout. Six more questions to a host that is not
-     * there buy six timeouts, so that case reports straight away.
+     * Only worth asking when the site actually answered, and answered for
+     * itself: a missing status code is a DNS failure or a dead connection, and
+     * a 5xx is a server that is currently answering nothing correctly. Either
+     * way the guesses would fail the same way the page did.
      */
     private function feedTheSiteMightStillServe(
         string $url,
         FeedUnreachableException $error,
     ): FeedDiscoveryResult {
-        if (null === $error->statusCode) {
+        $status = $error->statusCode;
+        if (null === $status || $status >= 500) {
             return FeedDiscoveryResult::scrapeFailed('unreachable');
         }
 
-        $feedUrl = $this->wellKnownFeeds->probe($url);
-        if (null !== $feedUrl) {
-            return FeedDiscoveryResult::directFeed($feedUrl);
-        }
+        return $this->probedFeed($url)
+            ?? FeedDiscoveryResult::scrapeFailed(
+                \in_array($status, self::BLOCKED_STATUSES, true) ? 'blocked' : 'unreachable',
+            );
+    }
 
-        return FeedDiscoveryResult::scrapeFailed(
-            \in_array($error->statusCode, self::BLOCKED_STATUSES, true) ? 'blocked' : 'unreachable',
-        );
+    /**
+     * A hit is reported as a direct feed rather than as a candidate: the probe
+     * has already parsed the document, and a candidate would cost two more
+     * requests (preview, then subscribe) to a host that just turned one down.
+     */
+    private function probedFeed(string $url): ?FeedDiscoveryResult
+    {
+        $feedUrl = $this->wellKnownFeeds->probe($url);
+
+        return null === $feedUrl ? null : FeedDiscoveryResult::directFeed($feedUrl);
     }
 
     /**

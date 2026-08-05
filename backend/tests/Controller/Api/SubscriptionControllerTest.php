@@ -8,8 +8,8 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Discovery\WellKnownFeedProbe;
 use App\Service\Fetch\Exception\FeedUnreachableException;
+use App\Service\Fetch\BatchFeedFetcherInterface;
 use App\Service\Fetch\FeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Subscription\SubscriptionService;
@@ -55,20 +55,12 @@ final class SubscriptionControllerTest extends WebTestCase
      */
     private function installFetcher(StubFeedFetcher $stub): void
     {
+        // Discovery guesses feed addresses under any page that names none, so a
+        // test cannot list every URL it will ask for without re-deriving the
+        // code under test. It says "nothing else is out there" once instead.
+        $stub->willThrowForEverythingElse(new FeedUnreachableException('x: HTTP 404', 404));
         self::getContainer()->set(FeedFetcherInterface::class, $stub);
-    }
-
-    /**
-     * Answers every conventional feed path under $pageUrl with a 404. A page
-     * that points at no feed sends discovery probing for one, and an unstubbed
-     * probe would fail the test with a stub error instead of its own assertion.
-     */
-    private function withoutAConventionalFeed(StubFeedFetcher $stub, string $pageUrl): void
-    {
-        $directory = str_ends_with($pageUrl, '/') ? $pageUrl : $pageUrl . '/';
-        foreach (WellKnownFeedProbe::SUFFIXES as $suffix) {
-            $stub->willThrow($directory . $suffix, new FeedUnreachableException('x: HTTP 404', 404));
-        }
+        self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
     }
 
     /**
@@ -330,7 +322,6 @@ final class SubscriptionControllerTest extends WebTestCase
                 lastModified: null,
             ),
         );
-        $this->withoutAConventionalFeed($stub, 'https://www.heise.de/');
         $this->installFetcher($stub);
 
         $client->request(
@@ -374,7 +365,6 @@ final class SubscriptionControllerTest extends WebTestCase
                 lastModified: null,
             ),
         );
-        $this->withoutAConventionalFeed($stub, 'https://www.heise.de/');
         $this->installFetcher($stub);
 
         $client->request(
@@ -397,9 +387,6 @@ final class SubscriptionControllerTest extends WebTestCase
 
         $stub = new StubFeedFetcher();
         $stub->willThrow('https://forbidden.example.com', new FeedUnreachableException('x: HTTP 403', 403));
-        // A refusal sends discovery looking for a feed under the conventional
-        // paths; this site serves none, so the refusal is still the answer.
-        $this->withoutAConventionalFeed($stub, 'https://forbidden.example.com');
         $this->installFetcher($stub);
 
         $client->request(
