@@ -71,7 +71,10 @@ In `frontend/src/app/core/transloco-loader.spec.ts`, add to the existing `descri
   // dead radio can no longer blank the app (#280).
   it('serves the bundled English dictionary without touching the network', (done) => {
     loader.getTranslation('en').subscribe((translation) => {
-      expect(translation['login.title']).toBeDefined();
+      // The real dictionary, not an empty object: the loader must not degrade
+      // into serving `{}` and leaving every key to render as its raw name.
+      const auth = translation['auth'] as { login: { subtitle: string } };
+      expect(auth.login.subtitle).toBe('Welcome back to your reader.');
       done();
     });
 
@@ -79,7 +82,10 @@ In `frontend/src/app/core/transloco-loader.spec.ts`, add to the existing `descri
   });
 ```
 
-Note: if `en.json` has no `login.title` key, pick any real top-level-dotted key from `frontend/public/i18n/en.json` — open the file and use one that exists. The assertion's point is "this is the real dictionary, not `{}`".
+The dictionaries are NESTED JSON, not flat dotted keys — `auth.login.subtitle` is
+`{"auth": {"login": {"subtitle": "Welcome back to your reader."}}}` in
+`frontend/public/i18n/en.json`. Transloco flattens on `setTranslation`; the loader
+returns the raw nested object, so the assertion indexes it nested.
 
 Also change the second existing test (`carries the build version…`) from `'en'` to `'de'`:
 
@@ -473,11 +479,13 @@ git commit -m "fix(#280): cache the versioned i18n dictionaries immutably on Str
 - Consumes: the dev server on `http://localhost:4200` (Playwright `webServer` config starts/reuses it), the Docker stack for the API, `LANG_KEY` = `'sfr.lang'`.
 - Produces: two Playwright tests proving the #280 failure modes render.
 
-- [ ] **Step 1: Find the stable English login-screen text**
+The exact copy, already resolved — do not go looking for it:
+`auth.login.subtitle` is `"Welcome back to your reader."` in `en.json` and
+`"Willkommen zurück bei deinem Reader."` in `de.json`. Both appear on `/login`.
+Asserting the English string is visible AND the German one is not proves the
+fallback actually engaged, rather than the device language never applying.
 
-Open `frontend/src/app/auth/login/login.component.html` and `frontend/public/i18n/en.json`; the baseline render shows "Welcome back to your reader." — confirm which key it is and that it appears on `/login`. Use that literal in the assertions below (adjust if the actual copy differs).
-
-- [ ] **Step 2: Write the spec**
+- [ ] **Step 1: Write the spec**
 
 Create `frontend/e2e/boot-without-dictionary.spec.ts`:
 
@@ -495,10 +503,17 @@ import { test, expect, Page } from '@playwright/test';
  * dictionary; English alone would never issue the request (it is bundled).
  * The spec owns all the data it asserts on: no account, no seeded state.
  */
-const ENGLISH_LOGIN_TEXT = 'Welcome back to your reader.';
+const ENGLISH_SUBTITLE = 'Welcome back to your reader.';
+const GERMAN_SUBTITLE = 'Willkommen zurück bei deinem Reader.';
 
 async function bootAsGermanDevice(page: Page) {
   await page.addInitScript(() => localStorage.setItem('sfr.lang', 'de'));
+}
+
+/** The app rendered, and it rendered via the bundled fallback. */
+async function expectFallbackRender(page: Page) {
+  await expect(page.getByText(ENGLISH_SUBTITLE)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(GERMAN_SUBTITLE)).toHaveCount(0);
 }
 
 test('renders the login screen when the dictionary request fails', async ({ page }) => {
@@ -507,7 +522,7 @@ test('renders the login screen when the dictionary request fails', async ({ page
 
   await page.goto('/login');
 
-  await expect(page.getByText(ENGLISH_LOGIN_TEXT)).toBeVisible({ timeout: 15_000 });
+  await expectFallbackRender(page);
 });
 
 test('renders the login screen when the dictionary request stalls', async ({ page }) => {
@@ -517,7 +532,7 @@ test('renders the login screen when the dictionary request stalls', async ({ pag
 
   await page.goto('/login');
 
-  await expect(page.getByText(ENGLISH_LOGIN_TEXT)).toBeVisible({ timeout: 15_000 });
+  await expectFallbackRender(page);
 });
 ```
 
