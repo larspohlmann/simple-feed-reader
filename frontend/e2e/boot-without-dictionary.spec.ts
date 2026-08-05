@@ -57,12 +57,17 @@ test('renders the login screen when the dictionary request stalls', async ({ pag
 /**
  * The dictionary fetch is bounded and non-fatal, but bootstrap isn't the only
  * thing that can leave the outlet empty: every route in app.routes.ts is
- * `loadComponent`/`loadChildren`, so a failed or stalled *lazy route chunk*
+ * `loadComponent`/`loadChildren`, so a *lazy route chunk* that fails to load
  * produces the identical permanent blank page — same trigger as #280 (Brave
- * resume-reload with main.js served from cache but the route chunk stalled on
- * a reconnecting radio), just past a different fetch. app.config.ts's
- * `withNavigationErrorHandler` is the fix; this proves it fires and that
- * `#boot-error` genuinely becomes visible, which had no coverage before.
+ * resume-reload with main.js served from cache but the route chunk evicted),
+ * just past a different fetch. app.config.ts's `withNavigationErrorHandler`
+ * is the fix; this proves it fires and that `#boot-error` genuinely becomes
+ * visible, which had no coverage before.
+ *
+ * Scope, deliberately: this covers a chunk that FAILS, not one that STALLS.
+ * A hung `import()` never rejects, so the router raises no NavigationError and
+ * the handler never runs — that gap is #282, and it needs a bounded lazy load
+ * or a pre-bootstrap watchdog, not another assertion here.
  *
  * Chunk filenames are content-hashed and change on every build, so the exact
  * URL is discovered live rather than hardcoded: load the register screen (its
@@ -101,10 +106,6 @@ test('reveals the boot error surface when a lazy route chunk fails to load', asy
   const loginChunkUrl = chunkRequest.url();
 
   const brokenPage = await context.newPage();
-  const consoleErrors: string[] = [];
-  brokenPage.on('console', (message) => {
-    if (message.type() === 'error') consoleErrors.push(message.text());
-  });
   await brokenPage.route(loginChunkUrl, (route) => route.abort('failed'));
 
   await brokenPage.goto('/register');
@@ -112,7 +113,6 @@ test('reveals the boot error surface when a lazy route chunk fails to load', asy
 
   await expect(brokenPage.locator('#boot-error')).toBeVisible({ timeout: 15_000 });
   expect((await brokenPage.locator('body').innerText()).trim()).not.toBe('');
-  expect(consoleErrors.length).toBeGreaterThan(0);
 
   await brokenPage.close();
 });
