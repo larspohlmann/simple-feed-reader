@@ -5,7 +5,7 @@ import { provideLocationMocks } from '@angular/common/testing';
 import { DefaultUrlSerializer, NavigationStart, Router, provideRouter } from '@angular/router';
 import { Subject } from 'rxjs';
 import { ListScrollMemory } from './list-scroll-memory';
-import { forgetsPosition, startListScrollReset } from './list-scroll-reset';
+import { ListScrollReset, forgetsPosition } from './list-scroll-reset';
 import { Selection } from './query';
 
 const ALL: Selection = { kind: 'all', id: null, unread: true };
@@ -36,7 +36,7 @@ describe('forgetsPosition', () => {
   });
 });
 
-describe('startListScrollReset', () => {
+describe('ListScrollReset', () => {
   let events: Subject<unknown>;
   let memory: { forget: jest.Mock };
   const serializer = new DefaultUrlSerializer();
@@ -57,7 +57,7 @@ describe('startListScrollReset', () => {
         { provide: ListScrollMemory, useValue: memory },
       ],
     });
-    TestBed.runInInjectionContext(() => startListScrollReset());
+    TestBed.inject(ListScrollReset);
   });
 
   it('leaves the first list it sees alone', () => {
@@ -95,6 +95,9 @@ describe('startListScrollReset', () => {
     expect(memory.forget).not.toHaveBeenCalled();
   });
 
+  // Settings destroys the reader shell. Remembering the list left behind is why
+  // this is root-provided rather than started by the shell: a listener that died
+  // with the shell would come back knowing nothing and restore instead of reset.
   it('forgets the list a click opens after a trip outside the reader', () => {
     navigate('/?tag=5');
     navigate('/settings');
@@ -115,7 +118,7 @@ describe('startListScrollReset', () => {
 // The fake event stream above cannot prove that the real router labels a real
 // back gesture 'popstate' and a real click 'imperative'. These drive the router
 // itself, against the real sessionStorage-backed memory.
-describe('startListScrollReset, driven by the real router', () => {
+describe('ListScrollReset, driven by the real router', () => {
   let router: Router;
   let location: Location;
   let memory: ListScrollMemory;
@@ -134,7 +137,7 @@ describe('startListScrollReset, driven by the real router', () => {
     router = TestBed.inject(Router);
     location = TestBed.inject(Location);
     memory = TestBed.inject(ListScrollMemory);
-    TestBed.runInInjectionContext(() => startListScrollReset());
+    TestBed.inject(ListScrollReset);
   });
 
   it('drops the offset of a list the user clicks', fakeAsync(() => {

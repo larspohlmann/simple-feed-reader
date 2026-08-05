@@ -1,18 +1,19 @@
 // src/app/reader/list-scroll-reset.ts
-import { DestroyRef, inject } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationStart, PRIMARY_OUTLET, Router, convertToParamMap } from '@angular/router';
 import { ListScrollMemory } from './list-scroll-memory';
 import { Selection, sameSelection, selectionFromParams } from './query';
 
-/** How the router says a navigation began. `undefined` is read as a gesture, not
- *  as a click, so an unattributed navigation never costs the user their place. */
-export type NavigationTrigger = 'imperative' | 'popstate' | 'hashchange' | undefined;
+/** How the router says a navigation began. Taken from the event rather than
+ *  spelled out, so a trigger Angular adds later cannot drift out of sync. */
+type NavigationTrigger = NavigationStart['navigationTrigger'];
 
 /**
  * Whether the incoming list must start at the top rather than where it was left.
  *
  * Asking for a list is not the same as returning to one (#286). A click on a tag
- * or on "All feeds" asks for that list, and the user expects its newest entries;
+ * or on "All items" asks for that list, and the user expects its newest entries;
  * back, forward and a resume-reload return to a list, and there the remembered
  * place is the whole point.
  */
@@ -22,7 +23,8 @@ export function forgetsPosition(
   trigger: NavigationTrigger,
 ): boolean {
   // Nothing came before: the app is booting, or the browser reloaded a
-  // backgrounded tab. Both must land where the user left off.
+  // backgrounded tab. Both must land where the user left off. An unattributed
+  // navigation is read the same way, so it never costs the user their place.
   if (previous === null) return false;
   if (trigger !== 'imperative') return false;
   // A click that does not change the list — mark-all-read, opening or closing an
@@ -44,34 +46,45 @@ export function forgetsPosition(
  * because it fires before the route parameters update, so the erase always lands
  * before anything reads the offset.
  *
- * Started by the reader shell, not by an app initializer: everything here belongs
- * to the reader's lazy chunk, and wiring it at bootstrap would pull the chunk into
- * the initial bundle. The bootstrap navigation is therefore never seen, which is
- * exactly the "nothing came before" case — a resume-reload restores.
+ * Root-provided, and deliberately not tied to the reader shell's lifetime: the
+ * shell is destroyed by a trip to settings, and a listener that died with it
+ * would come back not knowing which list the user had left — so the first click
+ * after returning would restore instead of resetting. `providedIn: 'root'` does
+ * not pull this into the initial bundle, because only the reader's lazy chunk
+ * imports it. The bootstrap navigation is never seen either way, which is exactly
+ * the "nothing came before" case that makes a resume-reload restore.
  */
-export function startListScrollReset(): void {
-  const router = inject(Router);
-  const memory = inject(ListScrollMemory);
-  let previous: Selection | null = null;
+@Injectable({ providedIn: 'root' })
+export class ListScrollReset {
+  private readonly router = inject(Router);
+  private readonly memory = inject(ListScrollMemory);
 
-  const subscription = router.events.subscribe((event) => {
-    if (!(event instanceof NavigationStart)) return;
-    const incoming = readerSelectionFrom(router, event.url);
+  /** The list the user was last on, or null before the first one is seen. */
+  private previous: Selection | null = null;
+
+  constructor() {
+    this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
+      if (event instanceof NavigationStart) this.onNavigationStart(event);
+    });
+  }
+
+  private onNavigationStart(event: NavigationStart): void {
+    const incoming = this.readerSelectionFrom(event.url);
     // Settings, admin, discover: not a list, so neither the memory nor the list
     // left behind may be disturbed by passing through them.
     if (incoming === null) return;
-    if (forgetsPosition(previous, incoming, event.navigationTrigger)) memory.forget(incoming);
-    previous = incoming;
-  });
+    if (forgetsPosition(this.previous, incoming, event.navigationTrigger)) {
+      this.memory.forget(incoming);
+    }
+    this.previous = incoming;
+  }
 
-  inject(DestroyRef).onDestroy(() => subscription.unsubscribe());
-}
-
-/** The list a URL names, or null when the URL is not the reader. The reader is
- *  the app's root route, so any path segment at all names something else. */
-function readerSelectionFrom(router: Router, url: string): Selection | null {
-  const tree = router.parseUrl(url);
-  const primary = tree.root.children[PRIMARY_OUTLET];
-  if (primary && primary.segments.length > 0) return null;
-  return selectionFromParams(convertToParamMap(tree.queryParams)).selection;
+  /** The list a URL names, or null when the URL is not the reader. The reader is
+   *  the app's root route, so any path segment at all names something else. */
+  private readerSelectionFrom(url: string): Selection | null {
+    const tree = this.router.parseUrl(url);
+    const primary = tree.root.children[PRIMARY_OUTLET];
+    if (primary && primary.segments.length > 0) return null;
+    return selectionFromParams(convertToParamMap(tree.queryParams)).selection;
+  }
 }

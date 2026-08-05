@@ -10,10 +10,16 @@ const SCROLLED_TO = 900;
 
 const TAG = { id: 7001, name: 'Scroll fixture', color: null, icon: null, position: 0 };
 
-function entry(id: number) {
+/** The two lists under test, each named by the sidebar link that opens it and by
+ *  a row title only that list holds — the switch is only complete once the
+ *  incoming list's own rows are on screen, and identical fixtures could not say. */
+const ALL_LIST = { link: 'All items', rowPrefix: 'All fixture entry' };
+const TAG_LIST = { link: TAG.name, rowPrefix: 'Tag fixture entry' };
+
+function entry(id: number, title: string) {
   return {
     id,
-    title: `Scroll fixture entry ${id}`,
+    title,
     url: `https://fixtures.invalid/${id}`,
     author: null,
     summary: 'A fixture summary, long enough to give the row some height.',
@@ -32,8 +38,10 @@ function entry(id: number) {
   };
 }
 
-/** Long enough that every list under test scrolls well past SCROLLED_TO. */
-const ENTRIES = Array.from({ length: 60 }, (_, i) => entry(i + 1));
+/** Long enough that both lists scroll well past SCROLLED_TO. */
+function entriesFor(list: { rowPrefix: string }) {
+  return Array.from({ length: 60 }, (_, i) => entry(i + 1, `${list.rowPrefix} ${i + 1}`));
+}
 
 const SUBSCRIPTIONS = {
   subscriptions: [
@@ -49,18 +57,28 @@ const SUBSCRIPTIONS = {
       sourceFormat: 'xml',
       createdAt: '2026-08-01T10:00:00+00:00',
       tags: [TAG],
-      unreadCount: ENTRIES.length,
+      unreadCount: 60,
     },
   ],
   favoritesCount: 0,
   keptCount: 0,
 };
 
+async function stubGet(page: Page, pathname: string, json: unknown): Promise<void> {
+  await page.route(
+    (url) => url.pathname === pathname,
+    async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      await route.fulfill({ status: 200, json });
+    },
+  );
+}
+
 /**
  * Own every list this spec scrolls. The assertion is about a scroll offset, so
- * both lists must be reliably taller than the viewport and identical in height —
- * reading whatever the seeded account happens to hold would pass on a developer
- * machine and fail on a fresh database.
+ * both lists must be reliably taller than the viewport — reading whatever the
+ * seeded account happens to hold would pass on a developer machine and fail on a
+ * fresh database.
  *
  * Matched on the pathname so `/api/entries/{id}` and `/api/entries/{id}/state`
  * still reach the real backend.
@@ -70,23 +88,13 @@ async function stubReaderData(page: Page): Promise<void> {
     (url) => url.pathname === '/api/entries',
     async (route) => {
       if (route.request().method() !== 'GET') return route.fallback();
-      await route.fulfill({ status: 200, json: { entries: ENTRIES, nextCursor: null } });
+      const url = new URL(route.request().url());
+      const list = url.searchParams.get('tag') === String(TAG.id) ? TAG_LIST : ALL_LIST;
+      await route.fulfill({ status: 200, json: { entries: entriesFor(list), nextCursor: null } });
     },
   );
-  await page.route(
-    (url) => url.pathname === '/api/subscriptions',
-    async (route) => {
-      if (route.request().method() !== 'GET') return route.fallback();
-      await route.fulfill({ status: 200, json: SUBSCRIPTIONS });
-    },
-  );
-  await page.route(
-    (url) => url.pathname === '/api/tags',
-    async (route) => {
-      if (route.request().method() !== 'GET') return route.fallback();
-      await route.fulfill({ status: 200, json: { tags: [TAG] } });
-    },
-  );
+  await stubGet(page, '/api/subscriptions', SUBSCRIPTIONS);
+  await stubGet(page, '/api/tags', { tags: [TAG] });
 }
 
 async function signInAsAdmin(page: Page): Promise<boolean> {
@@ -104,22 +112,37 @@ async function signInAsAdmin(page: Page): Promise<boolean> {
 
 /** The list's own scroller — the shell locks the page and scrolls this instead. */
 function listScroller(page: Page) {
-  return page.locator('app-entry-list .rows');
-}
-
-async function scrollListTo(page: Page, top: number): Promise<void> {
-  const rows = listScroller(page);
-  await expect(rows.first()).toBeVisible();
-  await rows.first().evaluate((el, to) => el.scrollTo({ top: to }), top);
-  // The offset is only remembered from the scroll event, which fires after the
-  // assignment; waiting on the settled value is what makes the rest deterministic.
-  await expect.poll(() => rows.first().evaluate((el) => el.scrollTop)).toBe(top);
+  return page.locator('app-entry-list .rows').first();
 }
 
 function scrollTop(page: Page): Promise<number> {
-  return listScroller(page)
-    .first()
-    .evaluate((el) => el.scrollTop);
+  return listScroller(page).evaluate((el) => el.scrollTop);
+}
+
+/**
+ * Wait for a list's own rows before touching the scroller. The outgoing list
+ * stays rendered while the next query runs (#254), so the scroller is visible
+ * throughout a switch — and an offset scrolled before the incoming rows land is
+ * never written to that list's memory, which would leave every assertion below
+ * passing against an empty memory.
+ */
+async function showsRowsOf(page: Page, list: { rowPrefix: string }): Promise<void> {
+  await expect(page.getByText(`${list.rowPrefix} 1`, { exact: true })).toBeVisible();
+}
+
+async function openList(page: Page, list: { link: string; rowPrefix: string }): Promise<void> {
+  await page
+    .getByRole('navigation', { name: 'Feeds' })
+    .getByRole('link', { name: list.link })
+    .click();
+  await showsRowsOf(page, list);
+}
+
+async function scrollListTo(page: Page, top: number): Promise<void> {
+  await listScroller(page).evaluate((el, to) => el.scrollTo({ top: to }), top);
+  // The offset is only remembered from the scroll event, which fires after the
+  // assignment; waiting on the settled value is what makes the rest deterministic.
+  await expect.poll(() => scrollTop(page)).toBe(top);
 }
 
 /**
@@ -137,26 +160,47 @@ test.describe('list scroll position on a list switch', () => {
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
     );
 
-    const sidebar = page.getByRole('navigation', { name: 'Feeds' });
+    // Give BOTH lists a remembered place, so neither assertion below can pass
+    // merely because that list had never been scrolled.
+    await showsRowsOf(page, ALL_LIST);
+    await scrollListTo(page, SCROLLED_TO);
+    await openList(page, TAG_LIST);
     await scrollListTo(page, SCROLLED_TO);
 
-    // --- A click on a tag shows that list from the top. ---
-    await sidebar.getByRole('link', { name: TAG.name }).click();
-    await expect(page).toHaveURL(new RegExp(`tag=${TAG.id}`));
-    await expect.poll(() => scrollTop(page)).toBe(0);
-
-    // --- Back to "All items" restores where that list was left. ---
+    // --- Back restores the place the list was left at. ---
     await page.goBack();
-    await expect(page).not.toHaveURL(new RegExp(`tag=${TAG.id}`));
+    await showsRowsOf(page, ALL_LIST);
     await expect.poll(() => scrollTop(page)).toBe(SCROLLED_TO);
 
-    // --- Clicking the tag again asks for it afresh: top, not where it was. ---
-    await scrollListTo(page, SCROLLED_TO);
-    await sidebar.getByRole('link', { name: TAG.name }).click();
+    // --- A click asks for the list afresh: top, not where it was left. ---
+    await openList(page, TAG_LIST);
     await expect.poll(() => scrollTop(page)).toBe(0);
+  });
+
+  /**
+   * Settings destroys the reader shell. The rule has to survive that: a listener
+   * tied to the shell's lifetime would come back knowing nothing about the list
+   * the user had left, and the next click would restore instead of reset.
+   */
+  test('a click still starts at the top after a trip through settings', async ({ page }) => {
+    const signedIn = await signInAsAdmin(page);
+    test.skip(
+      !signedIn,
+      'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
+    );
+
+    await showsRowsOf(page, ALL_LIST);
+    await openList(page, TAG_LIST);
     await scrollListTo(page, SCROLLED_TO);
-    await sidebar.getByRole('link', { name: 'All items' }).click();
-    await sidebar.getByRole('link', { name: TAG.name }).click();
+
+    await page.getByRole('button', { name: 'Account' }).click();
+    await page.getByRole('menuitem', { name: 'Settings' }).click();
+    await expect(page).toHaveURL(/\/settings/);
+    await page.getByRole('link', { name: 'Reader' }).click();
+    await showsRowsOf(page, ALL_LIST);
+
+    await openList(page, TAG_LIST);
+
     await expect.poll(() => scrollTop(page)).toBe(0);
   });
 
@@ -167,11 +211,12 @@ test.describe('list scroll position on a list switch', () => {
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
     );
 
+    await showsRowsOf(page, ALL_LIST);
     await scrollListTo(page, SCROLLED_TO);
 
     await page.reload();
 
-    await expect(listScroller(page).first()).toBeVisible();
+    await showsRowsOf(page, ALL_LIST);
     await expect.poll(() => scrollTop(page)).toBe(SCROLLED_TO);
   });
 });
