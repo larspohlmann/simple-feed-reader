@@ -676,6 +676,7 @@ git commit -m "fix(#285): wire the navigation watchdog and route errors through 
 
 **Files:**
 - Test: `frontend/e2e/navigation-watchdog.spec.ts` (create)
+- Test: `frontend/e2e/boot-without-dictionary.spec.ts` (modify its third test only — see Step 4a)
 
 **Interfaces:**
 - Consumes: the wiring from Task 4; the banner markup from Task 3 (`.banner` class, English text `That page did not load.`).
@@ -757,12 +758,125 @@ Copy `frontend/src/app/core/navigation-watchdog.ts` to the scratchpad. In the wo
 - [ ] **Step 4: Verify no regression in the neighbouring boot specs**
 
 From `frontend/`: `npm run e2e -- boot-watchdog.spec.ts boot-without-dictionary.spec.ts`
-Expected: 4/4 and 3/3, both files unchanged. These prove the `@if` banner did not disarm the #282 boot watchdog.
+Expected: `boot-watchdog.spec.ts` 4/4, unchanged — it proves the `@if` banner did not disarm the #282 boot watchdog.
+
+`boot-without-dictionary.spec.ts`'s third test, `reveals the boot error surface when a lazy route chunk fails to load`, **will fail, and it is right to fail** — Step 4a fixes it.
+
+- [ ] **Step 4a: Re-point the #281 chunk-failure test at the behavior this branch deliberately changed**
+
+That test navigates `/register` → `/login` with the login chunk aborted, then asserts the full-page `#boot-error` surface appears. `/register` renders first, so under this branch that is a *mid-session* failure and the reporter now shows the banner instead. The old expectation asserts exactly the behavior the design set out to remove: replacing a working page with "The app could not start", which is false. It is the test that must change, not the code.
+
+Keep both branches covered by splitting them. In `frontend/e2e/boot-without-dictionary.spec.ts`, replace that whole third test — its docblock and its body, from the `/**` above `test('reveals the boot error surface when a lazy route chunk fails to load'` through that test's closing `});` — with:
+
+```ts
+/**
+ * The dictionary fetch is bounded and non-fatal, but bootstrap isn't the only
+ * thing that can leave the outlet empty: every route in app.routes.ts is
+ * `loadComponent`/`loadChildren`, so a *lazy route chunk* that fails to load
+ * produces the identical permanent blank page — same trigger as #280 (Brave
+ * resume-reload with main.js served from cache but the route chunk evicted),
+ * just past a different fetch. app.config.ts's `withNavigationErrorHandler`
+ * is the fix; this proves it fires and that `#boot-error` genuinely becomes
+ * visible.
+ *
+ * The load is direct rather than an in-app hop, and that is the whole point
+ * since #285: the full-page surface is now only for a failure with nothing
+ * on screen yet. A chunk that fails *after* a page has rendered shows the
+ * retry banner and keeps the page — covered by navigation-watchdog.spec.ts,
+ * because replacing a working page with "The app could not start" was itself
+ * a defect.
+ *
+ * Scope, deliberately: this covers a chunk that FAILS, not one that STALLS.
+ * A hung `import()` never rejects, so the router raises no NavigationError
+ * and this handler never runs — that is what the watchdogs are for (#282 at
+ * boot, #285 mid-session).
+ *
+ * Chunk filenames are content-hashed and change on every build, so the exact
+ * URL is discovered live rather than hardcoded: load the register screen (its
+ * own chunk, loaded up front) and follow its in-app link to /login, capturing
+ * the one new script request that client-side navigation triggers. Doing this
+ * as an SPA navigation rather than two page.goto() calls is what isolates the
+ * login chunk from the shared initial bundle — a full reload would refetch
+ * everything and defeat the isolation. That discovered URL is then aborted on
+ * a fresh page (a fresh module graph, so the browser can't just serve the
+ * chunk from the page that already fetched it).
+ */
+test('reveals the boot error surface when the first route chunk fails to load', async ({
+  page,
+  context,
+}) => {
+  await page.goto('/register');
+  await page.waitForLoadState('networkidle');
+
+  // waitForRequest only ever resolves on a request made after it is registered,
+  // and networkidle above means every initial chunk is already in. So the first
+  // chunk request it sees is necessarily the one the click triggers — no need to
+  // track which URLs were already fetched. (This holds only while no route
+  // preloading strategy is configured; app.config.ts uses none.)
+  const [chunkRequest] = await Promise.all([
+    page.waitForRequest((request) => /\/chunk-[^/?]+\.js/.test(request.url())),
+    page.getByRole('link', { name: 'Already have an account?' }).click(),
+  ]);
+  const loginChunkUrl = chunkRequest.url();
+
+  const brokenPage = await context.newPage();
+  await brokenPage.route(loginChunkUrl, (route) => route.abort('failed'));
+
+  // Straight to /login: the chunk fails before any route has rendered, so
+  // there is no page worth keeping and the static surface is the only thing
+  // that can carry a message.
+  await brokenPage.goto('/login');
+
+  await expect(brokenPage.locator('#boot-error')).toBeVisible({ timeout: 15_000 });
+  expect((await brokenPage.locator('body').innerText()).trim()).not.toBe('');
+
+  await brokenPage.close();
+});
+```
+
+Then add this second test to `frontend/e2e/navigation-watchdog.spec.ts`, so the mid-session branch the old test used to cover keeps its coverage:
+
+```ts
+test('shows the retry banner when an in-app navigation fails outright', async ({
+  page,
+  context,
+}) => {
+  test.setTimeout(60_000);
+
+  await page.goto('/register');
+  await page.waitForLoadState('networkidle');
+
+  const [chunkRequest] = await Promise.all([
+    page.waitForRequest((request) => /\/chunk-[^/?]+\.js/.test(request.url())),
+    page.getByRole('link', { name: 'Already have an account?' }).click(),
+  ]);
+  const loginChunkUrl = chunkRequest.url();
+
+  const brokenPage = await context.newPage();
+  await brokenPage.goto('/register');
+  await brokenPage.waitForLoadState('networkidle');
+
+  // A hard failure, not a stall: NavigationError fires immediately, so this
+  // needs no deadline. Before #285 it revealed the full-page surface and threw
+  // away a working page; now the reporter routes it to the banner.
+  await brokenPage.route(loginChunkUrl, (route) => route.abort('failed'));
+  await brokenPage.getByRole('link', { name: 'Already have an account?' }).click();
+
+  await expect(brokenPage.locator('.banner')).toContainText('That page did not load.', {
+    timeout: 15_000,
+  });
+  await expect(brokenPage.locator('#boot-error')).toBeHidden();
+
+  await brokenPage.close();
+});
+```
+
+Re-run both files. Expected: `boot-without-dictionary.spec.ts` 3/3 and `navigation-watchdog.spec.ts` 2/2.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add frontend/e2e/navigation-watchdog.spec.ts
+git add frontend/e2e/navigation-watchdog.spec.ts frontend/e2e/boot-without-dictionary.spec.ts
 git commit -m "fix(#285): prove the stalled navigation reaches the banner"
 ```
 
@@ -785,7 +899,7 @@ Expected: both clean; the initial bundle stays within the 500 kB budget (it was 
 
 From the repo root: `docker compose up -d` (skip if already up).
 From `frontend/`: `npm run e2e` (allow 20 minutes)
-Expected: all pass. It was 47 tests before this branch and gains 1.
+Expected: all pass. It was 47 tests before this branch and gains 2 (both in navigation-watchdog.spec.ts); boot-without-dictionary.spec.ts keeps its 3.
 
 - [ ] **Step 3: Push and open the PR**
 
