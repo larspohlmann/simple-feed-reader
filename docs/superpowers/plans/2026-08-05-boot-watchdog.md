@@ -65,7 +65,10 @@ test.describe('boot watchdog', () => {
     // radio. Only lazy chunks match chunk-*.js; the initial bundle loads.
     await page.route(/\/chunk-[^/?]+\.js/, () => undefined);
 
-    await page.goto('/login');
+    // domcontentloaded, not the default 'load': the hung chunk fetch keeps
+    // the load event from ever firing, so a default goto would time out
+    // before the assertion below gets to run.
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
 
     await expect(page.locator('#boot-error')).toBeVisible({
       timeout: WATCHDOG_DEADLINE_MS + 5_000,
@@ -80,7 +83,9 @@ test.describe('boot watchdog', () => {
       await route.continue();
     });
 
-    await page.goto('/login');
+    // domcontentloaded for the same reason as above: the load event is
+    // blocked until the chunk resolves at ~18 s, long past the first assert.
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
 
     await expect(page.locator('#boot-error')).toBeVisible({
       timeout: WATCHDOG_DEADLINE_MS + 5_000,
