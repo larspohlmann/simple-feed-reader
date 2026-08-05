@@ -18,9 +18,13 @@ export const DICTIONARY_WAIT_MS = 3000;
  * and stall now land on the bundled fallback language instead of rejecting
  * `bootstrapApplication`, which left `<app-root>` permanently empty.
  *
- * The final catch is defense in depth: the fallback load is network-free
- * (see transloco-loader.ts) and should not fail, but a blank page is the one
- * outcome this function exists to make impossible.
+ * Both legs are bounded, and deliberately so. The fallback load is network-free
+ * today because transloco-loader.ts bundles English — but that is a property of
+ * a different file, and this function must not depend on it to avoid hanging.
+ * Bounding the fallback too makes the guarantee local: whatever the loader ever
+ * does, neither leg can hold the render open for more than the wait. The final
+ * catch then turns the last error into a resolved promise, because a blank page
+ * is the one outcome this function exists to make impossible.
  */
 export function preloadInitialLanguage(transloco: TranslocoService, lang: Lang): Promise<unknown> {
   return firstValueFrom(
@@ -28,7 +32,7 @@ export function preloadInitialLanguage(transloco: TranslocoService, lang: Lang):
       timeout(DICTIONARY_WAIT_MS),
       catchError(() => {
         transloco.setActiveLang(FALLBACK_LANG);
-        return transloco.load(FALLBACK_LANG);
+        return transloco.load(FALLBACK_LANG).pipe(timeout(DICTIONARY_WAIT_MS));
       }),
     ),
   ).catch(() => undefined);

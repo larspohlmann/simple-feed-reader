@@ -1,6 +1,14 @@
 // src/app/core/language.ts
 
-/** The languages the UI ships translations for. */
+/** The languages the UI ships translations for.
+ *
+ *  Adding one needs a matching edit in `deploy/strato/.htaccess`, whose
+ *  cache-header rule names the dictionary files explicitly. Missing it costs no
+ *  test and no build error — the new dictionary just goes uncached in
+ *  production, which is what made boot fragile on mobile in the first place
+ *  (#280). `.htaccess` cannot express "everything under i18n/" without
+ *  directives Apache rejects in that context, hence the duplication.
+ */
 export type Lang = 'en' | 'de';
 
 export const LANGS: readonly Lang[] = ['en', 'de'];

@@ -7,16 +7,28 @@ import { buildVersion } from '../../environments/version';
 import { FALLBACK_LANG } from './language';
 import englishDictionary from '../../../public/i18n/en.json';
 
-/** Loads a language's dictionary — English from the bundle, the rest from the
- *  statically-served `public/i18n/`.
+/**
+ * Dictionaries compiled into the build, served without touching the network.
  *
- *  ENGLISH IS BUNDLED, not fetched. The dictionary preload used to gate the
- *  whole bootstrap on one uncached network request; a mobile browser that
- *  discards the tab and resume-reloads on a still-reconnecting radio got a
- *  permanently blank page (#280). With the fallback language compiled in, the
- *  fallback chain terminates without the network — and it has to live HERE,
- *  in the loader: Transloco's load() consults only its own request cache, so
- *  a setTranslation() call would not prevent the HTTP request.
+ * English is here because it is the fallback language, but the rule is
+ * "bundled", not "fallback": add an entry and that language stops needing the
+ * network too. Keyed loosely because Transloco hands the loader a plain string.
+ */
+const BUNDLED_DICTIONARIES: Readonly<Record<string, Translation>> = {
+  [FALLBACK_LANG]: englishDictionary,
+};
+
+/** Loads a language's dictionary — bundled ones from the build, the rest from
+ *  the statically-served `public/i18n/`.
+ *
+ *  THE FALLBACK LANGUAGE IS BUNDLED, not fetched. The dictionary preload used
+ *  to gate the whole bootstrap on one uncached network request; a mobile
+ *  browser that discards the tab and resume-reloads on a still-reconnecting
+ *  radio got a permanently blank page (#280). With the fallback language
+ *  compiled in, the fallback chain terminates without the network — and it has
+ *  to live HERE, in the loader: Transloco's load() consults only its own
+ *  request cache, so a setTranslation() call would not prevent the HTTP
+ *  request.
  *
  *  The path is deliberately RELATIVE. The app is served at the domain root by
  *  the Docker setup and under a `/reader` subpath on Strato; a relative URL
@@ -34,7 +46,8 @@ export class HttpTranslocoLoader implements TranslocoLoader {
   private readonly http = inject(HttpClient);
 
   getTranslation(lang: string): Observable<Translation> {
-    if (lang === FALLBACK_LANG) return of(englishDictionary);
+    const bundled = BUNDLED_DICTIONARIES[lang];
+    if (bundled) return of(bundled);
 
     return this.http.get<Translation>(`i18n/${lang}.json`, {
       params: { v: buildVersion.version },

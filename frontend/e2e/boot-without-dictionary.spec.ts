@@ -85,22 +85,16 @@ test('reveals the boot error surface when a lazy route chunk fails to load', asy
   page,
   context,
 }) => {
-  const requestedBeforeNavigation = new Set<string>();
-  const trackRequestedUrl = (request: { url(): string }) =>
-    requestedBeforeNavigation.add(request.url());
-  page.on('request', trackRequestedUrl);
   await page.goto('/register');
   await page.waitForLoadState('networkidle');
-  // Detach rather than merely clear: a listener left attached would still add
-  // the chunk's own URL to the set the instant it fires, racing the predicate
-  // below and making every request look like one already seen "before".
-  page.off('request', trackRequestedUrl);
 
+  // waitForRequest only ever resolves on a request made after it is registered,
+  // and networkidle above means every initial chunk is already in. So the first
+  // chunk request it sees is necessarily the one the click triggers — no need to
+  // track which URLs were already fetched. (This holds only while no route
+  // preloading strategy is configured; app.config.ts uses none.)
   const [chunkRequest] = await Promise.all([
-    page.waitForRequest(
-      (request) =>
-        /\/chunk-[^/?]+\.js/.test(request.url()) && !requestedBeforeNavigation.has(request.url()),
-    ),
+    page.waitForRequest((request) => /\/chunk-[^/?]+\.js/.test(request.url())),
     page.getByRole('link', { name: 'Already have an account?' }).click(),
   ]);
   const loginChunkUrl = chunkRequest.url();
