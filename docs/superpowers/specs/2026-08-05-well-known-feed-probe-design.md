@@ -1,21 +1,31 @@
-# Well-known feed-path probe (#283)
+# Feeds a page does not advertise (#283)
 
 **Goal:** a URL whose HTML page refuses automated clients but whose site still
 serves a feed under a conventional path — `https://www.reddit.com/r/Bitwig/` —
-becomes subscribable.
+becomes subscribable. And, since the same guessing machinery answers it, so does
+a page that has a feed but never advertises one.
 
 ## Behaviour
 
-When the fetch of the entered URL comes back **refused** (401/403/429, the
-existing `BLOCKED_STATUSES`), discovery tries a short, ordered list of
-conventional feed paths under that URL and returns the first one whose body the
-feed parser accepts. Nothing found: the existing `blocked` failure, unchanged.
+Discovery tries four sources, in decreasing order of certainty:
 
-The probe runs **only for a refusal**, not for `unreachable`. `unreachable`
-means no answer arrived at all (DNS failure, transport error, timeout); asking
-the same dead host six more questions costs six timeouts and can only fail. A
-refusal, in contrast, is a fast answer from a live server, so the whole probe
-costs a few hundred milliseconds.
+1. the entered URL parsed as a feed (unchanged);
+2. the feeds the page points at — exact autodiscovery links first, then
+   feed-shaped links as a guess (`FeedLinkScanner`);
+3. a feed under one of the conventional paths (`WellKnownFeedProbe`);
+4. a synthetic `scraped` candidate from the page's article list (unchanged).
+
+Source 3 is the only one left when the page never arrives, which is the #283
+case. It runs whenever the site **answered** — a refusal (401/403/429) or any
+other error status, a 404 included — and whenever a page **arrived pointing at
+no feed at all**, where a real feed beats a synthesized one.
+
+It does not run when nothing answered at all: a null status code means DNS
+failure, refused connection or timeout, and asking a dead host six more
+questions costs six timeouts and can only fail. An answer, by contrast, is proof
+the host is alive and replies fast.
+
+Nothing found anywhere: the existing failure reasons, unchanged.
 
 ### The paths
 
@@ -50,12 +60,32 @@ motivating site rate-limits hard enough that the third request reliably answers
 has already proved the body parses as a feed, so the extra confirmation buys
 nothing.
 
+## The guessed links
+
+`FeedLinkScanner` owns both passes over the page. The strict pass is the old
+inline scan, moved out of `FeedDiscovery`: `<link rel="alternate">` with an RSS
+or Atom type, whose dialect is therefore known. The fuzzy pass runs only when
+the strict one found nothing, and accepts:
+
+- an `alternate` link with a vaguer type (`text/xml`, `application/xml`,
+  `application/feed+json`);
+- an anchor whose path looks like a feed (`/feed`, `/rss/`, `/index.atom`,
+  `/feed.xml`) — but not `/feedback`;
+- an anchor whose query says so (`?feed=rss2`, `?format=atom`);
+- an anchor whose label says RSS, Atom or feed.
+
+Guessed candidates carry the format `feed`, since nothing has parsed them yet,
+and are capped at five. They cost no request: the dialog previews every
+candidate it is offered, so a wrong guess reads as an unavailable preview rather
+than as a bad subscription.
+
 ## Units
 
 | Unit | Responsibility |
 |---|---|
-| `Service/Discovery/WellKnownFeedProbe` | Build the candidate URLs, fetch them in order, return the first that parses. Knows nothing about discovery outcomes. |
-| `Service/Discovery/FeedDiscovery` | Unchanged except: on a refusal, ask the probe and map its answer to a `FeedDiscoveryResult`. |
+| `Service/Discovery/FeedLinkScanner` | Read the feeds a page points at, exactly and then approximately. Pure: HTML in, candidates out. |
+| `Service/Discovery/WellKnownFeedProbe` | Build the conventional URLs, fetch them in order, return the first that parses. Knows nothing about discovery outcomes. |
+| `Service/Discovery/FeedDiscovery` | Order the four sources and map the winner to a `FeedDiscoveryResult`. |
 
 `WellKnownFeedProbe::probe(string $pageUrl): ?string` returns the canonical feed
 URL, or `null` when no conventional path answered with a feed. Null is an
@@ -79,8 +109,12 @@ cannot know which suffix the server is on.
   and stop-at-first-hit, non-feed bodies skipped, all-miss returns null,
   fetch exceptions skipped, trailing-slash normalisation, query dropped, the
   skip rule, and the redirect-canonical final URL.
+- `FeedLinkScannerTest` — the strict pass and its dialects, the footer icon, the
+  feed-shaped addresses, the near-misses it must ignore, the cap, the
+  self-link and duplicate guards.
 - `FeedDiscoveryTest` — a refused page whose probe hits returns `directFeed`; a
-  refused page whose probe misses still reports `blocked`; an unreachable page
-  probes nothing.
-- `add-feed-dialog.component.spec.ts` — the indicator shows while loading and
-  disappears afterwards.
+  404 that probes; a refused page whose probe misses still reports `blocked`; a
+  page whose only hint is an anchor; a scrapable page that still prefers a
+  conventional feed; an unreachable page that probes nothing.
+- `add-feed-dialog.component.spec.ts` and `e2e/add-feed-progress.spec.ts` — the
+  indicator shows while the request is in flight and disappears afterwards.
