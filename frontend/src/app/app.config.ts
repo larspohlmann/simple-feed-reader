@@ -7,13 +7,14 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZoneChangeDetection,
 } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withNavigationErrorHandler } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TranslocoService, provideTransloco } from '@jsverse/transloco';
 import { routes } from './app.routes';
 import { API_BASE_URL } from './core/api';
 import { authInterceptor } from './core/auth.interceptor';
 import { preloadInitialLanguage } from './core/boot-language';
+import { revealBootErrorSurface } from './core/boot-error-surface';
 import { HttpLocaleWriter } from './core/http-locale-writer';
 import { HttpPreferencesWriter } from './core/http-preferences-writer';
 import { HttpTranslocoLoader } from './core/transloco-loader';
@@ -27,7 +28,18 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(routes),
+    // A lazy route chunk can fail or stall exactly like the dictionary fetch
+    // (#280) — Brave's resume-reload serves main.js from the immutable cache
+    // but a chunk evicted from the HTTP cache, or new since the last release,
+    // stalls on the reconnecting radio. The router then leaves the outlet
+    // permanently empty, which looks identical to a rejected bootstrap, so it
+    // gets the same static surface. This handler must not rely on anything
+    // the bundle still needs to fetch: by the time it fires, a chunk has
+    // already failed, so revealBootErrorSurface is deliberately DI-free.
+    provideRouter(
+      routes,
+      withNavigationErrorHandler((event) => revealBootErrorSurface(event.error)),
+    ),
     provideHttpClient(withInterceptors([authInterceptor])),
     { provide: API_BASE_URL, useValue: environment.apiBaseUrl },
     // LOCALE_WRITER defaults to a no-op (see locale-writer.ts) so most of the

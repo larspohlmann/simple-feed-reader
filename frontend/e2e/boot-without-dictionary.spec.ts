@@ -53,3 +53,66 @@ test('renders the login screen when the dictionary request stalls', async ({ pag
 
   await expectFallbackRender(page);
 });
+
+/**
+ * The dictionary fetch is bounded and non-fatal, but bootstrap isn't the only
+ * thing that can leave the outlet empty: every route in app.routes.ts is
+ * `loadComponent`/`loadChildren`, so a failed or stalled *lazy route chunk*
+ * produces the identical permanent blank page — same trigger as #280 (Brave
+ * resume-reload with main.js served from cache but the route chunk stalled on
+ * a reconnecting radio), just past a different fetch. app.config.ts's
+ * `withNavigationErrorHandler` is the fix; this proves it fires and that
+ * `#boot-error` genuinely becomes visible, which had no coverage before.
+ *
+ * Chunk filenames are content-hashed and change on every build, so the exact
+ * URL is discovered live rather than hardcoded: load the register screen (its
+ * own chunk, loaded up front) and follow its in-app link to /login, capturing
+ * the one new script request that client-side navigation triggers. Doing this
+ * as an SPA navigation rather than two page.goto() calls is what isolates the
+ * login chunk from the shared initial bundle — a full reload would refetch
+ * everything and defeat the isolation. That discovered URL is then aborted on
+ * a fresh page (a fresh module graph, so the browser can't just serve the
+ * chunk from the page that already fetched it) before repeating the same
+ * navigation, so the assertions below exercise a genuinely broken fetch, not
+ * the main bundle.
+ */
+test('reveals the boot error surface when a lazy route chunk fails to load', async ({
+  page,
+  context,
+}) => {
+  const requestedBeforeNavigation = new Set<string>();
+  const trackRequestedUrl = (request: { url(): string }) =>
+    requestedBeforeNavigation.add(request.url());
+  page.on('request', trackRequestedUrl);
+  await page.goto('/register');
+  await page.waitForLoadState('networkidle');
+  // Detach rather than merely clear: a listener left attached would still add
+  // the chunk's own URL to the set the instant it fires, racing the predicate
+  // below and making every request look like one already seen "before".
+  page.off('request', trackRequestedUrl);
+
+  const [chunkRequest] = await Promise.all([
+    page.waitForRequest(
+      (request) =>
+        /\/chunk-[^/?]+\.js/.test(request.url()) && !requestedBeforeNavigation.has(request.url()),
+    ),
+    page.getByRole('link', { name: 'Already have an account?' }).click(),
+  ]);
+  const loginChunkUrl = chunkRequest.url();
+
+  const brokenPage = await context.newPage();
+  const consoleErrors: string[] = [];
+  brokenPage.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text());
+  });
+  await brokenPage.route(loginChunkUrl, (route) => route.abort('failed'));
+
+  await brokenPage.goto('/register');
+  await brokenPage.getByRole('link', { name: 'Already have an account?' }).click();
+
+  await expect(brokenPage.locator('#boot-error')).toBeVisible({ timeout: 15_000 });
+  expect((await brokenPage.locator('body').innerText()).trim()).not.toBe('');
+  expect(consoleErrors.length).toBeGreaterThan(0);
+
+  await brokenPage.close();
+});
