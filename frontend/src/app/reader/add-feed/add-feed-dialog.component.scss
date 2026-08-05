@@ -29,6 +29,17 @@ form {
   font-size: var(--fs-sm);
 }
 
+// The one live sign that a search is running. It sits where the results will
+// appear, so the dialog grows once and the answer replaces the wait.
+.searching {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
 .hint {
   color: var(--text-secondary);
   font-size: var(--fs-sm);

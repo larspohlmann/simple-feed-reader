@@ -17,6 +17,8 @@ final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInt
     /** @var array<string, FetchResponse|FetchException> */
     private array $results = [];
 
+    private ?FetchException $fallbackResult = null;
+
     /** @var list<string> */
     public array $fetchedUrls = [];
 
@@ -40,6 +42,18 @@ final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInt
     public function willThrow(string $url, FetchException $exception): void
     {
         $this->results[$url] = $exception;
+    }
+
+    /**
+     * What every URL nobody stubbed answers with. Opt-in, because the default
+     * default — a LogicException — is what keeps a test honest about which
+     * requests it expects. A test whose subject GUESSES addresses (feed-path
+     * probing) cannot list them without re-deriving the code under test, so it
+     * says "nothing else is out there" once instead.
+     */
+    public function willThrowForEverythingElse(FetchException $exception): void
+    {
+        $this->fallbackResult = $exception;
     }
 
     public function fetch(string $url, ?string $etag = null, ?string $lastModified = null): FetchResponse
@@ -90,6 +104,7 @@ final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInt
             $this->fetchedUrls[] = $ticket->url;
 
             $result = $this->results[$ticket->url]
+                ?? $this->fallbackResult
                 ?? throw new \LogicException('No stubbed result for ' . $ticket->url);
 
             yield $key => $result instanceof FetchException

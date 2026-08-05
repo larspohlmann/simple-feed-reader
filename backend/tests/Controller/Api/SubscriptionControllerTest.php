@@ -9,6 +9,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Fetch\Exception\FeedUnreachableException;
+use App\Service\Fetch\BatchFeedFetcherInterface;
 use App\Service\Fetch\FeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Subscription\SubscriptionService;
@@ -54,7 +55,12 @@ final class SubscriptionControllerTest extends WebTestCase
      */
     private function installFetcher(StubFeedFetcher $stub): void
     {
+        // Discovery guesses feed addresses under any page that names none, so a
+        // test cannot list every URL it will ask for without re-deriving the
+        // code under test. It says "nothing else is out there" once instead.
+        $stub->willThrowForEverythingElse(new FeedUnreachableException('x: HTTP 404', 404));
         self::getContainer()->set(FeedFetcherInterface::class, $stub);
+        self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
     }
 
     /**

@@ -92,6 +92,7 @@
     "addFeed": {
       "title": "Add a feed",
       "urlLabel": "Feed or site URL",
+      "searching": "Looking for a feed…",
       "tags": "Tags",
       "foundPick": "We found these feeds — pick one:",
       "items": "{{count}} items",
@@ -103,7 +104,6 @@
       "noRecentItems": "No recent items",
       "subscribe": "Subscribe",
       "noneFound": "No feeds found at that address.",
-      "adding": "Adding…",
       "previewUnavailable": "Preview unavailable",
       "contentFull": "Full text",
       "contentSummary": "Summary only",

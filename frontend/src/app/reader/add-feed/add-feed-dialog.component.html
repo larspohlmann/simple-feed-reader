@@ -28,6 +28,16 @@
           }
         </div>
       }
+      <!-- Discovery reads the page, then guesses the feed addresses the page
+           never mentioned, so a search can run for seconds. This line is the
+           one live report of that: the footer button only disables, which
+           reads as a dialog that stopped working. -->
+      @if (loading()) {
+        <p class="searching" role="status">
+          <app-spinner [size]="16" [decorative]="true" />
+          {{ 'dialog.addFeed.searching' | transloco }}
+        </p>
+      }
       @if (candidates().length) {
         <p class="hint">{{ 'dialog.addFeed.foundPick' | transloco }}</p>
         <ul class="candidates">
@@ -104,7 +114,7 @@
          the URL changes. -->
     @if (!candidates().length && !failureReason()) {
       <app-button footer type="submit" variant="primary" [disabled]="loading()">
-        {{ (loading() ? 'dialog.addFeed.adding' : 'common.add') | transloco }}
+        {{ 'common.add' | transloco }}
       </app-button>
     }
   </app-overlay-panel>
