@@ -27,14 +27,52 @@
   <body>
     <app-root></app-root>
     <!--
-      Revealed by main.ts only when bootstrapApplication rejects. Static and
+      Revealed when boot fails: by main.ts when bootstrapApplication rejects,
+      by withNavigationErrorHandler when a lazy chunk fails, and by the
+      watchdog below when nothing renders at all (#280, #282). Static and
       style-inlined on purpose: at that point no bundle code is trustworthy,
-      so this surface must depend on nothing but the document itself (#280).
+      so this surface must depend on nothing but the document itself.
       Both languages, because no dictionary loaded either.
     -->
     <div id="boot-error" hidden style="padding: 2rem; text-align: center; font-family: system-ui">
       <p>The app could not start. / Die App konnte nicht gestartet werden.</p>
       <button onclick="location.reload()">Reload / Neu laden</button>
     </div>
+    <!--
+      Boot watchdog (#282). A lazy chunk that STALLS raises no event — a hung
+      import() never rejects — so no handler in the bundle can ever run. This
+      is symptom-level on purpose: it covers every silent boot stall (chunk,
+      guard, resolver, future initializer) with no app-side hook.
+    -->
+    <script>
+      (function () {
+        // 15 s is long past any working load on a slow connection, yet still
+        // reaches the user staring at a genuinely dead boot. A false positive
+        // costs only a brief flash: the observer below re-hides the surface
+        // the moment real content arrives.
+        var BOOT_DEADLINE_MS = 15000;
+        try {
+          var surface = document.getElementById('boot-error');
+          var root = document.querySelector('app-root');
+          var timer = setTimeout(function () {
+            console.error('Boot watchdog: no content within ' + BOOT_DEADLINE_MS + ' ms.');
+            surface.removeAttribute('hidden');
+          }, BOOT_DEADLINE_MS);
+          // app.html holds nothing but <router-outlet>, which Angular appends
+          // ~70 ms into bootstrap — long before a lazy route chunk is even
+          // requested. So "a node appeared" is not "the app rendered": the
+          // timer has to survive until something OTHER than the outlet exists,
+          // or a stalled route chunk cancels the watchdog and still leaves a
+          // blank page (#282). If app.html ever gains static chrome, this
+          // condition must change with it.
+          new MutationObserver(function (mutations, observer) {
+            if (!root.querySelector(':not(router-outlet)')) return;
+            clearTimeout(timer);
+            surface.setAttribute('hidden', '');
+            observer.disconnect();
+          }).observe(root, { childList: true, subtree: true });
+        } catch (e) {}
+      })();
+    </script>
   </body>
 </html>
