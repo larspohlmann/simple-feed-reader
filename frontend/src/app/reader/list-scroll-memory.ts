@@ -35,6 +35,11 @@ export class ListScrollMemory {
     return this.readNum(scrollKey(s));
   }
 
+  /** Drop a list's remembered offset, so its next load starts at the top. */
+  forget(s: Selection): void {
+    this.mutate((store) => store.removeItem(scrollKey(s)));
+  }
+
   /** Remember the scroll offset within an open article (keyed by entry id). */
   saveEntry(entryId: number, top: number): void {
     this.write(entryScrollKey(entryId), top);
@@ -45,10 +50,14 @@ export class ListScrollMemory {
   }
 
   private write(key: string, top: number): void {
+    this.mutate((store) => store.setItem(key, String(Math.max(0, Math.round(top)))));
+  }
+
+  private mutate(change: (store: Storage) => void): void {
     const store = this.store();
     if (!store) return;
     try {
-      store.setItem(key, String(Math.max(0, Math.round(top))));
+      change(store);
     } catch {
       // Quota exceeded or storage blocked (private mode) — scroll memory is
       // a convenience, so dropping it silently is the right failure mode.

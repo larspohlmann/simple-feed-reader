@@ -6,15 +6,24 @@ import {
   TestRequest,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
-import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
+import {
+  ActivatedRoute,
+  NavigationStart,
+  Router,
+  Event as RouterEvent,
+  convertToParamMap,
+  provideRouter,
+} from '@angular/router';
 import { By } from '@angular/platform-browser';
-import { BehaviorSubject, of } from 'rxjs';
+import { BehaviorSubject, Subject, of } from 'rxjs';
 import { signal } from '@angular/core';
 import { API_BASE_URL } from '../core/api';
 import { AuthService } from '../core/auth.service';
 import { OnboardingSkip } from '../discover/onboarding-skip';
 import { ReaderShellComponent } from './reader-shell.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
+import { ListScrollMemory } from './list-scroll-memory';
+import { Selection } from './query';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { RefreshService } from './refresh.service';
 import { LayoutService } from './layout.service';
@@ -734,6 +743,24 @@ describe('ReaderShellComponent', () => {
         (f.nativeElement as HTMLElement).querySelector('[data-testid="catalog-empty-warning"]'),
       ).toBeNull();
       expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
+    });
+  });
+
+  describe('list scroll reset', () => {
+    // The rule itself is proved in list-scroll-reset.spec.ts. This proves the
+    // shell starts it, which is the one thing that file cannot show: without the
+    // constructor call nothing listens and the offset survives the click (#286).
+    it('drops the offset of a list the user clicks', () => {
+      const allUnread: Selection = { kind: 'all', id: null, unread: true };
+      bootWith([SUBSCRIPTION_FIXTURE]);
+      const memory = TestBed.inject(ListScrollMemory);
+      const events = TestBed.inject(Router).events as Subject<RouterEvent>;
+
+      events.next(new NavigationStart(1, '/?tag=5', 'imperative'));
+      memory.save(allUnread, 300);
+      events.next(new NavigationStart(2, '/', 'imperative'));
+
+      expect(memory.read(allUnread)).toBe(0);
     });
   });
 
