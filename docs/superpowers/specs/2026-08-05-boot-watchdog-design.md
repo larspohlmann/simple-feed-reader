@@ -51,10 +51,14 @@ with no app-side hook.
 New e2e spec `frontend/e2e/boot-watchdog.spec.ts`:
 
 - **Stall test** (the issue's reproduction): direct `goto('/login')` with
-  the login chunk's request stalled (routed, never fulfilled, never
-  aborted); assert `#boot-error` becomes visible within ~20 s. Falsifiable:
-  without the watchdog this times out blank (proven during the #281
-  review).
+  `chunk-*.js` requests stalled (routed, never fulfilled, never aborted);
+  assert `#boot-error` becomes visible within ~20 s. Two dev-server
+  realities shape the mechanics (found in implementation, 2026-08-05): the
+  dev build serves shared code as chunk-named STATIC imports, so the stall
+  hangs the whole module graph — still a silent boot stall, which is the
+  watchdog's exact net — and a hung graph suppresses DOMContentLoaded and
+  load, so the gotos need `waitUntil: 'commit'`. Falsifiable: without the
+  watchdog this times out blank (proven during the #281 review).
 - **Happy-path guard**: after a normal boot renders, `#boot-error` still
   has `hidden` — guards against the observer failing to cancel the timer.
 
