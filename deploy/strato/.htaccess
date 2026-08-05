@@ -47,9 +47,19 @@ Options +FollowSymLinks
 
     # Every build renames these with a fresh content hash, so a stale copy can
     # never be served for changed content -- the URL itself changes. Anything
-    # NOT hashed (index.html above, i18n dictionaries, favicons) is excluded:
+    # NOT hashed (index.html above, favicons) is excluded:
     # those keep their names across releases and would pin a year-old copy.
     <FilesMatch "-[A-Z0-9]{8}\.(js|mjs|css)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+
+    # The dictionaries keep their names across releases, but the app requests
+    # them with ?v=<release> (#141), so every release is a URL no cache has
+    # already held -- the same guarantee the hashed bundles get from their
+    # names. Long caching then takes the one boot-critical fetch off the
+    # network on a mobile resume-reload (#280). Scoped to the two dictionary
+    # files, not *.json, so nothing else is accidentally pinned for a year.
+    <FilesMatch "^(en|de)\.json$">
         Header set Cache-Control "public, max-age=31536000, immutable"
     </FilesMatch>
 </IfModule>
