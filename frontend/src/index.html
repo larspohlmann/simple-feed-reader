@@ -26,5 +26,15 @@
   </head>
   <body>
     <app-root></app-root>
+    <!--
+      Revealed by main.ts only when bootstrapApplication rejects. Static and
+      style-inlined on purpose: at that point no bundle code is trustworthy,
+      so this surface must depend on nothing but the document itself (#280).
+      Both languages, because no dictionary loaded either.
+    -->
+    <div id="boot-error" hidden style="padding: 2rem; text-align: center; font-family: system-ui">
+      <p>The app could not start. / Die App konnte nicht gestartet werden.</p>
+      <button onclick="location.reload()">Reload / Neu laden</button>
+    </div>
   </body>
 </html>
