@@ -92,6 +92,7 @@
     "addFeed": {
       "title": "Feed hinzufügen",
       "urlLabel": "Feed- oder Seiten-URL",
+      "searching": "Feed wird gesucht…",
       "tags": "Tags",
       "foundPick": "Wir haben diese Feeds gefunden – wähle einen aus:",
       "items": "{{count}} Einträge",

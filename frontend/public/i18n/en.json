@@ -92,6 +92,7 @@
     "addFeed": {
       "title": "Add a feed",
       "urlLabel": "Feed or site URL",
+      "searching": "Looking for a feed…",
       "tags": "Tags",
       "foundPick": "We found these feeds — pick one:",
       "items": "{{count}} items",

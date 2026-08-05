@@ -28,6 +28,15 @@
           }
         </div>
       }
+      <!-- Discovery reads the page, then guesses the feed addresses the page
+           never mentioned, so a search can run for seconds. Say so: the
+           disabled Add button alone reads as a dialog that stopped working. -->
+      @if (loading()) {
+        <p class="searching" role="status">
+          <app-spinner [size]="16" [decorative]="true" />
+          {{ 'dialog.addFeed.searching' | transloco }}
+        </p>
+      }
       @if (candidates().length) {
         <p class="hint">{{ 'dialog.addFeed.foundPick' | transloco }}</p>
         <ul class="candidates">

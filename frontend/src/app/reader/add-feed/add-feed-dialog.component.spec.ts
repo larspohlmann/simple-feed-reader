@@ -51,6 +51,25 @@ describe('AddFeedDialogComponent', () => {
     expect(close).toHaveBeenCalledWith({ id: 9 });
   });
 
+  it('reports that a search is running while the subscribe is in flight', () => {
+    // Discovery can spend seconds probing a site that hides its feed, so the
+    // dialog has to say something is happening — a disabled button does not.
+    const f = create();
+    f.componentInstance.form.setValue({ url: 'https://slow.example' });
+    f.componentInstance.submit();
+    f.detectChanges();
+
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.searching')?.textContent).toContain('Looking for a feed');
+    expect(el.querySelector('.searching app-spinner')).toBeTruthy();
+
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ candidates: [], scrapeFailureReason: 'blocked' });
+    f.detectChanges();
+    expect(el.querySelector('.searching')).toBeNull();
+  });
+
   it('renders the tag picker and sends the checked tag ids on submit', () => {
     const f = create();
     const pills = (f.nativeElement as HTMLElement).querySelectorAll('button.tag-pill');
