@@ -18,12 +18,13 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * The row mechanics of subscribing: the per-user cap, the shared Feed row, the
- * duplicate check, the tag positions.
+ * The row mechanics of subscribing one feed: the per-user cap, the shared Feed
+ * row, the duplicate check, the tag positions.
  *
- * Split out of SubscriptionService so that service reads as the decision it
- * makes — what is there to subscribe to, and what do we already know about it —
- * with the bookkeeping behind one call.
+ * BulkSubscriber is the batch sibling and keeps its own copy of these rules
+ * because it defers every flush to the end of the import — a difference worth
+ * collapsing one day, and the reason neither class may claim to be the only
+ * place a subscription comes into being.
  */
 final readonly class SubscriptionCreator
 {
@@ -38,12 +39,12 @@ final readonly class SubscriptionCreator
     }
 
     /**
-     * The one place a subscription row comes into being — both the
-     * discovery-confirmed path and the scraped shortcut go through here, so
-     * the cap, the shared-feed lookup and the duplicate check can never
-     * diverge between them.
+     * Both single-feed paths — discovery-confirmed and the scraped shortcut —
+     * come through here, so the cap, the shared-feed lookup and the duplicate
+     * check cannot diverge between them.
      *
-     * @param list<Tag> $tags
+     * @param 'xml'|'scraped' $sourceFormat
+     * @param list<Tag>       $tags
      */
     public function create(User $user, string $feedUrl, string $sourceFormat, array $tags): Subscription
     {

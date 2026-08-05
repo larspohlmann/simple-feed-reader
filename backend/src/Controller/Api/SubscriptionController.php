@@ -87,18 +87,10 @@ final readonly class SubscriptionController
             return new JsonResponse($payload);
         }
 
-        // Not the 0 a new subscription used to be worth: discovery hands the
-        // feed its entries at subscribe time now (#290), so the dialog would
-        // report "no unread" for a feed that arrived with twenty-five.
-        $unread = $this->entryStates->unreadCountsForUser((int) $user->getId());
-
+        // A new subscription is no longer always worth 0 unread: discovery
+        // hands the feed its entries at subscribe time (#290).
         return new JsonResponse(
-            [
-                'subscription' => SubscriptionJson::one(
-                    $outcome->subscription,
-                    $unread[(int) $outcome->subscription->getId()] ?? 0,
-                ),
-            ],
+            ['subscription' => SubscriptionJson::one($outcome->subscription, $outcome->unreadCount)],
             Response::HTTP_CREATED,
         );
     }

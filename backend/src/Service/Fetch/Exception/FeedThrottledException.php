@@ -7,17 +7,15 @@ namespace App\Service\Fetch\Exception;
 /**
  * The site is rationing requests: HTTP 429.
  *
- * Its own kind rather than a plain unreachable feed, because it says something
- * different — the feed is fine, we asked too often. Treating it as a failure
- * costs a healthy feed its schedule: one throttled fetch would set the erroring
- * status and an exponential backoff measured in hours, for a document that
- * would have arrived a minute later. Reddit rations to roughly one request per
- * minute per address, which is what made this worth a type (#290).
- *
- * Still a FeedUnreachableException so the callers that only care that nothing
- * arrived — discovery reporting "the site refused us" — keep working unchanged.
+ * Its own kind, and deliberately NOT a FeedUnreachableException: it says
+ * something different. The feed is fine and we asked too often, so the answer
+ * is a schedule, not a diagnosis. Every caller that treats it as an ordinary
+ * failure costs a healthy feed its place in the rotation — the erroring status
+ * and an exponential backoff measured in hours, for a document that would have
+ * arrived a minute later. Reddit rations to roughly one request per minute per
+ * address, which is what made this worth a type (#290).
  */
-final class FeedThrottledException extends FeedUnreachableException
+final class FeedThrottledException extends FetchException
 {
     public function __construct(
         string $message,
@@ -25,6 +23,6 @@ final class FeedThrottledException extends FeedUnreachableException
         public readonly ?int $retryAfterSeconds = null,
         ?\Throwable $previous = null,
     ) {
-        parent::__construct($message, 429, $previous);
+        parent::__construct($message, 0, $previous);
     }
 }

@@ -26,6 +26,11 @@ final class ResponseClassifierTest extends TestCase
         return FetchAttempt::start(1, new FetchTicket($url, '"v1"', 'Mon, 20 Jul 2026 08:30:00 GMT'));
     }
 
+    private function classifier(string $now = '2026-08-05 12:00:00'): ResponseClassifier
+    {
+        return new ResponseClassifier(new MockClock($now));
+    }
+
     private function respond(MockResponse $mock): ResponseInterface
     {
         return (new MockHttpClient($mock))->request('GET', 'https://example.com/feed');
@@ -33,7 +38,7 @@ final class ResponseClassifierTest extends TestCase
 
     public function testATwoHundredAwaitsTheBody(): void
     {
-        $verdict = (new ResponseClassifier())->fromHeaders(
+        $verdict = $this->classifier()->fromHeaders(
             $this->respond(new MockResponse('<rss/>', ['http_code' => 200])),
             $this->attempt(),
         );
@@ -43,7 +48,7 @@ final class ResponseClassifierTest extends TestCase
 
     public function testAThreeOhOneRedirectsAndIsPermanent(): void
     {
-        $verdict = (new ResponseClassifier())->fromHeaders(
+        $verdict = $this->classifier()->fromHeaders(
             $this->respond(new MockResponse('', [
                 'http_code' => 301,
                 'response_headers' => ['location' => 'https://example.com/moved'],
@@ -58,7 +63,7 @@ final class ResponseClassifierTest extends TestCase
 
     public function testAThreeOhTwoRedirectsButIsNotPermanent(): void
     {
-        $verdict = (new ResponseClassifier())->fromHeaders(
+        $verdict = $this->classifier()->fromHeaders(
             $this->respond(new MockResponse('', [
                 'http_code' => 302,
                 'response_headers' => ['location' => '/relative'],
@@ -81,7 +86,7 @@ final class ResponseClassifierTest extends TestCase
     #[DataProvider('otherTemporaryRedirectCodes')]
     public function testOtherRedirectCodesAreNotPermanent(int $statusCode): void
     {
-        $verdict = (new ResponseClassifier())->fromHeaders(
+        $verdict = $this->classifier()->fromHeaders(
             $this->respond(new MockResponse('', [
                 'http_code' => $statusCode,
                 'response_headers' => ['location' => 'https://example.com/moved'],
@@ -97,7 +102,7 @@ final class ResponseClassifierTest extends TestCase
     {
         $this->expectException(FeedUnreachableException::class);
 
-        (new ResponseClassifier())->fromHeaders(
+        $this->classifier()->fromHeaders(
             $this->respond(new MockResponse('', ['http_code' => 302])),
             $this->attempt(),
         );
@@ -105,7 +110,7 @@ final class ResponseClassifierTest extends TestCase
 
     public function testAThreeOhFourIsTerminalAndEchoesTheCachingHeaders(): void
     {
-        $verdict = (new ResponseClassifier())->fromHeaders(
+        $verdict = $this->classifier()->fromHeaders(
             $this->respond(new MockResponse('', ['http_code' => 304])),
             $this->attempt(),
         );
@@ -122,71 +127,40 @@ final class ResponseClassifierTest extends TestCase
     {
         $this->expectException(FeedGoneException::class);
 
-        (new ResponseClassifier())->fromHeaders(
+        $this->classifier()->fromHeaders(
             $this->respond(new MockResponse('', ['http_code' => 410])),
             $this->attempt(),
         );
     }
 
-    public function testAFourTwentyNineIsThrottledAndCarriesTheRetryDelay(): void
+    /**
+     * @return iterable<string, array{string|null, int|null}>
+     */
+    public static function retryAfterHeaders(): iterable
     {
-        try {
-            (new ResponseClassifier())->fromHeaders(
-                $this->respond(new MockResponse('', [
-                    'http_code' => 429,
-                    'response_headers' => ['retry-after' => '90'],
-                ])),
-                $this->attempt(),
-            );
-            self::fail('Expected a FeedThrottledException.');
-        } catch (FeedThrottledException $e) {
-            self::assertSame(90, $e->retryAfterSeconds);
-            self::assertSame(429, $e->statusCode);
-        }
+        yield 'a delay in seconds' => ['90', 90];
+        // RFC 9110 allows the date the door reopens instead of a delay.
+        yield 'the date it reopens' => ['Wed, 05 Aug 2026 12:02:30 GMT', 150];
+        yield 'a date already past' => ['Wed, 05 Aug 2026 11:59:00 GMT', null];
+        yield 'no header at all' => [null, null];
+        yield 'something unparseable' => ['soon-ish', null];
     }
 
-    public function testAThrottleWithADateRetryAfterIsTurnedIntoSeconds(): void
-    {
-        try {
-            (new ResponseClassifier(new MockClock('2026-08-05 12:00:00')))->fromHeaders(
-                $this->respond(new MockResponse('', [
-                    'http_code' => 429,
-                    'response_headers' => ['retry-after' => 'Wed, 05 Aug 2026 12:02:30 GMT'],
-                ])),
-                $this->attempt(),
-            );
-            self::fail('Expected a FeedThrottledException.');
-        } catch (FeedThrottledException $e) {
-            self::assertSame(150, $e->retryAfterSeconds);
-        }
-    }
+    #[DataProvider('retryAfterHeaders')]
+    public function testAFourTwentyNineIsThrottledAndReadsTheDelayItWasGiven(
+        ?string $retryAfter,
+        ?int $expectedSeconds,
+    ): void {
+        $headers = null === $retryAfter ? [] : ['response_headers' => ['retry-after' => $retryAfter]];
 
-    public function testAThrottleWithoutARetryAfterNamesNoDelay(): void
-    {
         try {
-            (new ResponseClassifier())->fromHeaders(
-                $this->respond(new MockResponse('', ['http_code' => 429])),
+            $this->classifier()->fromHeaders(
+                $this->respond(new MockResponse('', ['http_code' => 429] + $headers)),
                 $this->attempt(),
             );
             self::fail('Expected a FeedThrottledException.');
         } catch (FeedThrottledException $e) {
-            self::assertNull($e->retryAfterSeconds);
-        }
-    }
-
-    public function testAnUnparseableRetryAfterNamesNoDelay(): void
-    {
-        try {
-            (new ResponseClassifier())->fromHeaders(
-                $this->respond(new MockResponse('', [
-                    'http_code' => 429,
-                    'response_headers' => ['retry-after' => 'soon-ish'],
-                ])),
-                $this->attempt(),
-            );
-            self::fail('Expected a FeedThrottledException.');
-        } catch (FeedThrottledException $e) {
-            self::assertNull($e->retryAfterSeconds);
+            self::assertSame($expectedSeconds, $e->retryAfterSeconds);
         }
     }
 
@@ -194,7 +168,7 @@ final class ResponseClassifierTest extends TestCase
     {
         $this->expectException(FeedUnreachableException::class);
 
-        (new ResponseClassifier())->fromHeaders(
+        $this->classifier()->fromHeaders(
             $this->respond(new MockResponse('', ['http_code' => 500])),
             $this->attempt(),
         );
@@ -207,7 +181,7 @@ final class ResponseClassifierTest extends TestCase
             'response_headers' => ['etag' => '"v2"', 'last-modified' => 'Tue, 21 Jul 2026 08:30:00 GMT'],
         ]));
 
-        $fetched = (new ResponseClassifier())->fromBody($response, $this->attempt());
+        $fetched = $this->classifier()->fromBody($response, $this->attempt());
 
         self::assertFalse($fetched->notModified);
         self::assertSame('<rss/>', $fetched->body);
@@ -220,7 +194,7 @@ final class ResponseClassifierTest extends TestCase
     {
         $this->expectException(ResponseTooLargeException::class);
 
-        (new ResponseClassifier())->fromBody(
+        $this->classifier()->fromBody(
             $this->respond(new MockResponse(str_repeat('x', 5_000_001), ['http_code' => 200])),
             $this->attempt(),
         );

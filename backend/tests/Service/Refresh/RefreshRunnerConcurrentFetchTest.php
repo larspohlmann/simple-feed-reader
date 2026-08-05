@@ -145,7 +145,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
         return new ConcurrentFeedFetcher(
             $httpClient,
             new UrlGuard($resolver, new IpValidator()),
-            new ResponseClassifier(),
+            new ResponseClassifier($this->clock),
             $concurrency,
             'TestAgent/1.0',
         );

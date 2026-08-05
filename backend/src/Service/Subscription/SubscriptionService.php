@@ -72,18 +72,14 @@ final readonly class SubscriptionService
 
         $result = $this->discovery->discover($url, $this->scrapeFallbackPolicy->forUser($user));
 
-        if (!$result->isDirectFeed) {
+        $discovered = $result->feed;
+        if (null === $discovered) {
             return SubscribeOutcome::candidates($result->candidates, $result->scrapeFailureReason);
         }
 
-        $subscription = $this->creator->create($user, (string) $result->feedUrl, SourceFormat::XML, $tags);
-        if (null !== $result->document) {
-            // Discovery read the feed to confirm it was one. Storing that
-            // document here is what makes a new subscription arrive with its
-            // entries, instead of empty until a refresh re-fetches the URL.
-            $this->firstFetch->record($subscription->getFeed(), $result->document);
-        }
+        $subscription = $this->creator->create($user, $discovered->url, SourceFormat::XML, $tags);
+        $unread = $this->firstFetch->record($subscription->getFeed(), $discovered);
 
-        return SubscribeOutcome::subscribed($subscription);
+        return SubscribeOutcome::subscribed($subscription, $unread);
     }
 }

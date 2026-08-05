@@ -12,6 +12,8 @@ final readonly class RefreshReport
         public int $fetched,
         public int $notModified,
         public int $failed,
+        /** Feeds the site rationed. Not failures: they are healthy and will be asked again shortly. */
+        public int $throttled,
         public int $skippedForBudget,
         public int $remaining,
         public int $pruned,
@@ -20,7 +22,7 @@ final readonly class RefreshReport
 
     public static function busy(): self
     {
-        return new self('busy', 0, 0, 0, 0, 0, 0, 0);
+        return new self('busy', 0, 0, 0, 0, 0, 0, 0, 0);
     }
 
     public static function finished(
@@ -28,6 +30,7 @@ final readonly class RefreshReport
         int $fetched,
         int $notModified,
         int $failed,
+        int $throttled,
         int $skippedForBudget,
         int $remaining,
         int $pruned,
@@ -38,6 +41,7 @@ final readonly class RefreshReport
             $fetched,
             $notModified,
             $failed,
+            $throttled,
             $skippedForBudget,
             $remaining,
             $pruned,
@@ -55,14 +59,15 @@ final readonly class RefreshReport
         int $fetched,
         int $notModified,
         int $failed,
+        int $throttled,
         int $remaining,
     ): self {
-        return new self('aborted', $total, $fetched, $notModified, $failed, 0, $remaining, 0);
+        return new self('aborted', $total, $fetched, $notModified, $failed, $throttled, 0, $remaining, 0);
     }
 
     /**
      * @return array{status: string, total: int, fetched: int, notModified: int,
-     *     failed: int, skippedForBudget: int, remaining: int, pruned: int}
+     *     failed: int, throttled: int, skippedForBudget: int, remaining: int, pruned: int}
      */
     public function toArray(): array
     {
@@ -72,6 +77,7 @@ final readonly class RefreshReport
             'fetched' => $this->fetched,
             'notModified' => $this->notModified,
             'failed' => $this->failed,
+            'throttled' => $this->throttled,
             'skippedForBudget' => $this->skippedForBudget,
             'remaining' => $this->remaining,
             'pruned' => $this->pruned,

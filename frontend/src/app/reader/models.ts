@@ -93,6 +93,8 @@ export interface RefreshReport {
   fetched: number;
   notModified: number;
   failed: number;
+  /** Feeds the site rationed. Healthy, and asked again shortly — not failures. */
+  throttled: number;
   skippedForBudget: number;
   remaining: number;
   pruned: number;
@@ -132,7 +134,8 @@ export interface FeedPreview {
  * server may send a reason this build hasn't heard of. `failureText()` renders a
  * generic warning for anything outside the known set rather than an empty box.
  */
-export type ScrapeFailureReason = 'blocked' | 'unreachable' | 'not_scrapable' | (string & {});
+export type ScrapeFailureReason =
+  'blocked' | 'throttled' | 'unreachable' | 'not_scrapable' | (string & {});
 
 /** POST /subscriptions returns either the created subscription or a candidate
  *  list; an empty list may carry the reason the scraper fallback gave up. */

@@ -110,6 +110,11 @@ services:
     App\Service\Refresh\RefreshRunner:
         arguments:
             $clock: '@App\Service\Clock\DatabaseClock'
+    # Reads the distance to a Retry-After date, which is then applied by
+    # FeedScheduler — two clocks would make the wait wrong by the skew.
+    App\Service\Fetch\ResponseClassifier:
+        arguments:
+            $clock: '@App\Service\Clock\DatabaseClock'
 
     # The sweep's in-flight cap. Wired on this one service rather than as a
     # `bind` in _defaults: a binding matches by parameter NAME, so a global

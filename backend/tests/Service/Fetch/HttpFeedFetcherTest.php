@@ -15,6 +15,7 @@ use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -43,7 +44,7 @@ final class HttpFeedFetcherTest extends TestCase
         return new HttpFeedFetcher(new ConcurrentFeedFetcher(
             new MockHttpClient($responses),
             new UrlGuard($resolver, new IpValidator()),
-            new ResponseClassifier(),
+            new ResponseClassifier(new MockClock()),
             1,
             'TestAgent/1.0',
         ));

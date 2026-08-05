@@ -274,18 +274,21 @@ final class RefreshRunnerTest extends DbTestCase
 
         $report = $this->runner()->run(RefreshRequest::allDue(300));
 
+        // Its own bucket: reporting it as a failure is what let the Reddit
+        // feeds look broken while nothing was wrong with them.
+        self::assertSame(1, $report->throttled);
+        self::assertSame(0, $report->failed);
         self::assertSame(0, $report->fetched);
-        // Nothing arrived, so this run did not update the feed …
-        self::assertSame(1, $report->failed);
-        // … but the feed itself is untouched, and due again in 90 seconds.
+        // The scheduler owns what a throttle does to the feed (FeedSchedulerTest);
+        // what matters here is that a 429 reaches it at all instead of being
+        // recorded as a failure.
         self::assertSame(FeedStatus::Active, $feed->getStatus());
-        self::assertSame(0, $feed->getConsecutiveFailures());
-        self::assertSame('2026-07-21 11:00:00', $feed->getLastFetchedAt()?->format('Y-m-d H:i:s'));
         self::assertSame(
             $this->clock->now()->modify('+90 seconds')->format('Y-m-d H:i:s'),
             $feed->getNextFetchAt()?->format('Y-m-d H:i:s'),
         );
-        // One more request to a host that just asked us to slow down.
+        // Chasing its icon would be one more request to a host that just
+        // asked us for fewer.
         self::assertNotContains('https://www.reddit.com', $this->faviconFetcher->fetchedUrls);
     }
 

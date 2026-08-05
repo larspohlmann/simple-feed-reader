@@ -103,7 +103,12 @@ final readonly class WellKnownFeedProbe
         $response = $outcome->responseOrThrow();
 
         try {
-            return new DiscoveredFeed($response->finalUrl, $this->parser->parse($response->body ?? ''));
+            return new DiscoveredFeed(
+                $response->finalUrl,
+                $this->parser->parse($response->body ?? ''),
+                $response->etag,
+                $response->lastModified,
+            );
         } catch (FeedParseException) {
             return null;
         }

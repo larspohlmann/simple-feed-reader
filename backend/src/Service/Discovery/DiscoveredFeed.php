@@ -19,7 +19,16 @@ use App\Service\Parser\ParsedFeed;
  */
 final readonly class DiscoveredFeed
 {
-    public function __construct(public string $url, public ParsedFeed $document)
-    {
+    /**
+     * The validators travel with the document: whoever stores it can send a
+     * conditional request next time, exactly as the refresh pipeline does, so
+     * seeding a feed does not cost it its first cheap poll.
+     */
+    public function __construct(
+        public string $url,
+        public ParsedFeed $document,
+        public ?string $etag = null,
+        public ?string $lastModified = null,
+    ) {
     }
 }

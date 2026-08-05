@@ -10,7 +10,8 @@ use Symfony\Component\Clock\ClockInterface;
 
 /**
  * Owns all fetch-schedule state transitions on Feed: adaptive interval on
- * success, exponential backoff on failure, and the "gone" terminal state.
+ * success, a wait on a rationed request, exponential backoff on failure, and
+ * the "gone" terminal state.
  */
 final class FeedScheduler
 {
@@ -21,10 +22,10 @@ final class FeedScheduler
     private const int MAX_BACKOFF_EXPONENT = 9;
     private const int ERROR_MESSAGE_MAX = 1000;
 
-    /** Retry windows for a rationing site: what to wait when it named nothing, and the bounds on what it may ask for. */
-    private const int THROTTLE_DEFAULT_SECONDS = 900;
+    /** The bounds on a wait a rationing site may ask for. */
     private const int THROTTLE_FLOOR_SECONDS = 60;
     private const int THROTTLE_CEILING_SECONDS = 86400;
+    private const int SECONDS_PER_MINUTE = 60;
 
     public function __construct(private readonly ClockInterface $clock)
     {
@@ -55,11 +56,11 @@ final class FeedScheduler
     }
 
     /**
-     * The site is rationing requests, not broken. Nothing about the feed's
-     * health changes — no failure counted, no erroring status, no backoff
-     * growth — only when we may ask again. Anything else would let one 429 cost
-     * a working feed hours of silence, which is exactly what emptied the Reddit
-     * feeds in #290.
+     * The site is rationing requests, not broken. This writes one field — when
+     * we may ask again. No failure counted, no erroring status, no error
+     * message, no backoff growth: anything else would let one 429 cost a
+     * working feed hours of silence, which is what emptied the Reddit feeds in
+     * #290.
      *
      * lastFetchedAt stays as it was: it records when content last arrived, and
      * the manual refresh's cooldown reads it, so stamping it here would also
@@ -69,12 +70,17 @@ final class FeedScheduler
      */
     public function recordThrottled(Feed $feed, ?int $retryAfterSeconds): void
     {
+        // A site that named no delay is asked again no sooner than it would
+        // have been anyway. Polling a host that just said "less" every quarter
+        // hour, when its own cadence had grown to daily, is asking for more.
         $wait = min(
             self::THROTTLE_CEILING_SECONDS,
-            max(self::THROTTLE_FLOOR_SECONDS, $retryAfterSeconds ?? self::THROTTLE_DEFAULT_SECONDS),
+            max(
+                self::THROTTLE_FLOOR_SECONDS,
+                $retryAfterSeconds ?? $feed->getFetchIntervalMinutes() * self::SECONDS_PER_MINUTE,
+            ),
         );
 
-        $feed->setLastErrorMessage(sprintf('Rate limited; retrying in %d s.', $wait));
         $feed->setNextFetchAt($this->clock->now()->modify(sprintf('+%d seconds', $wait)));
     }
 

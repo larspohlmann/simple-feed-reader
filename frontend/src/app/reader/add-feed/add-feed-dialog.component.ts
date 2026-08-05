@@ -120,11 +120,13 @@ export class AddFeedDialogComponent implements OnInit {
     const key =
       reason === 'blocked'
         ? 'failBlocked'
-        : reason === 'unreachable'
-          ? 'failUnreachable'
-          : reason === 'not_scrapable'
-            ? 'failNotScrapable'
-            : 'failGeneric';
+        : reason === 'throttled'
+          ? 'failThrottled'
+          : reason === 'unreachable'
+            ? 'failUnreachable'
+            : reason === 'not_scrapable'
+              ? 'failNotScrapable'
+              : 'failGeneric';
     return this.i18n.translate(`dialog.addFeed.${key}`);
   }
 

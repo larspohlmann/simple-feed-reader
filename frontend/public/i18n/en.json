@@ -110,6 +110,7 @@
       "contentTitles": "Titles only",
       "formatFeed": "Feed",
       "failBlocked": "This site blocks automated access — it can't be subscribed.",
+      "failThrottled": "This site is limiting requests right now — wait a moment and try again.",
       "failUnreachable": "The site couldn't be reached — check the address or try again later.",
       "failNotScrapable": "This page offers no feed and no article list could be detected — it can't be subscribed.",
       "failGeneric": "This page can't be subscribed."

@@ -137,6 +137,7 @@ final class RefreshRunner
                 $tally->fetched,
                 $tally->notModified,
                 $tally->failed,
+                $tally->throttled,
                 \count($feeds) - $tally->processed,
             );
         }
@@ -178,6 +179,7 @@ final class RefreshRunner
                 $tally->fetched,
                 $tally->notModified,
                 $tally->failed,
+                $tally->throttled,
                 $queue->skippedCount(),
             );
         }
@@ -187,6 +189,7 @@ final class RefreshRunner
             $tally->fetched,
             $tally->notModified,
             $tally->failed,
+            $tally->throttled,
             $queue->skippedCount(),
             $this->countRemaining($request, $cooldownCutoff, $queue->skippedCount()),
             $request->prune ? $this->pruner->prune() : 0,
@@ -335,8 +338,6 @@ final class RefreshRunner
 
             return FeedOutcome::Fetched;
         } catch (FeedThrottledException $e) {
-            // Not a failure: the feed is fine, the site is rationing. It keeps
-            // its health and its schedule, and is simply asked again later.
             $this->scheduler->recordThrottled($feed, $e->retryAfterSeconds);
             $this->em->flush();
             $this->logger->info('Feed rate limited: {url}', ['url' => $feed->getUrl()]);

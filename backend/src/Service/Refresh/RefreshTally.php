@@ -12,6 +12,7 @@ final class RefreshTally
     public int $fetched = 0;
     public int $notModified = 0;
     public int $failed = 0;
+    public int $throttled = 0;
     public int $processed = 0;
     public bool $aborted = false;
 
@@ -49,15 +50,11 @@ final class RefreshTally
         match ($outcome) {
             FeedOutcome::Fetched => $this->fetched++,
             FeedOutcome::NotModified => $this->notModified++,
-            // A throttled feed brought nothing back, so this run did not update
-            // it — which is what the count reports. Its own health is a
-            // different question, and recordThrottled leaves that untouched.
-            FeedOutcome::Failed, FeedOutcome::Throttled => $this->failed++,
+            FeedOutcome::Failed => $this->failed++,
+            FeedOutcome::Throttled => $this->throttled++,
         };
 
-        // No new content to show an icon beside — and for a throttled feed the
-        // homepage fetch would be one more request to a host already rationing.
-        if (FeedOutcome::Failed !== $outcome && FeedOutcome::Throttled !== $outcome) {
+        if ($outcome->broughtContent()) {
             $this->faviconEligibleFeeds[] = $feed;
         }
     }

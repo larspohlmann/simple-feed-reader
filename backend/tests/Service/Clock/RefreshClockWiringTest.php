@@ -7,6 +7,7 @@ namespace App\Tests\Service\Clock;
 use App\Service\Clock\DatabaseClock;
 use App\Service\EntryIngestor;
 use App\Service\FeedScheduler;
+use App\Service\Fetch\ResponseClassifier;
 use App\Service\Refresh\RefreshRunner;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -30,6 +31,7 @@ final class RefreshClockWiringTest extends KernelTestCase
         yield 'scheduler' => [FeedScheduler::class];
         yield 'ingestor' => [EntryIngestor::class];
         yield 'runner' => [RefreshRunner::class];
+        yield 'classifier' => [ResponseClassifier::class];
     }
 
     /**

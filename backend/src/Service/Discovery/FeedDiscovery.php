@@ -30,8 +30,12 @@ use App\Service\Scraper\HtmlItemExtractor;
  */
 final readonly class FeedDiscovery implements FeedDiscoveryInterface
 {
-    /** Statuses meaning "the site answered but refused us" — retrying won't help, a feed URL might. */
-    private const array BLOCKED_STATUSES = [401, 403, 429];
+    /**
+     * Statuses meaning "the site answered but refused us" — retrying won't help,
+     * a feed URL might. 429 is NOT one of them: retrying is exactly what that
+     * one asks for, and it arrives as its own FeedThrottledException.
+     */
+    private const array BLOCKED_STATUSES = [401, 403];
 
     public function __construct(
         private FeedFetcherInterface $fetcher,
@@ -46,6 +50,10 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
     {
         try {
             $response = $this->fetcher->fetch($url);
+        } catch (FeedThrottledException) {
+            // The site has just asked us to slow down; six parallel guesses are
+            // the opposite of that, and each would draw its own 429.
+            return FeedDiscoveryResult::scrapeFailed('throttled');
         } catch (FeedUnreachableException $e) {
             return $this->feedTheSiteMightStillServe($url, $e);
         } catch (FetchException) {
@@ -61,7 +69,12 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
             // a second time to read what we are holding already.
             $document = $this->parser->parse($body);
 
-            return FeedDiscoveryResult::directFeed(new DiscoveredFeed($response->finalUrl, $document));
+            return FeedDiscoveryResult::directFeed(new DiscoveredFeed(
+                $response->finalUrl,
+                $document,
+                $response->etag,
+                $response->lastModified,
+            ));
         } catch (FeedParseException) {
             // Not a feed — treat it as a page that may point at one.
         }
@@ -98,9 +111,6 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
      * itself: a missing status code is a DNS failure or a dead connection, and
      * a 5xx is a server that is currently answering nothing correctly. Either
      * way the guesses would fail the same way the page did.
-     *
-     * A 429 is a third no: the site has just asked us to slow down, and six
-     * parallel guesses are the opposite of that.
      */
     private function feedTheSiteMightStillServe(
         string $url,
@@ -109,10 +119,6 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         $status = $error->statusCode;
         if (null === $status || $status >= 500) {
             return FeedDiscoveryResult::scrapeFailed('unreachable');
-        }
-
-        if ($error instanceof FeedThrottledException) {
-            return FeedDiscoveryResult::scrapeFailed('blocked');
         }
 
         return $this->probedFeed($url)

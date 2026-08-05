@@ -10,7 +10,6 @@ use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use Psr\Clock\ClockInterface;
-use Symfony\Component\Clock\Clock;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -22,20 +21,19 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * before the next request. A second implementation would drift out of step with
  * that guard, so both the serial and the concurrent fetcher route through here.
  */
-final class ResponseClassifier
+final readonly class ResponseClassifier
 {
     private const array REDIRECT_CODES = [301, 302, 303, 307, 308];
     private const array PERMANENT_CODES = [301, 308];
 
-    private readonly ClockInterface $clock;
-
     /**
-     * The clock only ever reads a Retry-After date, so it defaults rather than
-     * making every construction site of this stateless helper pass one.
+     * Injected rather than read from the global clock: the only use is the
+     * distance to a Retry-After date, and the tier that computes it is the one
+     * observed running an hour fast — so it shares the refresh pipeline's
+     * database clock (see config/services.yaml, RefreshClockWiringTest).
      */
-    public function __construct(?ClockInterface $clock = null)
+    public function __construct(private ClockInterface $clock)
     {
-        $this->clock = $clock ?? Clock::get();
     }
 
     public function fromHeaders(ResponseInterface $response, FetchAttempt $attempt): HeaderVerdict

@@ -72,8 +72,8 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $result = $this->discovery($fetcher)->discover('https://example.com/feed', ScrapeFallback::Enabled);
 
-        self::assertTrue($result->isDirectFeed);
-        self::assertSame('https://example.com/feed.xml', $result->feedUrl);
+        self::assertNotNull($result->feed);
+        self::assertSame('https://example.com/feed.xml', $result->feed->url);
         self::assertNull($result->scrapeFailureReason);
     }
 
@@ -94,7 +94,7 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $result = $this->discovery($fetcher)->discover('https://example.com/blog', ScrapeFallback::Enabled);
 
-        self::assertFalse($result->isDirectFeed);
+        self::assertNull($result->feed);
         self::assertNull($result->scrapeFailureReason);
         self::assertCount(2, $result->candidates);
         self::assertSame('https://example.com/rss.xml', $result->candidates[0]->url);
@@ -127,7 +127,7 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $result = $this->discovery($fetcher)->discover('https://www.heise.de', ScrapeFallback::Enabled);
 
-        self::assertFalse($result->isDirectFeed);
+        self::assertNull($result->feed);
         self::assertNull($result->scrapeFailureReason);
         self::assertCount(1, $result->candidates);
         self::assertSame('https://www.heise.de/', $result->candidates[0]->url);
@@ -174,8 +174,8 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $result = $this->discovery($fetcher)->discover('https://www.heise.de', ScrapeFallback::Enabled);
 
-        self::assertTrue($result->isDirectFeed);
-        self::assertSame('https://www.heise.de/.rss', $result->feedUrl);
+        self::assertNotNull($result->feed);
+        self::assertSame('https://www.heise.de/.rss', $result->feed->url);
     }
 
     public function testAccessDeniedStatusReportsBlockedWhenNoConventionalPathServesAFeed(): void
@@ -185,7 +185,7 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $result = $this->discovery($fetcher)->discover('https://forbidden.example.com', ScrapeFallback::Enabled);
 
-        self::assertFalse($result->isDirectFeed);
+        self::assertNull($result->feed);
         self::assertSame('blocked', $result->scrapeFailureReason);
         self::assertSame([], $result->candidates);
     }
@@ -211,8 +211,8 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $result = $this->discovery($fetcher)->discover('https://www.reddit.com/r/Bitwig/', ScrapeFallback::Enabled);
 
-        self::assertTrue($result->isDirectFeed);
-        self::assertSame('https://www.reddit.com/r/Bitwig/.rss', $result->feedUrl);
+        self::assertNotNull($result->feed);
+        self::assertSame('https://www.reddit.com/r/Bitwig/.rss', $result->feed->url);
         self::assertNull($result->scrapeFailureReason);
     }
 
@@ -234,8 +234,8 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $result = $this->discovery($fetcher)->discover('https://example.com/blog/', ScrapeFallback::Enabled);
 
-        self::assertTrue($result->isDirectFeed);
-        self::assertSame('https://example.com/blog/feed', $result->feedUrl);
+        self::assertNotNull($result->feed);
+        self::assertSame('https://example.com/blog/feed', $result->feed->url);
     }
 
     public function testAMissingPageWithNoFeedAnywhereStillReportsUnreachable(): void
@@ -260,7 +260,8 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $result = $this->discovery($fetcher)->discover('https://www.reddit.com/r/Bitwig/', ScrapeFallback::Enabled);
 
-        self::assertSame('blocked', $result->scrapeFailureReason);
+        // Its own reason: "slow down" is not "you may not have this".
+        self::assertSame('throttled', $result->scrapeFailureReason);
         self::assertSame(['https://www.reddit.com/r/Bitwig/'], $fetcher->fetchedUrls);
     }
 
@@ -316,7 +317,7 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $result = $this->discovery($fetcher)->discover('https://example.com/plain', ScrapeFallback::Enabled);
 
-        self::assertFalse($result->isDirectFeed);
+        self::assertNull($result->feed);
         self::assertSame('not_scrapable', $result->scrapeFailureReason);
         self::assertSame([], $result->candidates);
     }
@@ -341,7 +342,7 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $result = $this->discovery($fetcher)->discover('https://example.com/blog', ScrapeFallback::Disabled);
 
-        self::assertFalse($result->isDirectFeed);
+        self::assertNull($result->feed);
         self::assertSame([], $result->candidates);
         // A null reason is what makes the dialog render its plain "no feed
         // found" state instead of a scrape-flavoured warning.

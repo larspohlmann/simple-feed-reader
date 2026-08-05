@@ -110,6 +110,7 @@
       "contentTitles": "Nur Titel",
       "formatFeed": "Feed",
       "failBlocked": "Diese Seite blockiert automatisierten Zugriff – sie kann nicht abonniert werden.",
+      "failThrottled": "Diese Seite begrenzt gerade die Anfragen – warte einen Moment und versuche es erneut.",
       "failUnreachable": "Die Seite konnte nicht erreicht werden – prüfe die Adresse oder versuche es später erneut.",
       "failNotScrapable": "Diese Seite bietet keinen Feed und es konnte keine Artikelliste erkannt werden – sie kann nicht abonniert werden.",
       "failGeneric": "Diese Seite kann nicht abonniert werden."

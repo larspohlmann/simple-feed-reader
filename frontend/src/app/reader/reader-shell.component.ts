@@ -582,9 +582,15 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         queryParams: { subscription: sub.id, view: null, tag: null, entry: null },
         queryParamsHandling: 'merge',
       });
-      // A just-added feed has no entries until its first fetch. Populate it now,
-      // scoped to this one feed so it stays fast, instead of leaving the user on
-      // an empty list until they hit refresh. Reload the list once it lands.
+      // A feed discovery could read arrives with its entries already stored
+      // (#290), so there is nothing left to fetch — and asking the same host
+      // again a second later is precisely what a rationing site answers with
+      // 429. Only a feed that came in unfetched, the scraped shortcut, still
+      // needs its first fetch; scope it to that one feed so it stays fast.
+      if (sub.lastFetchedAt) {
+        this.entries.load(queryFromSelection(this.selection()));
+        return;
+      }
       this.refreshSvc.run(
         () => {
           this.subs.load();

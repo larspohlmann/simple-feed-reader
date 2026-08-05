@@ -6,12 +6,9 @@ namespace App\Service\Fetch\Exception;
 
 /**
  * Nothing usable arrived: no answer at all, or an answer that was not the feed
- * (any non-2xx but 304/410, which have their own meanings).
- *
- * Not final: FeedThrottledException narrows it to "we asked too often", so that
- * every caller which only cares that nothing arrived keeps catching one type.
+ * (any non-2xx but 304, 410 and 429, which have their own meanings).
  */
-class FeedUnreachableException extends FetchException
+final class FeedUnreachableException extends FetchException
 {
     public function __construct(string $message, public readonly ?int $statusCode = null, ?\Throwable $previous = null)
     {
