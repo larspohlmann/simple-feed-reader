@@ -89,10 +89,24 @@ user explicitly choosing to leave.
 - **Jest component test** (`app`): the banner renders only when the signal is
   set, and `app.html` renders no element other than `<router-outlet>` when it
   is not — the regression guard for the coupling above.
-- **Playwright** (one test): render `/register`, stall the discovered login
-  chunk, click through to `/login`, expect the banner within ~12 s and assert
-  `#boot-error` stays hidden. A direct-invocation test can assert something
-  the real wiring makes impossible, so this backs the unit tests.
+- **Playwright** (two tests, `navigation-watchdog.spec.ts`): the first renders
+  `/register`, stalls the discovered login chunk, clicks through to `/login`,
+  expects the banner within ~16 s and asserts `#boot-error` stays hidden; the
+  second aborts the same chunk request outright, so `NavigationError` fires
+  immediately and the banner appears with no deadline to wait out. A
+  direct-invocation test can assert something the real wiring makes
+  impossible, so both back the unit tests.
+- **Playwright** (`boot-without-dictionary.spec.ts`, pre-existing #280/#281
+  coverage): its third test, the #281 chunk-failure case, used to navigate
+  `/register` → `/login` in-app with the login chunk aborted and assert the
+  full-page `#boot-error` surface. Under this branch that is a mid-session
+  failure, so the reporter now shows the retry banner instead and keeps the
+  working page — the old assertion was asserting exactly the behavior this
+  branch set out to remove. It was re-pointed to a direct `page.goto('/login')`
+  with the same chunk aborted, so the failure again lands before anything has
+  rendered and the full-page surface is still the right, provable outcome; the
+  in-app case it used to cover moved to the new second test in
+  `navigation-watchdog.spec.ts` above.
 
 ## Out of scope / unchanged
 

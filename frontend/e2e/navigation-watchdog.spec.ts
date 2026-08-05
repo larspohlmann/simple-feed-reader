@@ -57,8 +57,6 @@ test('shows the retry banner when an in-app navigation fails outright', async ({
   page,
   context,
 }) => {
-  test.setTimeout(60_000);
-
   await page.goto('/register');
   await page.waitForLoadState('networkidle');
 

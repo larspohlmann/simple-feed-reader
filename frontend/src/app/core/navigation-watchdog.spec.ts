@@ -27,8 +27,18 @@ describe('startNavigationWatchdog', () => {
     jest.useRealTimers();
   });
 
-  it('reports a navigation that never terminates', () => {
-    events.next(new NavigationStart(1, '/settings'));
+  it('does not arm for the bootstrap navigation, seen before any NavigationEnd', () => {
+    events.next(new NavigationStart(1, '/login'));
+
+    jest.advanceTimersByTime(NAVIGATION_DEADLINE_MS * 2);
+
+    expect(reporter.report).not.toHaveBeenCalled();
+  });
+
+  it('reports a navigation that never terminates, after a completed one', () => {
+    events.next(new NavigationStart(1, '/login'));
+    events.next(new NavigationEnd(1, '/login', '/login'));
+    events.next(new NavigationStart(2, '/settings'));
 
     jest.advanceTimersByTime(NAVIGATION_DEADLINE_MS);
 
@@ -36,7 +46,9 @@ describe('startNavigationWatchdog', () => {
   });
 
   it('stays silent while the deadline has not passed', () => {
-    events.next(new NavigationStart(1, '/settings'));
+    events.next(new NavigationStart(1, '/login'));
+    events.next(new NavigationEnd(1, '/login', '/login'));
+    events.next(new NavigationStart(2, '/settings'));
 
     jest.advanceTimersByTime(NAVIGATION_DEADLINE_MS - 1);
 
@@ -57,7 +69,9 @@ describe('startNavigationWatchdog', () => {
     // Guards redirect: setupRedirectGuard and guestGuard both do, so a cancel
     // must not be mistaken for a stall.
     events.next(new NavigationStart(1, '/login'));
-    events.next(new NavigationCancel(1, '/login', 'guard redirect'));
+    events.next(new NavigationEnd(1, '/login', '/login'));
+    events.next(new NavigationStart(2, '/settings'));
+    events.next(new NavigationCancel(2, '/settings', 'guard redirect'));
 
     jest.advanceTimersByTime(NAVIGATION_DEADLINE_MS * 2);
 
@@ -65,8 +79,10 @@ describe('startNavigationWatchdog', () => {
   });
 
   it('cancels on a failed navigation, leaving the error handler to report it', () => {
-    events.next(new NavigationStart(1, '/settings'));
-    events.next(new NavigationError(1, '/settings', new Error('chunk failed')));
+    events.next(new NavigationStart(1, '/login'));
+    events.next(new NavigationEnd(1, '/login', '/login'));
+    events.next(new NavigationStart(2, '/settings'));
+    events.next(new NavigationError(2, '/settings', new Error('chunk failed')));
 
     jest.advanceTimersByTime(NAVIGATION_DEADLINE_MS * 2);
 
@@ -74,9 +90,11 @@ describe('startNavigationWatchdog', () => {
   });
 
   it('restarts the deadline for a second navigation instead of stacking timers', () => {
-    events.next(new NavigationStart(1, '/settings'));
+    events.next(new NavigationStart(1, '/login'));
+    events.next(new NavigationEnd(1, '/login', '/login'));
+    events.next(new NavigationStart(2, '/settings'));
     jest.advanceTimersByTime(NAVIGATION_DEADLINE_MS - 1_000);
-    events.next(new NavigationStart(2, '/discover'));
+    events.next(new NavigationStart(3, '/discover'));
 
     jest.advanceTimersByTime(1_000);
     expect(reporter.report).not.toHaveBeenCalled();

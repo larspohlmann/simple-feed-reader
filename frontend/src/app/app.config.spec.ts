@@ -19,6 +19,14 @@ import { LOCALE_WRITER } from './core/locale-writer';
  * would already satisfy.
  */
 describe('appConfig', () => {
+  afterEach(() => {
+    // Guards the case where the expectations below threw before the surface
+    // was ever created, or where a test that never runs this block leaves
+    // nothing to remove.
+    document.getElementById('boot-error')?.remove();
+    jest.restoreAllMocks();
+  });
+
   it('provides the HTTP-backed locale writer, not the no-op default', () => {
     TestBed.configureTestingModule({ providers: appConfig.providers });
 
@@ -50,8 +58,5 @@ describe('appConfig', () => {
 
     expect(reporter.failed()).toBe(true);
     expect(surface.hasAttribute('hidden')).toBe(true);
-
-    surface.remove();
-    jest.restoreAllMocks();
   });
 });

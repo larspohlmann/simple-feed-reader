@@ -17,7 +17,13 @@ describe('App', () => {
       // actual English UI strings.
       imports: [App, provideTranslocoTesting()],
       // provideRouter supplies the context <router-outlet> needs to render.
-      providers: [provideRouter([]), { provide: NavigationFailureReporter, useValue: { failed } }],
+      providers: [
+        provideRouter([]),
+        {
+          provide: NavigationFailureReporter,
+          useValue: { failed } satisfies Partial<NavigationFailureReporter>,
+        },
+      ],
     }).compileComponents();
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();

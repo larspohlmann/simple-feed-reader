@@ -394,7 +394,7 @@
     "add": "Hinzufügen",
     "loading": "Wird geladen…",
     "retry": "Erneut versuchen",
-    "navigationFailed": "Diese Seite wurde nicht geladen."
+    "navigationFailed": "Diese Seite konnte nicht geladen werden."
   },
   "discover": {
     "title": "Feeds entdecken",
