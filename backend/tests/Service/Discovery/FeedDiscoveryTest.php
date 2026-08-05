@@ -6,6 +6,8 @@ namespace App\Tests\Service\Discovery;
 
 use App\Enum\ScrapeFallback;
 use App\Service\Discovery\FeedDiscovery;
+use App\Service\Discovery\FeedLinkScanner;
+use App\Service\Discovery\WellKnownFeedProbe;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Service\Fetch\FetchResponse;
@@ -26,7 +28,13 @@ final class FeedDiscoveryTest extends KernelTestCase
         $extractor = self::getContainer()->get(HtmlItemExtractor::class);
         self::assertInstanceOf(HtmlItemExtractor::class, $extractor);
 
-        return new FeedDiscovery($fetcher, $parser, $extractor);
+        return new FeedDiscovery(
+            $fetcher,
+            $parser,
+            $extractor,
+            new FeedLinkScanner(),
+            new WellKnownFeedProbe($fetcher, $parser),
+        );
     }
 
     private function fetcherReturning(string $url, string $finalUrl, string $body): StubFeedFetcher
@@ -36,8 +44,22 @@ final class FeedDiscoveryTest extends KernelTestCase
             $url,
             FetchResponse::fetched($finalUrl, permanentRedirect: false, body: $body, etag: null, lastModified: null),
         );
+        $this->withoutAConventionalFeed($fetcher, $finalUrl);
 
         return $fetcher;
+    }
+
+    /**
+     * Answers every conventional path under $pageUrl with a 404. A page that
+     * points at no feed sends discovery probing, and an unstubbed probe would
+     * fail the test with a stub error rather than with its own assertion.
+     */
+    private function withoutAConventionalFeed(StubFeedFetcher $fetcher, string $pageUrl): void
+    {
+        $directory = str_ends_with($pageUrl, '/') ? $pageUrl : $pageUrl . '/';
+        foreach (WellKnownFeedProbe::SUFFIXES as $suffix) {
+            $fetcher->willThrow($directory . $suffix, new FeedUnreachableException('x: HTTP 404', 404));
+        }
     }
 
     public function testDirectFeedUrlReturnsCanonicalFinalUrl(): void
@@ -112,10 +134,54 @@ final class FeedDiscoveryTest extends KernelTestCase
         self::assertNotNull($result->candidates[0]->title);
     }
 
-    public function testAccessDeniedStatusReportsBlocked(): void
+    /** A page that advertises nothing but links its feed in the footer still offers it. */
+    public function testAPageWithoutAutodiscoveryOffersItsFeedShapedLink(): void
+    {
+        $html = /** @lang TEXT */ <<<'HTML'
+            <!doctype html><html><head><title>A blog</title></head><body>
+              <a href="/blog/feed" title="RSS">feed</a>
+            </body></html>
+            HTML;
+
+        $fetcher = $this->fetcherReturning('https://example.com/blog/', 'https://example.com/blog/', $html);
+
+        $result = $this->discovery($fetcher)->discover('https://example.com/blog/', ScrapeFallback::Enabled);
+
+        self::assertCount(1, $result->candidates);
+        self::assertSame('https://example.com/blog/feed', $result->candidates[0]->url);
+        self::assertSame('feed', $result->candidates[0]->format);
+    }
+
+    /** A real feed under a conventional path beats a feed synthesized from the page. */
+    public function testAScrapablePageStillPrefersAConventionalFeed(): void
+    {
+        $xml = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
+        self::assertIsString($xml);
+
+        $fetcher = $this->fetcherReturning(
+            'https://www.heise.de',
+            'https://www.heise.de/',
+            $this->scrapedFixture('heise-2026-07-23.html'),
+        );
+        $fetcher->willReturn('https://www.heise.de/.rss', FetchResponse::fetched(
+            'https://www.heise.de/.rss',
+            permanentRedirect: false,
+            body: $xml,
+            etag: null,
+            lastModified: null,
+        ));
+
+        $result = $this->discovery($fetcher)->discover('https://www.heise.de', ScrapeFallback::Enabled);
+
+        self::assertTrue($result->isDirectFeed);
+        self::assertSame('https://www.heise.de/.rss', $result->feedUrl);
+    }
+
+    public function testAccessDeniedStatusReportsBlockedWhenNoConventionalPathServesAFeed(): void
     {
         $fetcher = new StubFeedFetcher();
         $fetcher->willThrow('https://forbidden.example.com', new FeedUnreachableException('x: HTTP 403', 403));
+        $this->withoutAConventionalFeed($fetcher, 'https://forbidden.example.com');
 
         $result = $this->discovery($fetcher)->discover('https://forbidden.example.com', ScrapeFallback::Enabled);
 
@@ -124,7 +190,72 @@ final class FeedDiscoveryTest extends KernelTestCase
         self::assertSame([], $result->candidates);
     }
 
-    public function testTransportFailureReportsUnreachable(): void
+    /**
+     * The #283 case: the site refuses its own page but serves the feed under a
+     * conventional path, so the subscribe completes instead of dead-ending.
+     */
+    public function testARefusedPageSubscribesTheFeedFoundUnderAConventionalPath(): void
+    {
+        $xml = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
+        self::assertIsString($xml);
+
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willThrow('https://www.reddit.com/r/Bitwig/', new FeedUnreachableException('x: HTTP 403', 403));
+        $fetcher->willReturn('https://www.reddit.com/r/Bitwig/.rss', FetchResponse::fetched(
+            'https://www.reddit.com/r/Bitwig/.rss',
+            permanentRedirect: false,
+            body: $xml,
+            etag: null,
+            lastModified: null,
+        ));
+
+        $result = $this->discovery($fetcher)->discover('https://www.reddit.com/r/Bitwig/', ScrapeFallback::Enabled);
+
+        self::assertTrue($result->isDirectFeed);
+        self::assertSame('https://www.reddit.com/r/Bitwig/.rss', $result->feedUrl);
+        self::assertNull($result->scrapeFailureReason);
+    }
+
+    /** A 404 is an answer from a live site, so the conventional paths are worth asking for. */
+    public function testAMissingPageSubscribesTheFeedFoundUnderAConventionalPath(): void
+    {
+        $xml = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
+        self::assertIsString($xml);
+
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willThrow('https://example.com/blog/', new FeedUnreachableException('x: HTTP 404', 404));
+        $fetcher->willThrow('https://example.com/blog/.rss', new FeedUnreachableException('x: HTTP 404', 404));
+        $fetcher->willReturn('https://example.com/blog/feed', FetchResponse::fetched(
+            'https://example.com/blog/feed',
+            permanentRedirect: false,
+            body: $xml,
+            etag: null,
+            lastModified: null,
+        ));
+
+        $result = $this->discovery($fetcher)->discover('https://example.com/blog/', ScrapeFallback::Enabled);
+
+        self::assertTrue($result->isDirectFeed);
+        self::assertSame('https://example.com/blog/feed', $result->feedUrl);
+    }
+
+    public function testAMissingPageWithNoFeedAnywhereStillReportsUnreachable(): void
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willThrow('https://example.com/typo', new FeedUnreachableException('x: HTTP 404', 404));
+        $this->withoutAConventionalFeed($fetcher, 'https://example.com/typo');
+
+        $result = $this->discovery($fetcher)->discover('https://example.com/typo', ScrapeFallback::Enabled);
+
+        self::assertSame('unreachable', $result->scrapeFailureReason);
+        self::assertSame([], $result->candidates);
+    }
+
+    /**
+     * Nothing answered the first request, so nothing will answer six more —
+     * each probe would cost a full timeout to confirm the host is still gone.
+     */
+    public function testTransportFailureReportsUnreachableWithoutProbing(): void
     {
         $fetcher = new StubFeedFetcher();
         $fetcher->willThrow('https://nxdomain.example.com', new FeedUnreachableException('DNS', null));
@@ -133,6 +264,7 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         self::assertSame('unreachable', $result->scrapeFailureReason);
         self::assertSame([], $result->candidates);
+        self::assertSame(['https://nxdomain.example.com'], $fetcher->fetchedUrls);
     }
 
     public function testSsrfBlockedFetchReportsUnreachable(): void
@@ -202,6 +334,7 @@ final class FeedDiscoveryTest extends KernelTestCase
     {
         $fetcher = new StubFeedFetcher();
         $fetcher->willThrow('https://example.com/gone', new FeedUnreachableException('gone', 404));
+        $this->withoutAConventionalFeed($fetcher, 'https://example.com/gone');
 
         $result = $this->discovery($fetcher)->discover('https://example.com/gone', ScrapeFallback::Disabled);
 

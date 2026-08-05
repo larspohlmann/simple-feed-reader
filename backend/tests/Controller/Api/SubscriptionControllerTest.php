@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Service\Discovery\WellKnownFeedProbe;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
@@ -55,6 +56,19 @@ final class SubscriptionControllerTest extends WebTestCase
     private function installFetcher(StubFeedFetcher $stub): void
     {
         self::getContainer()->set(FeedFetcherInterface::class, $stub);
+    }
+
+    /**
+     * Answers every conventional feed path under $pageUrl with a 404. A page
+     * that points at no feed sends discovery probing for one, and an unstubbed
+     * probe would fail the test with a stub error instead of its own assertion.
+     */
+    private function withoutAConventionalFeed(StubFeedFetcher $stub, string $pageUrl): void
+    {
+        $directory = str_ends_with($pageUrl, '/') ? $pageUrl : $pageUrl . '/';
+        foreach (WellKnownFeedProbe::SUFFIXES as $suffix) {
+            $stub->willThrow($directory . $suffix, new FeedUnreachableException('x: HTTP 404', 404));
+        }
     }
 
     /**
@@ -316,6 +330,7 @@ final class SubscriptionControllerTest extends WebTestCase
                 lastModified: null,
             ),
         );
+        $this->withoutAConventionalFeed($stub, 'https://www.heise.de/');
         $this->installFetcher($stub);
 
         $client->request(
@@ -359,6 +374,7 @@ final class SubscriptionControllerTest extends WebTestCase
                 lastModified: null,
             ),
         );
+        $this->withoutAConventionalFeed($stub, 'https://www.heise.de/');
         $this->installFetcher($stub);
 
         $client->request(
@@ -381,6 +397,9 @@ final class SubscriptionControllerTest extends WebTestCase
 
         $stub = new StubFeedFetcher();
         $stub->willThrow('https://forbidden.example.com', new FeedUnreachableException('x: HTTP 403', 403));
+        // A refusal sends discovery looking for a feed under the conventional
+        // paths; this site serves none, so the refusal is still the answer.
+        $this->withoutAConventionalFeed($stub, 'https://forbidden.example.com');
         $this->installFetcher($stub);
 
         $client->request(

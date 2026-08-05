@@ -9,15 +9,19 @@ use App\Enum\SourceFormat;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcherInterface;
-use App\Service\Fetch\UrlResolver;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
 use App\Service\Scraper\HtmlItemExtractor;
 
 /**
- * Turns a user-entered URL into a confirmed feed URL, a list of candidate
- * feeds discovered from an HTML page, or — for pages advertising no feeds at
- * all — a synthetic 'scraped' candidate backed by the HTML item extractor.
+ * Turns a user-entered URL into something to subscribe to, trying four sources
+ * in decreasing order of certainty: the URL itself parsed as a feed; the feeds
+ * the page points at (FeedLinkScanner, exact first and guessed second); a feed
+ * under one of the conventional paths (WellKnownFeedProbe) — which is also the
+ * only source left when the page never arrives, as on the sites that refuse
+ * every non-browser client; and finally a synthetic 'scraped' candidate built
+ * from the page's own article list.
+ *
  * Discovery never throws for a bad address: failures come back as a
  * scrapeFailureReason so the subscribe endpoint can always answer with a
  * renderable outcome. Every fetch goes through the SSRF-guarded fetcher, so
@@ -25,8 +29,6 @@ use App\Service\Scraper\HtmlItemExtractor;
  */
 final readonly class FeedDiscovery implements FeedDiscoveryInterface
 {
-    private const array FEED_LINK_TYPES = ['application/rss+xml', 'application/atom+xml'];
-
     /** Statuses meaning "the site answered but refused us" — retrying won't help, a feed URL might. */
     private const array BLOCKED_STATUSES = [401, 403, 429];
 
@@ -34,6 +36,8 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         private FeedFetcherInterface $fetcher,
         private FeedParser $parser,
         private HtmlItemExtractor $extractor,
+        private FeedLinkScanner $links,
+        private WellKnownFeedProbe $wellKnownFeeds,
     ) {
     }
 
@@ -42,37 +46,78 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         try {
             $response = $this->fetcher->fetch($url);
         } catch (FeedUnreachableException $e) {
-            return FeedDiscoveryResult::scrapeFailed(
-                \in_array($e->statusCode, self::BLOCKED_STATUSES, true) ? 'blocked' : 'unreachable',
-            );
+            return $this->feedTheSiteMightStillServe($url, $e);
         } catch (FetchException) {
             // Gone, over-size, SSRF-blocked: nothing usable ever arrived.
             return FeedDiscoveryResult::scrapeFailed('unreachable');
         }
 
         $body = $response->body ?? '';
-        if ('' === trim($body)) {
-            return ScrapeFallback::Enabled === $fallback
-                ? FeedDiscoveryResult::scrapeFailed('not_scrapable')
-                : FeedDiscoveryResult::candidates([]);
-        }
 
         try {
             $this->parser->parse($body); // validates it really is a feed
 
             return FeedDiscoveryResult::directFeed($response->finalUrl);
         } catch (FeedParseException) {
-            // Not a feed — treat as HTML and look for <link rel="alternate">.
+            // Not a feed — treat it as a page that may point at one.
         }
 
-        $candidates = $this->scanHtml($body, $response->finalUrl);
-        if ([] === $candidates) {
-            return ScrapeFallback::Enabled === $fallback
-                ? $this->scrapeFallback($body, $response->finalUrl)
-                : FeedDiscoveryResult::candidates([]);
+        $candidates = $this->links->scan($body, $response->finalUrl);
+
+        return [] !== $candidates
+            ? FeedDiscoveryResult::candidates($candidates)
+            : $this->feedThePageNeverMentions($body, $response->finalUrl, $fallback);
+    }
+
+    /**
+     * The page arrived and points at no feed at all. Before synthesizing one
+     * from its article list, ask for the conventional paths: a real feed the
+     * page merely forgot to advertise beats anything the scraper can build, and
+     * the page is proof the host is answering.
+     */
+    private function feedThePageNeverMentions(
+        string $body,
+        string $finalUrl,
+        ScrapeFallback $fallback,
+    ): FeedDiscoveryResult {
+        $feedUrl = $this->wellKnownFeeds->probe($finalUrl);
+        if (null !== $feedUrl) {
+            return FeedDiscoveryResult::directFeed($feedUrl);
         }
 
-        return FeedDiscoveryResult::candidates($candidates);
+        return ScrapeFallback::Enabled === $fallback
+            ? $this->scrapeFallback($body, $finalUrl)
+            : FeedDiscoveryResult::candidates([]);
+    }
+
+    /**
+     * The page did not arrive, but the site may still serve a feed under it —
+     * that page was the only way to LEARN the feed's address, so the probe
+     * guesses it instead. A hit is reported as a direct feed rather than as a
+     * candidate: the probe has already parsed the document, and a candidate
+     * would cost two more requests (preview, then subscribe) to a host that
+     * just turned one down.
+     *
+     * A missing status code means nothing answered at all — DNS failure,
+     * refused connection, timeout. Six more questions to a host that is not
+     * there buy six timeouts, so that case reports straight away.
+     */
+    private function feedTheSiteMightStillServe(
+        string $url,
+        FeedUnreachableException $error,
+    ): FeedDiscoveryResult {
+        if (null === $error->statusCode) {
+            return FeedDiscoveryResult::scrapeFailed('unreachable');
+        }
+
+        $feedUrl = $this->wellKnownFeeds->probe($url);
+        if (null !== $feedUrl) {
+            return FeedDiscoveryResult::directFeed($feedUrl);
+        }
+
+        return FeedDiscoveryResult::scrapeFailed(
+            \in_array($error->statusCode, self::BLOCKED_STATUSES, true) ? 'blocked' : 'unreachable',
+        );
     }
 
     /**
@@ -96,46 +141,5 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         return FeedDiscoveryResult::candidates([
             new FeedCandidate($finalUrl, $parsed->title, SourceFormat::SCRAPED),
         ]);
-    }
-
-    /** @return list<FeedCandidate> */
-    private function scanHtml(string $html, string $baseUrl): array
-    {
-        $dom = new \DOMDocument();
-        $previous = libxml_use_internal_errors(true);
-        // LIBXML_NONET: never let the parser dereference external entities.
-        $dom->loadHTML($html, \LIBXML_NONET);
-        libxml_clear_errors();
-        libxml_use_internal_errors($previous);
-
-        $candidates = [];
-        $seen = [];
-        foreach ($dom->getElementsByTagName('link') as $link) {
-            if ('alternate' !== strtolower(trim($link->getAttribute('rel')))) {
-                continue;
-            }
-            $type = strtolower(trim($link->getAttribute('type')));
-            if (!\in_array($type, self::FEED_LINK_TYPES, true)) {
-                continue;
-            }
-            // Only the two feed types above reach here, so anything not Atom is
-            // RSS. The scraper fallback path introduces its own 'scraped' value.
-            $format = 'application/atom+xml' === $type ? 'atom' : 'rss';
-            $href = trim($link->getAttribute('href'));
-            if ('' === $href) {
-                continue;
-            }
-
-            $resolved = UrlResolver::resolve($baseUrl, $href);
-            if (isset($seen[$resolved])) {
-                continue;
-            }
-            $seen[$resolved] = true;
-
-            $title = trim($link->getAttribute('title'));
-            $candidates[] = new FeedCandidate($resolved, '' === $title ? null : $title, $format);
-        }
-
-        return $candidates;
     }
 }
