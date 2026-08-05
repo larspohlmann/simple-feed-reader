@@ -393,7 +393,8 @@
     "close": "Schließen",
     "add": "Hinzufügen",
     "loading": "Wird geladen…",
-    "retry": "Erneut versuchen"
+    "retry": "Erneut versuchen",
+    "navigationFailed": "Diese Seite wurde nicht geladen."
   },
   "discover": {
     "title": "Feeds entdecken",
