@@ -7,6 +7,13 @@ export const LANGS: readonly Lang[] = ['en', 'de'];
 export const LANG_KEY = 'sfr.lang';
 
 /**
+ * The language every fallback path lands on: Transloco's `fallbackLang`, the
+ * missing-key fallback translation, and the dictionary that ships inside the
+ * bundle so booting can never depend on the network (#280).
+ */
+export const FALLBACK_LANG: Lang = 'en';
+
+/**
  * Pick the initial UI language from a persisted choice or, failing that, the
  * browser's preferred language. German for any `de*` tag (de, de-DE, de-AT, …),
  * English for everything else — the two locales we translate.

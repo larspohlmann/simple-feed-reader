@@ -34,10 +34,26 @@ describe('HttpTranslocoLoader', () => {
   // since as its raw name (#141). The version turns each release into a URL no
   // cache can already hold.
   it('carries the build version, so a new release cannot hit a cached copy', () => {
-    loader.getTranslation('en').subscribe();
+    loader.getTranslation('de').subscribe();
 
-    const req = ctrl.expectOne(`i18n/en.json?v=${buildVersion.version}`);
+    const req = ctrl.expectOne(`i18n/de.json?v=${buildVersion.version}`);
     expect(req.request.params.get('v')).toBe(buildVersion.version);
     req.flush({});
+  });
+
+  // The English dictionary ships inside the bundle. Serving it from the loader
+  // (not setTranslation: Transloco's load() consults only its own cache) means
+  // the fallback chain terminates without the network, so a resume-reload on a
+  // dead radio can no longer blank the app (#280).
+  it('serves the bundled English dictionary without touching the network', (done) => {
+    loader.getTranslation('en').subscribe((translation) => {
+      // The real dictionary, not an empty object: the loader must not degrade
+      // into serving `{}` and leaving every key to render as its raw name.
+      const auth = translation['auth'] as { login: { subtitle: string } };
+      expect(auth.login.subtitle).toBe('Welcome back to your reader.');
+      done();
+    });
+
+    ctrl.expectNone((request) => request.url.includes('i18n'));
   });
 });
