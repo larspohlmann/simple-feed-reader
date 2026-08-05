@@ -16,6 +16,7 @@ use App\Service\EntryPruner;
 use App\Service\EntrySanitizer;
 use App\Service\FeedScheduler;
 use App\Service\Fetch\Exception\FeedGoneException;
+use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FetchResponse;
@@ -252,6 +253,40 @@ final class RefreshRunnerTest extends DbTestCase
         // HTTP round trip for a feed that may never recover — so it must not
         // be in phase two's favicon batch at all, favicon-less or not.
         self::assertNotContains('https://bad.example.com', $this->faviconFetcher->fetchedUrls);
+    }
+
+    /**
+     * The #290 case: Reddit rations to about one request a minute, so a healthy
+     * feed draws a 429 whenever it is asked twice in a row. Recording that as a
+     * failure would set the erroring status and back the feed off for hours,
+     * for a document that would arrive on the next attempt.
+     */
+    public function testAThrottledFeedKeepsItsHealthAndIsAskedAgainShortly(): void
+    {
+        $feed = $this->dueFeed('https://www.reddit.com/r/Bitwig/.rss');
+        $feed->setLastFetchedAt(new \DateTimeImmutable('2026-07-21 11:00:00'));
+        $this->em->flush();
+
+        $this->fetcher->willThrow(
+            $feed->getUrl(),
+            new FeedThrottledException('https://www.reddit.com/r/Bitwig/.rss: HTTP 429', 90),
+        );
+
+        $report = $this->runner()->run(RefreshRequest::allDue(300));
+
+        self::assertSame(0, $report->fetched);
+        // Nothing arrived, so this run did not update the feed …
+        self::assertSame(1, $report->failed);
+        // … but the feed itself is untouched, and due again in 90 seconds.
+        self::assertSame(FeedStatus::Active, $feed->getStatus());
+        self::assertSame(0, $feed->getConsecutiveFailures());
+        self::assertSame('2026-07-21 11:00:00', $feed->getLastFetchedAt()?->format('Y-m-d H:i:s'));
+        self::assertSame(
+            $this->clock->now()->modify('+90 seconds')->format('Y-m-d H:i:s'),
+            $feed->getNextFetchAt()?->format('Y-m-d H:i:s'),
+        );
+        // One more request to a host that just asked us to slow down.
+        self::assertNotContains('https://www.reddit.com', $this->faviconFetcher->fetchedUrls);
     }
 
     public function testUnparseableBodyIsRecordedAsFailure(): void

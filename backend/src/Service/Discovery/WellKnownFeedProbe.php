@@ -44,25 +44,25 @@ final readonly class WellKnownFeedProbe
     }
 
     /**
-     * The canonical URL of the likeliest conventional path that answers with a
-     * parseable feed, or null when none does. Null is an absence, not a failure
-     * signal: a site with no feed under a conventional path is the ordinary
-     * case, and the caller reports the page's own outcome instead.
+     * The likeliest conventional path that answers with a parseable feed, with
+     * the document it answered — or null when none does. Null is an absence,
+     * not a failure signal: a site with no feed under a conventional path is
+     * the ordinary case, and the caller reports the page's own outcome instead.
      */
-    public function probe(string $pageUrl): ?string
+    public function probe(string $pageUrl): ?DiscoveredFeed
     {
         $candidateUrls = $this->candidateUrls($pageUrl);
         if ([] === $candidateUrls) {
             return null;
         }
 
-        $feedUrls = $this->feedUrlsAmong($candidateUrls);
+        $feeds = $this->feedsAmong($candidateUrls);
 
         // Preference, not arrival order: the outcomes come back as the hosts
         // answer, and `.rss` beating `index.xml` is the point of the list.
         foreach (array_keys($candidateUrls) as $rank) {
-            if (isset($feedUrls[$rank])) {
-                return $feedUrls[$rank];
+            if (isset($feeds[$rank])) {
+                return $feeds[$rank];
             }
         }
 
@@ -70,32 +70,31 @@ final readonly class WellKnownFeedProbe
     }
 
     /**
-     * The final URL of each candidate that served a feed, keyed by its rank in
-     * the suffix list.
+     * Each candidate that served a feed, keyed by its rank in the suffix list.
      *
      * @param array<int, string> $candidateUrls
      *
-     * @return array<int, string>
+     * @return array<int, DiscoveredFeed>
      */
-    private function feedUrlsAmong(array $candidateUrls): array
+    private function feedsAmong(array $candidateUrls): array
     {
         $tickets = array_map(
             static fn (string $url): FetchTicket => new FetchTicket($url),
             $candidateUrls,
         );
 
-        $feedUrls = [];
+        $feeds = [];
         foreach ($this->fetcher->fetchAll($tickets) as $rank => $outcome) {
-            $feedUrl = $this->feedUrlOf($outcome);
-            if (null !== $feedUrl) {
-                $feedUrls[(int) $rank] = $feedUrl;
+            $feed = $this->feedOf($outcome);
+            if (null !== $feed) {
+                $feeds[(int) $rank] = $feed;
             }
         }
 
-        return $feedUrls;
+        return $feeds;
     }
 
-    private function feedUrlOf(FetchOutcome $outcome): ?string
+    private function feedOf(FetchOutcome $outcome): ?DiscoveredFeed
     {
         if (null !== $outcome->failure()) {
             return null;
@@ -104,12 +103,10 @@ final readonly class WellKnownFeedProbe
         $response = $outcome->responseOrThrow();
 
         try {
-            $this->parser->parse($response->body ?? '');
+            return new DiscoveredFeed($response->finalUrl, $this->parser->parse($response->body ?? ''));
         } catch (FeedParseException) {
             return null;
         }
-
-        return $response->finalUrl;
     }
 
     /**

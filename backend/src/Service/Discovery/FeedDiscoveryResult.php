@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Discovery;
 
+use App\Service\Parser\ParsedFeed;
+
 /**
  * @phpstan-type ScrapeFailureReason 'blocked'|'unreachable'|'not_scrapable'
  */
@@ -14,18 +16,22 @@ final readonly class FeedDiscoveryResult
      * @param string|null              $feedUrl
      * @param list<FeedCandidate>      $candidates
      * @param ScrapeFailureReason|null $scrapeFailureReason
+     * @param ParsedFeed|null          $document the feed document discovery
+     *   already read, present exactly when this is a direct feed — so the
+     *   subscribe can store its entries instead of fetching the URL again
      */
     private function __construct(
         public bool $isDirectFeed,
         public ?string $feedUrl,
         public array $candidates,
         public ?string $scrapeFailureReason = null,
+        public ?ParsedFeed $document = null,
     ) {
     }
 
-    public static function directFeed(string $feedUrl): self
+    public static function directFeed(DiscoveredFeed $feed): self
     {
-        return new self(true, $feedUrl, []);
+        return new self(true, $feed->url, [], null, $feed->document);
     }
 
     /** @param list<FeedCandidate> $candidates */

@@ -74,7 +74,7 @@ final class WellKnownFeedProbeTest extends KernelTestCase
         $fetcher = $this->fetcher();
         $fetcher->willReturn($feed, $this->feedAt($feed));
 
-        self::assertSame($feed, $this->probe($fetcher)->probe($page));
+        self::assertSame($feed, $this->probe($fetcher)->probe($page)?->url);
     }
 
     public function testItPrefersTheLikelierSuffixWhenSeveralServeAFeed(): void
@@ -85,7 +85,7 @@ final class WellKnownFeedProbeTest extends KernelTestCase
         $fetcher->willReturn($page . 'index.xml', $this->feedAt($page . 'index.xml'));
         $fetcher->willReturn($page . 'feed', $this->feedAt($page . 'feed'));
 
-        self::assertSame($page . 'feed', $this->probe($fetcher)->probe($page));
+        self::assertSame($page . 'feed', $this->probe($fetcher)->probe($page)?->url);
     }
 
     public function testItAsksForEveryConventionalPathAtOnce(): void
@@ -107,13 +107,27 @@ final class WellKnownFeedProbeTest extends KernelTestCase
         ], $fetcher->fetchedUrls);
     }
 
+    public function testItCarriesTheDocumentItAlreadyRead(): void
+    {
+        $page = 'https://blocked.example.com/blog/';
+        $fetcher = $this->fetcher();
+        $fetcher->willReturn($page . '.rss', $this->feedAt($page . '.rss'));
+
+        // The subscribe stores these entries instead of fetching the URL again.
+        $document = $this->probe($fetcher)->probe($page)?->document;
+
+        self::assertNotNull($document);
+        self::assertSame('Example Tech Blog', $document->title);
+        self::assertNotSame([], $document->entries);
+    }
+
     public function testItReportsTheFinalUrlOfARedirectedProbe(): void
     {
         $page = 'https://blocked.example.com/blog/';
         $fetcher = $this->fetcher();
         $fetcher->willReturn($page . '.rss', $this->feedAt($page . '.rss', 'https://feeds.example.com/blog.xml'));
 
-        self::assertSame('https://feeds.example.com/blog.xml', $this->probe($fetcher)->probe($page));
+        self::assertSame('https://feeds.example.com/blog.xml', $this->probe($fetcher)->probe($page)?->url);
     }
 
     public function testItSkipsABodyThatIsNotAFeed(): void
@@ -129,7 +143,7 @@ final class WellKnownFeedProbeTest extends KernelTestCase
         ));
         $fetcher->willReturn($page . 'feed', $this->feedAt($page . 'feed'));
 
-        self::assertSame($page . 'feed', $this->probe($fetcher)->probe($page));
+        self::assertSame($page . 'feed', $this->probe($fetcher)->probe($page)?->url);
     }
 
     public function testItKeepsTheOtherAnswersWhenOneProbeFails(): void
@@ -139,7 +153,7 @@ final class WellKnownFeedProbeTest extends KernelTestCase
         $fetcher->willThrow($page . '.rss', new SsrfBlockedException('private address'));
         $fetcher->willReturn($page . 'feed', $this->feedAt($page . 'feed'));
 
-        self::assertSame($page . 'feed', $this->probe($fetcher)->probe($page));
+        self::assertSame($page . 'feed', $this->probe($fetcher)->probe($page)?->url);
     }
 
     public function testItFindsNothingWhenNoConventionalPathServesAFeed(): void

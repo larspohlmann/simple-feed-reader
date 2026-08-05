@@ -9,6 +9,8 @@ enum FeedOutcome
     case Fetched;
     case NotModified;
     case Failed;
+    /** The site is rationing requests; the feed is healthy and will be asked again shortly. */
+    case Throttled;
     /** Persistence failed; the EntityManager may be closed, so the run must stop. */
     case Aborted;
 }

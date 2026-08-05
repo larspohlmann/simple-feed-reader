@@ -6,6 +6,7 @@ namespace App\Service\Discovery;
 
 use App\Enum\ScrapeFallback;
 use App\Enum\SourceFormat;
+use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcherInterface;
@@ -55,9 +56,12 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         $body = $response->body ?? '';
 
         try {
-            $this->parser->parse($body); // validates it really is a feed
+            // Parsing IS the test of "is this a feed?", and the document it
+            // yields is what the subscribe stores — so the URL is never fetched
+            // a second time to read what we are holding already.
+            $document = $this->parser->parse($body);
 
-            return FeedDiscoveryResult::directFeed($response->finalUrl);
+            return FeedDiscoveryResult::directFeed(new DiscoveredFeed($response->finalUrl, $document));
         } catch (FeedParseException) {
             // Not a feed — treat it as a page that may point at one.
         }
@@ -94,6 +98,9 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
      * itself: a missing status code is a DNS failure or a dead connection, and
      * a 5xx is a server that is currently answering nothing correctly. Either
      * way the guesses would fail the same way the page did.
+     *
+     * A 429 is a third no: the site has just asked us to slow down, and six
+     * parallel guesses are the opposite of that.
      */
     private function feedTheSiteMightStillServe(
         string $url,
@@ -102,6 +109,10 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         $status = $error->statusCode;
         if (null === $status || $status >= 500) {
             return FeedDiscoveryResult::scrapeFailed('unreachable');
+        }
+
+        if ($error instanceof FeedThrottledException) {
+            return FeedDiscoveryResult::scrapeFailed('blocked');
         }
 
         return $this->probedFeed($url)
@@ -117,9 +128,9 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
      */
     private function probedFeed(string $url): ?FeedDiscoveryResult
     {
-        $feedUrl = $this->wellKnownFeeds->probe($url);
+        $probed = $this->wellKnownFeeds->probe($url);
 
-        return null === $feedUrl ? null : FeedDiscoveryResult::directFeed($feedUrl);
+        return null === $probed ? null : FeedDiscoveryResult::directFeed($probed);
     }
 
     /**

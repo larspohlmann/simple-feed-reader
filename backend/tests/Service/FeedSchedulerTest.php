@@ -39,6 +39,62 @@ final class FeedSchedulerTest extends TestCase
         self::assertSame(30, $feed->getFetchIntervalMinutes());
     }
 
+    public function testAThrottleWaitsTheDelayTheSiteAskedForAndCostsTheFeedNothing(): void
+    {
+        $feed = new Feed('https://example.com/feed');
+        $feed->setFetchIntervalMinutes(60);
+        $feed->setConsecutiveFailures(0);
+        $feed->setLastFetchedAt(new \DateTimeImmutable('2026-07-21 11:00:00'));
+
+        $this->scheduler->recordThrottled($feed, 90);
+
+        self::assertSame('2026-07-21 12:01:30', $feed->getNextFetchAt()?->format('Y-m-d H:i:s'));
+        // The feed is healthy; we asked too often. Counting this as a failure
+        // would set the erroring status and an hours-long backoff.
+        self::assertSame(0, $feed->getConsecutiveFailures());
+        self::assertSame(FeedStatus::Active, $feed->getStatus());
+        self::assertSame(60, $feed->getFetchIntervalMinutes());
+        // Untouched, so the manual refresh's cooldown still measures the last
+        // time content actually arrived.
+        self::assertSame('2026-07-21 11:00:00', $feed->getLastFetchedAt()?->format('Y-m-d H:i:s'));
+        self::assertNotNull($feed->getLastErrorMessage());
+    }
+
+    public function testAThrottleWithoutADelayWaitsTheDefaultWindow(): void
+    {
+        $feed = new Feed('https://example.com/feed');
+
+        $this->scheduler->recordThrottled($feed, null);
+
+        self::assertSame('2026-07-21 12:15:00', $feed->getNextFetchAt()?->format('Y-m-d H:i:s'));
+    }
+
+    /**
+     * A site may ask for a day or for a second. Both are honoured within
+     * reason: below a minute the retry would just draw a second 429, and a
+     * multi-day delay is a feed nobody would see refresh again.
+     */
+    public function testAnAbsurdDelayIsClampedAtBothEnds(): void
+    {
+        $feed = new Feed('https://example.com/feed');
+
+        $this->scheduler->recordThrottled($feed, 2);
+        self::assertSame('2026-07-21 12:01:00', $feed->getNextFetchAt()?->format('Y-m-d H:i:s'));
+
+        $this->scheduler->recordThrottled($feed, 7 * 24 * 3600);
+        self::assertSame('2026-07-22 12:00:00', $feed->getNextFetchAt()?->format('Y-m-d H:i:s'));
+    }
+
+    public function testASuccessAfterAThrottleClearsTheNote(): void
+    {
+        $feed = new Feed('https://example.com/feed');
+        $this->scheduler->recordThrottled($feed, null);
+
+        $this->scheduler->recordSuccess($feed, 2);
+
+        self::assertNull($feed->getLastErrorMessage());
+    }
+
     public function testQuietSuccessGrowsIntervalUpToCeiling(): void
     {
         $feed = new Feed('https://example.com/feed');

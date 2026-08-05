@@ -8,6 +8,7 @@ use App\Enum\ScrapeFallback;
 use App\Service\Discovery\FeedDiscovery;
 use App\Service\Discovery\FeedLinkScanner;
 use App\Service\Discovery\WellKnownFeedProbe;
+use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Service\Fetch\FetchResponse;
@@ -246,6 +247,21 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         self::assertSame('unreachable', $result->scrapeFailureReason);
         self::assertSame([], $result->candidates);
+    }
+
+    /**
+     * The site has just asked us to slow down; six parallel guesses are the
+     * opposite of that, and each would draw its own 429 anyway.
+     */
+    public function testARationingSiteIsNotAskedSixMoreQuestions(): void
+    {
+        $fetcher = $this->fetcher();
+        $fetcher->willThrow('https://www.reddit.com/r/Bitwig/', new FeedThrottledException('x: HTTP 429', 60));
+
+        $result = $this->discovery($fetcher)->discover('https://www.reddit.com/r/Bitwig/', ScrapeFallback::Enabled);
+
+        self::assertSame('blocked', $result->scrapeFailureReason);
+        self::assertSame(['https://www.reddit.com/r/Bitwig/'], $fetcher->fetchedUrls);
     }
 
     /**

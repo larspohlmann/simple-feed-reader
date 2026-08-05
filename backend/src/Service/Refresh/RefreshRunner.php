@@ -11,6 +11,7 @@ use App\Service\EntryPruner;
 use App\Service\FeedScheduler;
 use App\Service\Fetch\BatchFeedFetcherInterface;
 use App\Service\Fetch\Exception\FeedGoneException;
+use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FetchOutcome;
@@ -333,6 +334,14 @@ final class RefreshRunner
             $this->em->flush();
 
             return FeedOutcome::Fetched;
+        } catch (FeedThrottledException $e) {
+            // Not a failure: the feed is fine, the site is rationing. It keeps
+            // its health and its schedule, and is simply asked again later.
+            $this->scheduler->recordThrottled($feed, $e->retryAfterSeconds);
+            $this->em->flush();
+            $this->logger->info('Feed rate limited: {url}', ['url' => $feed->getUrl()]);
+
+            return FeedOutcome::Throttled;
         } catch (FeedGoneException $e) {
             $this->scheduler->recordGone($feed, $e->getMessage());
             $this->em->flush();

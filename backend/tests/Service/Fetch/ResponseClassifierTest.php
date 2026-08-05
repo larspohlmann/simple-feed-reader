@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Fetch;
 
 use App\Service\Fetch\Exception\FeedGoneException;
+use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\FetchAttempt;
@@ -13,6 +14,7 @@ use App\Service\Fetch\HeaderDecision;
 use App\Service\Fetch\ResponseClassifier;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -124,6 +126,68 @@ final class ResponseClassifierTest extends TestCase
             $this->respond(new MockResponse('', ['http_code' => 410])),
             $this->attempt(),
         );
+    }
+
+    public function testAFourTwentyNineIsThrottledAndCarriesTheRetryDelay(): void
+    {
+        try {
+            (new ResponseClassifier())->fromHeaders(
+                $this->respond(new MockResponse('', [
+                    'http_code' => 429,
+                    'response_headers' => ['retry-after' => '90'],
+                ])),
+                $this->attempt(),
+            );
+            self::fail('Expected a FeedThrottledException.');
+        } catch (FeedThrottledException $e) {
+            self::assertSame(90, $e->retryAfterSeconds);
+            self::assertSame(429, $e->statusCode);
+        }
+    }
+
+    public function testAThrottleWithADateRetryAfterIsTurnedIntoSeconds(): void
+    {
+        try {
+            (new ResponseClassifier(new MockClock('2026-08-05 12:00:00')))->fromHeaders(
+                $this->respond(new MockResponse('', [
+                    'http_code' => 429,
+                    'response_headers' => ['retry-after' => 'Wed, 05 Aug 2026 12:02:30 GMT'],
+                ])),
+                $this->attempt(),
+            );
+            self::fail('Expected a FeedThrottledException.');
+        } catch (FeedThrottledException $e) {
+            self::assertSame(150, $e->retryAfterSeconds);
+        }
+    }
+
+    public function testAThrottleWithoutARetryAfterNamesNoDelay(): void
+    {
+        try {
+            (new ResponseClassifier())->fromHeaders(
+                $this->respond(new MockResponse('', ['http_code' => 429])),
+                $this->attempt(),
+            );
+            self::fail('Expected a FeedThrottledException.');
+        } catch (FeedThrottledException $e) {
+            self::assertNull($e->retryAfterSeconds);
+        }
+    }
+
+    public function testAnUnparseableRetryAfterNamesNoDelay(): void
+    {
+        try {
+            (new ResponseClassifier())->fromHeaders(
+                $this->respond(new MockResponse('', [
+                    'http_code' => 429,
+                    'response_headers' => ['retry-after' => 'soon-ish'],
+                ])),
+                $this->attempt(),
+            );
+            self::fail('Expected a FeedThrottledException.');
+        } catch (FeedThrottledException $e) {
+            self::assertNull($e->retryAfterSeconds);
+        }
     }
 
     public function testAFiveHundredIsUnreachable(): void
