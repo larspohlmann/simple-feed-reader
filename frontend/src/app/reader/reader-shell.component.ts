@@ -26,6 +26,7 @@ import { refreshFailureKey } from './refresh-message';
 import { ReadingLayoutService } from './reading-layout.service';
 import { LayoutService } from './layout.service';
 import { RefreshScope, markReadTarget, queryFromSelection, selectionFromParams } from './query';
+import { startListScrollReset } from './list-scroll-reset';
 import { entryParam } from './slug';
 import { EntryDto, EntryStatePatch, SubscriptionDto, SubscriptionTagDto, TagDto } from './models';
 import { headerHiddenAtRest, nextHeaderHidden } from './header-scroll';
@@ -218,6 +219,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly markedOnOpen = new Set<number>();
 
   constructor() {
+    // A clicked list starts at the top, a list returned to keeps its place
+    // (#286). Started here rather than from an app initializer so it stays
+    // inside the reader's lazy chunk; see list-scroll-reset.ts.
+    startListScrollReset();
     // Reload the list whenever the selection (not the open entry) changes.
     effect(() => {
       const q = queryFromSelection(this.selection());

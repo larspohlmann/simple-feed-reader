@@ -35,6 +35,17 @@ export class ListScrollMemory {
     return this.readNum(scrollKey(s));
   }
 
+  /** Drop a list's remembered offset, so its next load starts at the top. */
+  forget(s: Selection): void {
+    const store = this.store();
+    if (!store) return;
+    try {
+      store.removeItem(scrollKey(s));
+    } catch {
+      // Same reasoning as write(): losing the memory is the acceptable failure.
+    }
+  }
+
   /** Remember the scroll offset within an open article (keyed by entry id). */
   saveEntry(entryId: number, top: number): void {
     this.write(entryScrollKey(entryId), top);

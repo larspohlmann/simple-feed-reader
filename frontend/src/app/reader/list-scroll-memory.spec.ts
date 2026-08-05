@@ -60,6 +60,16 @@ describe('ListScrollMemory', () => {
     expect(mem.read(sel({ kind: 'tag', id: 2 }))).toBe(0);
   });
 
+  it('forgets one list without touching another', () => {
+    mem.save(sel({ kind: 'tag', id: 3 }), 500);
+    mem.save(sel({ kind: 'tag', id: 4 }), 700);
+
+    mem.forget(sel({ kind: 'tag', id: 3 }));
+
+    expect(mem.read(sel({ kind: 'tag', id: 3 }))).toBe(0);
+    expect(mem.read(sel({ kind: 'tag', id: 4 }))).toBe(700);
+  });
+
   it('round-trips an article scroll offset per entry id, surviving a fresh instance', () => {
     mem.saveEntry(514, 1200);
     expect(new ListScrollMemory().readEntry(514)).toBe(1200);
@@ -80,9 +90,14 @@ describe('ListScrollMemory', () => {
     const getItem = jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('blocked');
     });
+    const removeItem = jest.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
     expect(() => mem.save(sel(), 100)).not.toThrow();
     expect(mem.read(sel())).toBe(0);
+    expect(() => mem.forget(sel())).not.toThrow();
     setItem.mockRestore();
     getItem.mockRestore();
+    removeItem.mockRestore();
   });
 });
