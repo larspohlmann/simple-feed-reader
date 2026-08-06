@@ -67,6 +67,30 @@
       "deleteNote": "Deleting your account removes your subscriptions, tags and read state permanently. Export your feeds first if you want to keep them.",
       "deleteMessage": "This permanently deletes your account with all subscriptions, tags and read state. This cannot be undone."
     },
+    "ai": {
+      "title": "AI",
+      "lead": "Connect an OpenAI-compatible endpoint. The key is stored encrypted and is never shown again.",
+      "baseUrl": "Endpoint",
+      "baseUrlHint": "The full API root, including any version path — for example https://api.openai.com/v1",
+      "apiKey": "API key",
+      "apiKeyHint": "The key is sent once and stored encrypted. Enter it again to replace it.",
+      "storedKey": "A key ending in {{hint}} is stored.",
+      "connect": "Save and find models",
+      "loadModels": "Load the model list",
+      "model": "Model",
+      "modelPlaceholder": "Select a model",
+      "saveModel": "Save model",
+      "remove": "Remove this provider",
+      "removeNote": "This deletes the endpoint, the stored key and the model. AI features stop until you configure a provider again.",
+      "ready": "AI features are available and use {{model}}.",
+      "errors": {
+        "provider": "The provider could not be used. Check the endpoint and the key.",
+        "unreadableKey": "This account's stored API key cannot be read any more. Retrying will not help — enter the key again to restore AI features.",
+        "rateLimited": "Too many requests to the provider. Wait a few minutes and try again.",
+        "notConfigured": "Save an endpoint and an API key first.",
+        "unknown": "Something went wrong. Try again."
+      }
+    },
     "about": {
       "title": "About",
       "app": "App",
@@ -424,6 +448,10 @@
   "iconPicker": {
     "choose": "Choose icon",
     "none": "No icon"
+  },
+  "searchableSelect": {
+    "filter": "Type to filter",
+    "noMatch": "Nothing matches"
   },
   "colorField": {
     "swatch": "Colour {{colour}}",

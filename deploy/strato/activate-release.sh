@@ -59,7 +59,7 @@ test -f "${SHARED}/config/jwt/private.pem" || die "missing shared JWT key: ${SHA
 test -f "${SHARED}/config/jwt/public.pem" || die "missing shared JWT key: ${SHARED}/config/jwt/public.pem"
 
 # shared/.env.local is hand-written on the server, so its *contents* are as
-# unverified as its existence. Two omissions there are silent and expensive,
+# unverified as its existence. Three omissions there are silent and expensive,
 # because backend/.env ships a working default for each and the deploy then
 # succeeds with it.
 #
@@ -76,6 +76,20 @@ grep -Eq "^APP_ENV=['\"]?prod['\"]?[[:space:]]*$" "${SHARED}/.env.local" \
 # default; that it points into shared/ is the operator's job.
 grep -Eq "^CACHE_DIRECTORY=['\"]?/" "${SHARED}/.env.local" \
     || die "${SHARED}/.env.local does not set CACHE_DIRECTORY to an absolute path -- the filesystem cache pools would live inside the release, so every deploy would reset the rate-limit counters and the record of spent ALTCHA solutions (point it at ${SHARED}/var/cache-pools)"
+# AI_KEY_SECRET: the committed default is a placeholder, and it is 48 characters
+# long, so ApiKeyCipher's minimum-length check accepts it and every account's AI
+# provider API key seals successfully -- under a secret that is readable by
+# anyone in the public repository. The second half is worse than the first:
+# adding a real secret later makes every key stored in the meantime
+# undecryptable, and each account is told only to enter its key again. Docker
+# has no such hole, because prod-start.sh generates the secret; nothing on this
+# host does, so the check is here.
+AI_KEY_SECRET_PLACEHOLDER='test-ai-key-secret-not-for-production-0123456789'
+grep -Eq "^AI_KEY_SECRET=['\"]?[^'\"[:space:]]" "${SHARED}/.env.local" \
+    || die "${SHARED}/.env.local does not set AI_KEY_SECRET -- every stored AI provider API key would be sealed with the placeholder that backend/.env ships in the public repository. Generate one (openssl rand -hex 32), add it as AI_KEY_SECRET= to ${SHARED}/.env.local, and deploy again. Keep it: changing it later makes every stored key unreadable."
+if grep -Eq "^AI_KEY_SECRET=['\"]?${AI_KEY_SECRET_PLACEHOLDER}['\"]?[[:space:]]*$" "${SHARED}/.env.local"; then
+    die "${SHARED}/.env.local still carries the committed AI_KEY_SECRET placeholder -- it is public, so every stored AI provider API key would be sealed with a secret anyone can read. Replace it with a real secret (openssl rand -hex 32) and deploy again. Keep it: changing it later makes every stored key unreadable."
+fi
 
 echo "==> Linking shared state"
 # Secrets. Never shipped in the release. Unguarded on purpose, unlike the two

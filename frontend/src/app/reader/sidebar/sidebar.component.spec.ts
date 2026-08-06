@@ -27,6 +27,7 @@ const account = (trialEndsAt: string | null): CurrentUser => ({
   locale: 'en',
   trialEndsAt,
   preferences: { scrapeFallbackEnabled: false },
+  ai: { ready: false, model: null },
 });
 
 const inDays = (days: number): string => new Date(Date.now() + days * 86_400_000).toISOString();

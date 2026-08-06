@@ -18,6 +18,8 @@ final class MeJson
      */
     public static function profile(User $user): array
     {
+        $aiSettings = $user->getAiProviderSettings();
+
         return [
             'id' => $user->getId(),
             'email' => $user->getEmail(),
@@ -28,6 +30,10 @@ final class MeJson
             'trialEndsAt' => $user->getTrialEndsAt()?->format(\DateTimeInterface::ATOM),
             'preferences' => [
                 'scrapeFallbackEnabled' => $user->getPreferences()->isScrapeFallbackEnabled(),
+            ],
+            'ai' => [
+                'ready' => AiSettingsJson::isReady($aiSettings),
+                'model' => $aiSettings?->getModel(),
             ],
         ];
     }

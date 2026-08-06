@@ -32,6 +32,10 @@ export const SETTINGS_ROUTES: Routes = [
           import('./account-section.component').then((m) => m.AccountSectionComponent),
       },
       {
+        path: 'ai',
+        loadComponent: () => import('./ai-section.component').then((m) => m.AiSectionComponent),
+      },
+      {
         path: 'about',
         loadComponent: () =>
           import('./about-section.component').then((m) => m.AboutSectionComponent),

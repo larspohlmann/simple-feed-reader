@@ -6,11 +6,12 @@ import { Router } from '@angular/router';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { API_BASE_URL } from './api';
 import { TokenStore } from './token.store';
-import { AuthService } from './auth.service';
+import { AuthService, CurrentUser } from './auth.service';
 import { LanguageService } from './language.service';
 import { LOCALE_WRITER } from './locale-writer';
 import { HttpLocaleWriter } from './http-locale-writer';
 import { PreferencesService } from './preferences.service';
+import { AiAvailabilityService } from './ai-availability.service';
 import { CatalogStore } from '../discover/catalog.store';
 
 describe('AuthService', () => {
@@ -57,9 +58,13 @@ describe('AuthService', () => {
       status: 'active',
       createdAt: '2026-07-01T00:00:00+00:00',
       locale: 'de',
+      preferences: { scrapeFallbackEnabled: false },
+      ai: { ready: true, model: 'gpt-4o' },
     });
 
     expect(svc.user()?.email).toBe('a@b.c');
+    expect(TestBed.inject(AiAvailabilityService).ready()).toBe(true);
+    expect(TestBed.inject(AiAvailabilityService).model()).toBe('gpt-4o');
     // The one place the account's locale is adopted into the UI.
     expect(TestBed.inject(LanguageService).lang()).toBe('de');
     // A value that just arrived from the server must never be PATCHed
@@ -83,6 +88,17 @@ describe('AuthService', () => {
     svc.logout();
 
     expect(preferences.scrapeFallbackEnabled()).toBe(false);
+  });
+
+  it('logout drops AI availability, so the next account never inherits it', () => {
+    const ai = TestBed.inject(AiAvailabilityService);
+    ai.adopt({ ai: { ready: true, model: 'gpt-4o' } } as CurrentUser);
+    expect(ai.ready()).toBe(true);
+
+    svc.logout();
+
+    expect(ai.ready()).toBe(false);
+    expect(ai.model()).toBeNull();
   });
 
   // Driven through the real logout() rather than through TokenStore, because

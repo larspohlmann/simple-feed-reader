@@ -1,4 +1,17 @@
 services:
+    # AiProviderConfiguratorTest swaps the real catalog for a stub via
+    # `self::getContainer()->set(...)`, which the container only allows on
+    # public services, and fetches the configurator itself with `->get(...)`,
+    # which the container refuses on a private service. Test environment only
+    # — production keeps both private.
+    App\Service\Ai\ModelCatalog:
+        alias: App\Service\Ai\OpenAiCompatibleCatalog
+        public: true
+
+    App\Service\Ai\AiProviderConfigurator:
+        autowire: true
+        public: true
+
     # Functional tests swap the real fetcher for a stub via
     # `self::getContainer()->set(...)`, which the container only allows on
     # public services. Test environment only — production keeps them private.

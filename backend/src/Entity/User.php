@@ -109,6 +109,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist'], orphanRemoval: true)]
     private ?Preferences $preferences = null;
 
+    #[ORM\OneToOne(mappedBy: 'user', targetEntity: AiProviderSettings::class, cascade: ['remove'])]
+    private ?AiProviderSettings $aiProviderSettings = null;
+
     public function __construct(string $email, \DateTimeImmutable $createdAt)
     {
         $email = self::normalizeEmail($email);
@@ -274,6 +277,25 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         }
 
         return $this->preferences;
+    }
+
+    /** Null until the account configures a provider — see AiProviderSettings. */
+    public function getAiProviderSettings(): ?AiProviderSettings
+    {
+        return $this->aiProviderSettings;
+    }
+
+    /**
+     * For AiProviderConfigurator only, which owns every write to the row.
+     *
+     * This is the inverse side, so Doctrine never fills it in during the
+     * request that wrote the row. Without this the same User instance would
+     * report the state it had before the write until the next request
+     * hydrated it — and MeJson reads exactly this association.
+     */
+    public function setAiProviderSettings(?AiProviderSettings $aiProviderSettings): void
+    {
+        $this->aiProviderSettings = $aiProviderSettings;
     }
 
     /**
