@@ -3,13 +3,20 @@ import { Injectable, signal } from '@angular/core';
 import { CurrentUser } from './auth.service';
 import { onIdentityChange } from './session-identity';
 
-/** The account's AI provider, as the API reports it. */
-export interface AiState {
+/**
+ * The whole of what this service tracks — and so the whole of what any caller
+ * has to hand it. `/api/me` reports exactly these two fields under `ai`.
+ */
+export interface AiAvailability {
+  readonly model: string | null;
+  readonly ready: boolean;
+}
+
+/** The account's AI provider, as the settings endpoints report it. */
+export interface AiState extends AiAvailability {
   readonly configured: boolean;
   readonly baseUrl: string | null;
   readonly apiKeyHint: string | null;
-  readonly model: string | null;
-  readonly ready: boolean;
 }
 
 /**
@@ -39,14 +46,12 @@ export class AiAvailabilityService {
 
   /** Take the account's values, right after `AuthService.loadMe()`. */
   adopt(user: CurrentUser): void {
-    this.readySignal.set(user.ai.ready);
-    this.modelSignal.set(user.ai.model);
+    this.set(user.ai);
   }
 
   /** Take a settings write's own answer, so the section needs no profile refetch. */
-  apply(state: AiState): void {
-    this.readySignal.set(state.ready);
-    this.modelSignal.set(state.model);
+  apply(state: AiAvailability): void {
+    this.set(state);
   }
 
   /**
@@ -56,7 +61,11 @@ export class AiAvailabilityService {
    * belt-and-braces — the identity binding above covers that path as well.
    */
   reset(): void {
-    this.readySignal.set(false);
-    this.modelSignal.set(null);
+    this.set({ ready: false, model: null });
+  }
+
+  private set(availability: AiAvailability): void {
+    this.readySignal.set(availability.ready);
+    this.modelSignal.set(availability.model);
   }
 }
