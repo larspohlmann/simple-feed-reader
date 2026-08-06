@@ -154,8 +154,8 @@ describe('AiSectionComponent', () => {
 
     http.expectOne('/api/me/ai/models').flush(
       {
-        type: 'ai_provider_rejected',
-        title: 'The AI provider could not be used',
+        type: 'ai_key_unreadable',
+        title: 'The stored API key could not be read',
         status: 422,
         detail: 'The stored API key can no longer be read. Enter it again.',
       },

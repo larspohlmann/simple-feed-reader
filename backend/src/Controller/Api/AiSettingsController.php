@@ -7,6 +7,7 @@ namespace App\Controller\Api;
 use App\Dto\Ai\SaveConnectionRequest;
 use App\Dto\Ai\SaveModelRequest;
 use App\Entity\User;
+use App\Exception\AiKeyUnreadableApiException;
 use App\Exception\AiNotConfiguredApiException;
 use App\Exception\AiProviderApiException;
 use App\Http\AiSettingsJson;
@@ -74,7 +75,7 @@ final readonly class AiSettingsController
         } catch (AiNotConfiguredException $e) {
             throw new AiNotConfiguredApiException($e);
         } catch (ApiKeyUnreadableException $e) {
-            throw AiProviderApiException::forUnreadableStoredKey($e);
+            throw new AiKeyUnreadableApiException($e);
         } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
             throw new AiProviderApiException($e->getMessage(), $e);
         }
@@ -95,7 +96,7 @@ final readonly class AiSettingsController
         } catch (AiNotConfiguredException $e) {
             throw new AiNotConfiguredApiException($e);
         } catch (ApiKeyUnreadableException $e) {
-            throw AiProviderApiException::forUnreadableStoredKey($e);
+            throw new AiKeyUnreadableApiException($e);
         } catch (ModelNotOfferedException | ProviderUnreachableException | CredentialsRejectedException $e) {
             throw new AiProviderApiException($e->getMessage(), $e);
         }

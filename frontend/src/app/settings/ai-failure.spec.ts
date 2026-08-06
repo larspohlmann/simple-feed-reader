@@ -29,18 +29,29 @@ describe('aiFailure', () => {
     expect(failure.kind).toBe('provider');
   });
 
-  it('separates the unreadable stored key from the refusals it shares a type with', () => {
+  it('reads the unreadable stored key by its own type', () => {
     const failure = aiFailure(
       response(
         422,
-        problem(
-          'ai_provider_rejected',
-          'The stored API key can no longer be read. Enter it again.',
-        ),
+        problem('ai_key_unreadable', 'The stored API key can no longer be read. Enter it again.'),
       ),
     );
 
     expect(failure.kind).toBe('unreadableKey');
+  });
+
+  // The prose the backend sends is not part of the contract. A reworded detail
+  // must still classify as the unreadable key, and the sentence on its own must
+  // no longer classify as anything.
+  it('ignores the detail when it decides the kind', () => {
+    expect(aiFailure(response(422, problem('ai_key_unreadable', 'Anything at all.'))).kind).toBe(
+      'unreadableKey',
+    );
+    expect(
+      aiFailure(
+        response(422, problem('ai_provider_rejected', 'The stored API key can no longer be read.')),
+      ).kind,
+    ).toBe('provider');
   });
 
   it('reads the rate limit', () => {

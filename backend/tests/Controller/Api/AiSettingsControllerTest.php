@@ -355,6 +355,10 @@ final class AiSettingsControllerTest extends ApiTestCase
      * uncaught throw, so the account gets an opaque 500 on every read and no
      * hint that entering the key again is the way out.
      *
+     * The type is the contract the client reads: it decides between "try again"
+     * and "enter the key again", and it is pinned here so a rename cannot pass
+     * unnoticed.
+     *
      * The row is corrupted through raw SQL rather than through the entity: the
      * ciphertext columns are private and the cipher is the only writer, which
      * is exactly the invariant this case has to break.
@@ -378,7 +382,7 @@ final class AiSettingsControllerTest extends ApiTestCase
 
         self::assertResponseStatusCodeSame(422);
         $payload = $this->payload($client);
-        self::assertSame('ai_provider_rejected', $payload['type']);
+        self::assertSame('ai_key_unreadable', $payload['type']);
         self::assertSame('The stored API key can no longer be read. Enter it again.', $payload['detail']);
         // The cipher's own diagnosis describes the stored material; it stays in
         // the log, not in the document.
@@ -386,7 +390,7 @@ final class AiSettingsControllerTest extends ApiTestCase
 
         $this->putJson($client, '/api/me/ai/model', '{"model":"gpt-4o"}');
         self::assertResponseStatusCodeSame(422);
-        self::assertSame('ai_provider_rejected', $this->payload($client)['type']);
+        self::assertSame('ai_key_unreadable', $this->payload($client)['type']);
     }
 
     /**
