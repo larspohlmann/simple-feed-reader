@@ -29,6 +29,10 @@ final class MeJson
             'preferences' => [
                 'scrapeFallbackEnabled' => $user->getPreferences()->isScrapeFallbackEnabled(),
             ],
+            'ai' => [
+                'ready' => AiSettingsJson::state($user->getAiProviderSettings())['ready'],
+                'model' => $user->getAiProviderSettings()?->getModel(),
+            ],
         ];
     }
 }
