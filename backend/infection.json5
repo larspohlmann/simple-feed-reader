@@ -1,0 +1,23 @@
+{
+    $schema: 'vendor/infection/infection/resources/schema.json',
+    source: {
+        directories: ['src'],
+    },
+    logs: {
+        text: 'var/infection.log',
+    },
+    mutators: {
+        '@default': true,
+    },
+    phpUnit: {
+        configDir: '.',
+    },
+    // A mutant that loops forever has to be cut off, and the cut-off has to sit
+    // far enough above a healthy test that a slow runner cannot trip it. The
+    // whole suite runs in ~11 s; a single mutant runs a fraction of that.
+    timeout: 30,
+    // The gate runs against changed files only (see composer infection:diff), so
+    // this is the bar for code a branch touches, not for the whole tree. A full
+    // sweep scores lower — raise this as the tree catches up, never lower it.
+    minMsi: 80,
+}

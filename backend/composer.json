@@ -35,8 +35,9 @@
         "symfony/yaml": "7.4.*"
     },
     "require-dev": {
-        "dama/doctrine-test-bundle": "^8.6",
         "ext-openssl": "*",
+        "dama/doctrine-test-bundle": "^8.6",
+        "infection/infection": "^0.34.1",
         "phpmd/phpmd": "^2.15",
         "phpstan/phpstan": "^2.2.5",
         "phpstan/phpstan-doctrine": "^2.0.28",
@@ -50,7 +51,8 @@
         "allow-plugins": {
             "php-http/discovery": true,
             "symfony/flex": true,
-            "symfony/runtime": true
+            "symfony/runtime": true,
+            "infection/extension-installer": true
         },
         "bump-after-update": true,
         "sort-packages": true,
@@ -94,6 +96,8 @@
         "stan": "phpstan analyse --memory-limit=512M",
         "md": "phpmd src text phpmd.xml.dist",
         "check": ["@cs", "@stan"],
+        "infection": "infection --threads=max",
+        "infection:diff": "infection --git-diff-filter=AM --git-diff-base=origin/develop --threads=max --ignore-msi-with-no-mutations",
         "e2e": "bin/e2e.sh"
     },
     "conflict": {
