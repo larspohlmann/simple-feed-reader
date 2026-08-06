@@ -56,6 +56,12 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalog
                 'headers' => [
                     'Authorization' => 'Bearer ' . $credentials->apiKey,
                     'Accept' => 'application/json',
+                    // Refuse transparent compression so MAXIMUM_RESPONSE_BYTES, counted
+                    // on the decoded body in boundedContent(), also bounds the bytes the
+                    // provider actually sends — gzip would otherwise let a small reply
+                    // decompress unbounded before the cap ever sees it. Same reasoning as
+                    // ConcurrentFeedFetcher::headers().
+                    'Accept-Encoding' => 'identity',
                     'User-Agent' => $this->userAgent,
                 ],
                 'timeout' => self::TIMEOUT_SECONDS,

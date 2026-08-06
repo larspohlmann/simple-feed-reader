@@ -48,6 +48,14 @@ final readonly class ProviderCredentials
             throw new ProviderUnreachableException('The address must start with http:// or https://.');
         }
 
+        // A query or fragment has nowhere to go once /models is appended — it would
+        // land after the appended path instead of before it, producing a URL the
+        // provider was never meant to receive. Reject it here, the one place this
+        // input is validated, instead of failing later as a confusing "unreachable".
+        if (isset($parts['query']) || isset($parts['fragment'])) {
+            throw new ProviderUnreachableException('Remove the query string or fragment from the address.');
+        }
+
         return $trimmed;
     }
 }

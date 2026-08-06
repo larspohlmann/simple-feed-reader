@@ -55,6 +55,33 @@ final class OpenAiCompatibleCatalogTest extends TestCase
         self::assertContains('Authorization: Bearer sk-test', $seen['headers']);
     }
 
+    public function testItRefusesTransparentCompression(): void
+    {
+        $seen = [];
+        $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$seen): MockResponse {
+            $seen = ['headers' => $options['headers'] ?? []];
+
+            return new MockResponse('{"data":[{"id":"gpt-4o"}]}');
+        });
+
+        (new OpenAiCompatibleCatalog($client, 'SimpleFeedReader/1.0'))->listModels($this->credentials());
+
+        /** @var array{headers: array<int, string>} $seen */
+        self::assertContains('Accept-Encoding: identity', $seen['headers']);
+    }
+
+    public function testAnOversizedBodyIsUnreachable(): void
+    {
+        // Chunked, not one big string: a real gzip-negotiated response also
+        // arrives in pieces, and this is the shape that would have let a
+        // decompressed body sail past the cap before this fix.
+        $chunks = array_fill(0, 20, str_repeat('a', 100_000));
+        $catalog = $this->catalogAnswering(new MockResponse($chunks));
+
+        $this->expectException(ProviderUnreachableException::class);
+        $catalog->listModels($this->credentials());
+    }
+
     public function testARejectedKeyIsDistinguishedFromAnUnreachableProvider(): void
     {
         $catalog = $this->catalogAnswering(new MockResponse('{"error":"nope"}', ['http_code' => 401]));
@@ -139,5 +166,17 @@ final class OpenAiCompatibleCatalogTest extends TestCase
     {
         $this->expectException(ProviderUnreachableException::class);
         ProviderCredentials::normalizeBaseUrl('https://user:pass@api.example.test/v1');
+    }
+
+    public function testAQueryStringInTheUrlIsRefused(): void
+    {
+        $this->expectException(ProviderUnreachableException::class);
+        ProviderCredentials::normalizeBaseUrl('https://api.example.test/v1?tenant=1');
+    }
+
+    public function testAFragmentInTheUrlIsRefused(): void
+    {
+        $this->expectException(ProviderUnreachableException::class);
+        ProviderCredentials::normalizeBaseUrl('https://api.example.test/v1#section');
     }
 }
