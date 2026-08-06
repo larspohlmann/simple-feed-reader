@@ -133,9 +133,11 @@ class FeedRepository extends ServiceEntityRepository
             if ($force) {
                 if ($cooldownCutoff !== null) {
                     // A lastFetchedAt in the future is impossible under a correct
-                    // clock: a skewed process clock (observed on the FastCGI host)
-                    // stamped it there. Treat it as stale rather than let it read
-                    // as "just fetched" and freeze the feed out of every refresh.
+                    // clock, so something wrote it wrong — a worker on a non-UTC
+                    // timezone did exactly that in #151, before the kernel pinned
+                    // UTC. Treat it as stale rather than let it read as "just
+                    // fetched" and freeze the feed out of every refresh in
+                    // silence, which is a costly failure to notice.
                     $qb->andWhere(
                         '(f.lastFetchedAt IS NULL OR f.lastFetchedAt <= :cooldownCutoff OR f.lastFetchedAt > :now)',
                     )
