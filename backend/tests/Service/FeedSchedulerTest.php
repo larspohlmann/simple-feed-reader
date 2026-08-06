@@ -7,6 +7,7 @@ namespace App\Tests\Service;
 use App\Entity\Feed;
 use App\Enum\FeedStatus;
 use App\Service\FeedScheduler;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 
@@ -37,6 +38,56 @@ final class FeedSchedulerTest extends TestCase
         $feed->setFetchIntervalMinutes(40);
         $this->scheduler->recordSuccess($feed, 1);
         self::assertSame(30, $feed->getFetchIntervalMinutes());
+    }
+
+    public function testAThrottleCostsTheFeedNothingButItsPlaceInTheQueue(): void
+    {
+        $feed = new Feed('https://example.com/feed');
+        $feed->setFetchIntervalMinutes(60);
+        $feed->setLastFetchedAt(new \DateTimeImmutable('2026-07-21 11:00:00'));
+
+        $this->scheduler->recordThrottled($feed, 90);
+
+        self::assertSame('2026-07-21 12:01:30', $feed->getNextFetchAt()?->format('Y-m-d H:i:s'));
+        // The feed is healthy; we asked too often. Counting this as a failure
+        // would set the erroring status and an hours-long backoff.
+        self::assertSame(0, $feed->getConsecutiveFailures());
+        self::assertSame(FeedStatus::Active, $feed->getStatus());
+        self::assertSame(60, $feed->getFetchIntervalMinutes());
+        self::assertNull($feed->getLastErrorMessage());
+        // Untouched, so the manual refresh's cooldown still measures the last
+        // time content actually arrived.
+        self::assertSame('2026-07-21 11:00:00', $feed->getLastFetchedAt()?->format('Y-m-d H:i:s'));
+    }
+
+    /**
+     * @return iterable<string, array{int|null, int, string}>
+     */
+    public static function throttleWaits(): iterable
+    {
+        yield 'the delay the site asked for' => [90, 60, '2026-07-21 12:01:30'];
+        // Below a minute the retry would only draw a second 429, and a
+        // multi-day wait is a feed nobody would see refresh again.
+        yield 'a delay too short to help' => [2, 60, '2026-07-21 12:01:00'];
+        yield 'a delay longer than a day' => [7 * 24 * 3600, 60, '2026-07-22 12:00:00'];
+        yield 'no delay named' => [null, 60, '2026-07-21 13:00:00'];
+        // Never sooner than the feed's own cadence: a daily feed that hits one
+        // 429 must not be polled every quarter hour until it answers.
+        yield 'no delay named, on a daily feed' => [null, 1440, '2026-07-22 12:00:00'];
+    }
+
+    #[DataProvider('throttleWaits')]
+    public function testAThrottleWaitIsBoundedAtBothEnds(
+        ?int $retryAfterSeconds,
+        int $intervalMinutes,
+        string $expectedNextFetch,
+    ): void {
+        $feed = new Feed('https://example.com/feed');
+        $feed->setFetchIntervalMinutes($intervalMinutes);
+
+        $this->scheduler->recordThrottled($feed, $retryAfterSeconds);
+
+        self::assertSame($expectedNextFetch, $feed->getNextFetchAt()?->format('Y-m-d H:i:s'));
     }
 
     public function testQuietSuccessGrowsIntervalUpToCeiling(): void

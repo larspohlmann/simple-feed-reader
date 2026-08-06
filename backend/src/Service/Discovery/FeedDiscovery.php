@@ -6,6 +6,7 @@ namespace App\Service\Discovery;
 
 use App\Enum\ScrapeFallback;
 use App\Enum\SourceFormat;
+use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcherInterface;
@@ -29,8 +30,12 @@ use App\Service\Scraper\HtmlItemExtractor;
  */
 final readonly class FeedDiscovery implements FeedDiscoveryInterface
 {
-    /** Statuses meaning "the site answered but refused us" — retrying won't help, a feed URL might. */
-    private const array BLOCKED_STATUSES = [401, 403, 429];
+    /**
+     * Statuses meaning "the site answered but refused us" — retrying won't help,
+     * a feed URL might. 429 is NOT one of them: retrying is exactly what that
+     * one asks for, and it arrives as its own FeedThrottledException.
+     */
+    private const array BLOCKED_STATUSES = [401, 403];
 
     public function __construct(
         private FeedFetcherInterface $fetcher,
@@ -45,6 +50,10 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
     {
         try {
             $response = $this->fetcher->fetch($url);
+        } catch (FeedThrottledException) {
+            // The site has just asked us to slow down; six parallel guesses are
+            // the opposite of that, and each would draw its own 429.
+            return FeedDiscoveryResult::scrapeFailed('throttled');
         } catch (FeedUnreachableException $e) {
             return $this->feedTheSiteMightStillServe($url, $e);
         } catch (FetchException) {
@@ -55,9 +64,17 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         $body = $response->body ?? '';
 
         try {
-            $this->parser->parse($body); // validates it really is a feed
+            // Parsing IS the test of "is this a feed?", and the document it
+            // yields is what the subscribe stores — so the URL is never fetched
+            // a second time to read what we are holding already.
+            $document = $this->parser->parse($body);
 
-            return FeedDiscoveryResult::directFeed($response->finalUrl);
+            return FeedDiscoveryResult::directFeed(new DiscoveredFeed(
+                $response->finalUrl,
+                $document,
+                $response->etag,
+                $response->lastModified,
+            ));
         } catch (FeedParseException) {
             // Not a feed — treat it as a page that may point at one.
         }
@@ -117,9 +134,9 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
      */
     private function probedFeed(string $url): ?FeedDiscoveryResult
     {
-        $feedUrl = $this->wellKnownFeeds->probe($url);
+        $probed = $this->wellKnownFeeds->probe($url);
 
-        return null === $feedUrl ? null : FeedDiscoveryResult::directFeed($feedUrl);
+        return null === $probed ? null : FeedDiscoveryResult::directFeed($probed);
     }
 
     /**

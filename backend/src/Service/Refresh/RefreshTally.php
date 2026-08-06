@@ -12,6 +12,7 @@ final class RefreshTally
     public int $fetched = 0;
     public int $notModified = 0;
     public int $failed = 0;
+    public int $throttled = 0;
     public int $processed = 0;
     public bool $aborted = false;
 
@@ -50,9 +51,10 @@ final class RefreshTally
             FeedOutcome::Fetched => $this->fetched++,
             FeedOutcome::NotModified => $this->notModified++,
             FeedOutcome::Failed => $this->failed++,
+            FeedOutcome::Throttled => $this->throttled++,
         };
 
-        if (FeedOutcome::Failed !== $outcome) {
+        if ($outcome->broughtContent()) {
             $this->faviconEligibleFeeds[] = $feed;
         }
     }

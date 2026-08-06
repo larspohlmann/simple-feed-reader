@@ -242,6 +242,22 @@ describe('AddFeedDialogComponent', () => {
     expect(close).not.toHaveBeenCalled();
   });
 
+  it('tells the user to wait when the site is rationing requests', () => {
+    // "It blocks automated access" would be wrong and final; a 429 asks for
+    // patience, and the retry is the user's next move.
+    const f = create();
+    f.componentInstance.form.setValue({ url: 'https://busy.example' });
+    f.componentInstance.submit();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ candidates: [], scrapeFailureReason: 'throttled' });
+    f.detectChanges();
+
+    expect((f.nativeElement as HTMLElement).querySelector('.warn')?.textContent).toContain(
+      'limiting requests',
+    );
+  });
+
   it('shows a generic warning for a scrape-failure reason it does not recognise', () => {
     // The backend reason set is open, so a newer server may send a reason this
     // build has never heard of; it must still warn, not render an empty box.

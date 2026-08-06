@@ -87,8 +87,10 @@ final readonly class SubscriptionController
             return new JsonResponse($payload);
         }
 
+        // A new subscription is no longer always worth 0 unread: discovery
+        // hands the feed its entries at subscribe time (#290).
         return new JsonResponse(
-            ['subscription' => SubscriptionJson::one($outcome->subscription)],
+            ['subscription' => SubscriptionJson::one($outcome->subscription, $outcome->unreadCount)],
             Response::HTTP_CREATED,
         );
     }

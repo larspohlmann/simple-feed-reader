@@ -10,7 +10,8 @@ use Symfony\Component\Clock\ClockInterface;
 
 /**
  * Owns all fetch-schedule state transitions on Feed: adaptive interval on
- * success, exponential backoff on failure, and the "gone" terminal state.
+ * success, a wait on a rationed request, exponential backoff on failure, and
+ * the "gone" terminal state.
  */
 final class FeedScheduler
 {
@@ -20,6 +21,11 @@ final class FeedScheduler
     private const int FAILURES_UNTIL_GONE = 30;
     private const int MAX_BACKOFF_EXPONENT = 9;
     private const int ERROR_MESSAGE_MAX = 1000;
+
+    /** The bounds on a wait a rationing site may ask for. */
+    private const int THROTTLE_FLOOR_SECONDS = 60;
+    private const int THROTTLE_CEILING_SECONDS = 86400;
+    private const int SECONDS_PER_MINUTE = 60;
 
     public function __construct(private readonly ClockInterface $clock)
     {
@@ -47,6 +53,35 @@ final class FeedScheduler
         $feed->setStatus(FeedStatus::Active);
         $feed->setLastFetchedAt($now);
         $feed->setNextFetchAt($now->modify(sprintf('+%d minutes', $interval)));
+    }
+
+    /**
+     * The site is rationing requests, not broken. This writes one field — when
+     * we may ask again. No failure counted, no erroring status, no error
+     * message, no backoff growth: anything else would let one 429 cost a
+     * working feed hours of silence, which is what emptied the Reddit feeds in
+     * #290.
+     *
+     * lastFetchedAt stays as it was: it records when content last arrived, and
+     * the manual refresh's cooldown reads it, so stamping it here would also
+     * lock the user out of retrying by hand.
+     *
+     * @throws \DateMalformedStringException
+     */
+    public function recordThrottled(Feed $feed, ?int $retryAfterSeconds): void
+    {
+        // A site that named no delay is asked again no sooner than it would
+        // have been anyway. Polling a host that just said "less" every quarter
+        // hour, when its own cadence had grown to daily, is asking for more.
+        $wait = min(
+            self::THROTTLE_CEILING_SECONDS,
+            max(
+                self::THROTTLE_FLOOR_SECONDS,
+                $retryAfterSeconds ?? $feed->getFetchIntervalMinutes() * self::SECONDS_PER_MINUTE,
+            ),
+        );
+
+        $feed->setNextFetchAt($this->clock->now()->modify(sprintf('+%d seconds', $wait)));
     }
 
     /**

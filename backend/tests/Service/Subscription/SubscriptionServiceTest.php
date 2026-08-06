@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Subscription;
 
+use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
@@ -15,10 +16,18 @@ use App\Exception\SubscriptionLimitReachedException;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
 use App\Service\Discovery\FeedCandidate;
 use App\Service\Discovery\FeedDiscoveryInterface;
+use App\Service\Discovery\DiscoveredFeed;
 use App\Service\Discovery\FeedDiscoveryResult;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\OrphanedFeedReclaimer;
 use App\Service\Subscription\SubscriptionLimitResolver;
+use App\Service\EntryIngestor;
+use App\Service\EntrySanitizer;
+use App\Service\FeedScheduler;
+use App\Service\Parser\ParsedEntry;
+use App\Service\Parser\ParsedFeed;
+use App\Service\Subscription\FirstFetchRecorder;
+use App\Service\Subscription\SubscriptionCreator;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -50,18 +59,53 @@ final class SubscriptionServiceTest extends DbTestCase
         };
     }
 
+    /** The document a real discovery would carry back, with one entry to ingest. */
+    private function discovered(string $url, string $title = 'Discovered'): FeedDiscoveryResult
+    {
+        $entry = new ParsedEntry(
+            guid: $url . '#1',
+            title: 'First post',
+            url: $url . '/1',
+            author: null,
+            publishedAt: new \DateTimeImmutable('2026-05-31T12:00:00Z'),
+            contentHtml: '<p>Hello.</p>',
+            summary: null,
+            image: null,
+        );
+
+        return FeedDiscoveryResult::directFeed(new DiscoveredFeed(
+            $url,
+            new ParsedFeed($title, null, null, [$entry]),
+        ));
+    }
+
     private function service(FeedDiscoveryInterface $discovery): SubscriptionService
     {
+        $clock = new MockClock('2026-06-01T00:00:00Z');
+
         return new SubscriptionService(
             $discovery,
-            $this->em->getRepository(Subscription::class),
-            $this->em->getRepository(Feed::class),
-            $this->em->getRepository(SubscriptionTag::class),
-            $this->em,
-            new MockClock('2026-06-01T00:00:00Z'),
-            new SubscriptionLimitResolver(),
+            new SubscriptionCreator(
+                $this->em->getRepository(Subscription::class),
+                $this->em->getRepository(Feed::class),
+                $this->em->getRepository(SubscriptionTag::class),
+                $this->em,
+                $clock,
+                new SubscriptionLimitResolver(),
+            ),
             new ScrapeFallbackPolicy(),
+            new FirstFetchRecorder(
+                new EntryIngestor(
+                    $this->em,
+                    $this->em->getRepository(Entry::class),
+                    new EntrySanitizer(),
+                    $clock,
+                ),
+                new FeedScheduler($clock),
+                $this->em,
+            ),
             new OrphanedFeedReclaimer($this->em),
+            $this->em,
         );
     }
 
@@ -70,7 +114,7 @@ final class SubscriptionServiceTest extends DbTestCase
         $user = $this->factory()->create('sub@example.com');
 
         $service = $this->service(
-            $this->discoveryReturning(FeedDiscoveryResult::directFeed('https://example.com/feed.xml')),
+            $this->discoveryReturning($this->discovered('https://example.com/feed.xml')),
         );
 
         $outcome = $service->subscribe($user, 'https://example.com/feed');
@@ -80,12 +124,55 @@ final class SubscriptionServiceTest extends DbTestCase
         self::assertSame([], $outcome->candidates);
     }
 
+    /**
+     * The #290 promise: discovery already read the document, so the feed
+     * arrives with its entries and on the normal schedule. Nothing fetches the
+     * URL a second time, which is what a rationing site answers with 429.
+     */
+    public function testANewSubscriptionArrivesWithTheEntriesDiscoveryAlreadyRead(): void
+    {
+        $user = $this->factory()->create('seeded@example.com');
+
+        $service = $this->service($this->discoveryReturning($this->discovered(
+            'https://example.com/feed.xml',
+            'Discovered Feed',
+        )));
+
+        $feed = $service->subscribe($user, 'https://example.com/feed')->subscription?->getFeed();
+
+        self::assertNotNull($feed);
+        self::assertSame('Discovered Feed', $feed->getTitle());
+        self::assertCount(1, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
+        self::assertNotNull($feed->getLastFetchedAt());
+        self::assertNotNull($feed->getNextFetchAt());
+    }
+
+    /**
+     * A feed somebody else already subscribed to has a schedule and a history
+     * of its own; this user's subscribe is no reason to rewrite either.
+     */
+    public function testAnAlreadyFetchedFeedKeepsItsSchedule(): void
+    {
+        $fetchedAt = new \DateTimeImmutable('2026-05-30T09:00:00Z');
+        $shared = new Feed('https://example.com/feed.xml');
+        $shared->setLastFetchedAt($fetchedAt);
+        $shared->setNextFetchAt($fetchedAt->modify('+1 hour'));
+        $this->em->persist($shared);
+        $this->em->flush();
+
+        $service = $this->service($this->discoveryReturning($this->discovered('https://example.com/feed.xml')));
+        $service->subscribe($this->factory()->create('second@example.com'), 'https://example.com/feed');
+
+        self::assertSame($fetchedAt->format('c'), $shared->getLastFetchedAt()?->format('c'));
+        self::assertSame([], $this->em->getRepository(Entry::class)->findBy(['feed' => $shared]));
+    }
+
     public function testSecondSubscriptionToSameFeedIsRejected(): void
     {
         $user = $this->factory()->create('dupe@example.com');
 
         $service = $this->service(
-            $this->discoveryReturning(FeedDiscoveryResult::directFeed('https://example.com/feed.xml')),
+            $this->discoveryReturning($this->discovered('https://example.com/feed.xml')),
         );
 
         $service->subscribe($user, 'https://example.com/feed');
@@ -110,7 +197,7 @@ final class SubscriptionServiceTest extends DbTestCase
         $this->em->flush();
 
         $service = $this->service(
-            $this->discoveryReturning(FeedDiscoveryResult::directFeed('https://example.com/feed.xml')),
+            $this->discoveryReturning($this->discovered('https://example.com/feed.xml')),
         );
 
         $outcome = $service->subscribe($user, 'https://example.com/feed.xml');
@@ -138,7 +225,7 @@ final class SubscriptionServiceTest extends DbTestCase
         $feedId = (int) $feed->getId();
 
         $service = $this->service(
-            $this->discoveryReturning(FeedDiscoveryResult::directFeed('https://example.com/feed.xml')),
+            $this->discoveryReturning($this->discovered('https://example.com/feed.xml')),
         );
 
         try {
@@ -170,7 +257,7 @@ final class SubscriptionServiceTest extends DbTestCase
         $this->em->flush();
 
         $service = $this->service(
-            $this->discoveryReturning(FeedDiscoveryResult::directFeed('https://example.com/feed.xml')),
+            $this->discoveryReturning($this->discovered('https://example.com/feed.xml')),
         );
 
         $outcome = $service->subscribe($user, 'https://example.com/feed.xml', 'scraped');
@@ -189,7 +276,7 @@ final class SubscriptionServiceTest extends DbTestCase
         $this->em->flush();
 
         $service = $this->service(
-            $this->discoveryReturning(FeedDiscoveryResult::directFeed('https://example.com/feed.xml')),
+            $this->discoveryReturning($this->discovered('https://example.com/feed.xml')),
         );
 
         $outcome = $service->subscribe($user, 'https://example.com/feed', null, [$news, $tech]);
@@ -216,7 +303,7 @@ final class SubscriptionServiceTest extends DbTestCase
         $this->em->flush();
 
         $service = $this->service(
-            $this->discoveryReturning(FeedDiscoveryResult::directFeed('https://example.com/unused.xml')),
+            $this->discoveryReturning($this->discovered('https://example.com/unused.xml')),
         );
 
         $outcome = $service->subscribe($user, 'https://example.com/page', 'scraped', [$blog]);
@@ -272,7 +359,7 @@ final class SubscriptionServiceTest extends DbTestCase
         $this->em->flush();
 
         $service = $this->service(
-            $this->discoveryReturning(FeedDiscoveryResult::directFeed('https://fresh.example.com/feed.xml')),
+            $this->discoveryReturning($this->discovered('https://fresh.example.com/feed.xml')),
         );
 
         $outcome = $service->subscribe($user, 'https://fresh.example.com/feed', null, [$tag]);
@@ -307,7 +394,7 @@ final class SubscriptionServiceTest extends DbTestCase
     {
         $user = $this->factory()->create('capped@example.com', maxSubscriptions: 1);
         $service = $this->service($this->discoveryReturning(
-            FeedDiscoveryResult::directFeed('https://example.com/a.xml'),
+            $this->discovered('https://example.com/a.xml'),
         ));
 
         $service->subscribe($user, 'https://example.com/a.xml');

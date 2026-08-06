@@ -119,6 +119,10 @@ final class SubscriptionControllerTest extends WebTestCase
         self::assertIsArray($created);
         self::assertIsArray($created['subscription']);
         self::assertSame('https://example.com/feed.xml', $created['subscription']['feedUrl']);
+        // Discovery read the document to confirm it was a feed, so the entries
+        // are already there when the dialog closes (#290).
+        self::assertSame(2, $created['subscription']['unreadCount']);
+        self::assertSame('Example Tech Blog', $created['subscription']['title']);
         // A discovery-confirmed feed document parses as XML — the refresh
         // pipeline must never route it through the HTML scraper.
         self::assertSame('xml', $created['subscription']['sourceFormat']);
@@ -133,9 +137,10 @@ final class SubscriptionControllerTest extends WebTestCase
         self::assertIsArray($first);
         self::assertSame('https://example.com/feed.xml', $first['feedUrl']);
         self::assertArrayHasKey('unreadCount', $first);
-        // Subscribe defers ingestion to the refresh pipeline, so a freshly
-        // subscribed feed carries no entries yet — deterministically 0 unread.
-        self::assertSame(0, $first['unreadCount']);
+        // Discovery had to read the document to know it was a feed, and the
+        // subscribe stores it — so the feed arrives with the fixture's two
+        // entries rather than empty until some later refresh (#290).
+        self::assertSame(2, $first['unreadCount']);
         // Sidebar favourite/kept badge totals travel on the same payload.
         self::assertSame(0, $list['favoritesCount']);
         self::assertSame(0, $list['keptCount']);

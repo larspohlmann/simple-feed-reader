@@ -17,6 +17,7 @@ use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -40,7 +41,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
         return new ConcurrentFeedFetcher(
             new MockHttpClient($responses),
             new UrlGuard($resolver, new IpValidator()),
-            new ResponseClassifier(),
+            new ResponseClassifier(new MockClock()),
             $concurrency,
             'TestAgent/1.0',
         );
