@@ -10,6 +10,25 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v0.5.5] - 2026-08-06
+
+## What's Changed
+* fix(#274): measure the magazine kicker after the layout settles by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/279
+* fix(#280): never gate boot on the i18n dictionary fetch by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/281
+* fix(#282): boot watchdog reveals the error surface when nothing renders by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/284
+* fix(#285): a navigation watchdog for stalls the router cannot report by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/287
+* fix(#286): show a clicked list from the top by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/288
+* fix(#283): find the feed a page hides — conventional paths and feed-shaped links by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/289
+* fix(#290): fill a new feed from the document discovery already read, and stop treating 429 as a failure by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/291
+* fix(#292): let an unbreakable word wrap, once, for every surface by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/293
+* feat(#294): show the tag's glyph and colour in the list header by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/295
+* fix(#296): trim the blank tail a feed leaves on an article by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/297
+* Add Infection mutation testing to the quality pipeline by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/299
+* refactor(#300): drop DatabaseClock, the timezone pin from #154 covers it by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/301
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v0.5.4...v0.5.5
+
 ## [v0.5.4] - 2026-08-04
 
 ## What's Changed
