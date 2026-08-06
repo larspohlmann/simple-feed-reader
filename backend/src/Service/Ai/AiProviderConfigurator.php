@@ -65,6 +65,20 @@ final readonly class AiProviderConfigurator
     }
 
     /**
+     * Refuses an account that has no provider row, without doing any of the
+     * work that needs one. It exists so a caller holding a budget meant to cap
+     * outbound calls can decline before spending it: listModels() and
+     * chooseModel() raise the same refusal, but only after the caller has
+     * already paid for a request that will never leave the server.
+     *
+     * @throws AiNotConfiguredException
+     */
+    public function requireConfiguration(User $user): void
+    {
+        $this->requireSettings($user);
+    }
+
+    /**
      * @return list<string>
      */
     public function listModels(User $user): array

@@ -6,11 +6,14 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
 use App\Service\Ai\Exception\CredentialsRejectedException;
+use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ModelCatalog;
 use App\Service\Ai\ProviderCredentials;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StubModelCatalog;
+use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
@@ -25,6 +28,8 @@ final class AiSettingsControllerTest extends ApiTestCase
     private const string BASE_URL = 'https://api.example.test/v1';
     private const string API_KEY = 'sk-abcdef1234';
     private const string REFUSED_KEY = 'sk-refused9876';
+    /** Must match framework.rate_limiter.ai_provider.limit in rate_limiter.yaml. */
+    private const int PROVIDER_BUDGET = 30;
 
     protected function setUp(): void
     {
@@ -187,18 +192,87 @@ final class AiSettingsControllerTest extends ApiTestCase
         return str_contains($body, substr(self::API_KEY, -4));
     }
 
-    public function testARejectedKeyIsReportedAsUnprocessable(): void
+    /**
+     * Both refusals, on every route that can raise them. Each is listed
+     * separately in a union catch, and dropping one type from any of those
+     * unions turns a routine failure — a mistyped address, a revoked key — into
+     * the opaque 500 the listener produces for an unexpected throw.
+     *
+     * @return iterable<string, array{\Throwable}>
+     */
+    public static function providerRefusals(): iterable
     {
-        $client = $this->clientAnswering(new CredentialsRejectedException('refused'));
+        yield 'an address that does not answer' => [
+            new ProviderUnreachableException('That address did not answer.'),
+        ];
+        yield 'a key the provider refuses' => [
+            new CredentialsRejectedException('That key was refused.'),
+        ];
+    }
+
+    #[DataProvider('providerRefusals')]
+    public function testAProviderRefusalOnTheConnectionWriteIsUnprocessable(\Throwable $refusal): void
+    {
+        $client = $this->clientAnswering($refusal);
         $this->accountOn($client, 'ai-refused@example.test');
 
         $this->saveConnection($client, 'sk-wrong-key');
 
         self::assertResponseStatusCodeSame(422);
+        self::assertSame('ai_provider_rejected', $this->payload($client)['type']);
         self::assertStringContainsString(
             'application/problem+json',
             (string) $client->getResponse()->headers->get('Content-Type'),
         );
+    }
+
+    #[DataProvider('providerRefusals')]
+    public function testAProviderRefusalWhileListingModelsIsUnprocessable(\Throwable $refusal): void
+    {
+        $client = $this->clientTurningBad($refusal);
+        $this->accountOn($client, 'ai-relist-bad@example.test');
+
+        $this->saveConnection($client);
+        self::assertResponseIsSuccessful();
+
+        $client->request('GET', '/api/me/ai/models');
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame('ai_provider_rejected', $this->payload($client)['type']);
+    }
+
+    #[DataProvider('providerRefusals')]
+    public function testAProviderRefusalOnTheModelWriteIsUnprocessable(\Throwable $refusal): void
+    {
+        $client = $this->clientTurningBad($refusal);
+        $this->accountOn($client, 'ai-model-bad@example.test');
+
+        $this->saveConnection($client);
+        self::assertResponseIsSuccessful();
+
+        $this->putJson($client, '/api/me/ai/model', '{"model":"gpt-4o"}');
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame('ai_provider_rejected', $this->payload($client)['type']);
+    }
+
+    /**
+     * A provider that answers the save and has gone bad by the next call — the
+     * shape every case needs that must store a connection before it can prove
+     * how a later refusal is reported.
+     */
+    private function clientTurningBad(\Throwable $refusal): KernelBrowser
+    {
+        $answered = false;
+
+        return $this->clientAnswering(function () use (&$answered, $refusal): array {
+            if ($answered) {
+                throw $refusal;
+            }
+            $answered = true;
+
+            return ['gpt-4o'];
+        });
     }
 
     public function testChoosingAModelMakesTheAccountReady(): void
@@ -273,6 +347,120 @@ final class AiSettingsControllerTest extends ApiTestCase
 
         self::assertResponseStatusCodeSame(422);
         self::assertSame('validation_error', $this->payload($client)['type']);
+    }
+
+    /**
+     * A stored key that no longer decrypts — a rotated AI_KEY_SECRET, an edited
+     * row, a row moved between accounts. Without the mapping this is an
+     * uncaught throw, so the account gets an opaque 500 on every read and no
+     * hint that entering the key again is the way out.
+     *
+     * The row is corrupted through raw SQL rather than through the entity: the
+     * ciphertext columns are private and the cipher is the only writer, which
+     * is exactly the invariant this case has to break.
+     */
+    public function testAnUnreadableStoredKeyIsReportedAsUnprocessable(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-unreadable@example.test');
+
+        $this->saveConnection($client);
+        self::assertResponseIsSuccessful();
+
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->getConnection()->executeStatement(
+            "UPDATE user_ai_settings SET api_key_ciphertext = 'not-a-sealed-key'",
+        );
+        $entityManager->clear();
+
+        $client->request('GET', '/api/me/ai/models');
+
+        self::assertResponseStatusCodeSame(422);
+        $payload = $this->payload($client);
+        self::assertSame('ai_provider_rejected', $payload['type']);
+        self::assertSame('The stored API key can no longer be read. Enter it again.', $payload['detail']);
+        // The cipher's own diagnosis describes the stored material; it stays in
+        // the log, not in the document.
+        self::assertStringNotContainsString('integrity', $this->body($client));
+
+        $this->putJson($client, '/api/me/ai/model', '{"model":"gpt-4o"}');
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame('ai_provider_rejected', $this->payload($client)['type']);
+    }
+
+    /**
+     * Pins that the budget is actually spent. Every other case proves only that
+     * the limiter does NOT fire, so a limiter argument bound to the wrong
+     * service — it autowires by parameter name — would leave the whole suite
+     * green with the endpoints uncapped.
+     *
+     * The budget is spent through the endpoints themselves rather than by
+     * consuming from the factory in the test, so what is pinned is the limiter
+     * the controller holds, not one the test picked out of the container.
+     *
+     * One save, then the rest of the budget spent on the model list — so the
+     * three routes that share the budget each both pay into it and refuse once
+     * it is gone. Removing the guard from any single one of them leaves the
+     * budget unspent, and its 429 becomes a 200.
+     */
+    public function testTheProviderBudgetIsSpentAndRunsOut(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-budget@example.test');
+
+        $this->saveConnection($client);
+        self::assertResponseIsSuccessful();
+
+        for ($spent = 1; $spent < self::PROVIDER_BUDGET; ++$spent) {
+            $client->request('GET', '/api/me/ai/models');
+            self::assertResponseIsSuccessful(sprintf('Request %d was inside the budget.', $spent + 1));
+        }
+
+        $client->request('GET', '/api/me/ai/models');
+        self::assertResponseStatusCodeSame(429);
+        self::assertSame('rate_limited', $this->payload($client)['type']);
+        self::assertGreaterThan(0, (int) $client->getResponse()->headers->get('Retry-After'));
+
+        $this->putJson($client, '/api/me/ai/model', '{"model":"gpt-4o"}');
+        self::assertResponseStatusCodeSame(429);
+
+        $this->saveConnection($client);
+        self::assertResponseStatusCodeSame(429);
+    }
+
+    /**
+     * The other side of the same budget: a request that cannot make an outbound
+     * call must not pay for one. More refusals than the budget holds, and every
+     * one of them still answers 404 rather than turning into a 429.
+     */
+    public function testAnUnconfiguredAccountDoesNotSpendTheProviderBudget(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-nobudget@example.test');
+
+        for ($attempt = 0; $attempt <= self::PROVIDER_BUDGET; ++$attempt) {
+            $client->request('GET', '/api/me/ai/models');
+            self::assertResponseStatusCodeSame(404);
+
+            $this->putJson($client, '/api/me/ai/model', '{"model":"gpt-4o"}');
+            self::assertResponseStatusCodeSame(404);
+        }
+    }
+
+    public function testDeletingAnUnconfiguredAccountStillSucceeds(): void
+    {
+        // A delete is idempotent by contract: a client that repeats one, or
+        // clears an account that was never configured, must not have to read a
+        // successful no-op as an error.
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-forget-twice@example.test');
+
+        $client->request('DELETE', '/api/me/ai');
+        self::assertResponseStatusCodeSame(204);
+
+        $client->request('DELETE', '/api/me/ai');
+        self::assertResponseStatusCodeSame(204);
     }
 
     public function testDeletingTheConfigurationClearsIt(): void

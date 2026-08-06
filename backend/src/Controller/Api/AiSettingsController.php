@@ -11,6 +11,7 @@ use App\Exception\AiNotConfiguredApiException;
 use App\Exception\AiProviderApiException;
 use App\Http\AiSettingsJson;
 use App\Service\Ai\AiProviderConfigurator;
+use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
@@ -64,12 +65,16 @@ final readonly class AiSettingsController
     #[Route('/models', name: 'api_me_ai_models', methods: ['GET'])]
     public function models(#[CurrentUser] User $user): JsonResponse
     {
-        $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
-
         try {
+            // Refuse first, spend second: the budget caps outbound calls, and an
+            // account with no row makes none.
+            $this->configurator->requireConfiguration($user);
+            $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
             $models = $this->configurator->listModels($user);
         } catch (AiNotConfiguredException $e) {
             throw new AiNotConfiguredApiException($e);
+        } catch (ApiKeyUnreadableException $e) {
+            throw AiProviderApiException::forUnreadableStoredKey($e);
         } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
             throw new AiProviderApiException($e->getMessage(), $e);
         }
@@ -82,12 +87,15 @@ final readonly class AiSettingsController
         #[CurrentUser] User $user,
         #[MapRequestPayload] SaveModelRequest $request,
     ): JsonResponse {
-        $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
-
         try {
+            // Refuse first, spend second — see models().
+            $this->configurator->requireConfiguration($user);
+            $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
             $this->configurator->chooseModel($user, $request->model);
         } catch (AiNotConfiguredException $e) {
             throw new AiNotConfiguredApiException($e);
+        } catch (ApiKeyUnreadableException $e) {
+            throw AiProviderApiException::forUnreadableStoredKey($e);
         } catch (ModelNotOfferedException | ProviderUnreachableException | CredentialsRejectedException $e) {
             throw new AiProviderApiException($e->getMessage(), $e);
         }
