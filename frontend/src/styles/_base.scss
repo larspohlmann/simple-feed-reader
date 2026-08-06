@@ -4,6 +4,20 @@ body {
   font-size: var(--fs-base);
   background: var(--surface-0);
   color: var(--text-primary);
+
+  /* Feed text is arbitrary: a title can be an 80-character compound noun and a
+     summary a base64 id, neither carrying a space, a hyphen or a slash to break
+     on. At the CSS initial value (`normal`) the browser may not break inside a
+     word at all, so such a token stays one line box and paints straight out of
+     its card and off the screen (#292). Inherited from here rather than set per
+     surface: two components had already patched themselves and every other
+     block had not, which is the shape of a rule that belongs in the base.
+
+     `anywhere`, not `break-word`: only `anywhere` also lowers the element's
+     min-content width, so the same token cannot force a flex or grid ancestor
+     wide either. Text that must hold one line opts out with `white-space:
+     nowrap` — the kicker line, the sidebar rows — and this is inert there. */
+  overflow-wrap: anywhere;
 }
 
 h1,
