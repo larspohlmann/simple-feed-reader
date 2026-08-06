@@ -105,3 +105,18 @@ framework:
             limit: 5
             interval: '15 minutes'
             cache_pool: cache.rate_limiter
+
+        # Both AI writes call the account's own provider before they store
+        # anything, so an uncapped pair is an outbound request generator keyed
+        # to whatever address the account last entered. The budget is per user
+        # id, not per IP: the endpoints are authenticated, so the trustworthy
+        # key is available.
+        #
+        # 30 in 15 minutes is generous for the flow it serves -- save, look at
+        # the list, pick, maybe correct a typo -- and low enough that a script
+        # cannot make the server a useful probe.
+        ai_provider:
+            policy: 'sliding_window'
+            limit: 30
+            interval: '15 minutes'
+            cache_pool: cache.rate_limiter
