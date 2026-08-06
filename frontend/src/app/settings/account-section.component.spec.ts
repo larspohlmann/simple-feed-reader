@@ -19,6 +19,7 @@ const user: CurrentUser = {
   locale: 'en',
   trialEndsAt: null,
   preferences: { scrapeFallbackEnabled: false },
+  ai: { ready: false, model: null },
 };
 
 const base = 'https://api.test';

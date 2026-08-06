@@ -61,6 +61,7 @@ describe('PreferencesService', () => {
       locale: 'en',
       trialEndsAt: null,
       preferences: { scrapeFallbackEnabled: true },
+      ai: { ready: false, model: null },
     });
 
     expect(s.scrapeFallbackEnabled()).toBe(true);

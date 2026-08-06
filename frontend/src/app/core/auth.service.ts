@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
+import { AiAvailabilityService } from './ai-availability.service';
 import { API_BASE_URL } from './api';
 import { LanguageService } from './language.service';
 import { PreferencesService } from './preferences.service';
@@ -21,6 +22,7 @@ export interface CurrentUser {
   locale: string;
   trialEndsAt: string | null;
   preferences: UserPreferences;
+  ai: { ready: boolean; model: string | null };
 }
 
 @Injectable({ providedIn: 'root' })
@@ -31,6 +33,7 @@ export class AuthService {
   private readonly router = inject(Router);
   private readonly language = inject(LanguageService);
   private readonly preferences = inject(PreferencesService);
+  private readonly ai = inject(AiAvailabilityService);
 
   readonly user = signal<CurrentUser | null>(null);
 
@@ -50,6 +53,7 @@ export class AuthService {
         this.user.set(u);
         this.language.adopt(u.locale);
         this.preferences.adopt(u);
+        this.ai.adopt(u);
       }),
     );
   }
@@ -61,6 +65,7 @@ export class AuthService {
     // account see the previous one's toggle state until (or unless) its own
     // loadMe() resolves.
     this.preferences.reset();
+    this.ai.reset();
     void this.router.navigate(['/login']);
   }
 

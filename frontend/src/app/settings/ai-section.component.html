@@ -1,0 +1,85 @@
+<app-settings-card
+  [heading]="'settings.ai.title' | transloco"
+  [description]="'settings.ai.lead' | transloco"
+>
+  <div class="group">
+    @if (ai.state().configured) {
+      <p class="note">{{ 'settings.ai.storedKey' | transloco: { hint: ai.state().apiKeyHint } }}</p>
+    }
+
+    <app-field
+      [label]="'settings.ai.baseUrl' | transloco"
+      [hint]="'settings.ai.baseUrlHint' | transloco"
+    >
+      <input
+        type="url"
+        autocomplete="off"
+        placeholder="https://api.openai.com/v1"
+        [value]="baseUrl()"
+        (input)="baseUrl.set(value($event))"
+      />
+    </app-field>
+
+    <app-field
+      [label]="'settings.ai.apiKey' | transloco"
+      [hint]="'settings.ai.apiKeyHint' | transloco"
+    >
+      <input
+        type="password"
+        autocomplete="off"
+        [value]="apiKey()"
+        (input)="apiKey.set(value($event))"
+      />
+    </app-field>
+
+    <app-button
+      variant="primary"
+      [loading]="ai.busy()"
+      [disabled]="!canSaveConnection()"
+      (click)="saveConnection()"
+    >
+      {{ 'settings.ai.connect' | transloco }}
+    </app-button>
+  </div>
+
+  <div class="group">
+    @if (ai.models().length) {
+      <app-field [label]="'settings.ai.model' | transloco">
+        <app-searchable-select
+          inputId="ai-model-select"
+          [options]="options()"
+          [placeholder]="'settings.ai.modelPlaceholder' | transloco"
+          [value]="chosenModel()"
+          (valueChange)="chosenModel.set($event)"
+        />
+      </app-field>
+
+      <app-button variant="primary" [disabled]="!chosenModel() || ai.busy()" (click)="saveModel()">
+        {{ 'settings.ai.saveModel' | transloco }}
+      </app-button>
+    } @else if (ai.state().configured) {
+      <app-button [disabled]="ai.busy()" (click)="ai.refreshModels()">
+        {{ 'settings.ai.loadModels' | transloco }}
+      </app-button>
+    }
+
+    @if (ai.state().ready) {
+      <p class="ready">{{ 'settings.ai.ready' | transloco: { model: ai.state().model } }}</p>
+    }
+  </div>
+
+  @if (failureDetail(); as detail) {
+    <app-error-banner [message]="detail" />
+  } @else if (failureKey(); as key) {
+    <app-error-banner [message]="key | transloco" />
+  }
+
+  @if (ai.state().configured) {
+    <div class="group danger-zone">
+      <p class="note">{{ 'settings.ai.removeNote' | transloco }}</p>
+      <app-button variant="danger" [disabled]="ai.busy()" (click)="ai.forget()">
+        {{ 'settings.ai.remove' | transloco }}
+      </app-button>
+    </div>
+  }
+</app-settings-card>

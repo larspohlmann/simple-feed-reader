@@ -1,0 +1,39 @@
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin-bottom: var(--space-3);
+}
+
+.group:last-child {
+  margin-bottom: 0;
+}
+
+.note {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.ready {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--success);
+}
+
+app-field {
+  display: block;
+  width: 100%;
+}
+
+app-searchable-select {
+  display: block;
+}
+
+.danger-zone {
+  width: 100%;
+  margin-block-start: var(--space-5);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--border);
+}
