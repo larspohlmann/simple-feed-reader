@@ -41,14 +41,29 @@ strongest claim a save can make without polling the provider.
 
 ### Secret material
 
-A new environment variable `AI_KEY_SECRET` holds 32 random bytes, base64
-encoded. It follows the `ALTCHA_HMAC_KEY` pattern exactly:
+A new environment variable `AI_KEY_SECRET` holds 64 hex characters — the shape
+`generate_secret` already produces everywhere else in this project. The cipher
+uses the string as HKDF input keying material, so it is never decoded.
+
+It follows the `ALTCHA_HMAC_KEY` pattern:
 
 - `scripts/install.sh` generates it with `generate_secret`;
-- `scripts/lib.sh` lists it in `ENV_PROD_REQUIRED`, so a deploy that misses it
-  fails loudly instead of failing at the first save;
+- `scripts/lib.sh` lists it in `ENV_PROD_REQUIRED`;
 - it lives in `.env.local` on the server. It is not in git and not in the
   database.
+
+One addition to that pattern: `scripts/prod-start.sh` calls a new
+`ensure_ai_key_secret`, which generates the value when it is still empty. This
+mirrors `ensure_admin_setup_secret` and exists because the running instance has
+no such variable. Without it, the first deploy of this branch would boot a
+container whose `%env(AI_KEY_SECRET)%` cannot resolve, and every route would
+fail — a site-wide outage for a feature nobody has switched on yet.
+
+For the same proportionality reason, `InsecureProductionConfigGuard` is **not**
+extended. That guard refuses to serve the whole instance, which is right for a
+void CAPTCHA or a black-hole mailer — both are silent, global failures. An
+optional per-account feature does not warrant taking the site down, and the
+deploy path already guarantees a real secret.
 
 ### Derivation and encryption
 
@@ -158,7 +173,6 @@ migration works on both MySQL and SQLite.
 | `ModelCatalog` (interface) | `listModels(ProviderCredentials $credentials): ModelList` |
 | `OpenAiCompatibleCatalog` | the `GET /models` implementation over `HttpClientInterface` |
 | `AiProviderConfigurator` | verify, then persist. The only writer |
-| `AiReadiness` | `isReady(User $user): bool`, read by `MeJson` |
 | `Exception/ProviderUnreachableException` | the endpoint did not answer |
 | `Exception/CredentialsRejectedException` | the endpoint answered `401`/`403` |
 | `Exception/ModelNotOfferedException` | the chosen model is not in the list |
@@ -197,6 +211,10 @@ rejected cases are `422`, so the client can show which of the two happened.
 ```json
 "ai": { "ready": true, "model": "gpt-4o-mini" }
 ```
+
+`ready` is decided in exactly one place — `App\Http\AiSettingsJson::state()`, the
+mapper that puts it on the wire. `MeJson` delegates to it rather than repeating
+the rule, so no second implementation can drift.
 
 ### Native client check
 
