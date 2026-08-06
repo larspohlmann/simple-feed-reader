@@ -90,9 +90,40 @@ describe('AiSectionComponent', () => {
       apiKey: 'sk-secret-value',
     });
     expect(request.request.urlWithParams).toBe('/api/me/ai/connection');
-    expect(JSON.stringify(localStorage)).not.toContain('sk-secret-value');
 
     request.flush({ ...CONFIGURED, models: ['gpt-4o'] });
+    fixture.detectChanges();
+
+    // After the response, not before it: a success handler that stashed the key
+    // would slip past an assertion made while the request was still in flight.
+    expect(JSON.stringify(localStorage)).not.toContain('sk-secret-value');
+    expect(JSON.stringify(sessionStorage)).not.toContain('sk-secret-value');
+  });
+
+  // The failing save is the interesting one. A key that outlives the request it
+  // was typed for is exactly what "never persisted" has to rule out, and a
+  // rejection is when a naive retry design would be tempted to keep it around.
+  it('keeps no trace of the key when the save fails', () => {
+    const fixture = mount();
+    saveConnection(fixture, 'sk-doomed-value');
+    const request = http.expectOne('/api/me/ai/connection');
+
+    request.flush(
+      {
+        type: 'ai_provider_rejected',
+        title: 'The AI provider could not be used',
+        status: 422,
+        detail: 'That provider refused the API key.',
+      },
+      { status: 422, statusText: 'Unprocessable Content' },
+    );
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.apiKey()).toBe('');
+    expect(JSON.stringify(localStorage)).not.toContain('sk-doomed-value');
+    expect(JSON.stringify(sessionStorage)).not.toContain('sk-doomed-value');
+    expect(request.request.urlWithParams).not.toContain('sk-doomed-value');
+    expect(fixture.nativeElement.textContent).not.toContain('sk-doomed-value');
   });
 
   it('surfaces the provider refusal in the words the server sent', () => {
@@ -113,6 +144,10 @@ describe('AiSectionComponent', () => {
     expect(banner(fixture)?.textContent).toContain('refused the API key');
   });
 
+  // The assertion deliberately does NOT look for the server's own sentence: the
+  // ordinary-refusal fallback renders that sentence verbatim, so an assertion on
+  // it would pass even if the classification were deleted. "Retrying will not
+  // help" exists only in the translated message this kind resolves to.
   it('tells the account to enter the key again when the stored key cannot be read', () => {
     const fixture = mount(CONFIGURED);
     fixture.componentInstance.ai.refreshModels();
@@ -128,7 +163,9 @@ describe('AiSectionComponent', () => {
     );
     fixture.detectChanges();
 
-    expect(banner(fixture)?.textContent).toContain('can no longer be read');
+    expect(fixture.componentInstance.ai.failure()?.kind).toBe('unreadableKey');
+    expect(banner(fixture)?.textContent).toContain('Retrying will not help');
+    expect(banner(fixture)?.textContent).not.toContain('Enter it again.');
   });
 
   it('names the rate limit rather than blaming the provider', () => {
@@ -137,10 +174,10 @@ describe('AiSectionComponent', () => {
 
     http.expectOne('/api/me/ai/models').flush(
       {
-        type: 'too_many_requests',
+        type: 'rate_limited',
         title: 'Too many requests',
         status: 429,
-        detail: 'Slow down.',
+        detail: 'Too many attempts. Try again later.',
       },
       { status: 429, statusText: 'Too Many Requests' },
     );

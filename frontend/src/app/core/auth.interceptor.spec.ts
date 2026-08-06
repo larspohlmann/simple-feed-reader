@@ -7,6 +7,8 @@ import { API_BASE_URL } from './api';
 import { TokenStore } from './token.store';
 import { authInterceptor } from './auth.interceptor';
 import { CatalogStore } from '../discover/catalog.store';
+import { AiAvailabilityService } from './ai-availability.service';
+import { CurrentUser } from './auth.service';
 
 describe('authInterceptor', () => {
   let http: HttpClient;
@@ -72,5 +74,24 @@ describe('authInterceptor', () => {
     TestBed.tick();
 
     expect(catalog.resolved()).toBe(false);
+  });
+
+  // Same hole, second cache: an expired session that never reaches logout()
+  // would otherwise offer the next account AI on the previous account's model,
+  // and keep offering it if that account's own /api/me never resolves (#263).
+  it('drops AI availability on 401, so an expired session cannot hand it on', () => {
+    tokens.set('jwt-abc');
+    const ai = TestBed.inject(AiAvailabilityService);
+    ai.adopt({ ai: { ready: true, model: 'gpt-4o' } } as CurrentUser);
+    expect(ai.ready()).toBe(true);
+
+    http.get('https://api.test/api/me').subscribe({ error: () => undefined });
+    ctrl
+      .expectOne('https://api.test/api/me')
+      .flush(null, { status: 401, statusText: 'Unauthorized' });
+    TestBed.tick();
+
+    expect(ai.ready()).toBe(false);
+    expect(ai.model()).toBeNull();
   });
 });

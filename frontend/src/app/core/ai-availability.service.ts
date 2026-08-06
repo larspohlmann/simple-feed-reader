@@ -1,6 +1,7 @@
 // src/app/core/ai-availability.service.ts
 import { Injectable, signal } from '@angular/core';
 import { CurrentUser } from './auth.service';
+import { onIdentityChange } from './session-identity';
 
 /** The account's AI provider, as the API reports it. */
 export interface AiState {
@@ -28,6 +29,14 @@ export class AiAvailabilityService {
   readonly ready = this.readySignal.asReadonly();
   readonly model = this.modelSignal.asReadonly();
 
+  constructor() {
+    // The token is the trigger, not `logout()`. The interceptor's 401 path
+    // clears the token and navigates without ever calling `logout()`, so a
+    // reset wired only there would let an expired session hand `ready: true`
+    // and the previous account's model to the next one (#263).
+    onIdentityChange(() => this.reset());
+  }
+
   /** Take the account's values, right after `AuthService.loadMe()`. */
   adopt(user: CurrentUser): void {
     this.readySignal.set(user.ai.ready);
@@ -43,7 +52,8 @@ export class AiAvailabilityService {
   /**
    * Per-account, like PreferencesService: leaving it set would let the next
    * signed-in account see AI offered until its own profile arrives, or forever
-   * if that request fails.
+   * if that request fails. `AuthService.logout()` calls this too, which is now
+   * belt-and-braces — the identity binding above covers that path as well.
    */
   reset(): void {
     this.readySignal.set(false);

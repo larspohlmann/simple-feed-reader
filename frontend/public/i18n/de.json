@@ -85,7 +85,7 @@
       "ready": "KI-Funktionen sind verfügbar und nutzen {{model}}.",
       "errors": {
         "provider": "Der Anbieter konnte nicht genutzt werden. Prüfe den Endpunkt und den Schlüssel.",
-        "unreadableKey": "Der gespeicherte API-Schlüssel kann nicht mehr gelesen werden. Gib ihn erneut ein.",
+        "unreadableKey": "Der gespeicherte API-Schlüssel dieses Kontos kann nicht mehr gelesen werden. Ein neuer Versuch hilft nicht — gib den Schlüssel erneut ein, damit die KI-Funktionen wieder verfügbar sind.",
         "rateLimited": "Zu viele Anfragen an den Anbieter. Warte einige Minuten und versuche es erneut.",
         "notConfigured": "Speichere zuerst einen Endpunkt und einen API-Schlüssel.",
         "unknown": "Etwas ist schiefgelaufen. Versuche es erneut."

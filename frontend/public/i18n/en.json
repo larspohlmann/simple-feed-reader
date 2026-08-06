@@ -85,7 +85,7 @@
       "ready": "AI features are available and use {{model}}.",
       "errors": {
         "provider": "The provider could not be used. Check the endpoint and the key.",
-        "unreadableKey": "The stored API key can no longer be read. Enter it again.",
+        "unreadableKey": "This account's stored API key cannot be read any more. Retrying will not help — enter the key again to restore AI features.",
         "rateLimited": "Too many requests to the provider. Wait a few minutes and try again.",
         "notConfigured": "Save an endpoint and an API key first.",
         "unknown": "Something went wrong. Try again."

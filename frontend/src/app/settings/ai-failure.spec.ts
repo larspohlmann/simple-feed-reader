@@ -44,7 +44,9 @@ describe('aiFailure', () => {
   });
 
   it('reads the rate limit', () => {
-    const failure = aiFailure(response(429, problem('too_many_requests', 'Slow down.', 429)));
+    const failure = aiFailure(
+      response(429, problem('rate_limited', 'Too many attempts. Try again later.', 429)),
+    );
 
     expect(failure.kind).toBe('rateLimited');
   });
