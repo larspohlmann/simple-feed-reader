@@ -342,7 +342,7 @@ env_prod_set() {
 
 # The .env.prod values docker-compose.prod.yml refuses to start without.
 # Keep in step with the ${VAR:?} interpolations there.
-ENV_PROD_REQUIRED='PUBLIC_URL MAILER_DSN MAIL_FROM MYSQL_ROOT_PASSWORD MYSQL_PASSWORD APP_SECRET ALTCHA_HMAC_KEY JWT_PASSPHRASE'
+ENV_PROD_REQUIRED='PUBLIC_URL MAILER_DSN MAIL_FROM MYSQL_ROOT_PASSWORD MYSQL_PASSWORD APP_SECRET ALTCHA_HMAC_KEY JWT_PASSPHRASE AI_KEY_SECRET'
 
 # Names of required values that are still empty, one per line. Empty output
 # means the file is complete.
@@ -375,6 +375,17 @@ generate_secret() {
 ensure_admin_setup_secret() {
   if [ -z "$(env_prod_get ADMIN_SETUP_SECRET)" ]; then
     env_prod_set ADMIN_SETUP_SECRET "$(generate_secret)"
+  fi
+}
+
+# Generate AI_KEY_SECRET when it is still empty. An instance installed before
+# #305 has no such variable, and %env(AI_KEY_SECRET)% that cannot resolve fails
+# the container build -- every route, not just the AI ones. Generating here
+# keeps the upgrade uneventful. Never regenerate a value that exists: that
+# would silently make every stored API key unreadable.
+ensure_ai_key_secret() {
+  if [ -z "$(env_prod_get AI_KEY_SECRET)" ]; then
+    env_prod_set AI_KEY_SECRET "$(generate_secret)"
   fi
 }
 

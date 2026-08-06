@@ -90,6 +90,7 @@ say 'Writing .env.prod with freshly generated secrets ...'
 cp "${REPO_ROOT}/.env.prod.example" "${ENV_PROD_FILE}"
 env_prod_set APP_SECRET "$(generate_secret)"
 env_prod_set ALTCHA_HMAC_KEY "$(generate_secret)"
+env_prod_set AI_KEY_SECRET "$(generate_secret)"
 env_prod_set JWT_PASSPHRASE "$(generate_secret)"
 env_prod_set MYSQL_ROOT_PASSWORD "$(generate_secret)"
 env_prod_set MYSQL_PASSWORD "$(generate_secret)"
