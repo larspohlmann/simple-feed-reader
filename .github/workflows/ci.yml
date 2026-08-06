@@ -110,6 +110,66 @@ jobs:
       - name: PHPUnit
         run: php bin/phpunit
 
+  # Line coverage says a line ran; it does not say a test would notice if the
+  # line were wrong. Infection changes the line and reports whether anything
+  # failed, which is the property the suite is actually meant to have.
+  #
+  # Scoped to the files the branch changes, in the spirit of the PHPMD rule: a
+  # file you touch has to be clean, and untouched code is not this branch's
+  # problem. That keeps the job to a minute or two and lets the threshold land
+  # without a tree-wide cleanup first. One leg only — the SQLite one; mutation
+  # scores do not differ by database engine, and the MySQL leg already proves
+  # the suite passes there.
+  mutation:
+    name: Mutation (changed files)
+    runs-on: ubuntu-latest
+    # Needs a base to diff against, which only a pull request has.
+    if: github.event_name == 'pull_request'
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Infection diffs the branch against the PR base, so the shallow
+          # default clone is not enough — the base ref has to be present.
+          fetch-depth: 0
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: intl, pdo_sqlite
+          # The one job that needs a coverage driver: Infection maps each mutant
+          # to the tests that reach it. PCOV over Xdebug because it is several
+          # times faster and this job runs the suite many times over.
+          coverage: pcov
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Fetch the base branch
+        run: git fetch --no-tags origin '${{ github.event.pull_request.base.ref }}'
+
+      # Escaped mutants come back as PR annotations on the offending line, so a
+      # gap is visible where the code is rather than only in the job log.
+      #
+      # --ignore-msi-with-no-mutations because a diff can legitimately produce
+      # no mutants at all — a comment-only edit to a src file, say. Without it
+      # Infection compares the threshold against an MSI of 0% and fails a PR
+      # that has nothing to answer for.
+      - name: Infection
+        run: >-
+          vendor/bin/infection
+          --git-diff-filter=AM
+          --git-diff-base='origin/${{ github.event.pull_request.base.ref }}'
+          --threads=max
+          --logger-github
+          --no-progress
+          --ignore-msi-with-no-mutations
+
   frontend:
     name: Frontend
     runs-on: ubuntu-latest
