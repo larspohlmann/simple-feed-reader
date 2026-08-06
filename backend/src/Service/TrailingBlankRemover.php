@@ -68,14 +68,15 @@ final class TrailingBlankRemover
      */
     private function stripOnce(string $html): ?string
     {
+        $stripped = $html;
         foreach (self::BLANK_TAIL as $pattern) {
-            $stripped = preg_replace($pattern, '', $html);
-            if ($stripped === null) {
+            $shorter = preg_replace($pattern, '', $stripped);
+            if ($shorter === null) {
                 return null;
             }
-            $html = $stripped;
+            $stripped = $shorter;
         }
 
-        return $html;
+        return $stripped;
     }
 }
