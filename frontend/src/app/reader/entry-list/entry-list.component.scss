@@ -48,6 +48,19 @@
   min-width: 0; /* let the title truncate instead of shoving the tools away */
 }
 
+/* The tag's glyph, inline before its name — the same glyph and colour the
+   sidebar row shows, so the heading and the row that led here read as the same
+   tag. It sits inside the ellipsised h2 on purpose: the clip runs from the end,
+   so the glyph stays put however long the name is. The gap is a margin rather
+   than a flex gap because the h2 must stay a plain text box for
+   `text-overflow: ellipsis` to work at all — and the name is wrapped in a span
+   for the same reason the margin exists: between two elements Angular drops the
+   whitespace, so this margin is the whole gap, at every formatting of the
+   template. */
+.list-header h2 app-tag-glyph {
+  margin-right: var(--space-1);
+}
+
 .list-header h2 {
   margin: 0;
   font-size: var(--fs-lg);

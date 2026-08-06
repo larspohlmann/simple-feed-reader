@@ -17,6 +17,7 @@ import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
+import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import {
   BACK_TO_TOP_AFTER_PX,
   ToTopButtonComponent,
@@ -34,7 +35,7 @@ import { EntryKickerComponent } from '../magazine/entry-kicker.component';
 import { MagazineBlock } from '../magazine/magazine-block';
 import { planMagazine } from '../magazine/magazine-planner';
 import { ReadingLayout } from '../reading-layout.service';
-import { EntryDto, SubscriptionTagDto } from '../models';
+import { EntryDto, SubscriptionTagDto, TagDto } from '../models';
 import { Selection, canScopedRefresh, sameSelection } from '../query';
 import { atTop, pullTriggersRefresh, rubberBand } from '../reader-gestures';
 import { relativeTime } from '../format';
@@ -65,6 +66,7 @@ export const REFRESH_REVEAL = 48;
     TranslocoPipe,
     IconComponent,
     SpinnerComponent,
+    TagGlyphComponent,
     EntryRowComponent,
     EntryHeroComponent,
     EntryCompactComponent,
@@ -81,6 +83,10 @@ export const REFRESH_REVEAL = 48;
 })
 export class EntryListComponent implements OnDestroy {
   readonly title = input.required<string>();
+  /** The tag the heading names, when the list is scoped to one. It carries the
+   *  glyph and the colour the sidebar row already shows, so the same tag reads
+   *  the same in both places; null for every other selection. */
+  readonly titleTag = input<TagDto | null>(null);
   readonly entries = input.required<EntryDto[]>();
   readonly loading = input.required<boolean>();
   readonly loadingMore = input.required<boolean>();

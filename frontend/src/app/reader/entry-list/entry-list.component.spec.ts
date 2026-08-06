@@ -71,6 +71,39 @@ describe('EntryListComponent', () => {
     expect(el.querySelectorAll('app-entry-row').length).toBe(2);
   });
 
+  // A tag's heading carries the same glyph and colour its sidebar row does, so
+  // the list a reader lands in is recognisably the tag they clicked.
+  describe('the tag heading', () => {
+    const tag = { id: 4, name: 'Wissenschaft', color: '#c2410c', icon: 'science', position: 0 };
+    // The same colour as the DOM reports it back: a style binding is normalised.
+    const TAG_RGB = 'rgb(194, 65, 12)';
+
+    it('shows the tag glyph in the tag colour beside the name', () => {
+      const el = mount({ title: tag.name, titleTag: tag }).nativeElement as HTMLElement;
+      const heading = el.querySelector('.list-header h2')!;
+      expect(heading.textContent).toContain('Wissenschaft');
+
+      const icon = heading.querySelector<HTMLElement>('app-tag-glyph app-icon')!;
+      expect(icon.textContent!.trim()).toBe('science');
+      expect(icon.style.color).toBe(TAG_RGB);
+    });
+
+    it('falls back to the colour dot for a tag with no glyph of its own', () => {
+      const el = mount({ title: tag.name, titleTag: { ...tag, icon: null } })
+        .nativeElement as HTMLElement;
+      const heading = el.querySelector('.list-header h2')!;
+      expect(heading.querySelector('app-tag-glyph app-icon')).toBeNull();
+      expect(heading.querySelector<HTMLElement>('app-tag-glyph .dot')!.style.background).toBe(
+        TAG_RGB,
+      );
+    });
+
+    it('shows no glyph for a heading that names no tag', () => {
+      const el = mount().nativeElement as HTMLElement;
+      expect(el.querySelector('.list-header h2 app-tag-glyph')).toBeNull();
+    });
+  });
+
   // #87: the collapsing list header is a second bar with the same defect as the
   // app header — it used to shrink the list's own box, resizing the scroller
   // mid-gesture. It floats over reserved padding now.
