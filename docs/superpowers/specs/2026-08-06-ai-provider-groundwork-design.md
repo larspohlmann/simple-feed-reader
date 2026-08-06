@@ -90,7 +90,12 @@ Both bindings do work:
   before derivation, and a value the cipher does not know is refused outright
   rather than treated as version 1.
 
-The plaintext is cleared with `sodium_memzero` after use.
+The derived row key is cleared with `sodium_memzero` on every exit from `seal()`
+and `open()`. The plaintext API key is not: it is passed in and returned as an
+ordinary PHP string, which the engine may already have copied, so wiping the one
+variable this class holds would clear a copy rather than the secret. The row key
+is the material worth wiping — it is derived here, used here, and nothing outside
+this class ever sees it.
 
 ### What this protects against
 
