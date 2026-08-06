@@ -17,7 +17,7 @@ final class OpenAiCompatibleCatalogTest extends TestCase
 {
     private function credentials(): ProviderCredentials
     {
-        return new ProviderCredentials('https://api.example.test/v1', 'sk-test');
+        return ProviderCredentials::fromStoredConfiguration('https://api.example.test/v1', 'sk-test');
     }
 
     private function catalogAnswering(MockResponse $response): OpenAiCompatibleCatalog
@@ -168,7 +168,15 @@ final class OpenAiCompatibleCatalogTest extends TestCase
     {
         self::assertSame(
             'https://api.example.test/v1',
-            ProviderCredentials::normalizeBaseUrl('  https://api.example.test/v1//  '),
+            ProviderCredentials::fromAccountInput('  https://api.example.test/v1//  ', 'sk-test')->baseUrl,
+        );
+    }
+
+    public function testTheApiKeyLosesItsSurroundingSpace(): void
+    {
+        self::assertSame(
+            'sk-test',
+            ProviderCredentials::fromAccountInput('https://api.example.test/v1', "  sk-test\n")->apiKey,
         );
     }
 
@@ -176,31 +184,31 @@ final class OpenAiCompatibleCatalogTest extends TestCase
     {
         self::assertSame(
             'http://localhost:11434/v1',
-            ProviderCredentials::normalizeBaseUrl('http://localhost:11434/v1'),
+            ProviderCredentials::fromAccountInput('http://localhost:11434/v1', 'sk-test')->baseUrl,
         );
     }
 
     public function testANonHttpSchemeIsRefused(): void
     {
         $this->expectException(ProviderUnreachableException::class);
-        ProviderCredentials::normalizeBaseUrl('file:///etc/passwd');
+        ProviderCredentials::fromAccountInput('file:///etc/passwd', 'sk-test');
     }
 
     public function testCredentialsInTheUrlAreRefused(): void
     {
         $this->expectException(ProviderUnreachableException::class);
-        ProviderCredentials::normalizeBaseUrl('https://user:pass@api.example.test/v1');
+        ProviderCredentials::fromAccountInput('https://user:pass@api.example.test/v1', 'sk-test');
     }
 
     public function testAQueryStringInTheUrlIsRefused(): void
     {
         $this->expectException(ProviderUnreachableException::class);
-        ProviderCredentials::normalizeBaseUrl('https://api.example.test/v1?tenant=1');
+        ProviderCredentials::fromAccountInput('https://api.example.test/v1?tenant=1', 'sk-test');
     }
 
     public function testAFragmentInTheUrlIsRefused(): void
     {
         $this->expectException(ProviderUnreachableException::class);
-        ProviderCredentials::normalizeBaseUrl('https://api.example.test/v1#section');
+        ProviderCredentials::fromAccountInput('https://api.example.test/v1#section', 'sk-test');
     }
 }

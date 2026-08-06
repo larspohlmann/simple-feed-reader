@@ -44,7 +44,7 @@ final readonly class AiProviderConfigurator
      */
     public function saveConnection(User $user, string $baseUrl, string $apiKey): array
     {
-        $credentials = new ProviderCredentials(ProviderCredentials::normalizeBaseUrl($baseUrl), trim($apiKey));
+        $credentials = ProviderCredentials::fromAccountInput($baseUrl, $apiKey);
         $models = $this->catalog->listModels($credentials);
 
         $sealed = $this->cipher->seal($this->identify($user), $credentials->apiKey);
@@ -112,7 +112,7 @@ final readonly class AiProviderConfigurator
 
     private function credentialsFor(AiProviderSettings $settings): ProviderCredentials
     {
-        return new ProviderCredentials(
+        return ProviderCredentials::fromStoredConfiguration(
             $settings->getBaseUrl(),
             $this->cipher->open($this->identify($settings->getUser()), $settings->getSealedApiKey()),
         );

@@ -19,17 +19,38 @@ use App\Service\Ai\Exception\ProviderUnreachableException;
  */
 final readonly class ProviderCredentials
 {
-    public function __construct(
+    private function __construct(
         public string $baseUrl,
         public string $apiKey,
     ) {
     }
 
     /**
+     * What the account typed. The constructor is private so this path — the
+     * only one that ever sees untrusted input — cannot be bypassed: the checks
+     * below are the entire validation this URL gets.
+     */
+    public static function fromAccountInput(string $baseUrl, string $apiKey): self
+    {
+        return new self(self::normalizeBaseUrl($baseUrl), trim($apiKey));
+    }
+
+    /**
+     * A base URL that went through fromAccountInput() before it was stored, and
+     * a key the cipher just opened. Both are already in their normalised form,
+     * so re-validating them here would only invent a way for a stored row to
+     * stop working.
+     */
+    public static function fromStoredConfiguration(string $baseUrl, string $apiKey): self
+    {
+        return new self($baseUrl, $apiKey);
+    }
+
+    /**
      * Trims the value and removes trailing slashes, so `…/v1` and `…/v1/`
      * produce one stored form and one request URL.
      */
-    public static function normalizeBaseUrl(string $baseUrl): string
+    private static function normalizeBaseUrl(string $baseUrl): string
     {
         $trimmed = rtrim(trim($baseUrl), '/');
         $parts = parse_url($trimmed);
