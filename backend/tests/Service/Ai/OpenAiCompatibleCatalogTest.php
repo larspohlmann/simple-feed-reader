@@ -91,14 +91,14 @@ final class OpenAiCompatibleCatalogTest extends TestCase
     public function testAnOversizedBodyIsUnreachable(): void
     {
         // This is otherwise-valid JSON that would decode into one perfectly good
-        // model — the id is just padded well past MAXIMUM_RESPONSE_BYTES. The cap
-        // truncating the stream mid-string is the ONLY reason this throws: without
-        // it, this body parses and listModels() returns successfully.
+        // model — the id is just padded well past MAXIMUM_RESPONSE_BYTES. The wire
+        // cap aborting the download is the ONLY reason this throws: without it,
+        // this body parses and listModels() returns successfully.
         //
         // Split into small chunks: MockHttpClient delivers one plain string as a
-        // single chunk, which would let it land in $content whole before the size
-        // check ever runs. Chunking matches how a real response actually streams
-        // and is what makes this test able to catch a cap that stopped truncating.
+        // single chunk, and reports progress only once it is already complete.
+        // Chunking matches how a real response actually streams and is what makes
+        // this test able to catch a cap that stopped firing.
         $body = '{"data":[{"id":"' . str_repeat('a', 2_000_000) . '"}]}';
         $catalog = $this->catalogAnswering(new MockResponse(str_split($body, 50_000)));
 

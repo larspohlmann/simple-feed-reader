@@ -50,23 +50,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalog
     private function readBody(ProviderCredentials $credentials): string
     {
         try {
-            $response = $this->httpClient->request('GET', $credentials->baseUrl . '/models', [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $credentials->apiKey,
-                    'Accept' => 'application/json',
-                    // Refuse transparent compression so MAXIMUM_RESPONSE_BYTES, counted
-                    // on the decoded body in boundedContent(), also bounds the bytes the
-                    // provider actually sends — gzip would otherwise let a small reply
-                    // decompress unbounded before the cap ever sees it. Same reasoning as
-                    // ConcurrentFeedFetcher::headers().
-                    'Accept-Encoding' => 'identity',
-                    'User-Agent' => $this->userAgent,
-                ],
-                'timeout' => self::TIMEOUT_SECONDS,
-                'max_duration' => self::TIMEOUT_SECONDS,
-                'max_redirects' => 0,
-            ]);
-
+            $response = $this->request($credentials);
             $status = $response->getStatusCode();
 
             if (401 === $status || 403 === $status) {
@@ -77,30 +61,43 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalog
                 throw new ProviderUnreachableException(sprintf('That provider answered with status %d.', $status));
             }
 
-            return $this->boundedContent($response);
+            return $response->getContent();
         } catch (ExceptionInterface $e) {
             throw new ProviderUnreachableException('That address did not answer.', 0, $e);
         }
     }
 
-    /**
-     * Reads at most the cap. Streaming chunk-by-chunk rather than
-     * `getContent()`: a provider that answers with gigabytes must cost one
-     * megabyte of memory, not all of it.
-     */
-    private function boundedContent(ResponseInterface $response): string
+    private function request(ProviderCredentials $credentials): ResponseInterface
     {
-        $content = '';
-
-        foreach ($this->httpClient->stream($response) as $chunk) {
-            $content .= $chunk->getContent();
-
-            if (\strlen($content) >= self::MAXIMUM_RESPONSE_BYTES) {
-                break;
-            }
-        }
-
-        return $content;
+        return $this->httpClient->request('GET', $credentials->baseUrl . '/models', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $credentials->apiKey,
+                'Accept' => 'application/json',
+                // Refuse transparent compression so the wire cap below also bounds
+                // the buffered body — gzip would otherwise let a small reply
+                // decompress unbounded after the cap has already passed it. Same
+                // reasoning as ConcurrentFeedFetcher::headers().
+                'Accept-Encoding' => 'identity',
+                'User-Agent' => $this->userAgent,
+            ],
+            'timeout' => self::TIMEOUT_SECONDS,
+            'max_duration' => self::TIMEOUT_SECONDS,
+            'max_redirects' => 0,
+            // Capped on the wire, the one size-cap mechanism this codebase has
+            // (ConcurrentFeedFetcher::send(), HtmlPageFetcher, CatalogFaviconFetcher):
+            // a provider answering with gigabytes is refused as the bytes arrive,
+            // rather than truncated into a body that can only fail to parse. The
+            // transport re-reports the aborted download as its own failure, which
+            // readBody() translates back into this domain's refusal.
+            'on_progress' => static function (int $downloaded): void {
+                if ($downloaded > self::MAXIMUM_RESPONSE_BYTES) {
+                    throw new ProviderUnreachableException(sprintf(
+                        'That provider answered with more than %d bytes.',
+                        self::MAXIMUM_RESPONSE_BYTES,
+                    ));
+                }
+            },
+        ]);
     }
 
     /**
