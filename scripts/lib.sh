@@ -342,7 +342,12 @@ env_prod_set() {
 
 # The .env.prod values docker-compose.prod.yml refuses to start without.
 # Keep in step with the ${VAR:?} interpolations there.
-ENV_PROD_REQUIRED='PUBLIC_URL MAILER_DSN MAIL_FROM MYSQL_ROOT_PASSWORD MYSQL_PASSWORD APP_SECRET ALTCHA_HMAC_KEY JWT_PASSPHRASE AI_KEY_SECRET'
+ENV_PROD_REQUIRED='PUBLIC_URL MAILER_DSN MAIL_FROM MYSQL_ROOT_PASSWORD MYSQL_PASSWORD APP_SECRET ALTCHA_HMAC_KEY JWT_PASSPHRASE'
+# AI_KEY_SECRET is deliberately NOT in this list, same as ADMIN_SETUP_SECRET:
+# it is machine-generated, never operator-supplied, so there is nothing for a
+# human to "fill in". Listing it here would make env_prod_missing/die below
+# abort an upgrading instance before ensure_ai_key_secret ever runs -- the
+# exact outage that helper exists to prevent.
 
 # Names of required values that are still empty, one per line. Empty output
 # means the file is complete.
