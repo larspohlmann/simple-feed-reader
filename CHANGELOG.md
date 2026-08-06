@@ -10,6 +10,14 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v0.5.6] - 2026-08-06
+
+## What's Changed
+* fix(#302): stop the refresh poll loop on a rationed feed by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/303
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v0.5.5...v0.5.6
+
 ## [v0.5.5] - 2026-08-06
 
 ## What's Changed
