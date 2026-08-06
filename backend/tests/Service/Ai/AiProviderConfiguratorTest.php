@@ -125,7 +125,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
         $user = $this->user('cfg-model@example.test');
         $configurator->saveConnection($user, 'https://api.example.test/v1', 'sk-abcdef1234');
 
-        $configurator->chooseModel($user, 'gpt-4o-mini');
+        $configurator->chooseModel($configurator->requireConfiguration($user), 'gpt-4o-mini');
 
         // clear() first: without it the identity map serves the entity this
         // test already holds, and the assertion would pass even if nothing was
@@ -142,7 +142,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
         $configurator->saveConnection($user, 'https://api.example.test/v1', 'sk-abcdef1234');
 
         $this->expectException(ModelNotOfferedException::class);
-        $configurator->chooseModel($user, 'gpt-4o-mini');
+        $configurator->chooseModel($configurator->requireConfiguration($user), 'gpt-4o-mini');
     }
 
     public function testASecondConnectionSaveDropsTheChosenModel(): void
@@ -150,7 +150,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
         $configurator = $this->configurator(['gpt-4o']);
         $user = $this->user('cfg-replace@example.test');
         $configurator->saveConnection($user, 'https://api.example.test/v1', 'sk-abcdef1234');
-        $configurator->chooseModel($user, 'gpt-4o');
+        $configurator->chooseModel($configurator->requireConfiguration($user), 'gpt-4o');
 
         $configurator->saveConnection($user, 'https://other.example.test/v1', 'sk-zyxwvu9876');
 
@@ -214,8 +214,10 @@ final class AiProviderConfiguratorTest extends DbTestCase
 
         // The row is now the thief's, so the configurator seals/opens it under
         // the thief's id — which is not the id the key was bound to.
+        $thiefSettings = $configurator->requireConfiguration($this->reload('cfg-thief@example.test'));
+
         $this->expectException(ApiKeyUnreadableException::class);
-        $configurator->listModels($this->reload('cfg-thief@example.test'));
+        $configurator->listModels($thiefSettings);
     }
 
     private function moveSettingsRow(User $from, User $to): void

@@ -68,9 +68,9 @@ final readonly class AiSettingsController
         try {
             // Refuse first, spend second: the budget caps outbound calls, and an
             // account with no row makes none.
-            $this->configurator->requireConfiguration($user);
+            $settings = $this->configurator->requireConfiguration($user);
             $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
-            $models = $this->configurator->listModels($user);
+            $models = $this->configurator->listModels($settings);
         } catch (AiNotConfiguredException $e) {
             throw new AiNotConfiguredApiException($e);
         } catch (ApiKeyUnreadableException $e) {
@@ -89,9 +89,9 @@ final readonly class AiSettingsController
     ): JsonResponse {
         try {
             // Refuse first, spend second — see models().
-            $this->configurator->requireConfiguration($user);
+            $settings = $this->configurator->requireConfiguration($user);
             $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
-            $this->configurator->chooseModel($user, $request->model);
+            $this->configurator->chooseModel($settings, $request->model);
         } catch (AiNotConfiguredException $e) {
             throw new AiNotConfiguredApiException($e);
         } catch (ApiKeyUnreadableException $e) {
@@ -100,7 +100,7 @@ final readonly class AiSettingsController
             throw new AiProviderApiException($e->getMessage(), $e);
         }
 
-        return new JsonResponse(AiSettingsJson::state($this->configurator->settingsFor($user)));
+        return new JsonResponse(AiSettingsJson::state($settings));
     }
 
     #[Route('', name: 'api_me_ai_forget', methods: ['DELETE'])]
