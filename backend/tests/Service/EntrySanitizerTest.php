@@ -99,10 +99,26 @@ final class EntrySanitizerTest extends TestCase
         self::assertStringNotContainsString('data:', $clean);
     }
 
+    /**
+     * Both bodies of article HTML cross this barrier — the feed's on ingest and
+     * the extracted one on every reader request — so trimming the blank tail
+     * here is what keeps it out of every client's article (#296).
+     */
+    public function testTrimsTheBlankTailAFeedLeftBehind(): void
+    {
+        $clean = (string) $this->sanitizer->sanitize(
+            "<p>The last sentence.</p>\n<p>&nbsp;</p>\n<p></p>\n<br>\n\n  ",
+        );
+
+        self::assertSame('<p>The last sentence.</p>', $clean);
+    }
+
     public function testEmptyInputBecomesNull(): void
     {
         self::assertNull($this->sanitizer->sanitize(null));
         self::assertNull($this->sanitizer->sanitize('   '));
         self::assertNull($this->sanitizer->sanitize('<script>only evil</script>'));
+        // Nothing but a tail is not an article either.
+        self::assertNull($this->sanitizer->sanitize('<p>&nbsp;</p><p></p><br>'));
     }
 }
