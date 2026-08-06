@@ -326,6 +326,7 @@
     "fetchFailed": "Einige Feeds konnten nicht geladen werden.",
     "refreshBusy": "Eine andere Aktualisierung läuft bereits. Bitte gleich noch einmal versuchen.",
     "refreshAborted": "Die Aktualisierung wurde vorzeitig beendet. Einige Feeds sind noch fällig.",
+    "refreshStalled": "Die Aktualisierung kam nicht mehr voran. Einige Feeds sind noch fällig — versuchen Sie es in einigen Minuten erneut.",
     "retryFetch": "Erneut versuchen",
     "addFeed": "Feed hinzufügen",
     "allItems": "Alle Einträge",

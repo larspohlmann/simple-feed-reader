@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\FeedStatus;
+use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
 use App\Tests\DbTestCase;
 
@@ -53,10 +54,56 @@ final class FeedRepositoryTest extends DbTestCase
         $this->feed('https://d.example.com/feed', $this->now->modify('-1 day'), FeedStatus::Gone);
         $this->em->flush();
 
-        $due = $this->repository->findDue($this->now, 10);
+        $due = $this->repository->findDue(new DueFeedCriteria($this->now), 10);
 
         self::assertSame([$neverFetched->getId(), $overdue->getId()], $this->ids($due));
-        self::assertSame(2, $this->repository->countDue($this->now));
+        self::assertSame(2, $this->repository->countDue(new DueFeedCriteria($this->now)));
+    }
+
+    /**
+     * The refresh sweep excludes the feeds it already took on, so a feed whose
+     * outcome writes no fetch time — a 429 (#290) — still leaves `remaining`
+     * and the client's poll loop terminates (#302).
+     */
+    public function testExcludedFeedsAreNeitherReturnedNorCounted(): void
+    {
+        $handled = $this->feed('https://a.example.com/feed', $this->now->modify('-2 hours'));
+        $untouched = $this->feed('https://b.example.com/feed', $this->now->modify('-1 hour'));
+        $this->em->flush();
+
+        $criteria = (new DueFeedCriteria($this->now))->excluding([(int) $handled->getId()]);
+
+        self::assertSame([$untouched->getId()], $this->ids($this->repository->findDue($criteria, 10)));
+        self::assertSame(1, $this->repository->countDue($criteria));
+        // Without the exclusion both are due, so the filter is what moved the count.
+        self::assertSame(2, $this->repository->countDue(new DueFeedCriteria($this->now)));
+    }
+
+    /**
+     * `excluding()` replaces only the exclusion list. A scope it dropped on the
+     * way would silently widen a per-user sweep into every user's feeds.
+     */
+    public function testExcludingKeepsEveryOtherScope(): void
+    {
+        $original = new DueFeedCriteria(
+            $this->now,
+            userId: 7,
+            feedId: 8,
+            tagId: 9,
+            force: true,
+            cooldownCutoff: $this->now->modify('-5 minutes'),
+        );
+
+        $narrowed = $original->excluding([42]);
+
+        self::assertSame([42], $narrowed->excludedFeedIds);
+        self::assertSame($original->now, $narrowed->now);
+        self::assertSame(7, $narrowed->userId);
+        self::assertSame(8, $narrowed->feedId);
+        self::assertSame(9, $narrowed->tagId);
+        self::assertTrue($narrowed->force);
+        self::assertEquals($original->cooldownCutoff, $narrowed->cooldownCutoff);
+        self::assertSame([], $original->excludedFeedIds);
     }
 
     public function testOrdersMostOverdueFirst(): void
@@ -68,7 +115,7 @@ final class FeedRepositoryTest extends DbTestCase
 
         self::assertSame(
             [$ancient->getId(), $middle->getId(), $recent->getId()],
-            $this->ids($this->repository->findDue($this->now, 10)),
+            $this->ids($this->repository->findDue(new DueFeedCriteria($this->now), 10)),
         );
     }
 
@@ -79,8 +126,8 @@ final class FeedRepositoryTest extends DbTestCase
         $this->feed('https://c.example.com/feed', $this->now->modify('-1 hour'));
         $this->em->flush();
 
-        self::assertCount(2, $this->repository->findDue($this->now, 2));
-        self::assertSame(3, $this->repository->countDue($this->now));
+        self::assertCount(2, $this->repository->findDue(new DueFeedCriteria($this->now), 2));
+        self::assertSame(3, $this->repository->countDue(new DueFeedCriteria($this->now)));
     }
 
     public function testForceIgnoresScheduleButHonorsCooldown(): void
@@ -92,10 +139,8 @@ final class FeedRepositoryTest extends DbTestCase
         $this->em->flush();
 
         $due = $this->repository->findDue(
-            $this->now,
+            new DueFeedCriteria($this->now, force: true, cooldownCutoff: $this->now->modify('-5 minutes')),
             10,
-            force: true,
-            cooldownCutoff: $this->now->modify('-5 minutes'),
         );
 
         self::assertSame([$stale->getId()], $this->ids($due));
@@ -112,16 +157,18 @@ final class FeedRepositoryTest extends DbTestCase
         $this->em->flush();
 
         $due = $this->repository->findDue(
-            $this->now,
+            new DueFeedCriteria($this->now, force: true, cooldownCutoff: $this->now->modify('-5 minutes')),
             10,
-            force: true,
-            cooldownCutoff: $this->now->modify('-5 minutes'),
         );
 
         self::assertSame([$future->getId()], $this->ids($due));
         self::assertSame(
             1,
-            $this->repository->countDue($this->now, force: true, cooldownCutoff: $this->now->modify('-5 minutes')),
+            $this->repository->countDue(new DueFeedCriteria(
+                $this->now,
+                force: true,
+                cooldownCutoff: $this->now->modify('-5 minutes'),
+            )),
         );
     }
 
@@ -131,9 +178,25 @@ final class FeedRepositoryTest extends DbTestCase
         $active = $this->feed('https://ok.example.com/feed', null);
         $this->em->flush();
 
-        $due = $this->repository->findDue($this->now, 10, force: true);
+        $due = $this->repository->findDue(new DueFeedCriteria($this->now, force: true), 10);
 
         self::assertSame([$active->getId()], $this->ids($due));
+    }
+
+    /**
+     * Force without a cooldown means exactly that: no fetch-time test at all.
+     * A feed fetched one minute ago is still returned — only a cutoff may hold
+     * one back, and there is none here.
+     */
+    public function testForceWithoutACooldownIgnoresTheFetchTime(): void
+    {
+        $justFetched = $this->feed('https://a.example.com/feed', $this->now->modify('+1 hour'));
+        $justFetched->setLastFetchedAt($this->now->modify('-1 minute'));
+        $this->em->flush();
+
+        $due = $this->repository->findDue(new DueFeedCriteria($this->now, force: true), 10);
+
+        self::assertSame([$justFetched->getId()], $this->ids($due));
     }
 
     public function testUserScopeOnlyReturnsSubscribedFeeds(): void
@@ -148,18 +211,21 @@ final class FeedRepositoryTest extends DbTestCase
         $this->em->persist(new Subscription($other, $theirs, $this->now));
         $this->em->flush();
 
-        $due = $this->repository->findDue($this->now, 10, userId: $user->getId());
+        $due = $this->repository->findDue(new DueFeedCriteria($this->now, userId: $user->getId()), 10);
 
         self::assertSame([$mine->getId()], $this->ids($due));
-        self::assertSame(1, $this->repository->countDue($this->now, userId: $user->getId()));
+        self::assertSame(1, $this->repository->countDue(new DueFeedCriteria($this->now, userId: $user->getId())));
     }
 
     public function testFeedScopeIncludesGoneFeeds(): void
     {
         $gone = $this->feed('https://gone.example.com/feed', null, FeedStatus::Gone);
+        // A second due feed, so the assertion below fails if the id filter is
+        // dropped rather than passing on a one-row fixture.
+        $this->feed('https://ok.example.com/feed', null);
         $this->em->flush();
 
-        $due = $this->repository->findDue($this->now, 10, feedId: $gone->getId(), force: true);
+        $due = $this->repository->findDue(new DueFeedCriteria($this->now, feedId: $gone->getId(), force: true), 10);
 
         self::assertSame([$gone->getId()], $this->ids($due));
     }
@@ -169,7 +235,7 @@ final class FeedRepositoryTest extends DbTestCase
         $this->feed('https://a.example.com/feed', $this->now->modify('+1 hour'));
         $this->em->flush();
 
-        self::assertSame([], $this->repository->findDue($this->now, 10));
-        self::assertSame(0, $this->repository->countDue($this->now));
+        self::assertSame([], $this->repository->findDue(new DueFeedCriteria($this->now), 10));
+        self::assertSame(0, $this->repository->countDue(new DueFeedCriteria($this->now)));
     }
 }

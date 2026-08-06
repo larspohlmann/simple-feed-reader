@@ -24,25 +24,12 @@ class FeedRepository extends ServiceEntityRepository
     /**
      * Feeds eligible for refresh, never-fetched first, then most overdue.
      *
-     * Scopes: $feedId selects exactly one feed (including "gone" ones — this
-     * is the manual-retry path); $userId restricts to feeds the user is
-     * subscribed to; $tagId further restricts to feeds the user has tagged with
-     * it; $force ignores the schedule but respects $cooldownCutoff (feeds
-     * fetched after the cutoff are skipped).
-     *
      * @return list<Feed>
      */
-    public function findDue(
-        \DateTimeImmutable $now,
-        int $limit,
-        ?int $userId = null,
-        ?int $feedId = null,
-        ?int $tagId = null,
-        bool $force = false,
-        ?\DateTimeImmutable $cooldownCutoff = null,
-    ): array {
+    public function findDue(DueFeedCriteria $criteria, int $limit): array
+    {
         /** @var list<Feed> $feeds */
-        $feeds = $this->dueQueryBuilder($now, $userId, $feedId, $tagId, $force, $cooldownCutoff)
+        $feeds = $this->dueQueryBuilder($criteria)
             ->addSelect('COALESCE(f.nextFetchAt, :epoch) AS HIDDEN dueOrder')
             ->setParameter('epoch', new \DateTimeImmutable('@0'))
             ->orderBy('dueOrder', 'ASC')
@@ -54,15 +41,9 @@ class FeedRepository extends ServiceEntityRepository
         return $feeds;
     }
 
-    public function countDue(
-        \DateTimeImmutable $now,
-        ?int $userId = null,
-        ?int $feedId = null,
-        ?int $tagId = null,
-        bool $force = false,
-        ?\DateTimeImmutable $cooldownCutoff = null,
-    ): int {
-        return (int) $this->dueQueryBuilder($now, $userId, $feedId, $tagId, $force, $cooldownCutoff)
+    public function countDue(DueFeedCriteria $criteria): int
+    {
+        return (int) $this->dueQueryBuilder($criteria)
             ->select('COUNT(f.id)')
             ->getQuery()
             ->getSingleScalarResult();
@@ -113,61 +94,87 @@ class FeedRepository extends ServiceEntityRepository
         return array_map(static fn (array $row): int => (int) $row['id'], $rows);
     }
 
-    private function dueQueryBuilder(
-        \DateTimeImmutable $now,
-        ?int $userId,
-        ?int $feedId,
-        ?int $tagId,
-        bool $force,
-        ?\DateTimeImmutable $cooldownCutoff,
-    ): QueryBuilder {
+    private function dueQueryBuilder(DueFeedCriteria $criteria): QueryBuilder
+    {
         $qb = $this->createQueryBuilder('f');
 
-        if ($feedId !== null) {
-            // Manual per-feed retry: exactly this feed, "gone" included, schedule
-            // ignored — but the user scope below still applies.
-            $qb->andWhere('f.id = :feedId')->setParameter('feedId', $feedId);
-        } else {
-            $qb->andWhere('f.status != :gone')->setParameter('gone', FeedStatus::Gone);
+        $this->restrictToSchedule($qb, $criteria);
+        $this->restrictToOwnership($qb, $criteria);
+        $this->restrictToUnhandled($qb, $criteria);
 
-            if ($force) {
-                if ($cooldownCutoff !== null) {
-                    // A lastFetchedAt in the future is impossible under a correct
-                    // clock, so something wrote it wrong — a worker on a non-UTC
-                    // timezone did exactly that in #151, before the kernel pinned
-                    // UTC. Treat it as stale rather than let it read as "just
-                    // fetched" and freeze the feed out of every refresh in
-                    // silence, which is a costly failure to notice.
-                    $qb->andWhere(
-                        '(f.lastFetchedAt IS NULL OR f.lastFetchedAt <= :cooldownCutoff OR f.lastFetchedAt > :now)',
-                    )
-                        ->setParameter('cooldownCutoff', $cooldownCutoff)
-                        ->setParameter('now', $now);
-                }
-            } else {
-                $qb->andWhere('(f.nextFetchAt IS NULL OR f.nextFetchAt <= :now)')
-                    ->setParameter('now', $now);
-            }
+        return $qb;
+    }
+
+    private function restrictToSchedule(QueryBuilder $qb, DueFeedCriteria $criteria): void
+    {
+        if ($criteria->feedId !== null) {
+            // Manual per-feed retry: exactly this feed, "gone" included, schedule
+            // ignored — but the ownership scope still applies.
+            $qb->andWhere('f.id = :feedId')->setParameter('feedId', $criteria->feedId);
+
+            return;
         }
 
-        if ($userId !== null) {
+        $qb->andWhere('f.status != :gone')->setParameter('gone', FeedStatus::Gone);
+
+        if ($criteria->force) {
+            // Force drops the schedule entirely; only the cooldown may hold a
+            // feed back, and only when the caller set one.
+            $this->restrictToCooldown($qb, $criteria);
+
+            return;
+        }
+
+        $qb->andWhere('(f.nextFetchAt IS NULL OR f.nextFetchAt <= :now)')
+            ->setParameter('now', $criteria->now);
+    }
+
+    private function restrictToCooldown(QueryBuilder $qb, DueFeedCriteria $criteria): void
+    {
+        if ($criteria->cooldownCutoff === null) {
+            return;
+        }
+
+        // A lastFetchedAt in the future is impossible under a correct clock, so
+        // something wrote it wrong — a worker on a non-UTC timezone did exactly
+        // that in #151, before the kernel pinned UTC. Treat it as stale rather
+        // than let it read as "just fetched" and freeze the feed out of every
+        // refresh in silence, which is a costly failure to notice.
+        $qb->andWhere('(f.lastFetchedAt IS NULL OR f.lastFetchedAt <= :cooldownCutoff OR f.lastFetchedAt > :now)')
+            ->setParameter('cooldownCutoff', $criteria->cooldownCutoff)
+            ->setParameter('now', $criteria->now);
+    }
+
+    private function restrictToOwnership(QueryBuilder $qb, DueFeedCriteria $criteria): void
+    {
+        if ($criteria->userId !== null) {
             $qb->andWhere(sprintf(
                 'EXISTS (SELECT s.id FROM %s s WHERE s.feed = f AND s.user = :userId)',
                 Subscription::class,
-            ))->setParameter('userId', $userId);
+            ))->setParameter('userId', $criteria->userId);
         }
 
-        if ($tagId !== null) {
-            // Scope to feeds the user has tagged with $tagId. Pinning the
-            // subscription to :userId means another user's identically-named tag
-            // can never widen the scope.
-            $qb->andWhere(sprintf(
-                'EXISTS (SELECT ts.id FROM %s ts JOIN ts.subscriptionTags tst '
-                . 'WHERE ts.feed = f AND ts.user = :userId AND tst.tag = :tagId)',
-                Subscription::class,
-            ))->setParameter('tagId', $tagId);
+        if ($criteria->tagId === null) {
+            return;
         }
 
-        return $qb;
+        // Scope to feeds the user has tagged with $tagId. Pinning the
+        // subscription to :userId means another user's identically-named tag
+        // can never widen the scope.
+        $qb->andWhere(sprintf(
+            'EXISTS (SELECT ts.id FROM %s ts JOIN ts.subscriptionTags tst '
+            . 'WHERE ts.feed = f AND ts.user = :userId AND tst.tag = :tagId)',
+            Subscription::class,
+        ))->setParameter('tagId', $criteria->tagId);
+    }
+
+    private function restrictToUnhandled(QueryBuilder $qb, DueFeedCriteria $criteria): void
+    {
+        if ($criteria->excludedFeedIds === []) {
+            return;
+        }
+
+        $qb->andWhere('f.id NOT IN (:excludedFeedIds)')
+            ->setParameter('excludedFeedIds', $criteria->excludedFeedIds);
     }
 }

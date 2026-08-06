@@ -19,6 +19,8 @@ export function refreshFailureKey(failure: RefreshFailure): string {
       return 'reader.refreshBusy';
     case 'aborted':
       return 'reader.refreshAborted';
+    case 'stalled':
+      return 'reader.refreshStalled';
     case 'http':
       return 'reader.fetchFailed';
   }

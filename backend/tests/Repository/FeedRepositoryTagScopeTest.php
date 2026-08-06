@@ -7,6 +7,7 @@ namespace App\Tests\Repository;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
+use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -43,9 +44,9 @@ final class FeedRepositoryTagScopeTest extends DbTestCase
         $ownerId = (int) $owner->getId();
         $tagId = (int) $tag->getId();
 
-        $due = $repo->findDue($now, 50, $ownerId, tagId: $tagId, force: true);
+        $due = $repo->findDue(new DueFeedCriteria($now, $ownerId, tagId: $tagId, force: true), 50);
         self::assertSame([$tagged->getId()], array_map(static fn (Feed $f): ?int => $f->getId(), $due));
-        self::assertSame(1, $repo->countDue($now, $ownerId, tagId: $tagId, force: true));
+        self::assertSame(1, $repo->countDue(new DueFeedCriteria($now, $ownerId, tagId: $tagId, force: true)));
     }
 
     public function testTagScopeExcludesAnotherUsersFeedWithTheSameTagName(): void
@@ -76,8 +77,13 @@ final class FeedRepositoryTagScopeTest extends DbTestCase
 
         // The owner scoping their own tag id must not reach the stranger's feed,
         // even though the tag shares a name.
-        $due = $repo->findDue($now, 50, (int) $owner->getId(), tagId: (int) $ownerTag->getId(), force: true);
+        $due = $repo->findDue(
+            new DueFeedCriteria($now, (int) $owner->getId(), tagId: (int) $ownerTag->getId(), force: true),
+            50,
+        );
         self::assertCount(0, $due);
-        self::assertSame(0, $repo->countDue($now, (int) $owner->getId(), tagId: (int) $ownerTag->getId(), force: true));
+        self::assertSame(0, $repo->countDue(
+            new DueFeedCriteria($now, (int) $owner->getId(), tagId: (int) $ownerTag->getId(), force: true),
+        ));
     }
 }

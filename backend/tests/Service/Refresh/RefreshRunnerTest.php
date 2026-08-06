@@ -717,6 +717,30 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(0, $report->remaining);
     }
 
+    /**
+     * A 429 is the one outcome that leaves lastFetchedAt untouched, and does so
+     * on purpose (#290): the field records when content last arrived, and the
+     * manual refresh's cooldown reads it. `remaining` must therefore not be
+     * re-derived from that field, or the throttled feed stays due forever, the
+     * report stays `partial`, and the client's poll loop hammers the very site
+     * that asked for less — 89 requests to one Reddit feed in production (#302).
+     */
+    public function testThrottledFeedIsNotCountedAsRemaining(): void
+    {
+        $feed = $this->dueFeed('https://rationing.example.com/feed');
+        $this->em->flush();
+
+        $this->fetcher->willThrow($feed->getUrl(), new FeedThrottledException('429 Too Many Requests', 60));
+
+        $userId = $this->subscriber->getId();
+        self::assertNotNull($userId);
+        $report = $this->runner()->run(RefreshRequest::forUser($userId, 60));
+
+        self::assertSame(1, $report->throttled);
+        self::assertSame(0, $report->remaining, 'a feed this run handled is not remaining');
+        self::assertSame('completed', $report->status);
+    }
+
     public function testAllDueRunPrunesOldEntries(): void
     {
         $feed = $this->dueFeed('https://a.example.com/feed');

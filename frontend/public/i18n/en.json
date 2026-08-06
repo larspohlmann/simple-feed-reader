@@ -326,6 +326,7 @@
     "fetchFailed": "Some feeds could not be fetched.",
     "refreshBusy": "Another refresh is already running. Try again in a moment.",
     "refreshAborted": "The refresh stopped early. Some feeds are still due.",
+    "refreshStalled": "The refresh stopped making progress. Some feeds are still due — try again in a few minutes.",
     "retryFetch": "Retry",
     "addFeed": "Add feed",
     "allItems": "All items",

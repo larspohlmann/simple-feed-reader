@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Refresh;
 
 use App\Entity\Feed;
+use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
 use App\Service\EntryIngestor;
 use App\Service\EntryPruner;
@@ -109,15 +110,16 @@ final class RefreshRunner
             ? $now->modify(sprintf('-%d minutes', self::COOLDOWN_MINUTES))
             : null;
 
-        $feeds = $this->feedRepository->findDue(
+        $criteria = new DueFeedCriteria(
             $now,
-            self::BATCH_LIMIT,
             $request->userId,
             $request->feedId,
             $request->tagId,
             $request->force,
             $cooldownCutoff,
         );
+
+        $feeds = $this->feedRepository->findDue($criteria, self::BATCH_LIMIT);
 
         // The deadline gates when a fetch may *start*, not when it must finish —
         // nothing cancels a fetch already in flight. The real per-response bound
@@ -142,7 +144,7 @@ final class RefreshRunner
             );
         }
 
-        return $this->resolveFaviconsAndReport($request, $feeds, $tally, $queue, $cooldownCutoff);
+        return $this->resolveFaviconsAndReport($request, $feeds, $tally, $queue, $criteria);
     }
 
     /**
@@ -164,7 +166,7 @@ final class RefreshRunner
         array $feeds,
         RefreshTally $tally,
         BudgetedFeedQueue $queue,
-        ?\DateTimeImmutable $cooldownCutoff,
+        DueFeedCriteria $criteria,
     ): RefreshReport {
         try {
             $this->resolveMissingFavicons($tally->faviconEligibleFeeds);
@@ -191,7 +193,7 @@ final class RefreshRunner
             $tally->failed,
             $tally->throttled,
             $queue->skippedCount(),
-            $this->countRemaining($request, $cooldownCutoff, $queue->skippedCount()),
+            $this->countRemaining($criteria, $queue),
             $request->prune ? $this->pruner->prune() : 0,
         );
     }
@@ -274,24 +276,23 @@ final class RefreshRunner
     }
 
     /**
-     * A single-feed scope matches on id alone — countDue ignores the schedule and
-     * would keep answering 1 even after a successful refresh, so a polling caller
-     * would never see `remaining` reach 0.
+     * What this run left undone, which is what the client polls on.
+     *
+     * The feeds the run took on are excluded by id rather than trusted to fall
+     * out of the due query on their own. A feed drops out of that query by
+     * having a fetch time written, and a 429 writes none on purpose (#290) — so
+     * without the exclusion a rationed feed stays `remaining` for ever, the
+     * report stays `partial`, and the client re-polls without pause. In
+     * production that sent 89 requests to one Reddit feed (#302).
+     *
+     * The exclusion also settles the single-feed scope, which used to need a
+     * branch of its own: that scope matches on id alone, so countDue ignored the
+     * schedule and kept answering 1 after a successful refresh. Excluded, the
+     * one feed leaves the count exactly as every other handled feed does.
      */
-    private function countRemaining(RefreshRequest $request, ?\DateTimeImmutable $cooldownCutoff, int $skipped): int
+    private function countRemaining(DueFeedCriteria $criteria, BudgetedFeedQueue $queue): int
     {
-        if (null !== $request->feedId) {
-            return $skipped;
-        }
-
-        return $this->feedRepository->countDue(
-            $this->clock->now(),
-            $request->userId,
-            $request->feedId,
-            $request->tagId,
-            $request->force,
-            $cooldownCutoff,
-        );
+        return $this->feedRepository->countDue($criteria->excluding($queue->startedFeedIds()));
     }
 
     /**
