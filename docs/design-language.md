@@ -145,6 +145,16 @@ one that must never get tighter.
 more than UI chrome does. Article headings size in `em` against it, so changing
 this one value rescales the whole article.
 
+**`overflow-wrap: anywhere` is set on `body` and inherited everywhere**
+(`src/styles/_base.scss`). Feed text is arbitrary — a title can be an
+80-character compound noun, a summary a base64 id — and at the CSS default such
+a token may not break at all, so it paints straight out of its card and off the
+screen (#292). Do not repeat the declaration in a component; two components had
+already patched themselves that way and every other block had not, which is how
+the bug survived. A surface that must hold one line says so with
+`white-space: nowrap` (the magazine kicker line, the sidebar rows), and the
+inherited rule is inert there.
+
 ### Breakpoints
 
 Three steps only. The seven values that existed before (560/720/800/820/899/900/960)

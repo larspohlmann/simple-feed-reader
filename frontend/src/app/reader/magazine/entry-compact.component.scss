@@ -45,16 +45,12 @@
   min-width: 0;
 }
 
-/* A flex row, matching the hero's kicker, so the dot, the favicon and the
-   source name space evenly. Left inline, the whitespace between the dot and
-   the favicon and the favicon's own margin gave two different gaps in the same
-   line -- 12px on one side, 4.5px on the other. */
+/* No line clamp: never truncate the title, even in this small tile — let it
+   wrap in full. Breaking inside an unbreakable word is the base stylesheet's
+   job, for every block alike (#292). */
 .title {
   margin: 0;
   color: var(--text-primary);
-
-  /* Never truncate the title, even in this small tile — let it wrap in full. */
-  overflow-wrap: anywhere;
 }
 
 .compact.read .title {
