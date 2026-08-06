@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Repository\AiProviderSettingsRepository;
 use App\Service\Ai\Crypto\SealedApiKey;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -51,7 +52,7 @@ class AiProviderSettings
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $model = null;
 
-    #[ORM\Column(nullable: true)]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $verifiedAt = null;
 
     public function __construct(User $user, string $baseUrl, SealedApiKey $sealed, string $apiKeyHint)
