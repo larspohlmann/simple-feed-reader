@@ -10,7 +10,7 @@ use App\Service\Ai\Exception\ProviderUnreachableException;
 interface ModelCatalog
 {
     /**
-     * @return list<string> the model identifiers the provider offers, sorted, never empty
+     * @return list<string> the model identifiers the provider offers, sorted, unique, never empty
      *
      * @throws CredentialsRejectedException  the provider refused the key
      * @throws ProviderUnreachableException  the provider did not answer usably

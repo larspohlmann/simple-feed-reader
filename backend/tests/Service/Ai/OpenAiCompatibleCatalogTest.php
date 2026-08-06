@@ -38,6 +38,24 @@ final class OpenAiCompatibleCatalogTest extends TestCase
         );
     }
 
+    /**
+     * An aggregating proxy in front of several backends lists the same model
+     * once per backend. The frontend tracks its dropdown options by the
+     * identifier, so a repeat reaching it breaks the rendering.
+     */
+    public function testItReturnsAnIdentifierOnlyOnce(): void
+    {
+        $catalog = $this->catalogAnswering(new MockResponse(
+            '{"data":[{"id":"gpt-4o"},{"id":"claude-sonnet"},{"id":"gpt-4o"},{"id":"gpt-4o"}]}',
+            ['response_headers' => ['content-type' => 'application/json']],
+        ));
+
+        self::assertSame(
+            ['claude-sonnet', 'gpt-4o'],
+            $catalog->listModels($this->credentials()),
+        );
+    }
+
     public function testItSendsTheKeyAsABearerToken(): void
     {
         $seen = [];

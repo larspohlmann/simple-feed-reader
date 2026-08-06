@@ -44,8 +44,6 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalog
             throw new ProviderUnreachableException('That provider offers no models.');
         }
 
-        sort($models);
-
         return $models;
     }
 
@@ -106,9 +104,14 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalog
     }
 
     /**
+     * Unique, because an aggregating proxy (LiteLLM, a gateway in front of
+     * several backends) can list the same model once per backend. The frontend
+     * tracks its options by the identifier, so a repeat renders a broken
+     * dropdown rather than a duplicated row.
+     *
      * @param array<mixed> $entries
      *
-     * @return list<string>
+     * @return list<string> sorted and free of repeats
      */
     private function identifiers(array $entries): array
     {
@@ -120,6 +123,12 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalog
             }
         }
 
-        return $models;
+        // array_unique(), not the identifiers as array keys: PHP casts a
+        // numeric-string key to an int, and a model literally named "123"
+        // would come back out of array_keys() as an integer.
+        $identifiers = array_unique($models);
+        sort($identifiers);
+
+        return $identifiers;
     }
 }
