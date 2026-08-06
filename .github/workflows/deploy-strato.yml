@@ -319,7 +319,7 @@ jobs:
           # knows the path and the release name, the server does not.
           ssh strato "bash '${DEPLOY_PATH}/releases/${RELEASE_NAME}/activate-release.sh' '${DEPLOY_PATH}' '${RELEASE_NAME}'"
 
-      # Activation deliberately checks only the two .env.local settings whose
+      # Activation deliberately checks only the three .env.local settings whose
       # absence fails silently. Everything else -- ALTCHA_HMAC_KEY, MAILER_DSN,
       # a database that refuses the connection -- surfaces only once the app
       # serves a request, and InsecureProductionConfigGuard answers 500 to
