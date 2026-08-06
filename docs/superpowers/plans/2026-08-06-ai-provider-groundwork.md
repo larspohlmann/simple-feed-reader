@@ -434,11 +434,13 @@ AI_KEY_SECRET=test-ai-key-secret-not-for-production-0123456789
 
 - [ ] **Step 8: Wire the deploy scripts**
 
-In `scripts/lib.sh:345`, append the variable to the required list:
-
-```sh
-ENV_PROD_REQUIRED='PUBLIC_URL MAILER_DSN MAIL_FROM MYSQL_ROOT_PASSWORD MYSQL_PASSWORD APP_SECRET ALTCHA_HMAC_KEY JWT_PASSPHRASE AI_KEY_SECRET'
-```
+Leave `ENV_PROD_REQUIRED` (`scripts/lib.sh:345`) **unchanged**. An earlier
+draft of this plan appended `AI_KEY_SECRET` to it; that is wrong. `prod-start.sh`
+runs `env_prod_missing` and dies on any empty required value *before* it calls
+`ensure_ai_key_secret`, so an instance upgrading from before #305 would abort at
+that check and never reach the generator — the very outage the generator exists
+to prevent. `ADMIN_SETUP_SECRET` is the precedent: machine-generated values stay
+out of that list, because there is nothing for an operator to fill in.
 
 In `scripts/lib.sh`, directly after the `ensure_admin_setup_secret` function:
 
