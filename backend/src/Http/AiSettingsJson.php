@@ -32,13 +32,24 @@ final class AiSettingsJson
             'baseUrl' => $settings?->getBaseUrl(),
             'apiKeyHint' => $settings?->getApiKeyHint(),
             'model' => $settings?->getModel(),
-            // No verifiedAt term: AiProviderSettings::chooseModel() is the only
-            // writer of `model` and stamps verifiedAt in the same call, while
-            // replaceConnection() clears `model` again. A row with a model is
-            // therefore always a verified row, so testing both would be a term
-            // that can never be false.
-            'ready' => null !== $settings && $settings->hasModel(),
+            'ready' => self::isReady($settings),
         ];
+    }
+
+    /**
+     * The one definition of "ready", named so the other responses that report
+     * it — MeJson — reach a method instead of an array key no static analysis
+     * can follow.
+     *
+     * No verifiedAt term: AiProviderSettings::chooseModel() is the only writer
+     * of `model` and stamps verifiedAt in the same call, while
+     * replaceConnection() clears `model` again. A row with a model is therefore
+     * always a verified row, so testing both would be a term that can never be
+     * false.
+     */
+    public static function isReady(?AiProviderSettings $settings): bool
+    {
+        return null !== $settings && $settings->hasModel();
     }
 
     /**
