@@ -52,13 +52,13 @@ final readonly class AiProviderConfigurator
         $settings = $this->repository->findForUser($user);
 
         if (null === $settings) {
-            $this->entityManager->persist(
-                new AiProviderSettings($user, $credentials->baseUrl, $sealed, $hint),
-            );
+            $settings = new AiProviderSettings($user, $credentials->baseUrl, $sealed, $hint);
+            $this->entityManager->persist($settings);
         } else {
             $settings->replaceConnection($credentials->baseUrl, $sealed, $hint, $this->clock->now());
         }
 
+        $user->setAiProviderSettings($settings);
         $this->entityManager->flush();
 
         return $models;
@@ -69,12 +69,12 @@ final readonly class AiProviderConfigurator
      */
     public function listModels(User $user): array
     {
-        return $this->catalog->listModels($this->credentialsFor($this->require($user)));
+        return $this->catalog->listModels($this->credentialsFor($this->requireSettings($user)));
     }
 
     public function chooseModel(User $user, string $model): void
     {
-        $settings = $this->require($user);
+        $settings = $this->requireSettings($user);
         $offered = $this->catalog->listModels($this->credentialsFor($settings));
 
         if (!\in_array($model, $offered, true)) {
@@ -94,6 +94,7 @@ final readonly class AiProviderConfigurator
         }
 
         $this->entityManager->remove($settings);
+        $user->setAiProviderSettings(null);
         $this->entityManager->flush();
     }
 
@@ -105,7 +106,7 @@ final readonly class AiProviderConfigurator
         );
     }
 
-    private function require(User $user): AiProviderSettings
+    private function requireSettings(User $user): AiProviderSettings
     {
         return $this->repository->findForUser($user)
             ?? throw new AiNotConfiguredException('This account has no AI provider configured.');

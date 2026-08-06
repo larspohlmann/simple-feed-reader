@@ -286,6 +286,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
+     * For AiProviderConfigurator only, which owns every write to the row.
+     *
+     * This is the inverse side, so Doctrine never fills it in during the
+     * request that wrote the row. Without this the same User instance would
+     * report the state it had before the write until the next request
+     * hydrated it — and MeJson reads exactly this association.
+     */
+    public function setAiProviderSettings(?AiProviderSettings $aiProviderSettings): void
+    {
+        $this->aiProviderSettings = $aiProviderSettings;
+    }
+
+    /**
      * The constructor rejects an empty email, but Doctrine hydration bypasses
      * the constructor, so the invariant is re-checked here where the security
      * layer contract (a non-empty identifier) actually depends on it.

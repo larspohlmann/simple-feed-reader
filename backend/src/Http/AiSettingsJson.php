@@ -32,7 +32,12 @@ final class AiSettingsJson
             'baseUrl' => $settings?->getBaseUrl(),
             'apiKeyHint' => $settings?->getApiKeyHint(),
             'model' => $settings?->getModel(),
-            'ready' => null !== $settings && $settings->hasModel() && null !== $settings->getVerifiedAt(),
+            // No verifiedAt term: AiProviderSettings::chooseModel() is the only
+            // writer of `model` and stamps verifiedAt in the same call, while
+            // replaceConnection() clears `model` again. A row with a model is
+            // therefore always a verified row, so testing both would be a term
+            // that can never be false.
+            'ready' => null !== $settings && $settings->hasModel(),
         ];
     }
 
