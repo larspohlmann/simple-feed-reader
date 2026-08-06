@@ -58,6 +58,22 @@ export class SearchableSelectComponent {
     () => this.options().find((option) => option.value === this.value())?.label ?? '',
   );
 
+  /** Stable id for the popup listbox, derived from `inputId` so two instances
+   * on one page never collide. */
+  readonly listboxId = computed(() => `${this.inputId()}-listbox`);
+
+  /** The `aria-activedescendant` the search input reports: null while closed
+   * or while the filter has nothing left to highlight, so a screen reader
+   * never announces a highlight that isn't there. */
+  readonly activeOptionId = computed(() => {
+    if (!this.open() || this.matches().length === 0) return null;
+    return this.optionId(this.activeIndex());
+  });
+
+  optionId(index: number): string {
+    return `${this.inputId()}-option-${index}`;
+  }
+
   toggle(): void {
     if (this.disabled()) return;
     this.open.update((wasOpen) => !wasOpen);

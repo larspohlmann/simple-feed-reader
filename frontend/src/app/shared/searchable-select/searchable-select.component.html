@@ -21,23 +21,31 @@
         class="search"
         type="text"
         autocomplete="off"
+        role="combobox"
+        aria-autocomplete="list"
         [attr.aria-label]="'searchableSelect.filter' | transloco"
         [placeholder]="'searchableSelect.filter' | transloco"
         [value]="filter()"
+        [attr.aria-expanded]="open()"
+        [attr.aria-controls]="open() ? listboxId() : null"
+        [attr.aria-activedescendant]="activeOptionId()"
         (input)="applyFilter($any($event.target).value)"
         (keydown)="onKeydown($event)"
       />
 
       @if (matches().length) {
-        <ul class="list" role="listbox">
+        <ul class="list" role="listbox" [id]="listboxId()">
           @for (option of matches(); track option.value; let i = $index) {
-            <!-- Keyboard selection goes through the search input's Enter handler
-                 (onKeydown), which reads activeIndex — these options are a mouse
-                 shortcut onto the same choose(), not a second focusable stop. -->
+            <!-- No click-handling keyboard event on the <li> itself: keyboard
+                 selection is the ARIA combobox pattern above (role="combobox"
+                 plus aria-activedescendant on the .search input tracks the
+                 highlighted option), so these options are a mouse shortcut onto
+                 the same choose(), not a second focusable stop. -->
             <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
             <li
               class="option"
               role="option"
+              [id]="optionId(i)"
               [class.active]="i === activeIndex()"
               [attr.aria-selected]="option.value === value()"
               (click)="choose(option)"

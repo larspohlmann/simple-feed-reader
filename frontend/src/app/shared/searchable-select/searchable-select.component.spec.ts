@@ -121,4 +121,100 @@ describe('SearchableSelectComponent', () => {
     open(fixture);
     expect(fixture.nativeElement.querySelector('[role="listbox"]')).toBeNull();
   });
+
+  it('does not select or throw when Enter is pressed after the highlighted option is filtered away', () => {
+    const fixture = mount();
+    open(fixture);
+    const search = fixture.nativeElement.querySelector('.search') as HTMLInputElement;
+
+    // Highlight claude-sonnet (index 2), then filter it out entirely -- a
+    // missing activeIndex reset would leave it pointing past the shrunk
+    // matches array instead of at nothing.
+    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    fixture.detectChanges();
+    type(fixture, 'nonexistent-model');
+
+    expect(() =>
+      search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' })),
+    ).not.toThrow();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.value()).toBeNull();
+  });
+
+  it('does not select or throw when Enter is pressed with zero matches from the start', () => {
+    const fixture = mount();
+    open(fixture);
+    const search = fixture.nativeElement.querySelector('.search') as HTMLInputElement;
+    type(fixture, 'nonexistent-model');
+
+    expect(() =>
+      search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' })),
+    ).not.toThrow();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.value()).toBeNull();
+  });
+
+  it('reports the highlighted option via aria-activedescendant, following the arrow keys', () => {
+    const fixture = mount();
+    open(fixture);
+    const search = fixture.nativeElement.querySelector('.search') as HTMLInputElement;
+    const options = fixture.nativeElement.querySelectorAll('[role="option"]');
+
+    expect(search.getAttribute('role')).toBe('combobox');
+    expect(search.getAttribute('aria-activedescendant')).toBe((options[0] as HTMLElement).id);
+
+    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    fixture.detectChanges();
+
+    expect(search.getAttribute('aria-activedescendant')).toBe((options[1] as HTMLElement).id);
+  });
+
+  it('has no aria-activedescendant while there is no open list to point at', () => {
+    const fixture = mount();
+    expect(fixture.nativeElement.querySelector('.search')).toBeNull();
+
+    open(fixture);
+    type(fixture, 'nonexistent-model');
+    const search = fixture.nativeElement.querySelector('.search') as HTMLInputElement;
+
+    expect(search.getAttribute('aria-activedescendant')).toBeNull();
+  });
+
+  it('points aria-controls at the open listbox', () => {
+    const fixture = mount();
+    open(fixture);
+    const search = fixture.nativeElement.querySelector('.search') as HTMLInputElement;
+    const listbox = fixture.nativeElement.querySelector('[role="listbox"]') as HTMLElement;
+
+    expect(search.getAttribute('aria-expanded')).toBe('true');
+    expect(search.getAttribute('aria-controls')).toBe(listbox.id);
+  });
+
+  it('gives two instances on one page distinct listbox and option ids', () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ imports: [provideTranslocoTesting()] });
+
+    const first = TestBed.createComponent(SearchableSelectComponent);
+    first.componentRef.setInput('options', [{ value: 'a', label: 'a' }]);
+    first.componentRef.setInput('inputId', 'model-select');
+    first.detectChanges();
+    open(first);
+
+    const second = TestBed.createComponent(SearchableSelectComponent);
+    second.componentRef.setInput('options', [{ value: 'a', label: 'a' }]);
+    second.componentRef.setInput('inputId', 'fallback-select');
+    second.detectChanges();
+    open(second);
+
+    const firstListbox = first.nativeElement.querySelector('[role="listbox"]') as HTMLElement;
+    const secondListbox = second.nativeElement.querySelector('[role="listbox"]') as HTMLElement;
+    const firstOption = first.nativeElement.querySelector('[role="option"]') as HTMLElement;
+    const secondOption = second.nativeElement.querySelector('[role="option"]') as HTMLElement;
+
+    expect(firstListbox.id).not.toBe(secondListbox.id);
+    expect(firstOption.id).not.toBe(secondOption.id);
+  });
 });
