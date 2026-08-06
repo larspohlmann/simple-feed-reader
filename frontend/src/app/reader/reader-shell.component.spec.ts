@@ -518,6 +518,34 @@ describe('ReaderShellComponent', () => {
     expect(f.nativeElement.querySelector('.empty')).not.toBeNull();
   });
 
+  // The heading names the tag, so it also carries the tag's glyph and colour —
+  // the same pair the sidebar row shows. Both come from one lookup, so the two
+  // can never describe different tags.
+  it('hands the list the selected tag, and nothing for any other selection', () => {
+    const science = { id: 7, name: 'Wissenschaft', color: '#c2410c', icon: 'science', position: 0 };
+    const f = TestBed.createComponent(ReaderShellComponent);
+    f.detectChanges();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+    ctrl.expectOne('https://api.test/api/tags').flush({ tags: [science] });
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [entry], nextCursor: null });
+    f.detectChanges();
+
+    const list = () =>
+      f.debugElement.query(By.directive(EntryListComponent))
+        .componentInstance as EntryListComponent;
+    expect(list().titleTag()).toBeNull();
+
+    qp.next(convertToParamMap({ tag: '7' }));
+    f.detectChanges();
+    ctrl.expectOne((r) => r.params.get('tag') === '7').flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    expect(list().titleTag()).toEqual(science);
+    expect(f.componentInstance.title()).toBe('Wissenschaft');
+  });
+
   it('forwards the header tap to the entry list', () => {
     const f = boot();
     const list = f.debugElement.query(By.directive(EntryListComponent))

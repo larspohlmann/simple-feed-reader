@@ -87,6 +87,7 @@
         <app-entry-list
           [layout]="layout.mode()"
           [title]="title()"
+          [titleTag]="selectedTag()"
           [entries]="entries.entries()"
           [loading]="entries.loading()"
           [loadingMore]="entries.loadingMore()"
@@ -125,6 +126,7 @@
       <app-entry-list
         [layout]="layout.mode()"
         [title]="title()"
+        [titleTag]="selectedTag()"
         [entries]="entries.entries()"
         [loading]="entries.loading()"
         [loadingMore]="entries.loadingMore()"
