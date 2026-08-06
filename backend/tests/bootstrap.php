@@ -1,10 +1,17 @@
 <?php
 
+use App\Tests\Support\WorkerIsolation;
 use Symfony\Component\Dotenv\Dotenv;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 (new Dotenv())->bootEnv(dirname(__DIR__) . '/.env');
+
+// Under a parallel runner every worker gets a TEST_TOKEN. doctrine.yaml already
+// turns that into a MySQL dbname suffix; SQLite and the cache pools need the
+// token applied here, before anything reads the environment. Must run before
+// the database is rebuilt below, which is what would otherwise be shared.
+WorkerIsolation::applyToEnvironment();
 
 if ($_SERVER['APP_DEBUG']) {
     umask(0000);
