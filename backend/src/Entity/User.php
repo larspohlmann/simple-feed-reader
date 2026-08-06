@@ -109,6 +109,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist'], orphanRemoval: true)]
     private ?Preferences $preferences = null;
 
+    #[ORM\OneToOne(mappedBy: 'user', targetEntity: AiProviderSettings::class, cascade: ['remove'])]
+    private ?AiProviderSettings $aiProviderSettings = null;
+
     public function __construct(string $email, \DateTimeImmutable $createdAt)
     {
         $email = self::normalizeEmail($email);
@@ -274,6 +277,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         }
 
         return $this->preferences;
+    }
+
+    /** Null until the account configures a provider — see AiProviderSettings. */
+    public function getAiProviderSettings(): ?AiProviderSettings
+    {
+        return $this->aiProviderSettings;
     }
 
     /**
