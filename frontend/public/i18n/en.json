@@ -425,6 +425,10 @@
     "choose": "Choose icon",
     "none": "No icon"
   },
+  "searchableSelect": {
+    "filter": "Type to filter",
+    "noMatch": "Nothing matches"
+  },
   "colorField": {
     "swatch": "Colour {{colour}}",
     "custom": "Custom colour"

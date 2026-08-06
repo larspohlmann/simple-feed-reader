@@ -425,6 +425,10 @@
     "choose": "Symbol wählen",
     "none": "Kein Symbol"
   },
+  "searchableSelect": {
+    "filter": "Zum Filtern tippen",
+    "noMatch": "Keine Treffer"
+  },
   "colorField": {
     "swatch": "Farbe {{colour}}",
     "custom": "Eigene Farbe"

@@ -1,0 +1,87 @@
+.wrap {
+  position: relative;
+  width: 100%;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.trigger.open,
+.trigger:hover {
+  border-color: var(--border-strong);
+}
+
+.trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.current {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.current.empty-value {
+  color: var(--text-muted);
+}
+
+.panel {
+  position: absolute;
+  z-index: 20;
+  inset-inline: 0;
+  margin-top: var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 24%);
+}
+
+.search {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.list {
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned popover height, not a spacing value; matches icon-picker's popover
+     cap. */
+  max-height: 220px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.option {
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.option.active,
+.option:hover {
+  background: var(--surface-1);
+}
+
+.empty {
+  margin: 0;
+  padding: var(--space-3);
+  color: var(--text-muted);
+}

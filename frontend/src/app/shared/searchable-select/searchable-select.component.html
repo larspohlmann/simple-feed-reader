@@ -1,0 +1,54 @@
+<div class="wrap" [appDismissOnOutside]="open()" (dismiss)="close()">
+  <button
+    type="button"
+    class="trigger"
+    [id]="inputId()"
+    [class.open]="open()"
+    [disabled]="disabled()"
+    aria-haspopup="listbox"
+    [attr.aria-expanded]="open()"
+    (click)="toggle()"
+  >
+    <span class="current" [class.empty-value]="!selectedLabel()">
+      {{ selectedLabel() || placeholder() }}
+    </span>
+    <app-icon class="caret" name="expand_more" size="sm" />
+  </button>
+
+  @if (open()) {
+    <div class="panel">
+      <input
+        class="search"
+        type="text"
+        autocomplete="off"
+        [attr.aria-label]="'searchableSelect.filter' | transloco"
+        [placeholder]="'searchableSelect.filter' | transloco"
+        [value]="filter()"
+        (input)="applyFilter($any($event.target).value)"
+        (keydown)="onKeydown($event)"
+      />
+
+      @if (matches().length) {
+        <ul class="list" role="listbox">
+          @for (option of matches(); track option.value; let i = $index) {
+            <!-- Keyboard selection goes through the search input's Enter handler
+                 (onKeydown), which reads activeIndex — these options are a mouse
+                 shortcut onto the same choose(), not a second focusable stop. -->
+            <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+            <li
+              class="option"
+              role="option"
+              [class.active]="i === activeIndex()"
+              [attr.aria-selected]="option.value === value()"
+              (click)="choose(option)"
+            >
+              {{ option.label }}
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="empty">{{ 'searchableSelect.noMatch' | transloco }}</p>
+      }
+    </div>
+  }
+</div>
