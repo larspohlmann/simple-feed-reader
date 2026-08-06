@@ -71,12 +71,19 @@ final readonly class ApiKeyCipher
             throw new ApiKeyUnreadableException(sprintf('Unknown key scheme version %d.', $sealed->version));
         }
 
-        $rowKey = $this->deriveRowKey($userId, $sealed->version, $this->decode($sealed->salt));
+        // Decode every field before deriving the row key: once $rowKey exists,
+        // every exit must zero it, and a decode() thrown from inside the
+        // decrypt() call's argument list would skip the memzero below.
+        $salt = $this->decode($sealed->salt);
+        $ciphertext = $this->decode($sealed->ciphertext);
+        $nonce = $this->decode($sealed->nonce);
+
+        $rowKey = $this->deriveRowKey($userId, $sealed->version, $salt);
 
         $plainApiKey = sodium_crypto_aead_xchacha20poly1305_ietf_decrypt(
-            $this->decode($sealed->ciphertext),
+            $ciphertext,
             $this->binding($userId, $sealed->version),
-            $this->decode($sealed->nonce),
+            $nonce,
             $rowKey,
         );
 

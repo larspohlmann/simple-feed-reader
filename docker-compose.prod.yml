@@ -78,6 +78,12 @@ services:
       # volume makes them survive container recreates.
       CACHE_DIRECTORY: /app/var/cache-pools/app
       ADMIN_SETUP_SECRET: ${ADMIN_SETUP_SECRET:-}
+      # Permissive, not `:?`: prod-start.sh's ensure_ai_key_secret generates
+      # this value AFTER compose interpolation runs, so an instance upgrading
+      # from before #305 has no such variable yet at this point. A `:?` guard
+      # would fail compose right here on that instance -- exactly the outage
+      # ensure_ai_key_secret exists to prevent.
+      AI_KEY_SECRET: ${AI_KEY_SECRET:-}
       MAINTENANCE_TOKEN: ${MAINTENANCE_TOKEN:-}
       GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
       GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
