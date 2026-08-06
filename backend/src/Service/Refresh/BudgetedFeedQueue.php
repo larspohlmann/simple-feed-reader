@@ -20,7 +20,8 @@ final class BudgetedFeedQueue
 {
     private const int SAFETY_MARGIN_SECONDS = 10;
 
-    private int $started = 0;
+    /** @var list<int> */
+    private array $startedFeedIds = [];
 
     /** @param list<Feed> $feeds */
     public function __construct(
@@ -38,7 +39,7 @@ final class BudgetedFeedQueue
                 return;
             }
 
-            $this->started++;
+            $this->startedFeedIds[] = (int) $feed->getId();
 
             yield (int) $feed->getId() => new FetchTicket(
                 $feed->getUrl(),
@@ -48,14 +49,27 @@ final class BudgetedFeedQueue
         }
     }
 
+    /**
+     * The feeds this run took on. They are what the sweep must NOT count as
+     * still due afterwards: an outcome that writes no fetch time — a 429 does
+     * exactly that — would otherwise keep its feed in `remaining` forever and
+     * spin the client's poll loop (#302).
+     *
+     * @return list<int>
+     */
+    public function startedFeedIds(): array
+    {
+        return $this->startedFeedIds;
+    }
+
     public function startedCount(): int
     {
-        return $this->started;
+        return \count($this->startedFeedIds);
     }
 
     public function skippedCount(): int
     {
-        return \count($this->feeds) - $this->started;
+        return \count($this->feeds) - $this->startedCount();
     }
 
     /**
@@ -66,7 +80,7 @@ final class BudgetedFeedQueue
      */
     private function mayStartAnother(): bool
     {
-        if (0 === $this->started) {
+        if ([] === $this->startedFeedIds) {
             return true;
         }
 

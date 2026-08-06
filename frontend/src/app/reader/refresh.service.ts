@@ -18,6 +18,7 @@ const MAX_BUSY_RETRIES = 5;
 export type RefreshFailure =
   | { kind: 'busy' } // another refresh holds the lock, and outlasted our retries
   | { kind: 'aborted' } // the sweep stopped mid-way; feeds are still due
+  | { kind: 'stalled' } // the sweep kept reporting the same feeds as still due
   | { kind: 'http'; problem: Problem };
 
 @Injectable({ providedIn: 'root' })
@@ -35,6 +36,10 @@ export class RefreshService {
    *  staring at an empty list for the whole sweep. */
   readonly slice = signal(0);
 
+  /** The `remaining` of the previous slice, so the loop can tell progress from
+   *  a standstill. Reset per run; only one run is ever in flight. */
+  private previousRemaining = Number.POSITIVE_INFINITY;
+
   readonly progress = computed(() => {
     const r = this.report();
     if (!r || r.total <= 0) return 0;
@@ -50,6 +55,7 @@ export class RefreshService {
     this.report.set(null);
     this.failure.set(null);
     this.slice.set(0);
+    this.previousRemaining = Number.POSITIVE_INFINITY;
     this.step(0, onDone, scope);
   }
 
@@ -59,6 +65,17 @@ export class RefreshService {
         this.report.set(r);
         this.slice.update((n) => n + 1);
         if (r.status === 'partial' && r.remaining > 0) {
+          // A slice that leaves as many feeds due as the one before it did no
+          // work the next slice would undo. Asking again is then not a poll but
+          // a hammer: a feed whose outcome writes no fetch time never leaves the
+          // due set, and this loop sent 89 requests to one rationed Reddit feed
+          // in production (#302). The server owes us progress; without it, stop
+          // and say so.
+          if (r.remaining >= this.previousRemaining) {
+            this.stopWith({ kind: 'stalled' }, onDone);
+            return;
+          }
+          this.previousRemaining = r.remaining;
           this.step(0, onDone, scope);
         } else if (r.status === 'busy') {
           this.backOffWhileBusy(busyRetries, onDone, scope);

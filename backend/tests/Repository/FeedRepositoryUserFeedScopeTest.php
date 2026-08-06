@@ -7,6 +7,7 @@ namespace App\Tests\Repository;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Enum\FeedStatus;
+use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -34,13 +35,21 @@ final class FeedRepositoryUserFeedScopeTest extends DbTestCase
         $now = new \DateTimeImmutable('2026-06-01T00:00:00Z');
 
         // Owner CAN reach the feed by id.
-        $ownerResult = $repo->findDue($now, 50, (int) $owner->getId(), (int) $feed->getId(), force: true);
+        $ownerResult = $repo->findDue(
+            new DueFeedCriteria($now, (int) $owner->getId(), (int) $feed->getId(), force: true),
+            50,
+        );
         self::assertCount(1, $ownerResult);
 
         // Stranger CANNOT reach it by id — the subscription EXISTS clause must still apply.
-        $strangerResult = $repo->findDue($now, 50, (int) $stranger->getId(), (int) $feed->getId(), force: true);
+        $strangerResult = $repo->findDue(
+            new DueFeedCriteria($now, (int) $stranger->getId(), (int) $feed->getId(), force: true),
+            50,
+        );
         self::assertCount(0, $strangerResult);
-        self::assertSame(0, $repo->countDue($now, (int) $stranger->getId(), (int) $feed->getId(), force: true));
+        self::assertSame(0, $repo->countDue(
+            new DueFeedCriteria($now, (int) $stranger->getId(), (int) $feed->getId(), force: true),
+        ));
     }
 
     public function testOwnerCanStillRetryAGoneFeedById(): void
@@ -66,11 +75,17 @@ final class FeedRepositoryUserFeedScopeTest extends DbTestCase
         // Manual per-feed retry must ignore the "gone" filter: the owner can still
         // reach a dead feed by id. This guards against a refactor hoisting the
         // `status != gone` clause out of the else-branch.
-        $ownerResult = $repo->findDue($now, 50, (int) $owner->getId(), (int) $feed->getId(), force: true);
+        $ownerResult = $repo->findDue(
+            new DueFeedCriteria($now, (int) $owner->getId(), (int) $feed->getId(), force: true),
+            50,
+        );
         self::assertCount(1, $ownerResult);
 
         // The subscription scope still applies to the gone-feed retry path.
-        $strangerResult = $repo->findDue($now, 50, (int) $stranger->getId(), (int) $feed->getId(), force: true);
+        $strangerResult = $repo->findDue(
+            new DueFeedCriteria($now, (int) $stranger->getId(), (int) $feed->getId(), force: true),
+            50,
+        );
         self::assertCount(0, $strangerResult);
     }
 }

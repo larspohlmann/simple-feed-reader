@@ -47,6 +47,44 @@ describe('RefreshService', () => {
     expect(done).toHaveBeenCalledTimes(1);
   });
 
+  // A backend that reports the same `remaining` twice is making no progress.
+  // Polling on regardless is what sent 89 requests to one rationed Reddit feed
+  // in production, because a throttled feed writes no fetch time and so never
+  // left the due set (#302). The loop must stop rather than hammer.
+  it('stops when remaining does not decrease', () => {
+    const done = jest.fn();
+    svc.run(done);
+
+    ctrl
+      .expectOne('https://api.test/api/refresh')
+      .flush(report({ status: 'partial', remaining: 1 }));
+    ctrl
+      .expectOne('https://api.test/api/refresh')
+      .flush(report({ status: 'partial', remaining: 1 }));
+
+    ctrl.verify();
+    expect(svc.running()).toBe(false);
+    expect(svc.failure()).toEqual({ kind: 'stalled' });
+    expect(done).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps looping while remaining actually falls', () => {
+    svc.run();
+
+    ctrl
+      .expectOne('https://api.test/api/refresh')
+      .flush(report({ status: 'partial', remaining: 3 }));
+    ctrl
+      .expectOne('https://api.test/api/refresh')
+      .flush(report({ status: 'partial', remaining: 2 }));
+    ctrl
+      .expectOne('https://api.test/api/refresh')
+      .flush(report({ status: 'completed', remaining: 0 }));
+
+    expect(svc.running()).toBe(false);
+    expect(svc.failure()).toBeNull();
+  });
+
   it('emits a slice tick for every partial report, not just at the end', () => {
     const ticks: number[] = [];
     TestBed.runInInjectionContext(() => {
