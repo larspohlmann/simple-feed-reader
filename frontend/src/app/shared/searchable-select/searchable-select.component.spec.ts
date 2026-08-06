@@ -193,6 +193,20 @@ describe('SearchableSelectComponent', () => {
     expect(search.getAttribute('aria-controls')).toBe(listbox.id);
   });
 
+  it('never points aria-controls at an element that is not actually rendered', () => {
+    const fixture = mount();
+    open(fixture);
+    type(fixture, 'nonexistent-model');
+    const search = fixture.nativeElement.querySelector('.search') as HTMLInputElement;
+
+    const controlledId = search.getAttribute('aria-controls');
+    expect(controlledId).not.toBeNull();
+
+    const controlledElement = fixture.nativeElement.querySelector(`#${controlledId}`);
+    expect(controlledElement).not.toBeNull();
+    expect(controlledElement.getAttribute('role')).toBe('listbox');
+  });
+
   it('gives two instances on one page distinct listbox and option ids', () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({ imports: [provideTranslocoTesting()] });

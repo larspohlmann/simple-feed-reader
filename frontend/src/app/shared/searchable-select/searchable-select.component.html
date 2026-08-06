@@ -33,8 +33,14 @@
         (keydown)="onKeydown($event)"
       />
 
-      @if (matches().length) {
-        <ul class="list" role="listbox" [id]="listboxId()">
+      <!-- Always rendered while open, matches or not: aria-controls on the
+           search input names this element's id unconditionally, and a
+           listbox that vanishes in the empty state would leave that
+           reference dangling at nothing (#305 review). The "no match" state
+           is a role="presentation" row inside it, not a second element,
+           precisely so aria-controls never has to choose between two ids. -->
+      <ul class="list" role="listbox" [id]="listboxId()">
+        @if (matches().length) {
           @for (option of matches(); track option.value; let i = $index) {
             <!-- No click-handling keyboard event on the <li> itself: keyboard
                  selection is the ARIA combobox pattern above (role="combobox"
@@ -53,10 +59,12 @@
               {{ option.label }}
             </li>
           }
-        </ul>
-      } @else {
-        <p class="empty">{{ 'searchableSelect.noMatch' | transloco }}</p>
-      }
+        } @else {
+          <!-- role="presentation" keeps this out of the accessibility tree as
+               a selectable option -- it is a message, not a choice. -->
+          <li class="empty" role="presentation">{{ 'searchableSelect.noMatch' | transloco }}</li>
+        }
+      </ul>
     </div>
   }
 </div>
