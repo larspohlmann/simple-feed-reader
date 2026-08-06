@@ -55,12 +55,21 @@ class AiProviderSettings
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $verifiedAt = null;
 
-    public function __construct(User $user, string $baseUrl, SealedApiKey $sealed, string $apiKeyHint)
-    {
+    /**
+     * A row only ever exists because a live call to the provider succeeded, so
+     * the first save is a verification like every later one and stamps
+     * $verifiedAt too. Delegating to replaceConnection() keeps the two paths
+     * from drifting: whatever a replacement writes, a creation writes.
+     */
+    public function __construct(
+        User $user,
+        string $baseUrl,
+        SealedApiKey $sealed,
+        string $apiKeyHint,
+        \DateTimeImmutable $verifiedAt,
+    ) {
         $this->user = $user;
-        $this->baseUrl = $baseUrl;
-        $this->apiKeyHint = $apiKeyHint;
-        $this->applySealedKey($sealed);
+        $this->replaceConnection($baseUrl, $sealed, $apiKeyHint, $verifiedAt);
     }
 
     public function getId(): ?int

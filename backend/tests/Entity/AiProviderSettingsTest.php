@@ -23,6 +23,7 @@ final class AiProviderSettingsTest extends TestCase
             'https://api.example.test/v1',
             $this->sealed(),
             'cdef',
+            new \DateTimeImmutable('2026-08-06 09:30:00'),
         );
     }
 
@@ -32,6 +33,14 @@ final class AiProviderSettingsTest extends TestCase
 
         self::assertFalse($settings->hasModel());
         self::assertNull($settings->getModel());
+    }
+
+    public function testANewRowRecordsTheVerificationThatCreatedIt(): void
+    {
+        self::assertEquals(
+            new \DateTimeImmutable('2026-08-06 09:30:00'),
+            $this->settings()->getVerifiedAt(),
+        );
     }
 
     public function testChoosingAModelStampsTheVerificationTime(): void

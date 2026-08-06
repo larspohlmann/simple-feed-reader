@@ -87,6 +87,22 @@ final class AiProviderConfiguratorTest extends DbTestCase
         self::assertStringNotContainsString('sk-abcdef1234', $ciphertext);
     }
 
+    public function testAFirstSaveStampsTheVerificationTime(): void
+    {
+        $configurator = $this->configurator(['gpt-4o']);
+        $user = $this->user('cfg-verified@example.test');
+
+        $configurator->saveConnection($user, 'https://api.example.test/v1', 'sk-abcdef1234');
+
+        // clear() first: the assertion has to read the stamped column back out
+        // of the database, not off the entity this test already holds.
+        $this->em->clear();
+        $verifiedAt = $configurator->settingsFor($this->reload('cfg-verified@example.test'))?->getVerifiedAt();
+        self::assertNotNull($verifiedAt);
+        self::assertSame('UTC', $verifiedAt->getTimezone()->getName());
+        self::assertLessThan(60, abs($verifiedAt->getTimestamp() - time()));
+    }
+
     public function testARejectedKeyWritesNothing(): void
     {
         $configurator = $this->configurator(new CredentialsRejectedException('refused'));

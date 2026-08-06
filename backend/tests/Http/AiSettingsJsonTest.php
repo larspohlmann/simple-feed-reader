@@ -19,6 +19,7 @@ final class AiSettingsJsonTest extends TestCase
             'https://api.example.test/v1',
             new SealedApiKey('Y2lwaGVy', 'bm9uY2U=', 'c2FsdA==', 1),
             'abcd',
+            new \DateTimeImmutable('2026-08-06 09:30:00'),
         );
 
         if (null !== $model) {
