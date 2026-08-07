@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\AiProviderSettings;
 use App\Entity\User;
+use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -62,6 +64,29 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         ], \JSON_THROW_ON_ERROR);
     }
 
+    /**
+     * Gives the account a verified AI provider row with a model context
+     * window, without going through the connection endpoints — the only way
+     * to exercise `contextWindowSource: 'provider'` in the resolver.
+     */
+    private function seedProviderContextWindow(User $user, int $contextWindow): void
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $cipher = self::getContainer()->get(ApiKeyCipher::class);
+        self::assertInstanceOf(ApiKeyCipher::class, $cipher);
+
+        $userId = $user->getId();
+        self::assertNotNull($userId);
+        $sealed = $cipher->seal($userId, 'sk-throwaway1234');
+        $now = new \DateTimeImmutable('2026-08-07 09:00:00');
+
+        $settings = new AiProviderSettings($user, 'https://api.example.test/v1', $sealed, '1234', $now);
+        $em->persist($settings);
+        $settings->chooseModel('m', $now, $contextWindow);
+        $em->flush();
+    }
+
     public function testAnUnconfiguredAccountReportsAllDefaults(): void
     {
         $client = static::createClient();
@@ -88,6 +113,21 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         self::assertNull($payload['contextWindowOverride']);
         self::assertSame('fallback', $payload['contextWindowSource']);
         self::assertFalse($payload['debugEnabled']);
+    }
+
+    public function testAProviderContextWindowIsReportedAsTheEffectiveValueWithNoOverride(): void
+    {
+        $client = static::createClient();
+        [$headers, $user] = $this->auth('recsettings-provider@example.test');
+        $this->seedProviderContextWindow($user, 98304);
+
+        $client->request('GET', self::URI, server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client);
+        self::assertSame(98304, $payload['contextWindow']);
+        self::assertNull($payload['contextWindowOverride']);
+        self::assertSame('provider', $payload['contextWindowSource']);
     }
 
     public function testTheEndpointRefusesAnAnonymousCaller(): void
@@ -153,6 +193,84 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         self::assertSame('validation_error', $payload['type']);
         self::assertIsArray($payload['errors']);
         self::assertArrayHasKey('favoritesCap', $payload['errors']);
+    }
+
+    /**
+     * These three bounds are load-bearing rather than cosmetic: zero picks
+     * makes a run meaningless, a smaller candidate pool degrades
+     * recommendations silently, and a context window below 4096 breaks the
+     * downstream prompt-budgeting maths. The maxima and the other minima are
+     * UI ceilings with no failure mode and are deliberately not swept here.
+     *
+     * @return iterable<string, array{string, int|null}>
+     */
+    public static function rejectedLoadBearingBounds(): iterable
+    {
+        yield 'picksLimit below its floor of 1' => ['picksLimit', 0];
+        yield 'candidatePoolSize below its floor of 10' => ['candidatePoolSize', 9];
+        yield 'contextWindow below its floor of 4096' => ['contextWindow', 4095];
+    }
+
+    #[DataProvider('rejectedLoadBearingBounds')]
+    public function testARejectedLoadBearingBoundIsUnprocessable(string $field, int $rejectedValue): void
+    {
+        $client = static::createClient();
+        [$headers] = $this->auth('recsettings-bound-' . strtolower($field) . '@example.test');
+
+        $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        $body[$field] = $rejectedValue;
+
+        $client->request(
+            'PUT',
+            self::URI,
+            server: array_merge($headers, ['CONTENT_TYPE' => 'application/json']),
+            content: json_encode($body, \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(422);
+        $payload = $this->payload($client);
+        self::assertSame('validation_error', $payload['type']);
+        self::assertIsArray($payload['errors']);
+        self::assertArrayHasKey($field, $payload['errors']);
+    }
+
+    public function testClearingAContextWindowOverrideFallsBackToTheProvider(): void
+    {
+        $client = static::createClient();
+        [$headers, $user] = $this->auth('recsettings-clear-override@example.test');
+        $this->seedProviderContextWindow($user, 98304);
+
+        // First set a user override.
+        $client->request(
+            'PUT',
+            self::URI,
+            server: array_merge($headers, ['CONTENT_TYPE' => 'application/json']),
+            content: $this->fullPayloadJson(),
+        );
+        self::assertResponseIsSuccessful();
+        self::assertSame('user', $this->payload($client)['contextWindowSource']);
+
+        // Then clear it.
+        $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        $body['contextWindow'] = null;
+
+        $client->request(
+            'PUT',
+            self::URI,
+            server: array_merge($headers, ['CONTENT_TYPE' => 'application/json']),
+            content: json_encode($body, \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseIsSuccessful();
+
+        $client->request('GET', self::URI, server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client);
+        self::assertSame(98304, $payload['contextWindow']);
+        self::assertNull($payload['contextWindowOverride']);
+        self::assertSame('provider', $payload['contextWindowSource']);
     }
 
     /**
