@@ -194,6 +194,13 @@ final class RecommendationRunAdvancer
         $linesById = $this->candidateLoader->linesForIds($userId, $this->uniqueWinnerIds($winners));
         $validIds = array_keys($linesById);
 
+        if ([] === $validIds) {
+            // Every winning entry was pruned since its batch ran: there is
+            // nothing left to merge, so this is progress, not failure --
+            // mirrors providerTick's own all-pruned short-circuit.
+            return $this->finalize($run, []);
+        }
+
         $effectiveSettings = $this->settingsResolver->forUser($user);
         $messages = $this->mergeMessagesFor($run, $winners, $linesById, $effectiveSettings);
 

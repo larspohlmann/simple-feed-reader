@@ -543,6 +543,48 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ));
     }
 
+    /**
+     * Mirrors providerTick's all-pruned short-circuit (#308 final review,
+     * Minor 4): if every winning entry from both batches is gone by the
+     * time the merge runs, there is nothing to ask the model to rank, so
+     * this is progress, not a call the model would inevitably fail.
+     */
+    public function testMergeTickWithAllWinnersPrunedFinalizesWithoutAProviderCall(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startAndSnapshot();
+        $firstBatch = $run->getCandidateBatches()[0];
+        $secondBatch = $run->getCandidateBatches()[1];
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'reason' => 'from batch one']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $secondBatch[0], 'reason' => 'from batch two']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $this->em->clear();
+        self::assertTrue($this->activeRun()->progress()->isMergePhase);
+
+        foreach ([$firstBatch[0], $secondBatch[0]] as $winnerId) {
+            $entry = $this->em->getRepository(Entry::class)->find($winnerId);
+            self::assertNotNull($entry);
+            $this->em->remove($entry);
+        }
+        $this->em->flush();
+        $this->em->clear();
+
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame('completed', $report->status);
+        self::assertCount(2, $this->stubChatClient()->calls());
+        $this->em->clear();
+        self::assertCount(0, $this->recommendationItems($run));
+    }
+
     public function testMergeRespectsThePerBatchCap(): void
     {
         $this->seedMultiBatchFixture(picksLimit: 4, entryCount: 30);
