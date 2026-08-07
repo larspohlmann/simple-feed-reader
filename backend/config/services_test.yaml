@@ -340,3 +340,12 @@ services:
     App\Service\Recommendation\RecommendationRunAdvancer:
         autowire: true
         public: true
+
+    # Public so tests can drive poll()/current() directly against the real
+    # advancer/repository/presence graph, the same seam RecommendationRun
+    # AdvancerTest uses on advance() above -- useful for #311's worker-side
+    # tests still to come on this branch, which have no HTTP route to go
+    # through at all.
+    App\Service\Recommendation\RecommendationPollDriver:
+        autowire: true
+        public: true

@@ -9,16 +9,21 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Entity\WorkerHeartbeat;
+use App\Repository\WorkerHeartbeatRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Worker\WorkerPresence;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
+use Psr\Clock\ClockInterface;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -117,6 +122,41 @@ final class RecommendationRunControllerTest extends WebTestCase
         return $client;
     }
 
+    /** @return array{0: array<string,string>, 1: User} */
+    private function authWithReadyAi(string $email): array
+    {
+        [$headers, $user] = $this->auth($email);
+        $this->seedReadyAiSettings($user);
+
+        return [$headers, $user];
+    }
+
+    /** @param array<string,string> $headers */
+    private function startRun(KernelBrowser $client, array $headers): void
+    {
+        $client->request('POST', '/api/recommendations/runs', server: $headers);
+        self::assertResponseIsSuccessful();
+    }
+
+    /**
+     * Makes the #311 worker's heartbeat fresh by touching it through the real
+     * repository with the container's own clock, exactly like the poll
+     * driver reads it — a MockClock stand-in here would prove nothing about
+     * the wiring the request path actually uses.
+     */
+    private function touchWorkerHeartbeatNow(): void
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        /** @var WorkerHeartbeatRepository $repository */
+        $repository = $em->getRepository(WorkerHeartbeat::class);
+
+        $clock = self::getContainer()->get(ClockInterface::class);
+        self::assertInstanceOf(ClockInterface::class, $clock);
+
+        $repository->touch(WorkerPresence::RECOMMENDATION_SWEEP, $clock->now());
+    }
+
     /** @return array<string, mixed> */
     private function payload(Response $response): array
     {
@@ -157,7 +197,7 @@ final class RecommendationRunControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(
-            ['status' => 'pending', 'batchesTotal' => null, 'batchesDone' => 0, 'error' => null],
+            ['status' => 'pending', 'batchesTotal' => null, 'batchesDone' => 0, 'error' => null, 'background' => false],
             $this->payload($client->getResponse()),
         );
     }
@@ -207,9 +247,79 @@ final class RecommendationRunControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(
-            ['status' => 'none', 'batchesTotal' => null, 'batchesDone' => 0, 'error' => null],
+            ['status' => 'none', 'batchesTotal' => null, 'batchesDone' => 0, 'error' => null, 'background' => false],
             $this->payload($client->getResponse()),
         );
+    }
+
+    /**
+     * #311's arbitration: with a fresh worker heartbeat in place, a tick
+     * becomes a pure status read instead of doing the worker's job — the run
+     * stays pending and the provider is never called.
+     */
+    public function testTickDefersToAFreshWorkerHeartbeat(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers, $user] = $this->authWithReadyAi('defer@example.test');
+        $this->seedOneCandidateEntry($user);
+        $this->startRun($client, $headers);
+        $this->touchWorkerHeartbeatNow();
+
+        $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $report = $this->payload($client->getResponse());
+        self::assertSame('pending', $report['status']);
+        self::assertTrue($report['background']);
+        self::assertSame([], $this->stubChatClient()->calls());
+    }
+
+    /**
+     * Without a fresh heartbeat, the #308 poll behaviour applies untouched:
+     * the tick snapshots the run itself and reports it as foreground work.
+     */
+    public function testTickAdvancesWhenTheHeartbeatIsStale(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers, $user] = $this->authWithReadyAi('stale-heartbeat@example.test');
+        $this->seedOneCandidateEntry($user);
+        $this->startRun($client, $headers);
+
+        $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $report = $this->payload($client->getResponse());
+        self::assertSame('running', $report['status']);
+        self::assertFalse($report['background']);
+    }
+
+    public function testCurrentReportsBackgroundWhenTheWorkerIsAlive(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers] = $this->authWithReadyAi('current-background@example.test');
+        $this->startRun($client, $headers);
+        $this->touchWorkerHeartbeatNow();
+
+        $client->request('GET', '/api/recommendations/runs/current', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertTrue($this->payload($client->getResponse())['background']);
+    }
+
+    public function testCurrentReportsForegroundWhenNoWorkerIsAlive(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers] = $this->authWithReadyAi('current-foreground@example.test');
+        $this->startRun($client, $headers);
+
+        $client->request('GET', '/api/recommendations/runs/current', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertFalse($this->payload($client->getResponse())['background']);
     }
 
     /**

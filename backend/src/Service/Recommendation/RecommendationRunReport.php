@@ -22,6 +22,7 @@ final readonly class RecommendationRunReport
         public ?int $batchesTotal,
         public int $batchesDone,
         public ?string $error,
+        public bool $background = false,
     ) {
     }
 
@@ -43,7 +44,16 @@ final readonly class RecommendationRunReport
     }
 
     /**
-     * @return array{status: string, batchesTotal: ?int, batchesDone: int, error: ?string}
+     * The #311 poll driver's marker that a fresh worker heartbeat made this
+     * report a pure status read rather than a tick that just ran.
+     */
+    public function inBackground(): self
+    {
+        return new self($this->status, $this->batchesTotal, $this->batchesDone, $this->error, true);
+    }
+
+    /**
+     * @return array{status: string, batchesTotal: ?int, batchesDone: int, error: ?string, background: bool}
      */
     public function toArray(): array
     {
@@ -52,6 +62,7 @@ final readonly class RecommendationRunReport
             'batchesTotal' => $this->batchesTotal,
             'batchesDone' => $this->batchesDone,
             'error' => $this->error,
+            'background' => $this->background,
         ];
     }
 }
