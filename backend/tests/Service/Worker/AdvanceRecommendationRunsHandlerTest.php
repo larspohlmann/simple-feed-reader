@@ -114,12 +114,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $user = $this->user('unconfigured@example.test');
         $this->seedSingleBatchFixture($user);
         $this->startAndSnapshot($user);
-
-        $settings = $this->em->getRepository(AiProviderSettings::class)->findOneBy(['user' => $user]);
-        self::assertNotNull($settings);
-        $this->em->remove($settings);
-        $this->em->flush();
-        $this->em->clear();
+        $this->deleteAiSettingsFor($user);
 
         $this->handler()->__invoke(new AdvanceRecommendationRuns());
 
@@ -128,6 +123,73 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         self::assertNotNull($failed);
         self::assertSame(RecommendationRun::STATUS_FAILED, $failed->getStatus());
         self::assertSame('The AI provider is no longer configured.', $failed->getError());
+    }
+
+    /**
+     * Fix round 1 (#311 review): a run that never reached its first snapshot
+     * is still PENDING, not RUNNING, when its AI settings row disappears
+     * (DELETE /api/me/ai has no "is there an active run" guard). Unlike
+     * every test above, this one deliberately skips startAndSnapshot() so
+     * the run stays PENDING going into the firing that removes the row.
+     */
+    public function testPendingRunLosingConfigurationBeforeItsFirstSnapshotIsFailed(): void
+    {
+        $user = $this->user('never-snapshotted@example.test');
+        $this->seedSingleBatchFixture($user);
+        $this->starter()->start($user);
+        self::assertSame(RecommendationRun::STATUS_PENDING, $this->activeRun($user)->getStatus());
+
+        $this->deleteAiSettingsFor($user);
+
+        $this->handler()->__invoke(new AdvanceRecommendationRuns());
+
+        $this->em->clear();
+        $failed = $this->runs()->findLatestForUser($user);
+        self::assertNotNull($failed);
+        self::assertSame(RecommendationRun::STATUS_FAILED, $failed->getStatus());
+        self::assertSame('The AI provider is no longer configured.', $failed->getError());
+    }
+
+    /**
+     * Fix round 1 (#311 review): the same PENDING-loses-its-settings race as
+     * above, but with a second, healthy user's run sorted right after it.
+     * Before the fix, the first run's LogicException (from fail() guarding
+     * RUNNING) escaped __invoke() entirely and the second user's run was
+     * never even attempted in this firing.
+     */
+    public function testFairnessWhenAPendingRunFailsBeforeItsFirstSnapshot(): void
+    {
+        $strugglingUser = $this->user('never-snapshotted-struggling@example.test');
+        $this->seedSingleBatchFixture($strugglingUser);
+        $this->starter()->start($strugglingUser);
+        self::assertSame(RecommendationRun::STATUS_PENDING, $this->activeRun($strugglingUser)->getStatus());
+        $this->deleteAiSettingsFor($strugglingUser);
+
+        $healthyUser = $this->user('healthy-after-pending-failure@example.test');
+        $this->seedSingleBatchFixture($healthyUser);
+        $healthyRun = $this->startAndSnapshot($healthyUser);
+        $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
+
+        $this->handler()->__invoke(new AdvanceRecommendationRuns());
+
+        $this->em->clear();
+        $failed = $this->runs()->findLatestForUser($strugglingUser);
+        self::assertNotNull($failed);
+        self::assertSame(RecommendationRun::STATUS_FAILED, $failed->getStatus());
+
+        $advanced = $this->runs()->findLatestForUser($healthyUser);
+        self::assertNotNull($advanced);
+        self::assertSame(RecommendationRun::STATUS_COMPLETED, $advanced->getStatus());
+        self::assertNotCount(0, $this->recommendationItems($advanced));
+    }
+
+    private function deleteAiSettingsFor(User $user): void
+    {
+        $settings = $this->em->getRepository(AiProviderSettings::class)->findOneBy(['user' => $user]);
+        self::assertNotNull($settings);
+        $this->em->remove($settings);
+        $this->em->flush();
+        $this->em->clear();
     }
 
     /**

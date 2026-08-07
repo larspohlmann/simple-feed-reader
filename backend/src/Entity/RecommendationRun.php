@@ -211,9 +211,15 @@ class RecommendationRun
         $this->transportFailures = 0;
     }
 
+    /**
+     * Failing is reachable from PENDING as well as RUNNING: a run whose
+     * account loses its AI configuration before its very first snapshot
+     * never reaches RUNNING at all, and that must still end in a terminal
+     * state rather than being stuck retried forever (#311).
+     */
     public function fail(string $error, \DateTimeImmutable $when): void
     {
-        $this->guardStatus(self::STATUS_RUNNING, 'fail');
+        $this->guardStatusOneOf([self::STATUS_PENDING, self::STATUS_RUNNING], 'fail');
 
         $this->status = self::STATUS_FAILED;
         $this->error = $error;
@@ -233,7 +239,15 @@ class RecommendationRun
 
     private function guardStatus(string $requiredStatus, string $transition): void
     {
-        if ($this->status !== $requiredStatus) {
+        $this->guardStatusOneOf([$requiredStatus], $transition);
+    }
+
+    /**
+     * @param list<string> $allowedStatuses
+     */
+    private function guardStatusOneOf(array $allowedStatuses, string $transition): void
+    {
+        if (!\in_array($this->status, $allowedStatuses, true)) {
             throw new \LogicException(sprintf(
                 'Cannot %s a recommendation run from status "%s".',
                 $transition,

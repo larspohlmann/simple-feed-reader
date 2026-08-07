@@ -75,6 +75,16 @@ final readonly class AdvanceRecommendationRunsHandler
                 'runId' => $run->getId(),
                 'exception' => $e,
             ]);
+        } catch (\Throwable $e) {
+            // The floor beneath the typed cases above: an exception this
+            // handler did not anticipate must still never abort the firing
+            // for every run sorted after this one (#311 fix round 1). Unlike
+            // the typed cases, nothing here already recorded the failure
+            // anywhere else, so this is logged at error level.
+            $this->logger->error('Recommendation sweep: unexpected failure advancing a run.', [
+                'runId' => $run->getId(),
+                'exception' => $e,
+            ]);
         }
     }
 }
