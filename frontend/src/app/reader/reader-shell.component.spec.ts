@@ -29,6 +29,7 @@ import { ReaderHeaderComponent } from './header/reader-header.component';
 import { RefreshService } from './refresh.service';
 import { LayoutService } from './layout.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
+import { RecommendationsService } from './recommendations.service';
 
 describe('ReaderShellComponent', () => {
   let ctrl: HttpTestingController;
@@ -105,6 +106,11 @@ describe('ReaderShellComponent', () => {
     ctrl
       .expectOne((r) => r.url === 'https://api.test/api/entries')
       .flush({ entries: [{ ...entry, ...entryOverride }], nextCursor: null });
+    // resume() fires on init to pick up a run left in flight by an earlier
+    // session; 'none' means there is nothing to resume.
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/current')
+      .flush({ status: 'none', batchesTotal: null, batchesDone: 0, error: null });
     f.detectChanges();
     return f;
   }
@@ -139,6 +145,9 @@ describe('ReaderShellComponent', () => {
     ctrl
       .expectOne((r) => r.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/current')
+      .flush({ status: 'none', batchesTotal: null, batchesDone: 0, error: null });
     f.detectChanges();
     return f;
   }
@@ -637,6 +646,42 @@ describe('ReaderShellComponent', () => {
     expect(f.nativeElement.querySelector('.empty')).not.toBeNull();
   });
 
+  it('loads the for-you view and titles the list for it', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ view: 'for-you' }));
+    f.detectChanges();
+    const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
+    expect(req.request.params.get('view')).toBe('for-you');
+    req.flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    expect(f.componentInstance.title()).toBe('reader.forYou');
+  });
+
+  it('reloads the for-you list when a run completes while it is open', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ view: 'for-you' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    TestBed.inject(RecommendationsService).completedStamp.update((n) => n + 1);
+    f.detectChanges();
+
+    const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
+    expect(req.request.params.get('view')).toBe('for-you');
+    req.flush({ entries: [], nextCursor: null });
+  });
+
+  it('does not reload another list when a for-you run completes off-screen', () => {
+    const f = boot();
+    TestBed.inject(RecommendationsService).completedStamp.update((n) => n + 1);
+    f.detectChanges();
+    ctrl.expectNone((r) => r.url === 'https://api.test/api/entries');
+  });
+
   // The heading names the tag, so it also carries the tag's glyph and colour —
   // the same pair the sidebar row shows. Both come from one lookup, so the two
   // can never describe different tags.
@@ -649,6 +694,9 @@ describe('ReaderShellComponent', () => {
     ctrl
       .expectOne((r) => r.url === 'https://api.test/api/entries')
       .flush({ entries: [entry], nextCursor: null });
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/current')
+      .flush({ status: 'none', batchesTotal: null, batchesDone: 0, error: null });
     f.detectChanges();
 
     const list = () =>

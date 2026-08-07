@@ -31,7 +31,9 @@ import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
 import { SubscriptionDto, TagDto } from '../models';
 import { RefreshService } from '../refresh.service';
+import { RecommendationsService } from '../recommendations.service';
 import { AuthService } from '../../core/auth.service';
+import { AiAvailabilityService } from '../../core/ai-availability.service';
 import { LayoutService } from '../layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { buildVersion } from '../../../environments/version';
@@ -95,6 +97,8 @@ export class SidebarComponent {
   readonly acceptOnTagHead = (): boolean => true;
 
   readonly refreshSvc = inject(RefreshService);
+  readonly ai = inject(AiAvailabilityService);
+  readonly recs = inject(RecommendationsService);
   private readonly auth = inject(AuthService);
   readonly screen = inject(LayoutService);
   readonly organising = model(false);

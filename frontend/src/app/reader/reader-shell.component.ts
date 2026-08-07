@@ -22,6 +22,7 @@ import { SubscriptionsStore } from './subscriptions.store';
 import { TagsStore } from './tags.store';
 import { EntriesStore } from './entries.store';
 import { RefreshService } from './refresh.service';
+import { RecommendationsService } from './recommendations.service';
 import { refreshFailureKey } from './refresh-message';
 import { ReadingLayoutService } from './reading-layout.service';
 import { LayoutService } from './layout.service';
@@ -70,6 +71,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly tags = inject(TagsStore);
   readonly entries = inject(EntriesStore);
   readonly refreshSvc = inject(RefreshService);
+  readonly recs = inject(RecommendationsService);
   readonly layout = inject(ReadingLayoutService);
   readonly screen = inject(LayoutService);
   private readonly skip = inject(OnboardingSkip);
@@ -224,6 +226,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     const s = this.selection();
     if (s.kind === 'favorites') return 'Favorites';
     if (s.kind === 'kept') return 'Kept';
+    if (s.kind === 'for-you') return 'reader.forYou';
     if (s.kind === 'all') return 'All items';
     if (s.kind === 'tag') return this.selectedTag()?.name ?? 'Tag';
     return this.subs.subscriptions().find((x) => x.id === s.id)?.title ?? 'Feed';
@@ -356,6 +359,16 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       });
     });
 
+    // Reload the list when a for-you run completes while the user is already
+    // on that feed. `completedStamp` starts at 0, which is the signal's
+    // initial value, not a completion — the guard keeps a boot from reloading.
+    effect(() => {
+      if (this.recs.completedStamp() === 0) return;
+      untracked(() => {
+        if (this.selection().kind === 'for-you') this.entries.load({ view: 'for-you' });
+      });
+    });
+
     // The wide layout never hides the bar. Crossing the breakpoint with a
     // retracted one (a phone rotation) must not leave it stuck off-screen:
     // only list scrolls bring it back, and the wide layouts scroll other panes.
@@ -368,6 +381,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     this.subs.load();
     this.tags.load(); // the sidebar tag tree (order, empty tags) reads TagsStore
     if (!this.auth.user()) this.auth.loadMe().subscribe({ error: () => undefined });
+    // Reopening the app resumes a for-you run left in flight by an earlier session.
+    this.recs.resume();
   }
 
   ngAfterViewInit(): void {

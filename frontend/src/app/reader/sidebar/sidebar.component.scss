@@ -204,6 +204,21 @@
   color: var(--accent);
 }
 
+.nav app-icon.pulse {
+  animation: for-you-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes for-you-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}
+
 .label {
   font-size: var(--fs-sm);
   text-transform: uppercase;
