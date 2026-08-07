@@ -21,10 +21,12 @@ use Doctrine\ORM\QueryBuilder;
  * gate EntryRepository::rowQueryBuilder applies, including the per-user
  * customTitle override — because both render lines for the same prompt: a
  * retried batch must name a feed the same way the first attempt did.
- * linesForIds() drops only the unread filter; a checkpointed batch must
- * still resolve an entry the reader has since read (or even unsubscribed
- * from — the run already vetted these ids against the snapshot). Only
- * outright deletion drops an id.
+ * linesForIds() drops only the unread predicate, so a resumed run can retry
+ * its exact snapshot batch even for an entry the reader has since read.
+ * It keeps the Subscription join, so an entry whose feed the reader has
+ * since unsubscribed from still drops out with it, same as everywhere else
+ * in the app; only outright deletion of the entry itself is special-cased
+ * (silently dropped from the result rather than failing the batch).
  */
 final readonly class RecommendationCandidateLoader
 {
