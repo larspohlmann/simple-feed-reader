@@ -216,4 +216,7 @@ export interface RecommendationRunReport {
   batchesTotal: number | null;
   batchesDone: number;
   error: string | null;
+  /** True when a live worker owns execution and a tick is a pure status read;
+   *  false when the client's own poll loop is doing the work (#308 regime). */
+  background: boolean;
 }

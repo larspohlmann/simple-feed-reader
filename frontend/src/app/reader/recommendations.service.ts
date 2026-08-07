@@ -14,6 +14,12 @@ const MAX_BUSY_RETRIES = 5;
  *  three provider failures before it fails the run itself, so the poll loop
  *  must survive three too. One tick past that reads the run's own verdict. */
 const MAX_TRANSPORT_RETRIES = 3;
+/** How long the client waits before its next tick once a background worker
+ *  owns execution. A deferred tick returns instantly rather than blocking for
+ *  the length of a batch, so the tight recursive loop tuned for a
+ *  minutes-long server call would otherwise hammer the endpoint: 4s ≈ 15
+ *  requests/min against the `ai_recommendations` limiter's 90 per 5 minutes. */
+const BACKGROUND_POLL_MS = 4000;
 
 /** How many times in a row the poll loop has been turned away, per cause.
  *  Each cause has its own ceiling, and any progress resets both. */
@@ -103,7 +109,8 @@ export class RecommendationsService {
     switch (r.status) {
       case 'pending':
       case 'running':
-        this.step(NO_ATTEMPTS);
+        if (r.background) this.stepLater(NO_ATTEMPTS, BACKGROUND_POLL_MS);
+        else this.step(NO_ATTEMPTS);
         break;
       case 'busy':
         this.backOffWhileBusy(attempts);
@@ -157,8 +164,8 @@ export class RecommendationsService {
     this.stepLater({ ...attempts, transport: attempts.transport + 1 });
   }
 
-  private stepLater(attempts: PollAttempts): void {
-    setTimeout(() => this.step(attempts), BACKOFF_MS);
+  private stepLater(attempts: PollAttempts, delayMs = BACKOFF_MS): void {
+    setTimeout(() => this.step(attempts), delayMs);
   }
 
   private stopWithHttpError(e: HttpErrorResponse): void {

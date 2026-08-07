@@ -254,20 +254,38 @@ describe('ReaderApi', () => {
     api.startRecommendations().subscribe();
     const req = ctrl.expectOne('https://api.test/api/recommendations/runs');
     expect(req.request.method).toBe('POST');
-    req.flush({ status: 'pending', batchesTotal: null, batchesDone: 0, error: null });
+    req.flush({
+      status: 'pending',
+      batchesTotal: null,
+      batchesDone: 0,
+      error: null,
+      background: false,
+    });
   });
 
   it('POSTs to tick a recommendation run', () => {
     api.tickRecommendations().subscribe();
     const req = ctrl.expectOne('https://api.test/api/recommendations/runs/tick');
     expect(req.request.method).toBe('POST');
-    req.flush({ status: 'running', batchesTotal: 3, batchesDone: 1, error: null });
+    req.flush({
+      status: 'running',
+      batchesTotal: 3,
+      batchesDone: 1,
+      error: null,
+      background: false,
+    });
   });
 
   it('GETs the current recommendation run', () => {
     api.currentRecommendations().subscribe();
     const req = ctrl.expectOne('https://api.test/api/recommendations/runs/current');
     expect(req.request.method).toBe('GET');
-    req.flush({ status: 'none', batchesTotal: null, batchesDone: 0, error: null });
+    req.flush({
+      status: 'none',
+      batchesTotal: null,
+      batchesDone: 0,
+      error: null,
+      background: false,
+    });
   });
 });

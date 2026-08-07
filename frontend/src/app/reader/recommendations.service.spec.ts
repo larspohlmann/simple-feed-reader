@@ -14,6 +14,7 @@ const report = (over: Partial<RecommendationRunReport>): RecommendationRunReport
   batchesTotal: null,
   batchesDone: 0,
   error: null,
+  background: false,
   ...over,
 });
 
@@ -221,6 +222,51 @@ describe('RecommendationsService', () => {
     ctrl.verify(); // no tick request
     expect(svc.running()).toBe(false);
     expect(svc.failure()?.kind).toBe('http');
+  });
+
+  describe('background regime', () => {
+    it('slows the poll to BACKGROUND_POLL_MS when a worker owns execution', () => {
+      jest.useFakeTimers();
+      try {
+        svc.start();
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs')
+          .flush(report({ status: 'pending', background: true }));
+
+        // No synchronous next tick -- the deferred tick returns instantly, so a
+        // tight recursive loop would otherwise hammer the endpoint.
+        ctrl.expectNone('https://api.test/api/recommendations/runs/tick');
+
+        jest.advanceTimersByTime(3999);
+        ctrl.expectNone('https://api.test/api/recommendations/runs/tick');
+
+        jest.advanceTimersByTime(1);
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/tick')
+          .flush(report({ status: 'completed', background: true }));
+        expect(svc.running()).toBe(false);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('keeps ticking immediately when the client owns execution (background: false)', () => {
+      jest.useFakeTimers();
+      try {
+        svc.start();
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs')
+          .flush(report({ status: 'pending', background: false }));
+
+        // Immediate -- no timer advance needed.
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/tick')
+          .flush(report({ status: 'completed', background: false }));
+        expect(svc.running()).toBe(false);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
   });
 
   it('reports zero progress when the total is null or zero', () => {
