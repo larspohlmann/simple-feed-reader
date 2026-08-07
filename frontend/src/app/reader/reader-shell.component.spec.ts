@@ -655,7 +655,7 @@ describe('ReaderShellComponent', () => {
     req.flush({ entries: [], nextCursor: null });
     f.detectChanges();
 
-    expect(f.componentInstance.title()).toBe('reader.forYou');
+    expect(f.componentInstance.title()).toBe('For you');
   });
 
   it('reloads the for-you list when a run completes while it is open', () => {
