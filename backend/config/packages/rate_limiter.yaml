@@ -121,17 +121,36 @@ framework:
             interval: '15 minutes'
             cache_pool: cache.rate_limiter
 
-        # The recommendation run poll loop: starting a run and ticking it
-        # forward each call the account's own provider, so an uncapped pair is
-        # an outbound request generator the same way the AI settings writes
-        # are. Per-user, sliding window, same pool — see ai_provider above for
-        # the reasoning shared by every limiter in this file.
+        # Starting a recommendation run is the act that spends money: the run's
+        # snapshot fixes how many provider calls it can ever make, so capping
+        # how often an account may start one caps outbound spend outright.
+        # Per-user, sliding window, same pool — see ai_provider above for the
+        # reasoning shared by every limiter in this file.
         #
-        # 30 covers a full run over the default 1000-candidate pool -- a
-        # handful of batch ticks plus the merge tick, with retries -- and
-        # still leaves slack for a second run inside the same window.
+        # 10 in 15 minutes is far beyond honest use (a run takes minutes and
+        # supersedes the last one) and low enough that a script cannot turn the
+        # account's provider key into a request generator.
+        ai_recommendation_starts:
+            policy: 'sliding_window'
+            limit: 10
+            interval: '15 minutes'
+            cache_pool: 'cache.rate_limiter'
+
+        # Per-user cap on the recommendation progress loop, sized like refresh
+        # above and for the same reason: the client re-polls for as long as the
+        # run has batches left, so this counts polls, not provider calls.
+        #
+        # Sizing it to the provider calls a run makes was the original mistake
+        # (#308): a tick only calls the provider when it has a batch to advance,
+        # while the loop also spends ticks on snapshot, merge, busy backoff and
+        # re-polls, so the two counts diverge badly — a 26-batch run exhausted a
+        # 45-call budget and stranded itself mid-run with a 429. The real
+        # throttle is elsewhere: ai_recommendation_starts bounds how many runs
+        # exist, each run's frozen batch plan bounds its own provider calls, and
+        # the per-user lock serialises ticks. This limiter only stops a scripted
+        # client hammering the endpoint.
         ai_recommendations:
             policy: 'sliding_window'
-            limit: 30
-            interval: '15 minutes'
+            limit: 90
+            interval: '5 minutes'
             cache_pool: 'cache.rate_limiter'

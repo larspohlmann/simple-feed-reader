@@ -27,6 +27,10 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
  * The poll loop the client drives: start a run, tick it forward, and read its
  * current state. `current` does no work and carries no limiter — it is a
  * plain read, safe to poll as often as the client likes.
+ *
+ * The two writes carry separate budgets: starting a run is what commits
+ * outbound spend, while ticking is the progress loop and must stay generous
+ * enough that a long run never throttles itself off (#308).
  */
 #[Route('/api/recommendations/runs')]
 final readonly class RecommendationRunController
@@ -37,13 +41,14 @@ final readonly class RecommendationRunController
         private RecommendationRunRepository $runs,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $aiRecommendationsLimiter,
+        private RateLimiterFactoryInterface $aiRecommendationStartsLimiter,
     ) {
     }
 
     #[Route('', name: 'api_recommendations_start', methods: ['POST'])]
     public function start(#[CurrentUser] User $user): JsonResponse
     {
-        $this->rateLimitGuard->enforceForUser($this->aiRecommendationsLimiter, $user);
+        $this->rateLimitGuard->enforceForUser($this->aiRecommendationStartsLimiter, $user);
 
         try {
             $report = $this->starter->start($user);
