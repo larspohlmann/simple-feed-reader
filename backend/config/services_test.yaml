@@ -371,3 +371,21 @@ services:
     App\Service\Worker\Handler\AdvanceRecommendationRunsHandler:
         autowire: true
         public: true
+
+    # RefreshDueFeedsHandlerTest fetches this to drive __invoke() directly
+    # against the container's real RefreshRunner, the same "no mocks" stance
+    # as AdvanceRecommendationRunsHandlerTest above. Messenger handlers are
+    # never called through the container by anything else, so without this
+    # the compiler would inline it away and the test container could not
+    # fetch it. Same `autowire` caveat as the entries above.
+    App\Service\Worker\Handler\RefreshDueFeedsHandler:
+        autowire: true
+        public: true
+
+    # PurgeFailedMessagesHandlerTest fetches this to drive __invoke() against
+    # a schema with and without `messenger_messages` present. Same
+    # "no production caller through the container" and `autowire` caveats as
+    # RefreshDueFeedsHandler above.
+    App\Service\Worker\Handler\PurgeFailedMessagesHandler:
+        autowire: true
+        public: true
