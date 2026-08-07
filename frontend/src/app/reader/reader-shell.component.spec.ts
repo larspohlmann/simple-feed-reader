@@ -729,6 +729,82 @@ describe('ReaderShellComponent', () => {
     expect(status.textContent).toContain('1 of 3');
   });
 
+  it('tells the user a busy-retry exhaustion happened, next to the run button', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ view: 'for-you' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    const recs = TestBed.inject(RecommendationsService);
+    recs.running.set(false);
+    recs.failure.set({ kind: 'busy' });
+    f.detectChanges();
+
+    const alert = f.nativeElement.querySelector('.for-you-bar [role="alert"]') as HTMLElement;
+    expect(alert.textContent).toContain('Another run is already in progress');
+    expect(f.nativeElement.querySelector('.for-you-bar button.run')).not.toBeNull();
+  });
+
+  it('tells the user when the backend gave up on the run itself', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ view: 'for-you' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    const recs = TestBed.inject(RecommendationsService);
+    recs.running.set(false);
+    recs.failure.set({ kind: 'failed', error: 'provider unreachable' });
+    f.detectChanges();
+
+    const alert = f.nativeElement.querySelector('.for-you-bar [role="alert"]') as HTMLElement;
+    expect(alert.textContent).toContain('Recommendations failed');
+  });
+
+  it('tells the user when the request itself failed', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ view: 'for-you' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    const recs = TestBed.inject(RecommendationsService);
+    recs.running.set(false);
+    recs.failure.set({
+      kind: 'http',
+      problem: { type: 'about:blank', title: 'Too many requests', status: 429 },
+    });
+    f.detectChanges();
+
+    const alert = f.nativeElement.querySelector('.for-you-bar [role="alert"]') as HTMLElement;
+    expect(alert.textContent).toContain('Could not reach the recommendation service');
+  });
+
+  it('does not show a stale failure once a new run is in flight', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ view: 'for-you' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    const recs = TestBed.inject(RecommendationsService);
+    recs.running.set(false);
+    recs.failure.set({ kind: 'busy' });
+    recs.running.set(true);
+    f.detectChanges();
+
+    expect(f.nativeElement.querySelector('.for-you-bar [role="alert"]')).toBeNull();
+  });
+
   // The heading names the tag, so it also carries the tag's glyph and colour —
   // the same pair the sidebar row shows. Both come from one lookup, so the two
   // can never describe different tags.

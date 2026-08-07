@@ -24,6 +24,7 @@ import { EntriesStore } from './entries.store';
 import { RefreshService } from './refresh.service';
 import { RecommendationsService } from './recommendations.service';
 import { refreshFailureKey } from './refresh-message';
+import { forYouFailureKey } from './for-you-message';
 import { ReadingLayoutService } from './reading-layout.service';
 import { LayoutService } from './layout.service';
 import { RefreshScope, markReadTarget, queryFromSelection, selectionFromParams } from './query';
@@ -147,6 +148,16 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     done: this.recs.report()?.batchesDone ?? 0,
     total: this.recs.report()?.batchesTotal ?? 0,
   }));
+
+  /** What to tell the user about a for-you run that ended without a fresh
+   *  list -- busy-retry exhaustion, a backend-side failure, or an HTTP error.
+   *  Gated on `!running()` so a stale failure from a previous run never
+   *  overlaps the progress bar of a new one. */
+  readonly forYouFailureMessageKey = computed(() => {
+    if (this.recs.running()) return null;
+    const failure = this.recs.failure();
+    return failure ? forYouFailureKey(failure) : null;
+  });
 
   private readonly params = toSignal(this.route.queryParamMap, {
     initialValue: convertToParamMap({}),

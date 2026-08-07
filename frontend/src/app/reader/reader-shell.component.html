@@ -41,6 +41,9 @@
         <button type="button" class="run" (click)="recs.start()">
           {{ 'reader.forYouRun' | transloco }}
         </button>
+        @if (forYouFailureMessageKey(); as failureKey) {
+          <p role="alert">{{ failureKey | transloco }}</p>
+        }
       }
     </div>
     <app-progress-hairline [active]="recs.running()" [value]="recs.progress()" />

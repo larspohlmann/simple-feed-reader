@@ -434,7 +434,9 @@
     "forYouView": "View",
     "forYouFailed": "Recommendations failed. Try again.",
     "forYouRun": "Get recommendations",
-    "forYouProgress": "Ranking your feeds — {{done}} of {{total}}"
+    "forYouProgress": "Ranking your feeds — {{done}} of {{total}}",
+    "forYouBusy": "Another run is already in progress. Try again in a moment.",
+    "forYouUnreachable": "Could not reach the recommendation service. Try again."
   },
   "common": {
     "save": "Save",

@@ -434,7 +434,9 @@
     "forYouView": "Ansehen",
     "forYouFailed": "Empfehlungen fehlgeschlagen. Versuch es noch einmal.",
     "forYouRun": "Empfehlungen holen",
-    "forYouProgress": "Deine Feeds werden sortiert — {{done}} von {{total}}"
+    "forYouProgress": "Deine Feeds werden sortiert — {{done}} von {{total}}",
+    "forYouBusy": "Ein anderer Lauf ist schon aktiv. Versuch es gleich noch einmal.",
+    "forYouUnreachable": "Der Empfehlungsdienst war nicht erreichbar. Versuch es noch einmal."
   },
   "common": {
     "save": "Speichern",
