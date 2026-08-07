@@ -335,6 +335,59 @@ final class EntryControllerTest extends WebTestCase
         self::assertSame(0, $this->unreadCountOf($client, $headers, (int) $sub->getId()));
     }
 
+    public function testMarkingViewedSeedsReadOnlyUpToTheWatermark(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-viewed-boundary@example.com');
+        $sub = $this->seedFeedWithEntries($user, 3);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entries = $em->getRepository(Entry::class);
+
+        // Sweep to exactly the second entry's date: entry 2 is read (the
+        // watermark is inclusive), entry 3 is not.
+        $client->request(
+            'POST',
+            '/api/entries/mark-read',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['scope' => 'all', 'until' => '2026-07-02T00:00:00Z'], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(204);
+
+        $onTheWatermark = $entries->findOneBy(['feed' => $sub->getFeed(), 'guid' => 'g2'])?->getId();
+        $aboveTheWatermark = $entries->findOneBy(['feed' => $sub->getFeed(), 'guid' => 'g3'])?->getId();
+        self::assertNotNull($onTheWatermark);
+        self::assertNotNull($aboveTheWatermark);
+
+        self::assertTrue($this->markViewed($client, $headers, $onTheWatermark)['isRead']);
+
+        $above = $this->markViewed($client, $headers, $aboveTheWatermark);
+        self::assertFalse($above['isRead']);
+        self::assertNull($above['readAt']);
+    }
+
+    /**
+     * @param array<string,string> $headers
+     *
+     * @return array<string,mixed> the state the API reports back
+     */
+    private function markViewed(KernelBrowser $client, array $headers, int $entryId): array
+    {
+        $client->request(
+            'PATCH',
+            "/api/entries/$entryId/state",
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: '{"isViewed":true}',
+        );
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        /** @var array<string,mixed> $state */
+        $state = $body['state'];
+
+        return $state;
+    }
+
     /**
      * @param array<string,string> $headers
      */
