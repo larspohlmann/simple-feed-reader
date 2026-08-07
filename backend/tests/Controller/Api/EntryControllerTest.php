@@ -340,9 +340,6 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-viewed-boundary@example.com');
         $sub = $this->seedFeedWithEntries($user, 3);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entries = $em->getRepository(Entry::class);
 
         // Sweep to exactly the second entry's date: entry 2 is read (the
         // watermark is inclusive), entry 3 is not.
@@ -354,16 +351,32 @@ final class EntryControllerTest extends WebTestCase
         );
         self::assertResponseStatusCodeSame(204);
 
-        $onTheWatermark = $entries->findOneBy(['feed' => $sub->getFeed(), 'guid' => 'g2'])?->getId();
-        $aboveTheWatermark = $entries->findOneBy(['feed' => $sub->getFeed(), 'guid' => 'g3'])?->getId();
-        self::assertNotNull($onTheWatermark);
-        self::assertNotNull($aboveTheWatermark);
+        $onTheWatermark = $this->entryIdOf($sub, 'g2');
+        $aboveTheWatermark = $this->entryIdOf($sub, 'g3');
 
         self::assertTrue($this->markViewed($client, $headers, $onTheWatermark)['isRead']);
 
         $above = $this->markViewed($client, $headers, $aboveTheWatermark);
         self::assertFalse($above['isRead']);
         self::assertNull($above['readAt']);
+    }
+
+    private function entryIdOf(Subscription $subscription, string $guid): int
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entry = $em->getRepository(Entry::class)->findOneBy([
+            'feed' => $subscription->getFeed(),
+            'guid' => $guid,
+        ]);
+        self::assertInstanceOf(Entry::class, $entry);
+
+        $id = $entry->getId();
+        if (null === $id) {
+            self::fail("The seeded entry $guid has no id.");
+        }
+
+        return $id;
     }
 
     /**
