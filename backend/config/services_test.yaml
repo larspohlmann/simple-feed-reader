@@ -12,6 +12,23 @@ services:
         autowire: true
         public: true
 
+    # RecommendationSettingsResolverTest seals a throwaway API key directly to
+    # seed an AiProviderSettings row without a live provider call. Same
+    # `autowire` caveat as the entries below: naming a class here replaces the
+    # definition rather than amending it, and this file has no `_defaults`.
+    App\Service\Ai\Crypto\ApiKeyCipher:
+        autowire: true
+        public: true
+
+    # RecommendationSettingsResolverTest drives forUser() directly to prove the
+    # user-override / provider-window / fallback precedence. Its only
+    # production caller arrives with the settings API in a later task, so
+    # until then the compiler would inline it away and the test container
+    # could not fetch it. Same `autowire` caveat as above.
+    App\Service\Recommendation\RecommendationSettingsResolver:
+        autowire: true
+        public: true
+
     # Functional tests swap the real fetcher for a stub via
     # `self::getContainer()->set(...)`, which the container only allows on
     # public services. Test environment only — production keeps them private.
