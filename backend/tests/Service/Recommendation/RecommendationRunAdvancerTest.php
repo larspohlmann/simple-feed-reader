@@ -8,12 +8,16 @@ use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\RecommendationRun;
+use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
+use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Tests\DbTestCase;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
@@ -158,6 +162,266 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         self::assertTrue($lock->acquire());
         $lock->release();
+    }
+
+    public function testBatchTickRecordsWinnersAndAdvances(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startAndSnapshot();
+        $firstBatch = $run->getCandidateBatches()[0];
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [
+                ['id' => $firstBatch[0], 'reason' => 'r1'],
+                ['id' => $firstBatch[1], 'reason' => 'r2'],
+            ],
+        ], \JSON_THROW_ON_ERROR));
+
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame('running', $report->status);
+        self::assertSame(1, $report->batchesDone);
+
+        $calls = $this->stubChatClient()->calls();
+        self::assertCount(1, $calls);
+        self::assertSame('m', $calls[0]['model']);
+        self::assertStringContainsString(
+            'You rank candidate posts for one reader of an RSS reader.',
+            $calls[0]['messages'][0]['content'],
+        );
+        self::assertStringContainsString('- [' . $firstBatch[0], $calls[0]['messages'][1]['content']);
+
+        $this->em->clear();
+        $persisted = $this->activeRun();
+        self::assertSame(
+            [
+                ['id' => $firstBatch[0], 'reason' => 'r1'],
+                ['id' => $firstBatch[1], 'reason' => 'r2'],
+            ],
+            $persisted->getWinners()[0],
+        );
+    }
+
+    public function testInvalidReplyTriggersCorrectiveRetryNextTick(): void
+    {
+        $this->seedMultiBatchFixture();
+        $firstBatch = $this->startAndSnapshot()->getCandidateBatches()[0];
+
+        $this->stubChatClient()->queueContent('not json');
+        $this->advancer()->advance($this->user);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'reason' => 'r1']],
+        ], \JSON_THROW_ON_ERROR));
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame(1, $report->batchesDone);
+
+        $calls = $this->stubChatClient()->calls();
+        self::assertCount(2, $calls);
+        $secondCallMessages = $calls[1]['messages'];
+        self::assertCount(4, $secondCallMessages);
+        self::assertSame('assistant', $secondCallMessages[2]['role']);
+        self::assertSame('not json', $secondCallMessages[2]['content']);
+        self::assertSame('user', $secondCallMessages[3]['role']);
+        self::assertStringContainsString('Your previous reply was not usable.', $secondCallMessages[3]['content']);
+    }
+
+    public function testThreeUnusableRepliesFailTheRun(): void
+    {
+        $this->seedMultiBatchFixture();
+        $this->startAndSnapshot();
+
+        $this->stubChatClient()->queueContent('garbage 1');
+        $this->stubChatClient()->queueContent('garbage 2');
+        $this->stubChatClient()->queueContent('garbage 3');
+
+        $this->advancer()->advance($this->user);
+        $this->advancer()->advance($this->user);
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame('failed', $report->status);
+        self::assertNotNull($report->error);
+        self::assertSame(0, $report->batchesDone);
+
+        $this->em->clear();
+        $failed = $this->runs()->findLatestForUser($this->user);
+        self::assertNotNull($failed);
+        self::assertSame(RecommendationRun::STATUS_FAILED, $failed->getStatus());
+        self::assertSame([], $failed->getWinners());
+        self::assertTrue($failed->attemptsExhausted());
+    }
+
+    public function testResumeAfterFailureRetriesTheFailedBatchNotTheFirst(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startAndSnapshot();
+        $firstBatch = $run->getCandidateBatches()[0];
+        $secondBatch = $run->getCandidateBatches()[1];
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'reason' => 'r1']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $this->stubChatClient()->queueContent('bad 1');
+        $this->stubChatClient()->queueContent('bad 2');
+        $this->stubChatClient()->queueContent('bad 3');
+        $this->advancer()->advance($this->user);
+        $this->advancer()->advance($this->user);
+        $failedReport = $this->advancer()->advance($this->user);
+        self::assertSame('failed', $failedReport->status);
+
+        $this->starter()->start($this->user);
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $secondBatch[0], 'reason' => 'r2']],
+        ], \JSON_THROW_ON_ERROR));
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame(2, $report->batchesDone);
+        $calls = $this->stubChatClient()->calls();
+        $lastCall = array_pop($calls);
+        self::assertNotNull($lastCall);
+        self::assertStringContainsString('- [' . $secondBatch[0], $lastCall['messages'][1]['content']);
+    }
+
+    public function testProviderExceptionLeavesTheRunUntouched(): void
+    {
+        $this->seedMultiBatchFixture();
+        $this->startAndSnapshot();
+
+        $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down'));
+
+        try {
+            $this->advancer()->advance($this->user);
+            self::fail('Expected a ProviderUnreachableException.');
+        } catch (ProviderUnreachableException) {
+            // expected
+        }
+
+        $this->em->clear();
+        $run = $this->activeRun();
+        self::assertSame(RecommendationRun::STATUS_RUNNING, $run->getStatus());
+        self::assertSame(0, $run->progress()->batchesDone);
+        self::assertFalse($run->attemptsExhausted());
+        self::assertNull($run->getLastInvalidReply());
+    }
+
+    public function testPrunedBatchSkipsWithoutAProviderCall(): void
+    {
+        $this->seedMultiBatchFixture();
+        $firstBatch = $this->startAndSnapshot()->getCandidateBatches()[0];
+
+        foreach ($firstBatch as $entryId) {
+            $entry = $this->em->getRepository(Entry::class)->find($entryId);
+            self::assertNotNull($entry);
+            $this->em->remove($entry);
+        }
+        $this->em->flush();
+        $this->em->clear();
+
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame(1, $report->batchesDone);
+        self::assertSame([], $this->stubChatClient()->calls());
+
+        // Proves the empty winner set was actually flushed, not just set on
+        // the in-memory entity the report happens to read from.
+        $this->em->clear();
+        $persisted = $this->activeRun();
+        self::assertSame(1, $persisted->progress()->batchesDone);
+        self::assertSame([], $persisted->getWinners()[0]);
+    }
+
+    /**
+     * A batch pruned down to *most, but not all* of its ids still calls the
+     * provider — only the fully-pruned case is free — and the prompt must
+     * not mention the id that dropped out.
+     */
+    public function testPartiallyPrunedBatchStillCallsTheProviderWithoutTheDroppedId(): void
+    {
+        $this->seedMultiBatchFixture();
+        $firstBatch = $this->startAndSnapshot()->getCandidateBatches()[0];
+        $droppedId = $firstBatch[1];
+
+        $entry = $this->em->getRepository(Entry::class)->find($droppedId);
+        self::assertNotNull($entry);
+        $this->em->remove($entry);
+        $this->em->flush();
+        $this->em->clear();
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'reason' => 'r1']],
+        ], \JSON_THROW_ON_ERROR));
+
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame(1, $report->batchesDone);
+        $calls = $this->stubChatClient()->calls();
+        self::assertCount(1, $calls);
+        $userMessage = $calls[0]['messages'][1]['content'];
+        self::assertStringContainsString('- [' . $firstBatch[0], $userMessage);
+        self::assertStringNotContainsString('- [' . $droppedId . ']', $userMessage);
+    }
+
+    /**
+     * candidatePoolSize 20 with a small context window forces the packer to
+     * split into two batches of 10 (pinned by each test right after its own
+     * snapshot tick, via batchesTotal === 3: 2 batches + the merge slot) so a
+     * future change to the packing maths fails loudly here instead of
+     * silently making these tests single-batch.
+     */
+    private function seedMultiBatchFixture(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+
+        $summary = str_repeat('Lorem ipsum dolor sit amet consectetur adipiscing elit. ', 5);
+        for ($i = 0; $i < 20; $i++) {
+            $entry = $this->entry(sprintf('entry-%02d', $i), sprintf('2026-07-%02dT00:00:00Z', 10 + $i));
+            $entry->setSummary($summary);
+        }
+        $this->em->flush();
+
+        $settings = new RecommendationSettings($this->user);
+        $settings->update(new RecommendationSettingsValues(
+            guidancePrompt: null,
+            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
+            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
+            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
+            candidatePoolSize: 20,
+            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+            contextWindow: 2500,
+            debugEnabled: false,
+        ));
+        $this->em->persist($settings);
+        $this->em->flush();
+    }
+
+    /**
+     * Starts a run and drives the snapshot tick, then pins the fixture's
+     * batch count so a future change to the packing maths fails loudly here
+     * instead of silently making these tests single-batch.
+     */
+    private function startAndSnapshot(): RecommendationRun
+    {
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user);
+        $run = $this->activeRun();
+
+        self::assertSame(3, $run->progress()->batchesTotal);
+        self::assertCount(2, $run->getCandidateBatches());
+        self::assertCount(10, $run->getCandidateBatches()[0]);
+        self::assertCount(10, $run->getCandidateBatches()[1]);
+
+        return $run;
+    }
+
+    private function activeRun(): RecommendationRun
+    {
+        $run = $this->runs()->findActiveForUser($this->user);
+        self::assertNotNull($run);
+
+        return $run;
     }
 
     private function entry(string $guid, string $published): Entry

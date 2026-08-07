@@ -21,16 +21,20 @@ use Symfony\Component\Lock\LockFactory;
  * poll can never overlap a second one racing in from another tab or the
  * worker sweep.
  *
- * This task implements only the snapshot phase — a pending run's candidate
- * pool is frozen into fixed-size batches, with no provider call made yet.
- * providerTick() is a stub; a later task fills it in with the per-batch
- * selection call and the merge phase.
+ * The snapshot phase freezes a pending run's candidate pool into fixed-size
+ * batches with no provider call made. The batch phase then spends one
+ * provider call per tick: a batch whose entries are all pruned records an
+ * empty winner set for free, a usable reply advances the run, and an
+ * unusable one is retried with a corrective message until three attempts
+ * checkpoint the run as failed. The merge phase — folding several batches'
+ * winners into one final ranking — is a later task's; finalize() is a stub
+ * until then, reached only by a single-batch run's one and only tick.
  *
- * The nine constructor collaborators are deliberate: the advancer is the
+ * The eleven constructor collaborators are deliberate: the advancer is the
  * recommendation pipeline's composition root (lock, run persistence, AI
  * configuration, settings resolution, candidate/history loading, prompt
- * packing), and each is a seam the tests swap or drive independently —
- * see RefreshRunner for the same shape.
+ * packing, the provider call and its reply parser), and each is a seam the
+ * tests swap or drive independently — see RefreshRunner for the same shape.
  *
  * @SuppressWarnings("PHPMD.ExcessiveParameterList")
  */
@@ -48,6 +52,8 @@ final class RecommendationRunAdvancer
         private readonly RecommendationCandidateLoader $candidateLoader,
         private readonly RecommendationHistoryLoader $historyLoader,
         private readonly RecommendationPromptBuilder $promptBuilder,
+        private readonly ChatCompletionClient $chat,
+        private readonly RecommendationPickParser $parser,
         private readonly EntityManagerInterface $entityManager,
     ) {
     }
@@ -121,6 +127,106 @@ final class RecommendationRunAdvancer
         User $user,
         AiProviderSettings $settings,
     ): RecommendationRunReport {
+        $userId = $this->requireUserId($user);
+        $ids = $run->getCandidateBatches()[$run->progress()->nextBatchIndex];
+        $linesById = $this->candidateLoader->linesForIds($userId, $ids);
+        $validIds = array_keys($linesById);
+
+        if ([] === $validIds) {
+            // Every entry in this batch was pruned since the snapshot: there
+            // is nothing to ask the model, so this is progress, not failure.
+            $run->recordBatchWinners([]);
+            $this->entityManager->flush();
+
+            return RecommendationRunReport::fromRun($run);
+        }
+
+        $effectiveSettings = $this->settingsResolver->forUser($user);
+        $messages = $this->batchMessagesFor($run, $userId, $ids, $linesById, $effectiveSettings);
+
+        $content = $this->chat->complete(
+            $this->configurator->credentials($settings),
+            $settings->getModel() ?? '',
+            $messages,
+        );
+
+        $result = $this->parser->parse($content, $validIds, $effectiveSettings->picksLimit);
+
+        return $this->recordReply($run, $content, $result);
+    }
+
+    /**
+     * @param list<int>              $ids       the batch's entry ids, in snapshot order
+     * @param array<int, PromptLine> $linesById
+     *
+     * @return list<array{role: string, content: string}>
+     */
+    private function batchMessagesFor(
+        RecommendationRun $run,
+        int $userId,
+        array $ids,
+        array $linesById,
+        EffectiveRecommendationSettings $effectiveSettings,
+    ): array {
+        $history = $this->historyLoader->load($userId, $effectiveSettings);
+        $candidateLines = $this->linesInSnapshotOrder($ids, $linesById);
+        $messages = $this->promptBuilder->batchMessages($history, $candidateLines, $effectiveSettings);
+
+        $lastInvalidReply = $run->getLastInvalidReply();
+        if (null === $lastInvalidReply) {
+            return $messages;
+        }
+
+        return [...$messages, ...$this->promptBuilder->correctiveTail($lastInvalidReply)];
+    }
+
+    /**
+     * @param list<int>              $ids       the batch's entry ids, in snapshot order
+     * @param array<int, PromptLine> $linesById entries pruned since the snapshot are simply absent
+     *
+     * @return list<PromptLine>
+     */
+    private function linesInSnapshotOrder(array $ids, array $linesById): array
+    {
+        $present = array_filter($ids, static fn (int $id): bool => isset($linesById[$id]));
+
+        return array_values(array_map(static fn (int $id): PromptLine => $linesById[$id], $present));
+    }
+
+    private function recordReply(
+        RecommendationRun $run,
+        string $content,
+        PickParseResult $result,
+    ): RecommendationRunReport {
+        if (!$result->usable) {
+            $run->recordInvalidReply($content);
+            if ($run->attemptsExhausted()) {
+                $run->fail('The model did not return a usable ranking.', $this->clock->now());
+            }
+            $this->entityManager->flush();
+
+            return RecommendationRunReport::fromRun($run);
+        }
+
+        $run->recordBatchWinners(array_map(
+            static fn (RecommendationPick $pick): array => ['id' => $pick->entryId, 'reason' => $pick->reason],
+            $result->picks,
+        ));
+
+        if (!$run->progress()->needsMerge) {
+            return $this->finalize($run, $run->getWinners()[0]);
+        }
+
+        $this->entityManager->flush();
+
+        return RecommendationRunReport::fromRun($run);
+    }
+
+    /**
+     * @param list<array{id: int, reason: string}> $winners
+     */
+    private function finalize(RecommendationRun $run, array $winners): RecommendationRunReport
+    {
         throw new \LogicException('not yet implemented');
     }
 
