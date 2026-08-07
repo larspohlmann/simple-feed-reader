@@ -7,6 +7,7 @@ namespace App\Service\Recommendation;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
+use App\Repository\SubscriptionDisplayTitle;
 use App\Repository\UnreadDql;
 use App\Service\PlainText;
 use Doctrine\DBAL\Types\Types;
@@ -117,9 +118,11 @@ final readonly class RecommendationCandidateLoader
         $entry = $row[0];
         $feed = $entry->getFeed();
         $customTitle = $row['customTitle'];
-        $feedName = (\is_string($customTitle) && $customTitle !== '')
-            ? $customTitle
-            : ($feed->getTitle() ?? $feed->getUrl());
+        $feedName = SubscriptionDisplayTitle::from(
+            \is_string($customTitle) ? $customTitle : null,
+            $feed->getTitle(),
+            $feed->getUrl(),
+        );
 
         return new PromptLine(
             entryId: $entry->getId(),

@@ -148,27 +148,18 @@ final class RecommendationItemRepository extends ServiceEntityRepository
     }
 
     /**
-     * The subscription's display title: its custom override, else the feed
-     * title, else the bare feed URL as a last resort. Duplicated from
-     * EntryRepository::rowTitle — the two repositories build their
-     * projections independently.
-     *
      * @param array<array-key, mixed> $row
      */
     private function rowTitle(array $row): string
     {
         $customTitle = $row['customTitle'];
-        if (\is_string($customTitle) && $customTitle !== '') {
-            return $customTitle;
-        }
-
         $feedTitle = $row['feedTitle'];
-        if (\is_string($feedTitle) && $feedTitle !== '') {
-            return $feedTitle;
-        }
-
         $feedUrl = $row['feedUrl'];
 
-        return \is_string($feedUrl) ? $feedUrl : '';
+        return SubscriptionDisplayTitle::from(
+            \is_string($customTitle) ? $customTitle : null,
+            \is_string($feedTitle) ? $feedTitle : null,
+            \is_string($feedUrl) ? $feedUrl : '',
+        );
     }
 }

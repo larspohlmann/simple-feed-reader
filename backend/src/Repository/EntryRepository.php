@@ -260,17 +260,13 @@ class EntryRepository extends ServiceEntityRepository
     private function rowTitle(array $row): string
     {
         $customTitle = $row['customTitle'];
-        if (\is_string($customTitle) && $customTitle !== '') {
-            return $customTitle;
-        }
-
         $feedTitle = $row['feedTitle'];
-        if (\is_string($feedTitle) && $feedTitle !== '') {
-            return $feedTitle;
-        }
-
         $feedUrl = $row['feedUrl'];
 
-        return \is_string($feedUrl) ? $feedUrl : '';
+        return SubscriptionDisplayTitle::from(
+            \is_string($customTitle) ? $customTitle : null,
+            \is_string($feedTitle) ? $feedTitle : null,
+            \is_string($feedUrl) ? $feedUrl : '',
+        );
     }
 }
