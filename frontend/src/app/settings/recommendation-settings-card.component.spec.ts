@@ -153,6 +153,32 @@ describe('RecommendationSettingsCardComponent', () => {
     expect(banner(fixture)?.textContent).toContain('One or more fields are invalid.');
   });
 
+  it('leaves the last value in place when a capped numeric field is cleared', () => {
+    const fixture = mount();
+
+    const input = fixture.nativeElement.querySelector(
+      'input[min="1"][max="500"]',
+    ) as HTMLInputElement;
+    input.value = '';
+    input.dispatchEvent(new Event('input'));
+
+    // +'' === 0, which is below picksLimit's own min="1" -- a naive
+    // coercion would silently arm a save that 422s.
+    expect(fixture.componentInstance.picksLimit()).toBe(20);
+  });
+
+  it('accepts a typed numeric value for a capped field', () => {
+    const fixture = mount();
+
+    const input = fixture.nativeElement.querySelector(
+      'input[min="1"][max="500"]',
+    ) as HTMLInputElement;
+    input.value = '30';
+    input.dispatchEvent(new Event('input'));
+
+    expect(fixture.componentInstance.picksLimit()).toBe(30);
+  });
+
   it('reports the effective context window source', () => {
     const providerFixture = mount({ ...STATE, contextWindowSource: 'provider' });
     expect(providerFixture.nativeElement.textContent).toContain('Reported by your provider');

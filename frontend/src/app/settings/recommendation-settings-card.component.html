@@ -27,7 +27,7 @@
         min="0"
         max="500"
         [value]="favoritesCap()"
-        (input)="favoritesCap.set(numberValue($event))"
+        (input)="setNumber(favoritesCap, $event)"
       />
     </app-field>
 
@@ -37,7 +37,7 @@
         min="0"
         max="500"
         [value]="keptCap()"
-        (input)="keptCap.set(numberValue($event))"
+        (input)="setNumber(keptCap, $event)"
       />
     </app-field>
 
@@ -47,7 +47,7 @@
         min="0"
         max="500"
         [value]="viewedCap()"
-        (input)="viewedCap.set(numberValue($event))"
+        (input)="setNumber(viewedCap, $event)"
       />
     </app-field>
 
@@ -57,7 +57,7 @@
         min="10"
         max="5000"
         [value]="candidatePoolSize()"
-        (input)="candidatePoolSize.set(numberValue($event))"
+        (input)="setNumber(candidatePoolSize, $event)"
       />
     </app-field>
 
@@ -67,7 +67,7 @@
         min="1"
         max="500"
         [value]="picksLimit()"
-        (input)="picksLimit.set(numberValue($event))"
+        (input)="setNumber(picksLimit, $event)"
       />
     </app-field>
 

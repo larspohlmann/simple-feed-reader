@@ -1,5 +1,12 @@
 // src/app/settings/recommendation-settings-card.component.ts
-import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  WritableSignal,
+  computed,
+  inject,
+  linkedSignal,
+} from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ButtonComponent } from '../shared/button/button.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
@@ -56,8 +63,13 @@ export class RecommendationSettingsCardComponent {
     this.svc.load();
   }
 
-  numberValue(event: Event): number {
-    return +(event.target as HTMLInputElement).value;
+  /** Blank input is not zero: `+'' === 0` would silently coerce a cleared
+   *  field to a value below every cap's minimum and ship a raw 422 on save.
+   *  Leaving the signal untouched keeps its last valid value instead. */
+  setNumber(target: WritableSignal<number>, event: Event): void {
+    const raw = (event.target as HTMLInputElement).value;
+    if (raw === '') return;
+    target.set(+raw);
   }
 
   nullableNumberValue(event: Event): number | null {
