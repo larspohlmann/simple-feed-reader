@@ -166,6 +166,20 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         self::assertSame('Example', $history->favorites[0]->feedName);
     }
 
+    public function testFeedNameFallsBackToTheUrlWhenTheFeedTitleIsEmpty(): void
+    {
+        $this->feed->setTitle('');
+        $entry = $this->entry('A', '2026-07-10T00:00:00Z');
+        $state = new EntryState($this->user, $entry);
+        $state->setIsFavorite(true);
+        $this->em->persist($state);
+        $this->em->flush();
+
+        $history = $this->loader()->load($this->userId(), $this->settings());
+
+        self::assertSame($this->feed->getUrl(), $history->favorites[0]->feedName);
+    }
+
     private function entry(string $guid, string $published): Entry
     {
         $entry = new Entry(

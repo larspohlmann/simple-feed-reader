@@ -9,6 +9,7 @@ use App\Entity\Entry;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Repository\EntryRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Exception\AiNotConfiguredException;
@@ -39,7 +40,7 @@ use Symfony\Component\Lock\LockFactory;
  * mid-run — and writes the survivors as RecommendationItems at dense
  * positions before marking the run completed.
  *
- * The eleven constructor collaborators are deliberate: the advancer is the
+ * The twelve constructor collaborators are deliberate: the advancer is the
  * recommendation pipeline's composition root (lock, run persistence, AI
  * configuration, settings resolution, candidate/history loading, prompt
  * packing, the provider call and its reply parser), and each is a seam the
@@ -54,6 +55,7 @@ final class RecommendationRunAdvancer
 
     public function __construct(
         private readonly RecommendationRunRepository $runs,
+        private readonly EntryRepository $entries,
         private readonly LockFactory $lockFactory,
         private readonly AiProviderConfigurator $configurator,
         private readonly ClockInterface $clock,
@@ -212,10 +214,22 @@ final class RecommendationRunAdvancer
             return $this->recordUnusableReply($run, $content);
         }
 
-        return $this->finalize($run, array_map(
+        return $this->finalize($run, self::asWinners($result->picks));
+    }
+
+    /**
+     * The shape both the entity's winner list and finalize() speak.
+     *
+     * @param list<RecommendationPick> $picks
+     *
+     * @return list<array{id: int, reason: string}>
+     */
+    private static function asWinners(array $picks): array
+    {
+        return array_map(
             static fn (RecommendationPick $pick): array => ['id' => $pick->entryId, 'reason' => $pick->reason],
-            $result->picks,
-        ));
+            $picks,
+        );
     }
 
     /**
@@ -328,10 +342,7 @@ final class RecommendationRunAdvancer
             return $this->recordUnusableReply($run, $content);
         }
 
-        $run->recordBatchWinners(array_map(
-            static fn (RecommendationPick $pick): array => ['id' => $pick->entryId, 'reason' => $pick->reason],
-            $result->picks,
-        ));
+        $run->recordBatchWinners(self::asWinners($result->picks));
 
         if (!$run->progress()->needsMerge) {
             return $this->finalize($run, $run->getWinners()[0]);
@@ -366,7 +377,7 @@ final class RecommendationRunAdvancer
      */
     private function finalize(RecommendationRun $run, array $picks): RecommendationRunReport
     {
-        $existingIds = $this->existingEntryIds(array_map(
+        $existingIds = $this->entries->findExistingIds(array_map(
             static fn (array $pick): int => $pick['id'],
             $picks,
         ));
@@ -387,29 +398,6 @@ final class RecommendationRunAdvancer
         $this->entityManager->flush();
 
         return RecommendationRunReport::fromRun($run);
-    }
-
-    /**
-     * @param list<int> $ids
-     *
-     * @return list<int>
-     */
-    private function existingEntryIds(array $ids): array
-    {
-        if ([] === $ids) {
-            return [];
-        }
-
-        /** @var list<int> $existingIds */
-        $existingIds = $this->entityManager->createQueryBuilder()
-            ->select('e.id')
-            ->from(Entry::class, 'e')
-            ->where('e.id IN (:ids)')
-            ->setParameter('ids', $ids)
-            ->getQuery()
-            ->getSingleColumnResult();
-
-        return $existingIds;
     }
 
     private function requireUserId(User $user): int

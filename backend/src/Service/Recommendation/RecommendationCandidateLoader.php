@@ -44,6 +44,7 @@ final readonly class RecommendationCandidateLoader
     public function load(int $userId, int $poolSize): array
     {
         $qb = $this->candidateQueryBuilder($userId)
+            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
             ->andWhere(UnreadDql::predicate())
             ->orderBy('e.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
@@ -88,7 +89,6 @@ final readonly class RecommendationCandidateLoader
             ->from(Entry::class, 'e')
             ->join('e.feed', 'f')
             ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
-            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
             ->setParameter('user', $userId);
     }
 

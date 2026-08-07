@@ -49,6 +49,30 @@ class EntryRepository extends ServiceEntityRepository
     }
 
     /**
+     * @param list<int> $entryIds
+     *
+     * @return list<int> the subset of ids that still exist — a caller holding
+     *                   ids from an earlier checkpoint uses this to drop the
+     *                   ones pruned since
+     */
+    public function findExistingIds(array $entryIds): array
+    {
+        if ($entryIds === []) {
+            return [];
+        }
+
+        /** @var list<int> $existing */
+        $existing = $this->createQueryBuilder('e')
+            ->select('e.id')
+            ->andWhere('e.id IN (:ids)')
+            ->setParameter('ids', $entryIds)
+            ->getQuery()
+            ->getSingleColumnResult();
+
+        return $existing;
+    }
+
+    /**
      * The feed's existing entries for the given guid hashes, indexed by hash —
      * lets a re-parse match items back to their persisted rows.
      *
