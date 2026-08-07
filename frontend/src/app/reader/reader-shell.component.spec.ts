@@ -543,6 +543,7 @@ describe('ReaderShellComponent', () => {
     f.detectChanges();
 
     expect(f.nativeElement.querySelector('app-reader-view')).not.toBeNull();
+    ctrl.verify();
   });
 
   it('ignores a stale cold-entry fetch that resolves after navigating to another', () => {
