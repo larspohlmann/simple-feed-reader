@@ -23,6 +23,7 @@ import { OnboardingSkip } from '../discover/onboarding-skip';
 import { ReaderShellComponent } from './reader-shell.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
 import { ListScrollMemory } from './list-scroll-memory';
+import { EntryDto } from './models';
 import { Selection } from './query';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { RefreshService } from './refresh.service';
@@ -57,17 +58,21 @@ describe('ReaderShellComponent', () => {
       },
     ],
   };
-  const entry = {
+  const entry: EntryDto = {
     id: 1,
     title: 'e1',
     url: null,
     author: null,
     summary: 's',
     contentHtml: '<p>b</p>',
+    imageUrl: null,
+    imageWidth: null,
+    imageHeight: null,
     publishedAt: '2026-07-22T11:00:00Z',
     createdAt: 'x',
     subscriptionId: 5,
     source: 'heise',
+    faviconUrl: null,
     isRead: false,
     isFavorite: false,
     isKept: false,
@@ -92,17 +97,14 @@ describe('ReaderShellComponent', () => {
     ctrl = TestBed.inject(HttpTestingController);
   });
 
-  function boot() {
+  function boot(entryOverride: Partial<typeof entry> = {}) {
     const f = TestBed.createComponent(ReaderShellComponent);
     f.detectChanges(); // ngOnInit + initial effects
     ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl
       .expectOne((r) => r.url === 'https://api.test/api/entries')
-      .flush({
-        entries: [entry],
-        nextCursor: null,
-      });
+      .flush({ entries: [{ ...entry, ...entryOverride }], nextCursor: null });
     f.detectChanges();
     return f;
   }
@@ -313,8 +315,8 @@ describe('ReaderShellComponent', () => {
           isFavorite: false,
           isKept: false,
           readAt: 'x',
-          isViewed: false,
-          viewedAt: null,
+          isViewed: true,
+          viewedAt: 'x',
         },
       });
       f.detectChanges();
@@ -396,12 +398,12 @@ describe('ReaderShellComponent', () => {
     });
   });
 
-  it('marks the opened entry read', () => {
+  it('marks the opened entry read and viewed', () => {
     const f = boot();
     qp.next(convertToParamMap({ entry: '1' }));
     f.detectChanges();
     const req = ctrl.expectOne('https://api.test/api/entries/1/state');
-    expect(req.request.body).toEqual({ isRead: true });
+    expect(req.request.body).toEqual({ isRead: true, isViewed: true });
     req.flush({
       state: {
         entryId: 1,
@@ -409,24 +411,66 @@ describe('ReaderShellComponent', () => {
         isFavorite: false,
         isKept: false,
         readAt: 'x',
-        isViewed: false,
-        viewedAt: null,
+        isViewed: true,
+        viewedAt: 'x',
       },
     });
     expect(f.nativeElement.querySelector('app-reader-view')).not.toBeNull();
   });
 
-  it('marks the opened entry read only once even when the PATCH fails', () => {
+  it('marks the opened entry read and viewed only once even when the PATCH fails', () => {
     const f = boot();
     qp.next(convertToParamMap({ entry: '1' }));
     f.detectChanges();
     const req = ctrl.expectOne('https://api.test/api/entries/1/state');
-    expect(req.request.body).toEqual({ isRead: true });
+    expect(req.request.body).toEqual({ isRead: true, isViewed: true });
     req.flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
     f.detectChanges();
-    // The entry is still unread (rollback), but the effect must NOT re-fire a PATCH.
+    // The entry is still unread/unviewed (rollback), but the effect must NOT
+    // re-fire a PATCH.
     ctrl.expectNone((r) => r.url.endsWith('/entries/1/state'));
     ctrl.verify();
+  });
+
+  it('marks an already-read entry viewed on open', () => {
+    const f = boot({ isRead: true });
+    qp.next(convertToParamMap({ entry: '1' }));
+    f.detectChanges();
+    const req = ctrl.expectOne('https://api.test/api/entries/1/state');
+    expect(req.request.body).toEqual({ isViewed: true });
+    req.flush({
+      state: {
+        entryId: 1,
+        isRead: true,
+        isFavorite: false,
+        isKept: false,
+        readAt: 'x',
+        isViewed: true,
+        viewedAt: 'x',
+      },
+    });
+  });
+
+  it('does not re-mark an already-viewed entry on open', () => {
+    const f = boot({ isRead: true, isViewed: true });
+    qp.next(convertToParamMap({ entry: '1' }));
+    f.detectChanges();
+    ctrl.expectNone((r) => r.url.endsWith('/entries/1/state'));
+    ctrl.verify();
+  });
+
+  it('marks the entry viewed when the original-article link is followed', () => {
+    const f = boot({ isRead: true }); // open fires only the viewed patch…
+    qp.next(convertToParamMap({ entry: '1' }));
+    f.detectChanges();
+    ctrl
+      .expectOne('https://api.test/api/entries/1/state')
+      .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' }); // …which fails and rolls back, so the link click is the real retry path.
+    f.detectChanges();
+
+    f.componentInstance.onOpenOriginal({ ...entry, isRead: true, isViewed: false });
+    const req = ctrl.expectOne('https://api.test/api/entries/1/state');
+    expect(req.request.body).toEqual({ isViewed: true });
   });
 
   it('fetches a deep-linked entry that is not in the loaded list', () => {
@@ -437,8 +481,10 @@ describe('ReaderShellComponent', () => {
     // Not in the list → the shell fetches it by the id parsed from the slug.
     const req = ctrl.expectOne('https://api.test/api/entries/514');
     expect(req.request.method).toBe('GET');
-    // isRead:true so the mark-on-open effect fires no extra state PATCH.
-    req.flush({ entry: { ...entry, id: 514, title: 'Deep linked story', isRead: true } });
+    // isRead:true, isViewed:true so the on-open effect fires no state PATCH.
+    req.flush({
+      entry: { ...entry, id: 514, title: 'Deep linked story', isRead: true, isViewed: true },
+    });
     f.detectChanges();
 
     expect(f.nativeElement.querySelector('app-reader-view')).not.toBeNull();

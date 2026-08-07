@@ -103,6 +103,7 @@ export class ReaderViewComponent {
   readonly favorite = output<void>();
   readonly keep = output<void>();
   readonly read = output<void>();
+  readonly openOriginal = output<void>();
   // Semantic "back to list" output; not a DOM element's close event.
   // eslint-disable-next-line @angular-eslint/no-output-native
   readonly close = output<void>();
