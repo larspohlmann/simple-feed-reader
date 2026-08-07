@@ -16,6 +16,19 @@ final class RecommendationPromptBuilder
     private const int FIXED_OVERHEAD_TOKENS = 1500;
     private const int TOKENS_PER_PICK = 40;
     private const int MINIMUM_BATCH_SIZE = 10;
+
+    /**
+     * Hard ceiling on candidates per batch, independent of the token budget.
+     *
+     * The token budget alone let a large-context model receive 339
+     * candidates in a single batch; ranking that many took over 100 seconds
+     * and exceeded the provider request timeout. Ranking time scales with
+     * the number of items the model must order, not just with prompt size,
+     * so the token budget cannot be the only guard. 40 keeps a single batch
+     * call comfortably inside the timeout on every model this feature
+     * targets. See #308.
+     */
+    private const int MAXIMUM_BATCH_SIZE = 40;
     private const int DESCRIPTION_MIN_CHARS = 120;
     private const int DESCRIPTION_MAX_CHARS = 480;
     private const int DESCRIPTION_WINDOW_DIVISOR = 137;
@@ -50,7 +63,9 @@ final class RecommendationPromptBuilder
 
         foreach ($candidates as $candidate) {
             $lineTokens = $this->tokens($this->candidateLine($candidate, $descriptionLength));
-            if ([] !== $current && $used + $lineTokens > $budget && \count($current) >= self::MINIMUM_BATCH_SIZE) {
+            $overBudget = $used + $lineTokens > $budget && \count($current) >= self::MINIMUM_BATCH_SIZE;
+            $atCapacity = \count($current) >= self::MAXIMUM_BATCH_SIZE;
+            if ([] !== $current && ($overBudget || $atCapacity)) {
                 $batches[] = $current;
                 $current = [];
                 $used = 0;

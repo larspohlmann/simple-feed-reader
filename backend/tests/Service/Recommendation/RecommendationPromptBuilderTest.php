@@ -42,18 +42,46 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testPackingSplitsWhenTheBudgetOverflows(): void
     {
-        // 60 candidates at this window/picksLimit stay under budget in a single
-        // batch (each truncated line is short); 150 reliably crosses it while
-        // keeping the same window, picksLimit and description length.
-        $candidateCount = 150;
+        // 35 candidates at this window/picksLimit split into 20 + 15 purely on
+        // the token budget: both resulting batches stay well under
+        // MAXIMUM_BATCH_SIZE (40), so the cap plays no part in the split — only
+        // the budget does. A window of 8192 (as this test used before the cap
+        // existed) fits all 35 in one batch, so the window was shrunk instead
+        // of the candidate count grown, keeping the split budget-driven rather
+        // than cap-driven.
+        $candidateCount = 35;
         $candidates = array_map(
             static fn (int $id): PromptLine => self::line($id, "Candidate $id", 400),
             range(1, $candidateCount),
         );
 
-        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(8192, 10));
+        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(2829, 10));
 
         self::assertGreaterThan(1, \count($batches));
+        foreach ($batches as $batch) {
+            // Below the 40-candidate cap, so the split above is proven to come
+            // from the token budget, not from the cap.
+            self::assertLessThan(40, \count($batch));
+        }
+
+        $ids = array_merge(...$batches);
+        self::assertSame(range(1, $candidateCount), $ids);
+    }
+
+    public function testPackingCapsBatchSizeEvenWhenTheBudgetWouldAllowMore(): void
+    {
+        // A huge window and short lines mean the token budget never binds —
+        // every candidate would fit in one batch on budget alone. Only the
+        // MAXIMUM_BATCH_SIZE cap can be splitting these into 40/40/20.
+        $candidateCount = 100;
+        $candidates = array_map(
+            static fn (int $id): PromptLine => new PromptLine($id, "C$id", 'F', 'D', null),
+            range(1, $candidateCount),
+        );
+
+        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(1_000_000, 10));
+
+        self::assertSame([40, 40, 20], array_map('count', $batches));
 
         $ids = array_merge(...$batches);
         self::assertSame(range(1, $candidateCount), $ids);

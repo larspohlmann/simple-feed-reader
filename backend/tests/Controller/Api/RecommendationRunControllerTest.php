@@ -32,8 +32,11 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class RecommendationRunControllerTest extends WebTestCase
 {
+    /** Must match framework.rate_limiter.ai_recommendation_starts.limit in rate_limiter.yaml. */
+    private const int START_BUDGET = 10;
+
     /** Must match framework.rate_limiter.ai_recommendations.limit in rate_limiter.yaml. */
-    private const int BUDGET = 30;
+    private const int TICK_BUDGET = 90;
 
     protected function setUp(): void
     {
@@ -307,20 +310,21 @@ final class RecommendationRunControllerTest extends WebTestCase
     }
 
     /**
-     * Pins that the ai_recommendations budget is actually spent by the
-     * mutating routes. Every other case only proves the limiter does NOT
-     * fire, so a limiter argument bound to the wrong service — it autowires
-     * by parameter name — would leave the whole suite green with the
-     * endpoint uncapped.
+     * Pins that the ai_recommendation_starts budget is actually spent by
+     * start(). Every other case only proves the limiter does NOT fire, so a
+     * limiter argument bound to the wrong service — it autowires by parameter
+     * name — would leave the whole suite green with the endpoint uncapped.
+     * The two routes carry different budgets precisely so this case would fail
+     * if start() were wired to the loose tick limiter.
      */
-    public function testThe31stStartWithinTheWindowIsRateLimited(): void
+    public function testAStartBeyondTheWindowsBudgetIsRateLimited(): void
     {
         $client = self::createClient();
         $client->disableReboot();
         [$headers, $user] = $this->auth('run-budget@example.test');
         $this->seedReadyAiSettings($user);
 
-        for ($spent = 1; $spent <= self::BUDGET; ++$spent) {
+        for ($spent = 1; $spent <= self::START_BUDGET; ++$spent) {
             $client->request('POST', '/api/recommendations/runs', server: $headers);
             self::assertResponseIsSuccessful(sprintf('Request %d was inside the budget.', $spent));
         }
@@ -338,13 +342,13 @@ final class RecommendationRunControllerTest extends WebTestCase
      * ('none') so a run of ticks exercises the limiter alone, with nothing
      * else that could turn a spent budget into a different status code.
      */
-    public function testThe31stTickWithinTheWindowIsRateLimited(): void
+    public function testATickBeyondTheWindowsBudgetIsRateLimited(): void
     {
         $client = self::createClient();
         $client->disableReboot();
         [$headers] = $this->auth('run-tick-budget@example.test');
 
-        for ($spent = 1; $spent <= self::BUDGET; ++$spent) {
+        for ($spent = 1; $spent <= self::TICK_BUDGET; ++$spent) {
             $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
             self::assertResponseIsSuccessful(sprintf('Request %d was inside the budget.', $spent));
         }
@@ -361,7 +365,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         $client->disableReboot();
         [$headers] = $this->auth('run-current-unlimited@example.test');
 
-        for ($i = 0; $i <= self::BUDGET; ++$i) {
+        for ($i = 0; $i <= self::TICK_BUDGET; ++$i) {
             $client->request('GET', '/api/recommendations/runs/current', server: $headers);
             self::assertResponseIsSuccessful();
         }
