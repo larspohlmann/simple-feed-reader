@@ -259,7 +259,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         this.viewedOnOpen.add(e.id);
         patch.isViewed = true;
       }
-      if (patch.isRead === undefined && patch.isViewed === undefined) return;
+      if (Object.keys(patch).length === 0) return;
       untracked(() => this.applyOpenedPatch(e, patch));
     });
     // Deep link to an entry the current list page doesn't hold: fetch it by id so

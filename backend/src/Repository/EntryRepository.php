@@ -229,6 +229,9 @@ class EntryRepository extends ServiceEntityRepository
             isFavorite: (bool) ($row['esFavorite'] ?? false),
             isKept: (bool) ($row['esKept'] ?? false),
             isViewed: (bool) ($row['esViewed'] ?? false),
+            markedReadUntil: $row['markedReadUntil'] instanceof \DateTimeImmutable
+                ? $row['markedReadUntil']
+                : null,
         );
     }
 
