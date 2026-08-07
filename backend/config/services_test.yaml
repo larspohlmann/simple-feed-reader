@@ -1,4 +1,16 @@
 services:
+    # WorkerPresenceTest constructs a second instance by hand with a MockClock
+    # to pin the freshness boundary exactly, but also drives the
+    # container-built instance to prove the real wiring resolves. Its only
+    # production caller (the poll-side arbitration) arrives in a later task,
+    # so until then the compiler would inline it away and the test container
+    # could not fetch it. Same `autowire` caveat as the entries below: naming
+    # a class here replaces the definition rather than amending it, and this
+    # file has no `_defaults`.
+    App\Service\Worker\WorkerPresence:
+        autowire: true
+        public: true
+
     # AiProviderConfiguratorTest swaps the real catalog for a stub via
     # `self::getContainer()->set(...)`, which the container only allows on
     # public services, and fetches the configurator itself with `->get(...)`,
