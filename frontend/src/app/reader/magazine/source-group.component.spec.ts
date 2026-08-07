@@ -30,6 +30,7 @@ const e = (id: number): EntryDto => ({
   isRead: false,
   isFavorite: false,
   isKept: false,
+  isViewed: false,
 });
 
 describe('SourceGroupComponent', () => {

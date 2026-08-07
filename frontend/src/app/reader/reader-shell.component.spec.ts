@@ -71,6 +71,7 @@ describe('ReaderShellComponent', () => {
     isRead: false,
     isFavorite: false,
     isKept: false,
+    isViewed: false,
   };
 
   beforeEach(() => {
@@ -306,7 +307,15 @@ describe('ReaderShellComponent', () => {
       qp.next(convertToParamMap({ entry: '1' }));
       f.detectChanges();
       ctrl.expectOne('https://api.test/api/entries/1/state').flush({
-        state: { entryId: 1, isRead: true, isFavorite: false, isKept: false, readAt: 'x' },
+        state: {
+          entryId: 1,
+          isRead: true,
+          isFavorite: false,
+          isKept: false,
+          readAt: 'x',
+          isViewed: false,
+          viewedAt: null,
+        },
       });
       f.detectChanges();
       expect(f.componentInstance.articleFullscreen()).toBe(true);
@@ -394,7 +403,15 @@ describe('ReaderShellComponent', () => {
     const req = ctrl.expectOne('https://api.test/api/entries/1/state');
     expect(req.request.body).toEqual({ isRead: true });
     req.flush({
-      state: { entryId: 1, isRead: true, isFavorite: false, isKept: false, readAt: 'x' },
+      state: {
+        entryId: 1,
+        isRead: true,
+        isFavorite: false,
+        isKept: false,
+        readAt: 'x',
+        isViewed: false,
+        viewedAt: null,
+      },
     });
     expect(f.nativeElement.querySelector('app-reader-view')).not.toBeNull();
   });

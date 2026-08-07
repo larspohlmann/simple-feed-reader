@@ -30,6 +30,7 @@ const entry: EntryDto = {
   isRead: false,
   isFavorite: false,
   isKept: false,
+  isViewed: false,
 };
 
 describe('EntryCompactComponent', () => {

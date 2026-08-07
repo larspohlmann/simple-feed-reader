@@ -88,7 +88,15 @@ describe('ReaderApi', () => {
     expect(req.request.method).toBe('PATCH');
     expect(req.request.body).toEqual({ isFavorite: true });
     req.flush({
-      state: { entryId: 3, isRead: false, isFavorite: true, isKept: false, readAt: null },
+      state: {
+        entryId: 3,
+        isRead: false,
+        isFavorite: true,
+        isKept: false,
+        readAt: null,
+        isViewed: false,
+        viewedAt: null,
+      },
     });
   });
 

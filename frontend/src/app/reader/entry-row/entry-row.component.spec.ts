@@ -21,6 +21,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isRead: false,
   isFavorite: false,
   isKept: false,
+  isViewed: false,
   ...over,
 });
 
