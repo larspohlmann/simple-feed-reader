@@ -7,6 +7,7 @@ namespace App\Tests\Service\Recommendation;
 use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
@@ -364,6 +365,256 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertStringNotContainsString('- [' . $droppedId . ']', $userMessage);
     }
 
+    public function testSingleBatchRunFinalizesWithoutAMergeCall(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        for ($i = 0; $i < 5; $i++) {
+            $this->entry('entry-' . $i, sprintf('2026-07-%02dT00:00:00Z', 10 + $i));
+        }
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user);
+        $run = $this->activeRun();
+        self::assertSame(1, $run->progress()->batchesTotal);
+        $batch = $run->getCandidateBatches()[0];
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [
+                ['id' => $batch[1], 'reason' => 'second pick'],
+                ['id' => $batch[0], 'reason' => 'first pick'],
+            ],
+        ], \JSON_THROW_ON_ERROR));
+
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame('completed', $report->status);
+        self::assertCount(1, $this->stubChatClient()->calls());
+
+        $this->em->clear();
+        $items = $this->recommendationItems($run);
+        self::assertCount(2, $items);
+        self::assertSame(1, $items[0]->getPosition());
+        self::assertSame($batch[1], $items[0]->getEntry()->getId());
+        self::assertSame('second pick', $items[0]->getReason());
+        self::assertSame(2, $items[1]->getPosition());
+        self::assertSame($batch[0], $items[1]->getEntry()->getId());
+        self::assertSame('first pick', $items[1]->getReason());
+    }
+
+    public function testMergeTickRanksTheWinners(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startAndSnapshot();
+        $firstBatch = $run->getCandidateBatches()[0];
+        $secondBatch = $run->getCandidateBatches()[1];
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [
+                ['id' => $firstBatch[0], 'reason' => 'from batch one'],
+                ['id' => $firstBatch[1], 'reason' => 'also batch one'],
+            ],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [
+                ['id' => $secondBatch[0], 'reason' => 'from batch two'],
+            ],
+        ], \JSON_THROW_ON_ERROR));
+        $afterBatches = $this->advancer()->advance($this->user);
+        self::assertSame('running', $afterBatches->status);
+        self::assertTrue($this->activeRun()->progress()->isMergePhase);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [
+                ['id' => $secondBatch[0], 'reason' => 'ranked first'],
+                ['id' => $firstBatch[1], 'reason' => 'ranked second'],
+                ['id' => $firstBatch[0], 'reason' => 'ranked third'],
+            ],
+        ], \JSON_THROW_ON_ERROR));
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame('completed', $report->status);
+
+        $mergeCall = $this->stubChatClient()->calls()[2];
+        self::assertSame('m', $mergeCall['model']);
+        $mergeUserMessage = $mergeCall['messages'][1]['content'];
+        self::assertStringContainsString('WINNERS:', $mergeUserMessage);
+        self::assertStringContainsString('from batch one', $mergeUserMessage);
+        self::assertStringContainsString('also batch one', $mergeUserMessage);
+        self::assertStringContainsString('from batch two', $mergeUserMessage);
+
+        $this->em->clear();
+        $items = $this->recommendationItems($run);
+        self::assertCount(3, $items);
+        self::assertSame([$secondBatch[0], $firstBatch[1], $firstBatch[0]], array_map(
+            fn (RecommendationItem $item): int => $this->entryIdOf($item),
+            $items,
+        ));
+        self::assertSame(
+            [1, 2, 3],
+            array_map(static fn (RecommendationItem $item): int => $item->getPosition(), $items),
+        );
+        self::assertSame(['ranked first', 'ranked second', 'ranked third'], array_map(
+            static fn (RecommendationItem $item): string => $item->getReason(),
+            $items,
+        ));
+    }
+
+    public function testMergeRespectsThePerBatchCap(): void
+    {
+        $this->seedMultiBatchFixture(picksLimit: 4, entryCount: 30);
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user);
+        $run = $this->activeRun();
+
+        // A lower picksLimit shrinks the packer's response-token reserve, so
+        // this fixture's exact split differs from the other tests' 10/10 —
+        // only the two-batch shape matters here, not the split point.
+        self::assertSame(3, $run->progress()->batchesTotal);
+        self::assertCount(2, $run->getCandidateBatches());
+        $firstBatch = $run->getCandidateBatches()[0];
+        $secondBatch = $run->getCandidateBatches()[1];
+
+        $run->recordBatchWinners(array_map(
+            static fn (int $id): array => ['id' => $id, 'reason' => 'batch one reason ' . $id],
+            $firstBatch,
+        ));
+        $run->recordBatchWinners(array_map(
+            static fn (int $id): array => ['id' => $id, 'reason' => 'batch two reason ' . $id],
+            $secondBatch,
+        ));
+        $this->em->flush();
+        self::assertTrue($this->activeRun()->progress()->isMergePhase);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'reason' => 'winner']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $mergeCall = $this->stubChatClient()->calls()[0];
+        $mergeUserMessage = $mergeCall['messages'][1]['content'];
+        self::assertSame(4, $this->lineCountForBatch($mergeUserMessage, $firstBatch));
+        self::assertSame(4, $this->lineCountForBatch($mergeUserMessage, $secondBatch));
+    }
+
+    public function testUnusableMergeReplyRetriesThenFails(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startAndSnapshot();
+        $firstBatch = $run->getCandidateBatches()[0];
+        $secondBatch = $run->getCandidateBatches()[1];
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'reason' => 'r1']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $secondBatch[0], 'reason' => 'r2']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $this->stubChatClient()->queueContent('garbage 1');
+        $this->stubChatClient()->queueContent('garbage 2');
+        $this->stubChatClient()->queueContent('garbage 3');
+
+        $this->advancer()->advance($this->user);
+        $this->advancer()->advance($this->user);
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame('failed', $report->status);
+
+        $this->em->clear();
+        $failed = $this->runs()->findLatestForUser($this->user);
+        self::assertNotNull($failed);
+        self::assertSame(RecommendationRun::STATUS_FAILED, $failed->getStatus());
+        self::assertSame(
+            [
+                [['id' => $firstBatch[0], 'reason' => 'r1']],
+                [['id' => $secondBatch[0], 'reason' => 'r2']],
+            ],
+            $failed->getWinners(),
+        );
+    }
+
+    public function testFinalizeSkipsEntriesPrunedMidRun(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startAndSnapshot();
+        $firstBatch = $run->getCandidateBatches()[0];
+        $secondBatch = $run->getCandidateBatches()[1];
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [
+                ['id' => $firstBatch[0], 'reason' => 'r1'],
+                ['id' => $firstBatch[1], 'reason' => 'r2'],
+            ],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $secondBatch[0], 'reason' => 'r3']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $prunedId = $firstBatch[0];
+        $prunedEntry = $this->em->getRepository(Entry::class)->find($prunedId);
+        self::assertNotNull($prunedEntry);
+        $this->em->remove($prunedEntry);
+        $this->em->flush();
+        $this->em->clear();
+
+        $run = $this->activeRun();
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [
+                ['id' => $firstBatch[1], 'reason' => 'kept one'],
+                ['id' => $secondBatch[0], 'reason' => 'kept two'],
+            ],
+        ], \JSON_THROW_ON_ERROR));
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame('completed', $report->status);
+
+        $this->em->clear();
+        $items = $this->recommendationItems($run);
+        self::assertCount(2, $items);
+        self::assertSame([1, 2], array_map(static fn (RecommendationItem $item): int => $item->getPosition(), $items));
+        self::assertSame([$firstBatch[1], $secondBatch[0]], array_map(
+            fn (RecommendationItem $item): int => $this->entryIdOf($item),
+            $items,
+        ));
+    }
+
+    /**
+     * @return list<RecommendationItem>
+     */
+    private function recommendationItems(RecommendationRun $run): array
+    {
+        /** @var list<RecommendationItem> $items */
+        $items = $this->em->getRepository(RecommendationItem::class)->findBy(['run' => $run], ['position' => 'ASC']);
+
+        return $items;
+    }
+
+    private function entryIdOf(RecommendationItem $item): int
+    {
+        $id = $item->getEntry()->getId();
+        self::assertNotNull($id);
+
+        return $id;
+    }
+
+    /**
+     * @param list<int> $batchIds
+     */
+    private function lineCountForBatch(string $mergeUserMessage, array $batchIds): int
+    {
+        return array_sum(array_map(
+            static fn (int $id): int => substr_count($mergeUserMessage, '[' . $id . ']'),
+            $batchIds,
+        ));
+    }
+
     /**
      * candidatePoolSize 20 with a small context window forces the packer to
      * split into two batches of 10 (pinned by each test right after its own
@@ -371,13 +622,18 @@ final class RecommendationRunAdvancerTest extends DbTestCase
      * future change to the packing maths fails loudly here instead of
      * silently making these tests single-batch.
      */
-    private function seedMultiBatchFixture(): void
-    {
+    private function seedMultiBatchFixture(
+        int $picksLimit = EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+        int $entryCount = 20,
+    ): void {
         $this->seedReadyAiSettings($this->user);
 
         $summary = str_repeat('Lorem ipsum dolor sit amet consectetur adipiscing elit. ', 5);
-        for ($i = 0; $i < 20; $i++) {
-            $entry = $this->entry(sprintf('entry-%02d', $i), sprintf('2026-07-%02dT00:00:00Z', 10 + $i));
+        for ($i = 0; $i < $entryCount; $i++) {
+            $entry = $this->entry(
+                sprintf('entry-%02d', $i),
+                sprintf('2026-07-10T%02d:%02d:00Z', intdiv($i, 60), $i % 60),
+            );
             $entry->setSummary($summary);
         }
         $this->em->flush();
@@ -388,8 +644,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
             keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
             viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: 20,
-            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+            candidatePoolSize: $entryCount,
+            picksLimit: $picksLimit,
             contextWindow: 2500,
             debugEnabled: false,
         ));

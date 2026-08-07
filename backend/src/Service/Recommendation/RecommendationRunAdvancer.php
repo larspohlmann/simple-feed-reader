@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\Entry;
+use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
@@ -26,9 +28,14 @@ use Symfony\Component\Lock\LockFactory;
  * provider call per tick: a batch whose entries are all pruned records an
  * empty winner set for free, a usable reply advances the run, and an
  * unusable one is retried with a corrective message until three attempts
- * checkpoint the run as failed. The merge phase — folding several batches'
- * winners into one final ranking — is a later task's; finalize() is a stub
- * until then, reached only by a single-batch run's one and only tick.
+ * checkpoint the run as failed. Once every batch call is done, a run with
+ * more than one batch enters the merge phase: one more provider call folds
+ * all batches' winners into a single ranking, with the same salvage/retry/
+ * fail treatment as a batch reply. A single-batch run has nothing to merge,
+ * so it finalizes straight from its one winner list instead. finalize()
+ * re-checks that each winning entry still exists — the pool can be pruned
+ * mid-run — and writes the survivors as RecommendationItems at dense
+ * positions before marking the run completed.
  *
  * The eleven constructor collaborators are deliberate: the advancer is the
  * recommendation pipeline's composition root (lock, run persistence, AI
@@ -93,6 +100,10 @@ final class RecommendationRunAdvancer
 
         if (RecommendationRun::STATUS_PENDING === $run->getStatus()) {
             return $this->snapshotTick($run, $user);
+        }
+
+        if ($run->progress()->isMergePhase) {
+            return $this->mergeTick($run, $user, $settings);
         }
 
         return $this->providerTick($run, $user, $settings);
@@ -172,12 +183,87 @@ final class RecommendationRunAdvancer
         $candidateLines = $this->linesInSnapshotOrder($ids, $linesById);
         $messages = $this->promptBuilder->batchMessages($history, $candidateLines, $effectiveSettings);
 
+        return $this->withCorrectiveTail($messages, $run);
+    }
+
+    private function mergeTick(
+        RecommendationRun $run,
+        User $user,
+        AiProviderSettings $settings,
+    ): RecommendationRunReport {
+        $userId = $this->requireUserId($user);
+        $winners = $run->getWinners();
+        $linesById = $this->candidateLoader->linesForIds($userId, $this->uniqueWinnerIds($winners));
+        $validIds = array_keys($linesById);
+
+        $effectiveSettings = $this->settingsResolver->forUser($user);
+        $messages = $this->mergeMessagesFor($run, $winners, $linesById, $effectiveSettings);
+
+        $content = $this->chat->complete(
+            $this->configurator->credentials($settings),
+            $settings->getModel() ?? '',
+            $messages,
+        );
+
+        $result = $this->parser->parse($content, $validIds, $effectiveSettings->picksLimit);
+
+        if (!$result->usable) {
+            return $this->recordUnusableReply($run, $content);
+        }
+
+        return $this->finalize($run, array_map(
+            static fn (RecommendationPick $pick): array => ['id' => $pick->entryId, 'reason' => $pick->reason],
+            $result->picks,
+        ));
+    }
+
+    /**
+     * @param list<list<array{id: int, reason: string}>> $winners
+     * @param array<int, PromptLine>                      $linesById
+     *
+     * @return list<array{role: string, content: string}>
+     */
+    private function mergeMessagesFor(
+        RecommendationRun $run,
+        array $winners,
+        array $linesById,
+        EffectiveRecommendationSettings $effectiveSettings,
+    ): array {
+        $messages = $this->promptBuilder->mergeMessages($winners, $linesById, $effectiveSettings);
+
+        return $this->withCorrectiveTail($messages, $run);
+    }
+
+    /**
+     * @param list<array{role: string, content: string}> $messages
+     *
+     * @return list<array{role: string, content: string}>
+     */
+    private function withCorrectiveTail(array $messages, RecommendationRun $run): array
+    {
         $lastInvalidReply = $run->getLastInvalidReply();
         if (null === $lastInvalidReply) {
             return $messages;
         }
 
         return [...$messages, ...$this->promptBuilder->correctiveTail($lastInvalidReply)];
+    }
+
+    /**
+     * @param list<list<array{id: int, reason: string}>> $winners
+     *
+     * @return list<int>
+     */
+    private function uniqueWinnerIds(array $winners): array
+    {
+        $ids = [];
+        foreach ($winners as $batch) {
+            foreach ($batch as $winner) {
+                $ids[$winner['id']] = true;
+            }
+        }
+
+        return array_keys($ids);
     }
 
     /**
@@ -199,13 +285,7 @@ final class RecommendationRunAdvancer
         PickParseResult $result,
     ): RecommendationRunReport {
         if (!$result->usable) {
-            $run->recordInvalidReply($content);
-            if ($run->attemptsExhausted()) {
-                $run->fail('The model did not return a usable ranking.', $this->clock->now());
-            }
-            $this->entityManager->flush();
-
-            return RecommendationRunReport::fromRun($run);
+            return $this->recordUnusableReply($run, $content);
         }
 
         $run->recordBatchWinners(array_map(
@@ -223,11 +303,73 @@ final class RecommendationRunAdvancer
     }
 
     /**
-     * @param list<array{id: int, reason: string}> $winners
+     * Unusable batch and merge replies get the same treatment: the entity
+     * does not care which phase the failed attempt belonged to.
      */
-    private function finalize(RecommendationRun $run, array $winners): RecommendationRunReport
+    private function recordUnusableReply(RecommendationRun $run, string $content): RecommendationRunReport
     {
-        throw new \LogicException('not yet implemented');
+        $run->recordInvalidReply($content);
+        if ($run->attemptsExhausted()) {
+            $run->fail('The model did not return a usable ranking.', $this->clock->now());
+        }
+        $this->entityManager->flush();
+
+        return RecommendationRunReport::fromRun($run);
+    }
+
+    /**
+     * Re-checks that each pick's entry still exists — the candidate pool can
+     * be pruned mid-run — and writes the survivors as RecommendationItems at
+     * dense positions in pick order before marking the run completed.
+     *
+     * @param list<array{id: int, reason: string}> $picks
+     */
+    private function finalize(RecommendationRun $run, array $picks): RecommendationRunReport
+    {
+        $existingIds = $this->existingEntryIds(array_map(
+            static fn (array $pick): int => $pick['id'],
+            $picks,
+        ));
+
+        $position = 0;
+        foreach ($picks as $pick) {
+            if (!\in_array($pick['id'], $existingIds, true)) {
+                continue;
+            }
+
+            $position++;
+            $entryReference = $this->entityManager->getReference(Entry::class, $pick['id'])
+                ?? throw new \LogicException('Entry ' . $pick['id'] . ' was confirmed to exist a moment ago.');
+            $this->entityManager->persist(new RecommendationItem($run, $entryReference, $position, $pick['reason']));
+        }
+
+        $run->complete($this->clock->now());
+        $this->entityManager->flush();
+
+        return RecommendationRunReport::fromRun($run);
+    }
+
+    /**
+     * @param list<int> $ids
+     *
+     * @return list<int>
+     */
+    private function existingEntryIds(array $ids): array
+    {
+        if ([] === $ids) {
+            return [];
+        }
+
+        /** @var list<int> $existingIds */
+        $existingIds = $this->entityManager->createQueryBuilder()
+            ->select('e.id')
+            ->from(Entry::class, 'e')
+            ->where('e.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->getQuery()
+            ->getSingleColumnResult();
+
+        return $existingIds;
     }
 
     private function requireUserId(User $user): int
