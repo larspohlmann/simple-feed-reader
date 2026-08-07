@@ -51,11 +51,19 @@ final class EntryPruner
     }
 
     /**
+     * The empty-run pass is bookkeeping, not something the user's refresh
+     * summary should count: it deletes recommendation runs, not entries, so
+     * folding it into the total would report "3 entries pruned" for a
+     * refresh that removed zero entries and three empty runs.
+     *
      * @throws \DateMalformedStringException
      */
     public function prune(): int
     {
-        return $this->pruneByAge() + $this->pruneByFeedCap() + $this->pruneEmptyRuns();
+        $deletedEntries = $this->pruneByAge() + $this->pruneByFeedCap();
+        $this->pruneEmptyRuns();
+
+        return $deletedEntries;
     }
 
     /**

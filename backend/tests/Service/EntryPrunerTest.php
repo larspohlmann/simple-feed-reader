@@ -212,13 +212,37 @@ final class EntryPrunerTest extends DbTestCase
         $runId = $run->getId();
         $this->em->clear();
 
-        // The doomed entry (age pass) and the run it leaves empty (empty-runs
-        // pass) both count toward the total: 1 + 1, not 1 - 1.
+        // The run left empty by the doomed entry's deletion is bookkeeping,
+        // not an entry: it must not inflate the count the refresh summary
+        // shows the user. Only the entry counts toward the total.
         $pruned = $this->pruner->prune();
         $this->em->clear();
 
-        self::assertSame(2, $pruned);
+        self::assertSame(1, $pruned);
         self::assertNull($this->em->getRepository(RecommendationRun::class)->find($runId));
+    }
+
+    /**
+     * The run-deletion count must never leak into the entry count: a refresh
+     * that removes zero entries but leaves several runs empty (their items'
+     * entries pruned in an earlier pass) reports zero, not the run count.
+     */
+    public function testEmptyRunsAloneReportZeroPruned(): void
+    {
+        $user = new User('reader@example.com', $this->clock->now());
+        $this->em->persist($user);
+
+        for ($i = 0; $i < 3; $i++) {
+            $run = new RecommendationRun($user, $this->clock->now());
+            $run->snapshot([[1]]);
+            $run->complete($this->clock->now());
+            $this->em->persist($run);
+        }
+        $this->em->flush();
+
+        $pruned = $this->pruner->prune();
+
+        self::assertSame(0, $pruned);
     }
 
     public function testARunningRunWithNoItemsSurvivesPruning(): void
