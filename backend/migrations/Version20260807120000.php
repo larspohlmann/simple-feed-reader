@@ -53,7 +53,14 @@ final class Version20260807120000 extends AbstractMigration
         }
 
         if ($platform instanceof SQLitePlatform) {
-            $this->addSql('ALTER TABLE entry_state ADD COLUMN is_viewed BOOLEAN DEFAULT 0 NOT NULL');
+            // No DEFAULT: the sibling booleans on this table (is_read, is_favorite,
+            // is_kept) were created the same way and the ORM metadata declares none,
+            // so schema:validate demands none here either. SQLite's own rule is that
+            // ADD COLUMN ... NOT NULL needs a DEFAULT unless the table is empty; CI's
+            // migrate-from-empty leg satisfies that, and production runs MySQL, not
+            // SQLite, so this only bites a developer applying it to a populated local
+            // dev.db (recreate that database rather than adding a default here).
+            $this->addSql('ALTER TABLE entry_state ADD COLUMN is_viewed BOOLEAN NOT NULL');
             $this->addSql('ALTER TABLE entry_state ADD COLUMN viewed_at DATETIME DEFAULT NULL');
 
             return;
