@@ -132,7 +132,10 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         $linesById = $this->loader()->linesForIds($this->userId(), [$firstId, $secondId]);
 
-        self::assertSame([$firstId, $secondId], array_keys($linesById));
+        // linesForIds() returns a map keyed by entry id, not an ordered list
+        // (callers that need snapshot order re-derive it themselves via
+        // linesInSnapshotOrder()), so only set membership is a contract here.
+        self::assertEqualsCanonicalizing([$firstId, $secondId], array_keys($linesById));
     }
 
     public function testLinesForIdsCarriesTheSubscriptionsCustomTitle(): void
