@@ -94,6 +94,7 @@ final class Version20260807130000 extends AbstractMigration
                 batch_winners JSON NOT NULL,
                 batches_done INT DEFAULT 0 NOT NULL,
                 attempts INT DEFAULT 0 NOT NULL,
+                transport_failures INT DEFAULT 0 NOT NULL,
                 last_invalid_reply LONGTEXT DEFAULT NULL,
                 user_id INT NOT NULL,
                 INDEX IDX_ACA1664FA76ED395 (user_id),
@@ -163,6 +164,7 @@ final class Version20260807130000 extends AbstractMigration
                 batch_winners CLOB NOT NULL,
                 batches_done INTEGER DEFAULT 0 NOT NULL,
                 attempts INTEGER DEFAULT 0 NOT NULL,
+                transport_failures INTEGER DEFAULT 0 NOT NULL,
                 last_invalid_reply CLOB DEFAULT NULL,
                 user_id INTEGER NOT NULL,
                 CONSTRAINT FK_ACA1664FA76ED395 FOREIGN KEY (user_id) REFERENCES app_user (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE

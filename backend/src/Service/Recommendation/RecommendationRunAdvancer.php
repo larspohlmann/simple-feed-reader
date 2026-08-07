@@ -12,6 +12,8 @@ use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Exception\AiNotConfiguredException;
+use App\Service\Ai\Exception\CredentialsRejectedException;
+use App\Service\Ai\Exception\ProviderUnreachableException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Lock\LockFactory;
@@ -155,11 +157,7 @@ final class RecommendationRunAdvancer
         $effectiveSettings = $this->settingsResolver->forUser($user);
         $messages = $this->batchMessagesFor($run, $userId, $ids, $linesById, $effectiveSettings);
 
-        $content = $this->chat->complete(
-            $this->configurator->credentials($settings),
-            $settings->getModel() ?? '',
-            $messages,
-        );
+        $content = $this->callProvider($run, $settings, $messages);
 
         $result = $this->parser->parse($content, $validIds, $effectiveSettings->picksLimit);
 
@@ -199,11 +197,7 @@ final class RecommendationRunAdvancer
         $effectiveSettings = $this->settingsResolver->forUser($user);
         $messages = $this->mergeMessagesFor($run, $winners, $linesById, $effectiveSettings);
 
-        $content = $this->chat->complete(
-            $this->configurator->credentials($settings),
-            $settings->getModel() ?? '',
-            $messages,
-        );
+        $content = $this->callProvider($run, $settings, $messages);
 
         $result = $this->parser->parse($content, $validIds, $effectiveSettings->picksLimit);
 
@@ -232,6 +226,45 @@ final class RecommendationRunAdvancer
         $messages = $this->promptBuilder->mergeMessages($winners, $linesById, $effectiveSettings);
 
         return $this->withCorrectiveTail($messages, $run);
+    }
+
+    /**
+     * The one provider call a tick makes. A transport failure -- the provider
+     * unreachable, or refusing the key -- never produced a reply for the
+     * parser to judge, so it must not consume an `attempts` retry the way an
+     * unusable reply does. It counts against its own ceiling instead, so a
+     * provider that is persistently broken still fails the run eventually
+     * (#308 final review, Important 2) rather than ticking forever; either
+     * way the exception is re-thrown so the controller still maps it to its
+     * problem type and the caller still sees the error on this tick.
+     *
+     * @param list<array{role: string, content: string}> $messages
+     */
+    private function callProvider(RecommendationRun $run, AiProviderSettings $settings, array $messages): string
+    {
+        try {
+            return $this->chat->complete(
+                $this->configurator->credentials($settings),
+                $settings->getModel() ?? '',
+                $messages,
+            );
+        } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
+            $this->recordTransportFailure($run, $settings);
+
+            throw $e;
+        }
+    }
+
+    private function recordTransportFailure(RecommendationRun $run, AiProviderSettings $settings): void
+    {
+        $ceilingReached = $run->recordTransportFailure();
+        if ($ceilingReached) {
+            $run->fail(
+                sprintf('The AI provider at %s could not be reached.', $settings->getBaseUrl()),
+                $this->clock->now(),
+            );
+        }
+        $this->entityManager->flush();
     }
 
     /**

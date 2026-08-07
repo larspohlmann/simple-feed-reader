@@ -306,6 +306,89 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame(0, $run->progress()->batchesDone);
         self::assertFalse($run->attemptsExhausted());
         self::assertNull($run->getLastInvalidReply());
+        // Below the transport-failure ceiling: recorded, but the run stays
+        // running (asserted above) so the next tick retries the same batch.
+    }
+
+    /**
+     * A provider that is simply unreachable never produces a reply for the
+     * parser to judge, so attemptsExhausted() (unusable replies) never
+     * fires. Without its own ceiling, a persistently broken provider would
+     * leave the run wedged forever -- no cancel, no reaping (#308 final
+     * review, Important 2).
+     */
+    public function testConsecutiveTransportFailuresReachingTheCeilingFailTheRun(): void
+    {
+        $this->seedMultiBatchFixture();
+        $this->startAndSnapshot();
+
+        for ($i = 0; $i < RecommendationRun::MAX_TRANSPORT_FAILURES - 1; $i++) {
+            $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down'));
+            try {
+                $this->advancer()->advance($this->user);
+                self::fail('Expected a ProviderUnreachableException.');
+            } catch (ProviderUnreachableException) {
+                // expected -- the tick re-throws so the caller sees the error
+            }
+        }
+
+        $this->em->clear();
+        self::assertSame(RecommendationRun::STATUS_RUNNING, $this->activeRun()->getStatus());
+
+        $this->stubChatClient()->queueFailure(new ProviderUnreachableException('still down'));
+        try {
+            $this->advancer()->advance($this->user);
+            self::fail('Expected a ProviderUnreachableException.');
+        } catch (ProviderUnreachableException) {
+            // expected -- still re-thrown even once the run is failed
+        }
+
+        $this->em->clear();
+        $run = $this->runs()->findLatestForUser($this->user);
+        self::assertNotNull($run);
+        self::assertSame(RecommendationRun::STATUS_FAILED, $run->getStatus());
+        self::assertNotNull($run->getError());
+        self::assertNull($this->runs()->findActiveForUser($this->user));
+    }
+
+    /** A success between transport failures must not carry the old count
+     *  into a later run of bad luck. */
+    public function testABatchWinBetweenTransportFailuresResetsTheCounter(): void
+    {
+        $this->seedMultiBatchFixture();
+        $firstBatch = $this->startAndSnapshot()->getCandidateBatches()[0];
+
+        $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down'));
+        try {
+            $this->advancer()->advance($this->user);
+            self::fail('Expected a ProviderUnreachableException.');
+        } catch (ProviderUnreachableException) {
+            // expected
+        }
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'reason' => 'r1']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $this->em->clear();
+        $run = $this->activeRun();
+        self::assertSame(1, $run->progress()->batchesDone);
+
+        // Two more failures: had the earlier one not been reset, this would
+        // already be at the ceiling.
+        for ($i = 0; $i < RecommendationRun::MAX_TRANSPORT_FAILURES - 1; $i++) {
+            $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down again'));
+            try {
+                $this->advancer()->advance($this->user);
+                self::fail('Expected a ProviderUnreachableException.');
+            } catch (ProviderUnreachableException) {
+                // expected
+            }
+        }
+
+        $this->em->clear();
+        self::assertSame(RecommendationRun::STATUS_RUNNING, $this->activeRun()->getStatus());
     }
 
     public function testPrunedBatchSkipsWithoutAProviderCall(): void

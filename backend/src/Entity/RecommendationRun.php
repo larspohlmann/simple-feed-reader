@@ -30,6 +30,15 @@ class RecommendationRun
     /** First call plus the spec's two retries. */
     public const int MAX_ATTEMPTS = 3;
 
+    /**
+     * Ceiling on consecutive provider *transport* failures -- separate from
+     * MAX_ATTEMPTS, which counts unusable replies. A provider that is simply
+     * unreachable never produces a reply to be unusable, so without this a
+     * run wedged behind a broken provider would tick forever (#308 final
+     * review, Important 2).
+     */
+    public const int MAX_TRANSPORT_FAILURES = 3;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -68,6 +77,9 @@ class RecommendationRun
 
     #[ORM\Column(options: ['default' => 0])]
     private int $attempts = 0;
+
+    #[ORM\Column(options: ['default' => 0])]
+    private int $transportFailures = 0;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $lastInvalidReply = null;
@@ -142,6 +154,7 @@ class RecommendationRun
         $this->batchWinners[] = $picks;
         $this->batchesDone++;
         $this->attempts = 0;
+        $this->transportFailures = 0;
         $this->lastInvalidReply = null;
     }
 
@@ -166,6 +179,23 @@ class RecommendationRun
         return $this->attempts >= self::MAX_ATTEMPTS;
     }
 
+    /**
+     * Records one provider call that never produced a reply -- a transport
+     * failure, not an unusable one. Kept as its own counter, reset
+     * independently of `attempts`, so the "unusable reply" retry semantics
+     * are unaffected by an unrelated network blip.
+     *
+     * @return bool true once this failure has reached MAX_TRANSPORT_FAILURES
+     */
+    public function recordTransportFailure(): bool
+    {
+        $this->guardStatus(self::STATUS_RUNNING, 'recordTransportFailure');
+
+        $this->transportFailures++;
+
+        return $this->transportFailures >= self::MAX_TRANSPORT_FAILURES;
+    }
+
     public function getLastInvalidReply(): ?string
     {
         return $this->lastInvalidReply;
@@ -178,6 +208,7 @@ class RecommendationRun
         $this->status = self::STATUS_COMPLETED;
         $this->completedAt = $when;
         $this->batchesDone = $this->progress()->batchesTotal ?? $this->batchesDone;
+        $this->transportFailures = 0;
     }
 
     public function fail(string $error, \DateTimeImmutable $when): void
@@ -196,6 +227,7 @@ class RecommendationRun
         $this->status = self::STATUS_RUNNING;
         $this->error = null;
         $this->attempts = 0;
+        $this->transportFailures = 0;
         $this->lastInvalidReply = null;
     }
 

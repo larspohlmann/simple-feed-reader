@@ -137,6 +137,83 @@ final class RecommendationRunTest extends TestCase
         self::assertTrue($run->attemptsExhausted());
     }
 
+    public function testThirdTransportFailureExhaustsTheSeparateCeiling(): void
+    {
+        $run = $this->makeRun();
+        $run->snapshot([[1]]);
+
+        self::assertFalse($run->recordTransportFailure());
+        self::assertFalse($run->recordTransportFailure());
+
+        self::assertTrue($run->recordTransportFailure());
+    }
+
+    /** Unusable-reply attempts and transport failures are separate counters:
+     *  a corrective retry cycle must not push the transport ceiling closer,
+     *  and vice versa. */
+    public function testTransportFailuresAndAttemptsCountIndependently(): void
+    {
+        $run = $this->makeRun();
+        $run->snapshot([[1]]);
+
+        $run->recordInvalidReply('garbage');
+        $run->recordInvalidReply('garbage');
+
+        self::assertFalse($run->attemptsExhausted());
+        self::assertFalse($run->recordTransportFailure());
+    }
+
+    public function testRecordBatchWinnersResetsTransportFailuresToExactlyZero(): void
+    {
+        $run = $this->makeRun();
+        $run->snapshot([[1], [2]]);
+        $run->recordTransportFailure();
+        $run->recordTransportFailure();
+
+        $run->recordBatchWinners([['id' => 1, 'reason' => 'r']]);
+
+        // Exactly MAX_TRANSPORT_FAILURES (3) fresh failures are needed to
+        // exhaust again — pins the reset at 0, not -1 or 1.
+        self::assertFalse($run->recordTransportFailure());
+        self::assertFalse($run->recordTransportFailure());
+        self::assertTrue($run->recordTransportFailure());
+    }
+
+    public function testCompleteResetsTransportFailuresToExactlyZero(): void
+    {
+        $run = $this->makeRun();
+        $run->snapshot([[1]]);
+        $run->recordTransportFailure();
+        $run->recordTransportFailure();
+
+        $run->complete(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
+
+        self::assertSame(RecommendationRun::STATUS_COMPLETED, $run->getStatus());
+    }
+
+    public function testResumeResetsTransportFailuresToExactlyZero(): void
+    {
+        $run = $this->makeRun();
+        $run->snapshot([[1]]);
+        $run->recordTransportFailure();
+        $run->recordTransportFailure();
+        $run->fail('boom', new \DateTimeImmutable('2026-08-07T10:00:00Z'));
+
+        $run->resume();
+
+        self::assertFalse($run->recordTransportFailure());
+        self::assertFalse($run->recordTransportFailure());
+        self::assertTrue($run->recordTransportFailure());
+    }
+
+    public function testRecordTransportFailureBeforeSnapshotThrows(): void
+    {
+        $run = $this->makeRun();
+
+        $this->expectException(\LogicException::class);
+        $run->recordTransportFailure();
+    }
+
     public function testResumeIsOnlyLegalFromFailed(): void
     {
         $run = $this->makeRun();
