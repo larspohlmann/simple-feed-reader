@@ -473,6 +473,61 @@ describe('ReaderShellComponent', () => {
     expect(req.request.body).toEqual({ isViewed: true });
   });
 
+  // The two tests above/below drive onOpenOriginal directly and prove its own
+  // logic (no-op once viewed, retry after rollback). Direct invocation cannot
+  // prove the template actually wires the click to it — reader-shell.component.html
+  // has TWO <app-reader-view> sites (the wide split-pane and the narrow
+  // full-screen overlay), and nothing stops a future edit dropping the
+  // `(openOriginal)` binding from either. These click through the real DOM on
+  // each site so such a regression turns the test red.
+  describe('the original-article link, through the real template wiring', () => {
+    function clickOriginalLink(f: ReturnType<typeof boot>): void {
+      const link = f.debugElement.query(By.css('app-reader-view a[target="_blank"]'));
+      expect(link).not.toBeNull();
+      link.triggerEventHandler('click', null);
+      f.detectChanges();
+    }
+
+    it('marks viewed via the narrow full-screen overlay reader-view', () => {
+      // Default test layout is narrow (isWide() is false), so the shell renders
+      // the @else branch's overlay <app-reader-view> (reader-shell.component.html:157).
+      const f = boot({ isRead: true, url: 'https://example.com/story' });
+      qp.next(convertToParamMap({ entry: '1' }));
+      f.detectChanges();
+      // The on-open effect's own PATCH fails and rolls isViewed back to false,
+      // so the link click below is the one exercising the wiring under test.
+      ctrl
+        .expectOne('https://api.test/api/entries/1/state')
+        .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+      f.detectChanges();
+
+      clickOriginalLink(f);
+
+      const req = ctrl.expectOne('https://api.test/api/entries/1/state');
+      expect(req.request.body).toEqual({ isViewed: true });
+    });
+
+    it('marks viewed via the wide split-pane reader-view', () => {
+      // Force the wide split-pane layout so the shell renders the @if branch's
+      // <app-reader-view> (reader-shell.component.html:112) instead of the overlay.
+      const f = boot({ isRead: true, url: 'https://example.com/story' });
+      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => true;
+      f.componentInstance.layout.set('pane');
+      qp.next(convertToParamMap({ entry: '1' }));
+      f.detectChanges();
+      expect(f.componentInstance.paneMode()).toBe(true);
+      ctrl
+        .expectOne('https://api.test/api/entries/1/state')
+        .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+      f.detectChanges();
+
+      clickOriginalLink(f);
+
+      const req = ctrl.expectOne('https://api.test/api/entries/1/state');
+      expect(req.request.body).toEqual({ isViewed: true });
+    });
+  });
+
   it('fetches a deep-linked entry that is not in the loaded list', () => {
     const f = boot(); // initial list holds only entry id 1
     qp.next(convertToParamMap({ entry: '514-deep-linked-story' }));
