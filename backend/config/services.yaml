@@ -81,6 +81,7 @@ services:
     App\Service\Reader\ArticleExtractorInterface: '@App\Service\Reader\ArticleExtractor'
     App\Service\Version\ReleaseVersionReader: '@App\Service\Version\FileReleaseVersionReader'
     App\Service\Ai\ModelCatalog: '@App\Service\Ai\OpenAiCompatibleCatalog'
+    App\Service\Recommendation\ChatCompletionClient: '@App\Service\Recommendation\OpenAiCompatibleChatClient'
 
     # Two classes implement AccountMailerInterface (AccountMailer and its
     # #[AsDecorator] MailGatedAccountMailer below), so the container will not
