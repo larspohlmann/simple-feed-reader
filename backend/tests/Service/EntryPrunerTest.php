@@ -7,6 +7,8 @@ namespace App\Tests\Service;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\RecommendationItem;
+use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Service\EntryPruner;
 use App\Tests\DbTestCase;
@@ -189,6 +191,50 @@ final class EntryPrunerTest extends DbTestCase
 
         self::assertSame(0, $pruner->prune());
         self::assertCount(3, $this->em->getRepository(Entry::class)->findAll());
+    }
+
+    public function testPruningTheLastEntryOfACompletedRunAlsoDropsTheRun(): void
+    {
+        $feed = new Feed('https://example.com/feed');
+        $user = new User('reader@example.com', $this->clock->now());
+        $this->em->persist($feed);
+        $this->em->persist($user);
+
+        $doomed = $this->entry($feed, 'doomed', $this->clock->now()->modify('-200 days'));
+        $this->em->flush();
+
+        $run = new RecommendationRun($user, $this->clock->now());
+        $run->snapshot([[1]]);
+        $run->complete($this->clock->now());
+        $this->em->persist($run);
+        $this->em->persist(new RecommendationItem($run, $doomed, 1, 'because'));
+        $this->em->flush();
+        $runId = $run->getId();
+        $this->em->clear();
+
+        // The doomed entry (age pass) and the run it leaves empty (empty-runs
+        // pass) both count toward the total: 1 + 1, not 1 - 1.
+        $pruned = $this->pruner->prune();
+        $this->em->clear();
+
+        self::assertSame(2, $pruned);
+        self::assertNull($this->em->getRepository(RecommendationRun::class)->find($runId));
+    }
+
+    public function testARunningRunWithNoItemsSurvivesPruning(): void
+    {
+        $user = new User('reader@example.com', $this->clock->now());
+        $this->em->persist($user);
+        $run = new RecommendationRun($user, $this->clock->now());
+        $this->em->persist($run);
+        $this->em->flush();
+        $runId = $run->getId();
+        $this->em->clear();
+
+        $this->pruner->prune();
+        $this->em->clear();
+
+        self::assertNotNull($this->em->getRepository(RecommendationRun::class)->find($runId));
     }
 
     public function testCapIsPerFeedNotGlobal(): void

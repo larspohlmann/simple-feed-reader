@@ -237,22 +237,18 @@ class EntryRepository extends ServiceEntityRepository
     }
 
     /**
-     * Effective read state: an explicit EntryState row wins; absent one, the
-     * subscription watermark reads everything at or below it.
-     *
      * @param array<array-key, mixed> $row
      */
     private function rowIsRead(array $row, Entry $entry): bool
     {
         $esRead = $row['esRead'];
-        if ($esRead !== null) {
-            return (bool) $esRead;
-        }
-
         $markedReadUntil = $row['markedReadUntil'];
 
-        return $markedReadUntil instanceof \DateTimeInterface
-            && $entry->getEffectiveDate() <= $markedReadUntil;
+        return EffectiveReadState::isRead(
+            $esRead === null ? null : (bool) $esRead,
+            $markedReadUntil instanceof \DateTimeInterface ? $markedReadUntil : null,
+            $entry->getEffectiveDate(),
+        );
     }
 
     /**
