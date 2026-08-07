@@ -254,6 +254,34 @@ final class EntryControllerTest extends WebTestCase
         self::assertNull($page2['nextCursor']);
     }
 
+    public function testForYouViewWithAMalformedCursorDegradesToTheFirstPageInsteadOfErroring(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-foryou-badcursor@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
+        self::assertInstanceOf(Entry::class, $entry);
+
+        $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
+        $run->snapshot([[1]]);
+        $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+        $em->persist($run);
+        $em->persist(new RecommendationItem($run, $entry, 1, 'reason'));
+        $em->flush();
+
+        // A stale/garbled cursor from an old session must degrade to the
+        // first page — the for-you view never validates its cursor the way
+        // the main list does, unlike EntryCursor's strict 422.
+        $client->request('GET', '/api/entries?view=for-you&cursor=not-a-cursor', server: $headers);
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entries']);
+        self::assertCount(1, $body['entries']);
+    }
+
     public function testInvalidCursorIsRejected(): void
     {
         $client = self::createClient();

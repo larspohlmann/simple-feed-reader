@@ -226,6 +226,7 @@ final class EntryPrunerTest extends DbTestCase
         $user = new User('reader@example.com', $this->clock->now());
         $this->em->persist($user);
         $run = new RecommendationRun($user, $this->clock->now());
+        $run->snapshot([[1]]);
         $this->em->persist($run);
         $this->em->flush();
         $runId = $run->getId();
