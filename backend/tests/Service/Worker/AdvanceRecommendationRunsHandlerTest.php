@@ -19,9 +19,12 @@ use App\Service\Worker\Handler\AdvanceRecommendationRunsHandler;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
 use App\Service\Worker\WorkerPresence;
 use App\Tests\DbTestCase;
+use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
+use Psr\Log\NullLogger;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
@@ -181,6 +184,75 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         self::assertNotNull($advanced);
         self::assertSame(RecommendationRun::STATUS_COMPLETED, $advanced->getStatus());
         self::assertNotCount(0, $this->recommendationItems($advanced));
+    }
+
+    /**
+     * Fix round 2 (#311 review): the earlier fix still flushed the
+     * fail()-recording write INSIDE the catch that decided to record it, so
+     * a flush() failure there (lock timeout, dropped connection) threw from
+     * within a catch block -- which PHP never routes to a sibling catch --
+     * and escaped exactly like the round-1 LogicException did. This
+     * reproduces that with a decorator that makes only the FIRST flush()
+     * throw, without ever invoking the real EntityManager's UnitOfWork
+     * (see FlushFailingEntityManager), so the second, healthy user's run
+     * genuinely advances through the real, un-poisoned EntityManager in the
+     * very same firing -- the positive assertion, not just "no throw".
+     */
+    public function testFlushFailureRecordingOneRunsFailureDoesNotStarveTheNext(): void
+    {
+        $strugglingUser = $this->user('flush-failure-struggling@example.test');
+        $this->seedSingleBatchFixture($strugglingUser);
+        $this->starter()->start($strugglingUser);
+        self::assertSame(RecommendationRun::STATUS_PENDING, $this->activeRun($strugglingUser)->getStatus());
+        $this->deleteAiSettingsFor($strugglingUser);
+
+        $healthyUser = $this->user('flush-failure-healthy@example.test');
+        $this->seedSingleBatchFixture($healthyUser);
+        $healthyRun = $this->startAndSnapshot($healthyUser);
+        $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
+
+        $this->handlerWithFlushFailingEntityManager()->__invoke(new AdvanceRecommendationRuns());
+
+        $this->em->clear();
+        // fail() mutated the struggling run's in-memory object before its own
+        // flush() threw, and that object stayed managed in the *same* shared
+        // EntityManager the healthy run's advance() goes on to flush
+        // successfully -- Doctrine computes changesets for every managed
+        // entity at flush time, not just the one the caller had in mind, so
+        // the FAILED write actually reaches the database anyway, carried by
+        // the next successful flush in this firing. The one thing this test
+        // exists to prove is the part that is NOT incidental: the failing
+        // flush() itself never aborted the loop, so the healthy run's flush
+        // still happened at all in the same firing.
+        $struggling = $this->runs()->findLatestForUser($strugglingUser);
+        self::assertNotNull($struggling);
+        self::assertSame(RecommendationRun::STATUS_FAILED, $struggling->getStatus());
+
+        $advanced = $this->runs()->findLatestForUser($healthyUser);
+        self::assertNotNull($advanced);
+        self::assertSame(RecommendationRun::STATUS_COMPLETED, $advanced->getStatus());
+        self::assertNotCount(0, $this->recommendationItems($advanced));
+    }
+
+    /**
+     * Built by hand rather than fetched from the container: only the
+     * handler's OWN view of the EntityManager is replaced with one whose
+     * first flush() throws. The repository and advancer arguments are still
+     * the container's real, shared instances, so the healthy user's run
+     * advances through the real EntityManager exactly as it would in
+     * production -- only the struggling run's own failure-recording flush is
+     * faked.
+     */
+    private function handlerWithFlushFailingEntityManager(): AdvanceRecommendationRunsHandler
+    {
+        return new AdvanceRecommendationRunsHandler(
+            $this->runs(),
+            $this->advancer(),
+            $this->presence(),
+            new MockClock('2026-08-08T00:00:00Z'),
+            new FlushFailingEntityManager($this->em),
+            new NullLogger(),
+        );
     }
 
     private function deleteAiSettingsFor(User $user): void
