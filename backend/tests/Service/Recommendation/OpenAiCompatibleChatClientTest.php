@@ -69,6 +69,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client = $this->clientAnswering(new MockResponse('{"error":"nope"}', ['http_code' => 401]));
 
         $this->expectException(CredentialsRejectedException::class);
+        $this->expectExceptionMessage('That provider refused the API key.');
         $client->complete($this->credentials(), 'm', $this->messages());
     }
 
@@ -90,19 +91,17 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
     /**
      * Pins the documented contract at the boundary: 300 itself, not just
-     * something comfortably past it, is a refusal.
+     * something comfortably past it, is a refusal — and pins that the
+     * provider's own status reaches the user's problem detail, rather than
+     * being flattened into the generic "did not answer".
      *
-     * This does NOT distinguish "$status >= 300" from "$status > 300" as a
-     * mutation-testing matter — verified by direct experiment, not assumed.
-     * Symfony's HttpClientInterface throws a RedirectionExceptionInterface
-     * from getContent() itself for any 3xx status once max_redirects is
-     * exhausted (0 here), independently of readBody()'s own check; that
-     * exception lands in the same `catch (ExceptionInterface $e)` and comes
-     * out as this same ProviderUnreachableException either way. Only the
-     * exception's message would differ, and this suite — like
-     * OpenAiCompatibleCatalogTest, which has the identical accepted-escaped
-     * pair for its own "$status >= 300" check — asserts exception type, not
-     * message. Kept as a behavioural pin, not a kill.
+     * The message assertion is what makes this a real kill, not just a type
+     * check: if "$status >= 300" ever loosened to "$status > 300", 300 would
+     * fall through to getContent(), which Symfony's HttpClientInterface
+     * raises as RedirectionException for any unfollowed 3xx — caught by the
+     * same `catch (ExceptionInterface $e)`, but rewritten to the generic
+     * "That address did not answer." rather than this status-carrying one.
+     * Same exception type either way; different message.
      */
     public function testAStatusOfExactly300IsAlsoUnreachable(): void
     {
@@ -112,6 +111,30 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         ));
 
         $this->expectException(ProviderUnreachableException::class);
+        $this->expectExceptionMessage('That provider answered with status 300.');
+        $client->complete($this->credentials(), 'm', $this->messages());
+    }
+
+    /**
+     * Pins the same contract as the 300 case, at a status a real provider
+     * would plausibly send: its own outage reaches the user's problem detail
+     * instead of being flattened into a generic "did not answer".
+     *
+     * The message assertion is what kills the `Throw_` mutant on this branch:
+     * deleting the `throw` also falls through to getContent(), which raises
+     * ServerException for a 5xx — caught and rewritten to the generic
+     * message, not this status-carrying one. Same exception type, different
+     * message.
+     */
+    public function testAServerErrorIsUnreachable(): void
+    {
+        $client = $this->clientAnswering(new MockResponse(
+            '{"choices":[{"message":{"content":"ok"}}]}',
+            ['http_code' => 500],
+        ));
+
+        $this->expectException(ProviderUnreachableException::class);
+        $this->expectExceptionMessage('That provider answered with status 500.');
         $client->complete($this->credentials(), 'm', $this->messages());
     }
 
@@ -150,6 +173,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client = $this->clientAnswering(new MockResponse('{"error":"nope"}', ['http_code' => 403]));
 
         $this->expectException(CredentialsRejectedException::class);
+        $this->expectExceptionMessage('That provider refused the API key.');
         $client->complete($this->credentials(), 'm', $this->messages());
     }
 
