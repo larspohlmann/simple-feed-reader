@@ -1,0 +1,36 @@
+// src/app/shared/toast/toast.component.scss
+.toast {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+}
+
+.msg {
+  flex: 1;
+}
+
+.act,
+.close {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: var(--fs-sm);
+}
+
+.act {
+  flex-shrink: 0;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.close {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
