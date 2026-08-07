@@ -162,12 +162,7 @@ describe('RecommendationsService', () => {
     expect(toast.show).not.toHaveBeenCalled();
   });
 
-  it('stops and records the problem on an HTTP error during a tick', () => {
-    svc.start();
-    ctrl
-      .expectOne('https://api.test/api/recommendations/runs')
-      .flush(report({ status: 'pending' }));
-
+  const failTick = (): void =>
     ctrl
       .expectOne('https://api.test/api/recommendations/runs/tick')
       .flush(
@@ -175,10 +170,57 @@ describe('RecommendationsService', () => {
         { status: 500, statusText: 'Server Error' },
       );
 
+  it('keeps polling a run the server still holds after a failed tick', fakeAsync(() => {
+    svc.start();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs')
+      .flush(report({ status: 'pending' }));
+
+    failTick();
+    expect(svc.running()).toBe(true);
+    expect(svc.failure()).toBeNull();
+
+    tick(1500);
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'completed', batchesTotal: 2, batchesDone: 2 }));
+
+    expect(svc.running()).toBe(false);
+    expect(svc.failure()).toBeNull();
+    expect(svc.completedStamp()).toBe(1);
+  }));
+
+  it('stops and records the problem once the tick retry budget is spent', fakeAsync(() => {
+    svc.start();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs')
+      .flush(report({ status: 'pending' }));
+
+    failTick();
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      tick(1500);
+      failTick();
+    }
+
+    ctrl.verify(); // the loop gave up rather than polling on
     expect(svc.running()).toBe(false);
     const failure = svc.failure();
     expect(failure?.kind).toBe('http');
     expect(failure).toMatchObject({ problem: { status: 500, type: 'server_error' } });
+  }));
+
+  it('stops on an HTTP error from start, which has no run to keep polling', () => {
+    svc.start();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs')
+      .flush(
+        { type: 'server_error', title: 't', status: 500 },
+        { status: 500, statusText: 'Server Error' },
+      );
+
+    ctrl.verify(); // no tick request
+    expect(svc.running()).toBe(false);
+    expect(svc.failure()?.kind).toBe('http');
   });
 
   it('reports zero progress when the total is null or zero', () => {

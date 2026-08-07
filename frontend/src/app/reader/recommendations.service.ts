@@ -8,8 +8,21 @@ import { ToastService } from '../shared/toast/toast.service';
 import { ReaderApi } from './reader-api';
 import { RecommendationRunReport } from './models';
 
-const BUSY_BACKOFF_MS = 1500;
+const BACKOFF_MS = 1500;
 const MAX_BUSY_RETRIES = 5;
+/** Matches `RecommendationRun::MAX_TRANSPORT_FAILURES`: the server tolerates
+ *  three provider failures before it fails the run itself, so the poll loop
+ *  must survive three too. One tick past that reads the run's own verdict. */
+const MAX_TRANSPORT_RETRIES = 3;
+
+/** How many times in a row the poll loop has been turned away, per cause.
+ *  Each cause has its own ceiling, and any progress resets both. */
+interface PollAttempts {
+  readonly busy: number;
+  readonly transport: number;
+}
+
+const NO_ATTEMPTS: PollAttempts = { busy: 0, transport: 0 };
 
 /** Why a recommendation run ended without producing a fresh for-you list. */
 export type RecommendationFailure =
@@ -53,7 +66,7 @@ export class RecommendationsService {
     this.report.set(null);
     this.failure.set(null);
     this.api.startRecommendations().subscribe({
-      next: (r) => this.onReport(r, 0),
+      next: (r) => this.onReport(r, NO_ATTEMPTS),
       error: (e: HttpErrorResponse) => this.stopWithHttpError(e),
     });
   }
@@ -69,7 +82,7 @@ export class RecommendationsService {
         this.running.set(true);
         this.report.set(r);
         this.failure.set(null);
-        this.step(0);
+        this.step(NO_ATTEMPTS);
       },
       error: () => {
         // Boot resume is best-effort; a failed lookup just means no in-app
@@ -78,22 +91,22 @@ export class RecommendationsService {
     });
   }
 
-  private step(busyRetries: number): void {
+  private step(attempts: PollAttempts): void {
     this.api.tickRecommendations().subscribe({
-      next: (r) => this.onReport(r, busyRetries),
-      error: (e: HttpErrorResponse) => this.stopWithHttpError(e),
+      next: (r) => this.onReport(r, attempts),
+      error: (e: HttpErrorResponse) => this.retryOrStop(e, attempts),
     });
   }
 
-  private onReport(r: RecommendationRunReport, busyRetries: number): void {
+  private onReport(r: RecommendationRunReport, attempts: PollAttempts): void {
     this.report.set(r);
     switch (r.status) {
       case 'pending':
       case 'running':
-        this.step(0);
+        this.step(NO_ATTEMPTS);
         break;
       case 'busy':
-        this.backOffWhileBusy(busyRetries);
+        this.backOffWhileBusy(attempts);
         break;
       case 'completed':
         this.completedStamp.update((n) => n + 1);
@@ -121,13 +134,31 @@ export class RecommendationsService {
   /** Another run holds the lock. Wait and ask again -- but only so long: a
    *  CLI-triggered run can hold it well past the patience anyone has for a
    *  spinner. Retrying longer is not the fix; telling the user is. */
-  private backOffWhileBusy(busyRetries: number): void {
-    if (busyRetries >= MAX_BUSY_RETRIES) {
+  private backOffWhileBusy(attempts: PollAttempts): void {
+    if (attempts.busy >= MAX_BUSY_RETRIES) {
       this.failure.set({ kind: 'busy' });
       this.finish();
       return;
     }
-    setTimeout(() => this.step(busyRetries + 1), BUSY_BACKOFF_MS);
+    this.stepLater({ ...attempts, busy: attempts.busy + 1 });
+  }
+
+  /** A tick that fails outright has not ended the run: the server keeps it
+   *  running and counts the failure against its own ceiling. Throwing the run
+   *  away here loses a batch set that is still being built, so the loop
+   *  retries until the server is ready to give its own verdict -- a slow
+   *  provider call cut short by the web server's request window is exactly
+   *  this case, and it costs the user a whole run otherwise. */
+  private retryOrStop(e: HttpErrorResponse, attempts: PollAttempts): void {
+    if (attempts.transport >= MAX_TRANSPORT_RETRIES) {
+      this.stopWithHttpError(e);
+      return;
+    }
+    this.stepLater({ ...attempts, transport: attempts.transport + 1 });
+  }
+
+  private stepLater(attempts: PollAttempts): void {
+    setTimeout(() => this.step(attempts), BACKOFF_MS);
   }
 
   private stopWithHttpError(e: HttpErrorResponse): void {
