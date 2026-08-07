@@ -38,6 +38,12 @@ class EntryState
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $readAt = null;
 
+    #[ORM\Column]
+    private bool $isViewed = false;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $viewedAt = null;
+
     public function __construct(User $user, Entry $entry)
     {
         $this->user = $user;
@@ -92,5 +98,29 @@ class EntryState
     public function setReadAt(?\DateTimeImmutable $readAt): void
     {
         $this->readAt = $readAt;
+    }
+
+    public function isViewed(): bool
+    {
+        return $this->isViewed;
+    }
+
+    public function getViewedAt(): ?\DateTimeImmutable
+    {
+        return $this->viewedAt;
+    }
+
+    /**
+     * One-way by design (#307): "viewed" records that the user actively opened
+     * the entry at least once, so there is no setter and no way to clear it,
+     * and a repeat open keeps the first open's timestamp.
+     */
+    public function markViewed(\DateTimeImmutable $when): void
+    {
+        if ($this->isViewed) {
+            return;
+        }
+        $this->isViewed = true;
+        $this->viewedAt = $when;
     }
 }
