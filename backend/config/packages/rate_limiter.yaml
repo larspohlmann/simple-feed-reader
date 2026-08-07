@@ -120,3 +120,18 @@ framework:
             limit: 30
             interval: '15 minutes'
             cache_pool: cache.rate_limiter
+
+        # The recommendation run poll loop: starting a run and ticking it
+        # forward each call the account's own provider, so an uncapped pair is
+        # an outbound request generator the same way the AI settings writes
+        # are. Per-user, sliding window, same pool — see ai_provider above for
+        # the reasoning shared by every limiter in this file.
+        #
+        # 30 covers a full run over the default 1000-candidate pool -- a
+        # handful of batch ticks plus the merge tick, with retries -- and
+        # still leaves slack for a second run inside the same window.
+        ai_recommendations:
+            policy: 'sliding_window'
+            limit: 30
+            interval: '15 minutes'
+            cache_pool: 'cache.rate_limiter'
