@@ -6,6 +6,7 @@ namespace App\Tests\Service\Ai;
 
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Ai\ModelDescriptor;
 use App\Service\Ai\OpenAiCompatibleCatalog;
 use App\Service\Ai\ProviderCredentials;
 use PHPUnit\Framework\TestCase;
@@ -25,6 +26,16 @@ final class OpenAiCompatibleCatalogTest extends TestCase
         return new OpenAiCompatibleCatalog(new MockHttpClient($response), 'SimpleFeedReader/1.0');
     }
 
+    /**
+     * @param list<ModelDescriptor> $models
+     *
+     * @return list<string>
+     */
+    private function ids(array $models): array
+    {
+        return array_map(static fn (ModelDescriptor $model): string => $model->id, $models);
+    }
+
     public function testItReturnsTheOfferedModelsSorted(): void
     {
         $catalog = $this->catalogAnswering(new MockResponse(
@@ -34,8 +45,22 @@ final class OpenAiCompatibleCatalogTest extends TestCase
 
         self::assertSame(
             ['claude-sonnet', 'gpt-4o', 'gpt-4o-mini'],
-            $catalog->listModels($this->credentials()),
+            $this->ids($catalog->listModels($this->credentials())),
         );
+    }
+
+    public function testCapturesContextLengthWhenTheProviderReportsOne(): void
+    {
+        $catalog = $this->catalogAnswering(new MockResponse(json_encode(['data' => [
+            ['id' => 'small', 'context_length' => 8192],
+            ['id' => 'big', 'max_context_length' => 200000],
+            ['id' => 'silent'],
+        ]], JSON_THROW_ON_ERROR)));
+
+        $models = $catalog->listModels($this->credentials());
+
+        self::assertSame(['big', 'silent', 'small'], $this->ids($models));
+        self::assertSame([200000, null, 8192], array_map(static fn ($m) => $m->contextWindow, $models));
     }
 
     /**
@@ -52,7 +77,7 @@ final class OpenAiCompatibleCatalogTest extends TestCase
 
         self::assertSame(
             ['claude-sonnet', 'gpt-4o'],
-            $catalog->listModels($this->credentials()),
+            $this->ids($catalog->listModels($this->credentials())),
         );
     }
 
@@ -161,7 +186,51 @@ final class OpenAiCompatibleCatalogTest extends TestCase
     {
         $catalog = $this->catalogAnswering(new MockResponse('{"data":[{"id":"gpt-4o"},{"object":"model"}]}'));
 
-        self::assertSame(['gpt-4o'], $catalog->listModels($this->credentials()));
+        self::assertSame(['gpt-4o'], $this->ids($catalog->listModels($this->credentials())));
+    }
+
+    /**
+     * The invalid entry (a non-string id) comes first, on purpose: it proves
+     * the loop skips past it rather than stopping there, which a plain id
+     * check alone would not.
+     */
+    public function testANonStringIdIsIgnoredWithoutStoppingLaterEntries(): void
+    {
+        $catalog = $this->catalogAnswering(new MockResponse('{"data":[{"id":42},{"id":"gpt-4o"}]}'));
+
+        self::assertSame(['gpt-4o'], $this->ids($catalog->listModels($this->credentials())));
+    }
+
+    /**
+     * An aggregating proxy repeats the same id once per backend, and those
+     * backends can disagree about the model's context window. The first one
+     * seen wins, so a later repeat cannot silently overwrite it.
+     */
+    public function testTheFirstReportedContextWindowForARepeatedIdWins(): void
+    {
+        $catalog = $this->catalogAnswering(new MockResponse(json_encode(['data' => [
+            ['id' => 'gpt-4o', 'context_length' => 8192],
+            ['id' => 'gpt-4o', 'context_length' => 4096],
+        ]], JSON_THROW_ON_ERROR)));
+
+        $models = $catalog->listModels($this->credentials());
+
+        self::assertSame([8192], array_map(static fn ($m) => $m->contextWindow, $models));
+    }
+
+    /**
+     * Zero is not a context window a real provider would report — it exists
+     * only to prove the comparison is a strict ">", not ">=", boundary.
+     */
+    public function testAZeroReportedContextLengthIsTreatedAsNotReported(): void
+    {
+        $catalog = $this->catalogAnswering(new MockResponse(
+            '{"data":[{"id":"gpt-4o","context_length":0}]}',
+        ));
+
+        $models = $catalog->listModels($this->credentials());
+
+        self::assertNull($models[0]->contextWindow);
     }
 
     public function testTheBaseUrlLosesItsTrailingSlash(): void

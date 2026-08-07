@@ -52,6 +52,14 @@ class AiProviderSettings
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $model = null;
 
+    /**
+     * The chosen model's context window as /models reported it at choose time,
+     * tokens. Null when the provider did not report one. Cleared with the model
+     * on replaceConnection() — a new endpoint may be a different gateway.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?int $modelContextWindow = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $verifiedAt = null;
 
@@ -107,6 +115,11 @@ class AiProviderSettings
         return $this->model;
     }
 
+    public function getModelContextWindow(): ?int
+    {
+        return $this->modelContextWindow;
+    }
+
     public function hasModel(): bool
     {
         return null !== $this->model;
@@ -132,12 +145,14 @@ class AiProviderSettings
         $this->apiKeyHint = $apiKeyHint;
         $this->applySealedKey($sealed);
         $this->model = null;
+        $this->modelContextWindow = null;
         $this->verifiedAt = $verifiedAt;
     }
 
-    public function chooseModel(string $model, \DateTimeImmutable $verifiedAt): void
+    public function chooseModel(string $model, \DateTimeImmutable $verifiedAt, ?int $contextWindow): void
     {
         $this->model = $model;
+        $this->modelContextWindow = $contextWindow;
         $this->verifiedAt = $verifiedAt;
     }
 

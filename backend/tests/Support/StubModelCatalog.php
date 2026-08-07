@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Service\Ai\ModelCatalog;
+use App\Service\Ai\ModelDescriptor;
 use App\Service\Ai\ProviderCredentials;
 
 /**
@@ -16,13 +17,17 @@ use App\Service\Ai\ProviderCredentials;
  * configurator can no longer be replaced. A closure lets one instance answer
  * differently for different keys, which is what a case that saves a good
  * connection and then a refused one needs.
+ *
+ * A plain identifier is accepted alongside a full ModelDescriptor: most
+ * callers only care which ids are offered, not their context windows, and
+ * writing a bare string for those keeps the existing scripts unchanged.
  */
 final readonly class StubModelCatalog implements ModelCatalog
 {
-    /** @var \Closure(ProviderCredentials): list<string> */
+    /** @var \Closure(ProviderCredentials): list<string|ModelDescriptor> */
     private \Closure $answer;
 
-    /** @param list<string>|\Throwable|\Closure(ProviderCredentials): list<string> $answer */
+    /** @param list<string|ModelDescriptor>|\Throwable|\Closure(ProviderCredentials): list<string|ModelDescriptor> $answer */
     public function __construct(array|\Throwable|\Closure $answer)
     {
         $this->answer = match (true) {
@@ -34,6 +39,11 @@ final readonly class StubModelCatalog implements ModelCatalog
 
     public function listModels(ProviderCredentials $credentials): array
     {
-        return ($this->answer)($credentials);
+        return array_map(
+            static fn (string|ModelDescriptor $entry): ModelDescriptor => $entry instanceof ModelDescriptor
+                ? $entry
+                : new ModelDescriptor($entry, null),
+            ($this->answer)($credentials),
+        );
     }
 }
