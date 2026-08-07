@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation;
 
-use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
@@ -20,6 +19,7 @@ use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Lock\LockFactory;
@@ -34,6 +34,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 {
     private User $user;
     private Feed $feed;
+    private RecommendationRunFixtures $fixtures;
 
     protected function setUp(): void
     {
@@ -42,6 +43,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         $this->user = (new UserFactory($this->em, $hasher))->create('run-advancer@example.test');
+        /** @var ApiKeyCipher $cipher */
+        $cipher = self::getContainer()->get(ApiKeyCipher::class);
+        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
 
         $this->feed = new Feed('https://example.com/feed.xml');
         $this->feed->setTitle('Example');
@@ -807,33 +811,12 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
     private function entry(string $guid, string $published): Entry
     {
-        $entry = new Entry(
-            $this->feed,
-            $guid,
-            'https://example.com/' . $guid,
-            $guid,
-            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
-        );
-        $entry->setPublishedAt(new \DateTimeImmutable($published));
-        $this->em->persist($entry);
-        $this->em->flush();
-
-        return $entry;
+        return $this->fixtures->entry($this->feed, $guid, $published);
     }
 
     private function seedReadyAiSettings(User $user): void
     {
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $userId = $user->getId();
-        self::assertNotNull($userId);
-        $sealed = $cipher->seal($userId, 'sk-throwaway1234');
-        $now = new \DateTimeImmutable('2026-08-07 09:00:00');
-
-        $settings = new AiProviderSettings($user, 'https://api.example.test/v1', $sealed, '1234', $now);
-        $this->em->persist($settings);
-        $settings->chooseModel('m', $now, 32768);
-        $this->em->flush();
+        $this->fixtures->seedReadyAiSettings($user);
     }
 
     private function runs(): RecommendationRunRepository

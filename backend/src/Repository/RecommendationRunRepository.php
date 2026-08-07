@@ -49,4 +49,25 @@ final class RecommendationRunRepository extends ServiceEntityRepository
 
         return $run;
     }
+
+    /**
+     * Every run the worker sweep should tick this firing, oldest first so one
+     * account's run never starves another's behind it.
+     *
+     * @return list<RecommendationRun>
+     */
+    public function findAllActive(): array
+    {
+        /** @var list<RecommendationRun> $runs */
+        $runs = $this->createQueryBuilder('r')
+            ->andWhere('r.status IN (:active)')->setParameter('active', [
+                RecommendationRun::STATUS_PENDING,
+                RecommendationRun::STATUS_RUNNING,
+            ])
+            ->orderBy('r.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $runs;
+    }
 }

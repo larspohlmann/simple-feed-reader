@@ -360,3 +360,14 @@ services:
     App\Service\Worker\WorkerSchedule:
         autowire: true
         public: true
+
+    # AdvanceRecommendationRunsHandlerTest fetches this to drive __invoke()
+    # directly against the real repository/advancer/presence/entity-manager
+    # graph, the same "no mocks" stance as RecommendationRunAdvancerTest on
+    # advance() above. Messenger handlers are never called through the
+    # container by anything else, so without this the compiler would inline
+    # it away and the test container could not fetch it. Same `autowire`
+    # caveat as the entries above.
+    App\Service\Worker\Handler\AdvanceRecommendationRunsHandler:
+        autowire: true
+        public: true
