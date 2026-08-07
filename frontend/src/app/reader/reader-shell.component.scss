@@ -185,6 +185,30 @@ app-reader-header.hidden {
   }
 }
 
+/* The for-you run bar: an in-flow strip inside `.under-header`, mirroring
+   `.fetch-banner`'s spacing so the two read as the same family of strip. */
+.for-you-bar {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+
+  p {
+    margin: 0;
+  }
+
+  .run {
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+  }
+}
+
 /* The admin-only warning that no catalog is imported: an in-flow strip inside
    `.under-header`, stacking under the fetch banner. */
 .catalog-warning {

@@ -31,6 +31,20 @@
       <a routerLink="/settings/admin/catalog">{{ 'discover.adminEmptyAction' | transloco }}</a>
     </p>
   }
+  @if (selection().kind === 'for-you') {
+    <div class="for-you-bar">
+      @if (recs.running()) {
+        <p role="status" aria-live="polite">
+          {{ 'reader.forYouProgress' | transloco: forYouProgress() }}
+        </p>
+      } @else {
+        <button type="button" class="run" (click)="recs.start()">
+          {{ 'reader.forYouRun' | transloco }}
+        </button>
+      }
+    </div>
+    <app-progress-hairline [active]="recs.running()" [value]="recs.progress()" />
+  }
 </div>
 <!-- No top offset here: the scrolling panes reserve the header's height
      themselves (via --app-bar-h) and their content passes under it, so

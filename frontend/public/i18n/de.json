@@ -414,7 +414,9 @@
     "trialDayLeft": "Testphase · noch 1 Tag",
     "forYouReady": "Empfehlungen sind fertig",
     "forYouView": "Ansehen",
-    "forYouFailed": "Empfehlungen fehlgeschlagen. Versuch es noch einmal."
+    "forYouFailed": "Empfehlungen fehlgeschlagen. Versuch es noch einmal.",
+    "forYouRun": "Empfehlungen holen",
+    "forYouProgress": "Deine Feeds werden sortiert — {{done}} von {{total}}"
   },
   "common": {
     "save": "Speichern",

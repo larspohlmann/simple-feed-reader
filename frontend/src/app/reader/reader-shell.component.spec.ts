@@ -682,6 +682,53 @@ describe('ReaderShellComponent', () => {
     ctrl.expectNone((r) => r.url === 'https://api.test/api/entries');
   });
 
+  it('shows the run button on the for-you view and starts a run on click', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ view: 'for-you' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    const recs = TestBed.inject(RecommendationsService);
+    const button = f.nativeElement.querySelector('.for-you-bar button.run') as HTMLButtonElement;
+    expect(button).not.toBeNull();
+    expect(f.nativeElement.querySelector('.for-you-bar [role="status"]')).toBeNull();
+
+    button.click();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs')
+      .flush({ status: 'running', batchesTotal: 3, batchesDone: 0, error: null });
+    f.detectChanges();
+    expect(recs.running()).toBe(true);
+    ctrl.expectOne('https://api.test/api/recommendations/runs/tick').flush({
+      status: 'running',
+      batchesTotal: 3,
+      batchesDone: 0,
+      error: null,
+    });
+  });
+
+  it('shows determinate progress while a for-you run is in flight, and no button', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ view: 'for-you' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    const recs = TestBed.inject(RecommendationsService);
+    recs.running.set(true);
+    recs.report.set({ status: 'running', batchesTotal: 3, batchesDone: 1, error: null });
+    f.detectChanges();
+
+    expect(f.nativeElement.querySelector('.for-you-bar button.run')).toBeNull();
+    const status = f.nativeElement.querySelector('.for-you-bar [role="status"]') as HTMLElement;
+    expect(status.textContent).toContain('1 of 3');
+  });
+
   // The heading names the tag, so it also carries the tag's glyph and colour —
   // the same pair the sidebar row shows. Both come from one lookup, so the two
   // can never describe different tags.

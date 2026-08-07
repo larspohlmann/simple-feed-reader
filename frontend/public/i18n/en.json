@@ -414,7 +414,9 @@
     "trialDayLeft": "Trial · 1 day left",
     "forYouReady": "Recommendations ready",
     "forYouView": "View",
-    "forYouFailed": "Recommendations failed. Try again."
+    "forYouFailed": "Recommendations failed. Try again.",
+    "forYouRun": "Get recommendations",
+    "forYouProgress": "Ranking your feeds — {{done}} of {{total}}"
   },
   "common": {
     "save": "Save",
