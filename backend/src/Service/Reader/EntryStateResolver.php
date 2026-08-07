@@ -1,0 +1,66 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Reader;
+
+use App\Entity\Entry;
+use App\Entity\EntryState;
+use App\Entity\User;
+use App\Repository\EntryStateRepository;
+use Doctrine\ORM\EntityManagerInterface;
+
+/**
+ * The single place an EntryState row comes into existence.
+ *
+ * Read state is effective, not stored: an entry with no row is read when the
+ * subscription's mark-all-read watermark covers it (see
+ * EntryRepository::rowIsRead() and EntryStateRepository::unreadCountsForUser()).
+ * Materialising such a row with the field default isRead=false would therefore
+ * flip a read entry back to unread and raise the unread badge. Every lazily
+ * created row is seeded from the watermark here so that no caller — favorite,
+ * keep or viewed — can reintroduce that hazard.
+ */
+final readonly class EntryStateResolver
+{
+    public function __construct(
+        private EntryStateRepository $states,
+        private EntityManagerInterface $em,
+    ) {
+    }
+
+    /**
+     * The user's state row for the entry, created and persisted when absent.
+     */
+    public function resolve(User $user, Entry $entry): EntryState
+    {
+        $existing = $this->states->findOneForUserEntry((int) $user->getId(), (int) $entry->getId());
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $state = new EntryState($user, $entry);
+        $this->seedReadState($state, $entry);
+        $this->em->persist($state);
+
+        return $state;
+    }
+
+    private function seedReadState(EntryState $state, Entry $entry): void
+    {
+        $watermark = $this->states->markedReadUntilForUserEntry(
+            (int) $state->getUser()->getId(),
+            (int) $entry->getId(),
+        );
+        if ($watermark === null || $entry->getEffectiveDate() > $watermark) {
+            return;
+        }
+
+        $state->setIsRead(true);
+        // The watermark, not the current time: the entry became read when the
+        // sweep ran, and the clock would claim a read that never happened at
+        // this instant. It is also the same value the sweep itself compared
+        // against, so the row now states exactly what the watermark implied.
+        $state->setReadAt($watermark);
+    }
+}

@@ -34,6 +34,32 @@ class EntryStateRepository extends ServiceEntityRepository
     }
 
     /**
+     * The mark-all-read watermark of the subscription the entry belongs to, or
+     * null when there is none (or the user does not subscribe to the feed). An
+     * entry at or below it is read even with no EntryState row of its own.
+     *
+     * Lives here for the same reason unreadCountsForUser() does: its subject is
+     * read state, not the subscription that happens to carry the column.
+     */
+    public function markedReadUntilForUserEntry(int $userId, int $entryId): ?\DateTimeImmutable
+    {
+        /** @var array{markedReadUntil: \DateTimeImmutable|null}|null $row */
+        $row = $this->getEntityManager()->createQuery(sprintf(
+            'SELECT s.markedReadUntil AS markedReadUntil
+             FROM %s s
+             JOIN %s e ON e.feed = s.feed
+             WHERE s.user = :user AND e.id = :entry',
+            Subscription::class,
+            Entry::class,
+        ))
+            ->setParameter('user', $userId)
+            ->setParameter('entry', $entryId)
+            ->getOneOrNullResult();
+
+        return $row['markedReadUntil'] ?? null;
+    }
+
+    /**
      * Total favourite and kept entries for the user, counting only entries whose
      * feed the user still subscribes to — the same subscription gate the
      * Favorites/Kept lists apply, so the sidebar badges match their lists (an

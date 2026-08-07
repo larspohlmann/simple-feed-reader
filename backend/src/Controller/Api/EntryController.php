@@ -6,7 +6,6 @@ namespace App\Controller\Api;
 
 use App\Dto\Entry\MarkReadRequest;
 use App\Dto\Entry\UpdateEntryStateRequest;
-use App\Entity\EntryState;
 use App\Entity\User;
 use App\Exception\ValidationException;
 use App\Http\EntryCursor;
@@ -14,9 +13,9 @@ use App\Http\EntryJson;
 use App\Http\ReaderJson;
 use App\Repository\EntryQuery;
 use App\Repository\EntryRepository;
-use App\Repository\EntryStateRepository;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Reader\ArticleExtractorInterface;
+use App\Service\Reader\EntryStateResolver;
 use App\Service\Reader\ExtractionResult;
 use App\Service\Reader\MarkReadService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -35,7 +34,7 @@ final readonly class EntryController
 {
     public function __construct(
         private EntryRepository $entries,
-        private EntryStateRepository $states,
+        private EntryStateResolver $entryStates,
         private EntityManagerInterface $em,
         private ClockInterface $clock,
         private MarkReadService $markRead,
@@ -131,11 +130,7 @@ final readonly class EntryController
         $entry = $this->entries->findOneSubscribedByUser($id, (int) $user->getId())
             ?? throw new NotFoundHttpException('No such entry.');
 
-        $state = $this->states->findOneForUserEntry((int) $user->getId(), $id);
-        if ($state === null) {
-            $state = new EntryState($user, $entry);
-            $this->em->persist($state);
-        }
+        $state = $this->entryStates->resolve($user, $entry);
 
         if ($request->isRead !== null) {
             $state->setIsRead($request->isRead);
