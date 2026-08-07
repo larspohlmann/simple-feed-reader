@@ -98,9 +98,15 @@ final class RecommendationPromptBuilder
      * @param array<int, PromptLine>                     $linesById
      *
      * @return list<array{role: string, content: string}>
+     *
+     * @throws \LogicException if called with no batches of winners to merge
      */
     public function mergeMessages(array $winners, array $linesById, EffectiveRecommendationSettings $settings): array
     {
+        if ([] === $winners) {
+            throw new \LogicException('The merge phase requires at least one batch of winners.');
+        }
+
         $perBatchCap = max(1, intdiv(self::MERGE_WINNERS_PER_BATCH_FACTOR * $settings->picksLimit, \count($winners)));
 
         $guidance = $settings->guidancePrompt ?? RecommendationPromptText::DEFAULT_GUIDANCE;

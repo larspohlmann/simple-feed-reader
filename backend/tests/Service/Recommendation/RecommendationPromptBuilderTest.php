@@ -322,6 +322,14 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertStringNotContainsString('- [101] ', $user);
     }
 
+    public function testMergeMessagesRejectsAnEmptyWinnerSet(): void
+    {
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('The merge phase requires at least one batch of winners.');
+
+        $this->builder->mergeMessages([], [], $this->settings(32768, 10));
+    }
+
     private static function line(int $id, string $title, int $descriptionChars): PromptLine
     {
         return new PromptLine(
