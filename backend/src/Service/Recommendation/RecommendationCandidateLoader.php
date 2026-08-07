@@ -17,13 +17,14 @@ use Doctrine\ORM\QueryBuilder;
  * Loads the pool of unread candidates the recommendation prompt picks from,
  * and re-resolves a checkpointed batch of entry ids back to prompt lines.
  *
- * load() stays scoped to feeds the reader still subscribes to — the same
- * subscription gate EntryRepository::rowQueryBuilder applies. linesForIds()
- * has no user in scope by design: a checkpointed batch names entry ids that
- * were already vetted against the run owner's subscriptions when the
- * snapshot was taken, and a later re-resolution (a retried tick, possibly
- * after the reader read or unsubscribed in between) must still find them —
- * only outright deletion drops an id.
+ * Both stay scoped to feeds the reader subscribes to — the same subscription
+ * gate EntryRepository::rowQueryBuilder applies, including the per-user
+ * customTitle override — because both render lines for the same prompt: a
+ * retried batch must name a feed the same way the first attempt did.
+ * linesForIds() drops only the unread filter; a checkpointed batch must
+ * still resolve an entry the reader has since read (or even unsubscribed
+ * from — the run already vetted these ids against the snapshot). Only
+ * outright deletion drops an id.
  */
 final readonly class RecommendationCandidateLoader
 {
@@ -39,17 +40,11 @@ final readonly class RecommendationCandidateLoader
      */
     public function load(int $userId, int $poolSize): array
     {
-        $qb = $this->entityManager->createQueryBuilder()
-            ->select('e', 'f', 's.customTitle AS customTitle')
-            ->from(Entry::class, 'e')
-            ->join('e.feed', 'f')
-            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
-            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
+        $qb = $this->candidateQueryBuilder($userId)
             ->andWhere(UnreadDql::predicate())
             ->orderBy('e.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($poolSize)
-            ->setParameter('user', $userId)
             ->setParameter('readFalse', false, Types::BOOLEAN);
 
         return $this->linesFor($qb);
@@ -63,21 +58,13 @@ final readonly class RecommendationCandidateLoader
      *
      * @return array<int, PromptLine>
      */
-    public function linesForIds(array $entryIds): array
+    public function linesForIds(int $userId, array $entryIds): array
     {
         if ($entryIds === []) {
             return [];
         }
 
-        $qb = $this->entityManager->createQueryBuilder()
-            ->select('e', 'f')
-            // Without a scalar select alongside the (folded) entity select,
-            // Doctrine returns bare Entry objects instead of rows — add a
-            // throwaway scalar so getResult() always yields the array shape
-            // hydrateLine() expects, same as load()'s customTitle does.
-            ->addSelect('e.id AS entryId')
-            ->from(Entry::class, 'e')
-            ->join('e.feed', 'f')
+        $qb = $this->candidateQueryBuilder($userId)
             ->andWhere('e.id IN (:ids)')
             ->setParameter('ids', $entryIds);
 
@@ -89,6 +76,17 @@ final readonly class RecommendationCandidateLoader
         }
 
         return $linesById;
+    }
+
+    private function candidateQueryBuilder(int $userId): QueryBuilder
+    {
+        return $this->entityManager->createQueryBuilder()
+            ->select('e', 'f', 's.customTitle AS customTitle')
+            ->from(Entry::class, 'e')
+            ->join('e.feed', 'f')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
+            ->setParameter('user', $userId);
     }
 
     /**
@@ -109,14 +107,14 @@ final readonly class RecommendationCandidateLoader
      * graph instead of giving it its own row index — only the Entry root and
      * the optional scalar customTitle appear as row keys.
      *
-     * @param array<array-key, mixed> $row a mixed DQL result: [0 => Entry, customTitle?: ?string]
+     * @param array<array-key, mixed> $row a mixed DQL result: [0 => Entry, customTitle: ?string]
      */
     private function hydrateLine(array $row): PromptLine
     {
         /** @var Entry $entry */
         $entry = $row[0];
         $feed = $entry->getFeed();
-        $customTitle = $row['customTitle'] ?? null;
+        $customTitle = $row['customTitle'];
         $feedName = (\is_string($customTitle) && $customTitle !== '')
             ? $customTitle
             : ($feed->getTitle() ?? $feed->getUrl());

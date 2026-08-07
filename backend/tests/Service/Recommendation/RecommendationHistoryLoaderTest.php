@@ -17,6 +17,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
 {
     private User $user;
     private Feed $feed;
+    private Subscription $subscription;
 
     protected function setUp(): void
     {
@@ -29,7 +30,12 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $this->feed->setTitle('Example');
         $this->em->persist($this->feed);
 
-        $this->em->persist(new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->subscription = new Subscription(
+            $this->user,
+            $this->feed,
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+        );
+        $this->em->persist($this->subscription);
 
         $this->em->flush();
     }
@@ -116,6 +122,48 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $history = $this->loader()->load($this->userId(), $this->settings());
 
         self::assertSame(['F', 'C'], array_map(static fn ($l) => $l->title, $history->viewed));
+    }
+
+    public function testFeedNamePrefersTheSubscriptionsCustomTitle(): void
+    {
+        $this->subscription->setCustomTitle('My Custom Feed');
+        $entry = $this->entry('A', '2026-07-10T00:00:00Z');
+        $state = new EntryState($this->user, $entry);
+        $state->setIsFavorite(true);
+        $this->em->persist($state);
+        $this->em->flush();
+
+        $history = $this->loader()->load($this->userId(), $this->settings());
+
+        self::assertSame('My Custom Feed', $history->favorites[0]->feedName);
+    }
+
+    public function testDescriptionPrefersTheSummaryOverTheContentHtml(): void
+    {
+        $entry = $this->entry('A', '2026-07-10T00:00:00Z');
+        $entry->setSummary('Summary text');
+        $entry->setContentHtml('<p>Content text</p>');
+        $state = new EntryState($this->user, $entry);
+        $state->setIsFavorite(true);
+        $this->em->persist($state);
+        $this->em->flush();
+
+        $history = $this->loader()->load($this->userId(), $this->settings());
+
+        self::assertSame('Summary text', $history->favorites[0]->description);
+    }
+
+    public function testFeedNameFallsBackToTheFeedTitleWithoutACustomTitle(): void
+    {
+        $entry = $this->entry('A', '2026-07-10T00:00:00Z');
+        $state = new EntryState($this->user, $entry);
+        $state->setIsFavorite(true);
+        $this->em->persist($state);
+        $this->em->flush();
+
+        $history = $this->loader()->load($this->userId(), $this->settings());
+
+        self::assertSame('Example', $history->favorites[0]->feedName);
     }
 
     private function entry(string $guid, string $published): Entry
