@@ -147,6 +147,9 @@ final readonly class EntryController
         if ($request->isKept !== null) {
             $state->setIsKept($request->isKept);
         }
+        if ($request->isViewed === true) {
+            $state->markViewed($this->clock->now());
+        }
 
         $this->em->flush();
 
@@ -156,6 +159,8 @@ final readonly class EntryController
             'isFavorite' => $state->isFavorite(),
             'isKept' => $state->isKept(),
             'readAt' => $state->getReadAt()?->format(\DateTimeInterface::ATOM),
+            'isViewed' => $state->isViewed(),
+            'viewedAt' => $state->getViewedAt()?->format(\DateTimeInterface::ATOM),
         ]]);
     }
 

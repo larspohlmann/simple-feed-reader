@@ -233,6 +233,83 @@ final class EntryControllerTest extends WebTestCase
         self::assertNull($body['state']['readAt']);
     }
 
+    public function testPatchStateMarksViewed(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-viewed@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
+        self::assertNotNull($entryId);
+
+        $client->request(
+            'PATCH',
+            "/api/entries/$entryId/state",
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: '{"isViewed":true}',
+        );
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['state']);
+        self::assertTrue($body['state']['isViewed']);
+        self::assertNotNull($body['state']['viewedAt']);
+        self::assertFalse($body['state']['isRead']);
+    }
+
+    public function testPatchStateRejectsUnviewing(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-unview@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
+        self::assertNotNull($entryId);
+
+        $client->request(
+            'PATCH',
+            "/api/entries/$entryId/state",
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: '{"isViewed":false}',
+        );
+
+        self::assertResponseStatusCodeSame(422);
+    }
+
+    public function testViewedSurvivesOtherStatePatches(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-viewed-keep@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
+        self::assertNotNull($entryId);
+
+        $client->request(
+            'PATCH',
+            "/api/entries/$entryId/state",
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: '{"isViewed":true}',
+        );
+        $client->request(
+            'PATCH',
+            "/api/entries/$entryId/state",
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: '{"isRead":true,"isFavorite":true}',
+        );
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['state']);
+        self::assertTrue($body['state']['isViewed']);
+        self::assertNotNull($body['state']['viewedAt']);
+    }
+
     public function testCannotPatchEntryOfUnsubscribedFeed(): void
     {
         $client = self::createClient();
