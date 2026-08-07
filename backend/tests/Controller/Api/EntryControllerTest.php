@@ -82,6 +82,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertIsArray($first);
         self::assertSame('Post 3', $first['title']);
         self::assertFalse($first['isRead']);
+        self::assertFalse($first['isViewed']);
         self::assertSame('Seeded', $first['source']);
         self::assertSame('https://icon.example.com/f.png', $first['faviconUrl']);
         self::assertArrayHasKey('nextCursor', $body);

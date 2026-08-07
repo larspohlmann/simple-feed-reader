@@ -15,7 +15,7 @@ final class EntryJson
      *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null,
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
-     *   isRead: bool, isFavorite: bool, isKept: bool
+     *   isRead: bool, isFavorite: bool, isKept: bool, isViewed: bool
      * }
      */
     public static function one(EntryListRow $row): array
@@ -41,6 +41,7 @@ final class EntryJson
             'isRead' => $row->isRead,
             'isFavorite' => $row->isFavorite,
             'isKept' => $row->isKept,
+            'isViewed' => $row->isViewed,
         ];
     }
 }

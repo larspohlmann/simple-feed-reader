@@ -21,6 +21,7 @@ final readonly class EntryListRow
         public bool $isRead,
         public bool $isFavorite,
         public bool $isKept,
+        public bool $isViewed,
     ) {
     }
 }
