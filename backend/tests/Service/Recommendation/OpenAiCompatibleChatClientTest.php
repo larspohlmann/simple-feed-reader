@@ -88,6 +88,63 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client->complete($this->credentials(), 'm', $this->messages());
     }
 
+    /**
+     * Pins the documented contract at the boundary: 300 itself, not just
+     * something comfortably past it, is a refusal.
+     *
+     * This does NOT distinguish "$status >= 300" from "$status > 300" as a
+     * mutation-testing matter — verified by direct experiment, not assumed.
+     * Symfony's HttpClientInterface throws a RedirectionExceptionInterface
+     * from getContent() itself for any 3xx status once max_redirects is
+     * exhausted (0 here), independently of readBody()'s own check; that
+     * exception lands in the same `catch (ExceptionInterface $e)` and comes
+     * out as this same ProviderUnreachableException either way. Only the
+     * exception's message would differ, and this suite — like
+     * OpenAiCompatibleCatalogTest, which has the identical accepted-escaped
+     * pair for its own "$status >= 300" check — asserts exception type, not
+     * message. Kept as a behavioural pin, not a kill.
+     */
+    public function testAStatusOfExactly300IsAlsoUnreachable(): void
+    {
+        $client = $this->clientAnswering(new MockResponse(
+            '{"choices":[{"message":{"content":"ok"}}]}',
+            ['http_code' => 300],
+        ));
+
+        $this->expectException(ProviderUnreachableException::class);
+        $client->complete($this->credentials(), 'm', $this->messages());
+    }
+
+    /**
+     * Pins the documented contract: a redirect answer is a refusal, not
+     * something to follow. `max_redirects: 0` is load-bearing hardening on
+     * the one class in this branch that talks to an untrusted external
+     * endpoint — a client that silently followed a redirect would hand the
+     * API key to whatever host the provider's `Location` header names.
+     *
+     * This does NOT prove the `max_redirects: 0` request option specifically —
+     * verified by direct experiment, not assumed. MockHttpClient never
+     * performs real redirect-following regardless of that option's value: a
+     * queued second response is consumed only by an explicit second
+     * ->request() call, which nothing here makes. The identical limitation
+     * already applies to OpenAiCompatibleCatalog's own `max_redirects: 0`,
+     * whose Increment/DecrementInteger mutants escape for the same reason.
+     * Proving the option's wire effect would need a real transport against a
+     * server that actually redirects, which is an integration test, not this
+     * unit suite's job.
+     */
+    public function testARedirectIsRefusedRatherThanFollowed(): void
+    {
+        $client = new MockHttpClient([
+            new MockResponse('', ['http_code' => 302, 'response_headers' => ['location' => 'https://elsewhere.test/']]),
+            new MockResponse('{"choices":[{"message":{"content":"should never be read"}}]}'),
+        ]);
+
+        $this->expectException(ProviderUnreachableException::class);
+        (new OpenAiCompatibleChatClient($client, 'SimpleFeedReader/1.0'))
+            ->complete($this->credentials(), 'm', $this->messages());
+    }
+
     public function testAForbiddenAnswerIsAlsoARejectedKey(): void
     {
         $client = $this->clientAnswering(new MockResponse('{"error":"nope"}', ['http_code' => 403]));
