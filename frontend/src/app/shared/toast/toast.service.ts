@@ -21,6 +21,7 @@ export class ToastService {
 
   private ref: DialogRef<void, ToastComponent> | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
+  private cachedBottomOffset: string | null = null;
 
   /** Replaces any toast currently visible. */
   show(toast: ToastData): void {
@@ -58,10 +59,13 @@ export class ToastService {
 
   /** Stylelint bans ad-hoc `px` outside `theme/`, but cannot see this file:
    *  read the spacing scale's own value instead of hardcoding a literal that
-   *  would silently drift from it (#308 final review, Minor 9). */
+   *  would silently drift from it (#308 final review, Minor 9). Read once and
+   *  kept: the token is a static custom property, and `getComputedStyle`
+   *  forces a style flush every time it is asked. */
   private bottomOffset(): string {
-    const value = getComputedStyle(document.documentElement).getPropertyValue('--space-5').trim();
+    this.cachedBottomOffset ??=
+      getComputedStyle(document.documentElement).getPropertyValue('--space-5').trim() || '24px';
 
-    return value === '' ? '24px' : value;
+    return this.cachedBottomOffset;
   }
 }

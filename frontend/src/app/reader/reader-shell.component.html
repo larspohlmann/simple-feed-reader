@@ -84,23 +84,7 @@
   <main class="main" [class.split]="paneMode()">
     @if (paneMode()) {
       <section class="list">
-        @if (selection().kind === 'for-you') {
-          <div class="for-you-bar">
-            @if (recs.running()) {
-              <p role="status" aria-live="polite">
-                {{ 'reader.forYouProgress' | transloco: forYouProgress() }}
-              </p>
-            } @else {
-              <button type="button" class="run" (click)="recs.start()">
-                {{ 'reader.forYouRun' | transloco }}
-              </button>
-              @if (forYouFailureMessageKey(); as failureKey) {
-                <p role="alert">{{ failureKey | transloco }}</p>
-              }
-            }
-          </div>
-          <app-progress-hairline [active]="recs.running()" [value]="recs.progress()" />
-        }
+        <ng-container [ngTemplateOutlet]="forYouBar" />
         <app-entry-list
           [layout]="layout.mode()"
           [title]="title()"
@@ -142,23 +126,7 @@
            this list drives the bar's hide-on-scroll — its scrolled output is
            the bar's one and only scroll source (#128). -->
       <section class="list">
-        @if (selection().kind === 'for-you') {
-          <div class="for-you-bar">
-            @if (recs.running()) {
-              <p role="status" aria-live="polite">
-                {{ 'reader.forYouProgress' | transloco: forYouProgress() }}
-              </p>
-            } @else {
-              <button type="button" class="run" (click)="recs.start()">
-                {{ 'reader.forYouRun' | transloco }}
-              </button>
-              @if (forYouFailureMessageKey(); as failureKey) {
-                <p role="alert">{{ failureKey | transloco }}</p>
-              }
-            }
-          </div>
-          <app-progress-hairline [active]="recs.running()" [value]="recs.progress()" />
-        }
+        <ng-container [ngTemplateOutlet]="forYouBar" />
         <app-entry-list
           [layout]="layout.mode()"
           [title]="title()"
@@ -205,3 +173,27 @@
     }
   </main>
 </div>
+
+<!-- Defined once and outlet-rendered into whichever `.list` the current layout
+     mounts: the split pane and the single pane each build their own list
+     column, and two copies of this block drifted apart the moment one of them
+     gained a binding the other lacked. -->
+<ng-template #forYouBar>
+  @if (selection().kind === 'for-you') {
+    <div class="for-you-bar">
+      @if (recs.running()) {
+        <p role="status" aria-live="polite">
+          {{ 'reader.forYouProgress' | transloco: forYouProgress() }}
+        </p>
+      } @else {
+        <button type="button" class="run" (click)="recs.start()">
+          {{ 'reader.forYouRun' | transloco }}
+        </button>
+        @if (forYouFailureMessageKey(); as failureKey) {
+          <p role="alert">{{ failureKey | transloco }}</p>
+        }
+      }
+    </div>
+    <app-progress-hairline [active]="recs.running()" [value]="recs.progress()" />
+  }
+</ng-template>
