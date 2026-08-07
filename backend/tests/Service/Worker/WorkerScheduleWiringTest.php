@@ -41,6 +41,21 @@ final class WorkerScheduleWiringTest extends KernelTestCase
             [AdvanceRecommendationRuns::class, RefreshDueFeeds::class, PurgeFailedMessages::class],
             $classes,
         );
+
+        // The class assertion above cannot catch a right-message-wrong-cadence
+        // regression (e.g. AdvanceRecommendationRuns running every 10 minutes
+        // instead of every 10 seconds): PeriodicalTrigger::__toString() is the
+        // same description `debug:scheduler` prints in its "Trigger" column,
+        // so it is a stable, meaningful pin on the frequency, not an
+        // implementation accident.
+        $frequencies = array_map(
+            static fn (RecurringMessage $recurring): string => (string) $recurring->getTrigger(),
+            $recurringMessages,
+        );
+        self::assertSame(
+            ['every 10 seconds', 'every 5 minutes', 'every 1 day'],
+            $frequencies,
+        );
     }
 
     private static function firstMessageClass(RecurringMessage $recurring): string
