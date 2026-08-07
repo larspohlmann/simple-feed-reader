@@ -181,11 +181,7 @@ class EntryRepository extends ServiceEntityRepository
     {
         switch ($view) {
             case 'unread':
-                $qb->andWhere(
-                    'es.isRead = :readFalse '
-                    . 'OR (es.isRead IS NULL AND (s.markedReadUntil IS NULL '
-                    . 'OR e.effectiveDate > s.markedReadUntil))',
-                )->setParameter('readFalse', false, Types::BOOLEAN);
+                $qb->andWhere(UnreadDql::predicate())->setParameter('readFalse', false, Types::BOOLEAN);
                 break;
             case 'favorites':
                 $qb->andWhere('es.isFavorite = :flag')->setParameter('flag', true, Types::BOOLEAN);

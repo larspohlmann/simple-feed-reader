@@ -29,6 +29,24 @@ services:
         autowire: true
         public: true
 
+    # RecommendationHistoryLoaderTest drives load() directly to prove the
+    # section-precedence dedup (favorites beat kept beat viewed) and each
+    # section's ordering/cap. Its only production caller arrives with the
+    # prompt-building task later on this branch, so until then the compiler
+    # would inline it away and the test container could not fetch it. Same
+    # `autowire` caveat as above.
+    App\Service\Recommendation\RecommendationHistoryLoader:
+        autowire: true
+        public: true
+
+    # RecommendationCandidateLoaderTest drives load() and linesForIds()
+    # directly to prove the unread/subscribed filter and the pruned-id drop.
+    # Same "no production caller yet" caveat as RecommendationHistoryLoader
+    # above.
+    App\Service\Recommendation\RecommendationCandidateLoader:
+        autowire: true
+        public: true
+
     # Functional tests swap the real fetcher for a stub via
     # `self::getContainer()->set(...)`, which the container only allows on
     # public services. Test environment only — production keeps them private.
