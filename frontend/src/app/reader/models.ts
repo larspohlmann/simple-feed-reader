@@ -72,6 +72,8 @@ export interface EntryDto {
   isRead: boolean;
   isFavorite: boolean;
   isKept: boolean;
+  /** One-way: the user actively opened this entry at least once (#307). */
+  isViewed: boolean;
 }
 
 export interface EntriesPage {
@@ -85,6 +87,8 @@ export interface EntryStateDto {
   isFavorite: boolean;
   isKept: boolean;
   readAt: string | null;
+  isViewed: boolean;
+  viewedAt: string | null;
 }
 
 export interface RefreshReport {
@@ -158,6 +162,7 @@ export interface EntryStatePatch {
   isRead?: boolean;
   isFavorite?: boolean;
   isKept?: boolean;
+  isViewed?: boolean;
 }
 
 export interface OpmlImportResult {

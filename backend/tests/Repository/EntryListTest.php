@@ -200,6 +200,25 @@ final class EntryListTest extends DbTestCase
         }
     }
 
+    public function testCarriesTheViewedFlag(): void
+    {
+        $viewed = $this->entry('viewed', '2026-07-05T00:00:00Z');
+        $this->entry('untouched', '2026-07-06T00:00:00Z');
+
+        $state = new EntryState($this->user, $viewed);
+        $state->markViewed(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
+        $this->em->persist($state);
+        $this->em->flush();
+
+        $rows = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0));
+        $byGuid = [];
+        foreach ($rows as $row) {
+            $byGuid[$row->entry->getGuid()] = $row->isViewed;
+        }
+        self::assertTrue($byGuid['viewed']);
+        self::assertFalse($byGuid['untouched']);
+    }
+
     public function testStateIsScopedToTheCaller(): void
     {
         // A second subscriber to the SAME feed/entry. Their read + favorite

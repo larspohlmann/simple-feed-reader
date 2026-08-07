@@ -6,17 +6,17 @@ namespace App\Controller\Api;
 
 use App\Dto\Entry\MarkReadRequest;
 use App\Dto\Entry\UpdateEntryStateRequest;
-use App\Entity\EntryState;
 use App\Entity\User;
 use App\Exception\ValidationException;
 use App\Http\EntryCursor;
 use App\Http\EntryJson;
+use App\Http\EntryStateJson;
 use App\Http\ReaderJson;
 use App\Repository\EntryQuery;
 use App\Repository\EntryRepository;
-use App\Repository\EntryStateRepository;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Reader\ArticleExtractorInterface;
+use App\Service\Reader\EntryStateResolver;
 use App\Service\Reader\ExtractionResult;
 use App\Service\Reader\MarkReadService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -35,7 +35,7 @@ final readonly class EntryController
 {
     public function __construct(
         private EntryRepository $entries,
-        private EntryStateRepository $states,
+        private EntryStateResolver $entryStates,
         private EntityManagerInterface $em,
         private ClockInterface $clock,
         private MarkReadService $markRead,
@@ -128,14 +128,10 @@ final readonly class EntryController
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateEntryStateRequest $request,
     ): JsonResponse {
-        $entry = $this->entries->findOneSubscribedByUser($id, (int) $user->getId())
+        $row = $this->entries->oneRowForUser($id, (int) $user->getId())
             ?? throw new NotFoundHttpException('No such entry.');
 
-        $state = $this->states->findOneForUserEntry((int) $user->getId(), $id);
-        if ($state === null) {
-            $state = new EntryState($user, $entry);
-            $this->em->persist($state);
-        }
+        $state = $this->entryStates->resolve($user, $row);
 
         if ($request->isRead !== null) {
             $state->setIsRead($request->isRead);
@@ -147,16 +143,13 @@ final readonly class EntryController
         if ($request->isKept !== null) {
             $state->setIsKept($request->isKept);
         }
+        if ($request->isViewed === true) {
+            $state->markViewed($this->clock->now());
+        }
 
         $this->em->flush();
 
-        return new JsonResponse(['state' => [
-            'entryId' => $id,
-            'isRead' => $state->isRead(),
-            'isFavorite' => $state->isFavorite(),
-            'isKept' => $state->isKept(),
-            'readAt' => $state->getReadAt()?->format(\DateTimeInterface::ATOM),
-        ]]);
+        return new JsonResponse(['state' => EntryStateJson::one($state, $id)]);
     }
 
     #[Route('/{id}/reader', name: 'api_entries_reader', methods: ['GET'], requirements: ['id' => '\d+'])]

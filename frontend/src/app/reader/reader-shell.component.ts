@@ -230,6 +230,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   });
 
   private readonly markedOnOpen = new Set<number>();
+  private readonly viewedOnOpen = new Set<number>();
 
   constructor() {
     // Reload the list whenever the selection (not the open entry) changes.
@@ -242,14 +243,24 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       this.selection();
       untracked(() => this.sidebarOpen.set(false));
     });
-    // Mark the opened entry read exactly once per session — even if the PATCH
-    // fails and the entry rolls back to unread, we never re-fire the request.
+    // Mark the opened entry read and viewed, each exactly once per session —
+    // even if the PATCH fails and the flags roll back, we never re-fire. One
+    // combined request: the endpoint is a partial update, and both flags
+    // change at the same moment (the open).
     effect(() => {
       const e = this.openEntry();
-      if (e && !e.isRead && !this.markedOnOpen.has(e.id)) {
+      if (!e) return;
+      const patch: EntryStatePatch = {};
+      if (!e.isRead && !this.markedOnOpen.has(e.id)) {
         this.markedOnOpen.add(e.id);
-        untracked(() => this.setRead(e, true));
+        patch.isRead = true;
       }
+      if (!e.isViewed && !this.viewedOnOpen.has(e.id)) {
+        this.viewedOnOpen.add(e.id);
+        patch.isViewed = true;
+      }
+      if (Object.keys(patch).length === 0) return;
+      untracked(() => this.applyOpenedPatch(e, patch));
     });
     // Deep link to an entry the current list page doesn't hold: fetch it by id so
     // it still opens. Tracks only entryId; the list copy takes over once loaded.
@@ -490,6 +501,23 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       else this.subs.decrementUnread(e.subscriptionId);
     });
   }
+
+  /** The on-open patch: read + viewed in one request, with the unread badge
+   *  kept in sync (and reverted on failure) only for the read part — viewed
+   *  has no badge. */
+  private applyOpenedPatch(e: EntryDto, patch: EntryStatePatch): void {
+    if (patch.isRead) this.subs.decrementUnread(e.subscriptionId);
+    this.patchOpen(e, patch, () => {
+      if (patch.isRead) this.subs.incrementUnread(e.subscriptionId);
+    });
+  }
+
+  /** Following the original-article link is an active open even when the
+   *  entry was opened before; the flag is one-way, so an already-viewed
+   *  entry is a no-op (this fires only after an on-open PATCH rolled back). */
+  onOpenOriginal = (e: EntryDto): void => {
+    if (!e.isViewed) this.patchOpen(e, { isViewed: true });
+  };
 
   /** Apply an entry-state change. Entries in the loaded list go through the
    *  store's optimistic path; a cold-opened deep-link entry (in no list) is

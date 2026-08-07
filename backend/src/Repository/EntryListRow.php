@@ -21,6 +21,14 @@ final readonly class EntryListRow
         public bool $isRead,
         public bool $isFavorite,
         public bool $isKept,
+        public bool $isViewed,
+        /**
+         * The subscription's mark-all-read watermark, already selected by the
+         * row projection. `isRead` above has it folded in; it is carried
+         * separately only so a row materialised from this projection can record
+         * *when* the sweep made the entry read.
+         */
+        public ?\DateTimeImmutable $markedReadUntil,
     ) {
     }
 }

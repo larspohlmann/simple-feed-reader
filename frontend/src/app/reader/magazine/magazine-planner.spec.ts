@@ -25,6 +25,7 @@ const e = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   isRead: false,
   isFavorite: false,
   isKept: false,
+  isViewed: false,
   ...over,
 });
 const big = (id: number, over: Partial<EntryDto> = {}): EntryDto =>

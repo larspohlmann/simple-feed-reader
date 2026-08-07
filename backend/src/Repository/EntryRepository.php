@@ -137,6 +137,7 @@ class EntryRepository extends ServiceEntityRepository
             ->addSelect('es.isRead AS esRead')
             ->addSelect('es.isFavorite AS esFavorite')
             ->addSelect('es.isKept AS esKept')
+            ->addSelect('es.isViewed AS esViewed')
             ->addSelect('s.markedReadUntil AS markedReadUntil')
             ->setParameter('user', $userId);
     }
@@ -227,6 +228,10 @@ class EntryRepository extends ServiceEntityRepository
             isRead: $this->rowIsRead($row, $entry),
             isFavorite: (bool) ($row['esFavorite'] ?? false),
             isKept: (bool) ($row['esKept'] ?? false),
+            isViewed: (bool) ($row['esViewed'] ?? false),
+            markedReadUntil: $row['markedReadUntil'] instanceof \DateTimeImmutable
+                ? $row['markedReadUntil']
+                : null,
         );
     }
 

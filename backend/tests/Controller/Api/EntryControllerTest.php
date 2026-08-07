@@ -11,6 +11,7 @@ use App\Entity\User;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -82,6 +83,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertIsArray($first);
         self::assertSame('Post 3', $first['title']);
         self::assertFalse($first['isRead']);
+        self::assertFalse($first['isViewed']);
         self::assertSame('Seeded', $first['source']);
         self::assertSame('https://icon.example.com/f.png', $first['faviconUrl']);
         self::assertArrayHasKey('nextCursor', $body);
@@ -231,6 +233,224 @@ final class EntryControllerTest extends WebTestCase
         self::assertIsArray($body['state']);
         self::assertFalse($body['state']['isRead']);
         self::assertNull($body['state']['readAt']);
+    }
+
+    public function testPatchStateMarksViewed(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-viewed@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
+        self::assertNotNull($entryId);
+
+        $client->request(
+            'PATCH',
+            "/api/entries/$entryId/state",
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: '{"isViewed":true}',
+        );
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['state']);
+        self::assertTrue($body['state']['isViewed']);
+        self::assertNotNull($body['state']['viewedAt']);
+        self::assertFalse($body['state']['isRead']);
+    }
+
+    public function testPatchStateRejectsUnviewing(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-unview@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
+        self::assertNotNull($entryId);
+
+        $client->request(
+            'PATCH',
+            "/api/entries/$entryId/state",
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: '{"isViewed":false}',
+        );
+
+        // The client type-switches on the problem type and the offending field,
+        // so a bare 422 is not the contract.
+        self::assertResponseStatusCodeSame(422);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('validation_error', $body['type']);
+        self::assertIsArray($body['errors']);
+        self::assertArrayHasKey('isViewed', $body['errors']);
+    }
+
+    public function testMarkingViewedKeepsAWatermarkReadEntryRead(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-viewed-watermark@example.com');
+        $sub = $this->seedFeedWithEntries($user, 3);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
+        self::assertNotNull($entryId);
+
+        $client->request(
+            'POST',
+            '/api/entries/mark-read',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['scope' => 'all', 'until' => '2026-08-01T00:00:00Z'], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(204);
+        self::assertSame(0, $this->unreadCountOf($client, $headers, (int) $sub->getId()));
+
+        // The sweep leaves these entries sparse: they are read by the
+        // watermark alone. Materialising a state row must not resurrect them.
+        $client->request(
+            'PATCH',
+            "/api/entries/$entryId/state",
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: '{"isViewed":true}',
+        );
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['state']);
+        self::assertTrue($body['state']['isViewed']);
+        self::assertTrue($body['state']['isRead']);
+        self::assertSame('2026-08-01T00:00:00+00:00', $body['state']['readAt']);
+
+        $client->request('GET', '/api/entries', server: $headers);
+        $list = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($list);
+        self::assertIsArray($list['entries']);
+        foreach ($list['entries'] as $entry) {
+            self::assertIsArray($entry);
+            self::assertTrue($entry['isRead'], 'Every swept entry must stay read.');
+        }
+
+        self::assertSame(0, $this->unreadCountOf($client, $headers, (int) $sub->getId()));
+    }
+
+    public function testMarkingViewedSeedsReadOnlyUpToTheWatermark(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-viewed-boundary@example.com');
+        $sub = $this->seedFeedWithEntries($user, 3);
+
+        // Sweep to exactly the second entry's date: entry 2 is read (the
+        // watermark is inclusive), entry 3 is not.
+        $client->request(
+            'POST',
+            '/api/entries/mark-read',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['scope' => 'all', 'until' => '2026-07-02T00:00:00Z'], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(204);
+
+        $onTheWatermark = $this->entryIdOf($sub, 'g2');
+        $aboveTheWatermark = $this->entryIdOf($sub, 'g3');
+
+        self::assertTrue($this->markViewed($client, $headers, $onTheWatermark)['isRead']);
+
+        $above = $this->markViewed($client, $headers, $aboveTheWatermark);
+        self::assertFalse($above['isRead']);
+        self::assertNull($above['readAt']);
+    }
+
+    private function entryIdOf(Subscription $subscription, string $guid): int
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entry = $em->getRepository(Entry::class)->findOneBy([
+            'feed' => $subscription->getFeed(),
+            'guid' => $guid,
+        ]);
+        self::assertInstanceOf(Entry::class, $entry);
+
+        $id = $entry->getId();
+        if (null === $id) {
+            self::fail("The seeded entry $guid has no id.");
+        }
+
+        return $id;
+    }
+
+    /**
+     * @param array<string,string> $headers
+     *
+     * @return array<string,mixed> the state the API reports back
+     */
+    private function markViewed(KernelBrowser $client, array $headers, int $entryId): array
+    {
+        $client->request(
+            'PATCH',
+            "/api/entries/$entryId/state",
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: '{"isViewed":true}',
+        );
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        /** @var array<string,mixed> $state */
+        $state = $body['state'];
+
+        return $state;
+    }
+
+    /**
+     * @param array<string,string> $headers
+     */
+    private function unreadCountOf(KernelBrowser $client, array $headers, int $subscriptionId): int
+    {
+        $client->request('GET', '/api/subscriptions', server: $headers);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['subscriptions']);
+        foreach ($body['subscriptions'] as $subscription) {
+            self::assertIsArray($subscription);
+            if ($subscription['id'] === $subscriptionId) {
+                self::assertIsInt($subscription['unreadCount']);
+
+                return $subscription['unreadCount'];
+            }
+        }
+
+        self::fail("No subscription $subscriptionId in the list.");
+    }
+
+    public function testViewedSurvivesOtherStatePatches(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-viewed-keep@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
+        self::assertNotNull($entryId);
+
+        $client->request(
+            'PATCH',
+            "/api/entries/$entryId/state",
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: '{"isViewed":true}',
+        );
+        $client->request(
+            'PATCH',
+            "/api/entries/$entryId/state",
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: '{"isRead":true,"isFavorite":true}',
+        );
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['state']);
+        self::assertTrue($body['state']['isViewed']);
+        self::assertNotNull($body['state']['viewedAt']);
     }
 
     public function testCannotPatchEntryOfUnsubscribedFeed(): void

@@ -1,5 +1,6 @@
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { By } from '@angular/platform-browser';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { of, Subject } from 'rxjs';
 import { ReaderViewComponent } from './reader-view.component';
@@ -25,6 +26,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isRead: false,
   isFavorite: false,
   isKept: false,
+  isViewed: false,
   ...over,
 });
 
@@ -298,6 +300,17 @@ describe('ReaderViewComponent', () => {
     (el.querySelector('.actions [aria-label="Toggle read"]') as HTMLButtonElement).click();
     (el.querySelector('.close') as HTMLButtonElement).click();
     expect(c).toEqual({ favorite: 1, keep: 1, read: 1, close: 1 });
+  });
+
+  it('emits openOriginal when the original-article link is clicked', () => {
+    const f = mount(entry({ url: 'https://example.com/full-story' }));
+    const emitted = jest.fn();
+    f.componentInstance.openOriginal.subscribe(emitted);
+
+    const link = f.debugElement.query(By.css('a[target="_blank"]'));
+    link.triggerEventHandler('click', null);
+
+    expect(emitted).toHaveBeenCalled();
   });
 
   it('carries the full-screen back button in its own toolbar, sliding out before close', () => {
