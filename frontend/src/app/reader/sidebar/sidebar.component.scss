@@ -85,6 +85,10 @@
   .organise .knob {
     transition: none;
   }
+
+  .nav app-icon.pulse {
+    animation: none;
+  }
 }
 
 /* Rides along under the controls, which already carry the margin-top: auto. */
