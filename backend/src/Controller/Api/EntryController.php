@@ -12,6 +12,7 @@ use App\Http\EntryCursor;
 use App\Http\EntryJson;
 use App\Http\EntryStateJson;
 use App\Http\ReaderJson;
+use App\Http\RecommendationFeedJson;
 use App\Repository\EntryQuery;
 use App\Repository\EntryRepository;
 use App\Service\RateLimit\RateLimitGuard;
@@ -19,6 +20,7 @@ use App\Service\Reader\ArticleExtractorInterface;
 use App\Service\Reader\EntryStateResolver;
 use App\Service\Reader\ExtractionResult;
 use App\Service\Reader\MarkReadService;
+use App\Service\Recommendation\RecommendationFeedPager;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -42,6 +44,7 @@ final readonly class EntryController
         private ArticleExtractorInterface $extractor,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $readerLimiter,
+        private RecommendationFeedPager $recommendationFeedPager,
     ) {
     }
 
@@ -64,10 +67,19 @@ final readonly class EntryController
             'unread' => 'unread',
             'favorites' => 'favorites',
             'kept' => 'kept',
+            'for-you' => 'for-you',
             default => throw new ValidationException(
-                ['view' => ['Unknown view. Use one of: all, unread, favorites, kept.']],
+                ['view' => ['Unknown view. Use one of: all, unread, favorites, kept, for-you.']],
             ),
         };
+
+        // The for-you feed is score-ranked, not (effectiveDate, id)-ranked, so
+        // it needs its own cursor and never reaches EntryQuery's applyView.
+        if ($view === 'for-you') {
+            $page = $this->recommendationFeedPager->page((int) $user->getId(), $cursor, $limit);
+
+            return new JsonResponse(RecommendationFeedJson::page($page->rows, $page->nextCursor));
+        }
 
         $decodedCursor = null;
         if ($cursor !== null && $cursor !== '') {

@@ -23,7 +23,7 @@ final class AiSettingsJsonTest extends TestCase
         );
 
         if (null !== $model) {
-            $settings->chooseModel($model, new \DateTimeImmutable('2026-08-06 10:00:00'));
+            $settings->chooseModel($model, new \DateTimeImmutable('2026-08-06 10:00:00'), null);
         }
 
         return $settings;

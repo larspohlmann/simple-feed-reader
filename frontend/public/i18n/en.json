@@ -89,6 +89,24 @@
         "rateLimited": "Too many requests to the provider. Wait a few minutes and try again.",
         "notConfigured": "Save an endpoint and an API key first.",
         "unknown": "Something went wrong. Try again."
+      },
+      "recommendations": {
+        "title": "Recommendations",
+        "guidance": "Guidance prompt",
+        "guidanceReset": "Reset to default",
+        "fixedShow": "Show the fixed prompt",
+        "favoritesCap": "Favorites in history",
+        "keptCap": "Kept in history",
+        "viewedCap": "Viewed in history",
+        "candidatePool": "Candidate pool size",
+        "picksLimit": "Maximum picks",
+        "contextWindow": "Context window (tokens)",
+        "contextWindowFromProvider": "Reported by your provider",
+        "contextWindowFallback": "Built-in default",
+        "contextWindowOverride": "Your override",
+        "debug": "Keep debug data for runs",
+        "save": "Save",
+        "saved": "Saved."
       }
     },
     "about": {
@@ -356,6 +374,7 @@
     "allItems": "All items",
     "favorites": "Favorites",
     "kept": "Kept",
+    "forYou": "For you",
     "tags": "Tags",
     "feeds": "Feeds",
     "organise": "Organise",
@@ -410,7 +429,14 @@
     },
     "versionLabel": "Version {{version}} — open settings",
     "trialDaysLeft": "Trial · {{days}} days left",
-    "trialDayLeft": "Trial · 1 day left"
+    "trialDayLeft": "Trial · 1 day left",
+    "forYouReady": "Recommendations ready",
+    "forYouView": "View",
+    "forYouFailed": "Recommendations failed. Try again.",
+    "forYouRun": "Get recommendations",
+    "forYouProgress": "Ranking your feeds — {{done}} of {{total}}",
+    "forYouBusy": "Another run is already in progress. Try again in a moment.",
+    "forYouUnreachable": "Could not reach the recommendation service. Try again."
   },
   "common": {
     "save": "Save",

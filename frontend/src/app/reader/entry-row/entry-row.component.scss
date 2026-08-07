@@ -62,6 +62,13 @@
   overflow: hidden;
 }
 
+.reason {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  font-style: italic;
+}
+
 .actions {
   display: flex;
   gap: var(--space-3);

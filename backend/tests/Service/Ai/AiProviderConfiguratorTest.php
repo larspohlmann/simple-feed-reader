@@ -12,8 +12,9 @@ use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\ModelCatalog;
-use App\Service\Ai\ProviderCredentials;
+use App\Service\Ai\ModelDescriptor;
 use App\Tests\DbTestCase;
+use App\Tests\Support\StubModelCatalog;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -34,24 +35,10 @@ final class AiProviderConfiguratorTest extends DbTestCase
         return (new UserFactory($this->em, $hasher))->create($email);
     }
 
-    /** @param list<string>|\Throwable $models */
+    /** @param list<string|ModelDescriptor>|\Throwable $models */
     private function configurator(array|\Throwable $models): AiProviderConfigurator
     {
-        self::getContainer()->set(ModelCatalog::class, new class ($models) implements ModelCatalog {
-            /** @param list<string>|\Throwable $models */
-            public function __construct(private readonly array|\Throwable $models)
-            {
-            }
-
-            public function listModels(ProviderCredentials $credentials): array
-            {
-                if ($this->models instanceof \Throwable) {
-                    throw $this->models;
-                }
-
-                return $this->models;
-            }
-        });
+        self::getContainer()->set(ModelCatalog::class, new StubModelCatalog($models));
 
         /** @var AiProviderConfigurator $configurator */
         $configurator = self::getContainer()->get(AiProviderConfigurator::class);
@@ -135,6 +122,31 @@ final class AiProviderConfiguratorTest extends DbTestCase
         self::assertSame('gpt-4o-mini', $stored?->getModel());
     }
 
+    public function testChoosingAModelStoresItsReportedContextWindow(): void
+    {
+        $configurator = $this->configurator([new ModelDescriptor('big', 200000), new ModelDescriptor('small', null)]);
+        $user = $this->user('cfg-context-window@example.test');
+        $configurator->saveConnection($user, 'https://api.example.test/v1', 'sk-abcdef1234');
+        $settings = $configurator->requireConfiguration($user);
+
+        $configurator->chooseModel($settings, 'big');
+
+        self::assertSame(200000, $settings->getModelContextWindow());
+    }
+
+    public function testReplacingTheConnectionClearsTheContextWindow(): void
+    {
+        $configurator = $this->configurator([new ModelDescriptor('big', 200000), new ModelDescriptor('small', null)]);
+        $user = $this->user('cfg-context-clear@example.test');
+        $configurator->saveConnection($user, 'https://api.example.test/v1', 'sk-abcdef1234');
+        $settings = $configurator->requireConfiguration($user);
+        $configurator->chooseModel($settings, 'big');
+
+        $configurator->saveConnection($user, 'https://api.example.test/v1', 'sk-other-key987');
+
+        self::assertNull($settings->getModelContextWindow());
+    }
+
     public function testChoosingAModelTheProviderDoesNotOfferIsRefused(): void
     {
         $configurator = $this->configurator(['gpt-4o']);
@@ -143,6 +155,25 @@ final class AiProviderConfiguratorTest extends DbTestCase
 
         $this->expectException(ModelNotOfferedException::class);
         $configurator->chooseModel($configurator->requireConfiguration($user), 'gpt-4o-mini');
+    }
+
+    /**
+     * credentials() is public on purpose: a later caller that must talk to the
+     * provider directly (a prompt runner) reuses it instead of duplicating the
+     * cipher call. Called from here, outside the class, so a visibility
+     * regression back to private/protected fails this test rather than only
+     * a caller several tasks from now.
+     */
+    public function testCredentialsCanBeOpenedFromOutsideTheConfigurator(): void
+    {
+        $configurator = $this->configurator(['gpt-4o']);
+        $user = $this->user('cfg-public-credentials@example.test');
+        $configurator->saveConnection($user, 'https://api.example.test/v1', 'sk-abcdef1234');
+
+        $credentials = $configurator->credentials($configurator->requireConfiguration($user));
+
+        self::assertSame('https://api.example.test/v1', $credentials->baseUrl);
+        self::assertSame('sk-abcdef1234', $credentials->apiKey);
     }
 
     public function testASecondConnectionSaveDropsTheChosenModel(): void

@@ -14,6 +14,7 @@ import {
   MarkReadScope,
   OpmlImportResult,
   ReaderContent,
+  RecommendationRunReport,
   RefreshReport,
   SubscribeResult,
   SubscriptionDto,
@@ -140,5 +141,23 @@ export class ReaderApi {
       `${this.base}/api/feeds/preview`,
       format ? { url, format } : { url },
     );
+  }
+
+  /** Start a new for-you recommendation run. */
+  startRecommendations(): Observable<RecommendationRunReport> {
+    return this.http.post<RecommendationRunReport>(`${this.base}/api/recommendations/runs`, {});
+  }
+
+  /** Advance the in-flight recommendation run by one batch. */
+  tickRecommendations(): Observable<RecommendationRunReport> {
+    return this.http.post<RecommendationRunReport>(
+      `${this.base}/api/recommendations/runs/tick`,
+      {},
+    );
+  }
+
+  /** The recommendation run in flight, if any -- used to resume a poll loop on boot. */
+  currentRecommendations(): Observable<RecommendationRunReport> {
+    return this.http.get<RecommendationRunReport>(`${this.base}/api/recommendations/runs/current`);
   }
 }

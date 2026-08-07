@@ -34,3 +34,11 @@
     max-height: 100%;
   }
 }
+
+// The toast's global position strategy centres the pane but leaves it
+// shrink-to-fit, so a long message would run edge to edge on a phone with no
+// side margin. Capped against the viewport rather than a percentage: the pane
+// has no size of its own for a percentage to resolve against.
+.cdk-overlay-pane.app-toast {
+  max-width: min(100% - 2 * var(--space-4), 30rem);
+}

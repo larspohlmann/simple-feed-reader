@@ -112,6 +112,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToOne(mappedBy: 'user', targetEntity: AiProviderSettings::class, cascade: ['remove'])]
     private ?AiProviderSettings $aiProviderSettings = null;
 
+    #[ORM\OneToOne(mappedBy: 'user', targetEntity: RecommendationSettings::class, cascade: ['remove'])]
+    private ?RecommendationSettings $recommendationSettings = null;
+
     public function __construct(string $email, \DateTimeImmutable $createdAt)
     {
         $email = self::normalizeEmail($email);

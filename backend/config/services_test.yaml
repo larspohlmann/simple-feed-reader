@@ -12,6 +12,41 @@ services:
         autowire: true
         public: true
 
+    # RecommendationSettingsResolverTest seals a throwaway API key directly to
+    # seed an AiProviderSettings row without a live provider call. Same
+    # `autowire` caveat as the entries below: naming a class here replaces the
+    # definition rather than amending it, and this file has no `_defaults`.
+    App\Service\Ai\Crypto\ApiKeyCipher:
+        autowire: true
+        public: true
+
+    # RecommendationSettingsResolverTest drives forUser() directly to prove the
+    # user-override / provider-window / fallback precedence. Its only
+    # production caller arrives with the settings API in a later task, so
+    # until then the compiler would inline it away and the test container
+    # could not fetch it. Same `autowire` caveat as above.
+    App\Service\Recommendation\RecommendationSettingsResolver:
+        autowire: true
+        public: true
+
+    # RecommendationHistoryLoaderTest drives load() directly to prove the
+    # section-precedence dedup (favorites beat kept beat viewed) and each
+    # section's ordering/cap. Its only production caller arrives with the
+    # prompt-building task later on this branch, so until then the compiler
+    # would inline it away and the test container could not fetch it. Same
+    # `autowire` caveat as above.
+    App\Service\Recommendation\RecommendationHistoryLoader:
+        autowire: true
+        public: true
+
+    # RecommendationCandidateLoaderTest drives load() and linesForIds()
+    # directly to prove the unread/subscribed filter and the pruned-id drop.
+    # Same "no production caller yet" caveat as RecommendationHistoryLoader
+    # above.
+    App\Service\Recommendation\RecommendationCandidateLoader:
+        autowire: true
+        public: true
+
     # Functional tests swap the real fetcher for a stub via
     # `self::getContainer()->set(...)`, which the container only allows on
     # public services. Test environment only — production keeps them private.
@@ -260,5 +295,36 @@ services:
     # the compiler would inline this away and the test container could not
     # fetch it. Same `autowire` caveat as above.
     App\Service\Settings\InstanceSettings:
+        autowire: true
+        public: true
+
+    # StubChatClient replaces the real provider call for every recommendation
+    # test: RecommendationRunAdvancerTest asserts the snapshot phase makes NO
+    # call to it, and later tasks queue its scripted replies to drive the
+    # provider/merge phases without a network call. Public so tests can fetch
+    # it directly to queue content/failures and inspect calls().
+    App\Tests\Support\StubChatClient:
+        autowire: true
+        public: true
+
+    # Test environment only: the whole container speaks to the stub instead of
+    # OpenAiCompatibleChatClient, same swap pattern as ModelCatalog above.
+    App\Service\Recommendation\ChatCompletionClient:
+        alias: App\Tests\Support\StubChatClient
+        public: true
+
+    # RecommendationRunStarterTest drives start() directly against the real
+    # repository and entity manager to prove the idempotent/resume rules. Its
+    # only production caller arrives with the "for you" endpoint in a later
+    # task, so until then the compiler would inline it away and the test
+    # container could not fetch it. Same `autowire` caveat as above.
+    App\Service\Recommendation\RecommendationRunStarter:
+        autowire: true
+        public: true
+
+    # RecommendationRunAdvancerTest drives advance() directly to prove the
+    # lock, the snapshot-phase batching and the zero-candidate completion. Same
+    # "no production caller yet" caveat as RecommendationRunStarter above.
+    App\Service\Recommendation\RecommendationRunAdvancer:
         autowire: true
         public: true

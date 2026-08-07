@@ -1,0 +1,105 @@
+@if (svc.state(); as state) {
+  <div class="group">
+    <app-field [label]="'settings.ai.recommendations.guidance' | transloco">
+      <textarea
+        [placeholder]="state.defaultGuidancePrompt"
+        [value]="guidance()"
+        (input)="guidance.set(textValue($event))"
+      ></textarea>
+    </app-field>
+    <app-button size="sm" (click)="resetGuidance()">
+      {{ 'settings.ai.recommendations.guidanceReset' | transloco }}
+    </app-button>
+
+    <details>
+      <summary>{{ 'settings.ai.recommendations.fixedShow' | transloco }}</summary>
+      <pre class="fixed"
+        >{{ state.fixedPrompt.role }}
+
+{{ state.fixedPrompt.outputContract }}</pre>
+    </details>
+  </div>
+
+  <div class="group">
+    <app-field [label]="'settings.ai.recommendations.favoritesCap' | transloco">
+      <input
+        type="number"
+        min="0"
+        max="500"
+        [value]="favoritesCap()"
+        (input)="setNumber(favoritesCap, $event)"
+      />
+    </app-field>
+
+    <app-field [label]="'settings.ai.recommendations.keptCap' | transloco">
+      <input
+        type="number"
+        min="0"
+        max="500"
+        [value]="keptCap()"
+        (input)="setNumber(keptCap, $event)"
+      />
+    </app-field>
+
+    <app-field [label]="'settings.ai.recommendations.viewedCap' | transloco">
+      <input
+        type="number"
+        min="0"
+        max="500"
+        [value]="viewedCap()"
+        (input)="setNumber(viewedCap, $event)"
+      />
+    </app-field>
+
+    <app-field [label]="'settings.ai.recommendations.candidatePool' | transloco">
+      <input
+        type="number"
+        min="10"
+        max="5000"
+        [value]="candidatePoolSize()"
+        (input)="setNumber(candidatePoolSize, $event)"
+      />
+    </app-field>
+
+    <app-field [label]="'settings.ai.recommendations.picksLimit' | transloco">
+      <input
+        type="number"
+        min="1"
+        max="500"
+        [value]="picksLimit()"
+        (input)="setNumber(picksLimit, $event)"
+      />
+    </app-field>
+
+    <app-field
+      [label]="'settings.ai.recommendations.contextWindow' | transloco"
+      [hint]="contextWindowSourceKey() | transloco"
+    >
+      <input
+        type="number"
+        min="4096"
+        max="2097152"
+        [value]="contextWindow() ?? ''"
+        (input)="contextWindow.set(nullableNumberValue($event))"
+      />
+    </app-field>
+
+    <app-toggle
+      [label]="'settings.ai.recommendations.debug' | transloco"
+      [checked]="debugEnabled()"
+      (toggled)="debugEnabled.set($event)"
+    />
+  </div>
+
+  @if (failureMessage(); as message) {
+    <app-error-banner [message]="message" />
+  }
+
+  @if (svc.saved()) {
+    <p class="saved">{{ 'settings.ai.recommendations.saved' | transloco }}</p>
+  }
+
+  <app-button variant="primary" [loading]="svc.busy()" (click)="save()">
+    {{ 'settings.ai.recommendations.save' | transloco }}
+  </app-button>
+}

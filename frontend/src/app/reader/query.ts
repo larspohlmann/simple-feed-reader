@@ -4,7 +4,7 @@ import { EntryQuery, MarkReadScope } from './models';
 import { entryIdFromParam } from './slug';
 
 export interface Selection {
-  kind: 'all' | 'tag' | 'subscription' | 'favorites' | 'kept';
+  kind: 'all' | 'tag' | 'subscription' | 'favorites' | 'kept' | 'for-you';
   id: number | null;
   unread: boolean;
 }
@@ -40,7 +40,7 @@ export function selectionFromParams(p: ParamMap): {
   const entryId = entryIdFromParam(p.get('entry'));
 
   let selection: Selection;
-  if (view === 'favorites' || view === 'kept') {
+  if (view === 'favorites' || view === 'kept' || view === 'for-you') {
     selection = { kind: view, id: null, unread: false };
   } else if (subscription != null) {
     selection = { kind: 'subscription', id: subscription, unread };
@@ -58,6 +58,8 @@ export function queryFromSelection(s: Selection): EntryQuery {
       return { view: 'favorites' };
     case 'kept':
       return { view: 'kept' };
+    case 'for-you':
+      return { view: 'for-you' };
     case 'tag':
       return { view: s.unread ? 'unread' : 'all', tag: s.id ?? undefined };
     case 'subscription':

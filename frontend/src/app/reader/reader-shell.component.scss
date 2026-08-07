@@ -126,6 +126,16 @@ app-reader-header.hidden {
   }
 }
 
+/* The list column, in both layouts: a flex column so the for-you run bar (when
+   present) can sit above `app-entry-list` in normal flow instead of overlaying
+   it. Split mode nests it beside `.reader`; single-pane mode wraps the one
+   `app-entry-list` the same way so both modes share this rule. */
+.list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .main.split .list {
   flex: 0 0 42%;
 
@@ -133,8 +143,6 @@ app-reader-header.hidden {
      tuned list-pane measure, not a spacing value. */
   max-width: 480px;
   border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
 }
 
 .main.split .reader {
@@ -145,6 +153,68 @@ app-reader-header.hidden {
 .main:not(.split) > * {
   flex: 1;
   min-width: 0;
+}
+
+/* `app-entry-list` sets its own host to `height: 100%`, sized for the case
+   where it is `.list`'s only child. With the run bar sharing the column that
+   claims the whole column and pushes the bar into overflow, so the list
+   fills only what the bar leaves behind; it still scrolls internally (its own
+   `.rows` is the scroller, not `.list`), so the bar stays put at the column's
+   top rather than scrolling away with the entries. */
+.list app-entry-list {
+  flex: 1;
+  min-height: 0;
+}
+
+.list .for-you-bar,
+.list app-progress-hairline {
+  flex: 0 0 auto;
+}
+
+/* `app-entry-list` normally sits flush against the top of `.list` and clears
+   the (absolute, opaque) app header itself, via its own `--app-bar-h`-keyed
+   padding — see the header comment above `.body`. Once the run bar is its
+   preceding sibling instead, `app-entry-list` no longer starts at that seam,
+   so it must stop reserving space for a header it is no longer under: the
+   bar's own `margin-top` below does that job now. Left uncancelled, the list's
+   sticky header would land `--app-bar-h` below where the run bar already put
+   it — clearing nothing and opening a dead gap under the real header. */
+.for-you-bar ~ app-entry-list {
+  --app-bar-h: 0px;
+}
+
+/* The for-you run bar: chrome for one view of the entry list, not an app-wide
+   notice, so it lives in `.list` rather than the `.under-header` overlay —
+   sitting there let it paint over the sidebar's refresh/add-feed row, since
+   that overlay spans the full window width underneath the header (#308). It
+   is opaque-free by design: `.list` never extends past the list column, so it
+   cannot reach content it does not own.
+
+   `margin-top` — not `.list` padding — clears the (absolute, opaque) app
+   header, the same `--app-bar-h` seam `.sidebar` offsets into. `.list` itself
+   stays flush at the top so it keeps behaving like every other pane when the
+   bar is absent; only the bar, when present, pushes itself below the header. */
+.for-you-bar {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-top: var(--app-bar-h, var(--bar-h));
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+
+  p {
+    margin: 0;
+  }
+
+  .run {
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+  }
 }
 
 /* The header is an absolute, opaque overlay and the scrolling panes reserve its

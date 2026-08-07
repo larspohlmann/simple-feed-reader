@@ -25,6 +25,28 @@ describe('AiSectionComponent', () => {
     ready: false,
   };
 
+  const RECOMMENDATIONS = {
+    guidancePrompt: null,
+    defaultGuidancePrompt: 'Prefer long-form articles.',
+    fixedPrompt: { role: 'role', outputContract: 'contract' },
+    favoritesCap: 50,
+    keptCap: 50,
+    viewedCap: 200,
+    candidatePoolSize: 400,
+    picksLimit: 20,
+    contextWindow: 128000,
+    contextWindowOverride: null,
+    contextWindowSource: 'provider',
+    debugEnabled: false,
+  };
+
+  /** The recommendation card mounts, and fires its own GET, only once AI is
+   *  ready — every test that reaches that state has to drain it too. */
+  function flushRecommendations(fixture: ComponentFixture<AiSectionComponent>): void {
+    http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
+    fixture.detectChanges();
+  }
+
   function mount(initial: AiState = UNCONFIGURED): ComponentFixture<AiSectionComponent> {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -196,6 +218,7 @@ describe('AiSectionComponent', () => {
     fixture.componentInstance.saveModel();
     http.expectOne('/api/me/ai/model').flush({ ...CONFIGURED, model: 'gpt-4o', ready: true });
     fixture.detectChanges();
+    flushRecommendations(fixture);
 
     const availability = TestBed.inject(AiAvailabilityService);
     expect(availability.ready()).toBe(true);
@@ -204,6 +227,7 @@ describe('AiSectionComponent', () => {
 
   it('drops the provider, and the availability with it, when it is removed', () => {
     const fixture = mount({ ...CONFIGURED, model: 'gpt-4o', ready: true });
+    flushRecommendations(fixture);
     expect(TestBed.inject(AiAvailabilityService).ready()).toBe(true);
 
     fixture.componentInstance.ai.forget();
@@ -213,5 +237,15 @@ describe('AiSectionComponent', () => {
     expect(TestBed.inject(AiAvailabilityService).ready()).toBe(false);
     expect(fixture.componentInstance.ai.state().configured).toBe(false);
     expect(fixture.componentInstance.baseUrl()).toBe('');
+  });
+
+  it('shows the recommendation settings card once AI is ready, and not before', () => {
+    const notReady = mount(CONFIGURED);
+    expect(notReady.nativeElement.querySelector('app-recommendation-settings-card')).toBeNull();
+
+    const ready = mount({ ...CONFIGURED, model: 'gpt-4o', ready: true });
+    flushRecommendations(ready);
+
+    expect(ready.nativeElement.querySelector('app-recommendation-settings-card')).not.toBeNull();
   });
 });

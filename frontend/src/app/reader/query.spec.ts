@@ -38,6 +38,13 @@ describe('selectionFromParams', () => {
     });
     expect(selectionFromParams(pm({ view: 'kept' })).selection.kind).toBe('kept');
   });
+  it('reads for-you and ignores the unread toggle there', () => {
+    expect(selectionFromParams(pm({ view: 'for-you', unread: '0' })).selection).toEqual({
+      kind: 'for-you',
+      id: null,
+      unread: false,
+    });
+  });
   it('rejects non-positive/garbage ids', () => {
     expect(selectionFromParams(pm({ subscription: '0' })).selection.kind).toBe('all');
     expect(selectionFromParams(pm({ tag: 'x' })).selection.kind).toBe('all');
@@ -62,6 +69,9 @@ describe('queryFromSelection', () => {
       view: 'favorites',
     });
     expect(queryFromSelection({ kind: 'kept', id: null, unread: false })).toEqual({ view: 'kept' });
+    expect(queryFromSelection({ kind: 'for-you', id: null, unread: false })).toEqual({
+      view: 'for-you',
+    });
   });
 });
 
@@ -74,6 +84,7 @@ describe('markReadTarget', () => {
       id: 7,
     });
     expect(markReadTarget({ kind: 'favorites', id: null, unread: false })).toBeNull();
+    expect(markReadTarget({ kind: 'for-you', id: null, unread: false })).toBeNull();
   });
 });
 
@@ -86,6 +97,7 @@ describe('canScopedRefresh', () => {
   it('is disallowed for the cross-feed saved views', () => {
     expect(canScopedRefresh({ kind: 'favorites', id: null, unread: false })).toBe(false);
     expect(canScopedRefresh({ kind: 'kept', id: null, unread: false })).toBe(false);
+    expect(canScopedRefresh({ kind: 'for-you', id: null, unread: false })).toBe(false);
   });
 });
 

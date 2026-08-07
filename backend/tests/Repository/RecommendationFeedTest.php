@@ -1,0 +1,301 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Repository;
+
+use App\Entity\Entry;
+use App\Entity\EntryState;
+use App\Entity\Feed;
+use App\Entity\RecommendationItem;
+use App\Entity\RecommendationRun;
+use App\Entity\Subscription;
+use App\Entity\User;
+use App\Http\RecommendationCursor;
+use App\Repository\RecommendationItemRepository;
+use App\Tests\DbTestCase;
+
+final class RecommendationFeedTest extends DbTestCase
+{
+    private User $user;
+    private Feed $feed;
+    private Subscription $sub;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($this->user);
+
+        $this->feed = new Feed('https://example.com/feed.xml');
+        $this->feed->setTitle('Example');
+        $this->em->persist($this->feed);
+
+        $this->sub = new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($this->sub);
+
+        $this->em->flush();
+    }
+
+    private function entry(string $guid): Entry
+    {
+        $entry = new Entry(
+            $this->feed,
+            $guid,
+            'https://example.com/' . $guid,
+            'Title ' . $guid,
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+        );
+        $this->em->persist($entry);
+        $this->em->flush();
+
+        return $entry;
+    }
+
+    private function seedRun(User $user, string $status): RecommendationRun
+    {
+        $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
+
+        if ($status !== RecommendationRun::STATUS_PENDING) {
+            $run->snapshot([[1]]);
+        }
+
+        if ($status === RecommendationRun::STATUS_COMPLETED) {
+            $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+        }
+
+        $this->em->persist($run);
+        $this->em->flush();
+
+        return $run;
+    }
+
+    private function item(RecommendationRun $run, Entry $entry, int $position, string $reason): RecommendationItem
+    {
+        $item = new RecommendationItem($run, $entry, $position, $reason);
+        $this->em->persist($item);
+        $this->em->flush();
+
+        return $item;
+    }
+
+    private function repo(): RecommendationItemRepository
+    {
+        $repo = $this->em->getRepository(RecommendationItem::class);
+        self::assertInstanceOf(RecommendationItemRepository::class, $repo);
+
+        return $repo;
+    }
+
+    public function testDedupesToNewestRunAndHidesUnfinishedOrForeignRuns(): void
+    {
+        $entryA = $this->entry('a');
+        $entryB = $this->entry('b');
+        $entryC = $this->entry('c');
+        $entryD = $this->entry('d');
+
+        $run1 = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $this->item($run1, $entryA, 1, 'run1 reason a');
+        $this->item($run1, $entryB, 2, 'run1 reason b');
+
+        $run2 = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $this->item($run2, $entryB, 1, 'run2 reason b');
+        $this->item($run2, $entryC, 2, 'run2 reason c');
+
+        $runningRun = $this->seedRun($this->user, RecommendationRun::STATUS_RUNNING);
+        $this->item($runningRun, $entryD, 1, 'running reason d');
+
+        $stranger = new User('stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($stranger);
+        $strangerFeed = new Feed('https://stranger.example.com/feed.xml');
+        $this->em->persist($strangerFeed);
+        $this->em->persist(new Subscription($stranger, $strangerFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->em->flush();
+        $strangerEntry = new Entry(
+            $strangerFeed,
+            'stranger-entry',
+            'https://stranger.example.com/1',
+            'Stranger',
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+        );
+        $this->em->persist($strangerEntry);
+        $this->em->flush();
+        $strangerRun = $this->seedRun($stranger, RecommendationRun::STATUS_COMPLETED);
+        $this->item($strangerRun, $strangerEntry, 1, 'stranger reason');
+
+        $rows = $this->repo()->listForYou((int) $this->user->getId(), null, 50);
+
+        self::assertCount(3, $rows);
+        self::assertSame('b', $rows[0]->row->entry->getGuid());
+        self::assertSame($run2->getId(), $rows[0]->runId);
+        self::assertSame(1, $rows[0]->position);
+        self::assertSame('run2 reason b', $rows[0]->reason);
+        self::assertSame('c', $rows[1]->row->entry->getGuid());
+        self::assertSame('a', $rows[2]->row->entry->getGuid());
+        self::assertSame($run1->getId(), $rows[2]->runId);
+
+        foreach ($rows as $row) {
+            self::assertNotSame('d', $row->row->entry->getGuid());
+            self::assertNotSame('stranger-entry', $row->row->entry->getGuid());
+        }
+    }
+
+    public function testCarriesFlagsAndFoldsTheWatermark(): void
+    {
+        $entryOld = $this->entry('old');
+        $entryFav = $this->entry('fav');
+        $entryKept = $this->entry('kept');
+        $entryViewed = $this->entry('viewed');
+        $watermark = new \DateTimeImmutable('2026-08-07T00:00:00Z');
+        $this->sub->setMarkedReadUntil($watermark);
+        $this->em->flush();
+
+        $favState = new EntryState($this->user, $entryFav);
+        $favState->setIsFavorite(true);
+        $keptState = new EntryState($this->user, $entryKept);
+        $keptState->setIsKept(true);
+        $viewedState = new EntryState($this->user, $entryViewed);
+        $viewedState->markViewed(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
+        $this->em->persist($favState);
+        $this->em->persist($keptState);
+        $this->em->persist($viewedState);
+        $this->em->flush();
+
+        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $this->item($run, $entryOld, 1, 'reason old');
+        $this->item($run, $entryFav, 2, 'reason fav');
+        $this->item($run, $entryKept, 3, 'reason kept');
+        $this->item($run, $entryViewed, 4, 'reason viewed');
+
+        $rows = $this->repo()->listForYou((int) $this->user->getId(), null, 50);
+        $byGuid = [];
+        foreach ($rows as $row) {
+            $byGuid[$row->row->entry->getGuid()] = $row;
+        }
+
+        // The entry's effectiveDate (2026-07-01) falls under the watermark
+        // (2026-08-07), so with no explicit EntryState it reads as read.
+        self::assertTrue($byGuid['old']->row->isRead);
+        self::assertSame(
+            $watermark->getTimestamp(),
+            $byGuid['old']->row->markedReadUntil?->getTimestamp(),
+        );
+        self::assertSame('reason old', $byGuid['old']->reason);
+        self::assertFalse($byGuid['old']->row->isFavorite);
+        self::assertFalse($byGuid['old']->row->isKept);
+        self::assertFalse($byGuid['old']->row->isViewed);
+
+        self::assertTrue($byGuid['fav']->row->isFavorite);
+        self::assertFalse($byGuid['fav']->row->isKept);
+
+        self::assertTrue($byGuid['kept']->row->isKept);
+        self::assertFalse($byGuid['kept']->row->isFavorite);
+
+        self::assertTrue($byGuid['viewed']->row->isViewed);
+        self::assertFalse($byGuid['old']->row->isViewed);
+
+        self::assertSame($this->sub->getId(), $byGuid['old']->row->subscriptionId);
+        self::assertSame('Example', $byGuid['old']->row->subscriptionTitle);
+    }
+
+    public function testSubscriptionTitleFallsBackToCustomTitleThenFeedTitle(): void
+    {
+        $customFeed = new Feed('https://custom.example.com/feed.xml');
+        $customFeed->setTitle('Underlying Feed Title');
+        $this->em->persist($customFeed);
+        $customSub = new Subscription($this->user, $customFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $customSub->setCustomTitle('My Custom Title');
+        $this->em->persist($customSub);
+        $customEntry = new Entry(
+            $customFeed,
+            'custom-titled',
+            'https://custom.example.com/1',
+            'Custom',
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+        );
+        $this->em->persist($customEntry);
+        $this->em->flush();
+
+        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $this->item($run, $customEntry, 1, 'reason custom');
+
+        $rows = $this->repo()->listForYou((int) $this->user->getId(), null, 50);
+        self::assertCount(1, $rows);
+        self::assertSame('My Custom Title', $rows[0]->row->subscriptionTitle);
+    }
+
+    public function testSubscriptionTitleFallsBackToFeedUrlWhenNothingElseIsSet(): void
+    {
+        $untitledFeed = new Feed('https://untitled.example.com/feed.xml');
+        $this->em->persist($untitledFeed);
+        $untitledSub = new Subscription($this->user, $untitledFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($untitledSub);
+        $untitledEntry = new Entry(
+            $untitledFeed,
+            'untitled',
+            'https://untitled.example.com/1',
+            'Untitled',
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+        );
+        $this->em->persist($untitledEntry);
+        $this->em->flush();
+
+        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $this->item($run, $untitledEntry, 1, 'reason untitled');
+
+        $rows = $this->repo()->listForYou((int) $this->user->getId(), null, 50);
+        self::assertCount(1, $rows);
+        self::assertSame('https://untitled.example.com/feed.xml', $rows[0]->row->subscriptionTitle);
+    }
+
+    public function testLimitIsClampedToAtLeastOne(): void
+    {
+        $entryA = $this->entry('a');
+        $entryB = $this->entry('b');
+
+        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $this->item($run, $entryA, 1, 'reason a');
+        $this->item($run, $entryB, 2, 'reason b');
+
+        $rows = $this->repo()->listForYou((int) $this->user->getId(), null, 0);
+        self::assertCount(1, $rows);
+    }
+
+    public function testCursorReturnsTheSecondPage(): void
+    {
+        $entryA = $this->entry('a');
+        $entryB = $this->entry('b');
+        $entryC = $this->entry('c');
+
+        $run1 = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $this->item($run1, $entryA, 1, 'reason a');
+
+        $run2 = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $this->item($run2, $entryB, 1, 'reason b');
+        $this->item($run2, $entryC, 2, 'reason c');
+
+        $page1 = $this->repo()->listForYou((int) $this->user->getId(), null, 2);
+        self::assertCount(2, $page1);
+        self::assertSame('b', $page1[0]->row->entry->getGuid());
+        self::assertSame('c', $page1[1]->row->entry->getGuid());
+
+        $cursor = new RecommendationCursor($page1[1]->runId, $page1[1]->position);
+        $page2 = $this->repo()->listForYou((int) $this->user->getId(), $cursor, 2);
+        self::assertCount(1, $page2);
+        self::assertSame('a', $page2[0]->row->entry->getGuid());
+    }
+
+    public function testUnsubscribingHidesItsItems(): void
+    {
+        $entry = $this->entry('gone');
+        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $this->item($run, $entry, 1, 'reason gone');
+
+        $this->em->remove($this->sub);
+        $this->em->flush();
+
+        $rows = $this->repo()->listForYou((int) $this->user->getId(), null, 50);
+        self::assertCount(0, $rows);
+    }
+}

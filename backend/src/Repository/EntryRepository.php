@@ -49,6 +49,30 @@ class EntryRepository extends ServiceEntityRepository
     }
 
     /**
+     * @param list<int> $entryIds
+     *
+     * @return list<int> the subset of ids that still exist — a caller holding
+     *                   ids from an earlier checkpoint uses this to drop the
+     *                   ones pruned since
+     */
+    public function findExistingIds(array $entryIds): array
+    {
+        if ($entryIds === []) {
+            return [];
+        }
+
+        /** @var list<int> $existing */
+        $existing = $this->createQueryBuilder('e')
+            ->select('e.id')
+            ->andWhere('e.id IN (:ids)')
+            ->setParameter('ids', $entryIds)
+            ->getQuery()
+            ->getSingleColumnResult();
+
+        return $existing;
+    }
+
+    /**
      * The feed's existing entries for the given guid hashes, indexed by hash —
      * lets a re-parse match items back to their persisted rows.
      *
@@ -181,11 +205,7 @@ class EntryRepository extends ServiceEntityRepository
     {
         switch ($view) {
             case 'unread':
-                $qb->andWhere(
-                    'es.isRead = :readFalse '
-                    . 'OR (es.isRead IS NULL AND (s.markedReadUntil IS NULL '
-                    . 'OR e.effectiveDate > s.markedReadUntil))',
-                )->setParameter('readFalse', false, Types::BOOLEAN);
+                $qb->andWhere(UnreadDql::predicate())->setParameter('readFalse', false, Types::BOOLEAN);
                 break;
             case 'favorites':
                 $qb->andWhere('es.isFavorite = :flag')->setParameter('flag', true, Types::BOOLEAN);
@@ -241,22 +261,18 @@ class EntryRepository extends ServiceEntityRepository
     }
 
     /**
-     * Effective read state: an explicit EntryState row wins; absent one, the
-     * subscription watermark reads everything at or below it.
-     *
      * @param array<array-key, mixed> $row
      */
     private function rowIsRead(array $row, Entry $entry): bool
     {
         $esRead = $row['esRead'];
-        if ($esRead !== null) {
-            return (bool) $esRead;
-        }
-
         $markedReadUntil = $row['markedReadUntil'];
 
-        return $markedReadUntil instanceof \DateTimeInterface
-            && $entry->getEffectiveDate() <= $markedReadUntil;
+        return EffectiveReadState::isRead(
+            $esRead === null ? null : (bool) $esRead,
+            $markedReadUntil instanceof \DateTimeInterface ? $markedReadUntil : null,
+            $entry->getEffectiveDate(),
+        );
     }
 
     /**
@@ -268,17 +284,13 @@ class EntryRepository extends ServiceEntityRepository
     private function rowTitle(array $row): string
     {
         $customTitle = $row['customTitle'];
-        if (\is_string($customTitle) && $customTitle !== '') {
-            return $customTitle;
-        }
-
         $feedTitle = $row['feedTitle'];
-        if (\is_string($feedTitle) && $feedTitle !== '') {
-            return $feedTitle;
-        }
-
         $feedUrl = $row['feedUrl'];
 
-        return \is_string($feedUrl) ? $feedUrl : '';
+        return SubscriptionDisplayTitle::from(
+            \is_string($customTitle) ? $customTitle : null,
+            \is_string($feedTitle) ? $feedTitle : null,
+            \is_string($feedUrl) ? $feedUrl : '',
+        );
     }
 }

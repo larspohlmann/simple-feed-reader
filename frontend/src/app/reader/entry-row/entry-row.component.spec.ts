@@ -59,6 +59,19 @@ describe('EntryRowComponent', () => {
     expect(el.querySelector('.row')!.classList).toContain('img-left');
   });
 
+  it('renders the recommendation reason when present', () => {
+    const el = mount(entry({ recommendationReason: 'because you read heise' }))
+      .nativeElement as HTMLElement;
+    expect(el.querySelector('.reason')!.textContent).toContain('because you read heise');
+  });
+
+  it('omits the reason line when recommendationReason is null or absent', () => {
+    const withNull = mount(entry({ recommendationReason: null })).nativeElement as HTMLElement;
+    expect(withNull.querySelector('.reason')).toBeNull();
+    const withoutField = mount(entry()).nativeElement as HTMLElement;
+    expect(withoutField.querySelector('.reason')).toBeNull();
+  });
+
   it('emits actions and open', () => {
     const f = mount(entry());
     const out = { favorite: 0, keep: 0, read: 0, open: 0 };

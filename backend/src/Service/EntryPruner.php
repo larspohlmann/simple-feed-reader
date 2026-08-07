@@ -6,16 +6,22 @@ namespace App\Service;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
+use App\Entity\RecommendationItem;
+use App\Entity\RecommendationRun;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Retention runs two independent passes, both sparing entries any user marked
- * favorite or kept:
+ * Retention runs three independent passes:
  *
- *  1. By age — deletes entries older than 90 days.
- *  2. By per-feed count — deletes a feed's oldest entries beyond a cap.
+ *  1. By age — deletes entries older than 90 days, sparing any a user marked
+ *     favorite or kept.
+ *  2. By per-feed count — deletes a feed's oldest entries beyond a cap, same
+ *     sparing rule.
+ *  3. Empty completed recommendation runs — a run whose entries were all
+ *     pruned by (1) or (2) left an empty husk behind (its items die via the
+ *     DB FK cascade when their entry goes); this pass removes the husk.
  *
  * The count cap bounds a single feed's footprint regardless of age: a feed
  * whose article URLs change every fetch (cache-buster query params on a
@@ -45,11 +51,19 @@ final class EntryPruner
     }
 
     /**
+     * The empty-run pass is bookkeeping, not something the user's refresh
+     * summary should count: it deletes recommendation runs, not entries, so
+     * folding it into the total would report "3 entries pruned" for a
+     * refresh that removed zero entries and three empty runs.
+     *
      * @throws \DateMalformedStringException
      */
     public function prune(): int
     {
-        return $this->pruneByAge() + $this->pruneByFeedCap();
+        $deletedEntries = $this->pruneByAge() + $this->pruneByFeedCap();
+        $this->pruneEmptyRuns();
+
+        return $deletedEntries;
     }
 
     /**
@@ -116,6 +130,26 @@ final class EntryPruner
             ->getSingleColumnResult();
 
         return $ids;
+    }
+
+    /**
+     * A completed run left with no items (every one of them pruned along with
+     * its entry) is dead weight — never touches pending/running/failed runs,
+     * since a fresh snapshot legitimately has no items yet.
+     */
+    private function pruneEmptyRuns(): int
+    {
+        $affected = $this->em->createQuery(sprintf(
+            'DELETE FROM %s r WHERE r.status = :completed AND NOT EXISTS (SELECT i.id FROM %s i WHERE i.run = r)',
+            RecommendationRun::class,
+            RecommendationItem::class,
+        ))
+            ->setParameter('completed', RecommendationRun::STATUS_COMPLETED)
+            ->execute();
+
+        // A DQL DELETE returns its affected-row count, but Doctrine types
+        // execute() as mixed; narrow it rather than blind-casting.
+        return \is_int($affected) ? $affected : 0;
     }
 
     /** Shared guard: an entry is protected iff any user favorited or kept it. */

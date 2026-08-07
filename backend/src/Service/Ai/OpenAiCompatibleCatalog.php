@@ -38,7 +38,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalog
             throw new ProviderUnreachableException('That address answered, but not with a model list.');
         }
 
-        $models = $this->identifiers($decoded['data']);
+        $models = $this->descriptors($decoded['data']);
 
         if ([] === $models) {
             throw new ProviderUnreachableException('That provider offers no models.');
@@ -108,24 +108,33 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalog
      *
      * @param array<mixed> $entries
      *
-     * @return list<string> sorted and free of repeats
+     * @return list<ModelDescriptor> sorted by id, one entry per id
      */
-    private function identifiers(array $entries): array
+    private function descriptors(array $entries): array
     {
-        $models = [];
+        $byId = [];
 
         foreach ($entries as $entry) {
-            if (\is_array($entry) && isset($entry['id']) && \is_string($entry['id']) && '' !== $entry['id']) {
-                $models[] = $entry['id'];
+            if (!\is_array($entry) || !isset($entry['id']) || !\is_string($entry['id']) || '' === $entry['id']) {
+                continue;
+            }
+            $byId[$entry['id']] ??= new ModelDescriptor($entry['id'], $this->reportedContextWindow($entry));
+        }
+
+        ksort($byId, SORT_STRING);
+
+        return array_values($byId);
+    }
+
+    /** @param array<mixed> $entry */
+    private function reportedContextWindow(array $entry): ?int
+    {
+        foreach (['context_length', 'max_context_length'] as $field) {
+            if (isset($entry[$field]) && \is_int($entry[$field]) && $entry[$field] > 0) {
+                return $entry[$field];
             }
         }
 
-        // array_unique(), not the identifiers as array keys: PHP casts a
-        // numeric-string key to an int, and a model literally named "123"
-        // would come back out of array_keys() as an integer.
-        $identifiers = array_unique($models);
-        sort($identifiers);
-
-        return $identifiers;
+        return null;
     }
 }

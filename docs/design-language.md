@@ -512,6 +512,47 @@ that occupies layout where it renders, not an overlay.
 
 ---
 
+### `<app-toast>` (via the `ToastService`)
+
+The app's one toast: a message pinned to the bottom of the viewport, with an
+optional single action, auto-dismissing after `durationMs` (default 6000ms).
+Rendered through the CDK overlay, never `position: fixed` — a transformed
+ancestor (an open drawer, a dialog) would re-anchor a fixed child to the wrong
+containing block (#85, #100). `hasBackdrop: false`, `autoFocus: false`,
+`restoreFocus: false`: a toast must never steal focus from whatever the user
+is doing, unlike every other surface in this catalog.
+
+```ts
+private readonly toast = inject(ToastService);
+
+this.toast.show({
+  message: this.transloco.translate('reader.recommendations.applied'),
+  actionLabel: this.transloco.translate('reader.recommendations.undo'),
+  action: () => this.undo(),
+});
+```
+
+| `ToastData` field | Type | Default |
+|---|---|---|
+| `message` | `string` (required) | — |
+| `actionLabel` | `string` | `undefined` — omits the button |
+| `action` | `() => void` | `undefined` — runs before the toast closes |
+| `durationMs` | `number` | `6000` |
+
+`message` and `actionLabel` are already-translated strings — the component
+lives in `shared/` and must not know any feature's i18n keys. `show()`
+replaces whatever toast is already visible, clearing its timer; there is no
+queue. There is only one toast, so `ToastService` is injected directly rather
+than opened against a template reference.
+
+**Not for:** a failure that blocks the surface it reports on — use
+`<app-error-banner>` instead, which stays in the document until its own
+action or a reload clears it. The toast is for a transient, dismissible
+confirmation of something that already happened (a background refresh
+finished, a bulk action applied) that the user does not have to act on.
+
+---
+
 ### `<app-settings-card>`
 
 The one surface a settings or admin section sits in: a heading, an optional

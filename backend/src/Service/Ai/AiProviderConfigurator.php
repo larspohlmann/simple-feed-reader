@@ -8,6 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Repository\AiProviderSettingsRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use Doctrine\ORM\EntityManagerInterface;
@@ -45,7 +46,7 @@ final readonly class AiProviderConfigurator
     public function saveConnection(User $user, string $baseUrl, string $apiKey): array
     {
         $credentials = ProviderCredentials::fromAccountInput($baseUrl, $apiKey);
-        $models = $this->catalog->listModels($credentials);
+        $descriptors = $this->catalog->listModels($credentials);
 
         $sealed = $this->cipher->seal($this->identify($user), $credentials->apiKey);
         $hint = substr($credentials->apiKey, -self::HINT_LENGTH);
@@ -61,7 +62,7 @@ final readonly class AiProviderConfigurator
         $user->setAiProviderSettings($settings);
         $this->entityManager->flush();
 
-        return $models;
+        return $this->ids($descriptors);
     }
 
     /**
@@ -82,18 +83,15 @@ final readonly class AiProviderConfigurator
      */
     public function listModels(AiProviderSettings $settings): array
     {
-        return $this->catalog->listModels($this->credentialsFor($settings));
+        return $this->ids($this->catalog->listModels($this->credentials($settings)));
     }
 
     public function chooseModel(AiProviderSettings $settings, string $model): void
     {
-        $offered = $this->catalog->listModels($this->credentialsFor($settings));
+        $offered = $this->catalog->listModels($this->credentials($settings));
+        $descriptor = $this->offeredDescriptor($offered, $model);
 
-        if (!\in_array($model, $offered, true)) {
-            throw new ModelNotOfferedException(sprintf('That provider does not offer "%s".', $model));
-        }
-
-        $settings->chooseModel($model, $this->clock->now());
+        $settings->chooseModel($model, $this->clock->now(), $descriptor->contextWindow);
         $this->entityManager->flush();
     }
 
@@ -110,12 +108,43 @@ final readonly class AiProviderConfigurator
         $this->entityManager->flush();
     }
 
-    private function credentialsFor(AiProviderSettings $settings): ProviderCredentials
+    /**
+     * Public so a service that must call the provider directly — a prompt
+     * runner, say — can reuse the one place that opens the sealed key, rather
+     * than duplicating the cipher call.
+     *
+     * @throws ApiKeyUnreadableException
+     */
+    public function credentials(AiProviderSettings $settings): ProviderCredentials
     {
         return ProviderCredentials::fromStoredConfiguration(
             $settings->getBaseUrl(),
             $this->cipher->open($this->identify($settings->getUser()), $settings->getSealedApiKey()),
         );
+    }
+
+    /**
+     * @param list<ModelDescriptor> $offered
+     */
+    private function offeredDescriptor(array $offered, string $model): ModelDescriptor
+    {
+        foreach ($offered as $descriptor) {
+            if ($descriptor->id === $model) {
+                return $descriptor;
+            }
+        }
+
+        throw new ModelNotOfferedException(sprintf('That provider does not offer "%s".', $model));
+    }
+
+    /**
+     * @param list<ModelDescriptor> $descriptors
+     *
+     * @return list<string>
+     */
+    private function ids(array $descriptors): array
+    {
+        return array_map(static fn (ModelDescriptor $descriptor): string => $descriptor->id, $descriptors);
     }
 
     private function requireSettings(User $user): AiProviderSettings

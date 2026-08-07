@@ -7,6 +7,8 @@ namespace App\Tests\Service;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\RecommendationItem;
+use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Service\EntryPruner;
 use App\Tests\DbTestCase;
@@ -189,6 +191,75 @@ final class EntryPrunerTest extends DbTestCase
 
         self::assertSame(0, $pruner->prune());
         self::assertCount(3, $this->em->getRepository(Entry::class)->findAll());
+    }
+
+    public function testPruningTheLastEntryOfACompletedRunAlsoDropsTheRun(): void
+    {
+        $feed = new Feed('https://example.com/feed');
+        $user = new User('reader@example.com', $this->clock->now());
+        $this->em->persist($feed);
+        $this->em->persist($user);
+
+        $doomed = $this->entry($feed, 'doomed', $this->clock->now()->modify('-200 days'));
+        $this->em->flush();
+
+        $run = new RecommendationRun($user, $this->clock->now());
+        $run->snapshot([[1]]);
+        $run->complete($this->clock->now());
+        $this->em->persist($run);
+        $this->em->persist(new RecommendationItem($run, $doomed, 1, 'because'));
+        $this->em->flush();
+        $runId = $run->getId();
+        $this->em->clear();
+
+        // The run left empty by the doomed entry's deletion is bookkeeping,
+        // not an entry: it must not inflate the count the refresh summary
+        // shows the user. Only the entry counts toward the total.
+        $pruned = $this->pruner->prune();
+        $this->em->clear();
+
+        self::assertSame(1, $pruned);
+        self::assertNull($this->em->getRepository(RecommendationRun::class)->find($runId));
+    }
+
+    /**
+     * The run-deletion count must never leak into the entry count: a refresh
+     * that removes zero entries but leaves several runs empty (their items'
+     * entries pruned in an earlier pass) reports zero, not the run count.
+     */
+    public function testEmptyRunsAloneReportZeroPruned(): void
+    {
+        $user = new User('reader@example.com', $this->clock->now());
+        $this->em->persist($user);
+
+        for ($i = 0; $i < 3; $i++) {
+            $run = new RecommendationRun($user, $this->clock->now());
+            $run->snapshot([[1]]);
+            $run->complete($this->clock->now());
+            $this->em->persist($run);
+        }
+        $this->em->flush();
+
+        $pruned = $this->pruner->prune();
+
+        self::assertSame(0, $pruned);
+    }
+
+    public function testARunningRunWithNoItemsSurvivesPruning(): void
+    {
+        $user = new User('reader@example.com', $this->clock->now());
+        $this->em->persist($user);
+        $run = new RecommendationRun($user, $this->clock->now());
+        $run->snapshot([[1]]);
+        $this->em->persist($run);
+        $this->em->flush();
+        $runId = $run->getId();
+        $this->em->clear();
+
+        $this->pruner->prune();
+        $this->em->clear();
+
+        self::assertNotNull($this->em->getRepository(RecommendationRun::class)->find($runId));
     }
 
     public function testCapIsPerFeedNotGlobal(): void

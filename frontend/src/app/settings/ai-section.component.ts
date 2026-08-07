@@ -17,6 +17,7 @@ import {
 } from '../shared/searchable-select/searchable-select.component';
 import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
 import { AiSettingsService } from './ai-settings.service';
+import { RecommendationSettingsCardComponent } from './recommendation-settings-card.component';
 
 /**
  * The AI provider form. Two writes, in the order the flow needs them: the
@@ -33,6 +34,7 @@ import { AiSettingsService } from './ai-settings.service';
     ButtonComponent,
     ErrorBannerComponent,
     FieldComponent,
+    RecommendationSettingsCardComponent,
     SearchableSelectComponent,
     SettingsCardComponent,
     TranslocoPipe,

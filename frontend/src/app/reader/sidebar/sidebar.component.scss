@@ -85,6 +85,10 @@
   .organise .knob {
     transition: none;
   }
+
+  .nav app-icon.pulse {
+    animation: none;
+  }
 }
 
 /* Rides along under the controls, which already carry the margin-top: auto. */
@@ -202,6 +206,21 @@
 
 .nav.active .count {
   color: var(--accent);
+}
+
+.nav app-icon.pulse {
+  animation: for-you-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes for-you-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
 }
 
 .label {

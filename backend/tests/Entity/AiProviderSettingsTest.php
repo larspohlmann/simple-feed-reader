@@ -48,17 +48,35 @@ final class AiProviderSettingsTest extends TestCase
         $settings = $this->settings();
         $verifiedAt = new \DateTimeImmutable('2026-08-06 10:00:00');
 
-        $settings->chooseModel('gpt-4o-mini', $verifiedAt);
+        $settings->chooseModel('gpt-4o-mini', $verifiedAt, 128000);
 
         self::assertTrue($settings->hasModel());
         self::assertSame('gpt-4o-mini', $settings->getModel());
         self::assertEquals($verifiedAt, $settings->getVerifiedAt());
     }
 
+    public function testChoosingAModelRecordsTheContextWindowTheProviderReported(): void
+    {
+        $settings = $this->settings();
+
+        $settings->chooseModel('gpt-4o-mini', new \DateTimeImmutable('2026-08-06 10:00:00'), 128000);
+
+        self::assertSame(128000, $settings->getModelContextWindow());
+    }
+
+    public function testAModelChosenWithoutAReportedContextWindowLeavesItNull(): void
+    {
+        $settings = $this->settings();
+
+        $settings->chooseModel('gpt-4o-mini', new \DateTimeImmutable('2026-08-06 10:00:00'), null);
+
+        self::assertNull($settings->getModelContextWindow());
+    }
+
     public function testReplacingTheConnectionDropsTheChosenModel(): void
     {
         $settings = $this->settings();
-        $settings->chooseModel('gpt-4o-mini', new \DateTimeImmutable('2026-08-06 10:00:00'));
+        $settings->chooseModel('gpt-4o-mini', new \DateTimeImmutable('2026-08-06 10:00:00'), 128000);
 
         $settings->replaceConnection(
             'https://other.example.test/v1',
@@ -68,6 +86,7 @@ final class AiProviderSettingsTest extends TestCase
         );
 
         self::assertFalse($settings->hasModel());
+        self::assertNull($settings->getModelContextWindow());
         self::assertSame('https://other.example.test/v1', $settings->getBaseUrl());
         self::assertSame('wxyz', $settings->getApiKeyHint());
         self::assertSame('b3RoZXI=', $settings->getSealedApiKey()->ciphertext);

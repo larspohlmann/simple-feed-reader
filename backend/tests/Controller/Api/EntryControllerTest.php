@@ -6,6 +6,8 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\RecommendationItem;
+use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Tests\Support\UserFactory;
@@ -164,6 +166,120 @@ final class EntryControllerTest extends WebTestCase
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
         self::assertSame('validation_error', $body['type']); // uniform with every other invalid field
+        self::assertIsArray($body['errors']);
+        self::assertSame(
+            ['view' => ['Unknown view. Use one of: all, unread, favorites, kept, for-you.']],
+            $body['errors'],
+        );
+    }
+
+    public function testEveryNamedViewIsAccepted(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-view-all@example.com');
+        $this->seedFeedWithEntries($user, 1);
+
+        foreach (['all', 'unread', 'favorites', 'kept', 'for-you'] as $view) {
+            $client->request('GET', "/api/entries?view=$view", server: $headers);
+            self::assertResponseIsSuccessful("view=$view should be accepted");
+        }
+    }
+
+    public function testForYouViewReturnsRecommendedEntriesWithReason(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-foryou@example.com');
+        $sub = $this->seedFeedWithEntries($user, 2);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed(), 'guid' => 'g1']);
+        self::assertInstanceOf(Entry::class, $entry);
+
+        $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
+        $run->snapshot([[1]]);
+        $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+        $em->persist($run);
+        $em->persist(new RecommendationItem($run, $entry, 1, 'Matches your interest in g1'));
+        $em->flush();
+
+        $client->request('GET', '/api/entries?view=for-you', server: $headers);
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entries']);
+        self::assertCount(1, $body['entries']);
+        $first = $body['entries'][0];
+        self::assertIsArray($first);
+        self::assertSame('Post 1', $first['title']);
+        self::assertSame('Matches your interest in g1', $first['recommendationReason']);
+        self::assertArrayHasKey('nextCursor', $body);
+        self::assertNull($body['nextCursor']);
+    }
+
+    public function testForYouViewPaginatesWithCursor(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-foryou-page@example.com');
+        $sub = $this->seedFeedWithEntries($user, 3);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entries = $em->getRepository(Entry::class)->findBy(['feed' => $sub->getFeed()], ['guid' => 'ASC']);
+        self::assertCount(3, $entries);
+
+        $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
+        $run->snapshot([[1]]);
+        $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+        $em->persist($run);
+        foreach ($entries as $position => $entry) {
+            $em->persist(new RecommendationItem($run, $entry, $position + 1, "reason $position"));
+        }
+        $em->flush();
+
+        $client->request('GET', '/api/entries?view=for-you&limit=2', server: $headers);
+        $page1 = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($page1);
+        self::assertIsArray($page1['entries']);
+        self::assertCount(2, $page1['entries']);
+        self::assertIsString($page1['nextCursor']);
+
+        $client->request(
+            'GET',
+            '/api/entries?view=for-you&limit=2&cursor=' . urlencode($page1['nextCursor']),
+            server: $headers,
+        );
+        $page2 = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($page2);
+        self::assertIsArray($page2['entries']);
+        self::assertCount(1, $page2['entries']);
+        self::assertNull($page2['nextCursor']);
+    }
+
+    public function testForYouViewWithAMalformedCursorDegradesToTheFirstPageInsteadOfErroring(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-foryou-badcursor@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
+        self::assertInstanceOf(Entry::class, $entry);
+
+        $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
+        $run->snapshot([[1]]);
+        $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+        $em->persist($run);
+        $em->persist(new RecommendationItem($run, $entry, 1, 'reason'));
+        $em->flush();
+
+        // A stale/garbled cursor from an old session must degrade to the
+        // first page — the for-you view never validates its cursor the way
+        // the main list does, unlike EntryCursor's strict 422.
+        $client->request('GET', '/api/entries?view=for-you&cursor=not-a-cursor', server: $headers);
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entries']);
+        self::assertCount(1, $body['entries']);
     }
 
     public function testInvalidCursorIsRejected(): void

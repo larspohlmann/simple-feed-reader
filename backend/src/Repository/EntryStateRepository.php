@@ -83,18 +83,15 @@ class EntryStateRepository extends ServiceEntityRepository
              FROM %s s
              JOIN %s e ON e.feed = s.feed
              LEFT JOIN %s es ON es.entry = e AND es.user = s.user
-             WHERE s.user = :user AND (
-                 es.isRead = :false
-                 OR (es.isRead IS NULL AND (s.markedReadUntil IS NULL
-                     OR e.effectiveDate > s.markedReadUntil))
-             )
+             WHERE s.user = :user AND (%s)
              GROUP BY s.id',
             Subscription::class,
             Entry::class,
             EntryState::class,
+            UnreadDql::predicate(),
         ))
             ->setParameter('user', $userId)
-            ->setParameter('false', false, Types::BOOLEAN)
+            ->setParameter('readFalse', false, Types::BOOLEAN)
             ->getResult();
 
         $map = [];

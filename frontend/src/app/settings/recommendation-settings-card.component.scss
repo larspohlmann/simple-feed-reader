@@ -1,0 +1,48 @@
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin-bottom: var(--space-3);
+}
+
+.group:last-child {
+  margin-bottom: 0;
+}
+
+app-field {
+  display: block;
+  width: 100%;
+}
+
+textarea {
+  min-height: 6em;
+  resize: vertical;
+}
+
+details {
+  width: 100%;
+}
+
+summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+.fixed {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-0);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  white-space: pre-wrap;
+}
+
+.saved {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--success);
+}

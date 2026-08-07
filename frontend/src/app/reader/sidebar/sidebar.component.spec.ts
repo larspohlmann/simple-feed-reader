@@ -5,7 +5,9 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { API_BASE_URL } from '../../core/api';
 import { AuthService, CurrentUser } from '../../core/auth.service';
+import { AiAvailabilityService } from '../../core/ai-availability.service';
 import { RefreshService } from '../refresh.service';
+import { RecommendationsService } from '../recommendations.service';
 import { CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { DropData, SidebarComponent } from './sidebar.component';
 import { TagNode } from '../subscriptions.store';
@@ -449,6 +451,52 @@ describe('SidebarComponent', () => {
   it('hides the trial countdown when the trial is already past', () => {
     const f = mount({ user: account(inDays(-1)) });
     expect(f.nativeElement.querySelector('.trial')).toBeNull();
+  });
+});
+
+describe('for-you row', () => {
+  // AiAvailabilityService and RecommendationsService are faked with plain
+  // signals — structural typing accepts them in place of the readonly ones
+  // the real services expose.
+  function mountWithAi(ready: boolean, running = false) {
+    TestBed.configureTestingModule({
+      imports: [SidebarComponent, provideTranslocoTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
+        { provide: AuthService, useValue: { user: signal(account(null)) } },
+        { provide: LayoutService, useValue: { isCoarse: signal(false) } },
+        { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
+        { provide: AiAvailabilityService, useValue: { ready: signal(ready) } },
+        { provide: RecommendationsService, useValue: { running: signal(running) } },
+      ],
+    });
+    const f = TestBed.createComponent(SidebarComponent);
+    f.componentRef.setInput('tagTree', []);
+    f.componentRef.setInput('untagged', []);
+    f.componentRef.setInput('totalUnread', 0);
+    f.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
+    f.componentRef.setInput('loading', false);
+    f.componentRef.setInput('organising', false);
+    f.detectChanges();
+    return f;
+  }
+
+  it('is absent when AI is not ready', () => {
+    const el = mountWithAi(false).nativeElement as HTMLElement;
+    expect(el.querySelector('.nav.for-you')).toBeNull();
+  });
+
+  it('is present when AI is ready', () => {
+    const el = mountWithAi(true).nativeElement as HTMLElement;
+    expect(el.querySelector('.nav.for-you')).not.toBeNull();
+  });
+
+  it('pulses the icon while a recommendation run is in progress', () => {
+    const el = mountWithAi(true, true).nativeElement as HTMLElement;
+    expect(el.querySelector('.nav.for-you app-icon.pulse')).not.toBeNull();
   });
 });
 
