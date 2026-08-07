@@ -74,6 +74,8 @@ export interface EntryDto {
   isKept: boolean;
   /** One-way: the user actively opened this entry at least once (#307). */
   isViewed: boolean;
+  /** Why the recommender picked this entry; set only on for-you results. */
+  recommendationReason?: string | null;
 }
 
 export interface EntriesPage {
@@ -147,7 +149,7 @@ export type SubscribeResult =
   | { subscription: SubscriptionDto }
   | { candidates: FeedCandidate[]; scrapeFailureReason?: ScrapeFailureReason };
 
-export type EntryView = 'all' | 'unread' | 'favorites' | 'kept';
+export type EntryView = 'all' | 'unread' | 'favorites' | 'kept' | 'for-you';
 
 /** A resolved selection the entry list turns into query params. */
 export interface EntryQuery {
@@ -207,3 +209,11 @@ export interface ReaderFailure {
 }
 
 export type ReaderContent = ReaderArticle | ReaderFailure;
+
+/** Progress of a for-you recommendation run (POST/GET /api/recommendations/runs*). */
+export interface RecommendationRunReport {
+  status: 'none' | 'pending' | 'running' | 'completed' | 'failed' | 'busy';
+  batchesTotal: number | null;
+  batchesDone: number;
+  error: string | null;
+}

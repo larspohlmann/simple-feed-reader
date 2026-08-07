@@ -410,7 +410,10 @@
     },
     "versionLabel": "Version {{version}} — Einstellungen öffnen",
     "trialDaysLeft": "Testphase · noch {{days}} Tage",
-    "trialDayLeft": "Testphase · noch 1 Tag"
+    "trialDayLeft": "Testphase · noch 1 Tag",
+    "forYouReady": "Empfehlungen sind fertig",
+    "forYouView": "Ansehen",
+    "forYouFailed": "Empfehlungen fehlgeschlagen. Versuch es noch einmal."
   },
   "common": {
     "save": "Speichern",

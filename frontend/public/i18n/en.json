@@ -410,7 +410,10 @@
     },
     "versionLabel": "Version {{version}} — open settings",
     "trialDaysLeft": "Trial · {{days}} days left",
-    "trialDayLeft": "Trial · 1 day left"
+    "trialDayLeft": "Trial · 1 day left",
+    "forYouReady": "Recommendations ready",
+    "forYouView": "View",
+    "forYouFailed": "Recommendations failed. Try again."
   },
   "common": {
     "save": "Save",
