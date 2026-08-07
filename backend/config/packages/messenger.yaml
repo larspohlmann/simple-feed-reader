@@ -1,0 +1,13 @@
+framework:
+    messenger:
+        # The doctrine transport keeps the broker out of the stack (#311): the
+        # recommendation runs table is the real queue, and this transport only
+        # holds schedule messages whose handler failed, for post-mortem. Web
+        # requests never dispatch anything, so on Strato -- where nothing
+        # consumes -- no rows can ever accumulate. auto_setup creates
+        # messenger_messages lazily on the first failed delivery, which only
+        # the worker container can cause; FPM containers never see the table.
+        failure_transport: failed
+
+        transports:
+            failed: 'doctrine://default?queue_name=failed'
