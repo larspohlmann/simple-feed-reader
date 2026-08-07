@@ -88,6 +88,34 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client->complete($this->credentials(), 'm', $this->messages());
     }
 
+    public function testAForbiddenAnswerIsAlsoARejectedKey(): void
+    {
+        $client = $this->clientAnswering(new MockResponse('{"error":"nope"}', ['http_code' => 403]));
+
+        $this->expectException(CredentialsRejectedException::class);
+        $client->complete($this->credentials(), 'm', $this->messages());
+    }
+
+    /**
+     * This is otherwise-valid JSON that would decode into one perfectly good
+     * completion — the content is just padded well past MAXIMUM_RESPONSE_BYTES.
+     * The wire cap aborting the download is the ONLY reason this throws: without
+     * it, this body parses and complete() returns successfully.
+     *
+     * Split into small chunks: MockHttpClient delivers one plain string as a
+     * single chunk, and reports progress only once it is already complete.
+     * Chunking matches how a real response actually streams and is what makes
+     * this test able to catch a cap that stopped firing.
+     */
+    public function testAnOversizedBodyIsUnreachable(): void
+    {
+        $body = '{"choices":[{"message":{"content":"' . str_repeat('a', 2_100_000) . '"}}]}';
+        $client = $this->clientAnswering(new MockResponse(str_split($body, 50_000)));
+
+        $this->expectException(ProviderUnreachableException::class);
+        $client->complete($this->credentials(), 'm', $this->messages());
+    }
+
     public function testTransportErrorsAreUnreachable(): void
     {
         $client = new MockHttpClient(static function (): MockResponse {
