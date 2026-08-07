@@ -107,4 +107,15 @@ describe('ToastService', () => {
     expect(el()!.getAttribute('role')).toBe('status');
     expect(el()!.getAttribute('aria-live')).toBe('polite');
   });
+
+  it('positions the toast from the --space-5 token, not a hardcoded literal', () => {
+    document.documentElement.style.setProperty('--space-5', '40px');
+
+    toast.show({ message: 'Positioned' });
+    tick();
+
+    const pane = container.querySelector<HTMLElement>('.cdk-overlay-pane')!;
+    expect(pane.style.marginBottom).toBe('40px');
+    document.documentElement.style.removeProperty('--space-5');
+  });
 });

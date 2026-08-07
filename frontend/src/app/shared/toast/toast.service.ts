@@ -29,7 +29,11 @@ export class ToastService {
 
     this.ref = this.dialog.open<void, ToastData, ToastComponent>(ToastComponent, {
       panelClass: 'app-toast',
-      positionStrategy: this.overlay.position().global().centerHorizontally().bottom('24px'),
+      positionStrategy: this.overlay
+        .position()
+        .global()
+        .centerHorizontally()
+        .bottom(this.bottomOffset()),
       hasBackdrop: false,
       autoFocus: false,
       restoreFocus: false,
@@ -50,5 +54,14 @@ export class ToastService {
     if (this.timer === null) return;
     clearTimeout(this.timer);
     this.timer = null;
+  }
+
+  /** Stylelint bans ad-hoc `px` outside `theme/`, but cannot see this file:
+   *  read the spacing scale's own value instead of hardcoding a literal that
+   *  would silently drift from it (#308 final review, Minor 9). */
+  private bottomOffset(): string {
+    const value = getComputedStyle(document.documentElement).getPropertyValue('--space-5').trim();
+
+    return value === '' ? '24px' : value;
   }
 }
