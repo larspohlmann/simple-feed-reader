@@ -133,18 +133,10 @@ final class RecommendationPromptBuilder
         $lines = [];
         foreach ($winners as $batch) {
             foreach (\array_slice($batch, 0, $perBatchCap) as $winner) {
-                $line = $linesById[$winner['id']] ?? null;
-                if (null === $line) {
-                    continue;
+                $line = $this->winnerLine($winner, $linesById);
+                if (null !== $line) {
+                    $lines[] = $line;
                 }
-                $lines[] = \sprintf(
-                    '- [%d] %s — %s — %s — %s',
-                    $winner['id'],
-                    $line->title,
-                    $line->feedName,
-                    $line->date,
-                    $winner['reason'],
-                );
             }
         }
 
@@ -153,6 +145,41 @@ final class RecommendationPromptBuilder
         return [
             ['role' => 'system', 'content' => $system],
             ['role' => 'user', 'content' => $user],
+        ];
+    }
+
+    /**
+     * The dedup call carries no guidance prompt on purpose: guidance shapes
+     * what to recommend, and this call recommends nothing.
+     *
+     * @param list<array{id: int, score: int, reason: string}> $rankedPool
+     * @param array<int, PromptLine>                           $linesById
+     *
+     * @return list<array{role: string, content: string}>
+     *
+     * @throws \LogicException if called with an empty pool
+     */
+    public function dedupMessages(array $rankedPool, array $linesById): array
+    {
+        if ([] === $rankedPool) {
+            throw new \LogicException('The dedup phase requires at least one ranked winner.');
+        }
+
+        $lines = [];
+        foreach ($rankedPool as $winner) {
+            $line = $this->winnerLine($winner, $linesById);
+            if (null !== $line) {
+                $lines[] = $line;
+            }
+        }
+
+        return [
+            [
+                'role' => 'system',
+                'content' => RecommendationPromptText::DEDUP_ROLE
+                    . "\n\n" . RecommendationPromptText::DEDUP_OUTPUT_CONTRACT,
+            ],
+            ['role' => 'user', 'content' => "RANKED (best first):\n" . implode("\n", $lines)],
         ];
     }
 
@@ -238,6 +265,27 @@ final class RecommendationPromptBuilder
         }
 
         return mb_substr($description, 0, $length) . '…';
+    }
+
+    /**
+     * @param array{id: int, reason: string, ...}    $winner
+     * @param array<int, PromptLine>                 $linesById
+     */
+    private function winnerLine(array $winner, array $linesById): ?string
+    {
+        $line = $linesById[$winner['id']] ?? null;
+        if (null === $line) {
+            return null;
+        }
+
+        return \sprintf(
+            '- [%d] %s — %s — %s — %s',
+            $winner['id'],
+            $line->title,
+            $line->feedName,
+            $line->date,
+            $winner['reason'],
+        );
     }
 
     private function tokens(string $text): int

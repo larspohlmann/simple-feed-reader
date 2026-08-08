@@ -347,6 +347,59 @@ final class RecommendationPromptBuilderTest extends TestCase
         $this->builder->mergeMessages([], [], $this->settings(32768, 10));
     }
 
+    public function testDedupMessagesReturnsTheExactRoleContentStructureWithoutGuidance(): void
+    {
+        $rankedPool = [
+            ['id' => 2, 'score' => 90, 'reason' => 'Strong match'],
+            ['id' => 1, 'score' => 40, 'reason' => 'Loose match'],
+        ];
+        $linesById = [
+            1 => new PromptLine(1, 'Title One', 'Feed A', '2026-01-05', null),
+            2 => new PromptLine(2, 'Title Two', 'Feed B', '2026-01-06', null),
+        ];
+
+        $messages = $this->builder->dedupMessages($rankedPool, $linesById);
+
+        self::assertSame(
+            [
+                [
+                    'role' => 'system',
+                    'content' => RecommendationPromptText::DEDUP_ROLE
+                        . "\n\n" . RecommendationPromptText::DEDUP_OUTPUT_CONTRACT,
+                ],
+                [
+                    'role' => 'user',
+                    'content' => "RANKED (best first):\n"
+                        . "- [2] Title Two — Feed B — 2026-01-06 — Strong match\n"
+                        . '- [1] Title One — Feed A — 2026-01-05 — Loose match',
+                ],
+            ],
+            $messages,
+        );
+    }
+
+    public function testDedupMessagesSkipsAPoolEntryWhoseLineIsMissing(): void
+    {
+        $rankedPool = [
+            ['id' => 1, 'score' => 90, 'reason' => 'Present'],
+            ['id' => 2, 'score' => 80, 'reason' => 'Pruned'],
+        ];
+        $linesById = [1 => new PromptLine(1, 'Title One', 'Feed A', '2026-01-05', null)];
+
+        $messages = $this->builder->dedupMessages($rankedPool, $linesById);
+
+        self::assertStringContainsString('- [1] ', $messages[1]['content']);
+        self::assertStringNotContainsString('- [2] ', $messages[1]['content']);
+    }
+
+    public function testDedupMessagesRejectsAnEmptyPool(): void
+    {
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('The dedup phase requires at least one ranked winner.');
+
+        $this->builder->dedupMessages([], []);
+    }
+
     private static function line(int $id, string $title, int $descriptionChars): PromptLine
     {
         return new PromptLine(

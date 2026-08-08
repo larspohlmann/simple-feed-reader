@@ -25,6 +25,15 @@ final class RecommendationPromptText
         . 'square brackets, followed by title, source, date and the reason it was shortlisted. Prefer recent '
         . 'posts. When several entries cover the same story, keep exactly one of them.';
 
+    public const string DEDUP_ROLE = 'You remove duplicate stories from a ranked list built for one reader of '
+        . 'an RSS reader. The user message lists RANKED entries, best first; each line starts with the entry id '
+        . 'in square brackets, followed by title, source, date and the reason it was chosen. When several '
+        . 'entries cover the same story, keep the best-ranked source and name the others as duplicates.';
+
+    public const string DEDUP_OUTPUT_CONTRACT = 'Reply with JSON only, no prose: {"duplicates": '
+        . '[<entry id>, ...]}. List only ids of entries that duplicate a better-ranked entry. If there are no '
+        . 'duplicates, reply {"duplicates": []}. Use only ids that appear in the lines.';
+
     public const string OUTPUT_CONTRACT = 'Reply with JSON only, no prose: {"recommendations": '
         . '[{"id": <candidate id>, "score": <0-100>, "reason": "<one short sentence>"}]}. Score every '
         . 'candidate. Use only ids that appear in the candidate lines.';
