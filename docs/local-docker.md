@@ -40,7 +40,21 @@ Six services, started with one command from the repository root:
 > ```
 >
 > The recommendation feature degrades to #308's poll-driven behaviour while the
-> worker is stopped, so the app stays fully usable without it.
+> worker is stopped, so the app stays fully usable without it. That graceful
+> degradation is also why a stopped worker is easy to miss: the app keeps
+> working, it just tells you "Keep the app open while this runs" instead of
+> running the work in the background.
+>
+> **Check that it is actually sweeping**, not merely up:
+>
+> ```bash
+> docker compose ps worker
+> ```
+>
+> The health column reads the worker's own heartbeat, not its process — a
+> consumer that wedges inside a message keeps the process alive while the sweep
+> stops. `unhealthy` means the sweep has been silent for longer than
+> `WorkerPresence::FRESH_SECONDS`; restart it with `docker compose restart worker`.
 
 Every host port is bound to loopback only — nothing on your LAN can reach the
 stack. MySQL sits on 33306 so a natively installed MySQL never collides.

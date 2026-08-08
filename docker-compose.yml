@@ -77,9 +77,30 @@ services:
       - -vv
       - --time-limit=3600
       - --memory-limit=128M
-    restart: unless-stopped
+    # `always`, not `unless-stopped`: the two behave identically for a crash or
+    # a clean --time-limit exit, but they differ after someone stops the worker
+    # by hand — as the warning above tells you to before an e2e run.
+    # `unless-stopped` remembers that stop forever, so a worker stopped for one
+    # e2e run stays dead across reboots and nothing ever says so. That is how
+    # the sweep was silently down for a day. `always` brings it back with the
+    # Docker daemon; only an explicit `docker compose start worker` is needed
+    # within the same session.
+    restart: always
+    # The process being up is not the same as the sweep running: a wedged
+    # consumer keeps the container "healthy" while doing nothing. The heartbeat
+    # is the real signal, and the bound matches WorkerPresence::FRESH_SECONDS —
+    # see docker/php/worker-healthcheck.php. Compose does not restart on
+    # unhealthy, so this reports rather than repairs: `docker compose ps` names
+    # the fault instead of leaving you to infer it from missing recommendations.
+    healthcheck:
+      test: ["CMD", "php", "/usr/local/bin/worker-healthcheck.php"]
+      interval: 60s
+      timeout: 15s
+      retries: 2
+      start_period: 60s
     volumes:
       - ./backend:/app
+      - ./docker/php/worker-healthcheck.php:/usr/local/bin/worker-healthcheck.php:ro
     environment:
       DATABASE_URL: "mysql://feedreader:feedreader@mysql:3306/feedreader?serverVersion=8.4&charset=utf8mb4"
       MAILER_DSN: "smtp://mailpit:1025"
