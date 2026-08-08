@@ -198,7 +198,14 @@ final class RecommendationRunControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(
-            ['status' => 'pending', 'batchesTotal' => null, 'batchesDone' => 0, 'error' => null, 'background' => false],
+            [
+                'status' => 'pending',
+                'batchesTotal' => null,
+                'batchesDone' => 0,
+                'error' => null,
+                'background' => false,
+                'streamedChars' => 0,
+            ],
             $this->payload($client->getResponse()),
         );
     }
@@ -248,7 +255,14 @@ final class RecommendationRunControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(
-            ['status' => 'none', 'batchesTotal' => null, 'batchesDone' => 0, 'error' => null, 'background' => false],
+            [
+                'status' => 'none',
+                'batchesTotal' => null,
+                'batchesDone' => 0,
+                'error' => null,
+                'background' => false,
+                'streamedChars' => 0,
+            ],
             $this->payload($client->getResponse()),
         );
     }
