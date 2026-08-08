@@ -80,10 +80,12 @@ prod_compose exec -T -u www-data php bin/console lexik:jwt:generate-keypair --sk
 
 say 'Applying database migrations ...'
 prod_compose exec -T -u www-data php bin/console doctrine:migrations:migrate --no-interaction
+# It may have started before the schema existed (first install).
+prod_compose restart worker
 
 if wait_for_health "$(prod_base_url)/api/health"; then
   print_prod_summary
 else
   warn 'The API did not report healthy in time. It may still be starting.'
-  warn 'Check the logs with:  docker compose -p simple-feed-reader-prod logs -f php web'
+  warn 'Check the logs with:  docker compose -p simple-feed-reader-prod logs -f php web worker'
 fi

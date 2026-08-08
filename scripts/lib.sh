@@ -124,6 +124,8 @@ bring_up_stack() {
   compose exec -T php composer install --no-interaction
   say "Applying database migrations ..."
   compose exec -T php bin/console doctrine:migrations:migrate --no-interaction
+  # It may have started before the schema existed (first install).
+  compose restart worker
 }
 
 # The dev stack's health probe; prod callers pass their own URL. Exported so

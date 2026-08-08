@@ -51,6 +51,28 @@ services:
       mysql:
         condition: service_healthy
 
+  # The #311 background worker. Dev target has no entrypoint, so the command
+  # overrides the base image's php-fpm CMD cleanly; the bind mount shares
+  # vendor/ and var/ with the php container, so `composer install` there
+  # serves this one too. -vv surfaces each schedule firing in the logs.
+  worker:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: dev
+    command: ["php", "bin/console", "messenger:consume", "scheduler_worker", "-vv", "--time-limit=3600"]
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app
+    environment:
+      DATABASE_URL: "mysql://feedreader:feedreader@mysql:3306/feedreader?serverVersion=8.4&charset=utf8mb4"
+      MAILER_DSN: "smtp://mailpit:1025"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
   nginx:
     image: nginx:1.27-alpine
     volumes:

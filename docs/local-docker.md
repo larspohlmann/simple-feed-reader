@@ -9,7 +9,7 @@ natively. It is strictly additive: the native SQLite workflow (plain
 
 ## 1. What you get
 
-Five services, started with one command from the repository root:
+Six services, started with one command from the repository root:
 
 | Service | Where |
 |---|---|
@@ -17,6 +17,7 @@ Five services, started with one command from the repository root:
 | API (nginx → PHP-FPM 8.3) | https://localhost:8443 (http://localhost:8080 redirects there) |
 | Mailpit web inbox | http://localhost:8025 |
 | MySQL 8.4 | 127.0.0.1:33306 (user/password `feedreader`/`feedreader`, root `root`) |
+| Worker — recommendation runs in the background, 5-minute feed refresh sweep | `docker compose logs -f worker` |
 
 Every host port is bound to loopback only — nothing on your LAN can reach the
 stack. MySQL sits on 33306 so a natively installed MySQL never collides.
@@ -186,9 +187,8 @@ it:
   service runs cross-origin on `:4200` (bearer JWT, so no auth cookie to keep
   same-site); the production stack serves the built SPA same-origin, the
   topology this stack was designed to allow ([docs/oauth-sign-in.md](oauth-sign-in.md)).
-- **Worker / cron container.** The feed-fetch pipeline and the deployment plan
-  will add a container that runs console commands on a schedule; it reuses the
-  php image and the same env injection.
+- **Worker / cron container.** Delivered in #311 — see the `worker` service; it
+  reuses the php image and the same env injection.
 
 ---
 

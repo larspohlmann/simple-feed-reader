@@ -1,8 +1,9 @@
 # Running in production (Docker)
 
 The production stack is the production PHP image, nginx serving the compiled
-app with `/api` handled same-origin, and — unless you choose SQLite (§1) — a
-MySQL container beside them, defined
+app with `/api` handled same-origin, the `worker` container that drives
+background recommendation runs and the scheduled feed refresh (#311), and —
+unless you choose SQLite (§1) — a MySQL container beside them, defined
 in [`docker-compose.prod.yml`](../docker-compose.prod.yml). It is completely
 separate from the [development stack](local-docker.md): its own compose file,
 its own project name (`simple-feed-reader-prod`), its own volumes. Both can
@@ -284,6 +285,13 @@ but it signs every user out.
 
 ## 9. Troubleshooting
 
+- **The worker** — the `worker` container consumes the `scheduler_worker`
+  schedule: it advances background recommendation runs, sweeps due feeds
+  every 5 minutes, and purges the failure transport daily. Watch it with
+  `docker compose -p simple-feed-reader-prod logs -f worker`. If it is down,
+  the app degrades automatically rather than breaking: recommendation runs
+  only advance while a tab stays open (#308 behaviour), and scheduled feed
+  refresh pauses — feeds still refresh manually.
 - **Compose refuses to start and names a variable** — that value is empty in
   `.env.prod`. The comments in `.env.prod.example` explain each one.
 - **Every request answers 500** — the runtime guard refuses to serve while a
