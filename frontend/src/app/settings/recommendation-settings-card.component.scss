@@ -20,16 +20,6 @@ textarea {
   resize: vertical;
 }
 
-details {
-  width: 100%;
-}
-
-summary {
-  cursor: pointer;
-  color: var(--text-secondary);
-  font-size: var(--fs-sm);
-}
-
 .fixed {
   margin: var(--space-2) 0 0;
   padding: var(--space-3);

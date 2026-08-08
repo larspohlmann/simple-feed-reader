@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ButtonComponent } from '../shared/button/button.component';
+import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../shared/field/field.component';
 import { ToggleComponent } from '../shared/toggle/toggle.component';
@@ -23,7 +24,14 @@ import { RecommendationSettingsService } from './recommendation-settings.service
  */
 @Component({
   selector: 'app-recommendation-settings-card',
-  imports: [ButtonComponent, ErrorBannerComponent, FieldComponent, ToggleComponent, TranslocoPipe],
+  imports: [
+    ButtonComponent,
+    DisclosureComponent,
+    ErrorBannerComponent,
+    FieldComponent,
+    ToggleComponent,
+    TranslocoPipe,
+  ],
   providers: [RecommendationSettingsService],
   templateUrl: './recommendation-settings-card.component.html',
   styleUrl: './recommendation-settings-card.component.scss',

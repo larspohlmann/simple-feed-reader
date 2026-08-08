@@ -16,6 +16,7 @@ import { ReaderApi } from '../reader/reader-api';
 import { bytesToKb } from '../reader/format';
 import { DebugLogDetail, DebugLogEntry } from '../reader/models';
 import { RecommendationsService } from '../reader/recommendations.service';
+import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
 
 const POLL_MS = 2000;
 
@@ -32,7 +33,7 @@ const POLL_MS = 2000;
 @Component({
   selector: 'app-recommendation-debug-log',
   standalone: true,
-  imports: [TranslocoModule],
+  imports: [DisclosureComponent, TranslocoModule],
   templateUrl: './recommendation-debug-log.component.html',
   styleUrl: './recommendation-debug-log.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

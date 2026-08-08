@@ -1,0 +1,18 @@
+// src/app/shared/disclosure/disclosure.component.scss
+// The shared chrome for a native <details>/<summary> pair, consolidated from
+// the two hand-rolled copies (recommendation-settings-card's fixed-prompt
+// panel, recommendation-debug-log's panel shell). Both used identical
+// cursor/color/font-size on the toggle line; the debug log additionally
+// carried panel-level margin, font-size and color for its own list content --
+// that is host-specific layout, not disclosure chrome, so it stays local to
+// `recommendation-debug-log.component.scss`.
+:host {
+  display: block;
+  width: 100%;
+}
+
+summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}

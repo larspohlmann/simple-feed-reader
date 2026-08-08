@@ -1,8 +1,8 @@
 @if (entries().length > 0) {
-  <details class="debug-panel">
-    <summary class="debug-panel__title">
-      {{ 'settings.ai.recommendations.debugPanelTitle' | transloco }}
-    </summary>
+  <app-disclosure
+    class="debug-panel"
+    [label]="'settings.ai.recommendations.debugPanelTitle' | transloco"
+  >
     <ol class="debug-panel__list">
       @for (entry of entries(); track entry.id) {
         <li class="debug-panel__entry">
@@ -74,5 +74,5 @@
         </li>
       }
     </ol>
-  </details>
+  </app-disclosure>
 }

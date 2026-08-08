@@ -1,18 +1,14 @@
-/* Collapsed-surface pattern reused from
-   `settings/recommendation-settings-card.component.scss` (the fixed-prompt
-   `<details>`): a plain `<summary>` toggle over a bordered `--surface-0`
-   block, `pre` in `--text-muted` at `--fs-xs`. This panel repeats that shape
-   once per log entry instead of once per card. */
+/* The disclosure chrome (the toggle line) lives in
+   `shared/disclosure/disclosure.component.scss`. What's left here is this
+   panel's own layout: the margin that indents it under the debug switch, the
+   base font-size/color the entry rows inherit, and the bordered `--surface-0`
+   block each entry repeats -- a shape borrowed from the fixed-prompt
+   `<details>` in `recommendation-settings-card.component.scss`, `pre` in
+   `--text-muted` at `--fs-xs`. */
 .debug-panel {
   margin: 0 var(--space-4) var(--space-3);
   font-size: var(--fs-sm);
   color: var(--text-secondary);
-
-  &__title {
-    cursor: pointer;
-    color: var(--text-secondary);
-    font-size: var(--fs-sm);
-  }
 
   &__list {
     display: flex;
