@@ -5,8 +5,9 @@
   align-items: center;
   padding: var(--space-3) var(--space-4);
   background: var(--surface-2);
-  border: 1px solid var(--border-strong);
+  border: none;
   border-radius: var(--radius-lg);
+  box-shadow: 0 10px 32px rgb(0 0 0 / 22%);
   color: var(--text-primary);
   font-size: var(--fs-sm);
 }
