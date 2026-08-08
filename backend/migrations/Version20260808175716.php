@@ -19,9 +19,10 @@ use Doctrine\Migrations\AbstractMigration;
  * leaves `doctrine:schema:validate` out of sync.
  *
  * `doctrine:migrations:diff` also picked up the default-value change on
- * candidate_pool_size/picks_limit from #321's Task 4 (500/50), which never
- * got its own migration; that stray is pre-existing and out of this task's
- * scope, so it is left out here rather than folded in.
+ * candidate_pool_size/picks_limit from #321's Task 4 (500/50); that stray was
+ * pre-existing and out of this task's scope, so it was left out here rather
+ * than folded in. It now has its own migration, Version20260808180000 --
+ * look there, not here, for that column-default drift.
  */
 final class Version20260808175716 extends AbstractMigration
 {
