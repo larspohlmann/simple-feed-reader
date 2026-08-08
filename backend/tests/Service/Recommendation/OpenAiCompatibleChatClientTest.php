@@ -9,6 +9,7 @@ use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ProviderCredentials;
 use App\Service\Recommendation\CompletionBodyDecoder;
 use App\Service\Recommendation\OpenAiCompatibleChatClient;
+use App\Tests\Support\ResponseCapturingHttpClient;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -126,11 +127,20 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             yield 'data: {"choices":[{"delta":{"content":"par"}}]}' . "\n\n";
             yield '';
         };
-        $client = $this->clientAnswering(new MockResponse($body()));
+        $client = new ResponseCapturingHttpClient(new MockResponse($body()));
 
-        $this->expectException(ProviderUnreachableException::class);
-        $this->expectExceptionMessage('That provider stopped streaming for more than 30 seconds.');
-        $client->complete($this->credentials(), 'm', $this->messages());
+        try {
+            (new OpenAiCompatibleChatClient($client, new CompletionBodyDecoder(), 'SimpleFeedReader/1.0'))
+                ->complete($this->credentials(), 'm', $this->messages());
+            self::fail(ProviderUnreachableException::class . ' was not thrown.');
+        } catch (ProviderUnreachableException $e) {
+            self::assertSame('That provider stopped streaming for more than 30 seconds.', $e->getMessage());
+        }
+
+        // A stalled response is canceled rather than left open — leaving it
+        // running would hold the connection past the exception that already
+        // told the caller it is dead.
+        self::assertTrue($client->lastResponse?->getInfo('canceled'));
     }
 
     public function testRejectedCredentialsBecomeTheTypedException(): void

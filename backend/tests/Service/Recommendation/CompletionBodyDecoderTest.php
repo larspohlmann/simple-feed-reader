@@ -88,4 +88,48 @@ final class CompletionBodyDecoderTest extends TestCase
     {
         self::assertNull($this->decoder->assistantContent('not json'));
     }
+
+    /**
+     * A blocking envelope whose content happens to contain the substring
+     * "data:" mid-line must still decode as an envelope: only a line-initial
+     * "data:" means SSE. Without the `^` anchor, this single-line body would
+     * be misrouted into the stream join, which finds no line starting with
+     * "data:" and returns null instead of the real answer.
+     */
+    public function testABlockingEnvelopeContainingDataMidLineIsNotMisreadAsAStream(): void
+    {
+        $body = '{"choices":[{"message":{"content":"see data: below"}}]}';
+
+        self::assertSame('see data: below', $this->decoder->assistantContent($body));
+    }
+
+    /**
+     * A leading blank line before the first field — as a keep-alive comment
+     * would produce — still lets the following line be recognised as SSE.
+     * Without the `/m` flag, `^data:` only anchors to the very start of the
+     * body, so this stream would be misread as a blocking envelope and fail
+     * to decode.
+     */
+    public function testAStreamWithALeadingBlankLineStillDetectsAsAStream(): void
+    {
+        $body = "\n" . 'data: {"choices":[{"delta":{"content":"hello"}}]}' . "\n\n"
+            . 'data: [DONE]' . "\n\n";
+
+        self::assertSame('hello', $this->decoder->assistantContent($body));
+    }
+
+    /**
+     * A heartbeat event with an empty payload arrives mid-stream, not just as
+     * the terminal event; skipping it must not stop the join before later
+     * deltas are read.
+     */
+    public function testAnEmptyHeartbeatMidStreamDoesNotStopLaterDeltasFromJoining(): void
+    {
+        $body = 'data: {"choices":[{"delta":{"content":"first"}}]}' . "\n\n"
+            . 'data:' . "\n\n"
+            . 'data: {"choices":[{"delta":{"content":"second"}}]}' . "\n\n"
+            . 'data: [DONE]' . "\n\n";
+
+        self::assertSame('firstsecond', $this->decoder->assistantContent($body));
+    }
 }
