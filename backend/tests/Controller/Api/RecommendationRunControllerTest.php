@@ -26,6 +26,8 @@ use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\LockInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
@@ -293,6 +295,49 @@ final class RecommendationRunControllerTest extends WebTestCase
         $report = $this->payload($client->getResponse());
         self::assertSame('running', $report['status']);
         self::assertFalse($report['background']);
+    }
+
+    /**
+     * The heartbeat is a hint and the per-user lock is the truth, so the two
+     * must answer alike. A worker whose heartbeat has not landed yet still
+     * holds the lock while it works; reporting that as `busy` made the client
+     * spend five retries and then tell the user "another run is already in
+     * progress" about a perfectly healthy background run — and stop polling
+     * it (#311 final review, Critical 2c).
+     */
+    public function testATickThatFindsTheLockHeldReportsTheRunAsSomebodyElsesWork(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers, $user] = $this->authWithReadyAi('locked-tick@example.test');
+        $this->seedOneCandidateEntry($user);
+        $this->startRun($client, $headers);
+
+        $lock = $this->holdTheRunLockFor($user);
+
+        try {
+            $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
+        } finally {
+            $lock->release();
+        }
+
+        self::assertResponseIsSuccessful();
+        $report = $this->payload($client->getResponse());
+        self::assertNotSame('busy', $report['status']);
+        self::assertSame('pending', $report['status']);
+        self::assertTrue($report['background']);
+        self::assertSame([], $this->stubChatClient()->calls());
+    }
+
+    private function holdTheRunLockFor(User $user): LockInterface
+    {
+        $lockFactory = self::getContainer()->get(LockFactory::class);
+        self::assertInstanceOf(LockFactory::class, $lockFactory);
+
+        $lock = $lockFactory->createLock('ai-recommendations-' . $user->getId());
+        self::assertTrue($lock->acquire());
+
+        return $lock;
     }
 
     public function testCurrentReportsBackgroundWhenTheWorkerIsAlive(): void

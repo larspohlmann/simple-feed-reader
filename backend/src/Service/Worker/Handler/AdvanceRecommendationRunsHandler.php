@@ -44,6 +44,12 @@ final readonly class AdvanceRecommendationRunsHandler
 
         try {
             foreach ($this->runs->findAllActive() as $run) {
+                // Again before each run, because a firing's duration is the
+                // SUM over its runs and one run can spend a whole provider
+                // timeout. Marking only once per firing let the heartbeat go
+                // stale mid-firing, and the client then took the healthy
+                // worker for a dead one (#311 final review, Critical 2).
+                $this->presence->markRecommendationSweep();
                 $this->advanceOne($run);
             }
         } finally {

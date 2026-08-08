@@ -17,6 +17,12 @@ use App\Entity\RecommendationRun;
  */
 final readonly class RecommendationRunReport
 {
+    /** No run has ever started for this account. */
+    public const string STATUS_NONE = 'none';
+
+    /** Another tick holds the per-user lock; this one did no work. */
+    public const string STATUS_BUSY = 'busy';
+
     private function __construct(
         public string $status,
         public ?int $batchesTotal,
@@ -28,12 +34,12 @@ final readonly class RecommendationRunReport
 
     public static function none(): self
     {
-        return new self('none', null, 0, null);
+        return new self(self::STATUS_NONE, null, 0, null);
     }
 
     public static function busy(): self
     {
-        return new self('busy', null, 0, null);
+        return new self(self::STATUS_BUSY, null, 0, null);
     }
 
     public static function fromRun(RecommendationRun $run): self

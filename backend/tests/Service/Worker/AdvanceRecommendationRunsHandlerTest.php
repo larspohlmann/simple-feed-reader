@@ -10,7 +10,9 @@ use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Entity\WorkerHeartbeat;
 use App\Repository\RecommendationRunRepository;
+use App\Repository\WorkerHeartbeatRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
@@ -25,12 +27,14 @@ use App\Tests\Support\ClearTrackingEntityManager;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
+use App\Tests\Support\TickingClock;
 use App\Tests\Support\UserFactory;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -58,6 +62,40 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $this->handler()->__invoke(new AdvanceRecommendationRuns());
 
         self::assertTrue($this->presence()->isRecommendationWorkerAlive());
+    }
+
+    /**
+     * A firing's duration is the SUM over the runs it ticks, and one run can
+     * spend a whole provider timeout, so a single touch at the start of the
+     * firing goes stale while the worker is still working. The client then
+     * takes the working worker for a dead one, tries to advance the run
+     * itself, hits the per-user lock and gives up on a healthy run (#311
+     * final review, Critical 2a).
+     *
+     * A ticking clock makes the number of touches observable: one before the
+     * loop -- a firing with nothing to do must still report liveness -- plus
+     * one per run, so two runs must leave the heartbeat two steps past the
+     * start rather than at it.
+     */
+    public function testEachRunInAFiringGetsItsOwnHeartbeatTouch(): void
+    {
+        $first = $this->user('heartbeat-first@example.test');
+        $this->seedSingleBatchFixture($first);
+        $this->starter()->start($first);
+
+        $second = $this->user('heartbeat-second@example.test');
+        $this->seedSingleBatchFixture($second);
+        $this->starter()->start($second);
+
+        $startedAt = new \DateTimeImmutable('2026-08-08 00:00:00');
+        $stepSeconds = 60;
+        $this->handlerWithPresenceClock(new TickingClock($startedAt, $stepSeconds))
+            ->__invoke(new AdvanceRecommendationRuns());
+
+        self::assertEquals(
+            $startedAt->modify(sprintf('+%d seconds', 2 * $stepSeconds)),
+            $this->heartbeats()->findTouchedAt(WorkerPresence::RECOMMENDATION_SWEEP),
+        );
     }
 
     public function testDrivesARunToCompletionAcrossFirings(): void
@@ -387,6 +425,26 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             $this->em,
             $logger,
         );
+    }
+
+    private function handlerWithPresenceClock(ClockInterface $presenceClock): AdvanceRecommendationRunsHandler
+    {
+        return new AdvanceRecommendationRunsHandler(
+            $this->runs(),
+            $this->advancer(),
+            new WorkerPresence($this->heartbeats(), $presenceClock),
+            new MockClock('2026-08-08T00:00:00Z'),
+            $this->em,
+            new NullLogger(),
+        );
+    }
+
+    private function heartbeats(): WorkerHeartbeatRepository
+    {
+        /** @var WorkerHeartbeatRepository $repository */
+        $repository = $this->em->getRepository(WorkerHeartbeat::class);
+
+        return $repository;
     }
 
     private function deleteAiSettingsFor(User $user): void

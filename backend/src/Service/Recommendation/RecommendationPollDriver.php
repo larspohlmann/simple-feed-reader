@@ -14,6 +14,10 @@ use App\Service\Worker\WorkerPresence;
  * read; a stale one means the #308 poll behaviour applies untouched. Kill
  * the worker mid-run and the next poll tick advances from the checkpoint --
  * the fallback is automatic in both directions, with no config switch.
+ *
+ * The heartbeat is a hint, the per-user lock is the truth: an advance that
+ * comes back busy is answered the same way a fresh heartbeat is, because
+ * both mean the same thing -- somebody else owns execution right now.
  */
 final readonly class RecommendationPollDriver
 {
@@ -27,17 +31,36 @@ final readonly class RecommendationPollDriver
     public function poll(User $user): RecommendationRunReport
     {
         if ($this->presence->isRecommendationWorkerAlive()) {
-            return $this->current($user);
+            return $this->latestReport($user)->inBackground();
         }
 
-        return $this->advancer->advance($user);
+        $report = $this->advancer->advance($user);
+
+        if (RecommendationRunReport::STATUS_BUSY !== $report->status) {
+            return $report;
+        }
+
+        // Busy is not a failure and never was: it means the per-user lock is
+        // held, so somebody else -- a worker whose heartbeat has not landed
+        // yet, another tab, a CLI run -- is advancing this very run right
+        // now. Answering with an error made the client stop polling a
+        // healthy run (#311 final review, Critical 2). The honest answer is
+        // where the run actually stands, flagged as somebody else's work so
+        // the client keeps watching instead of driving.
+        return $this->latestReport($user)->inBackground();
     }
 
     public function current(User $user): RecommendationRunReport
     {
-        $latest = $this->runs->findLatestForUser($user);
-        $report = null === $latest ? RecommendationRunReport::none() : RecommendationRunReport::fromRun($latest);
+        $report = $this->latestReport($user);
 
         return $this->presence->isRecommendationWorkerAlive() ? $report->inBackground() : $report;
+    }
+
+    private function latestReport(User $user): RecommendationRunReport
+    {
+        $latest = $this->runs->findLatestForUser($user);
+
+        return null === $latest ? RecommendationRunReport::none() : RecommendationRunReport::fromRun($latest);
     }
 }
