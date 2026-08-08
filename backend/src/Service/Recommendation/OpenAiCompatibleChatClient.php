@@ -58,7 +58,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     {
         $content = $this->decoder->assistantContent($this->readBody($credentials, $model, $messages));
 
-        if (!\is_string($content)) {
+        if (null === $content) {
             throw new ProviderUnreachableException('That provider answered without a completion.');
         }
 

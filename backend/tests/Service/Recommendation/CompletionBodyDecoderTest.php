@@ -9,6 +9,8 @@ use PHPUnit\Framework\TestCase;
 
 final class CompletionBodyDecoderTest extends TestCase
 {
+    private const string DONE_EVENT = 'data: [DONE]' . "\n\n";
+
     private CompletionBodyDecoder $decoder;
 
     protected function setUp(): void
@@ -16,12 +18,25 @@ final class CompletionBodyDecoderTest extends TestCase
         $this->decoder = new CompletionBodyDecoder();
     }
 
+    /**
+     * One content-carrying SSE event. The framing is spelled out here because
+     * it is what the decoder parses; the payload is encoded rather than typed
+     * by hand, so a test whose content contains quotes cannot be defeated by
+     * an escaping slip in the fixture.
+     */
+    private function contentDelta(string $content): string
+    {
+        $event = ['choices' => [['delta' => ['content' => $content]]]];
+
+        return 'data: ' . json_encode($event, \JSON_THROW_ON_ERROR) . "\n\n";
+    }
+
     public function testJoinsTheContentDeltasOfAStreamedAnswer(): void
     {
         $body = 'data: {"choices":[{"delta":{"role":"assistant"}}]}' . "\n\n"
-            . 'data: {"choices":[{"delta":{"content":"{\"recommend"}}]}' . "\n\n"
-            . 'data: {"choices":[{"delta":{"content":"ations\":[]}"}}]}' . "\n\n"
-            . 'data: [DONE]' . "\n\n";
+            . $this->contentDelta('{"recommend')
+            . $this->contentDelta('ations":[]}')
+            . self::DONE_EVENT;
 
         self::assertSame('{"recommendations":[]}', $this->decoder->assistantContent($body));
     }
@@ -45,25 +60,23 @@ final class CompletionBodyDecoderTest extends TestCase
      */
     public function testEventsWithoutAContentDeltaAreSkipped(): void
     {
-        $body = 'data: {"choices":[{"delta":{"content":"kept"}}]}' . "\n\n"
+        $body = $this->contentDelta('kept')
             . 'data: {"choices":[],"usage":{"total_tokens":9}}' . "\n\n"
-            . 'data: [DONE]' . "\n\n";
+            . self::DONE_EVENT;
 
         self::assertSame('kept', $this->decoder->assistantContent($body));
     }
 
     public function testAMalformedEventIsSkippedNotFatal(): void
     {
-        $body = 'data: not json at all' . "\n\n"
-            . 'data: {"choices":[{"delta":{"content":"still here"}}]}' . "\n\n";
+        $body = 'data: not json at all' . "\n\n" . $this->contentDelta('still here');
 
         self::assertSame('still here', $this->decoder->assistantContent($body));
     }
 
     public function testAStreamWithNoContentAtAllIsNull(): void
     {
-        $body = 'data: {"choices":[{"delta":{"role":"assistant"}}]}' . "\n\n"
-            . 'data: [DONE]' . "\n\n";
+        $body = 'data: {"choices":[{"delta":{"role":"assistant"}}]}' . "\n\n" . self::DONE_EVENT;
 
         self::assertNull($this->decoder->assistantContent($body));
     }
@@ -112,8 +125,7 @@ final class CompletionBodyDecoderTest extends TestCase
      */
     public function testAStreamWithALeadingBlankLineStillDetectsAsAStream(): void
     {
-        $body = "\n" . 'data: {"choices":[{"delta":{"content":"hello"}}]}' . "\n\n"
-            . 'data: [DONE]' . "\n\n";
+        $body = "\n" . $this->contentDelta('hello') . self::DONE_EVENT;
 
         self::assertSame('hello', $this->decoder->assistantContent($body));
     }
@@ -125,10 +137,10 @@ final class CompletionBodyDecoderTest extends TestCase
      */
     public function testAnEmptyHeartbeatMidStreamDoesNotStopLaterDeltasFromJoining(): void
     {
-        $body = 'data: {"choices":[{"delta":{"content":"first"}}]}' . "\n\n"
+        $body = $this->contentDelta('first')
             . 'data:' . "\n\n"
-            . 'data: {"choices":[{"delta":{"content":"second"}}]}' . "\n\n"
-            . 'data: [DONE]' . "\n\n";
+            . $this->contentDelta('second')
+            . self::DONE_EVENT;
 
         self::assertSame('firstsecond', $this->decoder->assistantContent($body));
     }

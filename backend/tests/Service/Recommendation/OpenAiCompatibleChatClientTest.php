@@ -14,6 +14,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class OpenAiCompatibleChatClientTest extends TestCase
 {
@@ -28,13 +29,14 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         return [['role' => 'user', 'content' => 'Rank these entries.']];
     }
 
+    private function clientUsing(HttpClientInterface $httpClient): OpenAiCompatibleChatClient
+    {
+        return new OpenAiCompatibleChatClient($httpClient, new CompletionBodyDecoder(), 'SimpleFeedReader/1.0');
+    }
+
     private function clientAnswering(MockResponse $response): OpenAiCompatibleChatClient
     {
-        return new OpenAiCompatibleChatClient(
-            new MockHttpClient($response),
-            new CompletionBodyDecoder(),
-            'SimpleFeedReader/1.0',
-        );
+        return $this->clientUsing(new MockHttpClient($response));
     }
 
     public function testReturnsTheAssistantContentJoinedFromTheStream(): void
@@ -58,7 +60,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             ]);
         });
 
-        $content = (new OpenAiCompatibleChatClient($client, new CompletionBodyDecoder(), 'SimpleFeedReader/1.0'))
+        $content = $this->clientUsing($client)
             ->complete($this->credentials(), 'm', $this->messages());
 
         self::assertSame('{"recommendations":[]}', $content);
@@ -138,7 +140,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         // try/catch rather than expectException, unlike the rest of this file,
         // because the cancel assertion below has to run after the throw.
         try {
-            (new OpenAiCompatibleChatClient($client, new CompletionBodyDecoder(), 'SimpleFeedReader/1.0'))
+            $this->clientUsing($client)
                 ->complete($this->credentials(), 'm', $this->messages());
             self::fail(ProviderUnreachableException::class . ' was not thrown.');
         } catch (ProviderUnreachableException $e) {
@@ -251,7 +253,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         ]);
 
         $this->expectException(ProviderUnreachableException::class);
-        (new OpenAiCompatibleChatClient($client, new CompletionBodyDecoder(), 'SimpleFeedReader/1.0'))
+        $this->clientUsing($client)
             ->complete($this->credentials(), 'm', $this->messages());
     }
 
@@ -291,7 +293,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         });
 
         $this->expectException(ProviderUnreachableException::class);
-        (new OpenAiCompatibleChatClient($client, new CompletionBodyDecoder(), 'SimpleFeedReader/1.0'))
+        $this->clientUsing($client)
             ->complete($this->credentials(), 'm', $this->messages());
     }
 }

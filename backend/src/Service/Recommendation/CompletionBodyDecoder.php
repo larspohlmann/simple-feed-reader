@@ -21,7 +21,7 @@ final readonly class CompletionBodyDecoder
             return $this->joinedStreamDeltas($body);
         }
 
-        return $this->blockingEnvelopeContent($body);
+        return $this->choiceContent($body, 'message');
     }
 
     private function joinedStreamDeltas(string $body): ?string
@@ -39,52 +39,30 @@ final readonly class CompletionBodyDecoder
                 continue;
             }
 
-            $event = json_decode($payload, true);
-            $content = \is_array($event) ? $this->deltaContent($event) : null;
+            $delta = $this->choiceContent($payload, 'delta');
 
-            if (\is_string($content)) {
-                $deltas[] = $content;
+            if (null !== $delta) {
+                $deltas[] = $delta;
             }
         }
 
         return [] === $deltas ? null : implode('', $deltas);
     }
 
-    /** @param array<mixed> $event */
-    private function deltaContent(array $event): mixed
+    /**
+     * Both shapes carry the answer at `choices[0].<key>.content` and diverge
+     * only in that one key: an SSE event names it `delta`, a whole envelope
+     * `message`. Every step is guarded because the provider is untrusted —
+     * any of them can be absent or the wrong type.
+     */
+    private function choiceContent(string $json, string $choiceKey): ?string
     {
-        $delta = $this->firstChoice($event)['delta'] ?? null;
-
-        return \is_array($delta) ? ($delta['content'] ?? null) : null;
-    }
-
-    private function blockingEnvelopeContent(string $body): ?string
-    {
-        $decoded = json_decode($body, true);
-
-        if (!\is_array($decoded)) {
-            return null;
-        }
-
-        $message = $this->firstChoice($decoded)['message'] ?? null;
-        $content = \is_array($message) ? ($message['content'] ?? null) : null;
+        $decoded = json_decode($json, true);
+        $choices = \is_array($decoded) ? ($decoded['choices'] ?? null) : null;
+        $firstChoice = \is_array($choices) ? ($choices[0] ?? null) : null;
+        $answer = \is_array($firstChoice) ? ($firstChoice[$choiceKey] ?? null) : null;
+        $content = \is_array($answer) ? ($answer['content'] ?? null) : null;
 
         return \is_string($content) ? $content : null;
-    }
-
-    /**
-     * Both shapes carry the answer under the same `choices[0]` object and
-     * diverge only one key deeper.
-     *
-     * @param array<mixed> $decoded
-     *
-     * @return array<mixed>|null
-     */
-    private function firstChoice(array $decoded): ?array
-    {
-        $choices = $decoded['choices'] ?? null;
-        $firstChoice = \is_array($choices) ? ($choices[0] ?? null) : null;
-
-        return \is_array($firstChoice) ? $firstChoice : null;
     }
 }
