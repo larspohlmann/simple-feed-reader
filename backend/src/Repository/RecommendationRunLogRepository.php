@@ -18,7 +18,7 @@ use Doctrine\Persistence\ManagerRegistry;
  *
  * @extends ServiceEntityRepository<RecommendationRunLog>
  */
-class RecommendationRunLogRepository extends ServiceEntityRepository
+final class RecommendationRunLogRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
