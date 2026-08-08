@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation;
 
+use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
@@ -13,6 +14,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationRunAdvancer;
@@ -127,6 +129,49 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         } finally {
             $lock->release();
         }
+    }
+
+    /**
+     * The #311 sweep handler may fail a run straight out of PENDING, which is
+     * why RecommendationRun::fail() accepts that status at all. The #308 poll
+     * path must NOT: the client has nothing to say to a user about a run that
+     * never got as far as freezing a candidate pool, and the next tick can
+     * still snapshot it once the account is configured again. This pins the
+     * one way a poll tick can meet a PENDING run and a missing configuration
+     * at the same time -- the exception reaches the caller and the run is
+     * left exactly as it was.
+     */
+    public function testAPollTickNeverFailsAPendingRunWhenTheConfigurationDisappears(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $this->entry('entry-configless', '2026-07-10T00:00:00Z');
+        $this->starter()->start($this->user);
+        $runId = $this->activeRun()->getId();
+        self::assertNotNull($runId);
+
+        $this->deleteAiSettings();
+
+        try {
+            $this->advancer()->advance($this->user);
+            self::fail('advance() must surface the missing configuration.');
+        } catch (AiNotConfiguredException) {
+            // Expected: the caller maps it, nothing records it on the run.
+        }
+
+        $this->em->clear();
+        $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
+        self::assertNotNull($persisted);
+        self::assertSame(RecommendationRun::STATUS_PENDING, $persisted->getStatus());
+        self::assertNull($persisted->getError());
+    }
+
+    private function deleteAiSettings(): void
+    {
+        $settings = $this->em->getRepository(AiProviderSettings::class)->findOneBy(['user' => $this->user]);
+        self::assertNotNull($settings);
+        $this->em->remove($settings);
+        $this->em->flush();
+        $this->em->clear();
     }
 
     /**

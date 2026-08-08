@@ -51,6 +51,17 @@ final class RecommendationRunRepository extends ServiceEntityRepository
     }
 
     /**
+     * How many runs one worker firing may tick. A firing's duration is the
+     * SUM over the runs it touches, and one run can spend a whole provider
+     * timeout, so an unbounded set turns a "ten-second" sweep into an
+     * hour-long one. Oldest-first ordering keeps a capped sweep fair: a run
+     * only leaves the set by completing or failing, so the head of the queue
+     * drains under a bounded number of firings and every later run reaches
+     * the window in turn -- first come, first served, and nobody starves.
+     */
+    private const int MAXIMUM_RUNS_PER_SWEEP = 10;
+
+    /**
      * Every run the worker sweep should tick this firing, oldest first so one
      * account's run never starves another's behind it.
      *
@@ -65,6 +76,7 @@ final class RecommendationRunRepository extends ServiceEntityRepository
                 RecommendationRun::STATUS_RUNNING,
             ])
             ->orderBy('r.id', 'ASC')
+            ->setMaxResults(self::MAXIMUM_RUNS_PER_SWEEP)
             ->getQuery()
             ->getResult();
 

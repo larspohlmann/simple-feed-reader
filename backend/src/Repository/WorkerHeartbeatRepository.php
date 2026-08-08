@@ -27,7 +27,7 @@ final class WorkerHeartbeatRepository extends ServiceEntityRepository
     {
         $heartbeat = $this->find($name);
 
-        if ($heartbeat === null) {
+        if (null === $heartbeat) {
             $heartbeat = new WorkerHeartbeat($name, $when);
             $this->getEntityManager()->persist($heartbeat);
         } else {
