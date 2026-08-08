@@ -28,6 +28,29 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertSame(480, $this->builder->descriptionLength(200000));
     }
 
+    /**
+     * The reserve scales with the batch, because the batch is what the model
+     * must answer about. A flat cap cannot be right for both: the default
+     * pool packs to 45 items, but `batchCount` lets an account ask for one
+     * batch of thousands, and a constant sized for the first silently
+     * truncates the second.
+     */
+    public function testTheAnswerReserveScalesWithTheItemsBeingAnswered(): void
+    {
+        self::assertSame(1800, $this->builder->answerTokenReserve(45));
+        self::assertSame(20000, $this->builder->answerTokenReserve(500));
+    }
+
+    /**
+     * Below the floor the per-item estimate under-counts: 40 tokens does not
+     * cover a single item plus the JSON envelope around it.
+     */
+    public function testTheAnswerReserveNeverFallsBelowItsFloor(): void
+    {
+        self::assertSame(1024, $this->builder->answerTokenReserve(1));
+        self::assertSame(1024, $this->builder->answerTokenReserve(0));
+    }
+
     public function testEverythingFitsInOneBatchWhenSmall(): void
     {
         $candidates = array_map(

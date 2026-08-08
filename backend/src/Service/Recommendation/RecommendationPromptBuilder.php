@@ -15,6 +15,7 @@ final class RecommendationPromptBuilder
     private const int CHARS_PER_TOKEN = 4;
     private const int FIXED_OVERHEAD_TOKENS = 1500;
     private const int TOKENS_PER_PICK = 40;
+    private const int MINIMUM_ANSWER_TOKENS = 1024;
     private const int MINIMUM_BATCH_SIZE = 10;
 
     /**
@@ -60,7 +61,7 @@ final class RecommendationPromptBuilder
         $cap = $this->batchCap(\count($candidates), $settings);
         // The reply scores one line per candidate, so its size is bounded by
         // the batch cap, not by the final list size.
-        $responseReserve = $cap * self::TOKENS_PER_PICK;
+        $responseReserve = $this->answerTokenReserve($cap);
         $budget = $settings->packing->contextWindow - self::FIXED_OVERHEAD_TOKENS - $responseReserve - $historyTokens;
 
         $batches = [];
@@ -163,6 +164,25 @@ final class RecommendationPromptBuilder
     /** The explicit batch-count override wins over the #308 size ceiling: it is
      *  an expert setting, and the token budget below still protects the context
      *  window. Null means automatic packing under MAXIMUM_BATCH_SIZE. */
+    /**
+     * How many answer tokens a reply over `$replyItemCount` items may need.
+     *
+     * One number, two consumers. packBatches() subtracts it from the context
+     * window so the prompt leaves the model room to answer; the provider call
+     * sends it as `max_tokens` so a model that stops answering and starts
+     * looping is cut off rather than billed until the wall clock expires.
+     * Deriving both from the same estimate is what keeps the second from
+     * truncating replies the first deliberately made room for.
+     *
+     * The floor covers the JSON envelope and the short replies where a
+     * per-item estimate under-counts: at one item, 40 tokens would not fit
+     * the punctuation around it, let alone the item.
+     */
+    public function answerTokenReserve(int $replyItemCount): int
+    {
+        return max(self::MINIMUM_ANSWER_TOKENS, $replyItemCount * self::TOKENS_PER_PICK);
+    }
+
     private function batchCap(int $candidateCount, EffectiveRecommendationSettings $settings): int
     {
         if (null === $settings->packing->batchCount) {
