@@ -173,4 +173,42 @@ describe('ForYouDebugPanelComponent', () => {
     expect(el.querySelector('.debug-panel__stream')!.textContent).toContain('partial…');
     expect(debugLogEntry).not.toHaveBeenCalled();
   });
+
+  it('replaces a cached mid-stream detail with the finished text once the poll settles the verdict', () => {
+    jest.useFakeTimers();
+    running.set(true);
+    debugLog.mockReturnValue(of({ entries: [STREAMING_ENTRY] }));
+    debugLogEntry.mockReturnValue(
+      of({ ...DETAIL, id: 3, verdict: null, responseText: 'partial…' }),
+    );
+    const f = mount();
+    const el = f.nativeElement as HTMLElement;
+
+    // Expand the response while the call is still streaming: the live
+    // branch renders `streamingText`, but ensureDetail() still fetches and
+    // caches a partial detail underneath it.
+    const toggleButtons = el.querySelectorAll('.debug-panel__toggle');
+    (toggleButtons[1] as HTMLButtonElement).click();
+    f.detectChanges();
+    expect(debugLogEntry).toHaveBeenCalledTimes(1);
+
+    // The call finishes: the next poll reports a settled verdict and the
+    // real final text.
+    debugLog.mockReturnValue(
+      of({
+        entries: [
+          { ...STREAMING_ENTRY, verdict: 'usable', streamingText: null, responseBytes: 11 },
+        ],
+      }),
+    );
+    debugLogEntry.mockReturnValue(
+      of({ ...DETAIL, id: 3, verdict: 'usable', responseText: 'final answer' }),
+    );
+    jest.advanceTimersByTime(2000);
+    f.detectChanges();
+
+    expect(debugLogEntry).toHaveBeenCalledTimes(2);
+    expect(el.querySelector('pre')!.textContent).toContain('final answer');
+    expect(el.querySelector('pre')!.textContent).not.toContain('partial…');
+  });
 });

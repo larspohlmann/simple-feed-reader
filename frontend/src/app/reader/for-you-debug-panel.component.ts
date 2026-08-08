@@ -8,6 +8,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoModule } from '@jsverse/transloco';
@@ -36,7 +37,10 @@ export class ForYouDebugPanelComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly entries = signal<DebugLogEntry[]>([]);
-  /** Fetched bodies by entry id; an id maps once, expanding is then local. */
+  /** Fetched bodies by entry id; an id maps once and expanding is then
+   *  local -- except a detail cached while its verdict was still null,
+   *  which the next poll evicts once the call settles (see
+   *  `refreshDetailAfterCompletion`). */
   readonly details = signal<Map<number, DebugLogDetail>>(new Map());
   readonly expandedRequests = signal<ReadonlySet<number>>(new Set());
   readonly expandedResponses = signal<ReadonlySet<number>>(new Set());
@@ -121,12 +125,47 @@ export class ForYouDebugPanelComponent implements OnInit {
       .debugLog()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (r) => this.entries.set(r.entries),
+        next: (r) => this.applyEntries(r.entries),
         error: () => {
           // The panel is best-effort diagnostics; a failed poll shows stale
           // rows rather than an error state of its own.
         },
       });
+  }
+
+  /** A detail cached while its call was still streaming holds a partial
+   *  response: the poll that later flips `verdict` from null to a real
+   *  value must not leave that partial text on display forever. Evicting
+   *  the stale cache entry and re-fetching (only when the row is actually
+   *  expanded) replaces it with the finished transcript.
+   *
+   *  The prior-state read is wrapped in `untracked()`: `fetch()` runs inside
+   *  the completion `effect`, and an untracked read of `entries()` keeps
+   *  that effect from re-triggering itself the instant this method calls
+   *  `entries.set()` below. */
+  private applyEntries(entries: DebugLogEntry[]): void {
+    const priorVerdictById = new Map(
+      untracked(this.entries).map((entry) => [entry.id, entry.verdict]),
+    );
+    this.entries.set(entries);
+
+    for (const entry of entries) {
+      if (priorVerdictById.get(entry.id) === null && entry.verdict !== null) {
+        this.refreshDetailAfterCompletion(entry.id);
+      }
+    }
+  }
+
+  private refreshDetailAfterCompletion(id: number): void {
+    if (!this.details().has(id)) return;
+
+    const next = new Map(this.details());
+    next.delete(id);
+    this.details.set(next);
+
+    if (this.expandedRequests().has(id) || this.expandedResponses().has(id)) {
+      this.ensureDetail(id);
+    }
   }
 
   private stopPolling(): void {
