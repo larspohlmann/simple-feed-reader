@@ -376,6 +376,19 @@ final class RecommendationRunAdvancer
      * way the exception is re-thrown so the controller still maps it to its
      * problem type and the caller still sees the error on this tick.
      *
+     * The generic \Throwable catch below exists only to settle the log row:
+     * begin() has already persisted it, and a verdict that stays null reads
+     * to the debug panel as "still streaming" forever (its one other
+     * producer, streamingTextForUser(), has no way to tell a genuinely
+     * abandoned call from a live one). credentials() -- decrypting the
+     * stored key -- runs inside this same try on purpose, because an
+     * unreadable key (ApiKeyUnreadableException, e.g. after a master-secret
+     * rotation) never produced a reply either; it is not classified as a
+     * transport failure and does not touch the ceiling, it just must not
+     * leave the row stuck. The exception is always re-thrown unchanged, so
+     * which exception reaches tick() -- and how the run ends -- is exactly
+     * as before.
+     *
      * @param list<array{role: string, content: string}> $messages
      */
     private function callProvider(
@@ -394,6 +407,10 @@ final class RecommendationRunAdvancer
         } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
             $recordedCall->abortAfterTransportFailure();
             $this->recordTransportFailure($run, $settings);
+
+            throw $e;
+        } catch (\Throwable $e) {
+            $recordedCall->abortAfterTransportFailure();
 
             throw $e;
         }

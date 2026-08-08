@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation;
 
+use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
@@ -15,6 +16,7 @@ use App\Entity\User;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
@@ -1017,6 +1019,40 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
+     * A verdict that stays null forever reads to the debug panel as "still
+     * streaming" (streamingTextForUser() has no way to tell an abandoned
+     * call from a live one) -- so an exception that escapes callProvider()
+     * before a reply exists must still settle the row it opened, even one
+     * credentials() itself raises before the provider is ever called.
+     */
+    public function testApiKeyUnreadableSettlesTheLogRowInsteadOfLeavingItStreamingForever(): void
+    {
+        $this->seedMultiBatchFixture();
+        $this->enableDebug();
+        $this->startAndSnapshot();
+
+        $keyDonor = (new UserFactory($this->em, $this->passwordHasher()))->create('key-donor@example.test');
+        $this->fixtures->seedReadyAiSettings($keyDonor);
+        $this->deleteAiSettings();
+        // The donor's key was sealed under the donor's own account id, so
+        // moving its settings row onto $this->user makes the stored
+        // ciphertext fail its integrity check the moment credentials() opens it.
+        $this->em->createQuery(
+            sprintf('UPDATE %s s SET s.user = :to WHERE s.user = :from', AiProviderSettings::class),
+        )->execute(['to' => $this->user, 'from' => $keyDonor]);
+        $this->em->clear();
+
+        try {
+            $this->advancer()->advance($this->user);
+            self::fail('Expected an ApiKeyUnreadableException.');
+        } catch (ApiKeyUnreadableException) {
+        }
+
+        $rows = $this->runLogs()->listForUser($this->user);
+        self::assertSame(['transport-failed'], array_column($rows, 'verdict'));
+    }
+
+    /**
      * @return list<RecommendationItem>
      */
     private function recommendationItems(RecommendationRun $run): array
@@ -1238,5 +1274,13 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $advancer = self::getContainer()->get(RecommendationRunAdvancer::class);
 
         return $advancer;
+    }
+
+    private function passwordHasher(): UserPasswordHasherInterface
+    {
+        /** @var UserPasswordHasherInterface $hasher */
+        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+
+        return $hasher;
     }
 }
