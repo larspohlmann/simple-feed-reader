@@ -244,6 +244,26 @@ export interface DebugLogEntry {
   /** Everything the provider sent, reasoning and framing included. */
   wireBytes: number;
   streamingText: string | null;
+  createdAt: string;
+  /** Null while the call is still streaming; set the moment it settles. */
+  finishedAt: string | null;
+  /** The transport exception's message, set only on a `transport-failed`
+   *  verdict -- null on every other row, including a completed run. */
+  errorDetail: string | null;
+}
+
+/** The latest for-you run, as the debug log's summary strip shows it: distinct
+ *  from the per-row `errorDetail` above, `error` here is the run's own
+ *  failure, not any one call's. Null when the user has never run. */
+export interface DebugLogRunSummary {
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  error: string | null;
+  attempts: number;
+  maxAttempts: number;
+  transportFailures: number;
+  maxTransportFailures: number;
+  createdAt: string;
+  completedAt: string | null;
 }
 
 /** The full request/response pair for one logged provider call. */

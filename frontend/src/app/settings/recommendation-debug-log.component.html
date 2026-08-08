@@ -3,76 +3,134 @@
     class="debug-panel"
     [label]="'settings.ai.recommendations.debugPanelTitle' | transloco"
   >
-    <ol class="debug-panel__list">
-      @for (entry of entries(); track entry.id) {
-        <li class="debug-panel__entry">
-          <div class="debug-panel__label">
-            @if (entry.phase === 'batch') {
-              <span>{{
-                'settings.ai.recommendations.debugBatch' | transloco: { n: entry.batchNumber }
-              }}</span>
-            } @else {
-              <span>{{ 'settings.ai.recommendations.debugDedup' | transloco }}</span>
-            }
-            @if (entry.attempt > 1) {
-              <span class="debug-panel__attempt">{{
-                'settings.ai.recommendations.debugAttempt' | transloco: { n: entry.attempt }
-              }}</span>
-            }
-            @if (entry.verdict; as verdict) {
-              <span class="debug-panel__verdict debug-panel__verdict--{{ verdict }}">{{
-                verdict
-              }}</span>
-            }
-          </div>
-          @if (entry.wireBytes > 0) {
-            @if (entry.responseBytes === 0) {
-              <p class="debug-panel__wire">
-                {{
-                  'settings.ai.recommendations.debugStreamedNoAnswer'
-                    | transloco: { kb: kb(entry.wireBytes) }
-                }}
-              </p>
-            } @else {
-              <p class="debug-panel__wire">
-                {{
-                  'settings.ai.recommendations.debugStreamed'
-                    | transloco: { kb: kb(entry.wireBytes) }
-                }}
-              </p>
-            }
-          }
-          <button type="button" class="debug-panel__toggle" (click)="toggleRequest(entry.id)">
-            {{
-              'settings.ai.recommendations.debugRequest' | transloco: { kb: kb(entry.requestBytes) }
-            }}
-          </button>
-          @if (expandedRequests().has(entry.id) && requestText(entry); as text) {
-            <div class="debug-panel__body">
-              <button type="button" (click)="copy(text)">
-                {{ 'settings.ai.recommendations.debugCopy' | transloco }}
+    @if (run(); as r) {
+      <div class="debug-panel__summary">
+        <span class="debug-panel__status debug-panel__status--{{ r.status }}">{{ r.status }}</span>
+        <span class="debug-panel__meta">
+          {{
+            'settings.ai.recommendations.debugRunSummary'
+              | transloco
+                : {
+                    a: r.attempts,
+                    am: r.maxAttempts,
+                    t: r.transportFailures,
+                    tm: r.maxTransportFailures,
+                  }
+          }}
+        </span>
+        <span class="debug-panel__meta debug-panel__timeline">
+          {{ time(r.createdAt) }} → {{ r.completedAt ? time(r.completedAt) : '…' }}
+        </span>
+        @if (r.error; as runError) {
+          <p class="debug-panel__run-error">{{ runError }}</p>
+        }
+      </div>
+    }
+
+    <div class="debug-panel__grid-wrap">
+      <ol class="debug-panel__list">
+        @for (entry of entries(); track entry.id) {
+          <li class="debug-panel__entry">
+            <div class="debug-panel__row">
+              <span class="debug-panel__time">{{ time(entry.createdAt) }}</span>
+              <span class="debug-panel__call">
+                @if (entry.phase === 'batch') {
+                  {{
+                    'settings.ai.recommendations.debugBatch' | transloco: { n: entry.batchNumber }
+                  }}
+                } @else {
+                  {{ 'settings.ai.recommendations.debugDedup' | transloco }}
+                }
+                @if (entry.attempt > 1) {
+                  <span class="debug-panel__attempt">{{
+                    'settings.ai.recommendations.debugAttempt' | transloco: { n: entry.attempt }
+                  }}</span>
+                }
+              </span>
+              @if (entry.verdict; as verdict) {
+                <span class="debug-panel__verdict debug-panel__verdict--{{ verdict }}">{{
+                  verdict
+                }}</span>
+              } @else {
+                <span class="debug-panel__verdict"></span>
+              }
+              <span class="debug-panel__sizes"
+                >{{ kb(entry.requestBytes) }}/{{ kb(entry.responseBytes) }} KB</span
+              >
+              <button
+                type="button"
+                class="debug-panel__expander"
+                [attr.aria-expanded]="isRowExpanded(entry.id)"
+                [attr.aria-label]="'settings.ai.recommendations.debugDetails' | transloco"
+                (click)="toggleRow(entry.id)"
+              >
+                {{ isRowExpanded(entry.id) ? '−' : '+' }}
               </button>
-              <pre>{{ text }}</pre>
             </div>
-          }
-          <button type="button" class="debug-panel__toggle" (click)="toggleResponse(entry.id)">
-            {{
-              'settings.ai.recommendations.debugResponse'
-                | transloco: { kb: kb(entry.responseBytes) }
-            }}
-          </button>
-          @if (entry.verdict === null && entry.streamingText !== null) {
-            <pre class="debug-panel__stream">{{ entry.streamingText }}</pre>
-          } @else if (expandedResponses().has(entry.id) && responseText(entry); as text) {
-            <div class="debug-panel__body">
-              <button type="button" (click)="copy(text)">
-                {{ 'settings.ai.recommendations.debugCopy' | transloco }}
-              </button>
-              <pre>{{ text }}</pre>
-            </div>
-          }
-        </li>
-      }
-    </ol>
+
+            @if (entry.wireBytes > 0) {
+              @if (entry.responseBytes === 0) {
+                <p class="debug-panel__wire">
+                  {{
+                    'settings.ai.recommendations.debugStreamedNoAnswer'
+                      | transloco: { kb: kb(entry.wireBytes) }
+                  }}
+                </p>
+              } @else {
+                <p class="debug-panel__wire">
+                  {{
+                    'settings.ai.recommendations.debugStreamed'
+                      | transloco: { kb: kb(entry.wireBytes) }
+                  }}
+                </p>
+              }
+            }
+
+            @if (entry.verdict === 'transport-failed' && entry.errorDetail; as errorDetail) {
+              <p class="debug-panel__error">{{ errorDetail }}</p>
+            }
+
+            @if (entry.verdict === null && entry.streamingText !== null) {
+              <pre class="debug-panel__stream">{{ entry.streamingText }}</pre>
+            }
+
+            @if (isRowExpanded(entry.id)) {
+              <div class="debug-panel__body">
+                @if (entry.finishedAt !== null) {
+                  <p class="debug-panel__duration">
+                    {{
+                      'settings.ai.recommendations.debugDuration'
+                        | transloco: { s: durationSeconds(entry) }
+                    }}
+                  </p>
+                }
+                @if (requestText(entry); as text) {
+                  <div class="debug-panel__section">
+                    <span class="debug-panel__section-label">{{
+                      'settings.ai.recommendations.debugRequest' | transloco
+                    }}</span>
+                    <button type="button" (click)="copy(text)">
+                      {{ 'settings.ai.recommendations.debugCopy' | transloco }}
+                    </button>
+                    <pre>{{ text }}</pre>
+                  </div>
+                }
+                @if (entry.verdict !== null && responseText(entry); as text) {
+                  <div class="debug-panel__section">
+                    <span class="debug-panel__section-label">{{
+                      'settings.ai.recommendations.debugResponse' | transloco
+                    }}</span>
+                    <button type="button" (click)="copy(text)">
+                      {{ 'settings.ai.recommendations.debugCopy' | transloco }}
+                    </button>
+                    <pre>{{ text }}</pre>
+                  </div>
+                }
+              </div>
+            }
+          </li>
+        }
+      </ol>
+    </div>
   </app-disclosure>
 }

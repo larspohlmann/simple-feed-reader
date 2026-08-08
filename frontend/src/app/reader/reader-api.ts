@@ -8,6 +8,7 @@ import { RefreshScope } from './query';
 import {
   DebugLogDetail,
   DebugLogEntry,
+  DebugLogRunSummary,
   EntriesPage,
   EntryDto,
   EntryQuery,
@@ -163,9 +164,10 @@ export class ReaderApi {
     return this.http.get<RecommendationRunReport>(`${this.base}/api/recommendations/runs/current`);
   }
 
-  /** The provider calls logged for the most recent for-you run, in call order. */
-  debugLog(): Observable<{ entries: DebugLogEntry[] }> {
-    return this.http.get<{ entries: DebugLogEntry[] }>(
+  /** The provider calls logged for the most recent for-you run, in call
+   *  order, plus that run's own summary -- null when the user has never run. */
+  debugLog(): Observable<{ run: DebugLogRunSummary | null; entries: DebugLogEntry[] }> {
+    return this.http.get<{ run: DebugLogRunSummary | null; entries: DebugLogEntry[] }>(
       `${this.base}/api/recommendations/runs/debug-log`,
     );
   }

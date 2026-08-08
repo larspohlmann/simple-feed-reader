@@ -13,8 +13,8 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoModule } from '@jsverse/transloco';
 import { ReaderApi } from '../reader/reader-api';
-import { bytesToKb } from '../reader/format';
-import { DebugLogDetail, DebugLogEntry } from '../reader/models';
+import { bytesToKb, formatTime } from '../reader/format';
+import { DebugLogDetail, DebugLogEntry, DebugLogRunSummary } from '../reader/models';
 import { RecommendationsService } from '../reader/recommendations.service';
 import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
 
@@ -44,6 +44,9 @@ export class RecommendationDebugLogComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly entries = signal<DebugLogEntry[]>([]);
+  /** The latest run's own summary; null when the user has never run. Drives
+   *  the panel's summary strip, distinct from any one row's `errorDetail`. */
+  readonly run = signal<DebugLogRunSummary | null>(null);
   /** Fetched bodies by entry id; an id maps once and expanding is then
    *  local -- except a detail cached while its verdict was still null,
    *  which the next poll evicts once the call settles (see
@@ -82,6 +85,19 @@ export class RecommendationDebugLogComponent implements OnInit {
     this.toggle(this.expandedResponses, id);
   }
 
+  /** The row grid's single expander: opens (or closes) both bodies together,
+   *  so one click reveals the full request/response pair. Built purely from
+   *  the two existing toggles -- their lazy-fetch and dedup behaviour is
+   *  untouched, this only drives both from one control. */
+  toggleRow(id: number): void {
+    this.toggleRequest(id);
+    this.toggleResponse(id);
+  }
+
+  isRowExpanded(id: number): boolean {
+    return this.expandedRequests().has(id);
+  }
+
   copy(text: string): void {
     void navigator.clipboard.writeText(text);
   }
@@ -97,6 +113,20 @@ export class RecommendationDebugLogComponent implements OnInit {
 
   kb(bytes: number): number {
     return bytesToKb(bytes);
+  }
+
+  time(iso: string): string {
+    return formatTime(iso);
+  }
+
+  /** Seconds a settled call took, or null while it is still streaming --
+   *  `finishedAt` is null then, and rendering a duration from a moving
+   *  target would show a nonsensical or negative figure. Clamped at 0 for
+   *  the same reason: a clock skew must never surface as a negative time. */
+  durationSeconds(entry: DebugLogEntry): number | null {
+    if (entry.finishedAt === null) return null;
+    const elapsedMs = new Date(entry.finishedAt).getTime() - new Date(entry.createdAt).getTime();
+    return Math.max(0, Math.round(elapsedMs / 1000));
   }
 
   private toggle(expanded: WritableSignal<ReadonlySet<number>>, id: number): void {
@@ -132,7 +162,10 @@ export class RecommendationDebugLogComponent implements OnInit {
       .debugLog()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (r) => this.applyEntries(r.entries),
+        next: (r) => {
+          this.run.set(r.run);
+          this.applyEntries(r.entries);
+        },
         error: () => {
           // The panel is best-effort diagnostics; a failed poll shows stale
           // rows rather than an error state of its own.

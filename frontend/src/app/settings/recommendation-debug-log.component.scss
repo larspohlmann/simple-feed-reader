@@ -1,14 +1,66 @@
 /* The disclosure chrome (the toggle line) lives in
    `shared/disclosure/disclosure.component.scss`. What's left here is this
-   panel's own layout: the margin that indents it under the debug switch, the
-   base font-size/color the entry rows inherit, and the bordered `--surface-0`
-   block each entry repeats -- a shape borrowed from the fixed-prompt
-   `<details>` in `recommendation-settings-card.component.scss`, `pre` in
-   `--text-muted` at `--fs-xs`. */
+   panel's own layout (#321 Task 12): a summary strip built from the latest
+   run, and the calls as an aligned grid -- `time | call | verdict | req/resp
+   KB | expander` -- rather than the loose #309 list. The bordered
+   `--surface-0` block each entry sits in, and the `pre` styling for a
+   fetched body, are the same shape the original `<details>` list used. */
 .debug-panel {
   margin: 0 var(--space-4) var(--space-3);
   font-size: var(--fs-sm);
   color: var(--text-secondary);
+
+  &__summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+    margin: var(--space-2) 0 0;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-0);
+  }
+
+  &__status {
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--surface-1);
+    color: var(--text-secondary);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+
+    &--completed {
+      background: var(--bg-success);
+      color: var(--success);
+    }
+
+    &--failed {
+      background: var(--bg-danger);
+      color: var(--danger);
+    }
+  }
+
+  &__meta {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+  }
+
+  &__timeline {
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__run-error {
+    flex-basis: 100%;
+    margin: 0;
+    color: var(--danger);
+    font-size: var(--fs-xs);
+  }
+
+  &__grid-wrap {
+    overflow-x: auto;
+  }
 
   &__list {
     display: flex;
@@ -16,6 +68,7 @@
     gap: var(--space-2);
     margin: var(--space-2) 0 0;
     padding: 0;
+    min-width: 28rem;
     list-style: none;
   }
 
@@ -26,18 +79,78 @@
     background: var(--surface-0);
   }
 
-  &__label {
+  &__row {
+    display: grid;
+    grid-template-columns: 3rem 1fr 5rem 5.5rem 1.75rem;
+    align-items: center;
+    column-gap: var(--space-2);
+    font-weight: 600;
+  }
+
+  &__time,
+  &__sizes {
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__time {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 400;
+  }
+
+  &__call {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-2);
-    font-weight: 600;
+    gap: var(--space-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__attempt {
     color: var(--text-muted);
     font-size: var(--fs-xs);
     font-weight: 400;
+  }
+
+  &__sizes {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 400;
+    text-align: right;
+  }
+
+  &__verdict {
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-pill);
+    background: var(--surface-1);
+    font-size: var(--fs-xs);
+    font-weight: 400;
+    text-align: center;
+
+    &--usable {
+      background: var(--bg-success);
+      color: var(--success);
+    }
+
+    &--unusable,
+    &--transport-failed {
+      background: var(--bg-danger);
+      color: var(--danger);
+    }
+  }
+
+  &__expander {
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--accent);
+    font-size: var(--fs-sm);
+    line-height: 1;
+    cursor: pointer;
+    aspect-ratio: 1;
   }
 
   // What the provider sent, as opposed to what it answered. A thinking model
@@ -49,39 +162,29 @@
     font-size: var(--fs-xs);
   }
 
-  &__verdict {
-    padding: 0 var(--space-1);
-    border-radius: var(--radius-sm);
+  &__error {
+    margin: var(--space-1) 0 0;
+    color: var(--danger);
     font-size: var(--fs-xs);
-    font-weight: 400;
-
-    &--usable {
-      color: var(--success);
-    }
-
-    &--unusable,
-    &--transport-failed {
-      color: var(--danger);
-    }
-  }
-
-  &__toggle {
-    display: block;
-    margin-top: var(--space-1);
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--accent);
-    font-size: var(--fs-xs);
-    cursor: pointer;
   }
 
   &__body {
     margin-top: var(--space-1);
+  }
+
+  &__duration {
+    margin: 0 0 var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__section {
+    margin-bottom: var(--space-1);
 
     button {
       display: block;
-      margin-bottom: var(--space-1);
+      margin: 0 0 var(--space-1);
       padding: 0;
       border: 0;
       background: none;
@@ -89,6 +192,13 @@
       font-size: var(--fs-xs);
       cursor: pointer;
     }
+  }
+
+  &__section-label {
+    display: block;
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 600;
   }
 
   &__stream {
