@@ -161,6 +161,34 @@ final class RecommendationCallRecorderTest extends DbTestCase
         self::assertSame(RecommendationRunLog::VERDICT_TRANSPORT_FAILED, $log->getVerdict());
     }
 
+    /**
+     * DBAL's Connection::update() silently drops the WHERE clause on an
+     * empty criteria array instead of raising — with a single row seeded,
+     * a scoped and an unscoped UPDATE are observationally identical. Every
+     * checkpoint/verdict write in RecordedCall must stay row-scoped in a
+     * multi-user table, so this seeds a second user's run and log row and
+     * proves they survive every write RecordedCall makes for the first
+     * user's call.
+     */
+    public function testUpdatesStayScopedToTheOwningRunAndLog(): void
+    {
+        $this->seedDebugSettings(true);
+
+        [$otherRunId, $otherLogId] = $this->seedOtherUsersRunAndLog();
+
+        $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
+        $this->clock->modify('+3 seconds');
+        $call->bodyGrew("data: {\"choices\":[{\"delta\":{\"content\":\"mine\"}}]}\n");
+        $call->finishUsable('final mine');
+
+        $abortCall = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 2, [], 'm');
+        $this->clock->modify('+3 seconds');
+        $abortCall->bodyGrew("data: {\"choices\":[{\"delta\":{\"content\":\"cut\"}}]}\n");
+        $abortCall->abortAfterTransportFailure();
+
+        $this->assertOtherUsersRowsUntouched($otherRunId, $otherLogId);
+    }
+
     public function testASecondBeginForTheSamePhaseCountsTheAttempt(): void
     {
         $this->seedDebugSettings(true);
@@ -169,6 +197,56 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
         $rows = $this->logs()->listForUser($this->user);
         self::assertSame([1, 2], array_column($rows, 'attempt'));
+    }
+
+    /**
+     * @return array{0: int, 1: int} the other user's run id and log id
+     */
+    private function seedOtherUsersRunAndLog(): array
+    {
+        /** @var UserPasswordHasherInterface $hasher */
+        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+        $otherUser = (new UserFactory($this->em, $hasher))->create('recorder-other@example.test');
+
+        $otherRun = new RecommendationRun($otherUser, new \DateTimeImmutable('2026-08-08T09:00:00Z'));
+        $this->em->persist($otherRun);
+        $otherLog = new RecommendationRunLog(
+            $otherRun,
+            RecommendationRunLog::PHASE_BATCH,
+            1,
+            1,
+            'other request',
+            new \DateTimeImmutable('2026-08-08T09:00:01Z'),
+        );
+        $this->em->persist($otherLog);
+        $this->em->flush();
+
+        $otherRunId = $otherRun->getId();
+        $otherLogId = $otherLog->getId();
+        self::assertNotNull($otherRunId);
+        self::assertNotNull($otherLogId);
+
+        $connection = $this->em->getConnection();
+        $connection->update('recommendation_run', ['streamed_chars' => 777], ['id' => $otherRunId]);
+        $connection->update(
+            'recommendation_run_log',
+            ['response_text' => 'other original text', 'verdict' => RecommendationRunLog::VERDICT_USABLE],
+            ['id' => $otherLogId],
+        );
+
+        return [$otherRunId, $otherLogId];
+    }
+
+    private function assertOtherUsersRowsUntouched(int $otherRunId, int $otherLogId): void
+    {
+        $this->em->clear();
+
+        $otherRun = $this->em->find(RecommendationRun::class, $otherRunId);
+        self::assertSame(777, $otherRun?->getStreamedChars());
+
+        $otherLog = $this->em->find(RecommendationRunLog::class, $otherLogId);
+        self::assertSame('other original text', $otherLog?->getResponseText());
+        self::assertSame(RecommendationRunLog::VERDICT_USABLE, $otherLog?->getVerdict());
     }
 
     private function seedDebugSettings(bool $enabled): void
