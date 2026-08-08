@@ -438,7 +438,14 @@
     "forYouStreamed": "{{ kb }} KB received",
     "forYouUnreachable": "Could not reach the recommendation service. Try again.",
     "forYouKeepOpen": "Keep the app open while this runs.",
-    "forYouBackground": "Runs in the background — you can close this tab."
+    "forYouBackground": "Runs in the background — you can close this tab.",
+    "debugPanelTitle": "Debug log",
+    "debugBatch": "Batch {{ n }}",
+    "debugDedup": "Dedup",
+    "debugAttempt": "attempt {{ n }}",
+    "debugRequest": "Request ({{ kb }} KB)",
+    "debugResponse": "Response ({{ kb }} KB)",
+    "debugCopy": "Copy"
   },
   "common": {
     "save": "Save",
