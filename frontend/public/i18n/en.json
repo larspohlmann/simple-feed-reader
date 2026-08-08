@@ -454,6 +454,8 @@
     "forYouRun": "Get recommendations",
     "forYouRunHint": "Ranks your unread posts and keeps the best.",
     "forYouProgress": "Ranking your feeds — {{done}} of {{total}}",
+    "forYouStop": "Stop",
+    "forYouStopping": "Stopping…",
     "forYouStreamed": "{{ kb }} KB received",
     "forYouUnreachable": "Could not reach the recommendation service. Try again.",
     "forYouKeepOpen": "Keep the app open while this runs.",

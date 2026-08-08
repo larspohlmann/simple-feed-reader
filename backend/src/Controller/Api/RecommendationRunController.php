@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Exception\AiKeyUnreadableApiException;
 use App\Exception\AiNotConfiguredApiException;
 use App\Exception\AiProviderApiException;
+use App\Exception\NoActiveRecommendationRunApiException;
 use App\Exception\RecommendationRunActiveApiException;
 use App\Http\RecommendationRunStatusJson;
 use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
@@ -16,9 +17,11 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\RateLimit\RateLimitGuard;
+use App\Service\Recommendation\Exception\NoActiveRecommendationRunException;
 use App\Service\Recommendation\Exception\RecommendationRunActiveException;
 use App\Service\Recommendation\RecommendationForYouSummaryProvider;
 use App\Service\Recommendation\RecommendationPollDriver;
+use App\Service\Recommendation\RecommendationRunCanceller;
 use App\Service\Recommendation\RecommendationRunPurger;
 use App\Service\Recommendation\RecommendationRunReport;
 use App\Service\Recommendation\RecommendationRunStarter;
@@ -43,6 +46,7 @@ final readonly class RecommendationRunController
         private RecommendationRunStarter $starter,
         private RecommendationPollDriver $pollDriver,
         private RecommendationRunPurger $purger,
+        private RecommendationRunCanceller $canceller,
         private RecommendationForYouSummaryProvider $forYouSummaries,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $aiRecommendationsLimiter,
@@ -88,6 +92,26 @@ final readonly class RecommendationRunController
         $report = $this->pollDriver->current($user);
 
         return new JsonResponse(RecommendationRunStatusJson::report($report, $this->forYouSummaries->forUser($user)));
+    }
+
+    /**
+     * Stops the active run. Carries no limiter: it only ever reduces work, and
+     * throttling the way out of a run that is spending money is the wrong way
+     * round.
+     */
+    #[Route('/stop', name: 'api_recommendations_stop', methods: ['POST'])]
+    public function stop(#[CurrentUser] User $user): JsonResponse
+    {
+        try {
+            $this->canceller->cancel($user);
+        } catch (NoActiveRecommendationRunException $e) {
+            throw new NoActiveRecommendationRunApiException($e);
+        }
+
+        return new JsonResponse(RecommendationRunStatusJson::report(
+            $this->pollDriver->current($user),
+            $this->forYouSummaries->forUser($user),
+        ));
     }
 
     #[Route('', name: 'api_recommendations_purge', methods: ['DELETE'])]

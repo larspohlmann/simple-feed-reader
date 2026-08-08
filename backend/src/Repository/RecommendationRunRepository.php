@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\AbstractQuery;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -44,6 +45,26 @@ final class RecommendationRunRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
 
         return $run;
+    }
+
+    /**
+     * The run's status as the database holds it right now, deliberately read
+     * as a scalar so the identity map cannot answer with the copy the caller
+     * is itself mutating. RecommendationRunAdvancer's cancellation checkpoint
+     * needs exactly that: after a provider call it must learn whether someone
+     * else stopped the run meanwhile, and a managed entity would simply hand
+     * back the stale in-memory status.
+     */
+    public function statusOf(int $runId): ?string
+    {
+        /** @var string|null $status */
+        $status = $this->createQueryBuilder('r')
+            ->select('r.status')
+            ->andWhere('r.id = :id')->setParameter('id', $runId)
+            ->getQuery()
+            ->getOneOrNullResult(AbstractQuery::HYDRATE_SINGLE_SCALAR);
+
+        return $status;
     }
 
     public function findLatestForUser(User $user): ?RecommendationRun

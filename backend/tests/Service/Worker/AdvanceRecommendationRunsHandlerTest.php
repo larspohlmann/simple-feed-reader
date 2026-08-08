@@ -20,6 +20,7 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\ChatCompletionClient;
 use App\Service\Recommendation\RecommendationCallRecorder;
+use App\Service\Recommendation\RecommendationCancellationCheckpoint;
 use App\Service\Recommendation\RecommendationCandidateLoader;
 use App\Service\Recommendation\RecommendationDuplicateParser;
 use App\Service\Recommendation\RecommendationHistoryLoader;
@@ -466,6 +467,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             self::getContainer()->get(RecommendationWinnerRanker::class),
             self::getContainer()->get(RecommendationDuplicateParser::class),
             self::getContainer()->get(RecommendationCallRecorder::class),
+            self::getContainer()->get(RecommendationCancellationCheckpoint::class),
         );
     }
 

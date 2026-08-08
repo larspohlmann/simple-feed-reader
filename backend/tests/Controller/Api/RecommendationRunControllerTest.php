@@ -633,4 +633,37 @@ final class RecommendationRunControllerTest extends WebTestCase
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
         self::assertSame('recommendation_run_active', $this->payload($client->getResponse())['type']);
     }
+
+    public function testStopEndsTheActiveRunAndFreesTheAccountToStartAnother(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers, $user] = $this->authWithReadyAi('run-stop-active@example.test');
+        $this->seedOneCandidateEntry($user);
+        $this->startRun($client, $headers);
+
+        $client->request('POST', '/api/recommendations/runs/stop', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('cancelled', $this->payload($client->getResponse())['status']);
+
+        // The point of the button: a stopped run must not keep the account
+        // locked out of starting a fresh one. Purge is the cheapest probe for
+        // that, because it is the endpoint that refuses while a run is active.
+        $client->request('DELETE', '/api/recommendations/runs', server: $headers);
+        self::assertResponseIsSuccessful();
+    }
+
+    public function testStopWithNothingRunningIsRejected(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers] = $this->auth('run-stop-idle@example.test');
+
+        $client->request('POST', '/api/recommendations/runs/stop', server: $headers);
+
+        self::assertResponseStatusCodeSame(409);
+        self::assertResponseHeaderSame('content-type', 'application/problem+json');
+        self::assertSame('no_active_recommendation_run', $this->payload($client->getResponse())['type']);
+    }
 }

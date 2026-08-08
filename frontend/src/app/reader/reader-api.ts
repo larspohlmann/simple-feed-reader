@@ -159,6 +159,16 @@ export class ReaderApi {
     );
   }
 
+  /** Stops the in-flight run at the user's request. Refuses with a 409 when
+   *  nothing is running. This does not cancel the provider call already in
+   *  flight -- that spend is committed -- it stops every call after it. */
+  stopRecommendations(): Observable<RecommendationRunReport> {
+    return this.http.post<RecommendationRunReport>(
+      `${this.base}/api/recommendations/runs/stop`,
+      {},
+    );
+  }
+
   /** The recommendation run in flight, if any -- used to resume a poll loop on boot. */
   currentRecommendations(): Observable<RecommendationRunReport> {
     return this.http.get<RecommendationRunReport>(`${this.base}/api/recommendations/runs/current`);

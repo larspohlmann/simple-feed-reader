@@ -213,6 +213,65 @@ describe('RecommendationsService', () => {
     expect(svc.failure()?.kind).toBe('http');
   });
 
+  describe('stopping a run', () => {
+    it('posts the stop, ends the run, and stays quiet about it', () => {
+      svc.start();
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs')
+        .flush(report({ status: 'running', batchesTotal: 3, batchesDone: 1 }));
+      const inFlight = ctrl.expectOne('https://api.test/api/recommendations/runs/tick');
+
+      svc.stop();
+      expect(svc.stopping()).toBe(true);
+
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs/stop')
+        .flush(report({ status: 'cancelled', batchesTotal: 3, batchesDone: 1 }));
+
+      expect(svc.running()).toBe(false);
+      expect(svc.stopping()).toBe(false);
+      // The user pressed the button; telling them it worked is noise, and a
+      // failure toast would be a lie about what happened.
+      expect(toast.show).not.toHaveBeenCalled();
+      expect(svc.failure()).toBeNull();
+
+      // The tick that was already in flight when they pressed stop still
+      // answers. It must not restart the loop -- that is the bug where the
+      // button appears to work and the run keeps going.
+      inFlight.flush(report({ status: 'cancelled', batchesTotal: 3, batchesDone: 1 }));
+      expect(svc.running()).toBe(false);
+      ctrl.verify();
+    });
+
+    it('keeps the run going when the stop request fails', () => {
+      svc.start();
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs')
+        .flush(report({ status: 'running', batchesTotal: 3, batchesDone: 1 }));
+      const inFlight = ctrl.expectOne('https://api.test/api/recommendations/runs/tick');
+
+      svc.stop();
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs/stop')
+        .flush({}, { status: 500, statusText: 'Server Error' });
+
+      // Claiming the run stopped when the server never agreed would strand
+      // the user with a run still spending their money.
+      expect(svc.stopping()).toBe(false);
+      expect(svc.running()).toBe(true);
+
+      inFlight.flush(report({ status: 'completed', batchesTotal: 3, batchesDone: 3 }));
+      expect(svc.running()).toBe(false);
+    });
+
+    it('does nothing when no run is going', () => {
+      svc.stop();
+
+      expect(svc.stopping()).toBe(false);
+      ctrl.verify();
+    });
+  });
+
   describe('rate limiting (429)', () => {
     const fail429Tick = (): void =>
       ctrl

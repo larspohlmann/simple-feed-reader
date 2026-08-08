@@ -27,6 +27,9 @@ class RecommendationRun
     public const string STATUS_COMPLETED = 'completed';
     public const string STATUS_FAILED = 'failed';
 
+    /** Terminal, and reached only by the user stopping the run themselves. */
+    public const string STATUS_CANCELLED = 'cancelled';
+
     /** First call plus the spec's two retries. */
     public const int MAX_ATTEMPTS = 3;
 
@@ -155,7 +158,7 @@ class RecommendationRun
 
     public function progress(): RecommendationRunProgress
     {
-        return RecommendationRunProgress::forBatchPlan($this->candidateBatches, $this->batchesDone);
+        return RecommendationRunProgress::forBatchPlan($this->candidateBatches, $this->batchesDone, $this->attempts);
     }
 
     /**
@@ -203,11 +206,6 @@ class RecommendationRun
         $this->lastInvalidReply = $reply;
     }
 
-    public function attemptsExhausted(): bool
-    {
-        return $this->attempts >= self::MAX_ATTEMPTS;
-    }
-
     /**
      * Records one provider call that never produced a reply -- a transport
      * failure, not an unusable one. Kept as its own counter, reset
@@ -249,8 +247,7 @@ class RecommendationRun
     {
         $this->guardStatus(self::STATUS_RUNNING, 'complete');
 
-        $this->status = self::STATUS_COMPLETED;
-        $this->completedAt = $when;
+        $this->terminate(self::STATUS_COMPLETED, $when);
         $this->batchesDone = $this->progress()->batchesTotal ?? $this->batchesDone;
         $this->transportFailures = 0;
     }
@@ -265,9 +262,27 @@ class RecommendationRun
     {
         $this->guardStatusOneOf([self::STATUS_PENDING, self::STATUS_RUNNING], 'fail');
 
-        $this->status = self::STATUS_FAILED;
+        $this->terminate(self::STATUS_FAILED, $when);
         $this->error = $error;
-        $this->completedAt = $when;
+    }
+
+    /**
+     * Stopping is the user's own decision, so it is a terminal state of its
+     * own rather than a failure: nothing went wrong, and the debug surfaces
+     * must not read as though something did. Reachable from PENDING as well
+     * as RUNNING for the same reason fail() is — a run stopped before its
+     * first snapshot must still end somewhere terminal.
+     *
+     * A tick already inside a provider call cannot be interrupted, so this
+     * transition is only half the cancellation: RecommendationRunAdvancer
+     * re-reads the status after each call and throws its result away rather
+     * than flushing it over this one.
+     */
+    public function cancel(\DateTimeImmutable $when): void
+    {
+        $this->guardStatusOneOf([self::STATUS_PENDING, self::STATUS_RUNNING], 'cancel');
+
+        $this->terminate(self::STATUS_CANCELLED, $when);
     }
 
     public function resume(): void
@@ -279,6 +294,18 @@ class RecommendationRun
         $this->attempts = 0;
         $this->transportFailures = 0;
         $this->lastInvalidReply = null;
+    }
+
+    /**
+     * What every ending has in common. Extracted at the third one: completing,
+     * failing and cancelling had each grown their own copy of "set the status,
+     * stamp the time", and a fourth ending that forgot the stamp would leave a
+     * finished run looking unfinished to every query that reads completedAt.
+     */
+    private function terminate(string $status, \DateTimeImmutable $when): void
+    {
+        $this->status = $status;
+        $this->completedAt = $when;
     }
 
     private function guardStatus(string $requiredStatus, string $transition): void

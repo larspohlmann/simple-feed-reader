@@ -747,7 +747,7 @@ describe('ReaderShellComponent', () => {
     );
   });
 
-  it('shows determinate progress while a for-you run is in flight, and no button', () => {
+  it('swaps the start button for progress and a stop button while a run is in flight', () => {
     const f = boot();
     qp.next(convertToParamMap({ view: 'for-you' }));
     f.detectChanges();
@@ -769,9 +769,43 @@ describe('ReaderShellComponent', () => {
     });
     f.detectChanges();
 
-    expect(f.nativeElement.querySelector('.for-you-top app-button')).toBeNull();
+    // The start button must be gone -- starting a second run over a live one
+    // is exactly what the block exists to prevent -- but the run must remain
+    // stoppable, which is the whole point of having a button here at all.
+    const buttons = [...f.nativeElement.querySelectorAll('.for-you-top app-button')];
+    expect(buttons.map((b: HTMLElement) => b.textContent!.trim())).toEqual(['Stop']);
+
     const status = f.nativeElement.querySelector('.for-you-top [role="status"]') as HTMLElement;
     expect(status.textContent).toContain('1 of 3');
+  });
+
+  it('stops the run when the stop button is clicked', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ view: 'for-you' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    const recs = TestBed.inject(RecommendationsService);
+    const stop = jest.spyOn(recs, 'stop');
+    recs.running.set(true);
+    recs.report.set({
+      status: 'running',
+      batchesTotal: 3,
+      batchesDone: 1,
+      error: null,
+      background: false,
+      streamedChars: 0,
+      forYou: { itemCount: 0, generatedAt: null },
+    });
+    f.detectChanges();
+
+    const button = f.nativeElement.querySelector('.for-you-top app-button button') as HTMLElement;
+    button.click();
+
+    expect(stop).toHaveBeenCalledTimes(1);
   });
 
   it('opens the info dialog from the info button shown while a run is in flight', () => {
