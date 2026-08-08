@@ -155,6 +155,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             reason: $item->getReason(),
             runId: $item->getRun()->getId() ?? 0,
             position: $item->getPosition(),
+            score: $item->getScore(),
         );
     }
 

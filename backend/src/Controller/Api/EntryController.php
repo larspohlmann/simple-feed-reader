@@ -78,7 +78,11 @@ final readonly class EntryController
         if ($view === 'for-you') {
             $page = $this->recommendationFeedPager->page((int) $user->getId(), $cursor, $limit);
 
-            return new JsonResponse(RecommendationFeedJson::page($page->rows, $page->nextCursor));
+            return new JsonResponse(
+                $this->recommendationFeedPager->debugEnabledFor($user)
+                    ? RecommendationFeedJson::pageWithScores($page->rows, $page->nextCursor)
+                    : RecommendationFeedJson::page($page->rows, $page->nextCursor),
+            );
         }
 
         $decodedCursor = null;

@@ -575,6 +575,10 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             static fn (RecommendationItem $item): string => $item->getReason(),
             $items,
         ));
+        self::assertSame([90, 55], array_map(
+            static fn (RecommendationItem $item): ?int => $item->getScore(),
+            $items,
+        ));
     }
 
     public function testDedupTickDropsNamedDuplicatesAndFinalizesInScoreOrder(): void

@@ -16,6 +16,7 @@ final readonly class RecommendationFeedRow
         public string $reason,
         public int $runId,
         public int $position,
+        public ?int $score,
     ) {
     }
 }

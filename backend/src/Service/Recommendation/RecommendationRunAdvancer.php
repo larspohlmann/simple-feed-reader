@@ -544,7 +544,9 @@ final class RecommendationRunAdvancer
             $position++;
             $entryReference = $this->entityManager->getReference(Entry::class, $pick['id'])
                 ?? throw new \LogicException('Entry ' . $pick['id'] . ' was confirmed to exist a moment ago.');
-            $this->entityManager->persist(new RecommendationItem($run, $entryReference, $position, $pick['reason']));
+            $this->entityManager->persist(
+                new RecommendationItem($run, $entryReference, $position, $pick['reason'], $pick['score']),
+            );
         }
 
         $run->complete($this->clock->now());

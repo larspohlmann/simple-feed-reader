@@ -8,10 +8,14 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
+use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\RecommendationItemRepository;
+use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationFeedPager;
+use App\Service\Recommendation\RecommendationSettingsResolver;
+use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Tests\DbTestCase;
 
 final class RecommendationFeedPagerTest extends DbTestCase
@@ -57,11 +61,35 @@ final class RecommendationFeedPagerTest extends DbTestCase
         self::assertCount(1, $page->rows);
     }
 
+    public function testDebugEnabledForReflectsTheUsersSetting(): void
+    {
+        self::assertFalse($this->pager()->debugEnabledFor($this->user));
+
+        $settings = new RecommendationSettings($this->user);
+        $settings->update(new RecommendationSettingsValues(
+            guidancePrompt: null,
+            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
+            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
+            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
+            candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+            contextWindow: null,
+            debugEnabled: true,
+        ));
+        $this->em->persist($settings);
+        $this->em->flush();
+
+        self::assertTrue($this->pager()->debugEnabledFor($this->user));
+    }
+
     private function pager(): RecommendationFeedPager
     {
         $repository = $this->em->getRepository(RecommendationItem::class);
         self::assertInstanceOf(RecommendationItemRepository::class, $repository);
 
-        return new RecommendationFeedPager($repository);
+        $settings = self::getContainer()->get(RecommendationSettingsResolver::class);
+        self::assertInstanceOf(RecommendationSettingsResolver::class, $settings);
+
+        return new RecommendationFeedPager($repository, $settings);
     }
 }

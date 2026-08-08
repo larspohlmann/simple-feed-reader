@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Http;
+
+use App\Entity\Entry;
+use App\Entity\Feed;
+use App\Http\RecommendationFeedJson;
+use App\Repository\EntryListRow;
+use App\Repository\RecommendationFeedRow;
+use PHPUnit\Framework\TestCase;
+
+final class RecommendationFeedJsonTest extends TestCase
+{
+    public function testPageOmitsTheRecommendationScore(): void
+    {
+        $result = RecommendationFeedJson::page([$this->row()], null);
+
+        self::assertArrayNotHasKey('recommendationScore', $result['entries'][0]);
+    }
+
+    public function testPageWithScoresIncludesTheRecommendationScore(): void
+    {
+        $result = RecommendationFeedJson::pageWithScores([$this->row()], null);
+
+        self::assertSame(77, $result['entries'][0]['recommendationScore']);
+    }
+
+    public function testPageWithScoresCarriesANullScoreForRowsWrittenBeforeTheColumnExisted(): void
+    {
+        $result = RecommendationFeedJson::pageWithScores([$this->row(null)], null);
+
+        self::assertArrayHasKey('recommendationScore', $result['entries'][0]);
+        self::assertNull($result['entries'][0]['recommendationScore']);
+    }
+
+    private function row(?int $score = 77): RecommendationFeedRow
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+        $entry = new Entry(
+            $feed,
+            'g1',
+            'https://example.com/1',
+            'Post 1',
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+        );
+
+        $listRow = new EntryListRow(
+            entry: $entry,
+            subscriptionId: 1,
+            subscriptionTitle: 'Seeded',
+            isRead: false,
+            isFavorite: false,
+            isKept: false,
+            isViewed: false,
+            markedReadUntil: null,
+        );
+
+        return new RecommendationFeedRow(
+            row: $listRow,
+            reason: 'Matches your interest in g1',
+            runId: 1,
+            position: 1,
+            score: $score,
+        );
+    }
+}
