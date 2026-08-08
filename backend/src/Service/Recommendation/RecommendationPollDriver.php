@@ -36,10 +36,6 @@ final readonly class RecommendationPollDriver
 
         $report = $this->advancer->advance($user);
 
-        if (RecommendationRunReport::STATUS_BUSY !== $report->status) {
-            return $report;
-        }
-
         // Busy is not a failure and never was: it means the per-user lock is
         // held, so somebody else -- a worker whose heartbeat has not landed
         // yet, another tab, a CLI run -- is advancing this very run right
@@ -47,7 +43,9 @@ final readonly class RecommendationPollDriver
         // healthy run (#311 final review, Critical 2). The honest answer is
         // where the run actually stands, flagged as somebody else's work so
         // the client keeps watching instead of driving.
-        return $this->latestReport($user)->inBackground();
+        return RecommendationRunReport::STATUS_BUSY === $report->status
+            ? $this->latestReport($user)->inBackground()
+            : $report;
     }
 
     public function current(User $user): RecommendationRunReport

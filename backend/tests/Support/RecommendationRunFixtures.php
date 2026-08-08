@@ -39,6 +39,21 @@ final readonly class RecommendationRunFixtures
         $this->em->flush();
     }
 
+    /**
+     * Simulates the account losing its AI configuration mid-run: both
+     * RecommendationRunAdvancerTest and AdvanceRecommendationRunsHandlerTest
+     * drive that race, and both need the row gone and the identity map clear
+     * before the next tick sees it.
+     */
+    public function deleteAiSettings(User $user): void
+    {
+        $settings = $this->em->getRepository(AiProviderSettings::class)->findOneBy(['user' => $user])
+            ?? throw new \LogicException('Expected AI settings to exist for this user.');
+        $this->em->remove($settings);
+        $this->em->flush();
+        $this->em->clear();
+    }
+
     public function entry(Feed $feed, string $guid, string $published): Entry
     {
         $entry = new Entry(

@@ -481,11 +481,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 
     private function deleteAiSettingsFor(User $user): void
     {
-        $settings = $this->em->getRepository(AiProviderSettings::class)->findOneBy(['user' => $user]);
-        self::assertNotNull($settings);
-        $this->em->remove($settings);
-        $this->em->flush();
-        $this->em->clear();
+        $this->fixtures->deleteAiSettings($user);
     }
 
     private function moveAiSettingsRow(User $from, User $to): void

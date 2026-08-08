@@ -14,6 +14,18 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class RecommendationRunRepository extends ServiceEntityRepository
 {
+    /**
+     * What "active" means for a recommendation run, in one place: neither
+     * query below may drift from the other about which statuses still need
+     * ticking.
+     *
+     * @var list<string>
+     */
+    private const array ACTIVE_STATUSES = [
+        RecommendationRun::STATUS_PENDING,
+        RecommendationRun::STATUS_RUNNING,
+    ];
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, RecommendationRun::class);
@@ -27,10 +39,7 @@ final class RecommendationRunRepository extends ServiceEntityRepository
         /** @var RecommendationRun|null $run */
         $run = $this->createQueryBuilder('r')
             ->andWhere('r.user = :user')->setParameter('user', $user)
-            ->andWhere('r.status IN (:active)')->setParameter('active', [
-                RecommendationRun::STATUS_PENDING,
-                RecommendationRun::STATUS_RUNNING,
-            ])
+            ->andWhere('r.status IN (:active)')->setParameter('active', self::ACTIVE_STATUSES)
             ->getQuery()
             ->getOneOrNullResult();
 
@@ -71,10 +80,7 @@ final class RecommendationRunRepository extends ServiceEntityRepository
     {
         /** @var list<RecommendationRun> $runs */
         $runs = $this->createQueryBuilder('r')
-            ->andWhere('r.status IN (:active)')->setParameter('active', [
-                RecommendationRun::STATUS_PENDING,
-                RecommendationRun::STATUS_RUNNING,
-            ])
+            ->andWhere('r.status IN (:active)')->setParameter('active', self::ACTIVE_STATUSES)
             ->orderBy('r.id', 'ASC')
             ->setMaxResults(self::MAXIMUM_RUNS_PER_SWEEP)
             ->getQuery()

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation;
 
-use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
@@ -170,11 +169,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
     private function deleteAiSettings(): void
     {
-        $settings = $this->em->getRepository(AiProviderSettings::class)->findOneBy(['user' => $this->user]);
-        self::assertNotNull($settings);
-        $this->em->remove($settings);
-        $this->em->flush();
-        $this->em->clear();
+        $this->fixtures->deleteAiSettings($this->user);
     }
 
     /**

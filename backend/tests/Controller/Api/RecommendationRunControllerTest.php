@@ -17,6 +17,7 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Worker\WorkerPresence;
+use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -75,20 +76,17 @@ final class RecommendationRunControllerTest extends WebTestCase
 
     private function seedReadyAiSettings(User $user): void
     {
+        $this->fixtures()->seedReadyAiSettings($user);
+    }
+
+    private function fixtures(): RecommendationRunFixtures
+    {
         $em = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $em);
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         self::assertInstanceOf(ApiKeyCipher::class, $cipher);
 
-        $userId = $user->getId();
-        self::assertNotNull($userId);
-        $sealed = $cipher->seal($userId, 'sk-throwaway1234');
-        $now = new \DateTimeImmutable('2026-08-07 09:00:00');
-
-        $settings = new AiProviderSettings($user, 'https://api.example.test/v1', $sealed, '1234', $now);
-        $em->persist($settings);
-        $settings->chooseModel('m', $now, 32768);
-        $em->flush();
+        return new RecommendationRunFixtures($em, $cipher);
     }
 
     /**
