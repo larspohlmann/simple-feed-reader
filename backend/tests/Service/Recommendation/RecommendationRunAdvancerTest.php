@@ -34,6 +34,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 final class RecommendationRunAdvancerTest extends DbTestCase
 {
     private const int MULTI_BATCH_ENTRY_COUNT = 20;
+    private const int SINGLE_BATCH_ENTRY_COUNT = 5;
     private const int MULTI_BATCH_CONTEXT_WINDOW = 2500;
 
     private User $user;
@@ -664,6 +665,86 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame(8, substr_count($dedupUserMessage, "\n- ["));
         self::assertSame(8, $this->lineCountForBatch($dedupUserMessage, $secondBatch));
         self::assertSame(0, $this->lineCountForBatch($dedupUserMessage, $firstBatch));
+
+        // The dedup call named no duplicates, so the cut to the picks limit
+        // is the only thing that can bring those 8 survivors down to 4.
+        $this->em->clear();
+        self::assertCount(4, $this->recommendationItems($run));
+    }
+
+    /**
+     * A dedup reply may legally name every id it was shown -- the duplicate
+     * parser has no reason to call that unusable. The best-ranked entry
+     * cannot duplicate a better-ranked one, though, so it survives and the
+     * run still completes with a non-empty list instead of silently writing
+     * zero recommendations.
+     */
+    public function testADedupReplyNamingEveryPooledIdStillKeepsTheTopRankedEntry(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startAndSnapshot();
+        $firstBatch = $run->getCandidateBatches()[0];
+        $secondBatch = $run->getCandidateBatches()[1];
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 60, 'reason' => 'weaker']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $secondBatch[0], 'score' => 95, 'reason' => 'best of all']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'duplicates' => [$firstBatch[0], $secondBatch[0]],
+        ], \JSON_THROW_ON_ERROR));
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame('completed', $report->status);
+        self::assertNull($report->error);
+
+        $this->em->clear();
+        $items = $this->recommendationItems($run);
+        self::assertCount(1, $items);
+        self::assertSame($secondBatch[0], $this->entryIdOf($items[0]));
+        self::assertSame('best of all', $items[0]->getReason());
+    }
+
+    /**
+     * The batch call is no longer capped at the picks limit -- it scores
+     * every candidate it is shown -- so the single-batch ending is the only
+     * place that cuts the ranked pool down to the size the reader asked for.
+     */
+    public function testSingleBatchRunTruncatesTheRankedPoolToThePicksLimit(): void
+    {
+        $this->seedSingleBatchFixture(picksLimit: 2);
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user);
+        $run = $this->activeRun();
+        self::assertSame(1, $run->progress()->batchesTotal);
+        $batch = $run->getCandidateBatches()[0];
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [
+                ['id' => $batch[0], 'score' => 30, 'reason' => 'third'],
+                ['id' => $batch[1], 'score' => 70, 'reason' => 'second'],
+                ['id' => $batch[2], 'score' => 95, 'reason' => 'first'],
+                ['id' => $batch[3], 'score' => 10, 'reason' => 'fourth'],
+            ],
+        ], \JSON_THROW_ON_ERROR));
+
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame('completed', $report->status);
+
+        $this->em->clear();
+        $items = $this->recommendationItems($run);
+        self::assertCount(2, $items);
+        self::assertSame([$batch[2], $batch[1]], array_map(
+            fn (RecommendationItem $item): int => $this->entryIdOf($item),
+            $items,
+        ));
     }
 
     public function testThreeUnusableDedupRepliesCompleteTheRunUndeduped(): void
@@ -794,19 +875,19 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
     /**
      * candidatePoolSize 20 with a small context window forces the packer to
-     * split into two batches of 10 (pinned by each test right after its own
-     * snapshot tick, via batchesTotal === 3: 2 batches + the dedup slot) so a
-     * future change to the packing maths fails loudly here instead of
-     * silently making these tests single-batch.
+     * split into two batches of 10. Every test that uses this fixture pins
+     * that split right after its own snapshot tick — through
+     * startAndSnapshot(), or with its own assertion on getCandidateBatches()
+     * — so a future change to the packing maths fails loudly there instead
+     * of silently making these tests single-batch.
      */
     private function seedMultiBatchFixture(
         int $picksLimit = EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
     ): void {
-        $entryCount = self::MULTI_BATCH_ENTRY_COUNT;
         $this->seedReadyAiSettings($this->user);
 
         $summary = str_repeat('Lorem ipsum dolor sit amet consectetur adipiscing elit. ', 5);
-        for ($i = 0; $i < $entryCount; $i++) {
+        for ($i = 0; $i < self::MULTI_BATCH_ENTRY_COUNT; $i++) {
             $entry = $this->entry(
                 sprintf('entry-%02d', $i),
                 sprintf('2026-07-10T%02d:%02d:00Z', intdiv($i, 60), $i % 60),
@@ -815,13 +896,35 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         }
         $this->em->flush();
 
+        $this->persistSettings(self::MULTI_BATCH_ENTRY_COUNT, $picksLimit);
+    }
+
+    /**
+     * Five candidates always pack into one batch — the packer only splits
+     * once a batch holds MINIMUM_BATCH_SIZE (10) — so this fixture drives
+     * the single-batch ending regardless of the context window.
+     */
+    private function seedSingleBatchFixture(int $picksLimit): void
+    {
+        $this->seedReadyAiSettings($this->user);
+
+        for ($i = 0; $i < self::SINGLE_BATCH_ENTRY_COUNT; $i++) {
+            $this->entry('entry-' . $i, sprintf('2026-07-%02dT00:00:00Z', 10 + $i));
+        }
+        $this->em->flush();
+
+        $this->persistSettings(self::SINGLE_BATCH_ENTRY_COUNT, $picksLimit);
+    }
+
+    private function persistSettings(int $candidatePoolSize, int $picksLimit): void
+    {
         $settings = new RecommendationSettings($this->user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: null,
             favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
             keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
             viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: $entryCount,
+            candidatePoolSize: $candidatePoolSize,
             picksLimit: $picksLimit,
             contextWindow: self::MULTI_BATCH_CONTEXT_WINDOW,
             debugEnabled: false,

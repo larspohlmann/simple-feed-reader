@@ -303,19 +303,26 @@ final class RecommendationRunAdvancer
      * unchecked duplicates. A final list shorter than the picks limit is the
      * accepted cost.
      *
-     * @param list<array{id: int, score: int, reason: string}> $pool
-     * @param list<int>                                        $duplicateIds
+     * The best-ranked entry is exempt from the filter because it cannot, by
+     * definition, duplicate a better-ranked entry. Without that exemption a
+     * reply naming every id it was shown -- which the duplicate parser
+     * rightly reads as usable -- would complete the run with an empty list
+     * and no error.
+     *
+     * @param non-empty-list<array{id: int, score: int, reason: string}> $pool
+     * @param list<int>                                                  $duplicateIds
      *
      * @return list<array{id: int, score: int, reason: string}>
      */
     private function withoutDuplicates(array $pool, array $duplicateIds, int $picksLimit): array
     {
+        $bestRanked = $pool[0];
         $survivors = array_values(array_filter(
-            $pool,
+            \array_slice($pool, 1),
             static fn (array $winner): bool => !\in_array($winner['id'], $duplicateIds, true),
         ));
 
-        return \array_slice($survivors, 0, $picksLimit);
+        return \array_slice([$bestRanked, ...$survivors], 0, $picksLimit);
     }
 
     /**
