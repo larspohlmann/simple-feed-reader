@@ -5,48 +5,23 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 /**
- * Turns one accumulated /chat/completions response body into the assistant
- * content, whichever shape the provider chose: the SSE transcript a
- * `stream: true` request produces, or the blocking JSON envelope from a
- * provider that ignores the flag. Null means the body carried no completion.
+ * Knows where a /chat/completions answer sits inside the provider's JSON,
+ * in either of the two shapes: the whole envelope a blocking request returns,
+ * or one event of the SSE stream a `stream: true` request produces.
+ *
+ * Framing is not this class's business — CompletionStreamReader owns that and
+ * hands single payloads here. Null means the JSON carried no content.
  */
 final readonly class CompletionBodyDecoder
 {
-    public function assistantContent(string $body): ?string
+    public function envelopeContent(string $body): ?string
     {
-        // A raw newline cannot occur inside a JSON string (it must be escaped),
-        // so a line-initial "data:" cannot appear in a blocking envelope: this
-        // detection cannot misread one shape as the other.
-        if (1 === preg_match('/^data:/m', $body)) {
-            return $this->joinedStreamDeltas($body);
-        }
-
         return $this->choiceContent($body, 'message');
     }
 
-    private function joinedStreamDeltas(string $body): ?string
+    public function deltaContent(string $payload): ?string
     {
-        $deltas = [];
-
-        foreach (preg_split('/\r?\n/', $body) ?: [] as $line) {
-            if (!str_starts_with($line, 'data:')) {
-                continue;
-            }
-
-            $payload = trim(substr($line, \strlen('data:')));
-
-            if ('' === $payload || '[DONE]' === $payload) {
-                continue;
-            }
-
-            $delta = $this->choiceContent($payload, 'delta');
-
-            if (null !== $delta) {
-                $deltas[] = $delta;
-            }
-        }
-
-        return [] === $deltas ? null : implode('', $deltas);
+        return $this->choiceContent($payload, 'delta');
     }
 
     /**

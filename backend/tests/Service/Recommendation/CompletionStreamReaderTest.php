@@ -1,0 +1,235 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Recommendation;
+
+use App\Service\Recommendation\CompletionBodyDecoder;
+use App\Service\Recommendation\CompletionStreamReader;
+use PHPUnit\Framework\TestCase;
+
+final class CompletionStreamReaderTest extends TestCase
+{
+    private function reader(): CompletionStreamReader
+    {
+        return new CompletionStreamReader(new CompletionBodyDecoder());
+    }
+
+    /**
+     * One content-carrying SSE event. The framing is spelled out here because
+     * it is what the reader parses; the payload is encoded rather than typed
+     * by hand, so a test whose content contains quotes cannot be defeated by
+     * an escaping slip in the fixture.
+     */
+    private function contentEvent(string $content): string
+    {
+        $event = ['choices' => [['delta' => ['content' => $content]]]];
+
+        return 'data: ' . json_encode($event, \JSON_THROW_ON_ERROR) . "\n\n";
+    }
+
+    private function reasoningEvent(string $reasoning): string
+    {
+        $event = ['choices' => [['delta' => ['reasoning' => $reasoning]]]];
+
+        return 'data: ' . json_encode($event, \JSON_THROW_ON_ERROR) . "\n\n";
+    }
+
+    public function testJoinsTheContentDeltasOfAStreamedAnswer(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume('data: {"choices":[{"delta":{"role":"assistant"}}]}' . "\n\n");
+        $reader->consume($this->contentEvent('{"recommend'));
+        $reader->consume($this->contentEvent('ations":[]}'));
+        $reader->consume('data: [DONE]' . "\n\n");
+
+        self::assertSame('{"recommendations":[]}', $reader->assistantContent());
+    }
+
+    /**
+     * The point of #320. Reasoning deltas carry no content, so the answer
+     * stays empty while the wire count climbs — and, decisively, the reader
+     * retains none of them. Without this, a thinking model's transcript sat
+     * in memory under the answer's cap and killed the call.
+     */
+    public function testReasoningCostsWireBytesButIsNotRetained(): void
+    {
+        $reader = $this->reader();
+        $reasoning = $this->reasoningEvent(str_repeat('thinking. ', 5_000));
+
+        $reader->consume($reasoning);
+
+        self::assertNull($reader->assistantContent());
+        self::assertSame(\strlen($reasoning), $reader->wireBytes());
+        self::assertSame(0, $reader->retainedBytes());
+    }
+
+    /**
+     * Retained bytes must track the answer, not the traffic: it is the number
+     * the client caps, so if reasoning leaked into it the cap would fire on
+     * a healthy call again.
+     */
+    public function testRetainedBytesTrackTheAnswerNotTheWire(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume($this->reasoningEvent(str_repeat('x', 10_000)));
+        $reader->consume($this->contentEvent('four'));
+
+        self::assertSame(4, $reader->retainedBytes());
+        self::assertGreaterThan(10_000, $reader->wireBytes());
+    }
+
+    /**
+     * Chunk boundaries are the transport's business and fall anywhere — mid
+     * event, mid JSON, between the two newlines. The reader must join across
+     * them rather than parse each chunk on its own.
+     */
+    public function testAnEventSplitAcrossChunksIsStillDecoded(): void
+    {
+        $reader = $this->reader();
+        $event = $this->contentEvent('whole');
+
+        foreach (str_split($event, 7) as $piece) {
+            $reader->consume($piece);
+        }
+
+        self::assertSame('whole', $reader->assistantContent());
+        self::assertSame(\strlen($event), $reader->wireBytes());
+    }
+
+    /** Providers routed through some proxies deliver CRLF line endings. */
+    public function testACrlfSeparatedStreamDecodesToo(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume("data: {\"choices\":[{\"delta\":{\"content\":\"one\"}}]}\r\n\r\n");
+        $reader->consume("data: {\"choices\":[{\"delta\":{\"content\":\" two\"}}]}\r\n\r\n");
+        $reader->consume("data: [DONE]\r\n\r\n");
+
+        self::assertSame('one two', $reader->assistantContent());
+    }
+
+    public function testAMalformedEventIsSkippedNotFatal(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume('data: not json at all' . "\n\n");
+        $reader->consume($this->contentEvent('still here'));
+
+        self::assertSame('still here', $reader->assistantContent());
+    }
+
+    /**
+     * OpenRouter sends `: PROCESSING` keep-alive comments during a long
+     * thinking phase. They must neither break the shape detection nor be
+     * retained as if they were an envelope.
+     */
+    public function testKeepAliveCommentsBeforeTheFirstEventAreDropped(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume(": OPENROUTER PROCESSING\n\n");
+        $reader->consume(": OPENROUTER PROCESSING\n\n");
+        $reader->consume($this->contentEvent('answer'));
+
+        self::assertSame('answer', $reader->assistantContent());
+        self::assertSame(6, $reader->retainedBytes());
+    }
+
+    public function testAStreamWithNoContentAtAllIsNull(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume('data: {"choices":[{"delta":{"role":"assistant"}}]}' . "\n\n");
+        $reader->consume('data: [DONE]' . "\n\n");
+
+        self::assertNull($reader->assistantContent());
+    }
+
+    /**
+     * A provider that ignores `stream: true` answers with the blocking
+     * envelope; that path must keep working, including when the whole body
+     * arrives as one line with no trailing newline at all.
+     */
+    public function testABlockingEnvelopeStillDecodes(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume('{"choices":[{"message":{"content":"plain answer"}}]}');
+
+        self::assertSame('plain answer', $reader->assistantContent());
+    }
+
+    public function testAPrettyPrintedEnvelopeSpanningLinesStillDecodes(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume("{\n  \"choices\": [\n");
+        $reader->consume("    {\"message\": {\"content\": \"multi line\"}}\n  ]\n}");
+
+        self::assertSame('multi line', $reader->assistantContent());
+    }
+
+    /**
+     * An envelope whose content contains the substring "data:" mid-line must
+     * still read as an envelope: only a line-initial "data:" starts a stream.
+     */
+    public function testAnEnvelopeContainingDataMidLineIsNotMisreadAsAStream(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume('{"choices":[{"message":{"content":"see data: below"}}]}');
+
+        self::assertSame('see data: below', $reader->assistantContent());
+    }
+
+    public function testANonJsonBodyIsNull(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume('not json');
+
+        self::assertNull($reader->assistantContent());
+    }
+
+    /**
+     * #308's salvage depends on this: a stream cut mid-flight, or one whose
+     * last event simply lacks its closing newline, must still yield the
+     * deltas that did arrive — including that final unterminated one.
+     */
+    public function testAFinalEventWithoutItsClosingNewlineIsStillRead(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume($this->contentEvent('first '));
+        $reader->consume(rtrim($this->contentEvent('last'), "\n"));
+
+        self::assertSame('first last', $reader->assistantContent());
+    }
+
+    public function testATruncatedFinalEventContributesNothing(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume($this->contentEvent('kept'));
+        $reader->consume('data: {"choices":[{"delta":{"cont');
+
+        self::assertSame('kept', $reader->assistantContent());
+    }
+
+    /**
+     * Reading the answer must not consume it: the client asks after every
+     * chunk to report progress, and again at the end for the result.
+     */
+    public function testReadingTheAnswerRepeatedlyIsStable(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume($this->contentEvent('once'));
+
+        self::assertSame('once', $reader->assistantContent());
+        self::assertSame('once', $reader->assistantContent());
+    }
+}

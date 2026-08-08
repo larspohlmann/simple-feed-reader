@@ -41,7 +41,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
     {
         $run = $this->fixtures->createRun($this->user);
         $finished = $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'req-body-a');
-        $finished->finish('decoded text', RecommendationRunLog::VERDICT_USABLE);
+        $finished->finish('decoded text', RecommendationRunLog::VERDICT_USABLE, 41_000);
         $this->fixtures->log($run, RecommendationRunLog::PHASE_DEDUP, null, 1, 'req-body-longer');
         $this->em->flush();
 
@@ -57,6 +57,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
                     'verdict' => 'usable',
                     'requestBytes' => \strlen('req-body-a'),
                     'responseBytes' => \strlen('decoded text'),
+                    'wireBytes' => 41_000,
                 ],
                 [
                     'id' => $rows[1]['id'],
@@ -66,6 +67,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
                     'verdict' => null,
                     'requestBytes' => \strlen('req-body-longer'),
                     'responseBytes' => 0,
+                    'wireBytes' => 0,
                 ],
             ],
             $rows,
@@ -76,7 +78,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
     {
         $run = $this->fixtures->createRun($this->user);
         $done = $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
-        $done->finish('finished text', RecommendationRunLog::VERDICT_UNUSABLE);
+        $done->finish('finished text', RecommendationRunLog::VERDICT_UNUSABLE, 7);
         $streaming = $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 2, 1, 'r');
         $this->em->flush();
 

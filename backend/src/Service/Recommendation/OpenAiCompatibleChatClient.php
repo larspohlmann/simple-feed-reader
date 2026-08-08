@@ -21,14 +21,19 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  */
 final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
 {
-    // A ranking over a large batch can legitimately generate for minutes; this
-    // is also why the tick endpoint performs exactly one call — the whole tick
-    // must fit one FastCGI request.
+    // A ranking over a large batch can legitimately generate for minutes, and
+    // a reasoning model spends most of that thinking before it answers at all:
+    // 120 s failed real batches three times running and killed the run (#320).
     //
     // Public because it is a published bound, not an implementation detail:
     // WorkerPresence::FRESH_SECONDS has to outlast one call of this length or
     // the worker looks dead while it is merely thinking (#311).
-    public const float TIMEOUT_SECONDS = 120.0;
+    //
+    // This is the ceiling under a worker, which owns its own process. In the
+    // poll regime the tick is a web request, so the real ceiling there is
+    // whatever the web server allows a FastCGI request to run — this constant
+    // cannot raise that, and on a short-window host the call dies first.
+    public const float TIMEOUT_SECONDS = 300.0;
 
     // The answer arrives as an SSE stream (#312), so silence — no delta for
     // this long — means a dead connection, not a thinking model. The binding
@@ -45,7 +50,17 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     // rather than the old TIMEOUT_SECONDS to answer end to end. That is the
     // accepted price of failing a dead connection in 30 s instead of 120 s.
     private const float INACTIVITY_TIMEOUT_SECONDS = 30.0;
-    private const int MAXIMUM_RESPONSE_BYTES = 2_097_152;
+
+    // What the reader holds in memory: the answer, plus the envelope for a
+    // provider that ignores `stream: true`. Generous against real answers,
+    // which run to a few kilobytes.
+    private const int MAXIMUM_ANSWER_BYTES = 2_097_152;
+
+    // What the provider is allowed to send. This is a runaway guard, not a
+    // memory bound — the reader discards each event once decoded, so wire
+    // bytes no longer accumulate. It has to clear reasoning: a single #320
+    // call legitimately spent 1.9 MB of stream before answering.
+    private const int MAXIMUM_WIRE_BYTES = 67_108_864;
 
     public function __construct(
         private HttpClientInterface $httpClient,
@@ -60,8 +75,12 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
         array $messages,
         CompletionStreamObserver $observer,
     ): string {
-        $body = $this->readBody($credentials, $model, $messages, $observer);
-        $content = $this->decoder->assistantContent($body);
+        // One reader per call: it is this call's parsing state, the same way a
+        // RecordedCall is this call's recording state.
+        $reader = new CompletionStreamReader($this->decoder);
+
+        $this->readInto($reader, $credentials, $model, $messages, $observer);
+        $content = $reader->assistantContent();
 
         if (null === $content) {
             throw new ProviderUnreachableException('That provider answered without a completion.');
@@ -71,12 +90,13 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     }
 
     /** @param list<array{role: string, content: string}> $messages */
-    private function readBody(
+    private function readInto(
+        CompletionStreamReader $reader,
         ProviderCredentials $credentials,
         string $model,
         array $messages,
         CompletionStreamObserver $observer,
-    ): string {
+    ): void {
         try {
             $response = $this->request($credentials, $model, $messages);
             $status = $response->getStatusCode();
@@ -89,14 +109,14 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
                 throw new ProviderUnreachableException(sprintf('That provider answered with status %d.', $status));
             }
 
-            return $this->streamedBody($response, $observer);
+            $this->readStream($response, $reader, $observer);
         } catch (ExceptionInterface $e) {
             throw new ProviderUnreachableException('That address did not answer.', 0, $e);
         }
     }
 
     /**
-     * Accumulates the SSE body chunk by chunk. Passing the timeout to
+     * Feeds the response to the reader chunk by chunk. Passing the timeout to
      * stream() makes a stall arrive as a timeout chunk instead of an
      * exception, so it can carry its own message: the distinction between
      * "never answered" and "went silent mid-answer" is real to a user
@@ -104,10 +124,11 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
      *
      * @throws ExceptionInterface
      */
-    private function streamedBody(ResponseInterface $response, CompletionStreamObserver $observer): string
-    {
-        $body = '';
-
+    private function readStream(
+        ResponseInterface $response,
+        CompletionStreamReader $reader,
+        CompletionStreamObserver $observer,
+    ): void {
         foreach ($this->httpClient->stream($response, self::INACTIVITY_TIMEOUT_SECONDS) as $chunk) {
             // isTimeout() first — on a timeout chunk the other accessors
             // throw; same ordering hazard ConcurrentFeedFetcher documents. The
@@ -137,11 +158,24 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
                 continue;
             }
 
-            $body .= $content;
-            $observer->bodyGrew($body);
+            $reader->consume($content);
+            $this->guardRetainedSize($reader);
+            $observer->streamProgressed(
+                new CompletionStreamProgress($reader->assistantContent() ?? '', $reader->wireBytes()),
+            );
+        }
+    }
+
+    private function guardRetainedSize(CompletionStreamReader $reader): void
+    {
+        if ($reader->retainedBytes() <= self::MAXIMUM_ANSWER_BYTES) {
+            return;
         }
 
-        return $body;
+        throw new ProviderUnreachableException(sprintf(
+            'That provider answered with more than %d bytes.',
+            self::MAXIMUM_ANSWER_BYTES,
+        ));
     }
 
     /** @param list<array{role: string, content: string}> $messages */
@@ -177,10 +211,10 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
             // transport re-reports the aborted download as its own failure, which
             // readBody() translates back into this domain's refusal.
             'on_progress' => static function (int $downloaded): void {
-                if ($downloaded > self::MAXIMUM_RESPONSE_BYTES) {
+                if ($downloaded > self::MAXIMUM_WIRE_BYTES) {
                     throw new ProviderUnreachableException(sprintf(
-                        'That provider answered with more than %d bytes.',
-                        self::MAXIMUM_RESPONSE_BYTES,
+                        'That provider streamed more than %d bytes.',
+                        self::MAXIMUM_WIRE_BYTES,
                     ));
                 }
             },

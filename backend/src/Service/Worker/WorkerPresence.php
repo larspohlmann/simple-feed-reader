@@ -21,10 +21,15 @@ final readonly class WorkerPresence
      * Sized against the longest gap between two touches, NOT against the
      * sweep cadence. The sweep touches the heartbeat once per run it
      * advances, and advancing one run makes one provider call whose ceiling
-     * is OpenAiCompatibleChatClient::TIMEOUT_SECONDS (120 s); add the ten
+     * is OpenAiCompatibleChatClient::TIMEOUT_SECONDS (300 s); add the ten
      * seconds until the next firing and the worst honest silence of a
-     * perfectly healthy worker is ~130 s. 180 s carries that with room for
+     * perfectly healthy worker is ~310 s. 360 s carries that with room for
      * the surrounding bookkeeping.
+     *
+     * This constant follows that ceiling and must be raised with it: when
+     * #320 took the call bound from 120 s to 300 s to fit a reasoning
+     * model's thinking phase, leaving this at 180 s would have declared a
+     * working worker dead in the middle of every long call.
      *
      * The earlier 30 s -- justified as "three missed ten-second sweeps" --
      * was shorter than a single unit of work, so the arbitration flipped to
@@ -33,10 +38,10 @@ final readonly class WorkerPresence
      * healthy background run (#311 final review, Critical 2).
      *
      * The cost of the wider window is that a worker that dies mid-call is
-     * recognised as dead up to 180 s later. That is the right trade: a late
+     * recognised as dead up to 360 s later. That is the right trade: a late
      * fallback resumes a run, while a premature one aborts it.
      */
-    public const int FRESH_SECONDS = 180;
+    public const int FRESH_SECONDS = 360;
 
     public function __construct(
         private WorkerHeartbeatRepository $heartbeats,
