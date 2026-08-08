@@ -449,11 +449,15 @@
     "forYouView": "View",
     "forYouFailed": "Recommendations failed. Try again.",
     "forYouRun": "Get recommendations",
+    "forYouRunHint": "Ranks your unread posts and keeps the best.",
     "forYouProgress": "Ranking your feeds — {{done}} of {{total}}",
     "forYouStreamed": "{{ kb }} KB received",
     "forYouUnreachable": "Could not reach the recommendation service. Try again.",
     "forYouKeepOpen": "Keep the app open while this runs.",
-    "forYouBackground": "Runs in the background — you can close this tab."
+    "forYouBackground": "Runs in the background — you can close this tab.",
+    "forYouInfoOpen": "About this run",
+    "forYouInfoTitle": "About this run",
+    "forYouInfoWhat": "The AI compares your unread posts with your reading history and keeps the best matches."
   },
   "common": {
     "save": "Save",

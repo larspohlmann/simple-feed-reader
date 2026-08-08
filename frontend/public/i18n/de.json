@@ -449,11 +449,15 @@
     "forYouView": "Ansehen",
     "forYouFailed": "Empfehlungen fehlgeschlagen. Versuch es noch einmal.",
     "forYouRun": "Empfehlungen holen",
+    "forYouRunHint": "Bewertet deine ungelesenen Beiträge und behält die besten.",
     "forYouProgress": "Deine Feeds werden sortiert — {{done}} von {{total}}",
     "forYouStreamed": "{{ kb }} KB empfangen",
     "forYouUnreachable": "Der Empfehlungsdienst war nicht erreichbar. Versuch es noch einmal.",
     "forYouKeepOpen": "Lass die App geöffnet, während dies läuft.",
-    "forYouBackground": "Läuft im Hintergrund — du kannst diesen Tab schließen."
+    "forYouBackground": "Läuft im Hintergrund — du kannst diesen Tab schließen.",
+    "forYouInfoOpen": "Über diesen Lauf",
+    "forYouInfoTitle": "Über diesen Lauf",
+    "forYouInfoWhat": "Die KI vergleicht deine ungelesenen Beiträge mit deinem Leseverlauf und behält die besten Treffer."
   },
   "common": {
     "save": "Speichern",

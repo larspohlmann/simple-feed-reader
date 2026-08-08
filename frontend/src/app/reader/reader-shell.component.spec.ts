@@ -704,9 +704,11 @@ describe('ReaderShellComponent', () => {
     f.detectChanges();
 
     const recs = TestBed.inject(RecommendationsService);
-    const button = f.nativeElement.querySelector('.for-you-bar button.run') as HTMLButtonElement;
+    const button = f.nativeElement.querySelector(
+      '.for-you-top app-button button',
+    ) as HTMLButtonElement;
     expect(button).not.toBeNull();
-    expect(f.nativeElement.querySelector('.for-you-bar [role="status"]')).toBeNull();
+    expect(f.nativeElement.querySelector('.for-you-top [role="status"]')).toBeNull();
 
     button.click();
     ctrl.expectOne('https://api.test/api/recommendations/runs').flush({
@@ -731,6 +733,20 @@ describe('ReaderShellComponent', () => {
     });
   });
 
+  it('shows the run hint beside the button', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ view: 'for-you' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    expect(f.nativeElement.querySelector('.for-you-top .cap')!.textContent).toContain(
+      'Ranks your unread posts',
+    );
+  });
+
   it('shows determinate progress while a for-you run is in flight, and no button', () => {
     const f = boot();
     qp.next(convertToParamMap({ view: 'for-you' }));
@@ -753,12 +769,12 @@ describe('ReaderShellComponent', () => {
     });
     f.detectChanges();
 
-    expect(f.nativeElement.querySelector('.for-you-bar button.run')).toBeNull();
-    const status = f.nativeElement.querySelector('.for-you-bar [role="status"]') as HTMLElement;
+    expect(f.nativeElement.querySelector('.for-you-top app-button')).toBeNull();
+    const status = f.nativeElement.querySelector('.for-you-top [role="status"]') as HTMLElement;
     expect(status.textContent).toContain('1 of 3');
   });
 
-  it('shows the received-bytes fragment while streaming a batch', () => {
+  it('opens the info dialog from the info button shown while a run is in flight', () => {
     const f = boot();
     qp.next(convertToParamMap({ view: 'for-you' }));
     f.detectChanges();
@@ -771,34 +787,8 @@ describe('ReaderShellComponent', () => {
     recs.running.set(true);
     recs.report.set({
       status: 'running',
-      batchesTotal: 5,
-      batchesDone: 2,
-      error: null,
-      background: false,
-      streamedChars: 12288,
-      forYou: { itemCount: 0, generatedAt: null },
-    });
-    f.detectChanges();
-
-    const streamed = f.nativeElement.querySelector('.for-you-bar__streamed') as HTMLElement | null;
-    expect(streamed?.textContent).toContain('12 KB');
-  });
-
-  it('hides the received-bytes fragment when nothing has streamed yet', () => {
-    const f = boot();
-    qp.next(convertToParamMap({ view: 'for-you' }));
-    f.detectChanges();
-    ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
-      .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
-
-    const recs = TestBed.inject(RecommendationsService);
-    recs.running.set(true);
-    recs.report.set({
-      status: 'running',
-      batchesTotal: 5,
-      batchesDone: 2,
+      batchesTotal: 3,
+      batchesDone: 1,
       error: null,
       background: false,
       streamedChars: 0,
@@ -806,45 +796,12 @@ describe('ReaderShellComponent', () => {
     });
     f.detectChanges();
 
-    expect(f.nativeElement.querySelector('.for-you-bar__streamed')).toBeNull();
-  });
+    const info = f.nativeElement.querySelector('.for-you-top .info') as HTMLButtonElement;
+    expect(info).not.toBeNull();
+    info.click();
+    f.detectChanges();
 
-  describe('background regime hint', () => {
-    function bootRunning(background: boolean): ReturnType<typeof boot> {
-      const f = boot();
-      qp.next(convertToParamMap({ view: 'for-you' }));
-      f.detectChanges();
-      ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries')
-        .flush({ entries: [], nextCursor: null });
-      f.detectChanges();
-
-      const recs = TestBed.inject(RecommendationsService);
-      recs.running.set(true);
-      recs.report.set({
-        status: 'running',
-        batchesTotal: 3,
-        batchesDone: 1,
-        error: null,
-        background,
-        streamedChars: 0,
-        forYou: { itemCount: 0, generatedAt: null },
-      });
-      f.detectChanges();
-      return f;
-    }
-
-    it('shows the background copy when a worker owns execution', () => {
-      const f = bootRunning(true);
-      const hint = f.nativeElement.querySelector('.for-you-bar .hint') as HTMLElement;
-      expect(hint.textContent).toContain('Runs in the background');
-    });
-
-    it('shows the keep-open copy when the client owns execution', () => {
-      const f = bootRunning(false);
-      const hint = f.nativeElement.querySelector('.for-you-bar .hint') as HTMLElement;
-      expect(hint.textContent).toContain('Keep the app open');
-    });
+    expect(document.querySelector('app-for-you-info-dialog')).not.toBeNull();
   });
 
   it('tells the user when the backend gave up on the run itself', () => {
@@ -861,7 +818,7 @@ describe('ReaderShellComponent', () => {
     recs.failure.set({ kind: 'failed', error: 'provider unreachable' });
     f.detectChanges();
 
-    const alert = f.nativeElement.querySelector('.for-you-bar [role="alert"]') as HTMLElement;
+    const alert = f.nativeElement.querySelector('.for-you-top [role="alert"]') as HTMLElement;
     expect(alert.textContent).toContain('Recommendations failed');
   });
 
@@ -882,7 +839,7 @@ describe('ReaderShellComponent', () => {
     });
     f.detectChanges();
 
-    const alert = f.nativeElement.querySelector('.for-you-bar [role="alert"]') as HTMLElement;
+    const alert = f.nativeElement.querySelector('.for-you-top [role="alert"]') as HTMLElement;
     expect(alert.textContent).toContain('Could not reach the recommendation service');
   });
 
@@ -901,7 +858,7 @@ describe('ReaderShellComponent', () => {
     recs.running.set(true);
     f.detectChanges();
 
-    expect(f.nativeElement.querySelector('.for-you-bar [role="alert"]')).toBeNull();
+    expect(f.nativeElement.querySelector('.for-you-top [role="alert"]')).toBeNull();
   });
 
   // The heading names the tag, so it also carries the tag's glyph and colour —

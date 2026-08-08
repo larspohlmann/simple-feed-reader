@@ -288,7 +288,7 @@
 /* An error banner sits above the scroller in the flow and takes the reservation
    itself; the scroller must not add it a second time. */
 .rows.after-banner,
-.empty.after-banner {
+.empty-wrap.after-banner {
   padding-top: 0;
 }
 
@@ -309,12 +309,19 @@
   max-width: 680px;
 }
 
-.empty {
-  color: var(--text-muted);
-  padding: var(--space-6);
+/* Wraps the (optional) topBlock and the `.empty` message: the header-clearing
+   top reservation lives here rather than on `.empty` itself, so a projected
+   topBlock sits inside that same reserved space instead of the message text
+   growing an extra header-height gap above it. */
+.empty-wrap {
   padding-top: calc(
     var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap) + var(--space-6)
   );
+}
+
+.empty {
+  color: var(--text-muted);
+  padding: 0 var(--space-6) var(--space-6);
   text-align: center;
 
   a {
