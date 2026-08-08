@@ -74,7 +74,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     {
         // A huge window and short lines mean the token budget never binds —
         // every candidate would fit in one batch on budget alone. Only the
-        // MAXIMUM_BATCH_SIZE cap can be splitting these into 40/40/20.
+        // MAXIMUM_BATCH_SIZE cap can be splitting these into 45/45/10.
         $candidateCount = 100;
         $candidates = array_map(
             static fn (int $id): PromptLine => new PromptLine($id, "C$id", 'F', 'D', null),
@@ -83,7 +83,29 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(1_000_000, 10));
 
-        self::assertSame([40, 40, 20], array_map('count', $batches));
+        self::assertSame([45, 45, 10], array_map('count', $batches));
+
+        $ids = array_merge(...$batches);
+        self::assertSame(range(1, $candidateCount), $ids);
+    }
+
+    public function testPackingFiveHundredCandidatesIntoTwelveBatchesUnderNewDefaults(): void
+    {
+        // With MAXIMUM_BATCH_SIZE raised to 45 in #321, the default 500-candidate
+        // pool packs into 12 batches (11 × 45 + 1 × 5) under a huge budget.
+        // The 12 packing calls plus one dedup call make 13 total provider calls —
+        // half the 26 needed under the old 40-candidate cap.
+        $candidateCount = 500;
+        $candidates = array_map(
+            static fn (int $id): PromptLine => new PromptLine($id, "C$id", 'F', 'D', null),
+            range(1, $candidateCount),
+        );
+
+        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(1_000_000, 50));
+
+        self::assertCount(12, $batches);
+        $batchSizes = array_map('count', $batches);
+        self::assertSame([45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 5], $batchSizes);
 
         $ids = array_merge(...$batches);
         self::assertSame(range(1, $candidateCount), $ids);
@@ -99,8 +121,9 @@ final class RecommendationPromptBuilderTest extends TestCase
         $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(4096, 100));
 
         self::assertNotSame([], $batches);
-        foreach ($batches as $batch) {
-            self::assertGreaterThanOrEqual(10, \count($batch));
+        // All batches except the final one should respect MINIMUM_BATCH_SIZE.
+        for ($i = 0; $i < \count($batches) - 1; ++$i) {
+            self::assertGreaterThanOrEqual(10, \count($batches[$i]));
         }
     }
 
@@ -259,9 +282,10 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testPackingBudgetIsSensitiveToEveryTermInItsFormula(): void
     {
-        // Window 3190 (raised by the constant reserve of 1600) with picksLimit 1
-        // makes the budget land exactly on the 11-candidate boundary:
-        // used+lineTokens equals the budget for the 12th candidate, so the
+        // Window 3195 (raised by the constant reserve of 1600) with picksLimit 1
+        // makes the budget land exactly on the 10-candidate boundary (shifted down
+        // one candidate due to the new responseReserve = 45 * 1 instead of 40 * 1):
+        // used+lineTokens equals the budget for the 11th candidate, so the
         // strict `>` (not `>=`) leaves it in the first batch, and a sign error
         // in subtracting the history tokens shifts the split.
         $candidates = array_map(
@@ -269,9 +293,9 @@ final class RecommendationPromptBuilderTest extends TestCase
             range(100, 119),
         );
 
-        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(3190, 1));
+        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(3195, 1));
 
-        self::assertSame([range(100, 110), range(111, 119)], $batches);
+        self::assertSame([range(100, 109), range(110, 119)], $batches);
     }
 
     public function testDedupMessagesReturnsTheExactRoleContentStructureWithoutGuidance(): void
@@ -353,7 +377,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             favoritesCap: 40,
             keptCap: 40,
             viewedCap: 80,
-            candidatePoolSize: 1000,
+            candidatePoolSize: 500,
             picksLimit: $picksLimit,
             contextWindow: $contextWindow,
             contextWindowSource: 'default',

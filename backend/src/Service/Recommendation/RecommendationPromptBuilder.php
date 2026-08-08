@@ -27,8 +27,12 @@ final class RecommendationPromptBuilder
      * so the token budget cannot be the only guard. 40 keeps a single batch
      * call comfortably inside the timeout on every model this feature
      * targets. See #308.
+     *
+     * Raised 40 → 45 in #321 so the default 500-candidate pool packs into 12
+     * batch calls (13 with dedup) instead of 26. Still a fraction of the 339
+     * that broke the timeout.
      */
-    private const int MAXIMUM_BATCH_SIZE = 40;
+    private const int MAXIMUM_BATCH_SIZE = 45;
     private const int DESCRIPTION_MIN_CHARS = 120;
     private const int DESCRIPTION_MAX_CHARS = 480;
     private const int DESCRIPTION_WINDOW_DIVISOR = 137;

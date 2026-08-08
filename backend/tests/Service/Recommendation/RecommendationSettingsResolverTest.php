@@ -40,8 +40,8 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         self::assertSame(40, $effective->favoritesCap);
         self::assertSame(40, $effective->keptCap);
         self::assertSame(80, $effective->viewedCap);
-        self::assertSame(1000, $effective->candidatePoolSize);
-        self::assertSame(100, $effective->picksLimit);
+        self::assertSame(500, $effective->candidatePoolSize);
+        self::assertSame(50, $effective->picksLimit);
         self::assertSame(32768, $effective->contextWindow);
         self::assertSame('fallback', $effective->contextWindowSource);
         self::assertFalse($effective->debugEnabled);

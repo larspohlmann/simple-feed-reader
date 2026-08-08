@@ -109,8 +109,8 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         self::assertSame(40, $payload['favoritesCap']);
         self::assertSame(40, $payload['keptCap']);
         self::assertSame(80, $payload['viewedCap']);
-        self::assertSame(1000, $payload['candidatePoolSize']);
-        self::assertSame(100, $payload['picksLimit']);
+        self::assertSame(500, $payload['candidatePoolSize']);
+        self::assertSame(50, $payload['picksLimit']);
         self::assertSame(32768, $payload['contextWindow']);
         self::assertNull($payload['contextWindowOverride']);
         self::assertSame('fallback', $payload['contextWindowSource']);
