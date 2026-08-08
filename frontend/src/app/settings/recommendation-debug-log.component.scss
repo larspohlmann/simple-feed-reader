@@ -44,6 +44,15 @@
     font-weight: 400;
   }
 
+  // What the provider sent, as opposed to what it answered. A thinking model
+  // spends megabytes here before the first answer token (#320), so this line
+  // is the difference between "provider is silent" and "provider is busy".
+  &__wire {
+    margin: var(--space-1) 0 0;
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+  }
+
   &__verdict {
     padding: 0 var(--space-1);
     border-radius: var(--radius-sm);

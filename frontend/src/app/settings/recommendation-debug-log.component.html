@@ -25,6 +25,23 @@
               }}</span>
             }
           </div>
+          @if (entry.wireBytes > 0) {
+            @if (entry.responseBytes === 0) {
+              <p class="debug-panel__wire">
+                {{
+                  'settings.ai.recommendations.debugStreamedNoAnswer'
+                    | transloco: { kb: kb(entry.wireBytes) }
+                }}
+              </p>
+            } @else {
+              <p class="debug-panel__wire">
+                {{
+                  'settings.ai.recommendations.debugStreamed'
+                    | transloco: { kb: kb(entry.wireBytes) }
+                }}
+              </p>
+            }
+          }
           <button type="button" class="debug-panel__toggle" (click)="toggleRequest(entry.id)">
             {{
               'settings.ai.recommendations.debugRequest' | transloco: { kb: kb(entry.requestBytes) }

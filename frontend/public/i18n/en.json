@@ -112,6 +112,8 @@
         "debugRequest": "Request ({{ kb }} KB)",
         "debugResponse": "Response ({{ kb }} KB)",
         "debugCopy": "Copy",
+        "debugStreamed": "{{ kb }} KB streamed",
+        "debugStreamedNoAnswer": "{{ kb }} KB streamed, no answer",
         "save": "Save",
         "saved": "Saved."
       }

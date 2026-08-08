@@ -234,6 +234,8 @@ export interface DebugLogEntry {
   verdict: 'usable' | 'unusable' | 'transport-failed' | null;
   requestBytes: number;
   responseBytes: number;
+  /** Everything the provider sent, reasoning and framing included. */
+  wireBytes: number;
   streamingText: string | null;
 }
 
@@ -246,4 +248,5 @@ export interface DebugLogDetail {
   verdict: string | null;
   requestBody: string;
   responseText: string;
+  wireBytes: number;
 }
