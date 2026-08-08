@@ -5,6 +5,7 @@ import { Dialog } from '@angular/cdk/dialog';
 import { of } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
+import { RecommendationsService } from '../reader/recommendations.service';
 import { RecommendationSettingsCardComponent } from './recommendation-settings-card.component';
 import { RecommendationSettingsState } from './recommendation-settings.service';
 
@@ -262,6 +263,7 @@ describe('RecommendationSettingsCardComponent', () => {
         error: null,
         background: false,
         streamedChars: 0,
+        forYou: { itemCount: 3, generatedAt: '2026-08-08T09:00:00Z' },
       });
 
       // RecommendationsService.refreshStatus() re-reads the current status so
@@ -275,10 +277,15 @@ describe('RecommendationSettingsCardComponent', () => {
         error: null,
         background: false,
         streamedChars: 0,
+        forYou: { itemCount: 0, generatedAt: null },
       });
       fixture.detectChanges();
 
       expect(fixture.nativeElement.textContent).toContain('Recommendations cleared.');
+      // The seam this test exists to cover: the sidebar count must actually
+      // read the refreshed report, not fall through the `?.` guard on a
+      // `forYou` that isn't there (it guards `report`, not `report.forYou`).
+      expect(TestBed.inject(RecommendationsService).forYouCount()).toBe(0);
     });
 
     it('shows the 409 detail when a run is active instead of a generic error', () => {

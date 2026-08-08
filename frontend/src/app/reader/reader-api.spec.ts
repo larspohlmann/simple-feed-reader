@@ -261,6 +261,7 @@ describe('ReaderApi', () => {
       error: null,
       background: false,
       streamedChars: 0,
+      forYou: { itemCount: 0, generatedAt: null },
     });
   });
 
@@ -275,6 +276,7 @@ describe('ReaderApi', () => {
       error: null,
       background: false,
       streamedChars: 0,
+      forYou: { itemCount: 0, generatedAt: null },
     });
   });
 
@@ -289,6 +291,7 @@ describe('ReaderApi', () => {
       error: null,
       background: false,
       streamedChars: 0,
+      forYou: { itemCount: 0, generatedAt: null },
     });
   });
 
