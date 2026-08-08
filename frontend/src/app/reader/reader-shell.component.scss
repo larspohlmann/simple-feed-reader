@@ -213,6 +213,11 @@ app-reader-header.hidden {
     font-size: var(--fs-xs);
   }
 
+  &__streamed {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+  }
+
   .run {
     border: 0;
     background: none;

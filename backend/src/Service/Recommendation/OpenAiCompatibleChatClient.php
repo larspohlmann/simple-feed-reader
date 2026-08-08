@@ -54,9 +54,14 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     ) {
     }
 
-    public function complete(ProviderCredentials $credentials, string $model, array $messages): string
-    {
-        $content = $this->decoder->assistantContent($this->readBody($credentials, $model, $messages));
+    public function complete(
+        ProviderCredentials $credentials,
+        string $model,
+        array $messages,
+        CompletionStreamObserver $observer,
+    ): string {
+        $body = $this->readBody($credentials, $model, $messages, $observer);
+        $content = $this->decoder->assistantContent($body);
 
         if (null === $content) {
             throw new ProviderUnreachableException('That provider answered without a completion.');
@@ -66,8 +71,12 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     }
 
     /** @param list<array{role: string, content: string}> $messages */
-    private function readBody(ProviderCredentials $credentials, string $model, array $messages): string
-    {
+    private function readBody(
+        ProviderCredentials $credentials,
+        string $model,
+        array $messages,
+        CompletionStreamObserver $observer,
+    ): string {
         try {
             $response = $this->request($credentials, $model, $messages);
             $status = $response->getStatusCode();
@@ -80,7 +89,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
                 throw new ProviderUnreachableException(sprintf('That provider answered with status %d.', $status));
             }
 
-            return $this->streamedBody($response);
+            return $this->streamedBody($response, $observer);
         } catch (ExceptionInterface $e) {
             throw new ProviderUnreachableException('That address did not answer.', 0, $e);
         }
@@ -95,7 +104,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
      *
      * @throws ExceptionInterface
      */
-    private function streamedBody(ResponseInterface $response): string
+    private function streamedBody(ResponseInterface $response, CompletionStreamObserver $observer): string
     {
         $body = '';
 
@@ -118,7 +127,18 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
                 ));
             }
 
-            $body .= $chunk->getContent();
+            // Symfony's own stream() protocol includes content-free framing
+            // chunks (an isLast marker chunk in particular) alongside the real
+            // SSE data — appending their empty content is harmless, but
+            // reporting them to the observer would mean "the body grew" for a
+            // call that added nothing.
+            $content = $chunk->getContent();
+            if ('' === $content) {
+                continue;
+            }
+
+            $body .= $content;
+            $observer->bodyGrew($body);
         }
 
         return $body;

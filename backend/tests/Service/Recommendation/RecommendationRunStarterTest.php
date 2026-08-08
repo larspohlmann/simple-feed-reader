@@ -6,7 +6,9 @@ namespace App\Tests\Service\Recommendation;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
+use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiNotConfiguredException;
@@ -83,6 +85,59 @@ final class RecommendationRunStarterTest extends DbTestCase
         self::assertSame(1, $report->batchesDone);
         self::assertSame($run->getId(), $this->runs()->findActiveForUser($this->user)?->getId());
         self::assertSame(1, $this->countRuns());
+    }
+
+    public function testANewRunWipesTheDebugLogOfThePreviousRun(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $previous = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-08T09:00:00Z'));
+        $previous->snapshot([]);
+        $previous->complete(new \DateTimeImmutable('2026-08-08T09:01:00Z'));
+        $this->em->persist($previous);
+        $this->em->persist(new RecommendationRunLog(
+            $previous,
+            RecommendationRunLog::PHASE_BATCH,
+            1,
+            1,
+            'old request',
+        ));
+        $this->em->flush();
+
+        $this->starter()->start($this->user);
+
+        self::assertSame([], $this->runLogs()->listForUser($this->user));
+    }
+
+    public function testResumingAFailedRunKeepsItsDebugLog(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $failed = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-08T09:00:00Z'));
+        $failed->snapshot([[1], [2]]);
+        $failed->fail('provider gone', new \DateTimeImmutable('2026-08-08T09:01:00Z'));
+        $this->em->persist($failed);
+        $this->em->persist(new RecommendationRunLog(
+            $failed,
+            RecommendationRunLog::PHASE_BATCH,
+            1,
+            1,
+            'kept request',
+        ));
+        $this->em->flush();
+
+        $report = $this->starter()->start($this->user);
+
+        self::assertSame(RecommendationRun::STATUS_RUNNING, $report->status);
+        // The wipe is bulk DQL when it runs, so clear before asserting survival.
+        $this->em->clear();
+        self::assertCount(1, $this->runLogs()->listForUser($this->user));
+    }
+
+    private function runLogs(): RecommendationRunLogRepository
+    {
+        /** @var RecommendationRunLogRepository $repository */
+        $repository = self::getContainer()->get(RecommendationRunLogRepository::class);
+
+        return $repository;
     }
 
     private function seedReadyAiSettings(User $user): void

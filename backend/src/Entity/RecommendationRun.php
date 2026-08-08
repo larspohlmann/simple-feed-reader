@@ -86,6 +86,18 @@ class RecommendationRun
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $lastInvalidReply = null;
 
+    /**
+     * Raw SSE bytes received so far by the provider call currently in
+     * flight, checkpointed every ~2 s by RecordedCall via direct DBAL
+     * updates and reset to 0 when the call ends. Deliberately written
+     * outside the EntityManager — this entity only ever reads it — so the
+     * value is visible to the cheap status poll while the tick request is
+     * still blocked on the provider. Debug-independent: this is the
+     * progress indicator's liveness signal (#309), not debug data.
+     */
+    #[ORM\Column(options: ['default' => 0])]
+    private int $streamedChars = 0;
+
     public function __construct(User $user, \DateTimeImmutable $createdAt)
     {
         $this->user = $user;
@@ -216,6 +228,11 @@ class RecommendationRun
     public function getLastInvalidReply(): ?string
     {
         return $this->lastInvalidReply;
+    }
+
+    public function getStreamedChars(): int
+    {
+        return $this->streamedChars;
     }
 
     public function complete(\DateTimeImmutable $when): void

@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Service\Ai\ProviderCredentials;
 use App\Service\Recommendation\ChatCompletionClient;
+use App\Service\Recommendation\CompletionStreamObserver;
 
 /**
  * Records every complete() call and answers with a queued response, so
@@ -45,8 +46,12 @@ final class StubChatClient implements ChatCompletionClient
         return $this->calls;
     }
 
-    public function complete(ProviderCredentials $credentials, string $model, array $messages): string
-    {
+    public function complete(
+        ProviderCredentials $credentials,
+        string $model,
+        array $messages,
+        CompletionStreamObserver $observer,
+    ): string {
         $this->calls[] = ['model' => $model, 'messages' => $messages];
 
         if ([] === $this->queue) {

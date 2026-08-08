@@ -1,0 +1,106 @@
+/* Collapsed-surface pattern reused from
+   `settings/recommendation-settings-card.component.scss` (the fixed-prompt
+   `<details>`): a plain `<summary>` toggle over a bordered `--surface-0`
+   block, `pre` in `--text-muted` at `--fs-xs`. This panel repeats that shape
+   once per log entry instead of once per card. */
+.debug-panel {
+  margin: 0 var(--space-4) var(--space-3);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+
+  &__title {
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: var(--fs-sm);
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: var(--space-2) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__entry {
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-0);
+  }
+
+  &__label {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    font-weight: 600;
+  }
+
+  &__attempt {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 400;
+  }
+
+  &__verdict {
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-xs);
+    font-weight: 400;
+
+    &--usable {
+      color: var(--success);
+    }
+
+    &--unusable,
+    &--transport-failed {
+      color: var(--danger);
+    }
+  }
+
+  &__toggle {
+    display: block;
+    margin-top: var(--space-1);
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font-size: var(--fs-xs);
+    cursor: pointer;
+  }
+
+  &__body {
+    margin-top: var(--space-1);
+
+    button {
+      display: block;
+      margin-bottom: var(--space-1);
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--accent);
+      font-size: var(--fs-xs);
+      cursor: pointer;
+    }
+  }
+
+  &__stream {
+    margin: var(--space-1) 0 0;
+  }
+
+  pre {
+    margin: 0;
+    padding: var(--space-2);
+    max-height: calc(var(--space-7) * 3);
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-0);
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}

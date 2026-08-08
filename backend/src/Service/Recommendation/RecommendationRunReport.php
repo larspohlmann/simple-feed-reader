@@ -29,6 +29,7 @@ final readonly class RecommendationRunReport
         public int $batchesDone,
         public ?string $error,
         public bool $background = false,
+        public int $streamedChars = 0,
     ) {
     }
 
@@ -46,7 +47,13 @@ final readonly class RecommendationRunReport
     {
         $progress = $run->progress();
 
-        return new self($run->getStatus(), $progress->batchesTotal, $progress->batchesDone, $run->getError());
+        return new self(
+            $run->getStatus(),
+            $progress->batchesTotal,
+            $progress->batchesDone,
+            $run->getError(),
+            streamedChars: $run->getStreamedChars(),
+        );
     }
 
     /**
@@ -55,11 +62,19 @@ final readonly class RecommendationRunReport
      */
     public function inBackground(): self
     {
-        return new self($this->status, $this->batchesTotal, $this->batchesDone, $this->error, true);
+        return new self(
+            $this->status,
+            $this->batchesTotal,
+            $this->batchesDone,
+            $this->error,
+            true,
+            $this->streamedChars,
+        );
     }
 
     /**
-     * @return array{status: string, batchesTotal: ?int, batchesDone: int, error: ?string, background: bool}
+     * @return array{status: string, batchesTotal: ?int, batchesDone: int, error: ?string, background: bool,
+     *     streamedChars: int}
      */
     public function toArray(): array
     {
@@ -69,6 +84,7 @@ final readonly class RecommendationRunReport
             'batchesDone' => $this->batchesDone,
             'error' => $this->error,
             'background' => $this->background,
+            'streamedChars' => $this->streamedChars,
         ];
     }
 }

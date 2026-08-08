@@ -56,3 +56,13 @@ export function trialDaysRemaining(iso: string | null, now: number = Date.now())
   const remainingMs = new Date(iso).getTime() - now;
   return remainingMs > 0 ? Math.ceil(remainingMs / 86_400_000) : null;
 }
+
+/**
+ * Bytes as a whole KB figure, floored at 1 so a nonzero byte count never
+ * displays as "0 KB". Shared by the #309 debug log's per-entry sizes and the
+ * for-you bar's in-flight liveness figure -- both round the same raw byte
+ * count for a human, and a copy in each place would drift.
+ */
+export function bytesToKb(bytes: number): number {
+  return Math.max(1, Math.round(bytes / 1024));
+}

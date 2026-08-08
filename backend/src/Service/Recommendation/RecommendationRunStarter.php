@@ -7,6 +7,7 @@ namespace App\Service\Recommendation;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Http\AiSettingsJson;
+use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Exception\AiNotConfiguredException;
@@ -29,6 +30,7 @@ final readonly class RecommendationRunStarter
         private AiProviderConfigurator $configurator,
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
+        private RecommendationRunLogRepository $logs,
     ) {
     }
 
@@ -53,6 +55,11 @@ final readonly class RecommendationRunStarter
 
             return RecommendationRunReport::fromRun($latest);
         }
+
+        // The debug log lives only for the latest run (#309): a resumed run
+        // above keeps appending to its own log, a genuinely new run starts
+        // its record clean.
+        $this->logs->deleteForUser($user);
 
         $run = new RecommendationRun($user, $this->clock->now());
         $this->entityManager->persist($run);

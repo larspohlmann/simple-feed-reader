@@ -7,17 +7,22 @@ namespace App\Tests\Support;
 use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\RecommendationRun;
+use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * The recommendation pipeline's two most-seeded fixtures: a ready-to-call AI
- * connection and an unread entry. RecommendationRunAdvancerTest and
- * AdvanceRecommendationRunsHandlerTest both drive real runs end to end, so
- * both need the exact same "an account that can actually call a provider"
- * and "an entry that actually shows up as a candidate" setup — a second
- * near-identical copy would drift the moment one of them changed a default.
+ * The recommendation pipeline's most-seeded fixtures: a ready-to-call AI
+ * connection, an unread entry, a run and its debug-log rows.
+ * RecommendationRunAdvancerTest and AdvanceRecommendationRunsHandlerTest both
+ * drive real runs end to end, so both need the exact same "an account that
+ * can actually call a provider" and "an entry that actually shows up as a
+ * candidate" setup; RecommendationDebugLogControllerTest and
+ * RecommendationRunLogRepositoryTest both need the exact same run and
+ * debug-log row shape — a second near-identical copy would drift the moment
+ * one of them changed a default.
  */
 final readonly class RecommendationRunFixtures
 {
@@ -52,6 +57,30 @@ final readonly class RecommendationRunFixtures
         $this->em->remove($settings);
         $this->em->flush();
         $this->em->clear();
+    }
+
+    /** Not flushed: callers batch several rows (often a `finish()` on top of
+     *  each) before the one flush that makes them all visible together. */
+    public function createRun(User $user): RecommendationRun
+    {
+        $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-08T10:00:00Z'));
+        $this->em->persist($run);
+
+        return $run;
+    }
+
+    /** Not flushed, for the same reason as {@see createRun()}. */
+    public function log(
+        RecommendationRun $run,
+        string $phase,
+        ?int $batchNumber,
+        int $attempt,
+        string $requestBody,
+    ): RecommendationRunLog {
+        $log = new RecommendationRunLog($run, $phase, $batchNumber, $attempt, $requestBody);
+        $this->em->persist($log);
+
+        return $log;
     }
 
     public function entry(Feed $feed, string $guid, string $published): Entry

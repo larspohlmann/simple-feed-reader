@@ -8,6 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
+use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Repository\EntryRepository;
 use App\Repository\RecommendationRunRepository;
@@ -45,7 +46,7 @@ use Symfony\Component\Lock\LockFactory;
  * pool can be pruned mid-run — and writes the survivors as
  * RecommendationItems at dense positions before marking the run completed.
  *
- * The fourteen constructor collaborators are deliberate: the advancer is the
+ * The fifteen constructor collaborators are deliberate: the advancer is the
  * recommendation pipeline's composition root (lock, run persistence, AI
  * configuration, settings resolution, candidate/history loading, prompt
  * packing, the provider call and its reply parser), and each is a seam the
@@ -73,6 +74,7 @@ final class RecommendationRunAdvancer
         private readonly EntityManagerInterface $entityManager,
         private readonly RecommendationWinnerRanker $ranker,
         private readonly RecommendationDuplicateParser $duplicateParser,
+        private readonly RecommendationCallRecorder $callRecorder,
     ) {
     }
 
@@ -201,9 +203,18 @@ final class RecommendationRunAdvancer
 
         $messages = $this->batchMessagesFor($run, $userId, $ids, $linesById, $effectiveSettings);
 
-        $content = $this->callProvider($run, $settings, $messages);
+        $recordedCall = $this->callRecorder->begin(
+            $run,
+            RecommendationRunLog::PHASE_BATCH,
+            $run->progress()->nextBatchIndex + 1,
+            $messages,
+            $settings->getModel() ?? '',
+        );
+
+        $content = $this->callProvider($run, $settings, $messages, $recordedCall);
 
         $result = $this->parser->parse($content, $validIds);
+        $this->settleVerdict($recordedCall, $content, $result->usable);
 
         return $this->recordReply($run, $content, $result);
     }
@@ -248,9 +259,18 @@ final class RecommendationRunAdvancer
 
         $messages = $this->withCorrectiveTail($this->promptBuilder->dedupMessages($pool, $linesById), $run);
 
-        $content = $this->callProvider($run, $settings, $messages);
+        $recordedCall = $this->callRecorder->begin(
+            $run,
+            RecommendationRunLog::PHASE_DEDUP,
+            null,
+            $messages,
+            $settings->getModel() ?? '',
+        );
+
+        $content = $this->callProvider($run, $settings, $messages, $recordedCall);
 
         $result = $this->duplicateParser->parse($content, array_column($pool, 'id'));
+        $this->settleVerdict($recordedCall, $content, $result->usable);
 
         if (!$result->usable) {
             return $this->recordUnusableDedupReply($run, $content, $pool);
@@ -346,30 +366,65 @@ final class RecommendationRunAdvancer
     }
 
     /**
-     * The one provider call a tick makes. A transport failure -- the provider
-     * unreachable, or refusing the key -- never produced a reply for the
-     * parser to judge, so it must not consume an `attempts` retry the way an
-     * unusable reply does. It counts against its own ceiling instead, so a
+     * The one provider call a tick makes, recorded for the debug view from
+     * the moment the request goes out (#309). A transport failure -- the
+     * provider unreachable, or refusing the key -- never produced a reply for
+     * the parser to judge, so it must not consume an `attempts` retry the way
+     * an unusable reply does. It counts against its own ceiling instead, so a
      * provider that is persistently broken still fails the run eventually
      * (#308 final review, Important 2) rather than ticking forever; either
      * way the exception is re-thrown so the controller still maps it to its
      * problem type and the caller still sees the error on this tick.
      *
+     * The generic \Throwable catch below exists only to settle the log row:
+     * begin() has already persisted it, and a verdict that stays null reads
+     * to the debug panel as "still streaming" forever (its one other
+     * producer, streamingTextForUser(), has no way to tell a genuinely
+     * abandoned call from a live one). credentials() -- decrypting the
+     * stored key -- runs inside this same try on purpose, because an
+     * unreadable key (ApiKeyUnreadableException, e.g. after a master-secret
+     * rotation) never produced a reply either; it is not classified as a
+     * transport failure and does not touch the ceiling, it just must not
+     * leave the row stuck. The exception is always re-thrown unchanged, so
+     * which exception reaches tick() -- and how the run ends -- is exactly
+     * as before.
+     *
      * @param list<array{role: string, content: string}> $messages
      */
-    private function callProvider(RecommendationRun $run, AiProviderSettings $settings, array $messages): string
-    {
+    private function callProvider(
+        RecommendationRun $run,
+        AiProviderSettings $settings,
+        array $messages,
+        RecordedCall $recordedCall,
+    ): string {
         try {
             return $this->chat->complete(
                 $this->configurator->credentials($settings),
                 $settings->getModel() ?? '',
                 $messages,
+                $recordedCall,
             );
         } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
+            $recordedCall->abortAfterTransportFailure();
             $this->recordTransportFailure($run, $settings);
 
             throw $e;
+        } catch (\Throwable $e) {
+            $recordedCall->abortAfterTransportFailure();
+
+            throw $e;
         }
+    }
+
+    private function settleVerdict(RecordedCall $recordedCall, string $content, bool $usable): void
+    {
+        if ($usable) {
+            $recordedCall->finishUsable($content);
+
+            return;
+        }
+
+        $recordedCall->finishUnusable($content);
     }
 
     private function recordTransportFailure(RecommendationRun $run, AiProviderSettings $settings): void

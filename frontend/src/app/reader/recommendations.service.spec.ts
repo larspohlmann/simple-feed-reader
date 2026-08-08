@@ -15,6 +15,7 @@ const report = (over: Partial<RecommendationRunReport>): RecommendationRunReport
   batchesDone: 0,
   error: null,
   background: false,
+  streamedChars: 0,
   ...over,
 });
 

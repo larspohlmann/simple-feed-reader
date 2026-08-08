@@ -40,10 +40,12 @@ describe('AiSectionComponent', () => {
     debugEnabled: false,
   };
 
-  /** The recommendation card mounts, and fires its own GET, only once AI is
-   *  ready — every test that reaches that state has to drain it too. */
+  /** The recommendation card and the debug log beside it each fire their own
+   *  GET, only once AI is ready — every test that reaches that state has to
+   *  drain both. */
   function flushRecommendations(fixture: ComponentFixture<AiSectionComponent>): void {
     http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
+    http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
     fixture.detectChanges();
   }
 

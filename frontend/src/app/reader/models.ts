@@ -219,4 +219,31 @@ export interface RecommendationRunReport {
   /** True when a live worker owns execution and a tick is a pure status read;
    *  false when the client's own poll loop is doing the work (#308 regime). */
   background: boolean;
+  /** Bytes of the in-flight provider answer received so far this call; 0
+   *  between calls, since the server resets the counter when a call ends. */
+  streamedChars: number;
+}
+
+/** One provider call logged during a for-you run: a scored batch or the
+ *  final dedup pass. `verdict` is null while the call is still streaming. */
+export interface DebugLogEntry {
+  id: number;
+  phase: 'batch' | 'dedup';
+  batchNumber: number | null;
+  attempt: number;
+  verdict: 'usable' | 'unusable' | 'transport-failed' | null;
+  requestBytes: number;
+  responseBytes: number;
+  streamingText: string | null;
+}
+
+/** The full request/response pair for one logged provider call. */
+export interface DebugLogDetail {
+  id: number;
+  phase: 'batch' | 'dedup';
+  batchNumber: number | null;
+  attempt: number;
+  verdict: string | null;
+  requestBody: string;
+  responseText: string;
 }
