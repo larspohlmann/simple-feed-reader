@@ -20,15 +20,32 @@ const MAX_TRANSPORT_RETRIES = 3;
  *  minutes-long server call would otherwise hammer the endpoint: 4s ≈ 15
  *  requests/min against the `ai_recommendations` limiter's 90 per 5 minutes. */
 const BACKGROUND_POLL_MS = 4000;
+/** How long the client waits before retrying a tick that hit the
+ *  `ai_recommendations` limiter (90 requests / 5 minutes per user, a sliding
+ *  window -- see `backend/config/packages/rate_limiter.yaml`). A 429 means
+ *  the bucket is full, not that the server is unhealthy: retrying at
+ *  `BACKOFF_MS` would just spend another token against the same window and
+ *  never let it drain. The window's own average allowed rate is one request
+ *  every ~3.3s (90/300s); 15s keeps a retrying tab well under that even while
+ *  it shares the bucket with the ordinary background cadence and, worst
+ *  case, a second tab open on the same account. */
+const RATE_LIMIT_POLL_MS = 15000;
+/** How many consecutive 429s the loop rides out before giving up. At
+ *  `RATE_LIMIT_POLL_MS` that ceiling is 5 minutes -- exactly the limiter's
+ *  own window -- long enough for an honest two-tab session to fully drain
+ *  the bucket and recover, while still guaranteeing the loop terminates
+ *  against a server that keeps rejecting for good. */
+const MAX_RATE_LIMIT_RETRIES = 20;
 
 /** How many times in a row the poll loop has been turned away, per cause.
- *  Each cause has its own ceiling, and any progress resets both. */
+ *  Each cause has its own ceiling, and any progress resets all three. */
 interface PollAttempts {
   readonly busy: number;
   readonly transport: number;
+  readonly rateLimited: number;
 }
 
-const NO_ATTEMPTS: PollAttempts = { busy: 0, transport: 0 };
+const NO_ATTEMPTS: PollAttempts = { busy: 0, transport: 0, rateLimited: 0 };
 
 /** Why a recommendation run ended without producing a fresh for-you list. */
 export type RecommendationFailure =
@@ -155,13 +172,32 @@ export class RecommendationsService {
    *  away here loses a batch set that is still being built, so the loop
    *  retries until the server is ready to give its own verdict -- a slow
    *  provider call cut short by the web server's request window is exactly
-   *  this case, and it costs the user a whole run otherwise. */
+   *  this case, and it costs the user a whole run otherwise. A 429 is not
+   *  this case at all -- the server is healthy and the run is still
+   *  progressing, the client has just asked too often -- so it gets its own
+   *  branch, own counter, and own (much longer) wait rather than spending
+   *  the transport ceiling meant for an unhealthy server. */
   private retryOrStop(e: HttpErrorResponse, attempts: PollAttempts): void {
+    if (e.status === 429) {
+      this.backOffWhileRateLimited(e, attempts);
+      return;
+    }
     if (attempts.transport >= MAX_TRANSPORT_RETRIES) {
       this.stopWithHttpError(e);
       return;
     }
     this.stepLater({ ...attempts, transport: attempts.transport + 1 });
+  }
+
+  /** Waits out the `ai_recommendations` limiter's sliding window rather than
+   *  declaring the run dead -- but only so long: a server that keeps
+   *  rejecting for good must still end the run rather than poll forever. */
+  private backOffWhileRateLimited(e: HttpErrorResponse, attempts: PollAttempts): void {
+    if (attempts.rateLimited >= MAX_RATE_LIMIT_RETRIES) {
+      this.stopWithHttpError(e);
+      return;
+    }
+    this.stepLater({ ...attempts, rateLimited: attempts.rateLimited + 1 }, RATE_LIMIT_POLL_MS);
   }
 
   private stepLater(attempts: PollAttempts, delayMs = BACKOFF_MS): void {
