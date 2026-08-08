@@ -8,21 +8,25 @@ namespace App\Service\Recommendation;
  * Turns one raw assistant reply into validated picks — the defensive
  * boundary between an unreliable language model and the run state machine.
  *
- * A reply that parses keeps its valid picks even when some ids are invalid
- * or duplicated: partial credit is still credit. It is unusable — and only
- * unusable — when the JSON does not parse, the shape is wrong, or zero picks
- * survive validation. Tasks 10-11 branch on `usable`: a usable result is
- * recorded and the run advances; an unusable one triggers a retry with a
- * corrective message.
+ * A reply that parses keeps its valid picks even when some ids are invalid,
+ * duplicated, or scoreless: partial credit is still credit. It is unusable —
+ * and only unusable — when the JSON does not parse, the shape is wrong, or
+ * zero picks survive validation. Tasks 10-11 branch on `usable`: a usable
+ * result is recorded and the run advances; an unusable one triggers a retry
+ * with a corrective message.
  */
 final readonly class RecommendationPickParser
 {
-    /** @param list<int> $validIds */
-    public function parse(string $content, array $validIds, int $limit): PickParseResult
+    public function __construct(private ModelReplyJsonDecoder $decoder)
     {
-        $decoded = json_decode($this->stripCodeFence($content), true);
+    }
 
-        if (!\is_array($decoded)) {
+    /** @param list<int> $validIds */
+    public function parse(string $content, array $validIds): PickParseResult
+    {
+        $decoded = $this->decoder->decode($content);
+
+        if (null === $decoded) {
             return PickParseResult::unusable();
         }
 
@@ -32,7 +36,7 @@ final readonly class RecommendationPickParser
             return PickParseResult::unusable();
         }
 
-        $picks = $this->salvagePicks($entries, $validIds, $limit);
+        $picks = $this->salvagePicks($entries, $validIds);
 
         if ([] === $picks) {
             return PickParseResult::unusable();
@@ -41,40 +45,18 @@ final readonly class RecommendationPickParser
         return PickParseResult::usable($picks);
     }
 
-    private function stripCodeFence(string $content): string
-    {
-        $trimmed = trim($content);
-
-        if (!str_starts_with($trimmed, '```') || !str_ends_with($trimmed, '```')) {
-            return $trimmed;
-        }
-
-        $withoutClosingFence = substr($trimmed, 0, -3);
-        $firstLineEnd = strpos($withoutClosingFence, "\n");
-
-        if (false === $firstLineEnd) {
-            return $withoutClosingFence;
-        }
-
-        return substr($withoutClosingFence, $firstLineEnd + 1);
-    }
-
     /**
      * @param array<mixed> $entries
      * @param list<int> $validIds
      *
      * @return list<RecommendationPick>
      */
-    private function salvagePicks(array $entries, array $validIds, int $limit): array
+    private function salvagePicks(array $entries, array $validIds): array
     {
         $picks = [];
         $seenIds = [];
 
         foreach ($entries as $entry) {
-            if (\count($picks) >= $limit) {
-                break;
-            }
-
             $pick = $this->salvagePick($entry, $validIds, $seenIds);
 
             if (null === $pick) {
@@ -104,7 +86,26 @@ final readonly class RecommendationPickParser
             return null;
         }
 
-        return new RecommendationPick($entryId, $this->salvageReason($entry['reason'] ?? null));
+        $score = $this->salvageScore($entry['score'] ?? null);
+
+        if (null === $score) {
+            return null;
+        }
+
+        return new RecommendationPick($entryId, $score, $this->salvageReason($entry['reason'] ?? null));
+    }
+
+    private function salvageScore(mixed $score): ?int
+    {
+        if (\is_int($score) || \is_float($score)) {
+            $numeric = (float) $score;
+        } elseif (\is_string($score) && is_numeric($score)) {
+            $numeric = (float) $score;
+        } else {
+            return null;
+        }
+
+        return (int) min(100.0, max(0.0, round($numeric)));
     }
 
     /** @param list<int> $validIds */

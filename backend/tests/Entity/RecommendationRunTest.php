@@ -18,8 +18,8 @@ final class RecommendationRunTest extends TestCase
 
         self::assertSame(0, $progress->batchesDone);
         self::assertNull($progress->batchesTotal);
-        self::assertFalse($progress->needsMerge);
-        self::assertFalse($progress->isMergePhase);
+        self::assertFalse($progress->needsDedup);
+        self::assertFalse($progress->isDedupPhase);
         // Trivially true: zero batches planned, zero batches done.
         self::assertTrue($progress->allBatchCallsDone);
         self::assertSame(0, $progress->nextBatchIndex);
@@ -34,7 +34,7 @@ final class RecommendationRunTest extends TestCase
         self::assertSame(RecommendationRun::STATUS_RUNNING, $run->getStatus());
         self::assertSame([[1, 2], [3]], $run->getCandidateBatches());
         self::assertSame(3, $run->progress()->batchesTotal); // 2 batches + 1 merge
-        self::assertTrue($run->progress()->needsMerge);
+        self::assertTrue($run->progress()->needsDedup);
     }
 
     public function testASingleBatchNeedsNoMerge(): void
@@ -43,7 +43,7 @@ final class RecommendationRunTest extends TestCase
         $run->snapshot([[1, 2, 3]]);
 
         self::assertSame(1, $run->progress()->batchesTotal);
-        self::assertFalse($run->progress()->needsMerge);
+        self::assertFalse($run->progress()->needsDedup);
     }
 
     public function testRecordingWinnersAdvancesAndClearsRetryState(): void
@@ -52,14 +52,33 @@ final class RecommendationRunTest extends TestCase
         $run->snapshot([[1, 2], [3]]);
         $run->recordInvalidReply('garbage');
 
-        $run->recordBatchWinners([['id' => 2, 'reason' => 'fresh']]);
+        $run->recordBatchWinners([['id' => 2, 'score' => 50, 'reason' => 'fresh']]);
 
         self::assertSame(1, $run->progress()->batchesDone);
-        self::assertSame([[['id' => 2, 'reason' => 'fresh']]], $run->getWinners());
+        self::assertSame([[['id' => 2, 'score' => 50, 'reason' => 'fresh']]], $run->getWinners());
         self::assertNull($run->getLastInvalidReply());
         self::assertFalse($run->attemptsExhausted());
         self::assertSame(1, $run->progress()->nextBatchIndex);
-        self::assertFalse($run->progress()->isMergePhase);
+        self::assertFalse($run->progress()->isDedupPhase);
+    }
+
+    /**
+     * A run in flight across the deploy that introduced scores holds rows
+     * without one. Reading them must not fail: the column defaults them so
+     * every consumer sees a scored winner.
+     */
+    public function testAWinnerRowStoredWithoutAScoreReadsBackAsZero(): void
+    {
+        $run = $this->makeRun();
+        $run->snapshot([[1, 2]]);
+
+        (new \ReflectionProperty(RecommendationRun::class, 'batchWinners'))
+            ->setValue($run, [[['id' => 1, 'reason' => 'written before scores existed']]]);
+
+        self::assertSame(
+            [[['id' => 1, 'score' => 0, 'reason' => 'written before scores existed']]],
+            $run->getWinners(),
+        );
     }
 
     public function testThirdInvalidReplyExhaustsAttempts(): void
@@ -80,10 +99,10 @@ final class RecommendationRunTest extends TestCase
     {
         $run = $this->makeRun();
         $run->snapshot([[1], [2]]);
-        $run->recordBatchWinners([['id' => 1, 'reason' => 'r']]);
-        $run->recordBatchWinners([['id' => 2, 'reason' => 'r']]);
+        $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
+        $run->recordBatchWinners([['id' => 2, 'score' => 50, 'reason' => 'r']]);
 
-        self::assertTrue($run->progress()->isMergePhase);
+        self::assertTrue($run->progress()->isDedupPhase);
     }
 
     public function testAllBatchCallsDoneIsFalseUntilEveryBatchReportedWinners(): void
@@ -93,10 +112,10 @@ final class RecommendationRunTest extends TestCase
 
         self::assertFalse($run->progress()->allBatchCallsDone);
 
-        $run->recordBatchWinners([['id' => 1, 'reason' => 'r']]);
+        $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
         self::assertFalse($run->progress()->allBatchCallsDone);
 
-        $run->recordBatchWinners([['id' => 2, 'reason' => 'r']]);
+        $run->recordBatchWinners([['id' => 2, 'score' => 50, 'reason' => 'r']]);
         self::assertTrue($run->progress()->allBatchCallsDone);
     }
 
@@ -107,7 +126,7 @@ final class RecommendationRunTest extends TestCase
         $run->recordInvalidReply('a');
         $run->recordInvalidReply('b');
 
-        $run->recordBatchWinners([['id' => 1, 'reason' => 'r']]);
+        $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
 
         // Exactly MAX_ATTEMPTS (3) fresh invalid replies are needed to exhaust
         // again — pins the reset at 0, not -1 or 1.
@@ -170,7 +189,7 @@ final class RecommendationRunTest extends TestCase
         $run->recordTransportFailure();
         $run->recordTransportFailure();
 
-        $run->recordBatchWinners([['id' => 1, 'reason' => 'r']]);
+        $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
 
         // Exactly MAX_TRANSPORT_FAILURES (3) fresh failures are needed to
         // exhaust again — pins the reset at 0, not -1 or 1.
@@ -291,7 +310,7 @@ final class RecommendationRunTest extends TestCase
         $run = $this->makeRun();
 
         $this->expectException(\LogicException::class);
-        $run->recordBatchWinners([['id' => 1, 'reason' => 'r']]);
+        $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
     }
 
     public function testRecordInvalidReplyBeforeSnapshotThrows(): void

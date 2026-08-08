@@ -225,7 +225,7 @@ final class RecommendationRunControllerTest extends WebTestCase
             ->findOneBy(['guid' => 'g1']);
         self::assertInstanceOf(Entry::class, $entry);
         $this->stubChatClient()->queueContent(json_encode([
-            'recommendations' => [['id' => $entry->getId(), 'reason' => 'a good read']],
+            'recommendations' => [['id' => $entry->getId(), 'score' => 90, 'reason' => 'a good read']],
         ], \JSON_THROW_ON_ERROR));
 
         // The provider tick spends the one queued reply and finalizes the

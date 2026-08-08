@@ -32,7 +32,6 @@ final class RecommendationPromptBuilder
     private const int DESCRIPTION_MIN_CHARS = 120;
     private const int DESCRIPTION_MAX_CHARS = 480;
     private const int DESCRIPTION_WINDOW_DIVISOR = 137;
-    private const int MERGE_WINNERS_PER_BATCH_FACTOR = 2;
 
     public function descriptionLength(int $contextWindow): int
     {
@@ -54,7 +53,9 @@ final class RecommendationPromptBuilder
     ): array {
         $descriptionLength = $this->descriptionLength($settings->contextWindow);
         $historyTokens = $this->tokens($this->historySections($history, $descriptionLength));
-        $responseReserve = min($settings->picksLimit * self::TOKENS_PER_PICK, intdiv($settings->contextWindow, 4));
+        // The reply scores one line per candidate, so its size is bounded by
+        // the batch cap, not by the final list size.
+        $responseReserve = self::MAXIMUM_BATCH_SIZE * self::TOKENS_PER_PICK;
         $budget = $settings->contextWindow - self::FIXED_OVERHEAD_TOKENS - $responseReserve - $historyTokens;
 
         $batches = [];
@@ -94,7 +95,7 @@ final class RecommendationPromptBuilder
         $descriptionLength = $this->descriptionLength($settings->contextWindow);
 
         $guidance = $settings->guidancePrompt ?? RecommendationPromptText::DEFAULT_GUIDANCE;
-        $contract = \sprintf(RecommendationPromptText::OUTPUT_CONTRACT, $settings->picksLimit);
+        $contract = RecommendationPromptText::OUTPUT_CONTRACT;
         $system = implode("\n\n", [RecommendationPromptText::SYSTEM_ROLE, $guidance, $contract]);
 
         $user = implode("\n\n", [
@@ -109,48 +110,37 @@ final class RecommendationPromptBuilder
     }
 
     /**
-     * @param list<list<array{id: int, reason: string}>> $winners
-     * @param array<int, PromptLine>                     $linesById
+     * The dedup call carries no guidance prompt on purpose: guidance shapes
+     * what to recommend, and this call recommends nothing.
+     *
+     * @param list<array{id: int, score: int, reason: string}> $rankedPool
+     * @param array<int, PromptLine>                           $linesById
      *
      * @return list<array{role: string, content: string}>
      *
-     * @throws \LogicException if called with no batches of winners to merge
+     * @throws \LogicException if called with an empty pool
      */
-    public function mergeMessages(array $winners, array $linesById, EffectiveRecommendationSettings $settings): array
+    public function dedupMessages(array $rankedPool, array $linesById): array
     {
-        if ([] === $winners) {
-            throw new \LogicException('The merge phase requires at least one batch of winners.');
+        if ([] === $rankedPool) {
+            throw new \LogicException('The dedup phase requires at least one ranked winner.');
         }
 
-        $perBatchCap = max(1, intdiv(self::MERGE_WINNERS_PER_BATCH_FACTOR * $settings->picksLimit, \count($winners)));
-
-        $guidance = $settings->guidancePrompt ?? RecommendationPromptText::DEFAULT_GUIDANCE;
-        $contract = \sprintf(RecommendationPromptText::OUTPUT_CONTRACT, $settings->picksLimit);
-        $system = implode("\n\n", [RecommendationPromptText::MERGE_ROLE, $guidance, $contract]);
-
         $lines = [];
-        foreach ($winners as $batch) {
-            foreach (\array_slice($batch, 0, $perBatchCap) as $winner) {
-                $line = $linesById[$winner['id']] ?? null;
-                if (null === $line) {
-                    continue;
-                }
-                $lines[] = \sprintf(
-                    '- [%d] %s — %s — %s — %s',
-                    $winner['id'],
-                    $line->title,
-                    $line->feedName,
-                    $line->date,
-                    $winner['reason'],
-                );
+        foreach ($rankedPool as $winner) {
+            $line = $this->winnerLine($winner, $linesById);
+            if (null !== $line) {
+                $lines[] = $line;
             }
         }
 
-        $user = "WINNERS:\n" . ([] === $lines ? '- none' : implode("\n", $lines));
-
         return [
-            ['role' => 'system', 'content' => $system],
-            ['role' => 'user', 'content' => $user],
+            [
+                'role' => 'system',
+                'content' => RecommendationPromptText::DEDUP_ROLE
+                    . "\n\n" . RecommendationPromptText::DEDUP_OUTPUT_CONTRACT,
+            ],
+            ['role' => 'user', 'content' => "RANKED (best first):\n" . implode("\n", $lines)],
         ];
     }
 
@@ -236,6 +226,30 @@ final class RecommendationPromptBuilder
         }
 
         return mb_substr($description, 0, $length) . '…';
+    }
+
+    /**
+     * Null when the entry was pruned since its batch ran, so the caller can
+     * simply drop it from the rendered list.
+     *
+     * @param array{id: int, score: int, reason: string} $winner
+     * @param array<int, PromptLine>                     $linesById
+     */
+    private function winnerLine(array $winner, array $linesById): ?string
+    {
+        $line = $linesById[$winner['id']] ?? null;
+        if (null === $line) {
+            return null;
+        }
+
+        return \sprintf(
+            '- [%d] %s — %s — %s — %s',
+            $winner['id'],
+            $line->title,
+            $line->feedName,
+            $line->date,
+            $winner['reason'],
+        );
     }
 
     private function tokens(string $text): int

@@ -71,7 +71,7 @@ final class RecommendationRunStarterTest extends DbTestCase
 
         $run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07 09:00:00'));
         $run->snapshot([[1, 2], [3]]);
-        $run->recordBatchWinners([['id' => 1, 'reason' => 'r']]);
+        $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
         $run->fail('provider unreachable', new \DateTimeImmutable('2026-08-07 09:05:00'));
         $this->em->persist($run);
         $this->em->flush();
