@@ -127,7 +127,7 @@ final class RecommendationRunAdvancer
             return $this->snapshotTick($run, $user);
         }
 
-        if ($run->progress()->isMergePhase) {
+        if ($run->progress()->isDedupPhase) {
             return $this->mergeTick($run, $user, $settings);
         }
 
@@ -256,12 +256,16 @@ final class RecommendationRunAdvancer
      *
      * @param list<RecommendationPick> $picks
      *
-     * @return list<array{id: int, reason: string}>
+     * @return list<array{id: int, score: int, reason: string}>
      */
     private static function asWinners(array $picks): array
     {
         return array_map(
-            static fn (RecommendationPick $pick): array => ['id' => $pick->entryId, 'reason' => $pick->reason],
+            static fn (RecommendationPick $pick): array => [
+                'id' => $pick->entryId,
+                'score' => $pick->score,
+                'reason' => $pick->reason,
+            ],
             $picks,
         );
     }
@@ -378,7 +382,7 @@ final class RecommendationRunAdvancer
 
         $run->recordBatchWinners(self::asWinners($result->picks));
 
-        if (!$run->progress()->needsMerge) {
+        if (!$run->progress()->needsDedup) {
             return $this->finalize($run, $run->getWinners()[0]);
         }
 

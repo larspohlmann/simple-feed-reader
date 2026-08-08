@@ -243,8 +243,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $persisted = $this->activeRun();
         self::assertSame(
             [
-                ['id' => $firstBatch[0], 'reason' => 'r1'],
-                ['id' => $firstBatch[1], 'reason' => 'r2'],
+                ['id' => $firstBatch[0], 'score' => 90, 'reason' => 'r1'],
+                ['id' => $firstBatch[1], 'score' => 80, 'reason' => 'r2'],
             ],
             $persisted->getWinners()[0],
         );
@@ -552,7 +552,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
         $afterBatches = $this->advancer()->advance($this->user);
         self::assertSame('running', $afterBatches->status);
-        self::assertTrue($this->activeRun()->progress()->isMergePhase);
+        self::assertTrue($this->activeRun()->progress()->isDedupPhase);
 
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [
@@ -614,7 +614,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->advancer()->advance($this->user);
 
         $this->em->clear();
-        self::assertTrue($this->activeRun()->progress()->isMergePhase);
+        self::assertTrue($this->activeRun()->progress()->isDedupPhase);
 
         foreach ([$firstBatch[0], $secondBatch[0]] as $winnerId) {
             $entry = $this->em->getRepository(Entry::class)->find($winnerId);
@@ -651,15 +651,15 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $secondBatch = $run->getCandidateBatches()[1];
 
         $run->recordBatchWinners(array_map(
-            static fn (int $id): array => ['id' => $id, 'reason' => 'batch one reason ' . $id],
+            static fn (int $id): array => ['id' => $id, 'score' => 50, 'reason' => 'batch one reason ' . $id],
             $firstBatch,
         ));
         $run->recordBatchWinners(array_map(
-            static fn (int $id): array => ['id' => $id, 'reason' => 'batch two reason ' . $id],
+            static fn (int $id): array => ['id' => $id, 'score' => 50, 'reason' => 'batch two reason ' . $id],
             $secondBatch,
         ));
         $this->em->flush();
-        self::assertTrue($this->activeRun()->progress()->isMergePhase);
+        self::assertTrue($this->activeRun()->progress()->isDedupPhase);
 
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'winner']],
@@ -705,8 +705,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame(RecommendationRun::STATUS_FAILED, $failed->getStatus());
         self::assertSame(
             [
-                [['id' => $firstBatch[0], 'reason' => 'r1']],
-                [['id' => $secondBatch[0], 'reason' => 'r2']],
+                [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'r1']],
+                [['id' => $secondBatch[0], 'score' => 90, 'reason' => 'r2']],
             ],
             $failed->getWinners(),
         );

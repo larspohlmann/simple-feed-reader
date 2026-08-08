@@ -67,7 +67,9 @@ class RecommendationRun
     private ?array $candidateBatches = null;
 
     /**
-     * @var list<list<array{id: int, reason: string}>>
+     * @var list<list<array{id: int, score?: int, reason: string}>>
+     *     `score` is optional only for rows written before scores existed
+     *     (a run in flight across the deploy); the ranker reads those as 0
      */
     #[ORM\Column(type: Types::JSON)]
     private array $batchWinners = [];
@@ -145,7 +147,7 @@ class RecommendationRun
     }
 
     /**
-     * @param list<array{id: int, reason: string}> $picks
+     * @param list<array{id: int, score: int, reason: string}> $picks
      */
     public function recordBatchWinners(array $picks): void
     {
@@ -159,7 +161,7 @@ class RecommendationRun
     }
 
     /**
-     * @return list<list<array{id: int, reason: string}>>
+     * @return list<list<array{id: int, score?: int, reason: string}>>
      */
     public function getWinners(): array
     {

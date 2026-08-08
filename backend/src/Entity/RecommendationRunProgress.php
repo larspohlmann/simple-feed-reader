@@ -15,8 +15,8 @@ final readonly class RecommendationRunProgress
     public function __construct(
         public int $batchesDone,
         public ?int $batchesTotal,
-        public bool $needsMerge,
-        public bool $isMergePhase,
+        public bool $needsDedup,
+        public bool $isDedupPhase,
         public bool $allBatchCallsDone,
         public int $nextBatchIndex,
     ) {
@@ -29,21 +29,21 @@ final readonly class RecommendationRunProgress
     public static function forBatchPlan(?array $candidateBatches, int $batchesDone): self
     {
         $batchCount = $candidateBatches === null ? 0 : count($candidateBatches);
-        $needsMerge = $batchCount > 1;
+        $needsDedup = $batchCount > 1;
         $allBatchCallsDone = $batchesDone === $batchCount;
 
         return new self(
             batchesDone: $batchesDone,
             batchesTotal: self::batchesTotal($candidateBatches, $batchCount),
-            needsMerge: $needsMerge,
-            isMergePhase: $allBatchCallsDone && $needsMerge,
+            needsDedup: $needsDedup,
+            isDedupPhase: $allBatchCallsDone && $needsDedup,
             allBatchCallsDone: $allBatchCallsDone,
             nextBatchIndex: $batchesDone,
         );
     }
 
     /**
-     * The merge call counts as one extra batch for progress purposes.
+     * The dedup call counts as one extra batch for progress purposes.
      *
      * @param list<list<int>>|null $candidateBatches
      */
