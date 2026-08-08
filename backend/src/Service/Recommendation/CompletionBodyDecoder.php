@@ -53,9 +53,7 @@ final readonly class CompletionBodyDecoder
     /** @param array<mixed> $event */
     private function deltaContent(array $event): mixed
     {
-        $choices = $event['choices'] ?? null;
-        $firstChoice = \is_array($choices) ? ($choices[0] ?? null) : null;
-        $delta = \is_array($firstChoice) ? ($firstChoice['delta'] ?? null) : null;
+        $delta = $this->firstChoice($event)['delta'] ?? null;
 
         return \is_array($delta) ? ($delta['content'] ?? null) : null;
     }
@@ -68,11 +66,25 @@ final readonly class CompletionBodyDecoder
             return null;
         }
 
-        $choices = $decoded['choices'] ?? null;
-        $firstChoice = \is_array($choices) ? ($choices[0] ?? null) : null;
-        $message = \is_array($firstChoice) ? ($firstChoice['message'] ?? null) : null;
+        $message = $this->firstChoice($decoded)['message'] ?? null;
         $content = \is_array($message) ? ($message['content'] ?? null) : null;
 
         return \is_string($content) ? $content : null;
+    }
+
+    /**
+     * Both shapes carry the answer under the same `choices[0]` object and
+     * diverge only one key deeper.
+     *
+     * @param array<mixed> $decoded
+     *
+     * @return array<mixed>|null
+     */
+    private function firstChoice(array $decoded): ?array
+    {
+        $choices = $decoded['choices'] ?? null;
+        $firstChoice = \is_array($choices) ? ($choices[0] ?? null) : null;
+
+        return \is_array($firstChoice) ? $firstChoice : null;
     }
 }

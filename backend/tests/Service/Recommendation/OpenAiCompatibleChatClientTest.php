@@ -100,6 +100,12 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     /**
      * A provider that ignores `stream: true` answers with the blocking envelope;
      * the client must accept it exactly as it did before #312.
+     *
+     * Shape only, not timing: the MockResponse answers instantly, so this says
+     * nothing about whether such a provider can still finish in time. It
+     * cannot, past INACTIVITY_TIMEOUT_SECONDS — that bound covers the wait for
+     * the response headers too, and the constant's own comment records why the
+     * branch accepts that.
      */
     public function testABlockingEnvelopeAnswerStillWorks(): void
     {
@@ -129,12 +135,14 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         };
         $client = new ResponseCapturingHttpClient(new MockResponse($body()));
 
+        // try/catch rather than expectException, unlike the rest of this file,
+        // because the cancel assertion below has to run after the throw.
         try {
             (new OpenAiCompatibleChatClient($client, new CompletionBodyDecoder(), 'SimpleFeedReader/1.0'))
                 ->complete($this->credentials(), 'm', $this->messages());
             self::fail(ProviderUnreachableException::class . ' was not thrown.');
         } catch (ProviderUnreachableException $e) {
-            self::assertSame('That provider stopped streaming for more than 30 seconds.', $e->getMessage());
+            self::assertSame('That provider sent nothing for more than 30 seconds.', $e->getMessage());
         }
 
         // A stalled response is canceled rather than left open — leaving it

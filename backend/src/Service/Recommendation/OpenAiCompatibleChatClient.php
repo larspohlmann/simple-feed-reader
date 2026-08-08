@@ -36,6 +36,14 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     // nothing while it evaluates the prompt, and a local model on a large
     // #308 batch needs the headroom. Raise it before inventing a second
     // "first token" timeout.
+    //
+    // Note what this bound really covers: Symfony's idle timeout also bounds
+    // the wait for the response headers, so the clock runs from the request
+    // going out, not from the first body chunk. It is time-to-first-*byte*.
+    // A provider that ignores `stream: true` sends nothing at all — headers
+    // included — until the whole answer is ready, so it now has this window
+    // rather than the old TIMEOUT_SECONDS to answer end to end. That is the
+    // accepted price of failing a dead connection in 30 s instead of 120 s.
     private const float INACTIVITY_TIMEOUT_SECONDS = 30.0;
     private const int MAXIMUM_RESPONSE_BYTES = 2_097_152;
 
@@ -93,13 +101,20 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
 
         foreach ($this->httpClient->stream($response, self::INACTIVITY_TIMEOUT_SECONDS) as $chunk) {
             // isTimeout() first — on a timeout chunk the other accessors
-            // throw; same ordering hazard ConcurrentFeedFetcher documents.
+            // throw; same ordering hazard ConcurrentFeedFetcher documents. The
+            // other direction matters too: on a non-timeout error chunk
+            // isTimeout() itself throws, and that is how max_duration
+            // exhaustion leaves here as the generic "did not answer".
             if ($chunk->isTimeout()) {
                 $response->cancel();
 
+                // Shape-neutral on purpose: the provider may have gone silent
+                // mid-answer or never have started, and this bound covers both.
+                // %s over the float renders "30" today and keeps the number
+                // tied to the constant even if it ever became fractional.
                 throw new ProviderUnreachableException(sprintf(
-                    'That provider stopped streaming for more than %d seconds.',
-                    (int) self::INACTIVITY_TIMEOUT_SECONDS,
+                    'That provider sent nothing for more than %s seconds.',
+                    self::INACTIVITY_TIMEOUT_SECONDS,
                 ));
             }
 
