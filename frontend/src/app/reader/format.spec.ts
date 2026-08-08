@@ -1,5 +1,6 @@
 // format.spec.ts
 import {
+  bytesToKb,
   formatDateOr,
   formatLongDate,
   relativeTime,
@@ -86,5 +87,22 @@ describe('trialDaysRemaining', () => {
   it('reads exactly one day left as 1, not 0', () => {
     const endsAt = new Date(now + 86_400_000).toISOString();
     expect(trialDaysRemaining(endsAt, now)).toBe(1);
+  });
+});
+
+describe('bytesToKb', () => {
+  it('rounds to the nearest whole KB', () => {
+    expect(bytesToKb(2048)).toBe(2);
+    expect(bytesToKb(1536)).toBe(2);
+    expect(bytesToKb(1000)).toBe(1);
+  });
+
+  it('floors at 1 KB for any nonzero byte count', () => {
+    expect(bytesToKb(1)).toBe(1);
+    expect(bytesToKb(100)).toBe(1);
+  });
+
+  it('floors at 1 KB even for zero bytes', () => {
+    expect(bytesToKb(0)).toBe(1);
   });
 });

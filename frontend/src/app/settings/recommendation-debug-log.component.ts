@@ -13,6 +13,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoModule } from '@jsverse/transloco';
 import { ReaderApi } from '../reader/reader-api';
+import { bytesToKb } from '../reader/format';
 import { DebugLogDetail, DebugLogEntry } from '../reader/models';
 import { RecommendationsService } from '../reader/recommendations.service';
 
@@ -94,7 +95,7 @@ export class RecommendationDebugLogComponent implements OnInit {
   }
 
   kb(bytes: number): number {
-    return Math.max(1, Math.round(bytes / 1024));
+    return bytesToKb(bytes);
   }
 
   private toggle(expanded: WritableSignal<ReadonlySet<number>>, id: number): void {
