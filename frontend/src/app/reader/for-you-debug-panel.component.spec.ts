@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { ForYouDebugPanelComponent } from './for-you-debug-panel.component';
 import { ReaderApi } from './reader-api';
@@ -139,6 +139,31 @@ describe('ForYouDebugPanelComponent', () => {
     f.detectChanges();
     expect(debugLogEntry).toHaveBeenCalledTimes(1);
     expect(el.querySelector('pre')).toBeNull();
+  });
+
+  it('does not re-fetch a request body still in flight from an earlier toggle', () => {
+    debugLog.mockReturnValue(of({ entries: [BATCH_ENTRY] }));
+    const pending = new Subject<DebugLogDetail>();
+    debugLogEntry.mockReturnValue(pending.asObservable());
+    const f = mount();
+
+    const el = f.nativeElement as HTMLElement;
+    const toggle = el.querySelector('.debug-panel__toggle') as HTMLButtonElement;
+
+    toggle.click(); // opens; request still unresolved
+    f.detectChanges();
+    toggle.click(); // collapses without waiting for the response
+    f.detectChanges();
+    toggle.click(); // re-opens before the first response has landed
+    f.detectChanges();
+
+    expect(debugLogEntry).toHaveBeenCalledTimes(1);
+
+    pending.next(DETAIL);
+    pending.complete();
+    f.detectChanges();
+
+    expect(el.querySelector('pre')!.textContent).toContain('{"prompt":"x"}');
   });
 
   it('shows the streaming row text without any detail fetch', () => {

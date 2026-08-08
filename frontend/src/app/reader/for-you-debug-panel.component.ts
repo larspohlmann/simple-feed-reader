@@ -9,6 +9,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoModule } from '@jsverse/transloco';
 import { ReaderApi } from './reader-api';
 import { DebugLogDetail, DebugLogEntry } from './models';
@@ -41,6 +42,11 @@ export class ForYouDebugPanelComponent implements OnInit {
   readonly expandedResponses = signal<ReadonlySet<number>>(new Set());
 
   private timer: ReturnType<typeof setInterval> | null = null;
+  /** Ids with a `debugLogEntry` request already in flight. Guards against a
+   *  rapid open/close/open before the first response lands: `details()` is
+   *  still empty at that point, so without this a second request would fire
+   *  and race the first. */
+  private readonly pendingDetailIds = new Set<number>();
 
   /** Fetches on creation and again whenever a run completes, so the last
    *  call's verdict and final text replace the mid-stream snapshot the last
@@ -94,22 +100,33 @@ export class ForYouDebugPanelComponent implements OnInit {
   }
 
   private ensureDetail(id: number): void {
-    if (this.details().has(id)) return;
-    this.api.debugLogEntry(id).subscribe((detail) => {
-      const next = new Map(this.details());
-      next.set(id, detail);
-      this.details.set(next);
-    });
+    if (this.details().has(id) || this.pendingDetailIds.has(id)) return;
+    this.pendingDetailIds.add(id);
+    this.api
+      .debugLogEntry(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (detail) => {
+          const next = new Map(this.details());
+          next.set(id, detail);
+          this.details.set(next);
+        },
+        complete: () => this.pendingDetailIds.delete(id),
+        error: () => this.pendingDetailIds.delete(id),
+      });
   }
 
   private fetch(): void {
-    this.api.debugLog().subscribe({
-      next: (r) => this.entries.set(r.entries),
-      error: () => {
-        // The panel is best-effort diagnostics; a failed poll shows stale
-        // rows rather than an error state of its own.
-      },
-    });
+    this.api
+      .debugLog()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (r) => this.entries.set(r.entries),
+        error: () => {
+          // The panel is best-effort diagnostics; a failed poll shows stale
+          // rows rather than an error state of its own.
+        },
+      });
   }
 
   private stopPolling(): void {
