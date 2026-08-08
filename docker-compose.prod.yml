@@ -12,6 +12,57 @@
 
 name: simple-feed-reader-prod
 
+# One environment block, two consumers: php-fpm and the worker must see the
+# same configuration or they compute different DATABASE_URLs (#311).
+x-app-environment: &app-environment
+  # An empty DATABASE_URL means the bundled MySQL above, and the URL is
+  # assembled here so the MYSQL_* values stay the single source of those
+  # credentials. Every .env.prod written before the SQLite option leaves it
+  # empty, so an existing install keeps its database untouched.
+  #
+  # A SQLite install sets it to sqlite:///%kernel.project_dir%/var/data.db
+  # -- one file on the php-var volume, which already outlives the
+  # container. The default is only expanded when DATABASE_URL is empty, so
+  # MYSQL_PASSWORD is not required in that case.
+  DATABASE_URL: "${DATABASE_URL:-mysql://${MYSQL_USER:-feedreader}:${MYSQL_PASSWORD:?set it in .env.prod}@mysql:3306/${MYSQL_DATABASE:-feedreader}?serverVersion=8.4&charset=utf8mb4}"
+  # No default and no fallback: null:// discards mail and reports success,
+  # and InsecureProductionConfigGuard 500s every request while it is set.
+  MAILER_DSN: ${MAILER_DSN:?set a real mail transport in .env.prod}
+  # Deliberate "no mail" mode (#230). When 1, InsecureProductionConfigGuard
+  # accepts MAILER_DSN=null://null instead of 500ing. MAILER_DSN stays
+  # required above, so a FORGOTTEN mailer still fails compose at start; the
+  # installer's "No mail" choice writes both MAIL_DISABLED=1 and
+  # MAILER_DSN=null://null together.
+  MAIL_DISABLED: ${MAIL_DISABLED:-}
+  MAIL_FROM: ${MAIL_FROM:?set it in .env.prod}
+  MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Simple Feed Reader}
+  APP_SECRET: ${APP_SECRET:?set it in .env.prod}
+  ALTCHA_HMAC_KEY: ${ALTCHA_HMAC_KEY:?set it in .env.prod}
+  JWT_PASSPHRASE: ${JWT_PASSPHRASE:?set it in .env.prod}
+  # One public origin fills all three URL roles (SPA links in mail, OAuth
+  # redirect base, CLI-generated URLs).
+  APP_FRONTEND_URL: ${PUBLIC_URL:?set it in .env.prod}
+  APP_BACKEND_URL: ${PUBLIC_URL:?set it in .env.prod}
+  DEFAULT_URI: ${PUBLIC_URL:?set it in .env.prod}
+  # Pools live OUTSIDE var/cache/prod so the entrypoint's cache rebuild
+  # never resets rate limits or ALTCHA replay protection. The php-var
+  # volume makes them survive container recreates.
+  CACHE_DIRECTORY: /app/var/cache-pools/app
+  ADMIN_SETUP_SECRET: ${ADMIN_SETUP_SECRET:-}
+  # Permissive, not `:?`: prod-start.sh's ensure_ai_key_secret generates
+  # this value AFTER compose interpolation runs, so an instance upgrading
+  # from before #305 has no such variable yet at this point. A `:?` guard
+  # would fail compose right here on that instance -- exactly the outage
+  # ensure_ai_key_secret exists to prevent.
+  AI_KEY_SECRET: ${AI_KEY_SECRET:-}
+  MAINTENANCE_TOKEN: ${MAINTENANCE_TOKEN:-}
+  GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+  GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+  APPLE_OAUTH_CLIENT_ID: ${APPLE_OAUTH_CLIENT_ID:-}
+  APPLE_OAUTH_TEAM_ID: ${APPLE_OAUTH_TEAM_ID:-}
+  APPLE_OAUTH_KEY_ID: ${APPLE_OAUTH_KEY_ID:-}
+  APPLE_OAUTH_PRIVATE_KEY: ${APPLE_OAUTH_PRIVATE_KEY:-}
+
 services:
   # The bundled database, behind a profile: a SQLite install runs two
   # containers instead of three and never starts this one. prod_compose in
@@ -43,54 +94,7 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
       target: prod
-    environment:
-      # An empty DATABASE_URL means the bundled MySQL above, and the URL is
-      # assembled here so the MYSQL_* values stay the single source of those
-      # credentials. Every .env.prod written before the SQLite option leaves it
-      # empty, so an existing install keeps its database untouched.
-      #
-      # A SQLite install sets it to sqlite:///%kernel.project_dir%/var/data.db
-      # -- one file on the php-var volume, which already outlives the
-      # container. The default is only expanded when DATABASE_URL is empty, so
-      # MYSQL_PASSWORD is not required in that case.
-      DATABASE_URL: "${DATABASE_URL:-mysql://${MYSQL_USER:-feedreader}:${MYSQL_PASSWORD:?set it in .env.prod}@mysql:3306/${MYSQL_DATABASE:-feedreader}?serverVersion=8.4&charset=utf8mb4}"
-      # No default and no fallback: null:// discards mail and reports success,
-      # and InsecureProductionConfigGuard 500s every request while it is set.
-      MAILER_DSN: ${MAILER_DSN:?set a real mail transport in .env.prod}
-      # Deliberate "no mail" mode (#230). When 1, InsecureProductionConfigGuard
-      # accepts MAILER_DSN=null://null instead of 500ing. MAILER_DSN stays
-      # required above, so a FORGOTTEN mailer still fails compose at start; the
-      # installer's "No mail" choice writes both MAIL_DISABLED=1 and
-      # MAILER_DSN=null://null together.
-      MAIL_DISABLED: ${MAIL_DISABLED:-}
-      MAIL_FROM: ${MAIL_FROM:?set it in .env.prod}
-      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Simple Feed Reader}
-      APP_SECRET: ${APP_SECRET:?set it in .env.prod}
-      ALTCHA_HMAC_KEY: ${ALTCHA_HMAC_KEY:?set it in .env.prod}
-      JWT_PASSPHRASE: ${JWT_PASSPHRASE:?set it in .env.prod}
-      # One public origin fills all three URL roles (SPA links in mail, OAuth
-      # redirect base, CLI-generated URLs).
-      APP_FRONTEND_URL: ${PUBLIC_URL:?set it in .env.prod}
-      APP_BACKEND_URL: ${PUBLIC_URL:?set it in .env.prod}
-      DEFAULT_URI: ${PUBLIC_URL:?set it in .env.prod}
-      # Pools live OUTSIDE var/cache/prod so the entrypoint's cache rebuild
-      # never resets rate limits or ALTCHA replay protection. The php-var
-      # volume makes them survive container recreates.
-      CACHE_DIRECTORY: /app/var/cache-pools/app
-      ADMIN_SETUP_SECRET: ${ADMIN_SETUP_SECRET:-}
-      # Permissive, not `:?`: prod-start.sh's ensure_ai_key_secret generates
-      # this value AFTER compose interpolation runs, so an instance upgrading
-      # from before #305 has no such variable yet at this point. A `:?` guard
-      # would fail compose right here on that instance -- exactly the outage
-      # ensure_ai_key_secret exists to prevent.
-      AI_KEY_SECRET: ${AI_KEY_SECRET:-}
-      MAINTENANCE_TOKEN: ${MAINTENANCE_TOKEN:-}
-      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
-      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
-      APPLE_OAUTH_CLIENT_ID: ${APPLE_OAUTH_CLIENT_ID:-}
-      APPLE_OAUTH_TEAM_ID: ${APPLE_OAUTH_TEAM_ID:-}
-      APPLE_OAUTH_KEY_ID: ${APPLE_OAUTH_KEY_ID:-}
-      APPLE_OAUTH_PRIVATE_KEY: ${APPLE_OAUTH_PRIVATE_KEY:-}
+    environment: *app-environment
     extra_hosts:
       # Lets MAILER_DSN=smtp://host.docker.internal:25 reach an MTA on the
       # host; harmless when unused. Works on Docker Engine variants where
@@ -106,6 +110,36 @@ services:
         # A SQLite install leaves the mysql profile off, so the service is not
         # part of the run at all and php has to start without it.
         required: false
+
+  # The #311 background worker: same image, different command. It drives
+  # recommendation runs, sweeps due feeds, and purges the failure transport
+  # (see backend/src/Service/Worker/WorkerSchedule.php). If it dies, the app
+  # degrades to #308's poll-driven behaviour automatically -- no config.
+  worker:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: prod
+    command: ["php", "bin/console", "messenger:consume", "scheduler_worker", "--time-limit=3600", "--memory-limit=128M"]
+    # The first restart policy in this stack, and the one service that needs
+    # it: messenger:consume exits by design at --time-limit, and something
+    # must bring it back.
+    restart: unless-stopped
+    environment: *app-environment
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - php-var:/app/var
+      - jwt-keys:/app/config/jwt
+    depends_on:
+      mysql:
+        condition: service_healthy
+        # Same as php: a SQLite install runs without the mysql profile.
+        required: false
+      php:
+        # Start-order hint only; the entrypoint's var/.ready wait is the real
+        # readiness gate.
+        condition: service_started
 
   web:
     build:
