@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -63,6 +64,33 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
             ],
             $rows,
         );
+    }
+
+    /**
+     * How many attempts a given call has already recorded, so the caller can
+     * number the next one. Scoped to the run (not the user), phase and batch
+     * number — the dedup phase has no batch number, and SQL `= NULL` never
+     * matches, so that case needs an explicit `IS NULL`.
+     */
+    public function countAttempts(RecommendationRun $run, string $phase, ?int $batchNumber): int
+    {
+        $qb = $this->createQueryBuilder('l')
+            ->select('COUNT(l.id)')
+            ->where('l.run = :run')
+            ->andWhere('l.phase = :phase')
+            ->setParameter('run', $run)
+            ->setParameter('phase', $phase);
+
+        if (null === $batchNumber) {
+            $qb->andWhere('l.batchNumber IS NULL');
+        } else {
+            $qb->andWhere('l.batchNumber = :batchNumber')->setParameter('batchNumber', $batchNumber);
+        }
+
+        /** @var int|string $count */
+        $count = $qb->getQuery()->getSingleScalarResult();
+
+        return (int) $count;
     }
 
     /**

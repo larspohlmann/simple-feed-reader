@@ -79,12 +79,7 @@ final readonly class RecommendationCallRecorder
      */
     private function nextAttempt(RecommendationRun $run, string $phase, ?int $batchNumber): int
     {
-        $sameCall = array_filter(
-            $this->logs->listForUser($run->getUser()),
-            static fn (array $row): bool => $row['phase'] === $phase && $row['batchNumber'] === $batchNumber,
-        );
-
-        return \count($sameCall) + 1;
+        return $this->logs->countAttempts($run, $phase, $batchNumber) + 1;
     }
 
     /**

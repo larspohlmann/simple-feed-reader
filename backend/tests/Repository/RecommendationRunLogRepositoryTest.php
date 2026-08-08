@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
-use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Repository\RecommendationRunLogRepository;
+use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -17,6 +18,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
     private User $user;
     private User $otherUser;
     private RecommendationRunLogRepository $logs;
+    private RecommendationRunFixtures $fixtures;
 
     protected function setUp(): void
     {
@@ -30,14 +32,17 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         /** @var RecommendationRunLogRepository $logs */
         $logs = self::getContainer()->get(RecommendationRunLogRepository::class);
         $this->logs = $logs;
+        /** @var ApiKeyCipher $cipher */
+        $cipher = self::getContainer()->get(ApiKeyCipher::class);
+        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
     }
 
     public function testListReturnsMetadataWithByteSizesButNoBodies(): void
     {
-        $run = $this->createRun($this->user);
-        $finished = $this->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'req-body-a');
+        $run = $this->fixtures->createRun($this->user);
+        $finished = $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'req-body-a');
         $finished->finish('decoded text', RecommendationRunLog::VERDICT_USABLE);
-        $this->log($run, RecommendationRunLog::PHASE_DEDUP, null, 1, 'req-body-longer');
+        $this->fixtures->log($run, RecommendationRunLog::PHASE_DEDUP, null, 1, 'req-body-longer');
         $this->em->flush();
 
         $rows = $this->logs->listForUser($this->user);
@@ -69,10 +74,10 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
 
     public function testStreamingTextReturnsOnlyVerdictlessRows(): void
     {
-        $run = $this->createRun($this->user);
-        $done = $this->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
+        $run = $this->fixtures->createRun($this->user);
+        $done = $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
         $done->finish('finished text', RecommendationRunLog::VERDICT_UNUSABLE);
-        $streaming = $this->log($run, RecommendationRunLog::PHASE_BATCH, 2, 1, 'r');
+        $streaming = $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 2, 1, 'r');
         $this->em->flush();
 
         $streamingId = $streaming->getId();
@@ -80,10 +85,36 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         self::assertSame([$streamingId => ''], $this->logs->streamingTextForUser($this->user));
     }
 
+    public function testCountAttemptsMatchesOnBatchNumberIsNullForTheDedupPhase(): void
+    {
+        $run = $this->fixtures->createRun($this->user);
+        $this->fixtures->log($run, RecommendationRunLog::PHASE_DEDUP, null, 1, 'r');
+        $this->fixtures->log($run, RecommendationRunLog::PHASE_DEDUP, null, 2, 'r');
+        $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
+        $this->em->flush();
+
+        self::assertSame(2, $this->logs->countAttempts($run, RecommendationRunLog::PHASE_DEDUP, null));
+        self::assertSame(1, $this->logs->countAttempts($run, RecommendationRunLog::PHASE_BATCH, 1));
+        self::assertSame(0, $this->logs->countAttempts($run, RecommendationRunLog::PHASE_BATCH, 2));
+    }
+
+    public function testCountAttemptsIsScopedToTheRunNotTheUser(): void
+    {
+        $earlierRun = $this->fixtures->createRun($this->user);
+        $this->fixtures->log($earlierRun, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
+        $currentRun = $this->fixtures->createRun($this->user);
+        $this->fixtures->log($currentRun, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
+        $this->em->flush();
+
+        self::assertSame(1, $this->logs->countAttempts($currentRun, RecommendationRunLog::PHASE_BATCH, 1));
+    }
+
     public function testFindOwnedRefusesAnotherUsersRow(): void
     {
-        $mine = $this->log($this->createRun($this->user), RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
-        $theirs = $this->log($this->createRun($this->otherUser), RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
+        $myRun = $this->fixtures->createRun($this->user);
+        $mine = $this->fixtures->log($myRun, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
+        $theirRun = $this->fixtures->createRun($this->otherUser);
+        $theirs = $this->fixtures->log($theirRun, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
         $this->em->flush();
         $mineId = $mine->getId();
         $theirsId = $theirs->getId();
@@ -96,8 +127,9 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
 
     public function testDeleteForUserLeavesOtherUsersRows(): void
     {
-        $this->log($this->createRun($this->user), RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
-        $kept = $this->log($this->createRun($this->otherUser), RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
+        $this->fixtures->log($this->fixtures->createRun($this->user), RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
+        $otherRun = $this->fixtures->createRun($this->otherUser);
+        $kept = $this->fixtures->log($otherRun, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
         $this->em->flush();
         $keptId = $kept->getId();
         self::assertNotNull($keptId);
@@ -109,26 +141,5 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $this->em->clear();
         self::assertSame([], $this->logs->listForUser($this->user));
         self::assertNotNull($this->em->find(RecommendationRunLog::class, $keptId));
-    }
-
-    private function createRun(User $user): RecommendationRun
-    {
-        $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-08T10:00:00Z'));
-        $this->em->persist($run);
-
-        return $run;
-    }
-
-    private function log(
-        RecommendationRun $run,
-        string $phase,
-        ?int $batchNumber,
-        int $attempt,
-        string $requestBody,
-    ): RecommendationRunLog {
-        $log = new RecommendationRunLog($run, $phase, $batchNumber, $attempt, $requestBody);
-        $this->em->persist($log);
-
-        return $log;
     }
 }
