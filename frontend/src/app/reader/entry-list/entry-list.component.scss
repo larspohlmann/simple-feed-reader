@@ -1,5 +1,11 @@
 @use '../../theme/breakpoints' as bp;
 
+/* What every scroller/overlay branch below reserves before its own content:
+   the shell's app bar, this list's own sticky header, and the gap between
+   them. Was four independent copies of this calc (.rows, .rows.magazine,
+   the empty state, .banner) — a SCSS variable keeps it to one (#321). */
+$header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
+
 :host {
   display: flex;
   flex-direction: column;
@@ -267,7 +273,7 @@
      hidden state nor this list's collapsed one, so the rows never move (#87).
      They pass behind the bars instead, which is what makes retracting them
      actually give the reader more to look at. */
-  padding-top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
+  padding-top: $header-clear;
 }
 
 .rows.dragging {
@@ -294,7 +300,7 @@
 
 .rows.magazine {
   padding: var(--space-3);
-  padding-top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
+  padding-top: $header-clear;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -314,9 +320,7 @@
    topBlock sits inside that same reserved space instead of the message text
    growing an extra header-height gap above it. */
 .empty-wrap {
-  padding-top: calc(
-    var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap) + var(--space-6)
-  );
+  padding-top: calc(#{$header-clear} + var(--space-6));
 }
 
 .empty {
@@ -334,7 +338,7 @@
 
 .banner {
   margin: var(--space-3) var(--space-4);
-  margin-top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
+  margin-top: $header-clear;
   padding: var(--space-3);
   border-radius: var(--radius);
   background: var(--bg-danger);

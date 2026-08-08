@@ -166,10 +166,20 @@ app-reader-header.hidden {
 
 /* The 2px run hairline floats at the app-bar seam instead of living in flow:
    the run block scrolls away with the list (#321), so this is the one signal
-   of a running run that stays put. Zero layout impact by design. */
+   of a running run that stays put. Zero layout impact by design.
+
+   `z-index: 4`, ABOVE `app-entry-list`'s own `.list-header` (z-index 3, same
+   seam, opaque, unconditionally rendered — it never shrinks to zero height
+   even collapsed). At equal z-index the hairline is the earlier sibling in
+   `.list`, so `.list-header` would paint over it and hide it completely; one
+   step higher paints the hairline on top instead. This mirrors `.under-header`
+   below, which sits at the very same `--app-bar-h` seam over the very same
+   list header for the identical reason — see its own comment. The strip lands
+   in the header's top padding, above its heading text, so it reads as a
+   loading bar riding the header's edge rather than covering content. */
 .list app-progress-hairline {
   position: absolute;
-  z-index: 3;
+  z-index: 4;
   top: var(--app-bar-h, var(--bar-h));
   right: 0;
   left: 0;
