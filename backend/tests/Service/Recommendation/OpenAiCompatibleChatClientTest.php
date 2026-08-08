@@ -7,11 +7,14 @@ namespace App\Tests\Service\Recommendation;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ProviderCredentials;
+use App\Service\Recommendation\CompletionBodyDecoder;
 use App\Service\Recommendation\OpenAiCompatibleChatClient;
+use App\Tests\Support\ResponseCapturingHttpClient;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class OpenAiCompatibleChatClientTest extends TestCase
 {
@@ -26,12 +29,17 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         return [['role' => 'user', 'content' => 'Rank these entries.']];
     }
 
-    private function clientAnswering(MockResponse $response): OpenAiCompatibleChatClient
+    private function clientUsing(HttpClientInterface $httpClient): OpenAiCompatibleChatClient
     {
-        return new OpenAiCompatibleChatClient(new MockHttpClient($response), 'SimpleFeedReader/1.0');
+        return new OpenAiCompatibleChatClient($httpClient, new CompletionBodyDecoder(), 'SimpleFeedReader/1.0');
     }
 
-    public function testReturnsTheAssistantContent(): void
+    private function clientAnswering(MockResponse $response): OpenAiCompatibleChatClient
+    {
+        return $this->clientUsing(new MockHttpClient($response));
+    }
+
+    public function testReturnsTheAssistantContentJoinedFromTheStream(): void
     {
         $seen = [];
         $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$seen): MockResponse {
@@ -40,28 +48,109 @@ final class OpenAiCompatibleChatClientTest extends TestCase
                 'url' => $url,
                 'headers' => $options['headers'] ?? [],
                 'body' => $options['body'] ?? null,
+                'timeout' => $options['timeout'] ?? null,
+                'max_duration' => $options['max_duration'] ?? null,
             ];
 
-            return new MockResponse('{"choices":[{"message":{"content":"{\"recommendations\":[]}"}}]}');
+            return new MockResponse([
+                'data: {"choices":[{"delta":{"role":"assistant"}}]}' . "\n\n",
+                'data: {"choices":[{"delta":{"content":"{\"recommend"}}]}' . "\n\n",
+                'data: {"choices":[{"delta":{"content":"ations\":[]}"}}]}' . "\n\n",
+                'data: [DONE]' . "\n\n",
+            ]);
         });
 
-        $content = (new OpenAiCompatibleChatClient($client, 'SimpleFeedReader/1.0'))
+        $content = $this->clientUsing($client)
             ->complete($this->credentials(), 'm', $this->messages());
 
         self::assertSame('{"recommendations":[]}', $content);
 
-        /** @var array{method: string, url: string, headers: array<int, string>, body: string} $seen */
+        /**
+         * @var array{
+         *     method: string,
+         *     url: string,
+         *     headers: array<int, string>,
+         *     body: string,
+         *     timeout: float|null,
+         *     max_duration: float|null,
+         * } $seen
+         */
         self::assertSame('POST', $seen['method']);
         self::assertSame('https://api.example.test/v1/chat/completions', $seen['url']);
         self::assertContains('Authorization: Bearer sk-test', $seen['headers']);
+        self::assertContains('Accept: text/event-stream, application/json', $seen['headers']);
         self::assertContains('Accept-Encoding: identity', $seen['headers']);
+
+        // The idle bound is what makes a dead connection fail in 30 s rather
+        // than 120 s — the whole point of #312. The wall bound is the
+        // published 120 s budget WorkerPresence::FRESH_SECONDS is sized
+        // against (#311). Pinning the numbers, not the constants, means a
+        // regression that swaps one for the other or drops max_duration
+        // shows up here instead of only in production behaviour.
+        self::assertSame(30.0, $seen['timeout']);
+        self::assertSame(120.0, $seen['max_duration']);
 
         $decodedBody = json_decode($seen['body'], true);
         self::assertSame([
             'model' => 'm',
             'messages' => $this->messages(),
             'response_format' => ['type' => 'json_object'],
+            'stream' => true,
         ], $decodedBody);
+    }
+
+    /**
+     * A provider that ignores `stream: true` answers with the blocking envelope;
+     * the client must accept it exactly as it did before #312.
+     *
+     * Shape only, not timing: the MockResponse answers instantly, so this says
+     * nothing about whether such a provider can still finish in time. It
+     * cannot, past INACTIVITY_TIMEOUT_SECONDS — that bound covers the wait for
+     * the response headers too, and the constant's own comment records why the
+     * branch accepts that.
+     */
+    public function testABlockingEnvelopeAnswerStillWorks(): void
+    {
+        $client = $this->clientAnswering(
+            new MockResponse('{"choices":[{"message":{"content":"{\"recommendations\":[]}"}}]}'),
+        );
+
+        self::assertSame(
+            '{"recommendations":[]}',
+            $client->complete($this->credentials(), 'm', $this->messages()),
+        );
+    }
+
+    /**
+     * The point of #312: a stream that goes silent is aborted after the
+     * inactivity window and surfaces as the same typed transport failure the
+     * #308 retry pipeline already handles — not after the full 120 s budget.
+     *
+     * MockHttpClient turns an empty string yielded by a body generator into a
+     * timeout chunk, the documented way to simulate a stalled stream.
+     */
+    public function testASilentStreamIsAbortedAsUnreachable(): void
+    {
+        $body = static function (): \Generator {
+            yield 'data: {"choices":[{"delta":{"content":"par"}}]}' . "\n\n";
+            yield '';
+        };
+        $client = new ResponseCapturingHttpClient(new MockResponse($body()));
+
+        // try/catch rather than expectException, unlike the rest of this file,
+        // because the cancel assertion below has to run after the throw.
+        try {
+            $this->clientUsing($client)
+                ->complete($this->credentials(), 'm', $this->messages());
+            self::fail(ProviderUnreachableException::class . ' was not thrown.');
+        } catch (ProviderUnreachableException $e) {
+            self::assertSame('That provider sent nothing for more than 30 seconds.', $e->getMessage());
+        }
+
+        // A stalled response is canceled rather than left open — leaving it
+        // running would hold the connection past the exception that already
+        // told the caller it is dead.
+        self::assertTrue($client->lastResponse?->getInfo('canceled'));
     }
 
     public function testRejectedCredentialsBecomeTheTypedException(): void
@@ -164,7 +253,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         ]);
 
         $this->expectException(ProviderUnreachableException::class);
-        (new OpenAiCompatibleChatClient($client, 'SimpleFeedReader/1.0'))
+        $this->clientUsing($client)
             ->complete($this->credentials(), 'm', $this->messages());
     }
 
@@ -204,7 +293,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         });
 
         $this->expectException(ProviderUnreachableException::class);
-        (new OpenAiCompatibleChatClient($client, 'SimpleFeedReader/1.0'))
+        $this->clientUsing($client)
             ->complete($this->credentials(), 'm', $this->messages());
     }
 }
