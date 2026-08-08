@@ -813,6 +813,13 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertCount(4, $retryMessages);
         self::assertSame('garbage 1', $retryMessages[2]['content']);
 
+        // Read from the database, not the in-memory entity: an unpersisted
+        // retry counter would restart at zero on every poll, so the degrade
+        // ending would never arrive and each poll would spend one more
+        // provider call on the same run (the spend hazard of #302 and #308).
+        $this->em->clear();
+        self::assertSame(2, $this->persistedAttempts($run));
+
         $report = $this->advancer()->advance($this->user);
 
         // Degraded, not failed: the batches' ranking work is kept and the
@@ -826,6 +833,44 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             fn (RecommendationItem $item): int => $this->entryIdOf($item),
             $items,
         ));
+    }
+
+    /**
+     * The degrade ending still owes the reader the list size they asked for:
+     * the dedup pool is cut to twice the picks limit, so completing straight
+     * from it would hand back up to double that.
+     */
+    public function testTheDegradedDedupEndingStillCutsThePoolToThePicksLimit(): void
+    {
+        $this->seedMultiBatchFixture(picksLimit: 2);
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user);
+        $run = $this->activeRun();
+        self::assertCount(2, $run->getCandidateBatches());
+
+        foreach ($run->getCandidateBatches() as $batch) {
+            $run->recordBatchWinners(array_map(
+                static fn (int $id): array => ['id' => $id, 'score' => 50, 'reason' => 'pooled ' . $id],
+                $batch,
+            ));
+        }
+        $this->em->flush();
+        self::assertTrue($this->activeRun()->progress()->isDedupPhase);
+
+        for ($attempt = 1; $attempt < RecommendationRun::MAX_ATTEMPTS; $attempt++) {
+            $this->stubChatClient()->queueContent('garbage ' . $attempt);
+            $this->advancer()->advance($this->user);
+        }
+
+        $this->stubChatClient()->queueContent('the garbage that exhausts the attempts');
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame('completed', $report->status);
+
+        $this->em->clear();
+        // 2 × picksLimit(2) = 4 entries reached the dedup call, so a pool
+        // handed back whole would be twice the list the reader asked for.
+        self::assertCount(2, $this->recommendationItems($run));
     }
 
     /**
@@ -888,6 +933,23 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $items = $this->em->getRepository(RecommendationItem::class)->findBy(['run' => $run], ['position' => 'ASC']);
 
         return $items;
+    }
+
+    /**
+     * The retry counter as the database holds it. Read over the connection
+     * because the entity exposes no getter, and because reading it through
+     * the entity manager would risk serving the very in-memory value this
+     * assertion exists to bypass.
+     */
+    private function persistedAttempts(RecommendationRun $run): int
+    {
+        $attempts = $this->em->getConnection()->fetchOne(
+            'SELECT attempts FROM recommendation_run WHERE id = ?',
+            [$run->getId()],
+        );
+        self::assertIsNumeric($attempts);
+
+        return (int) $attempts;
     }
 
     private function entryIdOf(RecommendationItem $item): int

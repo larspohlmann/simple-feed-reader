@@ -292,19 +292,25 @@ final class RecommendationPickParserTest extends TestCase
         self::assertSame([90, 15], array_map(static fn ($pick) => $pick->score, $result->picks));
     }
 
+    /**
+     * Both sides of the halfway point are pinned on purpose: a fractional
+     * score that only ever sat at .5 reads the same whether the parser
+     * rounds, floors or ceils it.
+     */
     public function testFloatAndNumericStringScoresRoundToInt(): void
     {
         $content = self::encode([
             'recommendations' => [
-                ['id' => 1, 'score' => 87.5, 'reason' => 'Float'],
-                ['id' => 2, 'score' => '73', 'reason' => 'String'],
+                ['id' => 1, 'score' => 87.5, 'reason' => 'Float rounding up'],
+                ['id' => 2, 'score' => 87.4, 'reason' => 'Float rounding down'],
+                ['id' => 3, 'score' => '73', 'reason' => 'String'],
             ],
         ]);
 
-        $result = $this->parser->parse($content, [1, 2], 10);
+        $result = $this->parser->parse($content, [1, 2, 3], 10);
 
         self::assertTrue($result->usable);
-        self::assertSame([88, 73], array_map(static fn ($pick) => $pick->score, $result->picks));
+        self::assertSame([88, 87, 73], array_map(static fn ($pick) => $pick->score, $result->picks));
     }
 
     public function testOutOfRangeScoresAreClampedIntoTheScale(): void

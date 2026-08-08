@@ -41,7 +41,16 @@ final class RecommendationDuplicateParserTest extends TestCase
         self::assertSame([2], $result->duplicateIds);
     }
 
-    public function testNumericStringIdsAreAcceptedAndRepeatsCollapsed(): void
+    /** A string id alone, so the plain int cannot stand in for the branch. */
+    public function testANumericStringIdIsAccepted(): void
+    {
+        $result = $this->parser->parse('{"duplicates": ["2"]}', [1, 2]);
+
+        self::assertTrue($result->usable);
+        self::assertSame([2], $result->duplicateIds);
+    }
+
+    public function testRepeatedIdsAreCollapsed(): void
     {
         $result = $this->parser->parse('{"duplicates": ["2", 2]}', [1, 2]);
 
