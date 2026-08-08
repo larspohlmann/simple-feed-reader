@@ -114,6 +114,7 @@ describe('ReaderShellComponent', () => {
       batchesDone: 0,
       error: null,
       background: false,
+      streamedChars: 0,
     });
     f.detectChanges();
     return f;
@@ -155,6 +156,7 @@ describe('ReaderShellComponent', () => {
       batchesDone: 0,
       error: null,
       background: false,
+      streamedChars: 0,
     });
     f.detectChanges();
     return f;
@@ -711,6 +713,7 @@ describe('ReaderShellComponent', () => {
       batchesDone: 0,
       error: null,
       background: false,
+      streamedChars: 0,
     });
     f.detectChanges();
     expect(recs.running()).toBe(true);
@@ -720,6 +723,7 @@ describe('ReaderShellComponent', () => {
       batchesDone: 0,
       error: null,
       background: false,
+      streamedChars: 0,
     });
   });
 
@@ -740,12 +744,62 @@ describe('ReaderShellComponent', () => {
       batchesDone: 1,
       error: null,
       background: false,
+      streamedChars: 0,
     });
     f.detectChanges();
 
     expect(f.nativeElement.querySelector('.for-you-bar button.run')).toBeNull();
     const status = f.nativeElement.querySelector('.for-you-bar [role="status"]') as HTMLElement;
     expect(status.textContent).toContain('1 of 3');
+  });
+
+  it('shows the received-bytes fragment while streaming a batch', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ view: 'for-you' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    const recs = TestBed.inject(RecommendationsService);
+    recs.running.set(true);
+    recs.report.set({
+      status: 'running',
+      batchesTotal: 5,
+      batchesDone: 2,
+      error: null,
+      background: false,
+      streamedChars: 12288,
+    });
+    f.detectChanges();
+
+    const streamed = f.nativeElement.querySelector('.for-you-bar__streamed') as HTMLElement | null;
+    expect(streamed?.textContent).toContain('12 KB');
+  });
+
+  it('hides the received-bytes fragment when nothing has streamed yet', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ view: 'for-you' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    const recs = TestBed.inject(RecommendationsService);
+    recs.running.set(true);
+    recs.report.set({
+      status: 'running',
+      batchesTotal: 5,
+      batchesDone: 2,
+      error: null,
+      background: false,
+      streamedChars: 0,
+    });
+    f.detectChanges();
+
+    expect(f.nativeElement.querySelector('.for-you-bar__streamed')).toBeNull();
   });
 
   describe('background regime hint', () => {
@@ -766,6 +820,7 @@ describe('ReaderShellComponent', () => {
         batchesDone: 1,
         error: null,
         background,
+        streamedChars: 0,
       });
       f.detectChanges();
       return f;
@@ -859,6 +914,7 @@ describe('ReaderShellComponent', () => {
       batchesDone: 0,
       error: null,
       background: false,
+      streamedChars: 0,
     });
     f.detectChanges();
 

@@ -185,6 +185,11 @@
         <p role="status" aria-live="polite">
           {{ 'reader.forYouProgress' | transloco: forYouProgress() }}
         </p>
+        @if (forYouStreamedKb(); as kb) {
+          <span class="for-you-bar__streamed">{{
+            'reader.forYouStreamed' | transloco: { kb }
+          }}</span>
+        }
         <p class="hint">
           {{
             (recs.workerOwnsRun() ? 'reader.forYouBackground' : 'reader.forYouKeepOpen') | transloco

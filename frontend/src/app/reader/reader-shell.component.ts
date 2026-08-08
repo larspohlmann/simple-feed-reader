@@ -151,6 +151,14 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     total: this.recs.report()?.batchesTotal ?? 0,
   }));
 
+  /** Bytes of the in-flight provider answer, for the liveness fragment the
+   *  bar shows during the long silent stretch of a single call. 0 (shown as
+   *  null) between calls -- the server resets the counter when a call ends. */
+  readonly forYouStreamedKb = computed(() => {
+    const chars = this.recs.report()?.streamedChars ?? 0;
+    return chars > 0 ? Math.max(1, Math.round(chars / 1024)) : null;
+  });
+
   /** What to tell the user about a for-you run that ended without a fresh
    *  list -- busy-retry exhaustion, a backend-side failure, or an HTTP error.
    *  Gated on `!running()` so a stale failure from a previous run never

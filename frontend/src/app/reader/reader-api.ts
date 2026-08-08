@@ -6,6 +6,8 @@ import { API_BASE_URL } from '../core/api';
 import { PAGE_SIZE } from './paging';
 import { RefreshScope } from './query';
 import {
+  DebugLogDetail,
+  DebugLogEntry,
   EntriesPage,
   EntryDto,
   EntryQuery,
@@ -159,5 +161,17 @@ export class ReaderApi {
   /** The recommendation run in flight, if any -- used to resume a poll loop on boot. */
   currentRecommendations(): Observable<RecommendationRunReport> {
     return this.http.get<RecommendationRunReport>(`${this.base}/api/recommendations/runs/current`);
+  }
+
+  /** The provider calls logged for the most recent for-you run, in call order. */
+  debugLog(): Observable<{ entries: DebugLogEntry[] }> {
+    return this.http.get<{ entries: DebugLogEntry[] }>(
+      `${this.base}/api/recommendations/runs/debug-log`,
+    );
+  }
+
+  /** The full request/response body for one logged provider call. */
+  debugLogEntry(id: number): Observable<DebugLogDetail> {
+    return this.http.get<DebugLogDetail>(`${this.base}/api/recommendations/runs/debug-log/${id}`);
   }
 }

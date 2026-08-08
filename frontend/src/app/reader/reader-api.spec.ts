@@ -260,6 +260,7 @@ describe('ReaderApi', () => {
       batchesDone: 0,
       error: null,
       background: false,
+      streamedChars: 0,
     });
   });
 
@@ -273,6 +274,7 @@ describe('ReaderApi', () => {
       batchesDone: 1,
       error: null,
       background: false,
+      streamedChars: 0,
     });
   });
 
@@ -286,6 +288,29 @@ describe('ReaderApi', () => {
       batchesDone: 0,
       error: null,
       background: false,
+      streamedChars: 0,
+    });
+  });
+
+  it('GETs the debug log', () => {
+    api.debugLog().subscribe();
+    const req = ctrl.expectOne('https://api.test/api/recommendations/runs/debug-log');
+    expect(req.request.method).toBe('GET');
+    req.flush({ entries: [] });
+  });
+
+  it('GETs one debug log entry', () => {
+    api.debugLogEntry(7).subscribe();
+    const req = ctrl.expectOne('https://api.test/api/recommendations/runs/debug-log/7');
+    expect(req.request.method).toBe('GET');
+    req.flush({
+      id: 7,
+      phase: 'batch',
+      batchNumber: 1,
+      attempt: 1,
+      verdict: 'usable',
+      requestBody: '{}',
+      responseText: '{}',
     });
   });
 });
