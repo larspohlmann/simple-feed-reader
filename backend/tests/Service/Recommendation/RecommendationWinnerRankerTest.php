@@ -47,14 +47,13 @@ final class RecommendationWinnerRankerTest extends TestCase
         self::assertSame([5, 1, 2, 3, 6], array_column($ranked, 'id'));
     }
 
-    public function testAWinnerRecordedWithoutAScoreReadsAsZeroAndSortsLast(): void
+    public function testAZeroScoredWinnerSortsLast(): void
     {
         $ranked = $this->ranker->ranked([
-            [['id' => 1, 'reason' => 'legacy row'], ['id' => 2, 'score' => 10, 'reason' => 'scored']],
+            [['id' => 1, 'score' => 0, 'reason' => 'legacy row'], ['id' => 2, 'score' => 10, 'reason' => 'scored']],
         ]);
 
         self::assertSame([2, 1], array_column($ranked, 'id'));
-        self::assertSame(0, $ranked[1]['score']);
     }
 
     public function testEmptyBatchesRankToAnEmptyPool(): void

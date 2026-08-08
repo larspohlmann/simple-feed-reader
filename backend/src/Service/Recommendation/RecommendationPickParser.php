@@ -22,7 +22,7 @@ final readonly class RecommendationPickParser
     }
 
     /** @param list<int> $validIds */
-    public function parse(string $content, array $validIds, int $limit): PickParseResult
+    public function parse(string $content, array $validIds): PickParseResult
     {
         $decoded = $this->decoder->decode($content);
 
@@ -36,7 +36,7 @@ final readonly class RecommendationPickParser
             return PickParseResult::unusable();
         }
 
-        $picks = $this->salvagePicks($entries, $validIds, $limit);
+        $picks = $this->salvagePicks($entries, $validIds);
 
         if ([] === $picks) {
             return PickParseResult::unusable();
@@ -51,16 +51,12 @@ final readonly class RecommendationPickParser
      *
      * @return list<RecommendationPick>
      */
-    private function salvagePicks(array $entries, array $validIds, int $limit): array
+    private function salvagePicks(array $entries, array $validIds): array
     {
         $picks = [];
         $seenIds = [];
 
         foreach ($entries as $entry) {
-            if (\count($picks) >= $limit) {
-                break;
-            }
-
             $pick = $this->salvagePick($entry, $validIds, $seenIds);
 
             if (null === $pick) {

@@ -62,6 +62,25 @@ final class RecommendationRunTest extends TestCase
         self::assertFalse($run->progress()->isDedupPhase);
     }
 
+    /**
+     * A run in flight across the deploy that introduced scores holds rows
+     * without one. Reading them must not fail: the column defaults them so
+     * every consumer sees a scored winner.
+     */
+    public function testAWinnerRowStoredWithoutAScoreReadsBackAsZero(): void
+    {
+        $run = $this->makeRun();
+        $run->snapshot([[1, 2]]);
+
+        (new \ReflectionProperty(RecommendationRun::class, 'batchWinners'))
+            ->setValue($run, [[['id' => 1, 'reason' => 'written before scores existed']]]);
+
+        self::assertSame(
+            [[['id' => 1, 'score' => 0, 'reason' => 'written before scores existed']]],
+            $run->getWinners(),
+        );
+    }
+
     public function testThirdInvalidReplyExhaustsAttempts(): void
     {
         $run = $this->makeRun();

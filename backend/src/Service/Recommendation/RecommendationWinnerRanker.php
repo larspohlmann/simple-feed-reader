@@ -21,25 +21,13 @@ final readonly class RecommendationWinnerRanker
     private const int DEDUP_INPUT_FACTOR = 2;
 
     /**
-     * @param list<list<array{id: int, score?: int, reason: string}>> $batchWinners
+     * @param list<list<array{id: int, score: int, reason: string}>> $batchWinners
      *
      * @return list<array{id: int, score: int, reason: string}>
      */
     public function ranked(array $batchWinners): array
     {
-        $pool = [];
-        foreach ($batchWinners as $batch) {
-            foreach ($batch as $winner) {
-                // A winner recorded before scores existed (a run in flight
-                // across the deploy) reads as 0: it sorts last, the run
-                // still completes, and the next run self-heals.
-                $pool[] = [
-                    'id' => $winner['id'],
-                    'score' => $winner['score'] ?? 0,
-                    'reason' => $winner['reason'],
-                ];
-            }
-        }
+        $pool = array_merge(...$batchWinners);
 
         usort($pool, static fn (array $left, array $right): int => $right['score'] <=> $left['score']);
 

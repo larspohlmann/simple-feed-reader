@@ -161,11 +161,26 @@ class RecommendationRun
     }
 
     /**
-     * @return list<list<array{id: int, score?: int, reason: string}>>
+     * Defaults the score for rows written before scores existed (a run in
+     * flight across the deploy) so the concession stays at the column, not in
+     * every consumer: callers always see a scored winner. Such a row sorts
+     * last, the run still completes, and the next run self-heals.
+     *
+     * @return list<list<array{id: int, score: int, reason: string}>>
      */
     public function getWinners(): array
     {
-        return $this->batchWinners;
+        return array_map(
+            static fn (array $batch): array => array_map(
+                static fn (array $winner): array => [
+                    'id' => $winner['id'],
+                    'score' => $winner['score'] ?? 0,
+                    'reason' => $winner['reason'],
+                ],
+                $batch,
+            ),
+            $this->batchWinners,
+        );
     }
 
     public function recordInvalidReply(string $reply): void

@@ -27,7 +27,7 @@ final class RecommendationPickParserTest extends TestCase
             ],
         ]);
 
-        $result = $this->parser->parse($content, [1, 2, 3], 10);
+        $result = $this->parser->parse($content, [1, 2, 3]);
 
         self::assertTrue($result->usable);
         self::assertSame([3, 1, 2], array_map(static fn ($pick) => $pick->entryId, $result->picks));
@@ -45,7 +45,7 @@ final class RecommendationPickParserTest extends TestCase
             ],
         ]);
 
-        $result = $this->parser->parse($content, [1, 2, 3], 10);
+        $result = $this->parser->parse($content, [1, 2, 3]);
 
         self::assertTrue($result->usable);
         self::assertSame([1, 2], array_map(static fn ($pick) => $pick->entryId, $result->picks));
@@ -61,7 +61,7 @@ final class RecommendationPickParserTest extends TestCase
             ],
         ]);
 
-        $result = $this->parser->parse($content, [1, 2, 3], 10);
+        $result = $this->parser->parse($content, [1, 2, 3]);
 
         self::assertFalse($result->usable);
         self::assertSame([], $result->picks);
@@ -71,7 +71,7 @@ final class RecommendationPickParserTest extends TestCase
     {
         $content = self::encode(['recommendations' => []]);
 
-        $result = $this->parser->parse($content, [1, 2, 3], 10);
+        $result = $this->parser->parse($content, [1, 2, 3]);
 
         self::assertFalse($result->usable);
     }
@@ -80,14 +80,14 @@ final class RecommendationPickParserTest extends TestCase
     {
         $content = self::encode(['recommendations' => 'x']);
 
-        $result = $this->parser->parse($content, [1, 2, 3], 10);
+        $result = $this->parser->parse($content, [1, 2, 3]);
 
         self::assertFalse($result->usable);
     }
 
     public function testUnparseableJsonIsUnusable(): void
     {
-        $result = $this->parser->parse('not json', [1, 2, 3], 10);
+        $result = $this->parser->parse('not json', [1, 2, 3]);
 
         self::assertFalse($result->usable);
     }
@@ -96,55 +96,29 @@ final class RecommendationPickParserTest extends TestCase
     {
         $content = self::encode(['other' => []]);
 
-        $result = $this->parser->parse($content, [1, 2, 3], 10);
+        $result = $this->parser->parse($content, [1, 2, 3]);
 
         self::assertFalse($result->usable);
     }
 
-    public function testFencedJsonReplyParses(): void
+
+    /**
+     * The fence handling itself belongs to ModelReplyJsonDecoder and is
+     * covered exhaustively there; this only pins that the parser delegates
+     * to it rather than decoding the reply itself.
+     */
+    public function testAFencedReplyIsDecodedThroughTheSharedDecoder(): void
     {
         $payload = self::encode([
             'recommendations' => [
                 ['id' => 1, 'score' => 90, 'reason' => 'First'],
             ],
         ]);
-        $content = "```json\n{$payload}\n```";
 
-        $result = $this->parser->parse($content, [1, 2, 3], 10);
-
-        self::assertTrue($result->usable);
-        self::assertSame([1], array_map(static fn ($pick) => $pick->entryId, $result->picks));
-    }
-
-    public function testPlainFencedReplyWithoutLanguageTagParses(): void
-    {
-        $payload = self::encode([
-            'recommendations' => [
-                ['id' => 1, 'score' => 90, 'reason' => 'First'],
-            ],
-        ]);
-        $content = "```\n{$payload}\n```";
-
-        $result = $this->parser->parse($content, [1, 2, 3], 10);
+        $result = $this->parser->parse("```json\n{$payload}\n```", [1, 2, 3]);
 
         self::assertTrue($result->usable);
         self::assertSame([1], array_map(static fn ($pick) => $pick->entryId, $result->picks));
-    }
-
-    public function testPicksBeyondLimitAreDropped(): void
-    {
-        $content = self::encode([
-            'recommendations' => [
-                ['id' => 1, 'score' => 90, 'reason' => 'First'],
-                ['id' => 2, 'score' => 80, 'reason' => 'Second'],
-                ['id' => 3, 'score' => 70, 'reason' => 'Third'],
-            ],
-        ]);
-
-        $result = $this->parser->parse($content, [1, 2, 3], 2);
-
-        self::assertTrue($result->usable);
-        self::assertSame([1, 2], array_map(static fn ($pick) => $pick->entryId, $result->picks));
     }
 
     public function testNumericStringIdIsAcceptedAsInt(): void
@@ -155,7 +129,7 @@ final class RecommendationPickParserTest extends TestCase
             ],
         ]);
 
-        $result = $this->parser->parse($content, [42], 10);
+        $result = $this->parser->parse($content, [42]);
 
         self::assertTrue($result->usable);
         self::assertSame([42], array_map(static fn ($pick) => $pick->entryId, $result->picks));
@@ -169,7 +143,7 @@ final class RecommendationPickParserTest extends TestCase
             ],
         ]);
 
-        $result = $this->parser->parse($content, [1], 10);
+        $result = $this->parser->parse($content, [1]);
 
         self::assertTrue($result->usable);
         self::assertSame('', $result->picks[0]->reason);
@@ -183,7 +157,7 @@ final class RecommendationPickParserTest extends TestCase
             ],
         ]);
 
-        $result = $this->parser->parse($content, [1], 10);
+        $result = $this->parser->parse($content, [1]);
 
         self::assertTrue($result->usable);
         self::assertSame('', $result->picks[0]->reason);
@@ -197,7 +171,7 @@ final class RecommendationPickParserTest extends TestCase
             ],
         ]);
 
-        $result = $this->parser->parse($content, [1], 10);
+        $result = $this->parser->parse($content, [1]);
 
         self::assertTrue($result->usable);
         self::assertSame('', $result->picks[0]->reason);
@@ -212,55 +186,14 @@ final class RecommendationPickParserTest extends TestCase
             ],
         ]);
 
-        $result = $this->parser->parse($content, [1], 10);
+        $result = $this->parser->parse($content, [1]);
 
         self::assertTrue($result->usable);
         self::assertSame([1], array_map(static fn ($pick) => $pick->entryId, $result->picks));
     }
 
-    public function testSurroundingWhitespaceIsTrimmedBeforeFenceDetection(): void
-    {
-        $payload = self::encode([
-            'recommendations' => [
-                ['id' => 1, 'score' => 90, 'reason' => 'First'],
-            ],
-        ]);
-        $content = "  \n```json\n{$payload}\n```\n  ";
 
-        $result = $this->parser->parse($content, [1], 10);
 
-        self::assertTrue($result->usable);
-        self::assertSame([1], array_map(static fn ($pick) => $pick->entryId, $result->picks));
-    }
-
-    public function testClosingFenceWithoutAnOpeningFenceIsNotStripped(): void
-    {
-        $payload = self::encode([
-            'recommendations' => [
-                ['id' => 1, 'reason' => 'First'],
-            ],
-        ]);
-        $content = $payload . '```';
-
-        $result = $this->parser->parse($content, [1], 10);
-
-        self::assertFalse($result->usable);
-    }
-
-    public function testFenceClosingImmediatelyAfterTheJsonWithNoSeparatorIsStripped(): void
-    {
-        $payload = self::encode([
-            'recommendations' => [
-                ['id' => 1, 'score' => 90, 'reason' => 'First'],
-            ],
-        ]);
-        $content = "```json\n{$payload}```";
-
-        $result = $this->parser->parse($content, [1], 10);
-
-        self::assertTrue($result->usable);
-        self::assertSame([1], array_map(static fn ($pick) => $pick->entryId, $result->picks));
-    }
 
     public function testIdGivenAsAnArrayIsRejectedRatherThanCrashing(): void
     {
@@ -271,7 +204,7 @@ final class RecommendationPickParserTest extends TestCase
             ],
         ]);
 
-        $result = $this->parser->parse($content, [1], 10);
+        $result = $this->parser->parse($content, [1]);
 
         self::assertTrue($result->usable);
         self::assertSame([1], array_map(static fn ($pick) => $pick->entryId, $result->picks));
@@ -286,7 +219,7 @@ final class RecommendationPickParserTest extends TestCase
             ],
         ]);
 
-        $result = $this->parser->parse($content, [1, 2], 10);
+        $result = $this->parser->parse($content, [1, 2]);
 
         self::assertTrue($result->usable);
         self::assertSame([90, 15], array_map(static fn ($pick) => $pick->score, $result->picks));
@@ -307,7 +240,7 @@ final class RecommendationPickParserTest extends TestCase
             ],
         ]);
 
-        $result = $this->parser->parse($content, [1, 2, 3], 10);
+        $result = $this->parser->parse($content, [1, 2, 3]);
 
         self::assertTrue($result->usable);
         self::assertSame([88, 87, 73], array_map(static fn ($pick) => $pick->score, $result->picks));
@@ -322,7 +255,7 @@ final class RecommendationPickParserTest extends TestCase
             ],
         ]);
 
-        $result = $this->parser->parse($content, [1, 2], 10);
+        $result = $this->parser->parse($content, [1, 2]);
 
         self::assertTrue($result->usable);
         self::assertSame([100, 0], array_map(static fn ($pick) => $pick->score, $result->picks));
@@ -337,7 +270,7 @@ final class RecommendationPickParserTest extends TestCase
             ],
         ]);
 
-        $result = $this->parser->parse($content, [1, 2], 10);
+        $result = $this->parser->parse($content, [1, 2]);
 
         self::assertTrue($result->usable);
         self::assertSame([2], array_map(static fn ($pick) => $pick->entryId, $result->picks));
@@ -351,7 +284,7 @@ final class RecommendationPickParserTest extends TestCase
             ],
         ]);
 
-        $result = $this->parser->parse($content, [1], 10);
+        $result = $this->parser->parse($content, [1]);
 
         self::assertFalse($result->usable);
     }
@@ -365,7 +298,7 @@ final class RecommendationPickParserTest extends TestCase
             ],
         ]);
 
-        $result = $this->parser->parse($content, [1, 2], 10);
+        $result = $this->parser->parse($content, [1, 2]);
 
         self::assertFalse($result->usable);
     }

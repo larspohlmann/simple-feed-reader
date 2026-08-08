@@ -196,16 +196,16 @@ final class RecommendationRunAdvancer
             // checkpointing here would leave the run running with every
             // batch done, and the next tick would reach for a batch index
             // past the end of the frozen plan and wedge the run forever.
-            return $this->recordBatchWinners($run, [], $effectiveSettings->picksLimit);
+            return $this->recordBatchWinners($run, []);
         }
 
         $messages = $this->batchMessagesFor($run, $userId, $ids, $linesById, $effectiveSettings);
 
         $content = $this->callProvider($run, $settings, $messages);
 
-        $result = $this->parser->parse($content, $validIds, \count($validIds));
+        $result = $this->parser->parse($content, $validIds);
 
-        return $this->recordReply($run, $content, $result, $effectiveSettings->picksLimit);
+        return $this->recordReply($run, $content, $result);
     }
 
     /**
@@ -253,10 +253,10 @@ final class RecommendationRunAdvancer
         $result = $this->duplicateParser->parse($content, array_column($pool, 'id'));
 
         if (!$result->usable) {
-            return $this->recordUnusableDedupReply($run, $content, $pool, $picksLimit);
+            return $this->recordUnusableDedupReply($run, $content, $pool);
         }
 
-        return $this->finalize($run, $this->withoutDuplicates($pool, $result->duplicateIds, $picksLimit));
+        return $this->finalize($run, $this->withoutDuplicates($pool, $result->duplicateIds));
     }
 
     /**
@@ -286,12 +286,11 @@ final class RecommendationRunAdvancer
         RecommendationRun $run,
         string $content,
         array $pool,
-        int $picksLimit,
     ): RecommendationRunReport {
         $run->recordInvalidReply($content);
 
         if ($run->attemptsExhausted()) {
-            return $this->finalize($run, \array_slice($pool, 0, $picksLimit));
+            return $this->finalize($run, $pool);
         }
 
         $this->entityManager->flush();
@@ -314,9 +313,9 @@ final class RecommendationRunAdvancer
      * @param non-empty-list<array{id: int, score: int, reason: string}> $pool
      * @param list<int>                                                  $duplicateIds
      *
-     * @return list<array{id: int, score: int, reason: string}>
+     * @return non-empty-list<array{id: int, score: int, reason: string}>
      */
-    private function withoutDuplicates(array $pool, array $duplicateIds, int $picksLimit): array
+    private function withoutDuplicates(array $pool, array $duplicateIds): array
     {
         $bestRanked = $pool[0];
         $survivors = array_values(array_filter(
@@ -324,7 +323,7 @@ final class RecommendationRunAdvancer
             static fn (array $winner): bool => !\in_array($winner['id'], $duplicateIds, true),
         ));
 
-        return \array_slice([$bestRanked, ...$survivors], 0, $picksLimit);
+        return [$bestRanked, ...$survivors];
     }
 
     /**
@@ -417,13 +416,12 @@ final class RecommendationRunAdvancer
         RecommendationRun $run,
         string $content,
         PickParseResult $result,
-        int $picksLimit,
     ): RecommendationRunReport {
         if (!$result->usable) {
             return $this->recordUnusableReply($run, $content);
         }
 
-        return $this->recordBatchWinners($run, self::asWinners($result->picks), $picksLimit);
+        return $this->recordBatchWinners($run, self::asWinners($result->picks));
     }
 
     /**
@@ -434,15 +432,12 @@ final class RecommendationRunAdvancer
      *
      * @param list<array{id: int, score: int, reason: string}> $winners
      */
-    private function recordBatchWinners(
-        RecommendationRun $run,
-        array $winners,
-        int $picksLimit,
-    ): RecommendationRunReport {
+    private function recordBatchWinners(RecommendationRun $run, array $winners): RecommendationRunReport
+    {
         $run->recordBatchWinners($winners);
 
         if (!$run->progress()->needsDedup) {
-            return $this->finalize($run, \array_slice($this->ranker->ranked($run->getWinners()), 0, $picksLimit));
+            return $this->finalize($run, $this->ranker->ranked($run->getWinners()));
         }
 
         $this->entityManager->flush();
@@ -467,14 +462,19 @@ final class RecommendationRunAdvancer
     }
 
     /**
-     * Re-checks that each pick's entry still exists — the candidate pool can
-     * be pruned mid-run — and writes the survivors as RecommendationItems at
-     * dense positions in pick order before marking the run completed.
+     * Cuts the ranked list to the reader's picks limit, re-checks that each
+     * surviving pick's entry still exists — the candidate pool can be pruned
+     * mid-run — and writes the survivors as RecommendationItems at dense
+     * positions in pick order before marking the run completed.
      *
-     * @param list<array{id: int, score: int, reason: string}> $picks
+     * Every ending funnels through here, so the cut lives here too: a new
+     * ending cannot ship an over-long list by forgetting to slice.
+     *
+     * @param list<array{id: int, score: int, reason: string}> $ranked
      */
-    private function finalize(RecommendationRun $run, array $picks): RecommendationRunReport
+    private function finalize(RecommendationRun $run, array $ranked): RecommendationRunReport
     {
+        $picks = \array_slice($ranked, 0, $this->settingsResolver->forUser($run->getUser())->picksLimit);
         $existingIds = $this->entries->findExistingIds(array_map(
             static fn (array $pick): int => $pick['id'],
             $picks,
