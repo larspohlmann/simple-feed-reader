@@ -20,6 +20,7 @@ final readonly class RecommendationSettingsValues
         public int $candidatePoolSize,
         public int $picksLimit,
         public ?int $contextWindow,
+        public ?int $batchCount,
         public bool $debugEnabled,
     ) {
     }

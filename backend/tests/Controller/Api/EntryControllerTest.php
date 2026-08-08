@@ -79,6 +79,7 @@ final class EntryControllerTest extends WebTestCase
             candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
             picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
             contextWindow: null,
+            batchCount: null,
             debugEnabled: $enabled,
         ));
         $em->persist($settings);

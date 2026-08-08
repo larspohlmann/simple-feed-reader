@@ -53,6 +53,7 @@ final readonly class RecommendationSettingsWriter
             candidatePoolSize: $values->candidatePoolSize,
             picksLimit: $values->picksLimit,
             contextWindow: $values->contextWindow,
+            batchCount: $values->batchCount,
             debugEnabled: $values->debugEnabled,
         );
     }

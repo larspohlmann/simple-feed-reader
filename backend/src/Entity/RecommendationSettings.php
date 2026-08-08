@@ -49,6 +49,9 @@ class RecommendationSettings
     #[ORM\Column(nullable: true)]
     private ?int $contextWindow = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $batchCount = null;
+
     #[ORM\Column(options: ['default' => false])]
     private bool $debugEnabled = false;
 
@@ -71,6 +74,7 @@ class RecommendationSettings
         $this->candidatePoolSize = $values->candidatePoolSize;
         $this->picksLimit = $values->picksLimit;
         $this->contextWindow = $values->contextWindow;
+        $this->batchCount = $values->batchCount;
         $this->debugEnabled = $values->debugEnabled;
     }
 
@@ -84,6 +88,7 @@ class RecommendationSettings
             candidatePoolSize: $this->candidatePoolSize,
             picksLimit: $this->picksLimit,
             contextWindow: $this->contextWindow,
+            batchCount: $this->batchCount,
             debugEnabled: $this->debugEnabled,
         );
     }

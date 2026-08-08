@@ -42,8 +42,9 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         self::assertSame(80, $effective->viewedCap);
         self::assertSame(500, $effective->candidatePoolSize);
         self::assertSame(50, $effective->picksLimit);
-        self::assertSame(32768, $effective->contextWindow);
-        self::assertSame('fallback', $effective->contextWindowSource);
+        self::assertSame(32768, $effective->packing->contextWindow);
+        self::assertSame('fallback', $effective->packing->contextWindowSource);
+        self::assertNull($effective->packing->batchCount);
         self::assertFalse($effective->debugEnabled);
     }
 
@@ -53,8 +54,8 @@ final class RecommendationSettingsResolverTest extends DbTestCase
 
         $effective = $this->resolver()->forUser($this->user);
 
-        self::assertSame(200000, $effective->contextWindow);
-        self::assertSame('provider', $effective->contextWindowSource);
+        self::assertSame(200000, $effective->packing->contextWindow);
+        self::assertSame('provider', $effective->packing->contextWindowSource);
     }
 
     public function testUserOverrideBeatsTheProviderWindow(): void
@@ -69,6 +70,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
             candidatePoolSize: 500,
             picksLimit: 50,
             contextWindow: 65536,
+            batchCount: 12,
             debugEnabled: true,
         ));
         $this->em->persist($row);
@@ -82,8 +84,9 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         self::assertSame(30, $effective->viewedCap);
         self::assertSame(500, $effective->candidatePoolSize);
         self::assertSame(50, $effective->picksLimit);
-        self::assertSame(65536, $effective->contextWindow);
-        self::assertSame('user', $effective->contextWindowSource);
+        self::assertSame(65536, $effective->packing->contextWindow);
+        self::assertSame('user', $effective->packing->contextWindowSource);
+        self::assertSame(12, $effective->packing->batchCount);
         self::assertTrue($effective->debugEnabled);
     }
 

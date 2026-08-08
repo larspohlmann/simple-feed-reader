@@ -26,8 +26,7 @@ final readonly class EffectiveRecommendationSettings
         public int $viewedCap,
         public int $candidatePoolSize,
         public int $picksLimit,
-        public int $contextWindow,
-        public string $contextWindowSource,
+        public RecommendationPackingSettings $packing,
         public bool $debugEnabled,
     ) {
     }

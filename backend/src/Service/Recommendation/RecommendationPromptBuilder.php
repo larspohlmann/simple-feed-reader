@@ -55,12 +55,13 @@ final class RecommendationPromptBuilder
         RecommendationHistory $history,
         EffectiveRecommendationSettings $settings,
     ): array {
-        $descriptionLength = $this->descriptionLength($settings->contextWindow);
+        $descriptionLength = $this->descriptionLength($settings->packing->contextWindow);
         $historyTokens = $this->tokens($this->historySections($history, $descriptionLength));
+        $cap = $this->batchCap(\count($candidates), $settings);
         // The reply scores one line per candidate, so its size is bounded by
         // the batch cap, not by the final list size.
-        $responseReserve = self::MAXIMUM_BATCH_SIZE * self::TOKENS_PER_PICK;
-        $budget = $settings->contextWindow - self::FIXED_OVERHEAD_TOKENS - $responseReserve - $historyTokens;
+        $responseReserve = $cap * self::TOKENS_PER_PICK;
+        $budget = $settings->packing->contextWindow - self::FIXED_OVERHEAD_TOKENS - $responseReserve - $historyTokens;
 
         $batches = [];
         $current = [];
@@ -69,7 +70,7 @@ final class RecommendationPromptBuilder
         foreach ($candidates as $candidate) {
             $lineTokens = $this->tokens($this->candidateLine($candidate, $descriptionLength));
             $overBudget = $used + $lineTokens > $budget && \count($current) >= self::MINIMUM_BATCH_SIZE;
-            $atCapacity = \count($current) >= self::MAXIMUM_BATCH_SIZE;
+            $atCapacity = \count($current) >= $cap;
             if ([] !== $current && ($overBudget || $atCapacity)) {
                 $batches[] = $current;
                 $current = [];
@@ -96,7 +97,7 @@ final class RecommendationPromptBuilder
         array $candidateLines,
         EffectiveRecommendationSettings $settings,
     ): array {
-        $descriptionLength = $this->descriptionLength($settings->contextWindow);
+        $descriptionLength = $this->descriptionLength($settings->packing->contextWindow);
 
         $guidance = $settings->guidancePrompt ?? RecommendationPromptText::DEFAULT_GUIDANCE;
         $contract = RecommendationPromptText::OUTPUT_CONTRACT;
@@ -157,6 +158,18 @@ final class RecommendationPromptBuilder
             ['role' => 'assistant', 'content' => $invalidReply],
             ['role' => 'user', 'content' => RecommendationPromptText::CORRECTIVE],
         ];
+    }
+
+    /** The explicit batch-count override wins over the #308 size ceiling: it is
+     *  an expert setting, and the token budget below still protects the context
+     *  window. Null means automatic packing under MAXIMUM_BATCH_SIZE. */
+    private function batchCap(int $candidateCount, EffectiveRecommendationSettings $settings): int
+    {
+        if (null === $settings->packing->batchCount) {
+            return self::MAXIMUM_BATCH_SIZE;
+        }
+
+        return max(1, (int) ceil($candidateCount / $settings->packing->batchCount));
     }
 
     private function historySections(RecommendationHistory $history, int $descriptionLength): string

@@ -60,6 +60,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
             'candidatePoolSize' => 500,
             'picksLimit' => 25,
             'contextWindow' => 65536,
+            'batchCount' => 12,
             'debugEnabled' => true,
         ], \JSON_THROW_ON_ERROR);
     }
@@ -114,6 +115,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         self::assertSame(32768, $payload['contextWindow']);
         self::assertNull($payload['contextWindowOverride']);
         self::assertSame('fallback', $payload['contextWindowSource']);
+        self::assertNull($payload['batchCount']);
         self::assertFalse($payload['debugEnabled']);
     }
 
@@ -164,6 +166,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         self::assertSame(65536, $payload['contextWindow']);
         self::assertSame(65536, $payload['contextWindowOverride']);
         self::assertSame('user', $payload['contextWindowSource']);
+        self::assertSame(12, $payload['batchCount']);
         self::assertTrue($payload['debugEnabled']);
 
         // Persisted, not just echoed: a fresh GET on the same account reports it too.
@@ -172,6 +175,31 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         $reloaded = $this->payload($client);
         self::assertSame('Prefer long-form pieces.', $reloaded['guidancePrompt']);
         self::assertSame(65536, $reloaded['contextWindow']);
+        self::assertSame(12, $reloaded['batchCount']);
+    }
+
+    public function testSavingANullBatchCountEchoesNullMeaningAutomaticPacking(): void
+    {
+        $client = static::createClient();
+        [$headers] = $this->auth('recsettings-batchcount-null@example.test');
+
+        $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        $body['batchCount'] = null;
+
+        $client->request(
+            'PUT',
+            self::URI,
+            server: array_merge($headers, ['CONTENT_TYPE' => 'application/json']),
+            content: json_encode($body, \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseIsSuccessful();
+        self::assertNull($this->payload($client)['batchCount']);
+
+        $client->request('GET', self::URI, server: $headers);
+        self::assertResponseIsSuccessful();
+        self::assertNull($this->payload($client)['batchCount']);
     }
 
     public function testAnOutOfRangeCapIsUnprocessable(): void

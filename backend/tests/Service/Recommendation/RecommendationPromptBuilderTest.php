@@ -7,6 +7,7 @@ namespace App\Tests\Service\Recommendation;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\PromptLine;
 use App\Service\Recommendation\RecommendationHistory;
+use App\Service\Recommendation\RecommendationPackingSettings;
 use App\Service\Recommendation\RecommendationPromptBuilder;
 use App\Service\Recommendation\RecommendationPromptText;
 use PHPUnit\Framework\TestCase;
@@ -106,6 +107,55 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertCount(12, $batches);
         $batchSizes = array_map('count', $batches);
         self::assertSame([45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 5], $batchSizes);
+
+        $ids = array_merge(...$batches);
+        self::assertSame(range(1, $candidateCount), $ids);
+    }
+
+    public function testAnExplicitBatchCountReplacesTheDefaultCapUnderAHugeBudget(): void
+    {
+        // A huge window means the token budget never binds, so an explicit
+        // batchCount of 12 is the only thing that can produce 12 batches of
+        // at most ceil(500 / 12) = 42.
+        $candidateCount = 500;
+        $candidates = array_map(
+            static fn (int $id): PromptLine => new PromptLine($id, "C$id", 'F', 'D', null),
+            range(1, $candidateCount),
+        );
+
+        $batches = $this->builder->packBatches(
+            $candidates,
+            $this->emptyHistory(),
+            $this->settings(1_000_000, 50, batchCount: 12),
+        );
+
+        self::assertCount(12, $batches);
+        foreach ($batches as $batch) {
+            self::assertLessThanOrEqual(42, \count($batch));
+        }
+
+        $ids = array_merge(...$batches);
+        self::assertSame(range(1, $candidateCount), $ids);
+    }
+
+    public function testAnExplicitBatchCountStillSplitsOnTheTokenBudget(): void
+    {
+        // batchCount = 1 asks for a single batch, but a small context window
+        // cannot hold every candidate: the token budget below still forces a
+        // split, proving the expert override does not bypass it.
+        $candidateCount = 60;
+        $candidates = array_map(
+            static fn (int $id): PromptLine => self::line($id, "Candidate $id", 400),
+            range(1, $candidateCount),
+        );
+
+        $batches = $this->builder->packBatches(
+            $candidates,
+            $this->emptyHistory(),
+            $this->settings(4096, 10, batchCount: 1),
+        );
+
+        self::assertGreaterThan(1, \count($batches));
 
         $ids = array_merge(...$batches);
         self::assertSame(range(1, $candidateCount), $ids);
@@ -371,6 +421,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         int $contextWindow,
         int $picksLimit,
         ?string $guidancePrompt = null,
+        ?int $batchCount = null,
     ): EffectiveRecommendationSettings {
         return new EffectiveRecommendationSettings(
             guidancePrompt: $guidancePrompt,
@@ -379,8 +430,11 @@ final class RecommendationPromptBuilderTest extends TestCase
             viewedCap: 80,
             candidatePoolSize: 500,
             picksLimit: $picksLimit,
-            contextWindow: $contextWindow,
-            contextWindowSource: 'default',
+            packing: new RecommendationPackingSettings(
+                contextWindow: $contextWindow,
+                contextWindowSource: 'default',
+                batchCount: $batchCount,
+            ),
             debugEnabled: false,
         );
     }

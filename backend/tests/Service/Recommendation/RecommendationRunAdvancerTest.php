@@ -1157,6 +1157,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             candidatePoolSize: $candidatePoolSize,
             picksLimit: $picksLimit,
             contextWindow: self::MULTI_BATCH_CONTEXT_WINDOW,
+            batchCount: null,
             debugEnabled: false,
         ));
         $this->em->persist($settings);
@@ -1218,6 +1219,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             candidatePoolSize: $current->candidatePoolSize,
             picksLimit: $current->picksLimit,
             contextWindow: $current->contextWindow,
+            batchCount: $current->batchCount,
             debugEnabled: true,
         ));
         $this->em->flush();
