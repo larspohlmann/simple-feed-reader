@@ -332,7 +332,9 @@ Note in the PR text: defaults only apply to accounts **without** a saved setting
 - [ ] **Step 4: Run** `php bin/phpunit` — green.
 - [ ] **Step 5: Commit** `feat(#321): default to 50 picks from 500 candidates in 13 provider calls`
 
----### Task 5: `batchCount` expert setting (backend)
+---
+
+### Task 5: `batchCount` expert setting (backend)
 
 **Files:**
 - Modify: `backend/src/Entity/RecommendationSettings.php`, `backend/src/Service/Recommendation/RecommendationSettingsValues.php`, `backend/src/Dto/Recommendation/SaveRecommendationSettingsRequest.php`, `backend/src/Service/Recommendation/EffectiveRecommendationSettings.php`, `backend/src/Service/Recommendation/RecommendationSettingsResolver.php`, `backend/src/Http/RecommendationSettingsJson.php`, `backend/src/Service/Recommendation/RecommendationPromptBuilder.php`
