@@ -9,11 +9,14 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Fetch\BatchFeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
+use App\Service\Refresh\RefreshRunner;
 use App\Service\Worker\Handler\RefreshDueFeedsHandler;
 use App\Service\Worker\Message\RefreshDueFeeds;
 use App\Tests\DbTestCase;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\UserFactory;
+use Monolog\Handler\TestHandler;
+use Monolog\Logger;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
@@ -64,6 +67,44 @@ final class RefreshDueFeedsHandlerTest extends DbTestCase
         $refreshed = $this->em->getRepository(Feed::class)->find($feed->getId());
         self::assertNotNull($refreshed);
         self::assertNotNull($refreshed->getLastFetchedAt());
+    }
+
+    /**
+     * The handler's whole job past delegating to RefreshRunner is logging its
+     * report -- this pins the exact shape of that log line, not just that
+     * something got logged.
+     */
+    public function testFiringLogsTheReportUnderTheReportKey(): void
+    {
+        $logSpy = new TestHandler();
+        $handler = new RefreshDueFeedsHandler(
+            $this->refreshRunner(),
+            new Logger('test', [$logSpy]),
+        );
+
+        $handler->__invoke(new RefreshDueFeeds());
+
+        $records = $logSpy->getRecords();
+        self::assertCount(1, $records);
+        self::assertSame('Worker refresh sweep finished.', $records[0]->message);
+        self::assertSame(['report'], array_keys($records[0]->context));
+        $report = $records[0]->context['report'];
+        self::assertIsArray($report);
+        self::assertSame(
+            [
+                'status', 'total', 'fetched', 'notModified', 'failed',
+                'throttled', 'skippedForBudget', 'remaining', 'pruned',
+            ],
+            array_keys($report),
+        );
+    }
+
+    private function refreshRunner(): RefreshRunner
+    {
+        /** @var RefreshRunner $runner */
+        $runner = self::getContainer()->get(RefreshRunner::class);
+
+        return $runner;
     }
 
     private function rss(): string

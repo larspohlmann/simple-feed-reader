@@ -12,6 +12,8 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
+use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
@@ -19,10 +21,15 @@ use App\Service\Worker\Handler\AdvanceRecommendationRunsHandler;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
 use App\Service\Worker\WorkerPresence;
 use App\Tests\DbTestCase;
+use App\Tests\Support\ClearTrackingEntityManager;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
+use Monolog\Handler\TestHandler;
+use Monolog\Level;
+use Monolog\Logger;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -88,7 +95,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     {
         $strugglingUser = $this->user('struggling@example.test');
         $this->seedSingleBatchFixture($strugglingUser);
-        $this->startAndSnapshot($strugglingUser);
+        $strugglingRun = $this->startAndSnapshot($strugglingUser);
 
         $healthyUser = $this->user('healthy@example.test');
         $this->seedSingleBatchFixture($healthyUser);
@@ -99,7 +106,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down'));
         $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
 
-        $this->handler()->__invoke(new AdvanceRecommendationRuns());
+        $logSpy = new TestHandler();
+        $this->handlerWithLogger(new Logger('test', [$logSpy]))->__invoke(new AdvanceRecommendationRuns());
 
         $this->em->clear();
         $stillActive = $this->runs()->findActiveForUser($strugglingUser);
@@ -110,6 +118,86 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         self::assertNotNull($advanced);
         self::assertSame(RecommendationRun::STATUS_COMPLETED, $advanced->getStatus());
         self::assertNotCount(0, $this->recommendationItems($advanced));
+
+        $this->assertSoleProviderFailureWarningLogged($logSpy, $strugglingRun->getId());
+    }
+
+    /**
+     * The catch clause this handler uses is a union of two exception types;
+     * the ProviderUnreachableException case above alone cannot tell a real
+     * union apart from a mutant narrowed to just one arm. This proves the
+     * other arm is caught the same way.
+     */
+    public function testCredentialsRejectedIsLoggedAndDoesNotThrow(): void
+    {
+        $user = $this->user('bad-credentials@example.test');
+        $this->seedSingleBatchFixture($user);
+        $run = $this->startAndSnapshot($user);
+
+        $this->stubChatClient()->queueFailure(new CredentialsRejectedException('nope'));
+
+        $logSpy = new TestHandler();
+        $this->handlerWithLogger(new Logger('test', [$logSpy]))->__invoke(new AdvanceRecommendationRuns());
+
+        $this->em->clear();
+        $stillActive = $this->runs()->findActiveForUser($user);
+        self::assertNotNull($stillActive);
+        self::assertSame(RecommendationRun::STATUS_RUNNING, $stillActive->getStatus());
+
+        $this->assertSoleProviderFailureWarningLogged($logSpy, $run->getId());
+    }
+
+    /**
+     * Distinguishes the ApiKeyUnreadableException catch from the
+     * AiNotConfiguredException one above it: both fail the run, but each
+     * must carry its own message, not the sibling case's.
+     */
+    public function testApiKeyUnreadableFailsTheRunWithItsOwnMessage(): void
+    {
+        $user = $this->user('key-mismatch@example.test');
+        $this->seedSingleBatchFixture($user);
+        $this->startAndSnapshot($user);
+
+        $keyDonor = $this->user('key-mismatch-donor@example.test');
+        $this->fixtures->seedReadyAiSettings($keyDonor);
+
+        // The donor's key was sealed under the donor's own account id; moving
+        // its settings row onto $user, whose original (correctly-sealed) row
+        // is deleted first, makes the stored ciphertext fail its integrity
+        // check the moment $user's advance() tries to open it.
+        $this->deleteAiSettingsFor($user);
+        $this->moveAiSettingsRow($keyDonor, $user);
+
+        $this->handler()->__invoke(new AdvanceRecommendationRuns());
+
+        $this->em->clear();
+        $failed = $this->runs()->findLatestForUser($user);
+        self::assertNotNull($failed);
+        self::assertSame(RecommendationRun::STATUS_FAILED, $failed->getStatus());
+        self::assertSame('The stored API key can no longer be read.', $failed->getError());
+    }
+
+    /**
+     * The per-firing identity map cleanup is a `finally`, not a plain
+     * trailing statement (see the handler's own doc comment); this proves at
+     * least that clear() itself is not simply dropped from the successful
+     * path.
+     */
+    public function testFiringClearsTheIdentityMapAfterwards(): void
+    {
+        $clearTracker = new ClearTrackingEntityManager($this->em);
+        $handler = new AdvanceRecommendationRunsHandler(
+            $this->runs(),
+            $this->advancer(),
+            $this->presence(),
+            new MockClock('2026-08-08T00:00:00Z'),
+            $clearTracker,
+            new NullLogger(),
+        );
+
+        $handler->__invoke(new AdvanceRecommendationRuns());
+
+        self::assertTrue($clearTracker->wasCleared());
     }
 
     public function testUnconfiguredUsersRunIsFailedNotSweptForever(): void
@@ -203,7 +291,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $strugglingUser = $this->user('flush-failure-struggling@example.test');
         $this->seedSingleBatchFixture($strugglingUser);
         $this->starter()->start($strugglingUser);
-        self::assertSame(RecommendationRun::STATUS_PENDING, $this->activeRun($strugglingUser)->getStatus());
+        $strugglingRun = $this->activeRun($strugglingUser);
+        self::assertSame(RecommendationRun::STATUS_PENDING, $strugglingRun->getStatus());
         $this->deleteAiSettingsFor($strugglingUser);
 
         $healthyUser = $this->user('flush-failure-healthy@example.test');
@@ -211,7 +300,9 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $healthyRun = $this->startAndSnapshot($healthyUser);
         $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
 
-        $this->handlerWithFlushFailingEntityManager()->__invoke(new AdvanceRecommendationRuns());
+        $logSpy = new TestHandler();
+        $this->handlerWithFlushFailingEntityManager(new Logger('test', [$logSpy]))
+            ->__invoke(new AdvanceRecommendationRuns());
 
         $this->em->clear();
         // fail() mutated the struggling run's in-memory object before its own
@@ -232,6 +323,32 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         self::assertNotNull($advanced);
         self::assertSame(RecommendationRun::STATUS_COMPLETED, $advanced->getStatus());
         self::assertNotCount(0, $this->recommendationItems($advanced));
+
+        // The flush() failure is an unanticipated \Throwable, not one of the
+        // typed AI-provider cases the other tests exercise -- it must fall
+        // through to the outer floor and be logged at error level under a
+        // different message, proving that floor's own logging call (not
+        // just its exception-swallowing) survives.
+        self::assertTrue($logSpy->hasErrorRecords());
+        $errorRecords = array_values(array_filter(
+            $logSpy->getRecords(),
+            static fn ($record): bool => Level::Error === $record->level,
+        ));
+        self::assertCount(1, $errorRecords);
+        self::assertSame('Recommendation sweep: unexpected failure advancing a run.', $errorRecords[0]->message);
+        self::assertSame(['runId', 'exception'], array_keys($errorRecords[0]->context));
+        self::assertSame($strugglingRun->getId(), $errorRecords[0]->context['runId']);
+    }
+
+    private function assertSoleProviderFailureWarningLogged(TestHandler $logSpy, ?int $runId): void
+    {
+        self::assertFalse($logSpy->hasErrorRecords());
+
+        $records = $logSpy->getRecords();
+        self::assertCount(1, $records);
+        self::assertSame('Recommendation sweep: provider call failed.', $records[0]->message);
+        self::assertSame(['runId', 'exception'], array_keys($records[0]->context));
+        self::assertSame($runId, $records[0]->context['runId']);
     }
 
     /**
@@ -243,7 +360,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
      * production -- only the struggling run's own failure-recording flush is
      * faked.
      */
-    private function handlerWithFlushFailingEntityManager(): AdvanceRecommendationRunsHandler
+    private function handlerWithFlushFailingEntityManager(LoggerInterface $logger): AdvanceRecommendationRunsHandler
     {
         return new AdvanceRecommendationRunsHandler(
             $this->runs(),
@@ -251,7 +368,24 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             $this->presence(),
             new MockClock('2026-08-08T00:00:00Z'),
             new FlushFailingEntityManager($this->em),
-            new NullLogger(),
+            $logger,
+        );
+    }
+
+    /**
+     * Built by hand for the same reason as handlerWithFlushFailingEntityManager():
+     * only the logger changes, so a test can inspect what was logged without
+     * writing to the real log.
+     */
+    private function handlerWithLogger(LoggerInterface $logger): AdvanceRecommendationRunsHandler
+    {
+        return new AdvanceRecommendationRunsHandler(
+            $this->runs(),
+            $this->advancer(),
+            $this->presence(),
+            new MockClock('2026-08-08T00:00:00Z'),
+            $this->em,
+            $logger,
         );
     }
 
@@ -261,6 +395,14 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         self::assertNotNull($settings);
         $this->em->remove($settings);
         $this->em->flush();
+        $this->em->clear();
+    }
+
+    private function moveAiSettingsRow(User $from, User $to): void
+    {
+        $this->em->createQuery(
+            sprintf('UPDATE %s s SET s.user = :to WHERE s.user = :from', AiProviderSettings::class),
+        )->execute(['to' => $to, 'from' => $from]);
         $this->em->clear();
     }
 

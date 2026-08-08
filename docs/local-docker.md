@@ -97,7 +97,7 @@ it).
 | Coding standard | `docker compose exec php composer cs` |
 | Static analysis | `docker compose exec php composer stan` |
 | Any console command | `docker compose exec php bin/console …` |
-| Follow logs | `docker compose logs -f php nginx` |
+| Follow logs | `docker compose logs -f php nginx worker` |
 | Stop the stack | `docker compose down` |
 | MySQL from a host GUI tool | connect to `127.0.0.1:33306` |
 | Black-box e2e suite (from `backend/`) | `composer e2e` — see [`backend/tests/E2e/README.md`](../backend/tests/E2e/README.md) |

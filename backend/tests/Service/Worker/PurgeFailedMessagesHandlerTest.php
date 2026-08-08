@@ -8,6 +8,8 @@ use App\Service\Worker\Handler\PurgeFailedMessagesHandler;
 use App\Service\Worker\Message\PurgeFailedMessages;
 use App\Tests\DbTestCase;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Schema\Table;
+use Doctrine\DBAL\Types\Types;
 
 /**
  * `messenger_messages` is created lazily by `auto_setup` on the first failed
@@ -38,19 +40,35 @@ final class PurgeFailedMessagesHandlerTest extends DbTestCase
         self::assertSame([2, 3], $this->remainingMessageIds());
     }
 
+    /**
+     * Built through the DBAL schema API rather than raw DDL, so the column
+     * types land correctly on both SQLite (native test run) and MySQL
+     * (Docker leg) — `AUTOINCREMENT`/`CLOB` are SQLite-only keywords that a
+     * MySQL server rejects outright. Created as a TEMPORARY table: plain
+     * `CREATE TABLE` implicitly commits on MySQL, which would tear down the
+     * transaction DAMA's test bundle wraps every test in and cascade
+     * failures into every test that runs afterwards. `CREATE TEMPORARY
+     * TABLE` is the documented exception to that implicit commit.
+     */
     private function createMessengerMessagesTable(): void
     {
-        $this->connection()->executeStatement(
-            'CREATE TABLE messenger_messages ('
-            . 'id INTEGER PRIMARY KEY AUTOINCREMENT, '
-            . 'body CLOB NOT NULL, '
-            . 'headers CLOB NOT NULL, '
-            . 'queue_name VARCHAR(190) NOT NULL, '
-            . 'created_at DATETIME NOT NULL, '
-            . 'available_at DATETIME NOT NULL, '
-            . 'delivered_at DATETIME DEFAULT NULL'
-            . ')',
-        );
+        $table = new Table('messenger_messages');
+        $table->addColumn('id', Types::INTEGER)->setAutoincrement(true);
+        $table->addColumn('body', Types::TEXT);
+        $table->addColumn('headers', Types::TEXT);
+        $table->addColumn('queue_name', Types::STRING, ['length' => 190]);
+        $table->addColumn('created_at', Types::DATETIME_MUTABLE);
+        $table->addColumn('available_at', Types::DATETIME_MUTABLE);
+        $table->addColumn('delivered_at', Types::DATETIME_MUTABLE, ['notnull' => false]);
+        $table->setPrimaryKey(['id']);
+
+        $platform = $this->connection()->getDatabasePlatform();
+
+        foreach ($platform->getCreateTableSQL($table) as $statement) {
+            $temporaryStatement = str_replace('CREATE TABLE', 'CREATE TEMPORARY TABLE', $statement);
+
+            $this->connection()->executeStatement($temporaryStatement);
+        }
     }
 
     private function insertMessage(int $id, string $queueName, string $createdAt): void
