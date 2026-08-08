@@ -70,18 +70,32 @@ class RecommendationRunLog
     #[ORM\Column(options: ['default' => 0])]
     private int $wireBytes = 0;
 
+    /** When the request went out. */
+    #[ORM\Column]
+    private \DateTimeImmutable $createdAt;
+
+    /** When the call settled (any verdict). Null while streaming. */
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $finishedAt = null;
+
+    /** The transport exception's message, for transport-failed calls only. */
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $errorDetail = null;
+
     public function __construct(
         RecommendationRun $run,
         string $phase,
         ?int $batchNumber,
         int $attempt,
         string $requestBody,
+        \DateTimeImmutable $createdAt,
     ) {
         $this->run = $run;
         $this->phase = $phase;
         $this->batchNumber = $batchNumber;
         $this->attempt = $attempt;
         $this->requestBody = $requestBody;
+        $this->createdAt = $createdAt;
     }
 
     public function getId(): ?int
@@ -129,15 +143,31 @@ class RecommendationRunLog
         return $this->wireBytes;
     }
 
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function getFinishedAt(): ?\DateTimeImmutable
+    {
+        return $this->finishedAt;
+    }
+
+    public function getErrorDetail(): ?string
+    {
+        return $this->errorDetail;
+    }
+
     /**
      * The call ended: the final decoded text replaces whatever partial state
      * the checkpoints wrote, the verdict says how the reply was judged, and
      * the byte count says what it cost on the wire to get there.
      */
-    public function finish(string $responseText, string $verdict, int $wireBytes): void
+    public function finish(string $responseText, string $verdict, int $wireBytes, \DateTimeImmutable $finishedAt): void
     {
         $this->responseText = $responseText;
         $this->verdict = $verdict;
         $this->wireBytes = $wireBytes;
+        $this->finishedAt = $finishedAt;
     }
 }

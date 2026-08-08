@@ -1006,6 +1006,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $rows = $this->runLogs()->listForUser($this->user);
         self::assertSame(['transport-failed'], array_column($rows, 'verdict'));
+        $log = $this->freshRunLog($rows[0]['id']);
+        self::assertSame('gone', $log->getErrorDetail());
+        self::assertNotNull($log->getFinishedAt());
     }
 
     public function testNoLogRowsAreWrittenWithDebugOff(): void
@@ -1054,6 +1057,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $rows = $this->runLogs()->listForUser($this->user);
         self::assertSame(['transport-failed'], array_column($rows, 'verdict'));
+        $log = $this->freshRunLog($rows[0]['id']);
+        self::assertNotNull($log->getErrorDetail());
+        self::assertNotNull($log->getFinishedAt());
     }
 
     /**

@@ -69,15 +69,27 @@ final readonly class RecommendationRunFixtures
         return $run;
     }
 
-    /** Not flushed, for the same reason as {@see createRun()}. */
+    /**
+     * Not flushed, for the same reason as {@see createRun()}. $createdAt
+     * defaults to the run's own creation instant — most callers don't care
+     * about call timing and only a handful of #321 tests need to pin it.
+     */
     public function log(
         RecommendationRun $run,
         string $phase,
         ?int $batchNumber,
         int $attempt,
         string $requestBody,
+        ?\DateTimeImmutable $createdAt = null,
     ): RecommendationRunLog {
-        $log = new RecommendationRunLog($run, $phase, $batchNumber, $attempt, $requestBody);
+        $log = new RecommendationRunLog(
+            $run,
+            $phase,
+            $batchNumber,
+            $attempt,
+            $requestBody,
+            $createdAt ?? new \DateTimeImmutable('2026-08-08T10:00:00Z'),
+        );
         $this->em->persist($log);
 
         return $log;

@@ -230,6 +230,16 @@ class RecommendationRun
         return $this->lastInvalidReply;
     }
 
+    public function getAttempts(): int
+    {
+        return $this->attempts;
+    }
+
+    public function getTransportFailures(): int
+    {
+        return $this->transportFailures;
+    }
+
     public function getStreamedChars(): int
     {
         return $this->streamedChars;

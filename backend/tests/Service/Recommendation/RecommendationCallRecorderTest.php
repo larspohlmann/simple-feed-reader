@@ -79,6 +79,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $log = $this->freshLog($rows[0]['id']);
         self::assertStringContainsString('"model": "m"', $log->getRequestBody());
         self::assertStringContainsString('"content": "hi"', $log->getRequestBody());
+        self::assertEquals($this->clock->now(), $log->getCreatedAt());
     }
 
     public function testBeginWithDebugOffWritesNoRow(): void
@@ -137,11 +138,12 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $log = $this->freshLog($logId);
         self::assertSame('{"recommendations": []}', $log->getResponseText());
         self::assertSame(RecommendationRunLog::VERDICT_USABLE, $log->getVerdict());
+        self::assertEquals($this->clock->now(), $log->getFinishedAt());
         $freshRun = $this->em->find(RecommendationRun::class, $this->run->getId());
         self::assertSame(0, $freshRun?->getStreamedChars());
     }
 
-    public function testAbortKeepsThePartialTextWithTransportVerdict(): void
+    public function testAbortKeepsThePartialTextWithTransportVerdictAndTheTransportMessage(): void
     {
         $this->seedDebugSettings(true);
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
@@ -149,12 +151,14 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $this->clock->modify('+3 seconds');
         $call->streamProgressed(new CompletionStreamProgress('cut off', 9_001));
 
-        $call->abortAfterTransportFailure();
+        $call->abortAfterTransportFailure('cURL error 28');
 
         $log = $this->freshLog($logId);
         self::assertSame('cut off', $log->getResponseText());
         self::assertSame(RecommendationRunLog::VERDICT_TRANSPORT_FAILED, $log->getVerdict());
         self::assertSame(9_001, $log->getWireBytes());
+        self::assertSame('cURL error 28', $log->getErrorDetail());
+        self::assertEquals($this->clock->now(), $log->getFinishedAt());
     }
 
     /**
@@ -172,7 +176,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
         // Inside the checkpoint interval on purpose: no write has happened,
         // so the count can only reach the row if every report tracks it.
         $call->streamProgressed(new CompletionStreamProgress('', 1_900_000));
-        $call->abortAfterTransportFailure();
+        $call->abortAfterTransportFailure(null);
 
         $log = $this->freshLog($logId);
         self::assertSame('', $log->getResponseText());
@@ -203,7 +207,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $abortCall = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 2, [], 'm');
         $this->clock->modify('+3 seconds');
         $abortCall->streamProgressed(new CompletionStreamProgress('cut', 60));
-        $abortCall->abortAfterTransportFailure();
+        $abortCall->abortAfterTransportFailure('connection reset');
 
         $this->assertOtherUsersRowsUntouched($otherRunId, $otherLogId);
     }
@@ -235,6 +239,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
             1,
             1,
             'other request',
+            new \DateTimeImmutable('2026-08-08T09:00:00Z'),
         );
         $this->em->persist($otherLog);
         $this->em->flush();

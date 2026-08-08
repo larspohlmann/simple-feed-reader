@@ -405,12 +405,12 @@ final class RecommendationRunAdvancer
                 $recordedCall,
             );
         } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
-            $recordedCall->abortAfterTransportFailure();
+            $recordedCall->abortAfterTransportFailure($e->getMessage());
             $this->recordTransportFailure($run, $settings);
 
             throw $e;
         } catch (\Throwable $e) {
-            $recordedCall->abortAfterTransportFailure();
+            $recordedCall->abortAfterTransportFailure($e->getMessage());
 
             throw $e;
         }

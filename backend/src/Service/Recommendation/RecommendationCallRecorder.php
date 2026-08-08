@@ -64,6 +64,7 @@ final readonly class RecommendationCallRecorder
             $batchNumber,
             $this->nextAttempt($run, $phase, $batchNumber),
             $this->renderedRequest($messages, $model),
+            $this->clock->now(),
         );
         $this->entityManager->persist($log);
         $this->entityManager->flush();

@@ -100,6 +100,7 @@ final class RecommendationRunStarterTest extends DbTestCase
             1,
             1,
             'old request',
+            new \DateTimeImmutable('2026-08-08T09:00:30Z'),
         ));
         $this->em->flush();
 
@@ -121,6 +122,7 @@ final class RecommendationRunStarterTest extends DbTestCase
             1,
             1,
             'kept request',
+            new \DateTimeImmutable('2026-08-08T09:00:30Z'),
         ));
         $this->em->flush();
 
