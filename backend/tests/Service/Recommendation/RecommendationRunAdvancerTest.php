@@ -8,9 +8,11 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
+use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiNotConfiguredException;
@@ -924,6 +926,96 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ));
     }
 
+    public function testBatchAndDedupCallsAreLoggedWithVerdictsWhenDebugIsOn(): void
+    {
+        $this->seedMultiBatchFixture();
+        $this->enableDebug();
+        $run = $this->startAndSnapshot();
+        $firstBatch = $run->getCandidateBatches()[0];
+        $secondBatch = $run->getCandidateBatches()[1];
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 70, 'reason' => 'r1']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $secondBatch[0], 'score' => 90, 'reason' => 'r2']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+        $this->stubChatClient()->queueContent(json_encode(['duplicates' => []], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $rows = $this->runLogs()->listForUser($this->user);
+        self::assertSame(
+            [['batch', 1, 'usable'], ['batch', 2, 'usable'], ['dedup', null, 'usable']],
+            array_map(
+                static fn (array $row): array => [$row['phase'], $row['batchNumber'], $row['verdict']],
+                $rows,
+            ),
+        );
+        $firstLog = $this->freshRunLog($rows[0]['id']);
+        self::assertStringContainsString('You score candidate posts', $firstLog->getRequestBody());
+        // json_encode() with no pretty-print flag (StubChatClient's queued
+        // content, unlike the pretty-printed request body) has no space
+        // after the colon; the log must store the reply verbatim.
+        self::assertStringContainsString('"score":70', $firstLog->getResponseText());
+    }
+
+    public function testACorrectiveRetryGetsItsOwnLogRowWithTheUnusableVerdict(): void
+    {
+        $this->seedMultiBatchFixture();
+        $this->enableDebug();
+        $this->startAndSnapshot();
+
+        $this->stubChatClient()->queueContent('not json');
+        $this->advancer()->advance($this->user);
+        $firstEntryId = $this->activeRun()->getCandidateBatches()[0][0];
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstEntryId, 'score' => 50, 'reason' => 'r']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $rows = $this->runLogs()->listForUser($this->user);
+        self::assertSame([1, 2], array_column($rows, 'attempt'));
+        self::assertSame(['unusable', 'usable'], array_column($rows, 'verdict'));
+        self::assertSame('not json', $this->freshRunLog($rows[0]['id'])->getResponseText());
+        self::assertStringContainsString(
+            'Your previous reply was not usable.',
+            $this->freshRunLog($rows[1]['id'])->getRequestBody(),
+        );
+    }
+
+    public function testATransportFailureStampsItsLogRow(): void
+    {
+        $this->seedMultiBatchFixture();
+        $this->enableDebug();
+        $this->startAndSnapshot();
+
+        $this->stubChatClient()->queueFailure(new ProviderUnreachableException('gone'));
+        try {
+            $this->advancer()->advance($this->user);
+            self::fail('The transport failure must propagate.');
+        } catch (ProviderUnreachableException) {
+        }
+
+        $rows = $this->runLogs()->listForUser($this->user);
+        self::assertSame(['transport-failed'], array_column($rows, 'verdict'));
+    }
+
+    public function testNoLogRowsAreWrittenWithDebugOff(): void
+    {
+        $this->seedMultiBatchFixture();
+        $this->startAndSnapshot();
+
+        $firstEntryId = $this->activeRun()->getCandidateBatches()[0][0];
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstEntryId, 'score' => 50, 'reason' => 'r']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        self::assertSame([], $this->runLogs()->listForUser($this->user));
+    }
+
     /**
      * @return list<RecommendationItem>
      */
@@ -1066,6 +1158,46 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     private function seedReadyAiSettings(User $user): void
     {
         $this->fixtures->seedReadyAiSettings($user);
+    }
+
+    /**
+     * Re-updates the RecommendationSettings row seedMultiBatchFixture already
+     * persisted, flipping only debugEnabled -- no boolean flag parameter on
+     * the fixture helpers themselves.
+     */
+    private function enableDebug(): void
+    {
+        /** @var RecommendationSettings $settings */
+        $settings = $this->em->getRepository(RecommendationSettings::class)->findOneBy(['user' => $this->user]);
+        $current = $settings->values();
+        $settings->update(new RecommendationSettingsValues(
+            guidancePrompt: $current->guidancePrompt,
+            favoritesCap: $current->favoritesCap,
+            keptCap: $current->keptCap,
+            viewedCap: $current->viewedCap,
+            candidatePoolSize: $current->candidatePoolSize,
+            picksLimit: $current->picksLimit,
+            contextWindow: $current->contextWindow,
+            debugEnabled: true,
+        ));
+        $this->em->flush();
+    }
+
+    private function runLogs(): RecommendationRunLogRepository
+    {
+        /** @var RecommendationRunLogRepository $repository */
+        $repository = self::getContainer()->get(RecommendationRunLogRepository::class);
+
+        return $repository;
+    }
+
+    private function freshRunLog(int $id): RecommendationRunLog
+    {
+        $this->em->clear();
+        $log = $this->em->getRepository(RecommendationRunLog::class)->find($id);
+        self::assertNotNull($log);
+
+        return $log;
     }
 
     private function runs(): RecommendationRunRepository
