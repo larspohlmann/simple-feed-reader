@@ -260,12 +260,30 @@ final class RecommendationRunTest extends TestCase
         $run->complete(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
     }
 
-    public function testFailBeforeSnapshotThrows(): void
+    /**
+     * #311 fix round 1: an account can lose its AI configuration before its
+     * run ever reaches its first snapshot (DELETE /api/me/ai has no "is
+     * there an active run" guard), so a run stuck PENDING must still be able
+     * to reach a terminal FAILED state instead of guardStatus rejecting the
+     * only transition that could ever get it out of PENDING.
+     */
+    public function testFailBeforeSnapshotIsLegalAndTerminatesPending(): void
     {
         $run = $this->makeRun();
 
-        $this->expectException(\LogicException::class);
         $run->fail('boom', new \DateTimeImmutable('2026-08-07T10:00:00Z'));
+
+        self::assertSame(RecommendationRun::STATUS_FAILED, $run->getStatus());
+        self::assertSame('boom', $run->getError());
+    }
+
+    public function testFailAfterAlreadyFailedThrows(): void
+    {
+        $run = $this->makeRun();
+        $run->fail('boom', new \DateTimeImmutable('2026-08-07T10:00:00Z'));
+
+        $this->expectException(\LogicException::class);
+        $run->fail('boom again', new \DateTimeImmutable('2026-08-07T10:00:01Z'));
     }
 
     public function testRecordBatchWinnersBeforeSnapshotThrows(): void

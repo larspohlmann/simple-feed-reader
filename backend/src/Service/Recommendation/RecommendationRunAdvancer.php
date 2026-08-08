@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Repository\EntryRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\AiProviderConfigurator;
+use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
@@ -97,6 +98,26 @@ final class RecommendationRunAdvancer
             return null === $latest ? RecommendationRunReport::none() : RecommendationRunReport::fromRun($latest);
         }
 
+        try {
+            return $this->tickActiveRun($run, $user);
+        } catch (AiNotConfiguredException | ApiKeyUnreadableException $e) {
+            // Shared by both drivers (#311 fix): an account that loses its
+            // provider, model, or a readable key can never advance again on
+            // any driver, so the run is failed right here rather than only
+            // when the worker sweep happens to be the one ticking it. Before
+            // this, a poll-only install left such a run stuck retried
+            // forever, because only AdvanceRecommendationRunsHandler applied
+            // this classification. The exception still propagates: the
+            // controller's HTTP mapping and the worker's own fault-isolation
+            // floor are unchanged.
+            $this->failPermanently($run, self::failureMessageFor($e));
+
+            throw $e;
+        }
+    }
+
+    private function tickActiveRun(RecommendationRun $run, User $user): RecommendationRunReport
+    {
         $settings = $this->configurator->requireConfiguration($user);
         if (!$settings->hasModel()) {
             throw new AiNotConfiguredException('No model is chosen.');
@@ -111,6 +132,19 @@ final class RecommendationRunAdvancer
         }
 
         return $this->providerTick($run, $user, $settings);
+    }
+
+    private function failPermanently(RecommendationRun $run, string $message): void
+    {
+        $run->fail($message, $this->clock->now());
+        $this->entityManager->flush();
+    }
+
+    private static function failureMessageFor(AiNotConfiguredException | ApiKeyUnreadableException $e): string
+    {
+        return $e instanceof ApiKeyUnreadableException
+            ? 'The stored API key can no longer be read.'
+            : 'The AI provider is no longer configured.';
     }
 
     private function snapshotTick(RecommendationRun $run, User $user): RecommendationRunReport

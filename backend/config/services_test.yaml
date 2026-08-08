@@ -1,4 +1,16 @@
 services:
+    # WorkerPresenceTest constructs a second instance by hand with a MockClock
+    # to pin the freshness boundary exactly, but also drives the
+    # container-built instance to prove the real wiring resolves. Its only
+    # production caller (the poll-side arbitration) arrives in a later task,
+    # so until then the compiler would inline it away and the test container
+    # could not fetch it. Same `autowire` caveat as the entries below: naming
+    # a class here replaces the definition rather than amending it, and this
+    # file has no `_defaults`.
+    App\Service\Worker\WorkerPresence:
+        autowire: true
+        public: true
+
     # AiProviderConfiguratorTest swaps the real catalog for a stub via
     # `self::getContainer()->set(...)`, which the container only allows on
     # public services, and fetches the configurator itself with `->get(...)`,
@@ -326,5 +338,54 @@ services:
     # lock, the snapshot-phase batching and the zero-candidate completion. Same
     # "no production caller yet" caveat as RecommendationRunStarter above.
     App\Service\Recommendation\RecommendationRunAdvancer:
+        autowire: true
+        public: true
+
+    # Public so tests can drive poll()/current() directly against the real
+    # advancer/repository/presence graph, the same seam RecommendationRun
+    # AdvancerTest uses on advance() above -- useful for #311's worker-side
+    # tests still to come on this branch, which have no HTTP route to go
+    # through at all.
+    App\Service\Recommendation\RecommendationPollDriver:
+        autowire: true
+        public: true
+
+    # WorkerScheduleWiringTest fetches this to prove the container actually
+    # wires the `worker` schedule with the three decided entries in order —
+    # an autoconfigured #[AsSchedule] service builds fine even with an entry
+    # silently dropped, and only a booted container catches that. Handlers
+    # for the three messages arrive in later tasks, so until then the
+    # compiler would inline this away and the test container could not fetch
+    # it. Same `autowire` caveat as the entries above.
+    App\Service\Worker\WorkerSchedule:
+        autowire: true
+        public: true
+
+    # AdvanceRecommendationRunsHandlerTest fetches this to drive __invoke()
+    # directly against the real repository/advancer/presence/entity-manager
+    # graph, the same "no mocks" stance as RecommendationRunAdvancerTest on
+    # advance() above. Messenger handlers are never called through the
+    # container by anything else, so without this the compiler would inline
+    # it away and the test container could not fetch it. Same `autowire`
+    # caveat as the entries above.
+    App\Service\Worker\Handler\AdvanceRecommendationRunsHandler:
+        autowire: true
+        public: true
+
+    # RefreshDueFeedsHandlerTest fetches this to drive __invoke() directly
+    # against the container's real RefreshRunner, the same "no mocks" stance
+    # as AdvanceRecommendationRunsHandlerTest above. Messenger handlers are
+    # never called through the container by anything else, so without this
+    # the compiler would inline it away and the test container could not
+    # fetch it. Same `autowire` caveat as the entries above.
+    App\Service\Worker\Handler\RefreshDueFeedsHandler:
+        autowire: true
+        public: true
+
+    # PurgeFailedMessagesHandlerTest fetches this to drive __invoke() against
+    # a schema with and without `messenger_messages` present. Same
+    # "no production caller through the container" and `autowire` caveats as
+    # RefreshDueFeedsHandler above.
+    App\Service\Worker\Handler\PurgeFailedMessagesHandler:
         autowire: true
         public: true

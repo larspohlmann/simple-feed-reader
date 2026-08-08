@@ -67,11 +67,13 @@ if [ -n "$(compose ps -aq php 2>/dev/null)" ]; then
   compose exec -T php composer install --no-interaction
   say 'Applying database migrations ...'
   compose exec -T php bin/console doctrine:migrations:migrate --no-interaction
+  # It may have started before the schema existed (first install).
+  compose restart worker
 
   if wait_for_health "${DEV_HEALTH_URL}"; then
     ok "Development stack updated."
   else
-    warn 'The API did not report healthy in time. Check:  docker compose logs -f php nginx'
+    warn 'The API did not report healthy in time. Check:  docker compose logs -f php nginx worker'
   fi
   print_summary
   updated_any=1

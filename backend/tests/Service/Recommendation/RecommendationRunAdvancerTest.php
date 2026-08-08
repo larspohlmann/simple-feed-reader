@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation;
 
-use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
@@ -14,12 +13,14 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Lock\LockFactory;
@@ -34,6 +35,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 {
     private User $user;
     private Feed $feed;
+    private RecommendationRunFixtures $fixtures;
 
     protected function setUp(): void
     {
@@ -42,6 +44,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         $this->user = (new UserFactory($this->em, $hasher))->create('run-advancer@example.test');
+        /** @var ApiKeyCipher $cipher */
+        $cipher = self::getContainer()->get(ApiKeyCipher::class);
+        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
 
         $this->feed = new Feed('https://example.com/feed.xml');
         $this->feed->setTitle('Example');
@@ -123,6 +128,48 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         } finally {
             $lock->release();
         }
+    }
+
+    /**
+     * Fix #311: RecommendationRun::fail() accepts STATUS_PENDING precisely so
+     * a run that never got as far as freezing a candidate pool can still end
+     * in a terminal state. Before this fix, that classification lived only
+     * in AdvanceRecommendationRunsHandler, so a poll-only install left a
+     * PENDING run stuck retried forever the moment its configuration
+     * disappeared -- the worker driver would have failed the very same run.
+     * The classification now lives in the shared tick(), so the poll driver
+     * fails it exactly the way AdvanceRecommendationRunsHandlerTest's
+     * testPendingRunLosingConfigurationBeforeItsFirstSnapshotIsFailed proves
+     * the worker driver does; the exception still reaches the caller so the
+     * controller's HTTP mapping is unchanged.
+     */
+    public function testAPollTickFailsAPendingRunWhenTheConfigurationDisappears(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $this->entry('entry-configless', '2026-07-10T00:00:00Z');
+        $this->starter()->start($this->user);
+        $runId = $this->activeRun()->getId();
+        self::assertNotNull($runId);
+
+        $this->deleteAiSettings();
+
+        try {
+            $this->advancer()->advance($this->user);
+            self::fail('advance() must surface the missing configuration.');
+        } catch (AiNotConfiguredException) {
+            // Expected: the caller still sees the error on this tick.
+        }
+
+        $this->em->clear();
+        $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
+        self::assertNotNull($persisted);
+        self::assertSame(RecommendationRun::STATUS_FAILED, $persisted->getStatus());
+        self::assertSame('The AI provider is no longer configured.', $persisted->getError());
+    }
+
+    private function deleteAiSettings(): void
+    {
+        $this->fixtures->deleteAiSettings($this->user);
     }
 
     /**
@@ -807,33 +854,12 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
     private function entry(string $guid, string $published): Entry
     {
-        $entry = new Entry(
-            $this->feed,
-            $guid,
-            'https://example.com/' . $guid,
-            $guid,
-            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
-        );
-        $entry->setPublishedAt(new \DateTimeImmutable($published));
-        $this->em->persist($entry);
-        $this->em->flush();
-
-        return $entry;
+        return $this->fixtures->entry($this->feed, $guid, $published);
     }
 
     private function seedReadyAiSettings(User $user): void
     {
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $userId = $user->getId();
-        self::assertNotNull($userId);
-        $sealed = $cipher->seal($userId, 'sk-throwaway1234');
-        $now = new \DateTimeImmutable('2026-08-07 09:00:00');
-
-        $settings = new AiProviderSettings($user, 'https://api.example.test/v1', $sealed, '1234', $now);
-        $this->em->persist($settings);
-        $settings->chooseModel('m', $now, 32768);
-        $this->em->flush();
+        $this->fixtures->seedReadyAiSettings($user);
     }
 
     private function runs(): RecommendationRunRepository

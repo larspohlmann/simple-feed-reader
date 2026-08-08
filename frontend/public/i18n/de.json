@@ -435,8 +435,9 @@
     "forYouFailed": "Empfehlungen fehlgeschlagen. Versuch es noch einmal.",
     "forYouRun": "Empfehlungen holen",
     "forYouProgress": "Deine Feeds werden sortiert — {{done}} von {{total}}",
-    "forYouBusy": "Ein anderer Lauf ist schon aktiv. Versuch es gleich noch einmal.",
-    "forYouUnreachable": "Der Empfehlungsdienst war nicht erreichbar. Versuch es noch einmal."
+    "forYouUnreachable": "Der Empfehlungsdienst war nicht erreichbar. Versuch es noch einmal.",
+    "forYouKeepOpen": "Lass die App geöffnet, während dies läuft.",
+    "forYouBackground": "Läuft im Hintergrund — du kannst diesen Tab schließen."
   },
   "common": {
     "save": "Speichern",

@@ -8,15 +8,13 @@ use App\Entity\User;
 use App\Exception\AiKeyUnreadableApiException;
 use App\Exception\AiNotConfiguredApiException;
 use App\Exception\AiProviderApiException;
-use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\RateLimit\RateLimitGuard;
-use App\Service\Recommendation\RecommendationRunAdvancer;
-use App\Service\Recommendation\RecommendationRunReport;
+use App\Service\Recommendation\RecommendationPollDriver;
 use App\Service\Recommendation\RecommendationRunStarter;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
@@ -37,8 +35,7 @@ final readonly class RecommendationRunController
 {
     public function __construct(
         private RecommendationRunStarter $starter,
-        private RecommendationRunAdvancer $advancer,
-        private RecommendationRunRepository $runs,
+        private RecommendationPollDriver $pollDriver,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $aiRecommendationsLimiter,
         private RateLimiterFactoryInterface $aiRecommendationStartsLimiter,
@@ -65,7 +62,7 @@ final readonly class RecommendationRunController
         $this->rateLimitGuard->enforceForUser($this->aiRecommendationsLimiter, $user);
 
         try {
-            $report = $this->advancer->advance($user);
+            $report = $this->pollDriver->poll($user);
         } catch (AiNotConfiguredException $e) {
             throw new AiNotConfiguredApiException($e);
         } catch (ApiKeyUnreadableException $e) {
@@ -80,9 +77,6 @@ final readonly class RecommendationRunController
     #[Route('/current', name: 'api_recommendations_current', methods: ['GET'])]
     public function current(#[CurrentUser] User $user): JsonResponse
     {
-        $latest = $this->runs->findLatestForUser($user);
-        $report = null === $latest ? RecommendationRunReport::none() : RecommendationRunReport::fromRun($latest);
-
-        return new JsonResponse($report->toArray());
+        return new JsonResponse($this->pollDriver->current($user)->toArray());
     }
 }

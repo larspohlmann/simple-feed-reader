@@ -9,7 +9,7 @@ natively. It is strictly additive: the native SQLite workflow (plain
 
 ## 1. What you get
 
-Five services, started with one command from the repository root:
+Six services, started with one command from the repository root:
 
 | Service | Where |
 |---|---|
@@ -17,6 +17,30 @@ Five services, started with one command from the repository root:
 | API (nginx → PHP-FPM 8.3) | https://localhost:8443 (http://localhost:8080 redirects there) |
 | Mailpit web inbox | http://localhost:8025 |
 | MySQL 8.4 | 127.0.0.1:33306 (user/password `feedreader`/`feedreader`, root `root`) |
+| Worker — recommendation runs in the background, 5-minute feed refresh sweep | `docker compose logs -f worker` |
+
+> ### ⚠️ The worker touches your development data
+>
+> The `worker` service starts with `docker compose up` — deliberately, because
+> a dev stack that does not run the worker does not represent production. But
+> it is a real worker against your real `feedreader` database:
+>
+> - Every **5 minutes** it refreshes all due feeds, takes the **global refresh
+>   lock**, and prunes old entries. A test that holds or expects that lock can
+>   fail for reasons that have nothing to do with your change.
+> - It makes **unattended outbound HTTP requests** to every feed you subscribe
+>   to, for as long as the stack is up.
+> - Every **10 seconds** it advances any active recommendation run, which spends
+>   real AI provider credit if an account has a key configured.
+>
+> **Stop it before you run `composer e2e` or the Playwright smokes:**
+>
+> ```bash
+> docker compose stop worker     # …and `docker compose start worker` after
+> ```
+>
+> The recommendation feature degrades to #308's poll-driven behaviour while the
+> worker is stopped, so the app stays fully usable without it.
 
 Every host port is bound to loopback only — nothing on your LAN can reach the
 stack. MySQL sits on 33306 so a natively installed MySQL never collides.
@@ -96,7 +120,8 @@ it).
 | Coding standard | `docker compose exec php composer cs` |
 | Static analysis | `docker compose exec php composer stan` |
 | Any console command | `docker compose exec php bin/console …` |
-| Follow logs | `docker compose logs -f php nginx` |
+| Follow logs | `docker compose logs -f php nginx worker` |
+| Pause the background worker (before an e2e run) | `docker compose stop worker` |
 | Stop the stack | `docker compose down` |
 | MySQL from a host GUI tool | connect to `127.0.0.1:33306` |
 | Black-box e2e suite (from `backend/`) | `composer e2e` — see [`backend/tests/E2e/README.md`](../backend/tests/E2e/README.md) |
@@ -186,9 +211,8 @@ it:
   service runs cross-origin on `:4200` (bearer JWT, so no auth cookie to keep
   same-site); the production stack serves the built SPA same-origin, the
   topology this stack was designed to allow ([docs/oauth-sign-in.md](oauth-sign-in.md)).
-- **Worker / cron container.** The feed-fetch pipeline and the deployment plan
-  will add a container that runs console commands on a schedule; it reuses the
-  php image and the same env injection.
+- **Worker / cron container.** Delivered in #311 — see the `worker` service; it
+  reuses the php image and the same env injection.
 
 ---
 

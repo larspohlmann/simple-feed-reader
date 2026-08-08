@@ -14,6 +14,7 @@ const report = (over: Partial<RecommendationRunReport>): RecommendationRunReport
   batchesTotal: null,
   batchesDone: 0,
   error: null,
+  background: false,
   ...over,
 });
 
@@ -95,36 +96,6 @@ describe('RecommendationsService', () => {
       expect.objectContaining({ message: 'reader.forYouFailed' }),
     );
   });
-
-  it('backs off on busy then retries', fakeAsync(() => {
-    svc.start();
-    ctrl.expectOne('https://api.test/api/recommendations/runs').flush(report({ status: 'busy' }));
-    expect(svc.running()).toBe(true);
-
-    tick(1500);
-    ctrl
-      .expectOne('https://api.test/api/recommendations/runs/tick')
-      .flush(report({ status: 'completed', batchesTotal: 1, batchesDone: 1 }));
-
-    expect(svc.running()).toBe(false);
-    expect(svc.failure()).toBeNull();
-  }));
-
-  it('records a busy failure once the retry budget is spent, without a toast', fakeAsync(() => {
-    svc.start();
-    const busy = report({ status: 'busy' });
-
-    ctrl.expectOne('https://api.test/api/recommendations/runs').flush(busy);
-    for (let attempt = 1; attempt <= 5; attempt++) {
-      tick(1500);
-      ctrl.expectOne('https://api.test/api/recommendations/runs/tick').flush(busy);
-    }
-
-    ctrl.verify(); // the loop gave up rather than polling on
-    expect(svc.running()).toBe(false);
-    expect(svc.failure()).toEqual({ kind: 'busy' });
-    expect(toast.show).not.toHaveBeenCalled();
-  }));
 
   it('resume continues ticking a pending/running run', () => {
     svc.resume();
@@ -223,11 +194,268 @@ describe('RecommendationsService', () => {
     expect(svc.failure()?.kind).toBe('http');
   });
 
+  describe('rate limiting (429)', () => {
+    const fail429Tick = (): void =>
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs/tick')
+        .flush(
+          { type: 'rate_limited', title: 'Too many requests', status: 429 },
+          { status: 429, statusText: 'Too Many Requests' },
+        );
+
+    it('does not surface the hard failure or stop the run on repeated 429s', () => {
+      jest.useFakeTimers();
+      try {
+        svc.start();
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs')
+          .flush(report({ status: 'pending' }));
+
+        // More than MAX_TRANSPORT_RETRIES (3) worth of 429s in a row -- a 429
+        // must not count against that ceiling at all.
+        for (let attempt = 1; attempt <= 5; attempt++) {
+          fail429Tick();
+          expect(svc.running()).toBe(true);
+          expect(svc.failure()).toBeNull();
+          jest.advanceTimersByTime(15000);
+        }
+
+        // The loop is still polling, not stuck or dead: closing it out with a
+        // success proves it, and that the failure signal was never set.
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/tick')
+          .flush(report({ status: 'completed' }));
+        expect(svc.running()).toBe(false);
+        expect(svc.failure()).toBeNull();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('backs off well past BACKOFF_MS -- a fast retry would spend another token', () => {
+      jest.useFakeTimers();
+      try {
+        svc.start();
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs')
+          .flush(report({ status: 'pending' }));
+
+        fail429Tick();
+        jest.advanceTimersByTime(1500); // BACKOFF_MS: not enough for a 429 retry
+        ctrl.expectNone('https://api.test/api/recommendations/runs/tick');
+
+        jest.advanceTimersByTime(13500); // completes the 15s rate-limit wait
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/tick')
+          .flush(report({ status: 'completed' }));
+        expect(svc.running()).toBe(false);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('resumes normal cadence once a running report arrives after 429s', () => {
+      jest.useFakeTimers();
+      try {
+        svc.start();
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs')
+          .flush(report({ status: 'pending' }));
+
+        fail429Tick();
+        jest.advanceTimersByTime(15000);
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/tick')
+          .flush(report({ status: 'running', batchesTotal: 2, batchesDone: 1 }));
+
+        // The next tick is issued immediately (background: false) -- the
+        // 429 wait did not stick around past the run's own progress.
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/tick')
+          .flush(report({ status: 'completed' }));
+        expect(svc.running()).toBe(false);
+        expect(svc.failure()).toBeNull();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    const fail500Tick = (): void =>
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs/tick')
+        .flush(
+          { type: 'server_error', title: 't', status: 500 },
+          { status: 500, statusText: 'Server Error' },
+        );
+
+    it('does not let earlier 429s shorten the transport-failure budget', () => {
+      jest.useFakeTimers();
+      try {
+        svc.start();
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs')
+          .flush(report({ status: 'pending' }));
+
+        // Two 429s, with no reset in between -- if they shared a counter
+        // with genuine transport failures (the bug), this alone would leave
+        // only one slot of MAX_TRANSPORT_RETRIES (3) free.
+        fail429Tick();
+        jest.advanceTimersByTime(15000);
+        fail429Tick();
+        jest.advanceTimersByTime(15000);
+
+        // Two genuine transport failures now. A shared counter would already
+        // be at 2 (from the 429s) + 2 = 4, past the ceiling of 3, and the
+        // second one here would already surface the hard failure.
+        fail500Tick();
+        jest.advanceTimersByTime(1500);
+        fail500Tick();
+        jest.advanceTimersByTime(1500);
+        expect(svc.running()).toBe(true);
+        expect(svc.failure()).toBeNull();
+
+        // Two more genuine failures (four in total) are what actually spends
+        // the full, un-shortened MAX_TRANSPORT_RETRIES (3) budget -- matching
+        // 'stops and records the problem once the tick retry budget is spent'
+        // above, which needs the same four calls starting from a clean slate.
+        fail500Tick();
+        jest.advanceTimersByTime(1500);
+        fail500Tick();
+
+        ctrl.verify(); // the loop gave up rather than polling on
+        expect(svc.running()).toBe(false);
+        expect(svc.failure()?.kind).toBe('http');
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('still terminates: enough consecutive 429s surface the hard failure', () => {
+      jest.useFakeTimers();
+      try {
+        svc.start();
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs')
+          .flush(report({ status: 'pending' }));
+
+        // MAX_RATE_LIMIT_RETRIES (20) attempts, then one more tips it over.
+        for (let attempt = 1; attempt <= 20; attempt++) {
+          fail429Tick();
+          jest.advanceTimersByTime(15000);
+        }
+        fail429Tick();
+
+        ctrl.verify(); // the loop gave up rather than polling on
+        expect(svc.running()).toBe(false);
+        expect(svc.failure()?.kind).toBe('http');
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+  });
+
+  describe('background regime', () => {
+    it('slows the poll to BACKGROUND_POLL_MS when a worker owns execution', () => {
+      jest.useFakeTimers();
+      try {
+        svc.start();
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs')
+          .flush(report({ status: 'pending', background: true }));
+
+        // No synchronous next tick -- the deferred tick returns instantly, so a
+        // tight recursive loop would otherwise hammer the endpoint.
+        ctrl.expectNone('https://api.test/api/recommendations/runs/current');
+
+        jest.advanceTimersByTime(3999);
+        ctrl.expectNone('https://api.test/api/recommendations/runs/current');
+
+        jest.advanceTimersByTime(1);
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/current')
+          .flush(report({ status: 'completed', background: true }));
+        expect(svc.running()).toBe(false);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('polls the unlimited read endpoint, not the rate-limited write, while the worker owns the run', () => {
+      jest.useFakeTimers();
+      try {
+        svc.start();
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs')
+          .flush(report({ status: 'running', background: true }));
+
+        jest.advanceTimersByTime(4000);
+        // The tick endpoint would do no work at all here -- it delegates to
+        // exactly this read -- and would spend the `ai_recommendations`
+        // limiter for nothing.
+        ctrl.expectNone('https://api.test/api/recommendations/runs/tick');
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/current')
+          .flush(report({ status: 'completed', background: true }));
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('returns to the tick endpoint as soon as a report says the worker is gone', () => {
+      jest.useFakeTimers();
+      try {
+        svc.start();
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs')
+          .flush(report({ status: 'running', background: true }));
+
+        jest.advanceTimersByTime(4000);
+        // The worker died between the two reads: this one still comes from
+        // `current`, but it carries background: false.
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/current')
+          .flush(report({ status: 'running', background: false }));
+
+        // …so the client takes execution back and drives the run itself.
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/tick')
+          .flush(report({ status: 'completed', background: false }));
+        expect(svc.running()).toBe(false);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('keeps ticking immediately when the client owns execution (background: false)', () => {
+      jest.useFakeTimers();
+      try {
+        svc.start();
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs')
+          .flush(report({ status: 'pending', background: false }));
+
+        // Immediate -- no timer advance needed.
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/tick')
+          .flush(report({ status: 'completed', background: false }));
+        expect(svc.running()).toBe(false);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+  });
+
   it('reports zero progress when the total is null or zero', () => {
     svc.start();
     ctrl
       .expectOne('https://api.test/api/recommendations/runs')
-      .flush(report({ status: 'busy', batchesTotal: null }));
+      .flush(report({ status: 'pending', batchesTotal: null }));
     expect(svc.progress()).toBe(0);
+
+    // 'pending' keeps the loop going (unlike the now-impossible 'busy'),
+    // so this tick needs a response to leave no outstanding request behind.
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'completed', batchesTotal: 1, batchesDone: 1 }));
   });
 });

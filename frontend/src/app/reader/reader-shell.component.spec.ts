@@ -108,9 +108,13 @@ describe('ReaderShellComponent', () => {
       .flush({ entries: [{ ...entry, ...entryOverride }], nextCursor: null });
     // resume() fires on init to pick up a run left in flight by an earlier
     // session; 'none' means there is nothing to resume.
-    ctrl
-      .expectOne('https://api.test/api/recommendations/runs/current')
-      .flush({ status: 'none', batchesTotal: null, batchesDone: 0, error: null });
+    ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
+      status: 'none',
+      batchesTotal: null,
+      batchesDone: 0,
+      error: null,
+      background: false,
+    });
     f.detectChanges();
     return f;
   }
@@ -145,9 +149,13 @@ describe('ReaderShellComponent', () => {
     ctrl
       .expectOne((r) => r.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
-    ctrl
-      .expectOne('https://api.test/api/recommendations/runs/current')
-      .flush({ status: 'none', batchesTotal: null, batchesDone: 0, error: null });
+    ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
+      status: 'none',
+      batchesTotal: null,
+      batchesDone: 0,
+      error: null,
+      background: false,
+    });
     f.detectChanges();
     return f;
   }
@@ -697,9 +705,13 @@ describe('ReaderShellComponent', () => {
     expect(f.nativeElement.querySelector('.for-you-bar [role="status"]')).toBeNull();
 
     button.click();
-    ctrl
-      .expectOne('https://api.test/api/recommendations/runs')
-      .flush({ status: 'running', batchesTotal: 3, batchesDone: 0, error: null });
+    ctrl.expectOne('https://api.test/api/recommendations/runs').flush({
+      status: 'running',
+      batchesTotal: 3,
+      batchesDone: 0,
+      error: null,
+      background: false,
+    });
     f.detectChanges();
     expect(recs.running()).toBe(true);
     ctrl.expectOne('https://api.test/api/recommendations/runs/tick').flush({
@@ -707,6 +719,7 @@ describe('ReaderShellComponent', () => {
       batchesTotal: 3,
       batchesDone: 0,
       error: null,
+      background: false,
     });
   });
 
@@ -721,7 +734,13 @@ describe('ReaderShellComponent', () => {
 
     const recs = TestBed.inject(RecommendationsService);
     recs.running.set(true);
-    recs.report.set({ status: 'running', batchesTotal: 3, batchesDone: 1, error: null });
+    recs.report.set({
+      status: 'running',
+      batchesTotal: 3,
+      batchesDone: 1,
+      error: null,
+      background: false,
+    });
     f.detectChanges();
 
     expect(f.nativeElement.querySelector('.for-you-bar button.run')).toBeNull();
@@ -729,23 +748,40 @@ describe('ReaderShellComponent', () => {
     expect(status.textContent).toContain('1 of 3');
   });
 
-  it('tells the user a busy-retry exhaustion happened, next to the run button', () => {
-    const f = boot();
-    qp.next(convertToParamMap({ view: 'for-you' }));
-    f.detectChanges();
-    ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
-      .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
+  describe('background regime hint', () => {
+    function bootRunning(background: boolean): ReturnType<typeof boot> {
+      const f = boot();
+      qp.next(convertToParamMap({ view: 'for-you' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+      f.detectChanges();
 
-    const recs = TestBed.inject(RecommendationsService);
-    recs.running.set(false);
-    recs.failure.set({ kind: 'busy' });
-    f.detectChanges();
+      const recs = TestBed.inject(RecommendationsService);
+      recs.running.set(true);
+      recs.report.set({
+        status: 'running',
+        batchesTotal: 3,
+        batchesDone: 1,
+        error: null,
+        background,
+      });
+      f.detectChanges();
+      return f;
+    }
 
-    const alert = f.nativeElement.querySelector('.for-you-bar [role="alert"]') as HTMLElement;
-    expect(alert.textContent).toContain('Another run is already in progress');
-    expect(f.nativeElement.querySelector('.for-you-bar button.run')).not.toBeNull();
+    it('shows the background copy when a worker owns execution', () => {
+      const f = bootRunning(true);
+      const hint = f.nativeElement.querySelector('.for-you-bar .hint') as HTMLElement;
+      expect(hint.textContent).toContain('Runs in the background');
+    });
+
+    it('shows the keep-open copy when the client owns execution', () => {
+      const f = bootRunning(false);
+      const hint = f.nativeElement.querySelector('.for-you-bar .hint') as HTMLElement;
+      expect(hint.textContent).toContain('Keep the app open');
+    });
   });
 
   it('tells the user when the backend gave up on the run itself', () => {
@@ -798,7 +834,7 @@ describe('ReaderShellComponent', () => {
 
     const recs = TestBed.inject(RecommendationsService);
     recs.running.set(false);
-    recs.failure.set({ kind: 'busy' });
+    recs.failure.set({ kind: 'failed', error: 'boom' });
     recs.running.set(true);
     f.detectChanges();
 
@@ -817,9 +853,13 @@ describe('ReaderShellComponent', () => {
     ctrl
       .expectOne((r) => r.url === 'https://api.test/api/entries')
       .flush({ entries: [entry], nextCursor: null });
-    ctrl
-      .expectOne('https://api.test/api/recommendations/runs/current')
-      .flush({ status: 'none', batchesTotal: null, batchesDone: 0, error: null });
+    ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
+      status: 'none',
+      batchesTotal: null,
+      batchesDone: 0,
+      error: null,
+      background: false,
+    });
     f.detectChanges();
 
     const list = () =>

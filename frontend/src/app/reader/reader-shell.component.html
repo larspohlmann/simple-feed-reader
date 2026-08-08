@@ -185,6 +185,11 @@
         <p role="status" aria-live="polite">
           {{ 'reader.forYouProgress' | transloco: forYouProgress() }}
         </p>
+        <p class="hint">
+          {{
+            (recs.workerOwnsRun() ? 'reader.forYouBackground' : 'reader.forYouKeepOpen') | transloco
+          }}
+        </p>
       } @else {
         <button type="button" class="run" (click)="recs.start()">
           {{ 'reader.forYouRun' | transloco }}

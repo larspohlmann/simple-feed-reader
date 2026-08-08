@@ -25,7 +25,11 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     // is also why the tick endpoint performs exactly one call — the whole tick
     // must fit one FastCGI request. #312 will add streamed reads with stall
     // detection under this same interface.
-    private const float TIMEOUT_SECONDS = 120.0;
+    //
+    // Public because it is a published bound, not an implementation detail:
+    // WorkerPresence::FRESH_SECONDS has to outlast one call of this length or
+    // the worker looks dead while it is merely thinking (#311).
+    public const float TIMEOUT_SECONDS = 120.0;
     private const int MAXIMUM_RESPONSE_BYTES = 2_097_152;
 
     public function __construct(

@@ -12,6 +12,17 @@
 # commands: removed first thing, written after the warmup succeeded.
 set -e
 
+if [ "$#" -gt 0 ]; then
+  # Console/worker mode (#311). The php-fpm container owns the shared php-var
+  # volume's lifecycle -- the var/.ready flag the scripts poll and the
+  # var/cache/prod rebuild both belong to it alone, so this path must touch
+  # neither: a worker restart that deleted them would break
+  # wait_for_php_ready and flush a live FPM's cache. Wait for readiness,
+  # drop to www-data, run the given command.
+  until [ -f var/.ready ]; do sleep 2; done
+  exec su-exec www-data "$@"
+fi
+
 rm -f var/.ready
 mkdir -p var/cache var/log var/cache-pools config/jwt
 chown -R www-data:www-data var config/jwt

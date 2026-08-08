@@ -7,20 +7,29 @@ namespace App\Tests\Controller\Api;
 use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Entity\WorkerHeartbeat;
+use App\Repository\WorkerHeartbeatRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Worker\WorkerPresence;
+use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
+use Psr\Clock\ClockInterface;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\LockInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
@@ -67,20 +76,17 @@ final class RecommendationRunControllerTest extends WebTestCase
 
     private function seedReadyAiSettings(User $user): void
     {
+        $this->fixtures()->seedReadyAiSettings($user);
+    }
+
+    private function fixtures(): RecommendationRunFixtures
+    {
         $em = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $em);
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         self::assertInstanceOf(ApiKeyCipher::class, $cipher);
 
-        $userId = $user->getId();
-        self::assertNotNull($userId);
-        $sealed = $cipher->seal($userId, 'sk-throwaway1234');
-        $now = new \DateTimeImmutable('2026-08-07 09:00:00');
-
-        $settings = new AiProviderSettings($user, 'https://api.example.test/v1', $sealed, '1234', $now);
-        $em->persist($settings);
-        $settings->chooseModel('m', $now, 32768);
-        $em->flush();
+        return new RecommendationRunFixtures($em, $cipher);
     }
 
     /**
@@ -115,6 +121,41 @@ final class RecommendationRunControllerTest extends WebTestCase
         self::assertInstanceOf(StubChatClient::class, $client);
 
         return $client;
+    }
+
+    /** @return array{0: array<string,string>, 1: User} */
+    private function authWithReadyAi(string $email): array
+    {
+        [$headers, $user] = $this->auth($email);
+        $this->seedReadyAiSettings($user);
+
+        return [$headers, $user];
+    }
+
+    /** @param array<string,string> $headers */
+    private function startRun(KernelBrowser $client, array $headers): void
+    {
+        $client->request('POST', '/api/recommendations/runs', server: $headers);
+        self::assertResponseIsSuccessful();
+    }
+
+    /**
+     * Makes the #311 worker's heartbeat fresh by touching it through the real
+     * repository with the container's own clock, exactly like the poll
+     * driver reads it — a MockClock stand-in here would prove nothing about
+     * the wiring the request path actually uses.
+     */
+    private function touchWorkerHeartbeatNow(): void
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        /** @var WorkerHeartbeatRepository $repository */
+        $repository = $em->getRepository(WorkerHeartbeat::class);
+
+        $clock = self::getContainer()->get(ClockInterface::class);
+        self::assertInstanceOf(ClockInterface::class, $clock);
+
+        $repository->touch(WorkerPresence::RECOMMENDATION_SWEEP, $clock->now());
     }
 
     /** @return array<string, mixed> */
@@ -157,7 +198,7 @@ final class RecommendationRunControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(
-            ['status' => 'pending', 'batchesTotal' => null, 'batchesDone' => 0, 'error' => null],
+            ['status' => 'pending', 'batchesTotal' => null, 'batchesDone' => 0, 'error' => null, 'background' => false],
             $this->payload($client->getResponse()),
         );
     }
@@ -207,9 +248,122 @@ final class RecommendationRunControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(
-            ['status' => 'none', 'batchesTotal' => null, 'batchesDone' => 0, 'error' => null],
+            ['status' => 'none', 'batchesTotal' => null, 'batchesDone' => 0, 'error' => null, 'background' => false],
             $this->payload($client->getResponse()),
         );
+    }
+
+    /**
+     * #311's arbitration: with a fresh worker heartbeat in place, a tick
+     * becomes a pure status read instead of doing the worker's job — the run
+     * stays pending and the provider is never called.
+     */
+    public function testTickDefersToAFreshWorkerHeartbeat(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers, $user] = $this->authWithReadyAi('defer@example.test');
+        $this->seedOneCandidateEntry($user);
+        $this->startRun($client, $headers);
+        $this->touchWorkerHeartbeatNow();
+
+        $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $report = $this->payload($client->getResponse());
+        self::assertSame('pending', $report['status']);
+        self::assertTrue($report['background']);
+        self::assertSame([], $this->stubChatClient()->calls());
+    }
+
+    /**
+     * Without a fresh heartbeat, the #308 poll behaviour applies untouched:
+     * the tick snapshots the run itself and reports it as foreground work.
+     */
+    public function testTickAdvancesWhenTheHeartbeatIsStale(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers, $user] = $this->authWithReadyAi('stale-heartbeat@example.test');
+        $this->seedOneCandidateEntry($user);
+        $this->startRun($client, $headers);
+
+        $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $report = $this->payload($client->getResponse());
+        self::assertSame('running', $report['status']);
+        self::assertFalse($report['background']);
+    }
+
+    /**
+     * The heartbeat is a hint and the per-user lock is the truth, so the two
+     * must answer alike. A worker whose heartbeat has not landed yet still
+     * holds the lock while it works; reporting that as `busy` made the client
+     * spend five retries and then tell the user "another run is already in
+     * progress" about a perfectly healthy background run — and stop polling
+     * it (#311 final review, Critical 2c).
+     */
+    public function testATickThatFindsTheLockHeldReportsTheRunAsSomebodyElsesWork(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers, $user] = $this->authWithReadyAi('locked-tick@example.test');
+        $this->seedOneCandidateEntry($user);
+        $this->startRun($client, $headers);
+
+        $lock = $this->holdTheRunLockFor($user);
+
+        try {
+            $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
+        } finally {
+            $lock->release();
+        }
+
+        self::assertResponseIsSuccessful();
+        $report = $this->payload($client->getResponse());
+        self::assertNotSame('busy', $report['status']);
+        self::assertSame('pending', $report['status']);
+        self::assertTrue($report['background']);
+        self::assertSame([], $this->stubChatClient()->calls());
+    }
+
+    private function holdTheRunLockFor(User $user): LockInterface
+    {
+        $lockFactory = self::getContainer()->get(LockFactory::class);
+        self::assertInstanceOf(LockFactory::class, $lockFactory);
+
+        $lock = $lockFactory->createLock('ai-recommendations-' . $user->getId());
+        self::assertTrue($lock->acquire());
+
+        return $lock;
+    }
+
+    public function testCurrentReportsBackgroundWhenTheWorkerIsAlive(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers] = $this->authWithReadyAi('current-background@example.test');
+        $this->startRun($client, $headers);
+        $this->touchWorkerHeartbeatNow();
+
+        $client->request('GET', '/api/recommendations/runs/current', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertTrue($this->payload($client->getResponse())['background']);
+    }
+
+    public function testCurrentReportsForegroundWhenNoWorkerIsAlive(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers] = $this->authWithReadyAi('current-foreground@example.test');
+        $this->startRun($client, $headers);
+
+        $client->request('GET', '/api/recommendations/runs/current', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertFalse($this->payload($client->getResponse())['background']);
     }
 
     /**
@@ -253,6 +407,15 @@ final class RecommendationRunControllerTest extends WebTestCase
      * but the account's provider row has since been removed — a settings
      * change racing an in-flight run. Distinct from start()'s own mapping of
      * the same exception type: this pins that tick() carries the mapping too.
+     *
+     * Fix #311: it also pins the terminal-failure side of that same race.
+     * Before the fix, only the worker driver failed a run whose
+     * configuration disappeared mid-flight; a poll-only install left this
+     * exact run stuck retried forever, because RecommendationRunAdvancer's
+     * shared tick() only rethrew. The run must now be FAILED here too, the
+     * same way AdvanceRecommendationRunsHandlerTest's
+     * testPendingRunLosingConfigurationBeforeItsFirstSnapshotIsFailed proves
+     * the worker driver leaves it.
      */
     public function testATickWhoseConfigurationDisappearedIsNotFound(): void
     {
@@ -276,6 +439,12 @@ final class RecommendationRunControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(404);
         self::assertSame('ai_not_configured', $this->payload($client->getResponse())['type']);
+
+        $em->clear();
+        $run = $em->getRepository(RecommendationRun::class)->findOneBy(['user' => $user], ['id' => 'DESC']);
+        self::assertInstanceOf(RecommendationRun::class, $run);
+        self::assertSame(RecommendationRun::STATUS_FAILED, $run->getStatus());
+        self::assertSame('The AI provider is no longer configured.', $run->getError());
     }
 
     /**

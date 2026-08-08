@@ -51,6 +51,44 @@ services:
       mysql:
         condition: service_healthy
 
+  # The #311 background worker. Dev target has no entrypoint, so the command
+  # overrides the base image's php-fpm CMD cleanly; the bind mount shares
+  # vendor/ and var/ with the php container, so `composer install` there
+  # serves this one too. -vv surfaces each schedule firing in the logs.
+  worker:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: dev
+    #
+    # WARNING: this container drives the recommendation sweep AND a five-minute
+    # feed refresh sweep against your development database — see
+    # docs/local-docker.md §"The worker touches your development data".
+    # `docker compose stop worker` while you run the e2e suites by hand.
+    #
+    # --memory-limit matches the prod service: the same consumer, the same
+    # long-lived process, and a leak must be caught on a developer machine
+    # before it reaches a server.
+    command:
+      - php
+      - bin/console
+      - messenger:consume
+      - scheduler_worker
+      - -vv
+      - --time-limit=3600
+      - --memory-limit=128M
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app
+    environment:
+      DATABASE_URL: "mysql://feedreader:feedreader@mysql:3306/feedreader?serverVersion=8.4&charset=utf8mb4"
+      MAILER_DSN: "smtp://mailpit:1025"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
   nginx:
     image: nginx:1.27-alpine
     volumes:
