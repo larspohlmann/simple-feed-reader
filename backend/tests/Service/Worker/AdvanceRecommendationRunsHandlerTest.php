@@ -11,14 +11,21 @@ use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Entity\WorkerHeartbeat;
+use App\Repository\EntryRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Repository\WorkerHeartbeatRepository;
+use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Recommendation\ChatCompletionClient;
+use App\Service\Recommendation\RecommendationCandidateLoader;
+use App\Service\Recommendation\RecommendationHistoryLoader;
+use App\Service\Recommendation\RecommendationPickParser;
+use App\Service\Recommendation\RecommendationPromptBuilder;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
+use App\Service\Recommendation\RecommendationSettingsResolver;
 use App\Service\Worker\Handler\AdvanceRecommendationRunsHandler;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
 use App\Service\Worker\WorkerPresence;
@@ -35,7 +42,7 @@ use Monolog\Logger;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\ClockInterface;
-use Symfony\Component\Clock\MockClock;
+use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
@@ -228,7 +235,6 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             $this->runs(),
             $this->advancer(),
             $this->presence(),
-            new MockClock('2026-08-08T00:00:00Z'),
             $clearTracker,
             new NullLogger(),
         );
@@ -313,16 +319,20 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     }
 
     /**
-     * Fix round 2 (#311 review): the earlier fix still flushed the
+     * Fix round 2 (#311 review): an earlier version flushed the
      * fail()-recording write INSIDE the catch that decided to record it, so
      * a flush() failure there (lock timeout, dropped connection) threw from
      * within a catch block -- which PHP never routes to a sibling catch --
-     * and escaped exactly like the round-1 LogicException did. This
-     * reproduces that with a decorator that makes only the FIRST flush()
-     * throw, without ever invoking the real EntityManager's UnitOfWork
-     * (see FlushFailingEntityManager), so the second, healthy user's run
-     * genuinely advances through the real, un-poisoned EntityManager in the
-     * very same firing -- the positive assertion, not just "no throw".
+     * and escaped exactly like the round-1 LogicException did. That
+     * fail()+flush() now lives in RecommendationRunAdvancer::tick() (#311
+     * fix, shared with the poll driver), so this test builds its own
+     * advancer wired with a decorator that makes only the FIRST flush()
+     * throw, without ever invoking the real EntityManager's UnitOfWork (see
+     * FlushFailingEntityManager) -- every other collaborator, including the
+     * EntityManager underneath the decorator, is the container's real,
+     * shared instance, so the second, healthy user's run genuinely advances
+     * through the real, un-poisoned EntityManager in the very same firing --
+     * the positive assertion, not just "no throw".
      */
     public function testFlushFailureRecordingOneRunsFailureDoesNotStarveTheNext(): void
     {
@@ -390,23 +400,47 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     }
 
     /**
-     * Built by hand rather than fetched from the container: only the
-     * handler's OWN view of the EntityManager is replaced with one whose
-     * first flush() throws. The repository and advancer arguments are still
-     * the container's real, shared instances, so the healthy user's run
-     * advances through the real EntityManager exactly as it would in
-     * production -- only the struggling run's own failure-recording flush is
-     * faked.
+     * Built by hand rather than fetched from the container: the advancer
+     * this handler uses is wired with a decorator whose first flush()
+     * throws, so the struggling run's fail()-recording write (now inside
+     * RecommendationRunAdvancer::tick(), see the test above) fails exactly
+     * once. Every other collaborator -- the repository, and every one of the
+     * advancer's own collaborators besides its EntityManager -- is the
+     * container's real, shared instance, so the healthy user's run advances
+     * through the real EntityManager exactly as it would in production.
      */
     private function handlerWithFlushFailingEntityManager(LoggerInterface $logger): AdvanceRecommendationRunsHandler
     {
         return new AdvanceRecommendationRunsHandler(
             $this->runs(),
-            $this->advancer(),
+            $this->advancerWithFlushFailingEntityManager(),
             $this->presence(),
-            new MockClock('2026-08-08T00:00:00Z'),
-            new FlushFailingEntityManager($this->em),
+            $this->em,
             $logger,
+        );
+    }
+
+    /**
+     * Every RecommendationRunAdvancer collaborator except the EntityManager
+     * is the container's real, shared instance -- only the flush() that
+     * records the struggling run's failure is faked, never the healthy
+     * run's own provider call, prompt building or persistence.
+     */
+    private function advancerWithFlushFailingEntityManager(): RecommendationRunAdvancer
+    {
+        return new RecommendationRunAdvancer(
+            $this->runs(),
+            self::getContainer()->get(EntryRepository::class),
+            self::getContainer()->get(LockFactory::class),
+            self::getContainer()->get(AiProviderConfigurator::class),
+            self::getContainer()->get(ClockInterface::class),
+            self::getContainer()->get(RecommendationSettingsResolver::class),
+            self::getContainer()->get(RecommendationCandidateLoader::class),
+            self::getContainer()->get(RecommendationHistoryLoader::class),
+            self::getContainer()->get(RecommendationPromptBuilder::class),
+            self::getContainer()->get(ChatCompletionClient::class),
+            self::getContainer()->get(RecommendationPickParser::class),
+            new FlushFailingEntityManager($this->em),
         );
     }
 
@@ -421,7 +455,6 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             $this->runs(),
             $this->advancer(),
             $this->presence(),
-            new MockClock('2026-08-08T00:00:00Z'),
             $this->em,
             $logger,
         );
@@ -433,7 +466,6 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             $this->runs(),
             $this->advancer(),
             new WorkerPresence($this->heartbeats(), $presenceClock),
-            new MockClock('2026-08-08T00:00:00Z'),
             $this->em,
             new NullLogger(),
         );

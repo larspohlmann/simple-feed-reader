@@ -15,7 +15,6 @@ use App\Service\Worker\Message\AdvanceRecommendationRuns;
 use App\Service\Worker\WorkerPresence;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 /**
@@ -30,7 +29,6 @@ final readonly class AdvanceRecommendationRunsHandler
         private RecommendationRunRepository $runs,
         private RecommendationRunAdvancer $advancer,
         private WorkerPresence $presence,
-        private ClockInterface $clock,
         private EntityManagerInterface $entityManager,
         private LoggerInterface $logger,
     ) {
@@ -65,57 +63,24 @@ final readonly class AdvanceRecommendationRunsHandler
     }
 
     /**
-     * One try/catch, not one per typed case: the earlier version flushed
-     * inside each typed catch, so a flush failure (lock timeout, dropped
-     * connection) threw from *within* a catch block -- which PHP never
-     * routes to a sibling catch -- and escaped this method exactly like the
-     * unanticipated exception the \Throwable floor exists to stop (#311 fix
-     * round 2). Splitting "which failure to record" (classifyFailure) from
-     * "record it" (the fail()+flush() below, now the one call site for
-     * both typed cases) means every path that can throw, including that
-     * flush, runs under this single try, with the \Throwable clause as the
-     * one floor above all of it.
+     * The typed AI-provider cases are handled by exception type alone --
+     * neither needs the run passed back out, because each case already
+     * knows everything it needs to do. AiNotConfiguredException and
+     * ApiKeyUnreadableException are no longer classified here at all: the
+     * shared tick both drivers call (RecommendationRunAdvancer::tick(),
+     * #311 fix) already failed and flushed the run before rethrowing, so
+     * there is nothing left to record. That failure recording used to live
+     * here too, split into "which failure to record" (classifyFailure) and
+     * "record it"; duplicating that classification in only one driver is
+     * exactly what left a poll-only install's run stuck forever, so it now
+     * lives in the one place both drivers go through.
      */
     private function advanceOne(RecommendationRun $run): void
     {
         try {
-            $failureMessage = $this->classifyFailure($run);
-            if (null !== $failureMessage) {
-                $run->fail($failureMessage, $this->clock->now());
-                $this->entityManager->flush();
-            }
-        } catch (\Throwable $e) {
-            // The floor beneath every case above, typed or not: nothing that
-            // goes wrong advancing or recording one run may ever abort the
-            // firing for every run sorted after it. Logged at error level
-            // because, unlike the typed cases below, nothing here already
-            // recorded the failure anywhere else.
-            $this->logger->error('Recommendation sweep: unexpected failure advancing a run.', [
-                'runId' => $run->getId(),
-                'exception' => $e,
-            ]);
-        }
-    }
-
-    /**
-     * @return non-empty-string|null the message to fail the run with, or null
-     *                                if there is nothing to record
-     */
-    private function classifyFailure(RecommendationRun $run): ?string
-    {
-        try {
             $this->advancer->advance($run->getUser());
-
-            return null;
-        } catch (AiNotConfiguredException) {
-            // The account lost its provider or model mid-run. The run can
-            // never advance again on any driver, so fail it rather than sweep
-            // over the same exception every ten seconds forever.
-            return 'The AI provider is no longer configured.';
-        } catch (ApiKeyUnreadableException) {
-            // Same shape: the advancer cannot even build credentials, and no
-            // amount of retrying fixes a key only the user can re-enter.
-            return 'The stored API key can no longer be read.';
+        } catch (AiNotConfiguredException | ApiKeyUnreadableException) {
+            // Already failed and flushed by the shared tick; nothing to do.
         } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
             // The advancer already counted this against the run's own
             // transport-failure ceiling; the sweep just moves on and the next
@@ -125,8 +90,16 @@ final readonly class AdvanceRecommendationRunsHandler
                 'runId' => $run->getId(),
                 'exception' => $e,
             ]);
-
-            return null;
+        } catch (\Throwable $e) {
+            // The floor beneath every case above: nothing that goes wrong
+            // advancing one run may ever abort the firing for every run
+            // sorted after it. Logged at error level because, unlike the
+            // typed cases above, nothing here already recorded the failure
+            // anywhere else.
+            $this->logger->error('Recommendation sweep: unexpected failure advancing a run.', [
+                'runId' => $run->getId(),
+                'exception' => $e,
+            ]);
         }
     }
 }

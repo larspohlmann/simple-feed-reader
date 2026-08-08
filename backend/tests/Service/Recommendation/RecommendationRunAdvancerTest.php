@@ -132,16 +132,19 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The #311 sweep handler may fail a run straight out of PENDING, which is
-     * why RecommendationRun::fail() accepts that status at all. The #308 poll
-     * path must NOT: the client has nothing to say to a user about a run that
-     * never got as far as freezing a candidate pool, and the next tick can
-     * still snapshot it once the account is configured again. This pins the
-     * one way a poll tick can meet a PENDING run and a missing configuration
-     * at the same time -- the exception reaches the caller and the run is
-     * left exactly as it was.
+     * Fix #311: RecommendationRun::fail() accepts STATUS_PENDING precisely so
+     * a run that never got as far as freezing a candidate pool can still end
+     * in a terminal state. Before this fix, that classification lived only
+     * in AdvanceRecommendationRunsHandler, so a poll-only install left a
+     * PENDING run stuck retried forever the moment its configuration
+     * disappeared -- the worker driver would have failed the very same run.
+     * The classification now lives in the shared tick(), so the poll driver
+     * fails it exactly the way AdvanceRecommendationRunsHandlerTest's
+     * testPendingRunLosingConfigurationBeforeItsFirstSnapshotIsFailed proves
+     * the worker driver does; the exception still reaches the caller so the
+     * controller's HTTP mapping is unchanged.
      */
-    public function testAPollTickNeverFailsAPendingRunWhenTheConfigurationDisappears(): void
+    public function testAPollTickFailsAPendingRunWhenTheConfigurationDisappears(): void
     {
         $this->seedReadyAiSettings($this->user);
         $this->entry('entry-configless', '2026-07-10T00:00:00Z');
@@ -155,14 +158,14 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             $this->advancer()->advance($this->user);
             self::fail('advance() must surface the missing configuration.');
         } catch (AiNotConfiguredException) {
-            // Expected: the caller maps it, nothing records it on the run.
+            // Expected: the caller still sees the error on this tick.
         }
 
         $this->em->clear();
         $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
         self::assertNotNull($persisted);
-        self::assertSame(RecommendationRun::STATUS_PENDING, $persisted->getStatus());
-        self::assertNull($persisted->getError());
+        self::assertSame(RecommendationRun::STATUS_FAILED, $persisted->getStatus());
+        self::assertSame('The AI provider is no longer configured.', $persisted->getError());
     }
 
     private function deleteAiSettings(): void

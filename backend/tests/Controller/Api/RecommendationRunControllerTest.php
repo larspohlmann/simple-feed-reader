@@ -7,6 +7,7 @@ namespace App\Tests\Controller\Api;
 use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Entity\WorkerHeartbeat;
@@ -408,6 +409,15 @@ final class RecommendationRunControllerTest extends WebTestCase
      * but the account's provider row has since been removed — a settings
      * change racing an in-flight run. Distinct from start()'s own mapping of
      * the same exception type: this pins that tick() carries the mapping too.
+     *
+     * Fix #311: it also pins the terminal-failure side of that same race.
+     * Before the fix, only the worker driver failed a run whose
+     * configuration disappeared mid-flight; a poll-only install left this
+     * exact run stuck retried forever, because RecommendationRunAdvancer's
+     * shared tick() only rethrew. The run must now be FAILED here too, the
+     * same way AdvanceRecommendationRunsHandlerTest's
+     * testPendingRunLosingConfigurationBeforeItsFirstSnapshotIsFailed proves
+     * the worker driver leaves it.
      */
     public function testATickWhoseConfigurationDisappearedIsNotFound(): void
     {
@@ -431,6 +441,12 @@ final class RecommendationRunControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(404);
         self::assertSame('ai_not_configured', $this->payload($client->getResponse())['type']);
+
+        $em->clear();
+        $run = $em->getRepository(RecommendationRun::class)->findOneBy(['user' => $user], ['id' => 'DESC']);
+        self::assertInstanceOf(RecommendationRun::class, $run);
+        self::assertSame(RecommendationRun::STATUS_FAILED, $run->getStatus());
+        self::assertSame('The AI provider is no longer configured.', $run->getError());
     }
 
     /**
