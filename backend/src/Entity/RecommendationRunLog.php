@@ -61,23 +61,18 @@ class RecommendationRunLog
     #[ORM\Column(length: 24, nullable: true)]
     private ?string $verdict = null;
 
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private \DateTimeImmutable $updatedAt;
-
     public function __construct(
         RecommendationRun $run,
         string $phase,
         ?int $batchNumber,
         int $attempt,
         string $requestBody,
-        \DateTimeImmutable $updatedAt,
     ) {
         $this->run = $run;
         $this->phase = $phase;
         $this->batchNumber = $batchNumber;
         $this->attempt = $attempt;
         $this->requestBody = $requestBody;
-        $this->updatedAt = $updatedAt;
     }
 
     public function getId(): ?int
@@ -120,19 +115,13 @@ class RecommendationRunLog
         return $this->verdict;
     }
 
-    public function getUpdatedAt(): \DateTimeImmutable
-    {
-        return $this->updatedAt;
-    }
-
     /**
      * The call ended: the final decoded text replaces whatever partial state
      * the checkpoints wrote, and the verdict says how the reply was judged.
      */
-    public function finish(string $responseText, string $verdict, \DateTimeImmutable $when): void
+    public function finish(string $responseText, string $verdict): void
     {
         $this->responseText = $responseText;
         $this->verdict = $verdict;
-        $this->updatedAt = $when;
     }
 }

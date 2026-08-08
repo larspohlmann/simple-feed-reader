@@ -69,14 +69,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         int $attempt,
         string $requestBody,
     ): RecommendationRunLog {
-        $log = new RecommendationRunLog(
-            $run,
-            $phase,
-            $batchNumber,
-            $attempt,
-            $requestBody,
-            new \DateTimeImmutable('2026-08-08T10:00:01Z'),
-        );
+        $log = new RecommendationRunLog($run, $phase, $batchNumber, $attempt, $requestBody);
         $this->em()->persist($log);
 
         return $log;
@@ -88,11 +81,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('debug-log-list@example.test');
         $run = $this->createRun($user);
         $finished = $this->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'req a');
-        $finished->finish(
-            'done text',
-            RecommendationRunLog::VERDICT_USABLE,
-            new \DateTimeImmutable('2026-08-08T10:00:05Z'),
-        );
+        $finished->finish('done text', RecommendationRunLog::VERDICT_USABLE);
         $open = $this->log($run, RecommendationRunLog::PHASE_BATCH, 2, 1, 'req b');
         $this->em()->flush();
 
@@ -146,7 +135,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('debug-log-detail@example.test');
         $run = $this->createRun($user);
         $log = $this->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'req');
-        $log->finish('res', RecommendationRunLog::VERDICT_USABLE, new \DateTimeImmutable('2026-08-08T10:00:05Z'));
+        $log->finish('res', RecommendationRunLog::VERDICT_USABLE);
         $this->em()->flush();
         $id = $log->getId();
         self::assertNotNull($id);

@@ -36,11 +36,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
     {
         $run = $this->createRun($this->user);
         $finished = $this->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'req-body-a');
-        $finished->finish(
-            'decoded text',
-            RecommendationRunLog::VERDICT_USABLE,
-            new \DateTimeImmutable('2026-08-08T10:00:05Z'),
-        );
+        $finished->finish('decoded text', RecommendationRunLog::VERDICT_USABLE);
         $this->log($run, RecommendationRunLog::PHASE_DEDUP, null, 1, 'req-body-longer');
         $this->em->flush();
 
@@ -75,11 +71,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
     {
         $run = $this->createRun($this->user);
         $done = $this->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
-        $done->finish(
-            'finished text',
-            RecommendationRunLog::VERDICT_UNUSABLE,
-            new \DateTimeImmutable('2026-08-08T10:00:05Z'),
-        );
+        $done->finish('finished text', RecommendationRunLog::VERDICT_UNUSABLE);
         $streaming = $this->log($run, RecommendationRunLog::PHASE_BATCH, 2, 1, 'r');
         $this->em->flush();
 
@@ -134,14 +126,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         int $attempt,
         string $requestBody,
     ): RecommendationRunLog {
-        $log = new RecommendationRunLog(
-            $run,
-            $phase,
-            $batchNumber,
-            $attempt,
-            $requestBody,
-            new \DateTimeImmutable('2026-08-08T10:00:01Z'),
-        );
+        $log = new RecommendationRunLog($run, $phase, $batchNumber, $attempt, $requestBody);
         $this->em->persist($log);
 
         return $log;

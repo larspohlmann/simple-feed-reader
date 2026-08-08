@@ -70,7 +70,6 @@ final class Version20260808120000 extends AbstractMigration
                 request_body LONGTEXT NOT NULL,
                 response_text LONGTEXT NOT NULL,
                 verdict VARCHAR(24) DEFAULT NULL,
-                updated_at DATETIME NOT NULL,
                 INDEX idx_recommendation_run_log_run (run_id),
                 PRIMARY KEY (id),
                 CONSTRAINT FK_recommendation_run_log_run FOREIGN KEY (run_id)
@@ -92,7 +91,6 @@ final class Version20260808120000 extends AbstractMigration
                 request_body CLOB NOT NULL,
                 response_text CLOB NOT NULL,
                 verdict VARCHAR(24) DEFAULT NULL,
-                updated_at DATETIME NOT NULL,
                 CONSTRAINT FK_recommendation_run_log_run FOREIGN KEY (run_id)
                     REFERENCES recommendation_run (id) ON DELETE CASCADE
             )

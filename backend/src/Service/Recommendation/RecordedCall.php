@@ -59,10 +59,7 @@ final class RecordedCall implements CompletionStreamObserver
 
         $this->connection->update(
             'recommendation_run_log',
-            [
-                'response_text' => $this->decoder->assistantContent($accumulatedBody) ?? '',
-                'updated_at' => $now->format('Y-m-d H:i:s'),
-            ],
+            ['response_text' => $this->decoder->assistantContent($accumulatedBody) ?? ''],
             ['id' => $this->logId],
         );
     }
@@ -106,11 +103,7 @@ final class RecordedCall implements CompletionStreamObserver
 
         $this->connection->update(
             'recommendation_run_log',
-            [
-                'response_text' => $content,
-                'verdict' => $verdict,
-                'updated_at' => $this->clock->now()->format('Y-m-d H:i:s'),
-            ],
+            ['response_text' => $content, 'verdict' => $verdict],
             ['id' => $this->logId],
         );
     }

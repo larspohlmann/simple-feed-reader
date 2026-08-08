@@ -216,7 +216,6 @@ final class RecommendationCallRecorderTest extends DbTestCase
             1,
             1,
             'other request',
-            new \DateTimeImmutable('2026-08-08T09:00:01Z'),
         );
         $this->em->persist($otherLog);
         $this->em->flush();
@@ -242,11 +241,13 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $this->em->clear();
 
         $otherRun = $this->em->find(RecommendationRun::class, $otherRunId);
-        self::assertSame(777, $otherRun?->getStreamedChars());
+        self::assertNotNull($otherRun);
+        self::assertSame(777, $otherRun->getStreamedChars());
 
         $otherLog = $this->em->find(RecommendationRunLog::class, $otherLogId);
-        self::assertSame('other original text', $otherLog?->getResponseText());
-        self::assertSame(RecommendationRunLog::VERDICT_USABLE, $otherLog?->getVerdict());
+        self::assertNotNull($otherLog);
+        self::assertSame('other original text', $otherLog->getResponseText());
+        self::assertSame(RecommendationRunLog::VERDICT_USABLE, $otherLog->getVerdict());
     }
 
     private function seedDebugSettings(bool $enabled): void
