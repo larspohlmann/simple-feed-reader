@@ -23,6 +23,12 @@ use Doctrine\Migrations\AbstractMigration;
  * (RecordedCall, on every settle) *and* read (the debug list response) --
  * they carry real information, not incidental bookkeeping.
  *
+ * The DELETE is load-bearing, not just tidy: SQLite rejects `ADD COLUMN ...
+ * NOT NULL` without a default the moment the table holds a row (verified on
+ * SQLite 3.54), so on a populated table the ALTER below would abort without
+ * it. From-empty CI never has a row to trip this, which is why dropping the
+ * DELETE as "redundant" would still pass CI and only fail on Strato.
+ *
  * PLATFORM-AWARE DDL: tests build their schema from ORM metadata and never
  * execute a migration; CI's migrate-from-empty leg is the only runtime check.
  */
