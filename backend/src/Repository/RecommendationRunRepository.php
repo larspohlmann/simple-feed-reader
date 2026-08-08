@@ -109,4 +109,16 @@ final class RecommendationRunRepository extends ServiceEntityRepository
 
         return $runs;
     }
+
+    /**
+     * Runs carry no further children of their own by this point — the
+     * caller deletes logs and items first — so this deletes directly by
+     * user rather than the select-ids-then-delete shape those two need.
+     */
+    public function deleteForUser(User $user): void
+    {
+        $this->getEntityManager()->createQuery(
+            'DELETE FROM App\Entity\RecommendationRun r WHERE r.user = :user',
+        )->setParameter('user', $user)->execute();
+    }
 }

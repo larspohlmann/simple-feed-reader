@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Exception\AiKeyUnreadableApiException;
 use App\Exception\AiNotConfiguredApiException;
 use App\Exception\AiProviderApiException;
+use App\Exception\RecommendationRunActiveApiException;
 use App\Http\RecommendationRunStatusJson;
 use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
@@ -15,8 +16,11 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\RateLimit\RateLimitGuard;
+use App\Service\Recommendation\Exception\RecommendationRunActiveException;
 use App\Service\Recommendation\RecommendationForYouSummaryProvider;
 use App\Service\Recommendation\RecommendationPollDriver;
+use App\Service\Recommendation\RecommendationRunPurger;
+use App\Service\Recommendation\RecommendationRunReport;
 use App\Service\Recommendation\RecommendationRunStarter;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
@@ -38,6 +42,7 @@ final readonly class RecommendationRunController
     public function __construct(
         private RecommendationRunStarter $starter,
         private RecommendationPollDriver $pollDriver,
+        private RecommendationRunPurger $purger,
         private RecommendationForYouSummaryProvider $forYouSummaries,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $aiRecommendationsLimiter,
@@ -83,5 +88,22 @@ final readonly class RecommendationRunController
         $report = $this->pollDriver->current($user);
 
         return new JsonResponse(RecommendationRunStatusJson::report($report, $this->forYouSummaries->forUser($user)));
+    }
+
+    #[Route('', name: 'api_recommendations_purge', methods: ['DELETE'])]
+    public function purge(#[CurrentUser] User $user): JsonResponse
+    {
+        try {
+            $this->purger->purge($user);
+        } catch (RecommendationRunActiveException $e) {
+            throw new RecommendationRunActiveApiException($e);
+        }
+
+        return new JsonResponse(
+            RecommendationRunStatusJson::report(
+                RecommendationRunReport::none(),
+                $this->forYouSummaries->forUser($user),
+            ),
+        );
     }
 }

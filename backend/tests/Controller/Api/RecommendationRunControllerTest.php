@@ -560,4 +560,77 @@ final class RecommendationRunControllerTest extends WebTestCase
             self::assertResponseIsSuccessful();
         }
     }
+
+    public function testPurgeWithNoRunsReportsNone(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('run-purge-none@example.test');
+
+        $client->request('DELETE', '/api/recommendations/runs', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            [
+                'status' => 'none',
+                'batchesTotal' => null,
+                'batchesDone' => 0,
+                'error' => null,
+                'background' => false,
+                'streamedChars' => 0,
+                'forYou' => ['itemCount' => 0, 'generatedAt' => null],
+            ],
+            $this->payload($client->getResponse()),
+        );
+    }
+
+    public function testPurgeClearsAFinishedRunsForYouList(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers, $user] = $this->authWithReadyAi('run-purge-completed@example.test');
+        $this->seedOneCandidateEntry($user);
+        $this->startRun($client, $headers);
+        $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
+        self::assertResponseIsSuccessful();
+
+        $entry = self::getContainer()->get(EntityManagerInterface::class)
+            ->getRepository(Entry::class)
+            ->findOneBy(['guid' => 'g1']);
+        self::assertInstanceOf(Entry::class, $entry);
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $entry->getId(), 'score' => 90, 'reason' => 'a good read']],
+        ], \JSON_THROW_ON_ERROR));
+        $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
+        self::assertResponseIsSuccessful();
+        self::assertSame('completed', $this->payload($client->getResponse())['status']);
+
+        $client->request('DELETE', '/api/recommendations/runs', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client->getResponse());
+        self::assertSame('none', $payload['status']);
+        $forYou = $payload['forYou'];
+        self::assertIsArray($forYou);
+        self::assertSame(0, $forYou['itemCount']);
+        self::assertNull($forYou['generatedAt']);
+
+        $client->request('GET', '/api/recommendations/runs/current', server: $headers);
+        self::assertResponseIsSuccessful();
+        self::assertSame('none', $this->payload($client->getResponse())['status']);
+    }
+
+    public function testPurgeWithAnActiveRunIsRejected(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers, $user] = $this->authWithReadyAi('run-purge-active@example.test');
+        $this->seedOneCandidateEntry($user);
+        $this->startRun($client, $headers);
+
+        $client->request('DELETE', '/api/recommendations/runs', server: $headers);
+
+        self::assertResponseStatusCodeSame(409);
+        self::assertResponseHeaderSame('content-type', 'application/problem+json');
+        self::assertSame('recommendation_run_active', $this->payload($client->getResponse())['type']);
+    }
 }

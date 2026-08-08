@@ -8,6 +8,7 @@ use App\Entity\EntryState;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
+use App\Entity\User;
 use App\Http\RecommendationCursor;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -76,6 +77,34 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             ->getSingleScalarResult();
 
         return (int) $count;
+    }
+
+    /**
+     * Two-step (select ids, then delete) rather than a DELETE with a
+     * subquery: portable across both suite dialects and trivially testable,
+     * same shape as RecommendationRunLogRepository::deleteForUser().
+     */
+    public function deleteForUser(User $user): void
+    {
+        /** @var list<int> $ids */
+        $ids = array_column(
+            $this->createQueryBuilder('i')
+                ->select('i.id AS id')
+                ->join('i.run', 'r')
+                ->where('r.user = :user')
+                ->setParameter('user', $user)
+                ->getQuery()
+                ->getArrayResult(),
+            'id',
+        );
+
+        if ([] === $ids) {
+            return;
+        }
+
+        $this->getEntityManager()->createQuery(
+            'DELETE FROM App\Entity\RecommendationItem i WHERE i.id IN (:ids)',
+        )->setParameter('ids', $ids)->execute();
     }
 
     /** The for-you feed's row set: completed runs of this user, entries still
