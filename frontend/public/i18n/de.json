@@ -112,6 +112,8 @@
         "debugRequest": "Anfrage ({{ kb }} KB)",
         "debugResponse": "Antwort ({{ kb }} KB)",
         "debugCopy": "Kopieren",
+        "debugStreamed": "{{ kb }} KB gestreamt",
+        "debugStreamedNoAnswer": "{{ kb }} KB gestreamt, keine Antwort",
         "save": "Speichern",
         "saved": "Gespeichert."
       }

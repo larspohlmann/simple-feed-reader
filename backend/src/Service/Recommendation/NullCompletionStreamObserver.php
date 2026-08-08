@@ -10,7 +10,7 @@ namespace App\Service\Recommendation;
  */
 final readonly class NullCompletionStreamObserver implements CompletionStreamObserver
 {
-    public function bodyGrew(string $accumulatedBody): void
+    public function streamProgressed(CompletionStreamProgress $progress): void
     {
     }
 }

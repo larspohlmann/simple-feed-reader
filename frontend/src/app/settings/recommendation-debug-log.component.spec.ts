@@ -15,6 +15,7 @@ const BATCH_ENTRY: DebugLogEntry = {
   verdict: null,
   requestBytes: 421903,
   responseBytes: 1024,
+  wireBytes: 8192,
   streamingText: null,
 };
 
@@ -26,6 +27,7 @@ const DEDUP_ENTRY: DebugLogEntry = {
   verdict: 'usable',
   requestBytes: 2048,
   responseBytes: 4096,
+  wireBytes: 16384,
   streamingText: null,
 };
 
@@ -37,6 +39,7 @@ const STREAMING_ENTRY: DebugLogEntry = {
   verdict: null,
   requestBytes: 512,
   responseBytes: 0,
+  wireBytes: 0,
   streamingText: 'partial…',
 };
 
@@ -48,6 +51,7 @@ const DETAIL: DebugLogDetail = {
   verdict: null,
   requestBody: '{"prompt":"x"}',
   responseText: 'response body',
+  wireBytes: 8192,
 };
 
 describe('RecommendationDebugLogComponent', () => {
@@ -210,5 +214,50 @@ describe('RecommendationDebugLogComponent', () => {
     expect(debugLogEntry).toHaveBeenCalledTimes(2);
     expect(el.querySelector('pre')!.textContent).toContain('final answer');
     expect(el.querySelector('pre')!.textContent).not.toContain('partial…');
+  });
+
+  /**
+   * The #320 story the panel exists to tell: a reasoning model streams
+   * megabytes and answers nothing, which without this line looks exactly
+   * like a provider that never spoke.
+   */
+  it('reports bytes streamed without an answer', () => {
+    debugLog.mockReturnValue(
+      of({
+        entries: [
+          {
+            ...STREAMING_ENTRY,
+            verdict: 'transport-failed',
+            streamingText: null,
+            responseBytes: 0,
+            wireBytes: 1_900_000,
+          },
+        ],
+      }),
+    );
+    const f = TestBed.createComponent(RecommendationDebugLogComponent);
+    f.detectChanges();
+
+    const wire = (f.nativeElement as HTMLElement).querySelector('.debug-panel__wire');
+    expect(wire!.textContent).toContain('1855');
+    expect(wire!.textContent).toContain('no answer');
+  });
+
+  it('reports bytes streamed alongside an answer', () => {
+    debugLog.mockReturnValue(of({ entries: [DEDUP_ENTRY] }));
+    const f = TestBed.createComponent(RecommendationDebugLogComponent);
+    f.detectChanges();
+
+    const wire = (f.nativeElement as HTMLElement).querySelector('.debug-panel__wire');
+    expect(wire!.textContent).toContain('16');
+    expect(wire!.textContent).not.toContain('no answer');
+  });
+
+  it('hides the wire line when nothing was streamed', () => {
+    debugLog.mockReturnValue(of({ entries: [STREAMING_ENTRY] }));
+    const f = TestBed.createComponent(RecommendationDebugLogComponent);
+    f.detectChanges();
+
+    expect((f.nativeElement as HTMLElement).querySelector('.debug-panel__wire')).toBeNull();
   });
 });

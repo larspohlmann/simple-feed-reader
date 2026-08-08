@@ -61,6 +61,15 @@ class RecommendationRunLog
     #[ORM\Column(length: 24, nullable: true)]
     private ?string $verdict = null;
 
+    /**
+     * Every byte the provider sent, not just the ones that decoded into the
+     * answer. A reasoning model spends megabytes here while $responseText
+     * stays empty, and without this the panel cannot tell that call apart
+     * from a provider that never spoke (#320).
+     */
+    #[ORM\Column(options: ['default' => 0])]
+    private int $wireBytes = 0;
+
     public function __construct(
         RecommendationRun $run,
         string $phase,
@@ -115,13 +124,20 @@ class RecommendationRunLog
         return $this->verdict;
     }
 
+    public function getWireBytes(): int
+    {
+        return $this->wireBytes;
+    }
+
     /**
      * The call ended: the final decoded text replaces whatever partial state
-     * the checkpoints wrote, and the verdict says how the reply was judged.
+     * the checkpoints wrote, the verdict says how the reply was judged, and
+     * the byte count says what it cost on the wire to get there.
      */
-    public function finish(string $responseText, string $verdict): void
+    public function finish(string $responseText, string $verdict, int $wireBytes): void
     {
         $this->responseText = $responseText;
         $this->verdict = $verdict;
+        $this->wireBytes = $wireBytes;
     }
 }

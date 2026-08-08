@@ -9,8 +9,8 @@ use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
 use App\Entity\User;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Recommendation\CompletionBodyDecoder;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
+use App\Service\Recommendation\CompletionStreamProgress;
 use App\Service\Recommendation\RecommendationCallRecorder;
 use App\Service\Recommendation\RecommendationSettingsResolver;
 use App\Service\Recommendation\RecommendationSettingsValues;
@@ -54,7 +54,6 @@ final class RecommendationCallRecorderTest extends DbTestCase
             $this->logs,
             $this->em->getConnection(),
             $settingsResolver,
-            new CompletionBodyDecoder(),
             $this->clock,
         );
     }
@@ -97,7 +96,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
         $logId = $this->logs()->listForUser($this->user)[0]['id'];
 
-        $call->bodyGrew("data: {\"choices\":[{\"delta\":{\"content\":\"He\"}}]}\n");
+        $call->streamProgressed(new CompletionStreamProgress('He', 40));
         self::assertSame(
             '',
             $this->freshLog($logId)->getResponseText(),
@@ -105,10 +104,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
         );
 
         $this->clock->modify('+3 seconds');
-        $call->bodyGrew(
-            "data: {\"choices\":[{\"delta\":{\"content\":\"He\"}}]}\n"
-            . "data: {\"choices\":[{\"delta\":{\"content\":\"llo\"}}]}\n",
-        );
+        $call->streamProgressed(new CompletionStreamProgress('Hello', 90));
 
         self::assertSame('Hello', $this->freshLog($logId)->getResponseText());
     }
@@ -119,14 +115,13 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
 
         $this->clock->modify('+3 seconds');
-        $body = "data: {\"choices\":[{\"delta\":{\"content\":\"He\"}}]}\n";
-        $call->bodyGrew($body);
+        $call->streamProgressed(new CompletionStreamProgress('He', 1_234));
 
         $runId = $this->run->getId();
         self::assertNotNull($runId);
         $this->em->clear();
         $freshRun = $this->em->find(RecommendationRun::class, $runId);
-        self::assertSame(\strlen($body), $freshRun?->getStreamedChars());
+        self::assertSame(1_234, $freshRun?->getStreamedChars());
     }
 
     public function testFinishUsableStoresTextVerdictAndResetsLiveness(): void
@@ -135,7 +130,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
         $logId = $this->logs()->listForUser($this->user)[0]['id'];
         $this->clock->modify('+3 seconds');
-        $call->bodyGrew('data: partial');
+        $call->streamProgressed(new CompletionStreamProgress('partial', 7_000));
 
         $call->finishUsable('{"recommendations": []}');
 
@@ -152,12 +147,36 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
         $logId = $this->logs()->listForUser($this->user)[0]['id'];
         $this->clock->modify('+3 seconds');
-        $call->bodyGrew("data: {\"choices\":[{\"delta\":{\"content\":\"cut off\"}}]}\n");
+        $call->streamProgressed(new CompletionStreamProgress('cut off', 9_001));
 
         $call->abortAfterTransportFailure();
 
         $log = $this->freshLog($logId);
         self::assertSame('cut off', $log->getResponseText());
+        self::assertSame(RecommendationRunLog::VERDICT_TRANSPORT_FAILED, $log->getVerdict());
+        self::assertSame(9_001, $log->getWireBytes());
+    }
+
+    /**
+     * The #320 case the panel exists to explain: a reasoning model streams
+     * megabytes and never answers, so the call dies with an empty response.
+     * Without the byte count that row is indistinguishable from a provider
+     * that said nothing at all.
+     */
+    public function testAnAbortRecordsTheBytesEvenWhenNothingWasAnswered(): void
+    {
+        $this->seedDebugSettings(true);
+        $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
+        $logId = $this->logs()->listForUser($this->user)[0]['id'];
+
+        // Inside the checkpoint interval on purpose: no write has happened,
+        // so the count can only reach the row if every report tracks it.
+        $call->streamProgressed(new CompletionStreamProgress('', 1_900_000));
+        $call->abortAfterTransportFailure();
+
+        $log = $this->freshLog($logId);
+        self::assertSame('', $log->getResponseText());
+        self::assertSame(1_900_000, $log->getWireBytes());
         self::assertSame(RecommendationRunLog::VERDICT_TRANSPORT_FAILED, $log->getVerdict());
     }
 
@@ -178,12 +197,12 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
         $this->clock->modify('+3 seconds');
-        $call->bodyGrew("data: {\"choices\":[{\"delta\":{\"content\":\"mine\"}}]}\n");
+        $call->streamProgressed(new CompletionStreamProgress('mine', 50));
         $call->finishUsable('final mine');
 
         $abortCall = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 2, [], 'm');
         $this->clock->modify('+3 seconds');
-        $abortCall->bodyGrew("data: {\"choices\":[{\"delta\":{\"content\":\"cut\"}}]}\n");
+        $abortCall->streamProgressed(new CompletionStreamProgress('cut', 60));
         $abortCall->abortAfterTransportFailure();
 
         $this->assertOtherUsersRowsUntouched($otherRunId, $otherLogId);

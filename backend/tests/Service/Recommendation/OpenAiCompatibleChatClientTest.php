@@ -8,6 +8,7 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ProviderCredentials;
 use App\Service\Recommendation\CompletionBodyDecoder;
+use App\Service\Recommendation\CompletionStreamProgress;
 use App\Service\Recommendation\CompletionStreamObserver;
 use App\Service\Recommendation\NullCompletionStreamObserver;
 use App\Service\Recommendation\OpenAiCompatibleChatClient;
@@ -90,7 +91,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         // regression that swaps one for the other or drops max_duration
         // shows up here instead of only in production behaviour.
         self::assertSame(30.0, $seen['timeout']);
-        self::assertSame(120.0, $seen['max_duration']);
+        self::assertSame(300.0, $seen['max_duration']);
 
         $decodedBody = json_decode($seen['body'], true);
         self::assertSame([
@@ -279,7 +280,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
      * Chunking matches how a real response actually streams and is what makes
      * this test able to catch a cap that stopped firing.
      */
-    public function testAnOversizedBodyIsUnreachable(): void
+    public function testAnOversizedAnswerIsUnreachable(): void
     {
         $body = '{"choices":[{"message":{"content":"' . str_repeat('a', 2_100_000) . '"}}]}';
         $client = $this->clientAnswering(new MockResponse(str_split($body, 50_000)));
@@ -299,30 +300,83 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             ->complete($this->credentials(), 'm', $this->messages(), new NullCompletionStreamObserver());
     }
 
-    public function testObserverSeesTheAccumulatingBodyChunkByChunk(): void
+    public function testObserverSeesTheAnswerAndTheWireCountGrow(): void
     {
-        $client = $this->clientAnswering(new MockResponse([
-            "data: {\"choices\":[{\"delta\":{\"content\":\"He\"}}]}\n\n",
-            "data: [DONE]\n\n",
-        ]));
-        $seen = new class implements CompletionStreamObserver {
-            /** @var list<string> */
-            public array $bodies = [];
-
-            public function bodyGrew(string $accumulatedBody): void
-            {
-                $this->bodies[] = $accumulatedBody;
-            }
-        };
+        $first = "data: {\"choices\":[{\"delta\":{\"content\":\"He\"}}]}\n\n";
+        $second = "data: {\"choices\":[{\"delta\":{\"content\":\"llo\"}}]}\n\n";
+        $client = $this->clientAnswering(new MockResponse([$first, $second]));
+        $seen = $this->recordingObserver();
 
         $client->complete($this->credentials(), 'm', $this->messages(), $seen);
 
-        self::assertCount(2, $seen->bodies);
-        self::assertStringContainsString('"He"', $seen->bodies[0]);
-        // Each call carries everything so far, not just the newest chunk.
-        // str_starts_with() rather than assertStringStartsWith(), whose
-        // $prefix parameter is typed non-empty-string: PHPStan cannot see
-        // that $seen->bodies[0] is non-empty from the assertion above.
-        self::assertTrue(str_starts_with($seen->bodies[1], $seen->bodies[0]));
+        self::assertCount(2, $seen->reports);
+        // The answer accumulates; each report carries everything decoded so
+        // far, not just the newest delta.
+        self::assertSame('He', $seen->reports[0]->answerSoFar);
+        self::assertSame('Hello', $seen->reports[1]->answerSoFar);
+        self::assertSame(\strlen($first), $seen->reports[0]->wireBytes);
+        self::assertSame(\strlen($first . $second), $seen->reports[1]->wireBytes);
+    }
+
+    /**
+     * The #320 regression, at the seam that produced it. A reasoning model
+     * streams its thinking as deltas with no content: the wire count must
+     * climb while the answer stays empty, and the call must not be refused
+     * for it. Before this change the transcript was retained and counted
+     * against the answer's own 2 MiB cap, which failed real batches three
+     * times running and killed the run.
+     */
+    public function testAReasoningStreamIsReportedWithoutBeingCharged(): void
+    {
+        // Thousands of small events, the way a thinking phase really
+        // arrives -- not one giant one, which would have to be buffered
+        // whole to be parsed and is legitimately refused.
+        $event = 'data: ' . json_encode(
+            ['choices' => [['delta' => ['reasoning' => str_repeat('thinking. ', 20)]]]],
+            \JSON_THROW_ON_ERROR,
+        ) . "\n\n";
+        $reasoning = str_repeat($event, 10_000);
+        $answer = "data: {\"choices\":[{\"delta\":{\"content\":\"done\"}}]}\n\n";
+
+        self::assertGreaterThan(2_097_152, \strlen($reasoning), 'fixture must exceed the answer cap');
+
+        $client = $this->clientAnswering(new MockResponse(str_split($reasoning . $answer, 50_000)));
+        $seen = $this->recordingObserver();
+
+        self::assertSame('done', $client->complete($this->credentials(), 'm', $this->messages(), $seen));
+        self::assertSame('', $seen->reports[0]->answerSoFar);
+        self::assertGreaterThan(2_097_152, $seen->reports[\count($seen->reports) - 1]->wireBytes);
+    }
+
+    /**
+     * The answer cap still protects memory on the streaming path -- it is
+     * only reasoning that stopped being charged to it. Without this, #320's
+     * fix would have removed the bound rather than moved it.
+     */
+    public function testAnOversizedStreamedAnswerIsStillUnreachable(): void
+    {
+        $event = 'data: ' . json_encode(
+            ['choices' => [['delta' => ['content' => str_repeat('a', 200)]]]],
+            \JSON_THROW_ON_ERROR,
+        ) . "\n\n";
+        $client = $this->clientAnswering(new MockResponse(str_split(str_repeat($event, 12_000), 50_000)));
+
+        $this->expectException(ProviderUnreachableException::class);
+        $this->expectExceptionMessage('That provider answered with more than 2097152 bytes.');
+        $client->complete($this->credentials(), 'm', $this->messages(), new NullCompletionStreamObserver());
+    }
+
+    /** @return CompletionStreamObserver&object{reports: list<CompletionStreamProgress>} */
+    private function recordingObserver(): CompletionStreamObserver
+    {
+        return new class implements CompletionStreamObserver {
+            /** @var list<CompletionStreamProgress> */
+            public array $reports = [];
+
+            public function streamProgressed(CompletionStreamProgress $progress): void
+            {
+                $this->reports[] = $progress;
+            }
+        };
     }
 }

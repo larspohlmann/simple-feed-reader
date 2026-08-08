@@ -26,7 +26,6 @@ final readonly class RecommendationCallRecorder
         private RecommendationRunLogRepository $logs,
         private Connection $connection,
         private RecommendationSettingsResolver $settingsResolver,
-        private CompletionBodyDecoder $decoder,
         private ClockInterface $clock,
     ) {
     }
@@ -45,7 +44,6 @@ final readonly class RecommendationCallRecorder
 
         return new RecordedCall(
             $this->connection,
-            $this->decoder,
             $this->clock,
             $run->getId() ?? throw new \LogicException('Cannot record a call for an unsaved run.'),
             $log?->getId(),

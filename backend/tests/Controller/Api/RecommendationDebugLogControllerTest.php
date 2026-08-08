@@ -69,7 +69,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('debug-log-list@example.test');
         $run = $this->fixtures()->createRun($user);
         $finished = $this->fixtures()->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'req a');
-        $finished->finish('done text', RecommendationRunLog::VERDICT_USABLE);
+        $finished->finish('done text', RecommendationRunLog::VERDICT_USABLE, 1_900_000);
         $open = $this->fixtures()->log($run, RecommendationRunLog::PHASE_BATCH, 2, 1, 'req b');
         $this->em()->flush();
 
@@ -87,6 +87,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
                 'verdict' => 'usable',
                 'requestBytes' => \strlen('req a'),
                 'responseBytes' => \strlen('done text'),
+                'wireBytes' => 1_900_000,
                 'streamingText' => null,
             ],
             $entries[0],
@@ -100,6 +101,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
                 'verdict' => null,
                 'requestBytes' => \strlen('req b'),
                 'responseBytes' => 0,
+                'wireBytes' => 0,
                 'streamingText' => '',
             ],
             $entries[1],
@@ -123,7 +125,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('debug-log-detail@example.test');
         $run = $this->fixtures()->createRun($user);
         $log = $this->fixtures()->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'req');
-        $log->finish('res', RecommendationRunLog::VERDICT_USABLE);
+        $log->finish('res', RecommendationRunLog::VERDICT_USABLE, 4_096);
         $this->em()->flush();
         $id = $log->getId();
         self::assertNotNull($id);
@@ -140,6 +142,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
                 'verdict' => 'usable',
                 'requestBody' => 'req',
                 'responseText' => 'res',
+                'wireBytes' => 4_096,
             ],
             $this->payload($client->getResponse()),
         );

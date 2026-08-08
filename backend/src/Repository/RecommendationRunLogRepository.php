@@ -28,12 +28,13 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
 
     /**
      * @return list<array{id: int, phase: string, batchNumber: ?int, attempt: int,
-     *     verdict: ?string, requestBytes: int, responseBytes: int}>
+     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int}>
      */
     public function listForUser(User $user): array
     {
         /** @var list<array{id: int, phase: string, batchNumber: ?int, attempt: int,
-         *     verdict: ?string, requestBytes: int|string, responseBytes: int|string}> $rows */
+         *     verdict: ?string, requestBytes: int|string, responseBytes: int|string,
+         *     wireBytes: int}> $rows */
         $rows = $this->createQueryBuilder('l')
             ->select(
                 'l.id AS id',
@@ -43,6 +44,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
                 'l.verdict AS verdict',
                 'LENGTH(l.requestBody) AS requestBytes',
                 'LENGTH(l.responseText) AS responseBytes',
+                'l.wireBytes AS wireBytes',
             )
             ->join('l.run', 'r')
             ->where('r.user = :user')
@@ -61,6 +63,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
                 'verdict' => $row['verdict'],
                 'requestBytes' => (int) $row['requestBytes'],
                 'responseBytes' => (int) $row['responseBytes'],
+                'wireBytes' => $row['wireBytes'],
             ],
             $rows,
         );

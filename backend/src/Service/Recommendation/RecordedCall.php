@@ -26,9 +26,15 @@ final class RecordedCall implements CompletionStreamObserver
 
     private \DateTimeImmutable $lastCheckpointAt;
 
+    /**
+     * Tracked on every report, not only on the ones that checkpoint, so the
+     * final row records what the provider really sent rather than whatever
+     * the last throttled write happened to catch.
+     */
+    private int $wireBytes = 0;
+
     public function __construct(
         private readonly Connection $connection,
-        private readonly CompletionBodyDecoder $decoder,
         private readonly ClockInterface $clock,
         private readonly int $runId,
         private readonly ?int $logId,
@@ -39,8 +45,10 @@ final class RecordedCall implements CompletionStreamObserver
         $this->lastCheckpointAt = $clock->now();
     }
 
-    public function bodyGrew(string $accumulatedBody): void
+    public function streamProgressed(CompletionStreamProgress $progress): void
     {
+        $this->wireBytes = $progress->wireBytes;
+
         $now = $this->clock->now();
         if ($now->getTimestamp() - $this->lastCheckpointAt->getTimestamp() < self::CHECKPOINT_SECONDS) {
             return;
@@ -49,7 +57,7 @@ final class RecordedCall implements CompletionStreamObserver
 
         $this->connection->update(
             'recommendation_run',
-            ['streamed_chars' => \strlen($accumulatedBody)],
+            ['streamed_chars' => $progress->wireBytes],
             ['id' => $this->runId],
         );
 
@@ -59,7 +67,7 @@ final class RecordedCall implements CompletionStreamObserver
 
         $this->connection->update(
             'recommendation_run_log',
-            ['response_text' => $this->decoder->assistantContent($accumulatedBody) ?? ''],
+            ['response_text' => $progress->answerSoFar, 'wire_bytes' => $progress->wireBytes],
             ['id' => $this->logId],
         );
     }
@@ -76,7 +84,10 @@ final class RecordedCall implements CompletionStreamObserver
 
     /**
      * The stream died mid-answer: whatever the checkpoints salvaged stays,
-     * stamped with the transport verdict so the panel can say so.
+     * stamped with the transport verdict so the panel can say so. The byte
+     * count is what makes that row readable — a call that streamed megabytes
+     * of reasoning without answering is a different story from a provider
+     * that said nothing, and only this number tells them apart (#320).
      */
     public function abortAfterTransportFailure(): void
     {
@@ -88,7 +99,7 @@ final class RecordedCall implements CompletionStreamObserver
 
         $this->connection->update(
             'recommendation_run_log',
-            ['verdict' => RecommendationRunLog::VERDICT_TRANSPORT_FAILED],
+            ['verdict' => RecommendationRunLog::VERDICT_TRANSPORT_FAILED, 'wire_bytes' => $this->wireBytes],
             ['id' => $this->logId],
         );
     }
@@ -103,7 +114,7 @@ final class RecordedCall implements CompletionStreamObserver
 
         $this->connection->update(
             'recommendation_run_log',
-            ['response_text' => $content, 'verdict' => $verdict],
+            ['response_text' => $content, 'verdict' => $verdict, 'wire_bytes' => $this->wireBytes],
             ['id' => $this->logId],
         );
     }

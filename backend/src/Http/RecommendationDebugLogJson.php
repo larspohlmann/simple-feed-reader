@@ -15,7 +15,7 @@ final class RecommendationDebugLogJson
 {
     /**
      * @param list<array{id: int, phase: string, batchNumber: ?int, attempt: int,
-     *     verdict: ?string, requestBytes: int, responseBytes: int}> $rows
+     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int}> $rows
      * @param array<int, string> $streamingTextById
      *
      * @return array{entries: list<array<string, mixed>>}
@@ -41,6 +41,7 @@ final class RecommendationDebugLogJson
             'verdict' => $log->getVerdict(),
             'requestBody' => $log->getRequestBody(),
             'responseText' => $log->getResponseText(),
+            'wireBytes' => $log->getWireBytes(),
         ];
     }
 
