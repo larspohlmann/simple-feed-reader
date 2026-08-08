@@ -187,8 +187,7 @@
         </p>
         <p class="hint">
           {{
-            (recs.report()?.background ? 'reader.forYouBackground' : 'reader.forYouKeepOpen')
-              | transloco
+            (recs.workerOwnsRun() ? 'reader.forYouBackground' : 'reader.forYouKeepOpen') | transloco
           }}
         </p>
       } @else {

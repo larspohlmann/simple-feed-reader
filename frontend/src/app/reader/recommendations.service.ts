@@ -9,7 +9,6 @@ import { ReaderApi } from './reader-api';
 import { RecommendationRunReport } from './models';
 
 const BACKOFF_MS = 1500;
-const MAX_BUSY_RETRIES = 5;
 /** Matches `RecommendationRun::MAX_TRANSPORT_FAILURES`: the server tolerates
  *  three provider failures before it fails the run itself, so the poll loop
  *  must survive three too. One tick past that reads the run's own verdict. */
@@ -38,27 +37,25 @@ const RATE_LIMIT_POLL_MS = 15000;
 const MAX_RATE_LIMIT_RETRIES = 20;
 
 /** How many times in a row the poll loop has been turned away, per cause.
- *  Each cause has its own ceiling, and any progress resets all three. */
+ *  Each cause has its own ceiling, and any progress resets both. */
 interface PollAttempts {
-  readonly busy: number;
   readonly transport: number;
   readonly rateLimited: number;
 }
 
-const NO_ATTEMPTS: PollAttempts = { busy: 0, transport: 0, rateLimited: 0 };
+const NO_ATTEMPTS: PollAttempts = { transport: 0, rateLimited: 0 };
 
 /** Why a recommendation run ended without producing a fresh for-you list. */
 export type RecommendationFailure =
-  | { kind: 'busy' } // another run holds the lock, and outlasted our retries
   | { kind: 'failed'; error: string | null } // the backend gave up on the run itself
   | { kind: 'http'; problem: Problem };
 
 /** Drives a for-you recommendation run to completion: starts it, ticks the
  *  poll loop, and resumes one left in flight by an earlier session. Modeled
- *  on `RefreshService` -- same shape, same busy-backoff, same "the server
- *  owes us progress" posture -- but the source is a batch run rather than a
- *  feed sweep, so completion and failure are worth telling the user about
- *  directly: this service owns the toast and the "go look" navigation. */
+ *  on `RefreshService` -- same shape, same "the server owes us progress"
+ *  posture -- but the source is a batch run rather than a feed sweep, so
+ *  completion and failure are worth telling the user about directly: this
+ *  service owns the toast and the "go look" navigation. */
 @Injectable({ providedIn: 'root' })
 export class RecommendationsService {
   private readonly api = inject(ReaderApi);
@@ -82,6 +79,13 @@ export class RecommendationsService {
     return Math.min(1, Math.max(0, r.batchesDone / r.batchesTotal));
   });
 
+  /** True while a background worker owns this run's execution, so the
+   *  client's own poll loop is a pure status read rather than the thing
+   *  driving progress. Shapes `report()` for both the service's own poll
+   *  loop and the template, so none of the three reads `report()?.background`
+   *  directly. */
+  readonly workerOwnsRun = computed(() => this.report()?.background ?? false);
+
   /** Starts a new run and polls it to completion. */
   start(): void {
     if (this.running()) return;
@@ -89,7 +93,7 @@ export class RecommendationsService {
     this.report.set(null);
     this.failure.set(null);
     this.api.startRecommendations().subscribe({
-      next: (r) => this.onReport(r, NO_ATTEMPTS),
+      next: (r) => this.onReport(r),
       error: (e: HttpErrorResponse) => this.stopWithHttpError(e),
     });
   }
@@ -125,26 +129,23 @@ export class RecommendationsService {
    *  advanced by the client -- that self-healing fallback is the point of the
    *  whole design. */
   private step(attempts: PollAttempts): void {
-    const poll = this.report()?.background
+    const poll = this.workerOwnsRun()
       ? this.api.currentRecommendations()
       : this.api.tickRecommendations();
 
     poll.subscribe({
-      next: (r) => this.onReport(r, attempts),
+      next: (r) => this.onReport(r),
       error: (e: HttpErrorResponse) => this.retryOrStop(e, attempts),
     });
   }
 
-  private onReport(r: RecommendationRunReport, attempts: PollAttempts): void {
+  private onReport(r: RecommendationRunReport): void {
     this.report.set(r);
     switch (r.status) {
       case 'pending':
       case 'running':
-        if (r.background) this.stepLater(NO_ATTEMPTS, BACKGROUND_POLL_MS);
+        if (this.workerOwnsRun()) this.stepLater(NO_ATTEMPTS, BACKGROUND_POLL_MS);
         else this.step(NO_ATTEMPTS);
-        break;
-      case 'busy':
-        this.backOffWhileBusy(attempts);
         break;
       case 'completed':
         this.completedStamp.update((n) => n + 1);
@@ -167,18 +168,6 @@ export class RecommendationsService {
         this.finish();
         break;
     }
-  }
-
-  /** Another run holds the lock. Wait and ask again -- but only so long: a
-   *  CLI-triggered run can hold it well past the patience anyone has for a
-   *  spinner. Retrying longer is not the fix; telling the user is. */
-  private backOffWhileBusy(attempts: PollAttempts): void {
-    if (attempts.busy >= MAX_BUSY_RETRIES) {
-      this.failure.set({ kind: 'busy' });
-      this.finish();
-      return;
-    }
-    this.stepLater({ ...attempts, busy: attempts.busy + 1 });
   }
 
   /** A tick that fails outright has not ended the run: the server keeps it

@@ -435,7 +435,6 @@
     "forYouFailed": "Recommendations failed. Try again.",
     "forYouRun": "Get recommendations",
     "forYouProgress": "Ranking your feeds — {{done}} of {{total}}",
-    "forYouBusy": "Another run is already in progress. Try again in a moment.",
     "forYouUnreachable": "Could not reach the recommendation service. Try again.",
     "forYouKeepOpen": "Keep the app open while this runs.",
     "forYouBackground": "Runs in the background — you can close this tab."

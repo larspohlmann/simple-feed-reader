@@ -2,10 +2,6 @@
 import { forYouFailureKey } from './for-you-message';
 
 describe('forYouFailureKey', () => {
-  it('names the contended lock', () => {
-    expect(forYouFailureKey({ kind: 'busy' })).toBe('reader.forYouBusy');
-  });
-
   it('names a run the backend gave up on', () => {
     expect(forYouFailureKey({ kind: 'failed', error: 'boom' })).toBe('reader.forYouFailed');
   });

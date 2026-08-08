@@ -212,7 +212,7 @@ export type ReaderContent = ReaderArticle | ReaderFailure;
 
 /** Progress of a for-you recommendation run (POST/GET /api/recommendations/runs*). */
 export interface RecommendationRunReport {
-  status: 'none' | 'pending' | 'running' | 'completed' | 'failed' | 'busy';
+  status: 'none' | 'pending' | 'running' | 'completed' | 'failed';
   batchesTotal: number | null;
   batchesDone: number;
   error: string | null;

@@ -97,36 +97,6 @@ describe('RecommendationsService', () => {
     );
   });
 
-  it('backs off on busy then retries', fakeAsync(() => {
-    svc.start();
-    ctrl.expectOne('https://api.test/api/recommendations/runs').flush(report({ status: 'busy' }));
-    expect(svc.running()).toBe(true);
-
-    tick(1500);
-    ctrl
-      .expectOne('https://api.test/api/recommendations/runs/tick')
-      .flush(report({ status: 'completed', batchesTotal: 1, batchesDone: 1 }));
-
-    expect(svc.running()).toBe(false);
-    expect(svc.failure()).toBeNull();
-  }));
-
-  it('records a busy failure once the retry budget is spent, without a toast', fakeAsync(() => {
-    svc.start();
-    const busy = report({ status: 'busy' });
-
-    ctrl.expectOne('https://api.test/api/recommendations/runs').flush(busy);
-    for (let attempt = 1; attempt <= 5; attempt++) {
-      tick(1500);
-      ctrl.expectOne('https://api.test/api/recommendations/runs/tick').flush(busy);
-    }
-
-    ctrl.verify(); // the loop gave up rather than polling on
-    expect(svc.running()).toBe(false);
-    expect(svc.failure()).toEqual({ kind: 'busy' });
-    expect(toast.show).not.toHaveBeenCalled();
-  }));
-
   it('resume continues ticking a pending/running run', () => {
     svc.resume();
     ctrl
@@ -479,7 +449,13 @@ describe('RecommendationsService', () => {
     svc.start();
     ctrl
       .expectOne('https://api.test/api/recommendations/runs')
-      .flush(report({ status: 'busy', batchesTotal: null }));
+      .flush(report({ status: 'pending', batchesTotal: null }));
     expect(svc.progress()).toBe(0);
+
+    // 'pending' keeps the loop going (unlike the now-impossible 'busy'),
+    // so this tick needs a response to leave no outstanding request behind.
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'completed', batchesTotal: 1, batchesDone: 1 }));
   });
 });

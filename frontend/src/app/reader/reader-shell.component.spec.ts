@@ -784,25 +784,6 @@ describe('ReaderShellComponent', () => {
     });
   });
 
-  it('tells the user a busy-retry exhaustion happened, next to the run button', () => {
-    const f = boot();
-    qp.next(convertToParamMap({ view: 'for-you' }));
-    f.detectChanges();
-    ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
-      .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
-
-    const recs = TestBed.inject(RecommendationsService);
-    recs.running.set(false);
-    recs.failure.set({ kind: 'busy' });
-    f.detectChanges();
-
-    const alert = f.nativeElement.querySelector('.for-you-bar [role="alert"]') as HTMLElement;
-    expect(alert.textContent).toContain('Another run is already in progress');
-    expect(f.nativeElement.querySelector('.for-you-bar button.run')).not.toBeNull();
-  });
-
   it('tells the user when the backend gave up on the run itself', () => {
     const f = boot();
     qp.next(convertToParamMap({ view: 'for-you' }));
@@ -853,7 +834,7 @@ describe('ReaderShellComponent', () => {
 
     const recs = TestBed.inject(RecommendationsService);
     recs.running.set(false);
-    recs.failure.set({ kind: 'busy' });
+    recs.failure.set({ kind: 'failed', error: 'boom' });
     recs.running.set(true);
     f.detectChanges();
 
