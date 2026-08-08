@@ -54,7 +54,9 @@ final class RecommendationPromptBuilder
     ): array {
         $descriptionLength = $this->descriptionLength($settings->contextWindow);
         $historyTokens = $this->tokens($this->historySections($history, $descriptionLength));
-        $responseReserve = min($settings->picksLimit * self::TOKENS_PER_PICK, intdiv($settings->contextWindow, 4));
+        // The reply scores one line per candidate, so its size is bounded by
+        // the batch cap, not by the final list size.
+        $responseReserve = self::MAXIMUM_BATCH_SIZE * self::TOKENS_PER_PICK;
         $budget = $settings->contextWindow - self::FIXED_OVERHEAD_TOKENS - $responseReserve - $historyTokens;
 
         $batches = [];
@@ -94,7 +96,7 @@ final class RecommendationPromptBuilder
         $descriptionLength = $this->descriptionLength($settings->contextWindow);
 
         $guidance = $settings->guidancePrompt ?? RecommendationPromptText::DEFAULT_GUIDANCE;
-        $contract = \sprintf(RecommendationPromptText::OUTPUT_CONTRACT, $settings->picksLimit);
+        $contract = RecommendationPromptText::OUTPUT_CONTRACT;
         $system = implode("\n\n", [RecommendationPromptText::SYSTEM_ROLE, $guidance, $contract]);
 
         $user = implode("\n\n", [
@@ -125,7 +127,7 @@ final class RecommendationPromptBuilder
         $perBatchCap = max(1, intdiv(self::MERGE_WINNERS_PER_BATCH_FACTOR * $settings->picksLimit, \count($winners)));
 
         $guidance = $settings->guidancePrompt ?? RecommendationPromptText::DEFAULT_GUIDANCE;
-        $contract = \sprintf(RecommendationPromptText::OUTPUT_CONTRACT, $settings->picksLimit);
+        $contract = RecommendationPromptText::OUTPUT_CONTRACT;
         $system = implode("\n\n", [RecommendationPromptText::MERGE_ROLE, $guidance, $contract]);
 
         $lines = [];

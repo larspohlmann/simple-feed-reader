@@ -234,7 +234,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertCount(1, $calls);
         self::assertSame('m', $calls[0]['model']);
         self::assertStringContainsString(
-            'You rank candidate posts for one reader of an RSS reader.',
+            'You score candidate posts for one reader of an RSS reader.',
             $calls[0]['messages'][0]['content'],
         );
         self::assertStringContainsString('- [' . $firstBatch[0], $calls[0]['messages'][1]['content']);
@@ -634,13 +634,16 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
     public function testMergeRespectsThePerBatchCap(): void
     {
-        $this->seedMultiBatchFixture(picksLimit: 4, entryCount: 30);
+        // The response reserve is now the constant 1600 rather than a
+        // picksLimit-scaled value, so the window is raised by the reserve
+        // delta (1600 - 160 = 1440) to keep this fixture's old budget (816)
+        // and therefore its old two-batch split.
+        $this->seedMultiBatchFixture(picksLimit: 4, entryCount: 30, contextWindow: 3940);
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user);
         $run = $this->activeRun();
 
-        // A lower picksLimit shrinks the packer's response-token reserve, so
-        // this fixture's exact split differs from the other tests' 10/10 —
+        // This fixture's exact split differs from the other tests' 10/10 —
         // only the two-batch shape matters here, not the split point.
         self::assertSame(3, $run->progress()->batchesTotal);
         self::assertCount(2, $run->getCandidateBatches());
@@ -797,6 +800,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     private function seedMultiBatchFixture(
         int $picksLimit = EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
         int $entryCount = 20,
+        int $contextWindow = 2500,
     ): void {
         $this->seedReadyAiSettings($this->user);
 
@@ -818,7 +822,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
             candidatePoolSize: $entryCount,
             picksLimit: $picksLimit,
-            contextWindow: 2500,
+            contextWindow: $contextWindow,
             debugEnabled: false,
         ));
         $this->em->persist($settings);

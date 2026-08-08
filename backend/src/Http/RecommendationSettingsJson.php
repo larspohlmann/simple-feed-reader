@@ -30,7 +30,7 @@ final class RecommendationSettingsJson
             'defaultGuidancePrompt' => RecommendationPromptText::DEFAULT_GUIDANCE,
             'fixedPrompt' => [
                 'role' => RecommendationPromptText::SYSTEM_ROLE,
-                'outputContract' => sprintf(RecommendationPromptText::OUTPUT_CONTRACT, $effective->picksLimit),
+                'outputContract' => RecommendationPromptText::OUTPUT_CONTRACT,
             ],
             'favoritesCap' => $effective->favoritesCap,
             'keptCap' => $effective->keptCap,

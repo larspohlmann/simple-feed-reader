@@ -48,14 +48,16 @@ final class RecommendationPromptBuilderTest extends TestCase
         // the budget does. A window of 8192 (as this test used before the cap
         // existed) fits all 35 in one batch, so the window was shrunk instead
         // of the candidate count grown, keeping the split budget-driven rather
-        // than cap-driven.
+        // than cap-driven. The window is raised by the constant reserve (1600)
+        // to keep the same budget now that the reserve no longer scales with
+        // picksLimit.
         $candidateCount = 35;
         $candidates = array_map(
             static fn (int $id): PromptLine => self::line($id, "Candidate $id", 400),
             range(1, $candidateCount),
         );
 
-        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(2829, 10));
+        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(4029, 10));
 
         self::assertGreaterThan(1, \count($batches));
         foreach ($batches as $batch) {
@@ -118,7 +120,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         $system = $withGuidance[0]['content'];
         self::assertStringContainsString(RecommendationPromptText::SYSTEM_ROLE, $system);
         self::assertStringContainsString('Focus on cats.', $system);
-        self::assertStringContainsString('Include at most 100 picks', $system);
+        self::assertStringContainsString('Score every candidate.', $system);
 
         self::assertStringContainsString(RecommendationPromptText::DEFAULT_GUIDANCE, $withoutGuidance[0]['content']);
 
@@ -184,7 +186,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         $expectedSystem = implode("\n\n", [
             RecommendationPromptText::SYSTEM_ROLE,
             RecommendationPromptText::DEFAULT_GUIDANCE,
-            \sprintf(RecommendationPromptText::OUTPUT_CONTRACT, 3),
+            RecommendationPromptText::OUTPUT_CONTRACT,
         ]);
         $expectedUser = implode("\n\n", [
             "FAVORITES (newest first):\n- Fav Title — Feed A — 2026-01-01 — fav desc",
@@ -241,62 +243,49 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testPackingSplitsExactlyAtTheMinimumBatchSizeWhenTheBudgetOverflowsEarly(): void
     {
-        // Window 1565 with picksLimit 1 makes the budget just 1 token, so every
-        // candidate after the first overflows it; only the >= MINIMUM_BATCH_SIZE
-        // guard decides where each batch actually ends.
+        // Window 3125 (raised by the constant reserve of 1600) with picksLimit 1
+        // makes the budget just 1 token, so every candidate after the first
+        // overflows it; only the >= MINIMUM_BATCH_SIZE guard decides where each
+        // batch actually ends.
         $candidates = array_map(
             static fn (int $id): PromptLine => new PromptLine($id, 'T', 'F', 'D', null),
             range(100, 124),
         );
 
-        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(1565, 1));
+        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(3125, 1));
 
         self::assertSame([range(100, 109), range(110, 119), range(120, 124)], $batches);
     }
 
     public function testPackingResetsUsedTokensExactlyAtEachSplitBoundary(): void
     {
-        // Window 1629 with picksLimit 1 puts the budget exactly one token below
-        // where the 11th candidate line would land: a one-token error in either
-        // the starting or the post-split reset of $used shifts the split point.
+        // Window 3189 (raised by the constant reserve of 1600) with picksLimit 1
+        // puts the budget exactly one token below where the 11th candidate line
+        // would land: a one-token error in either the starting or the
+        // post-split reset of $used shifts the split point.
         $candidates = array_map(
             static fn (int $id): PromptLine => new PromptLine($id, 'T', 'F', 'D', null),
             range(100, 124),
         );
 
-        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(1629, 1));
+        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(3189, 1));
 
         self::assertSame([range(100, 109), range(110, 119), range(120, 124)], $batches);
     }
 
     public function testPackingBudgetIsSensitiveToEveryTermInItsFormula(): void
     {
-        // Window 1630 with picksLimit 1 makes the budget land exactly on the
-        // 11-candidate boundary: used+lineTokens equals the budget for the 12th
-        // candidate, so the strict `>` (not `>=`) leaves it in the first batch,
-        // and a sign error in subtracting the history tokens shifts the split.
+        // Window 3190 (raised by the constant reserve of 1600) with picksLimit 1
+        // makes the budget land exactly on the 11-candidate boundary:
+        // used+lineTokens equals the budget for the 12th candidate, so the
+        // strict `>` (not `>=`) leaves it in the first batch, and a sign error
+        // in subtracting the history tokens shifts the split.
         $candidates = array_map(
             static fn (int $id): PromptLine => new PromptLine($id, 'T', 'F', 'D', null),
             range(100, 119),
         );
 
-        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(1630, 1));
-
-        self::assertSame([range(100, 110), range(111, 119)], $batches);
-    }
-
-    public function testPackingReservesAQuarterOfTheContextWindowWhenPicksLimitIsLarge(): void
-    {
-        // With picksLimit this large the response reserve is capped by
-        // intdiv(contextWindow, 4), not by picksLimit itself: window 2119
-        // reproduces the same 11/9 split as the picksLimit-bound budget test
-        // above, but only because that divisor is exactly 4.
-        $candidates = array_map(
-            static fn (int $id): PromptLine => new PromptLine($id, 'T', 'F', 'D', null),
-            range(100, 119),
-        );
-
-        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(2119, 100000));
+        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(3190, 1));
 
         self::assertSame([range(100, 110), range(111, 119)], $batches);
     }
@@ -312,7 +301,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         $expectedSystem = implode("\n\n", [
             RecommendationPromptText::MERGE_ROLE,
             'Focus on cats.',
-            \sprintf(RecommendationPromptText::OUTPUT_CONTRACT, 5),
+            RecommendationPromptText::OUTPUT_CONTRACT,
         ]);
 
         self::assertSame(
