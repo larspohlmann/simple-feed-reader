@@ -30,11 +30,6 @@ final class Version20260808180000 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->skipIf(
-            false === $this->isColumnDefaultValue('user_recommendation_settings', 'candidate_pool_size', '1000'),
-            'candidate_pool_size default is not 1000; already updated or column missing.',
-        );
-
         $platform = $this->connection->getDatabasePlatform();
 
         if ($platform instanceof AbstractMySQLPlatform) {
@@ -141,40 +136,15 @@ SQL
 
             return;
         }
+
+        $this->abortIf(true, \sprintf(
+            'No DDL defined for platform %s; only MySQL and SQLite are supported.',
+            $platform::class,
+        ));
     }
 
     public function isTransactional(): bool
     {
-        return false;
-    }
-
-    private function isColumnDefaultValue(string $table, string $column, string $expectedDefault): bool
-    {
-        $platform = $this->connection->getDatabasePlatform();
-
-        if ($platform instanceof AbstractMySQLPlatform) {
-            $result = $this->connection->executeQuery(
-                'SELECT COLUMN_DEFAULT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? AND COLUMN_NAME = ?',
-                [$table, $column],
-            )->fetchAssociative();
-
-            return $result && (string) $result['COLUMN_DEFAULT'] === $expectedDefault;
-        }
-
-        if ($platform instanceof SQLitePlatform) {
-            $result = $this->connection->executeQuery(
-                "PRAGMA table_info($table)",
-            )->fetchAllAssociative();
-
-            foreach ($result as $row) {
-                if ($row['name'] === $column) {
-                    return null !== $row['dflt_value'] && (string) $row['dflt_value'] === $expectedDefault;
-                }
-            }
-
-            return false;
-        }
-
         return false;
     }
 }
