@@ -115,6 +115,7 @@ describe('ReaderShellComponent', () => {
       error: null,
       background: false,
       streamedChars: 0,
+      forYou: { itemCount: 0, generatedAt: null },
     });
     f.detectChanges();
     return f;
@@ -157,6 +158,7 @@ describe('ReaderShellComponent', () => {
       error: null,
       background: false,
       streamedChars: 0,
+      forYou: { itemCount: 0, generatedAt: null },
     });
     f.detectChanges();
     return f;
@@ -714,6 +716,7 @@ describe('ReaderShellComponent', () => {
       error: null,
       background: false,
       streamedChars: 0,
+      forYou: { itemCount: 0, generatedAt: null },
     });
     f.detectChanges();
     expect(recs.running()).toBe(true);
@@ -724,6 +727,7 @@ describe('ReaderShellComponent', () => {
       error: null,
       background: false,
       streamedChars: 0,
+      forYou: { itemCount: 0, generatedAt: null },
     });
   });
 
@@ -745,6 +749,7 @@ describe('ReaderShellComponent', () => {
       error: null,
       background: false,
       streamedChars: 0,
+      forYou: { itemCount: 0, generatedAt: null },
     });
     f.detectChanges();
 
@@ -771,6 +776,7 @@ describe('ReaderShellComponent', () => {
       error: null,
       background: false,
       streamedChars: 12288,
+      forYou: { itemCount: 0, generatedAt: null },
     });
     f.detectChanges();
 
@@ -796,6 +802,7 @@ describe('ReaderShellComponent', () => {
       error: null,
       background: false,
       streamedChars: 0,
+      forYou: { itemCount: 0, generatedAt: null },
     });
     f.detectChanges();
 
@@ -821,6 +828,7 @@ describe('ReaderShellComponent', () => {
         error: null,
         background,
         streamedChars: 0,
+        forYou: { itemCount: 0, generatedAt: null },
       });
       f.detectChanges();
       return f;
@@ -915,6 +923,7 @@ describe('ReaderShellComponent', () => {
       error: null,
       background: false,
       streamedChars: 0,
+      forYou: { itemCount: 0, generatedAt: null },
     });
     f.detectChanges();
 

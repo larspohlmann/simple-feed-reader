@@ -121,12 +121,13 @@ export class EntryListComponent implements OnDestroy {
   readonly canRefresh = computed(() => canScopedRefresh(this.selection()));
 
   private readonly language = inject(LanguageService);
-  /** A localised "last refreshed 5 min ago" label for a single-feed selection,
-   *  or null when it doesn't apply (not a feed, or never fetched). Wide-only
-   *  visibility is handled in CSS. */
+  /** A localised "last refreshed 5 min ago" label for a single-feed selection
+   *  or the for-you list, or null when it doesn't apply (neither, or never
+   *  generated/fetched). */
   readonly lastRefreshedLabel = computed(() => {
     const iso = this.lastRefreshed();
-    if (this.selection().kind !== 'subscription' || !iso) return null;
+    const kind = this.selection().kind;
+    if ((kind !== 'subscription' && kind !== 'for-you') || !iso) return null;
     return relativeTime(iso, this.language.lang());
   });
 

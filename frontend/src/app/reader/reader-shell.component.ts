@@ -205,10 +205,11 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   });
   readonly hasMore = computed(() => this.entries.nextCursor() !== null);
   readonly canMarkAllRead = computed(() => markReadTarget(this.selection()) !== null);
-  /** The selected feed's last-fetched time, for the list header's "Last
-   *  refreshed" hint. Null unless a single feed is selected. */
-  readonly selectedFeedLastFetched = computed(() => {
+  /** What the list header's "Last refreshed" hint shows: a feed's fetch time,
+   *  or the for-you list's generation time. Null everywhere else. */
+  readonly listLastRefreshed = computed(() => {
     const s = this.selection();
+    if (s.kind === 'for-you') return this.recs.generatedAt();
     if (s.kind !== 'subscription') return null;
     return this.subs.subscriptions().find((x) => x.id === s.id)?.lastFetchedAt ?? null;
   });

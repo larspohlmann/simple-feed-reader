@@ -16,6 +16,7 @@ const report = (over: Partial<RecommendationRunReport>): RecommendationRunReport
   error: null,
   background: false,
   streamedChars: 0,
+  forYou: { itemCount: 0, generatedAt: null },
   ...over,
 });
 
@@ -121,6 +122,23 @@ describe('RecommendationsService', () => {
     ctrl.verify(); // no tick request
     expect(svc.running()).toBe(false);
     expect(toast.show).not.toHaveBeenCalled();
+  });
+
+  it('resume stores a completed run report so the for-you summary is available at boot', () => {
+    svc.resume();
+    ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush(
+      report({
+        status: 'completed',
+        batchesTotal: 2,
+        batchesDone: 2,
+        forYou: { itemCount: 7, generatedAt: '2026-08-08T09:00:00Z' },
+      }),
+    );
+
+    ctrl.verify(); // no tick request -- a finished run is not resumed
+    expect(svc.running()).toBe(false);
+    expect(svc.forYouCount()).toBe(7);
+    expect(svc.generatedAt()).toBe('2026-08-08T09:00:00Z');
   });
 
   it('resume swallows a fetch error rather than surfacing a failure', () => {

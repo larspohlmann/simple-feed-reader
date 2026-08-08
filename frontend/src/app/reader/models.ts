@@ -76,6 +76,9 @@ export interface EntryDto {
   isViewed: boolean;
   /** Why the recommender picked this entry; set only on for-you results. */
   recommendationReason?: string | null;
+  /** The model's 0-100 score for this entry; present only on for-you results
+   *  and only when the user's debug setting is on. */
+  recommendationScore?: number | null;
 }
 
 export interface EntriesPage {
@@ -222,6 +225,10 @@ export interface RecommendationRunReport {
   /** Bytes of the in-flight provider answer received so far this call; 0
    *  between calls, since the server resets the counter when a call ends. */
   streamedChars: number;
+  /** The surviving for-you list's own summary: how many entries it holds and
+   *  when it was last generated. Describes the *list*, not this run — a
+   *  failed latest run still carries the previous list's timestamp. */
+  forYou: { itemCount: number; generatedAt: string | null };
 }
 
 /** One provider call logged during a for-you run: a scored batch or the

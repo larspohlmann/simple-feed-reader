@@ -86,6 +86,12 @@ export class RecommendationsService {
    *  directly. */
   readonly workerOwnsRun = computed(() => this.report()?.background ?? false);
 
+  /** The surviving for-you list's item count, for the sidebar badge. */
+  readonly forYouCount = computed(() => this.report()?.forYou.itemCount ?? 0);
+  /** The surviving for-you list's generation time (ISO), for the list
+   *  header's "Last refreshed" hint. */
+  readonly generatedAt = computed(() => this.report()?.forYou.generatedAt ?? null);
+
   /** Starts a new run and polls it to completion. */
   start(): void {
     if (this.running()) return;
@@ -118,9 +124,9 @@ export class RecommendationsService {
   resume(): void {
     this.api.currentRecommendations().subscribe({
       next: (r) => {
+        this.report.set(r); // even a finished run carries the for-you summary the sidebar needs
         if (r.status !== 'pending' && r.status !== 'running') return;
         this.running.set(true);
-        this.report.set(r);
         this.failure.set(null);
         this.step(NO_ATTEMPTS);
       },

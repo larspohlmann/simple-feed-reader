@@ -338,6 +338,14 @@ describe('EntryListComponent', () => {
     expect(el.querySelector('.last-refreshed')).not.toBeNull();
   });
 
+  it('shows a last-refreshed hint for the for-you list', () => {
+    const el = mount({
+      selection: { kind: 'for-you', id: null, unread: false },
+      lastRefreshed: '2026-08-08T09:00:00Z',
+    }).nativeElement as HTMLElement;
+    expect(el.querySelector('.last-refreshed')).not.toBeNull();
+  });
+
   it('shows no last-refreshed hint for all/tag or a never-fetched feed', () => {
     expect(
       (
