@@ -8,24 +8,28 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
-use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\RecommendationItemRepository;
-use App\Service\Recommendation\EffectiveRecommendationSettings;
+use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\ForYouFeedResponder;
 use App\Service\Recommendation\RecommendationFeedPager;
 use App\Service\Recommendation\RecommendationSettingsResolver;
-use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RecommendationRunFixtures;
 
 final class ForYouFeedResponderTest extends DbTestCase
 {
     private User $user;
+    private RecommendationRunFixtures $fixtures;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        /** @var ApiKeyCipher $cipher */
+        $cipher = self::getContainer()->get(ApiKeyCipher::class);
+        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
 
         $this->user = new User('for-you-responder@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->em->persist($this->user);
@@ -57,7 +61,7 @@ final class ForYouFeedResponderTest extends DbTestCase
 
     public function testIncludesTheRecommendationScoreWhenDebugIsOn(): void
     {
-        $this->seedDebugSettings(true);
+        $this->fixtures->debugEnabledSettings($this->user);
 
         $page = $this->responder()->page($this->user, null, 50);
         self::assertIsArray($page['entries']);
@@ -65,24 +69,6 @@ final class ForYouFeedResponderTest extends DbTestCase
         self::assertIsArray($first);
 
         self::assertSame(88, $first['recommendationScore']);
-    }
-
-    private function seedDebugSettings(bool $enabled): void
-    {
-        $settings = new RecommendationSettings($this->user);
-        $settings->update(new RecommendationSettingsValues(
-            guidancePrompt: null,
-            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
-            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
-            contextWindow: null,
-            batchCount: null,
-            debugEnabled: $enabled,
-        ));
-        $this->em->persist($settings);
-        $this->em->flush();
     }
 
     private function responder(): ForYouFeedResponder

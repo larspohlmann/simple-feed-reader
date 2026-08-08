@@ -9,8 +9,11 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
+use App\Entity\RecommendationSettings;
 use App\Entity\User;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Recommendation\EffectiveRecommendationSettings;
+use App\Service\Recommendation\RecommendationSettingsValues;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -93,6 +96,44 @@ final readonly class RecommendationRunFixtures
         $this->em->persist($log);
 
         return $log;
+    }
+
+    /**
+     * The default-valued settings row three tests need only to flip the
+     * debug switch on: EntryControllerTest, ForYouFeedResponderTest and
+     * RecommendationCallRecorderTest each assert on debug-only behaviour
+     * (the score column, the debug-log rows) and don't care about any other
+     * field. Two named methods instead of a boolean flag, so a call site
+     * reads as what it means rather than what it passes.
+     */
+    public function debugEnabledSettings(User $user): RecommendationSettings
+    {
+        return $this->recommendationSettings($user, true);
+    }
+
+    public function debugDisabledSettings(User $user): RecommendationSettings
+    {
+        return $this->recommendationSettings($user, false);
+    }
+
+    private function recommendationSettings(User $user, bool $debugEnabled): RecommendationSettings
+    {
+        $settings = new RecommendationSettings($user);
+        $settings->update(new RecommendationSettingsValues(
+            guidancePrompt: null,
+            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
+            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
+            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
+            candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+            contextWindow: null,
+            batchCount: null,
+            debugEnabled: $debugEnabled,
+        ));
+        $this->em->persist($settings);
+        $this->em->flush();
+
+        return $settings;
     }
 
     public function entry(Feed $feed, string $guid, string $published): Entry

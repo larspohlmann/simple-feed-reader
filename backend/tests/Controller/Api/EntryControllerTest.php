@@ -8,11 +8,10 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
-use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Service\Recommendation\EffectiveRecommendationSettings;
-use App\Service\Recommendation\RecommendationSettingsValues;
+use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -65,24 +64,14 @@ final class EntryControllerTest extends WebTestCase
         return $sub;
     }
 
-    private function seedDebugSettings(User $user, bool $enabled): void
+    private function seedDebugEnabledSettings(User $user): void
     {
         $em = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $cipher = self::getContainer()->get(ApiKeyCipher::class);
+        self::assertInstanceOf(ApiKeyCipher::class, $cipher);
 
-        $settings = new RecommendationSettings($user);
-        $settings->update(new RecommendationSettingsValues(
-            guidancePrompt: null,
-            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
-            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
-            contextWindow: null,
-            batchCount: null,
-            debugEnabled: $enabled,
-        ));
-        $em->persist($settings);
+        (new RecommendationRunFixtures($em, $cipher))->debugEnabledSettings($user);
     }
 
     public function testAnonymousIsRejected(): void
@@ -255,7 +244,7 @@ final class EntryControllerTest extends WebTestCase
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $em->persist($run);
         $em->persist(new RecommendationItem($run, $entry, 1, 'Matches your interest in g1', 42));
-        $this->seedDebugSettings($user, true);
+        $this->seedDebugEnabledSettings($user);
         $em->flush();
 
         $client->request('GET', '/api/entries?view=for-you', server: $headers);
