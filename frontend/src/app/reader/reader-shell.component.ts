@@ -43,7 +43,6 @@ import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { CatalogStore } from '../discover/catalog.store';
 import { OnboardingSkip } from '../discover/onboarding-skip';
 import { ProgressHairlineComponent } from '../shared/progress-hairline/progress-hairline.component';
-import { ForYouDebugPanelComponent } from './for-you-debug-panel.component';
 import { TranslocoPipe } from '@jsverse/transloco';
 
 @Component({
@@ -55,7 +54,6 @@ import { TranslocoPipe } from '@jsverse/transloco';
     ReaderViewComponent,
     DrawerSwipeDirective,
     ProgressHairlineComponent,
-    ForYouDebugPanelComponent,
     NgTemplateOutlet,
     RouterLink,
     TranslocoPipe,

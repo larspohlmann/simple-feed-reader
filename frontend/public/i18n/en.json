@@ -105,6 +105,13 @@
         "contextWindowFallback": "Built-in default",
         "contextWindowOverride": "Your override",
         "debug": "Keep debug data for runs",
+        "debugPanelTitle": "Debug log",
+        "debugBatch": "Batch {{ n }}",
+        "debugDedup": "Dedup",
+        "debugAttempt": "attempt {{ n }}",
+        "debugRequest": "Request ({{ kb }} KB)",
+        "debugResponse": "Response ({{ kb }} KB)",
+        "debugCopy": "Copy",
         "save": "Save",
         "saved": "Saved."
       }
@@ -438,14 +445,7 @@
     "forYouStreamed": "{{ kb }} KB received",
     "forYouUnreachable": "Could not reach the recommendation service. Try again.",
     "forYouKeepOpen": "Keep the app open while this runs.",
-    "forYouBackground": "Runs in the background — you can close this tab.",
-    "debugPanelTitle": "Debug log",
-    "debugBatch": "Batch {{ n }}",
-    "debugDedup": "Dedup",
-    "debugAttempt": "attempt {{ n }}",
-    "debugRequest": "Request ({{ kb }} KB)",
-    "debugResponse": "Response ({{ kb }} KB)",
-    "debugCopy": "Copy"
+    "forYouBackground": "Runs in the background — you can close this tab."
   },
   "common": {
     "save": "Save",

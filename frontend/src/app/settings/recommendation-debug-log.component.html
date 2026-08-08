@@ -1,18 +1,22 @@
 @if (entries().length > 0) {
   <details class="debug-panel">
-    <summary class="debug-panel__title">{{ 'reader.debugPanelTitle' | transloco }}</summary>
+    <summary class="debug-panel__title">
+      {{ 'settings.ai.recommendations.debugPanelTitle' | transloco }}
+    </summary>
     <ol class="debug-panel__list">
       @for (entry of entries(); track entry.id) {
         <li class="debug-panel__entry">
           <div class="debug-panel__label">
             @if (entry.phase === 'batch') {
-              <span>{{ 'reader.debugBatch' | transloco: { n: entry.batchNumber } }}</span>
+              <span>{{
+                'settings.ai.recommendations.debugBatch' | transloco: { n: entry.batchNumber }
+              }}</span>
             } @else {
-              <span>{{ 'reader.debugDedup' | transloco }}</span>
+              <span>{{ 'settings.ai.recommendations.debugDedup' | transloco }}</span>
             }
             @if (entry.attempt > 1) {
               <span class="debug-panel__attempt">{{
-                'reader.debugAttempt' | transloco: { n: entry.attempt }
+                'settings.ai.recommendations.debugAttempt' | transloco: { n: entry.attempt }
               }}</span>
             }
             @if (entry.verdict; as verdict) {
@@ -22,25 +26,30 @@
             }
           </div>
           <button type="button" class="debug-panel__toggle" (click)="toggleRequest(entry.id)">
-            {{ 'reader.debugRequest' | transloco: { kb: kb(entry.requestBytes) } }}
+            {{
+              'settings.ai.recommendations.debugRequest' | transloco: { kb: kb(entry.requestBytes) }
+            }}
           </button>
           @if (expandedRequests().has(entry.id) && requestText(entry); as text) {
             <div class="debug-panel__body">
               <button type="button" (click)="copy(text)">
-                {{ 'reader.debugCopy' | transloco }}
+                {{ 'settings.ai.recommendations.debugCopy' | transloco }}
               </button>
               <pre>{{ text }}</pre>
             </div>
           }
           <button type="button" class="debug-panel__toggle" (click)="toggleResponse(entry.id)">
-            {{ 'reader.debugResponse' | transloco: { kb: kb(entry.responseBytes) } }}
+            {{
+              'settings.ai.recommendations.debugResponse'
+                | transloco: { kb: kb(entry.responseBytes) }
+            }}
           </button>
           @if (entry.verdict === null && entry.streamingText !== null) {
             <pre class="debug-panel__stream">{{ entry.streamingText }}</pre>
           } @else if (expandedResponses().has(entry.id) && responseText(entry); as text) {
             <div class="debug-panel__body">
               <button type="button" (click)="copy(text)">
-                {{ 'reader.debugCopy' | transloco }}
+                {{ 'settings.ai.recommendations.debugCopy' | transloco }}
               </button>
               <pre>{{ text }}</pre>
             </div>

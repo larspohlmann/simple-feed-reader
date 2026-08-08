@@ -17,6 +17,7 @@ import {
 } from '../shared/searchable-select/searchable-select.component';
 import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
 import { AiSettingsService } from './ai-settings.service';
+import { RecommendationDebugLogComponent } from './recommendation-debug-log.component';
 import { RecommendationSettingsCardComponent } from './recommendation-settings-card.component';
 
 /**
@@ -34,6 +35,7 @@ import { RecommendationSettingsCardComponent } from './recommendation-settings-c
     ButtonComponent,
     ErrorBannerComponent,
     FieldComponent,
+    RecommendationDebugLogComponent,
     RecommendationSettingsCardComponent,
     SearchableSelectComponent,
     SettingsCardComponent,

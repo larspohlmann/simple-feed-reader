@@ -2,10 +2,10 @@ import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { Subject, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
-import { ForYouDebugPanelComponent } from './for-you-debug-panel.component';
-import { ReaderApi } from './reader-api';
-import { RecommendationsService } from './recommendations.service';
-import { DebugLogDetail, DebugLogEntry } from './models';
+import { RecommendationDebugLogComponent } from './recommendation-debug-log.component';
+import { ReaderApi } from '../reader/reader-api';
+import { RecommendationsService } from '../reader/recommendations.service';
+import { DebugLogDetail, DebugLogEntry } from '../reader/models';
 
 const BATCH_ENTRY: DebugLogEntry = {
   id: 1,
@@ -50,14 +50,14 @@ const DETAIL: DebugLogDetail = {
   responseText: 'response body',
 };
 
-describe('ForYouDebugPanelComponent', () => {
+describe('RecommendationDebugLogComponent', () => {
   let debugLog: jest.Mock;
   let debugLogEntry: jest.Mock;
   let running: ReturnType<typeof signal<boolean>>;
   let completedStamp: ReturnType<typeof signal<number>>;
 
   function mount() {
-    const f = TestBed.createComponent(ForYouDebugPanelComponent);
+    const f = TestBed.createComponent(RecommendationDebugLogComponent);
     f.detectChanges();
     return f;
   }
@@ -69,7 +69,7 @@ describe('ForYouDebugPanelComponent', () => {
     completedStamp = signal(0);
 
     TestBed.configureTestingModule({
-      imports: [ForYouDebugPanelComponent, provideTranslocoTesting()],
+      imports: [RecommendationDebugLogComponent, provideTranslocoTesting()],
       providers: [
         { provide: ReaderApi, useValue: { debugLog, debugLogEntry } },
         { provide: RecommendationsService, useValue: { running, completedStamp } },

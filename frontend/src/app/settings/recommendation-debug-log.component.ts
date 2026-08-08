@@ -1,4 +1,4 @@
-// src/app/reader/for-you-debug-panel.component.ts
+// src/app/settings/recommendation-debug-log.component.ts
 import {
   ChangeDetectionStrategy,
   Component,
@@ -12,26 +12,31 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoModule } from '@jsverse/transloco';
-import { ReaderApi } from './reader-api';
-import { DebugLogDetail, DebugLogEntry } from './models';
-import { RecommendationsService } from './recommendations.service';
+import { ReaderApi } from '../reader/reader-api';
+import { DebugLogDetail, DebugLogEntry } from '../reader/models';
+import { RecommendationsService } from '../reader/recommendations.service';
 
 const POLL_MS = 2000;
 
-/** The #309 debug panel: what each provider call sent and what streamed
+/** The #309 debug log: what each provider call sent and what streamed
  *  back, ~2 s fresh while a run is in flight. Server-side truth only -- the
  *  panel never talks to the provider; it re-reads the run log the tick is
  *  checkpointing. Self-hiding: no log rows (debug switch off, or no run
- *  yet) means no panel, so the reader area needs no settings lookup. */
+ *  yet) means no panel, so the settings page needs no extra lookup to hide
+ *  it. Sits under AI settings, directly below the switch that produces it,
+ *  rather than in the reader's "For you" list -- so the common case here is
+ *  no run in flight: rows live until the next run starts, and the initial
+ *  fetch on creation (not gated on `running()`) is what renders that
+ *  previous run's log. */
 @Component({
-  selector: 'app-for-you-debug-panel',
+  selector: 'app-recommendation-debug-log',
   standalone: true,
   imports: [TranslocoModule],
-  templateUrl: './for-you-debug-panel.component.html',
-  styleUrl: './for-you-debug-panel.component.scss',
+  templateUrl: './recommendation-debug-log.component.html',
+  styleUrl: './recommendation-debug-log.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ForYouDebugPanelComponent implements OnInit {
+export class RecommendationDebugLogComponent implements OnInit {
   private readonly api = inject(ReaderApi);
   private readonly recs = inject(RecommendationsService);
   private readonly destroyRef = inject(DestroyRef);
