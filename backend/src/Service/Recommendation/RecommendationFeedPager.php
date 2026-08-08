@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation;
 
-use App\Entity\User;
 use App\Http\RecommendationCursor;
 use App\Repository\EntryQuery;
 use App\Repository\RecommendationFeedRow;
@@ -14,18 +13,7 @@ final readonly class RecommendationFeedPager
 {
     public function __construct(
         private RecommendationItemRepository $items,
-        private RecommendationSettingsResolver $settings,
     ) {
-    }
-
-    /**
-     * Whether this feed's caller should see each pick's model score
-     * (#321) — the for-you view's own reading of the debug setting, so
-     * EntryController does not need a second collaborator just for it.
-     */
-    public function debugEnabledFor(User $user): bool
-    {
-        return $this->settings->forUser($user)->debugEnabled;
     }
 
     /**

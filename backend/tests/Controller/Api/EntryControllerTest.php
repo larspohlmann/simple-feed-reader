@@ -65,6 +65,25 @@ final class EntryControllerTest extends WebTestCase
         return $sub;
     }
 
+    private function seedDebugSettings(User $user, bool $enabled): void
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+
+        $settings = new RecommendationSettings($user);
+        $settings->update(new RecommendationSettingsValues(
+            guidancePrompt: null,
+            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
+            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
+            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
+            candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+            contextWindow: null,
+            debugEnabled: $enabled,
+        ));
+        $em->persist($settings);
+    }
+
     public function testAnonymousIsRejected(): void
     {
         $client = self::createClient();
@@ -246,25 +265,6 @@ final class EntryControllerTest extends WebTestCase
         $first = $body['entries'][0];
         self::assertIsArray($first);
         self::assertSame(42, $first['recommendationScore']);
-    }
-
-    private function seedDebugSettings(User $user, bool $enabled): void
-    {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-
-        $settings = new RecommendationSettings($user);
-        $settings->update(new RecommendationSettingsValues(
-            guidancePrompt: null,
-            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
-            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
-            contextWindow: null,
-            debugEnabled: $enabled,
-        ));
-        $em->persist($settings);
     }
 
     public function testForYouViewPaginatesWithCursor(): void
