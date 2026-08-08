@@ -21,9 +21,9 @@ final class RecommendationPickParserTest extends TestCase
     {
         $content = self::encode([
             'recommendations' => [
-                ['id' => 3, 'reason' => 'Third'],
-                ['id' => 1, 'reason' => 'First'],
-                ['id' => 2, 'reason' => 'Second'],
+                ['id' => 3, 'score' => 90, 'reason' => 'Third'],
+                ['id' => 1, 'score' => 80, 'reason' => 'First'],
+                ['id' => 2, 'score' => 70, 'reason' => 'Second'],
             ],
         ]);
 
@@ -38,10 +38,10 @@ final class RecommendationPickParserTest extends TestCase
     {
         $content = self::encode([
             'recommendations' => [
-                ['id' => 1, 'reason' => 'First'],
-                ['id' => 99, 'reason' => 'Not a candidate'],
-                ['id' => 1, 'reason' => 'Duplicate of first'],
-                ['id' => 2, 'reason' => 'Second'],
+                ['id' => 1, 'score' => 90, 'reason' => 'First'],
+                ['id' => 99, 'score' => 80, 'reason' => 'Not a candidate'],
+                ['id' => 1, 'score' => 70, 'reason' => 'Duplicate of first'],
+                ['id' => 2, 'score' => 60, 'reason' => 'Second'],
             ],
         ]);
 
@@ -105,7 +105,7 @@ final class RecommendationPickParserTest extends TestCase
     {
         $payload = self::encode([
             'recommendations' => [
-                ['id' => 1, 'reason' => 'First'],
+                ['id' => 1, 'score' => 90, 'reason' => 'First'],
             ],
         ]);
         $content = "```json\n{$payload}\n```";
@@ -120,7 +120,7 @@ final class RecommendationPickParserTest extends TestCase
     {
         $payload = self::encode([
             'recommendations' => [
-                ['id' => 1, 'reason' => 'First'],
+                ['id' => 1, 'score' => 90, 'reason' => 'First'],
             ],
         ]);
         $content = "```\n{$payload}\n```";
@@ -135,9 +135,9 @@ final class RecommendationPickParserTest extends TestCase
     {
         $content = self::encode([
             'recommendations' => [
-                ['id' => 1, 'reason' => 'First'],
-                ['id' => 2, 'reason' => 'Second'],
-                ['id' => 3, 'reason' => 'Third'],
+                ['id' => 1, 'score' => 90, 'reason' => 'First'],
+                ['id' => 2, 'score' => 80, 'reason' => 'Second'],
+                ['id' => 3, 'score' => 70, 'reason' => 'Third'],
             ],
         ]);
 
@@ -151,7 +151,7 @@ final class RecommendationPickParserTest extends TestCase
     {
         $content = self::encode([
             'recommendations' => [
-                ['id' => '42', 'reason' => 'From a lenient gateway'],
+                ['id' => '42', 'score' => 90, 'reason' => 'From a lenient gateway'],
             ],
         ]);
 
@@ -165,7 +165,7 @@ final class RecommendationPickParserTest extends TestCase
     {
         $content = self::encode([
             'recommendations' => [
-                ['id' => 1],
+                ['id' => 1, 'score' => 90],
             ],
         ]);
 
@@ -179,7 +179,7 @@ final class RecommendationPickParserTest extends TestCase
     {
         $content = self::encode([
             'recommendations' => [
-                ['id' => 1, 'reason' => '   '],
+                ['id' => 1, 'score' => 90, 'reason' => '   '],
             ],
         ]);
 
@@ -193,7 +193,7 @@ final class RecommendationPickParserTest extends TestCase
     {
         $content = self::encode([
             'recommendations' => [
-                ['id' => 1, 'reason' => 42],
+                ['id' => 1, 'score' => 90, 'reason' => 42],
             ],
         ]);
 
@@ -208,7 +208,7 @@ final class RecommendationPickParserTest extends TestCase
         $content = self::encode([
             'recommendations' => [
                 'not-an-object',
-                ['id' => 1, 'reason' => 'First'],
+                ['id' => 1, 'score' => 90, 'reason' => 'First'],
             ],
         ]);
 
@@ -222,7 +222,7 @@ final class RecommendationPickParserTest extends TestCase
     {
         $payload = self::encode([
             'recommendations' => [
-                ['id' => 1, 'reason' => 'First'],
+                ['id' => 1, 'score' => 90, 'reason' => 'First'],
             ],
         ]);
         $content = "  \n```json\n{$payload}\n```\n  ";
@@ -251,7 +251,7 @@ final class RecommendationPickParserTest extends TestCase
     {
         $payload = self::encode([
             'recommendations' => [
-                ['id' => 1, 'reason' => 'First'],
+                ['id' => 1, 'score' => 90, 'reason' => 'First'],
             ],
         ]);
         $content = "```json\n{$payload}```";
@@ -266,8 +266,8 @@ final class RecommendationPickParserTest extends TestCase
     {
         $content = self::encode([
             'recommendations' => [
-                ['id' => [1, 2], 'reason' => 'Wrong shape'],
-                ['id' => 1, 'reason' => 'First'],
+                ['id' => [1, 2], 'score' => 90, 'reason' => 'Wrong shape'],
+                ['id' => 1, 'score' => 80, 'reason' => 'First'],
             ],
         ]);
 
@@ -275,6 +275,93 @@ final class RecommendationPickParserTest extends TestCase
 
         self::assertTrue($result->usable);
         self::assertSame([1], array_map(static fn ($pick) => $pick->entryId, $result->picks));
+    }
+
+    public function testScoresAreSalvagedAndPreserved(): void
+    {
+        $content = self::encode([
+            'recommendations' => [
+                ['id' => 1, 'score' => 90, 'reason' => 'First'],
+                ['id' => 2, 'score' => 15, 'reason' => 'Second'],
+            ],
+        ]);
+
+        $result = $this->parser->parse($content, [1, 2], 10);
+
+        self::assertTrue($result->usable);
+        self::assertSame([90, 15], array_map(static fn ($pick) => $pick->score, $result->picks));
+    }
+
+    public function testFloatAndNumericStringScoresRoundToInt(): void
+    {
+        $content = self::encode([
+            'recommendations' => [
+                ['id' => 1, 'score' => 87.5, 'reason' => 'Float'],
+                ['id' => 2, 'score' => '73', 'reason' => 'String'],
+            ],
+        ]);
+
+        $result = $this->parser->parse($content, [1, 2], 10);
+
+        self::assertTrue($result->usable);
+        self::assertSame([88, 73], array_map(static fn ($pick) => $pick->score, $result->picks));
+    }
+
+    public function testOutOfRangeScoresAreClampedIntoTheScale(): void
+    {
+        $content = self::encode([
+            'recommendations' => [
+                ['id' => 1, 'score' => 150, 'reason' => 'Too high'],
+                ['id' => 2, 'score' => -5, 'reason' => 'Too low'],
+            ],
+        ]);
+
+        $result = $this->parser->parse($content, [1, 2], 10);
+
+        self::assertTrue($result->usable);
+        self::assertSame([100, 0], array_map(static fn ($pick) => $pick->score, $result->picks));
+    }
+
+    public function testAPickWithoutAScoreIsDiscarded(): void
+    {
+        $content = self::encode([
+            'recommendations' => [
+                ['id' => 1, 'reason' => 'Scoreless'],
+                ['id' => 2, 'score' => 40, 'reason' => 'Scored'],
+            ],
+        ]);
+
+        $result = $this->parser->parse($content, [1, 2], 10);
+
+        self::assertTrue($result->usable);
+        self::assertSame([2], array_map(static fn ($pick) => $pick->entryId, $result->picks));
+    }
+
+    public function testANonNumericScoreDiscardsThePick(): void
+    {
+        $content = self::encode([
+            'recommendations' => [
+                ['id' => 1, 'score' => 'high', 'reason' => 'Wordy'],
+            ],
+        ]);
+
+        $result = $this->parser->parse($content, [1], 10);
+
+        self::assertFalse($result->usable);
+    }
+
+    public function testAReplyInTheOldScorelessShapeIsUnusable(): void
+    {
+        $content = self::encode([
+            'recommendations' => [
+                ['id' => 1, 'reason' => 'First'],
+                ['id' => 2, 'reason' => 'Second'],
+            ],
+        ]);
+
+        $result = $this->parser->parse($content, [1, 2], 10);
+
+        self::assertFalse($result->usable);
     }
 
     /** @param array<mixed> $data */

@@ -220,8 +220,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [
-                ['id' => $firstBatch[0], 'reason' => 'r1'],
-                ['id' => $firstBatch[1], 'reason' => 'r2'],
+                ['id' => $firstBatch[0], 'score' => 90, 'reason' => 'r1'],
+                ['id' => $firstBatch[1], 'score' => 80, 'reason' => 'r2'],
             ],
         ], \JSON_THROW_ON_ERROR));
 
@@ -259,7 +259,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->advancer()->advance($this->user);
 
         $this->stubChatClient()->queueContent(json_encode([
-            'recommendations' => [['id' => $firstBatch[0], 'reason' => 'r1']],
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'r1']],
         ], \JSON_THROW_ON_ERROR));
         $report = $this->advancer()->advance($this->user);
 
@@ -308,7 +308,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $secondBatch = $run->getCandidateBatches()[1];
 
         $this->stubChatClient()->queueContent(json_encode([
-            'recommendations' => [['id' => $firstBatch[0], 'reason' => 'r1']],
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'r1']],
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
@@ -322,7 +322,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $this->starter()->start($this->user);
         $this->stubChatClient()->queueContent(json_encode([
-            'recommendations' => [['id' => $secondBatch[0], 'reason' => 'r2']],
+            'recommendations' => [['id' => $secondBatch[0], 'score' => 90, 'reason' => 'r2']],
         ], \JSON_THROW_ON_ERROR));
         $report = $this->advancer()->advance($this->user);
 
@@ -414,7 +414,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         }
 
         $this->stubChatClient()->queueContent(json_encode([
-            'recommendations' => [['id' => $firstBatch[0], 'reason' => 'r1']],
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'r1']],
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
@@ -482,7 +482,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->em->clear();
 
         $this->stubChatClient()->queueContent(json_encode([
-            'recommendations' => [['id' => $firstBatch[0], 'reason' => 'r1']],
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'r1']],
         ], \JSON_THROW_ON_ERROR));
 
         $report = $this->advancer()->advance($this->user);
@@ -509,8 +509,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [
-                ['id' => $batch[1], 'reason' => 'second pick'],
-                ['id' => $batch[0], 'reason' => 'first pick'],
+                ['id' => $batch[1], 'score' => 90, 'reason' => 'second pick'],
+                ['id' => $batch[0], 'score' => 80, 'reason' => 'first pick'],
             ],
         ], \JSON_THROW_ON_ERROR));
 
@@ -539,15 +539,15 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [
-                ['id' => $firstBatch[0], 'reason' => 'from batch one'],
-                ['id' => $firstBatch[1], 'reason' => 'also batch one'],
+                ['id' => $firstBatch[0], 'score' => 90, 'reason' => 'from batch one'],
+                ['id' => $firstBatch[1], 'score' => 80, 'reason' => 'also batch one'],
             ],
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [
-                ['id' => $secondBatch[0], 'reason' => 'from batch two'],
+                ['id' => $secondBatch[0], 'score' => 90, 'reason' => 'from batch two'],
             ],
         ], \JSON_THROW_ON_ERROR));
         $afterBatches = $this->advancer()->advance($this->user);
@@ -556,9 +556,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [
-                ['id' => $secondBatch[0], 'reason' => 'ranked first'],
-                ['id' => $firstBatch[1], 'reason' => 'ranked second'],
-                ['id' => $firstBatch[0], 'reason' => 'ranked third'],
+                ['id' => $secondBatch[0], 'score' => 90, 'reason' => 'ranked first'],
+                ['id' => $firstBatch[1], 'score' => 80, 'reason' => 'ranked second'],
+                ['id' => $firstBatch[0], 'score' => 70, 'reason' => 'ranked third'],
             ],
         ], \JSON_THROW_ON_ERROR));
         $report = $this->advancer()->advance($this->user);
@@ -604,12 +604,12 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $secondBatch = $run->getCandidateBatches()[1];
 
         $this->stubChatClient()->queueContent(json_encode([
-            'recommendations' => [['id' => $firstBatch[0], 'reason' => 'from batch one']],
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'from batch one']],
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
         $this->stubChatClient()->queueContent(json_encode([
-            'recommendations' => [['id' => $secondBatch[0], 'reason' => 'from batch two']],
+            'recommendations' => [['id' => $secondBatch[0], 'score' => 90, 'reason' => 'from batch two']],
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
@@ -659,7 +659,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertTrue($this->activeRun()->progress()->isMergePhase);
 
         $this->stubChatClient()->queueContent(json_encode([
-            'recommendations' => [['id' => $firstBatch[0], 'reason' => 'winner']],
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'winner']],
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
@@ -677,12 +677,12 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $secondBatch = $run->getCandidateBatches()[1];
 
         $this->stubChatClient()->queueContent(json_encode([
-            'recommendations' => [['id' => $firstBatch[0], 'reason' => 'r1']],
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'r1']],
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
         $this->stubChatClient()->queueContent(json_encode([
-            'recommendations' => [['id' => $secondBatch[0], 'reason' => 'r2']],
+            'recommendations' => [['id' => $secondBatch[0], 'score' => 90, 'reason' => 'r2']],
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
@@ -718,14 +718,14 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [
-                ['id' => $firstBatch[0], 'reason' => 'r1'],
-                ['id' => $firstBatch[1], 'reason' => 'r2'],
+                ['id' => $firstBatch[0], 'score' => 90, 'reason' => 'r1'],
+                ['id' => $firstBatch[1], 'score' => 80, 'reason' => 'r2'],
             ],
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
         $this->stubChatClient()->queueContent(json_encode([
-            'recommendations' => [['id' => $secondBatch[0], 'reason' => 'r3']],
+            'recommendations' => [['id' => $secondBatch[0], 'score' => 90, 'reason' => 'r3']],
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
@@ -739,8 +739,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $run = $this->activeRun();
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [
-                ['id' => $firstBatch[1], 'reason' => 'kept one'],
-                ['id' => $secondBatch[0], 'reason' => 'kept two'],
+                ['id' => $firstBatch[1], 'score' => 90, 'reason' => 'kept one'],
+                ['id' => $secondBatch[0], 'score' => 80, 'reason' => 'kept two'],
             ],
         ], \JSON_THROW_ON_ERROR));
         $report = $this->advancer()->advance($this->user);

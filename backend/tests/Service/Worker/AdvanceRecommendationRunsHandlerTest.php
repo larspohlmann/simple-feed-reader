@@ -532,8 +532,13 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     {
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => array_map(
-                static fn (int $id): array => ['id' => $id, 'reason' => 'irrelevant'],
+                static fn (int $id, int $index): array => [
+                    'id' => $id,
+                    'score' => 100 - $index,
+                    'reason' => 'irrelevant',
+                ],
                 $batchIds,
+                array_keys($batchIds),
             ),
         ], \JSON_THROW_ON_ERROR));
     }
