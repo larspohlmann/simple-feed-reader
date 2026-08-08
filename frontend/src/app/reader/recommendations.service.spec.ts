@@ -395,15 +395,61 @@ describe('RecommendationsService', () => {
 
         // No synchronous next tick -- the deferred tick returns instantly, so a
         // tight recursive loop would otherwise hammer the endpoint.
-        ctrl.expectNone('https://api.test/api/recommendations/runs/tick');
+        ctrl.expectNone('https://api.test/api/recommendations/runs/current');
 
         jest.advanceTimersByTime(3999);
-        ctrl.expectNone('https://api.test/api/recommendations/runs/tick');
+        ctrl.expectNone('https://api.test/api/recommendations/runs/current');
 
         jest.advanceTimersByTime(1);
         ctrl
-          .expectOne('https://api.test/api/recommendations/runs/tick')
+          .expectOne('https://api.test/api/recommendations/runs/current')
           .flush(report({ status: 'completed', background: true }));
+        expect(svc.running()).toBe(false);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('polls the unlimited read endpoint, not the rate-limited write, while the worker owns the run', () => {
+      jest.useFakeTimers();
+      try {
+        svc.start();
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs')
+          .flush(report({ status: 'running', background: true }));
+
+        jest.advanceTimersByTime(4000);
+        // The tick endpoint would do no work at all here -- it delegates to
+        // exactly this read -- and would spend the `ai_recommendations`
+        // limiter for nothing.
+        ctrl.expectNone('https://api.test/api/recommendations/runs/tick');
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/current')
+          .flush(report({ status: 'completed', background: true }));
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('returns to the tick endpoint as soon as a report says the worker is gone', () => {
+      jest.useFakeTimers();
+      try {
+        svc.start();
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs')
+          .flush(report({ status: 'running', background: true }));
+
+        jest.advanceTimersByTime(4000);
+        // The worker died between the two reads: this one still comes from
+        // `current`, but it carries background: false.
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/current')
+          .flush(report({ status: 'running', background: false }));
+
+        // …so the client takes execution back and drives the run itself.
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/tick')
+          .flush(report({ status: 'completed', background: false }));
         expect(svc.running()).toBe(false);
       } finally {
         jest.useRealTimers();

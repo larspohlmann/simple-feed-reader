@@ -114,8 +114,22 @@ export class RecommendationsService {
     });
   }
 
+  /** One turn of the poll loop, against whichever endpoint is honest right
+   *  now. While a background worker owns execution the tick endpoint does no
+   *  work at all -- it returns the very same report `current` does -- so
+   *  polling it only spends the `ai_recommendations` limiter (90 per 5
+   *  minutes, per user): one tab at `BACKGROUND_POLL_MS` burns 75 of them and
+   *  a second tab of the same account 429s. `current` is a plain read and
+   *  carries no limiter by design. The moment a report says the worker is
+   *  gone the loop returns to `tick`, so a dying worker still gets the run
+   *  advanced by the client -- that self-healing fallback is the point of the
+   *  whole design. */
   private step(attempts: PollAttempts): void {
-    this.api.tickRecommendations().subscribe({
+    const poll = this.report()?.background
+      ? this.api.currentRecommendations()
+      : this.api.tickRecommendations();
+
+    poll.subscribe({
       next: (r) => this.onReport(r, attempts),
       error: (e: HttpErrorResponse) => this.retryOrStop(e, attempts),
     });
