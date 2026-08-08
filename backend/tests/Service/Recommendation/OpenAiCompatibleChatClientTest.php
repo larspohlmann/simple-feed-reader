@@ -45,6 +45,8 @@ final class OpenAiCompatibleChatClientTest extends TestCase
                 'url' => $url,
                 'headers' => $options['headers'] ?? [],
                 'body' => $options['body'] ?? null,
+                'timeout' => $options['timeout'] ?? null,
+                'max_duration' => $options['max_duration'] ?? null,
             ];
 
             return new MockResponse([
@@ -60,11 +62,30 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         self::assertSame('{"recommendations":[]}', $content);
 
-        /** @var array{method: string, url: string, headers: array<int, string>, body: string} $seen */
+        /**
+         * @var array{
+         *     method: string,
+         *     url: string,
+         *     headers: array<int, string>,
+         *     body: string,
+         *     timeout: float|null,
+         *     max_duration: float|null,
+         * } $seen
+         */
         self::assertSame('POST', $seen['method']);
         self::assertSame('https://api.example.test/v1/chat/completions', $seen['url']);
         self::assertContains('Authorization: Bearer sk-test', $seen['headers']);
+        self::assertContains('Accept: text/event-stream, application/json', $seen['headers']);
         self::assertContains('Accept-Encoding: identity', $seen['headers']);
+
+        // The idle bound is what makes a dead connection fail in 30 s rather
+        // than 120 s — the whole point of #312. The wall bound is the
+        // published 120 s budget WorkerPresence::FRESH_SECONDS is sized
+        // against (#311). Pinning the numbers, not the constants, means a
+        // regression that swaps one for the other or drops max_duration
+        // shows up here instead of only in production behaviour.
+        self::assertSame(30.0, $seen['timeout']);
+        self::assertSame(120.0, $seen['max_duration']);
 
         $decodedBody = json_decode($seen['body'], true);
         self::assertSame([
