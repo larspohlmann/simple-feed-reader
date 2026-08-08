@@ -13,12 +13,13 @@ use Doctrine\Migrations\AbstractMigration;
  * Update recommendation settings column defaults to match #321 constant changes.
  *
  * PLATFORM-AWARE DDL: DEFAULT_CANDIDATE_POOL_SIZE and DEFAULT_PICKS_LIMIT changed
- * from 1000/100 to 500/50 in #321, but the database schema defaults were not updated.
- * The entity uses these constants for its column options, so the ORM metadata now
- * declares 500/50, but the DDL still has 1000/100. Altering the defaults keeps
- * schema:validate happy and enables from-empty migrations to produce correct schemas.
+ * from 1000/100 to 500/50 in #321. The entity uses these constants for its column
+ * options via ORM attributes, so the metadata now declares 500/50, but the DDL still
+ * had 1000/100. This mismatch makes doctrine:schema:validate fail.
  *
- * SQLite cannot ALTER COLUMN ... DEFAULT in place; we rebuild the table.
+ * MySQL: direct ALTER COLUMN DEFAULT.
+ * SQLite: cannot ALTER COLUMN DEFAULT in place; must rebuild the table with the
+ *         new defaults while preserving all columns, indexes, and constraints.
  */
 final class Version20260808180000 extends AbstractMigration
 {
@@ -50,34 +51,36 @@ final class Version20260808180000 extends AbstractMigration
                 <<<'SQL'
 CREATE TABLE user_recommendation_settings (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    user_id INTEGER NOT NULL,
     guidance_prompt CLOB DEFAULT NULL,
-    favorites_cap INTEGER NOT NULL DEFAULT 40,
-    kept_cap INTEGER NOT NULL DEFAULT 40,
-    viewed_cap INTEGER NOT NULL DEFAULT 80,
-    candidate_pool_size INTEGER NOT NULL DEFAULT 500,
-    picks_limit INTEGER NOT NULL DEFAULT 50,
+    favorites_cap INTEGER DEFAULT 40 NOT NULL,
+    kept_cap INTEGER DEFAULT 40 NOT NULL,
+    viewed_cap INTEGER DEFAULT 80 NOT NULL,
+    candidate_pool_size INTEGER DEFAULT 500 NOT NULL,
+    picks_limit INTEGER DEFAULT 50 NOT NULL,
     context_window INTEGER DEFAULT NULL,
+    debug_enabled BOOLEAN DEFAULT 0 NOT NULL,
+    user_id INTEGER NOT NULL,
     batch_count INTEGER DEFAULT NULL,
-    debug_enabled BOOLEAN NOT NULL DEFAULT 0,
-    UNIQUE (user_id),
-    CONSTRAINT fk_user_recommendation_settings_user FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE
+    CONSTRAINT FK_83A9855EA76ED395 FOREIGN KEY (user_id) REFERENCES app_user (id) ON UPDATE NO ACTION ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE
 )
 SQL
             );
             $this->addSql(
                 <<<'SQL'
 INSERT INTO user_recommendation_settings (
-    id, user_id, guidance_prompt, favorites_cap, kept_cap, viewed_cap,
-    candidate_pool_size, picks_limit, context_window, batch_count, debug_enabled
+    id, guidance_prompt, favorites_cap, kept_cap, viewed_cap,
+    candidate_pool_size, picks_limit, context_window, debug_enabled,
+    user_id, batch_count
 )
 SELECT
-    id, user_id, guidance_prompt, favorites_cap, kept_cap, viewed_cap,
-    candidate_pool_size, picks_limit, context_window, batch_count, debug_enabled
+    id, guidance_prompt, favorites_cap, kept_cap, viewed_cap,
+    candidate_pool_size, picks_limit, context_window, debug_enabled,
+    user_id, batch_count
 FROM user_recommendation_settings_old
 SQL
             );
             $this->addSql('DROP TABLE user_recommendation_settings_old');
+            $this->addSql('CREATE UNIQUE INDEX uniq_recommendation_settings_user ON user_recommendation_settings (user_id)');
 
             return;
         }
@@ -105,34 +108,36 @@ SQL
                 <<<'SQL'
 CREATE TABLE user_recommendation_settings (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    user_id INTEGER NOT NULL,
     guidance_prompt CLOB DEFAULT NULL,
-    favorites_cap INTEGER NOT NULL DEFAULT 40,
-    kept_cap INTEGER NOT NULL DEFAULT 40,
-    viewed_cap INTEGER NOT NULL DEFAULT 80,
-    candidate_pool_size INTEGER NOT NULL DEFAULT 1000,
-    picks_limit INTEGER NOT NULL DEFAULT 100,
+    favorites_cap INTEGER DEFAULT 40 NOT NULL,
+    kept_cap INTEGER DEFAULT 40 NOT NULL,
+    viewed_cap INTEGER DEFAULT 80 NOT NULL,
+    candidate_pool_size INTEGER DEFAULT 1000 NOT NULL,
+    picks_limit INTEGER DEFAULT 100 NOT NULL,
     context_window INTEGER DEFAULT NULL,
+    debug_enabled BOOLEAN DEFAULT 0 NOT NULL,
+    user_id INTEGER NOT NULL,
     batch_count INTEGER DEFAULT NULL,
-    debug_enabled BOOLEAN NOT NULL DEFAULT 0,
-    UNIQUE (user_id),
-    CONSTRAINT fk_user_recommendation_settings_user FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE
+    CONSTRAINT FK_83A9855EA76ED395 FOREIGN KEY (user_id) REFERENCES app_user (id) ON UPDATE NO ACTION ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE
 )
 SQL
             );
             $this->addSql(
                 <<<'SQL'
 INSERT INTO user_recommendation_settings (
-    id, user_id, guidance_prompt, favorites_cap, kept_cap, viewed_cap,
-    candidate_pool_size, picks_limit, context_window, batch_count, debug_enabled
+    id, guidance_prompt, favorites_cap, kept_cap, viewed_cap,
+    candidate_pool_size, picks_limit, context_window, debug_enabled,
+    user_id, batch_count
 )
 SELECT
-    id, user_id, guidance_prompt, favorites_cap, kept_cap, viewed_cap,
-    candidate_pool_size, picks_limit, context_window, batch_count, debug_enabled
+    id, guidance_prompt, favorites_cap, kept_cap, viewed_cap,
+    candidate_pool_size, picks_limit, context_window, debug_enabled,
+    user_id, batch_count
 FROM user_recommendation_settings_new
 SQL
             );
             $this->addSql('DROP TABLE user_recommendation_settings_new');
+            $this->addSql('CREATE UNIQUE INDEX uniq_recommendation_settings_user ON user_recommendation_settings (user_id)');
 
             return;
         }
