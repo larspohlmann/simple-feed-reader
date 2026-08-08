@@ -176,7 +176,17 @@ app-reader-header.hidden {
    below, which sits at the very same `--app-bar-h` seam over the very same
    list header for the identical reason — see its own comment. The strip lands
    in the header's top padding, above its heading text, so it reads as a
-   loading bar riding the header's edge rather than covering content. */
+   loading bar riding the header's edge rather than covering content.
+
+   Second tie, decided on purpose: `.under-header` (below) is ALSO z-index 4,
+   the same seam, and it carries the background-refresh hairline. `.list`
+   (and this hairline inside it) is the LATER sibling in the template, so it
+   already wins that tie and paints over `.under-header`'s when a for-you run
+   and a background sweep overlap. That is the wanted order, not an accident
+   of markup position: this hairline reports the run the account just started
+   by pressing a button in this very list, so the just-initiated action should
+   show over the ambient one. Keep `.list` after `.under-header` in the
+   template, or restate the ordering explicitly if it ever moves. */
 .list app-progress-hairline {
   position: absolute;
   z-index: 4;
