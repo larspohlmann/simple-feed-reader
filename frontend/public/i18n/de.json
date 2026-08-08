@@ -95,11 +95,13 @@
         "guidance": "Leitprompt",
         "guidanceReset": "Auf Standard zurücksetzen",
         "fixedShow": "Festen Prompt anzeigen",
+        "expertTitle": "Experteneinstellungen",
         "favoritesCap": "Favoriten in der Historie",
         "keptCap": "Aufbewahrte in der Historie",
         "viewedCap": "Angesehene in der Historie",
         "candidatePool": "Größe des Kandidatenpools",
         "picksLimit": "Maximale Auswahl",
+        "batchCount": "Batches (leer = automatisch)",
         "contextWindow": "Kontextfenster (Token)",
         "contextWindowFromProvider": "Vom Provider gemeldet",
         "contextWindowFallback": "Eingebauter Standard",
@@ -115,7 +117,11 @@
         "debugStreamed": "{{ kb }} KB gestreamt",
         "debugStreamedNoAnswer": "{{ kb }} KB gestreamt, keine Antwort",
         "save": "Speichern",
-        "saved": "Gespeichert."
+        "saved": "Gespeichert.",
+        "purge": "Empfehlungen leeren",
+        "purgeExplain": "Entfernt alle empfohlenen Beiträge aus „Für dich“. Ein neuer Lauf baut die Liste neu auf.",
+        "purgeConfirm": "Alle Empfehlungen leeren?",
+        "purged": "Empfehlungen geleert."
       }
     },
     "about": {

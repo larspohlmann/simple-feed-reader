@@ -95,11 +95,13 @@
         "guidance": "Guidance prompt",
         "guidanceReset": "Reset to default",
         "fixedShow": "Show the fixed prompt",
+        "expertTitle": "Expert settings",
         "favoritesCap": "Favorites in history",
         "keptCap": "Kept in history",
         "viewedCap": "Viewed in history",
         "candidatePool": "Candidate pool size",
         "picksLimit": "Maximum picks",
+        "batchCount": "Batches (empty = automatic)",
         "contextWindow": "Context window (tokens)",
         "contextWindowFromProvider": "Reported by your provider",
         "contextWindowFallback": "Built-in default",
@@ -115,7 +117,11 @@
         "debugStreamed": "{{ kb }} KB streamed",
         "debugStreamedNoAnswer": "{{ kb }} KB streamed, no answer",
         "save": "Save",
-        "saved": "Saved."
+        "saved": "Saved.",
+        "purge": "Clear recommendations",
+        "purgeExplain": "Removes every recommended post from “For you”. A new run rebuilds the list.",
+        "purgeConfirm": "Clear all recommendations?",
+        "purged": "Recommendations cleared."
       }
     },
     "about": {

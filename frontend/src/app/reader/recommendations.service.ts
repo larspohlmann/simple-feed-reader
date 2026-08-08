@@ -98,6 +98,19 @@ export class RecommendationsService {
     });
   }
 
+  /** Re-reads the current run/for-you status without starting or advancing
+   *  anything. Best-effort like `resume()`'s own lookup: a failed refresh
+   *  just leaves the last known report in place rather than surfacing a
+   *  second error path for what is, from here, a read-only side effect. */
+  refreshStatus(): void {
+    this.api.currentRecommendations().subscribe({
+      next: (r) => this.report.set(r),
+      error: () => {
+        // Best-effort; see the docblock above.
+      },
+    });
+  }
+
   /** Best-effort resume on boot: pick up a run left in flight by an earlier
    *  session. Anything other than pending/running -- including a fetch
    *  failure -- is silently ignored; there's nothing to tell the user about a

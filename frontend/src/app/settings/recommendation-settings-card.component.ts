@@ -7,8 +7,13 @@ import {
   inject,
   linkedSignal,
 } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { Dialog } from '@angular/cdk/dialog';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ButtonComponent } from '../shared/button/button.component';
+import {
+  ConfirmData,
+  ConfirmDialogComponent,
+} from '../shared/confirm-dialog/confirm-dialog.component';
 import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../shared/field/field.component';
@@ -20,7 +25,12 @@ import { RecommendationSettingsService } from './recommendation-settings.service
  * caps and context window that shape a run, and the debug-persistence
  * switch. The fixed prompt layers are read-only here — they ship with the
  * app, not with the account — so they sit in a `<details>` rather than a
- * form field.
+ * form field. The six numeric tuning fields, the context window and the
+ * fixed prompt all fold into one "Expert settings" disclosure (#321 decision
+ * 6A): they are the knobs most accounts never touch, so only the guidance
+ * prompt and Save stay visible by default. The purge below is its own
+ * danger zone, always visible, copying the confirm-then-act pattern from
+ * `account-section.component.ts`.
  */
 @Component({
   selector: 'app-recommendation-settings-card',
@@ -39,6 +49,8 @@ import { RecommendationSettingsService } from './recommendation-settings.service
 })
 export class RecommendationSettingsCardComponent {
   readonly svc = inject(RecommendationSettingsService);
+  private readonly dialog = inject(Dialog);
+  private readonly i18n = inject(TranslocoService);
 
   readonly guidance = linkedSignal<string>(() => this.svc.state()?.guidancePrompt ?? '');
   readonly favoritesCap = linkedSignal<number>(() => this.svc.state()?.favoritesCap ?? 0);
@@ -46,6 +58,8 @@ export class RecommendationSettingsCardComponent {
   readonly viewedCap = linkedSignal<number>(() => this.svc.state()?.viewedCap ?? 0);
   readonly candidatePoolSize = linkedSignal<number>(() => this.svc.state()?.candidatePoolSize ?? 0);
   readonly picksLimit = linkedSignal<number>(() => this.svc.state()?.picksLimit ?? 0);
+  /** Blank stays `null` ("automatic packing"), same treatment as `contextWindow`. */
+  readonly batchCount = linkedSignal<number | null>(() => this.svc.state()?.batchCount ?? null);
   /** The override the account may set; blank stays `null` ("use provider or default"). */
   readonly contextWindow = linkedSignal<number | null>(
     () => this.svc.state()?.contextWindowOverride ?? null,
@@ -64,6 +78,13 @@ export class RecommendationSettingsCardComponent {
    *  network error, a gateway response) still shows something. */
   readonly failureMessage = computed(() => {
     const failure = this.svc.failure();
+    return failure ? (failure.detail ?? failure.title) : null;
+  });
+
+  /** Same fallback as `failureMessage`; the 409 while a run is active
+   *  arrives with a `detail` already written for the account to read. */
+  readonly purgeFailureMessage = computed(() => {
+    const failure = this.svc.purgeFailure();
     return failure ? (failure.detail ?? failure.title) : null;
   });
 
@@ -102,8 +123,30 @@ export class RecommendationSettingsCardComponent {
       viewedCap: this.viewedCap(),
       candidatePoolSize: this.candidatePoolSize(),
       picksLimit: this.picksLimit(),
+      batchCount: this.batchCount(),
       contextWindow: this.contextWindow(),
       debugEnabled: this.debugEnabled(),
+    });
+  }
+
+  /** Same confirm-then-act shape as `AccountSectionComponent.confirmThenDelete()`:
+   *  open the shared dialog, act only on a truthy close. No `requireText` here --
+   *  unlike the account, a purge does not take the account itself with it, and a
+   *  new run rebuilds the list. */
+  confirmPurge(): void {
+    const data: ConfirmData = {
+      title: this.i18n.translate('settings.ai.recommendations.purgeConfirm'),
+      message: this.i18n.translate('settings.ai.recommendations.purgeExplain'),
+      confirmLabel: this.i18n.translate('settings.ai.recommendations.purge'),
+      danger: true,
+    };
+    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
+      data,
+      role: 'alertdialog',
+      panelClass: 'app-dialog',
+    });
+    ref.closed.subscribe((confirmed) => {
+      if (confirmed) this.svc.purge();
     });
   }
 }

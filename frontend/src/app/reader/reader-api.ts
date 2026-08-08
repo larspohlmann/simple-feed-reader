@@ -174,4 +174,11 @@ export class ReaderApi {
   debugLogEntry(id: number): Observable<DebugLogDetail> {
     return this.http.get<DebugLogDetail>(`${this.base}/api/recommendations/runs/debug-log/${id}`);
   }
+
+  /** Deletes every persisted for-you recommendation. Refuses with a 409
+   *  while a run is pending or running -- purging out from under an
+   *  in-flight run would leave it writing picks nobody can see. */
+  purgeRecommendations(): Observable<RecommendationRunReport> {
+    return this.http.delete<RecommendationRunReport>(`${this.base}/api/recommendations/runs`);
+  }
 }

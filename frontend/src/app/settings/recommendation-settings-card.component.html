@@ -10,65 +10,70 @@
     <app-button size="sm" (click)="resetGuidance()">
       {{ 'settings.ai.recommendations.guidanceReset' | transloco }}
     </app-button>
-
-    <app-disclosure [label]="'settings.ai.recommendations.fixedShow' | transloco">
-      <pre class="fixed"
-        >{{ state.fixedPrompt.role }}
-
-{{ state.fixedPrompt.outputContract }}</pre>
-    </app-disclosure>
   </div>
 
-  <div class="group">
-    <app-field [label]="'settings.ai.recommendations.favoritesCap' | transloco">
-      <input
-        type="number"
-        min="0"
-        max="500"
-        [value]="favoritesCap()"
-        (input)="setNumber(favoritesCap, $event)"
-      />
-    </app-field>
+  <app-disclosure [label]="'settings.ai.recommendations.expertTitle' | transloco">
+    <div class="expert-grid">
+      <app-field [label]="'settings.ai.recommendations.favoritesCap' | transloco">
+        <input
+          type="number"
+          min="0"
+          max="500"
+          [value]="favoritesCap()"
+          (input)="setNumber(favoritesCap, $event)"
+        />
+      </app-field>
 
-    <app-field [label]="'settings.ai.recommendations.keptCap' | transloco">
-      <input
-        type="number"
-        min="0"
-        max="500"
-        [value]="keptCap()"
-        (input)="setNumber(keptCap, $event)"
-      />
-    </app-field>
+      <app-field [label]="'settings.ai.recommendations.keptCap' | transloco">
+        <input
+          type="number"
+          min="0"
+          max="500"
+          [value]="keptCap()"
+          (input)="setNumber(keptCap, $event)"
+        />
+      </app-field>
 
-    <app-field [label]="'settings.ai.recommendations.viewedCap' | transloco">
-      <input
-        type="number"
-        min="0"
-        max="500"
-        [value]="viewedCap()"
-        (input)="setNumber(viewedCap, $event)"
-      />
-    </app-field>
+      <app-field [label]="'settings.ai.recommendations.viewedCap' | transloco">
+        <input
+          type="number"
+          min="0"
+          max="500"
+          [value]="viewedCap()"
+          (input)="setNumber(viewedCap, $event)"
+        />
+      </app-field>
 
-    <app-field [label]="'settings.ai.recommendations.candidatePool' | transloco">
-      <input
-        type="number"
-        min="10"
-        max="5000"
-        [value]="candidatePoolSize()"
-        (input)="setNumber(candidatePoolSize, $event)"
-      />
-    </app-field>
+      <app-field [label]="'settings.ai.recommendations.candidatePool' | transloco">
+        <input
+          type="number"
+          min="10"
+          max="5000"
+          [value]="candidatePoolSize()"
+          (input)="setNumber(candidatePoolSize, $event)"
+        />
+      </app-field>
 
-    <app-field [label]="'settings.ai.recommendations.picksLimit' | transloco">
-      <input
-        type="number"
-        min="1"
-        max="500"
-        [value]="picksLimit()"
-        (input)="setNumber(picksLimit, $event)"
-      />
-    </app-field>
+      <app-field [label]="'settings.ai.recommendations.picksLimit' | transloco">
+        <input
+          type="number"
+          min="1"
+          max="500"
+          [value]="picksLimit()"
+          (input)="setNumber(picksLimit, $event)"
+        />
+      </app-field>
+
+      <app-field [label]="'settings.ai.recommendations.batchCount' | transloco">
+        <input
+          type="number"
+          min="1"
+          max="100"
+          [value]="batchCount() ?? ''"
+          (input)="batchCount.set(nullableNumberValue($event))"
+        />
+      </app-field>
+    </div>
 
     <app-field
       [label]="'settings.ai.recommendations.contextWindow' | transloco"
@@ -83,12 +88,19 @@
       />
     </app-field>
 
+    <app-disclosure [label]="'settings.ai.recommendations.fixedShow' | transloco">
+      <pre class="fixed"
+        >{{ state.fixedPrompt.role }}
+
+{{ state.fixedPrompt.outputContract }}</pre>
+    </app-disclosure>
+
     <app-toggle
       [label]="'settings.ai.recommendations.debug' | transloco"
       [checked]="debugEnabled()"
       (toggled)="debugEnabled.set($event)"
     />
-  </div>
+  </app-disclosure>
 
   @if (failureMessage(); as message) {
     <app-error-banner [message]="message" />
@@ -101,4 +113,19 @@
   <app-button variant="primary" [loading]="svc.busy()" (click)="save()">
     {{ 'settings.ai.recommendations.save' | transloco }}
   </app-button>
+
+  <div class="danger-zone">
+    <p class="danger-zone__note">{{ 'settings.ai.recommendations.purgeExplain' | transloco }}</p>
+    <app-button variant="danger-outline" [disabled]="svc.purging()" (click)="confirmPurge()">
+      {{ 'settings.ai.recommendations.purge' | transloco }}
+    </app-button>
+
+    @if (purgeFailureMessage(); as message) {
+      <app-error-banner [message]="message" />
+    }
+
+    @if (svc.purged()) {
+      <p class="saved">{{ 'settings.ai.recommendations.purged' | transloco }}</p>
+    }
+  </div>
 }
