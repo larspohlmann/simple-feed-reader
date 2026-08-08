@@ -76,6 +76,10 @@ services:
   mysql:
     image: mysql:8.4
     profiles: ["mysql"]
+    # See the worker service: the whole stack shares one restart policy, so a
+    # host reboot brings the database back alongside the consumer that needs
+    # it. `docker compose down` still stops everything for good.
+    restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set it in .env.prod}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-feedreader}
@@ -94,6 +98,7 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
       target: prod
+    restart: unless-stopped
     environment: *app-environment
     extra_hosts:
       # Lets MAILER_DSN=smtp://host.docker.internal:25 reach an MTA on the
@@ -121,9 +126,14 @@ services:
       dockerfile: docker/php/Dockerfile
       target: prod
     command: ["php", "bin/console", "messenger:consume", "scheduler_worker", "--time-limit=3600", "--memory-limit=128M"]
-    # The first restart policy in this stack, and the one service that needs
-    # it: messenger:consume exits by design at --time-limit, and something
-    # must bring it back.
+    # messenger:consume exits by design at --time-limit, so something must
+    # bring it back. It used to be the ONLY service with a restart policy,
+    # which made a host or daemon reboot bring the worker back alone: the
+    # entrypoint's `until [ -f var/.ready ]` gate then passed on the flag the
+    # previous run had left on the persistent php-var volume, and the worker
+    # hammered a stopped database every ten seconds (#311 final review,
+    # Important 3). Every service in this stack now carries the same policy,
+    # so "the worker came back" implies the stack came back.
     restart: unless-stopped
     environment: *app-environment
     extra_hosts:
@@ -145,6 +155,7 @@ services:
     build:
       context: .
       dockerfile: docker/web/Dockerfile
+    restart: unless-stopped
     environment:
       WEB_MODE: ${WEB_MODE:-auto}
       # The EXTERNAL TLS port, for the http->https redirect target. The
