@@ -196,6 +196,13 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
      * Distinguishes the ApiKeyUnreadableException catch from the
      * AiNotConfiguredException one above it: both fail the run, but each
      * must carry its own message, not the sibling case's.
+     *
+     * The run's FAILED status alone no longer proves which catch clause
+     * handled it (#311 fix): RecommendationRunAdvancer::tick() now fails and
+     * flushes the run itself before rethrowing, so even the handler's
+     * generic \Throwable floor would see a FAILED run. Asserting no error was
+     * logged is what actually pins that ApiKeyUnreadableException landed in
+     * the typed, silent catch rather than falling through to that floor.
      */
     public function testApiKeyUnreadableFailsTheRunWithItsOwnMessage(): void
     {
@@ -213,13 +220,15 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $this->deleteAiSettingsFor($user);
         $this->moveAiSettingsRow($keyDonor, $user);
 
-        $this->handler()->__invoke(new AdvanceRecommendationRuns());
+        $logSpy = new TestHandler();
+        $this->handlerWithLogger(new Logger('test', [$logSpy]))->__invoke(new AdvanceRecommendationRuns());
 
         $this->em->clear();
         $failed = $this->runs()->findLatestForUser($user);
         self::assertNotNull($failed);
         self::assertSame(RecommendationRun::STATUS_FAILED, $failed->getStatus());
         self::assertSame('The stored API key can no longer be read.', $failed->getError());
+        self::assertSame([], $logSpy->getRecords());
     }
 
     /**
@@ -244,6 +253,14 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         self::assertTrue($clearTracker->wasCleared());
     }
 
+    /**
+     * The run's FAILED status alone no longer proves which catch clause
+     * handled it (#311 fix): RecommendationRunAdvancer::tick() now fails and
+     * flushes the run itself before rethrowing, so even the handler's
+     * generic \Throwable floor would see a FAILED run. Asserting no error was
+     * logged is what actually pins that AiNotConfiguredException landed in
+     * the typed, silent catch rather than falling through to that floor.
+     */
     public function testUnconfiguredUsersRunIsFailedNotSweptForever(): void
     {
         $user = $this->user('unconfigured@example.test');
@@ -251,13 +268,15 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $this->startAndSnapshot($user);
         $this->deleteAiSettingsFor($user);
 
-        $this->handler()->__invoke(new AdvanceRecommendationRuns());
+        $logSpy = new TestHandler();
+        $this->handlerWithLogger(new Logger('test', [$logSpy]))->__invoke(new AdvanceRecommendationRuns());
 
         $this->em->clear();
         $failed = $this->runs()->findLatestForUser($user);
         self::assertNotNull($failed);
         self::assertSame(RecommendationRun::STATUS_FAILED, $failed->getStatus());
         self::assertSame('The AI provider is no longer configured.', $failed->getError());
+        self::assertSame([], $logSpy->getRecords());
     }
 
     /**
