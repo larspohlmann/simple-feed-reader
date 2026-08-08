@@ -37,6 +37,7 @@ services:
             Psr\Cache\CacheItemPoolInterface $altchaReplayCache: '@altcha.replay.cache'
             Psr\Cache\CacheItemPoolInterface $oauthStateCache: '@oauth.state.cache'
             Psr\Cache\CacheItemPoolInterface $loginCodeCache: '@oauth.login_code.cache'
+            Symfony\Contracts\Cache\CacheInterface $schedulerStateCache: '@scheduler.state.cache'
             # A name-matched bind, unlike the $concurrency case further down: there
             # the global match was the objection, here it is the point. Any service
             # that asks for a $userAgent is talking to a publisher, and every one of

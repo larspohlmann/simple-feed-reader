@@ -9,7 +9,10 @@ use App\Service\Worker\Message\PurgeFailedMessages;
 use App\Service\Worker\Message\RefreshDueFeeds;
 use App\Service\Worker\WorkerSchedule;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Scheduler\Generator\MessageContext;
+use Symfony\Component\Scheduler\Generator\MessageGenerator;
 use Symfony\Component\Scheduler\RecurringMessage;
 
 /**
@@ -56,6 +59,86 @@ final class WorkerScheduleWiringTest extends KernelTestCase
             ['every 10 seconds', 'every 5 minutes', 'every 1 day'],
             $frequencies,
         );
+    }
+
+    /**
+     * The daily housekeeping entry is unreachable without this: an in-process
+     * checkpoint re-anchors every entry to process start, and the consumer is
+     * recycled hourly by --time-limit=3600 (#311 final review, Critical 1).
+     */
+    public function testTheScheduleKeepsItsCheckpointsInAPersistentPool(): void
+    {
+        self::bootKernel();
+        $provider = self::getContainer()->get(WorkerSchedule::class);
+        self::assertInstanceOf(WorkerSchedule::class, $provider);
+
+        self::assertSame(
+            self::getContainer()->get('scheduler.state.cache'),
+            $provider->getSchedule()->getState(),
+        );
+    }
+
+    /**
+     * The behavioural proof behind the wiring assertion above, driven through
+     * the real MessageGenerator rather than through `debug:scheduler` -- the
+     * command renders next run dates from the checkpoint's *last run* time
+     * without calling StatefulTriggerInterface::continue(), so it cannot show
+     * this at all.
+     *
+     * A consumer recycled every hour by --time-limit=3600 is modelled as a
+     * new generator per hour over one shared pool. With an in-process
+     * checkpoint each of those generators anchored the daily entry at its own
+     * start, so the purge was always ~24 h away and never fired; with the
+     * pool it comes due 24 h after the FIRST start and is yielded there.
+     */
+    public function testTheDailyEntryFiresAcrossHourlyConsumerRestarts(): void
+    {
+        $pool = new ArrayAdapter();
+        $clock = new MockClock('2026-08-07 00:00:00');
+        $purgesYielded = 0;
+
+        // 25 hourly consumer generations: strictly more than the 24 h the
+        // daily entry waits for, and every one of them a fresh process.
+        for ($hour = 0; $hour < 25; $hour++) {
+            $generator = new MessageGenerator(new WorkerSchedule($pool), 'worker', $clock);
+            foreach ($generator->getMessages() as $message) {
+                $purgesYielded += $message instanceof PurgeFailedMessages ? 1 : 0;
+            }
+            $clock->modify('+1 hour');
+        }
+
+        self::assertSame(1, $purgesYielded);
+    }
+
+    /**
+     * The companion to statefulness: a persisted checkpoint means a consumer
+     * that was down owes every occurrence it missed, and an hour of downtime
+     * owes the ten-second entry 360 firings. All three messages are sweeps,
+     * so catching up means running once, now.
+     */
+    public function testDowntimeIsCaughtUpWithOneFiringPerEntryRatherThanEveryMissedOne(): void
+    {
+        $pool = new ArrayAdapter();
+        $clock = new MockClock('2026-08-07 00:00:00');
+
+        iterator_to_array(
+            (new MessageGenerator(new WorkerSchedule($pool), 'worker', $clock))->getMessages(),
+            false,
+        );
+
+        // Not a whole multiple of ten seconds, so the resumed generator has
+        // 360 missed occurrences behind it and none exactly due now.
+        $clock->modify('+1 hour +7 seconds');
+        $afterDowntime = iterator_to_array(
+            (new MessageGenerator(new WorkerSchedule($pool), 'worker', $clock))->getMessages(),
+            false,
+        );
+
+        $sweeps = array_filter(
+            $afterDowntime,
+            static fn (object $message): bool => $message instanceof AdvanceRecommendationRuns,
+        );
+        self::assertCount(1, $sweeps);
     }
 
     private static function firstMessageClass(RecurringMessage $recurring): string

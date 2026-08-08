@@ -39,3 +39,12 @@ framework:
             oauth.login_code.cache:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 60
+
+            # The worker schedule's checkpoints (#311). Without a pool that
+            # outlives the consumer process, every schedule entry re-anchors
+            # its first run to process start -- and the consumer is recycled
+            # hourly by --time-limit=3600, so the daily housekeeping entry
+            # could never reach its own due date. No lifetime: a checkpoint
+            # expiring would put the schedule right back where it started.
+            scheduler.state.cache:
+                adapter: cache.adapter.filesystem
