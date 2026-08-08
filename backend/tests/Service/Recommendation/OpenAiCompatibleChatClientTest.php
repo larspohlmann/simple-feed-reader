@@ -7,6 +7,7 @@ namespace App\Tests\Service\Recommendation;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ProviderCredentials;
+use App\Service\Recommendation\CompletionBodyDecoder;
 use App\Service\Recommendation\OpenAiCompatibleChatClient;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
@@ -28,10 +29,14 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
     private function clientAnswering(MockResponse $response): OpenAiCompatibleChatClient
     {
-        return new OpenAiCompatibleChatClient(new MockHttpClient($response), 'SimpleFeedReader/1.0');
+        return new OpenAiCompatibleChatClient(
+            new MockHttpClient($response),
+            new CompletionBodyDecoder(),
+            'SimpleFeedReader/1.0',
+        );
     }
 
-    public function testReturnsTheAssistantContent(): void
+    public function testReturnsTheAssistantContentJoinedFromTheStream(): void
     {
         $seen = [];
         $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$seen): MockResponse {
@@ -42,10 +47,15 @@ final class OpenAiCompatibleChatClientTest extends TestCase
                 'body' => $options['body'] ?? null,
             ];
 
-            return new MockResponse('{"choices":[{"message":{"content":"{\"recommendations\":[]}"}}]}');
+            return new MockResponse([
+                'data: {"choices":[{"delta":{"role":"assistant"}}]}' . "\n\n",
+                'data: {"choices":[{"delta":{"content":"{\"recommend"}}]}' . "\n\n",
+                'data: {"choices":[{"delta":{"content":"ations\":[]}"}}]}' . "\n\n",
+                'data: [DONE]' . "\n\n",
+            ]);
         });
 
-        $content = (new OpenAiCompatibleChatClient($client, 'SimpleFeedReader/1.0'))
+        $content = (new OpenAiCompatibleChatClient($client, new CompletionBodyDecoder(), 'SimpleFeedReader/1.0'))
             ->complete($this->credentials(), 'm', $this->messages());
 
         self::assertSame('{"recommendations":[]}', $content);
@@ -61,7 +71,45 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             'model' => 'm',
             'messages' => $this->messages(),
             'response_format' => ['type' => 'json_object'],
+            'stream' => true,
         ], $decodedBody);
+    }
+
+    /**
+     * A provider that ignores `stream: true` answers with the blocking envelope;
+     * the client must accept it exactly as it did before #312.
+     */
+    public function testABlockingEnvelopeAnswerStillWorks(): void
+    {
+        $client = $this->clientAnswering(
+            new MockResponse('{"choices":[{"message":{"content":"{\"recommendations\":[]}"}}]}'),
+        );
+
+        self::assertSame(
+            '{"recommendations":[]}',
+            $client->complete($this->credentials(), 'm', $this->messages()),
+        );
+    }
+
+    /**
+     * The point of #312: a stream that goes silent is aborted after the
+     * inactivity window and surfaces as the same typed transport failure the
+     * #308 retry pipeline already handles — not after the full 120 s budget.
+     *
+     * MockHttpClient turns an empty string yielded by a body generator into a
+     * timeout chunk, the documented way to simulate a stalled stream.
+     */
+    public function testASilentStreamIsAbortedAsUnreachable(): void
+    {
+        $body = static function (): \Generator {
+            yield 'data: {"choices":[{"delta":{"content":"par"}}]}' . "\n\n";
+            yield '';
+        };
+        $client = $this->clientAnswering(new MockResponse($body()));
+
+        $this->expectException(ProviderUnreachableException::class);
+        $this->expectExceptionMessage('That provider stopped streaming for more than 30 seconds.');
+        $client->complete($this->credentials(), 'm', $this->messages());
     }
 
     public function testRejectedCredentialsBecomeTheTypedException(): void
@@ -164,7 +212,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         ]);
 
         $this->expectException(ProviderUnreachableException::class);
-        (new OpenAiCompatibleChatClient($client, 'SimpleFeedReader/1.0'))
+        (new OpenAiCompatibleChatClient($client, new CompletionBodyDecoder(), 'SimpleFeedReader/1.0'))
             ->complete($this->credentials(), 'm', $this->messages());
     }
 
@@ -204,7 +252,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         });
 
         $this->expectException(ProviderUnreachableException::class);
-        (new OpenAiCompatibleChatClient($client, 'SimpleFeedReader/1.0'))
+        (new OpenAiCompatibleChatClient($client, new CompletionBodyDecoder(), 'SimpleFeedReader/1.0'))
             ->complete($this->credentials(), 'm', $this->messages());
     }
 }
