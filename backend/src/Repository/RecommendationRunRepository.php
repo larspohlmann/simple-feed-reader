@@ -60,6 +60,27 @@ final class RecommendationRunRepository extends ServiceEntityRepository
     }
 
     /**
+     * When the surviving for-you list was last refreshed: the newest
+     * *completed* run, distinct from findLatestForUser() which may return a
+     * failed run that never touched the list.
+     */
+    public function newestCompletedAt(User $user): ?\DateTimeImmutable
+    {
+        /** @var RecommendationRun|null $run */
+        $run = $this->createQueryBuilder('r')
+            ->where('r.user = :user')
+            ->andWhere('r.status = :completed')
+            ->setParameter('user', $user)
+            ->setParameter('completed', RecommendationRun::STATUS_COMPLETED)
+            ->orderBy('r.id', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $run?->getCompletedAt();
+    }
+
+    /**
      * How many runs one worker firing may tick. A firing's duration is the
      * SUM over the runs it touches, and one run can spend a whole provider
      * timeout, so an unbounded set turns a "ten-second" sweep into an

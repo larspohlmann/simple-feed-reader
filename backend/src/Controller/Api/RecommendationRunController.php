@@ -8,12 +8,14 @@ use App\Entity\User;
 use App\Exception\AiKeyUnreadableApiException;
 use App\Exception\AiNotConfiguredApiException;
 use App\Exception\AiProviderApiException;
+use App\Http\RecommendationRunStatusJson;
 use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\RateLimit\RateLimitGuard;
+use App\Service\Recommendation\RecommendationForYouSummaryProvider;
 use App\Service\Recommendation\RecommendationPollDriver;
 use App\Service\Recommendation\RecommendationRunStarter;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -36,6 +38,7 @@ final readonly class RecommendationRunController
     public function __construct(
         private RecommendationRunStarter $starter,
         private RecommendationPollDriver $pollDriver,
+        private RecommendationForYouSummaryProvider $forYouSummaries,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $aiRecommendationsLimiter,
         private RateLimiterFactoryInterface $aiRecommendationStartsLimiter,
@@ -53,7 +56,7 @@ final readonly class RecommendationRunController
             throw new AiNotConfiguredApiException($e);
         }
 
-        return new JsonResponse($report->toArray());
+        return new JsonResponse(RecommendationRunStatusJson::report($report, $this->forYouSummaries->forUser($user)));
     }
 
     #[Route('/tick', name: 'api_recommendations_tick', methods: ['POST'])]
@@ -71,12 +74,14 @@ final readonly class RecommendationRunController
             throw new AiProviderApiException($e->getMessage(), $e);
         }
 
-        return new JsonResponse($report->toArray());
+        return new JsonResponse(RecommendationRunStatusJson::report($report, $this->forYouSummaries->forUser($user)));
     }
 
     #[Route('/current', name: 'api_recommendations_current', methods: ['GET'])]
     public function current(#[CurrentUser] User $user): JsonResponse
     {
-        return new JsonResponse($this->pollDriver->current($user)->toArray());
+        $report = $this->pollDriver->current($user);
+
+        return new JsonResponse(RecommendationRunStatusJson::report($report, $this->forYouSummaries->forUser($user)));
     }
 }

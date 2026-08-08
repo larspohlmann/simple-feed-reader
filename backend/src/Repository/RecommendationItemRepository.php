@@ -55,12 +55,8 @@ final class RecommendationItemRepository extends ServiceEntityRepository
      */
     private function rowQueryBuilder(int $userId): QueryBuilder
     {
-        return $this->createQueryBuilder('i')
-            ->addSelect('e')
-            ->join('i.run', 'r')
-            ->join('i.entry', 'e')
+        return $this->applyForYouCriteria($this->createQueryBuilder('i')->addSelect('e'), $userId)
             ->leftJoin('e.feed', 'f')->addSelect('f')
-            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
             ->addSelect('s.id AS subscriptionId')
             ->addSelect('s.customTitle AS customTitle')
@@ -70,7 +66,27 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             ->addSelect('es.isFavorite AS esFavorite')
             ->addSelect('es.isKept AS esKept')
             ->addSelect('es.isViewed AS esViewed')
-            ->addSelect('s.markedReadUntil AS markedReadUntil')
+            ->addSelect('s.markedReadUntil AS markedReadUntil');
+    }
+
+    public function countForYou(int $userId): int
+    {
+        $count = $this->applyForYouCriteria($this->createQueryBuilder('i')->select('COUNT(i.id)'), $userId)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return (int) $count;
+    }
+
+    /** The for-you feed's row set: completed runs of this user, entries still
+     *  subscribed, deduped to their newest run. Shared by the pager and the
+     *  count so the sidebar number can never disagree with the list. */
+    private function applyForYouCriteria(QueryBuilder $qb, int $userId): QueryBuilder
+    {
+        return $qb
+            ->join('i.run', 'r')
+            ->join('i.entry', 'e')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
             ->andWhere('r.user = :user')
             ->andWhere('r.status = :completed')
             ->andWhere($this->notDedupedByNewerRunDql())

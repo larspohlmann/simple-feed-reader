@@ -205,6 +205,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'error' => null,
                 'background' => false,
                 'streamedChars' => 0,
+                'forYou' => ['itemCount' => 0, 'generatedAt' => null],
             ],
             $this->payload($client->getResponse()),
         );
@@ -243,7 +244,12 @@ final class RecommendationRunControllerTest extends WebTestCase
 
         $client->request('GET', '/api/recommendations/runs/current', server: $headers);
         self::assertResponseIsSuccessful();
-        self::assertSame('completed', $this->payload($client->getResponse())['status']);
+        $current = $this->payload($client->getResponse());
+        self::assertSame('completed', $current['status']);
+        $forYou = $current['forYou'];
+        self::assertIsArray($forYou);
+        self::assertSame(1, $forYou['itemCount']);
+        self::assertIsString($forYou['generatedAt']);
     }
 
     public function testCurrentWithoutAnyRunReportsNone(): void
@@ -262,6 +268,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'error' => null,
                 'background' => false,
                 'streamedChars' => 0,
+                'forYou' => ['itemCount' => 0, 'generatedAt' => null],
             ],
             $this->payload($client->getResponse()),
         );
