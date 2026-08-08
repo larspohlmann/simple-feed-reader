@@ -17,12 +17,16 @@ namespace App\Service\Recommendation;
  */
 final readonly class RecommendationPickParser
 {
+    public function __construct(private ModelReplyJsonDecoder $decoder)
+    {
+    }
+
     /** @param list<int> $validIds */
     public function parse(string $content, array $validIds, int $limit): PickParseResult
     {
-        $decoded = json_decode($this->stripCodeFence($content), true);
+        $decoded = $this->decoder->decode($content);
 
-        if (!\is_array($decoded)) {
+        if (null === $decoded) {
             return PickParseResult::unusable();
         }
 
@@ -39,24 +43,6 @@ final readonly class RecommendationPickParser
         }
 
         return PickParseResult::usable($picks);
-    }
-
-    private function stripCodeFence(string $content): string
-    {
-        $trimmed = trim($content);
-
-        if (!str_starts_with($trimmed, '```') || !str_ends_with($trimmed, '```')) {
-            return $trimmed;
-        }
-
-        $withoutClosingFence = substr($trimmed, 0, -3);
-        $firstLineEnd = strpos($withoutClosingFence, "\n");
-
-        if (false === $firstLineEnd) {
-            return $withoutClosingFence;
-        }
-
-        return substr($withoutClosingFence, $firstLineEnd + 1);
     }
 
     /**
