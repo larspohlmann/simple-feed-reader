@@ -32,7 +32,6 @@ final class RecommendationPromptBuilder
     private const int DESCRIPTION_MIN_CHARS = 120;
     private const int DESCRIPTION_MAX_CHARS = 480;
     private const int DESCRIPTION_WINDOW_DIVISOR = 137;
-    private const int MERGE_WINNERS_PER_BATCH_FACTOR = 2;
 
     public function descriptionLength(int $contextWindow): int
     {
@@ -103,44 +102,6 @@ final class RecommendationPromptBuilder
             $this->historySections($history, $descriptionLength),
             $this->candidateSection($candidateLines, $descriptionLength),
         ]);
-
-        return [
-            ['role' => 'system', 'content' => $system],
-            ['role' => 'user', 'content' => $user],
-        ];
-    }
-
-    /**
-     * @param list<list<array{id: int, reason: string}>> $winners
-     * @param array<int, PromptLine>                     $linesById
-     *
-     * @return list<array{role: string, content: string}>
-     *
-     * @throws \LogicException if called with no batches of winners to merge
-     */
-    public function mergeMessages(array $winners, array $linesById, EffectiveRecommendationSettings $settings): array
-    {
-        if ([] === $winners) {
-            throw new \LogicException('The merge phase requires at least one batch of winners.');
-        }
-
-        $perBatchCap = max(1, intdiv(self::MERGE_WINNERS_PER_BATCH_FACTOR * $settings->picksLimit, \count($winners)));
-
-        $guidance = $settings->guidancePrompt ?? RecommendationPromptText::DEFAULT_GUIDANCE;
-        $contract = RecommendationPromptText::OUTPUT_CONTRACT;
-        $system = implode("\n\n", [RecommendationPromptText::MERGE_ROLE, $guidance, $contract]);
-
-        $lines = [];
-        foreach ($winners as $batch) {
-            foreach (\array_slice($batch, 0, $perBatchCap) as $winner) {
-                $line = $this->winnerLine($winner, $linesById);
-                if (null !== $line) {
-                    $lines[] = $line;
-                }
-            }
-        }
-
-        $user = "WINNERS:\n" . ([] === $lines ? '- none' : implode("\n", $lines));
 
         return [
             ['role' => 'system', 'content' => $system],
@@ -268,8 +229,11 @@ final class RecommendationPromptBuilder
     }
 
     /**
-     * @param array{id: int, reason: string, ...}    $winner
-     * @param array<int, PromptLine>                 $linesById
+     * Null when the entry was pruned since its batch ran, so the caller can
+     * simply drop it from the rendered list.
+     *
+     * @param array{id: int, score: int, reason: string} $winner
+     * @param array<int, PromptLine>                     $linesById
      */
     private function winnerLine(array $winner, array $linesById): ?string
     {

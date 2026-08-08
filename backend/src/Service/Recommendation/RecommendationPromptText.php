@@ -20,11 +20,6 @@ final class RecommendationPromptText
         . 'but the connection is loose; 0-29 no visible connection. Prefer recent posts. When several candidates '
         . 'cover the same story, score only the best source and omit the others.';
 
-    public const string MERGE_ROLE = 'You merge ranked shortlists from earlier rounds into one final ranking '
-        . 'for the same reader. The user message lists WINNERS; each line starts with the candidate id in '
-        . 'square brackets, followed by title, source, date and the reason it was shortlisted. Prefer recent '
-        . 'posts. When several entries cover the same story, keep exactly one of them.';
-
     public const string DEDUP_ROLE = 'You remove duplicate stories from a ranked list built for one reader of '
         . 'an RSS reader. The user message lists RANKED entries, best first; each line starts with the entry id '
         . 'in square brackets, followed by title, source, date and the reason it was chosen. When several '

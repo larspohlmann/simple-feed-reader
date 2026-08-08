@@ -20,12 +20,14 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\ChatCompletionClient;
 use App\Service\Recommendation\RecommendationCandidateLoader;
+use App\Service\Recommendation\RecommendationDuplicateParser;
 use App\Service\Recommendation\RecommendationHistoryLoader;
 use App\Service\Recommendation\RecommendationPickParser;
 use App\Service\Recommendation\RecommendationPromptBuilder;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Recommendation\RecommendationSettingsResolver;
+use App\Service\Recommendation\RecommendationWinnerRanker;
 use App\Service\Worker\Handler\AdvanceRecommendationRunsHandler;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
 use App\Service\Worker\WorkerPresence;
@@ -460,6 +462,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             self::getContainer()->get(ChatCompletionClient::class),
             self::getContainer()->get(RecommendationPickParser::class),
             new FlushFailingEntityManager($this->em),
+            self::getContainer()->get(RecommendationWinnerRanker::class),
+            self::getContainer()->get(RecommendationDuplicateParser::class),
         );
     }
 

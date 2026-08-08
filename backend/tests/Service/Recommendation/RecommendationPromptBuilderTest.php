@@ -130,22 +130,6 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertStringContainsString('- [7] ', $user);
     }
 
-    public function testMergeMessagesCapPerBatch(): void
-    {
-        $winners = array_fill(0, 3, self::winnerBatch(10));
-        $linesById = [];
-        foreach ($winners as $batch) {
-            foreach ($batch as $winner) {
-                $linesById[$winner['id']] = self::line($winner['id'], "Title {$winner['id']}", 10);
-            }
-        }
-
-        $messages = $this->builder->mergeMessages($winners, $linesById, $this->settings(32768, 6));
-
-        $user = $messages[1]['content'];
-        self::assertSame(12, substr_count($user, "\n- ["));
-    }
-
     public function testCorrectiveTailEchoesTheInvalidReply(): void
     {
         $tail = $this->builder->correctiveTail('not json');
@@ -290,63 +274,6 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertSame([range(100, 110), range(111, 119)], $batches);
     }
 
-    public function testMergeMessagesReturnsTheExactRoleContentStructureAndUsesGuidance(): void
-    {
-        $winners = [[['id' => 1, 'reason' => 'Great fit']]];
-        $linesById = [1 => new PromptLine(null, 'Winner Title', 'Feed A', '2026-01-05', null)];
-        $settings = $this->settings(32768, 5, 'Focus on cats.');
-
-        $messages = $this->builder->mergeMessages($winners, $linesById, $settings);
-
-        $expectedSystem = implode("\n\n", [
-            RecommendationPromptText::MERGE_ROLE,
-            'Focus on cats.',
-            RecommendationPromptText::OUTPUT_CONTRACT,
-        ]);
-
-        self::assertSame(
-            [
-                ['role' => 'system', 'content' => $expectedSystem],
-                ['role' => 'user', 'content' => "WINNERS:\n- [1] Winner Title — Feed A — 2026-01-05 — Great fit"],
-            ],
-            $messages,
-        );
-    }
-
-    public function testMergeMessagesKeepsAtLeastOneWinnerPerBatchWhenTheCapWouldRoundToZero(): void
-    {
-        // 5 batches and picksLimit 1 make intdiv(2 * 1, 5) round down to 0;
-        // max(1, ...) is what still keeps exactly one winner per batch.
-        $winners = array_map(
-            static fn (int $batchIndex): array => [
-                ['id' => 100 + $batchIndex * 10, 'reason' => 'first'],
-                ['id' => 101 + $batchIndex * 10, 'reason' => 'second'],
-            ],
-            range(0, 4),
-        );
-        $linesById = [];
-        foreach ($winners as $batch) {
-            foreach ($batch as $winner) {
-                $linesById[$winner['id']] = new PromptLine(null, "T{$winner['id']}", 'F', 'D', null);
-            }
-        }
-
-        $messages = $this->builder->mergeMessages($winners, $linesById, $this->settings(32768, 1));
-
-        $user = $messages[1]['content'];
-        self::assertSame(5, substr_count($user, "\n- ["));
-        self::assertStringContainsString('- [100] ', $user);
-        self::assertStringNotContainsString('- [101] ', $user);
-    }
-
-    public function testMergeMessagesRejectsAnEmptyWinnerSet(): void
-    {
-        $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage('The merge phase requires at least one batch of winners.');
-
-        $this->builder->mergeMessages([], [], $this->settings(32768, 10));
-    }
-
     public function testDedupMessagesReturnsTheExactRoleContentStructureWithoutGuidance(): void
     {
         $rankedPool = [
@@ -409,19 +336,6 @@ final class RecommendationPromptBuilderTest extends TestCase
             date: '2026-08-01',
             description: str_repeat('x', $descriptionChars),
         );
-    }
-
-    /**
-     * @return list<array{id: int, reason: string}>
-     */
-    private static function winnerBatch(int $count): array
-    {
-        $winners = [];
-        for ($id = 1; $id <= $count; ++$id) {
-            $winners[] = ['id' => $id, 'reason' => "Reason $id"];
-        }
-
-        return $winners;
     }
 
     private function emptyHistory(): RecommendationHistory

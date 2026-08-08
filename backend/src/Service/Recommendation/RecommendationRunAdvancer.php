@@ -32,16 +32,20 @@ use Symfony\Component\Lock\LockFactory;
  * provider call per tick: a batch whose entries are all pruned records an
  * empty winner set for free, a usable reply advances the run, and an
  * unusable one is retried with a corrective message until three attempts
- * checkpoint the run as failed. Once every batch call is done, a run with
- * more than one batch enters the merge phase: one more provider call folds
- * all batches' winners into a single ranking, with the same salvage/retry/
- * fail treatment as a batch reply. A single-batch run has nothing to merge,
- * so it finalizes straight from its one winner list instead. finalize()
- * re-checks that each winning entry still exists — the pool can be pruned
- * mid-run — and writes the survivors as RecommendationItems at dense
- * positions before marking the run completed.
+ * checkpoint the run as failed. Ranking is code's job, not the model's: the
+ * batches score every candidate against a shared rubric, and the ranker
+ * orders the pooled scores globally. Once every batch call is done, a run
+ * with more than one batch enters the dedup phase: one more provider call
+ * receives the score-ordered cut of the pool and names the entries that
+ * duplicate a better-ranked story. That reply retries with a corrective
+ * message too, but a dedup reply that stays unusable degrades instead of
+ * failing — the run completes with the undeduped top list. A single-batch
+ * run has nothing to dedup, so it finalizes straight from its ranked pool
+ * instead. finalize() re-checks that each winning entry still exists — the
+ * pool can be pruned mid-run — and writes the survivors as
+ * RecommendationItems at dense positions before marking the run completed.
  *
- * The twelve constructor collaborators are deliberate: the advancer is the
+ * The fourteen constructor collaborators are deliberate: the advancer is the
  * recommendation pipeline's composition root (lock, run persistence, AI
  * configuration, settings resolution, candidate/history loading, prompt
  * packing, the provider call and its reply parser), and each is a seam the
@@ -67,6 +71,8 @@ final class RecommendationRunAdvancer
         private readonly ChatCompletionClient $chat,
         private readonly RecommendationPickParser $parser,
         private readonly EntityManagerInterface $entityManager,
+        private readonly RecommendationWinnerRanker $ranker,
+        private readonly RecommendationDuplicateParser $duplicateParser,
     ) {
     }
 
@@ -128,7 +134,7 @@ final class RecommendationRunAdvancer
         }
 
         if ($run->progress()->isDedupPhase) {
-            return $this->mergeTick($run, $user, $settings);
+            return $this->dedupTick($run, $user, $settings);
         }
 
         return $this->providerTick($run, $user, $settings);
@@ -195,9 +201,9 @@ final class RecommendationRunAdvancer
 
         $content = $this->callProvider($run, $settings, $messages);
 
-        $result = $this->parser->parse($content, $validIds, $effectiveSettings->picksLimit);
+        $result = $this->parser->parse($content, $validIds, \count($validIds));
 
-        return $this->recordReply($run, $content, $result);
+        return $this->recordReply($run, $content, $result, $effectiveSettings->picksLimit);
     }
 
     /**
@@ -220,35 +226,96 @@ final class RecommendationRunAdvancer
         return $this->withCorrectiveTail($messages, $run);
     }
 
-    private function mergeTick(
+    private function dedupTick(
         RecommendationRun $run,
         User $user,
         AiProviderSettings $settings,
     ): RecommendationRunReport {
         $userId = $this->requireUserId($user);
-        $winners = $run->getWinners();
-        $linesById = $this->candidateLoader->linesForIds($userId, $this->uniqueWinnerIds($winners));
-        $validIds = array_keys($linesById);
+        $picksLimit = $this->settingsResolver->forUser($user)->picksLimit;
+        $pool = $this->ranker->cutForDedup($this->ranker->ranked($run->getWinners()), $picksLimit);
+        $linesById = $this->candidateLoader->linesForIds($userId, array_column($pool, 'id'));
+        $pool = self::stillPresent($pool, $linesById);
 
-        if ([] === $validIds) {
-            // Every winning entry was pruned since its batch ran: there is
-            // nothing left to merge, so this is progress, not failure --
+        if ([] === $pool) {
+            // Every ranked entry was pruned since its batch ran: there is
+            // nothing left to dedup, so this is progress, not failure --
             // mirrors providerTick's own all-pruned short-circuit.
             return $this->finalize($run, []);
         }
 
-        $effectiveSettings = $this->settingsResolver->forUser($user);
-        $messages = $this->mergeMessagesFor($run, $winners, $linesById, $effectiveSettings);
+        $messages = $this->withCorrectiveTail($this->promptBuilder->dedupMessages($pool, $linesById), $run);
 
         $content = $this->callProvider($run, $settings, $messages);
 
-        $result = $this->parser->parse($content, $validIds, $effectiveSettings->picksLimit);
+        $result = $this->duplicateParser->parse($content, array_column($pool, 'id'));
 
         if (!$result->usable) {
-            return $this->recordUnusableReply($run, $content);
+            return $this->recordUnusableDedupReply($run, $content, $pool, $picksLimit);
         }
 
-        return $this->finalize($run, self::asWinners($result->picks));
+        return $this->finalize($run, $this->withoutDuplicates($pool, $result->duplicateIds, $picksLimit));
+    }
+
+    /**
+     * @param list<array{id: int, score: int, reason: string}> $pool
+     * @param array<int, PromptLine>                           $linesById entries pruned since their batch are absent
+     *
+     * @return list<array{id: int, score: int, reason: string}>
+     */
+    private static function stillPresent(array $pool, array $linesById): array
+    {
+        return array_values(array_filter(
+            $pool,
+            static fn (array $winner): bool => isset($linesById[$winner['id']]),
+        ));
+    }
+
+    /**
+     * A dedup reply that stays unusable after every retry degrades instead
+     * of failing: the batch calls' ranking work is already done, and an
+     * undeduped top list beats throwing the whole run away over a cosmetic
+     * cleanup. Transport failures keep failing the run -- an unreachable
+     * provider is not a degraded answer.
+     *
+     * @param list<array{id: int, score: int, reason: string}> $pool
+     */
+    private function recordUnusableDedupReply(
+        RecommendationRun $run,
+        string $content,
+        array $pool,
+        int $picksLimit,
+    ): RecommendationRunReport {
+        $run->recordInvalidReply($content);
+
+        if ($run->attemptsExhausted()) {
+            return $this->finalize($run, \array_slice($pool, 0, $picksLimit));
+        }
+
+        $this->entityManager->flush();
+
+        return RecommendationRunReport::fromRun($run);
+    }
+
+    /**
+     * Never reaches below the dedup cut for backfill: entries beyond it were
+     * never shown to the dedup call, so pulling them in could reintroduce
+     * unchecked duplicates. A final list shorter than the picks limit is the
+     * accepted cost.
+     *
+     * @param list<array{id: int, score: int, reason: string}> $pool
+     * @param list<int>                                        $duplicateIds
+     *
+     * @return list<array{id: int, score: int, reason: string}>
+     */
+    private function withoutDuplicates(array $pool, array $duplicateIds, int $picksLimit): array
+    {
+        $survivors = array_values(array_filter(
+            $pool,
+            static fn (array $winner): bool => !\in_array($winner['id'], $duplicateIds, true),
+        ));
+
+        return \array_slice($survivors, 0, $picksLimit);
     }
 
     /**
@@ -268,23 +335,6 @@ final class RecommendationRunAdvancer
             ],
             $picks,
         );
-    }
-
-    /**
-     * @param list<list<array{id: int, reason: string}>> $winners
-     * @param array<int, PromptLine>                      $linesById
-     *
-     * @return list<array{role: string, content: string}>
-     */
-    private function mergeMessagesFor(
-        RecommendationRun $run,
-        array $winners,
-        array $linesById,
-        EffectiveRecommendationSettings $effectiveSettings,
-    ): array {
-        $messages = $this->promptBuilder->mergeMessages($winners, $linesById, $effectiveSettings);
-
-        return $this->withCorrectiveTail($messages, $run);
     }
 
     /**
@@ -342,23 +392,6 @@ final class RecommendationRunAdvancer
     }
 
     /**
-     * @param list<list<array{id: int, reason: string}>> $winners
-     *
-     * @return list<int>
-     */
-    private function uniqueWinnerIds(array $winners): array
-    {
-        $ids = [];
-        foreach ($winners as $batch) {
-            foreach ($batch as $winner) {
-                $ids[$winner['id']] = true;
-            }
-        }
-
-        return array_keys($ids);
-    }
-
-    /**
      * @param list<int>              $ids       the batch's entry ids, in snapshot order
      * @param array<int, PromptLine> $linesById entries pruned since the snapshot are simply absent
      *
@@ -375,6 +408,7 @@ final class RecommendationRunAdvancer
         RecommendationRun $run,
         string $content,
         PickParseResult $result,
+        int $picksLimit,
     ): RecommendationRunReport {
         if (!$result->usable) {
             return $this->recordUnusableReply($run, $content);
@@ -383,7 +417,7 @@ final class RecommendationRunAdvancer
         $run->recordBatchWinners(self::asWinners($result->picks));
 
         if (!$run->progress()->needsDedup) {
-            return $this->finalize($run, $run->getWinners()[0]);
+            return $this->finalize($run, \array_slice($this->ranker->ranked($run->getWinners()), 0, $picksLimit));
         }
 
         $this->entityManager->flush();
@@ -392,8 +426,9 @@ final class RecommendationRunAdvancer
     }
 
     /**
-     * Unusable batch and merge replies get the same treatment: the entity
-     * does not care which phase the failed attempt belonged to.
+     * An unusable batch reply retries with a corrective tail and fails the
+     * run once attempts are exhausted; the dedup phase has its own, softer
+     * ending in recordUnusableDedupReply().
      */
     private function recordUnusableReply(RecommendationRun $run, string $content): RecommendationRunReport
     {
@@ -411,7 +446,7 @@ final class RecommendationRunAdvancer
      * be pruned mid-run — and writes the survivors as RecommendationItems at
      * dense positions in pick order before marking the run completed.
      *
-     * @param list<array{id: int, reason: string}> $picks
+     * @param list<array{id: int, score: int, reason: string}> $picks
      */
     private function finalize(RecommendationRun $run, array $picks): RecommendationRunReport
     {
