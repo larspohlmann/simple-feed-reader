@@ -186,17 +186,19 @@ final class RecommendationRunAdvancer
         $ids = $run->getCandidateBatches()[$run->progress()->nextBatchIndex];
         $linesById = $this->candidateLoader->linesForIds($userId, $ids);
         $validIds = array_keys($linesById);
+        $effectiveSettings = $this->settingsResolver->forUser($user);
 
         if ([] === $validIds) {
             // Every entry in this batch was pruned since the snapshot: there
             // is nothing to ask the model, so this is progress, not failure.
-            $run->recordBatchWinners([]);
-            $this->entityManager->flush();
-
-            return RecommendationRunReport::fromRun($run);
+            // It takes the same ending as a usable reply, because a
+            // single-batch run has no dedup phase to carry it: merely
+            // checkpointing here would leave the run running with every
+            // batch done, and the next tick would reach for a batch index
+            // past the end of the frozen plan and wedge the run forever.
+            return $this->recordBatchWinners($run, [], $effectiveSettings->picksLimit);
         }
 
-        $effectiveSettings = $this->settingsResolver->forUser($user);
         $messages = $this->batchMessagesFor($run, $userId, $ids, $linesById, $effectiveSettings);
 
         $content = $this->callProvider($run, $settings, $messages);
@@ -421,7 +423,23 @@ final class RecommendationRunAdvancer
             return $this->recordUnusableReply($run, $content);
         }
 
-        $run->recordBatchWinners(self::asWinners($result->picks));
+        return $this->recordBatchWinners($run, self::asWinners($result->picks), $picksLimit);
+    }
+
+    /**
+     * Records one batch's outcome and takes whichever ending the frozen
+     * batch plan leaves. A run that still owes batch calls, or owes the one
+     * dedup call, checkpoints and waits for the next tick; a single-batch run
+     * has neither ahead of it, so it finalizes straight from its ranked pool.
+     *
+     * @param list<array{id: int, score: int, reason: string}> $winners
+     */
+    private function recordBatchWinners(
+        RecommendationRun $run,
+        array $winners,
+        int $picksLimit,
+    ): RecommendationRunReport {
+        $run->recordBatchWinners($winners);
 
         if (!$run->progress()->needsDedup) {
             return $this->finalize($run, \array_slice($this->ranker->ranked($run->getWinners()), 0, $picksLimit));

@@ -469,6 +469,42 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
+     * The all-pruned short-circuit must take the same ending as a usable
+     * reply. A single-batch run has no dedup call behind it, so merely
+     * checkpointing the empty winner set leaves the run running with every
+     * batch done — and the next tick reaches for a batch index past the end
+     * of the frozen plan, throwing on every poll and on every worker sweep
+     * with no terminal state to stop it.
+     */
+    public function testSingleBatchRunWithEveryEntryPrunedCompletesInsteadOfWedging(): void
+    {
+        $this->seedSingleBatchFixture(picksLimit: 2);
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user);
+        $run = $this->activeRun();
+        self::assertSame(1, $run->progress()->batchesTotal);
+
+        foreach ($run->getCandidateBatches()[0] as $entryId) {
+            $entry = $this->em->getRepository(Entry::class)->find($entryId);
+            self::assertNotNull($entry);
+            $this->em->remove($entry);
+        }
+        $this->em->flush();
+        $this->em->clear();
+
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame('completed', $report->status);
+        self::assertSame([], $this->stubChatClient()->calls());
+        self::assertNull($this->runs()->findActiveForUser($this->user));
+        self::assertCount(0, $this->recommendationItems($run));
+
+        // The tick after is where the wedge showed: it re-entered the batch
+        // phase and died on an index the batch plan does not have.
+        self::assertSame('completed', $this->advancer()->advance($this->user)->status);
+    }
+
+    /**
      * A batch pruned down to *most, but not all* of its ids still calls the
      * provider — only the fully-pruned case is free — and the prompt must
      * not mention the id that dropped out.
