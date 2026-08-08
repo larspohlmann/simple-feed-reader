@@ -31,11 +31,20 @@ final class RecommendationWinnerRankerTest extends TestCase
     public function testTiedScoresKeepBatchOrderWhichIsSnapshotRecencyOrder(): void
     {
         $ranked = $this->ranker->ranked([
-            [['id' => 1, 'score' => 50, 'reason' => 'first batch, first line']],
-            [['id' => 2, 'score' => 50, 'reason' => 'second batch']],
+            [
+                ['id' => 1, 'score' => 50, 'reason' => 'first batch, tied'],
+                ['id' => 5, 'score' => 99, 'reason' => 'first batch, outright winner'],
+            ],
+            [
+                ['id' => 6, 'score' => 1, 'reason' => 'second batch, outright loser'],
+                ['id' => 2, 'score' => 50, 'reason' => 'second batch, tied'],
+            ],
+            [
+                ['id' => 3, 'score' => 50, 'reason' => 'third batch, tied'],
+            ],
         ]);
 
-        self::assertSame([1, 2], array_column($ranked, 'id'));
+        self::assertSame([5, 1, 2, 3, 6], array_column($ranked, 'id'));
     }
 
     public function testAWinnerRecordedWithoutAScoreReadsAsZeroAndSortsLast(): void
