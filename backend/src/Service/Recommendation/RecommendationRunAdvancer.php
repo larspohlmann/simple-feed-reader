@@ -226,11 +226,7 @@ final class RecommendationRunAdvancer
         $content = $this->callProvider(
             $run,
             $settings,
-            new CompletionRequest(
-                $settings->getModel() ?? '',
-                $messages,
-                $this->promptBuilder->answerTokenReserve(\count($validIds)),
-            ),
+            $this->requestFor($settings, $messages, \count($validIds)),
             $recordedCall,
         );
 
@@ -292,11 +288,7 @@ final class RecommendationRunAdvancer
         $content = $this->callProvider(
             $run,
             $settings,
-            new CompletionRequest(
-                $settings->getModel() ?? '',
-                $messages,
-                $this->promptBuilder->answerTokenReserve(\count($pool)),
-            ),
+            $this->requestFor($settings, $messages, \count($pool)),
             $recordedCall,
         );
 
@@ -421,6 +413,28 @@ final class RecommendationRunAdvancer
      * which exception reaches tick() -- and how the run ends -- is exactly
      * as before.
      */
+    /**
+     * Both provider phases ask the same question -- what to send, and how much
+     * the model may spend answering -- so the answer bound is derived in one
+     * place. A phase that built its own request could pair a batch prompt with
+     * someone else's token ceiling, and the symptom would be a truncated reply
+     * rather than an obvious error.
+     *
+     * @param list<array{role: string, content: string}> $messages
+     * @param int                                        $replyItemCount items the reply must cover
+     */
+    private function requestFor(
+        AiProviderSettings $settings,
+        array $messages,
+        int $replyItemCount,
+    ): CompletionRequest {
+        return new CompletionRequest(
+            $settings->getModel() ?? '',
+            $messages,
+            $this->promptBuilder->answerTokenReserve($replyItemCount),
+        );
+    }
+
     private function callProvider(
         RecommendationRun $run,
         AiProviderSettings $settings,

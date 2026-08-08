@@ -11,19 +11,25 @@
  * (AdvanceRecommendationRunsHandler), so the row's age is the honest liveness
  * signal — the same one the poll driver arbitrates on.
  *
- * The staleness bound is WorkerPresence::FRESH_SECONDS. Keep the two in step:
- * one firing may spend a whole provider timeout (300 s) inside a single run,
- * so anything shorter reports a working worker as unhealthy in the middle of
- * every long call.
+ * The staleness bound and the heartbeat's name are taken from WorkerPresence
+ * itself rather than copied: a duplicated 360 would silently disagree the next
+ * time the provider timeout moves, and the failure mode of disagreeing is a
+ * healthy worker reported dead in the middle of every long call.
  *
- * Stack plumbing, deliberately outside backend/src: it holds no domain logic
- * and must run before (and independently of) the application booting.
+ * Only the autoloader is required for that — the class is never constructed,
+ * so this stays what a healthcheck must be: no kernel, no container, no
+ * database migrations, nothing that can fail for reasons unrelated to whether
+ * the sweep is running.
  */
 
 declare(strict_types=1);
 
-const FRESH_SECONDS = 360;
-const HEARTBEAT_NAME = 'recommendation-sweep';
+use App\Service\Worker\WorkerPresence;
+
+// Absolute, not relative to __DIR__: the file is mounted into the image's bin
+// directory, not into the project, so its own location says nothing about
+// where the application lives. /app is the image's WORKDIR (docker/php/Dockerfile).
+require_once '/app/vendor/autoload.php';
 
 $databaseUrl = getenv('DATABASE_URL');
 
@@ -55,7 +61,7 @@ try {
     );
 
     $statement = $connection->prepare('SELECT touched_at FROM worker_heartbeat WHERE name = ?');
-    $statement->execute([HEARTBEAT_NAME]);
+    $statement->execute([WorkerPresence::RECOMMENDATION_SWEEP]);
     $touchedAt = $statement->fetchColumn();
 } catch (PDOException $e) {
     fwrite(STDERR, 'Cannot read the heartbeat: ' . $e->getMessage() . "\n");
@@ -71,7 +77,7 @@ if (!is_string($touchedAt)) {
 // rather than inferred from the container's clock.
 $ageInSeconds = time() - (int) strtotime($touchedAt . ' UTC');
 
-if ($ageInSeconds > FRESH_SECONDS) {
+if ($ageInSeconds > WorkerPresence::FRESH_SECONDS) {
     fwrite(STDERR, sprintf("The heartbeat is %d s old; the sweep has stopped.\n", $ageInSeconds));
     exit(1);
 }

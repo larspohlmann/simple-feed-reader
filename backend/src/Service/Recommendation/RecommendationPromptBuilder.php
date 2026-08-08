@@ -161,9 +161,6 @@ final class RecommendationPromptBuilder
         ];
     }
 
-    /** The explicit batch-count override wins over the #308 size ceiling: it is
-     *  an expert setting, and the token budget below still protects the context
-     *  window. Null means automatic packing under MAXIMUM_BATCH_SIZE. */
     /**
      * How many answer tokens a reply over `$replyItemCount` items may need.
      *
@@ -183,6 +180,9 @@ final class RecommendationPromptBuilder
         return max(self::MINIMUM_ANSWER_TOKENS, $replyItemCount * self::TOKENS_PER_PICK);
     }
 
+    /** The explicit batch-count override wins over the #308 size ceiling: it is
+     *  an expert setting, and the token budget below still protects the context
+     *  window. Null means automatic packing under MAXIMUM_BATCH_SIZE. */
     private function batchCap(int $candidateCount, EffectiveRecommendationSettings $settings): int
     {
         if (null === $settings->packing->batchCount) {
