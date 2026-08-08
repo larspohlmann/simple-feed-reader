@@ -1,5 +1,4 @@
 // src/app/reader/reader-shell.component.ts
-import { NgTemplateOutlet } from '@angular/common';
 import {
   AfterViewInit,
   Component,
@@ -59,7 +58,6 @@ import { TranslocoPipe } from '@jsverse/transloco';
     ProgressHairlineComponent,
     IconComponent,
     ButtonComponent,
-    NgTemplateOutlet,
     RouterLink,
     TranslocoPipe,
   ],
