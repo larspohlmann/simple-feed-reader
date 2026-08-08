@@ -8,6 +8,8 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ProviderCredentials;
 use App\Service\Recommendation\CompletionBodyDecoder;
+use App\Service\Recommendation\CompletionStreamObserver;
+use App\Service\Recommendation\NullCompletionStreamObserver;
 use App\Service\Recommendation\OpenAiCompatibleChatClient;
 use App\Tests\Support\ResponseCapturingHttpClient;
 use PHPUnit\Framework\TestCase;
@@ -61,7 +63,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         });
 
         $content = $this->clientUsing($client)
-            ->complete($this->credentials(), 'm', $this->messages());
+            ->complete($this->credentials(), 'm', $this->messages(), new NullCompletionStreamObserver());
 
         self::assertSame('{"recommendations":[]}', $content);
 
@@ -117,7 +119,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         self::assertSame(
             '{"recommendations":[]}',
-            $client->complete($this->credentials(), 'm', $this->messages()),
+            $client->complete($this->credentials(), 'm', $this->messages(), new NullCompletionStreamObserver()),
         );
     }
 
@@ -141,7 +143,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         // because the cancel assertion below has to run after the throw.
         try {
             $this->clientUsing($client)
-                ->complete($this->credentials(), 'm', $this->messages());
+                ->complete($this->credentials(), 'm', $this->messages(), new NullCompletionStreamObserver());
             self::fail(ProviderUnreachableException::class . ' was not thrown.');
         } catch (ProviderUnreachableException $e) {
             self::assertSame('That provider sent nothing for more than 30 seconds.', $e->getMessage());
@@ -159,7 +161,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         $this->expectException(CredentialsRejectedException::class);
         $this->expectExceptionMessage('That provider refused the API key.');
-        $client->complete($this->credentials(), 'm', $this->messages());
+        $client->complete($this->credentials(), 'm', $this->messages(), new NullCompletionStreamObserver());
     }
 
     public function testNonJsonEnvelopeIsUnreachable(): void
@@ -167,7 +169,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client = $this->clientAnswering(new MockResponse('not json'));
 
         $this->expectException(ProviderUnreachableException::class);
-        $client->complete($this->credentials(), 'm', $this->messages());
+        $client->complete($this->credentials(), 'm', $this->messages(), new NullCompletionStreamObserver());
     }
 
     public function testEnvelopeWithoutContentIsUnreachable(): void
@@ -175,7 +177,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client = $this->clientAnswering(new MockResponse('{"choices":[]}'));
 
         $this->expectException(ProviderUnreachableException::class);
-        $client->complete($this->credentials(), 'm', $this->messages());
+        $client->complete($this->credentials(), 'm', $this->messages(), new NullCompletionStreamObserver());
     }
 
     /**
@@ -201,7 +203,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         $this->expectException(ProviderUnreachableException::class);
         $this->expectExceptionMessage('That provider answered with status 300.');
-        $client->complete($this->credentials(), 'm', $this->messages());
+        $client->complete($this->credentials(), 'm', $this->messages(), new NullCompletionStreamObserver());
     }
 
     /**
@@ -224,7 +226,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         $this->expectException(ProviderUnreachableException::class);
         $this->expectExceptionMessage('That provider answered with status 500.');
-        $client->complete($this->credentials(), 'm', $this->messages());
+        $client->complete($this->credentials(), 'm', $this->messages(), new NullCompletionStreamObserver());
     }
 
     /**
@@ -254,7 +256,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         $this->expectException(ProviderUnreachableException::class);
         $this->clientUsing($client)
-            ->complete($this->credentials(), 'm', $this->messages());
+            ->complete($this->credentials(), 'm', $this->messages(), new NullCompletionStreamObserver());
     }
 
     public function testAForbiddenAnswerIsAlsoARejectedKey(): void
@@ -263,7 +265,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         $this->expectException(CredentialsRejectedException::class);
         $this->expectExceptionMessage('That provider refused the API key.');
-        $client->complete($this->credentials(), 'm', $this->messages());
+        $client->complete($this->credentials(), 'm', $this->messages(), new NullCompletionStreamObserver());
     }
 
     /**
@@ -283,7 +285,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client = $this->clientAnswering(new MockResponse(str_split($body, 50_000)));
 
         $this->expectException(ProviderUnreachableException::class);
-        $client->complete($this->credentials(), 'm', $this->messages());
+        $client->complete($this->credentials(), 'm', $this->messages(), new NullCompletionStreamObserver());
     }
 
     public function testTransportErrorsAreUnreachable(): void
@@ -294,6 +296,33 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         $this->expectException(ProviderUnreachableException::class);
         $this->clientUsing($client)
-            ->complete($this->credentials(), 'm', $this->messages());
+            ->complete($this->credentials(), 'm', $this->messages(), new NullCompletionStreamObserver());
+    }
+
+    public function testObserverSeesTheAccumulatingBodyChunkByChunk(): void
+    {
+        $client = $this->clientAnswering(new MockResponse([
+            "data: {\"choices\":[{\"delta\":{\"content\":\"He\"}}]}\n\n",
+            "data: [DONE]\n\n",
+        ]));
+        $seen = new class implements CompletionStreamObserver {
+            /** @var list<string> */
+            public array $bodies = [];
+
+            public function bodyGrew(string $accumulatedBody): void
+            {
+                $this->bodies[] = $accumulatedBody;
+            }
+        };
+
+        $client->complete($this->credentials(), 'm', $this->messages(), $seen);
+
+        self::assertCount(2, $seen->bodies);
+        self::assertStringContainsString('"He"', $seen->bodies[0]);
+        // Each call carries everything so far, not just the newest chunk.
+        // str_starts_with() rather than assertStringStartsWith(), whose
+        // $prefix parameter is typed non-empty-string: PHPStan cannot see
+        // that $seen->bodies[0] is non-empty from the assertion above.
+        self::assertTrue(str_starts_with($seen->bodies[1], $seen->bodies[0]));
     }
 }

@@ -364,6 +364,7 @@ final class RecommendationRunAdvancer
                 $this->configurator->credentials($settings),
                 $settings->getModel() ?? '',
                 $messages,
+                new NullCompletionStreamObserver(),
             );
         } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
             $this->recordTransportFailure($run, $settings);
