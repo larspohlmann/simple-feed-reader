@@ -248,14 +248,16 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         );
         self::assertStringContainsString('- [' . $firstBatch[0], $calls[0]['messages'][1]['content']);
 
-        // The answer bound travels with the prompt it belongs to: the cap sent
+        // The output bound travels with the prompt it belongs to: the cap sent
         // is the reserve for exactly the candidates this batch asked about, so
         // a bigger batch gets proportionally more room instead of being
-        // truncated by a fixed ceiling. Derived from the batch here rather
-        // than hardcoded, so the assertion still holds if the batch size
-        // changes for unrelated reasons.
+        // truncated by a fixed ceiling. It is the output reserve, not the
+        // answer reserve — `max_tokens` bounds reasoning-plus-answer, and a
+        // reasoning model starves without the headroom (#327). Derived from the
+        // batch here rather than hardcoded, so the assertion still holds if the
+        // batch size changes for unrelated reasons.
         self::assertSame(
-            $this->promptBuilder()->answerTokenReserve(\count($firstBatch)),
+            $this->promptBuilder()->outputTokenReserve(\count($firstBatch)),
             $calls[0]['maxAnswerTokens'],
         );
 

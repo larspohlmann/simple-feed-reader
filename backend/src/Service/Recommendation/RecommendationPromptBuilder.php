@@ -19,6 +19,18 @@ final class RecommendationPromptBuilder
     private const int MINIMUM_BATCH_SIZE = 10;
 
     /**
+     * A reasoning model's thinking is billed against the same `max_tokens` as
+     * its answer, and can legitimately run to tens of thousands of tokens
+     * before the JSON begins. This headroom rides on top of the answer reserve
+     * so `max_tokens` bounds reasoning-plus-answer, not the answer alone —
+     * without it a 45-item batch capped at 1800 tokens spent the whole budget
+     * thinking and its answer was truncated (deepseek-flash, #327). Generous
+     * and finite on purpose: a runaway model is still cut off here, and the
+     * wall clock and wire cap sit behind it.
+     */
+    private const int REASONING_HEADROOM_TOKENS = 32000;
+
+    /**
      * Hard ceiling on candidates per batch, independent of the token budget.
      *
      * The token budget alone let a large-context model receive 339
@@ -162,14 +174,10 @@ final class RecommendationPromptBuilder
     }
 
     /**
-     * How many answer tokens a reply over `$replyItemCount` items may need.
-     *
-     * One number, two consumers. packBatches() subtracts it from the context
-     * window so the prompt leaves the model room to answer; the provider call
-     * sends it as `max_tokens` so a model that stops answering and starts
-     * looping is cut off rather than billed until the wall clock expires.
-     * Deriving both from the same estimate is what keeps the second from
-     * truncating replies the first deliberately made room for.
+     * How many tokens the *answer alone* over `$replyItemCount` items may need.
+     * packBatches() subtracts this from the context window so the prompt leaves
+     * the model room to answer — and the answer is all that competes with the
+     * prompt for the input context, so reasoning has no place in this number.
      *
      * The floor covers the JSON envelope and the short replies where a
      * per-item estimate under-counts: at one item, 40 tokens would not fit
@@ -178,6 +186,19 @@ final class RecommendationPromptBuilder
     public function answerTokenReserve(int $replyItemCount): int
     {
         return max(self::MINIMUM_ANSWER_TOKENS, $replyItemCount * self::TOKENS_PER_PICK);
+    }
+
+    /**
+     * What the provider call sends as `max_tokens`, which caps total output —
+     * reasoning plus answer for a reasoning model, not the answer alone. It is
+     * the answer reserve plus a reasoning headroom, so a model that thinks
+     * before it answers still has room to finish the JSON. #321 sent the answer
+     * reserve here directly and starved reasoning models (#327); this is the
+     * one place the two budgets legitimately diverge.
+     */
+    public function outputTokenReserve(int $replyItemCount): int
+    {
+        return $this->answerTokenReserve($replyItemCount) + self::REASONING_HEADROOM_TOKENS;
     }
 
     /** The explicit batch-count override wins over the #308 size ceiling: it is

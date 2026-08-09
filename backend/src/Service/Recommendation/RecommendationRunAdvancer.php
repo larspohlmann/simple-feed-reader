@@ -415,10 +415,10 @@ final class RecommendationRunAdvancer
      */
     /**
      * Both provider phases ask the same question -- what to send, and how much
-     * the model may spend answering -- so the answer bound is derived in one
-     * place. A phase that built its own request could pair a batch prompt with
-     * someone else's token ceiling, and the symptom would be a truncated reply
-     * rather than an obvious error.
+     * the model may spend on the whole output -- so the output bound is derived
+     * in one place. A phase that built its own request could pair a batch
+     * prompt with someone else's token ceiling, and the symptom would be a
+     * truncated reply rather than an obvious error.
      *
      * @param list<array{role: string, content: string}> $messages
      * @param int                                        $replyItemCount items the reply must cover
@@ -431,7 +431,7 @@ final class RecommendationRunAdvancer
         return new CompletionRequest(
             $settings->getModel() ?? '',
             $messages,
-            $this->promptBuilder->answerTokenReserve($replyItemCount),
+            $this->promptBuilder->outputTokenReserve($replyItemCount),
         );
     }
 

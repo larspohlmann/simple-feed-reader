@@ -51,6 +51,24 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertSame(1024, $this->builder->answerTokenReserve(0));
     }
 
+    /**
+     * A reasoning model bills reasoning against the same `max_tokens` as its
+     * answer, so the provider budget adds a reasoning headroom on top of the
+     * answer reserve. Without it a 45-item batch capped at 1800 tokens spent
+     * its whole budget thinking and its JSON answer was truncated.
+     */
+    public function testTheProviderOutputReserveAddsReasoningHeadroomOnTopOfTheAnswer(): void
+    {
+        self::assertSame(
+            $this->builder->answerTokenReserve(45) + 32000,
+            $this->builder->outputTokenReserve(45),
+        );
+        self::assertSame(
+            $this->builder->answerTokenReserve(1) + 32000,
+            $this->builder->outputTokenReserve(1),
+        );
+    }
+
     public function testEverythingFitsInOneBatchWhenSmall(): void
     {
         $candidates = array_map(
