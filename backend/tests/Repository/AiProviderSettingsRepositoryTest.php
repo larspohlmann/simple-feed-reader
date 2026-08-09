@@ -7,8 +7,8 @@ namespace App\Tests\Repository;
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Repository\AiProviderSettingsRepository;
-use App\Service\Ai\Crypto\SealedApiKey;
 use App\Tests\DbTestCase;
+use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -73,14 +73,7 @@ final class AiProviderSettingsRepositoryTest extends DbTestCase
 
     private function persistConfiguration(User $user, string $name): AiProviderSettings
     {
-        $configuration = new AiProviderSettings(
-            $user,
-            $name,
-            'https://api.example.test/v1',
-            new SealedApiKey('c', 'n', 's', 1),
-            'ab12',
-            new \DateTimeImmutable('2026-08-09T09:00:00Z'),
-        );
+        $configuration = AiProviderSettingsFactory::build($user, $name);
         $this->em->persist($configuration);
 
         return $configuration;

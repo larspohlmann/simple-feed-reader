@@ -7,7 +7,7 @@ namespace App\Tests\Http;
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Http\MeJson;
-use App\Service\Ai\Crypto\SealedApiKey;
+use App\Tests\Support\AiProviderSettingsFactory;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -26,14 +26,7 @@ final class MeJsonTest extends TestCase
 
     private function configuration(User $user, string $name): AiProviderSettings
     {
-        return new AiProviderSettings(
-            $user,
-            $name,
-            'https://api.example.test/v1',
-            new SealedApiKey('c', 'n', 's', 1),
-            'ab12',
-            new \DateTimeImmutable('2026-08-09T09:00:00Z'),
-        );
+        return AiProviderSettingsFactory::build($user, $name);
     }
 
     public function testAnAccountWithNoActiveConfigurationIsNotReady(): void

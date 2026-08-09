@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Entity\AiProviderSettings;
 use App\Entity\User;
-use App\Service\Ai\Crypto\SealedApiKey;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ModelCatalog;
 use App\Service\Ai\ProviderCredentials;
+use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StubModelCatalog;
 use Doctrine\ORM\EntityManagerInterface;
@@ -327,14 +326,12 @@ final class AiSettingsControllerTest extends ApiTestCase
         self::assertInstanceOf(User::class, $user);
 
         for ($i = 0; $i < 20; ++$i) {
-            $entityManager->persist(new AiProviderSettings(
+            $configuration = AiProviderSettingsFactory::build(
                 $user,
-                null,
-                self::BASE_URL,
-                new SealedApiKey('c', 'n', 's', 1),
-                'ab12',
-                new \DateTimeImmutable(),
-            ));
+                baseUrl: self::BASE_URL,
+                verifiedAt: new \DateTimeImmutable(),
+            );
+            $entityManager->persist($configuration);
         }
 
         $entityManager->flush();
