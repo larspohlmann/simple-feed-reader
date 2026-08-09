@@ -5,7 +5,7 @@ import { OverlayPanelComponent } from './overlay-panel.component';
 @Component({
   imports: [OverlayPanelComponent],
   template: `
-    <app-overlay-panel heading="Edit tag" [headingLevel]="level()">
+    <app-overlay-panel heading="Edit tag" [headingLevel]="level()" [fillOnMobile]="fill()">
       <p class="body-probe">body</p>
       <button footer class="footer-probe">Save</button>
     </app-overlay-panel>
@@ -13,6 +13,7 @@ import { OverlayPanelComponent } from './overlay-panel.component';
 })
 class Host {
   readonly level = signal<1 | 2>(2);
+  readonly fill = signal(false);
 }
 
 describe('OverlayPanelComponent', () => {
@@ -45,6 +46,19 @@ describe('OverlayPanelComponent', () => {
     const heading = el.querySelector('h2') as HTMLElement;
     expect(panel.getAttribute('aria-labelledby')).toBe(heading.id);
     expect(heading.id).toBeTruthy();
+  });
+
+  // #325: a dialog is a card at every width; only a surface that opts in gets
+  // the full-screen phone layout, and the class is the sole hook the stylesheet
+  // keys that off.
+  it('stays a card unless it opts into the full-screen phone layout', async () => {
+    const fixture = await mount();
+    const panel = fixture.nativeElement.querySelector('.panel') as HTMLElement;
+    expect(panel.classList).not.toContain('fill-mobile');
+
+    fixture.componentInstance.fill.set(true);
+    fixture.detectChanges();
+    expect(panel.classList).toContain('fill-mobile');
   });
 
   it('renders the heading at the requested level, still labelling the panel', async () => {

@@ -2,8 +2,10 @@
 
 <!-- headingLevel 1: discover is a route, not an overlay over a page that already
      has an h1, so the panel's heading is this page's only top-level heading —
-     without it the category headings below would rank level with the title. -->
-<app-overlay-panel [heading]="'discover.title' | transloco" [headingLevel]="1">
+     without it the category headings below would rank level with the title.
+     fillOnMobile: discover IS the page on a phone, not a dialog floating on one,
+     so it keeps the full-screen layout the ordinary dialogs dropped (#325). -->
+<app-overlay-panel [heading]="'discover.title' | transloco" [headingLevel]="1" fillOnMobile>
   <button
     headerActions
     type="button"
