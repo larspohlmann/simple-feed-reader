@@ -1,6 +1,6 @@
 // src/app/reader/recommendations.service.ts
 import { HttpErrorResponse } from '@angular/common/http';
-import { InjectionToken, Injectable, computed, inject, signal } from '@angular/core';
+import { DestroyRef, InjectionToken, Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { Observable } from 'rxjs';
@@ -36,6 +36,17 @@ const RATE_LIMIT_POLL_MS = 15000;
  *  the bucket and recover, while still guaranteeing the loop terminates
  *  against a server that keeps rejecting for good. */
 const MAX_RATE_LIMIT_RETRIES = 20;
+
+/** Ticker cadence for the anticipatory bar. Fine enough to read as motion,
+ *  coarse enough to be cheap; the shared hairline's own `width` transition
+ *  smooths between ticks. */
+const TICK_MS = 200;
+/** How far into the gap to the next milestone the creep is allowed to reach.
+ *  Strictly < 1 so the bar never claims a step done before the server confirms
+ *  it; the real completion snaps it the rest of the way. */
+const CREEP_CAP = 0.92;
+
+const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 
 /** How many times in a row the poll loop has been turned away, per cause.
  *  Each cause has its own ceiling, and any progress resets both. */
@@ -96,14 +107,63 @@ export class RecommendationsService {
    *  balloon while nothing is actually progressing. */
   readonly rateLimited = signal(false);
 
+  /** The progress value captured the instant a 429 backoff began, held while
+   *  `rateLimited` so the bar freezes instead of creeping to its cap during a
+   *  wait. Cleared when a live report resumes progress. */
+  private readonly frozenProgress = signal<number | null>(null);
+
+  /** Ticker handle; the bar re-reads the clock on every bump. */
+  private tickerId: ReturnType<typeof setInterval> | null = null;
+
+  /** Bumped by the ticker so the interpolated reads recompute between polls. */
+  private readonly frame = signal(0);
+
   /** Increments once per completed run. Consumers watch this to refetch the
    *  for-you list rather than polling `report` themselves. */
   readonly completedStamp = signal(0);
 
   readonly progress = computed(() => {
-    const r = this.report();
-    if (!r || !r.batchesTotal) return 0;
-    return Math.min(1, Math.max(0, r.batchesDone / r.batchesTotal));
+    this.frame(); // re-run on every ticker bump
+    const current = this.report();
+    if (!current || !current.batchesTotal) return 0;
+
+    const base = clamp01(current.batchesDone / current.batchesTotal);
+    if (this.rateLimited()) return this.frozenProgress() ?? base;
+
+    const average = this.avgCompletedSeconds();
+    const batchStart = this.currentBatchStart();
+    if (average === null || batchStart === null) return base; // honest blank
+
+    const next = clamp01((current.batchesDone + 1) / current.batchesTotal);
+    const secondsIntoBatch = (this.now() - batchStart) / 1000;
+    const fractionIntoBatch = clamp01(secondsIntoBatch / average);
+    return clamp01(base + fractionIntoBatch * (next - base) * CREEP_CAP);
+  });
+
+  /** Ceil seconds remaining, or `null` when there is no run, no total, the run
+   *  is not actively progressing, or no average yet exists (before batch 1). */
+  readonly etaSeconds = computed<number | null>(() => {
+    this.frame();
+    const current = this.report();
+    if (!current || !current.batchesTotal) return null;
+    if (current.status !== 'running' && current.status !== 'pending') return null;
+
+    const average = this.avgCompletedSeconds();
+    const batchStart = this.currentBatchStart();
+    if (average === null || batchStart === null) return null;
+
+    const batchesRemaining = current.batchesTotal - current.batchesDone; // includes the in-flight one
+    const secondsIntoBatch = (this.now() - batchStart) / 1000;
+    return Math.max(0, Math.ceil(average * batchesRemaining - secondsIntoBatch));
+  });
+
+  /** Drives the Task 6 label: hidden outside a run, starting before the first
+   *  average exists, waiting during a 429 backoff, eta otherwise. */
+  readonly etaState = computed<'hidden' | 'starting' | 'waiting' | 'eta'>(() => {
+    if (!this.running()) return 'hidden';
+    if (this.rateLimited()) return 'waiting';
+    if (this.etaSeconds() === null) return 'starting';
+    return 'eta';
   });
 
   /** True while a background worker owns this run's execution, so the
@@ -118,6 +178,10 @@ export class RecommendationsService {
   /** The surviving for-you list's generation time (ISO), for the list
    *  header's "Last refreshed" hint. */
   readonly generatedAt = computed(() => this.report()?.forYou.generatedAt ?? null);
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.stopTicker());
+  }
 
   /** Starts a new run and polls it to completion. */
   start(): void {
@@ -138,6 +202,7 @@ export class RecommendationsService {
   private beginRun(source: Observable<RecommendationRunReport>): void {
     if (this.running()) return;
     this.running.set(true);
+    this.startTicker();
     this.stopping.set(false);
     this.report.set(null);
     this.failure.set(null);
@@ -184,6 +249,7 @@ export class RecommendationsService {
         this.applyReport(r); // even a finished run carries the for-you summary the sidebar needs
         if (r.status !== 'pending' && r.status !== 'running') return;
         this.running.set(true);
+        this.startTicker();
         this.failure.set(null);
         this.step(NO_ATTEMPTS);
       },
@@ -230,6 +296,7 @@ export class RecommendationsService {
     }
     if (next.status === 'running' || next.status === 'pending') {
       this.rateLimited.set(false);
+      this.frozenProgress.set(null);
     }
     this.report.set(next);
   }
@@ -300,6 +367,7 @@ export class RecommendationsService {
       this.stopWithHttpError(e);
       return;
     }
+    this.frozenProgress.set(this.progress());
     this.rateLimited.set(true);
     this.stepLater({ ...attempts, rateLimited: attempts.rateLimited + 1 }, RATE_LIMIT_POLL_MS);
   }
@@ -323,6 +391,18 @@ export class RecommendationsService {
     this.running.set(false);
     this.stopping.set(false);
     this.rateLimited.set(false);
+    this.stopTicker();
+  }
+
+  private startTicker(): void {
+    if (this.tickerId !== null) return;
+    this.tickerId = setInterval(() => this.frame.update((n) => n + 1), TICK_MS);
+  }
+
+  private stopTicker(): void {
+    if (this.tickerId === null) return;
+    clearInterval(this.tickerId);
+    this.tickerId = null;
   }
 
   private navigateToForYou(): void {

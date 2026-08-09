@@ -1,5 +1,5 @@
 // src/app/reader/recommendations.service.spec.ts
-import { TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
@@ -594,6 +594,148 @@ describe('RecommendationsService', () => {
       }
     });
   });
+
+  it('creeps toward the next milestone but never reaches it between completions', fakeAsync(() => {
+    jest.useFakeTimers();
+    nowMs = 0;
+    svc.start();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs')
+      .flush(report({ status: 'pending' }));
+    nowMs = 20000;
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'running', batchesTotal: 4, batchesDone: 1, elapsedSeconds: 20 }));
+
+    // On the completion boundary the bar is exactly at the milestone.
+    expect(svc.progress()).toBeCloseTo(0.25);
+
+    // Half an average batch later (10s of 20s) it is a fraction of the way to 0.5,
+    // capped short of it.
+    nowMs = 30000;
+    jest.advanceTimersByTime(200); // TICK_MS -> recompute
+    const p = svc.progress();
+    expect(p).toBeGreaterThan(0.25);
+    expect(p).toBeLessThan(0.5); // never reaches the next milestone
+
+    // A whole average later it sits at the cap, still short of 0.5.
+    nowMs = 45000;
+    jest.advanceTimersByTime(200);
+    expect(svc.progress()).toBeCloseTo(0.25 + 0.25 * 0.92);
+    expect(svc.progress()).toBeLessThan(0.5);
+
+    // Drain the tick the last 'running' flush auto-triggered (background:
+    // false re-polls immediately, per the existing poll-loop contract).
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'completed', batchesTotal: 4, batchesDone: 4, elapsedSeconds: 80 }));
+    discardPeriodicTasks();
+    jest.useRealTimers();
+  }));
+
+  it('snaps to the true milestone when a batch completes', fakeAsync(() => {
+    jest.useFakeTimers();
+    nowMs = 0;
+    svc.start();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs')
+      .flush(report({ status: 'pending' }));
+    nowMs = 20000;
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'running', batchesTotal: 4, batchesDone: 1, elapsedSeconds: 20 }));
+    nowMs = 40000;
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'running', batchesTotal: 4, batchesDone: 2, elapsedSeconds: 40 }));
+    expect(svc.progress()).toBeCloseTo(0.5);
+
+    // Drain the tick the last 'running' flush auto-triggered (background:
+    // false re-polls immediately, per the existing poll-loop contract).
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'completed', batchesTotal: 4, batchesDone: 4, elapsedSeconds: 80 }));
+    discardPeriodicTasks();
+    jest.useRealTimers();
+  }));
+
+  it('computes an ETA of average x remaining, and hides it before batch 1', fakeAsync(() => {
+    jest.useFakeTimers();
+    nowMs = 0;
+    svc.start();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs')
+      .flush(report({ status: 'pending' }));
+
+    // Before any completion: no average -> starting, no creep.
+    expect(svc.etaSeconds()).toBeNull();
+    expect(svc.etaState()).toBe('starting');
+    nowMs = 12345;
+    jest.advanceTimersByTime(200);
+    expect(svc.progress()).toBe(0);
+
+    nowMs = 20000;
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'running', batchesTotal: 4, batchesDone: 1, elapsedSeconds: 20 }));
+    // avg 20s, 3 batches remain (2,3,dedup). At the boundary, into-current = 0.
+    expect(svc.etaSeconds()).toBe(60);
+    expect(svc.etaState()).toBe('eta');
+
+    // Drain the tick the last 'running' flush auto-triggered (background:
+    // false re-polls immediately, per the existing poll-loop contract).
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'completed', batchesTotal: 4, batchesDone: 4, elapsedSeconds: 80 }));
+    discardPeriodicTasks();
+    jest.useRealTimers();
+  }));
+
+  it('freezes the bar and reports the waiting state during a 429 backoff', fakeAsync(() => {
+    jest.useFakeTimers();
+    nowMs = 0;
+    svc.start();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs')
+      .flush(report({ status: 'pending' }));
+    nowMs = 20000;
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'running', batchesTotal: 4, batchesDone: 1, elapsedSeconds: 20 }));
+    nowMs = 30000;
+    jest.advanceTimersByTime(200);
+    const beforeLimit = svc.progress();
+
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .error(new ProgressEvent('error'), { status: 429, statusText: 'Too Many Requests' });
+    expect(svc.etaState()).toBe('waiting');
+
+    nowMs = 90000; // time marches on, but the bar must not move
+    jest.advanceTimersByTime(200);
+    expect(svc.progress()).toBeCloseTo(beforeLimit);
+
+    jest.advanceTimersByTime(15000);
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'completed', batchesTotal: 4, batchesDone: 4, elapsedSeconds: 100 }));
+    discardPeriodicTasks();
+    jest.useRealTimers();
+  }));
+
+  it('stops the ticker when the run ends', fakeAsync(() => {
+    jest.useFakeTimers();
+    svc.start();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs')
+      .flush(report({ status: 'pending' }));
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'completed', batchesTotal: 3, batchesDone: 3, elapsedSeconds: 30 }));
+    expect(svc.running()).toBe(false);
+    // No periodic task should remain; if the ticker leaked, fakeAsync would throw here.
+    jest.useRealTimers();
+  }));
 
   it('reports zero progress when the total is null or zero', () => {
     svc.start();
