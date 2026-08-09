@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Http\RecommendationSettingsJson;
 use App\Service\Recommendation\RecommendationSettingsResolver;
 use App\Service\Recommendation\RecommendationSettingsWriter;
+use App\Service\Worker\WorkerPresence;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
@@ -25,13 +26,17 @@ final readonly class RecommendationSettingsController
     public function __construct(
         private RecommendationSettingsResolver $resolver,
         private RecommendationSettingsWriter $writer,
+        private WorkerPresence $presence,
     ) {
     }
 
     #[Route('', name: 'api_me_ai_recommendations_show', methods: ['GET'])]
     public function show(#[CurrentUser] User $user): JsonResponse
     {
-        return new JsonResponse(RecommendationSettingsJson::state($this->resolver->forUser($user)));
+        return new JsonResponse(RecommendationSettingsJson::state(
+            $this->resolver->forUser($user),
+            $this->presence->isRecommendationWorkerAlive(),
+        ));
     }
 
     #[Route('', name: 'api_me_ai_recommendations_save', methods: ['PUT'])]
@@ -41,6 +46,9 @@ final readonly class RecommendationSettingsController
     ): JsonResponse {
         $this->writer->save($user, $request->values());
 
-        return new JsonResponse(RecommendationSettingsJson::state($this->resolver->forUser($user)));
+        return new JsonResponse(RecommendationSettingsJson::state(
+            $this->resolver->forUser($user),
+            $this->presence->isRecommendationWorkerAlive(),
+        ));
     }
 }

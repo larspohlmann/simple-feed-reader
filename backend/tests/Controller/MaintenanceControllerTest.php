@@ -142,4 +142,49 @@ final class MaintenanceControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(404);
     }
+
+    public function testRecommendationSweepRejectsMissingToken(): void
+    {
+        $client = self::createClient();
+        $client->request('POST', '/maintenance/recommendations/sweep');
+
+        self::assertResponseStatusCodeSame(403);
+        // The body shape matters, not just the status: the guard's rejection
+        // carries the `error` field the caller reads.
+        self::assertSame(
+            ['error' => 'forbidden'],
+            json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR),
+        );
+    }
+
+    public function testRecommendationSweepRunsWithValidToken(): void
+    {
+        $client = self::createClient();
+
+        $client->request('POST', '/maintenance/recommendations/sweep', server: [
+            'HTTP_X_MAINTENANCE_TOKEN' => 'test-maintenance-token',
+        ]);
+
+        self::assertResponseIsSuccessful();
+        self::assertResponseHeaderSame('Content-Type', 'application/json');
+        // Shared SQLite DB: other test classes may have left runs, so assert
+        // the report's shape, not exact zero counts. Left untyped (not the
+        // array{...} shape used elsewhere in this file) so PHPStan does not
+        // treat the assertIsInt() calls below as already-proven and flag them
+        // as redundant (staticMethod.alreadyNarrowedType) — they are the point
+        // of this test.
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsInt($payload['startedRuns']);
+        self::assertIsInt($payload['advancedRuns']);
+        self::assertIsInt($payload['activeRuns']);
+    }
+
+    public function testRecommendationSweepGetMethodIsNotAllowed(): void
+    {
+        $client = self::createClient();
+        $client->request('GET', '/maintenance/recommendations/sweep?token=test-maintenance-token');
+
+        self::assertResponseStatusCodeSame(405);
+    }
 }

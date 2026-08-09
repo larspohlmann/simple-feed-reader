@@ -30,6 +30,8 @@ describe('RecommendationSettingsCardComponent', () => {
     contextWindowOverride: null,
     contextWindowSource: 'provider',
     debugEnabled: false,
+    autoGenerateIntervalHours: null,
+    workerAlive: true,
   };
 
   function mount(
@@ -56,6 +58,15 @@ describe('RecommendationSettingsCardComponent', () => {
   const banner = (
     fixture: ComponentFixture<RecommendationSettingsCardComponent>,
   ): HTMLElement | null => fixture.nativeElement.querySelector('app-error-banner');
+
+  const select = (
+    fixture: ComponentFixture<RecommendationSettingsCardComponent>,
+  ): HTMLSelectElement | null =>
+    fixture.nativeElement.querySelector('select[data-testid="auto-generate"]');
+
+  const cronNote = (
+    fixture: ComponentFixture<RecommendationSettingsCardComponent>,
+  ): HTMLElement | null => fixture.nativeElement.querySelector('.cron-example');
 
   beforeEach(() => dialogStub.open.mockReset());
 
@@ -126,6 +137,7 @@ describe('RecommendationSettingsCardComponent', () => {
       batchCount: null,
       contextWindow: null,
       debugEnabled: true,
+      autoGenerateIntervalHours: null,
     });
 
     request.flush({ ...STATE, picksLimit: 30, contextWindow: 128000, debugEnabled: true });
@@ -236,6 +248,37 @@ describe('RecommendationSettingsCardComponent', () => {
       contextWindowOverride: 64000,
     });
     expect(userFixture.nativeElement.textContent).toContain('Your override');
+  });
+
+  it('shows the auto-generate dropdown reflecting the saved interval', () => {
+    const fixture = mount({ ...STATE, autoGenerateIntervalHours: 3, workerAlive: true });
+    const dropdown = select(fixture);
+    expect(dropdown).not.toBeNull();
+    expect(dropdown!.value).toBe('3');
+  });
+
+  it('hides the cron help note while a worker is alive', () => {
+    const fixture = mount({ ...STATE, workerAlive: true });
+    expect(cronNote(fixture)).toBeNull();
+  });
+
+  it('shows the cron help note when no worker is alive', () => {
+    const fixture = mount({ ...STATE, workerAlive: false });
+    expect(cronNote(fixture)).not.toBeNull();
+  });
+
+  it('sends the chosen interval on save', () => {
+    const fixture = mount({ ...STATE, autoGenerateIntervalHours: null, workerAlive: true });
+    const dropdown = select(fixture)!;
+    dropdown.value = '12';
+    dropdown.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('app-button[variant="primary"] button')?.click();
+    const put = http.expectOne('/api/me/ai/recommendations');
+    expect(put.request.method).toBe('PUT');
+    expect(put.request.body.autoGenerateIntervalHours).toBe(12);
+    put.flush({ ...STATE, autoGenerateIntervalHours: 12, workerAlive: true });
   });
 
   describe('clearing recommendations', () => {

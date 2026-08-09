@@ -65,6 +65,20 @@ export class RecommendationSettingsCardComponent {
     () => this.svc.state()?.contextWindowOverride ?? null,
   );
   readonly debugEnabled = linkedSignal<boolean>(() => this.svc.state()?.debugEnabled ?? false);
+  readonly autoGenerateIntervalHours = linkedSignal<number | null>(
+    () => this.svc.state()?.autoGenerateIntervalHours ?? null,
+  );
+  readonly workerAlive = computed<boolean>(() => this.svc.state()?.workerAlive ?? false);
+
+  /** The six cadence choices; null is "only manually". */
+  readonly intervalOptions: readonly { readonly value: number | null; readonly key: string }[] = [
+    { value: null, key: 'settings.ai.recommendations.autoGenerateManual' },
+    { value: 1, key: 'settings.ai.recommendations.autoGenerate1' },
+    { value: 3, key: 'settings.ai.recommendations.autoGenerate3' },
+    { value: 6, key: 'settings.ai.recommendations.autoGenerate6' },
+    { value: 12, key: 'settings.ai.recommendations.autoGenerate12' },
+    { value: 24, key: 'settings.ai.recommendations.autoGenerate24' },
+  ];
 
   /** The key for the hint line, decided by where the effective value came from. */
   readonly contextWindowSourceKey = computed(() => {
@@ -101,6 +115,11 @@ export class RecommendationSettingsCardComponent {
     target.set(+raw);
   }
 
+  setAutoGenerate(event: Event): void {
+    const raw = (event.target as HTMLSelectElement).value;
+    this.autoGenerateIntervalHours.set(raw === '' ? null : +raw);
+  }
+
   nullableNumberValue(event: Event): number | null {
     const raw = (event.target as HTMLInputElement).value;
     return raw === '' ? null : +raw;
@@ -126,6 +145,7 @@ export class RecommendationSettingsCardComponent {
       batchCount: this.batchCount(),
       contextWindow: this.contextWindow(),
       debugEnabled: this.debugEnabled(),
+      autoGenerateIntervalHours: this.autoGenerateIntervalHours(),
     });
   }
 

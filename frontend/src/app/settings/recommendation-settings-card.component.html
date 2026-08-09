@@ -1,4 +1,21 @@
 @if (svc.state(); as state) {
+  <app-field [label]="'settings.ai.recommendations.autoGenerate' | transloco">
+    <select data-testid="auto-generate" (change)="setAutoGenerate($event)">
+      @for (opt of intervalOptions; track opt.value) {
+        <option [value]="opt.value ?? ''" [selected]="autoGenerateIntervalHours() === opt.value">
+          {{ opt.key | transloco }}
+        </option>
+      }
+    </select>
+  </app-field>
+
+  @if (!workerAlive()) {
+    <p class="no-worker">{{ 'settings.ai.recommendations.autoGenerateNoWorker' | transloco }}</p>
+    <pre class="cron-example">
+curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
+  -H "X-Maintenance-Token: &lt;MAINTENANCE_TOKEN&gt;"</pre>
+  }
+
   <div class="group">
     <app-field [label]="'settings.ai.recommendations.guidance' | transloco">
       <textarea

@@ -23,6 +23,27 @@ textarea {
   resize: vertical;
 }
 
+select {
+  width: 100%;
+}
+
+.no-worker {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.cron-example {
+  margin: var(--space-2) 0 var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-0);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  white-space: pre-wrap;
+}
+
 .expert-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

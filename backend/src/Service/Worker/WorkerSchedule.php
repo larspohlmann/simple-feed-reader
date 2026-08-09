@@ -7,6 +7,7 @@ namespace App\Service\Worker;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
 use App\Service\Worker\Message\PurgeFailedMessages;
 use App\Service\Worker\Message\RefreshDueFeeds;
+use App\Service\Worker\Message\StartDueRecommendationRuns;
 use Symfony\Component\Scheduler\Attribute\AsSchedule;
 use Symfony\Component\Scheduler\RecurringMessage;
 use Symfony\Component\Scheduler\Schedule;
@@ -15,11 +16,17 @@ use Symfony\Contracts\Cache\CacheInterface;
 
 /**
  * The worker container's whole job description (#311): consume this schedule
- * with `messenger:consume scheduler_worker`. Three entries by decision:
- * the recommendation sweep, the feed refresh sweep (the 2026-08-07 decision
- * that brings scheduled refresh to worker-equipped installs; poll-only
- * installs stay manual), and failure-transport housekeeping. Scheduled
- * recommendation runs stay out (#308: manual button only).
+ * with `messenger:consume scheduler_worker`. Four entries by decision: the
+ * recommendation sweep is now two of them -- the ten-second advance sweep and
+ * the five-minute start-due sweep (#333) -- plus the feed refresh sweep (the
+ * 2026-08-07 decision that brings scheduled refresh to worker-equipped
+ * installs; poll-only installs stay manual) and failure-transport
+ * housekeeping.
+ *
+ * The recommendation START sweep (#333) supersedes #308's "manual button
+ * only" as an opt-in: it starts a run only for an account that chose a
+ * cadence in its For You settings, and the ten-second sweep above then
+ * advances it. An account that never chose one is never started.
  */
 #[AsSchedule('worker')]
 final readonly class WorkerSchedule implements ScheduleProviderInterface
@@ -40,7 +47,7 @@ final readonly class WorkerSchedule implements ScheduleProviderInterface
      * that entry exists to prevent (#311 final review, Critical 1). A
      * persisted checkpoint keeps the original `from`, so the daily entry
      * comes due 24 h after the FIRST-EVER start no matter how often the
-     * consumer is recycled, and the other two entries stop losing their
+     * consumer is recycled, and the other three entries stop losing their
      * cadence at every restart as well.
      *
      * The pool is a filesystem one under CACHE_DIRECTORY (var/cache-pools),
@@ -50,13 +57,14 @@ final readonly class WorkerSchedule implements ScheduleProviderInterface
      * `processOnlyLastMissedRun()` is the necessary companion: a persisted
      * checkpoint means a consumer that was down replays every occurrence it
      * missed, and an hour of downtime owes the ten-second entry 360 firings.
-     * All three messages are SWEEPS -- each one does whatever is outstanding
+     * All four messages are SWEEPS -- each one does whatever is outstanding
      * at the moment it runs -- so catching up means running once, now.
      */
     public function getSchedule(): Schedule
     {
         return (new Schedule())
             ->add(RecurringMessage::every('10 seconds', new AdvanceRecommendationRuns()))
+            ->add(RecurringMessage::every('5 minutes', new StartDueRecommendationRuns()))
             ->add(RecurringMessage::every('5 minutes', new RefreshDueFeeds()))
             ->add(RecurringMessage::every('1 day', new PurgeFailedMessages()))
             ->stateful($this->schedulerStateCache)

@@ -23,7 +23,7 @@ final class RecommendationSettingsJson
     /**
      * @return array<string, mixed>
      */
-    public static function state(EffectiveRecommendationSettings $effective): array
+    public static function state(EffectiveRecommendationSettings $effective, bool $workerAlive): array
     {
         return [
             'guidancePrompt' => $effective->guidancePrompt,
@@ -44,6 +44,8 @@ final class RecommendationSettingsJson
             'contextWindowSource' => $effective->packing->contextWindowSource,
             'batchCount' => $effective->packing->batchCount,
             'debugEnabled' => $effective->debugEnabled,
+            'autoGenerateIntervalHours' => $effective->autoGenerateIntervalHours,
+            'workerAlive' => $workerAlive,
         ];
     }
 }

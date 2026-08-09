@@ -12,6 +12,10 @@ use Symfony\Component\Validator\Constraints as Assert;
  * mirror of RecommendationSettingsValues. Blank-guidance normalisation is
  * deliberately not here: RecommendationSettingsWriter owns that decision, not
  * the wire format.
+ *
+ * @SuppressWarnings("PHPMD.ExcessiveParameterList") pure data carrier that
+ * mirrors RecommendationSettingsValues field-for-field, not a behavioural
+ * method.
  */
 final readonly class SaveRecommendationSettingsRequest
 {
@@ -33,6 +37,8 @@ final readonly class SaveRecommendationSettingsRequest
         #[Assert\Range(min: 1, max: 100)]
         public ?int $batchCount,
         public bool $debugEnabled,
+        #[Assert\Choice(choices: [null, 1, 3, 6, 12, 24])]
+        public ?int $autoGenerateIntervalHours,
     ) {
     }
 
@@ -48,6 +54,7 @@ final readonly class SaveRecommendationSettingsRequest
             contextWindow: $this->contextWindow,
             batchCount: $this->batchCount,
             debugEnabled: $this->debugEnabled,
+            autoGenerateIntervalHours: $this->autoGenerateIntervalHours,
         );
     }
 }

@@ -226,7 +226,7 @@ it:
   same-site); the production stack serves the built SPA same-origin, the
   topology this stack was designed to allow ([docs/oauth-sign-in.md](oauth-sign-in.md)).
 - **Worker / cron container.** Delivered in #311 — see the `worker` service; it
-  reuses the php image and the same env injection.
+  reuses the php image and the same env injection. See [for-you-scheduling.md](for-you-scheduling.md) for how the worker (or an external cron) auto-generates "For You".
 
 ---
 

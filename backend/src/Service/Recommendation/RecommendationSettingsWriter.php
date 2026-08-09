@@ -55,6 +55,7 @@ final readonly class RecommendationSettingsWriter
             contextWindow: $values->contextWindow,
             batchCount: $values->batchCount,
             debugEnabled: $values->debugEnabled,
+            autoGenerateIntervalHours: $values->autoGenerateIntervalHours,
         );
     }
 }
