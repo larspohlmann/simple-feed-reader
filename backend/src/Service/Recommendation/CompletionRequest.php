@@ -27,6 +27,10 @@ final readonly class CompletionRequest
         public array $messages,
         public int $maxAnswerTokens,
         public JsonSchema $responseSchema,
+        // When true, the request asks the provider not to reason (#323). Sent as
+        // the OpenRouter `reasoning: {"effort": "none"}` extension; an endpoint
+        // that does not know the field ignores it.
+        public bool $suppressReasoning,
     ) {
     }
 }
