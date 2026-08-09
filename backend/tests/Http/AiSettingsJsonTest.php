@@ -116,9 +116,12 @@ final class AiSettingsJsonTest extends TestCase
 
         $shape = AiSettingsJson::list([$first, $second], 1);
 
+        self::assertIsArray($shape['configs']);
         self::assertCount(2, $shape['configs']);
+        self::assertIsArray($shape['configs'][0]);
         self::assertSame('First', $shape['configs'][0]['name']);
         self::assertTrue($shape['configs'][0]['active']);
+        self::assertIsArray($shape['configs'][1]);
         self::assertSame('Second', $shape['configs'][1]['name']);
         self::assertFalse($shape['configs'][1]['active']);
         self::assertSame(1, $shape['activeId']);
@@ -129,6 +132,8 @@ final class AiSettingsJsonTest extends TestCase
         $shape = AiSettingsJson::list([$this->withId($this->settings(null), 1)], null);
 
         self::assertNull($shape['activeId']);
+        self::assertIsArray($shape['configs']);
+        self::assertIsArray($shape['configs'][0]);
         self::assertFalse($shape['configs'][0]['active']);
     }
 
