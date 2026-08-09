@@ -36,6 +36,7 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   model: null,
   ready: false,
   active: false,
+  suppressReasoning: true,
   ...over,
 });
 
