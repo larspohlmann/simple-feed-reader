@@ -27,7 +27,16 @@ final class AiProviderSettingsRepository extends ServiceEntityRepository
     /** @return list<AiProviderSettings> */
     public function findAllForUser(User $user): array
     {
-        return $this->findBy(['user' => $user], ['id' => 'ASC']);
+        // array_values() makes the `list` return type true by construction,
+        // not by an inferred guarantee: phpstan-doctrine's extension currently
+        // types findBy()'s result as a list, which is why PHPStan flags this
+        // call as a no-op (arrayValues.list) — but that typing comes from the
+        // extension reading Doctrine's implementation, not from a contract
+        // findOneBy()/EntityRepository itself promises to keep. Re-indexing
+        // here means this method's own `list<AiProviderSettings>` promise
+        // holds even if that inference ever stops matching reality.
+        // @phpstan-ignore arrayValues.list
+        return array_values($this->findBy(['user' => $user], ['id' => 'ASC']));
     }
 
     public function countForUser(User $user): int
