@@ -1,12 +1,17 @@
 // src/app/shared/overlay-panel/overlay-panel.component.ts
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { booleanAttribute, ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 let nextId = 0;
 
 /**
- * The frame every interrupt surface renders inside: a centred card on desktop,
- * full screen on a phone. Owns the heading, the scrolling body and the footer
- * row, so a dialog's own stylesheet carries only what is specific to it.
+ * The frame every interrupt surface renders inside: a centred card, capped at
+ * 90dvh with its body scrolling. Owns the heading, the scrolling body and the
+ * footer row, so a dialog's own stylesheet carries only what is specific to it.
+ *
+ * A dialog stays a card on a phone too — a short confirm has no business filling
+ * the screen. The one exception is a route-level picker that *is* the page
+ * rather than a modal over it (discover): it opts into the full-screen phone
+ * layout with `fillOnMobile`.
  *
  * Width is the one dimension that legitimately varies per consumer, so it is
  * read from --panel-w rather than being an input — that keeps it in the
@@ -34,6 +39,13 @@ export class OverlayPanelComponent {
    * level with the title.
    */
   readonly headingLevel = input<1 | 2>(2);
+
+  /**
+   * Opt into the full-screen phone layout. For the route-level picker that is
+   * the page rather than a modal over it (discover); every ordinary dialog
+   * leaves this false and stays a centred card at every width.
+   */
+  readonly fillOnMobile = input(false, { transform: booleanAttribute });
 
   /** Ties the panel to its heading; unique so several panels can coexist. */
   protected readonly headingId = `overlay-panel-heading-${nextId++}`;

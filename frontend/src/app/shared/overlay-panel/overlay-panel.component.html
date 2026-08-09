@@ -1,4 +1,10 @@
-<section class="panel" role="dialog" aria-modal="true" [attr.aria-labelledby]="headingId">
+<section
+  class="panel"
+  [class.fill-mobile]="fillOnMobile()"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-labelledby]="headingId"
+>
   <header class="head">
     @if (headingLevel() === 1) {
       <h1 [id]="headingId">{{ heading() }}</h1>

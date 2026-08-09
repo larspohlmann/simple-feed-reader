@@ -254,6 +254,12 @@ export class RecommendationsService {
   private stopWithHttpError(e: HttpErrorResponse): void {
     this.failure.set({ kind: 'http', problem: parseProblem(e) });
     this.finish();
+    // The run's only in-reader surface is the progress hairline, which vanishes
+    // the moment the run ends. A request that fails outright — the start POST,
+    // or the poll loop giving up after its transport/rate-limit ceiling — would
+    // leave nothing behind without this, so it goes to the same toast the
+    // backend-side failure uses rather than failing silently (#325).
+    this.toast.show({ message: this.i18n.translate('reader.forYouUnreachable') });
   }
 
   private finish(): void {

@@ -75,11 +75,14 @@ h2 {
   display: none;
 }
 
-// Phone: the panel is the screen, not a card floating on one. `100%`, not
-// `100vw`/`100dvh` -- the container is already exactly the viewport, and the
-// viewport units disagree with it by the width of a classic scrollbar.
+// Phone: only a surface that opts in (a route-level picker that IS the page,
+// not a modal over it) becomes the screen. Every ordinary dialog stays a card,
+// so a short confirm no longer opens as a mostly-empty full page. `100%`, not
+// `100vw`/`100dvh` -- the opting-in consumer's host is already exactly the
+// viewport, and the viewport units disagree with it by a classic scrollbar's
+// width.
 @media (width <= bp.$bp-sm) {
-  .panel {
+  .panel.fill-mobile {
     width: 100%;
     max-width: 100%;
     height: 100%;

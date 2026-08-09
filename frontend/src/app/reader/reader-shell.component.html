@@ -102,7 +102,7 @@
           [feedTags]="feedTags()"
           [refreshing]="refreshSvc.running()"
           [lastRefreshed]="listLastRefreshed()"
-          [topBlock]="forYouTop"
+          [headerActions]="forYouActions"
           (loadMore)="entries.loadMore()"
           (markAllRead)="onMarkAllRead()"
           (refresh)="onScopedRefresh()"
@@ -147,7 +147,7 @@
           [feedTags]="feedTags()"
           [refreshing]="refreshSvc.running()"
           [lastRefreshed]="listLastRefreshed()"
-          [topBlock]="forYouTop"
+          [headerActions]="forYouActions"
           (scrolled)="onListScrolled($event)"
           (loadMore)="entries.loadMore()"
           (markAllRead)="onMarkAllRead()"
@@ -180,39 +180,50 @@
   </main>
 </div>
 
-<!-- Defined once and outlet-rendered into the top of the scrolling content of
+<!-- Defined once and outlet-rendered right-aligned into the list header of
      whichever `.list` the current layout mounts, via `app-entry-list`'s
-     `topBlock` input — the split pane and the single pane each build their own
-     list column, and two copies of this block drifted apart the moment one of
-     them gained a binding the other lacked. It scrolls away with the list
-     (#321); the hairline is the one signal that stays pinned, placed directly
-     in `.list` above (out of the scroller). -->
-<ng-template #forYouTop>
-  @if (selection().kind === 'for-you') {
-    <div class="for-you-top">
+     `headerActions` input — the split pane and the single pane each build their
+     own list column, so one shared template keeps the two from drifting apart.
+     One button in one slot: it starts a run (behind a confirm) while idle and
+     stops one while it is in flight. The run's only in-list signal is the
+     progress hairline pinned in `.list` above; every other detail lives in
+     Settings → AI (#325). -->
+<ng-template #forYouActions>
+  @if (selection().kind === 'for-you' && ai.ready()) {
+    <div class="for-you-action">
       @if (recs.running()) {
-        <p role="status" aria-live="polite">
+        <app-button
+          variant="danger"
+          size="sm"
+          class="for-you-run"
+          [disabled]="recs.stopping()"
+          [ariaLabel]="
+            (recs.stopping() ? 'reader.forYouStopping' : 'reader.forYouStop') | transloco
+          "
+          (click)="recs.stop()"
+        >
+          <app-icon name="stop" size="sm" />
+          <span class="label">{{
+            (recs.stopping() ? 'reader.forYouStopping' : 'reader.forYouStop') | transloco
+          }}</span>
+        </app-button>
+        <!-- The run's live batch count, back in the header under the button. It
+             is desktop-only and the button is anchored to the header's top edge,
+             so this line grows downward without shifting the button (#325). -->
+        <p class="for-you-progress" role="status" aria-live="polite">
           {{ 'reader.forYouProgress' | transloco: forYouProgress() }}
         </p>
-        <app-button variant="ghost" size="sm" [disabled]="recs.stopping()" (click)="recs.stop()">
-          {{ (recs.stopping() ? 'reader.forYouStopping' : 'reader.forYouStop') | transloco }}
-        </app-button>
-        <button
-          type="button"
-          class="info"
-          (click)="openForYouInfo()"
-          [attr.aria-label]="'reader.forYouInfoOpen' | transloco"
-        >
-          <app-icon name="info" size="sm" />
-        </button>
       } @else {
-        <app-button variant="primary" size="sm" (click)="recs.start()">
-          {{ 'reader.forYouRun' | transloco }}
+        <app-button
+          variant="primary"
+          size="sm"
+          class="for-you-run"
+          [ariaLabel]="'reader.forYouRun' | transloco"
+          (click)="startRecommendations()"
+        >
+          <app-icon name="auto_awesome" size="sm" />
+          <span class="label">{{ 'reader.forYouRun' | transloco }}</span>
         </app-button>
-        <p class="cap">{{ 'reader.forYouRunHint' | transloco }}</p>
-        @if (forYouFailureMessageKey(); as failureKey) {
-          <p role="alert">{{ failureKey | transloco }}</p>
-        }
       }
     </div>
   }

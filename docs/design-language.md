@@ -346,14 +346,20 @@ so Escape passes through untouched and still belongs to the dialog.
 
 ### `<app-overlay-panel>`
 
-The frame every interrupt surface renders inside: a centred card on desktop, full
-screen on a phone. Owns the heading, the scrolling body and the footer row, so a
-dialog's own stylesheet carries only what is specific to it.
+The frame every interrupt surface renders inside: a centred card, capped at 90dvh
+with its body scrolling, at every width. Owns the heading, the scrolling body and
+the footer row, so a dialog's own stylesheet carries only what is specific to it.
+
+A dialog stays a card on a phone too — a short confirm has no business opening as
+a mostly-empty full page. The one exception is a route-level picker that *is* the
+page rather than a modal over it (discover): it passes `fillOnMobile` to keep the
+full-screen phone layout.
 
 | Input | Type | Default |
 |---|---|---|
 | `heading` | `string` (required) | — |
 | `headingLevel` | `1 \| 2` | `2` |
+| `fillOnMobile` | `boolean` | `false` |
 
 Content slots: default content becomes the scrolling body; `[headerActions]`
 lands beside the heading; `[footer]` lands in the footer row (which hides itself

@@ -119,6 +119,21 @@ describe('EntryListComponent', () => {
     });
   });
 
+  // #325: the shell projects the For You run/stop button here, right-aligned in
+  // the header, without this generic list knowing what the action is.
+  describe('headerActions', () => {
+    it('renders the projected action inside the list header tools', () => {
+      const actions = topBlockTemplate();
+      const el = mount({ headerActions: actions }).nativeElement as HTMLElement;
+      expect(el.querySelector('.list-header .tools .top-marker')).not.toBeNull();
+    });
+
+    it('renders nothing in the header when no headerActions is provided', () => {
+      const el = mount().nativeElement as HTMLElement;
+      expect(el.querySelector('.list-header .top-marker')).toBeNull();
+    });
+  });
+
   it('renders a row per entry and the header title', () => {
     const el = mount().nativeElement as HTMLElement;
     expect(el.querySelector('.list-header')!.textContent).toContain('All items');

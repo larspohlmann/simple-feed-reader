@@ -111,6 +111,11 @@ export class EntryListComponent implements OnDestroy {
    *  occupying a permanently reserved bar above it (#321). Owned by the shell,
    *  which is the only place that knows what belongs there. */
   readonly topBlock = input<TemplateRef<unknown> | null>(null);
+  /** Rendered right-aligned in the list header, after the built-in tools. The
+   *  shell passes a per-selection action here (the For You run/stop button)
+   *  without this generic list knowing what the action is or which selection
+   *  it belongs to — the same outlet arrangement as `topBlock`. */
+  readonly headerActions = input<TemplateRef<unknown> | null>(null);
 
   readonly loadMore = output<void>();
   readonly markAllRead = output<void>();

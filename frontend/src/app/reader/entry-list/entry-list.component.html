@@ -15,7 +15,7 @@
       >
     }
   </div>
-  <div class="tools">
+  <div class="tools" [class.has-actions]="!!headerActions()">
     @if (
       selection().kind === 'all' ||
       selection().kind === 'tag' ||
@@ -71,6 +71,9 @@
         <app-icon name="refresh" size="sm" />
         <span class="txt">{{ 'reader.refresh' | transloco }}</span>
       </button>
+    }
+    @if (headerActions(); as actions) {
+      <ng-container [ngTemplateOutlet]="actions" />
     }
   </div>
 </header>
