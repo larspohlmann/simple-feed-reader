@@ -511,11 +511,26 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $this->fixtures->deleteAiSettings($user);
     }
 
+    /**
+     * Moves the row's own ownership FK, then points the recipient's active
+     * pointer at it too: the handler resolves the active configuration
+     * through that pointer, not a "find by owner" query, so a row that ends
+     * up under the wrong account only matters to this test once it is also
+     * that account's active one.
+     */
     private function moveAiSettingsRow(User $from, User $to): void
     {
         $this->em->createQuery(
             sprintf('UPDATE %s s SET s.user = :to WHERE s.user = :from', AiProviderSettings::class),
         )->execute(['to' => $to, 'from' => $from]);
+        $this->em->clear();
+
+        $moved = $this->em->getRepository(AiProviderSettings::class)->findOneBy(['user' => $to]);
+        self::assertInstanceOf(AiProviderSettings::class, $moved);
+
+        $this->em->createQuery(
+            sprintf('UPDATE %s u SET u.activeAiProviderSettings = :settings WHERE u = :to', User::class),
+        )->execute(['settings' => $moved, 'to' => $to]);
         $this->em->clear();
     }
 

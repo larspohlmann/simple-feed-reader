@@ -54,6 +54,12 @@ final readonly class RecommendationRunFixtures
      * RecommendationRunAdvancerTest and AdvanceRecommendationRunsHandlerTest
      * drive that race, and both need the row gone and the identity map clear
      * before the next tick sees it.
+     *
+     * The active pointer is also cleared on the in-memory $user directly:
+     * ON DELETE SET NULL clears the database column, but a caller that keeps
+     * driving this exact $user instance afterward (rather than reloading it)
+     * would otherwise still read the now-deleted row off the object's own
+     * property, which em->clear() does not touch.
      */
     public function deleteAiSettings(User $user): void
     {
@@ -62,6 +68,7 @@ final readonly class RecommendationRunFixtures
         $this->em->remove($settings);
         $this->em->flush();
         $this->em->clear();
+        $user->setActiveAiProviderSettings(null);
     }
 
     /** Not flushed: callers batch several rows (often a `finish()` on top of

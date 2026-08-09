@@ -1127,11 +1127,18 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->deleteAiSettings();
         // The donor's key was sealed under the donor's own account id, so
         // moving its settings row onto $this->user makes the stored
-        // ciphertext fail its integrity check the moment credentials() opens it.
+        // ciphertext fail its integrity check the moment credentials() opens
+        // it. The move also has to carry the active pointer onto the same
+        // in-memory $this->user instance advance() below receives: settingsFor()
+        // resolves through that property directly, and em->clear() detaches
+        // rather than refreshes it.
         $this->em->createQuery(
             sprintf('UPDATE %s s SET s.user = :to WHERE s.user = :from', AiProviderSettings::class),
         )->execute(['to' => $this->user, 'from' => $keyDonor]);
         $this->em->clear();
+        $moved = $this->em->getRepository(AiProviderSettings::class)->findOneBy(['user' => $this->user]);
+        self::assertInstanceOf(AiProviderSettings::class, $moved);
+        $this->user->setActiveAiProviderSettings($moved);
 
         try {
             $this->advancer()->advance($this->user);
