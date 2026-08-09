@@ -88,7 +88,13 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
         $reader = new CompletionStreamReader($this->decoder);
 
         $this->readInto($reader, $credentials, $request, $observer);
-        $content = $reader->assistantContent();
+
+        // Prefer the answer channel; fall back to the reasoning channel only
+        // when it is empty. LM Studio routes some models' whole answer through
+        // reasoning_content and never fills content (#323), and the answer is
+        // recoverable from there — the parser still validates whatever comes
+        // back, so a reply that is only thinking is rejected downstream.
+        $content = $reader->assistantContent() ?? $reader->reasoningContent();
 
         if (null === $content) {
             throw new ProviderUnreachableException('That provider answered without a completion.');

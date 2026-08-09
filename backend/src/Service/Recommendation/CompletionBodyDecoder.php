@@ -25,6 +25,16 @@ final readonly class CompletionBodyDecoder
     }
 
     /**
+     * The reasoning channel of one blocking envelope: a reasoning model under
+     * LM Studio that ignores `stream: true` puts its whole answer under
+     * `message.reasoning_content` and leaves `content` empty (#323).
+     */
+    public function envelopeReasoning(string $body): ?string
+    {
+        return $this->reasoningOf($this->firstChoice($body), 'message');
+    }
+
+    /**
      * Why the provider stopped generating, stamped on the choice itself:
      * `length` means `max_tokens` truncated the answer, `stop` a natural end.
      * Null while the choice is still streaming. Both shapes carry it in the
@@ -41,7 +51,7 @@ final readonly class CompletionBodyDecoder
      * once here — rather than once per field — halves the parse work over a
      * reasoning model's thousands of thinking events (#327).
      *
-     * @return array{content: ?string, finishReason: ?string}
+     * @return array{content: ?string, reasoning: ?string, finishReason: ?string}
      */
     public function streamEvent(string $payload): array
     {
@@ -49,6 +59,7 @@ final readonly class CompletionBodyDecoder
 
         return [
             'content' => $this->contentOf($choice, 'delta'),
+            'reasoning' => $this->reasoningOf($choice, 'delta'),
             'finishReason' => $this->finishReasonOf($choice),
         ];
     }
@@ -77,14 +88,49 @@ final readonly class CompletionBodyDecoder
      */
     private function contentOf(?array $choice, string $choiceKey): ?string
     {
-        if (null === $choice) {
-            return null;
-        }
+        return $this->stringField($this->answerOf($choice, $choiceKey), 'content');
+    }
 
-        $answer = \is_array($choice[$choiceKey] ?? null) ? $choice[$choiceKey] : null;
-        $content = \is_array($answer) ? ($answer['content'] ?? null) : null;
+    /**
+     * The same answer under its reasoning channel, which two providers spell
+     * two ways: LM Studio `reasoning_content`, OpenRouter `reasoning`. Read as
+     * a last resort — a model that answered under `content` is preferred.
+     *
+     * @param array<mixed>|null $choice
+     */
+    private function reasoningOf(?array $choice, string $choiceKey): ?string
+    {
+        $answer = $this->answerOf($choice, $choiceKey);
 
-        return \is_string($content) ? $content : null;
+        return $this->stringField($answer, 'reasoning_content') ?? $this->stringField($answer, 'reasoning');
+    }
+
+    /**
+     * The `delta` or `message` object that holds the answer fields, or null
+     * when the choice does not carry one.
+     *
+     * @param array<mixed>|null $choice
+     *
+     * @return array<mixed>|null
+     */
+    private function answerOf(?array $choice, string $choiceKey): ?array
+    {
+        $answer = null === $choice ? null : ($choice[$choiceKey] ?? null);
+
+        return \is_array($answer) ? $answer : null;
+    }
+
+    /**
+     * One string field of the answer object, or null when it is absent or —
+     * the provider being untrusted — not a string.
+     *
+     * @param array<mixed>|null $answer
+     */
+    private function stringField(?array $answer, string $field): ?string
+    {
+        $value = null === $answer ? null : ($answer[$field] ?? null);
+
+        return \is_string($value) ? $value : null;
     }
 
     /** @param array<mixed>|null $choice */

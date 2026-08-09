@@ -20,8 +20,18 @@ namespace App\Service\Recommendation;
  */
 final class CompletionStreamReader
 {
+    /**
+     * A reasoning model's thinking phase can run to megabytes (#320), so only
+     * the tail of the reasoning channel is retained — where LM Studio's models
+     * put the JSON answer right before they stop (#323). This buffer bounds
+     * itself rather than being charged to retainedBytes(): reasoning must never
+     * count against the answer's cap, the whole point of #320.
+     */
+    public const int REASONING_TAIL_LIMIT = 2_097_152;
+
     private string $pendingLine = '';
     private string $answer = '';
+    private string $reasoning = '';
     private string $envelope = '';
     private bool $sawStreamEvent = false;
     private int $wireBytes = 0;
@@ -80,6 +90,21 @@ final class CompletionStreamReader
         return '' === $answer ? null : $answer;
     }
 
+    /**
+     * The reasoning channel, kept only so the client can recover an answer a
+     * model routed there instead of into `content` (#323). Never the preferred
+     * source: the client reads it only when `assistantContent()` is empty. Held
+     * to its tail, and — unlike the answer — never charged to the size cap.
+     */
+    public function reasoningContent(): ?string
+    {
+        if (!$this->sawStreamEvent) {
+            return $this->decoder->envelopeReasoning($this->envelope . $this->pendingLine);
+        }
+
+        return '' === $this->reasoning ? null : $this->reasoning;
+    }
+
     private function readLine(string $line): void
     {
         if (str_starts_with($line, 'data:')) {
@@ -120,7 +145,25 @@ final class CompletionStreamReader
 
         $event = $this->decoder->streamEvent($payload);
         $this->answer .= $event['content'] ?? '';
+        $this->appendReasoning($event['reasoning'] ?? '');
         $this->finishReason = $event['finishReason'] ?? $this->finishReason;
+    }
+
+    /**
+     * Appends to the reasoning tail and trims it back to the bound from the
+     * front, so the buffer keeps the end — where the answer sits — however
+     * long the thinking phase runs.
+     */
+    private function appendReasoning(string $fragment): void
+    {
+        $this->reasoning .= $fragment;
+
+        // Keep only the tail: a reasoning phase can stream up to the wire cap,
+        // but the answer sits at its end (#323), and it must never be charged
+        // to the answer's own cap (#320) — so this buffer bounds itself.
+        if (\strlen($this->reasoning) > self::REASONING_TAIL_LIMIT) {
+            $this->reasoning = substr($this->reasoning, -self::REASONING_TAIL_LIMIT);
+        }
     }
 
     /**
