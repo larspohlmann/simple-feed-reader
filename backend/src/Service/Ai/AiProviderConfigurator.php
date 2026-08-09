@@ -73,6 +73,8 @@ final readonly class AiProviderConfigurator
     }
 
     /**
+     * @throws CredentialsRejectedException
+     * @throws ProviderUnreachableException
      * @throws TooManyConfigurationsException
      */
     public function addConfiguration(User $user, ?string $name, string $baseUrl, string $apiKey): AddedConfiguration
@@ -159,56 +161,6 @@ final readonly class AiProviderConfigurator
 
         $this->entityManager->remove($settings);
         $this->entityManager->flush();
-    }
-
-    /**
-     * @return list<string> the models the provider offers
-     *
-     * @deprecated transitional single-configuration surface; the HTTP layer
-     * still calls it and is rewritten in the next task
-     */
-    public function saveConnection(User $user, string $baseUrl, string $apiKey): array
-    {
-        $credentials = ProviderCredentials::fromAccountInput($baseUrl, $apiKey);
-        $descriptors = $this->catalog->listModels($credentials);
-
-        $sealed = $this->cipher->seal($this->identify($user), $credentials->apiKey);
-        $hint = substr($credentials->apiKey, -self::HINT_LENGTH);
-        $active = $user->getActiveAiProviderSettings();
-
-        if (null === $active) {
-            $configuration = new AiProviderSettings(
-                $user,
-                null,
-                $credentials->baseUrl,
-                $sealed,
-                $hint,
-                $this->clock->now(),
-            );
-            $this->entityManager->persist($configuration);
-            $user->setActiveAiProviderSettings($configuration);
-        } else {
-            $active->replaceConnection($credentials->baseUrl, $sealed, $hint, $this->clock->now());
-        }
-
-        $this->entityManager->flush();
-
-        return $this->ids($descriptors);
-    }
-
-    /**
-     * @deprecated transitional single-configuration surface; the HTTP layer
-     * still calls it and is rewritten in the next task
-     */
-    public function forget(User $user): void
-    {
-        $active = $user->getActiveAiProviderSettings();
-
-        if (null === $active) {
-            return;
-        }
-
-        $this->deleteConfiguration($active);
     }
 
     /**
