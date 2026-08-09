@@ -120,4 +120,33 @@ final class AiProviderSettingsTest extends TestCase
         self::assertSame('wxyz', $settings->getApiKeyHint());
         self::assertSame('b3RoZXI=', $settings->getSealedApiKey()->ciphertext);
     }
+
+    public function testANewRowSuppressesReasoningByDefault(): void
+    {
+        self::assertTrue($this->settings()->suppressesReasoning());
+    }
+
+    public function testSettingSuppressReasoningRoundTrips(): void
+    {
+        $settings = $this->settings();
+
+        $settings->setSuppressReasoning(false);
+
+        self::assertFalse($settings->suppressesReasoning());
+    }
+
+    public function testReplacingTheConnectionKeepsTheReasoningPreference(): void
+    {
+        $settings = $this->settings();
+        $settings->setSuppressReasoning(false);
+
+        $settings->replaceConnection(
+            'https://other.example.test/v1',
+            $this->sealed('b3RoZXI='),
+            'wxyz',
+            new \DateTimeImmutable('2026-08-06 11:00:00'),
+        );
+
+        self::assertFalse($settings->suppressesReasoning());
+    }
 }
