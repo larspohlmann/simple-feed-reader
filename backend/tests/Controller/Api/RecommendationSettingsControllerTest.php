@@ -433,4 +433,78 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         self::assertIsArray($payload['errors']);
         self::assertArrayHasKey('autoGenerateIntervalHours', $payload['errors']);
     }
+
+    /**
+     * @return iterable<string, array{int}>
+     */
+    public static function allowedAutoGenerateIntervals(): iterable
+    {
+        yield 'every hour' => [1];
+        yield 'every 3 hours' => [3];
+        yield 'every 6 hours' => [6];
+        yield 'every 12 hours' => [12];
+        yield 'every 24 hours' => [24];
+    }
+
+    #[DataProvider('allowedAutoGenerateIntervals')]
+    public function testSaveAcceptsEachAllowedInterval(int $hours): void
+    {
+        $client = static::createClient();
+        [$headers] = $this->auth('recsettings-interval-ok-' . $hours . '@example.test');
+
+        $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        $body['autoGenerateIntervalHours'] = $hours;
+
+        $client->request(
+            'PUT',
+            self::URI,
+            server: array_merge($headers, ['CONTENT_TYPE' => 'application/json']),
+            content: json_encode($body, \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseIsSuccessful();
+        self::assertSame($hours, $this->payload($client)['autoGenerateIntervalHours']);
+    }
+
+    /**
+     * Neighbours of each allowed value: an off-by-one on any of the
+     * `Assert\Choice` literals would let one of these through.
+     *
+     * @return iterable<string, array{int}>
+     */
+    public static function disallowedAutoGenerateIntervals(): iterable
+    {
+        yield 'zero' => [0];
+        yield 'two' => [2];
+        yield 'four' => [4];
+        yield 'seven' => [7];
+        yield 'eleven' => [11];
+        yield 'thirteen' => [13];
+        yield 'twenty-three' => [23];
+        yield 'twenty-five' => [25];
+    }
+
+    #[DataProvider('disallowedAutoGenerateIntervals')]
+    public function testSaveRejectsEachDisallowedInterval(int $hours): void
+    {
+        $client = static::createClient();
+        [$headers] = $this->auth('recsettings-interval-off-' . $hours . '@example.test');
+
+        $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        $body['autoGenerateIntervalHours'] = $hours;
+
+        $client->request(
+            'PUT',
+            self::URI,
+            server: array_merge($headers, ['CONTENT_TYPE' => 'application/json']),
+            content: json_encode($body, \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(422);
+        $errors = $this->payload($client)['errors'];
+        self::assertIsArray($errors);
+        self::assertArrayHasKey('autoGenerateIntervalHours', $errors);
+    }
 }

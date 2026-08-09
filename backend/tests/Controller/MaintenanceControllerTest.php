@@ -149,6 +149,12 @@ final class MaintenanceControllerTest extends WebTestCase
         $client->request('POST', '/maintenance/recommendations/sweep');
 
         self::assertResponseStatusCodeSame(403);
+        // The body shape matters, not just the status: the guard's rejection
+        // carries the `error` field the caller reads.
+        self::assertSame(
+            ['error' => 'forbidden'],
+            json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR),
+        );
     }
 
     public function testRecommendationSweepRunsWithValidToken(): void

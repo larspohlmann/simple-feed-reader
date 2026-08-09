@@ -6,6 +6,9 @@ namespace App\Tests\Service\Recommendation;
 
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Repository\RecommendationRunRepository;
+use App\Repository\RecommendationSettingsRepository;
+use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\DueRecommendationRunFinder;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
@@ -15,6 +18,7 @@ use App\Service\Recommendation\RecommendationSettingsWriter;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class DueRecommendationRunFinderTest extends DbTestCase
@@ -125,5 +129,61 @@ final class DueRecommendationRunFinderTest extends DbTestCase
         $this->em->clear();
 
         self::assertContains('finder-never-ran@example.test', $this->dueEmails());
+    }
+
+    /**
+     * The active-run guard is load-bearing on its own, not made redundant by
+     * the anchor check below it: a PENDING run (active) with a stale creation
+     * time would read as due by the anchor alone, so only the guard keeps it
+     * out. Pins that the guard's early return actually fires.
+     */
+    public function testNotDueWhileAnOldActiveRunExists(): void
+    {
+        $user = $this->user('finder-old-active@example.test');
+        $this->fixtures->seedReadyAiSettings($user);
+        $this->setCadence($user, 1);
+
+        // A PENDING run is active, and its creation time is well past one
+        // interval, so the anchor alone would say "due".
+        $run = new RecommendationRun($user, new \DateTimeImmutable('-10 hours'));
+        $this->em->persist($run);
+        $this->em->flush();
+        $this->em->clear();
+
+        self::assertNotContains('finder-old-active@example.test', $this->dueEmails());
+    }
+
+    /**
+     * Exactly one interval after the anchor is due: the comparison is `>=`,
+     * not `>`. Uses a fixed clock so the boundary is exact rather than racing
+     * the wall clock.
+     */
+    public function testDueExactlyAtTheIntervalBoundary(): void
+    {
+        $user = $this->user('finder-boundary@example.test');
+        $this->fixtures->seedReadyAiSettings($user);
+        $this->setCadence($user, 3);
+        $this->pastFailedRun($user, '2026-08-09 09:00:00');
+        $this->em->clear();
+
+        // "Now" is exactly three hours after the anchor: due under `>=`,
+        // not-due under `>`.
+        $settings = self::getContainer()->get(RecommendationSettingsRepository::class);
+        self::assertInstanceOf(RecommendationSettingsRepository::class, $settings);
+        $runs = self::getContainer()->get(RecommendationRunRepository::class);
+        self::assertInstanceOf(RecommendationRunRepository::class, $runs);
+        $configurator = self::getContainer()->get(AiProviderConfigurator::class);
+        self::assertInstanceOf(AiProviderConfigurator::class, $configurator);
+
+        $finder = new DueRecommendationRunFinder(
+            $settings,
+            $runs,
+            $configurator,
+            new MockClock(new \DateTimeImmutable('2026-08-09 12:00:00')),
+        );
+
+        $due = array_map(static fn (User $user): string => $user->getEmail(), $finder->due());
+
+        self::assertContains('finder-boundary@example.test', $due);
     }
 }
