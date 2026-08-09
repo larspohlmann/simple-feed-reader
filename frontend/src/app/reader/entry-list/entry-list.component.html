@@ -135,71 +135,73 @@
       <ng-container [ngTemplateOutlet]="block" />
     }
     @for (b of blocks(); track blockKey(b)) {
-      @switch (b.kind) {
-        @case ('hero') {
-          <app-entry-hero
-            [entry]="entryOf(b)"
-            [tags]="tagsFor(entryOf(b).subscriptionId)"
-            (favorite)="favorite.emit($event)"
-            (keep)="keep.emit($event)"
-            (read)="read.emit($event)"
-            (open)="open.emit($event)"
-          />
+      <app-recommendation-strip [entry]="strippableEntry(b)">
+        @switch (b.kind) {
+          @case ('hero') {
+            <app-entry-hero
+              [entry]="entryOf(b)"
+              [tags]="tagsFor(entryOf(b).subscriptionId)"
+              (favorite)="favorite.emit($event)"
+              (keep)="keep.emit($event)"
+              (read)="read.emit($event)"
+              (open)="open.emit($event)"
+            />
+          }
+          @case ('wide') {
+            <app-entry-wide
+              [entry]="entryOf(b)"
+              [tags]="tagsFor(entryOf(b).subscriptionId)"
+              (open)="open.emit($event)"
+            />
+          }
+          @case ('quote') {
+            <app-entry-quote
+              [entry]="entryOf(b)"
+              [tags]="tagsFor(entryOf(b).subscriptionId)"
+              (open)="open.emit($event)"
+            />
+          }
+          @case ('split') {
+            <app-entry-split
+              [entry]="entryOf(b)"
+              [imageSide]="side(b)"
+              [tags]="tagsFor(entryOf(b).subscriptionId)"
+              (open)="open.emit($event)"
+            />
+          }
+          @case ('kicker') {
+            <app-entry-kicker
+              [entry]="entryOf(b)"
+              [tags]="tagsFor(entryOf(b).subscriptionId)"
+              (open)="open.emit($event)"
+            />
+          }
+          @case ('thumb') {
+            <app-entry-thumb
+              [entry]="entryOf(b)"
+              [tags]="tagsFor(entryOf(b).subscriptionId)"
+              (open)="open.emit($event)"
+            />
+          }
+          @case ('compact') {
+            <app-entry-compact
+              [entry]="entryOf(b)"
+              [tags]="tagsFor(entryOf(b).subscriptionId)"
+              (open)="open.emit($event)"
+            />
+          }
+          @case ('group') {
+            <app-source-group
+              [source]="grp(b).source"
+              [subscriptionId]="grp(b).subscriptionId"
+              [entries]="grp(b).entries"
+              [previewCount]="grp(b).previewCount"
+              [tags]="tagsFor(grp(b).subscriptionId)"
+              (open)="open.emit($event)"
+            />
+          }
         }
-        @case ('wide') {
-          <app-entry-wide
-            [entry]="entryOf(b)"
-            [tags]="tagsFor(entryOf(b).subscriptionId)"
-            (open)="open.emit($event)"
-          />
-        }
-        @case ('quote') {
-          <app-entry-quote
-            [entry]="entryOf(b)"
-            [tags]="tagsFor(entryOf(b).subscriptionId)"
-            (open)="open.emit($event)"
-          />
-        }
-        @case ('split') {
-          <app-entry-split
-            [entry]="entryOf(b)"
-            [imageSide]="side(b)"
-            [tags]="tagsFor(entryOf(b).subscriptionId)"
-            (open)="open.emit($event)"
-          />
-        }
-        @case ('kicker') {
-          <app-entry-kicker
-            [entry]="entryOf(b)"
-            [tags]="tagsFor(entryOf(b).subscriptionId)"
-            (open)="open.emit($event)"
-          />
-        }
-        @case ('thumb') {
-          <app-entry-thumb
-            [entry]="entryOf(b)"
-            [tags]="tagsFor(entryOf(b).subscriptionId)"
-            (open)="open.emit($event)"
-          />
-        }
-        @case ('compact') {
-          <app-entry-compact
-            [entry]="entryOf(b)"
-            [tags]="tagsFor(entryOf(b).subscriptionId)"
-            (open)="open.emit($event)"
-          />
-        }
-        @case ('group') {
-          <app-source-group
-            [source]="grp(b).source"
-            [subscriptionId]="grp(b).subscriptionId"
-            [entries]="grp(b).entries"
-            [previewCount]="grp(b).previewCount"
-            [tags]="tagsFor(grp(b).subscriptionId)"
-            (open)="open.emit($event)"
-          />
-        }
-      }
+      </app-recommendation-strip>
     }
     @if (hasMore()) {
       <div class="foot" #sentinel>
@@ -230,15 +232,17 @@
       <ng-container [ngTemplateOutlet]="block" />
     }
     @for (e of entries(); track e.id) {
-      <app-entry-row
-        [entry]="e"
-        [tags]="tagsFor(e.subscriptionId)"
-        [class.open]="openEntryId() === e.id"
-        (favorite)="favorite.emit($event)"
-        (keep)="keep.emit($event)"
-        (read)="read.emit($event)"
-        (open)="open.emit($event)"
-      />
+      <app-recommendation-strip [entry]="e">
+        <app-entry-row
+          [entry]="e"
+          [tags]="tagsFor(e.subscriptionId)"
+          [class.open]="openEntryId() === e.id"
+          (favorite)="favorite.emit($event)"
+          (keep)="keep.emit($event)"
+          (read)="read.emit($event)"
+          (open)="open.emit($event)"
+        />
+      </app-recommendation-strip>
     }
     @if (hasMore()) {
       <div class="foot" #sentinel>

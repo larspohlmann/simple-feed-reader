@@ -119,6 +119,41 @@ describe('EntryListComponent', () => {
     });
   });
 
+  describe('recommendation strip', () => {
+    const recommended = [
+      entry(1, { recommendationReason: 'because you read src', recommendationScore: 91 }),
+      entry(2, { recommendationReason: 'similar to your favorites' }),
+    ];
+    const forYou = { kind: 'for-you', id: null, unread: false };
+
+    it('shows the reason on each for-you entry in the list layout', () => {
+      const el = mount({ entries: recommended, selection: forYou, layout: 'list' })
+        .nativeElement as HTMLElement;
+      const reasons = el.querySelectorAll('app-recommendation-strip .reason');
+      expect(reasons.length).toBe(2);
+      expect(reasons[0].textContent).toContain('because you read src');
+      expect(el.querySelector('app-recommendation-strip .reason .score')!.textContent).toContain(
+        '91',
+      );
+    });
+
+    it('shows the reason on each for-you entry in the magazine layout', () => {
+      const el = mount({ entries: recommended, selection: forYou, layout: 'magazine' })
+        .nativeElement as HTMLElement;
+      const reasons = el.querySelectorAll('app-recommendation-strip .reason');
+      expect(reasons.length).toBe(2);
+      expect(reasons[0].textContent).toContain('because you read src');
+    });
+
+    it('stays inert on a non-for-you view', () => {
+      const el = mount({
+        entries: [entry(1), entry(2)],
+        selection: { kind: 'all', id: null, unread: true },
+      }).nativeElement as HTMLElement;
+      expect(el.querySelector('.reason')).toBeNull();
+    });
+  });
+
   // #325: the shell projects the For You run/stop button here, right-aligned in
   // the header, without this generic list knowing what the action is.
   describe('headerActions', () => {
@@ -811,6 +846,37 @@ describe('EntryListComponent', () => {
       const f = mount({ refreshing: true });
       expect(f.componentInstance.revealOffset()).toBe(0);
       expect((f.nativeElement as HTMLElement).querySelector('.pull-indicator')).toBeNull();
+    });
+  });
+
+  describe('for-you grouping', () => {
+    const now = '2026-07-22T11:00:00Z';
+    const run = [
+      ...Array.from({ length: 8 }, (_, i) =>
+        entry(i + 1, { subscriptionId: 1, source: 'a', publishedAt: now }),
+      ),
+      entry(9, { subscriptionId: 2, source: 'b', publishedAt: now }),
+      entry(10, { subscriptionId: 2, source: 'b', publishedAt: now }),
+      entry(11, { subscriptionId: 3, source: 'c', publishedAt: now }),
+      entry(12, { subscriptionId: 3, source: 'c', publishedAt: now }),
+    ];
+
+    it('collapses a same-source run in an aggregated view', () => {
+      const f = mount({
+        entries: run,
+        selection: { kind: 'all', id: null, unread: false },
+        layout: 'magazine',
+      });
+      expect(f.componentInstance.blocks().some((b) => b.kind === 'group')).toBe(true);
+    });
+
+    it('never collapses the for-you list', () => {
+      const f = mount({
+        entries: run,
+        selection: { kind: 'for-you', id: null, unread: false },
+        layout: 'magazine',
+      });
+      expect(f.componentInstance.blocks().some((b) => b.kind === 'group')).toBe(false);
     });
   });
 });

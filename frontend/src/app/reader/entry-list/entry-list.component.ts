@@ -25,6 +25,7 @@ import {
   ToTopButtonComponent,
 } from '../../shared/to-top-button/to-top-button.component';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
+import { RecommendationStripComponent } from '../recommendation-strip/recommendation-strip.component';
 import { EntryHeroComponent } from '../magazine/entry-hero.component';
 import { EntryCompactComponent } from '../magazine/entry-compact.component';
 import { SourceGroupComponent } from '../magazine/source-group.component';
@@ -38,7 +39,7 @@ import { MagazineBlock } from '../magazine/magazine-block';
 import { planMagazine } from '../magazine/magazine-planner';
 import { ReadingLayout } from '../reading-layout.service';
 import { EntryDto, SubscriptionTagDto, TagDto } from '../models';
-import { Selection, canScopedRefresh, sameSelection } from '../query';
+import { Selection, canScopedRefresh, isSingleStreamView, sameSelection } from '../query';
 import { atTop, pullTriggersRefresh, rubberBand } from '../reader-gestures';
 import { relativeTime } from '../format';
 import { LanguageService } from '../../core/language.service';
@@ -71,6 +72,7 @@ export const REFRESH_REVEAL = 48;
     SpinnerComponent,
     TagGlyphComponent,
     EntryRowComponent,
+    RecommendationStripComponent,
     EntryHeroComponent,
     EntryCompactComponent,
     SourceGroupComponent,
@@ -139,8 +141,7 @@ export class EntryListComponent implements OnDestroy {
    *  generated/fetched). */
   readonly lastRefreshedLabel = computed(() => {
     const iso = this.lastRefreshed();
-    const kind = this.selection().kind;
-    if ((kind !== 'subscription' && kind !== 'for-you') || !iso) return null;
+    if (!isSingleStreamView(this.selection()) || !iso) return null;
     return relativeTime(iso, this.language.lang());
   });
 
@@ -186,7 +187,9 @@ export class EntryListComponent implements OnDestroy {
   readonly blocks = computed<MagazineBlock[]>(() =>
     planMagazine({
       entries: this.entries(),
-      grouping: this.selection().kind !== 'subscription',
+      // Only aggregated views collapse same-source runs into a group widget; a
+      // single-stream view must not (see isSingleStreamView).
+      grouping: !isSingleStreamView(this.selection()),
       complete: !this.hasMore(),
     }),
   );
@@ -387,6 +390,12 @@ export class EntryListComponent implements OnDestroy {
   /** Narrow a block to its entry-carrying form for the template. */
   entryOf(block: MagazineBlock): EntryDto {
     return (block as Extract<MagazineBlock, { entry: EntryDto }>).entry;
+  }
+
+  /** The entry a recommendation strip should read, or null for a group block
+   *  (which carries several entries and no single reason to show). */
+  strippableEntry(block: MagazineBlock): EntryDto | null {
+    return block.kind === 'group' ? null : block.entry;
   }
 
   side(block: MagazineBlock): 'left' | 'right' {
