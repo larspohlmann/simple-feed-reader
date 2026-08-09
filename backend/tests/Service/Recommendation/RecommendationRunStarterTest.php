@@ -71,13 +71,7 @@ final class RecommendationRunStarterTest extends DbTestCase
     public function testStartAlwaysBeginsAFreshRunEvenWithAFailedRunPresent(): void
     {
         $this->seedReadyAiSettings($this->user);
-
-        $failed = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07 09:00:00'));
-        $failed->snapshot([[1, 2], [3]]);
-        $failed->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
-        $failed->fail('provider unreachable', new \DateTimeImmutable('2026-08-07 09:05:00'));
-        $this->em->persist($failed);
-        $this->em->flush();
+        $failed = $this->persistFailedRunWithOneWinner();
 
         // start() no longer resumes: whether to pick up a failed run is the
         // user's choice, made in the client, so start() always begins fresh
@@ -95,13 +89,7 @@ final class RecommendationRunStarterTest extends DbTestCase
     public function testResumeContinuesTheLatestFailedRunInPlace(): void
     {
         $this->seedReadyAiSettings($this->user);
-
-        $failed = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07 09:00:00'));
-        $failed->snapshot([[1, 2], [3]]);
-        $failed->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
-        $failed->fail('provider unreachable', new \DateTimeImmutable('2026-08-07 09:05:00'));
-        $this->em->persist($failed);
-        $this->em->flush();
+        $failed = $this->persistFailedRunWithOneWinner();
 
         $report = $this->starter()->resume($this->user);
 
@@ -189,6 +177,20 @@ final class RecommendationRunStarterTest extends DbTestCase
         $this->em->persist($settings);
         $settings->chooseModel('m', $now, 32768);
         $this->em->flush();
+    }
+
+    /** A failed run with one batch already ranked, so resume() has a partial
+     *  result to continue from and start() has a run to leave as history. */
+    private function persistFailedRunWithOneWinner(): RecommendationRun
+    {
+        $failed = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07 09:00:00'));
+        $failed->snapshot([[1, 2], [3]]);
+        $failed->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
+        $failed->fail('provider unreachable', new \DateTimeImmutable('2026-08-07 09:05:00'));
+        $this->em->persist($failed);
+        $this->em->flush();
+
+        return $failed;
     }
 
     private function countRuns(): int

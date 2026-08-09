@@ -117,10 +117,8 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         self::assertSame([
             'model' => 'm',
             'messages' => $this->messages(),
-            // Structured output as a json_schema, not the older json_object:
-            // LM Studio rejects json_object with a 400, and a strict schema
-            // also constrains a weak local model to valid JSON (#329). The
-            // name and schema are the caller's, carried on the request.
+            // Structured output rides as a json_schema built from the request's
+            // own schema (OpenAiCompatibleChatClient records why, #329).
             'response_format' => [
                 'type' => 'json_schema',
                 'json_schema' => [

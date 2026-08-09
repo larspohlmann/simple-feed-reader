@@ -331,15 +331,11 @@ final class RecommendationRunAdvancer
         string $content,
         array $pool,
     ): RecommendationRunReport {
-        $run->recordInvalidReply($content);
-
-        if ($run->progress()->attemptsExhausted) {
-            return $this->finalize($run, $pool);
-        }
-
-        $this->entityManager->flush();
-
-        return RecommendationRunReport::fromRun($run);
+        return $this->retryOrDegrade(
+            $run,
+            $content,
+            fn (): RecommendationRunReport => $this->finalize($run, $pool),
+        );
     }
 
     /**
@@ -556,19 +552,40 @@ final class RecommendationRunAdvancer
     /**
      * An unusable batch reply retries with a corrective tail. Once attempts are
      * exhausted the batch is dropped rather than failing the whole run: the
-     * batch phase degrades like the dedup phase (recordUnusableDedupReply), so
-     * the batches that did rank still reach the reader. A weak local model that
-     * answers one batch with an empty ranking three times running no longer
-     * discards the other batches' work (#329). recordBatchWinners with no
-     * winners resets the attempt counter and advances the plan, so a dropped
-     * batch takes the same ending as an all-pruned one; a run whose batches all
-     * drop finalizes to an empty list, the honest outcome when nothing ranked.
+     * batch phase degrades like the dedup phase, so the batches that did rank
+     * still reach the reader. A weak local model that answers one batch with an
+     * empty ranking three times running no longer discards the other batches'
+     * work (#329). recordBatchWinners with no winners resets the attempt
+     * counter and advances the plan, so a dropped batch takes the same ending
+     * as an all-pruned one; a run whose batches all drop finalizes to an empty
+     * list, the honest outcome when nothing ranked.
      */
     private function recordUnusableReply(RecommendationRun $run, string $content): RecommendationRunReport
     {
+        return $this->retryOrDegrade(
+            $run,
+            $content,
+            fn (): RecommendationRunReport => $this->recordBatchWinners($run, []),
+        );
+    }
+
+    /**
+     * The retry envelope both unusable-reply phases share: record the invalid
+     * reply, and once attempts are exhausted hand off to the phase's own
+     * degraded ending rather than failing the run; otherwise checkpoint and
+     * wait for the corrective retry. Only the ending differs — a dropped batch
+     * for the batch phase, an undeduped list for the dedup phase (#329).
+     *
+     * @param callable(): RecommendationRunReport $onAttemptsExhausted
+     */
+    private function retryOrDegrade(
+        RecommendationRun $run,
+        string $content,
+        callable $onAttemptsExhausted,
+    ): RecommendationRunReport {
         $run->recordInvalidReply($content);
         if ($run->progress()->attemptsExhausted) {
-            return $this->recordBatchWinners($run, []);
+            return $onAttemptsExhausted();
         }
         $this->entityManager->flush();
 
