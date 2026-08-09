@@ -62,6 +62,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
             'contextWindow' => 65536,
             'batchCount' => 12,
             'debugEnabled' => true,
+            'autoGenerateIntervalHours' => null,
         ], \JSON_THROW_ON_ERROR);
     }
 
@@ -374,5 +375,62 @@ final class RecommendationSettingsControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertNull($this->payload($client)['guidancePrompt']);
+    }
+
+    public function testShowExposesTheIntervalAndWorkerLiveness(): void
+    {
+        $client = static::createClient();
+        [$headers] = $this->auth('recsettings-worker-liveness@example.test');
+
+        $client->request('GET', self::URI, server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client);
+        self::assertNull($payload['autoGenerateIntervalHours']);
+        self::assertArrayHasKey('workerAlive', $payload);
+        self::assertIsBool($payload['workerAlive']);
+    }
+
+    public function testSaveAcceptsAnAllowedInterval(): void
+    {
+        $client = static::createClient();
+        [$headers] = $this->auth('recsettings-interval-allowed@example.test');
+
+        $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        $body['autoGenerateIntervalHours'] = 6;
+
+        $client->request(
+            'PUT',
+            self::URI,
+            server: array_merge($headers, ['CONTENT_TYPE' => 'application/json']),
+            content: json_encode($body, \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(6, $this->payload($client)['autoGenerateIntervalHours']);
+    }
+
+    public function testSaveRejectsADisallowedInterval(): void
+    {
+        $client = static::createClient();
+        [$headers] = $this->auth('recsettings-interval-rejected@example.test');
+
+        $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        $body['autoGenerateIntervalHours'] = 5;
+
+        $client->request(
+            'PUT',
+            self::URI,
+            server: array_merge($headers, ['CONTENT_TYPE' => 'application/json']),
+            content: json_encode($body, \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(422);
+        $payload = $this->payload($client);
+        self::assertSame('validation_error', $payload['type']);
+        self::assertIsArray($payload['errors']);
+        self::assertArrayHasKey('autoGenerateIntervalHours', $payload['errors']);
     }
 }
