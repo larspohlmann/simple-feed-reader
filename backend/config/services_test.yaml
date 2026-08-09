@@ -350,6 +350,17 @@ services:
         autowire: true
         public: true
 
+    # DueRecommendationRunFinderTest fetches this to drive due() directly
+    # against the real settings/run repositories and AI configurator, the
+    # same "no mocks" stance as RecommendationRunStarter above. Its only
+    # production caller arrives with the scheduled-sweep wiring in a later
+    # task, so until then the compiler would inline it away and the test
+    # container could not fetch it. Same `autowire` caveat as the entries
+    # above.
+    App\Service\Recommendation\DueRecommendationRunFinder:
+        autowire: true
+        public: true
+
     # WorkerScheduleWiringTest fetches this to prove the container actually
     # wires the `worker` schedule with the three decided entries in order —
     # an autoconfigured #[AsSchedule] service builds fine even with an entry

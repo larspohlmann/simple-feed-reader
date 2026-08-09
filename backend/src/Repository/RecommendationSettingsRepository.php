@@ -23,4 +23,21 @@ final class RecommendationSettingsRepository extends ServiceEntityRepository
     {
         return $this->findOneBy(['user' => $user]);
     }
+
+    /**
+     * Every account that opted into a scheduled run (#333); the finder decides
+     * which of them are actually due right now.
+     *
+     * @return list<RecommendationSettings>
+     */
+    public function findWithAutoGenerateInterval(): array
+    {
+        /** @var list<RecommendationSettings> $rows */
+        $rows = $this->createQueryBuilder('s')
+            ->andWhere('s.autoGenerateIntervalHours IS NOT NULL')
+            ->getQuery()
+            ->getResult();
+
+        return $rows;
+    }
 }
