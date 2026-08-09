@@ -49,6 +49,16 @@ describe('RecommendationsService', () => {
 
   afterEach(() => ctrl.verify());
 
+  /** A `running` flush with `background: false` re-polls immediately (the
+   *  existing poll-loop contract), leaving one open tick request. The creep
+   *  tests below drive to a milestone and then need to settle that request;
+   *  answering it with a `completed` report ends the run cleanly. */
+  const drainTrailingTick = (): void => {
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'completed', batchesTotal: 4, batchesDone: 4, elapsedSeconds: 80 }));
+  };
+
   it('starts a run, ticks until completed, and shows the ready toast', () => {
     svc.start();
     ctrl
@@ -624,11 +634,7 @@ describe('RecommendationsService', () => {
     expect(svc.progress()).toBeCloseTo(0.25 + 0.25 * 0.92);
     expect(svc.progress()).toBeLessThan(0.5);
 
-    // Drain the tick the last 'running' flush auto-triggered (background:
-    // false re-polls immediately, per the existing poll-loop contract).
-    ctrl
-      .expectOne('https://api.test/api/recommendations/runs/tick')
-      .flush(report({ status: 'completed', batchesTotal: 4, batchesDone: 4, elapsedSeconds: 80 }));
+    drainTrailingTick();
     discardPeriodicTasks();
     jest.useRealTimers();
   }));
@@ -650,11 +656,7 @@ describe('RecommendationsService', () => {
       .flush(report({ status: 'running', batchesTotal: 4, batchesDone: 2, elapsedSeconds: 40 }));
     expect(svc.progress()).toBeCloseTo(0.5);
 
-    // Drain the tick the last 'running' flush auto-triggered (background:
-    // false re-polls immediately, per the existing poll-loop contract).
-    ctrl
-      .expectOne('https://api.test/api/recommendations/runs/tick')
-      .flush(report({ status: 'completed', batchesTotal: 4, batchesDone: 4, elapsedSeconds: 80 }));
+    drainTrailingTick();
     discardPeriodicTasks();
     jest.useRealTimers();
   }));
@@ -682,11 +684,7 @@ describe('RecommendationsService', () => {
     expect(svc.etaSeconds()).toBe(60);
     expect(svc.etaState()).toBe('eta');
 
-    // Drain the tick the last 'running' flush auto-triggered (background:
-    // false re-polls immediately, per the existing poll-loop contract).
-    ctrl
-      .expectOne('https://api.test/api/recommendations/runs/tick')
-      .flush(report({ status: 'completed', batchesTotal: 4, batchesDone: 4, elapsedSeconds: 80 }));
+    drainTrailingTick();
     discardPeriodicTasks();
     jest.useRealTimers();
   }));

@@ -102,15 +102,12 @@ export class RecommendationsService {
    *  null until batch 1 completes, which is the honest-blank window. */
   private readonly avgCompletedSeconds = signal<number | null>(null);
 
-  /** True while the poll loop is waiting out the 429 limiter. Freezes the bar
-   *  and swaps the ETA number for a wait label rather than letting the estimate
-   *  balloon while nothing is actually progressing. */
+  /** True while the poll loop is waiting out the 429 limiter. The ticker is
+   *  paused for the duration (see `backOffWhileRateLimited`), so the bar holds
+   *  its last value instead of creeping to its cap, and the ETA number is
+   *  swapped for a wait label rather than letting the estimate balloon while
+   *  nothing is actually progressing. */
   readonly rateLimited = signal(false);
-
-  /** The progress value captured the instant a 429 backoff began, held while
-   *  `rateLimited` so the bar freezes instead of creeping to its cap during a
-   *  wait. Cleared when a live report resumes progress. */
-  private readonly frozenProgress = signal<number | null>(null);
 
   /** Ticker handle; the bar re-reads the clock on every bump. */
   private tickerId: ReturnType<typeof setInterval> | null = null;
@@ -128,8 +125,6 @@ export class RecommendationsService {
     if (!current || !current.batchesTotal) return 0;
 
     const base = clamp01(current.batchesDone / current.batchesTotal);
-    if (this.rateLimited()) return this.frozenProgress() ?? base;
-
     const average = this.avgCompletedSeconds();
     const batchStart = this.currentBatchStart();
     if (average === null || batchStart === null) return base; // honest blank
@@ -296,7 +291,7 @@ export class RecommendationsService {
     }
     if (next.status === 'running' || next.status === 'pending') {
       this.rateLimited.set(false);
-      this.frozenProgress.set(null);
+      this.startTicker(); // resume the bar if a rate-limit backoff had paused it
     }
     this.report.set(next);
   }
@@ -367,7 +362,7 @@ export class RecommendationsService {
       this.stopWithHttpError(e);
       return;
     }
-    this.frozenProgress.set(this.progress());
+    this.stopTicker(); // freeze the bar: with no ticker bump, progress() holds its last value
     this.rateLimited.set(true);
     this.stepLater({ ...attempts, rateLimited: attempts.rateLimited + 1 }, RATE_LIMIT_POLL_MS);
   }

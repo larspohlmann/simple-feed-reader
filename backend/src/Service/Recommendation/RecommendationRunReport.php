@@ -69,9 +69,9 @@ final readonly class RecommendationRunReport
             $this->batchesTotal,
             $this->batchesDone,
             $this->error,
-            true,
-            $this->streamedChars,
-            $this->startedAt,
+            background: true,
+            streamedChars: $this->streamedChars,
+            startedAt: $this->startedAt,
         );
     }
 
