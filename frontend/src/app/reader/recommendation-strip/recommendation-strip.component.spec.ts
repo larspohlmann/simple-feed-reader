@@ -62,9 +62,7 @@ describe('RecommendationStripComponent', () => {
   });
 
   it('renders the score pill only when the score is a number', () => {
-    const withScore = mount(
-      entry({ recommendationReason: 'r', recommendationScore: 82 }),
-    );
+    const withScore = mount(entry({ recommendationReason: 'r', recommendationScore: 82 }));
     expect(withScore.querySelector('.reason .score')!.textContent).toContain('82');
 
     const noScore = mount(entry({ recommendationReason: 'r' }));
