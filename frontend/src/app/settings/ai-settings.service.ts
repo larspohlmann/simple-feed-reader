@@ -19,6 +19,7 @@ export interface AiConfig {
   readonly model: string | null;
   readonly ready: boolean;
   readonly active: boolean;
+  readonly suppressReasoning: boolean;
 }
 
 export interface AiConfigList {
@@ -102,6 +103,15 @@ export class AiSettingsService {
   rename(id: number, name: string | null): void {
     this.run(
       this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/name`, { name }),
+      (config) => this.upsert(config),
+    );
+  }
+
+  setReasoning(id: number, suppressReasoning: boolean): void {
+    this.run(
+      this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/reasoning`, {
+        suppressReasoning,
+      }),
       (config) => this.upsert(config),
     );
   }

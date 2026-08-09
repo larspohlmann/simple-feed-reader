@@ -16,6 +16,7 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   model: null,
   ready: false,
   active: false,
+  suppressReasoning: true,
   ...over,
 });
 
@@ -139,6 +140,19 @@ describe('AiSettingsService', () => {
     request.flush(config({ id: 5, name: 'New name' }));
 
     expect(svc.configs()).toEqual([config({ id: 5, name: 'New name' })]);
+  });
+
+  it('sets the reasoning preference in place', () => {
+    svc.load();
+    ctrl.expectOne(`${base}/api/me/ai`).flush({ configs: [config({ id: 5 })], activeId: null });
+
+    svc.setReasoning(5, false);
+    const request = ctrl.expectOne(`${base}/api/me/ai/configs/5/reasoning`);
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ suppressReasoning: false });
+    request.flush(config({ id: 5, suppressReasoning: false }));
+
+    expect(svc.configs()[0].suppressReasoning).toBe(false);
   });
 
   it('activates a configuration and clears the active flag on the others', () => {
