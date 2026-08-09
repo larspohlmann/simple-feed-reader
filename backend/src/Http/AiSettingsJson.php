@@ -7,7 +7,8 @@ namespace App\Http;
 use App\Entity\AiProviderSettings;
 
 /**
- * The client's view of its AI provider, and the ONE definition of "ready".
+ * The client's view of the account's AI provider configurations, and the ONE
+ * definition of "ready".
  *
  * Hand-built for the same reason MeJson is: the entity holds sealed key
  * material, and a serialiser that learned to walk it would put that on the
@@ -25,15 +26,43 @@ final class AiSettingsJson
     /**
      * @return array<string, mixed>
      */
-    public static function state(?AiProviderSettings $settings): array
+    public static function configuration(AiProviderSettings $settings, ?int $activeId): array
     {
         return [
-            'configured' => null !== $settings,
-            'baseUrl' => $settings?->getBaseUrl(),
-            'apiKeyHint' => $settings?->getApiKeyHint(),
-            'model' => $settings?->getModel(),
+            'id' => $settings->getId(),
+            'name' => $settings->getName(),
+            'baseUrl' => $settings->getBaseUrl(),
+            'apiKeyHint' => $settings->getApiKeyHint(),
+            'model' => $settings->getModel(),
             'ready' => self::isReady($settings),
+            'active' => $settings->getId() === $activeId,
         ];
+    }
+
+    /**
+     * @param list<AiProviderSettings> $configurations
+     *
+     * @return array<string, mixed>
+     */
+    public static function list(array $configurations, ?int $activeId): array
+    {
+        return [
+            'configs' => array_map(
+                static fn (AiProviderSettings $each): array => self::configuration($each, $activeId),
+                $configurations,
+            ),
+            'activeId' => $activeId,
+        ];
+    }
+
+    /**
+     * @param list<string> $models
+     *
+     * @return array<string, mixed>
+     */
+    public static function added(AiProviderSettings $settings, array $models): array
+    {
+        return self::configuration($settings, null) + ['models' => $models];
     }
 
     /**
@@ -50,25 +79,5 @@ final class AiSettingsJson
     public static function isReady(?AiProviderSettings $settings): bool
     {
         return null !== $settings && $settings->hasModel();
-    }
-
-    /**
-     * @param list<string> $models
-     *
-     * @return array<string, mixed>
-     */
-    public static function stateWithModels(?AiProviderSettings $settings, array $models): array
-    {
-        return self::state($settings) + ['models' => $models];
-    }
-
-    /**
-     * @param list<string> $models
-     *
-     * @return array<string, mixed>
-     */
-    public static function models(array $models): array
-    {
-        return ['models' => $models];
     }
 }
