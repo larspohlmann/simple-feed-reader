@@ -9,6 +9,7 @@ import { DebugLogDetail, DebugLogEntry, DebugLogRunSummary } from '../reader/mod
 
 const BATCH_ENTRY: DebugLogEntry = {
   id: 1,
+  runId: 7,
   phase: 'batch',
   batchNumber: 2,
   attempt: 1,
@@ -20,10 +21,12 @@ const BATCH_ENTRY: DebugLogEntry = {
   createdAt: '2026-08-08T10:00:00Z',
   finishedAt: null,
   errorDetail: null,
+  finishReason: null,
 };
 
 const DEDUP_ENTRY: DebugLogEntry = {
   id: 2,
+  runId: 7,
   phase: 'dedup',
   batchNumber: null,
   attempt: 2,
@@ -35,10 +38,12 @@ const DEDUP_ENTRY: DebugLogEntry = {
   createdAt: '2026-08-08T10:01:00Z',
   finishedAt: '2026-08-08T10:01:05Z',
   errorDetail: null,
+  finishReason: 'stop',
 };
 
 const STREAMING_ENTRY: DebugLogEntry = {
   id: 3,
+  runId: 7,
   phase: 'batch',
   batchNumber: 1,
   attempt: 1,
@@ -50,10 +55,12 @@ const STREAMING_ENTRY: DebugLogEntry = {
   createdAt: '2026-08-08T10:02:00Z',
   finishedAt: null,
   errorDetail: null,
+  finishReason: null,
 };
 
 const TRANSPORT_FAILED_ENTRY: DebugLogEntry = {
   id: 4,
+  runId: 7,
   phase: 'batch',
   batchNumber: 3,
   attempt: 1,
@@ -65,6 +72,7 @@ const TRANSPORT_FAILED_ENTRY: DebugLogEntry = {
   createdAt: '2026-08-08T10:03:00Z',
   finishedAt: '2026-08-08T10:03:02Z',
   errorDetail: 'cURL error 28: Operation timed out',
+  finishReason: 'length',
 };
 
 const DETAIL: DebugLogDetail = {
@@ -76,6 +84,7 @@ const DETAIL: DebugLogDetail = {
   requestBody: '{"prompt":"x"}',
   responseText: 'response body',
   wireBytes: 8192,
+  finishReason: null,
 };
 
 const RUN_SUMMARY: DebugLogRunSummary = {
@@ -324,6 +333,34 @@ describe('RecommendationDebugLogComponent', () => {
     expect((f.nativeElement as HTMLElement).querySelector('.debug-panel__wire')).toBeNull();
   });
 
+  it('names max_tokens truncation when the provider stopped on length', () => {
+    debugLog.mockReturnValue(of({ run: null, entries: [TRANSPORT_FAILED_ENTRY] }));
+    const f = TestBed.createComponent(RecommendationDebugLogComponent);
+    f.detectChanges();
+
+    const finish = (f.nativeElement as HTMLElement).querySelector('.debug-panel__finish');
+    expect(finish!.textContent).toContain('max_tokens');
+    expect(finish!.classList).toContain('debug-panel__finish--truncated');
+  });
+
+  it('reports a natural stop without the truncation styling', () => {
+    debugLog.mockReturnValue(of({ run: null, entries: [DEDUP_ENTRY] }));
+    const f = TestBed.createComponent(RecommendationDebugLogComponent);
+    f.detectChanges();
+
+    const finish = (f.nativeElement as HTMLElement).querySelector('.debug-panel__finish');
+    expect(finish!.textContent).toContain('stop');
+    expect(finish!.classList).not.toContain('debug-panel__finish--truncated');
+  });
+
+  it('shows no finish line until the provider stamps a reason', () => {
+    debugLog.mockReturnValue(of({ run: null, entries: [STREAMING_ENTRY] }));
+    const f = TestBed.createComponent(RecommendationDebugLogComponent);
+    f.detectChanges();
+
+    expect((f.nativeElement as HTMLElement).querySelector('.debug-panel__finish')).toBeNull();
+  });
+
   it('renders the summary strip from a completed run', () => {
     debugLog.mockReturnValue(of({ run: RUN_SUMMARY, entries: [DEDUP_ENTRY] }));
     const f = mount();
@@ -382,25 +419,57 @@ describe('RecommendationDebugLogComponent', () => {
     expect((f.nativeElement as HTMLElement).querySelector('.debug-panel__error')).toBeNull();
   });
 
-  it('renders a settled call’s duration, in seconds, once expanded', () => {
+  it('renders a settled call’s duration on the row, in seconds, without expanding', () => {
     debugLog.mockReturnValue(of({ run: null, entries: [DEDUP_ENTRY] }));
     const f = mount();
     const el = f.nativeElement as HTMLElement;
 
-    expanderFor(el).click();
-    f.detectChanges();
-
-    expect(el.querySelector('.debug-panel__duration')!.textContent).toContain('5 s');
+    expect(el.querySelector('.debug-panel__dur')!.textContent).toContain('5 s');
   });
 
-  it('never renders a duration for the row still streaming (no NaN, no negative)', () => {
+  it('leaves the duration cell empty for the row still streaming (no NaN, no negative)', () => {
     debugLog.mockReturnValue(of({ run: null, entries: [BATCH_ENTRY] }));
     const f = mount();
     const el = f.nativeElement as HTMLElement;
 
-    expanderFor(el).click();
-    f.detectChanges();
+    expect(el.querySelector('.debug-panel__dur')!.textContent?.trim()).toBe('');
+  });
 
-    expect(el.querySelector('.debug-panel__duration')).toBeNull();
+  it('renders a sub-second settled call as 0 s, not an empty cell', () => {
+    const instant = {
+      ...DEDUP_ENTRY,
+      createdAt: '2026-08-08T10:01:00Z',
+      finishedAt: '2026-08-08T10:01:00Z',
+    };
+    debugLog.mockReturnValue(of({ run: null, entries: [instant] }));
+    const f = mount();
+    const el = f.nativeElement as HTMLElement;
+
+    expect(el.querySelector('.debug-panel__dur')!.textContent).toContain('0 s');
+  });
+
+  it('clusters entries by run, newest run first, under one header each', () => {
+    const older = { ...BATCH_ENTRY, id: 1, runId: 7 };
+    const newer = { ...DEDUP_ENTRY, id: 2, runId: 8 };
+    debugLog.mockReturnValue(of({ run: null, entries: [older, newer] }));
+    const f = mount();
+    const el = f.nativeElement as HTMLElement;
+
+    const groups = el.querySelectorAll('.debug-panel__group');
+    expect(groups).toHaveLength(2);
+    // Newest run on top: the group holding the dedup row comes first.
+    expect(groups[0].textContent).toContain('Dedup');
+    expect(groups[1].textContent).toContain('Batch');
+    expect(el.querySelectorAll('.debug-panel__group-head')).toHaveLength(2);
+  });
+
+  it('keeps one run’s calls in a single group', () => {
+    const first = { ...BATCH_ENTRY, id: 1, runId: 7 };
+    const second = { ...DEDUP_ENTRY, id: 2, runId: 7 };
+    debugLog.mockReturnValue(of({ run: null, entries: [first, second] }));
+    const f = mount();
+    const el = f.nativeElement as HTMLElement;
+
+    expect(el.querySelectorAll('.debug-panel__group')).toHaveLength(1);
   });
 });

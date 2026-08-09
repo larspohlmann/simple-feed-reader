@@ -1,12 +1,16 @@
-/* The disclosure chrome (the toggle line) lives in
-   `shared/disclosure/disclosure.component.scss`. What's left here is this
-   panel's own layout (#321 Task 12): a summary strip built from the latest
-   run, and the calls as an aligned grid -- `time | call | verdict | req/resp
-   KB | expander` -- rather than the loose #309 list. The bordered
-   `--surface-0` block each entry sits in, and the `pre` styling for a
-   fetched body, are the same shape the original `<details>` list used. */
+/* This panel's own layout: a summary strip for the latest run, then the calls
+   grouped by run, each run's calls an aligned grid -- `time | call | duration |
+   verdict | req/resp KB | expander`. The panel is its own `app-settings-card`
+   (#327), a non-hideable sibling of the recommendations card above it. */
+:host {
+  display: block;
+}
+
+/* The base's `app-settings-card + app-settings-card` gap cannot reach across
+   this component's host wrapper, so the panel carries the same separation from
+   the card above it here. */
 .debug-panel {
-  margin: 0 var(--space-4) var(--space-3);
+  margin-block-start: var(--space-5);
   font-size: var(--fs-sm);
   color: var(--text-secondary);
 
@@ -62,13 +66,31 @@
     overflow-x: auto;
   }
 
+  // One cluster of calls per run. The header names the run by its time span,
+  // so a resumed run's later calls read as one group rather than a flat list
+  // that silently spans two runs.
+  &__group {
+    min-width: 30rem;
+
+    & + & {
+      margin-top: var(--space-3);
+    }
+  }
+
+  &__group-head {
+    margin: var(--space-3) 0 var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
   &__list {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    margin: var(--space-2) 0 0;
+    margin: 0;
     padding: 0;
-    min-width: 28rem;
     list-style: none;
   }
 
@@ -81,15 +103,26 @@
 
   &__row {
     display: grid;
-    grid-template-columns: 3rem 1fr 5rem 5.5rem 1.75rem;
+    grid-template-columns: 3rem 1fr 3.5rem 5rem 5.5rem 1.75rem;
     align-items: center;
     column-gap: var(--space-2);
     font-weight: 600;
   }
 
   &__time,
+  &__dur,
   &__sizes {
     font-variant-numeric: tabular-nums;
+  }
+
+  // How long the call took, on the row itself rather than behind the expander:
+  // for a reasoning model a batch runs for many seconds, and that number is
+  // the first thing a reader checks.
+  &__dur {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 400;
+    text-align: right;
   }
 
   &__time {
@@ -168,15 +201,21 @@
     font-size: var(--fs-xs);
   }
 
-  &__body {
-    margin-top: var(--space-1);
-  }
-
-  &__duration {
-    margin: 0 0 var(--space-1);
+  // Why the provider stopped. Muted for a natural `stop`, but `length` means
+  // the answer was truncated by max_tokens (#327) -- the reason a run failed,
+  // so it reads in the danger colour like an error.
+  &__finish {
+    margin: var(--space-1) 0 0;
     color: var(--text-muted);
     font-size: var(--fs-xs);
-    font-variant-numeric: tabular-nums;
+
+    &--truncated {
+      color: var(--danger);
+    }
+  }
+
+  &__body {
+    margin-top: var(--space-1);
   }
 
   &__section {
