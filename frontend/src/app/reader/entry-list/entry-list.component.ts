@@ -39,7 +39,7 @@ import { MagazineBlock } from '../magazine/magazine-block';
 import { planMagazine } from '../magazine/magazine-planner';
 import { ReadingLayout } from '../reading-layout.service';
 import { EntryDto, SubscriptionTagDto, TagDto } from '../models';
-import { Selection, canScopedRefresh, sameSelection } from '../query';
+import { Selection, canScopedRefresh, isSingleStreamView, sameSelection } from '../query';
 import { atTop, pullTriggersRefresh, rubberBand } from '../reader-gestures';
 import { relativeTime } from '../format';
 import { LanguageService } from '../../core/language.service';
@@ -141,8 +141,7 @@ export class EntryListComponent implements OnDestroy {
    *  generated/fetched). */
   readonly lastRefreshedLabel = computed(() => {
     const iso = this.lastRefreshed();
-    const kind = this.selection().kind;
-    if ((kind !== 'subscription' && kind !== 'for-you') || !iso) return null;
+    if (!isSingleStreamView(this.selection()) || !iso) return null;
     return relativeTime(iso, this.language.lang());
   });
 
@@ -185,17 +184,15 @@ export class EntryListComponent implements OnDestroy {
   private pullStartY = 0;
   private pullTracking = false;
 
-  readonly blocks = computed<MagazineBlock[]>(() => {
-    const kind = this.selection().kind;
-    return planMagazine({
+  readonly blocks = computed<MagazineBlock[]>(() =>
+    planMagazine({
       entries: this.entries(),
-      // A subscription is one source, and the for-you list is a ranked stream:
-      // neither should collapse same-source runs into a widget that hides
-      // entries and disrupts their order.
-      grouping: kind !== 'subscription' && kind !== 'for-you',
+      // Only aggregated views collapse same-source runs into a group widget; a
+      // single-stream view must not (see isSingleStreamView).
+      grouping: !isSingleStreamView(this.selection()),
       complete: !this.hasMore(),
-    });
-  });
+    }),
+  );
 
   private readonly screen = inject(LayoutService);
   private readonly scroll = inject(ListScrollMemory);

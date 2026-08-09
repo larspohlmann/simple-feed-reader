@@ -28,6 +28,14 @@ export function canScopedRefresh(s: Selection): boolean {
   return s.kind === 'all' || s.kind === 'tag' || s.kind === 'subscription';
 }
 
+/** A view that shows one logical stream rather than an aggregation of feeds: a
+ *  single subscription, or the ranked for-you list. Such a view carries a "last
+ *  refreshed" label and never collapses same-source runs into a group widget —
+ *  that would hide entries and disrupt their order. */
+export function isSingleStreamView(s: Selection): boolean {
+  return s.kind === 'subscription' || s.kind === 'for-you';
+}
+
 export function selectionFromParams(p: ParamMap): {
   selection: Selection;
   entryId: number | null;
