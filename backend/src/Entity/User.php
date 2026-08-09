@@ -6,6 +6,8 @@ namespace App\Entity;
 
 use App\Enum\UserStatus;
 use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
@@ -109,8 +111,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist'], orphanRemoval: true)]
     private ?Preferences $preferences = null;
 
-    #[ORM\OneToOne(mappedBy: 'user', targetEntity: AiProviderSettings::class, cascade: ['remove'])]
-    private ?AiProviderSettings $aiProviderSettings = null;
+    /** @var Collection<int, AiProviderSettings> */
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: AiProviderSettings::class, cascade: ['remove'])]
+    private Collection $aiProviderSettings;
+
+    /**
+     * The one configuration AI features use. A pointer, not a per-row flag, so
+     * the model cannot say two configurations are active at once. ON DELETE SET
+     * NULL is the database floor; AiProviderConfigurator clears it explicitly
+     * before it removes the active row.
+     */
+    #[ORM\ManyToOne(targetEntity: AiProviderSettings::class)]
+    #[ORM\JoinColumn(name: 'active_ai_config_id', nullable: true, onDelete: 'SET NULL')]
+    private ?AiProviderSettings $activeAiProviderSettings = null;
 
     #[ORM\OneToOne(mappedBy: 'user', targetEntity: RecommendationSettings::class, cascade: ['remove'])]
     private ?RecommendationSettings $recommendationSettings = null;
@@ -126,6 +139,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->email = $email;
         $this->createdAt = $createdAt;
         $this->preferences = new Preferences($this);
+        $this->aiProviderSettings = new ArrayCollection();
     }
 
     /**
@@ -282,23 +296,44 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->preferences;
     }
 
-    /** Null until the account configures a provider — see AiProviderSettings. */
-    public function getAiProviderSettings(): ?AiProviderSettings
+    /** @return Collection<int, AiProviderSettings> */
+    public function getAiProviderSettings(): Collection
     {
         return $this->aiProviderSettings;
     }
 
-    /**
-     * For AiProviderConfigurator only, which owns every write to the row.
-     *
-     * This is the inverse side, so Doctrine never fills it in during the
-     * request that wrote the row. Without this the same User instance would
-     * report the state it had before the write until the next request
-     * hydrated it — and MeJson reads exactly this association.
-     */
-    public function setAiProviderSettings(?AiProviderSettings $aiProviderSettings): void
+    /** For AiProviderConfigurator only, which owns every write to this side. */
+    public function addAiProviderSettings(AiProviderSettings $settings): void
     {
-        $this->aiProviderSettings = $aiProviderSettings;
+        if (!$this->aiProviderSettings->contains($settings)) {
+            $this->aiProviderSettings->add($settings);
+        }
+    }
+
+    /** For AiProviderConfigurator only, which owns every write to this side. */
+    public function removeAiProviderSettings(AiProviderSettings $settings): void
+    {
+        $this->aiProviderSettings->removeElement($settings);
+    }
+
+    /** Null until the account activates a configuration — see AiProviderSettings. */
+    public function getActiveAiProviderSettings(): ?AiProviderSettings
+    {
+        return $this->activeAiProviderSettings;
+    }
+
+    /**
+     * For AiProviderConfigurator only, which owns every write to the pointer.
+     *
+     * This is the owning side, but MeJson and every other reader takes the
+     * User instance a request already loaded rather than re-querying, so a
+     * caller that flips the pointer must also update it here — otherwise the
+     * same User instance would keep reporting the state it had before the
+     * write until the next request hydrated it fresh.
+     */
+    public function setActiveAiProviderSettings(?AiProviderSettings $settings): void
+    {
+        $this->activeAiProviderSettings = $settings;
     }
 
     /**
