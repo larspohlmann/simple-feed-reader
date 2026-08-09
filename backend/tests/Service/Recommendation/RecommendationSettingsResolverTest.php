@@ -99,9 +99,11 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         $sealed = $cipher->seal($userId, 'sk-throwaway1234');
         $now = new \DateTimeImmutable('2026-08-07 09:00:00');
 
-        $settings = new AiProviderSettings($user, 'https://api.example.test/v1', $sealed, '1234', $now);
+        $settings = new AiProviderSettings($user, null, 'https://api.example.test/v1', $sealed, '1234', $now);
         $this->em->persist($settings);
         $settings->chooseModel('m', $now, $contextWindow);
+        $user->addAiProviderSettings($settings);
+        $user->setActiveAiProviderSettings($settings);
         $this->em->flush();
     }
 

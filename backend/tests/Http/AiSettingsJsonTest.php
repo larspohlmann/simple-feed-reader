@@ -16,6 +16,7 @@ final class AiSettingsJsonTest extends TestCase
     {
         $settings = new AiProviderSettings(
             new User('mapper@example.test', new \DateTimeImmutable('2026-08-06 09:00:00')),
+            null,
             'https://api.example.test/v1',
             new SealedApiKey('Y2lwaGVy', 'bm9uY2U=', 'c2FsdA==', 1),
             'abcd',

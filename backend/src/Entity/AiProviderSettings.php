@@ -19,7 +19,6 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity(repositoryClass: AiProviderSettingsRepository::class)]
 #[ORM\Table(name: 'user_ai_settings')]
-#[ORM\UniqueConstraint(name: 'uniq_ai_settings_user', columns: ['user_id'])]
 class AiProviderSettings
 {
     #[ORM\Id]
@@ -27,9 +26,12 @@ class AiProviderSettings
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\OneToOne(inversedBy: 'aiProviderSettings')]
+    #[ORM\ManyToOne(inversedBy: 'aiProviderSettings')]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private User $user;
+
+    #[ORM\Column(length: 120, nullable: true)]
+    private ?string $name = null;
 
     #[ORM\Column(length: 512)]
     private string $baseUrl;
@@ -71,12 +73,14 @@ class AiProviderSettings
      */
     public function __construct(
         User $user,
+        ?string $name,
         string $baseUrl,
         SealedApiKey $sealed,
         string $apiKeyHint,
         \DateTimeImmutable $verifiedAt,
     ) {
         $this->user = $user;
+        $this->name = $name;
         $this->replaceConnection($baseUrl, $sealed, $apiKeyHint, $verifiedAt);
     }
 
@@ -88,6 +92,16 @@ class AiProviderSettings
     public function getUser(): User
     {
         return $this->user;
+    }
+
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
+    public function rename(?string $name): void
+    {
+        $this->name = $name;
     }
 
     public function getBaseUrl(): string

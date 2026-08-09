@@ -53,7 +53,7 @@ final readonly class AiProviderConfigurator
         $settings = $this->repository->findForUser($user);
 
         if (null === $settings) {
-            $settings = new AiProviderSettings($user, $credentials->baseUrl, $sealed, $hint, $this->clock->now());
+            $settings = new AiProviderSettings($user, null, $credentials->baseUrl, $sealed, $hint, $this->clock->now());
             $this->entityManager->persist($settings);
         } else {
             $settings->replaceConnection($credentials->baseUrl, $sealed, $hint, $this->clock->now());

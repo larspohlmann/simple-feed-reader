@@ -16,15 +16,44 @@ final class AiProviderSettingsTest extends TestCase
         return new SealedApiKey($ciphertext, 'bm9uY2U=', 'c2FsdA==', 1);
     }
 
-    private function settings(): AiProviderSettings
+    private function settings(?string $name = null): AiProviderSettings
     {
         return new AiProviderSettings(
             new User('reader@example.test', new \DateTimeImmutable('2026-08-06 09:00:00')),
+            $name,
             'https://api.example.test/v1',
             $this->sealed(),
             'cdef',
             new \DateTimeImmutable('2026-08-06 09:30:00'),
         );
+    }
+
+    public function testANewRowCarriesTheNameItWasGiven(): void
+    {
+        self::assertSame('Work OpenAI', $this->settings('Work OpenAI')->getName());
+    }
+
+    public function testANewRowCarriesNoNameByDefault(): void
+    {
+        self::assertNull($this->settings()->getName());
+    }
+
+    public function testRenamingRoundTripsTheNewName(): void
+    {
+        $settings = $this->settings('Work OpenAI');
+
+        $settings->rename('Personal OpenRouter');
+
+        self::assertSame('Personal OpenRouter', $settings->getName());
+    }
+
+    public function testRenamingToNullClearsTheName(): void
+    {
+        $settings = $this->settings('Work OpenAI');
+
+        $settings->rename(null);
+
+        self::assertNull($settings->getName());
     }
 
     public function testANewRowCarriesNoModelYet(): void
