@@ -24,6 +24,16 @@ services:
         autowire: true
         public: true
 
+    # AiConfigurationForUserTest drives require() directly against the real
+    # repository and entity manager to prove the ownership-scoped 404. Its
+    # only production caller is AiSettingsController, wired later on this
+    # branch, so until then the compiler would inline it away and the test
+    # container could not fetch it. Same `autowire` caveat as the entries
+    # above.
+    App\Service\Ai\AiConfigurationForUser:
+        autowire: true
+        public: true
+
     # RecommendationSettingsResolverTest seals a throwaway API key directly to
     # seed an AiProviderSettings row without a live provider call. Same
     # `autowire` caveat as the entries below: naming a class here replaces the
