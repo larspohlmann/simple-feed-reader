@@ -28,7 +28,14 @@ final class StubChatClient implements ChatCompletionClient
 
     private ?\Closure $duringNextCall = null;
 
-    /** @var list<array{model: string, messages: list<array{role: string, content: string}>, maxAnswerTokens: int}> */
+    /**
+     * @var list<array{
+     *     model: string,
+     *     messages: list<array{role: string, content: string}>,
+     *     maxAnswerTokens: int,
+     *     responseSchemaName: string,
+     * }>
+     */
     private array $calls = [];
 
     public function queueContent(string $content): void
@@ -55,7 +62,12 @@ final class StubChatClient implements ChatCompletionClient
     }
 
     /**
-     * @return list<array{model: string, messages: list<array{role: string, content: string}>, maxAnswerTokens: int}>
+     * @return list<array{
+     *     model: string,
+     *     messages: list<array{role: string, content: string}>,
+     *     maxAnswerTokens: int,
+     *     responseSchemaName: string,
+     * }>
      */
     public function calls(): array
     {
@@ -74,6 +86,10 @@ final class StubChatClient implements ChatCompletionClient
             'model' => $request->model,
             'messages' => $request->messages,
             'maxAnswerTokens' => $request->maxAnswerTokens,
+            // The schema name proves each phase asked for its own structured
+            // shape -- a batch call for the ranking, a dedup call for the
+            // duplicate list -- rather than sharing one (#329).
+            'responseSchemaName' => $request->responseSchema->name,
         ];
 
         if (null !== $this->duringNextCall) {

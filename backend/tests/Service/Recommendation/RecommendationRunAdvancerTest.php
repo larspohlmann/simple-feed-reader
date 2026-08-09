@@ -297,29 +297,47 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertStringContainsString('Your previous reply was not usable.', $secondCallMessages[3]['content']);
     }
 
-    public function testThreeUnusableRepliesFailTheRun(): void
+    /**
+     * A batch the model cannot rank after every retry is dropped, not fatal:
+     * the batch phase degrades like the dedup phase already does, so the
+     * batches that did rank still reach the reader instead of one stubborn
+     * batch throwing the whole run away (#329, seen live with qwen3-vl-4b
+     * returning {"recommendations": []} three times for one batch).
+     */
+    public function testAPersistentlyUnusableBatchIsDroppedNotFatal(): void
     {
         $this->seedMultiBatchFixture();
-        $this->startAndSnapshot();
+        $run = $this->startAndSnapshot();
+        $secondBatch = $run->getCandidateBatches()[1];
 
         $this->stubChatClient()->queueContent('garbage 1');
         $this->stubChatClient()->queueContent('garbage 2');
         $this->stubChatClient()->queueContent('garbage 3');
+        $this->advancer()->advance($this->user);
+        $this->advancer()->advance($this->user);
+        $afterDrop = $this->advancer()->advance($this->user);
 
+        // The run kept going: the empty batch counts as done, batch two is
+        // still owed -- it did not fail on the exhausted attempts.
+        self::assertSame('running', $afterDrop->status);
+        self::assertSame(1, $afterDrop->batchesDone);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $secondBatch[0], 'score' => 90, 'reason' => 'kept']],
+        ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
-        $this->advancer()->advance($this->user);
+        $this->stubChatClient()->queueContent(json_encode(['duplicates' => []], \JSON_THROW_ON_ERROR));
         $report = $this->advancer()->advance($this->user);
 
-        self::assertSame('failed', $report->status);
-        self::assertNotNull($report->error);
-        self::assertSame(0, $report->batchesDone);
+        self::assertSame('completed', $report->status);
 
+        // Only batch two's winner survives; the dropped batch contributes none.
         $this->em->clear();
-        $failed = $this->runs()->findLatestForUser($this->user);
-        self::assertNotNull($failed);
-        self::assertSame(RecommendationRun::STATUS_FAILED, $failed->getStatus());
-        self::assertSame([], $failed->getWinners());
-        self::assertTrue($failed->progress()->attemptsExhausted);
+        $items = $this->recommendationItems($run);
+        self::assertSame(
+            [$secondBatch[0]],
+            array_map(fn (RecommendationItem $item): int => $this->entryIdOf($item), $items),
+        );
     }
 
     public function testResumeAfterFailureRetriesTheFailedBatchNotTheFirst(): void
@@ -334,13 +352,22 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
-        $this->stubChatClient()->queueContent('bad 1');
-        $this->stubChatClient()->queueContent('bad 2');
-        $this->stubChatClient()->queueContent('bad 3');
-        $this->advancer()->advance($this->user);
-        $this->advancer()->advance($this->user);
-        $failedReport = $this->advancer()->advance($this->user);
-        self::assertSame('failed', $failedReport->status);
+        // Batch two fails at the transport ceiling -- now that an unusable
+        // batch degrades instead of failing, this is the run's remaining fatal
+        // path, and it is what leaves a resumable failure at batch two.
+        for ($i = 0; $i < RecommendationRun::MAX_TRANSPORT_FAILURES; $i++) {
+            $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down'));
+            try {
+                $this->advancer()->advance($this->user);
+                self::fail('Expected a ProviderUnreachableException.');
+            } catch (ProviderUnreachableException) {
+                // expected -- the tick re-throws so the caller sees the error
+            }
+        }
+        $this->em->clear();
+        $failed = $this->runs()->findLatestForUser($this->user);
+        self::assertNotNull($failed);
+        self::assertSame(RecommendationRun::STATUS_FAILED, $failed->getStatus());
 
         $this->starter()->start($this->user);
         $this->stubChatClient()->queueContent(json_encode([
@@ -416,8 +443,49 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $run = $this->runs()->findLatestForUser($this->user);
         self::assertNotNull($run);
         self::assertSame(RecommendationRun::STATUS_FAILED, $run->getStatus());
-        self::assertNotNull($run->getError());
+        // The run error names the real cause, not a hardcoded "could not be
+        // reached": the provider was reached on every call and refused each
+        // one, and the message that closes the run must say what actually
+        // happened -- here the last transport failure's own detail (#329).
+        $error = $run->getError();
+        self::assertNotNull($error);
+        self::assertStringContainsString('still down', $error);
+        self::assertStringContainsString('https://api.example.test/v1', $error);
         self::assertNull($this->runs()->findActiveForUser($this->user));
+    }
+
+    /**
+     * Each provider phase asks for its own structured-output shape: a batch
+     * call for the ranking, the dedup call for the duplicate list. Sending one
+     * shared schema would let the dedup call demand the ranking shape and fail
+     * to parse (#329).
+     */
+    public function testEachPhaseRequestsItsOwnResponseSchema(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startAndSnapshot();
+        $firstBatch = $run->getCandidateBatches()[0];
+        $secondBatch = $run->getCandidateBatches()[1];
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 80, 'reason' => 'one']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $secondBatch[0], 'score' => 95, 'reason' => 'two']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'duplicates' => [],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $calls = $this->stubChatClient()->calls();
+        self::assertSame('recommendations', $calls[0]['responseSchemaName']);
+        self::assertSame('recommendations', $calls[1]['responseSchemaName']);
+        self::assertSame('duplicates', $calls[2]['responseSchemaName']);
     }
 
     /** A success between transport failures must not carry the old count

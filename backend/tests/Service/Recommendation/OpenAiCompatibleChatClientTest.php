@@ -11,6 +11,7 @@ use App\Service\Recommendation\CompletionBodyDecoder;
 use App\Service\Recommendation\CompletionRequest;
 use App\Service\Recommendation\CompletionStreamProgress;
 use App\Service\Recommendation\CompletionStreamObserver;
+use App\Service\Recommendation\JsonSchema;
 use App\Service\Recommendation\NullCompletionStreamObserver;
 use App\Service\Recommendation\OpenAiCompatibleChatClient;
 use App\Tests\Support\ResponseCapturingHttpClient;
@@ -35,7 +36,12 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
     private function request(): CompletionRequest
     {
-        return new CompletionRequest('m', $this->messages(), 2048);
+        return new CompletionRequest('m', $this->messages(), 2048, $this->schema());
+    }
+
+    private function schema(): JsonSchema
+    {
+        return new JsonSchema('test_schema', ['type' => 'object']);
     }
 
     private function clientUsing(HttpClientInterface $httpClient): OpenAiCompatibleChatClient
@@ -111,7 +117,18 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         self::assertSame([
             'model' => 'm',
             'messages' => $this->messages(),
-            'response_format' => ['type' => 'json_object'],
+            // Structured output as a json_schema, not the older json_object:
+            // LM Studio rejects json_object with a 400, and a strict schema
+            // also constrains a weak local model to valid JSON (#329). The
+            // name and schema are the caller's, carried on the request.
+            'response_format' => [
+                'type' => 'json_schema',
+                'json_schema' => [
+                    'name' => 'test_schema',
+                    'strict' => true,
+                    'schema' => ['type' => 'object'],
+                ],
+            ],
             'stream' => true,
             'max_tokens' => 2048,
         ], $decodedBody);
