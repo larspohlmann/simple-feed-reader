@@ -66,6 +66,16 @@ final class AiSettingsJson
     }
 
     /**
+     * @param list<string> $models
+     *
+     * @return array<string, mixed>
+     */
+    public static function models(array $models): array
+    {
+        return ['models' => $models];
+    }
+
+    /**
      * The one definition of "ready", named so the other responses that report
      * it — MeJson — reach a method instead of an array key no static analysis
      * can follow.

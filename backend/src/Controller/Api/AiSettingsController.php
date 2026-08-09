@@ -93,7 +93,7 @@ final readonly class AiSettingsController
             throw new AiProviderApiException($e->getMessage(), $e);
         }
 
-        return new JsonResponse(['models' => $models]);
+        return new JsonResponse(AiSettingsJson::models($models));
     }
 
     #[Route('/configs/{id}/model', name: 'api_me_ai_save_model', requirements: ['id' => '\d+'], methods: ['PUT'])]
@@ -158,7 +158,9 @@ final readonly class AiSettingsController
             throw new AiProviderApiException($e->getMessage(), $e);
         }
 
-        return new JsonResponse(AiSettingsJson::configuration($configuration, $configuration->getId()));
+        return new JsonResponse(
+            AiSettingsJson::configuration($configuration, $this->configurator->settingsFor($user)?->getId()),
+        );
     }
 
     #[Route('/configs/{id}', name: 'api_me_ai_delete', requirements: ['id' => '\d+'], methods: ['DELETE'])]
