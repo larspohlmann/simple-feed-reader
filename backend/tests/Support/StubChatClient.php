@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Service\Ai\ProviderCredentials;
 use App\Service\Recommendation\ChatCompletionClient;
+use App\Service\Recommendation\CompletionRequest;
 use App\Service\Recommendation\CompletionStreamObserver;
 
 /**
@@ -25,7 +26,9 @@ final class StubChatClient implements ChatCompletionClient
     /** @var list<string|\RuntimeException> */
     private array $queue = [];
 
-    /** @var list<array{model: string, messages: list<array{role: string, content: string}>}> */
+    private ?\Closure $duringNextCall = null;
+
+    /** @var list<array{model: string, messages: list<array{role: string, content: string}>, maxAnswerTokens: int}> */
     private array $calls = [];
 
     public function queueContent(string $content): void
@@ -39,7 +42,20 @@ final class StubChatClient implements ChatCompletionClient
     }
 
     /**
-     * @return list<array{model: string, messages: list<array{role: string, content: string}>}>
+     * Runs inside the next complete(), before it answers.
+     *
+     * A provider call is the one window where the world can change underneath
+     * a tick — it is the only part that takes minutes — so a test that needs
+     * to model "something happened while the model was thinking" has nowhere
+     * else to stand. Cancellation is exactly that test.
+     */
+    public function duringNextCall(\Closure $hook): void
+    {
+        $this->duringNextCall = $hook;
+    }
+
+    /**
+     * @return list<array{model: string, messages: list<array{role: string, content: string}>, maxAnswerTokens: int}>
      */
     public function calls(): array
     {
@@ -48,11 +64,23 @@ final class StubChatClient implements ChatCompletionClient
 
     public function complete(
         ProviderCredentials $credentials,
-        string $model,
-        array $messages,
+        CompletionRequest $request,
         CompletionStreamObserver $observer,
     ): string {
-        $this->calls[] = ['model' => $model, 'messages' => $messages];
+        // maxAnswerTokens is recorded alongside the prompt so a test can prove
+        // the answer bound was derived from the batch it belongs to, rather
+        // than from a constant that happens to be large enough today.
+        $this->calls[] = [
+            'model' => $request->model,
+            'messages' => $request->messages,
+            'maxAnswerTokens' => $request->maxAnswerTokens,
+        ];
+
+        if (null !== $this->duringNextCall) {
+            $hook = $this->duringNextCall;
+            $this->duringNextCall = null;
+            $hook();
+        }
 
         if ([] === $this->queue) {
             throw new \LogicException('StubChatClient has no queued response left.');

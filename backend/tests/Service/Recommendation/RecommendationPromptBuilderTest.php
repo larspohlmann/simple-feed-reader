@@ -7,6 +7,7 @@ namespace App\Tests\Service\Recommendation;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\PromptLine;
 use App\Service\Recommendation\RecommendationHistory;
+use App\Service\Recommendation\RecommendationPackingSettings;
 use App\Service\Recommendation\RecommendationPromptBuilder;
 use App\Service\Recommendation\RecommendationPromptText;
 use PHPUnit\Framework\TestCase;
@@ -25,6 +26,29 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertSame(120, $this->builder->descriptionLength(8192));
         self::assertSame(239, $this->builder->descriptionLength(32768));
         self::assertSame(480, $this->builder->descriptionLength(200000));
+    }
+
+    /**
+     * The reserve scales with the batch, because the batch is what the model
+     * must answer about. A flat cap cannot be right for both: the default
+     * pool packs to 45 items, but `batchCount` lets an account ask for one
+     * batch of thousands, and a constant sized for the first silently
+     * truncates the second.
+     */
+    public function testTheAnswerReserveScalesWithTheItemsBeingAnswered(): void
+    {
+        self::assertSame(1800, $this->builder->answerTokenReserve(45));
+        self::assertSame(20000, $this->builder->answerTokenReserve(500));
+    }
+
+    /**
+     * Below the floor the per-item estimate under-counts: 40 tokens does not
+     * cover a single item plus the JSON envelope around it.
+     */
+    public function testTheAnswerReserveNeverFallsBelowItsFloor(): void
+    {
+        self::assertSame(1024, $this->builder->answerTokenReserve(1));
+        self::assertSame(1024, $this->builder->answerTokenReserve(0));
     }
 
     public function testEverythingFitsInOneBatchWhenSmall(): void
@@ -74,7 +98,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     {
         // A huge window and short lines mean the token budget never binds —
         // every candidate would fit in one batch on budget alone. Only the
-        // MAXIMUM_BATCH_SIZE cap can be splitting these into 40/40/20.
+        // MAXIMUM_BATCH_SIZE cap can be splitting these into 45/45/10.
         $candidateCount = 100;
         $candidates = array_map(
             static fn (int $id): PromptLine => new PromptLine($id, "C$id", 'F', 'D', null),
@@ -83,7 +107,78 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(1_000_000, 10));
 
-        self::assertSame([40, 40, 20], array_map('count', $batches));
+        self::assertSame([45, 45, 10], array_map('count', $batches));
+
+        $ids = array_merge(...$batches);
+        self::assertSame(range(1, $candidateCount), $ids);
+    }
+
+    public function testPackingFiveHundredCandidatesIntoTwelveBatchesUnderNewDefaults(): void
+    {
+        // With MAXIMUM_BATCH_SIZE raised to 45 in #321, the default 500-candidate
+        // pool packs into 12 batches (11 × 45 + 1 × 5) under a huge budget.
+        // The 12 packing calls plus one dedup call make 13 total provider calls —
+        // half the 26 needed under the old 40-candidate cap.
+        $candidateCount = 500;
+        $candidates = array_map(
+            static fn (int $id): PromptLine => new PromptLine($id, "C$id", 'F', 'D', null),
+            range(1, $candidateCount),
+        );
+
+        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(1_000_000, 50));
+
+        self::assertCount(12, $batches);
+        $batchSizes = array_map('count', $batches);
+        self::assertSame([45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 5], $batchSizes);
+
+        $ids = array_merge(...$batches);
+        self::assertSame(range(1, $candidateCount), $ids);
+    }
+
+    public function testAnExplicitBatchCountReplacesTheDefaultCapUnderAHugeBudget(): void
+    {
+        // A huge window means the token budget never binds, so an explicit
+        // batchCount of 12 is the only thing that can produce 12 batches of
+        // at most ceil(500 / 12) = 42.
+        $candidateCount = 500;
+        $candidates = array_map(
+            static fn (int $id): PromptLine => new PromptLine($id, "C$id", 'F', 'D', null),
+            range(1, $candidateCount),
+        );
+
+        $batches = $this->builder->packBatches(
+            $candidates,
+            $this->emptyHistory(),
+            $this->settings(1_000_000, 50, batchCount: 12),
+        );
+
+        self::assertCount(12, $batches);
+        foreach ($batches as $batch) {
+            self::assertLessThanOrEqual(42, \count($batch));
+        }
+
+        $ids = array_merge(...$batches);
+        self::assertSame(range(1, $candidateCount), $ids);
+    }
+
+    public function testAnExplicitBatchCountStillSplitsOnTheTokenBudget(): void
+    {
+        // batchCount = 1 asks for a single batch, but a small context window
+        // cannot hold every candidate: the token budget below still forces a
+        // split, proving the expert override does not bypass it.
+        $candidateCount = 60;
+        $candidates = array_map(
+            static fn (int $id): PromptLine => self::line($id, "Candidate $id", 400),
+            range(1, $candidateCount),
+        );
+
+        $batches = $this->builder->packBatches(
+            $candidates,
+            $this->emptyHistory(),
+            $this->settings(4096, 10, batchCount: 1),
+        );
+
+        self::assertGreaterThan(1, \count($batches));
 
         $ids = array_merge(...$batches);
         self::assertSame(range(1, $candidateCount), $ids);
@@ -99,8 +194,9 @@ final class RecommendationPromptBuilderTest extends TestCase
         $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(4096, 100));
 
         self::assertNotSame([], $batches);
-        foreach ($batches as $batch) {
-            self::assertGreaterThanOrEqual(10, \count($batch));
+        // All batches except the final one should respect MINIMUM_BATCH_SIZE.
+        for ($i = 0; $i < \count($batches) - 1; ++$i) {
+            self::assertGreaterThanOrEqual(10, \count($batches[$i]));
         }
     }
 
@@ -259,9 +355,10 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testPackingBudgetIsSensitiveToEveryTermInItsFormula(): void
     {
-        // Window 3190 (raised by the constant reserve of 1600) with picksLimit 1
-        // makes the budget land exactly on the 11-candidate boundary:
-        // used+lineTokens equals the budget for the 12th candidate, so the
+        // Window 3195 (raised by the constant reserve of 1600) with picksLimit 1
+        // makes the budget land exactly on the 10-candidate boundary (shifted down
+        // one candidate due to the new responseReserve = 45 * 1 instead of 40 * 1):
+        // used+lineTokens equals the budget for the 11th candidate, so the
         // strict `>` (not `>=`) leaves it in the first batch, and a sign error
         // in subtracting the history tokens shifts the split.
         $candidates = array_map(
@@ -269,9 +366,9 @@ final class RecommendationPromptBuilderTest extends TestCase
             range(100, 119),
         );
 
-        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(3190, 1));
+        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(3195, 1));
 
-        self::assertSame([range(100, 110), range(111, 119)], $batches);
+        self::assertSame([range(100, 109), range(110, 119)], $batches);
     }
 
     public function testDedupMessagesReturnsTheExactRoleContentStructureWithoutGuidance(): void
@@ -347,16 +444,20 @@ final class RecommendationPromptBuilderTest extends TestCase
         int $contextWindow,
         int $picksLimit,
         ?string $guidancePrompt = null,
+        ?int $batchCount = null,
     ): EffectiveRecommendationSettings {
         return new EffectiveRecommendationSettings(
             guidancePrompt: $guidancePrompt,
             favoritesCap: 40,
             keptCap: 40,
             viewedCap: 80,
-            candidatePoolSize: 1000,
+            candidatePoolSize: 500,
             picksLimit: $picksLimit,
-            contextWindow: $contextWindow,
-            contextWindowSource: 'default',
+            packing: new RecommendationPackingSettings(
+                contextWindow: $contextWindow,
+                contextWindowSource: 'default',
+                batchCount: $batchCount,
+            ),
             debugEnabled: false,
         );
     }

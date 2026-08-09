@@ -1,5 +1,4 @@
 // src/app/reader/reader-shell.component.ts
-import { NgTemplateOutlet } from '@angular/common';
 import {
   AfterViewInit,
   Component,
@@ -31,7 +30,6 @@ import { LayoutService } from './layout.service';
 import { RefreshScope, markReadTarget, queryFromSelection, selectionFromParams } from './query';
 import { ListScrollReset } from './list-scroll-reset';
 import { entryParam } from './slug';
-import { bytesToKb } from './format';
 import { EntryDto, EntryStatePatch, SubscriptionDto, SubscriptionTagDto, TagDto } from './models';
 import { headerHiddenAtRest, nextHeaderHidden } from './header-scroll';
 import { ReaderHeaderComponent } from './header/reader-header.component';
@@ -39,11 +37,14 @@ import { SidebarComponent } from './sidebar/sidebar.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
 import { ReaderViewComponent } from './reader-view/reader-view.component';
 import { AddFeedDialogComponent } from './add-feed/add-feed-dialog.component';
+import { ForYouInfoDialogComponent } from './for-you-info-dialog.component';
 import { ManageActions } from './manage/manage-actions.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { CatalogStore } from '../discover/catalog.store';
 import { OnboardingSkip } from '../discover/onboarding-skip';
 import { ProgressHairlineComponent } from '../shared/progress-hairline/progress-hairline.component';
+import { IconComponent } from '../shared/icon/icon.component';
+import { ButtonComponent } from '../shared/button/button.component';
 import { TranslocoPipe } from '@jsverse/transloco';
 
 @Component({
@@ -55,7 +56,8 @@ import { TranslocoPipe } from '@jsverse/transloco';
     ReaderViewComponent,
     DrawerSwipeDirective,
     ProgressHairlineComponent,
-    NgTemplateOutlet,
+    IconComponent,
+    ButtonComponent,
     RouterLink,
     TranslocoPipe,
   ],
@@ -152,14 +154,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     total: this.recs.report()?.batchesTotal ?? 0,
   }));
 
-  /** Bytes of the in-flight provider answer, for the liveness fragment the
-   *  bar shows during the long silent stretch of a single call. 0 (shown as
-   *  null) between calls -- the server resets the counter when a call ends. */
-  readonly forYouStreamedKb = computed(() => {
-    const chars = this.recs.report()?.streamedChars ?? 0;
-    return chars > 0 ? bytesToKb(chars) : null;
-  });
-
   /** What to tell the user about a for-you run that ended without a fresh
    *  list -- busy-retry exhaustion, a backend-side failure, or an HTTP error.
    *  Gated on `!running()` so a stale failure from a previous run never
@@ -205,10 +199,11 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   });
   readonly hasMore = computed(() => this.entries.nextCursor() !== null);
   readonly canMarkAllRead = computed(() => markReadTarget(this.selection()) !== null);
-  /** The selected feed's last-fetched time, for the list header's "Last
-   *  refreshed" hint. Null unless a single feed is selected. */
-  readonly selectedFeedLastFetched = computed(() => {
+  /** What the list header's "Last refreshed" hint shows: a feed's fetch time,
+   *  or the for-you list's generation time. Null everywhere else. */
+  readonly listLastRefreshed = computed(() => {
     const s = this.selection();
+    if (s.kind === 'for-you') return this.recs.generatedAt();
     if (s.kind !== 'subscription') return null;
     return this.subs.subscriptions().find((x) => x.id === s.id)?.lastFetchedAt ?? null;
   });
@@ -648,6 +643,13 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       this.tags.load();
       this.entries.load(queryFromSelection(this.selection()));
     }, scope);
+  }
+
+  /** The info icon shown next to a running for-you progress line: what used to
+   *  be inline hints (keep-open/background, streamed KB) now lives behind this
+   *  overlay instead of permanently occupying the bar (#321). */
+  openForYouInfo(): void {
+    this.dialog.open(ForYouInfoDialogComponent, { panelClass: 'app-dialog' });
   }
 
   onAddFeed(): void {

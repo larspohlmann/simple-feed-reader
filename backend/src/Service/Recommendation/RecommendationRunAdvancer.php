@@ -17,6 +17,7 @@ use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Lock\LockFactory;
@@ -46,7 +47,7 @@ use Symfony\Component\Lock\LockFactory;
  * pool can be pruned mid-run — and writes the survivors as
  * RecommendationItems at dense positions before marking the run completed.
  *
- * The fifteen constructor collaborators are deliberate: the advancer is the
+ * The sixteen constructor collaborators are deliberate: the advancer is the
  * recommendation pipeline's composition root (lock, run persistence, AI
  * configuration, settings resolution, candidate/history loading, prompt
  * packing, the provider call and its reply parser), and each is a seam the
@@ -75,6 +76,7 @@ final class RecommendationRunAdvancer
         private readonly RecommendationWinnerRanker $ranker,
         private readonly RecommendationDuplicateParser $duplicateParser,
         private readonly RecommendationCallRecorder $callRecorder,
+        private readonly RecommendationCancellationCheckpoint $cancellation,
     ) {
     }
 
@@ -108,6 +110,16 @@ final class RecommendationRunAdvancer
 
         try {
             return $this->tickActiveRun($run, $user);
+        } catch (RecommendationRunCancelledException) {
+            // Stopped mid-call. refresh() throws away everything this tick
+            // computed and re-reads the row the canceller wrote, so the
+            // caller is told the run is over rather than handed the progress
+            // of a run nobody is waiting for. Nothing is flushed: the guard
+            // fires before any run mutation, so there is no half-written
+            // checkpoint to undo.
+            $this->entityManager->refresh($run);
+
+            return RecommendationRunReport::fromRun($run);
         } catch (AiNotConfiguredException | ApiKeyUnreadableException $e) {
             // Shared by both drivers (#311 fix): an account that loses its
             // provider, model, or a readable key can never advance again on
@@ -211,10 +223,16 @@ final class RecommendationRunAdvancer
             $settings->getModel() ?? '',
         );
 
-        $content = $this->callProvider($run, $settings, $messages, $recordedCall);
+        $content = $this->callProvider(
+            $run,
+            $settings,
+            $this->requestFor($settings, $messages, \count($validIds)),
+            $recordedCall,
+        );
 
         $result = $this->parser->parse($content, $validIds);
         $this->settleVerdict($recordedCall, $content, $result->usable);
+        $this->cancellation->guard($run);
 
         return $this->recordReply($run, $content, $result);
     }
@@ -267,10 +285,16 @@ final class RecommendationRunAdvancer
             $settings->getModel() ?? '',
         );
 
-        $content = $this->callProvider($run, $settings, $messages, $recordedCall);
+        $content = $this->callProvider(
+            $run,
+            $settings,
+            $this->requestFor($settings, $messages, \count($pool)),
+            $recordedCall,
+        );
 
         $result = $this->duplicateParser->parse($content, array_column($pool, 'id'));
         $this->settleVerdict($recordedCall, $content, $result->usable);
+        $this->cancellation->guard($run);
 
         if (!$result->usable) {
             return $this->recordUnusableDedupReply($run, $content, $pool);
@@ -309,7 +333,7 @@ final class RecommendationRunAdvancer
     ): RecommendationRunReport {
         $run->recordInvalidReply($content);
 
-        if ($run->attemptsExhausted()) {
+        if ($run->progress()->attemptsExhausted) {
             return $this->finalize($run, $pool);
         }
 
@@ -388,29 +412,48 @@ final class RecommendationRunAdvancer
      * leave the row stuck. The exception is always re-thrown unchanged, so
      * which exception reaches tick() -- and how the run ends -- is exactly
      * as before.
+     */
+    /**
+     * Both provider phases ask the same question -- what to send, and how much
+     * the model may spend answering -- so the answer bound is derived in one
+     * place. A phase that built its own request could pair a batch prompt with
+     * someone else's token ceiling, and the symptom would be a truncated reply
+     * rather than an obvious error.
      *
      * @param list<array{role: string, content: string}> $messages
+     * @param int                                        $replyItemCount items the reply must cover
      */
+    private function requestFor(
+        AiProviderSettings $settings,
+        array $messages,
+        int $replyItemCount,
+    ): CompletionRequest {
+        return new CompletionRequest(
+            $settings->getModel() ?? '',
+            $messages,
+            $this->promptBuilder->answerTokenReserve($replyItemCount),
+        );
+    }
+
     private function callProvider(
         RecommendationRun $run,
         AiProviderSettings $settings,
-        array $messages,
+        CompletionRequest $request,
         RecordedCall $recordedCall,
     ): string {
         try {
             return $this->chat->complete(
                 $this->configurator->credentials($settings),
-                $settings->getModel() ?? '',
-                $messages,
+                $request,
                 $recordedCall,
             );
         } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
-            $recordedCall->abortAfterTransportFailure();
+            $recordedCall->abortAfterTransportFailure($e->getMessage());
             $this->recordTransportFailure($run, $settings);
 
             throw $e;
         } catch (\Throwable $e) {
-            $recordedCall->abortAfterTransportFailure();
+            $recordedCall->abortAfterTransportFailure($e->getMessage());
 
             throw $e;
         }
@@ -508,7 +551,7 @@ final class RecommendationRunAdvancer
     private function recordUnusableReply(RecommendationRun $run, string $content): RecommendationRunReport
     {
         $run->recordInvalidReply($content);
-        if ($run->attemptsExhausted()) {
+        if ($run->progress()->attemptsExhausted) {
             $run->fail('The model did not return a usable ranking.', $this->clock->now());
         }
         $this->entityManager->flush();
@@ -544,7 +587,9 @@ final class RecommendationRunAdvancer
             $position++;
             $entryReference = $this->entityManager->getReference(Entry::class, $pick['id'])
                 ?? throw new \LogicException('Entry ' . $pick['id'] . ' was confirmed to exist a moment ago.');
-            $this->entityManager->persist(new RecommendationItem($run, $entryReference, $position, $pick['reason']));
+            $this->entityManager->persist(
+                new RecommendationItem($run, $entryReference, $position, $pick['reason'], $pick['score']),
+            );
         }
 
         $run->complete($this->clock->now());

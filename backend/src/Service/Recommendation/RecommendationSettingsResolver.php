@@ -40,8 +40,11 @@ final readonly class RecommendationSettingsResolver
             candidatePoolSize: $row?->values()->candidatePoolSize
                 ?? EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
             picksLimit: $row?->values()->picksLimit ?? EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
-            contextWindow: $window,
-            contextWindowSource: $source,
+            packing: new RecommendationPackingSettings(
+                contextWindow: $window,
+                contextWindowSource: $source,
+                batchCount: $row?->values()->batchCount,
+            ),
             debugEnabled: $row?->values()->debugEnabled ?? false,
         );
     }

@@ -57,7 +57,7 @@ final class RecommendationRunTest extends TestCase
         self::assertSame(1, $run->progress()->batchesDone);
         self::assertSame([[['id' => 2, 'score' => 50, 'reason' => 'fresh']]], $run->getWinners());
         self::assertNull($run->getLastInvalidReply());
-        self::assertFalse($run->attemptsExhausted());
+        self::assertFalse($run->progress()->attemptsExhausted);
         self::assertSame(1, $run->progress()->nextBatchIndex);
         self::assertFalse($run->progress()->isDedupPhase);
     }
@@ -87,11 +87,11 @@ final class RecommendationRunTest extends TestCase
         $run->snapshot([[1]]);
         $run->recordInvalidReply('a');
         $run->recordInvalidReply('b');
-        self::assertFalse($run->attemptsExhausted());
+        self::assertFalse($run->progress()->attemptsExhausted);
 
         $run->recordInvalidReply('c');
 
-        self::assertTrue($run->attemptsExhausted());
+        self::assertTrue($run->progress()->attemptsExhausted);
         self::assertSame('c', $run->getLastInvalidReply());
     }
 
@@ -132,9 +132,9 @@ final class RecommendationRunTest extends TestCase
         // again — pins the reset at 0, not -1 or 1.
         $run->recordInvalidReply('c');
         $run->recordInvalidReply('d');
-        self::assertFalse($run->attemptsExhausted());
+        self::assertFalse($run->progress()->attemptsExhausted);
         $run->recordInvalidReply('e');
-        self::assertTrue($run->attemptsExhausted());
+        self::assertTrue($run->progress()->attemptsExhausted);
     }
 
     public function testResumeResetsAttemptsToExactlyZero(): void
@@ -151,9 +151,9 @@ final class RecommendationRunTest extends TestCase
         // again — pins the reset at 0, not -1 or 1.
         $run->recordInvalidReply('c');
         $run->recordInvalidReply('d');
-        self::assertFalse($run->attemptsExhausted());
+        self::assertFalse($run->progress()->attemptsExhausted);
         $run->recordInvalidReply('e');
-        self::assertTrue($run->attemptsExhausted());
+        self::assertTrue($run->progress()->attemptsExhausted);
     }
 
     public function testThirdTransportFailureExhaustsTheSeparateCeiling(): void
@@ -178,7 +178,7 @@ final class RecommendationRunTest extends TestCase
         $run->recordInvalidReply('garbage');
         $run->recordInvalidReply('garbage');
 
-        self::assertFalse($run->attemptsExhausted());
+        self::assertFalse($run->progress()->attemptsExhausted);
         self::assertFalse($run->recordTransportFailure());
     }
 

@@ -1,13 +1,17 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Dialog } from '@angular/cdk/dialog';
+import { of } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
+import { RecommendationsService } from '../reader/recommendations.service';
 import { RecommendationSettingsCardComponent } from './recommendation-settings-card.component';
 import { RecommendationSettingsState } from './recommendation-settings.service';
 
 describe('RecommendationSettingsCardComponent', () => {
   let http: HttpTestingController;
+  const dialogStub = { open: jest.fn() };
 
   const STATE: RecommendationSettingsState = {
     guidancePrompt: null,
@@ -21,6 +25,7 @@ describe('RecommendationSettingsCardComponent', () => {
     viewedCap: 200,
     candidatePoolSize: 400,
     picksLimit: 20,
+    batchCount: null,
     contextWindow: 128000,
     contextWindowOverride: null,
     contextWindowSource: 'provider',
@@ -37,6 +42,7 @@ describe('RecommendationSettingsCardComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: '' },
+        { provide: Dialog, useValue: dialogStub },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -51,6 +57,8 @@ describe('RecommendationSettingsCardComponent', () => {
     fixture: ComponentFixture<RecommendationSettingsCardComponent>,
   ): HTMLElement | null => fixture.nativeElement.querySelector('app-error-banner');
 
+  beforeEach(() => dialogStub.open.mockReset());
+
   afterEach(() => http.verify());
 
   it('renders the loaded values into the fields', () => {
@@ -61,6 +69,7 @@ describe('RecommendationSettingsCardComponent', () => {
     expect(fixture.componentInstance.viewedCap()).toBe(200);
     expect(fixture.componentInstance.candidatePoolSize()).toBe(400);
     expect(fixture.componentInstance.picksLimit()).toBe(20);
+    expect(fixture.componentInstance.batchCount()).toBeNull();
     expect(fixture.componentInstance.contextWindow()).toBeNull();
     expect(fixture.componentInstance.guidance()).toBe('');
     expect(fixture.componentInstance.debugEnabled()).toBe(false);
@@ -74,11 +83,34 @@ describe('RecommendationSettingsCardComponent', () => {
     expect(pre.textContent).toContain('Return at most 20 picks as a JSON array of entry ids.');
   });
 
-  it('sends the full PUT body on save, with a blank context window as null', () => {
+  it('renders the six numeric tuning fields inside the expert disclosure', () => {
+    const fixture = mount();
+
+    const summary = fixture.nativeElement.querySelector(
+      'app-disclosure summary',
+    ) as HTMLElement | null;
+    expect(summary?.textContent).toContain('Expert settings');
+
+    const grid = fixture.nativeElement.querySelector('details .expert-grid') as HTMLElement;
+    const labels = Array.from(grid.querySelectorAll('label')).map((el) => el.textContent?.trim());
+    expect(labels).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('Favorites in history'),
+        expect.stringContaining('Kept in history'),
+        expect.stringContaining('Viewed in history'),
+        expect.stringContaining('Candidate pool size'),
+        expect.stringContaining('Maximum picks'),
+        expect.stringContaining('Batches (empty = automatic)'),
+      ]),
+    );
+  });
+
+  it('sends the full PUT body on save, with a blank context window and batch count as null', () => {
     const fixture = mount();
 
     fixture.componentInstance.picksLimit.set(30);
     fixture.componentInstance.contextWindow.set(null);
+    fixture.componentInstance.batchCount.set(null);
     fixture.componentInstance.debugEnabled.set(true);
     fixture.componentInstance.save();
 
@@ -91,6 +123,7 @@ describe('RecommendationSettingsCardComponent', () => {
       viewedCap: 200,
       candidatePoolSize: 400,
       picksLimit: 30,
+      batchCount: null,
       contextWindow: null,
       debugEnabled: true,
     });
@@ -99,6 +132,17 @@ describe('RecommendationSettingsCardComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.svc.saved()).toBe(true);
+  });
+
+  it('sends a numeric batch count when the field is filled in', () => {
+    const fixture = mount();
+
+    fixture.componentInstance.batchCount.set(10);
+    fixture.componentInstance.save();
+
+    const request = http.expectOne('/api/me/ai/recommendations');
+    expect(request.request.body).toEqual(expect.objectContaining({ batchCount: 10 }));
+    request.flush({ ...STATE, batchCount: 10 });
   });
 
   it('sends the numeric context window override when the field is filled in', () => {
@@ -192,5 +236,94 @@ describe('RecommendationSettingsCardComponent', () => {
       contextWindowOverride: 64000,
     });
     expect(userFixture.nativeElement.textContent).toContain('Your override');
+  });
+
+  describe('clearing recommendations', () => {
+    it('does nothing until the confirm dialog resolves true', () => {
+      const fixture = mount();
+      dialogStub.open.mockReturnValue({ closed: of(false) });
+
+      fixture.componentInstance.confirmPurge();
+
+      http.expectNone((r) => r.method === 'DELETE');
+    });
+
+    it('purges, refreshes the recommendation status and shows the confirmation line', () => {
+      const fixture = mount();
+      dialogStub.open.mockReturnValue({ closed: of(true) });
+
+      fixture.componentInstance.confirmPurge();
+
+      const purgeRequest = http.expectOne('/api/recommendations/runs');
+      expect(purgeRequest.request.method).toBe('DELETE');
+      purgeRequest.flush({
+        status: 'none',
+        batchesTotal: null,
+        batchesDone: 0,
+        error: null,
+        background: false,
+        streamedChars: 0,
+        forYou: { itemCount: 3, generatedAt: '2026-08-08T09:00:00Z' },
+      });
+
+      // RecommendationsService.refreshStatus() re-reads the current status so
+      // the sidebar count (Task 9) reflects the cleared list.
+      const statusRequest = http.expectOne('/api/recommendations/runs/current');
+      expect(statusRequest.request.method).toBe('GET');
+      statusRequest.flush({
+        status: 'none',
+        batchesTotal: null,
+        batchesDone: 0,
+        error: null,
+        background: false,
+        streamedChars: 0,
+        forYou: { itemCount: 0, generatedAt: null },
+      });
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).toContain('Recommendations cleared.');
+      // The seam this test exists to cover: the sidebar count must actually
+      // read the refreshed report, not fall through the `?.` guard on a
+      // `forYou` that isn't there (it guards `report`, not `report.forYou`).
+      expect(TestBed.inject(RecommendationsService).forYouCount()).toBe(0);
+    });
+
+    it('shows the 409 detail when a run is active instead of a generic error', () => {
+      const fixture = mount();
+      dialogStub.open.mockReturnValue({ closed: of(true) });
+
+      fixture.componentInstance.confirmPurge();
+
+      http.expectOne('/api/recommendations/runs').flush(
+        {
+          type: 'recommendation_run_active',
+          title: 'A recommendation run is still active',
+          status: 409,
+          detail: 'Wait for the current run to finish, then try again.',
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).toContain(
+        'Wait for the current run to finish, then try again.',
+      );
+      http.expectNone('/api/recommendations/runs/current');
+    });
+
+    it('passes the purge copy to the confirm dialog', () => {
+      const fixture = mount();
+      dialogStub.open.mockReturnValue({ closed: of(false) });
+
+      fixture.componentInstance.confirmPurge();
+
+      const [, config] = dialogStub.open.mock.calls.at(-1) as [
+        unknown,
+        { data: { title: string; confirmLabel: string; danger?: boolean } },
+      ];
+      expect(config.data.title).toBe('Clear all recommendations?');
+      expect(config.data.confirmLabel).toBe('Clear recommendations');
+      expect(config.data.danger).toBe(true);
+    });
   });
 });

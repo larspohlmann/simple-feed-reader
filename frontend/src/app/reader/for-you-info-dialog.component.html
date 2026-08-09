@@ -1,0 +1,10 @@
+<app-overlay-panel [heading]="'reader.forYouInfoTitle' | transloco">
+  <p>{{ 'reader.forYouInfoWhat' | transloco }}</p>
+  <p>
+    {{ (recs.workerOwnsRun() ? 'reader.forYouBackground' : 'reader.forYouKeepOpen') | transloco }}
+  </p>
+  @if (streamedKb(); as kb) {
+    <p class="muted">{{ 'reader.forYouStreamed' | transloco: { kb } }}</p>
+  }
+  <app-button footer (click)="close()">{{ 'common.close' | transloco }}</app-button>
+</app-overlay-panel>

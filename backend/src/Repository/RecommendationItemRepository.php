@@ -8,6 +8,7 @@ use App\Entity\EntryState;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
+use App\Entity\User;
 use App\Http\RecommendationCursor;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -55,12 +56,8 @@ final class RecommendationItemRepository extends ServiceEntityRepository
      */
     private function rowQueryBuilder(int $userId): QueryBuilder
     {
-        return $this->createQueryBuilder('i')
-            ->addSelect('e')
-            ->join('i.run', 'r')
-            ->join('i.entry', 'e')
+        return $this->applyForYouCriteria($this->createQueryBuilder('i')->addSelect('e'), $userId)
             ->leftJoin('e.feed', 'f')->addSelect('f')
-            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
             ->addSelect('s.id AS subscriptionId')
             ->addSelect('s.customTitle AS customTitle')
@@ -70,7 +67,55 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             ->addSelect('es.isFavorite AS esFavorite')
             ->addSelect('es.isKept AS esKept')
             ->addSelect('es.isViewed AS esViewed')
-            ->addSelect('s.markedReadUntil AS markedReadUntil')
+            ->addSelect('s.markedReadUntil AS markedReadUntil');
+    }
+
+    public function countForYou(int $userId): int
+    {
+        $count = $this->applyForYouCriteria($this->createQueryBuilder('i')->select('COUNT(i.id)'), $userId)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return (int) $count;
+    }
+
+    /**
+     * Two-step (select ids, then delete) rather than a DELETE with a
+     * subquery: portable across both suite dialects and trivially testable,
+     * same shape as RecommendationRunLogRepository::deleteForUser().
+     */
+    public function deleteForUser(User $user): void
+    {
+        /** @var list<int> $ids */
+        $ids = array_column(
+            $this->createQueryBuilder('i')
+                ->select('i.id AS id')
+                ->join('i.run', 'r')
+                ->where('r.user = :user')
+                ->setParameter('user', $user)
+                ->getQuery()
+                ->getArrayResult(),
+            'id',
+        );
+
+        if ([] === $ids) {
+            return;
+        }
+
+        $this->getEntityManager()->createQuery(
+            'DELETE FROM App\Entity\RecommendationItem i WHERE i.id IN (:ids)',
+        )->setParameter('ids', $ids)->execute();
+    }
+
+    /** The for-you feed's row set: completed runs of this user, entries still
+     *  subscribed, deduped to their newest run. Shared by the pager and the
+     *  count so the sidebar number can never disagree with the list. */
+    private function applyForYouCriteria(QueryBuilder $qb, int $userId): QueryBuilder
+    {
+        return $qb
+            ->join('i.run', 'r')
+            ->join('i.entry', 'e')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
             ->andWhere('r.user = :user')
             ->andWhere('r.status = :completed')
             ->andWhere($this->notDedupedByNewerRunDql())
@@ -139,6 +184,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             reason: $item->getReason(),
             runId: $item->getRun()->getId() ?? 0,
             position: $item->getPosition(),
+            score: $item->getScore(),
         );
     }
 

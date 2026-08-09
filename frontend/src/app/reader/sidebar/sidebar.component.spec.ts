@@ -458,7 +458,7 @@ describe('for-you row', () => {
   // AiAvailabilityService and RecommendationsService are faked with plain
   // signals — structural typing accepts them in place of the readonly ones
   // the real services expose.
-  function mountWithAi(ready: boolean, running = false) {
+  function mountWithAi(ready: boolean, running = false, forYouCount = 0) {
     TestBed.configureTestingModule({
       imports: [SidebarComponent, provideTranslocoTesting()],
       providers: [
@@ -470,7 +470,10 @@ describe('for-you row', () => {
         { provide: LayoutService, useValue: { isCoarse: signal(false) } },
         { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
         { provide: AiAvailabilityService, useValue: { ready: signal(ready) } },
-        { provide: RecommendationsService, useValue: { running: signal(running) } },
+        {
+          provide: RecommendationsService,
+          useValue: { running: signal(running), forYouCount: signal(forYouCount) },
+        },
       ],
     });
     const f = TestBed.createComponent(SidebarComponent);
@@ -497,6 +500,16 @@ describe('for-you row', () => {
   it('pulses the icon while a recommendation run is in progress', () => {
     const el = mountWithAi(true, true).nativeElement as HTMLElement;
     expect(el.querySelector('.nav.for-you app-icon.pulse')).not.toBeNull();
+  });
+
+  it('shows the for-you item count as a badge', () => {
+    const el = mountWithAi(true, false, 12).nativeElement as HTMLElement;
+    expect(el.querySelector('.nav.for-you .count')!.textContent).toContain('12');
+  });
+
+  it('hides the badge when the for-you list is empty', () => {
+    const el = mountWithAi(true, false, 0).nativeElement as HTMLElement;
+    expect(el.querySelector('.nav.for-you .count')).toBeNull();
   });
 });
 

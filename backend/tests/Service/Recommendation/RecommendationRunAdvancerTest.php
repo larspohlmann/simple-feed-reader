@@ -20,6 +20,7 @@ use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
+use App\Service\Recommendation\RecommendationPromptBuilder;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Recommendation\RecommendationSettingsValues;
@@ -247,6 +248,17 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         );
         self::assertStringContainsString('- [' . $firstBatch[0], $calls[0]['messages'][1]['content']);
 
+        // The answer bound travels with the prompt it belongs to: the cap sent
+        // is the reserve for exactly the candidates this batch asked about, so
+        // a bigger batch gets proportionally more room instead of being
+        // truncated by a fixed ceiling. Derived from the batch here rather
+        // than hardcoded, so the assertion still holds if the batch size
+        // changes for unrelated reasons.
+        self::assertSame(
+            $this->promptBuilder()->answerTokenReserve(\count($firstBatch)),
+            $calls[0]['maxAnswerTokens'],
+        );
+
         $this->em->clear();
         $persisted = $this->activeRun();
         self::assertSame(
@@ -305,7 +317,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertNotNull($failed);
         self::assertSame(RecommendationRun::STATUS_FAILED, $failed->getStatus());
         self::assertSame([], $failed->getWinners());
-        self::assertTrue($failed->attemptsExhausted());
+        self::assertTrue($failed->progress()->attemptsExhausted);
     }
 
     public function testResumeAfterFailureRetriesTheFailedBatchNotTheFirst(): void
@@ -359,7 +371,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $run = $this->activeRun();
         self::assertSame(RecommendationRun::STATUS_RUNNING, $run->getStatus());
         self::assertSame(0, $run->progress()->batchesDone);
-        self::assertFalse($run->attemptsExhausted());
+        self::assertFalse($run->progress()->attemptsExhausted);
         self::assertNull($run->getLastInvalidReply());
         // Below the transport-failure ceiling: recorded, but the run stays
         // running (asserted above) so the next tick retries the same batch.
@@ -367,7 +379,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
     /**
      * A provider that is simply unreachable never produces a reply for the
-     * parser to judge, so attemptsExhausted() (unusable replies) never
+     * parser to judge, so attemptsExhausted (unusable replies) never
      * fires. Without its own ceiling, a persistently broken provider would
      * leave the run wedged forever -- no cancel, no reaping (#308 final
      * review, Important 2).
@@ -573,6 +585,10 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ));
         self::assertSame(['stronger match', 'weaker match'], array_map(
             static fn (RecommendationItem $item): string => $item->getReason(),
+            $items,
+        ));
+        self::assertSame([90, 55], array_map(
+            static fn (RecommendationItem $item): ?int => $item->getScore(),
             $items,
         ));
     }
@@ -1002,6 +1018,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $rows = $this->runLogs()->listForUser($this->user);
         self::assertSame(['transport-failed'], array_column($rows, 'verdict'));
+        $log = $this->freshRunLog($rows[0]['id']);
+        self::assertSame('gone', $log->getErrorDetail());
+        self::assertNotNull($log->getFinishedAt());
     }
 
     public function testNoLogRowsAreWrittenWithDebugOff(): void
@@ -1050,6 +1069,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $rows = $this->runLogs()->listForUser($this->user);
         self::assertSame(['transport-failed'], array_column($rows, 'verdict'));
+        $log = $this->freshRunLog($rows[0]['id']);
+        self::assertNotNull($log->getErrorDetail());
+        self::assertNotNull($log->getFinishedAt());
     }
 
     /**
@@ -1153,6 +1175,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             candidatePoolSize: $candidatePoolSize,
             picksLimit: $picksLimit,
             contextWindow: self::MULTI_BATCH_CONTEXT_WINDOW,
+            batchCount: null,
             debugEnabled: false,
         ));
         $this->em->persist($settings);
@@ -1214,6 +1237,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             candidatePoolSize: $current->candidatePoolSize,
             picksLimit: $current->picksLimit,
             contextWindow: $current->contextWindow,
+            batchCount: $current->batchCount,
             debugEnabled: true,
         ));
         $this->em->flush();
@@ -1250,6 +1274,69 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $client = self::getContainer()->get(StubChatClient::class);
 
         return $client;
+    }
+
+    /**
+     * The race the checkpoint exists for: the user stops the run while a tick
+     * is inside a provider call that has already been paid for. The tick must
+     * not flush its result over the cancellation — without the guard it
+     * records the batch and the run marches on, so the button appears to do
+     * nothing.
+     *
+     * The stop is written straight to the database rather than through
+     * RecommendationRunCanceller on purpose. The two really do sit in
+     * different processes — a worker tick against a web request — so the
+     * ticking side holds an entity that still says "running" and cannot learn
+     * otherwise by itself. Cancelling through the service here would mutate
+     * the very entity under test and the run would stop for the wrong reason:
+     * the entity's own status guard, which the real cross-process case never
+     * reaches. (RecommendationRunCanceller is covered through POST
+     * /api/recommendations/runs/stop in the controller test.)
+     */
+    public function testARunStoppedDuringAProviderCallDoesNotRecordThatCallsResult(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startAndSnapshot();
+        $firstBatch = $run->getCandidateBatches()[0];
+
+        $runId = $run->getId() ?? 0;
+        $this->stubChatClient()->duringNextCall(function () use ($runId): void {
+            $this->em->getConnection()->update(
+                'recommendation_run',
+                ['status' => 'cancelled', 'completed_at' => '2026-01-01 00:00:00'],
+                ['id' => $runId],
+            );
+        });
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'r1']],
+        ], \JSON_THROW_ON_ERROR));
+
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame('cancelled', $report->status);
+
+        $this->em->clear();
+        $persisted = $this->runRepository()->findLatestForUser($this->user);
+        self::assertNotNull($persisted);
+        self::assertSame('cancelled', $persisted->getStatus());
+        self::assertSame(0, $persisted->progress()->batchesDone);
+        self::assertSame([], $persisted->getWinners());
+    }
+
+    private function runRepository(): RecommendationRunRepository
+    {
+        /** @var RecommendationRunRepository $runs */
+        $runs = self::getContainer()->get(RecommendationRunRepository::class);
+
+        return $runs;
+    }
+
+    private function promptBuilder(): RecommendationPromptBuilder
+    {
+        /** @var RecommendationPromptBuilder $builder */
+        $builder = self::getContainer()->get(RecommendationPromptBuilder::class);
+
+        return $builder;
     }
 
     private function lockFactory(): LockFactory

@@ -15,8 +15,8 @@ final readonly class EffectiveRecommendationSettings
     public const int DEFAULT_FAVORITES_CAP = 40;
     public const int DEFAULT_KEPT_CAP = 40;
     public const int DEFAULT_VIEWED_CAP = 80;
-    public const int DEFAULT_CANDIDATE_POOL_SIZE = 1000;
-    public const int DEFAULT_PICKS_LIMIT = 100;
+    public const int DEFAULT_CANDIDATE_POOL_SIZE = 500;
+    public const int DEFAULT_PICKS_LIMIT = 50;
     public const int FALLBACK_CONTEXT_WINDOW = 32768;
 
     public function __construct(
@@ -26,8 +26,7 @@ final readonly class EffectiveRecommendationSettings
         public int $viewedCap,
         public int $candidatePoolSize,
         public int $picksLimit,
-        public int $contextWindow,
-        public string $contextWindowSource,
+        public RecommendationPackingSettings $packing,
         public bool $debugEnabled,
     ) {
     }

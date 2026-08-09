@@ -16,7 +16,12 @@
     </p>
     <p class="snippet">{{ snippet() }}</p>
     @if (entry().recommendationReason) {
-      <p class="reason">{{ entry().recommendationReason }}</p>
+      <p class="reason">
+        @if (entry().recommendationScore !== null && entry().recommendationScore !== undefined) {
+          <span class="score">{{ entry().recommendationScore }}</span>
+        }
+        {{ entry().recommendationReason }}
+      </p>
     }
     <app-source-tags [tags]="tags()" />
     <div class="actions">

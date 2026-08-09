@@ -10,6 +10,8 @@ use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -60,6 +62,16 @@ final class EntryControllerTest extends WebTestCase
         $em->flush();
 
         return $sub;
+    }
+
+    private function seedDebugEnabledSettings(User $user): void
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $cipher = self::getContainer()->get(ApiKeyCipher::class);
+        self::assertInstanceOf(ApiKeyCipher::class, $cipher);
+
+        (new RecommendationRunFixtures($em, $cipher))->debugEnabledSettings($user);
     }
 
     public function testAnonymousIsRejected(): void
@@ -199,7 +211,7 @@ final class EntryControllerTest extends WebTestCase
         $run->snapshot([[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $em->persist($run);
-        $em->persist(new RecommendationItem($run, $entry, 1, 'Matches your interest in g1'));
+        $em->persist(new RecommendationItem($run, $entry, 1, 'Matches your interest in g1', 77));
         $em->flush();
 
         $client->request('GET', '/api/entries?view=for-you', server: $headers);
@@ -212,8 +224,37 @@ final class EntryControllerTest extends WebTestCase
         self::assertIsArray($first);
         self::assertSame('Post 1', $first['title']);
         self::assertSame('Matches your interest in g1', $first['recommendationReason']);
+        self::assertArrayNotHasKey('recommendationScore', $first);
         self::assertArrayHasKey('nextCursor', $body);
         self::assertNull($body['nextCursor']);
+    }
+
+    public function testForYouViewIncludesTheRecommendationScoreOnlyWhenDebugIsEnabled(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-foryou-debug@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed(), 'guid' => 'g1']);
+        self::assertInstanceOf(Entry::class, $entry);
+
+        $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
+        $run->snapshot([[1]]);
+        $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+        $em->persist($run);
+        $em->persist(new RecommendationItem($run, $entry, 1, 'Matches your interest in g1', 42));
+        $this->seedDebugEnabledSettings($user);
+        $em->flush();
+
+        $client->request('GET', '/api/entries?view=for-you', server: $headers);
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entries']);
+        $first = $body['entries'][0];
+        self::assertIsArray($first);
+        self::assertSame(42, $first['recommendationScore']);
     }
 
     public function testForYouViewPaginatesWithCursor(): void

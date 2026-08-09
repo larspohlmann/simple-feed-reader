@@ -3,6 +3,7 @@ import {
   bytesToKb,
   formatDateOr,
   formatLongDate,
+  formatTime,
   relativeTime,
   trialDaysRemaining,
   trialExpired,
@@ -35,6 +36,18 @@ describe('formatLongDate', () => {
     expect(formatLongDate('2026-07-22T12:00:00Z', 'en')).toContain('2026');
     expect(formatLongDate('2026-07-22T12:00:00Z', 'de')).toContain('2026');
     expect(formatLongDate('nope', 'en')).toBe('');
+  });
+});
+
+describe('formatTime', () => {
+  // Renders in the test runner's own timezone, so this asserts shape (not an
+  // exact clock value) to stay green regardless of where the suite runs.
+  it('renders a zero-padded 24-hour HH:MM clock time', () => {
+    expect(formatTime('2026-07-22T09:05:00Z')).toMatch(/^\d{2}:\d{2}$/);
+  });
+
+  it('empties on bad input', () => {
+    expect(formatTime('nope')).toBe('');
   });
 });
 

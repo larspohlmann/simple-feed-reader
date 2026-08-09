@@ -4,6 +4,7 @@ import {
   DestroyRef,
   ElementRef,
   OnDestroy,
+  TemplateRef,
   computed,
   effect,
   inject,
@@ -13,6 +14,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -62,6 +64,7 @@ export const REFRESH_REVEAL = 48;
 @Component({
   selector: 'app-entry-list',
   imports: [
+    NgTemplateOutlet,
     RouterLink,
     TranslocoPipe,
     IconComponent,
@@ -103,6 +106,11 @@ export class EntryListComponent implements OnDestroy {
   /** The selected feed's last-fetched time (ISO), or null. Only meaningful for a
    *  single-feed selection; drives the header's "Last refreshed" hint. */
   readonly lastRefreshed = input<string | null>(null);
+  /** Rendered at the top of whichever content branch is live (empty state,
+   *  magazine rows, list rows) so it scrolls away with the list rather than
+   *  occupying a permanently reserved bar above it (#321). Owned by the shell,
+   *  which is the only place that knows what belongs there. */
+  readonly topBlock = input<TemplateRef<unknown> | null>(null);
 
   readonly loadMore = output<void>();
   readonly markAllRead = output<void>();
@@ -121,12 +129,13 @@ export class EntryListComponent implements OnDestroy {
   readonly canRefresh = computed(() => canScopedRefresh(this.selection()));
 
   private readonly language = inject(LanguageService);
-  /** A localised "last refreshed 5 min ago" label for a single-feed selection,
-   *  or null when it doesn't apply (not a feed, or never fetched). Wide-only
-   *  visibility is handled in CSS. */
+  /** A localised "last refreshed 5 min ago" label for a single-feed selection
+   *  or the for-you list, or null when it doesn't apply (neither, or never
+   *  generated/fetched). */
   readonly lastRefreshedLabel = computed(() => {
     const iso = this.lastRefreshed();
-    if (this.selection().kind !== 'subscription' || !iso) return null;
+    const kind = this.selection().kind;
+    if ((kind !== 'subscription' && kind !== 'for-you') || !iso) return null;
     return relativeTime(iso, this.language.lang());
   });
 

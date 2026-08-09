@@ -6,15 +6,14 @@ namespace App\Tests\Service\Recommendation;
 
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
-use App\Entity\RecommendationSettings;
 use App\Entity\User;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Recommendation\EffectiveRecommendationSettings;
+use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\CompletionStreamProgress;
 use App\Service\Recommendation\RecommendationCallRecorder;
 use App\Service\Recommendation\RecommendationSettingsResolver;
-use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -26,6 +25,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
     private MockClock $clock;
     private RecommendationCallRecorder $recorder;
     private RecommendationRunLogRepository $logs;
+    private RecommendationRunFixtures $fixtures;
 
     protected function setUp(): void
     {
@@ -35,6 +35,10 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         $factory = new UserFactory($this->em, $hasher);
         $this->user = $factory->create('recorder-owner@example.test');
+
+        /** @var ApiKeyCipher $cipher */
+        $cipher = self::getContainer()->get(ApiKeyCipher::class);
+        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
 
         $this->run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-08T09:00:00Z'));
         $this->em->persist($this->run);
@@ -60,7 +64,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
     public function testBeginWithDebugOnPersistsTheRequestBodyImmediately(): void
     {
-        $this->seedDebugSettings(true);
+        $this->fixtures->debugEnabledSettings($this->user);
 
         $this->recorder->begin(
             $this->run,
@@ -79,11 +83,12 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $log = $this->freshLog($rows[0]['id']);
         self::assertStringContainsString('"model": "m"', $log->getRequestBody());
         self::assertStringContainsString('"content": "hi"', $log->getRequestBody());
+        self::assertEquals($this->clock->now(), $log->getCreatedAt());
     }
 
     public function testBeginWithDebugOffWritesNoRow(): void
     {
-        $this->seedDebugSettings(false);
+        $this->fixtures->debugDisabledSettings($this->user);
 
         $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
 
@@ -92,7 +97,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
     public function testCheckpointsAreThrottledToTheInterval(): void
     {
-        $this->seedDebugSettings(true);
+        $this->fixtures->debugEnabledSettings($this->user);
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
         $logId = $this->logs()->listForUser($this->user)[0]['id'];
 
@@ -111,7 +116,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
     public function testCheckpointUpdatesTheLivenessCounterEvenWithDebugOff(): void
     {
-        $this->seedDebugSettings(false);
+        $this->fixtures->debugDisabledSettings($this->user);
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
 
         $this->clock->modify('+3 seconds');
@@ -126,7 +131,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
     public function testFinishUsableStoresTextVerdictAndResetsLiveness(): void
     {
-        $this->seedDebugSettings(true);
+        $this->fixtures->debugEnabledSettings($this->user);
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
         $logId = $this->logs()->listForUser($this->user)[0]['id'];
         $this->clock->modify('+3 seconds');
@@ -137,24 +142,27 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $log = $this->freshLog($logId);
         self::assertSame('{"recommendations": []}', $log->getResponseText());
         self::assertSame(RecommendationRunLog::VERDICT_USABLE, $log->getVerdict());
+        self::assertEquals($this->clock->now(), $log->getFinishedAt());
         $freshRun = $this->em->find(RecommendationRun::class, $this->run->getId());
         self::assertSame(0, $freshRun?->getStreamedChars());
     }
 
-    public function testAbortKeepsThePartialTextWithTransportVerdict(): void
+    public function testAbortKeepsThePartialTextWithTransportVerdictAndTheTransportMessage(): void
     {
-        $this->seedDebugSettings(true);
+        $this->fixtures->debugEnabledSettings($this->user);
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
         $logId = $this->logs()->listForUser($this->user)[0]['id'];
         $this->clock->modify('+3 seconds');
         $call->streamProgressed(new CompletionStreamProgress('cut off', 9_001));
 
-        $call->abortAfterTransportFailure();
+        $call->abortAfterTransportFailure('cURL error 28');
 
         $log = $this->freshLog($logId);
         self::assertSame('cut off', $log->getResponseText());
         self::assertSame(RecommendationRunLog::VERDICT_TRANSPORT_FAILED, $log->getVerdict());
         self::assertSame(9_001, $log->getWireBytes());
+        self::assertSame('cURL error 28', $log->getErrorDetail());
+        self::assertEquals($this->clock->now(), $log->getFinishedAt());
     }
 
     /**
@@ -165,14 +173,14 @@ final class RecommendationCallRecorderTest extends DbTestCase
      */
     public function testAnAbortRecordsTheBytesEvenWhenNothingWasAnswered(): void
     {
-        $this->seedDebugSettings(true);
+        $this->fixtures->debugEnabledSettings($this->user);
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
         $logId = $this->logs()->listForUser($this->user)[0]['id'];
 
         // Inside the checkpoint interval on purpose: no write has happened,
         // so the count can only reach the row if every report tracks it.
         $call->streamProgressed(new CompletionStreamProgress('', 1_900_000));
-        $call->abortAfterTransportFailure();
+        $call->abortAfterTransportFailure(null);
 
         $log = $this->freshLog($logId);
         self::assertSame('', $log->getResponseText());
@@ -191,7 +199,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
      */
     public function testUpdatesStayScopedToTheOwningRunAndLog(): void
     {
-        $this->seedDebugSettings(true);
+        $this->fixtures->debugEnabledSettings($this->user);
 
         [$otherRunId, $otherLogId] = $this->seedOtherUsersRunAndLog();
 
@@ -203,14 +211,14 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $abortCall = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 2, [], 'm');
         $this->clock->modify('+3 seconds');
         $abortCall->streamProgressed(new CompletionStreamProgress('cut', 60));
-        $abortCall->abortAfterTransportFailure();
+        $abortCall->abortAfterTransportFailure('connection reset');
 
         $this->assertOtherUsersRowsUntouched($otherRunId, $otherLogId);
     }
 
     public function testASecondBeginForTheSamePhaseCountsTheAttempt(): void
     {
-        $this->seedDebugSettings(true);
+        $this->fixtures->debugEnabledSettings($this->user);
         $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm')->finishUnusable('bad');
         $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
 
@@ -235,6 +243,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
             1,
             1,
             'other request',
+            new \DateTimeImmutable('2026-08-08T09:00:00Z'),
         );
         $this->em->persist($otherLog);
         $this->em->flush();
@@ -267,23 +276,6 @@ final class RecommendationCallRecorderTest extends DbTestCase
         self::assertNotNull($otherLog);
         self::assertSame('other original text', $otherLog->getResponseText());
         self::assertSame(RecommendationRunLog::VERDICT_USABLE, $otherLog->getVerdict());
-    }
-
-    private function seedDebugSettings(bool $enabled): void
-    {
-        $settings = new RecommendationSettings($this->user);
-        $settings->update(new RecommendationSettingsValues(
-            guidancePrompt: null,
-            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
-            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
-            contextWindow: null,
-            debugEnabled: $enabled,
-        ));
-        $this->em->persist($settings);
-        $this->em->flush();
     }
 
     private function logs(): RecommendationRunLogRepository

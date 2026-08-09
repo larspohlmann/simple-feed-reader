@@ -28,13 +28,15 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
 
     /**
      * @return list<array{id: int, phase: string, batchNumber: ?int, attempt: int,
-     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int}>
+     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
+     *     createdAt: string, finishedAt: ?string, errorDetail: ?string}>
      */
     public function listForUser(User $user): array
     {
         /** @var list<array{id: int, phase: string, batchNumber: ?int, attempt: int,
          *     verdict: ?string, requestBytes: int|string, responseBytes: int|string,
-         *     wireBytes: int}> $rows */
+         *     wireBytes: int, createdAt: \DateTimeImmutable, finishedAt: ?\DateTimeImmutable,
+         *     errorDetail: ?string}> $rows */
         $rows = $this->createQueryBuilder('l')
             ->select(
                 'l.id AS id',
@@ -45,6 +47,9 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
                 'LENGTH(l.requestBody) AS requestBytes',
                 'LENGTH(l.responseText) AS responseBytes',
                 'l.wireBytes AS wireBytes',
+                'l.createdAt AS createdAt',
+                'l.finishedAt AS finishedAt',
+                'l.errorDetail AS errorDetail',
             )
             ->join('l.run', 'r')
             ->where('r.user = :user')
@@ -64,6 +69,9 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
                 'requestBytes' => (int) $row['requestBytes'],
                 'responseBytes' => (int) $row['responseBytes'],
                 'wireBytes' => $row['wireBytes'],
+                'createdAt' => $row['createdAt']->format(\DATE_ATOM),
+                'finishedAt' => $row['finishedAt']?->format(\DATE_ATOM),
+                'errorDetail' => $row['errorDetail'],
             ],
             $rows,
         );

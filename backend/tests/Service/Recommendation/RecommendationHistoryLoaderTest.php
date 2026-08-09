@@ -11,6 +11,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationHistoryLoader;
+use App\Service\Recommendation\RecommendationPackingSettings;
 use App\Tests\DbTestCase;
 
 final class RecommendationHistoryLoaderTest extends DbTestCase
@@ -206,10 +207,13 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
             favoritesCap: $favoritesCap,
             keptCap: $keptCap,
             viewedCap: $viewedCap,
-            candidatePoolSize: 1000,
-            picksLimit: 100,
-            contextWindow: 32768,
-            contextWindowSource: 'fallback',
+            candidatePoolSize: 500,
+            picksLimit: 50,
+            packing: new RecommendationPackingSettings(
+                contextWindow: 32768,
+                contextWindowSource: 'fallback',
+                batchCount: null,
+            ),
             debugEnabled: false,
         );
     }

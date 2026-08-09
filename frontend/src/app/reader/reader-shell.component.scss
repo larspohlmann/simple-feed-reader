@@ -126,14 +126,15 @@ app-reader-header.hidden {
   }
 }
 
-/* The list column, in both layouts: a flex column so the for-you run bar (when
-   present) can sit above `app-entry-list` in normal flow instead of overlaying
+/* The list column, in both layouts: a flex column so `app-entry-list` fills
    it. Split mode nests it beside `.reader`; single-pane mode wraps the one
-   `app-entry-list` the same way so both modes share this rule. */
+   `app-entry-list` the same way so both modes share this rule. Positioned so
+   the run hairline below can anchor to it rather than to the viewport. */
 .list {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  position: relative;
 }
 
 .main.split .list {
@@ -155,76 +156,70 @@ app-reader-header.hidden {
   min-width: 0;
 }
 
-/* `app-entry-list` sets its own host to `height: 100%`, sized for the case
-   where it is `.list`'s only child. With the run bar sharing the column that
-   claims the whole column and pushes the bar into overflow, so the list
-   fills only what the bar leaves behind; it still scrolls internally (its own
-   `.rows` is the scroller, not `.list`), so the bar stays put at the column's
-   top rather than scrolling away with the entries. */
+/* `app-entry-list` is `.list`'s only child now — the run block lives inside
+   its own scroller (`topBlock`) rather than beside it — so it simply fills
+   the column. */
 .list app-entry-list {
   flex: 1;
   min-height: 0;
 }
 
-.list .for-you-bar,
+/* The 2px run hairline floats at the app-bar seam instead of living in flow:
+   the run block scrolls away with the list (#321), so this is the one signal
+   of a running run that stays put. Zero layout impact by design.
+
+   `z-index: 4`, ABOVE `app-entry-list`'s own `.list-header` (z-index 3, same
+   seam, opaque, unconditionally rendered — it never shrinks to zero height
+   even collapsed). At equal z-index the hairline is the earlier sibling in
+   `.list`, so `.list-header` would paint over it and hide it completely; one
+   step higher paints the hairline on top instead. This mirrors `.under-header`
+   below, which sits at the very same `--app-bar-h` seam over the very same
+   list header for the identical reason — see its own comment. The strip lands
+   in the header's top padding, above its heading text, so it reads as a
+   loading bar riding the header's edge rather than covering content.
+
+   Second tie, decided on purpose: `.under-header` (below) is ALSO z-index 4,
+   the same seam, and it carries the background-refresh hairline. `.list`
+   (and this hairline inside it) is the LATER sibling in the template, so it
+   already wins that tie and paints over `.under-header`'s when a for-you run
+   and a background sweep overlap. That is the wanted order, not an accident
+   of markup position: this hairline reports the run the account just started
+   by pressing a button in this very list, so the just-initiated action should
+   show over the ambient one. Keep `.list` after `.under-header` in the
+   template, or restate the ordering explicitly if it ever moves. */
 .list app-progress-hairline {
-  flex: 0 0 auto;
+  position: absolute;
+  z-index: 4;
+  top: var(--app-bar-h, var(--bar-h));
+  right: 0;
+  left: 0;
 }
 
-/* `app-entry-list` normally sits flush against the top of `.list` and clears
-   the (absolute, opaque) app header itself, via its own `--app-bar-h`-keyed
-   padding — see the header comment above `.body`. Once the run bar is its
-   preceding sibling instead, `app-entry-list` no longer starts at that seam,
-   so it must stop reserving space for a header it is no longer under: the
-   bar's own `margin-top` below does that job now. Left uncancelled, the list's
-   sticky header would land `--app-bar-h` below where the run bar already put
-   it — clearing nothing and opening a dead gap under the real header. */
-.for-you-bar ~ app-entry-list {
-  --app-bar-h: 0px;
-}
-
-/* The for-you run bar: chrome for one view of the entry list, not an app-wide
-   notice, so it lives in `.list` rather than the `.under-header` overlay —
-   sitting there let it paint over the sidebar's refresh/add-feed row, since
-   that overlay spans the full window width underneath the header (#308). It
-   is opaque-free by design: `.list` never extends past the list column, so it
-   cannot reach content it does not own.
-
-   `margin-top` — not `.list` padding — clears the (absolute, opaque) app
-   header, the same `--app-bar-h` seam `.sidebar` offsets into. `.list` itself
-   stays flush at the top so it keeps behaving like every other pane when the
-   bar is absent; only the bar, when present, pushes itself below the header. */
-.for-you-bar {
+.for-you-top {
   display: flex;
-  gap: var(--space-2);
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
   align-items: center;
-  margin-top: var(--app-bar-h, var(--bar-h));
-  padding: var(--space-2) var(--space-4);
-  font-size: var(--fs-sm);
+  padding: var(--space-2) var(--row-pad-comfy-x) var(--space-3);
   color: var(--text-secondary);
+  font-size: var(--fs-sm);
 
   p {
     margin: 0;
   }
 
-  .hint {
-    margin: 0;
+  .cap {
+    flex-basis: 100%;
     color: var(--text-muted);
     font-size: var(--fs-xs);
   }
 
-  &__streamed {
-    color: var(--text-muted);
-    font-size: var(--fs-xs);
-  }
-
-  .run {
+  .info {
+    padding: var(--space-1);
     border: 0;
     background: none;
-    color: var(--accent);
-    font-weight: 600;
+    color: var(--text-muted);
     cursor: pointer;
-    padding: 0;
   }
 }
 

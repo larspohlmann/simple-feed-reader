@@ -76,6 +76,9 @@ export interface EntryDto {
   isViewed: boolean;
   /** Why the recommender picked this entry; set only on for-you results. */
   recommendationReason?: string | null;
+  /** The model's 0-100 score for this entry; present only on for-you results
+   *  and only when the user's debug setting is on. */
+  recommendationScore?: number | null;
 }
 
 export interface EntriesPage {
@@ -212,7 +215,7 @@ export type ReaderContent = ReaderArticle | ReaderFailure;
 
 /** Progress of a for-you recommendation run (POST/GET /api/recommendations/runs*). */
 export interface RecommendationRunReport {
-  status: 'none' | 'pending' | 'running' | 'completed' | 'failed';
+  status: 'none' | 'pending' | 'running' | 'completed' | 'cancelled' | 'failed';
   batchesTotal: number | null;
   batchesDone: number;
   error: string | null;
@@ -222,6 +225,10 @@ export interface RecommendationRunReport {
   /** Bytes of the in-flight provider answer received so far this call; 0
    *  between calls, since the server resets the counter when a call ends. */
   streamedChars: number;
+  /** The surviving for-you list's own summary: how many entries it holds and
+   *  when it was last generated. Describes the *list*, not this run — a
+   *  failed latest run still carries the previous list's timestamp. */
+  forYou: { itemCount: number; generatedAt: string | null };
 }
 
 /** One provider call logged during a for-you run: a scored batch or the
@@ -237,6 +244,26 @@ export interface DebugLogEntry {
   /** Everything the provider sent, reasoning and framing included. */
   wireBytes: number;
   streamingText: string | null;
+  createdAt: string;
+  /** Null while the call is still streaming; set the moment it settles. */
+  finishedAt: string | null;
+  /** The transport exception's message, set only on a `transport-failed`
+   *  verdict -- null on every other row, including a completed run. */
+  errorDetail: string | null;
+}
+
+/** The latest for-you run, as the debug log's summary strip shows it: distinct
+ *  from the per-row `errorDetail` above, `error` here is the run's own
+ *  failure, not any one call's. Null when the user has never run. */
+export interface DebugLogRunSummary {
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  error: string | null;
+  attempts: number;
+  maxAttempts: number;
+  transportFailures: number;
+  maxTransportFailures: number;
+  createdAt: string;
+  completedAt: string | null;
 }
 
 /** The full request/response pair for one logged provider call. */

@@ -62,6 +62,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     // call legitimately spent 1.9 MB of stream before answering.
     private const int MAXIMUM_WIRE_BYTES = 67_108_864;
 
+
     public function __construct(
         private HttpClientInterface $httpClient,
         private CompletionBodyDecoder $decoder,
@@ -71,15 +72,14 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
 
     public function complete(
         ProviderCredentials $credentials,
-        string $model,
-        array $messages,
+        CompletionRequest $request,
         CompletionStreamObserver $observer,
     ): string {
         // One reader per call: it is this call's parsing state, the same way a
         // RecordedCall is this call's recording state.
         $reader = new CompletionStreamReader($this->decoder);
 
-        $this->readInto($reader, $credentials, $model, $messages, $observer);
+        $this->readInto($reader, $credentials, $request, $observer);
         $content = $reader->assistantContent();
 
         if (null === $content) {
@@ -89,16 +89,14 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
         return $content;
     }
 
-    /** @param list<array{role: string, content: string}> $messages */
     private function readInto(
         CompletionStreamReader $reader,
         ProviderCredentials $credentials,
-        string $model,
-        array $messages,
+        CompletionRequest $request,
         CompletionStreamObserver $observer,
     ): void {
         try {
-            $response = $this->request($credentials, $model, $messages);
+            $response = $this->request($credentials, $request);
             $status = $response->getStatusCode();
 
             if (401 === $status || 403 === $status) {
@@ -178,8 +176,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
         ));
     }
 
-    /** @param list<array{role: string, content: string}> $messages */
-    private function request(ProviderCredentials $credentials, string $model, array $messages): ResponseInterface
+    private function request(ProviderCredentials $credentials, CompletionRequest $request): ResponseInterface
     {
         return $this->httpClient->request('POST', $credentials->baseUrl . '/chat/completions', [
             'headers' => [
@@ -193,10 +190,17 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
                 'User-Agent' => $this->userAgent,
             ],
             'json' => [
-                'model' => $model,
-                'messages' => $messages,
+                'model' => $request->model,
+                'messages' => $request->messages,
                 'response_format' => ['type' => 'json_object'],
                 'stream' => true,
+                // The only guard here that prevents spend rather than
+                // discarding what was already billed: the byte caps and the
+                // timeouts all fire after the provider has generated the
+                // tokens. Sized by the caller from the same reserve the
+                // prompt left room for, so it can never truncate a reply the
+                // prompt legitimately asked for.
+                'max_tokens' => $request->maxAnswerTokens,
             ],
             // Idle bound only: with a streamed answer, deltas tick this over
             // continuously, so it fires on dead connections, not slow models.

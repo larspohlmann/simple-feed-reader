@@ -84,7 +84,9 @@
   <main class="main" [class.split]="paneMode()">
     @if (paneMode()) {
       <section class="list">
-        <ng-container [ngTemplateOutlet]="forYouBar" />
+        @if (selection().kind === 'for-you') {
+          <app-progress-hairline [active]="recs.running()" [value]="recs.progress()" />
+        }
         <app-entry-list
           [layout]="layout.mode()"
           [title]="title()"
@@ -99,7 +101,8 @@
           [openEntryId]="entryId()"
           [feedTags]="feedTags()"
           [refreshing]="refreshSvc.running()"
-          [lastRefreshed]="selectedFeedLastFetched()"
+          [lastRefreshed]="listLastRefreshed()"
+          [topBlock]="forYouTop"
           (loadMore)="entries.loadMore()"
           (markAllRead)="onMarkAllRead()"
           (refresh)="onScopedRefresh()"
@@ -126,7 +129,9 @@
            this list drives the bar's hide-on-scroll — its scrolled output is
            the bar's one and only scroll source (#128). -->
       <section class="list">
-        <ng-container [ngTemplateOutlet]="forYouBar" />
+        @if (selection().kind === 'for-you') {
+          <app-progress-hairline [active]="recs.running()" [value]="recs.progress()" />
+        }
         <app-entry-list
           [layout]="layout.mode()"
           [title]="title()"
@@ -141,7 +146,8 @@
           [openEntryId]="entryId()"
           [feedTags]="feedTags()"
           [refreshing]="refreshSvc.running()"
-          [lastRefreshed]="selectedFeedLastFetched()"
+          [lastRefreshed]="listLastRefreshed()"
+          [topBlock]="forYouTop"
           (scrolled)="onListScrolled($event)"
           (loadMore)="entries.loadMore()"
           (markAllRead)="onMarkAllRead()"
@@ -174,36 +180,40 @@
   </main>
 </div>
 
-<!-- Defined once and outlet-rendered into whichever `.list` the current layout
-     mounts: the split pane and the single pane each build their own list
-     column, and two copies of this block drifted apart the moment one of them
-     gained a binding the other lacked. -->
-<ng-template #forYouBar>
+<!-- Defined once and outlet-rendered into the top of the scrolling content of
+     whichever `.list` the current layout mounts, via `app-entry-list`'s
+     `topBlock` input — the split pane and the single pane each build their own
+     list column, and two copies of this block drifted apart the moment one of
+     them gained a binding the other lacked. It scrolls away with the list
+     (#321); the hairline is the one signal that stays pinned, placed directly
+     in `.list` above (out of the scroller). -->
+<ng-template #forYouTop>
   @if (selection().kind === 'for-you') {
-    <div class="for-you-bar">
+    <div class="for-you-top">
       @if (recs.running()) {
         <p role="status" aria-live="polite">
           {{ 'reader.forYouProgress' | transloco: forYouProgress() }}
         </p>
-        @if (forYouStreamedKb(); as kb) {
-          <span class="for-you-bar__streamed">{{
-            'reader.forYouStreamed' | transloco: { kb }
-          }}</span>
-        }
-        <p class="hint">
-          {{
-            (recs.workerOwnsRun() ? 'reader.forYouBackground' : 'reader.forYouKeepOpen') | transloco
-          }}
-        </p>
-      } @else {
-        <button type="button" class="run" (click)="recs.start()">
-          {{ 'reader.forYouRun' | transloco }}
+        <app-button variant="ghost" size="sm" [disabled]="recs.stopping()" (click)="recs.stop()">
+          {{ (recs.stopping() ? 'reader.forYouStopping' : 'reader.forYouStop') | transloco }}
+        </app-button>
+        <button
+          type="button"
+          class="info"
+          (click)="openForYouInfo()"
+          [attr.aria-label]="'reader.forYouInfoOpen' | transloco"
+        >
+          <app-icon name="info" size="sm" />
         </button>
+      } @else {
+        <app-button variant="primary" size="sm" (click)="recs.start()">
+          {{ 'reader.forYouRun' | transloco }}
+        </app-button>
+        <p class="cap">{{ 'reader.forYouRunHint' | transloco }}</p>
         @if (forYouFailureMessageKey(); as failureKey) {
           <p role="alert">{{ failureKey | transloco }}</p>
         }
       }
     </div>
-    <app-progress-hairline [active]="recs.running()" [value]="recs.progress()" />
   }
 </ng-template>

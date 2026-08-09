@@ -30,6 +30,8 @@ final readonly class SaveRecommendationSettingsRequest
         public int $picksLimit,
         #[Assert\Range(min: 4096, max: 2097152)]
         public ?int $contextWindow,
+        #[Assert\Range(min: 1, max: 100)]
+        public ?int $batchCount,
         public bool $debugEnabled,
     ) {
     }
@@ -44,6 +46,7 @@ final readonly class SaveRecommendationSettingsRequest
             candidatePoolSize: $this->candidatePoolSize,
             picksLimit: $this->picksLimit,
             contextWindow: $this->contextWindow,
+            batchCount: $this->batchCount,
             debugEnabled: $this->debugEnabled,
         );
     }

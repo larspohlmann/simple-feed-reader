@@ -7,6 +7,7 @@ namespace App\Controller\Api;
 use App\Entity\User;
 use App\Http\RecommendationDebugLogJson;
 use App\Repository\RecommendationRunLogRepository;
+use App\Repository\RecommendationRunRepository;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
@@ -20,8 +21,10 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 #[Route('/api/recommendations/runs/debug-log')]
 final readonly class RecommendationDebugLogController
 {
-    public function __construct(private RecommendationRunLogRepository $logs)
-    {
+    public function __construct(
+        private RecommendationRunLogRepository $logs,
+        private RecommendationRunRepository $runs,
+    ) {
     }
 
     #[Route('', name: 'api_recommendations_debug_log', methods: ['GET'])]
@@ -30,6 +33,7 @@ final readonly class RecommendationDebugLogController
         return new JsonResponse(RecommendationDebugLogJson::list(
             $this->logs->listForUser($user),
             $this->logs->streamingTextForUser($user),
+            $this->runs->findLatestForUser($user),
         ));
     }
 

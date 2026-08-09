@@ -34,12 +34,23 @@ final class RecommendationItem
     #[ORM\Column(type: Types::TEXT)]
     private string $reason;
 
-    public function __construct(RecommendationRun $run, Entry $entry, int $position, string $reason)
-    {
+    /** The model's 0-100 score for this pick. Null only on rows written
+     *  before the column existed (#321). */
+    #[ORM\Column(nullable: true)]
+    private ?int $score;
+
+    public function __construct(
+        RecommendationRun $run,
+        Entry $entry,
+        int $position,
+        string $reason,
+        ?int $score = null,
+    ) {
         $this->run = $run;
         $this->entry = $entry;
         $this->position = $position;
         $this->reason = $reason;
+        $this->score = $score;
     }
 
     public function getId(): ?int
@@ -65,6 +76,11 @@ final class RecommendationItem
     public function getReason(): string
     {
         return $this->reason;
+    }
+
+    public function getScore(): ?int
+    {
+        return $this->score;
     }
 
     // No setters — items are written once at run completion and never edited.

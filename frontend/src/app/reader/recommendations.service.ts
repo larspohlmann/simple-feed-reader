@@ -64,6 +64,11 @@ export class RecommendationsService {
   private readonly router = inject(Router);
 
   readonly running = signal(false);
+  /** True from the moment the user asks to stop until the run actually ends.
+   *  The two are not the same instant: a tick already inside a provider call
+   *  keeps going until that call returns, so the button must be able to say
+   *  "stopping" rather than pretend the run is already over. */
+  readonly stopping = signal(false);
   readonly report = signal<RecommendationRunReport | null>(null);
   /** Null while a run is doing its job. Set exactly once per run, on the
    *  paths that end it without a completed batch set. */
@@ -86,15 +91,49 @@ export class RecommendationsService {
    *  directly. */
   readonly workerOwnsRun = computed(() => this.report()?.background ?? false);
 
+  /** The surviving for-you list's item count, for the sidebar badge. */
+  readonly forYouCount = computed(() => this.report()?.forYou.itemCount ?? 0);
+  /** The surviving for-you list's generation time (ISO), for the list
+   *  header's "Last refreshed" hint. */
+  readonly generatedAt = computed(() => this.report()?.forYou.generatedAt ?? null);
+
   /** Starts a new run and polls it to completion. */
   start(): void {
     if (this.running()) return;
     this.running.set(true);
+    this.stopping.set(false);
     this.report.set(null);
     this.failure.set(null);
     this.api.startRecommendations().subscribe({
       next: (r) => this.onReport(r),
       error: (e: HttpErrorResponse) => this.stopWithHttpError(e),
+    });
+  }
+
+  /** Asks the server to stop the run. The poll loop is deliberately left
+   *  alone: it is the loop that will observe the run reaching `cancelled` and
+   *  tear itself down, so stopping stays a single source of truth rather than
+   *  two halves that can disagree. A failure just clears the flag -- the run
+   *  is still going, and saying otherwise would be a lie. */
+  stop(): void {
+    if (!this.running() || this.stopping()) return;
+    this.stopping.set(true);
+    this.api.stopRecommendations().subscribe({
+      next: (r) => this.onReport(r),
+      error: () => this.stopping.set(false),
+    });
+  }
+
+  /** Re-reads the current run/for-you status without starting or advancing
+   *  anything. Best-effort like `resume()`'s own lookup: a failed refresh
+   *  just leaves the last known report in place rather than surfacing a
+   *  second error path for what is, from here, a read-only side effect. */
+  refreshStatus(): void {
+    this.api.currentRecommendations().subscribe({
+      next: (r) => this.report.set(r),
+      error: () => {
+        // Best-effort; see the docblock above.
+      },
     });
   }
 
@@ -105,9 +144,9 @@ export class RecommendationsService {
   resume(): void {
     this.api.currentRecommendations().subscribe({
       next: (r) => {
+        this.report.set(r); // even a finished run carries the for-you summary the sidebar needs
         if (r.status !== 'pending' && r.status !== 'running') return;
         this.running.set(true);
-        this.report.set(r);
         this.failure.set(null);
         this.step(NO_ATTEMPTS);
       },
@@ -155,6 +194,11 @@ export class RecommendationsService {
           actionLabel: this.i18n.translate('reader.forYouView'),
           action: () => this.navigateToForYou(),
         });
+        break;
+      case 'cancelled':
+        // No toast and no failure: the user asked for this and is looking at
+        // the button they just pressed. Announcing it back to them is noise.
+        this.finish();
         break;
       case 'failed':
         this.failure.set({ kind: 'failed', error: r.error });
@@ -214,6 +258,7 @@ export class RecommendationsService {
 
   private finish(): void {
     this.running.set(false);
+    this.stopping.set(false);
   }
 
   private navigateToForYou(): void {

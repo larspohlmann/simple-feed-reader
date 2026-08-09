@@ -105,12 +105,17 @@
     }
   </div>
 } @else if (entries().length === 0) {
-  <p class="empty" [class.after-banner]="!!error()">
-    {{ (selection().unread ? 'reader.allCaughtUp' : 'reader.nothingHere') | transloco }}
-    @if (!catalogEmpty()) {
-      <a routerLink="/discover">{{ 'discover.browseCatalog' | transloco }}</a>
+  <div class="empty-wrap" [class.after-banner]="!!error()">
+    @if (topBlock(); as block) {
+      <ng-container [ngTemplateOutlet]="block" />
     }
-  </p>
+    <p class="empty">
+      {{ (selection().unread ? 'reader.allCaughtUp' : 'reader.nothingHere') | transloco }}
+      @if (!catalogEmpty()) {
+        <a routerLink="/discover">{{ 'discover.browseCatalog' | transloco }}</a>
+      }
+    </p>
+  </div>
 } @else if (layout() === 'magazine') {
   <div
     class="rows magazine"
@@ -123,6 +128,9 @@
     #rows
     (scroll)="onRowsScroll($event)"
   >
+    @if (topBlock(); as block) {
+      <ng-container [ngTemplateOutlet]="block" />
+    }
     @for (b of blocks(); track blockKey(b)) {
       @switch (b.kind) {
         @case ('hero') {
@@ -215,6 +223,9 @@
     #rows
     (scroll)="onRowsScroll($event)"
   >
+    @if (topBlock(); as block) {
+      <ng-container [ngTemplateOutlet]="block" />
+    }
     @for (e of entries(); track e.id) {
       <app-entry-row
         [entry]="e"

@@ -40,8 +40,20 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
     public function testListReturnsMetadataWithByteSizesButNoBodies(): void
     {
         $run = $this->fixtures->createRun($this->user);
-        $finished = $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'req-body-a');
-        $finished->finish('decoded text', RecommendationRunLog::VERDICT_USABLE, 41_000);
+        $finished = $this->fixtures->log(
+            $run,
+            RecommendationRunLog::PHASE_BATCH,
+            1,
+            1,
+            'req-body-a',
+            new \DateTimeImmutable('2026-08-08T10:00:00Z'),
+        );
+        $finished->finish(
+            'decoded text',
+            RecommendationRunLog::VERDICT_USABLE,
+            41_000,
+            new \DateTimeImmutable('2026-08-08T10:00:05Z'),
+        );
         $this->fixtures->log($run, RecommendationRunLog::PHASE_DEDUP, null, 1, 'req-body-longer');
         $this->em->flush();
 
@@ -58,6 +70,9 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
                     'requestBytes' => \strlen('req-body-a'),
                     'responseBytes' => \strlen('decoded text'),
                     'wireBytes' => 41_000,
+                    'createdAt' => (new \DateTimeImmutable('2026-08-08T10:00:00Z'))->format(\DATE_ATOM),
+                    'finishedAt' => (new \DateTimeImmutable('2026-08-08T10:00:05Z'))->format(\DATE_ATOM),
+                    'errorDetail' => null,
                 ],
                 [
                     'id' => $rows[1]['id'],
@@ -68,6 +83,9 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
                     'requestBytes' => \strlen('req-body-longer'),
                     'responseBytes' => 0,
                     'wireBytes' => 0,
+                    'createdAt' => (new \DateTimeImmutable('2026-08-08T10:00:00Z'))->format(\DATE_ATOM),
+                    'finishedAt' => null,
+                    'errorDetail' => null,
                 ],
             ],
             $rows,
@@ -78,7 +96,12 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
     {
         $run = $this->fixtures->createRun($this->user);
         $done = $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
-        $done->finish('finished text', RecommendationRunLog::VERDICT_UNUSABLE, 7);
+        $done->finish(
+            'finished text',
+            RecommendationRunLog::VERDICT_UNUSABLE,
+            7,
+            new \DateTimeImmutable('2026-08-08T10:00:05Z'),
+        );
         $streaming = $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 2, 1, 'r');
         $this->em->flush();
 

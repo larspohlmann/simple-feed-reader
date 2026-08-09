@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { Component, TemplateRef, ViewChild, signal } from '@angular/core';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { provideRouter } from '@angular/router';
 import { EntryListComponent, REFRESH_REVEAL } from './entry-list.component';
@@ -65,7 +65,60 @@ function mount(over: Record<string, unknown> = {}) {
   return f;
 }
 
+// A standalone host purely to mint a real TemplateRef — NgTemplateOutlet
+// accepts one from any module, so it doesn't need to come from the same
+// TestBed instance that renders EntryListComponent.
+@Component({
+  standalone: true,
+  template: `<ng-template #tb><p class="top-marker">Top</p></ng-template>`,
+})
+class TemplateHost {
+  @ViewChild('tb', { static: true }) tb!: TemplateRef<unknown>;
+}
+
+function topBlockTemplate(): TemplateRef<unknown> {
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({ imports: [TemplateHost] });
+  const f = TestBed.createComponent(TemplateHost);
+  f.detectChanges();
+  return f.componentInstance.tb;
+}
+
 describe('EntryListComponent', () => {
+  // #321: the for-you block is now projected into the top of whichever
+  // content branch is live, so it scrolls away with the list instead of
+  // sitting in a permanently reserved bar above it.
+  describe('topBlock', () => {
+    it('renders above the list rows', () => {
+      const tb = topBlockTemplate();
+      const el = mount({ topBlock: tb, layout: 'list' }).nativeElement as HTMLElement;
+      const rows = el.querySelector('.rows')!;
+      expect(rows.querySelector('.top-marker')).not.toBeNull();
+      // It scrolls with the rows: it lives inside the scroller, not before it.
+      expect(rows.firstElementChild!.classList).toContain('top-marker');
+    });
+
+    it('renders above the magazine rows', () => {
+      const tb = topBlockTemplate();
+      const el = mount({ topBlock: tb, layout: 'magazine' }).nativeElement as HTMLElement;
+      const rows = el.querySelector('.rows.magazine')!;
+      expect(rows.querySelector('.top-marker')).not.toBeNull();
+      expect(rows.firstElementChild!.classList).toContain('top-marker');
+    });
+
+    it('renders above the empty state, so the run button still shows there', () => {
+      const tb = topBlockTemplate();
+      const el = mount({ topBlock: tb, entries: [] }).nativeElement as HTMLElement;
+      expect(el.querySelector('.top-marker')).not.toBeNull();
+      expect(el.querySelector('.empty')).not.toBeNull();
+    });
+
+    it('renders nothing extra when no topBlock is provided', () => {
+      const el = mount().nativeElement as HTMLElement;
+      expect(el.querySelector('.top-marker')).toBeNull();
+    });
+  });
+
   it('renders a row per entry and the header title', () => {
     const el = mount().nativeElement as HTMLElement;
     expect(el.querySelector('.list-header')!.textContent).toContain('All items');
@@ -334,6 +387,14 @@ describe('EntryListComponent', () => {
     const el = mount({
       selection: { kind: 'subscription', id: 7, unread: true },
       lastRefreshed: '2026-07-25T08:00:00Z',
+    }).nativeElement as HTMLElement;
+    expect(el.querySelector('.last-refreshed')).not.toBeNull();
+  });
+
+  it('shows a last-refreshed hint for the for-you list', () => {
+    const el = mount({
+      selection: { kind: 'for-you', id: null, unread: false },
+      lastRefreshed: '2026-08-08T09:00:00Z',
     }).nativeElement as HTMLElement;
     expect(el.querySelector('.last-refreshed')).not.toBeNull();
   });

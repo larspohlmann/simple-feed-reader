@@ -4,6 +4,8 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
 import { Problem, parseProblem } from '../core/problem';
+import { ReaderApi } from '../reader/reader-api';
+import { RecommendationsService } from '../reader/recommendations.service';
 
 export type ContextWindowSource = 'user' | 'provider' | 'fallback';
 
@@ -20,13 +22,16 @@ export interface RecommendationSettingsState {
   readonly viewedCap: number;
   readonly candidatePoolSize: number;
   readonly picksLimit: number;
+  /** How many entries the provider scores per call. `null` packs batches
+   *  automatically; see Task 5's `RecommendationPackingSettings`. */
+  readonly batchCount: number | null;
   readonly contextWindow: number;
   readonly contextWindowOverride: number | null;
   readonly contextWindowSource: ContextWindowSource;
   readonly debugEnabled: boolean;
 }
 
-/** The eight writable fields of the PUT body. */
+/** The nine writable fields of the PUT body. */
 export interface SaveRecommendationSettings {
   readonly guidancePrompt: string | null;
   readonly favoritesCap: number;
@@ -34,6 +39,7 @@ export interface SaveRecommendationSettings {
   readonly viewedCap: number;
   readonly candidatePoolSize: number;
   readonly picksLimit: number;
+  readonly batchCount: number | null;
   readonly contextWindow: number | null;
   readonly debugEnabled: boolean;
 }
@@ -47,11 +53,20 @@ export interface SaveRecommendationSettings {
 export class RecommendationSettingsService {
   private readonly http = inject(HttpClient);
   private readonly base = inject(API_BASE_URL);
+  private readonly api = inject(ReaderApi);
+  private readonly recommendations = inject(RecommendationsService);
 
   readonly state = signal<RecommendationSettingsState | null>(null);
   readonly busy = signal(false);
   readonly failure = signal<Problem | null>(null);
   readonly saved = signal(false);
+
+  /** Kept apart from `busy`/`failure`/`saved`: the purge is a danger-zone
+   *  action with its own confirmation line, not another outcome of the save
+   *  form above it. */
+  readonly purging = signal(false);
+  readonly purgeFailure = signal<Problem | null>(null);
+  readonly purged = signal(false);
 
   load(): void {
     this.run(
@@ -68,6 +83,30 @@ export class RecommendationSettingsService {
         this.saved.set(true);
       },
     );
+  }
+
+  /** Clears every persisted recommendation. On success, refreshes the
+   *  reader's own status so the sidebar count (Task 9) drops immediately
+   *  rather than waiting for the next run. A 409 while a run is active comes
+   *  back as an ordinary `Problem` -- the caller renders its `detail`
+   *  verbatim, the same real-outcome treatment as any other rejected write,
+   *  rather than a generic failure message. */
+  purge(): void {
+    this.purging.set(true);
+    this.purgeFailure.set(null);
+    this.purged.set(false);
+
+    this.api.purgeRecommendations().subscribe({
+      next: () => {
+        this.purging.set(false);
+        this.purged.set(true);
+        this.recommendations.refreshStatus();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.purging.set(false);
+        this.purgeFailure.set(parseProblem(error));
+      },
+    });
   }
 
   private run<T>(request: Observable<T>, onSuccess: (value: T) => void): void {

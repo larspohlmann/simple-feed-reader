@@ -1,3 +1,5 @@
+@use '../theme/breakpoints' as bp;
+
 .group {
   display: flex;
   flex-direction: column;
@@ -6,8 +8,9 @@
   margin-bottom: var(--space-3);
 }
 
-.group:last-child {
-  margin-bottom: 0;
+app-disclosure {
+  display: block;
+  margin-bottom: var(--space-3);
 }
 
 app-field {
@@ -20,14 +23,17 @@ textarea {
   resize: vertical;
 }
 
-details {
-  width: 100%;
+.expert-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
 }
 
-summary {
-  cursor: pointer;
-  color: var(--text-secondary);
-  font-size: var(--fs-sm);
+@media (width <= bp.$bp-sm) {
+  .expert-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .fixed {
@@ -45,4 +51,16 @@ summary {
   margin: 0;
   font-size: var(--fs-sm);
   color: var(--success);
+}
+
+.danger-zone {
+  margin-block-start: var(--space-5);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--border);
+}
+
+.danger-zone__note {
+  margin-block-end: var(--space-3);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
 }

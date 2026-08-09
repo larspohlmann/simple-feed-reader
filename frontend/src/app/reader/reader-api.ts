@@ -8,6 +8,7 @@ import { RefreshScope } from './query';
 import {
   DebugLogDetail,
   DebugLogEntry,
+  DebugLogRunSummary,
   EntriesPage,
   EntryDto,
   EntryQuery,
@@ -158,14 +159,25 @@ export class ReaderApi {
     );
   }
 
+  /** Stops the in-flight run at the user's request. Refuses with a 409 when
+   *  nothing is running. This does not cancel the provider call already in
+   *  flight -- that spend is committed -- it stops every call after it. */
+  stopRecommendations(): Observable<RecommendationRunReport> {
+    return this.http.post<RecommendationRunReport>(
+      `${this.base}/api/recommendations/runs/stop`,
+      {},
+    );
+  }
+
   /** The recommendation run in flight, if any -- used to resume a poll loop on boot. */
   currentRecommendations(): Observable<RecommendationRunReport> {
     return this.http.get<RecommendationRunReport>(`${this.base}/api/recommendations/runs/current`);
   }
 
-  /** The provider calls logged for the most recent for-you run, in call order. */
-  debugLog(): Observable<{ entries: DebugLogEntry[] }> {
-    return this.http.get<{ entries: DebugLogEntry[] }>(
+  /** The provider calls logged for the most recent for-you run, in call
+   *  order, plus that run's own summary -- null when the user has never run. */
+  debugLog(): Observable<{ run: DebugLogRunSummary | null; entries: DebugLogEntry[] }> {
+    return this.http.get<{ run: DebugLogRunSummary | null; entries: DebugLogEntry[] }>(
       `${this.base}/api/recommendations/runs/debug-log`,
     );
   }
@@ -173,5 +185,12 @@ export class ReaderApi {
   /** The full request/response body for one logged provider call. */
   debugLogEntry(id: number): Observable<DebugLogDetail> {
     return this.http.get<DebugLogDetail>(`${this.base}/api/recommendations/runs/debug-log/${id}`);
+  }
+
+  /** Deletes every persisted for-you recommendation. Refuses with a 409
+   *  while a run is pending or running -- purging out from under an
+   *  in-flight run would leave it writing picks nobody can see. */
+  purgeRecommendations(): Observable<RecommendationRunReport> {
+    return this.http.delete<RecommendationRunReport>(`${this.base}/api/recommendations/runs`);
   }
 }

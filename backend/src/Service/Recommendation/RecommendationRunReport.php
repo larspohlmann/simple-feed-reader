@@ -11,7 +11,7 @@ use App\Entity\RecommendationRun;
  * #311 worker to decide what to do next, without exposing the entity's
  * checkpoint internals (candidate batches, batch winners, retry state).
  *
- * `status` widens the entity's four persisted statuses with two that never
+ * `status` widens the entity's five persisted statuses with two that never
  * reach the database: `none` (no run has ever started) and `busy` (another
  * tick currently holds the per-user lock).
  */

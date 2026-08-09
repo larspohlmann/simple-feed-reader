@@ -1,5 +1,11 @@
 @use '../../theme/breakpoints' as bp;
 
+/* What every scroller/overlay branch below reserves before its own content:
+   the shell's app bar, this list's own sticky header, and the gap between
+   them. Was four independent copies of this calc (.rows, .rows.magazine,
+   the empty state, .banner) — a SCSS variable keeps it to one (#321). */
+$header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
+
 :host {
   display: flex;
   flex-direction: column;
@@ -77,20 +83,16 @@
      the number the scroller reserves. */
 }
 
-/* "Last refreshed …" hint under a single-feed title. Wide screens only — it's
-   the same breakpoint that gives the reader its side pane. */
+/* "Last refreshed …" hint under a single-feed or for-you title. Shown at
+   every width — the phone mock wants it visible too — but dropped in the
+   narrow header's collapsed state below, alongside the other secondary
+   chrome, so a scrolled-down list keeps a slim bar. */
 .last-refreshed {
   font-size: var(--fs-xs, var(--fs-sm));
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-@media (width < bp.$bp-lg) {
-  .last-refreshed {
-    display: none;
-  }
 }
 
 /* Narrow layout: as you scroll the list down the header collapses to a slim
@@ -107,6 +109,10 @@
   }
 
   .list-header.collapsed .tools {
+    display: none;
+  }
+
+  .list-header.collapsed .last-refreshed {
     display: none;
   }
 }
@@ -267,7 +273,7 @@
      hidden state nor this list's collapsed one, so the rows never move (#87).
      They pass behind the bars instead, which is what makes retracting them
      actually give the reader more to look at. */
-  padding-top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
+  padding-top: $header-clear;
 }
 
 .rows.dragging {
@@ -288,13 +294,13 @@
 /* An error banner sits above the scroller in the flow and takes the reservation
    itself; the scroller must not add it a second time. */
 .rows.after-banner,
-.empty.after-banner {
+.empty-wrap.after-banner {
   padding-top: 0;
 }
 
 .rows.magazine {
   padding: var(--space-3);
-  padding-top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
+  padding-top: $header-clear;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -309,12 +315,17 @@
   max-width: 680px;
 }
 
+/* Wraps the (optional) topBlock and the `.empty` message: the header-clearing
+   top reservation lives here rather than on `.empty` itself, so a projected
+   topBlock sits inside that same reserved space instead of the message text
+   growing an extra header-height gap above it. */
+.empty-wrap {
+  padding-top: calc(#{$header-clear} + var(--space-6));
+}
+
 .empty {
   color: var(--text-muted);
-  padding: var(--space-6);
-  padding-top: calc(
-    var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap) + var(--space-6)
-  );
+  padding: 0 var(--space-6) var(--space-6);
   text-align: center;
 
   a {
@@ -327,7 +338,7 @@
 
 .banner {
   margin: var(--space-3) var(--space-4);
-  margin-top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
+  margin-top: $header-clear;
   padding: var(--space-3);
   border-radius: var(--radius);
   background: var(--bg-danger);

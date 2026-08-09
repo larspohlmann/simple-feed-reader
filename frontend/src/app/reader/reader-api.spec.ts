@@ -261,6 +261,7 @@ describe('ReaderApi', () => {
       error: null,
       background: false,
       streamedChars: 0,
+      forYou: { itemCount: 0, generatedAt: null },
     });
   });
 
@@ -275,6 +276,7 @@ describe('ReaderApi', () => {
       error: null,
       background: false,
       streamedChars: 0,
+      forYou: { itemCount: 0, generatedAt: null },
     });
   });
 
@@ -289,6 +291,7 @@ describe('ReaderApi', () => {
       error: null,
       background: false,
       streamedChars: 0,
+      forYou: { itemCount: 0, generatedAt: null },
     });
   });
 
@@ -296,7 +299,7 @@ describe('ReaderApi', () => {
     api.debugLog().subscribe();
     const req = ctrl.expectOne('https://api.test/api/recommendations/runs/debug-log');
     expect(req.request.method).toBe('GET');
-    req.flush({ entries: [] });
+    req.flush({ run: null, entries: [] });
   });
 
   it('GETs one debug log entry', () => {

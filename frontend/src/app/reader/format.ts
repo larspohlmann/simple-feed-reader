@@ -37,6 +37,22 @@ export function formatDateOr(iso: string | null, locale: string, fallback: strin
 }
 
 /**
+ * A zero-padded 24-hour `HH:MM` clock time in the browser's own timezone.
+ * `hourCycle: 'h23'` is forced regardless of locale -- the debug log's run
+ * summary and row times read as a timeline (`start → end`), and a 12-hour
+ * AM/PM rendering would make that arrow misleading rather than helpful.
+ */
+export function formatTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return new Intl.DateTimeFormat(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(d);
+}
+
+/**
  * Whether a trial's end date has already passed. An account with no trial at
  * all (`iso === null`) is never "expired" -- that only describes one that ran
  * out of time. Shared by the sidebar indicator and both admin screens so the

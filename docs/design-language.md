@@ -601,6 +601,34 @@ or an overlay (`<app-overlay-panel>`).
 
 ---
 
+### `<app-disclosure>`
+
+The one wrapper for a native `<details>`/`<summary>` collapsed-content pattern:
+a summary line and the projected body. No open/closed signal, no animation, no
+ARIA reimplementation — `<details>` already gives all three for free.
+
+| Input | Type | Default |
+|---|---|---|
+| `label` | `string` (required) | — |
+
+```html
+<app-disclosure [label]="'Show the fixed prompt' | transloco">
+  <pre class="fixed">…</pre>
+</app-disclosure>
+```
+
+`label` takes an already-translated string, not an i18n key — the component
+lives in `shared/` and must not hardcode a feature's translation keys.
+Extracted in #321 from the two places this shape had been hand-rolled
+(`recommendation-settings-card`'s fixed-prompt panel,
+`recommendation-debug-log`'s panel shell). It owns only the toggle line
+(cursor, colour, size, full-width block); a host that needs panel-level
+layout — margin, base font-size, the bordered entry rows — keeps that on its
+own wrapping class, the same way `recommendation-debug-log.component.scss`'s
+`.debug-panel` still does.
+
+---
+
 ### `<app-action-sheet>` (via the `ActionSheet` service)
 
 The row-menu surface for coarse pointers: a sheet pinned to the bottom of the

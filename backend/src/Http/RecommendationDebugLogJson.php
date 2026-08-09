@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 
 /**
@@ -15,18 +16,35 @@ final class RecommendationDebugLogJson
 {
     /**
      * @param list<array{id: int, phase: string, batchNumber: ?int, attempt: int,
-     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int}> $rows
+     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
+     *     createdAt: string, finishedAt: ?string, errorDetail: ?string}> $rows
      * @param array<int, string> $streamingTextById
      *
-     * @return array{entries: list<array<string, mixed>>}
+     * @return array{entries: list<array<string, mixed>>, run: ?array<string, mixed>}
      */
-    public static function list(array $rows, array $streamingTextById): array
+    public static function list(array $rows, array $streamingTextById, ?RecommendationRun $run): array
     {
         return [
             'entries' => array_map(
                 static fn (array $row): array => [...$row, 'streamingText' => $streamingTextById[$row['id']] ?? null],
                 $rows,
             ),
+            'run' => null === $run ? null : self::run($run),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private static function run(RecommendationRun $run): array
+    {
+        return [
+            'status' => $run->getStatus(),
+            'error' => $run->getError(),
+            'attempts' => $run->getAttempts(),
+            'maxAttempts' => RecommendationRun::MAX_ATTEMPTS,
+            'transportFailures' => $run->getTransportFailures(),
+            'maxTransportFailures' => RecommendationRun::MAX_TRANSPORT_FAILURES,
+            'createdAt' => $run->getCreatedAt()->format(\DATE_ATOM),
+            'completedAt' => $run->getCompletedAt()?->format(\DATE_ATOM),
         ];
     }
 

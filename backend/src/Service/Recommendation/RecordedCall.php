@@ -87,9 +87,12 @@ final class RecordedCall implements CompletionStreamObserver
      * stamped with the transport verdict so the panel can say so. The byte
      * count is what makes that row readable — a call that streamed megabytes
      * of reasoning without answering is a different story from a provider
-     * that said nothing, and only this number tells them apart (#320).
+     * that said nothing, and only this number tells them apart (#320). The
+     * transport exception's message is recorded too, so a stalled or failing
+     * run can be diagnosed from the log alone rather than a live tail of the
+     * server's own error output.
      */
-    public function abortAfterTransportFailure(): void
+    public function abortAfterTransportFailure(?string $errorDetail): void
     {
         $this->resetLiveness();
 
@@ -97,11 +100,12 @@ final class RecordedCall implements CompletionStreamObserver
             return;
         }
 
-        $this->connection->update(
-            'recommendation_run_log',
-            ['verdict' => RecommendationRunLog::VERDICT_TRANSPORT_FAILED, 'wire_bytes' => $this->wireBytes],
-            ['id' => $this->logId],
-        );
+        $this->connection->update('recommendation_run_log', [
+            'verdict' => RecommendationRunLog::VERDICT_TRANSPORT_FAILED,
+            'wire_bytes' => $this->wireBytes,
+            'finished_at' => $this->clock->now()->format('Y-m-d H:i:s'),
+            'error_detail' => $errorDetail,
+        ], ['id' => $this->logId]);
     }
 
     private function finish(string $content, string $verdict): void
@@ -112,11 +116,12 @@ final class RecordedCall implements CompletionStreamObserver
             return;
         }
 
-        $this->connection->update(
-            'recommendation_run_log',
-            ['response_text' => $content, 'verdict' => $verdict, 'wire_bytes' => $this->wireBytes],
-            ['id' => $this->logId],
-        );
+        $this->connection->update('recommendation_run_log', [
+            'response_text' => $content,
+            'verdict' => $verdict,
+            'wire_bytes' => $this->wireBytes,
+            'finished_at' => $this->clock->now()->format('Y-m-d H:i:s'),
+        ], ['id' => $this->logId]);
     }
 
     private function resetLiveness(): void

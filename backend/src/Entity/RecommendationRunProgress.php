@@ -6,8 +6,12 @@ namespace App\Entity;
 
 /**
  * A snapshot of a recommendation run's derived progress, computed from the
- * frozen candidate batch plan and the number of batch calls completed so
- * far. This is a plain value object — it holds no persistence mapping and
+ * frozen candidate batch plan, the number of batch calls completed so far,
+ * and the retry count of the call in progress.
+
+ * Everything the run derives rather than stores lives here, so a caller asks
+ * one object what state the run is in instead of the entity growing a query
+ * method per question. This is a plain value object — it holds no persistence mapping and
  * is rebuilt on every call to {@see RecommendationRun::progress()}.
  */
 final readonly class RecommendationRunProgress
@@ -19,14 +23,16 @@ final readonly class RecommendationRunProgress
         public bool $isDedupPhase,
         public bool $allBatchCallsDone,
         public int $nextBatchIndex,
+        public bool $attemptsExhausted,
     ) {
     }
 
     /**
      * @param list<list<int>>|null $candidateBatches null while the run is
      *     still pending, i.e. before {@see RecommendationRun::snapshot()}
+     * @param int                  $attempts         unusable replies for the call now in progress
      */
-    public static function forBatchPlan(?array $candidateBatches, int $batchesDone): self
+    public static function forBatchPlan(?array $candidateBatches, int $batchesDone, int $attempts): self
     {
         $batchCount = $candidateBatches === null ? 0 : count($candidateBatches);
         $needsDedup = $batchCount > 1;
@@ -39,6 +45,7 @@ final readonly class RecommendationRunProgress
             isDedupPhase: $allBatchCallsDone && $needsDedup,
             allBatchCallsDone: $allBatchCallsDone,
             nextBatchIndex: $batchesDone,
+            attemptsExhausted: $attempts >= RecommendationRun::MAX_ATTEMPTS,
         );
     }
 

@@ -15,6 +15,7 @@ final class RecommendationPromptBuilder
     private const int CHARS_PER_TOKEN = 4;
     private const int FIXED_OVERHEAD_TOKENS = 1500;
     private const int TOKENS_PER_PICK = 40;
+    private const int MINIMUM_ANSWER_TOKENS = 1024;
     private const int MINIMUM_BATCH_SIZE = 10;
 
     /**
@@ -27,8 +28,12 @@ final class RecommendationPromptBuilder
      * so the token budget cannot be the only guard. 40 keeps a single batch
      * call comfortably inside the timeout on every model this feature
      * targets. See #308.
+     *
+     * Raised 40 → 45 in #321 so the default 500-candidate pool packs into 12
+     * batch calls (13 with dedup) instead of 26. Still a fraction of the 339
+     * that broke the timeout.
      */
-    private const int MAXIMUM_BATCH_SIZE = 40;
+    private const int MAXIMUM_BATCH_SIZE = 45;
     private const int DESCRIPTION_MIN_CHARS = 120;
     private const int DESCRIPTION_MAX_CHARS = 480;
     private const int DESCRIPTION_WINDOW_DIVISOR = 137;
@@ -51,12 +56,13 @@ final class RecommendationPromptBuilder
         RecommendationHistory $history,
         EffectiveRecommendationSettings $settings,
     ): array {
-        $descriptionLength = $this->descriptionLength($settings->contextWindow);
+        $descriptionLength = $this->descriptionLength($settings->packing->contextWindow);
         $historyTokens = $this->tokens($this->historySections($history, $descriptionLength));
+        $cap = $this->batchCap(\count($candidates), $settings);
         // The reply scores one line per candidate, so its size is bounded by
         // the batch cap, not by the final list size.
-        $responseReserve = self::MAXIMUM_BATCH_SIZE * self::TOKENS_PER_PICK;
-        $budget = $settings->contextWindow - self::FIXED_OVERHEAD_TOKENS - $responseReserve - $historyTokens;
+        $responseReserve = $this->answerTokenReserve($cap);
+        $budget = $settings->packing->contextWindow - self::FIXED_OVERHEAD_TOKENS - $responseReserve - $historyTokens;
 
         $batches = [];
         $current = [];
@@ -65,7 +71,7 @@ final class RecommendationPromptBuilder
         foreach ($candidates as $candidate) {
             $lineTokens = $this->tokens($this->candidateLine($candidate, $descriptionLength));
             $overBudget = $used + $lineTokens > $budget && \count($current) >= self::MINIMUM_BATCH_SIZE;
-            $atCapacity = \count($current) >= self::MAXIMUM_BATCH_SIZE;
+            $atCapacity = \count($current) >= $cap;
             if ([] !== $current && ($overBudget || $atCapacity)) {
                 $batches[] = $current;
                 $current = [];
@@ -92,7 +98,7 @@ final class RecommendationPromptBuilder
         array $candidateLines,
         EffectiveRecommendationSettings $settings,
     ): array {
-        $descriptionLength = $this->descriptionLength($settings->contextWindow);
+        $descriptionLength = $this->descriptionLength($settings->packing->contextWindow);
 
         $guidance = $settings->guidancePrompt ?? RecommendationPromptText::DEFAULT_GUIDANCE;
         $contract = RecommendationPromptText::OUTPUT_CONTRACT;
@@ -153,6 +159,37 @@ final class RecommendationPromptBuilder
             ['role' => 'assistant', 'content' => $invalidReply],
             ['role' => 'user', 'content' => RecommendationPromptText::CORRECTIVE],
         ];
+    }
+
+    /**
+     * How many answer tokens a reply over `$replyItemCount` items may need.
+     *
+     * One number, two consumers. packBatches() subtracts it from the context
+     * window so the prompt leaves the model room to answer; the provider call
+     * sends it as `max_tokens` so a model that stops answering and starts
+     * looping is cut off rather than billed until the wall clock expires.
+     * Deriving both from the same estimate is what keeps the second from
+     * truncating replies the first deliberately made room for.
+     *
+     * The floor covers the JSON envelope and the short replies where a
+     * per-item estimate under-counts: at one item, 40 tokens would not fit
+     * the punctuation around it, let alone the item.
+     */
+    public function answerTokenReserve(int $replyItemCount): int
+    {
+        return max(self::MINIMUM_ANSWER_TOKENS, $replyItemCount * self::TOKENS_PER_PICK);
+    }
+
+    /** The explicit batch-count override wins over the #308 size ceiling: it is
+     *  an expert setting, and the token budget below still protects the context
+     *  window. Null means automatic packing under MAXIMUM_BATCH_SIZE. */
+    private function batchCap(int $candidateCount, EffectiveRecommendationSettings $settings): int
+    {
+        if (null === $settings->packing->batchCount) {
+            return self::MAXIMUM_BATCH_SIZE;
+        }
+
+        return max(1, (int) ceil($candidateCount / $settings->packing->batchCount));
     }
 
     private function historySections(RecommendationHistory $history, int $descriptionLength): string

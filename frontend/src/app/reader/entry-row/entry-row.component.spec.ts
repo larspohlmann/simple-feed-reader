@@ -72,6 +72,19 @@ describe('EntryRowComponent', () => {
     expect(withoutField.querySelector('.reason')).toBeNull();
   });
 
+  it('renders the recommendation score as a pill', () => {
+    const el = mount(
+      entry({ recommendationReason: 'because you read heise', recommendationScore: 82 }),
+    ).nativeElement as HTMLElement;
+    expect(el.querySelector('.reason .score')!.textContent).toContain('82');
+  });
+
+  it('omits the score pill when recommendationScore is absent', () => {
+    const el = mount(entry({ recommendationReason: 'because you read heise' }))
+      .nativeElement as HTMLElement;
+    expect(el.querySelector('.reason .score')).toBeNull();
+  });
+
   it('emits actions and open', () => {
     const f = mount(entry());
     const out = { favorite: 0, keep: 0, read: 0, open: 0 };

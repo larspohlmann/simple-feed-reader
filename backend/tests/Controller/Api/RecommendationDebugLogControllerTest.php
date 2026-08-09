@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Service\Ai\Crypto\ApiKeyCipher;
@@ -68,15 +69,35 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('debug-log-list@example.test');
         $run = $this->fixtures()->createRun($user);
-        $finished = $this->fixtures()->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'req a');
-        $finished->finish('done text', RecommendationRunLog::VERDICT_USABLE, 1_900_000);
-        $open = $this->fixtures()->log($run, RecommendationRunLog::PHASE_BATCH, 2, 1, 'req b');
+        $finished = $this->fixtures()->log(
+            $run,
+            RecommendationRunLog::PHASE_BATCH,
+            1,
+            1,
+            'req a',
+            new \DateTimeImmutable('2026-08-08T10:00:00Z'),
+        );
+        $finished->finish(
+            'done text',
+            RecommendationRunLog::VERDICT_USABLE,
+            1_900_000,
+            new \DateTimeImmutable('2026-08-08T10:00:05Z'),
+        );
+        $open = $this->fixtures()->log(
+            $run,
+            RecommendationRunLog::PHASE_BATCH,
+            2,
+            1,
+            'req b',
+            new \DateTimeImmutable('2026-08-08T10:00:06Z'),
+        );
         $this->em()->flush();
 
         $client->request('GET', '/api/recommendations/runs/debug-log', server: $headers);
 
         self::assertResponseIsSuccessful();
-        $entries = $this->payload($client->getResponse())['entries'];
+        $payload = $this->payload($client->getResponse());
+        $entries = $payload['entries'];
         self::assertIsArray($entries);
         self::assertSame(
             [
@@ -88,6 +109,9 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
                 'requestBytes' => \strlen('req a'),
                 'responseBytes' => \strlen('done text'),
                 'wireBytes' => 1_900_000,
+                'createdAt' => (new \DateTimeImmutable('2026-08-08T10:00:00Z'))->format(\DATE_ATOM),
+                'finishedAt' => (new \DateTimeImmutable('2026-08-08T10:00:05Z'))->format(\DATE_ATOM),
+                'errorDetail' => null,
                 'streamingText' => null,
             ],
             $entries[0],
@@ -102,10 +126,17 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
                 'requestBytes' => \strlen('req b'),
                 'responseBytes' => 0,
                 'wireBytes' => 0,
+                'createdAt' => (new \DateTimeImmutable('2026-08-08T10:00:06Z'))->format(\DATE_ATOM),
+                'finishedAt' => null,
+                'errorDetail' => null,
                 'streamingText' => '',
             ],
             $entries[1],
         );
+        $run = $payload['run'];
+        self::assertIsArray($run);
+        self::assertSame(RecommendationRun::STATUS_PENDING, $run['status']);
+        self::assertSame(0, $run['attempts']);
     }
 
     public function testListIsEmptyForAUserWithoutLogs(): void
@@ -116,7 +147,36 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         $client->request('GET', '/api/recommendations/runs/debug-log', server: $headers);
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['entries' => []], $this->payload($client->getResponse()));
+        self::assertSame(['entries' => [], 'run' => null], $this->payload($client->getResponse()));
+    }
+
+    public function testListCarriesTheLatestRunsStatusAndRetryCounters(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('debug-log-run-summary@example.test');
+        $run = $this->fixtures()->createRun($user);
+        $run->snapshot([[1]]);
+        $run->recordInvalidReply('bad reply');
+        $run->fail('The model did not return a usable ranking.', new \DateTimeImmutable('2026-08-08T10:05:00Z'));
+        $this->em()->flush();
+
+        $client->request('GET', '/api/recommendations/runs/debug-log', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $runSummary = $this->payload($client->getResponse())['run'];
+        self::assertSame(
+            [
+                'status' => 'failed',
+                'error' => 'The model did not return a usable ranking.',
+                'attempts' => 1,
+                'maxAttempts' => 3,
+                'transportFailures' => 0,
+                'maxTransportFailures' => 3,
+                'createdAt' => (new \DateTimeImmutable('2026-08-08T10:00:00Z'))->format(\DATE_ATOM),
+                'completedAt' => (new \DateTimeImmutable('2026-08-08T10:05:00Z'))->format(\DATE_ATOM),
+            ],
+            $runSummary,
+        );
     }
 
     public function testDetailReturnsFullBodies(): void
@@ -125,7 +185,12 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('debug-log-detail@example.test');
         $run = $this->fixtures()->createRun($user);
         $log = $this->fixtures()->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'req');
-        $log->finish('res', RecommendationRunLog::VERDICT_USABLE, 4_096);
+        $log->finish(
+            'res',
+            RecommendationRunLog::VERDICT_USABLE,
+            4_096,
+            new \DateTimeImmutable('2026-08-08T10:00:05Z'),
+        );
         $this->em()->flush();
         $id = $log->getId();
         self::assertNotNull($id);

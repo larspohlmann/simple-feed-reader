@@ -37,9 +37,12 @@ final class RecommendationSettingsJson
             'viewedCap' => $effective->viewedCap,
             'candidatePoolSize' => $effective->candidatePoolSize,
             'picksLimit' => $effective->picksLimit,
-            'contextWindow' => $effective->contextWindow,
-            'contextWindowOverride' => 'user' === $effective->contextWindowSource ? $effective->contextWindow : null,
-            'contextWindowSource' => $effective->contextWindowSource,
+            'contextWindow' => $effective->packing->contextWindow,
+            'contextWindowOverride' => 'user' === $effective->packing->contextWindowSource
+                ? $effective->packing->contextWindow
+                : null,
+            'contextWindowSource' => $effective->packing->contextWindowSource,
+            'batchCount' => $effective->packing->batchCount,
             'debugEnabled' => $effective->debugEnabled,
         ];
     }

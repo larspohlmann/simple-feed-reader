@@ -14,15 +14,12 @@ interface ChatCompletionClient
      * One JSON-mode chat completion; returns the assistant message content.
      * Reports the accumulating streamed body to $observer chunk by chunk.
      *
-     * @param list<array{role: string, content: string}> $messages
-     *
      * @throws CredentialsRejectedException
      * @throws ProviderUnreachableException
      */
     public function complete(
         ProviderCredentials $credentials,
-        string $model,
-        array $messages,
+        CompletionRequest $request,
         CompletionStreamObserver $observer,
     ): string;
 }
