@@ -848,4 +848,35 @@ describe('EntryListComponent', () => {
       expect((f.nativeElement as HTMLElement).querySelector('.pull-indicator')).toBeNull();
     });
   });
+
+  describe('for-you grouping', () => {
+    const now = '2026-07-22T11:00:00Z';
+    const run = [
+      ...Array.from({ length: 8 }, (_, i) =>
+        entry(i + 1, { subscriptionId: 1, source: 'a', publishedAt: now }),
+      ),
+      entry(9, { subscriptionId: 2, source: 'b', publishedAt: now }),
+      entry(10, { subscriptionId: 2, source: 'b', publishedAt: now }),
+      entry(11, { subscriptionId: 3, source: 'c', publishedAt: now }),
+      entry(12, { subscriptionId: 3, source: 'c', publishedAt: now }),
+    ];
+
+    it('collapses a same-source run in an aggregated view', () => {
+      const f = mount({
+        entries: run,
+        selection: { kind: 'all', id: null, unread: false },
+        layout: 'magazine',
+      });
+      expect(f.componentInstance.blocks().some((b) => b.kind === 'group')).toBe(true);
+    });
+
+    it('never collapses the for-you list', () => {
+      const f = mount({
+        entries: run,
+        selection: { kind: 'for-you', id: null, unread: false },
+        layout: 'magazine',
+      });
+      expect(f.componentInstance.blocks().some((b) => b.kind === 'group')).toBe(false);
+    });
+  });
 });

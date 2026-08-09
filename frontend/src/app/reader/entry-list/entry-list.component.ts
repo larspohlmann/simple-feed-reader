@@ -185,13 +185,17 @@ export class EntryListComponent implements OnDestroy {
   private pullStartY = 0;
   private pullTracking = false;
 
-  readonly blocks = computed<MagazineBlock[]>(() =>
-    planMagazine({
+  readonly blocks = computed<MagazineBlock[]>(() => {
+    const kind = this.selection().kind;
+    return planMagazine({
       entries: this.entries(),
-      grouping: this.selection().kind !== 'subscription',
+      // A subscription is one source, and the for-you list is a ranked stream:
+      // neither should collapse same-source runs into a widget that hides
+      // entries and disrupts their order.
+      grouping: kind !== 'subscription' && kind !== 'for-you',
       complete: !this.hasMore(),
-    }),
-  );
+    });
+  });
 
   private readonly screen = inject(LayoutService);
   private readonly scroll = inject(ListScrollMemory);
