@@ -1,0 +1,11 @@
+<ng-content />
+@if (entry(); as e) {
+  @if (e.recommendationReason) {
+    <p class="reason">
+      @if (e.recommendationScore !== null && e.recommendationScore !== undefined) {
+        <span class="score">{{ e.recommendationScore }}</span>
+      }
+      {{ e.recommendationReason }}
+    </p>
+  }
+}
