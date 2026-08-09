@@ -86,7 +86,6 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         $settings = new AiProviderSettings($user, null, 'https://api.example.test/v1', $sealed, '1234', $now);
         $em->persist($settings);
         $settings->chooseModel('m', $now, $contextWindow);
-        $user->addAiProviderSettings($settings);
         $user->setActiveAiProviderSettings($settings);
         $em->flush();
     }

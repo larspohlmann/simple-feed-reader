@@ -6,8 +6,6 @@ namespace App\Entity;
 
 use App\Enum\UserStatus;
 use App\Repository\UserRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
@@ -111,15 +109,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist'], orphanRemoval: true)]
     private ?Preferences $preferences = null;
 
-    /** @var Collection<int, AiProviderSettings> */
-    #[ORM\OneToMany(mappedBy: 'user', targetEntity: AiProviderSettings::class, cascade: ['remove'])]
-    private Collection $aiProviderSettings;
-
     /**
      * The one configuration AI features use. A pointer, not a per-row flag, so
-     * the model cannot say two configurations are active at once. ON DELETE SET
-     * NULL is the database floor; AiProviderConfigurator clears it explicitly
-     * before it removes the active row.
+     * the model cannot say two configurations are active at once. There is no
+     * inverse Collection of every configuration an account owns — nothing
+     * needs the whole set through User, and AiProviderSettingsRepository
+     * already answers that (findAllForUser()/countForUser()), so a second,
+     * always-in-sync path was not worth the field. ON DELETE SET NULL is the
+     * database floor for this pointer; AiProviderConfigurator clears it
+     * explicitly before it removes the active row. The rows themselves cascade
+     * on account deletion through user_ai_settings.user_id's own FK ON DELETE
+     * CASCADE — see AccountDeleter.
      */
     #[ORM\ManyToOne(targetEntity: AiProviderSettings::class)]
     #[ORM\JoinColumn(name: 'active_ai_config_id', nullable: true, onDelete: 'SET NULL')]
@@ -139,7 +139,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->email = $email;
         $this->createdAt = $createdAt;
         $this->preferences = new Preferences($this);
-        $this->aiProviderSettings = new ArrayCollection();
     }
 
     /**
@@ -294,26 +293,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         }
 
         return $this->preferences;
-    }
-
-    /** @return Collection<int, AiProviderSettings> */
-    public function getAiProviderSettings(): Collection
-    {
-        return $this->aiProviderSettings;
-    }
-
-    /** For AiProviderConfigurator only, which owns every write to this side. */
-    public function addAiProviderSettings(AiProviderSettings $settings): void
-    {
-        if (!$this->aiProviderSettings->contains($settings)) {
-            $this->aiProviderSettings->add($settings);
-        }
-    }
-
-    /** For AiProviderConfigurator only, which owns every write to this side. */
-    public function removeAiProviderSettings(AiProviderSettings $settings): void
-    {
-        $this->aiProviderSettings->removeElement($settings);
     }
 
     /** Null until the account activates a configuration — see AiProviderSettings. */

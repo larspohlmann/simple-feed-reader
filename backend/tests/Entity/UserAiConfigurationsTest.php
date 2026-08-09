@@ -9,6 +9,13 @@ use App\Entity\User;
 use App\Service\Ai\Crypto\SealedApiKey;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * User <-> AiProviderSettings is unidirectional (#334 review): User carries
+ * only the pointer to whichever configuration is active, not an inverse
+ * Collection of every configuration it owns — nothing needed the whole set
+ * through User, and AiProviderSettingsRepository already answers that
+ * (findAllForUser()/countForUser()).
+ */
 final class UserAiConfigurationsTest extends TestCase
 {
     private function user(): User
@@ -28,44 +35,6 @@ final class UserAiConfigurationsTest extends TestCase
         );
     }
 
-    public function testANewAccountHasNoConfigurations(): void
-    {
-        self::assertCount(0, $this->user()->getAiProviderSettings());
-    }
-
-    public function testAddingAConfigurationMakesItAppearInTheCollection(): void
-    {
-        $user = $this->user();
-        $configuration = $this->configuration($user, 'Work OpenAI');
-
-        $user->addAiProviderSettings($configuration);
-
-        self::assertCount(1, $user->getAiProviderSettings());
-        self::assertTrue($user->getAiProviderSettings()->contains($configuration));
-    }
-
-    public function testAddingTheSameConfigurationTwiceDoesNotDuplicateIt(): void
-    {
-        $user = $this->user();
-        $configuration = $this->configuration($user, 'Work OpenAI');
-
-        $user->addAiProviderSettings($configuration);
-        $user->addAiProviderSettings($configuration);
-
-        self::assertCount(1, $user->getAiProviderSettings());
-    }
-
-    public function testRemovingAConfigurationDropsItFromTheCollection(): void
-    {
-        $user = $this->user();
-        $configuration = $this->configuration($user, 'Work OpenAI');
-        $user->addAiProviderSettings($configuration);
-
-        $user->removeAiProviderSettings($configuration);
-
-        self::assertCount(0, $user->getAiProviderSettings());
-    }
-
     public function testANewAccountHasNoActiveConfiguration(): void
     {
         self::assertNull($this->user()->getActiveAiProviderSettings());
@@ -75,7 +44,6 @@ final class UserAiConfigurationsTest extends TestCase
     {
         $user = $this->user();
         $configuration = $this->configuration($user, 'Work OpenAI');
-        $user->addAiProviderSettings($configuration);
 
         $user->setActiveAiProviderSettings($configuration);
 
@@ -86,7 +54,6 @@ final class UserAiConfigurationsTest extends TestCase
     {
         $user = $this->user();
         $configuration = $this->configuration($user, 'Work OpenAI');
-        $user->addAiProviderSettings($configuration);
         $user->setActiveAiProviderSettings($configuration);
 
         $user->setActiveAiProviderSettings(null);

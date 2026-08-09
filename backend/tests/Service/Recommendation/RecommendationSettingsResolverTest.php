@@ -102,7 +102,6 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         $settings = new AiProviderSettings($user, null, 'https://api.example.test/v1', $sealed, '1234', $now);
         $this->em->persist($settings);
         $settings->chooseModel('m', $now, $contextWindow);
-        $user->addAiProviderSettings($settings);
         $user->setActiveAiProviderSettings($settings);
         $this->em->flush();
     }

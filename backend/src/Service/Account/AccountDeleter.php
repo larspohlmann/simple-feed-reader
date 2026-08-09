@@ -20,8 +20,9 @@ use Doctrine\ORM\EntityManagerInterface;
  *
  * remove(), not a bulk DQL DELETE: going through the ORM keeps the unit of work
  * aware of what left, the same reasoning recorded on E2ePurgeUsersCommand. The
- * account's subscriptions, tags, read state, preferences, identities and action
- * tokens follow through their FK ON DELETE CASCADE.
+ * account's subscriptions, tags, read state, preferences, identities, action
+ * tokens and AI provider configurations follow through their FK ON DELETE
+ * CASCADE.
  *
  * Feeds are NOT the user's content — other people read them — so they are not
  * cascaded. Only the feeds this account was the last subscriber of are

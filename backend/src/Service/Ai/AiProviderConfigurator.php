@@ -98,7 +98,6 @@ final readonly class AiProviderConfigurator
             $this->clock->now(),
         );
         $this->entityManager->persist($configuration);
-        $user->addAiProviderSettings($configuration);
         $this->entityManager->flush();
 
         return new AddedConfiguration($configuration, $this->ids($descriptors));
@@ -158,7 +157,6 @@ final readonly class AiProviderConfigurator
             $user->setActiveAiProviderSettings(null);
         }
 
-        $user->removeAiProviderSettings($settings);
         $this->entityManager->remove($settings);
         $this->entityManager->flush();
     }
@@ -188,7 +186,6 @@ final readonly class AiProviderConfigurator
                 $this->clock->now(),
             );
             $this->entityManager->persist($configuration);
-            $user->addAiProviderSettings($configuration);
             $user->setActiveAiProviderSettings($configuration);
         } else {
             $active->replaceConnection($credentials->baseUrl, $sealed, $hint, $this->clock->now());

@@ -26,7 +26,7 @@ class AiProviderSettings
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(inversedBy: 'aiProviderSettings')]
+    #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private User $user;
 
