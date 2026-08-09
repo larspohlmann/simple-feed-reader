@@ -24,6 +24,7 @@ interface AiSettingsStub {
   loadModels: jest.Mock;
   chooseModel: jest.Mock;
   rename: jest.Mock;
+  setReasoning: jest.Mock;
   activate: jest.Mock;
   remove: jest.Mock;
 }
@@ -68,6 +69,7 @@ function createStub(): AiSettingsStub {
     loadModels: jest.fn(),
     chooseModel: jest.fn(),
     rename: jest.fn(),
+    setReasoning: jest.fn(),
     activate: jest.fn(),
     remove: jest.fn(),
   };
@@ -219,6 +221,23 @@ describe('AiSectionComponent', () => {
     (row(fixture, 0).querySelector('.activate') as HTMLButtonElement).click();
 
     expect(ai.activate).toHaveBeenCalledWith(1);
+  });
+
+  it('toggles the reasoning preference for a row', () => {
+    const fixture = mount();
+    const setReasoning = jest.spyOn(ai, 'setReasoning').mockImplementation(() => undefined);
+    ai.configs.set([config({ id: 7, suppressReasoning: true })]);
+    fixture.detectChanges();
+
+    const checkbox: HTMLInputElement =
+      fixture.nativeElement.querySelector('.reasoning-toggle input');
+    expect(checkbox).not.toBeNull();
+    expect(checkbox.checked).toBe(true);
+
+    checkbox.checked = false;
+    checkbox.dispatchEvent(new Event('change'));
+
+    expect(setReasoning).toHaveBeenCalledWith(7, false);
   });
 
   it('disables activation for a row that is already active, not ready, or while busy', () => {

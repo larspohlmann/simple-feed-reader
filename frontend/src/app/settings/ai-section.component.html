@@ -43,6 +43,15 @@
                     >{{ 'settings.ai.model' | transloco }}: {{ config.model }}</span
                   >
                 }
+                <label class="reasoning-toggle">
+                  <input
+                    type="checkbox"
+                    [checked]="config.suppressReasoning"
+                    [disabled]="ai.busy()"
+                    (change)="toggleReasoning(config, $event)"
+                  />
+                  <span>{{ 'settings.ai.configs.reasoning' | transloco }}</span>
+                </label>
               }
             </div>
 

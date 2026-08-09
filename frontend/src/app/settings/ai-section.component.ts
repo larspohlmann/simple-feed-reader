@@ -129,6 +129,10 @@ export class AiSectionComponent {
     if (model) this.ai.chooseModel(id, model);
   }
 
+  toggleReasoning(config: AiConfig, event: Event): void {
+    this.ai.setReasoning(config.id, (event.target as HTMLInputElement).checked);
+  }
+
   startRename(config: AiConfig): void {
     this.renamingId.set(config.id);
     this.renameText.set(config.name ?? '');
