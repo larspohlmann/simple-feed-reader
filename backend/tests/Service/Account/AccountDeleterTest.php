@@ -115,6 +115,48 @@ final class AccountDeleterTest extends DbTestCase
         self::assertNull($this->em->getRepository(AiProviderSettings::class)->find($configurationId));
     }
 
+    /**
+     * The full two-table cycle, not just one edge of it: app_user.
+     * active_ai_config_id points at user_ai_settings (ON DELETE SET NULL)
+     * while user_ai_settings.user_id points back at app_user (ON DELETE
+     * CASCADE). Activating the configuration before deleting the account is
+     * what puts the pointer in place, so the delete must resolve both FKs
+     * without a constraint violation and must not leave the row behind.
+     */
+    public function testDeletionResolvesTheActiveAiConfigurationCycle(): void
+    {
+        $admin = $this->users->create('admin-ai-2@example.com', roles: ['ROLE_ADMIN']);
+        $target = $this->users->create('target-ai-2@example.com');
+        /** @var ApiKeyCipher $cipher */
+        $cipher = self::getContainer()->get(ApiKeyCipher::class);
+        $sealed = $cipher->seal((int) $target->getId(), 'sk-throwaway5678');
+        $configuration = new AiProviderSettings(
+            $target,
+            'Active OpenAI',
+            'https://api.example.test/v1',
+            $sealed,
+            '5678',
+            new \DateTimeImmutable(self::NOW),
+        );
+        $this->em->persist($configuration);
+        $this->em->flush();
+        $target->setActiveAiProviderSettings($configuration);
+        $this->em->flush();
+        $targetId = (int) $target->getId();
+        $configurationId = (int) $configuration->getId();
+
+        $this->deleter->deleteAsAdmin($target, $admin);
+
+        $this->em->clear();
+        self::assertNull($this->em->getRepository(User::class)->find($targetId));
+
+        $count = $this->em->getConnection()->executeQuery(
+            'SELECT COUNT(*) FROM user_ai_settings WHERE id = ?',
+            [$configurationId],
+        )->fetchOne();
+        self::assertSame(0, is_numeric($count) ? (int) $count : -1);
+    }
+
     public function testAnAdminCannotDeleteThemselves(): void
     {
         $admin = $this->users->create('self@example.com', roles: ['ROLE_ADMIN']);
