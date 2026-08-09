@@ -154,6 +154,7 @@ describe('AiSettingsService', () => {
     svc.activate(2);
     const request = ctrl.expectOne(`${base}/api/me/ai/configs/2/active`);
     expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({});
 
     request.flush(config({ id: 2, active: true, ready: true, model: 'claude' }));
 

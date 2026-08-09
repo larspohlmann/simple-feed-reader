@@ -106,9 +106,8 @@ export class AiSettingsService {
   }
 
   activate(id: number): void {
-    this.run(
-      this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/active`, null),
-      (config) => this.upsert(config),
+    this.run(this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/active`, {}), (config) =>
+      this.upsert(config),
     );
   }
 
