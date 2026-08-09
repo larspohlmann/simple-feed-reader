@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ai;
 
-use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use App\Service\Ai\AiProviderConfigurator;
@@ -18,6 +17,7 @@ use App\Service\Ai\ModelCatalog;
 use App\Service\Ai\ModelDescriptor;
 use App\Service\Ai\ProviderCredentials;
 use App\Tests\DbTestCase;
+use App\Tests\Support\AiSettingsRowMover;
 use App\Tests\Support\StubModelCatalog;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -435,21 +435,14 @@ final class AiProviderConfiguratorTest extends DbTestCase
      * pointer at it too — settingsFor()/requireConfiguration() now resolve
      * through that pointer rather than a "find by owner" query, so a test
      * simulating a row ending up under the wrong account has to move both.
+     * pointActiveAt() writes at the database level, which is enough here
+     * because the one caller reloads $to afterward (see reload()).
      */
     private function moveSettingsRow(User $from, User $to): void
     {
-        $this->em->createQuery(
-            sprintf('UPDATE %s s SET s.user = :to WHERE s.user = :from', AiProviderSettings::class),
-        )->execute(['to' => $to, 'from' => $from]);
-        $this->em->clear();
-
-        $moved = $this->em->getRepository(AiProviderSettings::class)->findOneBy(['user' => $to]);
-        self::assertInstanceOf(AiProviderSettings::class, $moved);
-
-        $this->em->createQuery(
-            sprintf('UPDATE %s u SET u.activeAiProviderSettings = :settings WHERE u = :to', User::class),
-        )->execute(['settings' => $moved, 'to' => $to]);
-        $this->em->clear();
+        $mover = new AiSettingsRowMover($this->em);
+        $moved = $mover->moveOwnership($from, $to);
+        $mover->pointActiveAt($to, $moved);
     }
 
     private function reload(string $email): User
