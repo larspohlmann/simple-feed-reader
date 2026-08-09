@@ -16,6 +16,7 @@ const report = (over: Partial<RecommendationRunReport>): RecommendationRunReport
   error: null,
   background: false,
   streamedChars: 0,
+  elapsedSeconds: null,
   forYou: { itemCount: 0, generatedAt: null },
   ...over,
 });

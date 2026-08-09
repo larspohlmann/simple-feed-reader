@@ -225,6 +225,10 @@ export interface RecommendationRunReport {
   /** Bytes of the in-flight provider answer received so far this call; 0
    *  between calls, since the server resets the counter when a call ends. */
   streamedChars: number;
+  /** Whole seconds the run has been going, computed on the server's clock;
+   *  null when there is no run. The client keeps it live between polls with a
+   *  local monotonic delta rather than re-subtracting server time. */
+  elapsedSeconds: number | null;
   /** The surviving for-you list's own summary: how many entries it holds and
    *  when it was last generated. Describes the *list*, not this run — a
    *  failed latest run still carries the previous list's timestamp. */
