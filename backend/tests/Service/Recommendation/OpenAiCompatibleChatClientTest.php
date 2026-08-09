@@ -415,6 +415,68 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
     }
 
+    /**
+     * #323: LM Studio delivers a reasoning model's whole answer under
+     * `reasoning_content` and never populates `content`. The client recovers it
+     * from the reasoning channel rather than failing the call as answerless.
+     */
+    public function testRecoversAnAnswerDeliveredOnlyInTheReasoningChannel(): void
+    {
+        $answer = 'data: ' . json_encode(
+            ['choices' => [['delta' => ['reasoning_content' => '{"recommendations":[]}']]]],
+            \JSON_THROW_ON_ERROR,
+        ) . "\n\n";
+        $finish = 'data: ' . json_encode(
+            ['choices' => [['delta' => [], 'finish_reason' => 'stop']]],
+            \JSON_THROW_ON_ERROR,
+        ) . "\n\n";
+        $client = $this->clientAnswering(new MockResponse([$answer, $finish, "data: [DONE]\n\n"]));
+
+        self::assertSame(
+            '{"recommendations":[]}',
+            $client->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver()),
+        );
+    }
+
+    /**
+     * When a model populates both channels the content is the answer; the
+     * reasoning stays the fallback, never overriding a real completion.
+     */
+    public function testContentIsPreferredWhenBothChannelsArrive(): void
+    {
+        $reasoning = 'data: ' . json_encode(
+            ['choices' => [['delta' => ['reasoning_content' => 'discarded thinking']]]],
+            \JSON_THROW_ON_ERROR,
+        ) . "\n\n";
+        $content = 'data: ' . json_encode(
+            ['choices' => [['delta' => ['content' => '{"recommendations":[]}']]]],
+            \JSON_THROW_ON_ERROR,
+        ) . "\n\n";
+        $client = $this->clientAnswering(new MockResponse([$reasoning, $content, "data: [DONE]\n\n"]));
+
+        self::assertSame(
+            '{"recommendations":[]}',
+            $client->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver()),
+        );
+    }
+
+    /**
+     * The answerless refusal survives the recovery path: a stream that carries
+     * neither a content nor a reasoning answer is still unreachable, not an
+     * empty success.
+     */
+    public function testAStreamWithNeitherContentNorReasoningIsUnreachable(): void
+    {
+        $client = $this->clientAnswering(new MockResponse([
+            'data: {"choices":[{"delta":{"role":"assistant"}}]}' . "\n\n",
+            'data: [DONE]' . "\n\n",
+        ]));
+
+        $this->expectException(ProviderUnreachableException::class);
+        $this->expectExceptionMessage('That provider answered without a completion.');
+        $client->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
+    }
+
     /** @return CompletionStreamObserver&object{reports: list<CompletionStreamProgress>} */
     private function recordingObserver(): CompletionStreamObserver
     {

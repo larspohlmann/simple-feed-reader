@@ -303,6 +303,26 @@ final class RecommendationPickParserTest extends TestCase
         self::assertFalse($result->usable);
     }
 
+    /**
+     * The end-to-end shape of #323: a reasoning model's answer arrives wrapped
+     * in its thinking prose (what the client hands over when only the reasoning
+     * channel carried an answer). The parser lifts the JSON out and salvages
+     * the picks, exactly as it would from a clean reply.
+     */
+    public function testAnAnswerWrappedInReasoningProseIsUsable(): void
+    {
+        $content = 'Comparing the entries against the guidance… I will rank 2 above 1. '
+            . self::encode(['recommendations' => [
+                ['id' => 2, 'score' => 88, 'reason' => 'Closer fit'],
+                ['id' => 1, 'score' => 60, 'reason' => 'Weaker'],
+            ]]);
+
+        $result = $this->parser->parse($content, [1, 2]);
+
+        self::assertTrue($result->usable);
+        self::assertSame([2, 1], array_map(static fn ($pick) => $pick->entryId, $result->picks));
+    }
+
     /** @param array<mixed> $data */
     private static function encode(array $data): string
     {

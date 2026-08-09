@@ -35,6 +35,13 @@ final class CompletionStreamReaderTest extends TestCase
         return 'data: ' . json_encode($event, \JSON_THROW_ON_ERROR) . "\n\n";
     }
 
+    private function reasoningContentEvent(string $reasoning): string
+    {
+        $event = ['choices' => [['delta' => ['reasoning_content' => $reasoning]]]];
+
+        return 'data: ' . json_encode($event, \JSON_THROW_ON_ERROR) . "\n\n";
+    }
+
     private function finishEvent(string $reason): string
     {
         $event = ['choices' => [['delta' => [], 'finish_reason' => $reason]]];
@@ -266,5 +273,114 @@ final class CompletionStreamReaderTest extends TestCase
 
         self::assertSame('once', $reader->assistantContent());
         self::assertSame('once', $reader->assistantContent());
+    }
+
+    /**
+     * #323: LM Studio delivers a reasoning model's whole answer under
+     * `reasoning_content` and leaves `content` empty. The reader exposes that
+     * channel so the client can recover an answer the content channel never
+     * carried — while `assistantContent()` stays empty, keeping the observer
+     * and the debug log unchanged, and `retainedBytes()` stays zero, keeping
+     * #320's answer cap unmoved.
+     */
+    public function testTheReasoningChannelIsExposedForRecovery(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume($this->reasoningContentEvent('{"recommendations":[]}'));
+        $reader->consume('data: [DONE]' . "\n\n");
+
+        self::assertNull($reader->assistantContent());
+        self::assertSame('{"recommendations":[]}', $reader->reasoningContent());
+        self::assertSame(0, $reader->retainedBytes());
+    }
+
+    public function testTheReasoningChannelJoinsAcrossEvents(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume($this->reasoningContentEvent('{"recomm'));
+        $reader->consume($this->reasoningContentEvent('endations":[]}'));
+
+        self::assertSame('{"recommendations":[]}', $reader->reasoningContent());
+    }
+
+    /**
+     * Both channels can arrive on one call. They stay separate: the content is
+     * the answer, the reasoning is only the fallback the client reaches for
+     * when the content channel is empty.
+     */
+    public function testContentAndReasoningAreKeptApart(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume($this->reasoningContentEvent('thinking'));
+        $reader->consume($this->contentEvent('{"recommendations":[]}'));
+
+        self::assertSame('{"recommendations":[]}', $reader->assistantContent());
+        self::assertSame('thinking', $reader->reasoningContent());
+    }
+
+    public function testAStreamWithNeitherContentNorReasoningHasNullReasoning(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume('data: {"choices":[{"delta":{"role":"assistant"}}]}' . "\n\n");
+        $reader->consume('data: [DONE]' . "\n\n");
+
+        self::assertNull($reader->reasoningContent());
+    }
+
+    /**
+     * A rambling reasoning phase can run to megabytes, so the retained tail is
+     * bounded. It keeps the END, where a reasoning model puts the JSON answer
+     * right before it stops — and it is never charged to the answer cap, so a
+     * runaway thinking phase cannot fail a healthy call the way #320 did.
+     */
+    public function testTheReasoningTailIsBoundedButKeepsTheTrailingAnswer(): void
+    {
+        $reader = $this->reader();
+        $answer = '{"recommendations":[]}';
+        $filler = str_repeat('x', CompletionStreamReader::REASONING_TAIL_LIMIT);
+
+        $reader->consume($this->reasoningContentEvent($filler . $answer));
+
+        $tail = $reader->reasoningContent();
+        self::assertNotNull($tail);
+        // Exactly the bound, not merely under it: the buffer held limit+answer
+        // and was trimmed from the front, so the trailing answer survives while
+        // the length lands on the cap.
+        self::assertSame(CompletionStreamReader::REASONING_TAIL_LIMIT, \strlen($tail));
+        self::assertStringEndsWith($answer, $tail);
+        self::assertSame(0, $reader->retainedBytes());
+    }
+
+    /**
+     * The blocking-envelope reasoning path reconstructs the body from the
+     * accumulated lines plus the trailing partial line, so both parts, in order,
+     * have to reach the decoder.
+     */
+    public function testAPrettyPrintedEnvelopeReasoningSpanningLinesStillDecodes(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume("{\n  \"choices\": [\n");
+        $reader->consume("    {\"message\": {\"reasoning_content\": \"{}\"}}\n  ]\n}");
+
+        self::assertSame('{}', $reader->reasoningContent());
+    }
+
+    /**
+     * A provider that ignores `stream: true` and answers with the blocking
+     * envelope can still route the answer through the reasoning channel.
+     */
+    public function testABlockingEnvelopeExposesItsReasoningForRecovery(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume('{"choices":[{"message":{"reasoning_content":"{\"recommendations\":[]}"}}]}');
+
+        self::assertNull($reader->assistantContent());
+        self::assertSame('{"recommendations":[]}', $reader->reasoningContent());
     }
 }

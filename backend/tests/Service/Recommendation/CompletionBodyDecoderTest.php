@@ -131,6 +131,85 @@ final class CompletionBodyDecoderTest extends TestCase
 
     public function testAStreamEventOfMalformedJsonIsAllNulls(): void
     {
-        self::assertSame(['content' => null, 'finishReason' => null], $this->decoder->streamEvent('not json'));
+        self::assertSame(
+            ['content' => null, 'reasoning' => null, 'finishReason' => null],
+            $this->decoder->streamEvent('not json'),
+        );
+    }
+
+    /**
+     * LM Studio delivers a reasoning model's whole answer under
+     * `delta.reasoning_content`, leaving `content` empty (#323). The reader
+     * needs that channel to recover an answer no other field carries.
+     */
+    public function testAStreamEventExposesTheReasoningContentChannel(): void
+    {
+        $event = $this->decoder->streamEvent('{"choices":[{"delta":{"reasoning_content":"{\"a\":1}"}}]}');
+
+        self::assertSame('{"a":1}', $event['reasoning']);
+        self::assertNull($event['content']);
+    }
+
+    /**
+     * OpenRouter names the same channel `delta.reasoning`. One accessor covers
+     * both spellings so the reader does not have to know which provider it is
+     * talking to.
+     */
+    public function testAStreamEventExposesThePlainReasoningChannel(): void
+    {
+        $event = $this->decoder->streamEvent('{"choices":[{"delta":{"reasoning":"thinking"}}]}');
+
+        self::assertSame('thinking', $event['reasoning']);
+    }
+
+    /**
+     * When a model fills both spellings, `reasoning_content` (LM Studio's, the
+     * one that carries the answer here) is the one read; `reasoning` is only the
+     * fallback for providers that use it instead.
+     */
+    public function testTheReasoningContentSpellingIsPreferredOverReasoning(): void
+    {
+        $event = $this->decoder->streamEvent(
+            '{"choices":[{"delta":{"reasoning_content":"primary","reasoning":"secondary"}}]}',
+        );
+
+        self::assertSame('primary', $event['reasoning']);
+    }
+
+    public function testAStreamEventWithoutAnyReasoningHasNullReasoning(): void
+    {
+        $event = $this->decoder->streamEvent('{"choices":[{"delta":{"content":"x"}}]}');
+
+        self::assertNull($event['reasoning']);
+    }
+
+    public function testANonStringReasoningIsNullRatherThanCoerced(): void
+    {
+        $event = $this->decoder->streamEvent('{"choices":[{"delta":{"reasoning_content":42}}]}');
+
+        self::assertNull($event['reasoning']);
+    }
+
+    /**
+     * A provider that ignores `stream: true` answers with the blocking
+     * envelope; a reasoning-only model puts the answer under
+     * `message.reasoning_content` there, the same way it does per delta.
+     */
+    public function testAnEnvelopeExposesItsReasoningChannel(): void
+    {
+        self::assertSame(
+            '{"a":1}',
+            $this->decoder->envelopeReasoning('{"choices":[{"message":{"reasoning_content":"{\"a\":1}"}}]}'),
+        );
+        self::assertSame(
+            'thinking',
+            $this->decoder->envelopeReasoning('{"choices":[{"message":{"reasoning":"thinking"}}]}'),
+        );
+    }
+
+    public function testAnEnvelopeWithoutReasoningHasNullReasoning(): void
+    {
+        self::assertNull($this->decoder->envelopeReasoning('{"choices":[{"message":{"content":"x"}}]}'));
+        self::assertNull($this->decoder->envelopeReasoning('not json'));
     }
 }
