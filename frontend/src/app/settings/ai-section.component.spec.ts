@@ -7,6 +7,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { API_BASE_URL } from '../core/api';
+import { ConfirmData } from '../shared/confirm-dialog/confirm-dialog.component';
 import { AiFailure } from './ai-failure';
 import { AiSectionComponent } from './ai-section.component';
 import { AiConfig, AiSettingsService } from './ai-settings.service';
@@ -292,6 +293,22 @@ describe('AiSectionComponent', () => {
 
     expect(dialogStub.open).toHaveBeenCalled();
     expect(ai.remove).toHaveBeenCalledWith(1);
+  });
+
+  it('opens the delete dialog with the configuration-specific title, message and danger styling', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1 })]);
+    fixture.detectChanges();
+    dialogStub.open.mockReturnValue({ closed: of(false) });
+
+    (row(fixture, 0).querySelector('.delete') as HTMLButtonElement).click();
+
+    const [, dialogConfig] = dialogStub.open.mock.calls.at(-1) as [unknown, { data: ConfirmData }];
+    expect(dialogConfig.data.title).toBe('Delete this configuration?');
+    expect(dialogConfig.data.message).toBe(
+      'This deletes the endpoint, the stored key and the model. AI features stop if this was the active configuration.',
+    );
+    expect(dialogConfig.data.danger).toBe(true);
   });
 
   it('does nothing when the delete dialog is dismissed', () => {

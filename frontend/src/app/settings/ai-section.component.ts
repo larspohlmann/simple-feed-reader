@@ -121,6 +121,8 @@ export class AiSectionComponent {
 
   add(): void {
     this.ai.add(this.newName().trim() || null, this.newBaseUrl().trim(), this.newApiKey().trim());
+    this.newName.set('');
+    this.newBaseUrl.set('');
     this.newApiKey.set('');
   }
 
