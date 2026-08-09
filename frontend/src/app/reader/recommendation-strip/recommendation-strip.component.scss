@@ -4,7 +4,9 @@
 }
 
 .reason {
-  margin: var(--space-1) 0 0;
+  /* Tight to the card above, with a little room below so the caption reads as
+     part of that card and not the next entry. */
+  margin: var(--space-1) 0 var(--space-2);
   color: var(--text-muted);
   font-size: var(--fs-sm);
   font-style: italic;
