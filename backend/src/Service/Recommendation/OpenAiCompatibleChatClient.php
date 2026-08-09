@@ -48,8 +48,13 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     // A provider that ignores `stream: true` sends nothing at all — headers
     // included — until the whole answer is ready, so it now has this window
     // rather than the old TIMEOUT_SECONDS to answer end to end. That is the
-    // accepted price of failing a dead connection in 30 s instead of 120 s.
-    private const float INACTIVITY_TIMEOUT_SECONDS = 30.0;
+    // accepted price of failing a dead connection in 180 s instead of 300 s.
+    //
+    // Raised from 30 s: a local model evaluating a large #308 batch on modest
+    // hardware legitimately spends over a minute before the first token, and
+    // 30 s failed those runs as "sent nothing" while the model was still
+    // thinking. 180 s stays clear of the 300 s wall clock.
+    private const float INACTIVITY_TIMEOUT_SECONDS = 180.0;
 
     // What the reader holds in memory: the answer, plus the envelope for a
     // provider that ignores `stream: true`. Generous against real answers,
