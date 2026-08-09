@@ -100,6 +100,16 @@ final class AiSettingsJsonTest extends TestCase
         self::assertFalse($shape['active']);
     }
 
+    public function testTheConfigurationShapeCarriesTheReasoningPreference(): void
+    {
+        $settings = $this->settings('gpt-4o');
+        $settings->setSuppressReasoning(false);
+
+        $shape = AiSettingsJson::configuration($settings, null);
+
+        self::assertFalse($shape['suppressReasoning']);
+    }
+
     public function testConfigurationNeverCarriesKeyMaterial(): void
     {
         $encoded = json_encode(AiSettingsJson::configuration($this->settings('gpt-4o'), null));

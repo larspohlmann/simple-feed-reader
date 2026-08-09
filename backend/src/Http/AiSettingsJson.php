@@ -34,6 +34,7 @@ final class AiSettingsJson
             'baseUrl' => $settings->getBaseUrl(),
             'apiKeyHint' => $settings->getApiKeyHint(),
             'model' => $settings->getModel(),
+            'suppressReasoning' => $settings->suppressesReasoning(),
             'ready' => self::isReady($settings),
             'active' => $settings->getId() === $activeId,
         ];

@@ -7,6 +7,7 @@ namespace App\Controller\Api;
 use App\Dto\Ai\AddConfigurationRequest;
 use App\Dto\Ai\RenameConfigurationRequest;
 use App\Dto\Ai\SaveModelRequest;
+use App\Dto\Ai\SetReasoningRequest;
 use App\Entity\User;
 use App\Exception\AiConfigurationNotFoundApiException;
 use App\Exception\AiKeyUnreadableApiException;
@@ -132,6 +133,30 @@ final readonly class AiSettingsController
         }
 
         $this->configurator->rename($configuration, $request->name);
+
+        return new JsonResponse(
+            AiSettingsJson::configuration($configuration, $this->configurator->settingsFor($user)?->getId()),
+        );
+    }
+
+    #[Route(
+        '/configs/{id}/reasoning',
+        name: 'api_me_ai_set_reasoning',
+        requirements: ['id' => '\d+'],
+        methods: ['PUT'],
+    )]
+    public function setReasoning(
+        #[CurrentUser] User $user,
+        int $id,
+        #[MapRequestPayload] SetReasoningRequest $request,
+    ): JsonResponse {
+        try {
+            $configuration = $this->configuration->require($user, $id);
+        } catch (ConfigurationNotFoundException $e) {
+            throw new AiConfigurationNotFoundApiException($e);
+        }
+
+        $this->configurator->setSuppressReasoning($configuration, $request->suppressReasoning);
 
         return new JsonResponse(
             AiSettingsJson::configuration($configuration, $this->configurator->settingsFor($user)?->getId()),
