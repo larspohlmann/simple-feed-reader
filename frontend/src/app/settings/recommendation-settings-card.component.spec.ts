@@ -30,6 +30,8 @@ describe('RecommendationSettingsCardComponent', () => {
     contextWindowOverride: null,
     contextWindowSource: 'provider',
     debugEnabled: false,
+    autoGenerateIntervalHours: null,
+    workerAlive: true,
   };
 
   function mount(

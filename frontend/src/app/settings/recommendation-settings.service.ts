@@ -29,9 +29,14 @@ export interface RecommendationSettingsState {
   readonly contextWindowOverride: number | null;
   readonly contextWindowSource: ContextWindowSource;
   readonly debugEnabled: boolean;
+  /** Chosen auto-generate cadence in hours; null = only manually (#333). */
+  readonly autoGenerateIntervalHours: number | null;
+  /** Whether a background worker heartbeat is fresh; false hides the schedule's
+   *  external-cron help note. */
+  readonly workerAlive: boolean;
 }
 
-/** The nine writable fields of the PUT body. */
+/** The ten writable fields of the PUT body. */
 export interface SaveRecommendationSettings {
   readonly guidancePrompt: string | null;
   readonly favoritesCap: number;
@@ -42,6 +47,7 @@ export interface SaveRecommendationSettings {
   readonly batchCount: number | null;
   readonly contextWindow: number | null;
   readonly debugEnabled: boolean;
+  readonly autoGenerateIntervalHours: number | null;
 }
 
 /**
