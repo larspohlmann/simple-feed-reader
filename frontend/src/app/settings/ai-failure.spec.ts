@@ -70,6 +70,21 @@ describe('aiFailure', () => {
     expect(failure.kind).toBe('notConfigured');
   });
 
+  it('reads the configuration limit', () => {
+    const failure = aiFailure(
+      response(
+        409,
+        problem(
+          'ai_configuration_limit',
+          'This account already holds the maximum number of AI configurations.',
+          409,
+        ),
+      ),
+    );
+
+    expect(failure.kind).toBe('limit');
+  });
+
   it('falls back to the unknown kind, and shows no server text, when the body is not a problem', () => {
     const failure = aiFailure(response(0, null));
 
