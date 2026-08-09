@@ -62,6 +62,15 @@ class AiProviderSettings
     #[ORM\Column(nullable: true)]
     private ?int $modelContextWindow = null;
 
+    /**
+     * Whether the recommendation call asks the provider not to reason. Default
+     * true: ranking never needs a thinking phase, and a reasoning model that
+     * reasons here is pure cost (#320/#323). A strict endpoint that rejects the
+     * `reasoning` field — a direct OpenAI URL — turns it off.
+     */
+    #[ORM\Column(options: ['default' => 1])]
+    private bool $suppressReasoning = true;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $verifiedAt = null;
 
@@ -137,6 +146,16 @@ class AiProviderSettings
     public function hasModel(): bool
     {
         return null !== $this->model;
+    }
+
+    public function suppressesReasoning(): bool
+    {
+        return $this->suppressReasoning;
+    }
+
+    public function setSuppressReasoning(bool $suppressReasoning): void
+    {
+        $this->suppressReasoning = $suppressReasoning;
     }
 
     public function getVerifiedAt(): ?\DateTimeImmutable

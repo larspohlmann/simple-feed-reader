@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation;
 
+use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
@@ -270,6 +271,27 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             ],
             $persisted->getWinners()[0],
         );
+    }
+
+    public function testTheBatchCallCarriesTheAccountsReasoningPreference(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $config = $this->em->getRepository(AiProviderSettings::class)->findOneBy(['user' => $this->user]);
+        self::assertNotNull($config);
+        $config->setSuppressReasoning(false);
+        $this->em->flush();
+
+        for ($i = 0; $i < 3; $i++) {
+            $this->entry('entry-' . $i, sprintf('2026-07-%02dT00:00:00Z', 10 + $i));
+        }
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user); // snapshot tick
+        $this->stubChatClient()->queueContent('{"recommendations":[]}');
+        $this->advancer()->advance($this->user); // batch tick
+
+        $calls = $this->stubChatClient()->calls();
+        self::assertNotSame([], $calls);
+        self::assertFalse($calls[0]['suppressReasoning']);
     }
 
     public function testInvalidReplyTriggersCorrectiveRetryNextTick(): void

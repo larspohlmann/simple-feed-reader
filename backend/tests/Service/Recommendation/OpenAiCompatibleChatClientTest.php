@@ -36,7 +36,12 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
     private function request(): CompletionRequest
     {
-        return new CompletionRequest('m', $this->messages(), 2048, $this->schema());
+        return new CompletionRequest('m', $this->messages(), 2048, $this->schema(), false);
+    }
+
+    private function suppressingRequest(): CompletionRequest
+    {
+        return new CompletionRequest('m', $this->messages(), 2048, $this->schema(), true);
     }
 
     private function schema(): JsonSchema
@@ -475,6 +480,40 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $this->expectException(ProviderUnreachableException::class);
         $this->expectExceptionMessage('That provider answered without a completion.');
         $client->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
+    }
+
+    public function testAsksTheProviderNotToReasonWhenSuppressed(): void
+    {
+        $body = $this->captureRequestBody($this->suppressingRequest());
+
+        self::assertSame(['effort' => 'none'], $body['reasoning']);
+    }
+
+    public function testOmitsTheReasoningFieldWhenNotSuppressed(): void
+    {
+        $body = $this->captureRequestBody($this->request());
+
+        self::assertArrayNotHasKey('reasoning', $body);
+    }
+
+    /** @return array<string, mixed> the decoded JSON request body */
+    private function captureRequestBody(CompletionRequest $request): array
+    {
+        $seen = null;
+        $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$seen): MockResponse {
+            $seen = $options['body'] ?? '';
+
+            return new MockResponse('{"choices":[{"message":{"content":"{\"recommendations\":[]}"}}]}');
+        });
+
+        $this->clientUsing($client)->complete($this->credentials(), $request, new NullCompletionStreamObserver());
+        self::assertIsString($seen);
+
+        $decoded = json_decode($seen, true);
+        self::assertIsArray($decoded);
+
+        /** @var array<string, mixed> $decoded */
+        return $decoded;
     }
 
     /** @return CompletionStreamObserver&object{reports: list<CompletionStreamProgress>} */

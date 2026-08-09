@@ -89,7 +89,9 @@
         "deleteConfirmTitle": "Delete this configuration?",
         "deleteConfirmMessage": "This deletes the endpoint, the stored key and the model. AI features stop if this was the active configuration.",
         "namePlaceholder": "Optional name",
-        "add": "Add configuration"
+        "add": "Add configuration",
+        "reasoning": "Ask the model not to reason",
+        "reasoningHint": "Leave on for most providers. Turn it off only if the endpoint rejects the request (for example a direct OpenAI URL)."
       },
       "errors": {
         "provider": "The provider could not be used. Check the endpoint and the key.",

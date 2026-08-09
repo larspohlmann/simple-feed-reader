@@ -133,6 +133,12 @@ final readonly class AiProviderConfigurator
         $this->entityManager->flush();
     }
 
+    public function setSuppressReasoning(AiProviderSettings $settings, bool $suppressReasoning): void
+    {
+        $settings->setSuppressReasoning($suppressReasoning);
+        $this->entityManager->flush();
+    }
+
     /**
      * @throws ApiKeyUnreadableException
      * @throws CredentialsRejectedException

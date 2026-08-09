@@ -89,7 +89,9 @@
         "deleteConfirmTitle": "Diese Konfiguration löschen?",
         "deleteConfirmMessage": "Das löscht den Endpunkt, den gespeicherten Schlüssel und das Modell. KI-Funktionen stehen nicht mehr zur Verfügung, wenn dies die aktive Konfiguration war.",
         "namePlaceholder": "Optionaler Name",
-        "add": "Konfiguration hinzufügen"
+        "add": "Konfiguration hinzufügen",
+        "reasoning": "Das Modell nicht nachdenken lassen",
+        "reasoningHint": "Für die meisten Anbieter aktiviert lassen. Nur ausschalten, wenn der Endpunkt die Anfrage ablehnt (zum Beispiel eine direkte OpenAI-URL)."
       },
       "errors": {
         "provider": "Der Anbieter konnte nicht genutzt werden. Prüfe den Endpunkt und den Schlüssel.",

@@ -430,6 +430,7 @@ final class RecommendationRunAdvancer
             $messages,
             $this->promptBuilder->outputTokenReserve($replyItemCount),
             $responseSchema->toJsonSchema(),
+            $settings->suppressesReasoning(),
         );
     }
 

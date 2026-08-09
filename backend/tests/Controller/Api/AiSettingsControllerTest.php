@@ -228,6 +228,27 @@ final class AiSettingsControllerTest extends ApiTestCase
         self::assertSame('New name', $payload['configs'][0]['name']);
     }
 
+    public function testSettingReasoningChangesTheConfiguration(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-reasoning@example.test');
+        $added = $this->addConfiguration($client);
+        $id = $added['id'];
+        self::assertIsInt($id);
+        self::assertTrue($added['suppressReasoning']); // default on
+
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/reasoning', $id), '{"suppressReasoning":false}');
+
+        self::assertResponseIsSuccessful();
+        self::assertFalse($this->payload($client)['suppressReasoning']);
+
+        $client->request('GET', '/api/me/ai');
+        $payload = $this->payload($client);
+        self::assertIsArray($payload['configs']);
+        self::assertIsArray($payload['configs'][0]);
+        self::assertFalse($payload['configs'][0]['suppressReasoning']);
+    }
+
     public function testDeletingANonActiveConfigurationDropsItFromTheList(): void
     {
         $client = $this->clientAnswering(['gpt-4o', 'gpt-4o-mini']);
@@ -273,6 +294,7 @@ final class AiSettingsControllerTest extends ApiTestCase
         yield 'choosing a model' => ['PUT', '/model', '{"model":"gpt-4o"}'];
         yield 'renaming' => ['PUT', '/name', '{"name":"Stolen"}'];
         yield 'activating' => ['PUT', '/active', '{}'];
+        yield 'setting reasoning' => ['PUT', '/reasoning', '{"suppressReasoning":false}'];
         yield 'deleting' => ['DELETE', '', '{}'];
     }
 

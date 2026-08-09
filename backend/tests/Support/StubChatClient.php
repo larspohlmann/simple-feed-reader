@@ -34,6 +34,7 @@ final class StubChatClient implements ChatCompletionClient
      *     messages: list<array{role: string, content: string}>,
      *     maxAnswerTokens: int,
      *     responseSchemaName: string,
+     *     suppressReasoning: bool,
      * }>
      */
     private array $calls = [];
@@ -67,6 +68,7 @@ final class StubChatClient implements ChatCompletionClient
      *     messages: list<array{role: string, content: string}>,
      *     maxAnswerTokens: int,
      *     responseSchemaName: string,
+     *     suppressReasoning: bool,
      * }>
      */
     public function calls(): array
@@ -90,6 +92,9 @@ final class StubChatClient implements ChatCompletionClient
             // shape -- a batch call for the ranking, a dedup call for the
             // duplicate list -- rather than sharing one (#329).
             'responseSchemaName' => $request->responseSchema->name,
+            // Proves the advancer read the account's per-config preference into the
+            // request rather than hardcoding it (#323).
+            'suppressReasoning' => $request->suppressReasoning,
         ];
 
         if (null !== $this->duringNextCall) {

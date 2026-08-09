@@ -205,31 +205,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
                 'Accept-Encoding' => 'identity',
                 'User-Agent' => $this->userAgent,
             ],
-            'json' => [
-                'model' => $request->model,
-                'messages' => $request->messages,
-                // A strict json_schema, not the older json_object: current LM
-                // Studio rejects json_object with a 400, and grammar-constrained
-                // decoding also keeps a weak local model's answer parseable
-                // (#329). The name and schema ride on the request, set by the
-                // phase that built the prompt.
-                'response_format' => [
-                    'type' => 'json_schema',
-                    'json_schema' => [
-                        'name' => $request->responseSchema->name,
-                        'strict' => true,
-                        'schema' => $request->responseSchema->schema,
-                    ],
-                ],
-                'stream' => true,
-                // The only guard here that prevents spend rather than
-                // discarding what was already billed: the byte caps and the
-                // timeouts all fire after the provider has generated the
-                // tokens. Sized by the caller from the same reserve the
-                // prompt left room for, so it can never truncate a reply the
-                // prompt legitimately asked for.
-                'max_tokens' => $request->maxAnswerTokens,
-            ],
+            'json' => $this->completionPayload($request),
             // Idle bound only: with a streamed answer, deltas tick this over
             // continuously, so it fires on dead connections, not slow models.
             // max_duration stays the published wall-clock bound.
@@ -251,5 +227,47 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
                 }
             },
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function completionPayload(CompletionRequest $request): array
+    {
+        $payload = [
+            'model' => $request->model,
+            'messages' => $request->messages,
+            // A strict json_schema, not the older json_object: current LM
+            // Studio rejects json_object with a 400, and grammar-constrained
+            // decoding also keeps a weak local model's answer parseable
+            // (#329). The name and schema ride on the request, set by the
+            // phase that built the prompt.
+            'response_format' => [
+                'type' => 'json_schema',
+                'json_schema' => [
+                    'name' => $request->responseSchema->name,
+                    'strict' => true,
+                    'schema' => $request->responseSchema->schema,
+                ],
+            ],
+            'stream' => true,
+            // The only guard here that prevents spend rather than
+            // discarding what was already billed: the byte caps and the
+            // timeouts all fire after the provider has generated the
+            // tokens. Sized by the caller from the same reserve the
+            // prompt left room for, so it can never truncate a reply the
+            // prompt legitimately asked for.
+            'max_tokens' => $request->maxAnswerTokens,
+        ];
+
+        if ($request->suppressReasoning) {
+            // OpenRouter's reasoning extension: fully disables the thinking
+            // phase, which ranking never needs (#323). An endpoint that does
+            // not know the field ignores an unknown top-level member; a strict
+            // one is why the flag is per-config rather than always on.
+            $payload['reasoning'] = ['effort' => 'none'];
+        }
+
+        return $payload;
     }
 }

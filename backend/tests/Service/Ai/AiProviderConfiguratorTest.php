@@ -216,6 +216,22 @@ final class AiProviderConfiguratorTest extends DbTestCase
         self::assertSame('New name', $added->configuration->getName());
     }
 
+    public function testSetSuppressReasoningPersistsTheFlag(): void
+    {
+        $configurator = $this->configurator(['gpt-4o']);
+        $user = $this->user('cfg-suppress-reasoning@example.test');
+        $added = $configurator->addConfiguration($user, null, 'https://api.example.test/v1', 'sk-abcdef1234');
+
+        $configurator->setSuppressReasoning($added->configuration, false);
+
+        // clear() first: without it the identity map serves the entity this
+        // test already holds, and the assertion would pass even if nothing was
+        // ever written to the database.
+        $this->em->clear();
+        $stored = $configurator->listConfigurations($this->reload('cfg-suppress-reasoning@example.test'));
+        self::assertFalse($stored[0]->suppressesReasoning());
+    }
+
     public function testListConfigurationsReturnsAllOwnedRowsOrderedById(): void
     {
         $configurator = $this->configurator(['gpt-4o']);
