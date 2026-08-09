@@ -81,9 +81,7 @@ export class AiSectionComponent {
       this.newBaseUrl().trim().length > 0 && this.newApiKey().trim().length > 0 && !this.ai.busy(),
   );
 
-  private readonly activeConfig = computed(() =>
-    this.ai.configs().find((config) => config.id === this.ai.activeId()),
-  );
+  private readonly activeConfig = computed(() => this.ai.configs().find((config) => config.active));
 
   readonly activeReady = computed(() => this.activeConfig()?.ready ?? false);
   readonly activeModel = computed(() => this.activeConfig()?.model ?? null);

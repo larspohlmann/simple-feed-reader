@@ -1,6 +1,6 @@
 // src/app/settings/ai-settings.service.ts
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 import { AiAvailabilityService } from '../core/ai-availability.service';
 import { API_BASE_URL } from '../core/api';
@@ -51,7 +51,9 @@ export class AiSettingsService {
   private readonly availability = inject(AiAvailabilityService);
 
   readonly configs = signal<readonly AiConfig[]>([]);
-  readonly activeId = signal<number | null>(null);
+  readonly activeId = computed<number | null>(
+    () => this.configs().find((each) => each.active)?.id ?? null,
+  );
   readonly models = signal<readonly string[]>([]);
   readonly choosingModelFor = signal<number | null>(null);
   readonly busy = signal(false);
@@ -60,7 +62,6 @@ export class AiSettingsService {
   load(): void {
     this.run(this.http.get<AiConfigList>(`${this.base}/api/me/ai`), (list) => {
       this.configs.set(list.configs);
-      this.activeId.set(list.activeId);
       this.applyAvailability();
     });
   }
@@ -118,9 +119,10 @@ export class AiSettingsService {
   /**
    * Replaces the row by id when it already exists, so a sibling row's write
    * never reorders the list; otherwise appends it, which is what `add`
-   * needs. A row reported `active` clears the flag on every other row, the
-   * same guarantee the server holds server-side (at most one active
-   * configuration per account).
+   * needs. A row reported `active` clears the flag on whichever row held it
+   * before — the rest are already inactive, so there is nothing else to
+   * touch — the same guarantee the server holds server-side (at most one
+   * active configuration per account).
    */
   private upsert(config: AiConfig): void {
     const current = this.configs();
@@ -132,21 +134,21 @@ export class AiSettingsService {
 
     this.configs.set(
       config.active
-        ? replaced.map((each) => (each.id === config.id ? each : { ...each, active: false }))
+        ? replaced.map((each) =>
+            each.id !== config.id && each.active ? { ...each, active: false } : each,
+          )
         : replaced,
     );
-    if (config.active) this.activeId.set(config.id);
     this.applyAvailability();
   }
 
   private drop(id: number): void {
     this.configs.set(this.configs().filter((each) => each.id !== id));
-    if (this.activeId() === id) this.activeId.set(null);
     this.applyAvailability();
   }
 
   private applyAvailability(): void {
-    const active = this.configs().find((each) => each.id === this.activeId());
+    const active = this.configs().find((each) => each.active);
     this.availability.apply({ ready: active?.ready ?? false, model: active?.model ?? null });
   }
 

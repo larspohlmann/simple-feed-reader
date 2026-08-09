@@ -225,6 +225,12 @@ describe('AiSectionComponent', () => {
     ai.configs.set([config({ id: 1, active: true, ready: true }), config({ id: 2, ready: false })]);
     fixture.detectChanges();
 
+    // Row 1 is the active, ready configuration, so it is the one the
+    // recommendation card now renders for — same as the dedicated card test
+    // below.
+    http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
+    http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
+
     expect((row(fixture, 0).querySelector('.activate button') as HTMLButtonElement).disabled).toBe(
       true,
     );
