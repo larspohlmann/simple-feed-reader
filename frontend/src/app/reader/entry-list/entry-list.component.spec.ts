@@ -119,6 +119,41 @@ describe('EntryListComponent', () => {
     });
   });
 
+  describe('recommendation strip', () => {
+    const recommended = [
+      entry(1, { recommendationReason: 'because you read src', recommendationScore: 91 }),
+      entry(2, { recommendationReason: 'similar to your favorites' }),
+    ];
+    const forYou = { kind: 'for-you', id: null, unread: false };
+
+    it('shows the reason on each for-you entry in the list layout', () => {
+      const el = mount({ entries: recommended, selection: forYou, layout: 'list' })
+        .nativeElement as HTMLElement;
+      const reasons = el.querySelectorAll('app-recommendation-strip .reason');
+      expect(reasons.length).toBe(2);
+      expect(reasons[0].textContent).toContain('because you read src');
+      expect(el.querySelector('app-recommendation-strip .reason .score')!.textContent).toContain(
+        '91',
+      );
+    });
+
+    it('shows the reason on each for-you entry in the magazine layout', () => {
+      const el = mount({ entries: recommended, selection: forYou, layout: 'magazine' })
+        .nativeElement as HTMLElement;
+      const reasons = el.querySelectorAll('app-recommendation-strip .reason');
+      expect(reasons.length).toBe(2);
+      expect(reasons[0].textContent).toContain('because you read src');
+    });
+
+    it('stays inert on a non-for-you view', () => {
+      const el = mount({
+        entries: [entry(1), entry(2)],
+        selection: { kind: 'all', id: null, unread: true },
+      }).nativeElement as HTMLElement;
+      expect(el.querySelector('.reason')).toBeNull();
+    });
+  });
+
   // #325: the shell projects the For You run/stop button here, right-aligned in
   // the header, without this generic list knowing what the action is.
   describe('headerActions', () => {

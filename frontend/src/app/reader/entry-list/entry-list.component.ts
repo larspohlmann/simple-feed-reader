@@ -25,6 +25,7 @@ import {
   ToTopButtonComponent,
 } from '../../shared/to-top-button/to-top-button.component';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
+import { RecommendationStripComponent } from '../recommendation-strip/recommendation-strip.component';
 import { EntryHeroComponent } from '../magazine/entry-hero.component';
 import { EntryCompactComponent } from '../magazine/entry-compact.component';
 import { SourceGroupComponent } from '../magazine/source-group.component';
@@ -71,6 +72,7 @@ export const REFRESH_REVEAL = 48;
     SpinnerComponent,
     TagGlyphComponent,
     EntryRowComponent,
+    RecommendationStripComponent,
     EntryHeroComponent,
     EntryCompactComponent,
     SourceGroupComponent,
@@ -387,6 +389,12 @@ export class EntryListComponent implements OnDestroy {
   /** Narrow a block to its entry-carrying form for the template. */
   entryOf(block: MagazineBlock): EntryDto {
     return (block as Extract<MagazineBlock, { entry: EntryDto }>).entry;
+  }
+
+  /** The entry a recommendation strip should read, or null for a group block
+   *  (which carries several entries and no single reason to show). */
+  strippableEntry(block: MagazineBlock): EntryDto | null {
+    return block.kind === 'group' ? null : block.entry;
   }
 
   side(block: MagazineBlock): 'left' | 'right' {
