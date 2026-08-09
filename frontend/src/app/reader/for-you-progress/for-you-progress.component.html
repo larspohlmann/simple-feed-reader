@@ -1,4 +1,17 @@
-<app-progress-hairline [active]="recs.running()" [value]="recs.progress()" />
-@if (label(); as text) {
-  <p class="eta" aria-live="polite">{{ text }}</p>
+@if (recs.running()) {
+  <p class="for-you-progress" role="status" aria-live="polite">
+    <span>{{ 'reader.forYouProgress' | transloco: count() }}</span>
+    @if (eta(); as phrase) {
+      <span class="eta"> · {{ phrase.key | transloco: phrase.params }}</span>
+    }
+  </p>
+  <div
+    class="track"
+    role="progressbar"
+    aria-valuemin="0"
+    aria-valuemax="100"
+    [attr.aria-valuenow]="percent()"
+  >
+    <span [style.width.%]="percent()"></span>
+  </div>
 }

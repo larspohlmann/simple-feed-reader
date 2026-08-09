@@ -1,6 +1,43 @@
-.eta {
+@use '../../theme/breakpoints' as bp;
+
+/* The count+ETA line and its bar stack, right-aligned to sit under the Stop
+   button in the header's action stack. The line's nowrap width sets the host
+   width, and the bar fills it. */
+:host {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+}
+
+.for-you-progress {
   margin: 0;
-  padding: var(--space-1) var(--space-2);
-  font-size: var(--fs-xs);
   color: var(--text-muted);
+  font-size: var(--fs-xs);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.track {
+  width: 100%;
+  height: var(--space-1);
+  overflow: hidden;
+  background: var(--border);
+  border-radius: var(--radius-pill);
+}
+
+.track span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: inherit;
+  transition: width 0.3s ease-out;
+}
+
+/* Below the small breakpoint the header drops its captions to stay compact on a
+   phone, matching the Stop button losing its label. */
+@media (width <= bp.$bp-sm) {
+  :host {
+    display: none;
+  }
 }

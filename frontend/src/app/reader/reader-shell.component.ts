@@ -156,13 +156,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     return { done: report.total - report.remaining, total: report.total };
   });
 
-  /** The terse batch count the header shows under the Stop button while a run
-   *  is in flight — `0 of 0` before the first tick reports a batch total. */
-  readonly forYouProgress = computed(() => ({
-    done: this.recs.report()?.batchesDone ?? 0,
-    total: this.recs.report()?.batchesTotal ?? 0,
-  }));
-
   private readonly params = toSignal(this.route.queryParamMap, {
     initialValue: convertToParamMap({}),
   });
