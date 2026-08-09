@@ -194,7 +194,19 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
             'json' => [
                 'model' => $request->model,
                 'messages' => $request->messages,
-                'response_format' => ['type' => 'json_object'],
+                // A strict json_schema, not the older json_object: current LM
+                // Studio rejects json_object with a 400, and grammar-constrained
+                // decoding also keeps a weak local model's answer parseable
+                // (#329). The name and schema ride on the request, set by the
+                // phase that built the prompt.
+                'response_format' => [
+                    'type' => 'json_schema',
+                    'json_schema' => [
+                        'name' => $request->responseSchema->name,
+                        'strict' => true,
+                        'schema' => $request->responseSchema->schema,
+                    ],
+                ],
                 'stream' => true,
                 // The only guard here that prevents spend rather than
                 // discarding what was already billed: the byte caps and the

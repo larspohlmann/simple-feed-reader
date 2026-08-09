@@ -151,6 +151,15 @@ export class ReaderApi {
     return this.http.post<RecommendationRunReport>(`${this.base}/api/recommendations/runs`, {});
   }
 
+  /** Resume the latest failed run at the batch that failed. 409s when there is
+   *  no failed run to resume. */
+  resumeRecommendations(): Observable<RecommendationRunReport> {
+    return this.http.post<RecommendationRunReport>(
+      `${this.base}/api/recommendations/runs/resume`,
+      {},
+    );
+  }
+
   /** Advance the in-flight recommendation run by one batch. */
   tickRecommendations(): Observable<RecommendationRunReport> {
     return this.http.post<RecommendationRunReport>(

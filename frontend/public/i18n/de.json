@@ -457,9 +457,12 @@
     "forYouRun": "Empfehlungen holen",
     "forYouRunConfirm": "Empfehlungen holen?",
     "forYouRunConfirmMessage": "Dies bewertet deine ungelesenen Beiträge mit KI. Es kann einige Minuten dauern.",
+    "forYouResume": "Nicht beendeten Lauf fortsetzen",
+    "forYouStartOver": "Neuen Lauf starten",
     "forYouStop": "Stoppen",
     "forYouStopping": "Wird gestoppt…",
     "forYouProgress": "Deine Feeds werden sortiert — {{done}} von {{total}}",
+    "forYouUnfinishedTitle": "Du hast einen nicht beendeten Empfehlungslauf",
     "forYouUnreachable": "Der Empfehlungsdienst war nicht erreichbar. Versuch es noch einmal."
   },
   "common": {

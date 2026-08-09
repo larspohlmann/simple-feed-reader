@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
+import { Observable } from 'rxjs';
 import { Problem, parseProblem } from '../core/problem';
 import { ToastService } from '../shared/toast/toast.service';
 import { ReaderApi } from './reader-api';
@@ -99,12 +100,27 @@ export class RecommendationsService {
 
   /** Starts a new run and polls it to completion. */
   start(): void {
+    this.beginRun(this.api.startRecommendations());
+  }
+
+  /** Resumes the latest failed run at the batch that failed, then polls it to
+   *  completion. The client offers this only when it has seen a failed run, so
+   *  a 409 here is a stale click and surfaces through the same error path as a
+   *  failed start. */
+  resumeRun(): void {
+    this.beginRun(this.api.resumeRecommendations());
+  }
+
+  /** Shared entry for both start and resume: guard against a double-run, reset
+   *  the per-run signals, then drive the returned run report into the poll
+   *  loop. The two differ only in which endpoint opens the run. */
+  private beginRun(source: Observable<RecommendationRunReport>): void {
     if (this.running()) return;
     this.running.set(true);
     this.stopping.set(false);
     this.report.set(null);
     this.failure.set(null);
-    this.api.startRecommendations().subscribe({
+    source.subscribe({
       next: (r) => this.onReport(r),
       error: (e: HttpErrorResponse) => this.stopWithHttpError(e),
     });

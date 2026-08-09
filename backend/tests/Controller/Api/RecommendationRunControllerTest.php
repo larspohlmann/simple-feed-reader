@@ -139,6 +139,21 @@ final class RecommendationRunControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
     }
 
+    /** A failed run with one batch already ranked, so resume() has something to
+     *  continue from at the batch that failed. */
+    private function persistFailedRun(User $user): void
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+
+        $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-08 09:00:00'));
+        $run->snapshot([[1, 2], [3]]);
+        $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
+        $run->fail('provider unreachable', new \DateTimeImmutable('2026-08-08 09:05:00'));
+        $em->persist($run);
+        $em->flush();
+    }
+
     /**
      * Makes the #311 worker's heartbeat fresh by touching it through the real
      * repository with the container's own clock, exactly like the poll
@@ -209,6 +224,34 @@ final class RecommendationRunControllerTest extends WebTestCase
             ],
             $this->payload($client->getResponse()),
         );
+    }
+
+    public function testResumeWithoutAFailedRunConflicts(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('run-resume-none@example.test');
+        $this->seedReadyAiSettings($user);
+
+        $client->request('POST', '/api/recommendations/runs/resume', server: $headers);
+
+        self::assertResponseStatusCodeSame(409);
+        self::assertSame('no_resumable_recommendation_run', $this->payload($client->getResponse())['type']);
+    }
+
+    public function testResumeContinuesAFailedRun(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('run-resume@example.test');
+        $this->seedReadyAiSettings($user);
+        $this->persistFailedRun($user);
+
+        $client->request('POST', '/api/recommendations/runs/resume', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client->getResponse());
+        self::assertSame('running', $payload['status']);
+        self::assertSame(1, $payload['batchesDone']);
+        self::assertNull($payload['error']);
     }
 
     public function testTickSequenceRunsThroughToCompletion(): void

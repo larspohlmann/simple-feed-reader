@@ -226,7 +226,7 @@ final class RecommendationRunAdvancer
         $content = $this->callProvider(
             $run,
             $settings,
-            $this->requestFor($settings, $messages, \count($validIds)),
+            $this->requestFor($settings, $messages, \count($validIds), RecommendationResponseSchema::Ranking),
             $recordedCall,
         );
 
@@ -288,7 +288,7 @@ final class RecommendationRunAdvancer
         $content = $this->callProvider(
             $run,
             $settings,
-            $this->requestFor($settings, $messages, \count($pool)),
+            $this->requestFor($settings, $messages, \count($pool), RecommendationResponseSchema::Duplicates),
             $recordedCall,
         );
 
@@ -331,15 +331,11 @@ final class RecommendationRunAdvancer
         string $content,
         array $pool,
     ): RecommendationRunReport {
-        $run->recordInvalidReply($content);
-
-        if ($run->progress()->attemptsExhausted) {
-            return $this->finalize($run, $pool);
-        }
-
-        $this->entityManager->flush();
-
-        return RecommendationRunReport::fromRun($run);
+        return $this->retryOrDegrade(
+            $run,
+            $content,
+            fn (): RecommendationRunReport => $this->finalize($run, $pool),
+        );
     }
 
     /**
@@ -427,11 +423,13 @@ final class RecommendationRunAdvancer
         AiProviderSettings $settings,
         array $messages,
         int $replyItemCount,
+        RecommendationResponseSchema $responseSchema,
     ): CompletionRequest {
         return new CompletionRequest(
             $settings->getModel() ?? '',
             $messages,
             $this->promptBuilder->outputTokenReserve($replyItemCount),
+            $responseSchema->toJsonSchema(),
         );
     }
 
@@ -449,7 +447,7 @@ final class RecommendationRunAdvancer
             );
         } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
             $recordedCall->abortAfterTransportFailure($e->getMessage());
-            $this->recordTransportFailure($run, $settings);
+            $this->recordTransportFailure($run, $settings, $e->getMessage());
 
             throw $e;
         } catch (\Throwable $e) {
@@ -470,12 +468,20 @@ final class RecommendationRunAdvancer
         $recordedCall->finishUnusable($content);
     }
 
-    private function recordTransportFailure(RecommendationRun $run, AiProviderSettings $settings): void
-    {
+    private function recordTransportFailure(
+        RecommendationRun $run,
+        AiProviderSettings $settings,
+        string $failureDetail,
+    ): void {
         $ceilingReached = $run->recordTransportFailure();
         if ($ceilingReached) {
+            // The real per-call detail, not a hardcoded "could not be reached":
+            // most transport failures are the provider refusing or truncating a
+            // call it plainly received, and flattening them all into one
+            // unreachable message hid a fixable 400 behind a network story
+            // (#329). The base URL stays for context -- which endpoint failed.
             $run->fail(
-                sprintf('The AI provider at %s could not be reached.', $settings->getBaseUrl()),
+                sprintf('The AI provider at %s failed: %s', $settings->getBaseUrl(), $failureDetail),
                 $this->clock->now(),
             );
         }
@@ -544,15 +550,42 @@ final class RecommendationRunAdvancer
     }
 
     /**
-     * An unusable batch reply retries with a corrective tail and fails the
-     * run once attempts are exhausted; the dedup phase has its own, softer
-     * ending in recordUnusableDedupReply().
+     * An unusable batch reply retries with a corrective tail. Once attempts are
+     * exhausted the batch is dropped rather than failing the whole run: the
+     * batch phase degrades like the dedup phase, so the batches that did rank
+     * still reach the reader. A weak local model that answers one batch with an
+     * empty ranking three times running no longer discards the other batches'
+     * work (#329). recordBatchWinners with no winners resets the attempt
+     * counter and advances the plan, so a dropped batch takes the same ending
+     * as an all-pruned one; a run whose batches all drop finalizes to an empty
+     * list, the honest outcome when nothing ranked.
      */
     private function recordUnusableReply(RecommendationRun $run, string $content): RecommendationRunReport
     {
+        return $this->retryOrDegrade(
+            $run,
+            $content,
+            fn (): RecommendationRunReport => $this->recordBatchWinners($run, []),
+        );
+    }
+
+    /**
+     * The retry envelope both unusable-reply phases share: record the invalid
+     * reply, and once attempts are exhausted hand off to the phase's own
+     * degraded ending rather than failing the run; otherwise checkpoint and
+     * wait for the corrective retry. Only the ending differs — a dropped batch
+     * for the batch phase, an undeduped list for the dedup phase (#329).
+     *
+     * @param callable(): RecommendationRunReport $onAttemptsExhausted
+     */
+    private function retryOrDegrade(
+        RecommendationRun $run,
+        string $content,
+        callable $onAttemptsExhausted,
+    ): RecommendationRunReport {
         $run->recordInvalidReply($content);
         if ($run->progress()->attemptsExhausted) {
-            $run->fail('The model did not return a usable ranking.', $this->clock->now());
+            return $onAttemptsExhausted();
         }
         $this->entityManager->flush();
 
