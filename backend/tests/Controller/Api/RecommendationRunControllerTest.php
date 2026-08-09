@@ -220,6 +220,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'error' => null,
                 'background' => false,
                 'streamedChars' => 0,
+                'elapsedSeconds' => 0,
                 'forYou' => ['itemCount' => 0, 'generatedAt' => null],
             ],
             $this->payload($client->getResponse()),
@@ -289,6 +290,9 @@ final class RecommendationRunControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         $current = $this->payload($client->getResponse());
         self::assertSame('completed', $current['status']);
+        self::assertArrayHasKey('elapsedSeconds', $current);
+        self::assertIsInt($current['elapsedSeconds']);
+        self::assertGreaterThanOrEqual(0, $current['elapsedSeconds']);
         $forYou = $current['forYou'];
         self::assertIsArray($forYou);
         self::assertSame(1, $forYou['itemCount']);
@@ -311,6 +315,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'error' => null,
                 'background' => false,
                 'streamedChars' => 0,
+                'elapsedSeconds' => null,
                 'forYou' => ['itemCount' => 0, 'generatedAt' => null],
             ],
             $this->payload($client->getResponse()),
@@ -620,6 +625,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'error' => null,
                 'background' => false,
                 'streamedChars' => 0,
+                'elapsedSeconds' => null,
                 'forYou' => ['itemCount' => 0, 'generatedAt' => null],
             ],
             $this->payload($client->getResponse()),

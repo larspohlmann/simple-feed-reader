@@ -27,6 +27,7 @@ use App\Service\Recommendation\RecommendationRunCanceller;
 use App\Service\Recommendation\RecommendationRunPurger;
 use App\Service\Recommendation\RecommendationRunReport;
 use App\Service\Recommendation\RecommendationRunStarter;
+use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -53,6 +54,7 @@ final readonly class RecommendationRunController
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $aiRecommendationsLimiter,
         private RateLimiterFactoryInterface $aiRecommendationStartsLimiter,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -67,7 +69,9 @@ final readonly class RecommendationRunController
             throw new AiNotConfiguredApiException($e);
         }
 
-        return new JsonResponse(RecommendationRunStatusJson::report($report, $this->forYouSummaries->forUser($user)));
+        return new JsonResponse(
+            RecommendationRunStatusJson::report($report, $this->forYouSummaries->forUser($user), $this->clock),
+        );
     }
 
     /**
@@ -89,7 +93,9 @@ final readonly class RecommendationRunController
             throw new NoResumableRecommendationRunApiException($e);
         }
 
-        return new JsonResponse(RecommendationRunStatusJson::report($report, $this->forYouSummaries->forUser($user)));
+        return new JsonResponse(
+            RecommendationRunStatusJson::report($report, $this->forYouSummaries->forUser($user), $this->clock),
+        );
     }
 
     #[Route('/tick', name: 'api_recommendations_tick', methods: ['POST'])]
@@ -107,7 +113,9 @@ final readonly class RecommendationRunController
             throw new AiProviderApiException($e->getMessage(), $e);
         }
 
-        return new JsonResponse(RecommendationRunStatusJson::report($report, $this->forYouSummaries->forUser($user)));
+        return new JsonResponse(
+            RecommendationRunStatusJson::report($report, $this->forYouSummaries->forUser($user), $this->clock),
+        );
     }
 
     #[Route('/current', name: 'api_recommendations_current', methods: ['GET'])]
@@ -115,7 +123,9 @@ final readonly class RecommendationRunController
     {
         $report = $this->pollDriver->current($user);
 
-        return new JsonResponse(RecommendationRunStatusJson::report($report, $this->forYouSummaries->forUser($user)));
+        return new JsonResponse(
+            RecommendationRunStatusJson::report($report, $this->forYouSummaries->forUser($user), $this->clock),
+        );
     }
 
     /**
@@ -135,6 +145,7 @@ final readonly class RecommendationRunController
         return new JsonResponse(RecommendationRunStatusJson::report(
             $this->pollDriver->current($user),
             $this->forYouSummaries->forUser($user),
+            $this->clock,
         ));
     }
 
@@ -151,6 +162,7 @@ final readonly class RecommendationRunController
             RecommendationRunStatusJson::report(
                 RecommendationRunReport::none(),
                 $this->forYouSummaries->forUser($user),
+                $this->clock,
             ),
         );
     }

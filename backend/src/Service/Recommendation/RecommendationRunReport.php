@@ -30,6 +30,7 @@ final readonly class RecommendationRunReport
         public ?string $error,
         public bool $background = false,
         public int $streamedChars = 0,
+        public ?\DateTimeImmutable $startedAt = null,
     ) {
     }
 
@@ -53,6 +54,7 @@ final readonly class RecommendationRunReport
             $progress->batchesDone,
             $run->getError(),
             streamedChars: $run->getStreamedChars(),
+            startedAt: $run->getCreatedAt(),
         );
     }
 
@@ -69,6 +71,7 @@ final readonly class RecommendationRunReport
             $this->error,
             true,
             $this->streamedChars,
+            $this->startedAt,
         );
     }
 
