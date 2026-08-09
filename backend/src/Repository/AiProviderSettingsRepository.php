@@ -27,7 +27,7 @@ final class AiProviderSettingsRepository extends ServiceEntityRepository
     /** @return list<AiProviderSettings> */
     public function findAllForUser(User $user): array
     {
-        return array_values($this->findBy(['user' => $user], ['id' => 'ASC']));
+        return $this->findBy(['user' => $user], ['id' => 'ASC']);
     }
 
     public function countForUser(User $user): int

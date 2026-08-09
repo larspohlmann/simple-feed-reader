@@ -10,8 +10,10 @@ use App\Repository\AiProviderSettingsRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
+use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ModelRequiredForActivationException;
+use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\TooManyConfigurationsException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -87,7 +89,14 @@ final readonly class AiProviderConfigurator
         $sealed = $this->cipher->seal($this->identify($user), $credentials->apiKey);
         $hint = substr($credentials->apiKey, -self::HINT_LENGTH);
 
-        $configuration = new AiProviderSettings($user, $name, $credentials->baseUrl, $sealed, $hint, $this->clock->now());
+        $configuration = new AiProviderSettings(
+            $user,
+            $name,
+            $credentials->baseUrl,
+            $sealed,
+            $hint,
+            $this->clock->now(),
+        );
         $this->entityManager->persist($configuration);
         $user->addAiProviderSettings($configuration);
         $this->entityManager->flush();
@@ -124,7 +133,11 @@ final readonly class AiProviderConfigurator
     }
 
     /**
+     * @throws ApiKeyUnreadableException
+     * @throws CredentialsRejectedException
+     * @throws ModelNotOfferedException
      * @throws ModelRequiredForActivationException
+     * @throws ProviderUnreachableException
      */
     public function activate(AiProviderSettings $settings): void
     {
@@ -166,7 +179,14 @@ final readonly class AiProviderConfigurator
         $active = $user->getActiveAiProviderSettings();
 
         if (null === $active) {
-            $configuration = new AiProviderSettings($user, null, $credentials->baseUrl, $sealed, $hint, $this->clock->now());
+            $configuration = new AiProviderSettings(
+                $user,
+                null,
+                $credentials->baseUrl,
+                $sealed,
+                $hint,
+                $this->clock->now(),
+            );
             $this->entityManager->persist($configuration);
             $user->addAiProviderSettings($configuration);
             $user->setActiveAiProviderSettings($configuration);
@@ -225,7 +245,10 @@ final readonly class AiProviderConfigurator
      * Returns the descriptor rather than stashing it on a field, so the two
      * callers stay free of shared mutable state between the call and its use.
      *
+     * @throws ApiKeyUnreadableException
+     * @throws CredentialsRejectedException
      * @throws ModelNotOfferedException
+     * @throws ProviderUnreachableException
      */
     private function assertModelStillOffered(AiProviderSettings $settings, string $model): ModelDescriptor
     {
