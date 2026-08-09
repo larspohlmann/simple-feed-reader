@@ -46,6 +46,7 @@ final readonly class RecommendationSettingsResolver
                 batchCount: $row?->values()->batchCount,
             ),
             debugEnabled: $row?->values()->debugEnabled ?? false,
+            autoGenerateIntervalHours: $row?->values()->autoGenerateIntervalHours,
         );
     }
 }

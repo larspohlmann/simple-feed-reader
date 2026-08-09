@@ -28,6 +28,7 @@ final readonly class EffectiveRecommendationSettings
         public int $picksLimit,
         public RecommendationPackingSettings $packing,
         public bool $debugEnabled,
+        public ?int $autoGenerateIntervalHours = null,
     ) {
     }
 }

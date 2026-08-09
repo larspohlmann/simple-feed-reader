@@ -55,6 +55,13 @@ class RecommendationSettings
     #[ORM\Column(options: ['default' => false])]
     private bool $debugEnabled = false;
 
+    /**
+     * How often the background worker (or the maintenance cron endpoint)
+     * starts a fresh run for this account. null means "only manually" (#333).
+     */
+    #[ORM\Column(nullable: true)]
+    private ?int $autoGenerateIntervalHours = null;
+
     public function __construct(User $user)
     {
         $this->user = $user;
@@ -76,6 +83,7 @@ class RecommendationSettings
         $this->contextWindow = $values->contextWindow;
         $this->batchCount = $values->batchCount;
         $this->debugEnabled = $values->debugEnabled;
+        $this->autoGenerateIntervalHours = $values->autoGenerateIntervalHours;
     }
 
     public function values(): RecommendationSettingsValues
@@ -90,6 +98,7 @@ class RecommendationSettings
             contextWindow: $this->contextWindow,
             batchCount: $this->batchCount,
             debugEnabled: $this->debugEnabled,
+            autoGenerateIntervalHours: $this->autoGenerateIntervalHours,
         );
     }
 }
