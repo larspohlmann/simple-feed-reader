@@ -1,6 +1,6 @@
 // src/app/reader/recommendations.service.ts
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { DestroyRef, InjectionToken, Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { Observable } from 'rxjs';
@@ -37,6 +37,17 @@ const RATE_LIMIT_POLL_MS = 15000;
  *  against a server that keeps rejecting for good. */
 const MAX_RATE_LIMIT_RETRIES = 20;
 
+/** Ticker cadence for the anticipatory bar. Fine enough to read as motion,
+ *  coarse enough to be cheap; the shared hairline's own `width` transition
+ *  smooths between ticks. */
+const TICK_MS = 200;
+/** How far into the gap to the next milestone the creep is allowed to reach.
+ *  Strictly < 1 so the bar never claims a step done before the server confirms
+ *  it; the real completion snaps it the rest of the way. */
+const CREEP_CAP = 0.92;
+
+const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
+
 /** How many times in a row the poll loop has been turned away, per cause.
  *  Each cause has its own ceiling, and any progress resets both. */
 interface PollAttempts {
@@ -45,6 +56,13 @@ interface PollAttempts {
 }
 
 const NO_ATTEMPTS: PollAttempts = { transport: 0, rateLimited: 0 };
+
+/** Monotonic wall-clock in ms. Injectable so tests drive time deterministically
+ *  instead of leaning on a real clock. */
+export const MONOTONIC_NOW = new InjectionToken<() => number>('MONOTONIC_NOW', {
+  providedIn: 'root',
+  factory: () => () => performance.now(),
+});
 
 /** Why a recommendation run ended without producing a fresh for-you list. */
 export type RecommendationFailure =
@@ -63,6 +81,7 @@ export class RecommendationsService {
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(TranslocoService);
   private readonly router = inject(Router);
+  private readonly now = inject(MONOTONIC_NOW);
 
   readonly running = signal(false);
   /** True from the moment the user asks to stop until the run actually ends.
@@ -75,14 +94,71 @@ export class RecommendationsService {
    *  paths that end it without a completed batch set. */
   readonly failure = signal<RecommendationFailure | null>(null);
 
+  /** Monotonic ms when the in-flight batch began, from our point of view: set
+   *  whenever `batchesDone` changes (a completion) and on the first report. */
+  private readonly currentBatchStart = signal<number | null>(null);
+
+  /** Blended seconds-per-completed-batch (`elapsedSeconds / batchesDone`);
+   *  null until batch 1 completes, which is the honest-blank window. */
+  private readonly avgCompletedSeconds = signal<number | null>(null);
+
+  /** True while the poll loop is waiting out the 429 limiter. The ticker is
+   *  paused for the duration (see `backOffWhileRateLimited`), so the bar holds
+   *  its last value instead of creeping to its cap, and the ETA number is
+   *  swapped for a wait label rather than letting the estimate balloon while
+   *  nothing is actually progressing. */
+  readonly rateLimited = signal(false);
+
+  /** Ticker handle; the bar re-reads the clock on every bump. */
+  private tickerId: ReturnType<typeof setInterval> | null = null;
+
+  /** Bumped by the ticker so the interpolated reads recompute between polls. */
+  private readonly frame = signal(0);
+
   /** Increments once per completed run. Consumers watch this to refetch the
    *  for-you list rather than polling `report` themselves. */
   readonly completedStamp = signal(0);
 
   readonly progress = computed(() => {
-    const r = this.report();
-    if (!r || !r.batchesTotal) return 0;
-    return Math.min(1, Math.max(0, r.batchesDone / r.batchesTotal));
+    this.frame(); // re-run on every ticker bump
+    const current = this.report();
+    if (!current || !current.batchesTotal) return 0;
+
+    const base = clamp01(current.batchesDone / current.batchesTotal);
+    const average = this.avgCompletedSeconds();
+    const batchStart = this.currentBatchStart();
+    if (average === null || batchStart === null) return base; // honest blank
+
+    const next = clamp01((current.batchesDone + 1) / current.batchesTotal);
+    const secondsIntoBatch = (this.now() - batchStart) / 1000;
+    const fractionIntoBatch = clamp01(secondsIntoBatch / average);
+    return clamp01(base + fractionIntoBatch * (next - base) * CREEP_CAP);
+  });
+
+  /** Ceil seconds remaining, or `null` when there is no run, no total, the run
+   *  is not actively progressing, or no average yet exists (before batch 1). */
+  readonly etaSeconds = computed<number | null>(() => {
+    this.frame();
+    const current = this.report();
+    if (!current || !current.batchesTotal) return null;
+    if (current.status !== 'running' && current.status !== 'pending') return null;
+
+    const average = this.avgCompletedSeconds();
+    const batchStart = this.currentBatchStart();
+    if (average === null || batchStart === null) return null;
+
+    const batchesRemaining = current.batchesTotal - current.batchesDone; // includes the in-flight one
+    const secondsIntoBatch = (this.now() - batchStart) / 1000;
+    return Math.max(0, Math.ceil(average * batchesRemaining - secondsIntoBatch));
+  });
+
+  /** Drives the Task 6 label: hidden outside a run, starting before the first
+   *  average exists, waiting during a 429 backoff, eta otherwise. */
+  readonly etaState = computed<'hidden' | 'starting' | 'waiting' | 'eta'>(() => {
+    if (!this.running()) return 'hidden';
+    if (this.rateLimited()) return 'waiting';
+    if (this.etaSeconds() === null) return 'starting';
+    return 'eta';
   });
 
   /** True while a background worker owns this run's execution, so the
@@ -97,6 +173,10 @@ export class RecommendationsService {
   /** The surviving for-you list's generation time (ISO), for the list
    *  header's "Last refreshed" hint. */
   readonly generatedAt = computed(() => this.report()?.forYou.generatedAt ?? null);
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.stopTicker());
+  }
 
   /** Starts a new run and polls it to completion. */
   start(): void {
@@ -117,6 +197,7 @@ export class RecommendationsService {
   private beginRun(source: Observable<RecommendationRunReport>): void {
     if (this.running()) return;
     this.running.set(true);
+    this.startTicker();
     this.stopping.set(false);
     this.report.set(null);
     this.failure.set(null);
@@ -146,7 +227,7 @@ export class RecommendationsService {
    *  second error path for what is, from here, a read-only side effect. */
   refreshStatus(): void {
     this.api.currentRecommendations().subscribe({
-      next: (r) => this.report.set(r),
+      next: (r) => this.applyReport(r),
       error: () => {
         // Best-effort; see the docblock above.
       },
@@ -160,9 +241,10 @@ export class RecommendationsService {
   resume(): void {
     this.api.currentRecommendations().subscribe({
       next: (r) => {
-        this.report.set(r); // even a finished run carries the for-you summary the sidebar needs
+        this.applyReport(r); // even a finished run carries the for-you summary the sidebar needs
         if (r.status !== 'pending' && r.status !== 'running') return;
         this.running.set(true);
+        this.startTicker();
         this.failure.set(null);
         this.step(NO_ATTEMPTS);
       },
@@ -194,8 +276,28 @@ export class RecommendationsService {
     });
   }
 
+  /** The single place a fresh report lands: it re-blends the average and
+   *  re-anchors the current batch whenever `batchesDone` moves, clears the
+   *  rate-limited flag on any live report, then stores the report. */
+  private applyReport(next: RecommendationRunReport): void {
+    const previousDone = this.report()?.batchesDone ?? -1;
+    if (next.batchesDone !== previousDone) {
+      this.avgCompletedSeconds.set(
+        next.batchesDone >= 1 && next.elapsedSeconds !== null
+          ? next.elapsedSeconds / next.batchesDone
+          : null,
+      );
+      this.currentBatchStart.set(this.now());
+    }
+    if (next.status === 'running' || next.status === 'pending') {
+      this.rateLimited.set(false);
+      this.startTicker(); // resume the bar if a rate-limit backoff had paused it
+    }
+    this.report.set(next);
+  }
+
   private onReport(r: RecommendationRunReport): void {
-    this.report.set(r);
+    this.applyReport(r);
     switch (r.status) {
       case 'pending':
       case 'running':
@@ -260,6 +362,8 @@ export class RecommendationsService {
       this.stopWithHttpError(e);
       return;
     }
+    this.stopTicker(); // freeze the bar: with no ticker bump, progress() holds its last value
+    this.rateLimited.set(true);
     this.stepLater({ ...attempts, rateLimited: attempts.rateLimited + 1 }, RATE_LIMIT_POLL_MS);
   }
 
@@ -281,6 +385,19 @@ export class RecommendationsService {
   private finish(): void {
     this.running.set(false);
     this.stopping.set(false);
+    this.rateLimited.set(false);
+    this.stopTicker();
+  }
+
+  private startTicker(): void {
+    if (this.tickerId !== null) return;
+    this.tickerId = setInterval(() => this.frame.update((n) => n + 1), TICK_MS);
+  }
+
+  private stopTicker(): void {
+    if (this.tickerId === null) return;
+    clearInterval(this.tickerId);
+    this.tickerId = null;
   }
 
   private navigateToForYou(): void {

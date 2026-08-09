@@ -212,6 +212,10 @@ final class RecommendationRunControllerTest extends WebTestCase
         $client->request('POST', '/api/recommendations/runs', server: $headers);
 
         self::assertResponseIsSuccessful();
+        $payload = $this->payload($client->getResponse());
+        self::assertIsInt($payload['elapsedSeconds']);
+        self::assertGreaterThanOrEqual(0, $payload['elapsedSeconds']);
+        unset($payload['elapsedSeconds']);
         self::assertSame(
             [
                 'status' => 'pending',
@@ -222,7 +226,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'streamedChars' => 0,
                 'forYou' => ['itemCount' => 0, 'generatedAt' => null],
             ],
-            $this->payload($client->getResponse()),
+            $payload,
         );
     }
 
@@ -289,6 +293,9 @@ final class RecommendationRunControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         $current = $this->payload($client->getResponse());
         self::assertSame('completed', $current['status']);
+        self::assertArrayHasKey('elapsedSeconds', $current);
+        self::assertIsInt($current['elapsedSeconds']);
+        self::assertGreaterThanOrEqual(0, $current['elapsedSeconds']);
         $forYou = $current['forYou'];
         self::assertIsArray($forYou);
         self::assertSame(1, $forYou['itemCount']);
@@ -311,6 +318,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'error' => null,
                 'background' => false,
                 'streamedChars' => 0,
+                'elapsedSeconds' => null,
                 'forYou' => ['itemCount' => 0, 'generatedAt' => null],
             ],
             $this->payload($client->getResponse()),
@@ -620,6 +628,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'error' => null,
                 'background' => false,
                 'streamedChars' => 0,
+                'elapsedSeconds' => null,
                 'forYou' => ['itemCount' => 0, 'generatedAt' => null],
             ],
             $this->payload($client->getResponse()),

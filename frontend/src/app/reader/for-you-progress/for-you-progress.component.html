@@ -1,0 +1,17 @@
+@if (recs.running()) {
+  <p class="for-you-progress" role="status" aria-live="polite">
+    <span>{{ 'reader.forYouProgress' | transloco: count() }}</span>
+    @if (eta(); as phrase) {
+      <span class="eta"> · {{ phrase.key | transloco: phrase.params }}</span>
+    }
+  </p>
+  <div
+    class="track"
+    role="progressbar"
+    aria-valuemin="0"
+    aria-valuemax="100"
+    [attr.aria-valuenow]="percent()"
+  >
+    <span [style.width.%]="percent()"></span>
+  </div>
+}

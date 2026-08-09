@@ -84,9 +84,6 @@
   <main class="main" [class.split]="paneMode()">
     @if (paneMode()) {
       <section class="list">
-        @if (selection().kind === 'for-you') {
-          <app-progress-hairline [active]="recs.running()" [value]="recs.progress()" />
-        }
         <app-entry-list
           [layout]="layout.mode()"
           [title]="title()"
@@ -129,9 +126,6 @@
            this list drives the bar's hide-on-scroll — its scrolled output is
            the bar's one and only scroll source (#128). -->
       <section class="list">
-        @if (selection().kind === 'for-you') {
-          <app-progress-hairline [active]="recs.running()" [value]="recs.progress()" />
-        }
         <app-entry-list
           [layout]="layout.mode()"
           [title]="title()"
@@ -207,12 +201,11 @@
             (recs.stopping() ? 'reader.forYouStopping' : 'reader.forYouStop') | transloco
           }}</span>
         </app-button>
-        <!-- The run's live batch count, back in the header under the button. It
-             is desktop-only and the button is anchored to the header's top edge,
-             so this line grows downward without shifting the button (#325). -->
-        <p class="for-you-progress" role="status" aria-live="polite">
-          {{ 'reader.forYouProgress' | transloco: forYouProgress() }}
-        </p>
+        <!-- The run's live count, ETA and progress bar, back in the header under
+             the button. It is desktop-only and the button is anchored to the
+             header's top edge, so this block grows downward without shifting the
+             button (#325, #336). -->
+        <app-for-you-progress />
       } @else {
         <app-button
           variant="primary"

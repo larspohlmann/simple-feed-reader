@@ -717,6 +717,7 @@ describe('ReaderShellComponent', () => {
     error: null,
     background: false,
     streamedChars: 0,
+    elapsedSeconds: null,
     forYou: { itemCount: 0, generatedAt: null },
   };
 
@@ -727,6 +728,7 @@ describe('ReaderShellComponent', () => {
     error: 'The AI provider at http://x/v1 failed: That provider answered with status 400.',
     background: false,
     streamedChars: 0,
+    elapsedSeconds: null,
     forYou: { itemCount: 0, generatedAt: null },
   };
 

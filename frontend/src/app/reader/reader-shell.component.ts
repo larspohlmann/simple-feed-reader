@@ -47,6 +47,7 @@ import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { CatalogStore } from '../discover/catalog.store';
 import { OnboardingSkip } from '../discover/onboarding-skip';
 import { ProgressHairlineComponent } from '../shared/progress-hairline/progress-hairline.component';
+import { ForYouProgressComponent } from './for-you-progress/for-you-progress.component';
 import { IconComponent } from '../shared/icon/icon.component';
 import { ButtonComponent } from '../shared/button/button.component';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -60,6 +61,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
     ReaderViewComponent,
     DrawerSwipeDirective,
     ProgressHairlineComponent,
+    ForYouProgressComponent,
     IconComponent,
     ButtonComponent,
     RouterLink,
@@ -153,13 +155,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!report) return { done: 0, total: 0 };
     return { done: report.total - report.remaining, total: report.total };
   });
-
-  /** The terse batch count the header shows under the Stop button while a run
-   *  is in flight — `0 of 0` before the first tick reports a batch total. */
-  readonly forYouProgress = computed(() => ({
-    done: this.recs.report()?.batchesDone ?? 0,
-    total: this.recs.report()?.batchesTotal ?? 0,
-  }));
 
   private readonly params = toSignal(this.route.queryParamMap, {
     initialValue: convertToParamMap({}),
