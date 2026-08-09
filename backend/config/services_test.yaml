@@ -361,6 +361,18 @@ services:
         autowire: true
         public: true
 
+    # ForYouSweepTest fetches this to drive startDueRuns()/sweepOnce()
+    # directly against the real finder/starter/advancer/repository graph, the
+    # same "no mocks" stance as DueRecommendationRunFinder above -- its own
+    # collaborators are final classes that cannot be doubled. Its only
+    # production caller arrives with the worker handler and cron endpoint in
+    # a later task, so until then the compiler would inline it away and the
+    # test container could not fetch it. Same `autowire` caveat as the
+    # entries above.
+    App\Service\Recommendation\ForYouSweep:
+        autowire: true
+        public: true
+
     # WorkerScheduleWiringTest fetches this to prove the container actually
     # wires the `worker` schedule with the three decided entries in order —
     # an autoconfigured #[AsSchedule] service builds fine even with an entry
