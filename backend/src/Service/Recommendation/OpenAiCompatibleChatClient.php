@@ -158,9 +158,11 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
 
             $reader->consume($content);
             $this->guardRetainedSize($reader);
-            $observer->streamProgressed(
-                new CompletionStreamProgress($reader->assistantContent() ?? '', $reader->wireBytes()),
-            );
+            $observer->streamProgressed(new CompletionStreamProgress(
+                $reader->assistantContent() ?? '',
+                $reader->wireBytes(),
+                $reader->finishReason(),
+            ));
         }
     }
 

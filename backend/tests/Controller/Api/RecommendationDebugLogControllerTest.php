@@ -81,6 +81,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
             'done text',
             RecommendationRunLog::VERDICT_USABLE,
             1_900_000,
+            'stop',
             new \DateTimeImmutable('2026-08-08T10:00:05Z'),
         );
         $open = $this->fixtures()->log(
@@ -102,6 +103,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         self::assertSame(
             [
                 'id' => $finished->getId(),
+                'runId' => $run->getId(),
                 'phase' => 'batch',
                 'batchNumber' => 1,
                 'attempt' => 1,
@@ -112,6 +114,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
                 'createdAt' => (new \DateTimeImmutable('2026-08-08T10:00:00Z'))->format(\DATE_ATOM),
                 'finishedAt' => (new \DateTimeImmutable('2026-08-08T10:00:05Z'))->format(\DATE_ATOM),
                 'errorDetail' => null,
+                'finishReason' => 'stop',
                 'streamingText' => null,
             ],
             $entries[0],
@@ -119,6 +122,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         self::assertSame(
             [
                 'id' => $open->getId(),
+                'runId' => $run->getId(),
                 'phase' => 'batch',
                 'batchNumber' => 2,
                 'attempt' => 1,
@@ -129,6 +133,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
                 'createdAt' => (new \DateTimeImmutable('2026-08-08T10:00:06Z'))->format(\DATE_ATOM),
                 'finishedAt' => null,
                 'errorDetail' => null,
+                'finishReason' => null,
                 'streamingText' => '',
             ],
             $entries[1],
@@ -189,6 +194,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
             'res',
             RecommendationRunLog::VERDICT_USABLE,
             4_096,
+            'length',
             new \DateTimeImmutable('2026-08-08T10:00:05Z'),
         );
         $this->em()->flush();
@@ -208,6 +214,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
                 'requestBody' => 'req',
                 'responseText' => 'res',
                 'wireBytes' => 4_096,
+                'finishReason' => 'length',
             ],
             $this->payload($client->getResponse()),
         );

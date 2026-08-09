@@ -15,9 +15,9 @@ use App\Entity\RecommendationRunLog;
 final class RecommendationDebugLogJson
 {
     /**
-     * @param list<array{id: int, phase: string, batchNumber: ?int, attempt: int,
+     * @param list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
      *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
-     *     createdAt: string, finishedAt: ?string, errorDetail: ?string}> $rows
+     *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}> $rows
      * @param array<int, string> $streamingTextById
      *
      * @return array{entries: list<array<string, mixed>>, run: ?array<string, mixed>}
@@ -60,6 +60,7 @@ final class RecommendationDebugLogJson
             'requestBody' => $log->getRequestBody(),
             'responseText' => $log->getResponseText(),
             'wireBytes' => $log->getWireBytes(),
+            'finishReason' => $log->getFinishReason(),
         ];
     }
 

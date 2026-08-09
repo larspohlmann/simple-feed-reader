@@ -7,6 +7,7 @@ namespace App\Tests\Service\Recommendation;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Service\Recommendation\CompletionStreamProgress;
 use App\Service\Recommendation\RecordedCall;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -82,6 +83,40 @@ final class RecordedCallTest extends DbTestCase
         $call->abortAfterTransportFailure(null);
 
         self::assertNull($this->freshLog()->getErrorDetail());
+    }
+
+    public function testASettledCallRecordsTheProvidersFinishReason(): void
+    {
+        $call = $this->call();
+        $call->streamProgressed(new CompletionStreamProgress('partial answer', 100, 'length'));
+
+        $call->finishUsable('the answer');
+
+        self::assertSame('length', $this->freshLog()->getFinishReason());
+    }
+
+    /**
+     * The reason the provider stamped before the stream died is exactly what
+     * explains the death: a `length` here turns an empty "answered without a
+     * completion" row into "the answer was truncated by max_tokens" (#327).
+     */
+    public function testATransportFailureKeepsTheFinishReasonSeenBeforeItDied(): void
+    {
+        $call = $this->call();
+        $call->streamProgressed(new CompletionStreamProgress('', 100, 'length'));
+
+        $call->abortAfterTransportFailure('cURL error 28');
+
+        self::assertSame('length', $this->freshLog()->getFinishReason());
+    }
+
+    public function testACallThatNeverHeardAFinishReasonRecordsNone(): void
+    {
+        $call = $this->call();
+
+        $call->finishUsable('the answer');
+
+        self::assertNull($this->freshLog()->getFinishReason());
     }
 
     private function call(): RecordedCall

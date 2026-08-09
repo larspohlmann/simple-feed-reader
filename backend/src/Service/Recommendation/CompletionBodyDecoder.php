@@ -16,28 +16,82 @@ final readonly class CompletionBodyDecoder
 {
     public function envelopeContent(string $body): ?string
     {
-        return $this->choiceContent($body, 'message');
+        return $this->contentOf($this->firstChoice($body), 'message');
     }
 
     public function deltaContent(string $payload): ?string
     {
-        return $this->choiceContent($payload, 'delta');
+        return $this->contentOf($this->firstChoice($payload), 'delta');
     }
 
     /**
-     * Both shapes carry the answer at `choices[0].<key>.content` and diverge
-     * only in that one key: an SSE event names it `delta`, a whole envelope
-     * `message`. Every step is guarded because the provider is untrusted —
-     * any of them can be absent or the wrong type.
+     * Why the provider stopped generating, stamped on the choice itself:
+     * `length` means `max_tokens` truncated the answer, `stop` a natural end.
+     * Null while the choice is still streaming. Both shapes carry it in the
+     * same place, so one reader covers stream events and whole envelopes alike.
      */
-    private function choiceContent(string $json, string $choiceKey): ?string
+    public function finishReason(string $json): ?string
+    {
+        return $this->finishReasonOf($this->firstChoice($json));
+    }
+
+    /**
+     * Both fields of one stream event from a single decode. The reader reads
+     * an event's answer fragment and its finish reason together, so decoding
+     * once here — rather than once per field — halves the parse work over a
+     * reasoning model's thousands of thinking events (#327).
+     *
+     * @return array{content: ?string, finishReason: ?string}
+     */
+    public function streamEvent(string $payload): array
+    {
+        $choice = $this->firstChoice($payload);
+
+        return [
+            'content' => $this->contentOf($choice, 'delta'),
+            'finishReason' => $this->finishReasonOf($choice),
+        ];
+    }
+
+    /**
+     * The first choice as an array, or null when the shape is wrong. Every
+     * step is guarded because the provider is untrusted — any of them can be
+     * absent or the wrong type. Shared so the decode-and-walk exists once.
+     *
+     * @return array<mixed>|null
+     */
+    private function firstChoice(string $json): ?array
     {
         $decoded = json_decode($json, true);
         $choices = \is_array($decoded) ? ($decoded['choices'] ?? null) : null;
         $firstChoice = \is_array($choices) ? ($choices[0] ?? null) : null;
-        $answer = \is_array($firstChoice) ? ($firstChoice[$choiceKey] ?? null) : null;
+
+        return \is_array($firstChoice) ? $firstChoice : null;
+    }
+
+    /**
+     * The answer sits at `<key>.content` and the two shapes diverge only in
+     * that one key: an SSE event names it `delta`, a whole envelope `message`.
+     *
+     * @param array<mixed>|null $choice
+     */
+    private function contentOf(?array $choice, string $choiceKey): ?string
+    {
+        if (null === $choice) {
+            return null;
+        }
+
+        $answer = \is_array($choice[$choiceKey] ?? null) ? $choice[$choiceKey] : null;
         $content = \is_array($answer) ? ($answer['content'] ?? null) : null;
 
         return \is_string($content) ? $content : null;
+    }
+
+    /** @param array<mixed>|null $choice */
+    private function finishReasonOf(?array $choice): ?string
+    {
+        $reason = null === $choice ? null : ($choice['finish_reason'] ?? null);
+
+        return \is_string($reason) ? $reason : null;
     }
 }

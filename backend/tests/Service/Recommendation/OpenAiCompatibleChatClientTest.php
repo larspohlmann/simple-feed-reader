@@ -334,6 +334,25 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     }
 
     /**
+     * The #327 seam. The provider stamps `length` on the choice when
+     * `max_tokens` truncated the answer, and the client must relay it to the
+     * observer -- that is what lets the debug log record why the answer stopped
+     * rather than only that it did.
+     */
+    public function testTheObserverIsToldWhyGenerationStopped(): void
+    {
+        $answer = "data: {\"choices\":[{\"delta\":{\"content\":\"{}\"}}]}\n\n";
+        $finish = "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"length\"}]}\n\n";
+        $client = $this->clientAnswering(new MockResponse([$answer, $finish]));
+        $seen = $this->recordingObserver();
+
+        $client->complete($this->credentials(), $this->request(), $seen);
+
+        self::assertNull($seen->reports[0]->finishReason);
+        self::assertSame('length', $seen->reports[\count($seen->reports) - 1]->finishReason);
+    }
+
+    /**
      * The #320 regression, at the seam that produced it. A reasoning model
      * streams its thinking as deltas with no content: the wire count must
      * climb while the answer stays empty, and the call must not be refused

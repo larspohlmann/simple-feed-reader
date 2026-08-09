@@ -35,6 +35,13 @@ final class CompletionStreamReaderTest extends TestCase
         return 'data: ' . json_encode($event, \JSON_THROW_ON_ERROR) . "\n\n";
     }
 
+    private function finishEvent(string $reason): string
+    {
+        $event = ['choices' => [['delta' => [], 'finish_reason' => $reason]]];
+
+        return 'data: ' . json_encode($event, \JSON_THROW_ON_ERROR) . "\n\n";
+    }
+
     public function testJoinsTheContentDeltasOfAStreamedAnswer(): void
     {
         $reader = $this->reader();
@@ -45,6 +52,34 @@ final class CompletionStreamReaderTest extends TestCase
         $reader->consume('data: [DONE]' . "\n\n");
 
         self::assertSame('{"recommendations":[]}', $reader->assistantContent());
+    }
+
+    public function testTheReaderRemembersWhyGenerationStopped(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume($this->contentEvent('{}'));
+        self::assertNull($reader->finishReason());
+
+        $reader->consume($this->finishEvent('length'));
+        $reader->consume('data: [DONE]' . "\n\n");
+
+        self::assertSame('length', $reader->finishReason());
+    }
+
+    /**
+     * A later event without a finish reason must not erase the one already
+     * seen: providers stamp the reason then send a trailing usage-only event,
+     * and the reason has to survive it.
+     */
+    public function testAKnownFinishReasonSurvivesALaterReasonlessEvent(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume($this->finishEvent('stop'));
+        $reader->consume('data: {"choices":[],"usage":{"total_tokens":9}}' . "\n\n");
+
+        self::assertSame('stop', $reader->finishReason());
     }
 
     /**
