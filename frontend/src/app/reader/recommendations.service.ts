@@ -1,6 +1,6 @@
 // src/app/reader/recommendations.service.ts
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { InjectionToken, Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { Observable } from 'rxjs';
@@ -46,6 +46,13 @@ interface PollAttempts {
 
 const NO_ATTEMPTS: PollAttempts = { transport: 0, rateLimited: 0 };
 
+/** Monotonic wall-clock in ms. Injectable so tests drive time deterministically
+ *  instead of leaning on a real clock. */
+export const MONOTONIC_NOW = new InjectionToken<() => number>('MONOTONIC_NOW', {
+  providedIn: 'root',
+  factory: () => () => performance.now(),
+});
+
 /** Why a recommendation run ended without producing a fresh for-you list. */
 export type RecommendationFailure =
   | { kind: 'failed'; error: string | null } // the backend gave up on the run itself
@@ -63,6 +70,7 @@ export class RecommendationsService {
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(TranslocoService);
   private readonly router = inject(Router);
+  private readonly now = inject(MONOTONIC_NOW);
 
   readonly running = signal(false);
   /** True from the moment the user asks to stop until the run actually ends.
@@ -74,6 +82,19 @@ export class RecommendationsService {
   /** Null while a run is doing its job. Set exactly once per run, on the
    *  paths that end it without a completed batch set. */
   readonly failure = signal<RecommendationFailure | null>(null);
+
+  /** Monotonic ms when the in-flight batch began, from our point of view: set
+   *  whenever `batchesDone` changes (a completion) and on the first report. */
+  private readonly currentBatchStart = signal<number | null>(null);
+
+  /** Blended seconds-per-completed-batch (`elapsedSeconds / batchesDone`);
+   *  null until batch 1 completes, which is the honest-blank window. */
+  private readonly avgCompletedSeconds = signal<number | null>(null);
+
+  /** True while the poll loop is waiting out the 429 limiter. Freezes the bar
+   *  and swaps the ETA number for a wait label rather than letting the estimate
+   *  balloon while nothing is actually progressing. */
+  readonly rateLimited = signal(false);
 
   /** Increments once per completed run. Consumers watch this to refetch the
    *  for-you list rather than polling `report` themselves. */
@@ -146,7 +167,7 @@ export class RecommendationsService {
    *  second error path for what is, from here, a read-only side effect. */
   refreshStatus(): void {
     this.api.currentRecommendations().subscribe({
-      next: (r) => this.report.set(r),
+      next: (r) => this.applyReport(r),
       error: () => {
         // Best-effort; see the docblock above.
       },
@@ -160,7 +181,7 @@ export class RecommendationsService {
   resume(): void {
     this.api.currentRecommendations().subscribe({
       next: (r) => {
-        this.report.set(r); // even a finished run carries the for-you summary the sidebar needs
+        this.applyReport(r); // even a finished run carries the for-you summary the sidebar needs
         if (r.status !== 'pending' && r.status !== 'running') return;
         this.running.set(true);
         this.failure.set(null);
@@ -194,8 +215,27 @@ export class RecommendationsService {
     });
   }
 
+  /** The single place a fresh report lands: it re-blends the average and
+   *  re-anchors the current batch whenever `batchesDone` moves, clears the
+   *  rate-limited flag on any live report, then stores the report. */
+  private applyReport(next: RecommendationRunReport): void {
+    const previousDone = this.report()?.batchesDone ?? -1;
+    if (next.batchesDone !== previousDone) {
+      this.avgCompletedSeconds.set(
+        next.batchesDone >= 1 && next.elapsedSeconds !== null
+          ? next.elapsedSeconds / next.batchesDone
+          : null,
+      );
+      this.currentBatchStart.set(this.now());
+    }
+    if (next.status === 'running' || next.status === 'pending') {
+      this.rateLimited.set(false);
+    }
+    this.report.set(next);
+  }
+
   private onReport(r: RecommendationRunReport): void {
-    this.report.set(r);
+    this.applyReport(r);
     switch (r.status) {
       case 'pending':
       case 'running':
@@ -260,6 +300,7 @@ export class RecommendationsService {
       this.stopWithHttpError(e);
       return;
     }
+    this.rateLimited.set(true);
     this.stepLater({ ...attempts, rateLimited: attempts.rateLimited + 1 }, RATE_LIMIT_POLL_MS);
   }
 
@@ -281,6 +322,7 @@ export class RecommendationsService {
   private finish(): void {
     this.running.set(false);
     this.stopping.set(false);
+    this.rateLimited.set(false);
   }
 
   private navigateToForYou(): void {

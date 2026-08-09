@@ -6,7 +6,7 @@ import { Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { API_BASE_URL } from '../core/api';
 import { ToastService } from '../shared/toast/toast.service';
-import { RecommendationsService } from './recommendations.service';
+import { MONOTONIC_NOW, RecommendationsService } from './recommendations.service';
 import { RecommendationRunReport } from './models';
 
 const report = (over: Partial<RecommendationRunReport>): RecommendationRunReport => ({
@@ -26,10 +26,12 @@ describe('RecommendationsService', () => {
   let ctrl: HttpTestingController;
   let toast: { show: jest.Mock };
   let navigate: jest.Mock;
+  let nowMs = 0;
 
   beforeEach(() => {
     toast = { show: jest.fn() };
     navigate = jest.fn();
+    nowMs = 0;
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -38,6 +40,7 @@ describe('RecommendationsService', () => {
         { provide: ToastService, useValue: toast },
         { provide: TranslocoService, useValue: { translate: (k: string) => k } },
         { provide: Router, useValue: { navigate } },
+        { provide: MONOTONIC_NOW, useValue: () => nowMs },
       ],
     });
     svc = TestBed.inject(RecommendationsService);
@@ -425,6 +428,53 @@ describe('RecommendationsService', () => {
         ctrl.verify(); // the loop gave up rather than polling on
         expect(svc.running()).toBe(false);
         expect(svc.failure()?.kind).toBe('http');
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('sets rateLimited during a 429 backoff and clears it once a live report resumes', () => {
+      jest.useFakeTimers();
+      try {
+        svc.start();
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs')
+          .flush(report({ status: 'pending' }));
+
+        fail429Tick();
+        expect(svc.rateLimited()).toBe(true);
+
+        jest.advanceTimersByTime(15000);
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/tick')
+          .flush(report({ status: 'running', batchesTotal: 2, batchesDone: 1 }));
+        expect(svc.rateLimited()).toBe(false);
+
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/tick')
+          .flush(report({ status: 'completed', batchesTotal: 2, batchesDone: 2 }));
+        expect(svc.rateLimited()).toBe(false);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('clears rateLimited in finish() when the run ends while still rate-limited', () => {
+      jest.useFakeTimers();
+      try {
+        svc.start();
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs')
+          .flush(report({ status: 'pending' }));
+
+        for (let attempt = 1; attempt <= 20; attempt++) {
+          fail429Tick();
+          jest.advanceTimersByTime(15000);
+        }
+        fail429Tick();
+
+        ctrl.verify(); // the loop gave up rather than polling on
+        expect(svc.rateLimited()).toBe(false);
       } finally {
         jest.useRealTimers();
       }
