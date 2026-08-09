@@ -25,11 +25,10 @@ services:
         public: true
 
     # AiConfigurationForUserTest drives require() directly against the real
-    # repository and entity manager to prove the ownership-scoped 404. Its
-    # only production caller is AiSettingsController, wired later on this
-    # branch, so until then the compiler would inline it away and the test
-    # container could not fetch it. Same `autowire` caveat as the entries
-    # above.
+    # repository and entity manager to prove the ownership-scoped 404. Public
+    # so the test container's `self::getContainer()->get(...)` can fetch it
+    # directly, which the container refuses on a private service. Same
+    # `autowire` caveat as the entries above.
     App\Service\Ai\AiConfigurationForUser:
         autowire: true
         public: true
