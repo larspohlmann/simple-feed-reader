@@ -235,6 +235,9 @@ export interface RecommendationRunReport {
  *  final dedup pass. `verdict` is null while the call is still streaming. */
 export interface DebugLogEntry {
   id: number;
+  /** The run this call belongs to. The log can hold more than one run (a
+   *  resumed run keeps appending), so the panel groups rows by it. */
+  runId: number;
   phase: 'batch' | 'dedup';
   batchNumber: number | null;
   attempt: number;
@@ -250,6 +253,9 @@ export interface DebugLogEntry {
   /** The transport exception's message, set only on a `transport-failed`
    *  verdict -- null on every other row, including a completed run. */
   errorDetail: string | null;
+  /** Why the provider stopped generating: `length` when `max_tokens` truncated
+   *  the answer, `stop` on a natural end. Null until the provider stamps it. */
+  finishReason: string | null;
 }
 
 /** The latest for-you run, as the debug log's summary strip shows it: distinct
@@ -276,4 +282,7 @@ export interface DebugLogDetail {
   requestBody: string;
   responseText: string;
   wireBytes: number;
+  /** Why the provider stopped generating: `length` when `max_tokens` truncated
+   *  the answer, `stop` on a natural end. Null until the provider stamps it. */
+  finishReason: string | null;
 }

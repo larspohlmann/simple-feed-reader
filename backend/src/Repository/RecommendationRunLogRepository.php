@@ -27,19 +27,20 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
     }
 
     /**
-     * @return list<array{id: int, phase: string, batchNumber: ?int, attempt: int,
+     * @return list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
      *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
-     *     createdAt: string, finishedAt: ?string, errorDetail: ?string}>
+     *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}>
      */
     public function listForUser(User $user): array
     {
-        /** @var list<array{id: int, phase: string, batchNumber: ?int, attempt: int,
+        /** @var list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
          *     verdict: ?string, requestBytes: int|string, responseBytes: int|string,
          *     wireBytes: int, createdAt: \DateTimeImmutable, finishedAt: ?\DateTimeImmutable,
-         *     errorDetail: ?string}> $rows */
+         *     errorDetail: ?string, finishReason: ?string}> $rows */
         $rows = $this->createQueryBuilder('l')
             ->select(
                 'l.id AS id',
+                'IDENTITY(l.run) AS runId',
                 'l.phase AS phase',
                 'l.batchNumber AS batchNumber',
                 'l.attempt AS attempt',
@@ -50,6 +51,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
                 'l.createdAt AS createdAt',
                 'l.finishedAt AS finishedAt',
                 'l.errorDetail AS errorDetail',
+                'l.finishReason AS finishReason',
             )
             ->join('l.run', 'r')
             ->where('r.user = :user')
@@ -62,6 +64,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
         return array_map(
             static fn (array $row): array => [
                 'id' => $row['id'],
+                'runId' => (int) $row['runId'],
                 'phase' => $row['phase'],
                 'batchNumber' => $row['batchNumber'],
                 'attempt' => $row['attempt'],
@@ -72,6 +75,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
                 'createdAt' => $row['createdAt']->format(\DATE_ATOM),
                 'finishedAt' => $row['finishedAt']?->format(\DATE_ATOM),
                 'errorDetail' => $row['errorDetail'],
+                'finishReason' => $row['finishReason'],
             ],
             $rows,
         );

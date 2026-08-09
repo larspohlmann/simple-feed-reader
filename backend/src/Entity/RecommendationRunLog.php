@@ -82,6 +82,16 @@ class RecommendationRunLog
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $errorDetail = null;
 
+    /**
+     * The provider's own account of why generation stopped — `length` when
+     * `max_tokens` truncated the answer, `stop` on a natural end. Null until
+     * the provider stamps it. It is what tells a truncated answer apart from a
+     * model that merely rambled, the diagnosis the log could not make before
+     * #327.
+     */
+    #[ORM\Column(length: 32, nullable: true)]
+    private ?string $finishReason = null;
+
     public function __construct(
         RecommendationRun $run,
         string $phase,
@@ -158,16 +168,28 @@ class RecommendationRunLog
         return $this->errorDetail;
     }
 
+    public function getFinishReason(): ?string
+    {
+        return $this->finishReason;
+    }
+
     /**
      * The call ended: the final decoded text replaces whatever partial state
-     * the checkpoints wrote, the verdict says how the reply was judged, and
-     * the byte count says what it cost on the wire to get there.
+     * the checkpoints wrote, the verdict says how the reply was judged, the
+     * byte count says what it cost on the wire to get there, and the finish
+     * reason says why the provider stopped.
      */
-    public function finish(string $responseText, string $verdict, int $wireBytes, \DateTimeImmutable $finishedAt): void
-    {
+    public function finish(
+        string $responseText,
+        string $verdict,
+        int $wireBytes,
+        ?string $finishReason,
+        \DateTimeImmutable $finishedAt,
+    ): void {
         $this->responseText = $responseText;
         $this->verdict = $verdict;
         $this->wireBytes = $wireBytes;
+        $this->finishReason = $finishReason;
         $this->finishedAt = $finishedAt;
     }
 }

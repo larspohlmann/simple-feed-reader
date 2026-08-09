@@ -52,6 +52,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
             'decoded text',
             RecommendationRunLog::VERDICT_USABLE,
             41_000,
+            'stop',
             new \DateTimeImmutable('2026-08-08T10:00:05Z'),
         );
         $this->fixtures->log($run, RecommendationRunLog::PHASE_DEDUP, null, 1, 'req-body-longer');
@@ -63,6 +64,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
             [
                 [
                     'id' => $finished->getId(),
+                    'runId' => $run->getId(),
                     'phase' => 'batch',
                     'batchNumber' => 1,
                     'attempt' => 1,
@@ -73,9 +75,11 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
                     'createdAt' => (new \DateTimeImmutable('2026-08-08T10:00:00Z'))->format(\DATE_ATOM),
                     'finishedAt' => (new \DateTimeImmutable('2026-08-08T10:00:05Z'))->format(\DATE_ATOM),
                     'errorDetail' => null,
+                    'finishReason' => 'stop',
                 ],
                 [
                     'id' => $rows[1]['id'],
+                    'runId' => $run->getId(),
                     'phase' => 'dedup',
                     'batchNumber' => null,
                     'attempt' => 1,
@@ -86,6 +90,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
                     'createdAt' => (new \DateTimeImmutable('2026-08-08T10:00:00Z'))->format(\DATE_ATOM),
                     'finishedAt' => null,
                     'errorDetail' => null,
+                    'finishReason' => null,
                 ],
             ],
             $rows,
@@ -100,6 +105,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
             'finished text',
             RecommendationRunLog::VERDICT_UNUSABLE,
             7,
+            'length',
             new \DateTimeImmutable('2026-08-08T10:00:05Z'),
         );
         $streaming = $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 2, 1, 'r');

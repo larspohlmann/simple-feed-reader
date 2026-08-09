@@ -5,6 +5,7 @@ import {
   DestroyRef,
   OnInit,
   WritableSignal,
+  computed,
   effect,
   inject,
   signal,
@@ -16,9 +17,16 @@ import { ReaderApi } from '../reader/reader-api';
 import { bytesToKb, formatTime } from '../reader/format';
 import { DebugLogDetail, DebugLogEntry, DebugLogRunSummary } from '../reader/models';
 import { RecommendationsService } from '../reader/recommendations.service';
-import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
+import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
 
 const POLL_MS = 2000;
+
+/** The calls of one run, as the panel groups them: a header line plus the
+ *  rows, newest run first. */
+export interface RunGroup {
+  runId: number;
+  entries: DebugLogEntry[];
+}
 
 /** The #309 debug log: what each provider call sent and what streamed
  *  back, ~2 s fresh while a run is in flight. Server-side truth only -- the
@@ -33,7 +41,7 @@ const POLL_MS = 2000;
 @Component({
   selector: 'app-recommendation-debug-log',
   standalone: true,
-  imports: [DisclosureComponent, TranslocoModule],
+  imports: [SettingsCardComponent, TranslocoModule],
   templateUrl: './recommendation-debug-log.component.html',
   styleUrl: './recommendation-debug-log.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -44,6 +52,23 @@ export class RecommendationDebugLogComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly entries = signal<DebugLogEntry[]>([]);
+  /** The entries clustered by run, newest run first. The log can span more
+   *  than one run (a resumed run keeps appending), and a flat list mixes them;
+   *  grouping keeps each run's calls together under one header. Rows arrive
+   *  ordered by id, so a run's rows are already contiguous -- this only marks
+   *  the boundaries and flips the run order so the latest sits on top. */
+  readonly groups = computed<RunGroup[]>(() => {
+    const groups: RunGroup[] = [];
+    for (const entry of this.entries()) {
+      const current = groups.at(-1);
+      if (current && current.runId === entry.runId) {
+        current.entries.push(entry);
+      } else {
+        groups.push({ runId: entry.runId, entries: [entry] });
+      }
+    }
+    return groups.reverse();
+  });
   /** The latest run's own summary; null when the user has never run. Drives
    *  the panel's summary strip, distinct from any one row's `errorDetail`. */
   readonly run = signal<DebugLogRunSummary | null>(null);
@@ -127,6 +152,18 @@ export class RecommendationDebugLogComponent implements OnInit {
     if (entry.finishedAt === null) return null;
     const elapsedMs = new Date(entry.finishedAt).getTime() - new Date(entry.createdAt).getTime();
     return Math.max(0, Math.round(elapsedMs / 1000));
+  }
+
+  /** When a run group's first call went out. */
+  groupStart(group: RunGroup): string {
+    return this.time(group.entries[0].createdAt);
+  }
+
+  /** When a run group's last call settled, or null while one is still
+   *  streaming -- the header then shows an open-ended range. */
+  groupEnd(group: RunGroup): string | null {
+    const finishedAt = group.entries.at(-1)?.finishedAt ?? null;
+    return finishedAt === null ? null : this.time(finishedAt);
   }
 
   private toggle(expanded: WritableSignal<ReadonlySet<number>>, id: number): void {

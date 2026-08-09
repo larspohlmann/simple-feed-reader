@@ -25,6 +25,7 @@ final class CompletionStreamReader
     private string $envelope = '';
     private bool $sawStreamEvent = false;
     private int $wireBytes = 0;
+    private ?string $finishReason = null;
 
     public function __construct(private readonly CompletionBodyDecoder $decoder)
     {
@@ -46,6 +47,17 @@ final class CompletionStreamReader
     public function wireBytes(): int
     {
         return $this->wireBytes;
+    }
+
+    /**
+     * Why the provider stopped generating, once it says so — `length` when
+     * `max_tokens` truncated the answer, `stop` on a natural end. Null until an
+     * event carries it; once carried it stays, so a trailing usage-only event
+     * cannot erase it.
+     */
+    public function finishReason(): ?string
+    {
+        return $this->finishReason;
     }
 
     /**
@@ -106,7 +118,9 @@ final class CompletionStreamReader
             return;
         }
 
-        $this->answer .= $this->decoder->deltaContent($payload) ?? '';
+        $event = $this->decoder->streamEvent($payload);
+        $this->answer .= $event['content'] ?? '';
+        $this->finishReason = $event['finishReason'] ?? $this->finishReason;
     }
 
     /**

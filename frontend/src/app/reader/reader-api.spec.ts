@@ -314,6 +314,7 @@ describe('ReaderApi', () => {
       verdict: 'usable',
       requestBody: '{}',
       responseText: '{}',
+      finishReason: 'stop',
     });
   });
 });

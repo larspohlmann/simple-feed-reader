@@ -77,4 +77,60 @@ final class CompletionBodyDecoderTest extends TestCase
         self::assertNull($this->decoder->deltaContent('{"choices":[{"delta":{"content":42}}]}'));
         self::assertNull($this->decoder->envelopeContent('{"choices":"nope"}'));
     }
+
+    /**
+     * The provider stamps why generation stopped on the choice, beside the
+     * delta rather than inside it. `length` is the signal that the answer was
+     * truncated by `max_tokens` — the diagnosis the debug log could not make
+     * before #327.
+     */
+    public function testTheFinishReasonRidesOnTheChoiceNotTheDelta(): void
+    {
+        self::assertSame(
+            'length',
+            $this->decoder->finishReason('{"choices":[{"delta":{"content":"x"},"finish_reason":"length"}]}'),
+        );
+        self::assertSame(
+            'stop',
+            $this->decoder->finishReason('{"choices":[{"delta":{},"finish_reason":"stop"}]}'),
+        );
+    }
+
+    public function testAChoiceStillGeneratingHasNoFinishReason(): void
+    {
+        self::assertNull($this->decoder->finishReason('{"choices":[{"delta":{"content":"x"},"finish_reason":null}]}'));
+        self::assertNull($this->decoder->finishReason('{"choices":[{"delta":{"content":"x"}}]}'));
+    }
+
+    public function testANonStringFinishReasonIsNullRatherThanCoerced(): void
+    {
+        self::assertNull($this->decoder->finishReason('{"choices":[{"finish_reason":7}]}'));
+        self::assertNull($this->decoder->finishReason('not json'));
+    }
+
+    /**
+     * The reader reads both fields of an event together, so the decoder yields
+     * them from one decode. The answer's content and the finish reason travel
+     * on the same event.
+     */
+    public function testAStreamEventYieldsBothContentAndFinishReasonFromOneDecode(): void
+    {
+        $event = $this->decoder->streamEvent('{"choices":[{"delta":{"content":"x"},"finish_reason":"length"}]}');
+
+        self::assertSame('x', $event['content']);
+        self::assertSame('length', $event['finishReason']);
+    }
+
+    public function testAStreamEventStillGeneratingCarriesContentButNoFinishReason(): void
+    {
+        $event = $this->decoder->streamEvent('{"choices":[{"delta":{"content":"x"}}]}');
+
+        self::assertSame('x', $event['content']);
+        self::assertNull($event['finishReason']);
+    }
+
+    public function testAStreamEventOfMalformedJsonIsAllNulls(): void
+    {
+        self::assertSame(['content' => null, 'finishReason' => null], $this->decoder->streamEvent('not json'));
+    }
 }

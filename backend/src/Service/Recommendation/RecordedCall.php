@@ -33,6 +33,14 @@ final class RecordedCall implements CompletionStreamObserver
      */
     private int $wireBytes = 0;
 
+    /**
+     * Held like $wireBytes, not written until the call settles: the provider
+     * stamps it near the end of the stream, and the settled row is where it
+     * explains the outcome — a `length` beside an empty answer is a truncation,
+     * not silence (#327).
+     */
+    private ?string $finishReason = null;
+
     public function __construct(
         private readonly Connection $connection,
         private readonly ClockInterface $clock,
@@ -48,6 +56,7 @@ final class RecordedCall implements CompletionStreamObserver
     public function streamProgressed(CompletionStreamProgress $progress): void
     {
         $this->wireBytes = $progress->wireBytes;
+        $this->finishReason = $progress->finishReason ?? $this->finishReason;
 
         $now = $this->clock->now();
         if ($now->getTimestamp() - $this->lastCheckpointAt->getTimestamp() < self::CHECKPOINT_SECONDS) {
@@ -105,6 +114,7 @@ final class RecordedCall implements CompletionStreamObserver
             'wire_bytes' => $this->wireBytes,
             'finished_at' => $this->clock->now()->format('Y-m-d H:i:s'),
             'error_detail' => $errorDetail,
+            'finish_reason' => $this->finishReason,
         ], ['id' => $this->logId]);
     }
 
@@ -121,6 +131,7 @@ final class RecordedCall implements CompletionStreamObserver
             'verdict' => $verdict,
             'wire_bytes' => $this->wireBytes,
             'finished_at' => $this->clock->now()->format('Y-m-d H:i:s'),
+            'finish_reason' => $this->finishReason,
         ], ['id' => $this->logId]);
     }
 
