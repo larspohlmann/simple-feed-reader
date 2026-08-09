@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Worker;
 
-use App\Entity\AiProviderSettings;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
@@ -34,6 +33,7 @@ use App\Service\Worker\Handler\AdvanceRecommendationRunsHandler;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
 use App\Service\Worker\WorkerPresence;
 use App\Tests\DbTestCase;
+use App\Tests\Support\AiSettingsRowMover;
 use App\Tests\Support\ClearTrackingEntityManager;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -511,12 +511,21 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $this->fixtures->deleteAiSettings($user);
     }
 
+    /**
+     * Moves the row's own ownership FK, then points the recipient's active
+     * pointer at it too: the handler resolves the active configuration
+     * through that pointer, not a "find by owner" query, so a row that ends
+     * up under the wrong account only matters to this test once it is also
+     * that account's active one. pointActiveAt() writes at the database
+     * level, which is enough here because the handler under test always
+     * loads $to fresh from the database — it never receives an in-memory
+     * instance from this test directly.
+     */
     private function moveAiSettingsRow(User $from, User $to): void
     {
-        $this->em->createQuery(
-            sprintf('UPDATE %s s SET s.user = :to WHERE s.user = :from', AiProviderSettings::class),
-        )->execute(['to' => $to, 'from' => $from]);
-        $this->em->clear();
+        $mover = new AiSettingsRowMover($this->em);
+        $moved = $mover->moveOwnership($from, $to);
+        $mover->pointActiveAt($to, $moved);
     }
 
     /**

@@ -75,19 +75,28 @@
       "apiKey": "API key",
       "apiKeyHint": "The key is sent once and stored encrypted. Enter it again to replace it.",
       "storedKey": "A key ending in {{hint}} is stored.",
-      "connect": "Save and find models",
-      "loadModels": "Load the model list",
       "model": "Model",
       "modelPlaceholder": "Select a model",
       "saveModel": "Save model",
-      "remove": "Remove this provider",
-      "removeNote": "This deletes the endpoint, the stored key and the model. AI features stop until you configure a provider again.",
       "ready": "AI features are available and use {{model}}.",
+      "configs": {
+        "active": "Active",
+        "activate": "Use this one",
+        "changeModel": "Change model",
+        "rename": "Rename",
+        "renameSave": "Save name",
+        "delete": "Delete",
+        "deleteConfirmTitle": "Delete this configuration?",
+        "deleteConfirmMessage": "This deletes the endpoint, the stored key and the model. AI features stop if this was the active configuration.",
+        "namePlaceholder": "Optional name",
+        "add": "Add configuration"
+      },
       "errors": {
         "provider": "The provider could not be used. Check the endpoint and the key.",
         "unreadableKey": "This account's stored API key cannot be read any more. Retrying will not help — enter the key again to restore AI features.",
         "rateLimited": "Too many requests to the provider. Wait a few minutes and try again.",
         "notConfigured": "Save an endpoint and an API key first.",
+        "limit": "You have reached the maximum number of saved configurations.",
         "unknown": "Something went wrong. Try again."
       },
       "recommendations": {

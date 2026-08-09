@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation;
 
-use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
@@ -25,6 +24,7 @@ use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Tests\DbTestCase;
+use App\Tests\Support\AiSettingsRowMover;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
@@ -1127,11 +1127,15 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->deleteAiSettings();
         // The donor's key was sealed under the donor's own account id, so
         // moving its settings row onto $this->user makes the stored
-        // ciphertext fail its integrity check the moment credentials() opens it.
-        $this->em->createQuery(
-            sprintf('UPDATE %s s SET s.user = :to WHERE s.user = :from', AiProviderSettings::class),
-        )->execute(['to' => $this->user, 'from' => $keyDonor]);
-        $this->em->clear();
+        // ciphertext fail its integrity check the moment credentials() opens
+        // it. The active pointer is applied directly on the same in-memory
+        // $this->user instance advance() below receives, not through
+        // AiSettingsRowMover::pointActiveAt()'s DQL write: settingsFor()
+        // resolves through that property directly, and em->clear() (which
+        // moveOwnership() calls) detaches $this->user rather than refreshing
+        // it, so a database-only write would never become visible to it.
+        $moved = (new AiSettingsRowMover($this->em))->moveOwnership($keyDonor, $this->user);
+        $this->user->setActiveAiProviderSettings($moved);
 
         try {
             $this->advancer()->advance($this->user);

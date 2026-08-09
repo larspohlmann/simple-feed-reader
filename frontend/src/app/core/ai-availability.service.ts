@@ -12,13 +12,6 @@ export interface AiAvailability {
   readonly ready: boolean;
 }
 
-/** The account's AI provider, as the settings endpoints report it. */
-export interface AiState extends AiAvailability {
-  readonly configured: boolean;
-  readonly baseUrl: string | null;
-  readonly apiKeyHint: string | null;
-}
-
 /**
  * Whether AI features may run for the signed-in account.
  *

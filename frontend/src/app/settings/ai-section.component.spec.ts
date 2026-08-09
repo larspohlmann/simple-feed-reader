@@ -1,55 +1,84 @@
+// src/app/settings/ai-section.component.spec.ts
+import { Dialog } from '@angular/cdk/dialog';
+import { WritableSignal, signal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { AiAvailabilityService, AiState } from '../core/ai-availability.service';
-import { API_BASE_URL } from '../core/api';
+import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
+import { API_BASE_URL } from '../core/api';
+import { ConfirmData } from '../shared/confirm-dialog/confirm-dialog.component';
+import { AiFailure } from './ai-failure';
 import { AiSectionComponent } from './ai-section.component';
+import { AiConfig, AiSettingsService } from './ai-settings.service';
+
+interface AiSettingsStub {
+  configs: WritableSignal<readonly AiConfig[]>;
+  activeId: WritableSignal<number | null>;
+  models: WritableSignal<readonly string[]>;
+  choosingModelFor: WritableSignal<number | null>;
+  busy: WritableSignal<boolean>;
+  failure: WritableSignal<AiFailure | null>;
+  load: jest.Mock;
+  add: jest.Mock;
+  loadModels: jest.Mock;
+  chooseModel: jest.Mock;
+  rename: jest.Mock;
+  activate: jest.Mock;
+  remove: jest.Mock;
+}
+
+const config = (over: Partial<AiConfig> = {}): AiConfig => ({
+  id: 1,
+  name: null,
+  baseUrl: 'https://api.example.test/v1',
+  apiKeyHint: '1234',
+  model: null,
+  ready: false,
+  active: false,
+  ...over,
+});
+
+const RECOMMENDATIONS = {
+  guidancePrompt: null,
+  defaultGuidancePrompt: 'Prefer long-form articles.',
+  fixedPrompt: { role: 'role', outputContract: 'contract' },
+  favoritesCap: 50,
+  keptCap: 50,
+  viewedCap: 200,
+  candidatePoolSize: 400,
+  picksLimit: 20,
+  contextWindow: 128000,
+  contextWindowOverride: null,
+  contextWindowSource: 'provider',
+  debugEnabled: false,
+};
+
+function createStub(): AiSettingsStub {
+  return {
+    configs: signal<readonly AiConfig[]>([]),
+    activeId: signal<number | null>(null),
+    models: signal<readonly string[]>([]),
+    choosingModelFor: signal<number | null>(null),
+    busy: signal(false),
+    failure: signal<AiFailure | null>(null),
+    load: jest.fn(),
+    add: jest.fn(),
+    loadModels: jest.fn(),
+    chooseModel: jest.fn(),
+    rename: jest.fn(),
+    activate: jest.fn(),
+    remove: jest.fn(),
+  };
+}
 
 describe('AiSectionComponent', () => {
+  let ai: AiSettingsStub;
   let http: HttpTestingController;
+  const dialogStub = { open: jest.fn() };
 
-  const UNCONFIGURED: AiState = {
-    configured: false,
-    baseUrl: null,
-    apiKeyHint: null,
-    model: null,
-    ready: false,
-  };
-
-  const CONFIGURED: AiState = {
-    configured: true,
-    baseUrl: 'https://api.example.test/v1',
-    apiKeyHint: '1234',
-    model: null,
-    ready: false,
-  };
-
-  const RECOMMENDATIONS = {
-    guidancePrompt: null,
-    defaultGuidancePrompt: 'Prefer long-form articles.',
-    fixedPrompt: { role: 'role', outputContract: 'contract' },
-    favoritesCap: 50,
-    keptCap: 50,
-    viewedCap: 200,
-    candidatePoolSize: 400,
-    picksLimit: 20,
-    contextWindow: 128000,
-    contextWindowOverride: null,
-    contextWindowSource: 'provider',
-    debugEnabled: false,
-  };
-
-  /** The recommendation card and the debug log beside it each fire their own
-   *  GET, only once AI is ready — every test that reaches that state has to
-   *  drain both. */
-  function flushRecommendations(fixture: ComponentFixture<AiSectionComponent>): void {
-    http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
-    http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
-    fixture.detectChanges();
-  }
-
-  function mount(initial: AiState = UNCONFIGURED): ComponentFixture<AiSectionComponent> {
+  function mount(): ComponentFixture<AiSectionComponent> {
+    ai = createStub();
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
@@ -57,197 +86,279 @@ describe('AiSectionComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: '' },
+        { provide: Dialog, useValue: dialogStub },
       ],
+    }).overrideComponent(AiSectionComponent, {
+      set: { providers: [{ provide: AiSettingsService, useValue: ai }] },
     });
     http = TestBed.inject(HttpTestingController);
     const fixture = TestBed.createComponent(AiSectionComponent);
     fixture.detectChanges();
-    http.expectOne('/api/me/ai').flush(initial);
-    fixture.detectChanges();
     return fixture;
   }
 
-  function saveConnection(fixture: ComponentFixture<AiSectionComponent>, key = 'sk-abcdef1234') {
-    fixture.componentInstance.baseUrl.set('https://api.example.test/v1');
-    fixture.componentInstance.apiKey.set(key);
-    fixture.componentInstance.saveConnection();
-  }
+  const row = (fixture: ComponentFixture<AiSectionComponent>, index: number): HTMLElement =>
+    (fixture.nativeElement as HTMLElement).querySelectorAll('.config-row')[index] as HTMLElement;
 
-  const banner = (fixture: ComponentFixture<AiSectionComponent>): HTMLElement | null =>
-    fixture.nativeElement.querySelector('app-error-banner');
-
+  beforeEach(() => dialogStub.open.mockReset());
   afterEach(() => http.verify());
 
-  it('offers no model select before a connection is saved', () => {
+  it('loads the configurations on construction', () => {
+    mount();
+    expect(ai.load).toHaveBeenCalled();
+  });
+
+  it('renders a row per config with its label, hint and model', () => {
     const fixture = mount();
+    ai.configs.set([
+      config({ id: 1, name: 'My provider', model: 'gpt-4o', apiKeyHint: '9999' }),
+      config({ id: 2, model: 'claude' }),
+    ]);
+    fixture.detectChanges();
+
+    const rows = fixture.nativeElement.querySelectorAll('.config-row');
+    expect(rows.length).toBe(2);
+    expect(row(fixture, 0).textContent).toContain('My provider');
+    expect(row(fixture, 0).textContent).toContain('9999');
+    expect(row(fixture, 0).textContent).toContain('gpt-4o');
+  });
+
+  it('derives a host · model label when the config has no name', () => {
+    const fixture = mount();
+    ai.configs.set([
+      config({ id: 1, name: null, baseUrl: 'https://api.example.test/v1', model: 'gpt-4o' }),
+    ]);
+    fixture.detectChanges();
+
+    expect(row(fixture, 0).querySelector('.label')?.textContent).toContain(
+      'api.example.test · gpt-4o',
+    );
+  });
+
+  it('shows the active badge only on the active row', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, active: true }), config({ id: 2 })]);
+    ai.activeId.set(1);
+    fixture.detectChanges();
+
+    expect(row(fixture, 0).querySelector('.badge')).not.toBeNull();
+    expect(row(fixture, 1).querySelector('.badge')).toBeNull();
+  });
+
+  it('offers no model select before "change model" is clicked', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1 })]);
+    fixture.detectChanges();
+
     expect(fixture.nativeElement.querySelector('app-searchable-select')).toBeNull();
   });
 
-  it('shows the model select once the connection save returns models', () => {
+  it('adds a configuration and clears the typed key', () => {
     const fixture = mount();
-    saveConnection(fixture);
+    fixture.componentInstance.newName.set('My provider');
+    fixture.componentInstance.newBaseUrl.set('https://api.example.test/v1');
+    fixture.componentInstance.newApiKey.set('sk-secret');
 
-    http.expectOne('/api/me/ai/connection').flush({
-      ...CONFIGURED,
-      models: ['gpt-4o', 'gpt-4o-mini'],
-    });
+    fixture.componentInstance.add();
+
+    expect(ai.add).toHaveBeenCalledWith('My provider', 'https://api.example.test/v1', 'sk-secret');
+    expect(fixture.componentInstance.newApiKey()).toBe('');
+  });
+
+  it('sends no name when the optional field is left blank', () => {
+    const fixture = mount();
+    fixture.componentInstance.newBaseUrl.set('https://api.example.test/v1');
+    fixture.componentInstance.newApiKey.set('sk-secret');
+
+    fixture.componentInstance.add();
+
+    expect(ai.add).toHaveBeenCalledWith(null, 'https://api.example.test/v1', 'sk-secret');
+  });
+
+  it('changes a model: "change model" calls loadModels, then the picker saves via chooseModel', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1 })]);
+    fixture.detectChanges();
+
+    (row(fixture, 0).querySelector('.change-model') as HTMLButtonElement).click();
+    expect(ai.loadModels).toHaveBeenCalledWith(1);
+
+    ai.choosingModelFor.set(1);
+    ai.models.set(['gpt-4o', 'gpt-4o-mini']);
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('app-searchable-select')).not.toBeNull();
-  });
-
-  it('clears the typed key after the connection is saved', () => {
-    const fixture = mount();
-    saveConnection(fixture);
-    http.expectOne('/api/me/ai/connection').flush({ ...CONFIGURED, models: ['gpt-4o'] });
-
-    expect(fixture.componentInstance.apiKey()).toBe('');
-  });
-
-  it('never sends the key anywhere but the connection body', () => {
-    const fixture = mount();
-    saveConnection(fixture, 'sk-secret-value');
-    const request = http.expectOne('/api/me/ai/connection');
-
-    expect(request.request.body).toEqual({
-      baseUrl: 'https://api.example.test/v1',
-      apiKey: 'sk-secret-value',
-    });
-    expect(request.request.urlWithParams).toBe('/api/me/ai/connection');
-
-    request.flush({ ...CONFIGURED, models: ['gpt-4o'] });
-    fixture.detectChanges();
-
-    // After the response, not before it: a success handler that stashed the key
-    // would slip past an assertion made while the request was still in flight.
-    expect(JSON.stringify(localStorage)).not.toContain('sk-secret-value');
-    expect(JSON.stringify(sessionStorage)).not.toContain('sk-secret-value');
-  });
-
-  // The failing save is the interesting one. A key that outlives the request it
-  // was typed for is exactly what "never persisted" has to rule out, and a
-  // rejection is when a naive retry design would be tempted to keep it around.
-  it('keeps no trace of the key when the save fails', () => {
-    const fixture = mount();
-    saveConnection(fixture, 'sk-doomed-value');
-    const request = http.expectOne('/api/me/ai/connection');
-
-    request.flush(
-      {
-        type: 'ai_provider_rejected',
-        title: 'The AI provider could not be used',
-        status: 422,
-        detail: 'That provider refused the API key.',
-      },
-      { status: 422, statusText: 'Unprocessable Content' },
-    );
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.apiKey()).toBe('');
-    expect(JSON.stringify(localStorage)).not.toContain('sk-doomed-value');
-    expect(JSON.stringify(sessionStorage)).not.toContain('sk-doomed-value');
-    expect(request.request.urlWithParams).not.toContain('sk-doomed-value');
-    expect(fixture.nativeElement.textContent).not.toContain('sk-doomed-value');
-  });
-
-  it('surfaces the provider refusal in the words the server sent', () => {
-    const fixture = mount();
-    saveConnection(fixture, 'sk-wrong');
-
-    http.expectOne('/api/me/ai/connection').flush(
-      {
-        type: 'ai_provider_rejected',
-        title: 'The AI provider could not be used',
-        status: 422,
-        detail: 'That provider refused the API key.',
-      },
-      { status: 422, statusText: 'Unprocessable Content' },
-    );
-    fixture.detectChanges();
-
-    expect(banner(fixture)?.textContent).toContain('refused the API key');
-  });
-
-  // The assertion deliberately does NOT look for the server's own sentence: the
-  // ordinary-refusal fallback renders that sentence verbatim, so an assertion on
-  // it would pass even if the classification were deleted. "Retrying will not
-  // help" exists only in the translated message this kind resolves to.
-  it('tells the account to enter the key again when the stored key cannot be read', () => {
-    const fixture = mount(CONFIGURED);
-    fixture.componentInstance.ai.refreshModels();
-
-    http.expectOne('/api/me/ai/models').flush(
-      {
-        type: 'ai_key_unreadable',
-        title: 'The stored API key could not be read',
-        status: 422,
-        detail: 'The stored API key can no longer be read. Enter it again.',
-      },
-      { status: 422, statusText: 'Unprocessable Content' },
-    );
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.ai.failure()?.kind).toBe('unreadableKey');
-    expect(banner(fixture)?.textContent).toContain('Retrying will not help');
-    expect(banner(fixture)?.textContent).not.toContain('Enter it again.');
-  });
-
-  it('names the rate limit rather than blaming the provider', () => {
-    const fixture = mount(CONFIGURED);
-    fixture.componentInstance.ai.refreshModels();
-
-    http.expectOne('/api/me/ai/models').flush(
-      {
-        type: 'rate_limited',
-        title: 'Too many requests',
-        status: 429,
-        detail: 'Too many attempts. Try again later.',
-      },
-      { status: 429, statusText: 'Too Many Requests' },
-    );
-    fixture.detectChanges();
-
-    expect(banner(fixture)?.textContent).toContain('Wait a few minutes');
-  });
-
-  it('publishes the saved model to the app-wide availability signal', () => {
-    const fixture = mount();
-    saveConnection(fixture);
-    http.expectOne('/api/me/ai/connection').flush({ ...CONFIGURED, models: ['gpt-4o'] });
-    fixture.detectChanges();
 
     fixture.componentInstance.chosenModel.set('gpt-4o');
-    fixture.componentInstance.saveModel();
-    http.expectOne('/api/me/ai/model').flush({ ...CONFIGURED, model: 'gpt-4o', ready: true });
     fixture.detectChanges();
-    flushRecommendations(fixture);
+    (row(fixture, 0).querySelector('.save-model') as HTMLButtonElement).click();
 
-    const availability = TestBed.inject(AiAvailabilityService);
-    expect(availability.ready()).toBe(true);
-    expect(availability.model()).toBe('gpt-4o');
+    expect(ai.chooseModel).toHaveBeenCalledWith(1, 'gpt-4o');
   });
 
-  it('drops the provider, and the availability with it, when it is removed', () => {
-    const fixture = mount({ ...CONFIGURED, model: 'gpt-4o', ready: true });
-    flushRecommendations(fixture);
-    expect(TestBed.inject(AiAvailabilityService).ready()).toBe(true);
+  it('resets the picked model whenever a different row starts choosing', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1 }), config({ id: 2 })]);
+    ai.choosingModelFor.set(1);
+    ai.models.set(['gpt-4o']);
+    fixture.detectChanges();
+    fixture.componentInstance.chosenModel.set('gpt-4o');
 
-    fixture.componentInstance.ai.forget();
-    http.expectOne('/api/me/ai').flush(null, { status: 204, statusText: 'No Content' });
+    ai.choosingModelFor.set(2);
     fixture.detectChanges();
 
-    expect(TestBed.inject(AiAvailabilityService).ready()).toBe(false);
-    expect(fixture.componentInstance.ai.state().configured).toBe(false);
-    expect(fixture.componentInstance.baseUrl()).toBe('');
+    expect(fixture.componentInstance.chosenModel()).toBeNull();
   });
 
-  it('shows the recommendation settings card once AI is ready, and not before', () => {
-    const notReady = mount(CONFIGURED);
-    expect(notReady.nativeElement.querySelector('app-recommendation-settings-card')).toBeNull();
+  it('activates a configuration', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, ready: true })]);
+    fixture.detectChanges();
 
-    const ready = mount({ ...CONFIGURED, model: 'gpt-4o', ready: true });
-    flushRecommendations(ready);
+    (row(fixture, 0).querySelector('.activate') as HTMLButtonElement).click();
 
-    expect(ready.nativeElement.querySelector('app-recommendation-settings-card')).not.toBeNull();
+    expect(ai.activate).toHaveBeenCalledWith(1);
+  });
+
+  it('disables activation for a row that is already active, not ready, or while busy', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, active: true, ready: true }), config({ id: 2, ready: false })]);
+    fixture.detectChanges();
+
+    // Row 1 is the active, ready configuration, so it is the one the
+    // recommendation card now renders for — same as the dedicated card test
+    // below.
+    http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
+    http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
+
+    expect((row(fixture, 0).querySelector('.activate button') as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    expect((row(fixture, 1).querySelector('.activate button') as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+  });
+
+  it('renames a configuration', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, name: 'Old name' })]);
+    fixture.detectChanges();
+
+    (row(fixture, 0).querySelector('.rename') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    const input = row(fixture, 0).querySelector('input[type="text"]') as HTMLInputElement;
+    input.value = 'New name';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    (row(fixture, 0).querySelector('.rename-save') as HTMLButtonElement).click();
+
+    expect(ai.rename).toHaveBeenCalledWith(1, 'New name');
+  });
+
+  it('sends a null name when renaming to a blank value', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, name: 'Old name' })]);
+    fixture.detectChanges();
+
+    (row(fixture, 0).querySelector('.rename') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    const input = row(fixture, 0).querySelector('input[type="text"]') as HTMLInputElement;
+    input.value = '   ';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    (row(fixture, 0).querySelector('.rename-save') as HTMLButtonElement).click();
+
+    expect(ai.rename).toHaveBeenCalledWith(1, null);
+  });
+
+  it('cancels the rename without calling rename()', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, name: 'Old name' })]);
+    fixture.detectChanges();
+
+    (row(fixture, 0).querySelector('.rename') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (row(fixture, 0).querySelector('.rename-cancel') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(ai.rename).not.toHaveBeenCalled();
+    expect(row(fixture, 0).querySelector('.label')?.textContent).toContain('Old name');
+  });
+
+  it('opens the confirm dialog and removes the configuration on a truthy close', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1 })]);
+    fixture.detectChanges();
+    dialogStub.open.mockReturnValue({ closed: of(true) });
+
+    (row(fixture, 0).querySelector('.delete') as HTMLButtonElement).click();
+
+    expect(dialogStub.open).toHaveBeenCalled();
+    expect(ai.remove).toHaveBeenCalledWith(1);
+  });
+
+  it('opens the delete dialog with the configuration-specific title, message and danger styling', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1 })]);
+    fixture.detectChanges();
+    dialogStub.open.mockReturnValue({ closed: of(false) });
+
+    (row(fixture, 0).querySelector('.delete') as HTMLButtonElement).click();
+
+    const [, dialogConfig] = dialogStub.open.mock.calls.at(-1) as [unknown, { data: ConfirmData }];
+    expect(dialogConfig.data.title).toBe('Delete this configuration?');
+    expect(dialogConfig.data.message).toBe(
+      'This deletes the endpoint, the stored key and the model. AI features stop if this was the active configuration.',
+    );
+    expect(dialogConfig.data.danger).toBe(true);
+  });
+
+  it('does nothing when the delete dialog is dismissed', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1 })]);
+    fixture.detectChanges();
+    dialogStub.open.mockReturnValue({ closed: of(false) });
+
+    (row(fixture, 0).querySelector('.delete') as HTMLButtonElement).click();
+
+    expect(ai.remove).not.toHaveBeenCalled();
+  });
+
+  it('shows the server sentence for a provider refusal, and a translated message otherwise', () => {
+    const fixture = mount();
+    ai.failure.set({ kind: 'provider', detail: 'That endpoint refused the key.' });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-error-banner')?.textContent).toContain(
+      'refused the key',
+    );
+
+    ai.failure.set({ kind: 'limit', detail: null });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-error-banner')?.textContent).toContain(
+      'maximum number',
+    );
+  });
+
+  it('shows the recommendation settings card once the active config is ready, and not before', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, active: true, ready: false })]);
+    ai.activeId.set(1);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-recommendation-settings-card')).toBeNull();
+
+    ai.configs.set([config({ id: 1, active: true, ready: true, model: 'gpt-4o' })]);
+    fixture.detectChanges();
+
+    http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
+    http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-recommendation-settings-card')).not.toBeNull();
   });
 });

@@ -18,7 +18,7 @@ final class MeJson
      */
     public static function profile(User $user): array
     {
-        $aiSettings = $user->getAiProviderSettings();
+        $aiSettings = $user->getActiveAiProviderSettings();
 
         return [
             'id' => $user->getId(),

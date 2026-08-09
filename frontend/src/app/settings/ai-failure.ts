@@ -8,15 +8,15 @@ import { parseProblem } from '../core/problem';
  * `provider` is the ordinary refusal — the endpoint did not answer, or it
  * rejected the key — and carries the server's own sentence, which already says
  * which of the two happened. The other kinds get a message of their own
- * because the account's next move differs: wait, configure first, or enter the
- * key again.
+ * because the account's next move differs: wait, configure first, enter the
+ * key again, or delete a configuration to make room for a new one.
  *
  * Every kind is decided by the problem type alone. The detail is prose the
  * backend is free to reword or a proxy to reflow, so classifying on it would
  * put one rule on both sides of the wire with no test able to see them drift.
  */
 export type AiFailureKind =
-  'unreadableKey' | 'rateLimited' | 'notConfigured' | 'provider' | 'unknown';
+  'unreadableKey' | 'rateLimited' | 'notConfigured' | 'provider' | 'limit' | 'unknown';
 
 export interface AiFailure {
   readonly kind: AiFailureKind;
@@ -32,6 +32,7 @@ export function aiFailure(error: HttpErrorResponse): AiFailure {
   if (problem.type === 'ai_not_configured') return { kind: 'notConfigured', detail };
   if (problem.type === 'ai_key_unreadable') return { kind: 'unreadableKey', detail };
   if (problem.type === 'ai_provider_rejected') return { kind: 'provider', detail };
+  if (problem.type === 'ai_configuration_limit') return { kind: 'limit', detail };
 
   return { kind: 'unknown', detail: null };
 }

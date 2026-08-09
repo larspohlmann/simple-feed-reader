@@ -41,9 +41,10 @@ final readonly class RecommendationRunFixtures
         $sealed = $this->cipher->seal($userId, 'sk-throwaway1234');
         $now = new \DateTimeImmutable('2026-08-07 09:00:00');
 
-        $settings = new AiProviderSettings($user, 'https://api.example.test/v1', $sealed, '1234', $now);
+        $settings = new AiProviderSettings($user, null, 'https://api.example.test/v1', $sealed, '1234', $now);
         $this->em->persist($settings);
         $settings->chooseModel('m', $now, 32768);
+        $user->setActiveAiProviderSettings($settings);
         $this->em->flush();
     }
 
@@ -52,6 +53,12 @@ final readonly class RecommendationRunFixtures
      * RecommendationRunAdvancerTest and AdvanceRecommendationRunsHandlerTest
      * drive that race, and both need the row gone and the identity map clear
      * before the next tick sees it.
+     *
+     * The active pointer is also cleared on the in-memory $user directly:
+     * ON DELETE SET NULL clears the database column, but a caller that keeps
+     * driving this exact $user instance afterward (rather than reloading it)
+     * would otherwise still read the now-deleted row off the object's own
+     * property, which em->clear() does not touch.
      */
     public function deleteAiSettings(User $user): void
     {
@@ -60,6 +67,7 @@ final readonly class RecommendationRunFixtures
         $this->em->remove($settings);
         $this->em->flush();
         $this->em->clear();
+        $user->setActiveAiProviderSettings(null);
     }
 
     /** Not flushed: callers batch several rows (often a `finish()` on top of

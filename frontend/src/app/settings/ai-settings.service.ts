@@ -1,28 +1,48 @@
 // src/app/settings/ai-settings.service.ts
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
-import { AiAvailabilityService, AiState } from '../core/ai-availability.service';
+import { AiAvailabilityService } from '../core/ai-availability.service';
 import { API_BASE_URL } from '../core/api';
 import { AiFailure, aiFailure } from './ai-failure';
 
-const EMPTY: AiState = {
-  configured: false,
-  baseUrl: null,
-  apiKeyHint: null,
-  model: null,
-  ready: false,
-};
+/**
+ * One saved provider connection, as the multi-config endpoints report it.
+ * The API key is never part of this shape — `apiKeyHint` is the last four
+ * characters, which is all the settings page ever needs to show.
+ */
+export interface AiConfig {
+  readonly id: number;
+  readonly name: string | null;
+  readonly baseUrl: string;
+  readonly apiKeyHint: string | null;
+  readonly model: string | null;
+  readonly ready: boolean;
+  readonly active: boolean;
+}
+
+export interface AiConfigList {
+  readonly configs: AiConfig[];
+  readonly activeId: number | null;
+}
 
 /**
- * The AI section's own state and writes.
+ * The AI section's own state and writes, over an account that may hold
+ * several provider configurations with at most one active.
  *
- * Every write answers with the new state, so nothing here re-reads the profile
- * to find out what happened, and `AiAvailabilityService` is fed from the same
- * answer.
+ * Every write answers with the configuration it touched (or, for `add`, the
+ * new one plus its model list), so nothing here re-reads the list to find out
+ * what happened. `configs` is kept in upsert form rather than replaced
+ * wholesale on every write, so a row the account is mid-edit on does not lose
+ * its place in the list when a sibling row changes.
  *
- * The typed key is a parameter and never a field: it goes into one request body
- * and is gone. Nothing here writes it to storage, a URL or a log.
+ * `AiAvailabilityService` is recomputed after every mutation from whichever
+ * configuration is now active, exactly the same way regardless of which
+ * write caused it — the alternative would be one bespoke availability update
+ * per method, with every new method a fresh chance to forget it.
+ *
+ * The typed key is a parameter and never a field: it goes into one request
+ * body and is gone. Nothing here writes it to storage, a URL or a log.
  */
 @Injectable()
 export class AiSettingsService {
@@ -30,50 +50,106 @@ export class AiSettingsService {
   private readonly base = inject(API_BASE_URL);
   private readonly availability = inject(AiAvailabilityService);
 
-  readonly state = signal<AiState>(EMPTY);
+  readonly configs = signal<readonly AiConfig[]>([]);
+  readonly activeId = computed<number | null>(
+    () => this.configs().find((each) => each.active)?.id ?? null,
+  );
   readonly models = signal<readonly string[]>([]);
+  readonly choosingModelFor = signal<number | null>(null);
   readonly busy = signal(false);
   readonly failure = signal<AiFailure | null>(null);
 
   load(): void {
-    this.run(this.http.get<AiState>(`${this.base}/api/me/ai`), (state) => this.take(state));
+    this.run(this.http.get<AiConfigList>(`${this.base}/api/me/ai`), (list) => {
+      this.configs.set(list.configs);
+      this.applyAvailability();
+    });
   }
 
-  saveConnection(baseUrl: string, apiKey: string): void {
+  add(name: string | null, baseUrl: string, apiKey: string): void {
     this.run(
-      this.http.put<AiState & { models: string[] }>(`${this.base}/api/me/ai/connection`, {
+      this.http.post<AiConfig & { models: string[] }>(`${this.base}/api/me/ai/configs`, {
+        name,
         baseUrl,
         apiKey,
       }),
-      (answer) => {
-        this.take(answer);
-        this.models.set(answer.models);
+      (added) => {
+        const { models, ...configuration } = added;
+        this.upsert(configuration);
+        this.models.set(models);
+        this.choosingModelFor.set(configuration.id);
       },
     );
   }
 
-  refreshModels(): void {
-    this.run(this.http.get<{ models: string[] }>(`${this.base}/api/me/ai/models`), (answer) =>
-      this.models.set(answer.models),
+  loadModels(id: number): void {
+    this.run(
+      this.http.get<{ models: string[] }>(`${this.base}/api/me/ai/configs/${id}/models`),
+      (answer) => {
+        this.models.set(answer.models);
+        this.choosingModelFor.set(id);
+      },
     );
   }
 
-  saveModel(model: string): void {
-    this.run(this.http.put<AiState>(`${this.base}/api/me/ai/model`, { model }), (state) =>
-      this.take(state),
+  chooseModel(id: number, model: string): void {
+    this.run(
+      this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/model`, { model }),
+      (config) => this.upsert(config),
     );
   }
 
-  forget(): void {
-    this.run(this.http.delete<void>(`${this.base}/api/me/ai`), () => {
-      this.take(EMPTY);
-      this.models.set([]);
-    });
+  rename(id: number, name: string | null): void {
+    this.run(
+      this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/name`, { name }),
+      (config) => this.upsert(config),
+    );
   }
 
-  private take(state: AiState): void {
-    this.state.set(state);
-    this.availability.apply(state);
+  activate(id: number): void {
+    this.run(this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/active`, {}), (config) =>
+      this.upsert(config),
+    );
+  }
+
+  remove(id: number): void {
+    this.run(this.http.delete<void>(`${this.base}/api/me/ai/configs/${id}`), () => this.drop(id));
+  }
+
+  /**
+   * Replaces the row by id when it already exists, so a sibling row's write
+   * never reorders the list; otherwise appends it, which is what `add`
+   * needs. A row reported `active` clears the flag on whichever row held it
+   * before — the rest are already inactive, so there is nothing else to
+   * touch — the same guarantee the server holds server-side (at most one
+   * active configuration per account).
+   */
+  private upsert(config: AiConfig): void {
+    const current = this.configs();
+    const index = current.findIndex((each) => each.id === config.id);
+    const replaced =
+      index === -1
+        ? [...current, config]
+        : current.map((each, position) => (position === index ? config : each));
+
+    this.configs.set(
+      config.active
+        ? replaced.map((each) =>
+            each.id !== config.id && each.active ? { ...each, active: false } : each,
+          )
+        : replaced,
+    );
+    this.applyAvailability();
+  }
+
+  private drop(id: number): void {
+    this.configs.set(this.configs().filter((each) => each.id !== id));
+    this.applyAvailability();
+  }
+
+  private applyAvailability(): void {
+    const active = this.configs().find((each) => each.active);
+    this.availability.apply({ ready: active?.ready ?? false, model: active?.model ?? null });
   }
 
   private run<T>(request: Observable<T>, onSuccess: (value: T) => void): void {

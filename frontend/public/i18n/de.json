@@ -75,19 +75,28 @@
       "apiKey": "API-Schlüssel",
       "apiKeyHint": "Der Schlüssel wird einmal gesendet und verschlüsselt gespeichert. Gib ihn erneut ein, um ihn zu ersetzen.",
       "storedKey": "Ein Schlüssel mit der Endung {{hint}} ist gespeichert.",
-      "connect": "Speichern und Modelle suchen",
-      "loadModels": "Modellliste laden",
       "model": "Modell",
       "modelPlaceholder": "Modell auswählen",
       "saveModel": "Modell speichern",
-      "remove": "Diesen Anbieter entfernen",
-      "removeNote": "Das löscht den Endpunkt, den gespeicherten Schlüssel und das Modell. KI-Funktionen stehen erst wieder zur Verfügung, wenn du einen Anbieter neu einrichtest.",
       "ready": "KI-Funktionen sind verfügbar und nutzen {{model}}.",
+      "configs": {
+        "active": "Aktiv",
+        "activate": "Diesen verwenden",
+        "changeModel": "Modell ändern",
+        "rename": "Umbenennen",
+        "renameSave": "Namen speichern",
+        "delete": "Löschen",
+        "deleteConfirmTitle": "Diese Konfiguration löschen?",
+        "deleteConfirmMessage": "Das löscht den Endpunkt, den gespeicherten Schlüssel und das Modell. KI-Funktionen stehen nicht mehr zur Verfügung, wenn dies die aktive Konfiguration war.",
+        "namePlaceholder": "Optionaler Name",
+        "add": "Konfiguration hinzufügen"
+      },
       "errors": {
         "provider": "Der Anbieter konnte nicht genutzt werden. Prüfe den Endpunkt und den Schlüssel.",
         "unreadableKey": "Der gespeicherte API-Schlüssel dieses Kontos kann nicht mehr gelesen werden. Ein neuer Versuch hilft nicht — gib den Schlüssel erneut ein, damit die KI-Funktionen wieder verfügbar sind.",
         "rateLimited": "Zu viele Anfragen an den Anbieter. Warte einige Minuten und versuche es erneut.",
         "notConfigured": "Speichere zuerst einen Endpunkt und einen API-Schlüssel.",
+        "limit": "Du hast die maximale Anzahl gespeicherter Konfigurationen erreicht.",
         "unknown": "Etwas ist schiefgelaufen. Versuche es erneut."
       },
       "recommendations": {

@@ -9,6 +9,7 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ModelCatalog;
 use App\Service\Ai\ProviderCredentials;
+use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StubModelCatalog;
 use Doctrine\ORM\EntityManagerInterface;
@@ -27,7 +28,6 @@ final class AiSettingsControllerTest extends ApiTestCase
 {
     private const string BASE_URL = 'https://api.example.test/v1';
     private const string API_KEY = 'sk-abcdef1234';
-    private const string REFUSED_KEY = 'sk-refused9876';
     /** Must match framework.rate_limiter.ai_provider.limit in rate_limiter.yaml. */
     private const int PROVIDER_BUDGET = 30;
 
@@ -79,13 +79,42 @@ final class AiSettingsControllerTest extends ApiTestCase
         $client->request('PUT', $uri, server: ['CONTENT_TYPE' => 'application/json'], content: $json);
     }
 
-    private function saveConnection(KernelBrowser $client, string $apiKey = self::API_KEY): void
+    private function postJson(KernelBrowser $client, string $uri, string $json): void
     {
-        $this->putJson(
+        $client->request('POST', $uri, server: ['CONTENT_TYPE' => 'application/json'], content: $json);
+    }
+
+    /** @return array<string, mixed> the decoded body of the add response */
+    private function addConfiguration(
+        KernelBrowser $client,
+        string $apiKey = self::API_KEY,
+        ?string $name = null,
+    ): array {
+        $this->postJson(
             $client,
-            '/api/me/ai/connection',
-            sprintf('{"baseUrl":"%s","apiKey":"%s"}', self::BASE_URL, $apiKey),
+            '/api/me/ai/configs',
+            sprintf('{"name":%s,"baseUrl":"%s","apiKey":"%s"}', json_encode($name), self::BASE_URL, $apiKey),
         );
+
+        return $this->payload($client);
+    }
+
+    private function chooseModel(KernelBrowser $client, int $id, string $model): void
+    {
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/model', $id), sprintf('{"model":"%s"}', $model));
+    }
+
+    /** Adds a configuration and chooses a model on it in one call — most cases need only that. */
+    private function addAndReadyConfiguration(KernelBrowser $client, string $model = 'gpt-4o'): int
+    {
+        $added = $this->addConfiguration($client);
+        $id = $added['id'];
+        self::assertIsInt($id);
+
+        $this->chooseModel($client, $id, $model);
+        self::assertResponseIsSuccessful();
+
+        return $id;
     }
 
     private function body(KernelBrowser $client): string
@@ -93,7 +122,7 @@ final class AiSettingsControllerTest extends ApiTestCase
         return (string) $client->getResponse()->getContent();
     }
 
-    public function testAnUnconfiguredAccountReportsNothingConfigured(): void
+    public function testAnUnconfiguredAccountReportsAnEmptyList(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
         $this->accountOn($client, 'ai-empty@example.test');
@@ -102,12 +131,11 @@ final class AiSettingsControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         $payload = $this->payload($client);
-        self::assertFalse($payload['configured']);
-        self::assertFalse($payload['ready']);
-        self::assertNull($payload['baseUrl']);
+        self::assertSame([], $payload['configs']);
+        self::assertNull($payload['activeId']);
     }
 
-    public function testTheEndpointRefusesAnAnonymousCaller(): void
+    public function testTheListEndpointRefusesAnAnonymousCaller(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
 
@@ -116,69 +144,313 @@ final class AiSettingsControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(401);
     }
 
-    public function testSavingAConnectionReturnsTheModels(): void
+    public function testAddingAConfigurationReturnsItWithTheOfferedModels(): void
     {
         $client = $this->clientAnswering(['gpt-4o', 'gpt-4o-mini']);
-        $this->accountOn($client, 'ai-save@example.test');
+        $this->accountOn($client, 'ai-add@example.test');
 
-        $this->saveConnection($client);
+        $added = $this->addConfiguration($client, name: 'Work OpenAI');
+
+        self::assertResponseStatusCodeSame(201);
+        self::assertSame('Work OpenAI', $added['name']);
+        self::assertSame('1234', $added['apiKeyHint']);
+        self::assertFalse($added['ready']);
+        self::assertFalse($added['active']);
+        self::assertSame(['gpt-4o', 'gpt-4o-mini'], $added['models']);
+    }
+
+    public function testChoosingAModelOnTheOnlyConfigurationMakesItActive(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o', 'gpt-4o-mini']);
+        $this->accountOn($client, 'ai-ready@example.test');
+
+        $id = $this->addAndReadyConfiguration($client, 'gpt-4o-mini');
+
+        $client->request('GET', '/api/me/ai');
+        $payload = $this->payload($client);
+        self::assertIsArray($payload['configs']);
+        self::assertCount(1, $payload['configs']);
+        self::assertSame($id, $payload['activeId']);
+        self::assertIsArray($payload['configs'][0]);
+        self::assertTrue($payload['configs'][0]['active']);
+        self::assertTrue($payload['configs'][0]['ready']);
+
+        $client->request('GET', '/api/me');
+        $me = $this->payload($client);
+        self::assertIsArray($me['ai']);
+        self::assertTrue($me['ai']['ready']);
+        self::assertSame('gpt-4o-mini', $me['ai']['model']);
+    }
+
+    public function testActivatingASecondConfigurationSwitchesTheActiveOne(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o', 'gpt-4o-mini']);
+        $this->accountOn($client, 'ai-switch@example.test');
+
+        $first = $this->addAndReadyConfiguration($client, 'gpt-4o');
+        $second = $this->addAndReadyConfiguration($client, 'gpt-4o-mini');
+
+        // Adding a second configuration and choosing its model does not steal
+        // the pointer from the first — only an explicit activate does.
+        $client->request('GET', '/api/me/ai');
+        self::assertSame($first, $this->payload($client)['activeId']);
+
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/active', $second), '{}');
+        self::assertResponseIsSuccessful();
+
+        $client->request('GET', '/api/me/ai');
+        $payload = $this->payload($client);
+        self::assertSame($second, $payload['activeId']);
+
+        $client->request('GET', '/api/me');
+        $me = $this->payload($client);
+        self::assertIsArray($me['ai']);
+        self::assertSame('gpt-4o-mini', $me['ai']['model']);
+    }
+
+    public function testRenamingAConfigurationChangesItsName(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-rename@example.test');
+        $added = $this->addConfiguration($client, name: 'Old name');
+        $id = $added['id'];
+        self::assertIsInt($id);
+
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/name', $id), '{"name":"New name"}');
 
         self::assertResponseIsSuccessful();
+        self::assertSame('New name', $this->payload($client)['name']);
+
+        $client->request('GET', '/api/me/ai');
         $payload = $this->payload($client);
-        self::assertTrue($payload['configured']);
-        self::assertFalse($payload['ready']);
-        self::assertSame('1234', $payload['apiKeyHint']);
-        self::assertSame(['gpt-4o', 'gpt-4o-mini'], $payload['models']);
+        self::assertIsArray($payload['configs']);
+        self::assertIsArray($payload['configs'][0]);
+        self::assertSame('New name', $payload['configs'][0]['name']);
+    }
+
+    public function testDeletingANonActiveConfigurationDropsItFromTheList(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o', 'gpt-4o-mini']);
+        $this->accountOn($client, 'ai-delete-inactive@example.test');
+        $active = $this->addAndReadyConfiguration($client, 'gpt-4o');
+        $extra = $this->addConfiguration($client)['id'];
+        self::assertIsInt($extra);
+
+        $client->request('DELETE', sprintf('/api/me/ai/configs/%d', $extra));
+
+        self::assertResponseStatusCodeSame(204);
+        $client->request('GET', '/api/me/ai');
+        $payload = $this->payload($client);
+        self::assertIsArray($payload['configs']);
+        self::assertCount(1, $payload['configs']);
+        self::assertSame($active, $payload['activeId']);
+    }
+
+    public function testDeletingTheActiveConfigurationLeavesNoActiveId(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-delete-active@example.test');
+        $active = $this->addAndReadyConfiguration($client);
+
+        $client->request('DELETE', sprintf('/api/me/ai/configs/%d', $active));
+
+        self::assertResponseStatusCodeSame(204);
+        $client->request('GET', '/api/me/ai');
+        $payload = $this->payload($client);
+        self::assertSame([], $payload['configs']);
+        self::assertNull($payload['activeId']);
     }
 
     /**
-     * Sweeps every route, on the success path and on both refusal paths, and
-     * demands the stored secret appears in none of them.
+     * Every {id} route sweeps into ownership-scoped 404, never 403 — the
+     * hard requirement that a caller cannot learn a stranger's id exists.
      *
-     * The sweep carries its own positive control. A body that contains the
-     * key's last four characters proves the response really was assembled from
-     * the saved row, so the negative assertion is a statement about a populated
-     * document rather than about an empty or absent one — the failure mode that
-     * makes "the secret is not in the response" true for the wrong reason.
-     * Remove the `apiKeyHint` term from AiSettingsJson and this case fails on
-     * the control; make any endpoint echo the key and it fails on the sweep.
+     * @return iterable<string, array{string, string, string}>
+     */
+    public static function idBearingRoutes(): iterable
+    {
+        yield 'listing models' => ['GET', '/models', '{}'];
+        yield 'choosing a model' => ['PUT', '/model', '{"model":"gpt-4o"}'];
+        yield 'renaming' => ['PUT', '/name', '{"name":"Stolen"}'];
+        yield 'activating' => ['PUT', '/active', '{}'];
+        yield 'deleting' => ['DELETE', '', '{}'];
+    }
+
+    #[DataProvider('idBearingRoutes')]
+    public function testAnIdBearingRouteRefusesAnotherAccountsConfiguration(
+        string $method,
+        string $suffix,
+        string $body,
+    ): void {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-stranger-victim@example.test');
+        $strangerId = $this->addAndReadyConfiguration($client);
+
+        $this->accountOn($client, 'ai-stranger-attacker@example.test');
+        $uri = sprintf('/api/me/ai/configs/%d%s', $strangerId, $suffix);
+
+        if ('GET' === $method) {
+            $client->request('GET', $uri);
+        } elseif ('DELETE' === $method) {
+            $client->request('DELETE', $uri);
+        } else {
+            $this->putJson($client, $uri, $body);
+        }
+
+        self::assertResponseStatusCodeSame(404);
+        self::assertSame('ai_configuration_not_found', $this->payload($client)['type']);
+    }
+
+    public function testAddingBeyondTheCapIsRefused(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-cap@example.test');
+        $this->persistConfigurationsUpToTheCap('ai-cap@example.test');
+
+        $this->addConfiguration($client);
+
+        self::assertResponseStatusCodeSame(409);
+        self::assertSame('ai_configuration_limit', $this->payload($client)['type']);
+    }
+
+    /**
+     * Persists 20 rows directly rather than through 20 HTTP calls: this case
+     * proves the cap itself, not the endpoints that would otherwise dominate
+     * the run time and the provider-budget bookkeeping for no extra coverage.
+     */
+    private function persistConfigurationsUpToTheCap(string $email): void
+    {
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $user = $this->users()->findOneByEmail($email);
+        self::assertInstanceOf(User::class, $user);
+
+        for ($i = 0; $i < 20; ++$i) {
+            $configuration = AiProviderSettingsFactory::build(
+                $user,
+                baseUrl: self::BASE_URL,
+                verifiedAt: new \DateTimeImmutable(),
+            );
+            $entityManager->persist($configuration);
+        }
+
+        $entityManager->flush();
+        $entityManager->clear();
+    }
+
+    public function testActivatingAConfigurationWithoutAModelIsRefused(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-activate-no-model@example.test');
+        $id = $this->addConfiguration($client)['id'];
+        self::assertIsInt($id);
+
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/active', $id), '{}');
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame('ai_provider_rejected', $this->payload($client)['type']);
+    }
+
+    /**
+     * @return iterable<string, array{\Throwable}>
+     */
+    public static function providerRefusals(): iterable
+    {
+        yield 'an address that does not answer' => [
+            new ProviderUnreachableException('That address did not answer.'),
+        ];
+        yield 'a key the provider refuses' => [
+            new CredentialsRejectedException('That key was refused.'),
+        ];
+    }
+
+    #[DataProvider('providerRefusals')]
+    public function testAProviderRefusalOnAddIsUnprocessable(\Throwable $refusal): void
+    {
+        $client = $this->clientAnswering($refusal);
+        $this->accountOn($client, 'ai-refused@example.test');
+
+        $this->addConfiguration($client, 'sk-wrong-key');
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame('ai_provider_rejected', $this->payload($client)['type']);
+        self::assertStringContainsString(
+            'application/problem+json',
+            (string) $client->getResponse()->headers->get('Content-Type'),
+        );
+    }
+
+    public function testAnEmptyAddBodyIsRejectedBeforeAnyProviderCall(): void
+    {
+        $client = $this->clientAnswering(
+            new \LogicException('The provider must not be called for an invalid body.'),
+        );
+        $this->accountOn($client, 'ai-blank@example.test');
+
+        $this->postJson($client, '/api/me/ai/configs', '{"name":null,"baseUrl":"","apiKey":""}');
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame('validation_error', $this->payload($client)['type']);
+    }
+
+    /**
+     * A stored key that no longer decrypts — a rotated AI_KEY_SECRET, an edited
+     * row, a row moved between accounts. Without the mapping this is an
+     * uncaught throw, so the account gets an opaque 500 on every read and no
+     * hint that entering the key again is the way out.
+     */
+    public function testAnUnreadableStoredKeyIsReportedAsUnprocessable(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-unreadable@example.test');
+        $id = $this->addConfiguration($client)['id'];
+        self::assertIsInt($id);
+
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->getConnection()->executeStatement(
+            "UPDATE user_ai_settings SET api_key_ciphertext = 'not-a-sealed-key'",
+        );
+        $entityManager->clear();
+
+        $client->request('GET', sprintf('/api/me/ai/configs/%d/models', $id));
+
+        self::assertResponseStatusCodeSame(422);
+        $payload = $this->payload($client);
+        self::assertSame('ai_key_unreadable', $payload['type']);
+        self::assertSame('The stored API key can no longer be read. Enter it again.', $payload['detail']);
+        self::assertStringNotContainsString('integrity', $this->body($client));
+    }
+
+    /**
+     * Sweeps the write paths and demands the stored secret appears in none of
+     * them. The sweep carries its own positive control: a body containing the
+     * key's last four characters proves the response really was assembled
+     * from the saved row.
      */
     public function testNoEndpointEverReturnsTheApiKey(): void
     {
-        $client = $this->clientAnswering(
-            static fn (ProviderCredentials $credentials): array => self::REFUSED_KEY === $credentials->apiKey
-                ? throw new CredentialsRejectedException('That key was refused.')
-                : ['gpt-4o', 'gpt-4o-mini'],
-        );
+        $client = $this->clientAnswering(['gpt-4o']);
         $this->accountOn($client, 'ai-secret@example.test');
 
-        $this->saveConnection($client);
+        $added = $this->addConfiguration($client);
+        $id = $added['id'];
+        self::assertIsInt($id);
         $controls = [$this->assertBodyHasNoKey($client)];
 
         $client->request('GET', '/api/me/ai');
         $controls[] = $this->assertBodyHasNoKey($client);
 
-        $client->request('GET', '/api/me/ai/models');
+        $client->request('GET', sprintf('/api/me/ai/configs/%d/models', $id));
         $this->assertBodyHasNoKey($client);
 
-        $this->putJson($client, '/api/me/ai/model', '{"model":"gpt-4o"}');
+        $this->chooseModel($client, $id, 'gpt-4o');
         $controls[] = $this->assertBodyHasNoKey($client);
 
         // /api/me is swept but is not a control: MeJson reports only `ready`
         // and `model`, so its body carries no hint to look for.
         $client->request('GET', '/api/me');
         $this->assertBodyHasNoKey($client);
-
-        // The refusal paths: a problem document must not carry the secret
-        // either, neither the one the account just sent nor the stored one.
-        $this->putJson($client, '/api/me/ai/model', '{"model":"gpt-9"}');
-        self::assertResponseStatusCodeSame(422);
-        $this->assertBodyHasNoKey($client);
-
-        $this->saveConnection($client, self::REFUSED_KEY);
-        self::assertResponseStatusCodeSame(422);
-        $this->assertBodyHasNoKey($client);
-        self::assertStringNotContainsString(self::REFUSED_KEY, $this->body($client));
 
         self::assertNotContains(false, $controls, 'A response that should carry the key hint did not.');
     }
@@ -193,305 +465,51 @@ final class AiSettingsControllerTest extends ApiTestCase
     }
 
     /**
-     * Both refusals, on every route that can raise them. Each is listed
-     * separately in a union catch, and dropping one type from any of those
-     * unions turns a routine failure — a mistyped address, a revoked key — into
-     * the opaque 500 the listener produces for an unexpected throw.
+     * Pins that the budget is actually spent. Every other case proves only
+     * that the limiter does NOT fire, so a limiter argument bound to the
+     * wrong service — it autowires by parameter name — would leave the whole
+     * suite green with the endpoints uncapped.
      *
-     * @return iterable<string, array{\Throwable}>
-     */
-    public static function providerRefusals(): iterable
-    {
-        yield 'an address that does not answer' => [
-            new ProviderUnreachableException('That address did not answer.'),
-        ];
-        yield 'a key the provider refuses' => [
-            new CredentialsRejectedException('That key was refused.'),
-        ];
-    }
-
-    #[DataProvider('providerRefusals')]
-    public function testAProviderRefusalOnTheConnectionWriteIsUnprocessable(\Throwable $refusal): void
-    {
-        $client = $this->clientAnswering($refusal);
-        $this->accountOn($client, 'ai-refused@example.test');
-
-        $this->saveConnection($client, 'sk-wrong-key');
-
-        self::assertResponseStatusCodeSame(422);
-        self::assertSame('ai_provider_rejected', $this->payload($client)['type']);
-        self::assertStringContainsString(
-            'application/problem+json',
-            (string) $client->getResponse()->headers->get('Content-Type'),
-        );
-    }
-
-    #[DataProvider('providerRefusals')]
-    public function testAProviderRefusalWhileListingModelsIsUnprocessable(\Throwable $refusal): void
-    {
-        $client = $this->clientTurningBad($refusal);
-        $this->accountOn($client, 'ai-relist-bad@example.test');
-
-        $this->saveConnection($client);
-        self::assertResponseIsSuccessful();
-
-        $client->request('GET', '/api/me/ai/models');
-
-        self::assertResponseStatusCodeSame(422);
-        self::assertSame('ai_provider_rejected', $this->payload($client)['type']);
-    }
-
-    #[DataProvider('providerRefusals')]
-    public function testAProviderRefusalOnTheModelWriteIsUnprocessable(\Throwable $refusal): void
-    {
-        $client = $this->clientTurningBad($refusal);
-        $this->accountOn($client, 'ai-model-bad@example.test');
-
-        $this->saveConnection($client);
-        self::assertResponseIsSuccessful();
-
-        $this->putJson($client, '/api/me/ai/model', '{"model":"gpt-4o"}');
-
-        self::assertResponseStatusCodeSame(422);
-        self::assertSame('ai_provider_rejected', $this->payload($client)['type']);
-    }
-
-    /**
-     * A provider that answers the save and has gone bad by the next call — the
-     * shape every case needs that must store a connection before it can prove
-     * how a later refusal is reported.
-     */
-    private function clientTurningBad(\Throwable $refusal): KernelBrowser
-    {
-        $answered = false;
-
-        return $this->clientAnswering(function () use (&$answered, $refusal): array {
-            if ($answered) {
-                throw $refusal;
-            }
-            $answered = true;
-
-            return ['gpt-4o'];
-        });
-    }
-
-    public function testChoosingAModelMakesTheAccountReady(): void
-    {
-        $client = $this->clientAnswering(['gpt-4o', 'gpt-4o-mini']);
-        $this->accountOn($client, 'ai-ready@example.test');
-
-        $this->saveConnection($client);
-        $this->putJson($client, '/api/me/ai/model', '{"model":"gpt-4o-mini"}');
-
-        self::assertResponseIsSuccessful();
-        self::assertTrue($this->payload($client)['ready']);
-
-        $client->request('GET', '/api/me');
-        $payload = $this->payload($client);
-        self::assertIsArray($payload['ai']);
-        self::assertTrue($payload['ai']['ready']);
-        self::assertSame('gpt-4o-mini', $payload['ai']['model']);
-    }
-
-    public function testAModelTheProviderDoesNotOfferIsRefused(): void
-    {
-        $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-badmodel@example.test');
-
-        $this->saveConnection($client);
-        $this->putJson($client, '/api/me/ai/model', '{"model":"gpt-9"}');
-
-        self::assertResponseStatusCodeSame(422);
-    }
-
-    public function testTheModelListCanBeReReadWithTheStoredKey(): void
-    {
-        $client = $this->clientAnswering(['gpt-4o', 'gpt-4o-mini']);
-        $this->accountOn($client, 'ai-relist@example.test');
-
-        $this->saveConnection($client);
-        $client->request('GET', '/api/me/ai/models');
-
-        self::assertResponseIsSuccessful();
-        self::assertSame(['gpt-4o', 'gpt-4o-mini'], $this->payload($client)['models']);
-    }
-
-    public function testListingModelsWithoutAConfigurationIsNotFound(): void
-    {
-        $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-nolist@example.test');
-
-        $client->request('GET', '/api/me/ai/models');
-
-        self::assertResponseStatusCodeSame(404);
-    }
-
-    public function testChoosingAModelWithoutAConfigurationIsNotFound(): void
-    {
-        $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-nomodel@example.test');
-
-        $this->putJson($client, '/api/me/ai/model', '{"model":"gpt-4o"}');
-
-        self::assertResponseStatusCodeSame(404);
-    }
-
-    public function testAnEmptyConnectionBodyIsRejectedBeforeAnyProviderCall(): void
-    {
-        $client = $this->clientAnswering(
-            new \LogicException('The provider must not be called for an invalid body.'),
-        );
-        $this->accountOn($client, 'ai-blank@example.test');
-
-        $this->putJson($client, '/api/me/ai/connection', '{"baseUrl":"","apiKey":""}');
-
-        self::assertResponseStatusCodeSame(422);
-        self::assertSame('validation_error', $this->payload($client)['type']);
-    }
-
-    /**
-     * A stored key that no longer decrypts — a rotated AI_KEY_SECRET, an edited
-     * row, a row moved between accounts. Without the mapping this is an
-     * uncaught throw, so the account gets an opaque 500 on every read and no
-     * hint that entering the key again is the way out.
-     *
-     * The type is the contract the client reads: it decides between "try again"
-     * and "enter the key again", and it is pinned here so a rename cannot pass
-     * unnoticed.
-     *
-     * The row is corrupted through raw SQL rather than through the entity: the
-     * ciphertext columns are private and the cipher is the only writer, which
-     * is exactly the invariant this case has to break.
-     */
-    public function testAnUnreadableStoredKeyIsReportedAsUnprocessable(): void
-    {
-        $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-unreadable@example.test');
-
-        $this->saveConnection($client);
-        self::assertResponseIsSuccessful();
-
-        /** @var EntityManagerInterface $entityManager */
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $entityManager->getConnection()->executeStatement(
-            "UPDATE user_ai_settings SET api_key_ciphertext = 'not-a-sealed-key'",
-        );
-        $entityManager->clear();
-
-        $client->request('GET', '/api/me/ai/models');
-
-        self::assertResponseStatusCodeSame(422);
-        $payload = $this->payload($client);
-        self::assertSame('ai_key_unreadable', $payload['type']);
-        self::assertSame('The stored API key can no longer be read. Enter it again.', $payload['detail']);
-        // The cipher's own diagnosis describes the stored material; it stays in
-        // the log, not in the document.
-        self::assertStringNotContainsString('integrity', $this->body($client));
-
-        $this->putJson($client, '/api/me/ai/model', '{"model":"gpt-4o"}');
-        self::assertResponseStatusCodeSame(422);
-        self::assertSame('ai_key_unreadable', $this->payload($client)['type']);
-    }
-
-    /**
-     * Pins that the budget is actually spent. Every other case proves only that
-     * the limiter does NOT fire, so a limiter argument bound to the wrong
-     * service — it autowires by parameter name — would leave the whole suite
-     * green with the endpoints uncapped.
-     *
-     * The budget is spent through the endpoints themselves rather than by
-     * consuming from the factory in the test, so what is pinned is the limiter
-     * the controller holds, not one the test picked out of the container.
-     *
-     * One save, then the rest of the budget spent on the model list — so the
-     * three routes that share the budget each both pay into it and refuse once
-     * it is gone. Removing the guard from any single one of them leaves the
-     * budget unspent, and its 429 becomes a 200.
+     * One add, then the rest of the budget spent on the model list — both
+     * routes share the budget and both pay into it.
      */
     public function testTheProviderBudgetIsSpentAndRunsOut(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
         $this->accountOn($client, 'ai-budget@example.test');
 
-        $this->saveConnection($client);
-        self::assertResponseIsSuccessful();
+        $id = $this->addConfiguration($client)['id'];
+        self::assertIsInt($id);
+        self::assertResponseStatusCodeSame(201);
 
         for ($spent = 1; $spent < self::PROVIDER_BUDGET; ++$spent) {
-            $client->request('GET', '/api/me/ai/models');
+            $client->request('GET', sprintf('/api/me/ai/configs/%d/models', $id));
             self::assertResponseIsSuccessful(sprintf('Request %d was inside the budget.', $spent + 1));
         }
 
-        $client->request('GET', '/api/me/ai/models');
+        $client->request('GET', sprintf('/api/me/ai/configs/%d/models', $id));
         self::assertResponseStatusCodeSame(429);
         self::assertSame('rate_limited', $this->payload($client)['type']);
         self::assertGreaterThan(0, (int) $client->getResponse()->headers->get('Retry-After'));
 
-        $this->putJson($client, '/api/me/ai/model', '{"model":"gpt-4o"}');
-        self::assertResponseStatusCodeSame(429);
-
-        $this->saveConnection($client);
+        $this->chooseModel($client, $id, 'gpt-4o');
         self::assertResponseStatusCodeSame(429);
     }
 
     /**
-     * The other side of the same budget: a request that cannot make an outbound
-     * call must not pay for one. More refusals than the budget holds, and every
-     * one of them still answers 404 rather than turning into a 429.
+     * The other side of the same budget: a request that cannot make an
+     * outbound call must not pay for one. More refusals than the budget
+     * holds, and every one of them still answers 404 rather than turning
+     * into a 429.
      */
-    public function testAnUnconfiguredAccountDoesNotSpendTheProviderBudget(): void
+    public function testAnOwnedConfigurationLookupFailureDoesNotSpendTheProviderBudget(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
         $this->accountOn($client, 'ai-nobudget@example.test');
 
         for ($attempt = 0; $attempt <= self::PROVIDER_BUDGET; ++$attempt) {
-            $client->request('GET', '/api/me/ai/models');
-            self::assertResponseStatusCodeSame(404);
-
-            $this->putJson($client, '/api/me/ai/model', '{"model":"gpt-4o"}');
+            $client->request('GET', '/api/me/ai/configs/999999/models');
             self::assertResponseStatusCodeSame(404);
         }
-    }
-
-    public function testDeletingAnUnconfiguredAccountStillSucceeds(): void
-    {
-        // A delete is idempotent by contract: a client that repeats one, or
-        // clears an account that was never configured, must not have to read a
-        // successful no-op as an error.
-        $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-forget-twice@example.test');
-
-        $client->request('DELETE', '/api/me/ai');
-        self::assertResponseStatusCodeSame(204);
-
-        $client->request('DELETE', '/api/me/ai');
-        self::assertResponseStatusCodeSame(204);
-    }
-
-    public function testDeletingTheConfigurationClearsIt(): void
-    {
-        $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-forget@example.test');
-
-        $this->saveConnection($client);
-        $client->request('DELETE', '/api/me/ai');
-
-        self::assertResponseStatusCodeSame(204);
-
-        $client->request('GET', '/api/me/ai');
-        self::assertFalse($this->payload($client)['configured']);
-    }
-
-    public function testOneAccountCannotSeeAnothersConfiguration(): void
-    {
-        $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-owner@example.test');
-        $this->factory()->create('ai-stranger@example.test');
-
-        $this->saveConnection($client);
-
-        $this->authenticate($client, 'ai-stranger@example.test');
-        $client->request('GET', '/api/me/ai');
-
-        self::assertFalse($this->payload($client)['configured']);
     }
 }

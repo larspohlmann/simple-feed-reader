@@ -109,8 +109,21 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist'], orphanRemoval: true)]
     private ?Preferences $preferences = null;
 
-    #[ORM\OneToOne(mappedBy: 'user', targetEntity: AiProviderSettings::class, cascade: ['remove'])]
-    private ?AiProviderSettings $aiProviderSettings = null;
+    /**
+     * The one configuration AI features use. A pointer, not a per-row flag, so
+     * the model cannot say two configurations are active at once. There is no
+     * inverse Collection of every configuration an account owns — nothing
+     * needs the whole set through User, and AiProviderSettingsRepository
+     * already answers that (findAllForUser()/countForUser()), so a second,
+     * always-in-sync path was not worth the field. ON DELETE SET NULL is the
+     * database floor for this pointer; AiProviderConfigurator clears it
+     * explicitly before it removes the active row. The rows themselves cascade
+     * on account deletion through user_ai_settings.user_id's own FK ON DELETE
+     * CASCADE — see AccountDeleter.
+     */
+    #[ORM\ManyToOne(targetEntity: AiProviderSettings::class)]
+    #[ORM\JoinColumn(name: 'active_ai_config_id', nullable: true, onDelete: 'SET NULL')]
+    private ?AiProviderSettings $activeAiProviderSettings = null;
 
     #[ORM\OneToOne(mappedBy: 'user', targetEntity: RecommendationSettings::class, cascade: ['remove'])]
     private ?RecommendationSettings $recommendationSettings = null;
@@ -282,23 +295,24 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->preferences;
     }
 
-    /** Null until the account configures a provider — see AiProviderSettings. */
-    public function getAiProviderSettings(): ?AiProviderSettings
+    /** Null until the account activates a configuration — see AiProviderSettings. */
+    public function getActiveAiProviderSettings(): ?AiProviderSettings
     {
-        return $this->aiProviderSettings;
+        return $this->activeAiProviderSettings;
     }
 
     /**
-     * For AiProviderConfigurator only, which owns every write to the row.
+     * For AiProviderConfigurator only, which owns every write to the pointer.
      *
-     * This is the inverse side, so Doctrine never fills it in during the
-     * request that wrote the row. Without this the same User instance would
-     * report the state it had before the write until the next request
-     * hydrated it — and MeJson reads exactly this association.
+     * This is the owning side, but MeJson and every other reader takes the
+     * User instance a request already loaded rather than re-querying, so a
+     * caller that flips the pointer must also update it here — otherwise the
+     * same User instance would keep reporting the state it had before the
+     * write until the next request hydrated it fresh.
      */
-    public function setAiProviderSettings(?AiProviderSettings $aiProviderSettings): void
+    public function setActiveAiProviderSettings(?AiProviderSettings $settings): void
     {
-        $this->aiProviderSettings = $aiProviderSettings;
+        $this->activeAiProviderSettings = $settings;
     }
 
     /**

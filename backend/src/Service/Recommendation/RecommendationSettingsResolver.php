@@ -5,26 +5,25 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 use App\Entity\User;
-use App\Repository\AiProviderSettingsRepository;
 use App\Repository\RecommendationSettingsRepository;
 
 /**
- * Combines the per-user override row (if any) with the account's AI provider
- * context window into the settings every recommendation service reads,
- * applying the caps' and window's fallback defaults in one place.
+ * Combines the per-user override row (if any) with the account's active AI
+ * configuration's context window into the settings every recommendation
+ * service reads, applying the caps' and window's fallback defaults in one
+ * place.
  */
 final readonly class RecommendationSettingsResolver
 {
     public function __construct(
         private RecommendationSettingsRepository $settings,
-        private AiProviderSettingsRepository $providerSettings,
     ) {
     }
 
     public function forUser(User $user): EffectiveRecommendationSettings
     {
         $row = $this->settings->findForUser($user);
-        $providerWindow = $this->providerSettings->findForUser($user)?->getModelContextWindow();
+        $providerWindow = $user->getActiveAiProviderSettings()?->getModelContextWindow();
 
         [$window, $source] = match (true) {
             null !== $row?->values()->contextWindow => [$row->values()->contextWindow, 'user'],
