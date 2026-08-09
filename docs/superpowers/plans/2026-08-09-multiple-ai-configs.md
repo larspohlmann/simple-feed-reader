@@ -22,6 +22,38 @@
 
 ---
 
+## Execution structure (supersedes the task numbering below)
+
+A Doctrine relation change is one atomic compile unit: the moment
+`AiProviderSettings`'s constructor and relation change, `AiProviderConfigurator`,
+`MeJson`, the existing controller, and `AiSettingsJson` all stop compiling. The
+plan's Tasks 1–8 below therefore cannot each be green. They are executed as six
+green slices; the detailed steps and code in Tasks 1–12 remain the reference the
+briefs draw from.
+
+- **Exec Task 1 — backend data model + service core (additive, green).** Plan
+  Tasks 1–5 minus the HTTP surface: entity (`ManyToOne` + `name`), `User`
+  (collection + active pointer), repository (`findOwnedById` / `findAllForUser` /
+  `countForUser`, drop `findForUser`), `TooManyConfigurationsException` /
+  `ModelRequiredForActivationException`, `AddedConfiguration`, the full
+  configurator (active-pointer resolution; `addConfiguration`, `chooseModel`
+  auto-activate, `rename`, `activate`, `deleteConfiguration`, `listConfigurations`,
+  cap), and `MeJson`. **Keep the existing `saveConnection`/`forget` working**
+  (reimplemented against the active pointer) so the untouched controller and
+  `AiSettingsJson` still compile and pass — the app stays green end-to-end as a
+  single-active-config setup. Unit tests only.
+- **Exec Task 2 — backend HTTP surface (green).** Plan Tasks 6, 7, 8:
+  `AiConfigurationForUser` resolver, request DTOs, API exception mappers,
+  `AiSettingsJson` new shapes (replacing `state`/`stateWithModels`/`models`),
+  the controller rewrite to the new routes, and **removal of the transitional
+  `saveConnection`/`forget`**. Functional tests incl. cross-user 404 and the cap.
+- **Exec Task 3 — migration** (plan Task 9).
+- **Exec Task 4 — frontend service** (plan Task 10).
+- **Exec Task 5 — frontend section** (plan Task 11).
+- **Exec Task 6 — full verification + mutation + PR** (plan Task 12).
+
+---
+
 ## File Structure
 
 **Backend — create:**
