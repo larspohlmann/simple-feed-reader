@@ -41,6 +41,7 @@ import {
   ConfirmData,
   ConfirmDialogComponent,
 } from '../shared/confirm-dialog/confirm-dialog.component';
+import { ActionSheet } from '../shared/action-sheet/action-sheet.service';
 import { ManageActions } from './manage/manage-actions.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { CatalogStore } from '../discover/catalog.store';
@@ -71,6 +72,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dialog = inject(Dialog);
+  private readonly actionSheet = inject(ActionSheet);
   private readonly i18n = inject(TranslocoService);
   private readonly api = inject(ReaderApi);
   private readonly auth = inject(AuthService);
@@ -643,8 +645,20 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   /** The header button's start path: a for-you run is long and spends provider
    *  budget, so it is confirmed every time before it begins. The run itself,
    *  its poll loop, and its stop live in `RecommendationsService`; this only
-   *  guards the door. */
+   *  guards the door.
+   *
+   *  A leftover failed run can be resumed at the batch that failed rather than
+   *  redone from scratch, but its candidate snapshot is frozen from when it
+   *  first started -- so the choice is the user's, not a silent resume (#329). */
   startRecommendations(): void {
+    if (this.recs.report()?.status === 'failed') {
+      this.chooseResumeOrFreshRun();
+      return;
+    }
+    this.confirmFreshRun();
+  }
+
+  private confirmFreshRun(): void {
     const data: ConfirmData = {
       title: this.i18n.translate('reader.forYouRunConfirm'),
       message: this.i18n.translate('reader.forYouRunConfirmMessage'),
@@ -658,6 +672,24 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     ref.closed.subscribe((confirmed) => {
       if (confirmed) this.recs.start();
     });
+  }
+
+  /** An unfinished (failed) run is waiting: offer to resume it or start over,
+   *  rather than silently picking one. Both choices spend provider budget, so
+   *  the sheet itself stands in for the plain confirm. */
+  private chooseResumeOrFreshRun(): void {
+    this.actionSheet
+      .open({
+        title: this.i18n.translate('reader.forYouUnfinishedTitle'),
+        actions: [
+          { id: 'resume', label: this.i18n.translate('reader.forYouResume') },
+          { id: 'fresh', label: this.i18n.translate('reader.forYouStartOver') },
+        ],
+      })
+      .subscribe((choice) => {
+        if (choice === 'resume') this.recs.resumeRun();
+        else if (choice === 'fresh') this.recs.start();
+      });
   }
 
   onAddFeed(): void {

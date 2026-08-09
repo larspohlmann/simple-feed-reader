@@ -457,9 +457,12 @@
     "forYouRun": "Get recommendations",
     "forYouRunConfirm": "Get recommendations?",
     "forYouRunConfirmMessage": "This ranks your unread posts with AI. It can take several minutes.",
+    "forYouResume": "Resume unfinished run",
+    "forYouStartOver": "Start a new run",
     "forYouStop": "Stop",
     "forYouStopping": "Stopping…",
     "forYouProgress": "Ranking your feeds — {{done}} of {{total}}",
+    "forYouUnfinishedTitle": "You have an unfinished recommendation run",
     "forYouUnreachable": "Could not reach the recommendation service. Try again."
   },
   "common": {

@@ -720,6 +720,24 @@ describe('ReaderShellComponent', () => {
     forYou: { itemCount: 0, generatedAt: null },
   };
 
+  const failedReport = {
+    status: 'failed' as const,
+    batchesTotal: 3,
+    batchesDone: 2,
+    error: 'The AI provider at http://x/v1 failed: That provider answered with status 400.',
+    background: false,
+    streamedChars: 0,
+    forYou: { itemCount: 0, generatedAt: null },
+  };
+
+  function menuItem(text: string): HTMLElement {
+    const item = [...document.querySelectorAll('[role="menuitem"]')].find((b) =>
+      b.textContent?.includes(text),
+    ) as HTMLElement | undefined;
+    expect(item).not.toBeUndefined();
+    return item!;
+  }
+
   it('withholds the run button until AI is ready', () => {
     const f = boot();
     qp.next(convertToParamMap({ view: 'for-you' }));
@@ -776,6 +794,43 @@ describe('ReaderShellComponent', () => {
 
     ctrl.expectNone('https://api.test/api/recommendations/runs');
     expect(TestBed.inject(RecommendationsService).running()).toBe(false);
+  });
+
+  it('offers resume or start-over for a failed run, and resumes on choice', () => {
+    const f = bootForYou();
+    const recs = TestBed.inject(RecommendationsService);
+    recs.report.set(failedReport);
+    f.detectChanges();
+
+    (f.nativeElement.querySelector('.for-you-run button') as HTMLButtonElement).click();
+    f.detectChanges();
+
+    // The plain confirm never opens; the choice sheet stands in for it, and
+    // nothing is requested until the user picks.
+    ctrl.expectNone('https://api.test/api/recommendations/runs');
+    menuItem('Resume unfinished run').click();
+    f.detectChanges();
+
+    ctrl.expectOne('https://api.test/api/recommendations/runs/resume').flush(runningReport);
+    f.detectChanges();
+    expect(recs.running()).toBe(true);
+    ctrl.expectOne('https://api.test/api/recommendations/runs/tick').flush(runningReport);
+  });
+
+  it('starts a fresh run when start-over is chosen over a failed run', () => {
+    const f = bootForYou();
+    TestBed.inject(RecommendationsService).report.set(failedReport);
+    f.detectChanges();
+
+    (f.nativeElement.querySelector('.for-you-run button') as HTMLButtonElement).click();
+    f.detectChanges();
+
+    menuItem('Start a new run').click();
+    f.detectChanges();
+
+    ctrl.expectOne('https://api.test/api/recommendations/runs').flush(runningReport);
+    f.detectChanges();
+    ctrl.expectOne('https://api.test/api/recommendations/runs/tick').flush(runningReport);
   });
 
   it('replaces the run button with a stop button while a run is in flight', () => {

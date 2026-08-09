@@ -9,6 +9,7 @@ use App\Exception\AiKeyUnreadableApiException;
 use App\Exception\AiNotConfiguredApiException;
 use App\Exception\AiProviderApiException;
 use App\Exception\NoActiveRecommendationRunApiException;
+use App\Exception\NoResumableRecommendationRunApiException;
 use App\Exception\RecommendationRunActiveApiException;
 use App\Http\RecommendationRunStatusJson;
 use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
@@ -18,6 +19,7 @@ use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Recommendation\Exception\NoActiveRecommendationRunException;
+use App\Service\Recommendation\Exception\NoResumableRecommendationRunException;
 use App\Service\Recommendation\Exception\RecommendationRunActiveException;
 use App\Service\Recommendation\RecommendationForYouSummaryProvider;
 use App\Service\Recommendation\RecommendationPollDriver;
@@ -63,6 +65,28 @@ final readonly class RecommendationRunController
             $report = $this->starter->start($user);
         } catch (AiNotConfiguredException $e) {
             throw new AiNotConfiguredApiException($e);
+        }
+
+        return new JsonResponse(RecommendationRunStatusJson::report($report, $this->forYouSummaries->forUser($user)));
+    }
+
+    /**
+     * Resumes the latest failed run at the batch that failed. Shares the start
+     * limiter because it commits the same outbound spend a fresh run does, and
+     * 409s when there is nothing failed to resume -- the client offers this
+     * only after it has seen a failed run, so a miss is a stale click.
+     */
+    #[Route('/resume', name: 'api_recommendations_resume', methods: ['POST'])]
+    public function resume(#[CurrentUser] User $user): JsonResponse
+    {
+        $this->rateLimitGuard->enforceForUser($this->aiRecommendationStartsLimiter, $user);
+
+        try {
+            $report = $this->starter->resume($user);
+        } catch (AiNotConfiguredException $e) {
+            throw new AiNotConfiguredApiException($e);
+        } catch (NoResumableRecommendationRunException $e) {
+            throw new NoResumableRecommendationRunApiException($e);
         }
 
         return new JsonResponse(RecommendationRunStatusJson::report($report, $this->forYouSummaries->forUser($user)));

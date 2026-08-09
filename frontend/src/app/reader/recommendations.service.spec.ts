@@ -70,6 +70,21 @@ describe('RecommendationsService', () => {
     );
   });
 
+  it('resumeRun opens the run via the resume endpoint, then ticks to completion', () => {
+    svc.resumeRun();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/resume')
+      .flush(report({ status: 'running', batchesTotal: 3, batchesDone: 2 }));
+    expect(svc.running()).toBe(true);
+
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'completed', batchesTotal: 3, batchesDone: 3 }));
+
+    expect(svc.running()).toBe(false);
+    expect(svc.completedStamp()).toBe(1);
+  });
+
   it('the ready toast action navigates to the for-you view', () => {
     svc.start();
     ctrl

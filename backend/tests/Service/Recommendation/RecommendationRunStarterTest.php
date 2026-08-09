@@ -12,6 +12,7 @@ use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiNotConfiguredException;
+use App\Service\Recommendation\Exception\NoResumableRecommendationRunException;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -67,24 +68,57 @@ final class RecommendationRunStarterTest extends DbTestCase
         self::assertSame(1, $this->countRuns());
     }
 
-    public function testLatestFailedRunIsResumed(): void
+    public function testStartAlwaysBeginsAFreshRunEvenWithAFailedRunPresent(): void
     {
         $this->seedReadyAiSettings($this->user);
 
-        $run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07 09:00:00'));
-        $run->snapshot([[1, 2], [3]]);
-        $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
-        $run->fail('provider unreachable', new \DateTimeImmutable('2026-08-07 09:05:00'));
-        $this->em->persist($run);
+        $failed = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07 09:00:00'));
+        $failed->snapshot([[1, 2], [3]]);
+        $failed->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
+        $failed->fail('provider unreachable', new \DateTimeImmutable('2026-08-07 09:05:00'));
+        $this->em->persist($failed);
         $this->em->flush();
 
+        // start() no longer resumes: whether to pick up a failed run is the
+        // user's choice, made in the client, so start() always begins fresh
+        // and resume() is its own action (#329).
         $report = $this->starter()->start($this->user);
+
+        self::assertSame('pending', $report->status);
+        self::assertSame(0, $report->batchesDone);
+        self::assertSame(2, $this->countRuns());
+        $active = $this->runs()->findActiveForUser($this->user);
+        self::assertNotNull($active);
+        self::assertNotSame($failed->getId(), $active->getId());
+    }
+
+    public function testResumeContinuesTheLatestFailedRunInPlace(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+
+        $failed = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07 09:00:00'));
+        $failed->snapshot([[1, 2], [3]]);
+        $failed->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
+        $failed->fail('provider unreachable', new \DateTimeImmutable('2026-08-07 09:05:00'));
+        $this->em->persist($failed);
+        $this->em->flush();
+
+        $report = $this->starter()->resume($this->user);
 
         self::assertSame('running', $report->status);
         self::assertNull($report->error);
         self::assertSame(1, $report->batchesDone);
-        self::assertSame($run->getId(), $this->runs()->findActiveForUser($this->user)?->getId());
+        self::assertSame($failed->getId(), $this->runs()->findActiveForUser($this->user)?->getId());
         self::assertSame(1, $this->countRuns());
+    }
+
+    public function testResumeWithNoFailedRunThrows(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+
+        $this->expectException(NoResumableRecommendationRunException::class);
+
+        $this->starter()->resume($this->user);
     }
 
     public function testANewRunWipesTheDebugLogOfThePreviousRun(): void
@@ -126,7 +160,7 @@ final class RecommendationRunStarterTest extends DbTestCase
         ));
         $this->em->flush();
 
-        $report = $this->starter()->start($this->user);
+        $report = $this->starter()->resume($this->user);
 
         self::assertSame(RecommendationRun::STATUS_RUNNING, $report->status);
         // The wipe is bulk DQL when it runs, so clear before asserting survival.

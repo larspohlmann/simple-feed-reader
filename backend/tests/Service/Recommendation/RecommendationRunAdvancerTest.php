@@ -369,7 +369,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertNotNull($failed);
         self::assertSame(RecommendationRun::STATUS_FAILED, $failed->getStatus());
 
-        $this->starter()->start($this->user);
+        // resume() -- not start() -- is what continues a failed run now; start()
+        // would begin fresh at batch one.
+        $this->starter()->resume($this->user);
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $secondBatch[0], 'score' => 90, 'reason' => 'r2']],
         ], \JSON_THROW_ON_ERROR));

@@ -265,6 +265,21 @@ describe('ReaderApi', () => {
     });
   });
 
+  it('POSTs to resume a recommendation run', () => {
+    api.resumeRecommendations().subscribe();
+    const req = ctrl.expectOne('https://api.test/api/recommendations/runs/resume');
+    expect(req.request.method).toBe('POST');
+    req.flush({
+      status: 'running',
+      batchesTotal: 3,
+      batchesDone: 1,
+      error: null,
+      background: false,
+      streamedChars: 0,
+      forYou: { itemCount: 0, generatedAt: null },
+    });
+  });
+
   it('POSTs to tick a recommendation run', () => {
     api.tickRecommendations().subscribe();
     const req = ctrl.expectOne('https://api.test/api/recommendations/runs/tick');
