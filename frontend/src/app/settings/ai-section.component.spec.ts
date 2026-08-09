@@ -233,6 +233,9 @@ describe('AiSectionComponent', () => {
       fixture.nativeElement.querySelector('.reasoning-toggle input');
     expect(checkbox).not.toBeNull();
     expect(checkbox.checked).toBe(true);
+    expect(row(fixture, 0).querySelector('.reasoning-toggle .hint')?.textContent).toContain(
+      'rejects the request',
+    );
 
     checkbox.checked = false;
     checkbox.dispatchEvent(new Event('change'));

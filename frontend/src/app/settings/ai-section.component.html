@@ -44,13 +44,16 @@
                   >
                 }
                 <label class="reasoning-toggle">
-                  <input
-                    type="checkbox"
-                    [checked]="config.suppressReasoning"
-                    [disabled]="ai.busy()"
-                    (change)="toggleReasoning(config, $event)"
-                  />
-                  <span>{{ 'settings.ai.configs.reasoning' | transloco }}</span>
+                  <span class="reasoning-toggle-row">
+                    <input
+                      type="checkbox"
+                      [checked]="config.suppressReasoning"
+                      [disabled]="ai.busy()"
+                      (change)="toggleReasoning(config, $event)"
+                    />
+                    <span>{{ 'settings.ai.configs.reasoning' | transloco }}</span>
+                  </span>
+                  <span class="hint">{{ 'settings.ai.configs.reasoningHint' | transloco }}</span>
                 </label>
               }
             </div>
