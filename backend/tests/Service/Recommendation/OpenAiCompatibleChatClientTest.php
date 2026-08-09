@@ -512,6 +512,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $decoded = json_decode($seen, true);
         self::assertIsArray($decoded);
 
+        /** @var array<string, mixed> $decoded */
         return $decoded;
     }
 
