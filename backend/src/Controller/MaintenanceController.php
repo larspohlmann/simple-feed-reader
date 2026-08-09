@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Service\Maintenance\MaintenanceTokenGuard;
+use App\Service\Recommendation\ForYouSweep;
 use App\Service\Refresh\RefreshRequest;
 use App\Service\Refresh\RefreshRunner;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -25,6 +26,7 @@ final readonly class MaintenanceController
     public function __construct(
         private MaintenanceTokenGuard $tokenGuard,
         private RefreshRunner $refreshRunner,
+        private ForYouSweep $forYouSweep,
     ) {
     }
 
@@ -44,5 +46,20 @@ final readonly class MaintenanceController
         };
 
         return new JsonResponse($report->toArray(), $status);
+    }
+
+    /**
+     * Starts the accounts that are due and advances every active run once, so
+     * an install without the background worker can drive scheduled generation
+     * from an external cron (#333). One tick per run keeps the request bounded.
+     */
+    #[Route('/maintenance/recommendations/sweep', name: 'maintenance_recommendations_sweep', methods: ['POST'])]
+    public function sweepRecommendations(Request $request): JsonResponse
+    {
+        if (!$this->tokenGuard->isAuthorized($request)) {
+            return new JsonResponse(['error' => 'forbidden'], Response::HTTP_FORBIDDEN);
+        }
+
+        return new JsonResponse($this->forYouSweep->sweepOnce()->toArray());
     }
 }
