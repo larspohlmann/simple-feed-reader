@@ -23,7 +23,10 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
 {
     // A ranking over a large batch can legitimately generate for minutes, and
     // a reasoning model spends most of that thinking before it answers at all:
-    // 120 s failed real batches three times running and killed the run (#320).
+    // 120 s failed real batches three times running and killed the run (#320),
+    // and 300 s still failed a slow local model on a large batch with the
+    // generic "did not answer" once the whole generation overran the wall
+    // clock. 600 s carries a local run that streams for many minutes.
     //
     // Public because it is a published bound, not an implementation detail:
     // WorkerPresence::FRESH_SECONDS has to outlast one call of this length or
@@ -33,7 +36,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     // poll regime the tick is a web request, so the real ceiling there is
     // whatever the web server allows a FastCGI request to run — this constant
     // cannot raise that, and on a short-window host the call dies first.
-    public const float TIMEOUT_SECONDS = 300.0;
+    public const float TIMEOUT_SECONDS = 600.0;
 
     // The answer arrives as an SSE stream (#312), so silence — no delta for
     // this long — means a dead connection, not a thinking model. The binding

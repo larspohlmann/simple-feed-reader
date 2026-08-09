@@ -98,12 +98,12 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         // The idle bound is what makes a dead connection fail in 180 s rather
         // than at the full wall clock — the whole point of #312. The wall bound
-        // is the published 300 s budget WorkerPresence::FRESH_SECONDS is sized
+        // is the published 600 s budget WorkerPresence::FRESH_SECONDS is sized
         // against (#311). Pinning the numbers, not the constants, means a
         // regression that swaps one for the other or drops max_duration
         // shows up here instead of only in production behaviour.
         self::assertSame(180.0, $seen['timeout']);
-        self::assertSame(300.0, $seen['max_duration']);
+        self::assertSame(600.0, $seen['max_duration']);
 
         // Asserted as a whole body rather than key by key: `max_tokens` is the
         // only guard here that stops tokens being generated instead of
@@ -157,7 +157,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     /**
      * The point of #312: a stream that goes silent is aborted after the
      * inactivity window and surfaces as the same typed transport failure the
-     * #308 retry pipeline already handles — not after the full 300 s budget.
+     * #308 retry pipeline already handles — not after the full 600 s budget.
      *
      * MockHttpClient turns an empty string yielded by a body generator into a
      * timeout chunk, the documented way to simulate a stalled stream.
