@@ -30,6 +30,7 @@ import { RefreshService } from './refresh.service';
 import { LayoutService } from './layout.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { RecommendationsService } from './recommendations.service';
+import { AiAvailabilityService } from '../core/ai-availability.service';
 
 describe('ReaderShellComponent', () => {
   let ctrl: HttpTestingController;
@@ -694,7 +695,32 @@ describe('ReaderShellComponent', () => {
     ctrl.expectNone((r) => r.url === 'https://api.test/api/entries');
   });
 
-  it('shows the run button on the for-you view and starts a run on click', () => {
+  // The run trigger lives in the list header now (#325), gated on AI being
+  // ready — the same gate the sidebar's For You link uses — so a booted for-you
+  // view marks readiness before it expects the button.
+  function bootForYou() {
+    const f = boot();
+    TestBed.inject(AiAvailabilityService).apply({ ready: true, model: 'gpt' });
+    qp.next(convertToParamMap({ view: 'for-you' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+    return f;
+  }
+
+  const runningReport = {
+    status: 'running' as const,
+    batchesTotal: 3,
+    batchesDone: 1,
+    error: null,
+    background: false,
+    streamedChars: 0,
+    forYou: { itemCount: 0, generatedAt: null },
+  };
+
+  it('withholds the run button until AI is ready', () => {
     const f = boot();
     qp.next(convertToParamMap({ view: 'for-you' }));
     f.detectChanges();
@@ -703,196 +729,84 @@ describe('ReaderShellComponent', () => {
       .flush({ entries: [], nextCursor: null });
     f.detectChanges();
 
+    expect(f.nativeElement.querySelector('.for-you-run')).toBeNull();
+  });
+
+  it('shows the run button in the list header and starts a run only after the user confirms', () => {
+    const f = bootForYou();
     const recs = TestBed.inject(RecommendationsService);
+
     const button = f.nativeElement.querySelector(
-      '.for-you-top app-button button',
+      '.list-header .for-you-run button',
     ) as HTMLButtonElement;
     expect(button).not.toBeNull();
-    expect(f.nativeElement.querySelector('.for-you-top [role="status"]')).toBeNull();
+    expect(button.textContent).toContain('Get recommendations');
+    // No progress caption while idle — it belongs to a live run only.
+    expect(f.nativeElement.querySelector('.for-you-progress')).toBeNull();
 
+    // The click only opens the confirmation: nothing is requested until it is
+    // accepted, because a run is long and spends provider budget.
     button.click();
-    ctrl.expectOne('https://api.test/api/recommendations/runs').flush({
-      status: 'running',
-      batchesTotal: 3,
-      batchesDone: 0,
-      error: null,
-      background: false,
-      streamedChars: 0,
-      forYou: { itemCount: 0, generatedAt: null },
-    });
+    f.detectChanges();
+    ctrl.expectNone('https://api.test/api/recommendations/runs');
+
+    const confirm = document.querySelector('[data-testid="confirm"]') as HTMLButtonElement;
+    expect(confirm).not.toBeNull();
+    confirm.click();
+    f.detectChanges();
+
+    ctrl.expectOne('https://api.test/api/recommendations/runs').flush(runningReport);
     f.detectChanges();
     expect(recs.running()).toBe(true);
-    ctrl.expectOne('https://api.test/api/recommendations/runs/tick').flush({
-      status: 'running',
-      batchesTotal: 3,
-      batchesDone: 0,
-      error: null,
-      background: false,
-      streamedChars: 0,
-      forYou: { itemCount: 0, generatedAt: null },
-    });
+    ctrl.expectOne('https://api.test/api/recommendations/runs/tick').flush(runningReport);
   });
 
-  it('shows the run hint beside the button', () => {
-    const f = boot();
-    qp.next(convertToParamMap({ view: 'for-you' }));
-    f.detectChanges();
-    ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
-      .flush({ entries: [], nextCursor: null });
+  it('starts no run when the confirmation is dismissed', () => {
+    const f = bootForYou();
+
+    (f.nativeElement.querySelector('.for-you-run button') as HTMLButtonElement).click();
     f.detectChanges();
 
-    expect(f.nativeElement.querySelector('.for-you-top .cap')!.textContent).toContain(
-      'Ranks your unread posts',
-    );
+    const cancel = [...document.querySelectorAll('app-button button')].find(
+      (b) => b.textContent?.trim() === 'Cancel',
+    ) as HTMLButtonElement;
+    expect(cancel).not.toBeUndefined();
+    cancel.click();
+    f.detectChanges();
+
+    ctrl.expectNone('https://api.test/api/recommendations/runs');
+    expect(TestBed.inject(RecommendationsService).running()).toBe(false);
   });
 
-  it('swaps the start button for progress and a stop button while a run is in flight', () => {
-    const f = boot();
-    qp.next(convertToParamMap({ view: 'for-you' }));
-    f.detectChanges();
-    ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
-      .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
-
+  it('replaces the run button with a stop button while a run is in flight', () => {
+    const f = bootForYou();
     const recs = TestBed.inject(RecommendationsService);
     recs.running.set(true);
-    recs.report.set({
-      status: 'running',
-      batchesTotal: 3,
-      batchesDone: 1,
-      error: null,
-      background: false,
-      streamedChars: 0,
-      forYou: { itemCount: 0, generatedAt: null },
-    });
+    recs.report.set(runningReport);
     f.detectChanges();
 
-    // The start button must be gone -- starting a second run over a live one
-    // is exactly what the block exists to prevent -- but the run must remain
-    // stoppable, which is the whole point of having a button here at all.
-    const buttons = [...f.nativeElement.querySelectorAll('.for-you-top app-button')];
-    expect(buttons.map((b: HTMLElement) => b.textContent!.trim())).toEqual(['Stop']);
-
-    const status = f.nativeElement.querySelector('.for-you-top [role="status"]') as HTMLElement;
-    expect(status.textContent).toContain('1 of 3');
+    // Only the Stop button remains — starting a second run over a live one is
+    // exactly what the single toggling slot prevents — with the batch count
+    // beneath it and no failure alert clutter in the header (#325).
+    const buttons = [...f.nativeElement.querySelectorAll('.for-you-run')];
+    expect(buttons.length).toBe(1);
+    expect(buttons[0].querySelector('.label')!.textContent!.trim()).toBe('Stop');
+    const progress = f.nativeElement.querySelector('.for-you-progress') as HTMLElement;
+    expect(progress.textContent).toContain('1 of 3');
+    expect(f.nativeElement.querySelector('.list-header [role="alert"]')).toBeNull();
   });
 
   it('stops the run when the stop button is clicked', () => {
-    const f = boot();
-    qp.next(convertToParamMap({ view: 'for-you' }));
-    f.detectChanges();
-    ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
-      .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
-
+    const f = bootForYou();
     const recs = TestBed.inject(RecommendationsService);
     const stop = jest.spyOn(recs, 'stop');
     recs.running.set(true);
-    recs.report.set({
-      status: 'running',
-      batchesTotal: 3,
-      batchesDone: 1,
-      error: null,
-      background: false,
-      streamedChars: 0,
-      forYou: { itemCount: 0, generatedAt: null },
-    });
+    recs.report.set(runningReport);
     f.detectChanges();
 
-    const button = f.nativeElement.querySelector('.for-you-top app-button button') as HTMLElement;
-    button.click();
+    (f.nativeElement.querySelector('.for-you-run button') as HTMLElement).click();
 
     expect(stop).toHaveBeenCalledTimes(1);
-  });
-
-  it('opens the info dialog from the info button shown while a run is in flight', () => {
-    const f = boot();
-    qp.next(convertToParamMap({ view: 'for-you' }));
-    f.detectChanges();
-    ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
-      .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
-
-    const recs = TestBed.inject(RecommendationsService);
-    recs.running.set(true);
-    recs.report.set({
-      status: 'running',
-      batchesTotal: 3,
-      batchesDone: 1,
-      error: null,
-      background: false,
-      streamedChars: 0,
-      forYou: { itemCount: 0, generatedAt: null },
-    });
-    f.detectChanges();
-
-    const info = f.nativeElement.querySelector('.for-you-top .info') as HTMLButtonElement;
-    expect(info).not.toBeNull();
-    info.click();
-    f.detectChanges();
-
-    expect(document.querySelector('app-for-you-info-dialog')).not.toBeNull();
-  });
-
-  it('tells the user when the backend gave up on the run itself', () => {
-    const f = boot();
-    qp.next(convertToParamMap({ view: 'for-you' }));
-    f.detectChanges();
-    ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
-      .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
-
-    const recs = TestBed.inject(RecommendationsService);
-    recs.running.set(false);
-    recs.failure.set({ kind: 'failed', error: 'provider unreachable' });
-    f.detectChanges();
-
-    const alert = f.nativeElement.querySelector('.for-you-top [role="alert"]') as HTMLElement;
-    expect(alert.textContent).toContain('Recommendations failed');
-  });
-
-  it('tells the user when the request itself failed', () => {
-    const f = boot();
-    qp.next(convertToParamMap({ view: 'for-you' }));
-    f.detectChanges();
-    ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
-      .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
-
-    const recs = TestBed.inject(RecommendationsService);
-    recs.running.set(false);
-    recs.failure.set({
-      kind: 'http',
-      problem: { type: 'about:blank', title: 'Too many requests', status: 429 },
-    });
-    f.detectChanges();
-
-    const alert = f.nativeElement.querySelector('.for-you-top [role="alert"]') as HTMLElement;
-    expect(alert.textContent).toContain('Could not reach the recommendation service');
-  });
-
-  it('does not show a stale failure once a new run is in flight', () => {
-    const f = boot();
-    qp.next(convertToParamMap({ view: 'for-you' }));
-    f.detectChanges();
-    ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
-      .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
-
-    const recs = TestBed.inject(RecommendationsService);
-    recs.running.set(false);
-    recs.failure.set({ kind: 'failed', error: 'boom' });
-    recs.running.set(true);
-    f.detectChanges();
-
-    expect(f.nativeElement.querySelector('.for-you-top [role="alert"]')).toBeNull();
   });
 
   // The heading names the tag, so it also carries the tag's glyph and colour —

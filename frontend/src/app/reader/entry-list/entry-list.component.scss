@@ -124,6 +124,14 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   flex: none;
 }
 
+/* When the shell projects a header action (the For You run/stop button, #325),
+   the tools anchor to the header's top edge instead of centering. The action
+   can carry a caption that grows downward while a run is in flight; anchoring
+   the top keeps the button itself from moving as that caption appears. */
+.tools.has-actions {
+  align-self: flex-start;
+}
+
 .toggle {
   display: inline-flex;
   border: 1px solid var(--border-strong);

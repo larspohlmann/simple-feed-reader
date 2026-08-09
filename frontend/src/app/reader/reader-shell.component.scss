@@ -195,31 +195,37 @@ app-reader-header.hidden {
   left: 0;
 }
 
-.for-you-top {
+/* The For You run/stop button lives in the list header (#325). The action is a
+   right-aligned stack: the button on top, and — while a run is in flight — the
+   progress line beneath it. The parent `.tools.has-actions` anchors this stack
+   to the header's top edge, so the caption grows downward without moving the
+   button. */
+.for-you-action {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-2);
-  align-items: center;
-  padding: var(--space-2) var(--row-pad-comfy-x) var(--space-3);
-  color: var(--text-secondary);
-  font-size: var(--fs-sm);
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+}
 
-  p {
-    margin: 0;
+.for-you-progress {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Below the small breakpoint the button drops its label and stands on the icon
+   alone — the same rule the header's other tools follow, with the aria-label
+   keeping it named — and the progress caption is dropped so the header stays
+   compact on a phone. */
+@media (width <= bp.$bp-sm) {
+  .for-you-run .label {
+    display: none;
   }
 
-  .cap {
-    flex-basis: 100%;
-    color: var(--text-muted);
-    font-size: var(--fs-xs);
-  }
-
-  .info {
-    padding: var(--space-1);
-    border: 0;
-    background: none;
-    color: var(--text-muted);
-    cursor: pointer;
+  .for-you-progress {
+    display: none;
   }
 }
 

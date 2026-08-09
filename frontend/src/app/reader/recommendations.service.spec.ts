@@ -211,6 +211,12 @@ describe('RecommendationsService', () => {
     ctrl.verify(); // no tick request
     expect(svc.running()).toBe(false);
     expect(svc.failure()?.kind).toBe('http');
+    // The run's only in-reader surface is the progress hairline, gone the moment
+    // the run ends. Without this toast an outright request failure would be
+    // silent (#325).
+    expect(toast.show).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'reader.forYouUnreachable' }),
+    );
   });
 
   describe('stopping a run', () => {

@@ -24,7 +24,7 @@ import { EntriesStore } from './entries.store';
 import { RefreshService } from './refresh.service';
 import { RecommendationsService } from './recommendations.service';
 import { refreshFailureKey } from './refresh-message';
-import { forYouFailureKey } from './for-you-message';
+import { AiAvailabilityService } from '../core/ai-availability.service';
 import { ReadingLayoutService } from './reading-layout.service';
 import { LayoutService } from './layout.service';
 import { RefreshScope, markReadTarget, queryFromSelection, selectionFromParams } from './query';
@@ -37,7 +37,10 @@ import { SidebarComponent } from './sidebar/sidebar.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
 import { ReaderViewComponent } from './reader-view/reader-view.component';
 import { AddFeedDialogComponent } from './add-feed/add-feed-dialog.component';
-import { ForYouInfoDialogComponent } from './for-you-info-dialog.component';
+import {
+  ConfirmData,
+  ConfirmDialogComponent,
+} from '../shared/confirm-dialog/confirm-dialog.component';
 import { ManageActions } from './manage/manage-actions.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { CatalogStore } from '../discover/catalog.store';
@@ -45,7 +48,7 @@ import { OnboardingSkip } from '../discover/onboarding-skip';
 import { ProgressHairlineComponent } from '../shared/progress-hairline/progress-hairline.component';
 import { IconComponent } from '../shared/icon/icon.component';
 import { ButtonComponent } from '../shared/button/button.component';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 @Component({
   selector: 'app-reader-shell',
@@ -68,6 +71,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dialog = inject(Dialog);
+  private readonly i18n = inject(TranslocoService);
   private readonly api = inject(ReaderApi);
   private readonly auth = inject(AuthService);
   private readonly hostRef = inject(ElementRef<HTMLElement>);
@@ -78,6 +82,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly entries = inject(EntriesStore);
   readonly refreshSvc = inject(RefreshService);
   readonly recs = inject(RecommendationsService);
+  readonly ai = inject(AiAvailabilityService);
   readonly layout = inject(ReadingLayoutService);
   readonly screen = inject(LayoutService);
   private readonly skip = inject(OnboardingSkip);
@@ -147,22 +152,12 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     return { done: report.total - report.remaining, total: report.total };
   });
 
-  /** For the terse, non-churning progress line the for-you bar shows while a
-   *  run is in flight — `0 of 0` before the first tick reports a batch count. */
+  /** The terse batch count the header shows under the Stop button while a run
+   *  is in flight — `0 of 0` before the first tick reports a batch total. */
   readonly forYouProgress = computed(() => ({
     done: this.recs.report()?.batchesDone ?? 0,
     total: this.recs.report()?.batchesTotal ?? 0,
   }));
-
-  /** What to tell the user about a for-you run that ended without a fresh
-   *  list -- busy-retry exhaustion, a backend-side failure, or an HTTP error.
-   *  Gated on `!running()` so a stale failure from a previous run never
-   *  overlaps the progress bar of a new one. */
-  readonly forYouFailureMessageKey = computed(() => {
-    if (this.recs.running()) return null;
-    const failure = this.recs.failure();
-    return failure ? forYouFailureKey(failure) : null;
-  });
 
   private readonly params = toSignal(this.route.queryParamMap, {
     initialValue: convertToParamMap({}),
@@ -645,11 +640,24 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     }, scope);
   }
 
-  /** The info icon shown next to a running for-you progress line: what used to
-   *  be inline hints (keep-open/background, streamed KB) now lives behind this
-   *  overlay instead of permanently occupying the bar (#321). */
-  openForYouInfo(): void {
-    this.dialog.open(ForYouInfoDialogComponent, { panelClass: 'app-dialog' });
+  /** The header button's start path: a for-you run is long and spends provider
+   *  budget, so it is confirmed every time before it begins. The run itself,
+   *  its poll loop, and its stop live in `RecommendationsService`; this only
+   *  guards the door. */
+  startRecommendations(): void {
+    const data: ConfirmData = {
+      title: this.i18n.translate('reader.forYouRunConfirm'),
+      message: this.i18n.translate('reader.forYouRunConfirmMessage'),
+      confirmLabel: this.i18n.translate('reader.forYouRun'),
+    };
+    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
+      data,
+      role: 'alertdialog',
+      panelClass: 'app-dialog',
+    });
+    ref.closed.subscribe((confirmed) => {
+      if (confirmed) this.recs.start();
+    });
   }
 
   onAddFeed(): void {
