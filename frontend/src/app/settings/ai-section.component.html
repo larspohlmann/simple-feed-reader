@@ -89,6 +89,13 @@
                 >
                   {{ 'settings.ai.configs.changeModel' | transloco }}
                 </app-button>
+                <app-button
+                  class="duplicate"
+                  [disabled]="ai.busy()"
+                  (click)="ai.duplicate(config.id)"
+                >
+                  {{ 'settings.ai.configs.duplicate' | transloco }}
+                </app-button>
                 <app-button class="rename" (click)="startRename(config)">
                   {{ 'settings.ai.configs.rename' | transloco }}
                 </app-button>

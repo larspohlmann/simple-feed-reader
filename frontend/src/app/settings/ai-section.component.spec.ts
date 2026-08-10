@@ -24,6 +24,7 @@ interface AiSettingsStub {
   add: jest.Mock;
   loadModels: jest.Mock;
   chooseModel: jest.Mock;
+  duplicate: jest.Mock;
   rename: jest.Mock;
   setReasoning: jest.Mock;
   setBatchConcurrency: jest.Mock;
@@ -72,6 +73,7 @@ function createStub(): AiSettingsStub {
     add: jest.fn(),
     loadModels: jest.fn(),
     chooseModel: jest.fn(),
+    duplicate: jest.fn(),
     rename: jest.fn(),
     setReasoning: jest.fn(),
     setBatchConcurrency: jest.fn(),
@@ -226,6 +228,16 @@ describe('AiSectionComponent', () => {
     (row(fixture, 0).querySelector('.activate') as HTMLButtonElement).click();
 
     expect(ai.activate).toHaveBeenCalledWith(1);
+  });
+
+  it('duplicates a configuration', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 7 })]);
+    fixture.detectChanges();
+
+    (row(fixture, 0).querySelector('.duplicate') as HTMLButtonElement).click();
+
+    expect(ai.duplicate).toHaveBeenCalledWith(7);
   });
 
   it('toggles the reasoning preference for a row', () => {
