@@ -38,7 +38,8 @@ final readonly class RecommendationCandidateLoader
     }
 
     /**
-     * Unread candidates in feeds the reader subscribes to. The newest
+     * Unread candidates, excluding anything the reader has already favorited,
+     * kept, or viewed, in feeds the reader subscribes to. The newest
      * $poolSize are selected, then returned in a randomized order seeded by
      * $orderSeed, so batches sample the pool rather than cluster by recency
      * (#344). The same seed always produces the same order.
@@ -50,10 +51,23 @@ final readonly class RecommendationCandidateLoader
         $qb = $this->candidateQueryBuilder($userId)
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
             ->andWhere(UnreadDql::predicate())
+            // Favorited, kept, and viewed entries are the reader's history —
+            // they already appear in the prompt's FAVORITES/KEPT/VIEWED
+            // sections, so scoring them again as fresh candidates would
+            // re-recommend what the reader has already acted on. es is a
+            // LEFT JOIN, so an entry with no state row (never interacted
+            // with) must stay a candidate — hence the null-safe OR on each
+            // flag.
+            ->andWhere(
+                '(es.isFavorite = :notInteracted OR es.isFavorite IS NULL)'
+                . ' AND (es.isKept = :notInteracted OR es.isKept IS NULL)'
+                . ' AND (es.isViewed = :notInteracted OR es.isViewed IS NULL)',
+            )
             ->orderBy('e.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($poolSize)
-            ->setParameter('readFalse', false, Types::BOOLEAN);
+            ->setParameter('readFalse', false, Types::BOOLEAN)
+            ->setParameter('notInteracted', false, Types::BOOLEAN);
 
         $lines = $this->linesFor($qb);
         $shuffled = (new Randomizer(new Mt19937($orderSeed)))->shuffleArray($lines);

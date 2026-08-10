@@ -59,6 +59,68 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         self::assertSame([$unread->getId()], array_map(static fn ($l) => $l->entryId, $lines));
     }
 
+    public function testAnUnreadFavoritedEntryIsExcluded(): void
+    {
+        $favorited = $this->entry('favorited', '2026-07-10T00:00:00Z');
+        $state = new EntryState($this->user, $favorited);
+        $state->setIsFavorite(true);
+        $this->em->persist($state);
+        $this->em->flush();
+
+        $lines = $this->loader()->load($this->userId(), 100, 1);
+
+        self::assertSame([], array_map(static fn ($l) => $l->entryId, $lines));
+    }
+
+    public function testAnUnreadKeptEntryIsExcluded(): void
+    {
+        $kept = $this->entry('kept-entry', '2026-07-10T00:00:00Z');
+        $state = new EntryState($this->user, $kept);
+        $state->setIsKept(true);
+        $this->em->persist($state);
+        $this->em->flush();
+
+        $lines = $this->loader()->load($this->userId(), 100, 1);
+
+        self::assertSame([], array_map(static fn ($l) => $l->entryId, $lines));
+    }
+
+    public function testAnUnreadViewedEntryIsExcluded(): void
+    {
+        $viewed = $this->entry('viewed-entry', '2026-07-10T00:00:00Z');
+        $state = new EntryState($this->user, $viewed);
+        $state->markViewed(new \DateTimeImmutable('2026-07-10T01:00:00Z'));
+        $this->em->persist($state);
+        $this->em->flush();
+
+        $lines = $this->loader()->load($this->userId(), 100, 1);
+
+        self::assertSame([], array_map(static fn ($l) => $l->entryId, $lines));
+    }
+
+    public function testAnUnreadEntryWithNoStateRowIsReturned(): void
+    {
+        $noState = $this->entry('no-state', '2026-07-10T00:00:00Z');
+
+        $lines = $this->loader()->load($this->userId(), 100, 1);
+
+        self::assertSame([$noState->getId()], array_map(static fn ($l) => $l->entryId, $lines));
+    }
+
+    public function testAnUnreadEntryWithAllInteractionFlagsFalseIsReturned(): void
+    {
+        $untouched = $this->entry('untouched', '2026-07-10T00:00:00Z');
+        $state = new EntryState($this->user, $untouched);
+        $state->setIsFavorite(false);
+        $state->setIsKept(false);
+        $this->em->persist($state);
+        $this->em->flush();
+
+        $lines = $this->loader()->load($this->userId(), 100, 1);
+
+        self::assertSame([$untouched->getId()], array_map(static fn ($l) => $l->entryId, $lines));
+    }
+
     public function testReturnsTheUnreadCandidatesAsAMultiset(): void
     {
         $this->entry('older', '2026-07-10T00:00:00Z');
