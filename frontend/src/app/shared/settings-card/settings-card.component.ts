@@ -1,6 +1,7 @@
 // src/app/shared/settings-card/settings-card.component.ts
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { DisclosureComponent } from '../disclosure/disclosure.component';
 
 /**
  * The one surface a settings or admin section sits in: a heading, an optional
@@ -15,14 +16,14 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
  * keys, so this shared component never hardcodes a feature's translation keys
  * -- the caller resolves those with its own `transloco` pipe.
  *
- * `collapsible` turns the heading into a native `<details>`/`<summary>` toggle:
- * the body -- the description and the projected content -- is collapsed by
- * default and opens on click. Collapsible cards do not support the
- * `cardActions` slot.
+ * `collapsible` turns the heading into a collapsed `<app-disclosure>` toggle
+ * (the one shared `<details>`/`<summary>` wrapper): the body -- the description
+ * and the projected content -- is collapsed by default and opens on click.
+ * Collapsible cards do not support the `cardActions` slot.
  */
 @Component({
   selector: 'app-settings-card',
-  imports: [NgTemplateOutlet],
+  imports: [NgTemplateOutlet, DisclosureComponent],
   templateUrl: './settings-card.component.html',
   styleUrl: './settings-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
