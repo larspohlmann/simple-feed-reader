@@ -14,7 +14,8 @@ app-disclosure {
 }
 
 /* The debug switch carries a visible legend, not just an aria-label, so it is
-   clear what the knob turns on. Text on the left, switch on the right. */
+   clear what the knob turns on. Label and hint on the left, switch on the
+   right. */
 .debug-row {
   display: flex;
   align-items: center;
@@ -22,10 +23,21 @@ app-disclosure {
   gap: var(--space-3);
 }
 
+.debug-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
 .debug-label {
   color: var(--text-primary);
   font-size: var(--fs-sm);
   cursor: pointer;
+}
+
+.debug-hint {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
 }
 
 app-field {

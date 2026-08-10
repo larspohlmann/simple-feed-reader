@@ -113,9 +113,12 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
     </app-disclosure>
 
     <div class="debug-row">
-      <label class="debug-label" for="rec-debug-toggle">{{
-        'settings.ai.recommendations.debug' | transloco
-      }}</label>
+      <span class="debug-text">
+        <label class="debug-label" for="rec-debug-toggle">{{
+          'settings.ai.recommendations.debug' | transloco
+        }}</label>
+        <span class="debug-hint">{{ 'settings.ai.recommendations.debugHint' | transloco }}</span>
+      </span>
       <app-toggle
         inputId="rec-debug-toggle"
         [label]="'settings.ai.recommendations.debug' | transloco"
