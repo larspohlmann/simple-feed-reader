@@ -231,6 +231,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
                 'on_progress' => static function (int $downloaded): void {
                     ResponseTooLargeException::throwIfExceeded($downloaded);
                 },
+                ...CrossFamilyFailover::freshConnectionAfter($attempt->pinnedAddressAttempt),
             ]);
         } catch (ExceptionInterface $e) {
             throw FetchException::from($attempt->url, $e);
