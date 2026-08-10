@@ -421,6 +421,7 @@
     "favorites": "Favoriten",
     "kept": "Gemerkt",
     "forYou": "Für dich",
+    "forYouGeneratedAt": "Erstellt {{ago}}",
     "tags": "Tags",
     "feeds": "Feeds",
     "organise": "Organisieren",
