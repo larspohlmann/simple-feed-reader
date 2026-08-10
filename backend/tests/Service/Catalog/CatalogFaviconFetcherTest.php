@@ -7,6 +7,7 @@ namespace App\Tests\Service\Catalog;
 use App\Service\Catalog\CatalogFaviconFetcher;
 use App\Service\Catalog\Exception\FaviconUnavailableException;
 use App\Service\Fetch\DnsResolverInterface;
+use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use PHPUnit\Framework\TestCase;
@@ -41,7 +42,10 @@ final class CatalogFaviconFetcherTest extends TestCase
             }
         };
 
-        return new CatalogFaviconFetcher($client, new UrlGuard($resolver, new IpValidator()));
+        return new CatalogFaviconFetcher(
+            new FailoverRequestSender($client),
+            new UrlGuard($resolver, new IpValidator()),
+        );
     }
 
     public function testReturnsTheBytesAndContentTypeOfAnImageResponse(): void
@@ -55,6 +59,28 @@ final class CatalogFaviconFetcherTest extends TestCase
         self::assertSame('BINARY', $icon->bytes);
         self::assertSame('image/png', $icon->contentType);
         self::assertSame(self::ICON_URL, $icon->sourceUrl);
+    }
+
+    public function testFailsOverToIpv4WhenIpv6ConnectsButResetsBeforeHeaders(): void
+    {
+        // The both-families pin leads with IPv6; a route that resets at the TLS
+        // handshake (heise's IPv6 from Strato) is unrecoverable by the client, so
+        // the icon must still download over IPv4.
+        $client = new MockHttpClient(static function (string $method, string $url, array $options): MockResponse {
+            /** @var array<string, string> $resolve */
+            $resolve = $options['resolve'];
+            $pinnedAddresses = $resolve['www.theverge.com'];
+
+            return str_contains($pinnedAddresses, ':')
+                ? new MockResponse('', ['error' => 'Connection reset by peer'])
+                : new MockResponse('ICON', ['response_headers' => ['content-type' => ['image/png']]]);
+        });
+
+        $icon = $this
+            ->fetcher($client, ['www.theverge.com' => ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']])
+            ->download(self::ICON_URL);
+
+        self::assertSame('ICON', $icon->bytes);
     }
 
     public function testRejectsANonImageContentType(): void

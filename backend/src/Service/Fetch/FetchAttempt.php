@@ -24,6 +24,7 @@ final readonly class FetchAttempt
         public string $url,
         public bool $permanentRedirect,
         private int $hop,
+        public int $pinnedAddressAttempt = 0,
     ) {
     }
 
@@ -45,6 +46,26 @@ final readonly class FetchAttempt
             $url,
             $this->permanentRedirect || $permanent,
             $this->hop + 1,
+            // A redirect lands on a fresh host, so the address pins start over.
+        );
+    }
+
+    /**
+     * The same request pinned to the next address family. A family that connects
+     * and only then dies (heise's IPv6 from Strato resets at TLS) takes the whole
+     * request down with no client-side fallback; re-driving it over the next pin
+     * reaches the family that works. The redirect hop count is untouched — this
+     * is the same hop over a different route, not a new one.
+     */
+    public function overNextPinnedAddress(): self
+    {
+        return new self(
+            $this->key,
+            $this->ticket,
+            $this->url,
+            $this->permanentRedirect,
+            $this->hop,
+            $this->pinnedAddressAttempt + 1,
         );
     }
 }

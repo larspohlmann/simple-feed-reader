@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Fetch\Exception\SsrfBlockedException;
+use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\GuardedUrl;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Fetch\UrlResolver;
 use App\Service\Reader\Exception\PageFetchException;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
@@ -26,7 +26,7 @@ final class HtmlPageFetcher
     private const float TIMEOUT_SECONDS = 10.0;
 
     public function __construct(
-        private readonly HttpClientInterface $httpClient,
+        private readonly FailoverRequestSender $requestSender,
         private readonly UrlGuard $urlGuard,
         private readonly string $userAgent,
     ) {
@@ -76,7 +76,7 @@ final class HtmlPageFetcher
     private function request(string $url, GuardedUrl $guarded): ResponseInterface
     {
         try {
-            return $this->httpClient->request('GET', $url, [
+            return $this->requestSender->send('GET', $url, $guarded, [
                 'headers' => [
                     'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                     // Refuse transparent compression: otherwise curl counts the
@@ -89,7 +89,6 @@ final class HtmlPageFetcher
                 'max_redirects' => 0,
                 'timeout' => self::TIMEOUT_SECONDS,
                 'max_duration' => self::TIMEOUT_SECONDS * 2,
-                'resolve' => [$guarded->host => $guarded->pinnedAddresses()],
                 'on_progress' => static function (int $downloaded): void {
                     if ($downloaded > self::MAX_BYTES) {
                         throw new PageFetchException(sprintf('response exceeds %d bytes', self::MAX_BYTES));
