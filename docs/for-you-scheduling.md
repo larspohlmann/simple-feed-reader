@@ -39,3 +39,26 @@ Example GitHub Actions schedule (store the token as the repository secret
                 -H "X-Maintenance-Token: ${{ secrets.MAINTENANCE_TOKEN }}"
 
 The response is JSON: `{ "startedRuns": n, "advancedRuns": m, "activeRuns": k }`.
+
+## One call for everything
+
+To drive both jobs from a single cron line, ping the combined endpoint instead
+of the two separate ones:
+
+    POST /maintenance/tick
+    Header: X-Maintenance-Token: <MAINTENANCE_TOKEN>
+
+It refreshes all due feeds, then starts due recommendation runs and advances
+each active run one step, and returns both reports:
+
+    { "refresh": { "status": "completed", ... },
+      "recommendations": { "startedRuns": n, "advancedRuns": m, "activeRuns": k } }
+
+It always answers `200` when the tick ran; read each half's own status in the
+body. The granular `/maintenance/refresh` and `/maintenance/recommendations/sweep`
+routes stay available for a caller that wants one job only.
+
+Example cron line (every minute for the sweep cadence; the refresh half only
+touches feeds that are already due):
+
+    * * * * * curl -fsS -X POST "https://YOUR_HOST/maintenance/tick" -H "X-Maintenance-Token: $MAINTENANCE_TOKEN"
