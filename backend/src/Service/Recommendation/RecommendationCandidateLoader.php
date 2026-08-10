@@ -51,6 +51,9 @@ final readonly class RecommendationCandidateLoader
         $qb = $this->candidateQueryBuilder($userId)
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
             ->andWhere(UnreadDql::predicate())
+            // This is the negation of what RecommendationHistoryLoader's
+            // FAVORITES/KEPT/VIEWED sections contain -- a future change to
+            // what counts as reader history there must update both.
             // Favorited, kept, and viewed entries are the reader's history —
             // they already appear in the prompt's FAVORITES/KEPT/VIEWED
             // sections, so scoring them again as fresh candidates would
@@ -70,15 +73,15 @@ final readonly class RecommendationCandidateLoader
             ->setParameter('notInteracted', false, Types::BOOLEAN);
 
         $lines = $this->linesFor($qb);
-        $shuffled = (new Randomizer(new Mt19937($orderSeed)))->shuffleArray($lines);
 
         // shuffleArray() has no generic stub, so it widens the element type
-        // back to mixed; the instanceof re-narrows it to the PromptLine list
-        // the return type promises, dropping nothing — every element is one.
-        return array_values(array_filter(
-            $shuffled,
-            static fn (mixed $line): bool => $line instanceof PromptLine,
-        ));
+        // back to mixed; the @var restates the PromptLine list the return
+        // type promises -- shuffling reorders $lines, it cannot change what
+        // is in it.
+        /** @var list<PromptLine> $shuffled */
+        $shuffled = (new Randomizer(new Mt19937($orderSeed)))->shuffleArray($lines);
+
+        return $shuffled;
     }
 
     /**

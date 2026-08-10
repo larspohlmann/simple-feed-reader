@@ -256,15 +256,11 @@ describe('AiSectionComponent', () => {
     ai.configs.set([config({ id: 7, batchConcurrency: 1 })]);
     fixture.detectChanges();
 
-    const select: HTMLSelectElement = fixture.nativeElement.querySelector(
-      '.concurrency-field select',
-    );
+    const select = row(fixture, 0).querySelector('app-field select') as HTMLSelectElement;
     expect(select).not.toBeNull();
     expect(Array.from(select.options).map((option) => option.value)).toEqual(['1', '2', '3', '4']);
     expect(select.value).toBe('1');
-    expect(row(fixture, 0).querySelector('.concurrency-field .hint')?.textContent).toContain(
-      'local model',
-    );
+    expect(row(fixture, 0).querySelector('app-field .hint')?.textContent).toContain('local model');
 
     select.value = '3';
     select.dispatchEvent(new Event('change'));
@@ -277,13 +273,13 @@ describe('AiSectionComponent', () => {
     ai.configs.set([config({ id: 7 }), config({ id: 8 })]);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('.concurrency-field-row .saved')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.saved')).toBeNull();
 
     ai.savedConcurrencyId.set(7);
     fixture.detectChanges();
 
-    expect(row(fixture, 0).querySelector('.concurrency-field-row .saved')).not.toBeNull();
-    expect(row(fixture, 1).querySelector('.concurrency-field-row .saved')).toBeNull();
+    expect(row(fixture, 0).querySelector('.saved')).not.toBeNull();
+    expect(row(fixture, 1).querySelector('.saved')).toBeNull();
   });
 
   it('disables activation for a row that is already active, not ready, or while busy', () => {

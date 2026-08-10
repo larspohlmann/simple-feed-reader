@@ -370,7 +370,7 @@ final class RecommendationRunAdvancer
         );
 
         $result = $this->duplicateParser->parse($content, array_column($pool, 'id'));
-        $this->settleVerdict($recordedCall, $content, $result->usable);
+        $recordedCall->settle($content, $result->usable);
         $this->cancellation->guard($run);
 
         if (!$result->usable) {
@@ -492,17 +492,6 @@ final class RecommendationRunAdvancer
 
             throw $e;
         }
-    }
-
-    private function settleVerdict(RecordedCall $recordedCall, string $content, bool $usable): void
-    {
-        if ($usable) {
-            $recordedCall->finishUsable($content);
-
-            return;
-        }
-
-        $recordedCall->finishUnusable($content);
     }
 
     private function recordTransportFailure(

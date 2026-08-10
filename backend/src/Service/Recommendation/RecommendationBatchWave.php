@@ -63,9 +63,8 @@ final readonly class RecommendationBatchWave
         $waveBatches = $this->waveBatches($run, $userId, $waveSize);
         $poolSummary = $this->candidateLoader->summarize($userId, $this->allCandidateIds($run));
         $history = $this->historyLoader->load($userId, $effectiveSettings);
-        $winners = [];
         $correctiveReply = [];
-        $pending = $this->pendingPositions($waveBatches, $winners);
+        [$winners, $pending] = $this->splitByPruned($waveBatches);
 
         for ($round = 1; [] !== $pending; $round++) {
             $replies = $this->sendRound(
@@ -81,7 +80,7 @@ final readonly class RecommendationBatchWave
             $pending = [];
             foreach ($replies as $position => $reply) {
                 $result = $this->parser->parse($reply['content'], $waveBatches[$position]->validIds());
-                $this->settleVerdict($reply['call'], $reply['content'], $result->usable);
+                $reply['call']->settle($reply['content'], $result->usable);
                 if ($result->usable) {
                     $winners[$position] = self::asWinners($result->picks);
 
@@ -102,7 +101,11 @@ final readonly class RecommendationBatchWave
 
     /**
      * Resolves the next $waveSize batches of the plan to their entry ids and
-     * the prompt lines those ids still resolve to.
+     * the prompt lines those ids still resolve to. Every batch's ids are
+     * resolved through one linesForIds() call over their union, not one call
+     * per batch, then split back out per batch by key -- the wave sends up
+     * to MAX_BATCH_CONCURRENCY batches at once, and this is the difference
+     * between one round trip and one per batch.
      *
      * @return list<WaveBatch>
      */
@@ -111,10 +114,16 @@ final readonly class RecommendationBatchWave
         $startIndex = $run->progress()->nextBatchIndex;
         $candidateBatches = $run->getCandidateBatches();
 
-        $waveBatches = [];
+        $idsByPosition = [];
         for ($index = $startIndex; $index < $startIndex + $waveSize; $index++) {
-            $ids = $candidateBatches[$index];
-            $waveBatches[] = new WaveBatch($index, $ids, $this->candidateLoader->linesForIds($userId, $ids));
+            $idsByPosition[$index] = $candidateBatches[$index];
+        }
+
+        $linesById = $this->candidateLoader->linesForIds($userId, array_merge(...array_values($idsByPosition)));
+
+        $waveBatches = [];
+        foreach ($idsByPosition as $index => $ids) {
+            $waveBatches[] = new WaveBatch($index, $ids, array_intersect_key($linesById, array_flip($ids)));
         }
 
         return $waveBatches;
@@ -130,25 +139,23 @@ final readonly class RecommendationBatchWave
     private function allCandidateIds(RecommendationRun $run): array
     {
         $candidateBatches = $run->getCandidateBatches();
-        if ([] === $candidateBatches) {
-            return [];
-        }
 
         return array_merge(...$candidateBatches);
     }
 
     /**
-     * The positions still owing a provider call: every batch except the
-     * fully-pruned ones, which are seeded straight into $winners as an empty
-     * set -- the per-batch form of the all-pruned short-circuit.
+     * Splits the wave's batches into the ones already resolved and the ones
+     * still owing a provider call. A fully-pruned batch is resolved for
+     * free -- it seeds $winners with an empty set, the per-batch form of the
+     * all-pruned short-circuit -- everything else is a pending position.
      *
-     * @param list<WaveBatch>                                              $waveBatches
-     * @param array<int, list<array{id: int, score: int, reason: string}>> $winners populated here for pruned batches
+     * @param list<WaveBatch> $waveBatches
      *
-     * @return list<int>
+     * @return array{0: array<int, list<array{id: int, score: int, reason: string}>>, 1: list<int>}
      */
-    private function pendingPositions(array $waveBatches, array &$winners): array
+    private function splitByPruned(array $waveBatches): array
     {
+        $winners = [];
         $pending = [];
         foreach ($waveBatches as $position => $waveBatch) {
             if ($waveBatch->isFullyPruned()) {
@@ -159,7 +166,7 @@ final readonly class RecommendationBatchWave
             $pending[] = $position;
         }
 
-        return $pending;
+        return [$winners, $pending];
     }
 
     /**
@@ -362,17 +369,6 @@ final readonly class RecommendationBatchWave
         $present = array_filter($ids, static fn (int $id): bool => isset($linesById[$id]));
 
         return array_values(array_map(static fn (int $id): PromptLine => $linesById[$id], $present));
-    }
-
-    private function settleVerdict(RecordedCall $recordedCall, string $content, bool $usable): void
-    {
-        if ($usable) {
-            $recordedCall->finishUsable($content);
-
-            return;
-        }
-
-        $recordedCall->finishUnusable($content);
     }
 
     /**

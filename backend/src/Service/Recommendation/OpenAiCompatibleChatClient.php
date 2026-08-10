@@ -86,23 +86,16 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
         CompletionRequest $request,
         CompletionStreamObserver $observer,
     ): string {
-        // One reader per call: it is this call's parsing state, the same way a
-        // RecordedCall is this call's recording state.
-        $reader = new CompletionStreamReader($this->decoder);
-
-        try {
-            $response = $this->request($credentials, $request);
-
-            foreach ($this->httpClient->stream($response, self::INACTIVITY_TIMEOUT_SECONDS) as $chunk) {
-                if ($this->consumeChunk($response, $chunk, $reader, $observer)) {
-                    break;
-                }
-            }
-        } catch (ExceptionInterface $e) {
-            throw new ProviderUnreachableException('That address did not answer.', 0, $e);
+        // A single-call wave through the same concurrent path (#344): one
+        // call is just completeMany() with a call list of one, so the two
+        // never drift on how a chunk is read, a status is guarded, or an
+        // answer is recovered.
+        $outcome = $this->completeMany($credentials, [new ConcurrentCompletion($request, $observer)])[0];
+        if ($outcome->isFailure()) {
+            throw $outcome->cause();
         }
 
-        return $this->contentOf($reader);
+        return $outcome->content();
     }
 
     public function completeMany(ProviderCredentials $credentials, array $calls): array
@@ -136,24 +129,35 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     /**
      * Fires every request up front — Symfony starts the transfer on request(),
      * so this is what makes the reads concurrent — and records the per-response
-     * state the multiplexed loop needs to route each chunk.
+     * state the multiplexed loop needs to route each chunk. request() itself is
+     * not part of the multiplexed read, so a transport failure here (a refused
+     * connection, say) never produced a response for ANY call to route back
+     * to — unlike a mid-stream failure, it cannot be one call's own outcome, so
+     * it is wrapped the same way complete() has always wrapped it and thrown
+     * wholesale for the caller to settle every call against.
      *
      * @param non-empty-list<ConcurrentCompletion> $calls
      *
      * @return \SplObjectStorage<ResponseInterface, ResponseSlot>
+     *
+     * @throws ProviderUnreachableException
      */
     private function fireRequests(ProviderCredentials $credentials, array $calls): \SplObjectStorage
     {
         /** @var \SplObjectStorage<ResponseInterface, ResponseSlot> $context */
         $context = new \SplObjectStorage();
 
-        foreach ($calls as $index => $call) {
-            $response = $this->request($credentials, $call->request);
-            $context[$response] = [
-                'index' => $index,
-                'reader' => new CompletionStreamReader($this->decoder),
-                'observer' => $call->observer,
-            ];
+        try {
+            foreach ($calls as $index => $call) {
+                $response = $this->request($credentials, $call->request);
+                $context[$response] = [
+                    'index' => $index,
+                    'reader' => new CompletionStreamReader($this->decoder),
+                    'observer' => $call->observer,
+                ];
+            }
+        } catch (ExceptionInterface $e) {
+            throw new ProviderUnreachableException('That address did not answer.', 0, $e);
         }
 
         return $context;
