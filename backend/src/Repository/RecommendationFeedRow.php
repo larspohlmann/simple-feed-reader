@@ -17,6 +17,7 @@ final readonly class RecommendationFeedRow
         public int $runId,
         public int $position,
         public ?int $score,
+        public ?\DateTimeImmutable $runGeneratedAt = null,
     ) {
     }
 }

@@ -141,6 +141,21 @@ final class RecommendationFeedTest extends DbTestCase
         }
     }
 
+    public function testRowCarriesTheRunGenerationTime(): void
+    {
+        $entryA = $this->entry('a');
+        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $this->item($run, $entryA, 1, 'reason a');
+
+        $rows = $this->repo()->listForYou((int) $this->user->getId(), null, 20);
+
+        self::assertCount(1, $rows);
+        self::assertEquals(
+            new \DateTimeImmutable('2026-08-07T09:05:00Z'),
+            $rows[0]->runGeneratedAt,
+        );
+    }
+
     public function testCarriesFlagsAndFoldsTheWatermark(): void
     {
         $entryOld = $this->entry('old');
