@@ -22,4 +22,16 @@ interface ChatCompletionClient
         CompletionRequest $request,
         CompletionStreamObserver $observer,
     ): string;
+
+    /**
+     * Several JSON-mode chat completions at once, read in one multiplexed
+     * stream. Returns one CompletionOutcome per call, aligned by index. A
+     * per-call transport failure is carried in that call's outcome rather than
+     * thrown, so one failed call never discards a sibling's answer (#344).
+     *
+     * @param non-empty-list<ConcurrentCompletion> $calls
+     *
+     * @return list<CompletionOutcome>
+     */
+    public function completeMany(ProviderCredentials $credentials, array $calls): array;
 }

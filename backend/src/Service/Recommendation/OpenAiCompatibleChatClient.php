@@ -7,6 +7,7 @@ namespace App\Service\Recommendation;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ProviderCredentials;
+use Symfony\Contracts\HttpClient\ChunkInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -87,89 +88,178 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
         // RecordedCall is this call's recording state.
         $reader = new CompletionStreamReader($this->decoder);
 
-        $this->readInto($reader, $credentials, $request, $observer);
-
-        // Prefer the answer channel; fall back to the reasoning channel only
-        // when it is empty. LM Studio routes some models' whole answer through
-        // reasoning_content and never fills content (#323), and the answer is
-        // recoverable from there — the parser still validates whatever comes
-        // back, so a reply that is only thinking is rejected downstream.
-        $content = $reader->assistantContent() ?? $reader->reasoningContent();
-
-        if (null === $content) {
-            throw new ProviderUnreachableException('That provider answered without a completion.');
-        }
-
-        return $content;
-    }
-
-    private function readInto(
-        CompletionStreamReader $reader,
-        ProviderCredentials $credentials,
-        CompletionRequest $request,
-        CompletionStreamObserver $observer,
-    ): void {
         try {
             $response = $this->request($credentials, $request);
-            $status = $response->getStatusCode();
 
-            if (401 === $status || 403 === $status) {
-                throw new CredentialsRejectedException('That provider refused the API key.');
+            foreach ($this->httpClient->stream($response, self::INACTIVITY_TIMEOUT_SECONDS) as $chunk) {
+                if ($this->consumeChunk($response, $chunk, $reader, $observer)) {
+                    break;
+                }
             }
-
-            if ($status >= 300) {
-                throw new ProviderUnreachableException(sprintf('That provider answered with status %d.', $status));
-            }
-
-            $this->readStream($response, $reader, $observer);
         } catch (ExceptionInterface $e) {
             throw new ProviderUnreachableException('That address did not answer.', 0, $e);
+        }
+
+        return $this->contentOf($reader);
+    }
+
+    public function completeMany(ProviderCredentials $credentials, array $calls): array
+    {
+        // Each response carries its own reader (its parsing state) and its own
+        // observer. SplObjectStorage maps the response object the stream() loop
+        // yields back to those and to the $calls index, so the outcomes stay
+        // aligned however the concurrent streams interleave.
+        $context = $this->fireRequests($credentials, $calls);
+
+        /** @var list<?CompletionOutcome> $outcomes */
+        $outcomes = array_fill(0, \count($calls), null);
+
+        foreach ($this->httpClient->stream($this->responsesIn($context), self::INACTIVITY_TIMEOUT_SECONDS) as $response => $chunk) {
+            $slot = $context[$response];
+
+            // A failed call cancels its response but the loop may still yield a
+            // trailing chunk for it; a finished call is likewise done. Ignore
+            // both — this call already has its outcome.
+            if (null !== $outcomes[$slot['index']]) {
+                continue;
+            }
+
+            $outcomes[$slot['index']] = $this->advance($response, $chunk, $slot);
+        }
+
+        return $this->settleOutstanding($outcomes);
+    }
+
+    /**
+     * Fires every request up front — Symfony starts the transfer on request(),
+     * so this is what makes the reads concurrent — and records the per-response
+     * state the multiplexed loop needs to route each chunk.
+     *
+     * @param non-empty-list<ConcurrentCompletion> $calls
+     *
+     * @return \SplObjectStorage<ResponseInterface, array{index: int, reader: CompletionStreamReader, observer: CompletionStreamObserver}>
+     */
+    private function fireRequests(ProviderCredentials $credentials, array $calls): \SplObjectStorage
+    {
+        /** @var \SplObjectStorage<ResponseInterface, array{index: int, reader: CompletionStreamReader, observer: CompletionStreamObserver}> $context */
+        $context = new \SplObjectStorage();
+
+        foreach ($calls as $index => $call) {
+            $response = $this->request($credentials, $call->request);
+            $context[$response] = [
+                'index' => $index,
+                'reader' => new CompletionStreamReader($this->decoder),
+                'observer' => $call->observer,
+            ];
+        }
+
+        return $context;
+    }
+
+    /**
+     * @param \SplObjectStorage<ResponseInterface, array{index: int, reader: CompletionStreamReader, observer: CompletionStreamObserver}> $context
+     *
+     * @return list<ResponseInterface>
+     */
+    private function responsesIn(\SplObjectStorage $context): array
+    {
+        return iterator_to_array($context, false);
+    }
+
+    /**
+     * Reads one chunk of one call's stream and settles that call when it ends.
+     * A per-call transport failure becomes that call's failure outcome rather
+     * than an exception, so it never aborts the read for its siblings (#344);
+     * null means the call is still in progress.
+     *
+     * @param array{index: int, reader: CompletionStreamReader, observer: CompletionStreamObserver} $slot
+     */
+    private function advance(ResponseInterface $response, ChunkInterface $chunk, array $slot): ?CompletionOutcome
+    {
+        try {
+            if (!$this->consumeChunk($response, $chunk, $slot['reader'], $slot['observer'])) {
+                return null;
+            }
+
+            return CompletionOutcome::answer($this->contentOf($slot['reader']));
+        } catch (CredentialsRejectedException | ProviderUnreachableException $failure) {
+            $response->cancel();
+
+            return CompletionOutcome::failure($failure);
+        } catch (ExceptionInterface $transportFailure) {
+            $response->cancel();
+
+            return CompletionOutcome::failure(
+                new ProviderUnreachableException('That address did not answer.', 0, $transportFailure),
+            );
         }
     }
 
     /**
-     * Feeds the response to the reader chunk by chunk. Passing the timeout to
-     * stream() makes a stall arrive as a timeout chunk instead of an
-     * exception, so it can carry its own message: the distinction between
-     * "never answered" and "went silent mid-answer" is real to a user
-     * deciding whether their provider is down or their network dropped.
+     * A response that never yields a closing chunk (it should always) still
+     * owes the caller one outcome per call, so an unsettled slot becomes the
+     * same answerless failure an empty completion does.
      *
+     * @param list<?CompletionOutcome> $outcomes
+     *
+     * @return list<CompletionOutcome>
+     */
+    private function settleOutstanding(array $outcomes): array
+    {
+        return array_map(
+            static fn (?CompletionOutcome $outcome): CompletionOutcome => $outcome ?? CompletionOutcome::failure(
+                new ProviderUnreachableException('That provider answered without a completion.'),
+            ),
+            $outcomes,
+        );
+    }
+
+    /**
+     * The per-chunk core shared by the single-call and concurrent reads. Feeds
+     * one chunk to the reader and reports it to the observer; returns true once
+     * the response is complete.
+     *
+     * @throws CredentialsRejectedException
+     * @throws ProviderUnreachableException
      * @throws ExceptionInterface
      */
-    private function readStream(
+    private function consumeChunk(
         ResponseInterface $response,
+        ChunkInterface $chunk,
         CompletionStreamReader $reader,
         CompletionStreamObserver $observer,
-    ): void {
-        foreach ($this->httpClient->stream($response, self::INACTIVITY_TIMEOUT_SECONDS) as $chunk) {
-            // isTimeout() first — on a timeout chunk the other accessors
-            // throw; same ordering hazard ConcurrentFeedFetcher documents. The
-            // other direction matters too: on a non-timeout error chunk
-            // isTimeout() itself throws, and that is how max_duration
-            // exhaustion leaves here as the generic "did not answer".
-            if ($chunk->isTimeout()) {
-                $response->cancel();
+    ): bool {
+        // isTimeout() first — on a timeout chunk the other accessors throw;
+        // same ordering hazard ConcurrentFeedFetcher documents. The other
+        // direction matters too: on a non-timeout error chunk isTimeout()
+        // itself throws, and that is how max_duration exhaustion leaves here as
+        // the generic "did not answer".
+        if ($chunk->isTimeout()) {
+            $response->cancel();
 
-                // Shape-neutral on purpose: the provider may have gone silent
-                // mid-answer or never have started, and this bound covers both.
-                // %s over the float renders "30" today and keeps the number
-                // tied to the constant even if it ever became fractional.
-                throw new ProviderUnreachableException(sprintf(
-                    'That provider sent nothing for more than %s seconds.',
-                    self::INACTIVITY_TIMEOUT_SECONDS,
-                ));
-            }
+            // Shape-neutral on purpose: the provider may have gone silent
+            // mid-answer or never have started, and this bound covers both.
+            // %s over the float renders "180" today and keeps the number tied
+            // to the constant even if it ever became fractional.
+            throw new ProviderUnreachableException(sprintf(
+                'That provider sent nothing for more than %s seconds.',
+                self::INACTIVITY_TIMEOUT_SECONDS,
+            ));
+        }
 
-            // Symfony's own stream() protocol includes content-free framing
-            // chunks (an isLast marker chunk in particular) alongside the real
-            // SSE data — appending their empty content is harmless, but
-            // reporting them to the observer would mean "the body grew" for a
-            // call that added nothing.
-            $content = $chunk->getContent();
-            if ('' === $content) {
-                continue;
-            }
+        // Headers have arrived: the status is readable here without blocking,
+        // which is also the only point the concurrent read can inspect it.
+        if ($chunk->isFirst()) {
+            $this->guardStatus($response->getStatusCode());
+        }
 
+        // Symfony's own stream() protocol includes content-free framing chunks
+        // (the isFirst and isLast markers in particular) alongside the real SSE
+        // data — appending their empty content is harmless, but reporting them
+        // to the observer would mean "the body grew" for a chunk that added
+        // nothing.
+        $content = $chunk->getContent();
+        if ('' !== $content) {
             $reader->consume($content);
             $this->guardRetainedSize($reader);
             $observer->streamProgressed(new CompletionStreamProgress(
@@ -178,6 +268,37 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
                 $reader->finishReason(),
             ));
         }
+
+        return $chunk->isLast();
+    }
+
+    private function guardStatus(int $status): void
+    {
+        if (401 === $status || 403 === $status) {
+            throw new CredentialsRejectedException('That provider refused the API key.');
+        }
+
+        if ($status >= 300) {
+            throw new ProviderUnreachableException(sprintf('That provider answered with status %d.', $status));
+        }
+    }
+
+    /**
+     * Prefer the answer channel; fall back to the reasoning channel only when
+     * it is empty. LM Studio routes some models' whole answer through
+     * reasoning_content and never fills content (#323), and the answer is
+     * recoverable from there — the parser still validates whatever comes back,
+     * so a reply that is only thinking is rejected downstream.
+     */
+    private function contentOf(CompletionStreamReader $reader): string
+    {
+        $content = $reader->assistantContent() ?? $reader->reasoningContent();
+
+        if (null === $content) {
+            throw new ProviderUnreachableException('That provider answered without a completion.');
+        }
+
+        return $content;
     }
 
     private function guardRetainedSize(CompletionStreamReader $reader): void
