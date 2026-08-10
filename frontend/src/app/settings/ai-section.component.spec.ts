@@ -110,6 +110,11 @@ describe('AiSectionComponent', () => {
   const row = (fixture: ComponentFixture<AiSectionComponent>, index: number): HTMLElement =>
     (fixture.nativeElement as HTMLElement).querySelectorAll('.config-row')[index] as HTMLElement;
 
+  const addDetails = (fixture: ComponentFixture<AiSectionComponent>): HTMLDetailsElement =>
+    Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('details')).find((details) =>
+      details.querySelector('.add-config'),
+    ) as HTMLDetailsElement;
+
   beforeEach(() => dialogStub.open.mockReset());
   afterEach(() => http.verify());
 
@@ -165,6 +170,9 @@ describe('AiSectionComponent', () => {
 
   it('adds a configuration and clears the typed key', () => {
     const fixture = mount();
+    (addDetails(fixture).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
+
     fixture.componentInstance.newName.set('My provider');
     fixture.componentInstance.newBaseUrl.set('https://api.example.test/v1');
     fixture.componentInstance.newApiKey.set('sk-secret');
@@ -177,6 +185,9 @@ describe('AiSectionComponent', () => {
 
   it('sends no name when the optional field is left blank', () => {
     const fixture = mount();
+    (addDetails(fixture).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
+
     fixture.componentInstance.newBaseUrl.set('https://api.example.test/v1');
     fixture.componentInstance.newApiKey.set('sk-secret');
 
@@ -511,6 +522,14 @@ describe('AiSectionComponent', () => {
     expect(listCard.querySelector('.add-config')).toBeNull();
     expect(addCard.querySelector('.configs')).toBeNull();
     expect(addCard.querySelector('h2')?.textContent).toBe('Add a configuration');
+  });
+
+  it('collapses the add-configuration card by default', () => {
+    const fixture = mount();
+
+    const details = addDetails(fixture);
+    expect(details.open).toBe(false);
+    expect(details.querySelector('summary')?.textContent).toContain('Add a configuration');
   });
 
   it('shows the recommendation settings card once the active config is ready, and not before', () => {
