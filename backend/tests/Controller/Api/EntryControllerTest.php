@@ -197,7 +197,7 @@ final class EntryControllerTest extends WebTestCase
         }
     }
 
-    public function testForYouViewReturnsRecommendedEntriesWithReason(): void
+    public function testForYouViewOmitsBothDebugAnnotationsWhenDebugIsOff(): void
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-foryou@example.com');
@@ -223,7 +223,9 @@ final class EntryControllerTest extends WebTestCase
         $first = $body['entries'][0];
         self::assertIsArray($first);
         self::assertSame('Post 1', $first['title']);
-        self::assertSame('Matches your interest in g1', $first['recommendationReason']);
+        // Debug off hides both the score and the reason (#342): the reason used
+        // to show with the score suppressed, which read as inconsistent.
+        self::assertArrayNotHasKey('recommendationReason', $first);
         self::assertArrayNotHasKey('recommendationScore', $first);
         self::assertArrayHasKey('nextCursor', $body);
         self::assertNull($body['nextCursor']);
@@ -255,6 +257,7 @@ final class EntryControllerTest extends WebTestCase
         $first = $body['entries'][0];
         self::assertIsArray($first);
         self::assertSame(42, $first['recommendationScore']);
+        self::assertSame('Matches your interest in g1', $first['recommendationReason']);
     }
 
     public function testForYouViewPaginatesWithCursor(): void
