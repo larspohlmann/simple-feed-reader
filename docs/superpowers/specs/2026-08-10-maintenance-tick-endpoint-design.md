@@ -51,15 +51,20 @@ orchestration in the controller.
 ### Orchestration service
 
 A new `MaintenanceTick` in `Service/Maintenance/`. It depends on the same
-`RefreshRunner` and `ForYouSweep` the granular endpoints already use.
+concrete `RefreshRunner` and `ForYouSweep` the granular endpoints already use.
 
 - **Order:** refresh first, then the recommendation sweep. Refresh is the
   cheaper, time-bounded job; running it first also lets a later run see freshly
-  fetched entries.
-- **Failure isolation:** each half runs behind its own guard. A failure in the
-  refresh half does not stop the recommendation half, and the reverse. Both
-  underlying pieces report status instead of throwing in the normal case; the
-  guard is a defensive floor that records the failure in the report.
+  fetched entries, and its work commits before the sweep begins.
+- **No extra guard — isolation comes from the halves themselves.** Both halves
+  are already near-non-throwing: `RefreshRunner::run()` catches its own database
+  errors and returns `status: "aborted"` instead of throwing, and
+  `ForYouSweep::sweepOnce()` catches per-run failures internally. So a broken
+  refresh surfaces as a status in its own report and the sweep still runs; a
+  broken provider for one account is logged and skipped inside the sweep.
+  `MaintenanceTick` adds no try/catch of its own. A genuinely unexpected
+  exception is left to bubble to Symfony's 500 handler — the "the tick could not
+  run" case.
 - **Budget:** the refresh half keeps its existing 20-second budget. The
   recommendation half advances one step per active run, which is already
   bounded. One tick's worst case is 20 s plus one step per active run — well
@@ -71,18 +76,16 @@ A combined `MaintenanceTickReport`:
 
 ```json
 {
-  "refresh": { "...": "RefreshReport shape" },
+  "refresh": { "...": "RefreshReport shape, incl. status" },
   "recommendations": { "startedRuns": 0, "advancedRuns": 0, "activeRuns": 0 }
 }
 ```
 
-If a half fails, its key carries an error marker instead of its normal report,
-and the other half's result is still present.
-
 **HTTP status:** always `200` when the tick ran, with each half's own status
-inside the JSON. A cron cares about 2xx-versus-error, and one half being "busy"
-must not read as a failed tick. The endpoint returns `500` only if the tick
-itself could not run.
+inside the JSON. A cron cares about 2xx-versus-error, and a refresh half that
+came back `busy` or `aborted` must not read as a failed tick — its status lives
+in the body. The endpoint reaches Symfony's `500` only on an unexpected,
+unhandled exception.
 
 This differs on purpose from the standalone `/maintenance/refresh`, which maps
 `busy → 409` and `aborted → 500`. Those granular codes stay on the granular
@@ -90,8 +93,10 @@ route for a caller that pings refresh alone.
 
 ## Testing
 
-- Unit test for `MaintenanceTick`: both halves run and merge into one report; a
-  thrown failure in one half leaves the other half's result intact.
+- Unit test for `MaintenanceTickReport`: it merges the two half-reports under
+  the `refresh` and `recommendations` keys.
+- Integration test for `MaintenanceTick` (through the container): one `run()`
+  produces a report carrying both halves' shapes.
 - Functional test for the route: the token guard rejects a missing or wrong
   token; an authorized call returns the combined JSON with both keys.
 
