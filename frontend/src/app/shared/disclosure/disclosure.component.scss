@@ -52,3 +52,23 @@ details[open] > summary::before {
 summary:hover {
   border-color: var(--accent);
 }
+
+// Row appearance: a flat, full-width list-row summary for callers that stack
+// many <app-disclosure> instances as list items, where the bordered pill
+// button would compete with the row itself rather than read as part of it.
+// The chevron stays (still rotates via the shared `details[open]` rule above)
+// but moves to the trailing edge with `order`, since it is inserted as the
+// first flex item by `::before`.
+summary.is-row {
+  display: flex;
+  width: 100%;
+  padding: var(--row-pad-comfy-y) var(--row-pad-comfy-x);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+summary.is-row::before {
+  order: 1;
+  margin-left: auto;
+}

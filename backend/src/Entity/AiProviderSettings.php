@@ -89,10 +89,14 @@ class AiProviderSettings
     private ?\DateTimeImmutable $verifiedAt = null;
 
     /**
-     * A row only ever exists because a live call to the provider succeeded, so
+     * A row is normally born from a live call to the provider that succeeded, so
      * the first save is a verification like every later one and stamps
-     * $verifiedAt too. Delegating to replaceConnection() keeps the two paths
-     * from drifting: whatever a replacement writes, a creation writes.
+     * $verifiedAt too. The one exception is a duplicate (see
+     * AiProviderConfigurator::duplicateConfiguration): it reuses an
+     * already-verified sibling's credentials and carries that row's $verifiedAt
+     * across without a fresh call. Either way the caller passes the timestamp
+     * in. Delegating to replaceConnection() keeps the two paths from drifting:
+     * whatever a replacement writes, a creation writes.
      */
     public function __construct(
         User $user,

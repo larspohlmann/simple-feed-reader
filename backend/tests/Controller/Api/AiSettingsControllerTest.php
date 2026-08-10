@@ -330,6 +330,7 @@ final class AiSettingsControllerTest extends ApiTestCase
         yield 'setting reasoning' => ['PUT', '/reasoning', '{"suppressReasoning":false}'];
         yield 'setting batch concurrency' => ['PUT', '/batch-concurrency', '{"batchConcurrency":2}'];
         yield 'deleting' => ['DELETE', '', '{}'];
+        yield 'duplicating' => ['POST', '/duplicate', '{}'];
     }
 
     #[DataProvider('idBearingRoutes')]
@@ -349,12 +350,37 @@ final class AiSettingsControllerTest extends ApiTestCase
             $client->request('GET', $uri);
         } elseif ('DELETE' === $method) {
             $client->request('DELETE', $uri);
+        } elseif ('POST' === $method) {
+            $this->postJson($client, $uri, $body);
         } else {
             $this->putJson($client, $uri, $body);
         }
 
         self::assertResponseStatusCodeSame(404);
         self::assertSame('ai_configuration_not_found', $this->payload($client)['type']);
+    }
+
+    public function testDuplicatingAConfigurationReturnsAKeylessCopy(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o', 'gpt-4o-mini']);
+        $this->accountOn($client, 'ai-duplicate@example.test');
+        $added = $this->addConfiguration($client, name: 'Work OpenAI');
+        $source = $added['id'];
+        self::assertIsInt($source);
+        $this->chooseModel($client, $source, 'gpt-4o');
+
+        $client->request('POST', sprintf('/api/me/ai/configs/%d/duplicate', $source));
+
+        self::assertResponseStatusCodeSame(201);
+        $body = $this->payload($client);
+        self::assertSame('Copy of Work OpenAI', $body['name']);
+        self::assertSame(self::BASE_URL, $body['baseUrl']);
+        self::assertNull($body['model']);
+        self::assertFalse($body['ready']);
+        self::assertFalse($body['active']);
+        self::assertArrayNotHasKey('apiKey', $body);
+        self::assertArrayNotHasKey('apiKeyCiphertext', $body);
+        self::assertNotSame($source, $body['id']);
     }
 
     public function testAddingBeyondTheCapIsRefused(): void
@@ -364,6 +390,25 @@ final class AiSettingsControllerTest extends ApiTestCase
         $this->persistConfigurationsUpToTheCap('ai-cap@example.test');
 
         $this->addConfiguration($client);
+
+        self::assertResponseStatusCodeSame(409);
+        self::assertSame('ai_configuration_limit', $this->payload($client)['type']);
+    }
+
+    public function testDuplicatingAtTheCapIsRefused(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-duplicate-cap@example.test');
+        $this->persistConfigurationsUpToTheCap('ai-duplicate-cap@example.test');
+
+        $client->request('GET', '/api/me/ai');
+        $payload = $this->payload($client);
+        self::assertIsArray($payload['configs']);
+        self::assertIsArray($payload['configs'][0]);
+        $sourceId = $payload['configs'][0]['id'];
+        self::assertIsInt($sourceId);
+
+        $this->postJson($client, sprintf('/api/me/ai/configs/%d/duplicate', $sourceId), '{}');
 
         self::assertResponseStatusCodeSame(409);
         self::assertSame('ai_configuration_limit', $this->payload($client)['type']);

@@ -24,6 +24,7 @@ interface AiSettingsStub {
   add: jest.Mock;
   loadModels: jest.Mock;
   chooseModel: jest.Mock;
+  duplicate: jest.Mock;
   rename: jest.Mock;
   setReasoning: jest.Mock;
   setBatchConcurrency: jest.Mock;
@@ -72,6 +73,7 @@ function createStub(): AiSettingsStub {
     add: jest.fn(),
     loadModels: jest.fn(),
     chooseModel: jest.fn(),
+    duplicate: jest.fn(),
     rename: jest.fn(),
     setReasoning: jest.fn(),
     setBatchConcurrency: jest.fn(),
@@ -107,6 +109,16 @@ describe('AiSectionComponent', () => {
 
   const row = (fixture: ComponentFixture<AiSectionComponent>, index: number): HTMLElement =>
     (fixture.nativeElement as HTMLElement).querySelectorAll('.config-row')[index] as HTMLElement;
+
+  const addDetails = (fixture: ComponentFixture<AiSectionComponent>): HTMLDetailsElement =>
+    Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('details')).find((details) =>
+      details.querySelector('.add-config'),
+    ) as HTMLDetailsElement;
+
+  const expandRow = (fixture: ComponentFixture<AiSectionComponent>, index: number): void => {
+    (row(fixture, index).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
+  };
 
   beforeEach(() => dialogStub.open.mockReset());
   afterEach(() => http.verify());
@@ -163,6 +175,9 @@ describe('AiSectionComponent', () => {
 
   it('adds a configuration and clears the typed key', () => {
     const fixture = mount();
+    (addDetails(fixture).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
+
     fixture.componentInstance.newName.set('My provider');
     fixture.componentInstance.newBaseUrl.set('https://api.example.test/v1');
     fixture.componentInstance.newApiKey.set('sk-secret');
@@ -175,6 +190,9 @@ describe('AiSectionComponent', () => {
 
   it('sends no name when the optional field is left blank', () => {
     const fixture = mount();
+    (addDetails(fixture).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
+
     fixture.componentInstance.newBaseUrl.set('https://api.example.test/v1');
     fixture.componentInstance.newApiKey.set('sk-secret');
 
@@ -188,6 +206,7 @@ describe('AiSectionComponent', () => {
     ai.configs.set([config({ id: 1 })]);
     fixture.detectChanges();
 
+    expandRow(fixture, 0);
     (row(fixture, 0).querySelector('.change-model') as HTMLButtonElement).click();
     expect(ai.loadModels).toHaveBeenCalledWith(1);
 
@@ -223,9 +242,21 @@ describe('AiSectionComponent', () => {
     ai.configs.set([config({ id: 1, ready: true })]);
     fixture.detectChanges();
 
+    expandRow(fixture, 0);
     (row(fixture, 0).querySelector('.activate') as HTMLButtonElement).click();
 
     expect(ai.activate).toHaveBeenCalledWith(1);
+  });
+
+  it('duplicates a configuration', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 7 })]);
+    fixture.detectChanges();
+
+    expandRow(fixture, 0);
+    (row(fixture, 0).querySelector('.duplicate') as HTMLButtonElement).click();
+
+    expect(ai.duplicate).toHaveBeenCalledWith(7);
   });
 
   it('toggles the reasoning preference for a row', () => {
@@ -233,6 +264,8 @@ describe('AiSectionComponent', () => {
     const setReasoning = jest.spyOn(ai, 'setReasoning').mockImplementation(() => undefined);
     ai.configs.set([config({ id: 7, suppressReasoning: true })]);
     fixture.detectChanges();
+
+    expandRow(fixture, 0);
 
     const checkbox: HTMLInputElement =
       fixture.nativeElement.querySelector('.reasoning-toggle input');
@@ -255,6 +288,8 @@ describe('AiSectionComponent', () => {
       .mockImplementation(() => undefined);
     ai.configs.set([config({ id: 7, batchConcurrency: 1 })]);
     fixture.detectChanges();
+
+    expandRow(fixture, 0);
 
     const select = row(fixture, 0).querySelector('app-field select') as HTMLSelectElement;
     expect(select).not.toBeNull();
@@ -293,6 +328,10 @@ describe('AiSectionComponent', () => {
     http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
     http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
 
+    (row(fixture, 0).querySelector('summary') as HTMLElement).click();
+    (row(fixture, 1).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
+
     expect((row(fixture, 0).querySelector('.activate button') as HTMLButtonElement).disabled).toBe(
       true,
     );
@@ -306,6 +345,7 @@ describe('AiSectionComponent', () => {
     ai.configs.set([config({ id: 1, name: 'Old name' })]);
     fixture.detectChanges();
 
+    expandRow(fixture, 0);
     (row(fixture, 0).querySelector('.rename') as HTMLButtonElement).click();
     fixture.detectChanges();
 
@@ -324,6 +364,7 @@ describe('AiSectionComponent', () => {
     ai.configs.set([config({ id: 1, name: 'Old name' })]);
     fixture.detectChanges();
 
+    expandRow(fixture, 0);
     (row(fixture, 0).querySelector('.rename') as HTMLButtonElement).click();
     fixture.detectChanges();
 
@@ -342,6 +383,7 @@ describe('AiSectionComponent', () => {
     ai.configs.set([config({ id: 1, name: 'Old name' })]);
     fixture.detectChanges();
 
+    expandRow(fixture, 0);
     (row(fixture, 0).querySelector('.rename') as HTMLButtonElement).click();
     fixture.detectChanges();
     (row(fixture, 0).querySelector('.rename-cancel') as HTMLButtonElement).click();
@@ -357,6 +399,7 @@ describe('AiSectionComponent', () => {
     fixture.detectChanges();
     dialogStub.open.mockReturnValue({ closed: of(true) });
 
+    expandRow(fixture, 0);
     (row(fixture, 0).querySelector('.delete') as HTMLButtonElement).click();
 
     expect(dialogStub.open).toHaveBeenCalled();
@@ -369,6 +412,7 @@ describe('AiSectionComponent', () => {
     fixture.detectChanges();
     dialogStub.open.mockReturnValue({ closed: of(false) });
 
+    expandRow(fixture, 0);
     (row(fixture, 0).querySelector('.delete') as HTMLButtonElement).click();
 
     const [, dialogConfig] = dialogStub.open.mock.calls.at(-1) as [unknown, { data: ConfirmData }];
@@ -385,6 +429,7 @@ describe('AiSectionComponent', () => {
     fixture.detectChanges();
     dialogStub.open.mockReturnValue({ closed: of(false) });
 
+    expandRow(fixture, 0);
     (row(fixture, 0).querySelector('.delete') as HTMLButtonElement).click();
 
     expect(ai.remove).not.toHaveBeenCalled();
@@ -405,6 +450,79 @@ describe('AiSectionComponent', () => {
     expect(fixture.nativeElement.querySelector('app-error-banner')?.textContent).toContain(
       'maximum number',
     );
+  });
+
+  it('collapses a row by default', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1 })]);
+    fixture.detectChanges();
+
+    const details = row(fixture, 0).querySelector('details') as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+  });
+
+  it('carries the label and active badge on the collapsed summary', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, name: 'My provider', active: true }), config({ id: 2 })]);
+    fixture.detectChanges();
+
+    const activeSummary = row(fixture, 0).querySelector('summary') as HTMLElement;
+    expect(activeSummary.querySelector('.label')?.textContent).toContain('My provider');
+    expect(activeSummary.querySelector('.badge')).not.toBeNull();
+
+    const inactiveSummary = row(fixture, 1).querySelector('summary') as HTMLElement;
+    expect(inactiveSummary.querySelector('.badge')).toBeNull();
+  });
+
+  it('marks only the active row with is-active', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, active: true }), config({ id: 2 })]);
+    fixture.detectChanges();
+
+    expect(row(fixture, 0).classList.contains('is-active')).toBe(true);
+    expect(row(fixture, 1).classList.contains('is-active')).toBe(false);
+  });
+
+  it('reveals the action bar with all five buttons once the row is expanded', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, ready: true })]);
+    fixture.detectChanges();
+
+    expandRow(fixture, 0);
+
+    const acts = row(fixture, 0).querySelector('.acts') as HTMLElement;
+    expect(acts).not.toBeNull();
+    expect(acts.querySelector('.activate')).not.toBeNull();
+    expect(acts.querySelector('.change-model')).not.toBeNull();
+    expect(acts.querySelector('.duplicate')).not.toBeNull();
+    expect(acts.querySelector('.rename')).not.toBeNull();
+    expect(acts.querySelector('.delete')).not.toBeNull();
+  });
+
+  it('puts the add-configuration form in its own titled card, separate from the configs list', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1 })]);
+    fixture.detectChanges();
+
+    const cards = Array.from(
+      fixture.nativeElement.querySelectorAll('app-settings-card'),
+    ) as HTMLElement[];
+    expect(cards.length).toBe(2);
+
+    const listCard = cards.find((card) => card.querySelector('.configs')) as HTMLElement;
+    const addCard = cards.find((card) => card.querySelector('.add-config')) as HTMLElement;
+    expect(listCard).not.toBe(addCard);
+    expect(listCard.querySelector('.add-config')).toBeNull();
+    expect(addCard.querySelector('.configs')).toBeNull();
+    expect(addCard.querySelector('h2')?.textContent).toBe('Add a configuration');
+  });
+
+  it('collapses the add-configuration card by default', () => {
+    const fixture = mount();
+
+    const details = addDetails(fixture);
+    expect(details.open).toBe(false);
+    expect(details.querySelector('summary')?.textContent).toContain('Add a configuration');
   });
 
   it('shows the recommendation settings card once the active config is ready, and not before', () => {

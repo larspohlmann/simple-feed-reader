@@ -14,6 +14,7 @@ import {
   ConfirmData,
   ConfirmDialogComponent,
 } from '../shared/confirm-dialog/confirm-dialog.component';
+import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../shared/field/field.component';
 import {
@@ -40,6 +41,7 @@ import { RecommendationSettingsCardComponent } from './recommendation-settings-c
   selector: 'app-ai-section',
   imports: [
     ButtonComponent,
+    DisclosureComponent,
     ErrorBannerComponent,
     FieldComponent,
     RecommendationDebugLogComponent,

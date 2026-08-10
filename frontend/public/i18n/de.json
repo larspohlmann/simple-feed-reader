@@ -79,10 +79,12 @@
       "modelPlaceholder": "Modell auswählen",
       "saveModel": "Modell speichern",
       "ready": "KI-Funktionen sind verfügbar und nutzen {{model}}.",
+      "addTitle": "Konfiguration hinzufügen",
       "configs": {
         "active": "Aktiv",
         "activate": "Diesen verwenden",
         "changeModel": "Modell ändern",
+        "duplicate": "Duplizieren",
         "rename": "Umbenennen",
         "renameSave": "Namen speichern",
         "delete": "Löschen",

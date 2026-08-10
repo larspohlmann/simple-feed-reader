@@ -15,6 +15,7 @@ use App\Exception\AiKeyUnreadableApiException;
 use App\Exception\AiProviderApiException;
 use App\Exception\TooManyAiConfigurationsApiException;
 use App\Http\AiSettingsJson;
+use App\Service\Ai\AiConfigurationEditor;
 use App\Service\Ai\AiConfigurationForUser;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
@@ -44,6 +45,7 @@ final readonly class AiSettingsController
 {
     public function __construct(
         private AiProviderConfigurator $configurator,
+        private AiConfigurationEditor $editor,
         private AiConfigurationForUser $configuration,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $aiProviderLimiter,
@@ -76,6 +78,27 @@ final readonly class AiSettingsController
 
         return new JsonResponse(
             AiSettingsJson::added($added->configuration, $added->modelIds),
+            Response::HTTP_CREATED,
+        );
+    }
+
+    #[Route('/configs/{id}/duplicate', name: 'api_me_ai_duplicate', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function duplicate(#[CurrentUser] User $user, int $id): JsonResponse
+    {
+        try {
+            $source = $this->configuration->require($user, $id);
+            $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
+            $copy = $this->configurator->duplicateConfiguration($source);
+        } catch (ConfigurationNotFoundException $e) {
+            throw new AiConfigurationNotFoundApiException($e);
+        } catch (TooManyConfigurationsException $e) {
+            throw new TooManyAiConfigurationsApiException($e);
+        } catch (ApiKeyUnreadableException $e) {
+            throw new AiKeyUnreadableApiException($e);
+        }
+
+        return new JsonResponse(
+            AiSettingsJson::configuration($copy, $this->configurator->settingsFor($user)?->getId()),
             Response::HTTP_CREATED,
         );
     }
@@ -133,7 +156,7 @@ final readonly class AiSettingsController
             throw new AiConfigurationNotFoundApiException($e);
         }
 
-        $this->configurator->rename($configuration, $request->name);
+        $this->editor->rename($configuration, $request->name);
 
         return new JsonResponse(
             AiSettingsJson::configuration($configuration, $this->configurator->settingsFor($user)?->getId()),
@@ -157,7 +180,7 @@ final readonly class AiSettingsController
             throw new AiConfigurationNotFoundApiException($e);
         }
 
-        $this->configurator->setSuppressReasoning($configuration, $request->suppressReasoning);
+        $this->editor->setSuppressReasoning($configuration, $request->suppressReasoning);
 
         return new JsonResponse(
             AiSettingsJson::configuration($configuration, $this->configurator->settingsFor($user)?->getId()),
@@ -181,7 +204,7 @@ final readonly class AiSettingsController
             throw new AiConfigurationNotFoundApiException($e);
         }
 
-        $this->configurator->setBatchConcurrency($configuration, $request->batchConcurrency);
+        $this->editor->setBatchConcurrency($configuration, $request->batchConcurrency);
 
         return new JsonResponse(
             AiSettingsJson::configuration($configuration, $this->configurator->settingsFor($user)?->getId()),

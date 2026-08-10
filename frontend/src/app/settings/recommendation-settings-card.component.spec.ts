@@ -116,6 +116,22 @@ describe('RecommendationSettingsCardComponent', () => {
     );
   });
 
+  it('renders the guidance field and its reset button inside the expert disclosure', () => {
+    const fixture = mount({ ...STATE, guidancePrompt: 'Focus on space exploration.' });
+
+    const textarea = fixture.nativeElement.querySelector(
+      'details .group textarea',
+    ) as HTMLTextAreaElement | null;
+    expect(textarea).not.toBeNull();
+    expect(textarea!.value).toBe('Focus on space exploration.');
+
+    const resetButton = fixture.nativeElement.querySelector(
+      'details .group app-button button',
+    ) as HTMLButtonElement | null;
+    expect(resetButton).not.toBeNull();
+    expect(resetButton!.textContent).toContain('Reset to default');
+  });
+
   it('sends the full PUT body on save, with a blank context window and batch count as null', () => {
     const fixture = mount();
 
