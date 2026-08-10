@@ -174,6 +174,26 @@ final class RecommendationPromptBuilder
     }
 
     /**
+     * Appends the corrective tail for a retry -- the model's own last invalid
+     * reply and the correction instruction -- when there is one. Both provider
+     * phases retry the same way; passing the reply in keeps the tail tied to
+     * the call being retried: the batch phase passes each batch's own local
+     * last invalid reply, the dedup phase the run's cross-tick one (#344).
+     *
+     * @param list<array{role: string, content: string}> $messages
+     *
+     * @return list<array{role: string, content: string}>
+     */
+    public function messagesWithCorrectiveTail(array $messages, ?string $lastInvalidReply): array
+    {
+        if (null === $lastInvalidReply) {
+            return $messages;
+        }
+
+        return [...$messages, ...$this->correctiveTail($lastInvalidReply)];
+    }
+
+    /**
      * How many tokens the *answer alone* over `$replyItemCount` items may need.
      * packBatches() subtracts this from the context window so the prompt leaves
      * the model room to answer — and the answer is all that competes with the

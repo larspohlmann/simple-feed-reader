@@ -34,7 +34,7 @@ final readonly class RecommendationPollDriver
             return $this->latestReport($user)->inBackground();
         }
 
-        $report = $this->advancer->advance($user);
+        $report = $this->advancer->advance($user, TickDriver::Poll);
 
         // Busy is not a failure and never was: it means the per-user lock is
         // held, so somebody else -- a worker whose heartbeat has not landed

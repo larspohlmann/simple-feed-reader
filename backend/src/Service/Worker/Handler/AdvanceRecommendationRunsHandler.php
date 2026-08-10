@@ -11,6 +11,7 @@ use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\RecommendationRunAdvancer;
+use App\Service\Recommendation\TickDriver;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
 use App\Service\Worker\WorkerPresence;
 use Doctrine\ORM\EntityManagerInterface;
@@ -78,7 +79,7 @@ final readonly class AdvanceRecommendationRunsHandler
     private function advanceOne(RecommendationRun $run): void
     {
         try {
-            $this->advancer->advance($run->getUser());
+            $this->advancer->advance($run->getUser(), TickDriver::Worker);
         } catch (AiNotConfiguredException | ApiKeyUnreadableException) {
             // Already failed and flushed by the shared tick; nothing to do.
         } catch (ProviderUnreachableException | CredentialsRejectedException $e) {

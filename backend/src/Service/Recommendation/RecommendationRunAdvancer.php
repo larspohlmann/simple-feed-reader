@@ -30,11 +30,16 @@ use Symfony\Component\Lock\LockFactory;
  * worker sweep.
  *
  * The snapshot phase freezes a pending run's candidate pool into fixed-size
- * batches with no provider call made. The batch phase then spends one
- * provider call per tick: a batch whose entries are all pruned records an
- * empty winner set for free, a usable reply advances the run, and an
- * unusable one is retried with a corrective message until three attempts
- * checkpoint the run as failed. Ranking is code's job, not the model's: the
+ * batches with no provider call made. The batch phase then sends a wave of
+ * concurrent provider calls per tick (#344), bounded by the connection's
+ * batchConcurrency and the driver's regime: a batch whose entries are all
+ * pruned records an empty winner set for free, a usable reply banks the
+ * batch's winners, and an unusable one is retried in-tick with a corrective
+ * message -- built from that batch's own last invalid reply -- until
+ * MAX_ATTEMPTS rounds drop it as an empty winner set (#329). A transport
+ * failure anywhere in a wave banks nothing, records one ceiling increment,
+ * and re-runs the whole wave next tick from the unmoved cursor. Ranking is
+ * code's job, not the model's: the
  * batches score every candidate against a shared rubric, and the ranker
  * orders the pooled scores globally. Once every batch call is done, a run
  * with more than one batch enters the dedup phase: one more provider call
@@ -47,10 +52,10 @@ use Symfony\Component\Lock\LockFactory;
  * pool can be pruned mid-run — and writes the survivors as
  * RecommendationItems at dense positions before marking the run completed.
  *
- * The sixteen constructor collaborators are deliberate: the advancer is the
+ * The many constructor collaborators are deliberate: the advancer is the
  * recommendation pipeline's composition root (lock, run persistence, AI
  * configuration, settings resolution, candidate/history loading, prompt
- * packing, the provider call and its reply parser), and each is a seam the
+ * packing, the batch wave and the dedup provider call), and each is a seam the
  * tests swap or drive independently — see RefreshRunner for the same shape.
  *
  * @SuppressWarnings("PHPMD.ExcessiveParameterList")
@@ -59,6 +64,14 @@ final class RecommendationRunAdvancer
 {
     private const string LOCK_NAME_PREFIX = 'ai-recommendations-';
     private const float LOCK_TTL_SECONDS = 300.0;
+
+    /**
+     * The most concurrent batch calls a poll tick may fan out. A poll tick is
+     * a web request, so its wave stays small however high the connection's
+     * batchConcurrency is set; the worker, which owns its process, sends the
+     * full configured cap (#344).
+     */
+    public const int POLL_MAX_CONCURRENCY = 2;
 
     public function __construct(
         private readonly RecommendationRunRepository $runs,
@@ -71,16 +84,17 @@ final class RecommendationRunAdvancer
         private readonly RecommendationHistoryLoader $historyLoader,
         private readonly RecommendationPromptBuilder $promptBuilder,
         private readonly ChatCompletionClient $chat,
-        private readonly RecommendationPickParser $parser,
         private readonly EntityManagerInterface $entityManager,
         private readonly RecommendationWinnerRanker $ranker,
         private readonly RecommendationDuplicateParser $duplicateParser,
         private readonly RecommendationCallRecorder $callRecorder,
         private readonly RecommendationCancellationCheckpoint $cancellation,
+        private readonly RecommendationBatchWave $batchWave,
+        private readonly RecommendationCompletionRequestFactory $requestFactory,
     ) {
     }
 
-    public function advance(User $user): RecommendationRunReport
+    public function advance(User $user, TickDriver $driver = TickDriver::Poll): RecommendationRunReport
     {
         $lock = $this->lockFactory->createLock(
             self::LOCK_NAME_PREFIX . ($user->getId() ?? 0),
@@ -92,13 +106,13 @@ final class RecommendationRunAdvancer
         }
 
         try {
-            return $this->tick($user);
+            return $this->tick($user, $driver);
         } finally {
             $lock->release();
         }
     }
 
-    private function tick(User $user): RecommendationRunReport
+    private function tick(User $user, TickDriver $driver): RecommendationRunReport
     {
         $run = $this->runs->findActiveForUser($user);
 
@@ -109,7 +123,7 @@ final class RecommendationRunAdvancer
         }
 
         try {
-            return $this->tickActiveRun($run, $user);
+            return $this->tickActiveRun($run, $user, $driver);
         } catch (RecommendationRunCancelledException) {
             // Stopped mid-call. refresh() throws away everything this tick
             // computed and re-reads the row the canceller wrote, so the
@@ -136,7 +150,7 @@ final class RecommendationRunAdvancer
         }
     }
 
-    private function tickActiveRun(RecommendationRun $run, User $user): RecommendationRunReport
+    private function tickActiveRun(RecommendationRun $run, User $user, TickDriver $driver): RecommendationRunReport
     {
         $settings = $this->configurator->requireConfiguration($user);
         if (!$settings->hasModel()) {
@@ -151,7 +165,7 @@ final class RecommendationRunAdvancer
             return $this->dedupTick($run, $user, $settings);
         }
 
-        return $this->providerTick($run, $user, $settings);
+        return $this->providerTick($run, $user, $settings, $driver);
     }
 
     private function failPermanently(RecommendationRun $run, string $message): void
@@ -195,66 +209,92 @@ final class RecommendationRunAdvancer
         RecommendationRun $run,
         User $user,
         AiProviderSettings $settings,
+        TickDriver $driver,
     ): RecommendationRunReport {
         $userId = $this->requireUserId($user);
-        $ids = $run->getCandidateBatches()[$run->progress()->nextBatchIndex];
-        $linesById = $this->candidateLoader->linesForIds($userId, $ids);
-        $validIds = array_keys($linesById);
         $effectiveSettings = $this->settingsResolver->forUser($user);
+        $waveSize = $this->waveSize($run, $settings, $driver);
 
-        if ([] === $validIds) {
-            // Every entry in this batch was pruned since the snapshot: there
-            // is nothing to ask the model, so this is progress, not failure.
-            // It takes the same ending as a usable reply, because a
-            // single-batch run has no dedup phase to carry it: merely
-            // checkpointing here would leave the run running with every
-            // batch done, and the next tick would reach for a batch index
-            // past the end of the frozen plan and wedge the run forever.
-            return $this->recordBatchWinners($run, []);
-        }
+        $winnersPerBatch = $this->resolveWave($run, $settings, $effectiveSettings, $userId, $waveSize);
 
-        $messages = $this->batchMessagesFor($run, $userId, $ids, $linesById, $effectiveSettings);
-
-        $recordedCall = $this->callRecorder->begin(
-            $run,
-            RecommendationRunLog::PHASE_BATCH,
-            $run->progress()->nextBatchIndex + 1,
-            $messages,
-            $settings->getModel() ?? '',
-        );
-
-        $content = $this->callProvider(
-            $run,
-            $settings,
-            $this->requestFor($settings, $messages, \count($validIds), RecommendationResponseSchema::Ranking),
-            $recordedCall,
-        );
-
-        $result = $this->parser->parse($content, $validIds);
-        $this->settleVerdict($recordedCall, $content, $result->usable);
-        $this->cancellation->guard($run);
-
-        return $this->recordReply($run, $content, $result);
+        return $this->pickEndingAfterWave($run, $winnersPerBatch);
     }
 
     /**
-     * @param list<int>              $ids       the batch's entry ids, in snapshot order
-     * @param array<int, PromptLine> $linesById
+     * Delegates the wave to RecommendationBatchWave and turns its atomic-wave
+     * transport failure into the run's own accounting: one ceiling increment
+     * for the whole wave -- the wave threw once, whatever its size, so a wave
+     * of four cannot exhaust a ceiling of three at once -- failing the run if
+     * that increment reached the ceiling, then re-throwing so the caller's
+     * mapping is unchanged and the next tick re-runs the wave from the unmoved
+     * cursor (#344). An unreadable key is not a transport failure -- the wave
+     * settles its log rows and lets it propagate untouched to tick(), which
+     * fails the run permanently.
      *
-     * @return list<array{role: string, content: string}>
+     * @return list<list<array{id: int, score: int, reason: string}>>
      */
-    private function batchMessagesFor(
+    private function resolveWave(
         RecommendationRun $run,
-        int $userId,
-        array $ids,
-        array $linesById,
+        AiProviderSettings $settings,
         EffectiveRecommendationSettings $effectiveSettings,
+        int $userId,
+        int $waveSize,
     ): array {
-        $history = $this->historyLoader->load($userId, $effectiveSettings);
-        $candidateLines = $this->linesInSnapshotOrder($ids, $linesById);
-        $messages = $this->promptBuilder->batchMessages($history, $candidateLines, $effectiveSettings);
+        try {
+            return $this->batchWave->resolve($run, $settings, $effectiveSettings, $userId, $waveSize);
+        } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
+            $this->recordTransportFailure($run, $settings, $e->getMessage());
 
-        return $this->withCorrectiveTail($messages, $run);
+            throw $e;
+        }
+    }
+
+    /**
+     * How many batches this tick sends at once: the connection's configured
+     * concurrency, clamped to the driver's regime and to the batches the plan
+     * has left. A poll tick is a web request, so it never sends more than
+     * POLL_MAX_CONCURRENCY however high the connection is set; the worker owns
+     * its process and sends the full configured cap. The hard
+     * MAX_BATCH_CONCURRENCY ceiling protects both (#344).
+     */
+    private function waveSize(RecommendationRun $run, AiProviderSettings $settings, TickDriver $driver): int
+    {
+        $batchesRemaining = \count($run->getCandidateBatches()) - $run->progress()->nextBatchIndex;
+
+        return min($this->effectiveCap($settings, $driver), $batchesRemaining);
+    }
+
+    private function effectiveCap(AiProviderSettings $settings, TickDriver $driver): int
+    {
+        $cap = TickDriver::Poll === $driver
+            ? min($settings->batchConcurrency(), self::POLL_MAX_CONCURRENCY)
+            : $settings->batchConcurrency();
+
+        return min($cap, AiProviderSettings::MAX_BATCH_CONCURRENCY);
+    }
+
+    /**
+     * Banks every resolved batch of the wave in plan order -- so batchesDone
+     * advances by the wave size and the winner list stays batch-ordered -- then
+     * takes the plan's ending once: a single-batch run finalizes straight from
+     * its ranked pool, a multi-batch run checkpoints (its next tick runs the
+     * remaining batches, or the dedup barrier once every batch is done).
+     *
+     * @param list<list<array{id: int, score: int, reason: string}>> $winnersPerBatch
+     */
+    private function pickEndingAfterWave(RecommendationRun $run, array $winnersPerBatch): RecommendationRunReport
+    {
+        foreach ($winnersPerBatch as $winners) {
+            $run->recordBatchWinners($winners);
+        }
+
+        if (!$run->progress()->needsDedup) {
+            return $this->finalize($run, $this->ranker->ranked($run->getWinners()));
+        }
+
+        $this->entityManager->flush();
+
+        return RecommendationRunReport::fromRun($run);
     }
 
     private function dedupTick(
@@ -275,7 +315,10 @@ final class RecommendationRunAdvancer
             return $this->finalize($run, []);
         }
 
-        $messages = $this->withCorrectiveTail($this->promptBuilder->dedupMessages($pool, $linesById), $run);
+        $messages = $this->promptBuilder->messagesWithCorrectiveTail(
+            $this->promptBuilder->dedupMessages($pool, $linesById),
+            $run->getLastInvalidReply(),
+        );
 
         $recordedCall = $this->callRecorder->begin(
             $run,
@@ -288,7 +331,7 @@ final class RecommendationRunAdvancer
         $content = $this->callProvider(
             $run,
             $settings,
-            $this->requestFor($settings, $messages, \count($pool), RecommendationResponseSchema::Duplicates),
+            $this->requestFactory->create($settings, $messages, \count($pool), RecommendationResponseSchema::Duplicates),
             $recordedCall,
         );
 
@@ -367,26 +410,7 @@ final class RecommendationRunAdvancer
     }
 
     /**
-     * The shape both the entity's winner list and finalize() speak.
-     *
-     * @param list<RecommendationPick> $picks
-     *
-     * @return list<array{id: int, score: int, reason: string}>
-     */
-    private static function asWinners(array $picks): array
-    {
-        return array_map(
-            static fn (RecommendationPick $pick): array => [
-                'id' => $pick->entryId,
-                'score' => $pick->score,
-                'reason' => $pick->reason,
-            ],
-            $picks,
-        );
-    }
-
-    /**
-     * The one provider call a tick makes, recorded for the debug view from
+     * The dedup phase's single provider call, recorded for the debug view from
      * the moment the request goes out (#309). A transport failure -- the
      * provider unreachable, or refusing the key -- never produced a reply for
      * the parser to judge, so it must not consume an `attempts` retry the way
@@ -394,7 +418,10 @@ final class RecommendationRunAdvancer
      * provider that is persistently broken still fails the run eventually
      * (#308 final review, Important 2) rather than ticking forever; either
      * way the exception is re-thrown so the controller still maps it to its
-     * problem type and the caller still sees the error on this tick.
+     * problem type and the caller still sees the error on this tick. The batch
+     * phase reads its wave through completeWave()/completeMany instead (#344),
+     * which folds a per-call transport failure into that call's outcome rather
+     * than throwing.
      *
      * The generic \Throwable catch below exists only to settle the log row:
      * begin() has already persisted it, and a verdict that stays null reads
@@ -409,31 +436,6 @@ final class RecommendationRunAdvancer
      * which exception reaches tick() -- and how the run ends -- is exactly
      * as before.
      */
-    /**
-     * Both provider phases ask the same question -- what to send, and how much
-     * the model may spend on the whole output -- so the output bound is derived
-     * in one place. A phase that built its own request could pair a batch
-     * prompt with someone else's token ceiling, and the symptom would be a
-     * truncated reply rather than an obvious error.
-     *
-     * @param list<array{role: string, content: string}> $messages
-     * @param int                                        $replyItemCount items the reply must cover
-     */
-    private function requestFor(
-        AiProviderSettings $settings,
-        array $messages,
-        int $replyItemCount,
-        RecommendationResponseSchema $responseSchema,
-    ): CompletionRequest {
-        return new CompletionRequest(
-            $settings->getModel() ?? '',
-            $messages,
-            $this->promptBuilder->outputTokenReserve($replyItemCount),
-            $responseSchema->toJsonSchema(),
-            $settings->suppressesReasoning(),
-        );
-    }
-
     private function callProvider(
         RecommendationRun $run,
         AiProviderSettings $settings,
@@ -490,92 +492,13 @@ final class RecommendationRunAdvancer
     }
 
     /**
-     * @param list<array{role: string, content: string}> $messages
-     *
-     * @return list<array{role: string, content: string}>
-     */
-    private function withCorrectiveTail(array $messages, RecommendationRun $run): array
-    {
-        $lastInvalidReply = $run->getLastInvalidReply();
-        if (null === $lastInvalidReply) {
-            return $messages;
-        }
-
-        return [...$messages, ...$this->promptBuilder->correctiveTail($lastInvalidReply)];
-    }
-
     /**
-     * @param list<int>              $ids       the batch's entry ids, in snapshot order
-     * @param array<int, PromptLine> $linesById entries pruned since the snapshot are simply absent
-     *
-     * @return list<PromptLine>
-     */
-    private function linesInSnapshotOrder(array $ids, array $linesById): array
-    {
-        $present = array_filter($ids, static fn (int $id): bool => isset($linesById[$id]));
-
-        return array_values(array_map(static fn (int $id): PromptLine => $linesById[$id], $present));
-    }
-
-    private function recordReply(
-        RecommendationRun $run,
-        string $content,
-        PickParseResult $result,
-    ): RecommendationRunReport {
-        if (!$result->usable) {
-            return $this->recordUnusableReply($run, $content);
-        }
-
-        return $this->recordBatchWinners($run, self::asWinners($result->picks));
-    }
-
-    /**
-     * Records one batch's outcome and takes whichever ending the frozen
-     * batch plan leaves. A run that still owes batch calls, or owes the one
-     * dedup call, checkpoints and waits for the next tick; a single-batch run
-     * has neither ahead of it, so it finalizes straight from its ranked pool.
-     *
-     * @param list<array{id: int, score: int, reason: string}> $winners
-     */
-    private function recordBatchWinners(RecommendationRun $run, array $winners): RecommendationRunReport
-    {
-        $run->recordBatchWinners($winners);
-
-        if (!$run->progress()->needsDedup) {
-            return $this->finalize($run, $this->ranker->ranked($run->getWinners()));
-        }
-
-        $this->entityManager->flush();
-
-        return RecommendationRunReport::fromRun($run);
-    }
-
-    /**
-     * An unusable batch reply retries with a corrective tail. Once attempts are
-     * exhausted the batch is dropped rather than failing the whole run: the
-     * batch phase degrades like the dedup phase, so the batches that did rank
-     * still reach the reader. A weak local model that answers one batch with an
-     * empty ranking three times running no longer discards the other batches'
-     * work (#329). recordBatchWinners with no winners resets the attempt
-     * counter and advances the plan, so a dropped batch takes the same ending
-     * as an all-pruned one; a run whose batches all drop finalizes to an empty
-     * list, the honest outcome when nothing ranked.
-     */
-    private function recordUnusableReply(RecommendationRun $run, string $content): RecommendationRunReport
-    {
-        return $this->retryOrDegrade(
-            $run,
-            $content,
-            fn (): RecommendationRunReport => $this->recordBatchWinners($run, []),
-        );
-    }
-
-    /**
-     * The retry envelope both unusable-reply phases share: record the invalid
-     * reply, and once attempts are exhausted hand off to the phase's own
-     * degraded ending rather than failing the run; otherwise checkpoint and
-     * wait for the corrective retry. Only the ending differs — a dropped batch
-     * for the batch phase, an undeduped list for the dedup phase (#329).
+     * The retry envelope the dedup phase uses: record the invalid reply, and
+     * once attempts are exhausted hand off to the degraded ending -- an
+     * undeduped list -- rather than failing the run; otherwise checkpoint and
+     * wait for the corrective retry on the next tick. The batch phase no longer
+     * comes here: its retries happen in-tick within the wave, so it never
+     * writes the run's cross-tick attempt state (#344).
      *
      * @param callable(): RecommendationRunReport $onAttemptsExhausted
      */

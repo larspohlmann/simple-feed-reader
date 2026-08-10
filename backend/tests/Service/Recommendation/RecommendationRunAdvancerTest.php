@@ -24,6 +24,7 @@ use App\Service\Recommendation\RecommendationPromptBuilder;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Recommendation\RecommendationSettingsValues;
+use App\Service\Recommendation\TickDriver;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiSettingsRowMover;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -273,6 +274,193 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         );
     }
 
+    /**
+     * A wave sized to the whole plan banks every batch in one tick (#344):
+     * with concurrency 2 and two batches, one worker tick advances batchesDone
+     * by the wave size and records both batches' winners.
+     */
+    public function testWaveBanksEveryBatchInOneTick(): void
+    {
+        $this->seedMultiBatchFixture();
+        $this->setBatchConcurrency(2);
+        $run = $this->startAndSnapshot();
+        $firstBatch = $run->getCandidateBatches()[0];
+        $secondBatch = $run->getCandidateBatches()[1];
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'one']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $secondBatch[0], 'score' => 80, 'reason' => 'two']],
+        ], \JSON_THROW_ON_ERROR));
+
+        $report = $this->advancer()->advance($this->user, TickDriver::Worker);
+
+        self::assertSame('running', $report->status);
+        self::assertSame(2, $report->batchesDone);
+        self::assertCount(2, $this->stubChatClient()->calls());
+
+        $this->em->clear();
+        $persisted = $this->activeRun();
+        self::assertTrue($persisted->progress()->isDedupPhase);
+        self::assertSame(
+            [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'one']],
+            $persisted->getWinners()[0],
+        );
+        self::assertSame(
+            [['id' => $secondBatch[0], 'score' => 80, 'reason' => 'two']],
+            $persisted->getWinners()[1],
+        );
+    }
+
+    /**
+     * An unusable batch in a wave retries in-tick and degrades after
+     * MAX_ATTEMPTS without dropping its usable siblings (#344). The wave draws
+     * in offset order each round, so the FIFO stub serves: round 1 [A-usable,
+     * B-garbage], round 2 [B-garbage], round 3 [B-garbage] -- A once, B three
+     * times, all in one tick.
+     */
+    public function testUnusableBatchRetriesInTickThenDegradesWithoutDroppingSiblings(): void
+    {
+        $this->seedMultiBatchFixture();
+        $this->setBatchConcurrency(2);
+        $run = $this->startAndSnapshot();
+        $firstBatch = $run->getCandidateBatches()[0];
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'kept']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->stubChatClient()->queueContent('garbage 1');
+        $this->stubChatClient()->queueContent('garbage 2');
+        $this->stubChatClient()->queueContent('garbage 3');
+
+        $report = $this->advancer()->advance($this->user, TickDriver::Worker);
+
+        self::assertSame('running', $report->status);
+        self::assertSame(2, $report->batchesDone);
+        // A once, B three times -- the retries stayed in-tick.
+        self::assertCount(4, $this->stubChatClient()->calls());
+
+        $this->em->clear();
+        $persisted = $this->activeRun();
+        self::assertSame(RecommendationRun::STATUS_RUNNING, $persisted->getStatus());
+        self::assertSame(
+            [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'kept']],
+            $persisted->getWinners()[0],
+        );
+        // The stubborn batch degraded to an empty winner set, not fatal.
+        self::assertSame([], $persisted->getWinners()[1]);
+    }
+
+    /**
+     * A transport failure anywhere in a wave is atomic (#344): nothing is
+     * banked, the cursor does not move, and the ceiling counts exactly one for
+     * the whole wave -- not one per failed call -- so the next tick re-runs the
+     * same batches.
+     */
+    public function testTransportFailureInWaveAdvancesNothingAndIncrementsCeilingOnce(): void
+    {
+        $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 3);
+        $this->setBatchConcurrency(3);
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+        $batches = $this->activeRun()->getCandidateBatches();
+        self::assertCount(3, $batches);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'a']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down'));
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[2][0], 'score' => 90, 'reason' => 'c']],
+        ], \JSON_THROW_ON_ERROR));
+
+        try {
+            $this->advancer()->advance($this->user, TickDriver::Worker);
+            self::fail('The wave transport failure must propagate.');
+        } catch (ProviderUnreachableException) {
+            // expected -- the caller still sees the error this tick
+        }
+
+        $this->em->clear();
+        $persisted = $this->activeRun();
+        self::assertSame(RecommendationRun::STATUS_RUNNING, $persisted->getStatus());
+        self::assertSame(0, $persisted->progress()->batchesDone);
+        self::assertSame([], $persisted->getWinners());
+        self::assertSame(1, $persisted->getTransportFailures());
+        // All three calls of the wave fired, even though only one failed.
+        self::assertCount(3, $this->stubChatClient()->calls());
+
+        // The next tick re-runs the very same batch indices from the unmoved
+        // cursor -- three fresh usable replies bank all three.
+        foreach ($batches as $batch) {
+            $this->stubChatClient()->queueContent(json_encode([
+                'recommendations' => [['id' => $batch[0], 'score' => 90, 'reason' => 'rerun']],
+            ], \JSON_THROW_ON_ERROR));
+        }
+        $rerun = $this->advancer()->advance($this->user, TickDriver::Worker);
+        self::assertSame(3, $rerun->batchesDone);
+    }
+
+    /**
+     * Concurrency 1 keeps the pre-#344 behaviour exactly, even under the worker
+     * driver: a multi-batch run advances one batch per tick, waveSize 1.
+     */
+    public function testConcurrencyOneTakesTheSequentialPath(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startAndSnapshot();
+        $firstBatch = $run->getCandidateBatches()[0];
+        $secondBatch = $run->getCandidateBatches()[1];
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'one']],
+        ], \JSON_THROW_ON_ERROR));
+        $firstTick = $this->advancer()->advance($this->user, TickDriver::Worker);
+
+        self::assertSame(1, $firstTick->batchesDone);
+        self::assertCount(1, $this->stubChatClient()->calls());
+        self::assertFalse($this->activeRun()->progress()->isDedupPhase);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $secondBatch[0], 'score' => 80, 'reason' => 'two']],
+        ], \JSON_THROW_ON_ERROR));
+        $secondTick = $this->advancer()->advance($this->user, TickDriver::Worker);
+
+        self::assertSame(2, $secondTick->batchesDone);
+        self::assertCount(2, $this->stubChatClient()->calls());
+        self::assertTrue($this->activeRun()->progress()->isDedupPhase);
+    }
+
+    /**
+     * A poll tick clamps concurrency to POLL_MAX_CONCURRENCY however high the
+     * connection is set (#344): with concurrency 4 and four batches, the first
+     * poll wave sends two, not four -- and two batches remain, so it is the
+     * clamp, not the plan length, that held it.
+     */
+    public function testPollDriverClampsConcurrencyToTwo(): void
+    {
+        $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
+        $this->setBatchConcurrency(4);
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user, TickDriver::Poll);
+        $batches = $this->activeRun()->getCandidateBatches();
+        self::assertCount(4, $batches);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'a']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[1][0], 'score' => 90, 'reason' => 'b']],
+        ], \JSON_THROW_ON_ERROR));
+
+        $report = $this->advancer()->advance($this->user, TickDriver::Poll);
+
+        self::assertSame(2, $report->batchesDone);
+        self::assertCount(2, $this->stubChatClient()->calls());
+        self::assertFalse($this->activeRun()->progress()->isDedupPhase);
+    }
+
     public function testTheBatchCallCarriesTheAccountsReasoningPreference(): void
     {
         $this->seedReadyAiSettings($this->user);
@@ -286,7 +474,12 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         }
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user); // snapshot tick
-        $this->stubChatClient()->queueContent('{"recommendations":[]}');
+        // An empty ranking is unusable, so it retries in-tick (#344); queue one
+        // reply per attempt so the single batch degrades within the one tick.
+        // The reasoning flag this test pins rides on every call, first included.
+        for ($attempt = 0; $attempt < RecommendationRun::MAX_ATTEMPTS; $attempt++) {
+            $this->stubChatClient()->queueContent('{"recommendations":[]}');
+        }
         $this->advancer()->advance($this->user); // batch tick
 
         $calls = $this->stubChatClient()->calls();
@@ -294,17 +487,22 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertFalse($calls[0]['suppressReasoning']);
     }
 
-    public function testInvalidReplyTriggersCorrectiveRetryNextTick(): void
+    /**
+     * The batch phase retries an unusable reply in-tick now (#344): the
+     * unusable reply and its corrective retry are one tick, not two, and the
+     * corrective tail is built from that batch's own last invalid reply held
+     * in a local map, not the run's cross-tick lastInvalidReply.
+     */
+    public function testInvalidReplyTriggersCorrectiveRetryInTheSameTick(): void
     {
         $this->seedMultiBatchFixture();
         $firstBatch = $this->startAndSnapshot()->getCandidateBatches()[0];
 
         $this->stubChatClient()->queueContent('not json');
-        $this->advancer()->advance($this->user);
-
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'r1']],
         ], \JSON_THROW_ON_ERROR));
+
         $report = $this->advancer()->advance($this->user);
 
         self::assertSame(1, $report->batchesDone);
@@ -332,11 +530,11 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $run = $this->startAndSnapshot();
         $secondBatch = $run->getCandidateBatches()[1];
 
+        // In-tick now (#344): the three attempts for the first batch all run
+        // inside one tick, so one advance drops it -- no longer three ticks.
         $this->stubChatClient()->queueContent('garbage 1');
         $this->stubChatClient()->queueContent('garbage 2');
         $this->stubChatClient()->queueContent('garbage 3');
-        $this->advancer()->advance($this->user);
-        $this->advancer()->advance($this->user);
         $afterDrop = $this->advancer()->advance($this->user);
 
         // The run kept going: the empty batch counts as done, batch two is
@@ -1079,9 +1277,11 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->enableDebug();
         $this->startAndSnapshot();
 
-        $this->stubChatClient()->queueContent('not json');
-        $this->advancer()->advance($this->user);
+        // In-tick retry (#344): the unusable reply and its corrective retry are
+        // one tick, so both queued replies are consumed by a single advance and
+        // each still gets its own log row with the right verdict.
         $firstEntryId = $this->activeRun()->getCandidateBatches()[0][0];
+        $this->stubChatClient()->queueContent('not json');
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $firstEntryId, 'score' => 50, 'reason' => 'r']],
         ], \JSON_THROW_ON_ERROR));
@@ -1262,7 +1462,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->persistSettings(self::SINGLE_BATCH_ENTRY_COUNT, $picksLimit);
     }
 
-    private function persistSettings(int $candidatePoolSize, int $picksLimit): void
+    private function persistSettings(int $candidatePoolSize, int $picksLimit, ?int $batchCount = null): void
     {
         $settings = new RecommendationSettings($this->user);
         $settings->update(new RecommendationSettingsValues(
@@ -1273,10 +1473,46 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             candidatePoolSize: $candidatePoolSize,
             picksLimit: $picksLimit,
             contextWindow: self::MULTI_BATCH_CONTEXT_WINDOW,
-            batchCount: null,
+            batchCount: $batchCount,
             debugEnabled: false,
         ));
         $this->em->persist($settings);
+        $this->em->flush();
+    }
+
+    /**
+     * Forces an exact batch count through the expert batchCount override, so a
+     * wave test can pin how many batches a wave has to work with. ceil(entries
+     * / batchCount) is the per-batch cap, and each cap here stays under the
+     * MINIMUM_BATCH_SIZE the token budget splits on, so the packer produces
+     * exactly $batchCount batches regardless of the context window.
+     */
+    private function seedForcedBatchCountFixture(int $entryCount, int $batchCount): void
+    {
+        $this->seedReadyAiSettings($this->user);
+
+        $summary = str_repeat('Lorem ipsum dolor sit amet consectetur adipiscing elit. ', 5);
+        for ($i = 0; $i < $entryCount; $i++) {
+            $entry = $this->entry(
+                sprintf('entry-%02d', $i),
+                sprintf('2026-07-10T%02d:%02d:00Z', intdiv($i, 60), $i % 60),
+            );
+            $entry->setSummary($summary);
+        }
+        $this->em->flush();
+
+        $this->persistSettings($entryCount, EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT, $batchCount);
+    }
+
+    /**
+     * Sets the connection's per-batch concurrency: the default seeded row is 1,
+     * so a wave test opts in to the fan-out here.
+     */
+    private function setBatchConcurrency(int $concurrency): void
+    {
+        $config = $this->em->getRepository(AiProviderSettings::class)->findOneBy(['user' => $this->user]);
+        self::assertNotNull($config);
+        $config->setBatchConcurrency($concurrency);
         $this->em->flush();
     }
 
