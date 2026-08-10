@@ -13,18 +13,22 @@ use PHPUnit\Framework\TestCase;
 
 final class RecommendationFeedJsonTest extends TestCase
 {
-    public function testPageOmitsTheRecommendationScore(): void
+    public function testPageOmitsBothDebugAnnotations(): void
     {
         $result = RecommendationFeedJson::page([$this->row()], null);
 
+        // Debug off keeps neither the score nor the reason (#342): the reason
+        // used to leak through with the score hidden, which read as inconsistent.
         self::assertArrayNotHasKey('recommendationScore', $result['entries'][0]);
+        self::assertArrayNotHasKey('recommendationReason', $result['entries'][0]);
     }
 
-    public function testPageWithScoresIncludesTheRecommendationScore(): void
+    public function testPageWithScoresIncludesBothDebugAnnotations(): void
     {
         $result = RecommendationFeedJson::pageWithScores([$this->row()], null);
 
         self::assertSame(77, $result['entries'][0]['recommendationScore']);
+        self::assertSame('Matches your interest in g1', $result['entries'][0]['recommendationReason']);
     }
 
     public function testPageWithScoresCarriesANullScoreForRowsWrittenBeforeTheColumnExisted(): void

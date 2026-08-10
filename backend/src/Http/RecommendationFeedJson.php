@@ -16,14 +16,17 @@ final class RecommendationFeedJson
     public static function page(array $rows, ?string $nextCursor): array
     {
         return [
-            'entries' => self::entries($rows, withScores: false),
+            'entries' => self::entries($rows, withDebugAnnotations: false),
             'nextCursor' => $nextCursor,
         ];
     }
 
     /**
-     * Same shape as page(), plus each entry's `recommendationScore` — used
-     * only while the caller's debug setting is on (#321).
+     * Same shape as page(), plus each entry's `recommendationReason` and
+     * `recommendationScore` — the run's debug annotations, sent only while the
+     * caller's debug setting is on (#321; the reason joined the score behind the
+     * debug flag in #342, so "keep debug data off" hides both, not just the
+     * score).
      *
      * @param list<RecommendationFeedRow> $rows
      *
@@ -32,7 +35,7 @@ final class RecommendationFeedJson
     public static function pageWithScores(array $rows, ?string $nextCursor): array
     {
         return [
-            'entries' => self::entries($rows, withScores: true),
+            'entries' => self::entries($rows, withDebugAnnotations: true),
             'nextCursor' => $nextCursor,
         ];
     }
@@ -42,12 +45,18 @@ final class RecommendationFeedJson
      *
      * @return list<array<string, mixed>>
      */
-    private static function entries(array $rows, bool $withScores): array
+    private static function entries(array $rows, bool $withDebugAnnotations): array
     {
-        return array_map(static function (RecommendationFeedRow $row) use ($withScores): array {
-            $entry = EntryJson::one($row->row) + ['recommendationReason' => $row->reason];
+        return array_map(static function (RecommendationFeedRow $row) use ($withDebugAnnotations): array {
+            $entry = EntryJson::one($row->row);
+            if (!$withDebugAnnotations) {
+                return $entry;
+            }
 
-            return $withScores ? $entry + ['recommendationScore' => $row->score] : $entry;
+            return $entry + [
+                'recommendationReason' => $row->reason,
+                'recommendationScore' => $row->score,
+            ];
         }, $rows);
     }
 }
