@@ -402,15 +402,21 @@ final class AiProviderConfiguratorTest extends DbTestCase
     {
         $configurator = $this->configurator(['gpt-4o']);
         $user = $this->user('cfg-duplicate-longname@example.test');
-        $longName = str_repeat('ä', 130); // 130 multibyte chars, well over 120
+        // Exactly the column limit (120 chars): long enough that "Copy of " + name
+        // overflows and forces truncation, but still valid to persist as the source
+        // row (a longer name would 22001 on MySQL, which does enforce the length).
+        $longName = str_repeat('ä', 120);
         $added = $configurator->addConfiguration($user, $longName, 'https://api.example.test/v1', 'sk-abcdef1234');
 
         $copy = $configurator->duplicateConfiguration($added->configuration);
 
         $name = $copy->getName();
         self::assertNotNull($name);
-        // mb-correct truncation: at most 120 CHARACTERS, and still valid UTF-8 (no split multibyte sequence).
-        self::assertLessThanOrEqual(120, mb_strlen($name));
+        // mb-correct truncation to the 120-CHARACTER limit: "Copy of " + 112 of the
+        // multibyte chars. A byte-wise substr(0, 120) would cut mid-run and yield
+        // 64 characters, so asserting exactly 120 kills that mutation and proves the
+        // result is still valid UTF-8 (no split sequence).
+        self::assertSame(120, mb_strlen($name));
         self::assertSame($name, mb_convert_encoding($name, 'UTF-8', 'UTF-8'));
         self::assertStringStartsWith('Copy of ', $name);
     }
