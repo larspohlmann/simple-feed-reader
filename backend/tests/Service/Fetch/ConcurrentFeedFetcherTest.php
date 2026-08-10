@@ -214,6 +214,35 @@ final class ConcurrentFeedFetcherTest extends TestCase
         self::assertSame('<rss/>', $outcomes[1]->responseOrThrow()->body);
     }
 
+    public function testAFailoverRetryForcesAFreshConnection(): void
+    {
+        // curl pools by host:port, so a retry pinned to IPv4 would otherwise reuse
+        // the previous family's live connection (taz's IPv6 answers 403). The
+        // first attempt reuses the pool; the retry must open its own connection.
+        /** @var list<bool> $freshConnectPerAttempt */
+        $freshConnectPerAttempt = [];
+        $ipv4 = '193.99.144.85';
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$freshConnectPerAttempt, $ipv4): MockResponse {
+                /** @var array<string, string> $resolve */
+                $resolve = $options['resolve'];
+                $extra = $options['extra'] ?? null;
+                $curl = \is_array($extra) ? ($extra['curl'] ?? null) : null;
+                $freshConnectPerAttempt[] = \is_array($curl) && ($curl[\CURLOPT_FRESH_CONNECT] ?? null) === true;
+
+                return $resolve['taz.de'] === $ipv4
+                    ? new MockResponse('<rss/>', ['http_code' => 200])
+                    : new MockResponse('forbidden', ['http_code' => 403]);
+            },
+            dnsOverrides: ['taz.de' => ['2a02:2e0:3fe:1001:7777:772e:2:85', $ipv4]],
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://taz.de/!p4608;rss/')]));
+
+        self::assertNull($outcomes[1]->failure());
+        self::assertSame([false, true], $freshConnectPerAttempt);
+    }
+
     public function testAnOversizedBodyIsNotFailedOverToAnotherFamily(): void
     {
         // The cap would be exceeded on any family, so a second request is pure

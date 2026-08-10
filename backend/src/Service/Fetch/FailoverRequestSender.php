@@ -42,6 +42,7 @@ final readonly class FailoverRequestSender
             $response = $this->httpClient->request($method, $url, [
                 ...$options,
                 'resolve' => [$guarded->host => $pinnedAddresses],
+                ...CrossFamilyFailover::freshConnectionAfter($index),
             ]);
             $canFailOver = $index < $finalAttempt;
 

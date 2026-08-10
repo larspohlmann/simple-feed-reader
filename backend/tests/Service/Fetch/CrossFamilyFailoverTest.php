@@ -45,4 +45,15 @@ final class CrossFamilyFailoverTest extends TestCase
         self::assertFalse(CrossFamilyFailover::isRetryableStatus(304));
         self::assertFalse(CrossFamilyFailover::isRetryableStatus(301));
     }
+
+    public function testForcesAFreshConnectionOnlyAfterTheFirstAttempt(): void
+    {
+        // The first attempt reuses the connection pool as normal; a retry must
+        // open its own connection so curl cannot reuse the dead family's socket.
+        self::assertSame([], CrossFamilyFailover::freshConnectionAfter(0));
+        self::assertSame(
+            ['extra' => ['curl' => [\CURLOPT_FRESH_CONNECT => true]]],
+            CrossFamilyFailover::freshConnectionAfter(1),
+        );
+    }
 }

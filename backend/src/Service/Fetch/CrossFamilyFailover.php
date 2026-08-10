@@ -36,4 +36,20 @@ final class CrossFamilyFailover
     {
         return $statusCode >= 400;
     }
+
+    /**
+     * The `extra.curl` option that forces a failover retry onto its own
+     * connection, empty on the first attempt. curl pools connections by
+     * host:port, so without this a retry pinned to a new family would reuse the
+     * previous family's still-open connection (taz's IPv6 answers 403 and stays
+     * keep-alive) and ignore the new pin, defeating the failover.
+     *
+     * @return array{extra?: array{curl: array<int, bool>}}
+     */
+    public static function freshConnectionAfter(int $attemptIndex): array
+    {
+        return $attemptIndex > 0
+            ? ['extra' => ['curl' => [\CURLOPT_FRESH_CONNECT => true]]]
+            : [];
+    }
 }

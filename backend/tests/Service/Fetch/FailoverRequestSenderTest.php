@@ -87,6 +87,32 @@ final class FailoverRequestSenderTest extends TestCase
         self::assertSame(3, $client->getRequestsCount());
     }
 
+    public function testForcesAFreshConnectionOnAFailoverRetry(): void
+    {
+        // curl pools connections by host:port. The dead family's connection can be
+        // alive and keep-alive (taz's IPv6 answers 403), so without a fresh
+        // connection the IPv4 retry would reuse it and get 403 again. The first
+        // attempt reuses the pool as normal; every retry must not.
+        /** @var list<bool> $freshConnectPerAttempt */
+        $freshConnectPerAttempt = [];
+        $capture = function (string $method, string $url, array $options) use (&$freshConnectPerAttempt): MockResponse {
+            /** @var array<string, string> $resolve */
+            $resolve = $options['resolve'];
+            $extra = $options['extra'] ?? null;
+            $curl = \is_array($extra) ? ($extra['curl'] ?? null) : null;
+            $freshConnectPerAttempt[] = \is_array($curl) && ($curl[\CURLOPT_FRESH_CONNECT] ?? null) === true;
+
+            return str_contains($resolve['dual.example.com'], ',')
+                ? new MockResponse('forbidden', ['http_code' => 403])
+                : new MockResponse('served over IPv4', ['http_code' => 200]);
+        };
+
+        (new FailoverRequestSender(new MockHttpClient($capture)))
+            ->send('GET', 'https://dual.example.com/post', new GuardedUrl('dual.example.com', self::DUAL_STACK), []);
+
+        self::assertSame([false, true], $freshConnectPerAttempt);
+    }
+
     public function testKeepsTheFinalFamilysErrorStatusWhenNoFamilyAnswers(): void
     {
         // Both families forbid the request: the last answer stands so the caller
