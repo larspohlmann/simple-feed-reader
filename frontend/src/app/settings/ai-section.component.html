@@ -6,7 +6,7 @@
     <ul class="configs">
       @for (config of ai.configs(); track config.id) {
         <li class="config-row" [class.is-active]="config.active">
-          <app-disclosure appearance="row" [label]="label(config)">
+          <app-disclosure appearance="row">
             <div summary class="summary-line">
               <span class="label">{{ label(config) }}</span>
               @if (config.active) {

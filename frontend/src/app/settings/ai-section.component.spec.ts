@@ -190,6 +190,8 @@ describe('AiSectionComponent', () => {
     ai.configs.set([config({ id: 1 })]);
     fixture.detectChanges();
 
+    (row(fixture, 0).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
     (row(fixture, 0).querySelector('.change-model') as HTMLButtonElement).click();
     expect(ai.loadModels).toHaveBeenCalledWith(1);
 
@@ -225,6 +227,8 @@ describe('AiSectionComponent', () => {
     ai.configs.set([config({ id: 1, ready: true })]);
     fixture.detectChanges();
 
+    (row(fixture, 0).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
     (row(fixture, 0).querySelector('.activate') as HTMLButtonElement).click();
 
     expect(ai.activate).toHaveBeenCalledWith(1);
@@ -235,6 +239,8 @@ describe('AiSectionComponent', () => {
     ai.configs.set([config({ id: 7 })]);
     fixture.detectChanges();
 
+    (row(fixture, 0).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
     (row(fixture, 0).querySelector('.duplicate') as HTMLButtonElement).click();
 
     expect(ai.duplicate).toHaveBeenCalledWith(7);
@@ -244,6 +250,9 @@ describe('AiSectionComponent', () => {
     const fixture = mount();
     const setReasoning = jest.spyOn(ai, 'setReasoning').mockImplementation(() => undefined);
     ai.configs.set([config({ id: 7, suppressReasoning: true })]);
+    fixture.detectChanges();
+
+    (row(fixture, 0).querySelector('summary') as HTMLElement).click();
     fixture.detectChanges();
 
     const checkbox: HTMLInputElement =
@@ -266,6 +275,9 @@ describe('AiSectionComponent', () => {
       .spyOn(ai, 'setBatchConcurrency')
       .mockImplementation(() => undefined);
     ai.configs.set([config({ id: 7, batchConcurrency: 1 })]);
+    fixture.detectChanges();
+
+    (row(fixture, 0).querySelector('summary') as HTMLElement).click();
     fixture.detectChanges();
 
     const select = row(fixture, 0).querySelector('app-field select') as HTMLSelectElement;
@@ -305,6 +317,10 @@ describe('AiSectionComponent', () => {
     http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
     http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
 
+    (row(fixture, 0).querySelector('summary') as HTMLElement).click();
+    (row(fixture, 1).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
+
     expect((row(fixture, 0).querySelector('.activate button') as HTMLButtonElement).disabled).toBe(
       true,
     );
@@ -318,6 +334,8 @@ describe('AiSectionComponent', () => {
     ai.configs.set([config({ id: 1, name: 'Old name' })]);
     fixture.detectChanges();
 
+    (row(fixture, 0).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
     (row(fixture, 0).querySelector('.rename') as HTMLButtonElement).click();
     fixture.detectChanges();
 
@@ -336,6 +354,8 @@ describe('AiSectionComponent', () => {
     ai.configs.set([config({ id: 1, name: 'Old name' })]);
     fixture.detectChanges();
 
+    (row(fixture, 0).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
     (row(fixture, 0).querySelector('.rename') as HTMLButtonElement).click();
     fixture.detectChanges();
 
@@ -354,6 +374,8 @@ describe('AiSectionComponent', () => {
     ai.configs.set([config({ id: 1, name: 'Old name' })]);
     fixture.detectChanges();
 
+    (row(fixture, 0).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
     (row(fixture, 0).querySelector('.rename') as HTMLButtonElement).click();
     fixture.detectChanges();
     (row(fixture, 0).querySelector('.rename-cancel') as HTMLButtonElement).click();
@@ -369,6 +391,8 @@ describe('AiSectionComponent', () => {
     fixture.detectChanges();
     dialogStub.open.mockReturnValue({ closed: of(true) });
 
+    (row(fixture, 0).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
     (row(fixture, 0).querySelector('.delete') as HTMLButtonElement).click();
 
     expect(dialogStub.open).toHaveBeenCalled();
@@ -381,6 +405,8 @@ describe('AiSectionComponent', () => {
     fixture.detectChanges();
     dialogStub.open.mockReturnValue({ closed: of(false) });
 
+    (row(fixture, 0).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
     (row(fixture, 0).querySelector('.delete') as HTMLButtonElement).click();
 
     const [, dialogConfig] = dialogStub.open.mock.calls.at(-1) as [unknown, { data: ConfirmData }];
@@ -397,6 +423,8 @@ describe('AiSectionComponent', () => {
     fixture.detectChanges();
     dialogStub.open.mockReturnValue({ closed: of(false) });
 
+    (row(fixture, 0).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
     (row(fixture, 0).querySelector('.delete') as HTMLButtonElement).click();
 
     expect(ai.remove).not.toHaveBeenCalled();
