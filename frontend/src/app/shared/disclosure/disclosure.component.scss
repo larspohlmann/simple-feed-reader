@@ -68,10 +68,6 @@ summary.is-row {
   background: transparent;
 }
 
-summary.is-row:hover {
-  border-color: transparent;
-}
-
 summary.is-row::before {
   order: 1;
   margin-left: auto;
