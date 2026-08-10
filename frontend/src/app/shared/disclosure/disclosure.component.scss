@@ -11,17 +11,44 @@
   width: 100%;
 }
 
-// Read as a deliberate control, not muted throwaway text: the accent colour
-// and weight mark it interactive, the padding gives a comfortable tap target,
-// and the hover underline confirms it is clickable. The native marker stays.
+// A bordered toggle with the same chrome as the default button beside it, so it
+// reads as a real control rather than muted text with a bare marker. Changing
+// `display` drops the native disclosure triangle (and iOS Safari needs the
+// -webkit marker hidden too), so a CSS chevron stands in and rotates on open.
 summary {
-  padding: var(--space-1) 0;
-  cursor: pointer;
-  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--text-secondary);
   font-size: var(--fs-sm);
   font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+summary::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-top: 0.3em solid transparent;
+  border-bottom: 0.3em solid transparent;
+  border-left: 0.4em solid currentcolor;
+  transition: transform 0.15s ease;
+}
+
+details[open] > summary::before {
+  transform: rotate(90deg);
 }
 
 summary:hover {
-  text-decoration: underline;
+  border-color: var(--accent);
 }
