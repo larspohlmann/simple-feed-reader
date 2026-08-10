@@ -93,7 +93,8 @@
         "reasoning": "Ask the model not to reason",
         "reasoningHint": "Leave on for most providers. Turn it off only if the endpoint rejects the request (for example a direct OpenAI URL).",
         "batchConcurrency": "Parallel requests",
-        "batchConcurrencyHint": "How many batch prompts to send at once (1–4). Raise it for a hosted provider to speed up a run; leave it at 1 for a local model."
+        "batchConcurrencyHint": "How many batch prompts to send at once (1–4). Raise it for a hosted provider to speed up a run; leave it at 1 for a local model.",
+        "saved": "Saved"
       },
       "errors": {
         "provider": "The provider could not be used. Check the endpoint and the key.",

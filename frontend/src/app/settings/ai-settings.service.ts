@@ -61,6 +61,14 @@ export class AiSettingsService {
   readonly busy = signal(false);
   readonly failure = signal<AiFailure | null>(null);
 
+  /** Which row's parallel-requests dropdown most recently saved — drives a
+   *  transient "Saved" confirmation on that one row. Scoped to this single
+   *  write (not the shared `run()` helper) because every other field here
+   *  saves silently; only the concurrency dropdown needed feedback, since it
+   *  auto-saves on `change` with no submit button of its own. */
+  readonly savedConcurrencyId = signal<number | null>(null);
+  private savedConcurrencyTimer: ReturnType<typeof setTimeout> | null = null;
+
   load(): void {
     this.run(this.http.get<AiConfigList>(`${this.base}/api/me/ai`), (list) => {
       this.configs.set(list.configs);
@@ -118,11 +126,18 @@ export class AiSettingsService {
   }
 
   setBatchConcurrency(id: number, batchConcurrency: number): void {
+    if (this.savedConcurrencyTimer !== null) clearTimeout(this.savedConcurrencyTimer);
+    this.savedConcurrencyId.set(null);
+
     this.run(
       this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/batch-concurrency`, {
         batchConcurrency,
       }),
-      (config) => this.upsert(config),
+      (config) => {
+        this.upsert(config);
+        this.savedConcurrencyId.set(config.id);
+        this.savedConcurrencyTimer = setTimeout(() => this.savedConcurrencyId.set(null), 2500);
+      },
     );
   }
 

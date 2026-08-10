@@ -40,7 +40,10 @@ describe('AiSettingsService', () => {
     availability = TestBed.inject(AiAvailabilityService);
   });
 
-  afterEach(() => ctrl.verify());
+  afterEach(() => {
+    ctrl.verify();
+    jest.useRealTimers();
+  });
 
   it('loads the list and follows the active configuration', () => {
     svc.load();
@@ -164,6 +167,59 @@ describe('AiSettingsService', () => {
     request.flush(config({ id: 7, batchConcurrency: 3 }));
 
     expect(svc.configs().find((each) => each.id === 7)?.batchConcurrency).toBe(3);
+  });
+
+  it('marks the saved row on a successful concurrency save, then clears it after 2.5s', () => {
+    jest.useFakeTimers();
+
+    svc.setBatchConcurrency(7, 3);
+    expect(svc.savedConcurrencyId()).toBeNull();
+
+    ctrl
+      .expectOne(`${base}/api/me/ai/configs/7/batch-concurrency`)
+      .flush(config({ id: 7, batchConcurrency: 3 }));
+    expect(svc.savedConcurrencyId()).toBe(7);
+
+    jest.advanceTimersByTime(2500);
+    expect(svc.savedConcurrencyId()).toBeNull();
+  });
+
+  it('cancels the previous row-save timer so it cannot clobber a later row', () => {
+    jest.useFakeTimers();
+
+    // Row 7 saves at t=0; its auto-clear is scheduled for t=2500.
+    svc.setBatchConcurrency(7, 3);
+    ctrl
+      .expectOne(`${base}/api/me/ai/configs/7/batch-concurrency`)
+      .flush(config({ id: 7, batchConcurrency: 3 }));
+    expect(svc.savedConcurrencyId()).toBe(7);
+
+    // Row 8 saves at t=2000, well before row 7's timer would fire. Its own
+    // auto-clear lands at t=4500.
+    jest.advanceTimersByTime(2000);
+    svc.setBatchConcurrency(8, 2);
+    ctrl
+      .expectOne(`${base}/api/me/ai/configs/8/batch-concurrency`)
+      .flush(config({ id: 8, batchConcurrency: 2 }));
+    expect(svc.savedConcurrencyId()).toBe(8);
+
+    // t=2500: row 7's original timer would fire here if it survived —
+    // proving it was cancelled rather than merely superseded.
+    jest.advanceTimersByTime(500);
+    expect(svc.savedConcurrencyId()).toBe(8);
+
+    // t=4500: row 8's own timer fires.
+    jest.advanceTimersByTime(2000);
+    expect(svc.savedConcurrencyId()).toBeNull();
+  });
+
+  it('does not mark a save as done when the request fails', () => {
+    svc.setBatchConcurrency(7, 3);
+    ctrl
+      .expectOne(`${base}/api/me/ai/configs/7/batch-concurrency`)
+      .flush({ title: 'Bad request' }, { status: 400, statusText: 'Bad Request' });
+
+    expect(svc.savedConcurrencyId()).toBeNull();
   });
 
   it('activates a configuration and clears the active flag on the others', () => {

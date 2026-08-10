@@ -114,10 +114,9 @@ app-searchable-select {
   gap: var(--space-2);
 }
 
-/* Wide enough for a typed two-digit value before the change handler clamps
-   it back to 1..4 — --space-6 clipped the second digit. */
-.concurrency-field-row input {
-  width: var(--space-7);
+.concurrency-field-row .saved {
+  font-size: var(--fs-sm);
+  color: var(--success);
 }
 
 .model-picker {
