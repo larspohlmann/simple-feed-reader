@@ -11,8 +11,17 @@
   width: 100%;
 }
 
+// Read as a deliberate control, not muted throwaway text: the accent colour
+// and weight mark it interactive, the padding gives a comfortable tap target,
+// and the hover underline confirms it is clickable. The native marker stays.
 summary {
+  padding: var(--space-1) 0;
   cursor: pointer;
-  color: var(--text-secondary);
+  color: var(--accent);
   font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+summary:hover {
+  text-decoration: underline;
 }
