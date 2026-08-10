@@ -51,8 +51,8 @@ final class RecommendationFeedJson
         return array_map(static function (RecommendationFeedRow $row) use ($withDebugAnnotations): array {
             // runId + runGeneratedAt are unconditional: the divider needs the
             // run's identity and generation time on every row. The ATOM format
-            // matches the run report's forYou.generatedAt exactly, so the client
-            // can compare the two by string equality (#348).
+            // matches the run report's forYou.generatedAt, so the client can tell
+            // the newest run's picks from the rest by their generation instant (#348).
             $entry = EntryJson::one($row->row) + [
                 'runId' => $row->runId,
                 'runGeneratedAt' => $row->runGeneratedAt?->format(\DateTimeInterface::ATOM),

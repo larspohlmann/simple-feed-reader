@@ -205,9 +205,17 @@ export class EntryListComponent implements OnDestroy {
   /** Whether a run group opens with a divider. Suppressed only when the group's
    *  generation time is the one the list header already shows as "Last refreshed"
    *  — i.e. the newest run. An older run whose time differs always gets its
-   *  divider, even at the very top (newest run left nothing visible). */
+   *  divider, even at the very top (newest run left nothing visible).
+   *
+   *  Compares instants, not raw ISO strings: `runGeneratedAt` (the run's
+   *  completedAt) and the header's time (the for-you summary's generatedAt) are
+   *  serialized by two different backend mappers, so a representation difference
+   *  (`Z` vs `+00:00`, added fractional seconds) must not read as two runs. */
   showRunHeader(group: RunGroup): boolean {
-    return group.generatedAt != null && group.generatedAt !== this.lastRefreshed();
+    const generatedAt = group.generatedAt;
+    if (generatedAt == null) return false;
+    const shown = this.lastRefreshed();
+    return shown == null || Date.parse(generatedAt) !== Date.parse(shown);
   }
 
   readonly blocks = computed<ListBlock[]>(() => {
