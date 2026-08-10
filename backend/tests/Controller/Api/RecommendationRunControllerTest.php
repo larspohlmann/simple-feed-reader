@@ -224,7 +224,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'error' => null,
                 'background' => false,
                 'streamedChars' => 0,
-                'forYou' => ['itemCount' => 0, 'generatedAt' => null],
+                'forYou' => ['itemCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
             ],
             $payload,
         );
@@ -300,6 +300,9 @@ final class RecommendationRunControllerTest extends WebTestCase
         self::assertIsArray($forYou);
         self::assertSame(1, $forYou['itemCount']);
         self::assertIsString($forYou['generatedAt']);
+        // The completed run's own id rides along, so the client can suppress its
+        // divider by identity rather than by matching timestamps (#348).
+        self::assertIsInt($forYou['newestRunId']);
     }
 
     public function testCurrentWithoutAnyRunReportsNone(): void
@@ -319,7 +322,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'background' => false,
                 'streamedChars' => 0,
                 'elapsedSeconds' => null,
-                'forYou' => ['itemCount' => 0, 'generatedAt' => null],
+                'forYou' => ['itemCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
             ],
             $this->payload($client->getResponse()),
         );
@@ -629,7 +632,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'background' => false,
                 'streamedChars' => 0,
                 'elapsedSeconds' => null,
-                'forYou' => ['itemCount' => 0, 'generatedAt' => null],
+                'forYou' => ['itemCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
             ],
             $this->payload($client->getResponse()),
         );

@@ -119,6 +119,9 @@ final class RecommendationForYouSummaryProviderTest extends DbTestCase
             '2026-08-07T10:05:00+00:00',
             $summary->generatedAt?->format(\DateTimeInterface::ATOM),
         );
+        // The identity of that same newest completed run — not the failed one
+        // after it — so the client can suppress its divider by id, not by time.
+        self::assertSame($secondRun->getId(), $summary->newestRunId);
     }
 
     public function testAUserWithNoRunsGetsAnEmptySummary(): void
@@ -127,5 +130,6 @@ final class RecommendationForYouSummaryProviderTest extends DbTestCase
 
         self::assertSame(0, $summary->itemCount);
         self::assertNull($summary->generatedAt);
+        self::assertNull($summary->newestRunId);
     }
 }

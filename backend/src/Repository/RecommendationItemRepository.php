@@ -67,7 +67,8 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             ->addSelect('es.isFavorite AS esFavorite')
             ->addSelect('es.isKept AS esKept')
             ->addSelect('es.isViewed AS esViewed')
-            ->addSelect('s.markedReadUntil AS markedReadUntil');
+            ->addSelect('s.markedReadUntil AS markedReadUntil')
+            ->addSelect('r.completedAt AS runCompletedAt');
     }
 
     public function countForYou(int $userId): int
@@ -163,6 +164,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
         $entry = $item->getEntry();
         $esRead = $row['esRead'];
         $markedReadUntil = $row['markedReadUntil'];
+        $runCompletedAt = $row['runCompletedAt'];
 
         $listRow = new EntryListRow(
             entry: $entry,
@@ -185,6 +187,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             runId: $item->getRun()->getId() ?? 0,
             position: $item->getPosition(),
             score: $item->getScore(),
+            runGeneratedAt: $runCompletedAt instanceof \DateTimeImmutable ? $runCompletedAt : null,
         );
     }
 

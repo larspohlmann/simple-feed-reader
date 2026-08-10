@@ -261,7 +261,7 @@ describe('ReaderApi', () => {
       error: null,
       background: false,
       streamedChars: 0,
-      forYou: { itemCount: 0, generatedAt: null },
+      forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
     });
   });
 
@@ -276,7 +276,7 @@ describe('ReaderApi', () => {
       error: null,
       background: false,
       streamedChars: 0,
-      forYou: { itemCount: 0, generatedAt: null },
+      forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
     });
   });
 
@@ -291,7 +291,7 @@ describe('ReaderApi', () => {
       error: null,
       background: false,
       streamedChars: 0,
-      forYou: { itemCount: 0, generatedAt: null },
+      forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
     });
   });
 
@@ -306,7 +306,7 @@ describe('ReaderApi', () => {
       error: null,
       background: false,
       streamedChars: 0,
-      forYou: { itemCount: 0, generatedAt: null },
+      forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
     });
   });
 

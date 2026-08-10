@@ -79,6 +79,12 @@ export interface EntryDto {
   /** The model's 0-100 score for this entry; present only on for-you results
    *  and only when the user's debug setting is on. */
   recommendationScore?: number | null;
+  /** The recommendation run this entry belongs to; set only on for-you results.
+   *  Consecutive entries with different runIds mark a run boundary (#348). */
+  runId?: number;
+  /** When that run generated (ISO, RFC 3339); set only on for-you results. Drives
+   *  the run-boundary divider's "Generated ..." label (#348). */
+  runGeneratedAt?: string;
 }
 
 export interface EntriesPage {
@@ -229,10 +235,12 @@ export interface RecommendationRunReport {
    *  null when there is no run. The client keeps it live between polls with a
    *  local monotonic delta rather than re-subtracting server time. */
   elapsedSeconds: number | null;
-  /** The surviving for-you list's own summary: how many entries it holds and
-   *  when it was last generated. Describes the *list*, not this run — a
-   *  failed latest run still carries the previous list's timestamp. */
-  forYou: { itemCount: number; generatedAt: string | null };
+  /** The surviving for-you list's own summary: how many entries it holds, when
+   *  it was last generated, and the id of the run that generated it. Describes
+   *  the *list*, not this run — a failed latest run still carries the previous
+   *  list's timestamp and run id. `newestRunId` lets the reader suppress that
+   *  run's boundary divider by identity rather than by timestamp (#348). */
+  forYou: { itemCount: number; generatedAt: string | null; newestRunId: number | null };
 }
 
 /** One provider call logged during a for-you run: a scored batch or the

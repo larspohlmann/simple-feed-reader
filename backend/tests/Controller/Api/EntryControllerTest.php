@@ -227,6 +227,10 @@ final class EntryControllerTest extends WebTestCase
         // to show with the score suppressed, which read as inconsistent.
         self::assertArrayNotHasKey('recommendationReason', $first);
         self::assertArrayNotHasKey('recommendationScore', $first);
+        // The run identity and generation time ARE sent with debug off — the
+        // run-boundary divider is a normal-user feature (#348).
+        self::assertSame($run->getId(), $first['runId']);
+        self::assertSame('2026-08-07T09:05:00+00:00', $first['runGeneratedAt']);
         self::assertArrayHasKey('nextCursor', $body);
         self::assertNull($body['nextCursor']);
     }

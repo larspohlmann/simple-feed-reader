@@ -421,6 +421,7 @@
     "favorites": "Favorites",
     "kept": "Kept",
     "forYou": "For you",
+    "forYouGeneratedAt": "Generated {{ago}}",
     "tags": "Tags",
     "feeds": "Feeds",
     "organise": "Organise",

@@ -26,7 +26,8 @@ final class RecommendationFeedJson
      * `recommendationScore` — the run's debug annotations, sent only while the
      * caller's debug setting is on (#321; the reason joined the score behind the
      * debug flag in #342, so "keep debug data off" hides both, not just the
-     * score).
+     * score). `runId` and `runGeneratedAt` are NOT debug-gated: both pages carry
+     * them, because the run-boundary divider is a normal-user feature (#348).
      *
      * @param list<RecommendationFeedRow> $rows
      *
@@ -48,7 +49,14 @@ final class RecommendationFeedJson
     private static function entries(array $rows, bool $withDebugAnnotations): array
     {
         return array_map(static function (RecommendationFeedRow $row) use ($withDebugAnnotations): array {
-            $entry = EntryJson::one($row->row);
+            // runId + runGeneratedAt are unconditional: the divider needs the
+            // run's identity and generation time on every row. The ATOM format
+            // matches the run report's forYou.generatedAt, so the client can tell
+            // the newest run's picks from the rest by their generation instant (#348).
+            $entry = EntryJson::one($row->row) + [
+                'runId' => $row->runId,
+                'runGeneratedAt' => $row->runGeneratedAt?->format(\DateTimeInterface::ATOM),
+            ];
             if (!$withDebugAnnotations) {
                 return $entry;
             }

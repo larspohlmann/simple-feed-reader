@@ -15,6 +15,10 @@ final readonly class RecommendationForYouSummary
     public function __construct(
         public int $itemCount,
         public ?\DateTimeImmutable $generatedAt,
+        // The newest completed run's id — the run whose generation time the
+        // header shows. The client suppresses that one run's divider by id
+        // rather than by matching timestamps across two serializers (#348).
+        public ?int $newestRunId = null,
     ) {
     }
 }

@@ -26,6 +26,8 @@ import {
 } from '../../shared/to-top-button/to-top-button.component';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { RecommendationStripComponent } from '../recommendation-strip/recommendation-strip.component';
+import { RunHeaderComponent } from '../run-header/run-header.component';
+import { groupByRun, RunGroup } from '../for-you-runs';
 import { EntryHeroComponent } from '../magazine/entry-hero.component';
 import { EntryCompactComponent } from '../magazine/entry-compact.component';
 import { SourceGroupComponent } from '../magazine/source-group.component';
@@ -62,6 +64,17 @@ const MAX_PULL = 100;
 // and its park offset from the same number.
 export const REFRESH_REVEAL = 48;
 
+/** A for-you run-boundary divider — a rendering-only block the entry list
+ *  interleaves between per-run magazine block groups (#348). Kept out of
+ *  MagazineBlock so the planner, which never emits it, stays unaware. */
+interface RunHeaderBlock {
+  kind: 'run-header';
+  generatedAt: string;
+}
+
+/** What the magazine branch actually renders: planner blocks plus run dividers. */
+type ListBlock = MagazineBlock | RunHeaderBlock;
+
 @Component({
   selector: 'app-entry-list',
   imports: [
@@ -73,6 +86,7 @@ export const REFRESH_REVEAL = 48;
     TagGlyphComponent,
     EntryRowComponent,
     RecommendationStripComponent,
+    RunHeaderComponent,
     EntryHeroComponent,
     EntryCompactComponent,
     SourceGroupComponent,
@@ -108,6 +122,10 @@ export class EntryListComponent implements OnDestroy {
   /** The selected feed's last-fetched time (ISO), or null. Only meaningful for a
    *  single-feed selection; drives the header's "Last refreshed" hint. */
   readonly lastRefreshed = input<string | null>(null);
+  /** The id of the run whose picks the header already names ("Last refreshed").
+   *  For the for-you list only; that one run's boundary divider is suppressed.
+   *  Null off the for-you view, where entries carry no run id anyway (#348). */
+  readonly newestRunId = input<number | null>(null);
   /** Rendered at the top of whichever content branch is live (empty state,
    *  magazine rows, list rows) so it scrolls away with the list rather than
    *  occupying a permanently reserved bar above it (#321). Owned by the shell,
@@ -184,15 +202,44 @@ export class EntryListComponent implements OnDestroy {
   private pullStartY = 0;
   private pullTracking = false;
 
-  readonly blocks = computed<MagazineBlock[]>(() =>
-    planMagazine({
-      entries: this.entries(),
-      // Only aggregated views collapse same-source runs into a group widget; a
-      // single-stream view must not (see isSingleStreamView).
-      grouping: !isSingleStreamView(this.selection()),
-      complete: !this.hasMore(),
-    }),
-  );
+  /** The loaded entries split into one group per recommendation run (#348). One
+   *  run-less group for every non-for-you view, so those render exactly as before. */
+  readonly runGroups = computed<RunGroup[]>(() => groupByRun(this.entries()));
+
+  /** Whether a run group opens with a divider. Suppressed only for the run the
+   *  header already names ("Last refreshed") — the newest completed run, matched
+   *  by id. Every other run gets its divider, including at the very top when the
+   *  newest run left nothing visible. Groups without a run id (every non-for-you
+   *  view) never show one. */
+  showRunHeader(group: RunGroup): boolean {
+    return group.runId != null && group.runId !== this.newestRunId();
+  }
+
+  readonly blocks = computed<ListBlock[]>(() => {
+    const groups = this.runGroups();
+    // Only aggregated views collapse same-source runs into a group widget; a
+    // single-stream view (a feed, or the for-you list) must not.
+    const grouping = !isSingleStreamView(this.selection());
+    const complete = !this.hasMore();
+
+    // Fast path: no dividers (every non-for-you view, and a for-you list showing
+    // only the newest run). Plan the whole list at once — identical to before.
+    if (!groups.some((group) => this.showRunHeader(group))) {
+      return planMagazine({ entries: this.entries(), grouping, complete });
+    }
+
+    const out: ListBlock[] = [];
+    groups.forEach((group, index) => {
+      if (this.showRunHeader(group)) {
+        out.push({ kind: 'run-header', generatedAt: group.generatedAt! });
+      }
+      // Only the last loaded group may still grow on the next page; every earlier
+      // group is provably complete (a different run follows it).
+      const groupComplete = index === groups.length - 1 ? complete : true;
+      out.push(...planMagazine({ entries: group.entries, grouping, complete: groupComplete }));
+    });
+    return out;
+  });
 
   private readonly screen = inject(LayoutService);
   private readonly scroll = inject(ListScrollMemory);
@@ -381,7 +428,8 @@ export class EntryListComponent implements OnDestroy {
     return this.feedTags().get(subscriptionId) ?? [];
   }
 
-  blockKey(block: MagazineBlock): string {
+  blockKey(block: ListBlock): string {
+    if (block.kind === 'run-header') return `run-header:${block.generatedAt}`;
     return block.kind === 'group'
       ? `g${block.subscriptionId}:${block.entries[0].id}`
       : `${block.kind}:${block.entry.id}`;

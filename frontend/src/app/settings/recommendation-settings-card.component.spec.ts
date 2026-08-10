@@ -322,7 +322,7 @@ describe('RecommendationSettingsCardComponent', () => {
         error: null,
         background: false,
         streamedChars: 0,
-        forYou: { itemCount: 3, generatedAt: '2026-08-08T09:00:00Z' },
+        forYou: { itemCount: 3, generatedAt: '2026-08-08T09:00:00Z', newestRunId: null },
       });
 
       // RecommendationsService.refreshStatus() re-reads the current status so
@@ -336,7 +336,7 @@ describe('RecommendationSettingsCardComponent', () => {
         error: null,
         background: false,
         streamedChars: 0,
-        forYou: { itemCount: 0, generatedAt: null },
+        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
       });
       fixture.detectChanges();
 
