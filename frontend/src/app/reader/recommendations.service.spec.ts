@@ -17,7 +17,7 @@ const report = (over: Partial<RecommendationRunReport>): RecommendationRunReport
   background: false,
   streamedChars: 0,
   elapsedSeconds: null,
-  forYou: { itemCount: 0, generatedAt: null },
+  forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
   ...over,
 });
 
@@ -160,7 +160,7 @@ describe('RecommendationsService', () => {
         status: 'completed',
         batchesTotal: 2,
         batchesDone: 2,
-        forYou: { itemCount: 7, generatedAt: '2026-08-08T09:00:00Z' },
+        forYou: { itemCount: 7, generatedAt: '2026-08-08T09:00:00Z', newestRunId: null },
       }),
     );
 

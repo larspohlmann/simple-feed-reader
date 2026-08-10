@@ -20,7 +20,7 @@ describe('ForYouProgressComponent', () => {
     background: false,
     streamedChars: 0,
     elapsedSeconds: null,
-    forYou: { itemCount: 0, generatedAt: null },
+    forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
     ...over,
   });
 

@@ -173,6 +173,10 @@ export class RecommendationsService {
   /** The surviving for-you list's generation time (ISO), for the list
    *  header's "Last refreshed" hint. */
   readonly generatedAt = computed(() => this.report()?.forYou.generatedAt ?? null);
+  /** The id of the run that generated the surviving for-you list. The reader
+   *  suppresses this one run's boundary divider — the header already names it —
+   *  by identity, not by timestamp (#348). */
+  readonly newestRunId = computed(() => this.report()?.forYou.newestRunId ?? null);
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.stopTicker());

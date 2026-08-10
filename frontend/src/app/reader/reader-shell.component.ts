@@ -199,6 +199,12 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     if (s.kind !== 'subscription') return null;
     return this.subs.subscriptions().find((x) => x.id === s.id)?.lastFetchedAt ?? null;
   });
+  /** The id of the run whose picks head the for-you list — the one the header
+   *  already names, so the list suppresses its boundary divider. Null off the
+   *  for-you view, where there are no run dividers. */
+  readonly listNewestRunId = computed(() =>
+    this.selection().kind === 'for-you' ? this.recs.newestRunId() : null,
+  );
   readonly paneMode = computed(() => this.layout.mode() === 'pane' && this.screen.isWide());
   /** An article filling the whole main area (not the split pane) — the top bar
    *  takes over its back button, reader switch and prev/next. */

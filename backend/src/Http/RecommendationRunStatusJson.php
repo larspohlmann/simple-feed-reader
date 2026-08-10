@@ -27,6 +27,7 @@ final class RecommendationRunStatusJson
             'forYou' => [
                 'itemCount' => $summary->itemCount,
                 'generatedAt' => $summary->generatedAt?->format(\DateTimeInterface::ATOM),
+                'newestRunId' => $summary->newestRunId,
             ],
         ];
     }

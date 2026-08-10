@@ -116,7 +116,7 @@ describe('ReaderShellComponent', () => {
       error: null,
       background: false,
       streamedChars: 0,
-      forYou: { itemCount: 0, generatedAt: null },
+      forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
     });
     f.detectChanges();
     return f;
@@ -159,7 +159,7 @@ describe('ReaderShellComponent', () => {
       error: null,
       background: false,
       streamedChars: 0,
-      forYou: { itemCount: 0, generatedAt: null },
+      forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
     });
     f.detectChanges();
     return f;
@@ -718,7 +718,7 @@ describe('ReaderShellComponent', () => {
     background: false,
     streamedChars: 0,
     elapsedSeconds: null,
-    forYou: { itemCount: 0, generatedAt: null },
+    forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
   };
 
   const failedReport = {
@@ -729,7 +729,7 @@ describe('ReaderShellComponent', () => {
     background: false,
     streamedChars: 0,
     elapsedSeconds: null,
-    forYou: { itemCount: 0, generatedAt: null },
+    forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
   };
 
   function menuItem(text: string): HTMLElement {
@@ -885,7 +885,7 @@ describe('ReaderShellComponent', () => {
       error: null,
       background: false,
       streamedChars: 0,
-      forYou: { itemCount: 0, generatedAt: null },
+      forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
     });
     f.detectChanges();
 

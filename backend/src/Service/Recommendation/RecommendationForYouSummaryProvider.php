@@ -23,9 +23,12 @@ final readonly class RecommendationForYouSummaryProvider
 
     public function forUser(User $user): RecommendationForYouSummary
     {
+        $newestCompletedRun = $this->runs->newestCompletedRun($user);
+
         return new RecommendationForYouSummary(
             $this->items->countForYou((int) $user->getId()),
-            $this->runs->newestCompletedAt($user),
+            $newestCompletedRun?->getCompletedAt(),
+            $newestCompletedRun?->getId(),
         );
     }
 }

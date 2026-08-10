@@ -122,6 +122,10 @@ export class EntryListComponent implements OnDestroy {
   /** The selected feed's last-fetched time (ISO), or null. Only meaningful for a
    *  single-feed selection; drives the header's "Last refreshed" hint. */
   readonly lastRefreshed = input<string | null>(null);
+  /** The id of the run whose picks the header already names ("Last refreshed").
+   *  For the for-you list only; that one run's boundary divider is suppressed.
+   *  Null off the for-you view, where entries carry no run id anyway (#348). */
+  readonly newestRunId = input<number | null>(null);
   /** Rendered at the top of whichever content branch is live (empty state,
    *  magazine rows, list rows) so it scrolls away with the list rather than
    *  occupying a permanently reserved bar above it (#321). Owned by the shell,
@@ -202,20 +206,13 @@ export class EntryListComponent implements OnDestroy {
    *  run-less group for every non-for-you view, so those render exactly as before. */
   readonly runGroups = computed<RunGroup[]>(() => groupByRun(this.entries()));
 
-  /** Whether a run group opens with a divider. Suppressed only when the group's
-   *  generation time is the one the list header already shows as "Last refreshed"
-   *  — i.e. the newest run. An older run whose time differs always gets its
-   *  divider, even at the very top (newest run left nothing visible).
-   *
-   *  Compares instants, not raw ISO strings: `runGeneratedAt` (the run's
-   *  completedAt) and the header's time (the for-you summary's generatedAt) are
-   *  serialized by two different backend mappers, so a representation difference
-   *  (`Z` vs `+00:00`, added fractional seconds) must not read as two runs. */
+  /** Whether a run group opens with a divider. Suppressed only for the run the
+   *  header already names ("Last refreshed") — the newest completed run, matched
+   *  by id. Every other run gets its divider, including at the very top when the
+   *  newest run left nothing visible. Groups without a run id (every non-for-you
+   *  view) never show one. */
   showRunHeader(group: RunGroup): boolean {
-    const generatedAt = group.generatedAt;
-    if (generatedAt == null) return false;
-    const shown = this.lastRefreshed();
-    return shown == null || Date.parse(generatedAt) !== Date.parse(shown);
+    return group.runId != null && group.runId !== this.newestRunId();
   }
 
   readonly blocks = computed<ListBlock[]>(() => {

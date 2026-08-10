@@ -47,6 +47,21 @@ final class RecommendationRunStatusJsonTest extends TestCase
         self::assertNull($json['elapsedSeconds']);
     }
 
+    public function testForYouCarriesTheNewestCompletedRunId(): void
+    {
+        $summary = new RecommendationForYouSummary(4, new \DateTimeImmutable('2026-08-09T10:00:00Z'), 42);
+
+        $json = RecommendationRunStatusJson::report(
+            RecommendationRunReport::none(),
+            $summary,
+            new MockClock('2026-08-09T10:00:00'),
+        );
+
+        $forYou = $json['forYou'];
+        self::assertIsArray($forYou);
+        self::assertSame(42, $forYou['newestRunId']);
+    }
+
     private function user(): User
     {
         return new User('eta@example.test', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
@@ -54,6 +69,6 @@ final class RecommendationRunStatusJsonTest extends TestCase
 
     private function emptySummary(): RecommendationForYouSummary
     {
-        return new RecommendationForYouSummary(0, null);
+        return new RecommendationForYouSummary(0, null, null);
     }
 }

@@ -81,11 +81,12 @@ final class RecommendationRunRepository extends ServiceEntityRepository
     }
 
     /**
-     * When the surviving for-you list was last refreshed: the newest
-     * *completed* run, distinct from findLatestForUser() which may return a
-     * failed run that never touched the list.
+     * The run that produced the surviving for-you list: the newest *completed*
+     * run, distinct from findLatestForUser() which may return a failed run that
+     * never touched the list. Its id and completedAt drive the header's "Last
+     * refreshed" hint and the for-you divider suppression.
      */
-    public function newestCompletedAt(User $user): ?\DateTimeImmutable
+    public function newestCompletedRun(User $user): ?RecommendationRun
     {
         /** @var RecommendationRun|null $run */
         $run = $this->createQueryBuilder('r')
@@ -98,7 +99,7 @@ final class RecommendationRunRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
 
-        return $run?->getCompletedAt();
+        return $run;
     }
 
     /**

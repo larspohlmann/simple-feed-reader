@@ -156,7 +156,7 @@ describe('EntryListComponent', () => {
 
   describe('run-boundary dividers (#348)', () => {
     const forYou = { kind: 'for-you', id: null, unread: false };
-    // Newest run "N" generated at the header's shown time; older run "O" earlier.
+    // Run 9 is the newest (its id is what the header names); run 7 is older.
     const NEWEST = '2026-08-09T10:00:00+00:00';
     const OLDER = '2026-08-07T09:05:00+00:00';
     const twoRuns = [
@@ -169,7 +169,7 @@ describe('EntryListComponent', () => {
       const el = mount({
         entries: twoRuns,
         selection: forYou,
-        lastRefreshed: NEWEST,
+        newestRunId: 9,
         layout: 'list',
       }).nativeElement as HTMLElement;
 
@@ -181,12 +181,12 @@ describe('EntryListComponent', () => {
     });
 
     it('shows a divider on the top block when it is not the newest run', () => {
-      // Header shows NEWEST, but the newest run left nothing visible: the first
-      // visible entry is the older run, so it gets its own divider.
+      // Header names run 9, but run 9 left nothing visible: the first visible
+      // entry is run 7, so it gets its own divider.
       const el = mount({
         entries: [entry(3, { runId: 7, runGeneratedAt: OLDER })],
         selection: forYou,
-        lastRefreshed: NEWEST,
+        newestRunId: 9,
         layout: 'list',
       }).nativeElement as HTMLElement;
 
@@ -207,7 +207,7 @@ describe('EntryListComponent', () => {
       const el = mount({
         entries: twoRuns,
         selection: forYou,
-        lastRefreshed: NEWEST,
+        newestRunId: 9,
         layout: 'magazine',
       }).nativeElement as HTMLElement;
 
