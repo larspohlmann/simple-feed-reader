@@ -347,6 +347,15 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
     }
 
+    /**
+     * complete() is a one-call completeMany() wave (#344): this pins that the
+     * delegation still preserves complete()'s original contract even for a
+     * failure that never produced a response at all (the request() call
+     * itself refuses the connection) -- completeMany() settles it as that
+     * call's own outcome (testCompleteManySettlesARequestPhaseFailureAsThatCallsOutcome
+     * below pins that half directly), and complete() unwraps a single failed
+     * outcome back into a thrown exception.
+     */
     public function testTransportErrorsAreUnreachable(): void
     {
         $client = new MockHttpClient(static function (): MockResponse {
@@ -611,6 +620,34 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         self::assertSame('That address did not answer.', $outcomes[0]->cause()->getMessage());
         self::assertFalse($outcomes[1]->isFailure());
         self::assertSame('{"picks":[]}', $outcomes[1]->content());
+    }
+
+    /**
+     * The sibling of the test above, one stage earlier: here the connection
+     * refusal happens at request() itself, before there is any response to
+     * read a chunk from at all (MockHttpClient's factory throws synchronously,
+     * exactly as a refused TCP connection would). fireRequests() has to catch
+     * this one directly and bank it as that call's own outcome -- unlike the
+     * mid-stream case, there is no response object for advance() to key it by,
+     * so this exercises a different catch block from the mid-stream test
+     * above. completeMany() must not throw for this either: it stays exactly
+     * as available to the caller as any other per-call failure, which is what
+     * lets complete() (a one-call completeMany() wave, #344) recover it back
+     * into a thrown exception in testTransportErrorsAreUnreachable.
+     */
+    public function testCompleteManySettlesARequestPhaseFailureAsThatCallsOutcome(): void
+    {
+        $client = new MockHttpClient(static function (): MockResponse {
+            throw new TransportException('Connection refused');
+        });
+
+        $outcomes = $this->clientUsing($client)->completeMany($this->credentials(), [
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+        ]);
+
+        self::assertTrue($outcomes[0]->isFailure());
+        self::assertInstanceOf(ProviderUnreachableException::class, $outcomes[0]->cause());
+        self::assertSame('That address did not answer.', $outcomes[0]->cause()->getMessage());
     }
 
     /**

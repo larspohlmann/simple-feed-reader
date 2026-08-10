@@ -103,11 +103,11 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
         // Each response carries its own reader (its parsing state) and its own
         // observer. SplObjectStorage maps the response object the stream() loop
         // yields back to those and to the $calls index, so the outcomes stay
-        // aligned however the concurrent streams interleave.
-        $context = $this->fireRequests($credentials, $calls);
-
-        /** @var list<?CompletionOutcome> $outcomes */
-        $outcomes = array_fill(0, \count($calls), null);
+        // aligned however the concurrent streams interleave. fireRequests()
+        // already seeded $outcomes for any call that never made it to a
+        // response at all, so a request-phase failure and a stream-phase one
+        // both end up in the same per-call outcome shape.
+        [$context, $outcomes] = $this->fireRequests($credentials, $calls);
 
         $responses = $this->httpClient->stream($this->responsesIn($context), self::INACTIVITY_TIMEOUT_SECONDS);
         foreach ($responses as $response => $chunk) {
@@ -130,37 +130,44 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
      * Fires every request up front — Symfony starts the transfer on request(),
      * so this is what makes the reads concurrent — and records the per-response
      * state the multiplexed loop needs to route each chunk. request() itself is
-     * not part of the multiplexed read, so a transport failure here (a refused
-     * connection, say) never produced a response for ANY call to route back
-     * to — unlike a mid-stream failure, it cannot be one call's own outcome, so
-     * it is wrapped the same way complete() has always wrapped it and thrown
-     * wholesale for the caller to settle every call against.
+     * not part of the multiplexed read that advance() guards, so a transport
+     * failure here (a refused connection, say) is caught right here instead:
+     * wrapped the same way complete() has always wrapped it, and banked
+     * straight into that call's own outcome. That keeps every call independent
+     * even at this earlier stage — one call's connection refusal does not stop
+     * its siblings' requests from going out, matching the rest of this class's
+     * per-call failure story (#344).
      *
      * @param non-empty-list<ConcurrentCompletion> $calls
      *
-     * @return \SplObjectStorage<ResponseInterface, ResponseSlot>
-     *
-     * @throws ProviderUnreachableException
+     * @return array{0: \SplObjectStorage<ResponseInterface, ResponseSlot>, 1: list<?CompletionOutcome>}
      */
-    private function fireRequests(ProviderCredentials $credentials, array $calls): \SplObjectStorage
+    private function fireRequests(ProviderCredentials $credentials, array $calls): array
     {
         /** @var \SplObjectStorage<ResponseInterface, ResponseSlot> $context */
         $context = new \SplObjectStorage();
+        /** @var list<?CompletionOutcome> $outcomes */
+        $outcomes = array_fill(0, \count($calls), null);
 
-        try {
-            foreach ($calls as $index => $call) {
+        foreach ($calls as $index => $call) {
+            try {
                 $response = $this->request($credentials, $call->request);
-                $context[$response] = [
-                    'index' => $index,
-                    'reader' => new CompletionStreamReader($this->decoder),
-                    'observer' => $call->observer,
-                ];
+            } catch (ExceptionInterface $e) {
+                $outcomes[$index] = CompletionOutcome::failure(
+                    new ProviderUnreachableException('That address did not answer.', 0, $e),
+                );
+
+                continue;
             }
-        } catch (ExceptionInterface $e) {
-            throw new ProviderUnreachableException('That address did not answer.', 0, $e);
+
+            $context[$response] = [
+                'index' => $index,
+                'reader' => new CompletionStreamReader($this->decoder),
+                'observer' => $call->observer,
+            ];
         }
 
-        return $context;
+        return [$context, array_values($outcomes)];
     }
 
     /**
