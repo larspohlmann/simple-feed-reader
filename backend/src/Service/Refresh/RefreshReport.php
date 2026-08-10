@@ -6,6 +6,8 @@ namespace App\Service\Refresh;
 
 final readonly class RefreshReport
 {
+    public const string STATUS_ABORTED = 'aborted';
+
     private function __construct(
         public string $status,
         public int $total,
@@ -62,7 +64,18 @@ final readonly class RefreshReport
         int $throttled,
         int $remaining,
     ): self {
-        return new self('aborted', $total, $fetched, $notModified, $failed, $throttled, 0, $remaining, 0);
+        return new self(self::STATUS_ABORTED, $total, $fetched, $notModified, $failed, $throttled, 0, $remaining, 0);
+    }
+
+    /**
+     * Whether persistence failed and the shared EntityManager is closed.
+     * A caller that shares the EntityManager with other work this same
+     * request — MaintenanceTick does, with the recommendation sweep — must
+     * check this before touching it again.
+     */
+    public function isAborted(): bool
+    {
+        return self::STATUS_ABORTED === $this->status;
     }
 
     /**

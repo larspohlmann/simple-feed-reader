@@ -46,6 +46,24 @@ final class MaintenanceTokenGuardTest extends TestCase
         $this->assertFalse($guard->isAuthorized(Request::create('/maintenance/refresh', 'POST')));
     }
 
+    public function testRejectionResponseIsNullForAnAuthorisedRequest(): void
+    {
+        $guard = new MaintenanceTokenGuard('secret');
+
+        $this->assertNull($guard->rejectionResponse($this->requestWithHeader('secret')));
+    }
+
+    public function testRejectionResponseIsAForbiddenJsonBodyForAnUnauthorisedRequest(): void
+    {
+        $guard = new MaintenanceTokenGuard('secret');
+
+        $response = $guard->rejectionResponse($this->requestWithHeader('wrong'));
+
+        $this->assertNotNull($response);
+        $this->assertSame(403, $response->getStatusCode());
+        $this->assertSame('{"error":"forbidden"}', $response->getContent());
+    }
+
     private function requestWithHeader(string $token): Request
     {
         $request = Request::create('/maintenance/refresh', 'POST');

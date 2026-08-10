@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Maintenance;
 
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Authorises a machine-facing maintenance request by a shared token, in constant
@@ -38,5 +40,17 @@ final readonly class MaintenanceTokenGuard
 
         // hash_equals, not ===: the comparison stays constant-time.
         return \is_string($provided) && hash_equals($this->configuredToken, $provided);
+    }
+
+    /**
+     * The standard rejection for an unauthorised maintenance call, or null when
+     * the request is authorised. One source of truth for the forbidden shape,
+     * so every maintenance action guards with the same two-line clause.
+     */
+    public function rejectionResponse(Request $request): ?JsonResponse
+    {
+        return $this->isAuthorized($request)
+            ? null
+            : new JsonResponse(['error' => 'forbidden'], Response::HTTP_FORBIDDEN);
     }
 }
