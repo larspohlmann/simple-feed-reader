@@ -1,3 +1,5 @@
+@use '../theme/breakpoints' as bp;
+
 .group {
   display: flex;
   flex-direction: column;
@@ -74,6 +76,16 @@ app-searchable-select {
   flex-wrap: wrap;
   gap: var(--space-2);
   flex-shrink: 0;
+}
+
+/* On a phone the action row takes the full card width so its own wrap engages
+   and the buttons stack within the card. Without this the row keeps its
+   max-content width (all four buttons on one line) and the last one overflows
+   past the card's right edge. */
+@media (width <= bp.$bp-sm) {
+  .acts {
+    width: 100%;
+  }
 }
 
 .reasoning-toggle {
