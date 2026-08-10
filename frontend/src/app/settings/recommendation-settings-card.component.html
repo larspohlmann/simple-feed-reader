@@ -16,20 +16,20 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
   -H "X-Maintenance-Token: &lt;MAINTENANCE_TOKEN&gt;"</pre>
   }
 
-  <div class="group">
-    <app-field [label]="'settings.ai.recommendations.guidance' | transloco">
-      <textarea
-        [placeholder]="state.defaultGuidancePrompt"
-        [value]="guidance()"
-        (input)="guidance.set(textValue($event))"
-      ></textarea>
-    </app-field>
-    <app-button size="sm" (click)="resetGuidance()">
-      {{ 'settings.ai.recommendations.guidanceReset' | transloco }}
-    </app-button>
-  </div>
-
   <app-disclosure [label]="'settings.ai.recommendations.expertTitle' | transloco">
+    <div class="group">
+      <app-field [label]="'settings.ai.recommendations.guidance' | transloco">
+        <textarea
+          [placeholder]="state.defaultGuidancePrompt"
+          [value]="guidance()"
+          (input)="guidance.set(textValue($event))"
+        ></textarea>
+      </app-field>
+      <app-button size="sm" (click)="resetGuidance()">
+        {{ 'settings.ai.recommendations.guidanceReset' | transloco }}
+      </app-button>
+    </div>
+
     <div class="expert-grid">
       <app-field [label]="'settings.ai.recommendations.favoritesCap' | transloco">
         <input
