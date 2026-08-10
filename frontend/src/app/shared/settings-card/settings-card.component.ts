@@ -1,4 +1,5 @@
 // src/app/shared/settings-card/settings-card.component.ts
+import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 /**
@@ -13,9 +14,15 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
  * `heading` and `description` take already-translated strings rather than i18n
  * keys, so this shared component never hardcodes a feature's translation keys
  * -- the caller resolves those with its own `transloco` pipe.
+ *
+ * `collapsible` turns the heading into a native `<details>`/`<summary>` toggle:
+ * the body -- the description and the projected content -- is collapsed by
+ * default and opens on click. Collapsible cards do not support the
+ * `cardActions` slot.
  */
 @Component({
   selector: 'app-settings-card',
+  imports: [NgTemplateOutlet],
   templateUrl: './settings-card.component.html',
   styleUrl: './settings-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -25,4 +32,7 @@ export class SettingsCardComponent {
 
   /** `null` renders the card with no description line. */
   readonly description = input<string | null>(null);
+
+  /** `true` renders the heading as a collapsed `<details>` toggle. */
+  readonly collapsible = input<boolean>(false);
 }

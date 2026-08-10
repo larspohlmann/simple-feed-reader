@@ -1,11 +1,30 @@
 <!-- src/app/shared/settings-card/settings-card.component.html -->
 <section class="card">
-  <header class="head">
-    <h2>{{ heading() }}</h2>
-    <ng-content select="[cardActions]" />
-  </header>
+  @if (collapsible()) {
+    <details class="card-details">
+      <summary class="head is-toggle">
+        <h2>{{ heading() }}</h2>
+      </summary>
+      <ng-container [ngTemplateOutlet]="body" />
+    </details>
+  } @else {
+    <header class="head">
+      <h2>{{ heading() }}</h2>
+      <ng-content select="[cardActions]" />
+    </header>
+    <ng-container [ngTemplateOutlet]="body" />
+  }
+</section>
+
+<!-- A single default-slot <ng-content> shared by both branches above: two
+     static <ng-content> elements without a select attribute would both claim
+     the default slot, so Angular commits projected content to just one of
+     them at compile time -- silently dropping it when that branch never
+     renders. One <ng-content>, stamped out via ngTemplateOutlet, avoids the
+     ambiguity. -->
+<ng-template #body>
   @if (description(); as text) {
     <p class="description">{{ text }}</p>
   }
   <ng-content />
-</section>
+</ng-template>
