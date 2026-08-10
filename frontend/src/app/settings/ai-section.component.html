@@ -5,9 +5,23 @@
   @if (ai.configs().length) {
     <ul class="configs">
       @for (config of ai.configs(); track config.id) {
-        <li class="config-row">
-          <div class="row-main">
-            <div class="who">
+        <li class="config-row" [class.is-active]="config.active">
+          <app-disclosure appearance="row" [label]="label(config)">
+            <div summary class="summary-line">
+              <span class="label">{{ label(config) }}</span>
+              @if (config.active) {
+                <span class="badge">{{ 'settings.ai.configs.active' | transloco }}</span>
+              }
+              @if (config.model) {
+                <span class="model">{{ 'settings.ai.model' | transloco }}: {{ config.model }}</span>
+              }
+            </div>
+
+            <div class="config-body">
+              <span class="hint">{{
+                'settings.ai.storedKey' | transloco: { hint: config.apiKeyHint }
+              }}</span>
+
               @if (renamingId() === config.id) {
                 <app-field [label]="'settings.ai.configs.namePlaceholder' | transloco">
                   <input
@@ -31,18 +45,6 @@
                   </app-button>
                 </div>
               } @else {
-                <span class="label">{{ label(config) }}</span>
-                @if (config.active) {
-                  <span class="badge">{{ 'settings.ai.configs.active' | transloco }}</span>
-                }
-                <span class="hint">{{
-                  'settings.ai.storedKey' | transloco: { hint: config.apiKeyHint }
-                }}</span>
-                @if (config.model) {
-                  <span class="model"
-                    >{{ 'settings.ai.model' | transloco }}: {{ config.model }}</span
-                  >
-                }
                 <label class="reasoning-toggle">
                   <span class="reasoning-toggle-row">
                     <input
@@ -71,67 +73,67 @@
                   <span class="saved">{{ 'settings.ai.configs.saved' | transloco }}</span>
                 }
               }
-            </div>
 
-            @if (renamingId() !== config.id) {
-              <div class="acts">
-                <app-button
-                  class="activate"
-                  [disabled]="config.active || !config.ready || ai.busy()"
-                  (click)="ai.activate(config.id)"
-                >
-                  {{ 'settings.ai.configs.activate' | transloco }}
-                </app-button>
-                <app-button
-                  class="change-model"
-                  [disabled]="ai.busy()"
-                  (click)="ai.loadModels(config.id)"
-                >
-                  {{ 'settings.ai.configs.changeModel' | transloco }}
-                </app-button>
-                <app-button
-                  class="duplicate"
-                  [disabled]="ai.busy()"
-                  (click)="ai.duplicate(config.id)"
-                >
-                  {{ 'settings.ai.configs.duplicate' | transloco }}
-                </app-button>
-                <app-button class="rename" (click)="startRename(config)">
-                  {{ 'settings.ai.configs.rename' | transloco }}
-                </app-button>
-                <app-button
-                  variant="danger"
-                  class="delete"
-                  [disabled]="ai.busy()"
-                  (click)="confirmDelete(config)"
-                >
-                  {{ 'settings.ai.configs.delete' | transloco }}
-                </app-button>
-              </div>
-            }
-          </div>
+              @if (ai.choosingModelFor() === config.id && ai.models().length) {
+                <div class="model-picker">
+                  <app-field [label]="'settings.ai.model' | transloco">
+                    <app-searchable-select
+                      [inputId]="'ai-model-' + config.id"
+                      [options]="modelOptions()"
+                      [placeholder]="'settings.ai.modelPlaceholder' | transloco"
+                      [value]="chosenModel()"
+                      (valueChange)="chosenModel.set($event)"
+                    />
+                  </app-field>
+                  <app-button
+                    variant="primary"
+                    class="save-model"
+                    [disabled]="!chosenModel() || ai.busy()"
+                    (click)="saveModel(config.id)"
+                  >
+                    {{ 'settings.ai.saveModel' | transloco }}
+                  </app-button>
+                </div>
+              }
 
-          @if (ai.choosingModelFor() === config.id && ai.models().length) {
-            <div class="model-picker">
-              <app-field [label]="'settings.ai.model' | transloco">
-                <app-searchable-select
-                  [inputId]="'ai-model-' + config.id"
-                  [options]="modelOptions()"
-                  [placeholder]="'settings.ai.modelPlaceholder' | transloco"
-                  [value]="chosenModel()"
-                  (valueChange)="chosenModel.set($event)"
-                />
-              </app-field>
-              <app-button
-                variant="primary"
-                class="save-model"
-                [disabled]="!chosenModel() || ai.busy()"
-                (click)="saveModel(config.id)"
-              >
-                {{ 'settings.ai.saveModel' | transloco }}
-              </app-button>
+              @if (renamingId() !== config.id) {
+                <div class="acts">
+                  <app-button
+                    class="activate"
+                    [disabled]="config.active || !config.ready || ai.busy()"
+                    (click)="ai.activate(config.id)"
+                  >
+                    {{ 'settings.ai.configs.activate' | transloco }}
+                  </app-button>
+                  <app-button
+                    class="change-model"
+                    [disabled]="ai.busy()"
+                    (click)="ai.loadModels(config.id)"
+                  >
+                    {{ 'settings.ai.configs.changeModel' | transloco }}
+                  </app-button>
+                  <app-button
+                    class="duplicate"
+                    [disabled]="ai.busy()"
+                    (click)="ai.duplicate(config.id)"
+                  >
+                    {{ 'settings.ai.configs.duplicate' | transloco }}
+                  </app-button>
+                  <app-button class="rename" (click)="startRename(config)">
+                    {{ 'settings.ai.configs.rename' | transloco }}
+                  </app-button>
+                  <app-button
+                    variant="danger"
+                    class="delete"
+                    [disabled]="ai.busy()"
+                    (click)="confirmDelete(config)"
+                  >
+                    {{ 'settings.ai.configs.delete' | transloco }}
+                  </app-button>
+                </div>
+              }
             </div>
-          }
+          </app-disclosure>
         </li>
       }
     </ul>

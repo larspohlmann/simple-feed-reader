@@ -419,6 +419,54 @@ describe('AiSectionComponent', () => {
     );
   });
 
+  it('collapses a row by default', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1 })]);
+    fixture.detectChanges();
+
+    const details = row(fixture, 0).querySelector('details') as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+  });
+
+  it('carries the label and active badge on the collapsed summary', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, name: 'My provider', active: true }), config({ id: 2 })]);
+    fixture.detectChanges();
+
+    const activeSummary = row(fixture, 0).querySelector('summary') as HTMLElement;
+    expect(activeSummary.querySelector('.label')?.textContent).toContain('My provider');
+    expect(activeSummary.querySelector('.badge')).not.toBeNull();
+
+    const inactiveSummary = row(fixture, 1).querySelector('summary') as HTMLElement;
+    expect(inactiveSummary.querySelector('.badge')).toBeNull();
+  });
+
+  it('marks only the active row with is-active', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, active: true }), config({ id: 2 })]);
+    fixture.detectChanges();
+
+    expect(row(fixture, 0).classList.contains('is-active')).toBe(true);
+    expect(row(fixture, 1).classList.contains('is-active')).toBe(false);
+  });
+
+  it('reveals the action bar with all five buttons once the row is expanded', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, ready: true })]);
+    fixture.detectChanges();
+
+    (row(fixture, 0).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
+
+    const acts = row(fixture, 0).querySelector('.acts') as HTMLElement;
+    expect(acts).not.toBeNull();
+    expect(acts.querySelector('.activate')).not.toBeNull();
+    expect(acts.querySelector('.change-model')).not.toBeNull();
+    expect(acts.querySelector('.duplicate')).not.toBeNull();
+    expect(acts.querySelector('.rename')).not.toBeNull();
+    expect(acts.querySelector('.delete')).not.toBeNull();
+  });
+
   it('shows the recommendation settings card once the active config is ready, and not before', () => {
     const fixture = mount();
     ai.configs.set([config({ id: 1, active: true, ready: false })]);

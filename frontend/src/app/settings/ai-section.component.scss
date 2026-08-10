@@ -1,5 +1,3 @@
-@use '../theme/breakpoints' as bp;
-
 .group {
   display: flex;
   flex-direction: column;
@@ -29,28 +27,29 @@ app-searchable-select {
 }
 
 .config-row {
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.config-row.is-active {
+  border-left: 2px solid var(--accent);
+  background: var(--accent-soft);
+  padding-left: var(--space-3);
+}
+
+.summary-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.config-body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--row-pad-comfy-y) 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.row-main {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-start;
   gap: var(--space-3);
-}
-
-.who {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
+  padding: 0 var(--row-pad-comfy-x) var(--row-pad-comfy-y);
 }
 
 .label {
@@ -72,20 +71,10 @@ app-searchable-select {
 }
 
 .acts {
+  width: 100%;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  flex-shrink: 0;
-}
-
-/* On a phone the action row takes the full card width so its own wrap engages
-   and the buttons stack within the card. Without this the row keeps its
-   max-content width (all four buttons on one line) and the last one overflows
-   past the card's right edge. */
-@media (width <= bp.$bp-sm) {
-  .acts {
-    width: 100%;
-  }
 }
 
 .reasoning-toggle {
