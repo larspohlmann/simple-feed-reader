@@ -64,6 +64,17 @@ const MAX_PULL = 100;
 // and its park offset from the same number.
 export const REFRESH_REVEAL = 48;
 
+/** A for-you run-boundary divider — a rendering-only block the entry list
+ *  interleaves between per-run magazine block groups (#348). Kept out of
+ *  MagazineBlock so the planner, which never emits it, stays unaware. */
+interface RunHeaderBlock {
+  kind: 'run-header';
+  generatedAt: string;
+}
+
+/** What the magazine branch actually renders: planner blocks plus run dividers. */
+type ListBlock = MagazineBlock | RunHeaderBlock;
+
 @Component({
   selector: 'app-entry-list',
   imports: [
@@ -199,15 +210,31 @@ export class EntryListComponent implements OnDestroy {
     return group.generatedAt != null && group.generatedAt !== this.lastRefreshed();
   }
 
-  readonly blocks = computed<MagazineBlock[]>(() =>
-    planMagazine({
-      entries: this.entries(),
-      // Only aggregated views collapse same-source runs into a group widget; a
-      // single-stream view must not (see isSingleStreamView).
-      grouping: !isSingleStreamView(this.selection()),
-      complete: !this.hasMore(),
-    }),
-  );
+  readonly blocks = computed<ListBlock[]>(() => {
+    const groups = this.runGroups();
+    // Only aggregated views collapse same-source runs into a group widget; a
+    // single-stream view (a feed, or the for-you list) must not.
+    const grouping = !isSingleStreamView(this.selection());
+    const complete = !this.hasMore();
+
+    // Fast path: no dividers (every non-for-you view, and a for-you list showing
+    // only the newest run). Plan the whole list at once — identical to before.
+    if (!groups.some((group) => this.showRunHeader(group))) {
+      return planMagazine({ entries: this.entries(), grouping, complete });
+    }
+
+    const out: ListBlock[] = [];
+    groups.forEach((group, index) => {
+      if (this.showRunHeader(group)) {
+        out.push({ kind: 'run-header', generatedAt: group.generatedAt! });
+      }
+      // Only the last loaded group may still grow on the next page; every earlier
+      // group is provably complete (a different run follows it).
+      const groupComplete = index === groups.length - 1 ? complete : true;
+      out.push(...planMagazine({ entries: group.entries, grouping, complete: groupComplete }));
+    });
+    return out;
+  });
 
   private readonly screen = inject(LayoutService);
   private readonly scroll = inject(ListScrollMemory);
@@ -396,7 +423,8 @@ export class EntryListComponent implements OnDestroy {
     return this.feedTags().get(subscriptionId) ?? [];
   }
 
-  blockKey(block: MagazineBlock): string {
+  blockKey(block: ListBlock): string {
+    if (block.kind === 'run-header') return `run-header:${block.generatedAt}`;
     return block.kind === 'group'
       ? `g${block.subscriptionId}:${block.entries[0].id}`
       : `${block.kind}:${block.entry.id}`;
