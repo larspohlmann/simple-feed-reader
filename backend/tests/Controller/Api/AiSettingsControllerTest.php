@@ -395,6 +395,25 @@ final class AiSettingsControllerTest extends ApiTestCase
         self::assertSame('ai_configuration_limit', $this->payload($client)['type']);
     }
 
+    public function testDuplicatingAtTheCapIsRefused(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-duplicate-cap@example.test');
+        $this->persistConfigurationsUpToTheCap('ai-duplicate-cap@example.test');
+
+        $client->request('GET', '/api/me/ai');
+        $payload = $this->payload($client);
+        self::assertIsArray($payload['configs']);
+        self::assertIsArray($payload['configs'][0]);
+        $sourceId = $payload['configs'][0]['id'];
+        self::assertIsInt($sourceId);
+
+        $this->postJson($client, sprintf('/api/me/ai/configs/%d/duplicate', $sourceId), '{}');
+
+        self::assertResponseStatusCodeSame(409);
+        self::assertSame('ai_configuration_limit', $this->payload($client)['type']);
+    }
+
     /**
      * Persists 20 rows directly rather than through 20 HTTP calls: this case
      * proves the cap itself, not the endpoints that would otherwise dominate

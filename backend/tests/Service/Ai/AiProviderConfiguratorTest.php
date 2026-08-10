@@ -398,6 +398,23 @@ final class AiProviderConfiguratorTest extends DbTestCase
         ));
     }
 
+    public function testDuplicateCapsALongMultibyteNameToTheColumnLimit(): void
+    {
+        $configurator = $this->configurator(['gpt-4o']);
+        $user = $this->user('cfg-duplicate-longname@example.test');
+        $longName = str_repeat('ä', 130); // 130 multibyte chars, well over 120
+        $added = $configurator->addConfiguration($user, $longName, 'https://api.example.test/v1', 'sk-abcdef1234');
+
+        $copy = $configurator->duplicateConfiguration($added->configuration);
+
+        $name = $copy->getName();
+        self::assertNotNull($name);
+        // mb-correct truncation: at most 120 CHARACTERS, and still valid UTF-8 (no split multibyte sequence).
+        self::assertLessThanOrEqual(120, mb_strlen($name));
+        self::assertSame($name, mb_convert_encoding($name, 'UTF-8', 'UTF-8'));
+        self::assertStringStartsWith('Copy of ', $name);
+    }
+
     /**
      * Moves the row's own ownership FK, then points the recipient's active
      * pointer at it too — settingsFor()/requireConfiguration() now resolve
