@@ -20,6 +20,7 @@ export interface AiConfig {
   readonly ready: boolean;
   readonly active: boolean;
   readonly suppressReasoning: boolean;
+  readonly batchConcurrency: number;
 }
 
 export interface AiConfigList {
@@ -111,6 +112,15 @@ export class AiSettingsService {
     this.run(
       this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/reasoning`, {
         suppressReasoning,
+      }),
+      (config) => this.upsert(config),
+    );
+  }
+
+  setBatchConcurrency(id: number, batchConcurrency: number): void {
+    this.run(
+      this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/batch-concurrency`, {
+        batchConcurrency,
       }),
       (config) => this.upsert(config),
     );

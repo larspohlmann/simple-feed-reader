@@ -25,6 +25,7 @@ interface AiSettingsStub {
   chooseModel: jest.Mock;
   rename: jest.Mock;
   setReasoning: jest.Mock;
+  setBatchConcurrency: jest.Mock;
   activate: jest.Mock;
   remove: jest.Mock;
 }
@@ -38,6 +39,7 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   ready: false,
   active: false,
   suppressReasoning: true,
+  batchConcurrency: 1,
   ...over,
 });
 
@@ -70,6 +72,7 @@ function createStub(): AiSettingsStub {
     chooseModel: jest.fn(),
     rename: jest.fn(),
     setReasoning: jest.fn(),
+    setBatchConcurrency: jest.fn(),
     activate: jest.fn(),
     remove: jest.fn(),
   };
@@ -241,6 +244,29 @@ describe('AiSectionComponent', () => {
     checkbox.dispatchEvent(new Event('change'));
 
     expect(setReasoning).toHaveBeenCalledWith(7, false);
+  });
+
+  it('changes the batch concurrency for a row', () => {
+    const fixture = mount();
+    const setBatchConcurrency = jest
+      .spyOn(ai, 'setBatchConcurrency')
+      .mockImplementation(() => undefined);
+    ai.configs.set([config({ id: 7, batchConcurrency: 1 })]);
+    fixture.detectChanges();
+
+    const numberInput: HTMLInputElement = fixture.nativeElement.querySelector(
+      '.concurrency-field input',
+    );
+    expect(numberInput).not.toBeNull();
+    expect(numberInput.value).toBe('1');
+    expect(row(fixture, 0).querySelector('.concurrency-field .hint')?.textContent).toContain(
+      'local model',
+    );
+
+    numberInput.value = '3';
+    numberInput.dispatchEvent(new Event('change'));
+
+    expect(setBatchConcurrency).toHaveBeenCalledWith(7, 3);
   });
 
   it('disables activation for a row that is already active, not ready, or while busy', () => {

@@ -133,6 +133,10 @@ export class AiSectionComponent {
     this.ai.setReasoning(config.id, (event.target as HTMLInputElement).checked);
   }
 
+  setBatchConcurrency(config: AiConfig, event: Event): void {
+    this.ai.setBatchConcurrency(config.id, Number((event.target as HTMLInputElement).value));
+  }
+
   startRename(config: AiConfig): void {
     this.renamingId.set(config.id);
     this.renameText.set(config.name ?? '');

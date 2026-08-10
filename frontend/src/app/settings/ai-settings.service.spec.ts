@@ -17,6 +17,7 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   ready: false,
   active: false,
   suppressReasoning: true,
+  batchConcurrency: 1,
   ...over,
 });
 
@@ -153,6 +154,16 @@ describe('AiSettingsService', () => {
     request.flush(config({ id: 5, suppressReasoning: false }));
 
     expect(svc.configs()[0].suppressReasoning).toBe(false);
+  });
+
+  it('posts batch concurrency and upserts the returned config', () => {
+    svc.setBatchConcurrency(7, 3);
+    const request = ctrl.expectOne(`${base}/api/me/ai/configs/7/batch-concurrency`);
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ batchConcurrency: 3 });
+    request.flush(config({ id: 7, batchConcurrency: 3 }));
+
+    expect(svc.configs().find((each) => each.id === 7)?.batchConcurrency).toBe(3);
   });
 
   it('activates a configuration and clears the active flag on the others', () => {
