@@ -82,6 +82,27 @@ final readonly class AiSettingsController
         );
     }
 
+    #[Route('/configs/{id}/duplicate', name: 'api_me_ai_duplicate', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function duplicate(#[CurrentUser] User $user, int $id): JsonResponse
+    {
+        try {
+            $source = $this->configuration->require($user, $id);
+            $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
+            $copy = $this->configurator->duplicateConfiguration($source);
+        } catch (ConfigurationNotFoundException $e) {
+            throw new AiConfigurationNotFoundApiException($e);
+        } catch (TooManyConfigurationsException $e) {
+            throw new TooManyAiConfigurationsApiException($e);
+        } catch (ApiKeyUnreadableException $e) {
+            throw new AiKeyUnreadableApiException($e);
+        }
+
+        return new JsonResponse(
+            AiSettingsJson::configuration($copy, $this->configurator->settingsFor($user)?->getId()),
+            Response::HTTP_CREATED,
+        );
+    }
+
     #[Route('/configs/{id}/models', name: 'api_me_ai_models', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function models(#[CurrentUser] User $user, int $id): JsonResponse
     {
