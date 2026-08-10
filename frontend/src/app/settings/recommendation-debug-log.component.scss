@@ -1,3 +1,5 @@
+@use '../theme/breakpoints' as bp;
+
 /* This panel's own layout: a summary strip for the latest run, then the calls
    grouped by run, each run's calls an aligned grid -- `time | call | duration |
    verdict | req/resp KB | expander`. The panel is its own `app-settings-card`
@@ -107,6 +109,28 @@
     align-items: center;
     column-gap: var(--space-2);
     font-weight: 600;
+  }
+
+  /* On a phone the six fixed columns plus the group's 30rem floor are wider
+     than the viewport, so the whole panel overflowed the page (the size and
+     expander columns fell off the right edge). Release the floor and let the
+     row reflow to a wrapping line so every entry fits the card. */
+  @media (width <= bp.$bp-sm) {
+    &__group {
+      min-width: 0;
+    }
+
+    &__row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      row-gap: var(--space-1);
+    }
+
+    &__call {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
   }
 
   &__time,
