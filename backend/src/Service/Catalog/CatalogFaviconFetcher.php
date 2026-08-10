@@ -7,13 +7,13 @@ namespace App\Service\Catalog;
 use App\Service\Catalog\Exception\FaviconUnavailableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Fetch\UrlResolver;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
@@ -51,7 +51,7 @@ final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInter
     ];
 
     public function __construct(
-        private HttpClientInterface $httpClient,
+        private FailoverRequestSender $requestSender,
         private UrlGuard $urlGuard,
     ) {
     }
@@ -113,15 +113,16 @@ final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInter
     {
         $guarded = $this->urlGuard->assertSafe($url);
 
-        return $this->httpClient->request('GET', $url, [
+        // The sender pins the connection to the IPs the guard just validated —
+        // closing the DNS-rebinding window between assertSafe() and the request —
+        // and fails over across address families when one connects but then dies
+        // before the response headers arrive.
+        return $this->requestSender->send('GET', $url, $guarded, [
             'timeout' => self::TIMEOUT_SECONDS,
             'max_duration' => self::TIMEOUT_SECONDS,
             // Redirects are followed manually above, one re-guarded hop at a
             // time — never by the client itself.
             'max_redirects' => 0,
-            // Pins the connection to the IPs the guard just validated, closing
-            // the DNS-rebinding window between assertSafe() and the request.
-            'resolve' => [$guarded->host => $guarded->pinnedAddresses()],
             // Refuse transparent compression so the wire cap below also bounds
             // the buffered body — a compressed response would otherwise
             // decompress unbounded before the size check runs.

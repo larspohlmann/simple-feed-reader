@@ -118,6 +118,13 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
             } catch (FetchException $e) {
                 $this->retire($inFlight, $response);
 
+                $overNextFamily = $this->overNextFamily($attempt, $e);
+                if (null !== $overNextFamily) {
+                    $queue->requeue($overNextFamily);
+
+                    return;
+                }
+
                 yield $attempt->key => FetchOutcome::failed($e);
 
                 return;
@@ -211,6 +218,8 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     private function send(FetchAttempt $attempt): ResponseInterface
     {
         $guarded = $this->urlGuard->assertSafe($attempt->url);
+        $pins = $guarded->pinnedAddressAttempts();
+        $pinnedAddresses = $pins[min($attempt->pinnedAddressAttempt, \count($pins) - 1)];
 
         try {
             return $this->httpClient->request('GET', $attempt->url, [
@@ -218,7 +227,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
                 'max_redirects' => 0,
                 'timeout' => self::TIMEOUT_SECONDS,
                 'max_duration' => self::TIMEOUT_SECONDS * 2,
-                'resolve' => [$guarded->host => $guarded->pinnedAddresses()],
+                'resolve' => [$guarded->host => $pinnedAddresses],
                 'on_progress' => static function (int $downloaded): void {
                     ResponseTooLargeException::throwIfExceeded($downloaded);
                 },
@@ -226,6 +235,29 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
         } catch (ExceptionInterface $e) {
             throw FetchException::from($attempt->url, $e);
         }
+    }
+
+    /**
+     * The same attempt pinned to the next address family, or null when a
+     * different family cannot help — CrossFamilyFailover decides whether the
+     * failure is a dead route worth re-driving. A single-family host has nothing
+     * left to try, so the guard's attempt list bounds the retry.
+     */
+    private function overNextFamily(FetchAttempt $attempt, FetchException $failure): ?FetchAttempt
+    {
+        if (!CrossFamilyFailover::isWarranted($failure->getPrevious())) {
+            return null;
+        }
+
+        try {
+            $familyCount = \count($this->urlGuard->assertSafe($attempt->url)->pinnedAddressAttempts());
+        } catch (FetchException) {
+            return null;
+        }
+
+        return $attempt->pinnedAddressAttempt + 1 < $familyCount
+            ? $attempt->overNextPinnedAddress()
+            : null;
     }
 
     /** @return array<string, string> */

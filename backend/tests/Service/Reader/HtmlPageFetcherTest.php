@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Service\Fetch\DnsResolverInterface;
+use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\Exception\PageFetchException;
@@ -36,7 +37,7 @@ final class HtmlPageFetcherTest extends TestCase
         };
 
         return new HtmlPageFetcher(
-            new MockHttpClient($responses),
+            new FailoverRequestSender(new MockHttpClient($responses)),
             new UrlGuard($resolver, new IpValidator()),
             'TestAgent/1.0',
         );
@@ -91,6 +92,30 @@ final class HtmlPageFetcherTest extends TestCase
         // would count compressed bytes while the decompressed body is buffered
         // whole — a decompression-bomb amplification.
         self::assertContains('Accept-Encoding: identity', $seenHeaders);
+    }
+
+    public function testFailsOverToIpv4WhenIpv6ConnectsButResetsBeforeHeaders(): void
+    {
+        // The both-families pin leads with IPv6. From Strato heise's IPv6 route
+        // completes the TCP connect and then resets at the TLS handshake, which
+        // happy-eyeballs cannot recover from — the article must still load over
+        // IPv4.
+        $fetcher = $this->fetcher(
+            static function (string $method, string $url, array $options): MockResponse {
+                /** @var array<string, string> $resolve */
+                $resolve = $options['resolve'];
+                $pinnedAddresses = $resolve['dual.example.com'];
+
+                return str_contains($pinnedAddresses, ':')
+                    ? new MockResponse('', ['error' => 'Connection reset by peer'])
+                    : new MockResponse('<html lang="en"><body>article</body></html>', ['http_code' => 200]);
+            },
+            ['dual.example.com' => ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']],
+        );
+
+        $result = $fetcher->fetch('https://dual.example.com/post');
+
+        self::assertStringContainsString('article', $result->html);
     }
 
     public function testPinsEveryResolvedAddressSoTheClientCanFallBackAcrossFamilies(): void

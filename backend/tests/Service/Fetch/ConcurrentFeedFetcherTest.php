@@ -126,6 +126,114 @@ final class ConcurrentFeedFetcherTest extends TestCase
         );
     }
 
+    /**
+     * The mirror of the fazemag case: heise's IPv6 route from Strato completes
+     * the TCP connect and then resets at the TLS handshake, which happy-eyeballs
+     * cannot recover from because the connect already succeeded. The both-family
+     * pin leads with IPv6, so the feed must fall over to an IPv4-only pin.
+     */
+    public function testFailsOverToIpv4WhenIpv6ConnectsButResetsBeforeHeaders(): void
+    {
+        /** @var list<string> $seenPins */
+        $seenPins = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seenPins): MockResponse {
+                /** @var array<string, string> $resolve */
+                $resolve = $options['resolve'];
+                $pinnedAddresses = $resolve['www.heise.de'];
+                $seenPins[] = $pinnedAddresses;
+
+                return str_contains($pinnedAddresses, ':')
+                    ? new MockResponse('', ['error' => 'Connection reset by peer'])
+                    : new MockResponse('<rss/>', ['http_code' => 200]);
+            },
+            dnsOverrides: ['www.heise.de' => ['2a02:2e0:3fe:1001:7777:772e:2:85', '193.99.144.85']],
+        );
+
+        $ticket = new FetchTicket('https://www.heise.de/rss/heise-atom.xml');
+        $outcomes = $this->collect($fetcher->fetchAll([1 => $ticket]));
+
+        self::assertNull($outcomes[1]->failure());
+        self::assertSame('<rss/>', $outcomes[1]->responseOrThrow()->body);
+        self::assertSame(
+            ['2a02:2e0:3fe:1001:7777:772e:2:85,193.99.144.85', '193.99.144.85'],
+            $seenPins,
+        );
+    }
+
+    public function testFailsOverThroughEveryFamilyUntilOneAnswers(): void
+    {
+        // Both the combined pin and the IPv4-only pin reset; only the IPv6-only
+        // pin answers. The fetcher must walk the whole attempt list, not stop
+        // after the first fallback.
+        $ipv6 = '2a02:2e0:3fe:1001:7777:772e:2:85';
+        $ipv4 = '193.99.144.85';
+        /** @var list<string> $seenPins */
+        $seenPins = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seenPins, $ipv6): MockResponse {
+                /** @var array<string, string> $resolve */
+                $resolve = $options['resolve'];
+                $pinnedAddresses = $resolve['www.heise.de'];
+                $seenPins[] = $pinnedAddresses;
+
+                return $pinnedAddresses === $ipv6
+                    ? new MockResponse('<rss/>', ['http_code' => 200])
+                    : new MockResponse('', ['error' => 'Connection reset by peer']);
+            },
+            dnsOverrides: ['www.heise.de' => [$ipv6, $ipv4]],
+        );
+
+        $ticket = new FetchTicket('https://www.heise.de/rss/heise-atom.xml');
+        $outcomes = $this->collect($fetcher->fetchAll([1 => $ticket]));
+
+        self::assertSame('<rss/>', $outcomes[1]->responseOrThrow()->body);
+        self::assertSame([$ipv6 . ',' . $ipv4, $ipv4, $ipv6], $seenPins);
+    }
+
+    public function testATimeoutIsNotFailedOverToAnotherFamily(): void
+    {
+        // A timeout means the family answered the connect but is slow, not that
+        // the route is dead. Even with a second family available, re-driving would
+        // only multiply the wait, so the timeout stands as the outcome.
+        $requestCount = 0;
+        $fetcher = $this->fetcher(
+            function () use (&$requestCount): MockResponse {
+                ++$requestCount;
+                $body = (static function (): \Generator {
+                    yield '<rss';
+                    yield '';
+                })();
+
+                return new MockResponse($body, ['http_code' => 200]);
+            },
+            dnsOverrides: ['dual.example.com' => ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']],
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://dual.example.com/feed')]));
+
+        self::assertInstanceOf(FeedUnreachableException::class, $outcomes[1]->failure());
+        self::assertSame(1, $requestCount);
+    }
+
+    public function testASingleFamilyTransportFailureIsNotRetried(): void
+    {
+        $requestCount = 0;
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$requestCount): MockResponse {
+                ++$requestCount;
+
+                return new MockResponse('', ['error' => 'Connection reset by peer']);
+            },
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://example.com/feed')]));
+
+        self::assertInstanceOf(FeedUnreachableException::class, $outcomes[1]->failure());
+        // One family, so nothing to fall back to: exactly one request, no retry loop.
+        self::assertSame(1, $requestCount);
+    }
+
     public function testFetchesEveryTicketInABatch(): void
     {
         $fetcher = $this->fetcher(static fn (string $method, string $url): MockResponse => new MockResponse(

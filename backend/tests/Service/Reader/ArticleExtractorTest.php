@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\EntrySanitizer;
 use App\Service\Fetch\DnsResolverInterface;
+use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\ArticleExtractor;
@@ -39,7 +40,7 @@ final class ArticleExtractorTest extends TestCase
         };
 
         $fetcher = new HtmlPageFetcher(
-            new MockHttpClient($responses),
+            new FailoverRequestSender(new MockHttpClient($responses)),
             new UrlGuard($resolver, new IpValidator()),
             'TestAgent/1.0',
         );
@@ -105,7 +106,7 @@ final class ArticleExtractorTest extends TestCase
             }
         };
         $fetcher = new HtmlPageFetcher(
-            new MockHttpClient(),
+            new FailoverRequestSender(new MockHttpClient()),
             new UrlGuard($resolver, new IpValidator()),
             'TestAgent/1.0',
         );
