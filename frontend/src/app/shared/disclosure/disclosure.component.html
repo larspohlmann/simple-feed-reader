@@ -1,6 +1,9 @@
 <!-- src/app/shared/disclosure/disclosure.component.html -->
 <details>
-  <summary [class.is-row]="appearance() === 'row'">
+  <summary
+    [class.is-row]="appearance() === 'row'"
+    [class.is-card-header]="appearance() === 'card-header'"
+  >
     <ng-content select="[summary]">{{ label() }}</ng-content>
   </summary>
   <ng-content />

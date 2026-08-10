@@ -53,6 +53,11 @@ describe('SettingsCardComponent', () => {
     expect(el.querySelector('.description')?.textContent?.trim()).toBe('Group your feeds.');
   });
 
+  it('renders no disclosure in the default (non-collapsible) mode', async () => {
+    const el = await render();
+    expect(el.querySelector('app-disclosure')).toBeNull();
+  });
+
   describe('collapsible mode', () => {
     async function renderCollapsible() {
       await TestBed.configureTestingModule({
@@ -62,6 +67,14 @@ describe('SettingsCardComponent', () => {
       fixture.detectChanges();
       return { el: fixture.nativeElement as HTMLElement, fixture };
     }
+
+    it('composes the shared app-disclosure rather than a hand-rolled details', async () => {
+      const { el } = await renderCollapsible();
+      const disclosure = el.querySelector('app-disclosure');
+      expect(disclosure).not.toBeNull();
+      // the <details> the assertions below rely on is the disclosure's own.
+      expect(disclosure?.querySelector('details')).not.toBeNull();
+    });
 
     it('renders a details element that is closed by default', async () => {
       const { el } = await renderCollapsible();

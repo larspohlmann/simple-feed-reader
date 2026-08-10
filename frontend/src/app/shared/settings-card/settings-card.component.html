@@ -1,12 +1,10 @@
 <!-- src/app/shared/settings-card/settings-card.component.html -->
 <section class="card">
   @if (collapsible()) {
-    <details>
-      <summary class="head is-toggle">
-        <h2>{{ heading() }}</h2>
-      </summary>
+    <app-disclosure appearance="card-header">
+      <h2 summary>{{ heading() }}</h2>
       <ng-container [ngTemplateOutlet]="body" />
-    </details>
+    </app-disclosure>
   } @else {
     <header class="head">
       <h2>{{ heading() }}</h2>

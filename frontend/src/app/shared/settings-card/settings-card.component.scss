@@ -26,32 +26,3 @@ h2 {
      would double up with it. */
   margin: calc(var(--space-3) * -1 + var(--space-2)) 0 var(--space-3);
 }
-
-// The collapsible mode's toggle: it IS the `.head` (same flex/space-between
-// layout), plus the button-less, marker-less chrome a native <summary> needs
-// to read as a plain clickable heading. Mirrors the chevron approach in
-// shared/disclosure/disclosure.component.scss.
-summary.is-toggle {
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-}
-
-summary.is-toggle::-webkit-details-marker {
-  display: none;
-}
-
-summary.is-toggle::after {
-  content: '';
-  width: 0;
-  height: 0;
-  margin-left: auto;
-  border-top: 0.3em solid transparent;
-  border-bottom: 0.3em solid transparent;
-  border-left: 0.4em solid currentcolor;
-  transition: transform 0.15s ease;
-}
-
-details[open] > summary.is-toggle::after {
-  transform: rotate(90deg);
-}

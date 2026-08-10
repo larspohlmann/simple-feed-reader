@@ -17,7 +17,11 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
  *
  * `appearance` picks the summary chrome: `'pill'` (default) is the bordered
  * toggle button this component always rendered; `'row'` is a flat, full-width
- * list row for callers that render one `<app-disclosure>` per item in a list.
+ * list row for callers that render one `<app-disclosure>` per item in a list;
+ * `'card-header'` is a flat, full-width heading with no horizontal padding, so
+ * it aligns to a card's content box when it wraps a card body (see
+ * `<app-settings-card>`'s collapsible mode) rather than inheriting the row's
+ * own inset.
  */
 @Component({
   selector: 'app-disclosure',
@@ -27,5 +31,5 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 })
 export class DisclosureComponent {
   readonly label = input<string>('');
-  readonly appearance = input<'pill' | 'row'>('pill');
+  readonly appearance = input<'pill' | 'row' | 'card-header'>('pill');
 }
