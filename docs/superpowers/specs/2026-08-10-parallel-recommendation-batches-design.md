@@ -48,6 +48,13 @@ no race on the `RecommendationRun`, the `EntityManager`, or the per-call
 the EM). This removes the scariest failure mode: the wave is concurrent on the
 wire and serial in memory.
 
+### Snapshot pool ordering
+
+The snapshot still **selects** the newest `candidatePoolSize` unread
+candidates, but before packing it **shuffles** the pool into a random order
+(clock-seeded, deterministic per seed) so each batch is a representative
+sample of the whole pool instead of a recency cluster (#344).
+
 ### The wave
 
 A tick's wave covers the batches

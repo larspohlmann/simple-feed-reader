@@ -13,6 +13,8 @@ use App\Service\PlainText;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
+use Random\Engine\Mt19937;
+use Random\Randomizer;
 
 /**
  * Loads the pool of unread candidates the recommendation prompt picks from,
@@ -36,12 +38,14 @@ final readonly class RecommendationCandidateLoader
     }
 
     /**
-     * Unread candidates in feeds the reader subscribes to, newest first,
-     * capped to $poolSize.
+     * Unread candidates in feeds the reader subscribes to. The newest
+     * $poolSize are selected, then returned in a randomized order seeded by
+     * $orderSeed, so batches sample the pool rather than cluster by recency
+     * (#344). The same seed always produces the same order.
      *
      * @return list<PromptLine>
      */
-    public function load(int $userId, int $poolSize): array
+    public function load(int $userId, int $poolSize, int $orderSeed): array
     {
         $qb = $this->candidateQueryBuilder($userId)
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
@@ -51,7 +55,16 @@ final readonly class RecommendationCandidateLoader
             ->setMaxResults($poolSize)
             ->setParameter('readFalse', false, Types::BOOLEAN);
 
-        return $this->linesFor($qb);
+        $lines = $this->linesFor($qb);
+        $shuffled = (new Randomizer(new Mt19937($orderSeed)))->shuffleArray($lines);
+
+        // shuffleArray() has no generic stub, so it widens the element type
+        // back to mixed; the instanceof re-narrows it to the PromptLine list
+        // the return type promises, dropping nothing — every element is one.
+        return array_values(array_filter(
+            $shuffled,
+            static fn (mixed $line): bool => $line instanceof PromptLine,
+        ));
     }
 
     /**
