@@ -24,17 +24,28 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 final class ConcurrentFeedFetcherTest extends TestCase
 {
     /**
-     * Every host in these tests resolves to one public address; the SSRF rules
-     * themselves are covered by UrlGuard's own test.
+     * Every host in these tests resolves to one public address unless
+     * $dnsOverrides says otherwise; the SSRF rules themselves are covered by
+     * UrlGuard's own test.
      *
      * @param callable|iterable<MockResponse> $responses
+     * @param array<string, list<string>>     $dnsOverrides
      */
-    private function fetcher(callable|iterable $responses, int $concurrency = 4): ConcurrentFeedFetcher
-    {
-        $resolver = new class () implements DnsResolverInterface {
+    private function fetcher(
+        callable|iterable $responses,
+        int $concurrency = 4,
+        array $dnsOverrides = [],
+    ): ConcurrentFeedFetcher {
+        $resolver = new class ($dnsOverrides) implements DnsResolverInterface {
+            /** @param array<string, list<string>> $overrides */
+            public function __construct(private readonly array $overrides)
+            {
+            }
+
             public function resolve(string $hostname): array
             {
-                return 'blocked.example.com' === $hostname ? [] : ['93.184.216.34'];
+                return $this->overrides[$hostname]
+                    ?? ('blocked.example.com' === $hostname ? [] : ['93.184.216.34']);
             }
         };
 
@@ -83,6 +94,36 @@ final class ConcurrentFeedFetcherTest extends TestCase
 
         self::assertCount(1, $outcomes);
         self::assertSame('<rss/>', $outcomes[7]->responseOrThrow()->body);
+    }
+
+    /**
+     * A host whose IPv4 route is a blackhole but whose IPv6 route is healthy
+     * (fazemag.de from Strato) must still connect. Pinning only the first
+     * address defeats the client's cross-family fallback and times out; pinning
+     * every validated address lets happy-eyeballs reach the live one.
+     */
+    public function testPinsEveryResolvedAddressSoTheClientCanFallBackAcrossFamilies(): void
+    {
+        /** @var array<string, string> $seenResolve */
+        $seenResolve = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seenResolve): MockResponse {
+                /** @var array<string, string> $resolve */
+                $resolve = $options['resolve'];
+                $seenResolve = $resolve;
+
+                return new MockResponse('<rss/>', ['http_code' => 200]);
+            },
+            dnsOverrides: ['www.fazemag.de' => ['178.77.107.162', '2a01:488:42:1000:b24d:6ba2:1e:a1ad']],
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://www.fazemag.de/feed/')]));
+
+        self::assertNull($outcomes[1]->failure());
+        self::assertSame(
+            ['www.fazemag.de' => '178.77.107.162,2a01:488:42:1000:b24d:6ba2:1e:a1ad'],
+            $seenResolve,
+        );
     }
 
     public function testFetchesEveryTicketInABatch(): void
