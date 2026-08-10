@@ -79,6 +79,12 @@ export interface EntryDto {
   /** The model's 0-100 score for this entry; present only on for-you results
    *  and only when the user's debug setting is on. */
   recommendationScore?: number | null;
+  /** The recommendation run this entry belongs to; set only on for-you results.
+   *  Consecutive entries with different runIds mark a run boundary (#348). */
+  runId?: number;
+  /** When that run generated (ISO, RFC 3339); set only on for-you results. Drives
+   *  the run-boundary divider's "Generated ..." label (#348). */
+  runGeneratedAt?: string;
 }
 
 export interface EntriesPage {
