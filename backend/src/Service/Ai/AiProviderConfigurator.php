@@ -139,6 +139,12 @@ final readonly class AiProviderConfigurator
         $this->entityManager->flush();
     }
 
+    public function setBatchConcurrency(AiProviderSettings $settings, int $batchConcurrency): void
+    {
+        $settings->setBatchConcurrency($batchConcurrency);
+        $this->entityManager->flush();
+    }
+
     /**
      * @throws ApiKeyUnreadableException
      * @throws CredentialsRejectedException

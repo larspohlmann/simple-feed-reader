@@ -249,6 +249,39 @@ final class AiSettingsControllerTest extends ApiTestCase
         self::assertFalse($payload['configs'][0]['suppressReasoning']);
     }
 
+    public function testSettingBatchConcurrencyChangesTheConfiguration(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-batch-concurrency@example.test');
+        $added = $this->addConfiguration($client);
+        $id = $added['id'];
+        self::assertIsInt($id);
+        self::assertSame(1, $added['batchConcurrency']); // default
+
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/batch-concurrency', $id), '{"batchConcurrency":3}');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(3, $this->payload($client)['batchConcurrency']);
+
+        $client->request('GET', '/api/me/ai');
+        $payload = $this->payload($client);
+        self::assertIsArray($payload['configs']);
+        self::assertIsArray($payload['configs'][0]);
+        self::assertSame(3, $payload['configs'][0]['batchConcurrency']);
+    }
+
+    public function testSettingBatchConcurrencyRejectsOutOfRange(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-batch-concurrency-range@example.test');
+        $id = $this->addConfiguration($client)['id'];
+        self::assertIsInt($id);
+
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/batch-concurrency', $id), '{"batchConcurrency":5}');
+
+        self::assertResponseStatusCodeSame(422);
+    }
+
     public function testDeletingANonActiveConfigurationDropsItFromTheList(): void
     {
         $client = $this->clientAnswering(['gpt-4o', 'gpt-4o-mini']);
@@ -295,6 +328,7 @@ final class AiSettingsControllerTest extends ApiTestCase
         yield 'renaming' => ['PUT', '/name', '{"name":"Stolen"}'];
         yield 'activating' => ['PUT', '/active', '{}'];
         yield 'setting reasoning' => ['PUT', '/reasoning', '{"suppressReasoning":false}'];
+        yield 'setting batch concurrency' => ['PUT', '/batch-concurrency', '{"batchConcurrency":2}'];
         yield 'deleting' => ['DELETE', '', '{}'];
     }
 

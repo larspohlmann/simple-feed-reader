@@ -35,6 +35,7 @@ final class AiSettingsJson
             'apiKeyHint' => $settings->getApiKeyHint(),
             'model' => $settings->getModel(),
             'suppressReasoning' => $settings->suppressesReasoning(),
+            'batchConcurrency' => $settings->batchConcurrency(),
             'ready' => self::isReady($settings),
             'active' => $settings->getId() === $activeId,
         ];
