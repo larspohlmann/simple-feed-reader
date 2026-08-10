@@ -79,6 +79,7 @@
       "modelPlaceholder": "Select a model",
       "saveModel": "Save model",
       "ready": "AI features are available and use {{model}}.",
+      "addTitle": "Add a configuration",
       "configs": {
         "active": "Active",
         "activate": "Use this one",

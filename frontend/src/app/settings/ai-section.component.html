@@ -139,6 +139,14 @@
     </ul>
   }
 
+  @if (failureDetail(); as detail) {
+    <app-error-banner [message]="detail" />
+  } @else if (failureKey(); as key) {
+    <app-error-banner [message]="key | transloco" />
+  }
+</app-settings-card>
+
+<app-settings-card [heading]="'settings.ai.addTitle' | transloco">
   <div class="group add-group">
     <app-field [label]="'settings.ai.configs.namePlaceholder' | transloco">
       <input
@@ -184,12 +192,6 @@
       {{ 'settings.ai.configs.add' | transloco }}
     </app-button>
   </div>
-
-  @if (failureDetail(); as detail) {
-    <app-error-banner [message]="detail" />
-  } @else if (failureKey(); as key) {
-    <app-error-banner [message]="key | transloco" />
-  }
 </app-settings-card>
 
 @if (activeReady()) {

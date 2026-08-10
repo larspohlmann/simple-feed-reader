@@ -79,6 +79,7 @@
       "modelPlaceholder": "Modell auswählen",
       "saveModel": "Modell speichern",
       "ready": "KI-Funktionen sind verfügbar und nutzen {{model}}.",
+      "addTitle": "Konfiguration hinzufügen",
       "configs": {
         "active": "Aktiv",
         "activate": "Diesen verwenden",

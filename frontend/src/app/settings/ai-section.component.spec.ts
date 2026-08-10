@@ -495,6 +495,24 @@ describe('AiSectionComponent', () => {
     expect(acts.querySelector('.delete')).not.toBeNull();
   });
 
+  it('puts the add-configuration form in its own titled card, separate from the configs list', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1 })]);
+    fixture.detectChanges();
+
+    const cards = Array.from(
+      fixture.nativeElement.querySelectorAll('app-settings-card'),
+    ) as HTMLElement[];
+    expect(cards.length).toBe(2);
+
+    const listCard = cards.find((card) => card.querySelector('.configs')) as HTMLElement;
+    const addCard = cards.find((card) => card.querySelector('.add-config')) as HTMLElement;
+    expect(listCard).not.toBe(addCard);
+    expect(listCard.querySelector('.add-config')).toBeNull();
+    expect(addCard.querySelector('.configs')).toBeNull();
+    expect(addCard.querySelector('h2')?.textContent).toBe('Add a configuration');
+  });
+
   it('shows the recommendation settings card once the active config is ready, and not before', () => {
     const fixture = mount();
     ai.configs.set([config({ id: 1, active: true, ready: false })]);
