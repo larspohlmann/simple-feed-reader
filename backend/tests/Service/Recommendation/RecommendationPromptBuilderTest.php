@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation;
 
+use App\Service\Recommendation\CandidatePoolSummary;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\PromptLine;
 use App\Service\Recommendation\RecommendationHistory;
@@ -242,6 +243,39 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertStringContainsString('FAVORITES (newest first):', $user);
         self::assertStringContainsString("KEPT (newest first):\n- none", $user);
         self::assertStringContainsString('- [7] ', $user);
+    }
+
+    public function testBatchMessagesAddsThePoolFrameLineWhenASummaryIsPassed(): void
+    {
+        $candidateLines = [self::line(7, 'Candidate seven', 10)];
+        $summary = new CandidatePoolSummary(total: 2000, oldest: '2026-01-15', newest: '2026-08-09');
+
+        $messages = $this->builder->batchMessages(
+            $this->emptyHistory(),
+            $candidateLines,
+            $this->settings(32768, 100),
+            $summary,
+        );
+
+        $user = $messages[1]['content'];
+        self::assertStringContainsString(
+            'The full candidate set has 2000 posts spanning 2026-01-15 to 2026-08-09. '
+                . 'This batch is a random sample of that set.',
+            $user,
+        );
+        // The frame sits before the candidate lines it frames.
+        self::assertLessThan(strpos($user, 'CANDIDATES:'), strpos($user, 'The full candidate set has'));
+    }
+
+    public function testBatchMessagesOmitsThePoolFrameLineWhenNoSummaryIsPassed(): void
+    {
+        $messages = $this->builder->batchMessages(
+            $this->emptyHistory(),
+            [self::line(7, 'Candidate seven', 10)],
+            $this->settings(32768, 100),
+        );
+
+        self::assertStringNotContainsString('The full candidate set has', $messages[1]['content']);
     }
 
     public function testCorrectiveTailEchoesTheInvalidReply(): void

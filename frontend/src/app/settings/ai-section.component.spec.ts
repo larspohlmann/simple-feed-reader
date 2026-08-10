@@ -19,12 +19,14 @@ interface AiSettingsStub {
   choosingModelFor: WritableSignal<number | null>;
   busy: WritableSignal<boolean>;
   failure: WritableSignal<AiFailure | null>;
+  savedConcurrencyId: WritableSignal<number | null>;
   load: jest.Mock;
   add: jest.Mock;
   loadModels: jest.Mock;
   chooseModel: jest.Mock;
   rename: jest.Mock;
   setReasoning: jest.Mock;
+  setBatchConcurrency: jest.Mock;
   activate: jest.Mock;
   remove: jest.Mock;
 }
@@ -38,6 +40,7 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   ready: false,
   active: false,
   suppressReasoning: true,
+  batchConcurrency: 1,
   ...over,
 });
 
@@ -64,12 +67,14 @@ function createStub(): AiSettingsStub {
     choosingModelFor: signal<number | null>(null),
     busy: signal(false),
     failure: signal<AiFailure | null>(null),
+    savedConcurrencyId: signal<number | null>(null),
     load: jest.fn(),
     add: jest.fn(),
     loadModels: jest.fn(),
     chooseModel: jest.fn(),
     rename: jest.fn(),
     setReasoning: jest.fn(),
+    setBatchConcurrency: jest.fn(),
     activate: jest.fn(),
     remove: jest.fn(),
   };
@@ -241,6 +246,40 @@ describe('AiSectionComponent', () => {
     checkbox.dispatchEvent(new Event('change'));
 
     expect(setReasoning).toHaveBeenCalledWith(7, false);
+  });
+
+  it('changes the batch concurrency for a row via a 1-4 dropdown', () => {
+    const fixture = mount();
+    const setBatchConcurrency = jest
+      .spyOn(ai, 'setBatchConcurrency')
+      .mockImplementation(() => undefined);
+    ai.configs.set([config({ id: 7, batchConcurrency: 1 })]);
+    fixture.detectChanges();
+
+    const select = row(fixture, 0).querySelector('app-field select') as HTMLSelectElement;
+    expect(select).not.toBeNull();
+    expect(Array.from(select.options).map((option) => option.value)).toEqual(['1', '2', '3', '4']);
+    expect(select.value).toBe('1');
+    expect(row(fixture, 0).querySelector('app-field .hint')?.textContent).toContain('local model');
+
+    select.value = '3';
+    select.dispatchEvent(new Event('change'));
+
+    expect(setBatchConcurrency).toHaveBeenCalledWith(7, 3);
+  });
+
+  it('shows a saved confirmation only on the row that just saved its concurrency', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 7 }), config({ id: 8 })]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.saved')).toBeNull();
+
+    ai.savedConcurrencyId.set(7);
+    fixture.detectChanges();
+
+    expect(row(fixture, 0).querySelector('.saved')).not.toBeNull();
+    expect(row(fixture, 1).querySelector('.saved')).toBeNull();
   });
 
   it('disables activation for a row that is already active, not ready, or while busy', () => {

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Worker;
 
+use App\Entity\AiProviderSettings;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
+use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Entity\WorkerHeartbeat;
@@ -18,16 +20,19 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\ChatCompletionClient;
+use App\Service\Recommendation\RecommendationBatchWave;
 use App\Service\Recommendation\RecommendationCallRecorder;
 use App\Service\Recommendation\RecommendationCancellationCheckpoint;
 use App\Service\Recommendation\RecommendationCandidateLoader;
+use App\Service\Recommendation\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\RecommendationDuplicateParser;
 use App\Service\Recommendation\RecommendationHistoryLoader;
-use App\Service\Recommendation\RecommendationPickParser;
 use App\Service\Recommendation\RecommendationPromptBuilder;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
+use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationSettingsResolver;
+use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Recommendation\RecommendationWinnerRanker;
 use App\Service\Worker\Handler\AdvanceRecommendationRunsHandler;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
@@ -134,6 +139,37 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         self::assertNotNull($persisted);
         self::assertSame(RecommendationRun::STATUS_COMPLETED, $persisted->getStatus());
         self::assertNotCount(0, $this->recommendationItems($persisted));
+    }
+
+    /**
+     * The worker owns its process, so it passes TickDriver::Worker and sends
+     * the connection's full batchConcurrency -- not the poll clamp (#344). With
+     * three batches and concurrency three, one batch firing banks all three at
+     * once; under the poll clamp of two it would bank only two and still owe a
+     * batch. This is what proves the handler passes the worker regime.
+     */
+    public function testAFiringSendsTheFullWorkerConcurrencyNotThePollClamp(): void
+    {
+        $user = $this->user('worker-wave@example.test');
+        $this->seedForcedBatchCountFixture($user, entryCount: 20, batchCount: 3);
+        $this->setBatchConcurrency($user, 3);
+        $this->starter()->start($user);
+
+        // Snapshot firing freezes the three-batch plan.
+        $this->handler()->__invoke(new AdvanceRecommendationRuns());
+        $run = $this->activeRun($user);
+        self::assertCount(3, $run->getCandidateBatches());
+        foreach ($run->getCandidateBatches() as $batch) {
+            $this->requeueCleanReplyFor($batch);
+        }
+
+        // One batch firing: the whole wave of three lands in this single tick.
+        $this->handler()->__invoke(new AdvanceRecommendationRuns());
+
+        $this->em->clear();
+        $persisted = $this->activeRun($user);
+        self::assertSame(3, $persisted->progress()->batchesDone);
+        self::assertTrue($persisted->progress()->isDedupPhase);
     }
 
     /**
@@ -462,12 +498,13 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             self::getContainer()->get(RecommendationHistoryLoader::class),
             self::getContainer()->get(RecommendationPromptBuilder::class),
             self::getContainer()->get(ChatCompletionClient::class),
-            self::getContainer()->get(RecommendationPickParser::class),
             new FlushFailingEntityManager($this->em),
             self::getContainer()->get(RecommendationWinnerRanker::class),
             self::getContainer()->get(RecommendationDuplicateParser::class),
             self::getContainer()->get(RecommendationCallRecorder::class),
             self::getContainer()->get(RecommendationCancellationCheckpoint::class),
+            self::getContainer()->get(RecommendationBatchWave::class),
+            self::getContainer()->get(RecommendationCompletionRequestFactory::class),
         );
     }
 
@@ -574,6 +611,57 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             $guid = $user->getEmail() . '-entry-' . $i;
             $this->fixtures->entry($feed, $guid, sprintf('2026-07-%02dT00:00:00Z', 10 + $i));
         }
+    }
+
+    /**
+     * Forces an exact batch count through the expert batchCount override, so a
+     * worker-regime test can pin how many batches a wave has to work with (the
+     * per-batch cap stays under the token budget's split size, so the packer
+     * produces exactly $batchCount batches).
+     */
+    private function seedForcedBatchCountFixture(User $user, int $entryCount, int $batchCount): void
+    {
+        $this->fixtures->seedReadyAiSettings($user);
+
+        $feed = new Feed('https://example.com/' . $user->getEmail() . '/feed.xml');
+        $feed->setTitle('Example');
+        $this->em->persist($feed);
+        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->em->flush();
+
+        $summary = str_repeat('Lorem ipsum dolor sit amet consectetur adipiscing elit. ', 5);
+        for ($i = 0; $i < $entryCount; $i++) {
+            $entry = $this->fixtures->entry($feed, $user->getEmail() . '-entry-' . $i, sprintf(
+                '2026-07-10T%02d:%02d:00Z',
+                intdiv($i, 60),
+                $i % 60,
+            ));
+            $entry->setSummary($summary);
+        }
+        $this->em->flush();
+
+        $settings = new RecommendationSettings($user);
+        $settings->update(new RecommendationSettingsValues(
+            guidancePrompt: null,
+            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
+            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
+            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
+            candidatePoolSize: $entryCount,
+            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+            contextWindow: 2500,
+            batchCount: $batchCount,
+            debugEnabled: false,
+        ));
+        $this->em->persist($settings);
+        $this->em->flush();
+    }
+
+    private function setBatchConcurrency(User $user, int $concurrency): void
+    {
+        $config = $this->em->getRepository(AiProviderSettings::class)->findOneBy(['user' => $user]);
+        self::assertNotNull($config);
+        $config->setBatchConcurrency($concurrency);
+        $this->em->flush();
     }
 
     private function user(string $email): User

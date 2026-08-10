@@ -55,6 +55,21 @@
                   </span>
                   <span class="hint">{{ 'settings.ai.configs.reasoningHint' | transloco }}</span>
                 </label>
+                <app-field
+                  [label]="'settings.ai.configs.batchConcurrency' | transloco"
+                  [hint]="'settings.ai.configs.batchConcurrencyHint' | transloco"
+                >
+                  <select [disabled]="ai.busy()" (change)="setBatchConcurrency(config, $event)">
+                    @for (option of concurrencyOptions; track option) {
+                      <option [value]="option" [selected]="config.batchConcurrency === option">
+                        {{ option }}
+                      </option>
+                    }
+                  </select>
+                </app-field>
+                @if (ai.savedConcurrencyId() === config.id) {
+                  <span class="saved">{{ 'settings.ai.configs.saved' | transloco }}</span>
+                }
               }
             </div>
 

@@ -101,6 +101,11 @@ app-searchable-select {
   gap: var(--space-2);
 }
 
+.saved {
+  font-size: var(--fs-sm);
+  color: var(--success);
+}
+
 .model-picker {
   display: flex;
   flex-direction: column;

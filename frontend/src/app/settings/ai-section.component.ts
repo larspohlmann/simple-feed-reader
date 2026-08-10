@@ -72,6 +72,10 @@ export class AiSectionComponent {
     computation: () => null,
   });
 
+  /** The dropdown's fixed choices — the server's own `Range(1..4)`, so there
+   *  is no invalid value the handler needs to guard against. */
+  readonly concurrencyOptions: readonly number[] = [1, 2, 3, 4];
+
   readonly modelOptions = computed<SelectOption[]>(() =>
     this.ai.models().map((model) => ({ value: model, label: model })),
   );
@@ -131,6 +135,11 @@ export class AiSectionComponent {
 
   toggleReasoning(config: AiConfig, event: Event): void {
     this.ai.setReasoning(config.id, (event.target as HTMLInputElement).checked);
+  }
+
+  setBatchConcurrency(config: AiConfig, event: Event): void {
+    const value = Number((event.target as HTMLSelectElement).value);
+    this.ai.setBatchConcurrency(config.id, value);
   }
 
   startRename(config: AiConfig): void {

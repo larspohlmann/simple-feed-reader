@@ -92,6 +92,22 @@ final class RecordedCall implements CompletionStreamObserver
     }
 
     /**
+     * Settles this call with the parser's verdict on $content: usable banks
+     * it as the answer, unusable records it as the invalid reply the next
+     * retry corrects against.
+     */
+    public function settle(string $content, bool $usable): void
+    {
+        if ($usable) {
+            $this->finishUsable($content);
+
+            return;
+        }
+
+        $this->finishUnusable($content);
+    }
+
+    /**
      * The stream died mid-answer: whatever the checkpoints salvaged stays,
      * stamped with the transport verdict so the panel can say so. The byte
      * count is what makes that row readable — a call that streamed megabytes

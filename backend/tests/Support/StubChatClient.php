@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Service\Ai\ProviderCredentials;
 use App\Service\Recommendation\ChatCompletionClient;
+use App\Service\Recommendation\CompletionOutcome;
 use App\Service\Recommendation\CompletionRequest;
 use App\Service\Recommendation\CompletionStreamObserver;
 
@@ -81,6 +82,41 @@ final class StubChatClient implements ChatCompletionClient
         CompletionRequest $request,
         CompletionStreamObserver $observer,
     ): string {
+        $next = $this->answer($request);
+        if ($next instanceof \RuntimeException) {
+            throw $next;
+        }
+
+        return $next;
+    }
+
+    /**
+     * Answers each call from the same FIFO queue as complete(), but folds a
+     * queued failure into that call's outcome rather than throwing — the
+     * concurrent contract, where one failed call never aborts its siblings
+     * (#344). Outcomes stay aligned to $calls by index.
+     */
+    public function completeMany(ProviderCredentials $credentials, array $calls): array
+    {
+        $outcomes = [];
+
+        foreach ($calls as $call) {
+            $next = $this->answer($call->request);
+            $outcomes[] = $next instanceof \RuntimeException
+                ? CompletionOutcome::failure($next)
+                : CompletionOutcome::answer($next);
+        }
+
+        return $outcomes;
+    }
+
+    /**
+     * Records the prompt, runs the one-shot hook, and returns the next queued
+     * response — a string answer or the failure to surface. Shared by both
+     * read methods so they record and dequeue identically.
+     */
+    private function answer(CompletionRequest $request): string|\RuntimeException
+    {
         // maxAnswerTokens is recorded alongside the prompt so a test can prove
         // the answer bound was derived from the batch it belongs to, rather
         // than from a constant that happens to be large enough today.
@@ -107,11 +143,6 @@ final class StubChatClient implements ChatCompletionClient
             throw new \LogicException('StubChatClient has no queued response left.');
         }
 
-        $next = array_shift($this->queue);
-        if ($next instanceof \RuntimeException) {
-            throw $next;
-        }
-
-        return $next;
+        return array_shift($this->queue);
     }
 }

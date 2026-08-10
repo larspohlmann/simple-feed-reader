@@ -13,6 +13,8 @@ use App\Service\PlainText;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
+use Random\Engine\Mt19937;
+use Random\Randomizer;
 
 /**
  * Loads the pool of unread candidates the recommendation prompt picks from,
@@ -36,22 +38,50 @@ final readonly class RecommendationCandidateLoader
     }
 
     /**
-     * Unread candidates in feeds the reader subscribes to, newest first,
-     * capped to $poolSize.
+     * Unread candidates, excluding anything the reader has already favorited,
+     * kept, or viewed, in feeds the reader subscribes to. The newest
+     * $poolSize are selected, then returned in a randomized order seeded by
+     * $orderSeed, so batches sample the pool rather than cluster by recency
+     * (#344). The same seed always produces the same order.
      *
      * @return list<PromptLine>
      */
-    public function load(int $userId, int $poolSize): array
+    public function load(int $userId, int $poolSize, int $orderSeed): array
     {
         $qb = $this->candidateQueryBuilder($userId)
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
             ->andWhere(UnreadDql::predicate())
+            // This is the negation of what RecommendationHistoryLoader's
+            // FAVORITES/KEPT/VIEWED sections contain -- a future change to
+            // what counts as reader history there must update both.
+            // Favorited, kept, and viewed entries are the reader's history —
+            // they already appear in the prompt's FAVORITES/KEPT/VIEWED
+            // sections, so scoring them again as fresh candidates would
+            // re-recommend what the reader has already acted on. es is a
+            // LEFT JOIN, so an entry with no state row (never interacted
+            // with) must stay a candidate — hence the null-safe OR on each
+            // flag.
+            ->andWhere(
+                '(es.isFavorite = :notInteracted OR es.isFavorite IS NULL)'
+                . ' AND (es.isKept = :notInteracted OR es.isKept IS NULL)'
+                . ' AND (es.isViewed = :notInteracted OR es.isViewed IS NULL)',
+            )
             ->orderBy('e.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($poolSize)
-            ->setParameter('readFalse', false, Types::BOOLEAN);
+            ->setParameter('readFalse', false, Types::BOOLEAN)
+            ->setParameter('notInteracted', false, Types::BOOLEAN);
 
-        return $this->linesFor($qb);
+        $lines = $this->linesFor($qb);
+
+        // shuffleArray() has no generic stub, so it widens the element type
+        // back to mixed; the @var restates the PromptLine list the return
+        // type promises -- shuffling reorders $lines, it cannot change what
+        // is in it.
+        /** @var list<PromptLine> $shuffled */
+        $shuffled = (new Randomizer(new Mt19937($orderSeed)))->shuffleArray($lines);
+
+        return $shuffled;
     }
 
     /**
@@ -80,6 +110,50 @@ final readonly class RecommendationCandidateLoader
         }
 
         return $linesById;
+    }
+
+    /**
+     * Counts the present entries among $entryIds and the date span they cover,
+     * in one aggregate query scoped through the SAME subscription gate the
+     * candidate lines use — so a pruned or unsubscribed id drops out of the
+     * total and the range alike, consistent with the lines the model sees.
+     * Returns null when the id set resolves to nothing.
+     *
+     * @param list<int> $entryIds
+     */
+    public function summarize(int $userId, array $entryIds): ?CandidatePoolSummary
+    {
+        if ($entryIds === []) {
+            return null;
+        }
+
+        /** @var array{total: int, oldest: ?string, newest: ?string} $row */
+        $row = $this->candidateQueryBuilder($userId)
+            ->select('COUNT(e.id) AS total', 'MIN(e.effectiveDate) AS oldest', 'MAX(e.effectiveDate) AS newest')
+            ->andWhere('e.id IN (:ids)')
+            ->setParameter('ids', $entryIds)
+            ->getQuery()
+            ->getSingleResult();
+
+        return $this->hydrateSummary($row);
+    }
+
+    /**
+     * @param array{total: int, oldest: ?string, newest: ?string} $row an aggregate row over the scoped id set
+     */
+    private function hydrateSummary(array $row): ?CandidatePoolSummary
+    {
+        $oldest = $row['oldest'];
+        $newest = $row['newest'];
+        if (!\is_string($oldest) || !\is_string($newest)) {
+            return null;
+        }
+
+        return new CandidatePoolSummary(
+            total: (int) $row['total'],
+            oldest: (new \DateTimeImmutable($oldest))->format('Y-m-d'),
+            newest: (new \DateTimeImmutable($newest))->format('Y-m-d'),
+        );
     }
 
     private function candidateQueryBuilder(int $userId): QueryBuilder

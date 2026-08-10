@@ -110,6 +110,16 @@ final class AiSettingsJsonTest extends TestCase
         self::assertFalse($shape['suppressReasoning']);
     }
 
+    public function testTheConfigurationShapeCarriesTheBatchConcurrency(): void
+    {
+        $settings = $this->settings('gpt-4o');
+        $settings->setBatchConcurrency(3);
+
+        $shape = AiSettingsJson::configuration($settings, null);
+
+        self::assertSame(3, $shape['batchConcurrency']);
+    }
+
     public function testConfigurationNeverCarriesKeyMaterial(): void
     {
         $encoded = json_encode(AiSettingsJson::configuration($this->settings('gpt-4o'), null));

@@ -54,31 +54,174 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         $this->em->flush();
 
-        $lines = $this->loader()->load($this->userId(), 100);
+        $lines = $this->loader()->load($this->userId(), 100, 1);
 
         self::assertSame([$unread->getId()], array_map(static fn ($l) => $l->entryId, $lines));
     }
 
-    public function testNewestFirst(): void
+    public function testAnUnreadFavoritedEntryIsExcluded(): void
+    {
+        $favorited = $this->entry('favorited', '2026-07-10T00:00:00Z');
+        $state = new EntryState($this->user, $favorited);
+        $state->setIsFavorite(true);
+        $this->em->persist($state);
+        $this->em->flush();
+
+        $lines = $this->loader()->load($this->userId(), 100, 1);
+
+        self::assertSame([], array_map(static fn ($l) => $l->entryId, $lines));
+    }
+
+    public function testAnUnreadKeptEntryIsExcluded(): void
+    {
+        $kept = $this->entry('kept-entry', '2026-07-10T00:00:00Z');
+        $state = new EntryState($this->user, $kept);
+        $state->setIsKept(true);
+        $this->em->persist($state);
+        $this->em->flush();
+
+        $lines = $this->loader()->load($this->userId(), 100, 1);
+
+        self::assertSame([], array_map(static fn ($l) => $l->entryId, $lines));
+    }
+
+    public function testAnUnreadViewedEntryIsExcluded(): void
+    {
+        $viewed = $this->entry('viewed-entry', '2026-07-10T00:00:00Z');
+        $state = new EntryState($this->user, $viewed);
+        $state->markViewed(new \DateTimeImmutable('2026-07-10T01:00:00Z'));
+        $this->em->persist($state);
+        $this->em->flush();
+
+        $lines = $this->loader()->load($this->userId(), 100, 1);
+
+        self::assertSame([], array_map(static fn ($l) => $l->entryId, $lines));
+    }
+
+    public function testAnUnreadEntryWithNoStateRowIsReturned(): void
+    {
+        $noState = $this->entry('no-state', '2026-07-10T00:00:00Z');
+
+        $lines = $this->loader()->load($this->userId(), 100, 1);
+
+        self::assertSame([$noState->getId()], array_map(static fn ($l) => $l->entryId, $lines));
+    }
+
+    public function testAnUnreadEntryWithAllInteractionFlagsFalseIsReturned(): void
+    {
+        $untouched = $this->entry('untouched', '2026-07-10T00:00:00Z');
+        $state = new EntryState($this->user, $untouched);
+        $state->setIsFavorite(false);
+        $state->setIsKept(false);
+        $this->em->persist($state);
+        $this->em->flush();
+
+        $lines = $this->loader()->load($this->userId(), 100, 1);
+
+        self::assertSame([$untouched->getId()], array_map(static fn ($l) => $l->entryId, $lines));
+    }
+
+    public function testReturnsTheUnreadCandidatesAsAMultiset(): void
     {
         $this->entry('older', '2026-07-10T00:00:00Z');
         $this->entry('newer', '2026-07-11T00:00:00Z');
 
-        $lines = $this->loader()->load($this->userId(), 100);
+        // load() no longer promises newest-first order — it selects the
+        // newest N, then shuffles — so only membership and count are the
+        // contract now.
+        $lines = $this->loader()->load($this->userId(), 100, 1);
 
-        self::assertSame(['newer', 'older'], array_map(static fn ($l) => $l->title, $lines));
+        self::assertEqualsCanonicalizing(
+            ['newer', 'older'],
+            array_map(static fn ($l) => $l->title, $lines),
+        );
     }
 
-    public function testPoolSizeCapsTheList(): void
+    public function testPoolSizeCapsTheListToTheNewestCandidates(): void
     {
         $this->entry('a', '2026-07-10T00:00:00Z');
         $this->entry('b', '2026-07-11T00:00:00Z');
         $this->entry('c', '2026-07-12T00:00:00Z');
 
-        $lines = $this->loader()->load($this->userId(), 2);
+        $lines = $this->loader()->load($this->userId(), 2, 1);
 
+        // The selection is still the newest $poolSize; the oldest ('a') is
+        // outside the newest-2 window and never appears, whatever the shuffle
+        // does to the order of the survivors.
         self::assertCount(2, $lines);
-        self::assertSame(['c', 'b'], array_map(static fn ($l) => $l->title, $lines));
+        self::assertEqualsCanonicalizing(
+            ['c', 'b'],
+            array_map(static fn ($l) => $l->title, $lines),
+        );
+    }
+
+    public function testTheSameSeedProducesTheSameOrderTwice(): void
+    {
+        foreach (range(1, 8) as $index) {
+            $this->entry('entry-' . $index, sprintf('2026-07-%02dT00:00:00Z', 10 + $index));
+        }
+
+        $first = $this->loader()->load($this->userId(), 100, 4242);
+        $second = $this->loader()->load($this->userId(), 100, 4242);
+
+        self::assertSame(
+            array_map(static fn ($l) => $l->title, $first),
+            array_map(static fn ($l) => $l->title, $second),
+        );
+    }
+
+    public function testAFixedSeedReordersTheNewestFirstInput(): void
+    {
+        foreach (range(1, 8) as $index) {
+            $this->entry('entry-' . $index, sprintf('2026-07-%02dT00:00:00Z', 10 + $index));
+        }
+
+        // The newest-first order the SELECT produces before the shuffle: the
+        // most recent date ('entry-8') first, down to 'entry-1'.
+        $newestFirst = array_map(
+            static fn (int $index) => 'entry-' . $index,
+            range(8, 1),
+        );
+
+        $shuffled = array_map(
+            static fn ($l) => $l->title,
+            $this->loader()->load($this->userId(), 100, 4242),
+        );
+
+        // Same multiset, different order — the shuffle actually happens.
+        self::assertEqualsCanonicalizing($newestFirst, $shuffled);
+        self::assertNotSame($newestFirst, $shuffled);
+    }
+
+    public function testTheShufflePreservesTheMultisetWithoutLossOrDuplication(): void
+    {
+        $expected = [];
+        foreach (range(1, 8) as $index) {
+            $entry = $this->entry('entry-' . $index, sprintf('2026-07-%02dT00:00:00Z', 10 + $index));
+            $expected[] = $entry->getId();
+        }
+
+        $ids = array_map(
+            static fn ($l) => $l->entryId,
+            $this->loader()->load($this->userId(), 100, 4242),
+        );
+
+        self::assertCount(\count($expected), $ids);
+        self::assertEqualsCanonicalizing($expected, $ids);
+    }
+
+    public function testAnEmptyPoolPassesThroughUnchanged(): void
+    {
+        self::assertSame([], $this->loader()->load($this->userId(), 100, 4242));
+    }
+
+    public function testASingleItemPoolPassesThroughUnchanged(): void
+    {
+        $only = $this->entry('only', '2026-07-10T00:00:00Z');
+
+        $lines = $this->loader()->load($this->userId(), 100, 4242);
+
+        self::assertSame([$only->getId()], array_map(static fn ($l) => $l->entryId, $lines));
     }
 
     public function testLinesForIdsDropsPrunedIds(): void
@@ -158,7 +301,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $this->em->flush();
         $this->entry('titled', '2026-07-10T00:00:00Z');
 
-        $lines = $this->loader()->load($this->userId(), 100);
+        $lines = $this->loader()->load($this->userId(), 100, 1);
 
         self::assertSame('My Custom Feed', $lines[0]->feedName);
     }
@@ -170,7 +313,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $entry->setContentHtml('<p>Content text</p>');
         $this->em->flush();
 
-        $lines = $this->loader()->load($this->userId(), 100);
+        $lines = $this->loader()->load($this->userId(), 100, 1);
 
         self::assertSame('Summary text', $lines[0]->description);
     }
@@ -179,9 +322,86 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $this->entry('untitled', '2026-07-10T00:00:00Z');
 
-        $lines = $this->loader()->load($this->userId(), 100);
+        $lines = $this->loader()->load($this->userId(), 100, 1);
 
         self::assertSame('Example', $lines[0]->feedName);
+    }
+
+    public function testSummarizeReportsTheTotalAndTheDateSpan(): void
+    {
+        $oldest = $this->entry('oldest', '2026-07-10T00:00:00Z');
+        $this->entry('middle', '2026-07-15T00:00:00Z');
+        $newest = $this->entry('newest', '2026-07-20T00:00:00Z');
+
+        $ids = [$oldest->getId() ?? 0, $newest->getId() ?? 0];
+        // Only two of the three ids are passed, so the span and count reflect
+        // exactly the set handed in, not the whole feed.
+        $summary = $this->loader()->summarize($this->userId(), $ids);
+
+        self::assertNotNull($summary);
+        self::assertSame(2, $summary->total);
+        self::assertSame('2026-07-10', $summary->oldest);
+        self::assertSame('2026-07-20', $summary->newest);
+    }
+
+    public function testSummarizeReturnsNullForAnEmptyIdList(): void
+    {
+        $this->entry('unused', '2026-07-10T00:00:00Z');
+
+        self::assertNull($this->loader()->summarize($this->userId(), []));
+    }
+
+    public function testSummarizeReturnsNullWhenEveryIdIsPruned(): void
+    {
+        $this->entry('present', '2026-07-10T00:00:00Z');
+
+        // Ids that resolve to no present entry aggregate to a zero count with
+        // null MIN/MAX, which the loader reports as no summary at all.
+        self::assertNull($this->loader()->summarize($this->userId(), [999999, 1000000]));
+    }
+
+    public function testSummarizeExcludesAnEntryInAnUnsubscribedFeed(): void
+    {
+        $subscribed = $this->entry('subscribed', '2026-07-10T00:00:00Z');
+
+        $otherFeed = new Feed('https://example.com/other.xml');
+        $otherFeed->setTitle('Other');
+        $this->em->persist($otherFeed);
+        $foreign = new Entry(
+            $otherFeed,
+            'foreign',
+            'https://example.com/foreign',
+            'foreign',
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+        );
+        $foreign->setPublishedAt(new \DateTimeImmutable('2026-08-01T00:00:00Z'));
+        $this->em->persist($foreign);
+        $this->em->flush();
+
+        $summary = $this->loader()->summarize(
+            $this->userId(),
+            [$subscribed->getId() ?? 0, $foreign->getId() ?? 0],
+        );
+
+        // The unsubscribed entry is the newest, so if the subscription gate
+        // leaked it the newest date would be 2026-08-01 and the count 2.
+        self::assertNotNull($summary);
+        self::assertSame(1, $summary->total);
+        self::assertSame('2026-07-10', $summary->oldest);
+        self::assertSame('2026-07-10', $summary->newest);
+    }
+
+    public function testSummarizeWithAnEmptyIdListNeverQueriesTheDatabase(): void
+    {
+        $this->entry('unused', '2026-07-10T00:00:00Z');
+
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+
+        $this->loader()->summarize($this->userId(), []);
+
+        self::assertSame([], $recorder->queries());
     }
 
     private function entry(string $guid, string $published): Entry

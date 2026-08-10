@@ -7,6 +7,7 @@ namespace App\Controller\Api;
 use App\Dto\Ai\AddConfigurationRequest;
 use App\Dto\Ai\RenameConfigurationRequest;
 use App\Dto\Ai\SaveModelRequest;
+use App\Dto\Ai\SetBatchConcurrencyRequest;
 use App\Dto\Ai\SetReasoningRequest;
 use App\Entity\User;
 use App\Exception\AiConfigurationNotFoundApiException;
@@ -157,6 +158,30 @@ final readonly class AiSettingsController
         }
 
         $this->configurator->setSuppressReasoning($configuration, $request->suppressReasoning);
+
+        return new JsonResponse(
+            AiSettingsJson::configuration($configuration, $this->configurator->settingsFor($user)?->getId()),
+        );
+    }
+
+    #[Route(
+        '/configs/{id}/batch-concurrency',
+        name: 'api_me_ai_set_batch_concurrency',
+        requirements: ['id' => '\d+'],
+        methods: ['PUT'],
+    )]
+    public function setBatchConcurrency(
+        #[CurrentUser] User $user,
+        int $id,
+        #[MapRequestPayload] SetBatchConcurrencyRequest $request,
+    ): JsonResponse {
+        try {
+            $configuration = $this->configuration->require($user, $id);
+        } catch (ConfigurationNotFoundException $e) {
+            throw new AiConfigurationNotFoundApiException($e);
+        }
+
+        $this->configurator->setBatchConcurrency($configuration, $request->batchConcurrency);
 
         return new JsonResponse(
             AiSettingsJson::configuration($configuration, $this->configurator->settingsFor($user)?->getId()),

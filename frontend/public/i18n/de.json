@@ -91,7 +91,10 @@
         "namePlaceholder": "Optionaler Name",
         "add": "Konfiguration hinzufügen",
         "reasoning": "Das Modell nicht nachdenken lassen",
-        "reasoningHint": "Für die meisten Anbieter aktiviert lassen. Nur ausschalten, wenn der Endpunkt die Anfrage ablehnt (zum Beispiel eine direkte OpenAI-URL)."
+        "reasoningHint": "Für die meisten Anbieter aktiviert lassen. Nur ausschalten, wenn der Endpunkt die Anfrage ablehnt (zum Beispiel eine direkte OpenAI-URL).",
+        "batchConcurrency": "Parallele Anfragen",
+        "batchConcurrencyHint": "Wie viele Batch-Prompts gleichzeitig gesendet werden (1–4). Bei einem gehosteten Anbieter erhöht das den Wert für einen schnelleren Durchlauf; bei einem lokalen Modell bei 1 belassen.",
+        "saved": "Gespeichert"
       },
       "errors": {
         "provider": "Der Anbieter konnte nicht genutzt werden. Prüfe den Endpunkt und den Schlüssel.",

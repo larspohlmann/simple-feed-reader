@@ -11,6 +11,7 @@ use App\Service\Recommendation\CompletionBodyDecoder;
 use App\Service\Recommendation\CompletionRequest;
 use App\Service\Recommendation\CompletionStreamProgress;
 use App\Service\Recommendation\CompletionStreamObserver;
+use App\Service\Recommendation\ConcurrentCompletion;
 use App\Service\Recommendation\JsonSchema;
 use App\Service\Recommendation\NullCompletionStreamObserver;
 use App\Service\Recommendation\OpenAiCompatibleChatClient;
@@ -57,6 +58,28 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     private function clientAnswering(MockResponse $response): OpenAiCompatibleChatClient
     {
         return $this->clientUsing(new MockHttpClient($response));
+    }
+
+    /** @param list<MockResponse> $responses one per concurrent call, in call order */
+    private function clientReturning(array $responses): OpenAiCompatibleChatClient
+    {
+        return $this->clientUsing(new MockHttpClient($responses));
+    }
+
+    /** A minimal SSE stream whose single delta carries $answer as the assistant content. */
+    private function sseStream(string $answer): MockResponse
+    {
+        $event = 'data: ' . json_encode(
+            ['choices' => [['delta' => ['content' => $answer]]]],
+            \JSON_THROW_ON_ERROR,
+        ) . "\n\n";
+
+        return new MockResponse([$event, "data: [DONE]\n\n"]);
+    }
+
+    private function concurrentCall(CompletionStreamObserver $observer): ConcurrentCompletion
+    {
+        return new ConcurrentCompletion($this->request(), $observer);
     }
 
     public function testReturnsTheAssistantContentJoinedFromTheStream(): void
@@ -324,15 +347,33 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
     }
 
+    /**
+     * complete() is a one-call completeMany() wave (#344): this pins that the
+     * delegation still preserves complete()'s original contract even for a
+     * failure that never produced a response at all (the request() call
+     * itself refuses the connection) -- completeMany() settles it as that
+     * call's own outcome (testCompleteManySettlesARequestPhaseFailureAsThatCallsOutcome
+     * below pins that half directly), and complete() unwraps a single failed
+     * outcome back into a thrown exception.
+     */
     public function testTransportErrorsAreUnreachable(): void
     {
         $client = new MockHttpClient(static function (): MockResponse {
             throw new TransportException('Connection refused');
         });
 
-        $this->expectException(ProviderUnreachableException::class);
-        $this->clientUsing($client)
-            ->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
+        // The exact message, not merely the exception class: without the
+        // throw in the ExceptionInterface catch, contentOf() would still
+        // raise a ProviderUnreachableException of its own (an empty reader
+        // reads as "answered without a completion"), so only the message
+        // proves this specific catch block actually ran.
+        try {
+            $this->clientUsing($client)
+                ->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
+            self::fail(ProviderUnreachableException::class . ' was not thrown.');
+        } catch (ProviderUnreachableException $e) {
+            self::assertSame('That address did not answer.', $e->getMessage());
+        }
     }
 
     public function testObserverSeesTheAnswerAndTheWireCountGrow(): void
@@ -494,6 +535,189 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $body = $this->captureRequestBody($this->request());
 
         self::assertArrayNotHasKey('reasoning', $body);
+    }
+
+    public function testCompleteManyReturnsAnswersAlignedByIndex(): void
+    {
+        $client = $this->clientReturning([
+            $this->sseStream('{"picks":[]}'),
+            $this->sseStream('{"picks":[{"id":1,"score":9,"reason":"x"}]}'),
+        ]);
+
+        $outcomes = $client->completeMany($this->credentials(), [
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+        ]);
+
+        self::assertCount(2, $outcomes);
+        self::assertFalse($outcomes[0]->isFailure());
+        self::assertFalse($outcomes[1]->isFailure());
+        self::assertSame('{"picks":[]}', $outcomes[0]->content());
+        self::assertSame('{"picks":[{"id":1,"score":9,"reason":"x"}]}', $outcomes[1]->content());
+    }
+
+    public function testCompleteManyCarriesOneCallsTransportFailureWithoutAbortingSiblings(): void
+    {
+        $client = $this->clientReturning([
+            $this->sseStream('{"picks":[]}'),
+            new MockResponse('', ['http_code' => 500]),
+        ]);
+
+        $outcomes = $client->completeMany($this->credentials(), [
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+        ]);
+
+        // The sibling still decoded; the failed call carries its cause rather
+        // than aborting the whole read.
+        self::assertFalse($outcomes[0]->isFailure());
+        self::assertSame('{"picks":[]}', $outcomes[0]->content());
+        self::assertTrue($outcomes[1]->isFailure());
+        self::assertInstanceOf(ProviderUnreachableException::class, $outcomes[1]->cause());
+    }
+
+    public function testCompleteManyMapsAuthRejectionToCredentialsRejected(): void
+    {
+        $client = $this->clientReturning([
+            new MockResponse('', ['http_code' => 401]),
+        ]);
+
+        $outcomes = $client->completeMany($this->credentials(), [
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+        ]);
+
+        self::assertTrue($outcomes[0]->isFailure());
+        self::assertInstanceOf(CredentialsRejectedException::class, $outcomes[0]->cause());
+    }
+
+    /**
+     * completeMany's whole atomicity promise -- one failed call never aborts
+     * the read for its siblings -- rests on advance() converting even a raw
+     * Symfony transport exception into that call's own failure outcome. Every
+     * other completeMany failure test above raises through an HTTP status
+     * (guardStatus's domain exceptions); this one is the only one that goes
+     * through the multiplexed loop's own generic ExceptionInterface catch, by
+     * having the connection itself die mid-stream.
+     */
+    public function testCompleteManyConvertsARawTransportFailureIntoThatCallsOutcomeWithoutAbortingSiblings(): void
+    {
+        $failingBody = (static function (): \Generator {
+            yield 'data: {"choices":[{"delta":{"content":"par"}}]}' . "\n\n";
+            yield new TransportException('Connection reset');
+        })();
+        $client = $this->clientReturning([
+            new MockResponse($failingBody),
+            $this->sseStream('{"picks":[]}'),
+        ]);
+
+        $outcomes = $client->completeMany($this->credentials(), [
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+        ]);
+
+        self::assertTrue($outcomes[0]->isFailure());
+        self::assertInstanceOf(ProviderUnreachableException::class, $outcomes[0]->cause());
+        self::assertSame('That address did not answer.', $outcomes[0]->cause()->getMessage());
+        self::assertFalse($outcomes[1]->isFailure());
+        self::assertSame('{"picks":[]}', $outcomes[1]->content());
+    }
+
+    /**
+     * The sibling of the test above, one stage earlier: here the connection
+     * refusal happens at request() itself, before there is any response to
+     * read a chunk from at all (MockHttpClient's factory throws synchronously,
+     * exactly as a refused TCP connection would). fireRequests() has to catch
+     * this one directly and bank it as that call's own outcome -- unlike the
+     * mid-stream case, there is no response object for advance() to key it by,
+     * so this exercises a different catch block from the mid-stream test
+     * above. completeMany() must not throw for this either: it stays exactly
+     * as available to the caller as any other per-call failure, which is what
+     * lets complete() (a one-call completeMany() wave, #344) recover it back
+     * into a thrown exception in testTransportErrorsAreUnreachable.
+     */
+    public function testCompleteManySettlesARequestPhaseFailureAsThatCallsOutcome(): void
+    {
+        $client = new MockHttpClient(static function (): MockResponse {
+            throw new TransportException('Connection refused');
+        });
+
+        $outcomes = $this->clientUsing($client)->completeMany($this->credentials(), [
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+        ]);
+
+        self::assertTrue($outcomes[0]->isFailure());
+        self::assertInstanceOf(ProviderUnreachableException::class, $outcomes[0]->cause());
+        self::assertSame('That address did not answer.', $outcomes[0]->cause()->getMessage());
+    }
+
+    /**
+     * A failed call's own response must not linger open once its outcome is
+     * settled -- the transport-failure branches cancel it explicitly rather
+     * than counting on the connection to close itself.
+     */
+    public function testCompleteManyCancelsTheFailedCallsOwnResponse(): void
+    {
+        $client = new ResponseCapturingHttpClient(new MockResponse('', ['http_code' => 500]));
+
+        $outcomes = $this->clientUsing($client)->completeMany($this->credentials(), [
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+        ]);
+
+        self::assertTrue($outcomes[0]->isFailure());
+        self::assertTrue($client->lastResponse?->getInfo('canceled'));
+    }
+
+    /**
+     * The multiplexed loop routes every chunk back to the reader and observer
+     * of the response it belongs to. If it crossed the streams, one call's
+     * answer would leak into the other's outcome — so each observer must have
+     * seen only its own answer, and each outcome must carry its own.
+     */
+    public function testCompleteManyRoutesEachStreamToItsOwnReaderAndObserver(): void
+    {
+        $client = $this->clientReturning([
+            $this->sseStream('{"a":1}'),
+            $this->sseStream('{"b":2}'),
+        ]);
+        $first = $this->recordingObserver();
+        $second = $this->recordingObserver();
+
+        $outcomes = $client->completeMany($this->credentials(), [
+            $this->concurrentCall($first),
+            $this->concurrentCall($second),
+        ]);
+
+        self::assertSame('{"a":1}', $outcomes[0]->content());
+        self::assertSame('{"b":2}', $outcomes[1]->content());
+        self::assertNotSame([], $first->reports);
+        self::assertNotSame([], $second->reports);
+        self::assertSame('{"a":1}', $first->reports[\count($first->reports) - 1]->answerSoFar);
+        self::assertSame('{"b":2}', $second->reports[\count($second->reports) - 1]->answerSoFar);
+    }
+
+    /**
+     * A stream that carries neither a content nor a reasoning answer is an
+     * empty completion, and on the concurrent path that becomes the call's own
+     * failure outcome rather than an exception that would lose its siblings.
+     */
+    public function testCompleteManyRecordsAnEmptyCompletionAsThatCallsFailure(): void
+    {
+        $client = $this->clientReturning([
+            $this->sseStream('{"picks":[]}'),
+            new MockResponse([
+                'data: {"choices":[{"delta":{"role":"assistant"}}]}' . "\n\n",
+                "data: [DONE]\n\n",
+            ]),
+        ]);
+
+        $outcomes = $client->completeMany($this->credentials(), [
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+        ]);
+
+        self::assertFalse($outcomes[0]->isFailure());
+        self::assertTrue($outcomes[1]->isFailure());
+        self::assertInstanceOf(ProviderUnreachableException::class, $outcomes[1]->cause());
     }
 
     /** @return array<string, mixed> the decoded JSON request body */
