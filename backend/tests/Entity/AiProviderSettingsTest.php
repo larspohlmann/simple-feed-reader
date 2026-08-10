@@ -149,4 +149,37 @@ final class AiProviderSettingsTest extends TestCase
 
         self::assertFalse($settings->suppressesReasoning());
     }
+
+    public function testBatchConcurrencyDefaultsToOne(): void
+    {
+        $settings = $this->settings();
+        self::assertSame(1, $settings->batchConcurrency());
+    }
+
+    public function testSetBatchConcurrencyIsReadBack(): void
+    {
+        $settings = $this->settings();
+        $settings->setBatchConcurrency(3);
+        self::assertSame(3, $settings->batchConcurrency());
+    }
+
+    public function testMaxBatchConcurrencyIsFour(): void
+    {
+        self::assertSame(4, AiProviderSettings::MAX_BATCH_CONCURRENCY);
+    }
+
+    public function testReplacingTheConnectionKeepsTheBatchConcurrency(): void
+    {
+        $settings = $this->settings();
+        $settings->setBatchConcurrency(3);
+
+        $settings->replaceConnection(
+            'https://other.example.test/v1',
+            $this->sealed('b3RoZXI='),
+            'wxyz',
+            new \DateTimeImmutable('2026-08-06 11:00:00'),
+        );
+
+        self::assertSame(3, $settings->batchConcurrency());
+    }
 }
