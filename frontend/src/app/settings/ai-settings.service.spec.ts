@@ -247,6 +247,22 @@ describe('AiSettingsService', () => {
     expect(availability.model()).toBe('claude');
   });
 
+  it('duplicates a configuration and adds the copy to the list', () => {
+    svc.configs.set([
+      config({ id: 1, name: 'Work OpenAI', active: true, ready: true, model: 'gpt-4o' }),
+    ]);
+
+    svc.duplicate(1);
+    const request = ctrl.expectOne(`${base}/api/me/ai/configs/1/duplicate`);
+    expect(request.request.method).toBe('POST');
+
+    request.flush(config({ id: 2, name: 'Copy of Work OpenAI' }));
+
+    expect(svc.configs().map((each) => each.id)).toEqual([1, 2]);
+    expect(svc.configs()[1].name).toBe('Copy of Work OpenAI');
+    expect(svc.configs()[1].active).toBe(false);
+  });
+
   it('drops a configuration and resets availability when the active one is removed', () => {
     svc.load();
     ctrl.expectOne(`${base}/api/me/ai`).flush({

@@ -147,6 +147,13 @@ export class AiSettingsService {
     );
   }
 
+  duplicate(id: number): void {
+    this.run(
+      this.http.post<AiConfig>(`${this.base}/api/me/ai/configs/${id}/duplicate`, {}),
+      (config) => this.upsert(config),
+    );
+  }
+
   remove(id: number): void {
     this.run(this.http.delete<void>(`${this.base}/api/me/ai/configs/${id}`), () => this.drop(id));
   }
