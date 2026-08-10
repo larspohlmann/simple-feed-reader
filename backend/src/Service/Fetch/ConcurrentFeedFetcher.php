@@ -239,13 +239,12 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
 
     /**
      * The same attempt pinned to the next address family, or null when a
-     * different family cannot help — CrossFamilyFailover decides whether the
-     * failure is a dead route worth re-driving. A single-family host has nothing
-     * left to try, so the guard's attempt list bounds the retry.
+     * different family cannot help (see warrantsAnotherFamily). A single-family
+     * host has nothing left to try, so the guard's attempt list bounds the retry.
      */
     private function overNextFamily(FetchAttempt $attempt, FetchException $failure): ?FetchAttempt
     {
-        if (!CrossFamilyFailover::isWarranted($failure->getPrevious())) {
+        if (!$this->warrantsAnotherFamily($failure)) {
             return null;
         }
 
@@ -258,6 +257,26 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
         return $attempt->pinnedAddressAttempt + 1 < $familyCount
             ? $attempt->overNextPinnedAddress()
             : null;
+    }
+
+    /**
+     * Whether this failure could clear on a different address family. An error
+     * status (any non-2xx the classifier raised — a 4xx/5xx, or the 410/429 it
+     * singles out) can be tied to the source address, so the other family is
+     * worth a try. With no status it is a transport failure: a dead-route reset
+     * qualifies, a timeout does not. An oversized body would repeat on any family.
+     */
+    private function warrantsAnotherFamily(FetchException $failure): bool
+    {
+        if ($failure instanceof ResponseTooLargeException) {
+            return false;
+        }
+
+        if ($failure instanceof FeedUnreachableException && null === $failure->statusCode) {
+            return CrossFamilyFailover::isWarranted($failure->getPrevious());
+        }
+
+        return true;
     }
 
     /** @return array<string, string> */

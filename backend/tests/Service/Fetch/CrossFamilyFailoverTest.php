@@ -27,4 +27,22 @@ final class CrossFamilyFailoverTest extends TestCase
     {
         self::assertFalse(CrossFamilyFailover::isWarranted(null));
     }
+
+    public function testAClientOrServerErrorStatusWarrantsAnotherFamily(): void
+    {
+        // A 403 from taz over IPv6 while IPv4 serves 200 is an address-family
+        // block, not a genuine refusal — the other family is worth a try.
+        self::assertTrue(CrossFamilyFailover::isRetryableStatus(400));
+        self::assertTrue(CrossFamilyFailover::isRetryableStatus(403));
+        self::assertTrue(CrossFamilyFailover::isRetryableStatus(503));
+    }
+
+    public function testASuccessOrRedirectStatusDoesNotWarrantAnotherFamily(): void
+    {
+        // 2xx and 304 are answers; 3xx is a redirect the caller follows. None is
+        // a failure to route around.
+        self::assertFalse(CrossFamilyFailover::isRetryableStatus(200));
+        self::assertFalse(CrossFamilyFailover::isRetryableStatus(304));
+        self::assertFalse(CrossFamilyFailover::isRetryableStatus(301));
+    }
 }

@@ -48,19 +48,71 @@ final class FailoverRequestSenderTest extends TestCase
         self::assertSame(1, $client->getRequestsCount());
     }
 
-    public function testDoesNotFailOverOnAnHttpErrorStatus(): void
+    public function testFailsOverToTheNextFamilyOnAnErrorStatus(): void
     {
-        // A 404 is a real answer, not a dead route: the sender must return it and
-        // never burn a second family retrying a host that is plainly reachable.
+        // taz.de forbids its IPv6 range from Strato (403) while IPv4 serves 200;
+        // the error status must fall over to the family that answers.
         $client = new MockHttpClient([
-            new MockResponse('nope', ['http_code' => 404]),
-            new MockResponse('unexpected second try', ['http_code' => 200]),
+            new MockResponse('forbidden over IPv6', ['http_code' => 403]),
+            new MockResponse('served over IPv4', ['http_code' => 200]),
         ]);
 
         $response = (new FailoverRequestSender($client))
-            ->send('GET', 'https://dual.example.com/missing', new GuardedUrl('dual.example.com', self::DUAL_STACK), []);
+            ->send('GET', 'https://dual.example.com/post', new GuardedUrl('dual.example.com', self::DUAL_STACK), []);
 
-        self::assertSame(404, $response->getStatusCode());
+        self::assertSame('served over IPv4', $response->getContent());
+        self::assertSame(2, $client->getRequestsCount());
+    }
+
+    public function testWalksEveryFamilyUntilOneAnswers(): void
+    {
+        // Both the combined pin and the IPv4-only pin reset; only the IPv6-only
+        // pin answers. The sender must try the whole attempt list, not stop after
+        // the first fallback.
+        [$ipv6] = self::DUAL_STACK;
+        $onlyIpv6Answers = static function (string $method, string $url, array $options) use ($ipv6): MockResponse {
+            /** @var array<string, string> $resolve */
+            $resolve = $options['resolve'];
+
+            return $resolve['dual.example.com'] === $ipv6
+                ? new MockResponse('answered over IPv6', ['http_code' => 200])
+                : new MockResponse('', ['error' => 'Connection reset by peer']);
+        };
+        $client = new MockHttpClient($onlyIpv6Answers);
+
+        $response = (new FailoverRequestSender($client))
+            ->send('GET', 'https://dual.example.com/post', new GuardedUrl('dual.example.com', self::DUAL_STACK), []);
+
+        self::assertSame('answered over IPv6', $response->getContent());
+        self::assertSame(3, $client->getRequestsCount());
+    }
+
+    public function testKeepsTheFinalFamilysErrorStatusWhenNoFamilyAnswers(): void
+    {
+        // Both families forbid the request: the last answer stands so the caller
+        // still sees the real 403 rather than a synthesised failure.
+        $client = new MockHttpClient(static fn (): MockResponse => new MockResponse('nope', ['http_code' => 403]));
+
+        $response = (new FailoverRequestSender($client))
+            ->send('GET', 'https://dual.example.com/post', new GuardedUrl('dual.example.com', self::DUAL_STACK), []);
+
+        self::assertSame(403, $response->getStatusCode());
+    }
+
+    public function testReturnsARedirectForTheCallerToFollowRatherThanFailingOver(): void
+    {
+        // A 3xx is not an error to route around; the caller follows it. The sender
+        // must return it from the first family without trying another.
+        $redirect = new MockResponse('', [
+            'http_code' => 301,
+            'response_headers' => ['location' => ['https://dual.example.com/moved']],
+        ]);
+        $client = new MockHttpClient([$redirect, new MockResponse('unexpected second try', ['http_code' => 200])]);
+
+        $response = (new FailoverRequestSender($client))
+            ->send('GET', 'https://dual.example.com/post', new GuardedUrl('dual.example.com', self::DUAL_STACK), []);
+
+        self::assertSame(301, $response->getStatusCode());
         self::assertSame(1, $client->getRequestsCount());
     }
 

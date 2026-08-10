@@ -191,6 +191,49 @@ final class ConcurrentFeedFetcherTest extends TestCase
         self::assertSame([$ipv6 . ',' . $ipv4, $ipv4, $ipv6], $seenPins);
     }
 
+    public function testFailsOverToIpv4WhenIpv6AnswersWithAnErrorStatus(): void
+    {
+        // taz.de forbids its IPv6 range from Strato (403) while IPv4 serves 200;
+        // the error status must fall over to the family that answers.
+        $ipv6 = '2a02:2e0:3fe:1001:7777:772e:2:85';
+        $ipv4 = '193.99.144.85';
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use ($ipv4): MockResponse {
+                /** @var array<string, string> $resolve */
+                $resolve = $options['resolve'];
+
+                return $resolve['taz.de'] === $ipv4
+                    ? new MockResponse('<rss/>', ['http_code' => 200])
+                    : new MockResponse('forbidden', ['http_code' => 403]);
+            },
+            dnsOverrides: ['taz.de' => [$ipv6, $ipv4]],
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://taz.de/!p4608;rss/')]));
+
+        self::assertSame('<rss/>', $outcomes[1]->responseOrThrow()->body);
+    }
+
+    public function testAnOversizedBodyIsNotFailedOverToAnotherFamily(): void
+    {
+        // The cap would be exceeded on any family, so a second request is pure
+        // waste: the oversized outcome stands after a single attempt.
+        $requestCount = 0;
+        $fetcher = $this->fetcher(
+            function () use (&$requestCount): MockResponse {
+                ++$requestCount;
+
+                return new MockResponse(str_repeat('x', 6_000_000), ['http_code' => 200]);
+            },
+            dnsOverrides: ['dual.example.com' => ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']],
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://dual.example.com/feed')]));
+
+        self::assertInstanceOf(ResponseTooLargeException::class, $outcomes[1]->failure());
+        self::assertSame(1, $requestCount);
+    }
+
     public function testATimeoutIsNotFailedOverToAnotherFamily(): void
     {
         // A timeout means the family answered the connect but is slow, not that

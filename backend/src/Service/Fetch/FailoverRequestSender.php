@@ -10,15 +10,16 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
  * Sends a guard-validated request and fails over across address families when a
- * family connects but then dies before the response headers arrive.
+ * family cannot serve the request.
  *
  * The client's own happy-eyeballs races the two families only at the TCP
  * connect; once one connects it is committed, so a family that resets during
- * the TLS handshake (heise's IPv6 from Strato) takes the whole request down
- * with no fallback. This sender pins each family in turn and forces the headers
- * to arrive, so that transport failure surfaces here and the next family is
- * tried. A real HTTP status — even 4xx or 5xx — is a genuine answer and is
- * returned untouched.
+ * the TLS handshake (heise's IPv6 from Strato) takes the whole request down with
+ * no fallback. This sender pins each family in turn and forces the status line to
+ * arrive, so both a post-connect transport reset and a route-specific error
+ * status (taz.de forbids its IPv6 range from Strato while IPv4 serves 200) fall
+ * over to the family that works. The last family's answer stands as it is, so a
+ * genuine 4xx/5xx is still reported.
  */
 final readonly class FailoverRequestSender
 {
@@ -30,38 +31,42 @@ final readonly class FailoverRequestSender
      * @param array<string, mixed> $options request options; any `resolve` is
      *                                       overridden per family attempt
      *
-     * @throws TransportExceptionInterface when every family attempt fails
+     * @throws TransportExceptionInterface when the final family's connection fails
      */
     public function send(string $method, string $url, GuardedUrl $guarded, array $options): ResponseInterface
     {
         $attempts = $guarded->pinnedAddressAttempts();
-        $lastError = null;
+        $finalAttempt = \count($attempts) - 1;
 
-        foreach ($attempts as $pinnedAddresses) {
+        foreach ($attempts as $index => $pinnedAddresses) {
             $response = $this->httpClient->request($method, $url, [
                 ...$options,
                 'resolve' => [$guarded->host => $pinnedAddresses],
             ]);
+            $canFailOver = $index < $finalAttempt;
 
             try {
                 // Block until the status line arrives: a family that resets after
-                // the TCP connect throws here, so the next family can be tried.
-                $response->getStatusCode();
-
-                return $response;
+                // the TCP connect throws here.
+                $status = $response->getStatusCode();
             } catch (TransportExceptionInterface $transportError) {
                 $response->cancel();
-                if (!CrossFamilyFailover::isWarranted($transportError)) {
-                    // A timeout, not a dead route: another family would only add
-                    // more waiting. Surface it now rather than retrying.
-                    throw $transportError;
+                if ($canFailOver && CrossFamilyFailover::isWarranted($transportError)) {
+                    continue;
                 }
-                $lastError = $transportError;
+
+                throw $transportError;
             }
+
+            if ($canFailOver && CrossFamilyFailover::isRetryableStatus($status)) {
+                $response->cancel();
+
+                continue;
+            }
+
+            return $response;
         }
 
-        // The attempt list is non-empty and every family reset, so $lastError
-        // holds the final dead-route error.
-        throw $lastError;
+        throw new \LogicException('A non-empty attempt list always returns or throws on its final family.');
     }
 }
