@@ -12,13 +12,21 @@ namespace App\Service\Recommendation;
 final class RecommendationPromptText
 {
     public const string SYSTEM_ROLE = 'You score candidate posts for one reader of an RSS reader. The user '
-        . "message holds four sections. FAVORITES, KEPT and VIEWED list posts from the reader's history, newest "
-        . 'first. FAVORITES weighs strongest, KEPT next, VIEWED least. CANDIDATES lists unread posts; each line '
-        . 'starts with the candidate id in square brackets. Score each candidate from 0 to 100 for how strongly '
-        . "the reader's history suggests they would open it: 90-100 squarely inside a theme the history shows "
-        . 'strong, repeated interest in; 60-89 clearly matches a visible interest; 30-59 plausibly interesting '
-        . 'but the connection is loose; 0-29 no visible connection. Prefer recent posts. When several candidates '
-        . 'cover the same story, score only the best source and omit the others.';
+        . 'message holds four sections. FAVORITES, KEPT and VIEWED list posts from the '
+        . "reader's history, newest first. FAVORITES weighs strongest, KEPT next, VIEWED "
+        . 'least. CANDIDATES lists unread posts; each line starts with the candidate id in '
+        . 'square brackets. Score each candidate from 0 to 100 for how strongly the '
+        . "reader's history — above all the FAVORITES — suggests they would open it. Be "
+        . 'critical and sparing with high scores: most candidates are only a weak or partial '
+        . 'fit and must score below 50. Reserve 90-100 for the rare candidate that is an '
+        . 'unmistakable, specific match to a strong, repeated favorite interest; 70-89 for a '
+        . 'clear, direct match to a demonstrated interest; 40-69 for a real but partial or '
+        . 'merely thematic match; 10-39 for a weak or tangential link; 0-9 for no visible '
+        . 'connection. A post that only shares a broad topic the reader occasionally reads '
+        . 'is a partial match, not a strong one. If you are giving many candidates scores '
+        . 'above 80, you are being too generous — lower them. When uncertain, score lower. '
+        . 'Prefer recent posts. When several candidates cover the same story, score only the '
+        . 'best source and omit the others.';
 
     public const string DEDUP_ROLE = 'You remove duplicate stories from a ranked list built for one reader of '
         . 'an RSS reader. The user message lists RANKED entries, best first; each line starts with the entry id '

@@ -109,6 +109,7 @@ final class RecommendationPromptBuilder
         RecommendationHistory $history,
         array $candidateLines,
         EffectiveRecommendationSettings $settings,
+        ?CandidatePoolSummary $poolSummary = null,
     ): array {
         $descriptionLength = $this->descriptionLength($settings->packing->contextWindow);
 
@@ -116,15 +117,52 @@ final class RecommendationPromptBuilder
         $contract = RecommendationPromptText::OUTPUT_CONTRACT;
         $system = implode("\n\n", [RecommendationPromptText::SYSTEM_ROLE, $guidance, $contract]);
 
-        $user = implode("\n\n", [
-            $this->historySections($history, $descriptionLength),
-            $this->candidateSection($candidateLines, $descriptionLength),
-        ]);
+        $user = implode("\n\n", $this->userSections($history, $candidateLines, $descriptionLength, $poolSummary));
 
         return [
             ['role' => 'system', 'content' => $system],
             ['role' => 'user', 'content' => $user],
         ];
+    }
+
+    /**
+     * The user message: the history, then the global pool frame when one is
+     * present (#344 shuffles the pool into random batches, so each batch names
+     * the whole set's size and date span before its own local sample), then the
+     * candidate lines.
+     *
+     * @param list<PromptLine> $candidateLines
+     *
+     * @return list<string>
+     */
+    private function userSections(
+        RecommendationHistory $history,
+        array $candidateLines,
+        int $descriptionLength,
+        ?CandidatePoolSummary $poolSummary,
+    ): array {
+        $sections = [$this->historySections($history, $descriptionLength)];
+        $poolFrame = $this->poolFrameLine($poolSummary);
+        if (null !== $poolFrame) {
+            $sections[] = $poolFrame;
+        }
+        $sections[] = $this->candidateSection($candidateLines, $descriptionLength);
+
+        return $sections;
+    }
+
+    private function poolFrameLine(?CandidatePoolSummary $poolSummary): ?string
+    {
+        if (null === $poolSummary) {
+            return null;
+        }
+
+        return \sprintf(
+            'The full candidate set has %d posts spanning %s to %s. This batch is a random sample of that set.',
+            $poolSummary->total,
+            $poolSummary->oldest,
+            $poolSummary->newest,
+        );
     }
 
     /**

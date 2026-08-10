@@ -61,6 +61,7 @@ final readonly class RecommendationBatchWave
         int $waveSize,
     ): array {
         $waveBatches = $this->waveBatches($run, $userId, $waveSize);
+        $poolSummary = $this->candidateLoader->summarize($userId, $this->allCandidateIds($run));
         $winners = [];
         $correctiveReply = [];
         $pending = $this->pendingPositions($waveBatches, $winners);
@@ -74,6 +75,7 @@ final readonly class RecommendationBatchWave
                 $waveBatches,
                 $pending,
                 $correctiveReply,
+                $poolSummary,
             );
             $pending = [];
             foreach ($replies as $position => $reply) {
@@ -115,6 +117,23 @@ final readonly class RecommendationBatchWave
         }
 
         return $waveBatches;
+    }
+
+    /**
+     * Every candidate id across every batch of the frozen plan, flattened. This
+     * is the whole snapshot pool, so the pool summary derived from it is the
+     * same global frame for every batch of the run, not the batch's own dates.
+     *
+     * @return list<int>
+     */
+    private function allCandidateIds(RecommendationRun $run): array
+    {
+        $candidateBatches = $run->getCandidateBatches();
+        if ([] === $candidateBatches) {
+            return [];
+        }
+
+        return array_merge(...$candidateBatches);
     }
 
     /**
@@ -183,6 +202,7 @@ final readonly class RecommendationBatchWave
         array $waveBatches,
         array $pending,
         array $correctiveReply,
+        ?CandidatePoolSummary $poolSummary,
     ): array {
         $calls = [];
         $recordedCalls = [];
@@ -193,6 +213,7 @@ final readonly class RecommendationBatchWave
                 $waveBatch,
                 $effectiveSettings,
                 $correctiveReply[$position] ?? null,
+                $poolSummary,
             );
             $recordedCall = $this->callRecorder->begin(
                 $run,
@@ -316,10 +337,16 @@ final readonly class RecommendationBatchWave
         WaveBatch $waveBatch,
         EffectiveRecommendationSettings $effectiveSettings,
         ?string $lastInvalidReply,
+        ?CandidatePoolSummary $poolSummary,
     ): array {
         $history = $this->historyLoader->load($userId, $effectiveSettings);
         $candidateLines = $this->linesInSnapshotOrder($waveBatch->ids, $waveBatch->linesById);
-        $messages = $this->promptBuilder->batchMessages($history, $candidateLines, $effectiveSettings);
+        $messages = $this->promptBuilder->batchMessages(
+            $history,
+            $candidateLines,
+            $effectiveSettings,
+            $poolSummary,
+        );
 
         return $this->promptBuilder->messagesWithCorrectiveTail($messages, $lastInvalidReply);
     }

@@ -55,6 +55,14 @@ candidates, but before packing it **shuffles** the pool into a random order
 (clock-seeded, deterministic per seed) so each batch is a representative
 sample of the whole pool instead of a recency cluster (#344).
 
+Because the shuffle scatters dates across batches, each batch's user message
+carries a **global pool frame** — one line naming the whole snapshot pool's size
+and date span (`MIN`/`MAX` `effectiveDate` over every batch's ids, one aggregate
+query, scoped through the same subscription gate as the candidate lines) — so
+the model judges a candidate's recency and rarity against the whole set, not its
+local sample. The scoring rubric (`SYSTEM_ROLE`) was also tightened to be far
+more sparing with high scores, since the model rated too many candidates a 95.
+
 ### The wave
 
 A tick's wave covers the batches

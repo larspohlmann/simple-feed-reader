@@ -95,6 +95,50 @@ final readonly class RecommendationCandidateLoader
         return $linesById;
     }
 
+    /**
+     * Counts the present entries among $entryIds and the date span they cover,
+     * in one aggregate query scoped through the SAME subscription gate the
+     * candidate lines use — so a pruned or unsubscribed id drops out of the
+     * total and the range alike, consistent with the lines the model sees.
+     * Returns null when the id set resolves to nothing.
+     *
+     * @param list<int> $entryIds
+     */
+    public function summarize(int $userId, array $entryIds): ?CandidatePoolSummary
+    {
+        if ($entryIds === []) {
+            return null;
+        }
+
+        /** @var array{total: int, oldest: ?string, newest: ?string} $row */
+        $row = $this->candidateQueryBuilder($userId)
+            ->select('COUNT(e.id) AS total', 'MIN(e.effectiveDate) AS oldest', 'MAX(e.effectiveDate) AS newest')
+            ->andWhere('e.id IN (:ids)')
+            ->setParameter('ids', $entryIds)
+            ->getQuery()
+            ->getSingleResult();
+
+        return $this->hydrateSummary($row);
+    }
+
+    /**
+     * @param array{total: int, oldest: ?string, newest: ?string} $row an aggregate row over the scoped id set
+     */
+    private function hydrateSummary(array $row): ?CandidatePoolSummary
+    {
+        $oldest = $row['oldest'];
+        $newest = $row['newest'];
+        if (!\is_string($oldest) || !\is_string($newest)) {
+            return null;
+        }
+
+        return new CandidatePoolSummary(
+            total: (int) $row['total'],
+            oldest: (new \DateTimeImmutable($oldest))->format('Y-m-d'),
+            newest: (new \DateTimeImmutable($newest))->format('Y-m-d'),
+        );
+    }
+
     private function candidateQueryBuilder(int $userId): QueryBuilder
     {
         return $this->entityManager->createQueryBuilder()

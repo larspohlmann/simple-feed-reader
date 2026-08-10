@@ -265,6 +265,83 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         self::assertSame('Example', $lines[0]->feedName);
     }
 
+    public function testSummarizeReportsTheTotalAndTheDateSpan(): void
+    {
+        $oldest = $this->entry('oldest', '2026-07-10T00:00:00Z');
+        $this->entry('middle', '2026-07-15T00:00:00Z');
+        $newest = $this->entry('newest', '2026-07-20T00:00:00Z');
+
+        $ids = [$oldest->getId() ?? 0, $newest->getId() ?? 0];
+        // Only two of the three ids are passed, so the span and count reflect
+        // exactly the set handed in, not the whole feed.
+        $summary = $this->loader()->summarize($this->userId(), $ids);
+
+        self::assertNotNull($summary);
+        self::assertSame(2, $summary->total);
+        self::assertSame('2026-07-10', $summary->oldest);
+        self::assertSame('2026-07-20', $summary->newest);
+    }
+
+    public function testSummarizeReturnsNullForAnEmptyIdList(): void
+    {
+        $this->entry('unused', '2026-07-10T00:00:00Z');
+
+        self::assertNull($this->loader()->summarize($this->userId(), []));
+    }
+
+    public function testSummarizeReturnsNullWhenEveryIdIsPruned(): void
+    {
+        $this->entry('present', '2026-07-10T00:00:00Z');
+
+        // Ids that resolve to no present entry aggregate to a zero count with
+        // null MIN/MAX, which the loader reports as no summary at all.
+        self::assertNull($this->loader()->summarize($this->userId(), [999999, 1000000]));
+    }
+
+    public function testSummarizeExcludesAnEntryInAnUnsubscribedFeed(): void
+    {
+        $subscribed = $this->entry('subscribed', '2026-07-10T00:00:00Z');
+
+        $otherFeed = new Feed('https://example.com/other.xml');
+        $otherFeed->setTitle('Other');
+        $this->em->persist($otherFeed);
+        $foreign = new Entry(
+            $otherFeed,
+            'foreign',
+            'https://example.com/foreign',
+            'foreign',
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+        );
+        $foreign->setPublishedAt(new \DateTimeImmutable('2026-08-01T00:00:00Z'));
+        $this->em->persist($foreign);
+        $this->em->flush();
+
+        $summary = $this->loader()->summarize(
+            $this->userId(),
+            [$subscribed->getId() ?? 0, $foreign->getId() ?? 0],
+        );
+
+        // The unsubscribed entry is the newest, so if the subscription gate
+        // leaked it the newest date would be 2026-08-01 and the count 2.
+        self::assertNotNull($summary);
+        self::assertSame(1, $summary->total);
+        self::assertSame('2026-07-10', $summary->oldest);
+        self::assertSame('2026-07-10', $summary->newest);
+    }
+
+    public function testSummarizeWithAnEmptyIdListNeverQueriesTheDatabase(): void
+    {
+        $this->entry('unused', '2026-07-10T00:00:00Z');
+
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+
+        $this->loader()->summarize($this->userId(), []);
+
+        self::assertSame([], $recorder->queries());
+    }
+
     private function entry(string $guid, string $published): Entry
     {
         $entry = new Entry(
