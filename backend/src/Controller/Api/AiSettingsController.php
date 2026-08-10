@@ -15,6 +15,7 @@ use App\Exception\AiKeyUnreadableApiException;
 use App\Exception\AiProviderApiException;
 use App\Exception\TooManyAiConfigurationsApiException;
 use App\Http\AiSettingsJson;
+use App\Service\Ai\AiConfigurationEditor;
 use App\Service\Ai\AiConfigurationForUser;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
@@ -44,6 +45,7 @@ final readonly class AiSettingsController
 {
     public function __construct(
         private AiProviderConfigurator $configurator,
+        private AiConfigurationEditor $editor,
         private AiConfigurationForUser $configuration,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $aiProviderLimiter,
@@ -133,7 +135,7 @@ final readonly class AiSettingsController
             throw new AiConfigurationNotFoundApiException($e);
         }
 
-        $this->configurator->rename($configuration, $request->name);
+        $this->editor->rename($configuration, $request->name);
 
         return new JsonResponse(
             AiSettingsJson::configuration($configuration, $this->configurator->settingsFor($user)?->getId()),
@@ -157,7 +159,7 @@ final readonly class AiSettingsController
             throw new AiConfigurationNotFoundApiException($e);
         }
 
-        $this->configurator->setSuppressReasoning($configuration, $request->suppressReasoning);
+        $this->editor->setSuppressReasoning($configuration, $request->suppressReasoning);
 
         return new JsonResponse(
             AiSettingsJson::configuration($configuration, $this->configurator->settingsFor($user)?->getId()),
@@ -181,7 +183,7 @@ final readonly class AiSettingsController
             throw new AiConfigurationNotFoundApiException($e);
         }
 
-        $this->configurator->setBatchConcurrency($configuration, $request->batchConcurrency);
+        $this->editor->setBatchConcurrency($configuration, $request->batchConcurrency);
 
         return new JsonResponse(
             AiSettingsJson::configuration($configuration, $this->configurator->settingsFor($user)?->getId()),

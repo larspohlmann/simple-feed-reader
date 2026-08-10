@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ai;
 
+use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use App\Service\Ai\AiProviderConfigurator;
@@ -205,33 +206,6 @@ final class AiProviderConfiguratorTest extends DbTestCase
         $configurator->addConfiguration($user, null, 'https://api.example.test/v1', 'sk-key-extra');
     }
 
-    public function testRenameRoundTripsTheName(): void
-    {
-        $configurator = $this->configurator(['gpt-4o']);
-        $user = $this->user('cfg-rename@example.test');
-        $added = $configurator->addConfiguration($user, 'Old name', 'https://api.example.test/v1', 'sk-abcdef1234');
-
-        $configurator->rename($added->configuration, 'New name');
-
-        self::assertSame('New name', $added->configuration->getName());
-    }
-
-    public function testSetSuppressReasoningPersistsTheFlag(): void
-    {
-        $configurator = $this->configurator(['gpt-4o']);
-        $user = $this->user('cfg-suppress-reasoning@example.test');
-        $added = $configurator->addConfiguration($user, null, 'https://api.example.test/v1', 'sk-abcdef1234');
-
-        $configurator->setSuppressReasoning($added->configuration, false);
-
-        // clear() first: without it the identity map serves the entity this
-        // test already holds, and the assertion would pass even if nothing was
-        // ever written to the database.
-        $this->em->clear();
-        $stored = $configurator->listConfigurations($this->reload('cfg-suppress-reasoning@example.test'));
-        self::assertFalse($stored[0]->suppressesReasoning());
-    }
-
     public function testListConfigurationsReturnsAllOwnedRowsOrderedById(): void
     {
         $configurator = $this->configurator(['gpt-4o']);
@@ -356,6 +330,72 @@ final class AiProviderConfiguratorTest extends DbTestCase
 
         self::assertSame($first->configuration, $user->getActiveAiProviderSettings());
         self::assertCount(1, $configurator->listConfigurations($user));
+    }
+
+    public function testDuplicateReusesTheKeyAndStartsWithoutAModel(): void
+    {
+        $configurator = $this->configurator(['gpt-4o', 'gpt-4o-mini']);
+        $user = $this->user('cfg-duplicate@example.test');
+        $added = $configurator->addConfiguration($user, 'Work OpenAI', 'https://api.example.test/v1', 'sk-abcdef1234');
+        $configurator->chooseModel($added->configuration, 'gpt-4o');
+        $added->configuration->setBatchConcurrency(3);
+        $added->configuration->setSuppressReasoning(false);
+
+        $copy = $configurator->duplicateConfiguration($added->configuration);
+
+        self::assertNotSame($added->configuration->getId(), $copy->getId());
+        self::assertSame('Copy of Work OpenAI', $copy->getName());
+        self::assertSame('https://api.example.test/v1', $copy->getBaseUrl());
+        self::assertSame($added->configuration->getApiKeyHint(), $copy->getApiKeyHint());
+        self::assertNull($copy->getModel());
+        self::assertSame(3, $copy->batchConcurrency());
+        self::assertFalse($copy->suppressesReasoning());
+        self::assertNotSame($copy, $user->getActiveAiProviderSettings());
+        // The re-sealed key opens back to the same plaintext under the copy's own row.
+        self::assertSame('sk-abcdef1234', $configurator->credentials($copy)->apiKey);
+    }
+
+    public function testDuplicateOfAnUnnamedConfigurationIsNamedCopy(): void
+    {
+        $configurator = $this->configurator(['gpt-4o']);
+        $user = $this->user('cfg-duplicate-unnamed@example.test');
+        $added = $configurator->addConfiguration($user, null, 'https://api.example.test/v1', 'sk-abcdef1234');
+
+        $copy = $configurator->duplicateConfiguration($added->configuration);
+
+        self::assertSame('Copy', $copy->getName());
+    }
+
+    public function testDuplicateRefusesBeyondTheCap(): void
+    {
+        $configurator = $this->configurator(['gpt-4o']);
+        $user = $this->user('cfg-duplicate-cap@example.test');
+        $first = $configurator->addConfiguration($user, null, 'https://api.example.test/v1', 'sk-key-0000');
+        for ($i = 1; $i < 20; ++$i) {
+            $configurator->addConfiguration($user, null, 'https://api.example.test/v1', sprintf('sk-key-%04d', $i));
+        }
+
+        $this->expectException(TooManyConfigurationsException::class);
+        $configurator->duplicateConfiguration($first->configuration);
+    }
+
+    public function testDuplicatePersistsAnIndependentRow(): void
+    {
+        $configurator = $this->configurator(['gpt-4o']);
+        $user = $this->user('cfg-duplicate-persist@example.test');
+        $added = $configurator->addConfiguration($user, 'Original', 'https://api.example.test/v1', 'sk-abcdef1234');
+        $configurator->duplicateConfiguration($added->configuration);
+
+        // clear() first: otherwise the identity map serves the entities this test
+        // already holds and the count/name would pass without any real write.
+        $this->em->clear();
+        $stored = $configurator->listConfigurations($this->reload('cfg-duplicate-persist@example.test'));
+
+        self::assertCount(2, $stored);
+        self::assertSame(['Original', 'Copy of Original'], array_map(
+            static fn (AiProviderSettings $each): ?string => $each->getName(),
+            $stored,
+        ));
     }
 
     /**

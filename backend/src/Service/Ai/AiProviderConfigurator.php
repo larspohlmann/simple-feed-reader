@@ -19,12 +19,15 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * The only writer of AiProviderSettings.
+ * The writer of AiProviderSettings that owns the provider relationship —
+ * creating, verifying, and removing a connection. Local edits to a saved row
+ * (its name and preferences) live in AiConfigurationEditor instead.
  *
- * Every write is preceded by a live call to the provider, so a stored
- * configuration is one that worked. A failed verification throws before
+ * A write that reaches the provider is preceded by a live call to it, so a
+ * stored configuration is one that worked. A failed verification throws before
  * anything is persisted, which is why the existing configuration survives a
- * mistyped key.
+ * mistyped key. The one write that does not call the provider is
+ * duplicateConfiguration(): it reuses an already-verified row's credentials.
  *
  * An account may hold several configurations; at most one is active at a
  * time, tracked as a pointer on User rather than a per-row flag. Reads
@@ -35,6 +38,7 @@ final readonly class AiProviderConfigurator
 {
     private const int HINT_LENGTH = 4;
     private const int MAX_CONFIGURATIONS = 20;
+    private const int NAME_MAX_LENGTH = 120; // matches AiProviderSettings::$name column length
 
     public function __construct(
         private ModelCatalog $catalog,
@@ -106,6 +110,46 @@ final readonly class AiProviderConfigurator
     }
 
     /**
+     * A second model on a provider the account already configured needs the
+     * same endpoint and key, so this reuses both rather than making the account
+     * re-enter a key it can no longer read. The source is already a verified
+     * row, so no live call is made: the copy carries the source's verifiedAt.
+     * The model is deliberately left unset — choosing a different one is the
+     * whole point — and the copy is not activated.
+     *
+     * @throws ApiKeyUnreadableException      the source key cannot be opened
+     * @throws TooManyConfigurationsException the account is at the cap
+     */
+    public function duplicateConfiguration(AiProviderSettings $source): AiProviderSettings
+    {
+        $user = $source->getUser();
+
+        if ($this->repository->countForUser($user) >= self::MAX_CONFIGURATIONS) {
+            throw new TooManyConfigurationsException(
+                'This account already holds the maximum number of AI configurations.',
+            );
+        }
+
+        $sealed = $this->cipher->seal($this->identify($user), $this->credentials($source)->apiKey);
+
+        $copy = new AiProviderSettings(
+            $user,
+            $this->copyName($source->getName()),
+            $source->getBaseUrl(),
+            $sealed,
+            $source->getApiKeyHint(),
+            $source->getVerifiedAt() ?? $this->clock->now(),
+        );
+        $copy->setSuppressReasoning($source->suppressesReasoning());
+        $copy->setBatchConcurrency($source->batchConcurrency());
+
+        $this->entityManager->persist($copy);
+        $this->entityManager->flush();
+
+        return $copy;
+    }
+
+    /**
      * @return list<string>
      */
     public function listModels(AiProviderSettings $settings): array
@@ -124,24 +168,6 @@ final readonly class AiProviderConfigurator
         $descriptor = $this->assertModelStillOffered($settings, $model);
         $settings->chooseModel($model, $this->clock->now(), $descriptor->contextWindow);
         $this->activateWhenNoneActive($settings);
-        $this->entityManager->flush();
-    }
-
-    public function rename(AiProviderSettings $settings, ?string $name): void
-    {
-        $settings->rename($name);
-        $this->entityManager->flush();
-    }
-
-    public function setSuppressReasoning(AiProviderSettings $settings, bool $suppressReasoning): void
-    {
-        $settings->setSuppressReasoning($suppressReasoning);
-        $this->entityManager->flush();
-    }
-
-    public function setBatchConcurrency(AiProviderSettings $settings, int $batchConcurrency): void
-    {
-        $settings->setBatchConcurrency($batchConcurrency);
         $this->entityManager->flush();
     }
 
@@ -240,6 +266,19 @@ final readonly class AiProviderConfigurator
     private function ids(array $descriptors): array
     {
         return array_map(static fn (ModelDescriptor $descriptor): string => $descriptor->id, $descriptors);
+    }
+
+    /**
+     * The `name` column holds 120 characters, so a long source name is trimmed
+     * to keep the prefixed copy inside it.
+     */
+    private function copyName(?string $sourceName): string
+    {
+        if (null === $sourceName || '' === $sourceName) {
+            return 'Copy';
+        }
+
+        return mb_substr('Copy of ' . $sourceName, 0, self::NAME_MAX_LENGTH);
     }
 
     /**
