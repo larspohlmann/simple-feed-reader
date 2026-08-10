@@ -154,6 +154,70 @@ describe('EntryListComponent', () => {
     });
   });
 
+  describe('run-boundary dividers (#348)', () => {
+    const forYou = { kind: 'for-you', id: null, unread: false };
+    // Newest run "N" generated at the header's shown time; older run "O" earlier.
+    const NEWEST = '2026-08-09T10:00:00+00:00';
+    const OLDER = '2026-08-07T09:05:00+00:00';
+    const twoRuns = [
+      entry(1, { runId: 9, runGeneratedAt: NEWEST }),
+      entry(2, { runId: 9, runGeneratedAt: NEWEST }),
+      entry(3, { runId: 7, runGeneratedAt: OLDER }),
+    ];
+
+    it('shows a divider at the older run and none above the newest', () => {
+      const el = mount({
+        entries: twoRuns,
+        selection: forYou,
+        lastRefreshed: NEWEST,
+        layout: 'list',
+      }).nativeElement as HTMLElement;
+
+      // One divider only — for the older run.
+      expect(el.querySelectorAll('app-run-header').length).toBe(1);
+      // It is not the first child of the scroller (the newest run's rows are).
+      const rows = el.querySelector('.rows')!;
+      expect(rows.firstElementChild!.tagName.toLowerCase()).not.toBe('app-run-header');
+    });
+
+    it('shows a divider on the top block when it is not the newest run', () => {
+      // Header shows NEWEST, but the newest run left nothing visible: the first
+      // visible entry is the older run, so it gets its own divider.
+      const el = mount({
+        entries: [entry(3, { runId: 7, runGeneratedAt: OLDER })],
+        selection: forYou,
+        lastRefreshed: NEWEST,
+        layout: 'list',
+      }).nativeElement as HTMLElement;
+
+      expect(el.querySelectorAll('app-run-header').length).toBe(1);
+    });
+
+    it('shows no divider on a non-for-you view', () => {
+      const el = mount({
+        entries: [entry(1), entry(2)],
+        selection: { kind: 'all', id: null, unread: true },
+        layout: 'list',
+      }).nativeElement as HTMLElement;
+
+      expect(el.querySelector('app-run-header')).toBeNull();
+    });
+
+    it('shows a divider at the older run in the magazine layout', () => {
+      const el = mount({
+        entries: twoRuns,
+        selection: forYou,
+        lastRefreshed: NEWEST,
+        layout: 'magazine',
+      }).nativeElement as HTMLElement;
+
+      const rows = el.querySelector('.rows.magazine')!;
+      expect(rows.querySelectorAll('app-run-header').length).toBe(1);
+      // No magazine block is emitted before the newest run's first block.
+      expect(rows.firstElementChild!.tagName.toLowerCase()).not.toBe('app-run-header');
+    });
+  });
+
   // #325: the shell projects the For You run/stop button here, right-aligned in
   // the header, without this generic list knowing what the action is.
   describe('headerActions', () => {

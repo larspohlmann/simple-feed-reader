@@ -26,6 +26,8 @@ import {
 } from '../../shared/to-top-button/to-top-button.component';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { RecommendationStripComponent } from '../recommendation-strip/recommendation-strip.component';
+import { RunHeaderComponent } from '../run-header/run-header.component';
+import { groupByRun, RunGroup } from '../for-you-runs';
 import { EntryHeroComponent } from '../magazine/entry-hero.component';
 import { EntryCompactComponent } from '../magazine/entry-compact.component';
 import { SourceGroupComponent } from '../magazine/source-group.component';
@@ -73,6 +75,7 @@ export const REFRESH_REVEAL = 48;
     TagGlyphComponent,
     EntryRowComponent,
     RecommendationStripComponent,
+    RunHeaderComponent,
     EntryHeroComponent,
     EntryCompactComponent,
     SourceGroupComponent,
@@ -183,6 +186,18 @@ export class EntryListComponent implements OnDestroy {
   );
   private pullStartY = 0;
   private pullTracking = false;
+
+  /** The loaded entries split into one group per recommendation run (#348). One
+   *  run-less group for every non-for-you view, so those render exactly as before. */
+  readonly runGroups = computed<RunGroup[]>(() => groupByRun(this.entries()));
+
+  /** Whether a run group opens with a divider. Suppressed only when the group's
+   *  generation time is the one the list header already shows as "Last refreshed"
+   *  — i.e. the newest run. An older run whose time differs always gets its
+   *  divider, even at the very top (newest run left nothing visible). */
+  showRunHeader(group: RunGroup): boolean {
+    return group.generatedAt != null && group.generatedAt !== this.lastRefreshed();
+  }
 
   readonly blocks = computed<MagazineBlock[]>(() =>
     planMagazine({

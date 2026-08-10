@@ -231,18 +231,23 @@
     @if (topBlock(); as block) {
       <ng-container [ngTemplateOutlet]="block" />
     }
-    @for (e of entries(); track e.id) {
-      <app-recommendation-strip [entry]="e">
-        <app-entry-row
-          [entry]="e"
-          [tags]="tagsFor(e.subscriptionId)"
-          [class.open]="openEntryId() === e.id"
-          (favorite)="favorite.emit($event)"
-          (keep)="keep.emit($event)"
-          (read)="read.emit($event)"
-          (open)="open.emit($event)"
-        />
-      </app-recommendation-strip>
+    @for (group of runGroups(); track group.runId) {
+      @if (showRunHeader(group)) {
+        <app-run-header [generatedAt]="group.generatedAt!" />
+      }
+      @for (e of group.entries; track e.id) {
+        <app-recommendation-strip [entry]="e">
+          <app-entry-row
+            [entry]="e"
+            [tags]="tagsFor(e.subscriptionId)"
+            [class.open]="openEntryId() === e.id"
+            (favorite)="favorite.emit($event)"
+            (keep)="keep.emit($event)"
+            (read)="read.emit($event)"
+            (open)="open.emit($event)"
+          />
+        </app-recommendation-strip>
+      }
     }
     @if (hasMore()) {
       <div class="foot" #sentinel>
