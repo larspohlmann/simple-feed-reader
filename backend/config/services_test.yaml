@@ -421,13 +421,3 @@ services:
     App\Service\Worker\Handler\PurgeFailedMessagesHandler:
         autowire: true
         public: true
-
-    # MaintenanceTickTest fetches this to drive run() directly against the real
-    # RefreshRunner/ForYouSweep graph, the same "no mocks" stance as the
-    # recommendation/worker tests above. Its production caller (the cron endpoint
-    # for worker-less installs) arrives in a later task, so until then the
-    # compiler would inline it away and the test container could not fetch it.
-    # Same `autowire` caveat as the entries above.
-    App\Service\Maintenance\MaintenanceTick:
-        autowire: true
-        public: true

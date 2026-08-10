@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Service\Maintenance\MaintenanceTick;
 use App\Service\Maintenance\MaintenanceTokenGuard;
 use App\Service\Recommendation\ForYouSweep;
 use App\Service\Refresh\RefreshRequest;
@@ -27,6 +28,7 @@ final readonly class MaintenanceController
         private MaintenanceTokenGuard $tokenGuard,
         private RefreshRunner $refreshRunner,
         private ForYouSweep $forYouSweep,
+        private MaintenanceTick $maintenanceTick,
     ) {
     }
 
@@ -61,5 +63,24 @@ final readonly class MaintenanceController
         }
 
         return new JsonResponse($this->forYouSweep->sweepOnce()->toArray());
+    }
+
+    /**
+     * One call that runs both maintenance halves — refresh all due feeds, then
+     * start due recommendation runs and advance each active run one step — so a
+     * worker-less install drives everything from a single cron line (#346). It
+     * always answers 200 when the tick ran; each half carries its own status in
+     * the body, and a failed half carries an error marker. The granular
+     * /maintenance/refresh keeps its 409/500 status mapping for a caller that
+     * pings refresh alone.
+     */
+    #[Route('/maintenance/tick', name: 'maintenance_tick', methods: ['POST'])]
+    public function tick(Request $request): JsonResponse
+    {
+        if (!$this->tokenGuard->isAuthorized($request)) {
+            return new JsonResponse(['error' => 'forbidden'], Response::HTTP_FORBIDDEN);
+        }
+
+        return new JsonResponse($this->maintenanceTick->run()->toArray());
     }
 }

@@ -187,4 +187,55 @@ final class MaintenanceControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(405);
     }
+
+    public function testTickRejectsMissingToken(): void
+    {
+        $client = self::createClient();
+        $client->request('POST', '/maintenance/tick');
+
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame(
+            ['error' => 'forbidden'],
+            json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR),
+        );
+    }
+
+    public function testTickGetMethodIsNotAllowed(): void
+    {
+        $client = self::createClient();
+        $client->request('GET', '/maintenance/tick?token=test-maintenance-token');
+
+        self::assertResponseStatusCodeSame(405);
+    }
+
+    public function testTickReturnsBothHalvesWithValidToken(): void
+    {
+        $client = self::createClient();
+        $feed = $this->feedFor($client, 'https://maint.example.com/feed');
+
+        $stub = new StubFeedFetcher();
+        $stub->willReturn($feed->getUrl(), FetchResponse::notModified($feed->getUrl(), false, null, null));
+        $stub->willReturn(
+            'https://maint.example.com',
+            FetchResponse::fetched('https://maint.example.com', false, '<html lang="en"></html>', null, null),
+        );
+        self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
+
+        $client->request('POST', '/maintenance/tick', server: [
+            'HTTP_X_MAINTENANCE_TOKEN' => 'test-maintenance-token',
+        ]);
+
+        self::assertResponseIsSuccessful();
+        self::assertResponseHeaderSame('Content-Type', 'application/json');
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertArrayHasKey('refresh', $payload);
+        self::assertArrayHasKey('recommendations', $payload);
+        /** @var array<string, mixed> $refresh */
+        $refresh = $payload['refresh'];
+        self::assertSame('completed', $refresh['status']);
+        /** @var array<string, mixed> $recommendations */
+        $recommendations = $payload['recommendations'];
+        self::assertIsInt($recommendations['activeRuns']);
+    }
 }
