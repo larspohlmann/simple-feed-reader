@@ -28,7 +28,7 @@ use App\Service\Refresh\RefreshRunner;
  */
 final readonly class MaintenanceTick
 {
-    private const int REFRESH_BUDGET_SECONDS = 20;
+    public const int REFRESH_BUDGET_SECONDS = 20;
 
     public function __construct(
         private RefreshRunner $refreshRunner,

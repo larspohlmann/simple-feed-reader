@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Service\Maintenance\MaintenanceTick;
 use App\Service\Maintenance\MaintenanceTokenGuard;
 use App\Service\Recommendation\ForYouSweep;
+use App\Service\Refresh\RefreshReport;
 use App\Service\Refresh\RefreshRequest;
 use App\Service\Refresh\RefreshRunner;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -22,8 +23,6 @@ use Symfony\Component\Routing\Attribute\Route;
  */
 final readonly class MaintenanceController
 {
-    private const int REFRESH_BUDGET_SECONDS = 20;
-
     public function __construct(
         private MaintenanceTokenGuard $tokenGuard,
         private RefreshRunner $refreshRunner,
@@ -35,15 +34,16 @@ final readonly class MaintenanceController
     #[Route('/maintenance/refresh', name: 'maintenance_refresh', methods: ['POST'])]
     public function refresh(Request $request): JsonResponse
     {
-        if (!$this->tokenGuard->isAuthorized($request)) {
-            return new JsonResponse(['error' => 'forbidden'], Response::HTTP_FORBIDDEN);
+        $rejection = $this->tokenGuard->rejectionResponse($request);
+        if (null !== $rejection) {
+            return $rejection;
         }
 
-        $report = $this->refreshRunner->run(RefreshRequest::allDue(self::REFRESH_BUDGET_SECONDS));
+        $report = $this->refreshRunner->run(RefreshRequest::allDue(MaintenanceTick::REFRESH_BUDGET_SECONDS));
 
         $status = match ($report->status) {
             'busy' => Response::HTTP_CONFLICT,
-            'aborted' => Response::HTTP_INTERNAL_SERVER_ERROR,
+            RefreshReport::STATUS_ABORTED => Response::HTTP_INTERNAL_SERVER_ERROR,
             default => Response::HTTP_OK,
         };
 
@@ -58,8 +58,9 @@ final readonly class MaintenanceController
     #[Route('/maintenance/recommendations/sweep', name: 'maintenance_recommendations_sweep', methods: ['POST'])]
     public function sweepRecommendations(Request $request): JsonResponse
     {
-        if (!$this->tokenGuard->isAuthorized($request)) {
-            return new JsonResponse(['error' => 'forbidden'], Response::HTTP_FORBIDDEN);
+        $rejection = $this->tokenGuard->rejectionResponse($request);
+        if (null !== $rejection) {
+            return $rejection;
         }
 
         return new JsonResponse($this->forYouSweep->sweepOnce()->toArray());
@@ -78,8 +79,9 @@ final readonly class MaintenanceController
     #[Route('/maintenance/tick', name: 'maintenance_tick', methods: ['POST'])]
     public function tick(Request $request): JsonResponse
     {
-        if (!$this->tokenGuard->isAuthorized($request)) {
-            return new JsonResponse(['error' => 'forbidden'], Response::HTTP_FORBIDDEN);
+        $rejection = $this->tokenGuard->rejectionResponse($request);
+        if (null !== $rejection) {
+            return $rejection;
         }
 
         return new JsonResponse($this->maintenanceTick->run()->toArray());
