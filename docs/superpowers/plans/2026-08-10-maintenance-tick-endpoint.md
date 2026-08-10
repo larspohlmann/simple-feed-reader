@@ -80,9 +80,8 @@ namespace App\Service\Maintenance;
 
 /**
  * The outcome of one maintenance tick (#346): the feed-refresh report and the
- * For You sweep report, each already serialised, merged under stable keys. A
- * half that failed carries `['error' => <message>]` in its place; see
- * MaintenanceTick.
+ * For You sweep report, each already serialised, merged under stable keys.
+ * Each half's own status lives inside its own array; see MaintenanceTick.
  */
 final readonly class MaintenanceTickReport
 {
@@ -333,9 +332,8 @@ Add the action after `sweepRecommendations`:
      * start due recommendation runs and advance each active run one step — so a
      * worker-less install drives everything from a single cron line (#346). It
      * always answers 200 when the tick ran; each half carries its own status in
-     * the body, and a failed half carries an error marker. The granular
-     * /maintenance/refresh keeps its 409/500 status mapping for a caller that
-     * pings refresh alone.
+     * the body. The granular /maintenance/refresh keeps its 409/500 status
+     * mapping for a caller that pings refresh alone.
      */
     #[Route('/maintenance/tick', name: 'maintenance_tick', methods: ['POST'])]
     public function tick(Request $request): JsonResponse
