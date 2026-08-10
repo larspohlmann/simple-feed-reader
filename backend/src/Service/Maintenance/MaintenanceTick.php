@@ -13,10 +13,18 @@ use App\Service\Refresh\RefreshRunner;
  * recommendation runs and advance each active run one step. Refresh runs first
  * so its work commits before the sweep, and both halves are near-non-throwing
  * on their own -- refresh returns `status: "aborted"` on a database error, and
- * the sweep catches per-run failures internally -- so this class needs no guard
- * of its own: each half's status lives in its own report. This is the
- * worker-less install's single cron entry point; the granular /maintenance
- * routes stay for a caller that wants one job only.
+ * the sweep catches per-run failures internally -- so this class needs no
+ * try/catch of its own.
+ *
+ * The halves are not fully independent, though: they share the single default
+ * EntityManager, and an aborted refresh has already closed it (a failed flush
+ * rolls back and closes the EM — see RefreshRunner). Calling the sweep against
+ * a closed EM would throw EntityManagerClosed, which nothing here catches, so
+ * the tick is guarded to skip the sweep that tick instead. The next tick runs
+ * on a fresh request with a fresh EM.
+ *
+ * This is the worker-less install's single cron entry point; the granular
+ * /maintenance routes stay for a caller that wants one job only.
  */
 final readonly class MaintenanceTick
 {
@@ -31,8 +39,23 @@ final readonly class MaintenanceTick
     public function run(): MaintenanceTickReport
     {
         $refresh = $this->refreshRunner->run(RefreshRequest::allDue(self::REFRESH_BUDGET_SECONDS));
-        $recommendations = $this->forYouSweep->sweepOnce();
+        $recommendations = $refresh->isAborted()
+            ? $this->skippedRecommendations()
+            : $this->forYouSweep->sweepOnce()->toArray();
 
-        return new MaintenanceTickReport($refresh->toArray(), $recommendations->toArray());
+        return new MaintenanceTickReport($refresh->toArray(), $recommendations);
+    }
+
+    /**
+     * @return array{startedRuns: int, advancedRuns: int, activeRuns: int, skipped: string}
+     */
+    private function skippedRecommendations(): array
+    {
+        return [
+            'startedRuns' => 0,
+            'advancedRuns' => 0,
+            'activeRuns' => 0,
+            'skipped' => 'refresh aborted: the shared EntityManager is unusable this tick',
+        ];
     }
 }
