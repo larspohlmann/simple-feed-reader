@@ -48,6 +48,16 @@ final class RecommendationFeedJsonTest extends TestCase
         self::assertSame('2026-08-07T09:05:00+00:00', $result['entries'][0]['runGeneratedAt']);
     }
 
+    public function testRunGeneratedAtIsNullWhenTheRowCarriesNoGenerationTime(): void
+    {
+        $result = RecommendationFeedJson::page([$this->rowWithoutGenerationTime()], null);
+
+        // Defensive: the field is nullable, so a row lacking a completion time
+        // serialises the key as null rather than dereferencing null.
+        self::assertArrayHasKey('runGeneratedAt', $result['entries'][0]);
+        self::assertNull($result['entries'][0]['runGeneratedAt']);
+    }
+
     public function testPageWithScoresCarriesANullScoreForRowsWrittenBeforeTheColumnExisted(): void
     {
         $result = RecommendationFeedJson::pageWithScores([$this->row(null)], null);
@@ -57,6 +67,16 @@ final class RecommendationFeedJsonTest extends TestCase
     }
 
     private function row(?int $score = 77): RecommendationFeedRow
+    {
+        return $this->rowGeneratedAt(new \DateTimeImmutable('2026-08-07T09:05:00Z'), $score);
+    }
+
+    private function rowWithoutGenerationTime(): RecommendationFeedRow
+    {
+        return $this->rowGeneratedAt(null, 77);
+    }
+
+    private function rowGeneratedAt(?\DateTimeImmutable $runGeneratedAt, ?int $score): RecommendationFeedRow
     {
         $feed = new Feed('https://example.com/feed.xml');
         $entry = new Entry(
@@ -84,7 +104,7 @@ final class RecommendationFeedJsonTest extends TestCase
             runId: 1,
             position: 1,
             score: $score,
-            runGeneratedAt: new \DateTimeImmutable('2026-08-07T09:05:00Z'),
+            runGeneratedAt: $runGeneratedAt,
         );
     }
 }
