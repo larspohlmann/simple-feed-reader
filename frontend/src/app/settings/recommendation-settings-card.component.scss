@@ -13,6 +13,21 @@ app-disclosure {
   margin-bottom: var(--space-3);
 }
 
+/* The debug switch carries a visible legend, not just an aria-label, so it is
+   clear what the knob turns on. Text on the left, switch on the right. */
+.debug-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.debug-label {
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
 app-field {
   display: block;
   width: 100%;
