@@ -18,9 +18,13 @@ use Psr\Log\LoggerInterface;
  * ten-second AdvanceRecommendationRuns sweep drives the started runs to the
  * finish, so the worker only needs to start them. `sweepOnce()` is the cron
  * half: a worker-less install has no advance sweep, so one call both starts
- * due runs and advances every active run once. It advances one tick per run —
- * one provider call, which the advancer flushes — so a request the gateway
- * kills still leaves committed progress and the next call resumes.
+ * due runs and advances every active run once. It advances one tick per run,
+ * and each tick now sends a bounded wave of concurrent provider calls rather
+ * than a single one (#344) — this caller never passes a driver, so it runs on
+ * the Poll clamp (`min(cap, POLL_MAX_CONCURRENCY)`, i.e. `min(cap, 2)`), the
+ * same regime a browser poll tick uses. The advancer flushes once the wave
+ * resolves, so a request the gateway kills still leaves committed progress
+ * and the next call resumes.
  */
 final readonly class ForYouSweep
 {

@@ -133,8 +133,14 @@ export class AiSectionComponent {
     this.ai.setReasoning(config.id, (event.target as HTMLInputElement).checked);
   }
 
+  /** The `min`/`max` on the input only constrain the spinner arrows and
+   *  native validation — a pasted or typed out-of-range value still reaches
+   *  `change`, and an empty or non-numeric value reads as `NaN`. Clamp here
+   *  so the request the server sees always satisfies its own `Range(1..4)`. */
   setBatchConcurrency(config: AiConfig, event: Event): void {
-    this.ai.setBatchConcurrency(config.id, Number((event.target as HTMLInputElement).value));
+    const typed = Number((event.target as HTMLInputElement).value);
+    const clamped = Number.isNaN(typed) ? 1 : Math.min(4, Math.max(1, typed));
+    this.ai.setBatchConcurrency(config.id, clamped);
   }
 
   startRename(config: AiConfig): void {

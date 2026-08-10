@@ -19,6 +19,8 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * The caps are not an SSRF boundary — see ProviderCredentials for why there is
  * none — they keep one hostile or broken endpoint from holding a request open
  * or filling memory.
+ *
+ * @phpstan-type ResponseSlot array{index: int, reader: CompletionStreamReader, observer: CompletionStreamObserver}
  */
 final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
 {
@@ -114,7 +116,8 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
         /** @var list<?CompletionOutcome> $outcomes */
         $outcomes = array_fill(0, \count($calls), null);
 
-        foreach ($this->httpClient->stream($this->responsesIn($context), self::INACTIVITY_TIMEOUT_SECONDS) as $response => $chunk) {
+        $responses = $this->httpClient->stream($this->responsesIn($context), self::INACTIVITY_TIMEOUT_SECONDS);
+        foreach ($responses as $response => $chunk) {
             $slot = $context[$response];
 
             // A failed call cancels its response but the loop may still yield a
@@ -137,11 +140,11 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
      *
      * @param non-empty-list<ConcurrentCompletion> $calls
      *
-     * @return \SplObjectStorage<ResponseInterface, array{index: int, reader: CompletionStreamReader, observer: CompletionStreamObserver}>
+     * @return \SplObjectStorage<ResponseInterface, ResponseSlot>
      */
     private function fireRequests(ProviderCredentials $credentials, array $calls): \SplObjectStorage
     {
-        /** @var \SplObjectStorage<ResponseInterface, array{index: int, reader: CompletionStreamReader, observer: CompletionStreamObserver}> $context */
+        /** @var \SplObjectStorage<ResponseInterface, ResponseSlot> $context */
         $context = new \SplObjectStorage();
 
         foreach ($calls as $index => $call) {
@@ -157,7 +160,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     }
 
     /**
-     * @param \SplObjectStorage<ResponseInterface, array{index: int, reader: CompletionStreamReader, observer: CompletionStreamObserver}> $context
+     * @param \SplObjectStorage<ResponseInterface, ResponseSlot> $context
      *
      * @return list<ResponseInterface>
      */
@@ -172,7 +175,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
      * than an exception, so it never aborts the read for its siblings (#344);
      * null means the call is still in progress.
      *
-     * @param array{index: int, reader: CompletionStreamReader, observer: CompletionStreamObserver} $slot
+     * @param ResponseSlot $slot
      */
     private function advance(ResponseInterface $response, ChunkInterface $chunk, array $slot): ?CompletionOutcome
     {

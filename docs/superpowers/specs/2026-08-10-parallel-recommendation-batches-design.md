@@ -30,7 +30,7 @@ low default cap keeps safe.
 | Driver model | One **wave** per tick on both drivers; worker uses the full cap, poll clamps to `min(cap, POLL_MAX)` |
 | Cap configuration | Per-connection setting on `AiProviderSettings`, `Range(1..4)`, **default 1** |
 | Retry state | **In-tick** retries; the single-integer `batchesDone` cursor is kept |
-| Transport failure | **Atomic wave**: cancel siblings, bank nothing, **one** ceiling increment, re-run the wave next tick |
+| Transport failure | **Atomic wave**: bank nothing, **one** ceiling increment, re-run the wave next tick; healthy siblings complete and their answers are discarded |
 | Stop | Checked at **round boundaries** inside the tick |
 | ETA (#336) | Untouched — throughput-based, self-corrects |
 | Debug panel | Untouched |
@@ -93,9 +93,14 @@ so the run entity never has to remember more than one integer.
 If any call in a wave raises `ProviderUnreachableException` or
 `CredentialsRejectedException`:
 
-- The other in-flight responses are **cancelled** (`$response->cancel()`), to
-  limit wasted spend.
-- The wave banks **nothing** — no `batchesDone` advance.
+- `completeMany` cancels only the **failed** call's own response
+  (`$response->cancel()`); it does not cancel its siblings. The maintainer
+  decided against implementing sibling cancellation — a healthy sibling
+  already in flight simply **keeps streaming to completion** on its own
+  connection.
+- The wave banks **nothing** — no `batchesDone` advance — so a healthy
+  sibling's answer is read to completion and then **discarded**: the round
+  that produced it is never persisted.
 - The run records **one** transport-failure increment for the whole wave (not
   one per failed call), so a cap of 4 cannot exhaust a ceiling of 3 in a single
   wave. `RecommendationRun::recordTransportFailure()` returns whether the
@@ -106,7 +111,8 @@ If any call in a wave raises `ProviderUnreachableException` or
   re-runs the whole wave** from the unchanged cursor.
 
 Re-billing the usable calls of a wave that had one transport failure is the
-accepted cost. It is self-correcting: a provider that rate-limits at
+accepted cost — both the discarded healthy siblings' answers and their
+provider spend. It is self-correcting: a provider that rate-limits at
 concurrency 4 will likely rate-limit the retry too, trip the ceiling, and fail
 the run — the correct signal to lower the connection's cap.
 
@@ -196,7 +202,8 @@ tick → providerTick(run, user, settings, driver)
   loop:
      outcomes = chat.completeMany(credentials, pending calls)   // concurrent
      if any outcome is a transport failure:
-        cancel siblings; recordTransportFailure (one); flush; throw or re-run
+        healthy siblings finish streaming, their answers discarded;
+        recordTransportFailure (one); flush; throw or re-run
      parse each usable/unusable; hold usable as winners
      guard cancellation (round boundary)
      if no unusable left OR round == MAX_ATTEMPTS: break
@@ -209,12 +216,15 @@ tick → providerTick(run, user, settings, driver)
 
 - **Unit** — `completeMany` against a mock HttpClient returning several staged
   responses: all-usable, mixed usable/unusable (retry only the unusable ones),
-  one transport failure (siblings cancelled, outcomes carry the exception).
+  one transport failure (only the failed call's response is cancelled; a
+  healthy sibling's outcome still carries its answer, which the caller then
+  discards under the atomic-wave rule).
 - **Advancer** — a wave of N banks N winners in one tick; an unusable batch in a
   wave retries in-tick and degrades after `MAX_ATTEMPTS` without dropping its
   usable siblings; a transport failure in a wave advances nothing and increments
-  the ceiling exactly once; `cap == 1` takes the single-call path unchanged; the
-  poll driver clamps to `POLL_MAX`.
+  the ceiling exactly once, discarding any healthy sibling answer the round
+  already produced; `cap == 1` takes the single-call path unchanged; the poll
+  driver clamps to `POLL_MAX`.
 - **API** — `PUT …/batch-concurrency` validates the range, persists, and
   round-trips through `AiSettingsJson`; out-of-range is a 422.
 - **Migration leg** — schema builds from empty on SQLite and MySQL;

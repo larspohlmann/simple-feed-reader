@@ -255,7 +255,10 @@ final class RecommendationRunAdvancer
      * has left. A poll tick is a web request, so it never sends more than
      * POLL_MAX_CONCURRENCY however high the connection is set; the worker owns
      * its process and sends the full configured cap. The hard
-     * MAX_BATCH_CONCURRENCY ceiling protects both (#344).
+     * MAX_BATCH_CONCURRENCY ceiling protects both, and a floor of 1 protects
+     * against a stored `batchConcurrency` of 0 or less -- unreachable through
+     * the API's `Range(1..4)` validation, but a direct-DB value that low would
+     * otherwise wedge the run in a zero-progress tick forever (#344).
      */
     private function waveSize(RecommendationRun $run, AiProviderSettings $settings, TickDriver $driver): int
     {
@@ -270,7 +273,7 @@ final class RecommendationRunAdvancer
             ? min($settings->batchConcurrency(), self::POLL_MAX_CONCURRENCY)
             : $settings->batchConcurrency();
 
-        return min($cap, AiProviderSettings::MAX_BATCH_CONCURRENCY);
+        return max(1, min($cap, AiProviderSettings::MAX_BATCH_CONCURRENCY));
     }
 
     /**
@@ -331,7 +334,12 @@ final class RecommendationRunAdvancer
         $content = $this->callProvider(
             $run,
             $settings,
-            $this->requestFactory->create($settings, $messages, \count($pool), RecommendationResponseSchema::Duplicates),
+            $this->requestFactory->create(
+                $settings,
+                $messages,
+                \count($pool),
+                RecommendationResponseSchema::Duplicates,
+            ),
             $recordedCall,
         );
 
@@ -419,9 +427,9 @@ final class RecommendationRunAdvancer
      * (#308 final review, Important 2) rather than ticking forever; either
      * way the exception is re-thrown so the controller still maps it to its
      * problem type and the caller still sees the error on this tick. The batch
-     * phase reads its wave through completeWave()/completeMany instead (#344),
-     * which folds a per-call transport failure into that call's outcome rather
-     * than throwing.
+     * phase reads its wave through RecommendationBatchWave::resolve() instead
+     * (#344), which delegates to completeMany -- that folds a per-call
+     * transport failure into that call's outcome rather than throwing.
      *
      * The generic \Throwable catch below exists only to settle the log row:
      * begin() has already persisted it, and a verdict that stays null reads
@@ -491,7 +499,6 @@ final class RecommendationRunAdvancer
         $this->entityManager->flush();
     }
 
-    /**
     /**
      * The retry envelope the dedup phase uses: record the invalid reply, and
      * once attempts are exhausted hand off to the degraded ending -- an

@@ -353,9 +353,18 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             throw new TransportException('Connection refused');
         });
 
-        $this->expectException(ProviderUnreachableException::class);
-        $this->clientUsing($client)
-            ->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
+        // The exact message, not merely the exception class: without the
+        // throw in the ExceptionInterface catch, contentOf() would still
+        // raise a ProviderUnreachableException of its own (an empty reader
+        // reads as "answered without a completion"), so only the message
+        // proves this specific catch block actually ran.
+        try {
+            $this->clientUsing($client)
+                ->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
+            self::fail(ProviderUnreachableException::class . ' was not thrown.');
+        } catch (ProviderUnreachableException $e) {
+            self::assertSame('That address did not answer.', $e->getMessage());
+        }
     }
 
     public function testObserverSeesTheAnswerAndTheWireCountGrow(): void
@@ -570,6 +579,55 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         self::assertTrue($outcomes[0]->isFailure());
         self::assertInstanceOf(CredentialsRejectedException::class, $outcomes[0]->cause());
+    }
+
+    /**
+     * completeMany's whole atomicity promise -- one failed call never aborts
+     * the read for its siblings -- rests on advance() converting even a raw
+     * Symfony transport exception into that call's own failure outcome. Every
+     * other completeMany failure test above raises through an HTTP status
+     * (guardStatus's domain exceptions); this one is the only one that goes
+     * through the multiplexed loop's own generic ExceptionInterface catch, by
+     * having the connection itself die mid-stream.
+     */
+    public function testCompleteManyConvertsARawTransportFailureIntoThatCallsOutcomeWithoutAbortingSiblings(): void
+    {
+        $failingBody = (static function (): \Generator {
+            yield 'data: {"choices":[{"delta":{"content":"par"}}]}' . "\n\n";
+            yield new TransportException('Connection reset');
+        })();
+        $client = $this->clientReturning([
+            new MockResponse($failingBody),
+            $this->sseStream('{"picks":[]}'),
+        ]);
+
+        $outcomes = $client->completeMany($this->credentials(), [
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+        ]);
+
+        self::assertTrue($outcomes[0]->isFailure());
+        self::assertInstanceOf(ProviderUnreachableException::class, $outcomes[0]->cause());
+        self::assertSame('That address did not answer.', $outcomes[0]->cause()->getMessage());
+        self::assertFalse($outcomes[1]->isFailure());
+        self::assertSame('{"picks":[]}', $outcomes[1]->content());
+    }
+
+    /**
+     * A failed call's own response must not linger open once its outcome is
+     * settled -- the transport-failure branches cancel it explicitly rather
+     * than counting on the connection to close itself.
+     */
+    public function testCompleteManyCancelsTheFailedCallsOwnResponse(): void
+    {
+        $client = new ResponseCapturingHttpClient(new MockResponse('', ['http_code' => 500]));
+
+        $outcomes = $this->clientUsing($client)->completeMany($this->credentials(), [
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+        ]);
+
+        self::assertTrue($outcomes[0]->isFailure());
+        self::assertTrue($client->lastResponse?->getInfo('canceled'));
     }
 
     /**

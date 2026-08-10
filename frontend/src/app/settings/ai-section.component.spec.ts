@@ -269,6 +269,31 @@ describe('AiSectionComponent', () => {
     expect(setBatchConcurrency).toHaveBeenCalledWith(7, 3);
   });
 
+  it('clamps a typed out-of-range batch concurrency before sending it', () => {
+    const fixture = mount();
+    const setBatchConcurrency = jest
+      .spyOn(ai, 'setBatchConcurrency')
+      .mockImplementation(() => undefined);
+    ai.configs.set([config({ id: 7, batchConcurrency: 1 })]);
+    fixture.detectChanges();
+
+    const numberInput: HTMLInputElement = fixture.nativeElement.querySelector(
+      '.concurrency-field input',
+    );
+
+    numberInput.value = '99';
+    numberInput.dispatchEvent(new Event('change'));
+    expect(setBatchConcurrency).toHaveBeenLastCalledWith(7, 4);
+
+    numberInput.value = '-5';
+    numberInput.dispatchEvent(new Event('change'));
+    expect(setBatchConcurrency).toHaveBeenLastCalledWith(7, 1);
+
+    numberInput.value = '';
+    numberInput.dispatchEvent(new Event('change'));
+    expect(setBatchConcurrency).toHaveBeenLastCalledWith(7, 1);
+  });
+
   it('disables activation for a row that is already active, not ready, or while busy', () => {
     const fixture = mount();
     ai.configs.set([config({ id: 1, active: true, ready: true }), config({ id: 2, ready: false })]);

@@ -66,7 +66,15 @@ final readonly class RecommendationBatchWave
         $pending = $this->pendingPositions($waveBatches, $winners);
 
         for ($round = 1; [] !== $pending; $round++) {
-            $replies = $this->sendRound($run, $settings, $effectiveSettings, $userId, $waveBatches, $pending, $correctiveReply);
+            $replies = $this->sendRound(
+                $run,
+                $settings,
+                $effectiveSettings,
+                $userId,
+                $waveBatches,
+                $pending,
+                $correctiveReply,
+            );
             $pending = [];
             foreach ($replies as $position => $reply) {
                 $result = $this->parser->parse($reply['content'], $waveBatches[$position]->validIds());
@@ -180,7 +188,12 @@ final readonly class RecommendationBatchWave
         $recordedCalls = [];
         foreach ($pending as $position) {
             $waveBatch = $waveBatches[$position];
-            $messages = $this->batchMessages($userId, $waveBatch, $effectiveSettings, $correctiveReply[$position] ?? null);
+            $messages = $this->batchMessages(
+                $userId,
+                $waveBatch,
+                $effectiveSettings,
+                $correctiveReply[$position] ?? null,
+            );
             $recordedCall = $this->callRecorder->begin(
                 $run,
                 RecommendationRunLog::PHASE_BATCH,
@@ -189,7 +202,12 @@ final readonly class RecommendationBatchWave
                 $settings->getModel() ?? '',
             );
             $calls[] = new ConcurrentCompletion(
-                $this->requestFactory->create($settings, $messages, \count($waveBatch->validIds()), RecommendationResponseSchema::Ranking),
+                $this->requestFactory->create(
+                    $settings,
+                    $messages,
+                    \count($waveBatch->validIds()),
+                    RecommendationResponseSchema::Ranking,
+                ),
                 $recordedCall,
             );
             $recordedCalls[] = $recordedCall;
@@ -229,10 +247,14 @@ final readonly class RecommendationBatchWave
 
     /**
      * The atomic-wave rule (#344): if any call in the round hit a transport
-     * failure, settle every in-flight call -- the failed one and the siblings
-     * completeMany already cancelled -- and re-throw the first failure, banking
-     * nothing. The caller records the one ceiling increment for the whole wave
-     * and re-runs it next tick.
+     * failure, settle every call this round opened a log row for and re-throw
+     * the first failure, banking nothing. completeMany cancels only the
+     * failed call's response -- a healthy sibling keeps streaming to
+     * completion on its own connection and its answer is simply discarded,
+     * since the wave never banks a partial round. The caller records one
+     * ceiling increment for the whole wave and re-runs it next tick; the
+     * discarded siblings' provider spend is the accepted re-bill cost of that
+     * re-run, not a bug to fix by cancelling them too.
      *
      * @param list<RecordedCall>      $recordedCalls
      * @param list<CompletionOutcome> $outcomes
