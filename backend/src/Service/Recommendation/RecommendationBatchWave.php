@@ -62,6 +62,7 @@ final readonly class RecommendationBatchWave
     ): array {
         $waveBatches = $this->waveBatches($run, $userId, $waveSize);
         $poolSummary = $this->candidateLoader->summarize($userId, $this->allCandidateIds($run));
+        $history = $this->historyLoader->load($userId, $effectiveSettings);
         $winners = [];
         $correctiveReply = [];
         $pending = $this->pendingPositions($waveBatches, $winners);
@@ -71,7 +72,7 @@ final readonly class RecommendationBatchWave
                 $run,
                 $settings,
                 $effectiveSettings,
-                $userId,
+                $history,
                 $waveBatches,
                 $pending,
                 $correctiveReply,
@@ -198,7 +199,7 @@ final readonly class RecommendationBatchWave
         RecommendationRun $run,
         AiProviderSettings $settings,
         EffectiveRecommendationSettings $effectiveSettings,
-        int $userId,
+        RecommendationHistory $history,
         array $waveBatches,
         array $pending,
         array $correctiveReply,
@@ -209,7 +210,7 @@ final readonly class RecommendationBatchWave
         foreach ($pending as $position) {
             $waveBatch = $waveBatches[$position];
             $messages = $this->batchMessages(
-                $userId,
+                $history,
                 $waveBatch,
                 $effectiveSettings,
                 $correctiveReply[$position] ?? null,
@@ -333,13 +334,12 @@ final readonly class RecommendationBatchWave
      * @return list<array{role: string, content: string}>
      */
     private function batchMessages(
-        int $userId,
+        RecommendationHistory $history,
         WaveBatch $waveBatch,
         EffectiveRecommendationSettings $effectiveSettings,
         ?string $lastInvalidReply,
         ?CandidatePoolSummary $poolSummary,
     ): array {
-        $history = $this->historyLoader->load($userId, $effectiveSettings);
         $candidateLines = $this->linesInSnapshotOrder($waveBatch->ids, $waveBatch->linesById);
         $messages = $this->promptBuilder->batchMessages(
             $history,

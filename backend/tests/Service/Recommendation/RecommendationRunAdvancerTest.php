@@ -21,6 +21,7 @@ use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
+use App\Service\Recommendation\OpenAiCompatibleChatClient;
 use App\Service\Recommendation\RecommendationPromptBuilder;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
@@ -222,6 +223,28 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         self::assertTrue($lock->acquire());
         $lock->release();
+    }
+
+    /**
+     * Pins the invariant RecommendationRunAdvancer::LOCK_TTL_SECONDS's own
+     * doc comment declares: the lock must outlive the longest possible tick,
+     * which is RecommendationRun::MAX_ATTEMPTS sequential in-tick retry
+     * rounds (#344), each bounded by OpenAiCompatibleChatClient::TIMEOUT_SECONDS.
+     * A future change to any of the three constants that lets the TTL fall
+     * back below that bound reopens the mid-tick lock-steal race the
+     * comment describes -- this test fails loudly instead of that race
+     * resurfacing silently in production.
+     */
+    public function testLockTtlOutlivesTheWorstCaseMultiRoundTick(): void
+    {
+        $lockTtlSeconds = (new \ReflectionClassConstant(
+            RecommendationRunAdvancer::class,
+            'LOCK_TTL_SECONDS',
+        ))->getValue();
+
+        $worstCaseTickSeconds = RecommendationRun::MAX_ATTEMPTS * OpenAiCompatibleChatClient::TIMEOUT_SECONDS;
+
+        self::assertGreaterThanOrEqual($worstCaseTickSeconds, $lockTtlSeconds);
     }
 
     public function testBatchTickRecordsWinnersAndAdvances(): void

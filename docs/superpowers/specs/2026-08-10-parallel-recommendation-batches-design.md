@@ -140,11 +140,11 @@ Dedup needs every batch's winners pooled and ranked, so it stays one sequential
 
 ### Backend — the setting
 
-- **`AiProviderSettings`** — new column `batch_concurrency SMALLINT DEFAULT 1
+- **`AiProviderSettings`** — new column `batch_concurrency INT DEFAULT 1
   NOT NULL`, field `private int $batchConcurrency = 1;`, accessors
   `batchConcurrency(): int` and `setBatchConcurrency(int): void`. Mirrors the
   #323 `suppressReasoning` addition. Not touched by `replaceConnection()`.
-- **Migration** — `batch_concurrency` on both MySQL (`SMALLINT DEFAULT 1 NOT
+- **Migration** — `batch_concurrency` on both MySQL (`INT DEFAULT 1 NOT
   NULL`) and SQLite (`INTEGER DEFAULT 1 NOT NULL`). Verified from empty on both
   dialects (the standing migration rule).
 - **`SetBatchConcurrencyRequest`** DTO — `#[Assert\Range(min: 1, max: 4)] public

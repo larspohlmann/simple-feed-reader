@@ -137,7 +137,7 @@ Open the generated migration. It must add exactly the one column on the `up()` a
 
 ```sql
 -- MySQL
-ALTER TABLE user_ai_settings ADD batch_concurrency SMALLINT DEFAULT 1 NOT NULL
+ALTER TABLE user_ai_settings ADD batch_concurrency INT DEFAULT 1 NOT NULL
 -- SQLite
 ALTER TABLE user_ai_settings ADD COLUMN batch_concurrency INTEGER DEFAULT 1 NOT NULL
 ```

@@ -63,7 +63,29 @@ use Symfony\Component\Lock\LockFactory;
 final class RecommendationRunAdvancer
 {
     private const string LOCK_NAME_PREFIX = 'ai-recommendations-';
-    private const float LOCK_TTL_SECONDS = 300.0;
+
+    /**
+     * A tick can now span up to RecommendationRun::MAX_ATTEMPTS sequential
+     * in-tick retry rounds (#344), each bounded by one provider call's wall
+     * clock, OpenAiCompatibleChatClient::TIMEOUT_SECONDS. The lock must
+     * outlive the longest possible tick, or it becomes stealable mid-tick: a
+     * second process (the worker sweep or another poll) could then start a
+     * concurrent tick for the same run. RecommendationRun carries no
+     * optimistic-version guard, so two concurrent ticks could double-bank
+     * winners or double-bill provider spend.
+     *
+     * Invariant: LOCK_TTL_SECONDS >= MAX_ATTEMPTS * TIMEOUT_SECONDS. Derived
+     * from both published constants, plus a margin, rather than a bare
+     * number, so a future change to either constant cannot silently reopen
+     * the race -- RecommendationRunAdvancerTest pins the inequality too.
+     *
+     * Accepted tradeoff: a process that crashes mid-tick holds the lock for
+     * the full TTL before another process can resume the run. That is a long
+     * wait, but this is a personal-scale app and a crash mid-tick is rare;
+     * correctness under concurrent ticks matters more than a fast failover.
+     */
+    private const float LOCK_TTL_SECONDS = RecommendationRun::MAX_ATTEMPTS * OpenAiCompatibleChatClient::TIMEOUT_SECONDS
+        + 300.0;
 
     /**
      * The most concurrent batch calls a poll tick may fan out. A poll tick is
