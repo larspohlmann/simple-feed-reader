@@ -37,7 +37,7 @@ final class UrlGuardTest extends TestCase
             ->assertSafe('https://example.com/feed.xml');
 
         self::assertSame('example.com', $guarded->host);
-        self::assertSame('93.184.216.34', $guarded->ip);
+        self::assertSame(['93.184.216.34'], $guarded->ips);
     }
 
     public function testAllowsPublicIpLiteralWithoutDns(): void
@@ -45,15 +45,15 @@ final class UrlGuardTest extends TestCase
         $guarded = $this->guard()->assertSafe('http://93.184.216.34/feed');
 
         self::assertSame('93.184.216.34', $guarded->host);
-        self::assertSame('93.184.216.34', $guarded->ip);
+        self::assertSame(['93.184.216.34'], $guarded->ips);
     }
 
-    public function testPinsTheFirstValidatedRecord(): void
+    public function testKeepsEveryValidatedRecordSoTheClientCanFallBack(): void
     {
         $guarded = $this->guard(['multi.example.com' => ['93.184.216.34', '8.8.8.8']])
             ->assertSafe('https://multi.example.com/feed');
 
-        self::assertSame('93.184.216.34', $guarded->ip);
+        self::assertSame(['93.184.216.34', '8.8.8.8'], $guarded->ips);
     }
 
     /** @return iterable<string, array{string}> */

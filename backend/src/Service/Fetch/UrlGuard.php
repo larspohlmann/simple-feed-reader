@@ -25,8 +25,10 @@ final readonly class UrlGuard
         $host = $this->parseAllowedHost($url);
         $ips = $this->resolveToPublicIps($host);
 
-        // Every record was validated above, so pinning the first is safe.
-        return new GuardedUrl($host, $ips[0]);
+        // Every record was validated above, so pinning them all is safe — and
+        // pinning the whole set, not just the first, keeps the client's
+        // cross-family fallback alive when one address is unroutable.
+        return new GuardedUrl($host, $ips);
     }
 
     /**

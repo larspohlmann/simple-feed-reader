@@ -92,4 +92,27 @@ final class HtmlPageFetcherTest extends TestCase
         // whole — a decompression-bomb amplification.
         self::assertContains('Accept-Encoding: identity', $seenHeaders);
     }
+
+    public function testPinsEveryResolvedAddressSoTheClientCanFallBackAcrossFamilies(): void
+    {
+        /** @var array<string, string> $seenResolve */
+        $seenResolve = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seenResolve): MockResponse {
+                /** @var array<string, string> $resolve */
+                $resolve = $options['resolve'];
+                $seenResolve = $resolve;
+
+                return new MockResponse('<html lang="en"><body>ok</body></html>', ['http_code' => 200]);
+            },
+            ['dual.example.com' => ['93.184.216.34', '2606:2800:220:1:248:1893:25c8:1946']],
+        );
+
+        $fetcher->fetch('https://dual.example.com/post');
+
+        self::assertSame(
+            ['dual.example.com' => '93.184.216.34,2606:2800:220:1:248:1893:25c8:1946'],
+            $seenResolve,
+        );
+    }
 }

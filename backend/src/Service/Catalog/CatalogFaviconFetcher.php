@@ -119,9 +119,9 @@ final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInter
             // Redirects are followed manually above, one re-guarded hop at a
             // time — never by the client itself.
             'max_redirects' => 0,
-            // Pins the connection to the IP the guard just validated, closing
+            // Pins the connection to the IPs the guard just validated, closing
             // the DNS-rebinding window between assertSafe() and the request.
-            'resolve' => [$guarded->host => $guarded->ip],
+            'resolve' => [$guarded->host => $guarded->pinnedAddresses()],
             // Refuse transparent compression so the wire cap below also bounds
             // the buffered body — a compressed response would otherwise
             // decompress unbounded before the size check runs.

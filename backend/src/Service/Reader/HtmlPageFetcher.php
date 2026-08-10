@@ -89,7 +89,7 @@ final class HtmlPageFetcher
                 'max_redirects' => 0,
                 'timeout' => self::TIMEOUT_SECONDS,
                 'max_duration' => self::TIMEOUT_SECONDS * 2,
-                'resolve' => [$guarded->host => $guarded->ip],
+                'resolve' => [$guarded->host => $guarded->pinnedAddresses()],
                 'on_progress' => static function (int $downloaded): void {
                     if ($downloaded > self::MAX_BYTES) {
                         throw new PageFetchException(sprintf('response exceeds %d bytes', self::MAX_BYTES));
