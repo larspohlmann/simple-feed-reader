@@ -60,8 +60,8 @@ routes stay available for a caller that wants one job only.
 
 Both halves share one database connection, so if the feed refresh aborts (its
 report shows `"status": "aborted"`), the recommendations half is skipped for
-that tick — its report shows `"skipped"` instead of run counts — and the call
-still returns `200`; the next tick tries the sweep again.
+that tick — its report keeps the run counts at zero and adds a `"skipped"`
+reason — and the call still returns `200`; the next tick tries the sweep again.
 
 Example cron line (every minute for the sweep cadence; the refresh half only
 touches feeds that are already due):
