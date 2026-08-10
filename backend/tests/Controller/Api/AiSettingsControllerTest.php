@@ -330,6 +330,7 @@ final class AiSettingsControllerTest extends ApiTestCase
         yield 'setting reasoning' => ['PUT', '/reasoning', '{"suppressReasoning":false}'];
         yield 'setting batch concurrency' => ['PUT', '/batch-concurrency', '{"batchConcurrency":2}'];
         yield 'deleting' => ['DELETE', '', '{}'];
+        yield 'duplicating' => ['POST', '/duplicate', '{}'];
     }
 
     #[DataProvider('idBearingRoutes')]
@@ -349,6 +350,8 @@ final class AiSettingsControllerTest extends ApiTestCase
             $client->request('GET', $uri);
         } elseif ('DELETE' === $method) {
             $client->request('DELETE', $uri);
+        } elseif ('POST' === $method) {
+            $this->postJson($client, $uri, $body);
         } else {
             $this->putJson($client, $uri, $body);
         }
@@ -378,16 +381,6 @@ final class AiSettingsControllerTest extends ApiTestCase
         self::assertArrayNotHasKey('apiKey', $body);
         self::assertArrayNotHasKey('apiKeyCiphertext', $body);
         self::assertNotSame($source, $body['id']);
-    }
-
-    public function testDuplicatingAnUnknownConfigurationIs404(): void
-    {
-        $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-duplicate-unknown@example.test');
-
-        $client->request('POST', '/api/me/ai/configs/999999/duplicate');
-
-        self::assertResponseStatusCodeSame(404);
     }
 
     public function testAddingBeyondTheCapIsRefused(): void
