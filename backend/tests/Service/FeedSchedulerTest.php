@@ -35,9 +35,9 @@ final class FeedSchedulerTest extends TestCase
         self::assertSame('2026-07-21 12:00:00', $feed->getLastFetchedAt()?->format('Y-m-d H:i:s'));
         self::assertSame('2026-07-21 13:00:00', $feed->getNextFetchAt()?->format('Y-m-d H:i:s'));
 
-        $feed->setFetchIntervalMinutes(40);
+        $feed->setFetchIntervalMinutes(8);
         $this->scheduler->recordSuccess($feed, 1);
-        self::assertSame(30, $feed->getFetchIntervalMinutes());
+        self::assertSame(5, $feed->getFetchIntervalMinutes());
     }
 
     public function testAThrottleCostsTheFeedNothingButItsPlaceInTheQueue(): void
@@ -98,9 +98,9 @@ final class FeedSchedulerTest extends TestCase
         $this->scheduler->recordSuccess($feed, 0);
         self::assertSame(90, $feed->getFetchIntervalMinutes());
 
-        $feed->setFetchIntervalMinutes(1200);
+        $feed->setFetchIntervalMinutes(300);
         $this->scheduler->recordSuccess($feed, 0);
-        self::assertSame(1440, $feed->getFetchIntervalMinutes());
+        self::assertSame(360, $feed->getFetchIntervalMinutes());
     }
 
     public function testCorruptedIntervalCannotScheduleInThePast(): void
@@ -111,7 +111,7 @@ final class FeedSchedulerTest extends TestCase
 
             $this->scheduler->recordSuccess($feed, 0);
 
-            self::assertSame(30, $feed->getFetchIntervalMinutes());
+            self::assertSame(5, $feed->getFetchIntervalMinutes());
             self::assertGreaterThan($this->clock->now(), $feed->getNextFetchAt());
         }
     }
