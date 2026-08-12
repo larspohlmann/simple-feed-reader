@@ -15,8 +15,8 @@ use Symfony\Component\Clock\ClockInterface;
  */
 final class FeedScheduler
 {
-    private const int FLOOR_MINUTES = 30;
-    private const int CEILING_MINUTES = 1440;      // 24 h
+    private const int FLOOR_MINUTES = 5;
+    private const int CEILING_MINUTES = 360;       // 6 h
     private const int FAILURE_CAP_MINUTES = 10080; // 7 days
     private const int FAILURES_UNTIL_GONE = 30;
     private const int MAX_BACKOFF_EXPONENT = 9;
