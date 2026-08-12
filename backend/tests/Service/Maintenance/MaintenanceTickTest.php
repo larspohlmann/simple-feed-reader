@@ -115,7 +115,7 @@ final class MaintenanceTickTest extends DbTestCase
             $failingEm,
             $fetcher,
             $bodyParser,
-            new EntryIngestor($this->em, $entryRepository, new EntrySanitizer(), $clock),
+            new EntryIngestor($this->em, $entryRepository, new EntrySanitizer()),
             new FaviconResolver($fetcher, new NullLogger()),
             new FeedScheduler($clock),
             new EntryPruner($this->em, $clock),

@@ -86,7 +86,7 @@ final class RefreshRunnerTest extends DbTestCase
             $runnerEm ?? $this->em,
             $this->fetcher,
             $this->bodyParser(),
-            new EntryIngestor($this->em, $entryRepository, new EntrySanitizer(), $this->clock),
+            new EntryIngestor($this->em, $entryRepository, new EntrySanitizer()),
             new FaviconResolver($this->faviconFetcher, new NullLogger()),
             new FeedScheduler($this->clock),
             new EntryPruner($this->em, $this->clock),
@@ -190,6 +190,31 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertNotNull($feedA->getNextFetchAt());
         self::assertGreaterThan($this->clock->now(), $feedA->getNextFetchAt());
         self::assertCount(1, $this->em->getRepository(Entry::class)->findAll());
+    }
+
+    public function testAllEntriesInOneRefreshRunShareTheRunStartAsCreatedAt(): void
+    {
+        $feedA = $this->dueFeed('https://a.example.com/feed');
+        $feedB = $this->dueFeed('https://b.example.com/feed');
+        $this->em->flush();
+
+        $this->fetcher->willReturn(
+            $feedA->getUrl(),
+            FetchResponse::fetched($feedA->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
+        );
+        $this->fetcher->willReturn(
+            $feedB->getUrl(),
+            FetchResponse::fetched($feedB->getUrl(), false, $this->rss('B', 'b-1'), '"etag-b"', null),
+        );
+
+        $runStart = $this->clock->now();
+        $this->runner()->run(RefreshRequest::allDue(300));
+
+        $entries = $this->em->getRepository(Entry::class)->findAll();
+        self::assertCount(2, $entries);
+        foreach ($entries as $entry) {
+            self::assertSame($runStart->getTimestamp(), $entry->getCreatedAt()->getTimestamp());
+        }
     }
 
     public function testRefreshBackfillsTheImageOntoAnAlreadyStoredEntryThatLacksOne(): void

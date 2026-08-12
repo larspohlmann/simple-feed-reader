@@ -79,7 +79,7 @@ final class RefreshRunnerOrphanSweepTest extends DbTestCase
                 ),
                 ScrapedBodyParser::format() => static fn (): ScrapedBodyParser => new ScrapedBodyParser($extractor),
             ])),
-            new EntryIngestor($this->em, $entryRepository, new EntrySanitizer(), $this->clock),
+            new EntryIngestor($this->em, $entryRepository, new EntrySanitizer()),
             new FaviconResolver($this->faviconFetcher, new NullLogger()),
             new FeedScheduler($this->clock),
             new EntryPruner($this->em, $this->clock),

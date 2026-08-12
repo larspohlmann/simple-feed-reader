@@ -99,10 +99,10 @@ final class SubscriptionServiceTest extends DbTestCase
                     $this->em,
                     $this->em->getRepository(Entry::class),
                     new EntrySanitizer(),
-                    $clock,
                 ),
                 new FeedScheduler($clock),
                 $this->em,
+                $clock,
             ),
             new OrphanedFeedReclaimer($this->em),
             $this->em,
@@ -142,7 +142,14 @@ final class SubscriptionServiceTest extends DbTestCase
 
         self::assertNotNull($feed);
         self::assertSame('Discovered Feed', $feed->getTitle());
-        self::assertCount(1, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
+        $entries = $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]);
+        self::assertCount(1, $entries);
+        // The recorder's clock-now is the entry's createdAt (the run-start for
+        // the list's run-first sort — a first-subscribe fetch is a one-feed run).
+        self::assertSame(
+            (new \DateTimeImmutable('2026-06-01T00:00:00Z'))->getTimestamp(),
+            $entries[0]->getCreatedAt()->getTimestamp(),
+        );
         self::assertNotNull($feed->getLastFetchedAt());
         self::assertNotNull($feed->getNextFetchAt());
     }

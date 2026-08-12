@@ -11,7 +11,6 @@ use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
 use App\Service\Parser\ParsedImage;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Clock\ClockInterface;
 
 /**
  * Turns a ParsedFeed into persisted Entry rows: dedupes against existing
@@ -29,11 +28,14 @@ final class EntryIngestor
         private readonly EntityManagerInterface $em,
         private readonly EntryRepository $entryRepository,
         private readonly EntrySanitizer $sanitizer,
-        private readonly ClockInterface $clock,
     ) {
     }
 
-    public function ingest(Feed $feed, ParsedFeed $parsed): int
+    /**
+     * @param \DateTimeImmutable $fetchedAt the refresh run-start shared by
+     *        every entry this call ingests — drives the list's run-first sort
+     */
+    public function ingest(Feed $feed, ParsedFeed $parsed, \DateTimeImmutable $fetchedAt): int
     {
         $this->updateFeedMetadata($feed, $parsed);
 
@@ -57,7 +59,7 @@ final class EntryIngestor
                 $parsedEntry->guid,
                 $parsedEntry->url === null ? null : mb_substr($parsedEntry->url, 0, self::URL_MAX),
                 mb_substr($parsedEntry->title, 0, self::TITLE_MAX),
-                $this->clock->now(),
+                $fetchedAt,
             );
             $entry->setAuthor(
                 $parsedEntry->author === null ? null : mb_substr($parsedEntry->author, 0, self::AUTHOR_MAX),
