@@ -118,7 +118,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
             $this->em,
             $fetcher,
             $bodyParser,
-            new EntryIngestor($this->em, $entryRepository, new EntrySanitizer(), $this->clock),
+            new EntryIngestor($this->em, $entryRepository, new EntrySanitizer()),
             new FaviconResolver($this->faviconFetcher, new NullLogger()),
             new FeedScheduler($this->clock),
             new EntryPruner($this->em, $this->clock),

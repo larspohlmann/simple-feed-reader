@@ -101,7 +101,11 @@ final readonly class EntryController
         // last row. (A short page cannot have a next page.)
         if ($last !== null && \count($rows) >= min(max(1, $limit), EntryQuery::MAX_LIMIT)) {
             $entry = $last->entry;
-            $nextCursor = EntryCursor::encode($entry->getEffectiveDate(), $entry->getId() ?? 0);
+            $nextCursor = EntryCursor::encode(
+                $entry->getCreatedAt(),
+                $entry->getPublishedAt(),
+                $entry->getId() ?? 0,
+            );
         }
 
         return new JsonResponse([

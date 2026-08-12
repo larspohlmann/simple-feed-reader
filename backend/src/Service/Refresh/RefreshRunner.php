@@ -129,7 +129,7 @@ final class RefreshRunner
         // not a regression; it is easy to mistake `budgetSeconds` for a hard
         // ceiling, so it is spelled out here rather than left to be rediscovered.
         $queue = new BudgetedFeedQueue($feeds, $this->clock, $now->getTimestamp() + $request->budgetSeconds);
-        $tally = $this->processOutcomes($feeds, $queue);
+        $tally = $this->processOutcomes($feeds, $queue, $now);
 
         if ($tally->aborted) {
             // The EntityManager is likely closed: no favicons, no countDue, no
@@ -210,7 +210,7 @@ final class RefreshRunner
      * @throws NotFoundExceptionInterface
      * @throws \DateMalformedStringException
      */
-    private function processOutcomes(array $feeds, BudgetedFeedQueue $queue): RefreshTally
+    private function processOutcomes(array $feeds, BudgetedFeedQueue $queue, \DateTimeImmutable $now): RefreshTally
     {
         $byId = [];
         foreach ($feeds as $feed) {
@@ -221,7 +221,7 @@ final class RefreshRunner
 
         foreach ($this->fetcher->fetchAll($queue->tickets()) as $feedId => $outcome) {
             $feed = $byId[$feedId];
-            $outcomeKind = $this->applyOutcome($feed, $outcome);
+            $outcomeKind = $this->applyOutcome($feed, $outcome, $now);
             $tally->record($outcomeKind, $feed);
 
             if (FeedOutcome::Aborted === $outcomeKind) {
@@ -237,10 +237,10 @@ final class RefreshRunner
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
-    private function applyOutcome(Feed $feed, FetchOutcome $outcome): FeedOutcome
+    private function applyOutcome(Feed $feed, FetchOutcome $outcome, \DateTimeImmutable $now): FeedOutcome
     {
         try {
-            return $this->persistOutcome($feed, $outcome);
+            return $this->persistOutcome($feed, $outcome, $now);
         } catch (UniqueConstraintViolationException | ForeignKeyConstraintViolationException | ORMException $e) {
             // A failed flush rolls back AND closes the EntityManager, so every
             // later persist/flush would throw "EntityManager is closed".
@@ -300,7 +300,7 @@ final class RefreshRunner
      * @throws NotFoundExceptionInterface
      * @throws ContainerExceptionInterface
      */
-    private function persistOutcome(Feed $feed, FetchOutcome $outcome): FeedOutcome
+    private function persistOutcome(Feed $feed, FetchOutcome $outcome, \DateTimeImmutable $now): FeedOutcome
     {
         try {
             $response = $outcome->responseOrThrow();
@@ -324,7 +324,7 @@ final class RefreshRunner
             }
 
             $parsed = $this->bodyParser->parse($feed, $body);
-            $created = $this->ingestor->ingest($feed, $parsed);
+            $created = $this->ingestor->ingest($feed, $parsed, $now);
             // Opportunistically fill images onto entries stored before the image
             // column existed (#148). The count is discarded on purpose: the
             // refresh's success signal is NEW content, and a backfilled image is

@@ -9,6 +9,7 @@ use App\Service\Discovery\DiscoveredFeed;
 use App\Service\EntryIngestor;
 use App\Service\FeedScheduler;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Clock\ClockInterface;
 
 /**
  * Stores the document discovery already read as a feed's first fetch.
@@ -32,6 +33,7 @@ final readonly class FirstFetchRecorder
         private EntryIngestor $ingestor,
         private FeedScheduler $scheduler,
         private EntityManagerInterface $em,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -53,7 +55,7 @@ final readonly class FirstFetchRecorder
             return 0;
         }
 
-        $created = $this->ingestor->ingest($feed, $discovered->document);
+        $created = $this->ingestor->ingest($feed, $discovered->document, $this->clock->now());
         $feed->setEtag($this->truncate($discovered->etag, self::ETAG_MAX));
         $feed->setLastModified($this->truncate($discovered->lastModified, self::LAST_MODIFIED_MAX));
         $this->scheduler->recordSuccess($feed, $created);

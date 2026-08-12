@@ -22,6 +22,11 @@ final class FillMissingImagesTest extends DbTestCase
         return $ingestor;
     }
 
+    private static function fetchedAt(): \DateTimeImmutable
+    {
+        return new \DateTimeImmutable('2026-07-21T12:00:00Z');
+    }
+
     private function feed(string $url = 'https://example.com/feed'): Feed
     {
         $feed = new Feed($url);
@@ -40,7 +45,7 @@ final class FillMissingImagesTest extends DbTestCase
     {
         $feed = $this->feed();
         $withoutImage = new ParsedFeed('T', null, null, [$this->parsedEntry('g2', null)]);
-        $this->ingestor()->ingest($feed, $withoutImage);
+        $this->ingestor()->ingest($feed, $withoutImage, self::fetchedAt());
         $this->em->flush();
 
         $withImage = new ParsedFeed('T', null, null, [
@@ -62,7 +67,7 @@ final class FillMissingImagesTest extends DbTestCase
         $feed = $this->feed();
         $this->ingestor()->ingest($feed, new ParsedFeed('T', null, null, [
             $this->parsedEntry('g3', new ParsedImage('https://i/original.jpg', 900, 600)),
-        ]));
+        ]), self::fetchedAt());
         $this->em->flush();
 
         $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeed('T', null, null, [
@@ -90,7 +95,8 @@ final class FillMissingImagesTest extends DbTestCase
     public function testSkipsParsedEntriesThatCarryNoImage(): void
     {
         $feed = $this->feed();
-        $this->ingestor()->ingest($feed, new ParsedFeed('T', null, null, [$this->parsedEntry('g5', null)]));
+        $g5 = new ParsedFeed('T', null, null, [$this->parsedEntry('g5', null)]);
+        $this->ingestor()->ingest($feed, $g5, self::fetchedAt());
         $this->em->flush();
 
         $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeed('T', null, null, [
@@ -106,7 +112,8 @@ final class FillMissingImagesTest extends DbTestCase
     public function testAnOverlongReplacementImageUrlIsNotFilledIn(): void
     {
         $feed = $this->feed();
-        $this->ingestor()->ingest($feed, new ParsedFeed('T', null, null, [$this->parsedEntry('g6', null)]));
+        $g6 = new ParsedFeed('T', null, null, [$this->parsedEntry('g6', null)]);
+        $this->ingestor()->ingest($feed, $g6, self::fetchedAt());
         $this->em->flush();
 
         $overlongUrl = 'https://i/' . str_repeat('u', 2048) . '.jpg';
@@ -123,7 +130,8 @@ final class FillMissingImagesTest extends DbTestCase
     public function testAnHttpReplacementImageUrlIsNotFilledIn(): void
     {
         $feed = $this->feed();
-        $this->ingestor()->ingest($feed, new ParsedFeed('T', null, null, [$this->parsedEntry('g7', null)]));
+        $g7 = new ParsedFeed('T', null, null, [$this->parsedEntry('g7', null)]);
+        $this->ingestor()->ingest($feed, $g7, self::fetchedAt());
         $this->em->flush();
 
         $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeed('T', null, null, [
