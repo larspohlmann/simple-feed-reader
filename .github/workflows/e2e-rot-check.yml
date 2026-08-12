@@ -113,11 +113,27 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      # --wait blocks until every service is running and every service that
-      # declares a healthcheck is healthy. Only mysql declares one, so the two
-      # readiness gates below are not redundant with it.
+      # `--wait` blocks until every booted service is running and every service
+      # that declares a healthcheck is healthy. Only mysql declares one among
+      # the services booted here, so the two readiness gates below are not
+      # redundant with it.
+      #
+      # The worker is intentionally NOT in the list below. It runs
+      # `messenger:consume scheduler_worker`, which crash-loops against a
+      # database whose `messenger_messages` and `worker_heartbeat` tables do
+      # not exist yet -- and the migrate step below is what creates them, so
+      # it cannot run until this step succeeds. `restart: always` would
+      # bounce the consumer, the heartbeat would never be touched, the
+      # worker's healthcheck (start_period 60 s + retries 2 at 60 s interval)
+      # would go red within ~120 s, and `--wait` would fail before the migrate
+      # step ever ran. Excluding the worker also mirrors what
+      # docs/local-docker.md tells a developer to do by hand before an e2e
+      # run (`docker compose stop worker`): the worker drives a sweep against
+      # real data, which is unwanted while a suite reads the same database.
+      # The suites seed their own fixtures and do not depend on a running
+      # sweep, so omitting the worker loses no coverage.
       - name: Boot the stack
-        run: docker compose up -d --wait
+        run: docker compose up -d --wait mysql mailpit php nginx frontend
 
       - name: Migrate the database
         run: |
