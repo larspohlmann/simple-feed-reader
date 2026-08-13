@@ -10,7 +10,7 @@ use App\Service\PlainText;
 final class Rss2Parser implements FeedFormatParserInterface
 {
     private const string CONTENT_NS = 'http://purl.org/rss/1.0/modules/content/';
-    private const string DC_NS = 'http://purl.org/dc/elements/1.1/';
+    private const string DC_NS = XmlHelper::DUBLIN_CORE_NAMESPACE;
 
     public function supports(\DOMElement $root): bool
     {

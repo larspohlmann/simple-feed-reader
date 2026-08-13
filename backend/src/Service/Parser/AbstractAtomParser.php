@@ -110,7 +110,11 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
             }
         }
 
-        return null;
+        // Some publishers (tagesschau, NDR) serve Atom that omits the dialect's
+        // own date element and carries the timestamp only as Dublin Core
+        // <dc:date>, exactly as many RSS feeds do. Fall back to it rather than
+        // dropping the date and rendering every entry as "now".
+        return XmlHelper::childText($entry, 'date', XmlHelper::DUBLIN_CORE_NAMESPACE);
     }
 
     private function alternateLink(\DOMElement $parent, string $ns): ?string
