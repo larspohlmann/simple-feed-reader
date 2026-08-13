@@ -7,6 +7,13 @@ namespace App\Service\Parser;
 final class XmlHelper
 {
     /**
+     * Dublin Core elements namespace. RSS 1.0/2.0 and the Atom 0.3 feeds of
+     * some publishers (tagesschau, NDR) carry the entry date as <dc:date> here
+     * rather than in the feed dialect's own date element.
+     */
+    public const string DUBLIN_CORE_NAMESPACE = 'http://purl.org/dc/elements/1.1/';
+
+    /**
      * Trimmed text content of the first matching direct child element, or
      * null when absent/empty. When $namespaceUri is null, any namespace
      * matches.
