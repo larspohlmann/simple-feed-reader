@@ -127,6 +127,24 @@ final class RecommendationRunAdvancer
             return RecommendationRunReport::busy();
         }
 
+        // A hard request-time kill -- Strato caps a web request at 240s, far
+        // below the lock TTL -- never reaches the finally below, so without
+        // this the lock would sit held for its full TTL (35 min) and freeze
+        // the run until it expired. A shutdown hook releases it on that path.
+        // The store's delete is token-scoped, so on the normal path (the
+        // finally has already released) or once another process has re-acquired
+        // the same name, the hook is a harmless no-op -- it can never free a
+        // lock this request no longer owns. A true hard kill (SIGKILL) skips
+        // shutdown hooks too, so the TTL stays as the ultimate backstop.
+        register_shutdown_function(static function () use ($lock): void {
+            try {
+                $lock->release();
+            } catch (\Throwable) {
+                // Best-effort: a failure to release during shutdown must not
+                // raise a second fatal. The TTL still bounds the stall.
+            }
+        });
+
         try {
             return $this->tick($user, $driver);
         } finally {
