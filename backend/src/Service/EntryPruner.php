@@ -114,10 +114,12 @@ final class EntryPruner
 
     private function pruneByFeedCap(): int
     {
+        $cap = $this->clampedMaxEntriesPerFeed();
+
         $deleted = 0;
-        foreach ($this->feedIdsOverCap() as $feedId) {
+        foreach ($this->feedIdsOverCap($cap) as $feedId) {
             $deleted += $this->deleteByIds(
-                $this->deletableIdsPastBoundary((int) $feedId, $this->maxEntriesPerFeed, null),
+                $this->deletableIdsPastBoundary((int) $feedId, $cap, null),
             );
         }
 
@@ -125,16 +127,29 @@ final class EntryPruner
     }
 
     /**
+     * `maxEntriesPerFeed` is a constructor argument an operator can override
+     * via the service definition; clamping it here, rather than trusting the
+     * configured value, keeps the floor structural instead of
+     * configuration-dependent — a value below it would silently defeat
+     * `MIN_ENTRIES_PER_FEED`, and zero would turn `rankBoundaryBeyond()`'s
+     * `setFirstResult($keep - 1)` negative.
+     */
+    private function clampedMaxEntriesPerFeed(): int
+    {
+        return max(self::MIN_ENTRIES_PER_FEED, $this->maxEntriesPerFeed);
+    }
+
+    /**
      * @return list<int> — only feeds over the cap are worth ranking at all.
      */
-    private function feedIdsOverCap(): array
+    private function feedIdsOverCap(int $cap): array
     {
         /** @var list<int> $feedIds */
         $feedIds = $this->em->createQuery(sprintf(
             'SELECT IDENTITY(e.feed) FROM %s e GROUP BY e.feed HAVING COUNT(e.id) > :cap',
             Entry::class,
         ))
-            ->setParameter('cap', $this->maxEntriesPerFeed)
+            ->setParameter('cap', $cap)
             ->getSingleColumnResult();
 
         return $feedIds;

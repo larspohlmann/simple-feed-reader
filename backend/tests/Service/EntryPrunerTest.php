@@ -181,27 +181,36 @@ final class EntryPrunerTest extends DbTestCase
      */
     public function testCapPassSumsDeletionsAcrossFeeds(): void
     {
-        $pruner = new EntryPruner($this->em, $this->clock, maxEntriesPerFeed: 3);
+        // A cap above MIN_ENTRIES_PER_FEED, so the #384 clamp doesn't mask
+        // the boundary this test exercises.
+        $cap = 22;
+        $pruner = new EntryPruner($this->em, $this->clock, maxEntriesPerFeed: $cap);
 
-        $this->feedWithEntries(4, $this->daysAgo(1));
-        $this->feedWithEntries(4, $this->daysAgo(1));
+        $this->feedWithEntries($cap + 1, $this->daysAgo(1));
+        $this->feedWithEntries($cap + 1, $this->daysAgo(1));
 
         self::assertSame(2, $pruner->prune());
     }
 
     /**
-     * Five entries sharing one `createdAt` (a burst fetch): cap 3 keeps the
-     * three highest ids (entry-2..entry-4) and drops the two lowest
-     * (entry-0, entry-1), tie-broken by id alone.
+     * `$cap + 2` entries sharing one `createdAt` (a burst fetch): the cap
+     * keeps the highest ids and drops the two lowest, tie-broken by id
+     * alone.
      */
     public function testCapPassBreaksATieById(): void
     {
-        $pruner = new EntryPruner($this->em, $this->clock, maxEntriesPerFeed: 3);
+        // A cap above MIN_ENTRIES_PER_FEED, so the #384 clamp doesn't mask
+        // the boundary this test exercises.
+        $cap = 22;
+        $pruner = new EntryPruner($this->em, $this->clock, maxEntriesPerFeed: $cap);
 
-        $feed = $this->feedWithEntries(5, $this->daysAgo(1));
+        $feed = $this->feedWithEntries($cap + 2, $this->daysAgo(1));
 
         self::assertSame(2, $pruner->prune());
-        self::assertEqualsCanonicalizing(['entry-2', 'entry-3', 'entry-4'], $this->remainingGuids($feed));
+        self::assertEqualsCanonicalizing(
+            array_map(static fn (int $i): string => "entry-{$i}", range(2, $cap + 1)),
+            $this->remainingGuids($feed),
+        );
     }
 
     public function testPrunesOldEntriesButKeepsProtectedAndRecent(): void
@@ -317,35 +326,29 @@ final class EntryPrunerTest extends DbTestCase
 
     public function testCapsEntriesPerFeedKeepingNewestAndProtected(): void
     {
-        // A small cap so the test stays readable; production default is 2000.
-        $pruner = new EntryPruner($this->em, $this->clock, maxEntriesPerFeed: 3);
+        // A cap above MIN_ENTRIES_PER_FEED, so the #384 clamp doesn't mask
+        // the boundary this test exercises.
+        $cap = 22;
+        $pruner = new EntryPruner($this->em, $this->clock, maxEntriesPerFeed: $cap);
 
-        $feed = new Feed('https://example.com/feed');
         $user = new User('reader@example.com', $this->clock->now());
-        $this->em->persist($feed);
         $this->em->persist($user);
 
-        // Five RECENT entries (age pass leaves them all), oldest → newest.
-        $e1 = $this->persistEntry($feed, 'e1-oldest', $this->daysAgo(5));
-        $this->persistEntry($feed, 'e2', $this->daysAgo(4));
-        $this->persistEntry($feed, 'e3', $this->daysAgo(3));
-        $this->persistEntry($feed, 'e4', $this->daysAgo(2));
-        $this->persistEntry($feed, 'e5-newest', $this->daysAgo(1));
+        // `$cap` recent filler entries hold the feed at the cap, so the two
+        // older entries below both fall beyond the boundary.
+        $feed = $this->feedWithEntries($cap, $this->daysAgo(1));
+        $this->seedEntry($feed, 'old-unprotected', $this->daysAgo(3));
+        $protected = $this->seedEntry($feed, 'old-protected', $this->daysAgo(2));
 
-        // The oldest is kept, so it survives despite being beyond the cap.
-        $keptState = new EntryState($user, $e1);
+        // The older of the two is kept, so it survives despite being beyond the cap.
+        $keptState = new EntryState($user, $protected);
         $keptState->setIsKept(true);
         $this->em->persist($keptState);
         $this->em->flush();
 
-        // Non-protected newest-first: e5,e4,e3,e2 → cap 3 keeps e5,e4,e3, drops e2.
         self::assertSame(1, $pruner->prune());
-        $remaining = array_map(
-            static fn (Entry $entry): string => $entry->getGuid(),
-            $this->findAllEntries($feed),
-        );
-        sort($remaining);
-        self::assertSame(['e1-oldest', 'e3', 'e4', 'e5-newest'], $remaining);
+        self::assertNull($this->findByGuid($feed, 'old-unprotected'));
+        self::assertNotNull($this->findByGuid($feed, 'old-protected'));
     }
 
     /**
@@ -355,17 +358,18 @@ final class EntryPrunerTest extends DbTestCase
      */
     public function testCapPassDeletesEntryWithOnlyAReadState(): void
     {
-        $pruner = new EntryPruner($this->em, $this->clock, maxEntriesPerFeed: 3);
+        // A cap above MIN_ENTRIES_PER_FEED, so the #384 clamp doesn't mask
+        // the boundary this test exercises.
+        $cap = 22;
+        $pruner = new EntryPruner($this->em, $this->clock, maxEntriesPerFeed: $cap);
 
-        $feed = new Feed('https://example.com/feed');
         $user = new User('reader@example.com', $this->clock->now());
-        $this->em->persist($feed);
         $this->em->persist($user);
 
-        $oldest = $this->persistEntry($feed, 'oldest', $this->daysAgo(4));
-        $this->persistEntry($feed, 'n1', $this->daysAgo(3));
-        $this->persistEntry($feed, 'n2', $this->daysAgo(2));
-        $this->persistEntry($feed, 'n3', $this->daysAgo(1));
+        // `$cap` recent filler entries hold the feed at the cap, so the
+        // older entry below falls beyond the boundary.
+        $feed = $this->feedWithEntries($cap, $this->daysAgo(1));
+        $oldest = $this->seedEntry($feed, 'oldest', $this->daysAgo(2));
 
         $readState = new EntryState($user, $oldest);
         $readState->setIsRead(true);
@@ -385,34 +389,33 @@ final class EntryPrunerTest extends DbTestCase
      */
     public function testProtectedNewestEntryStillOccupiesARankingSlot(): void
     {
-        $pruner = new EntryPruner($this->em, $this->clock, maxEntriesPerFeed: 3);
+        // A cap above MIN_ENTRIES_PER_FEED, so the #384 clamp doesn't mask
+        // the boundary this test exercises.
+        $cap = 22;
+        $pruner = new EntryPruner($this->em, $this->clock, maxEntriesPerFeed: $cap);
 
-        $feed = new Feed('https://example.com/feed');
         $user = new User('reader@example.com', $this->clock->now());
-        $this->em->persist($feed);
         $this->em->persist($user);
 
-        // Newest → oldest: favorite, n1, n2, n3, n4.
-        $favorite = $this->persistEntry($feed, 'favorite-newest', $this->daysAgo(1));
-        $this->persistEntry($feed, 'n1', $this->daysAgo(2));
-        $this->persistEntry($feed, 'n2', $this->daysAgo(3));
-        $this->persistEntry($feed, 'n3', $this->daysAgo(4));
-        $this->persistEntry($feed, 'n4', $this->daysAgo(5));
+        // `$cap + 1` same-day entries (tie-broken by id, oldest-inserted
+        // lowest) plus one favorite strictly newer than all of them: the
+        // favorite still occupies a ranking slot, so it isn't "one extra
+        // keep" — the two lowest ids in the tied group fall beyond the cap,
+        // not just one.
+        $feed = $this->feedWithEntries($cap + 1, $this->daysAgo(2));
+        $favorite = $this->seedEntry($feed, 'favorite-newest', $this->daysAgo(1));
 
         $favoriteState = new EntryState($user, $favorite);
         $favoriteState->setIsFavorite(true);
         $this->em->persist($favoriteState);
         $this->em->flush();
 
-        // Ranked over all 5 entries: favorite,n1,n2,n3,n4 → cap 3 keeps the
-        // top 3 (favorite,n1,n2) and drops n3,n4 — two deletions, not one.
         self::assertSame(2, $pruner->prune());
-        $remaining = array_map(
-            static fn (Entry $entry): string => $entry->getGuid(),
-            $this->findAllEntries($feed),
+        $expected = array_merge(
+            ['favorite-newest'],
+            array_map(static fn (int $i): string => "entry-{$i}", range(2, $cap)),
         );
-        sort($remaining);
-        self::assertSame(['favorite-newest', 'n1', 'n2'], $remaining);
+        self::assertEqualsCanonicalizing($expected, $this->remainingGuids($feed));
     }
 
     public function testFeedAtOrUnderCapIsUntouched(): void
@@ -496,6 +499,22 @@ final class EntryPrunerTest extends DbTestCase
         $this->em->clear();
 
         self::assertNotNull($this->em->getRepository(RecommendationRun::class)->find($runId));
+    }
+
+    /**
+     * `maxEntriesPerFeed` is overridable via the service definition; a value
+     * configured below the 20-entry floor must not defeat it, and the clamp
+     * must also stop `rankBoundaryBeyond()` from turning a `keep` of 0 into a
+     * negative `setFirstResult()`.
+     */
+    public function testCapBelowTheFloorIsClampedToTheFloor(): void
+    {
+        $pruner = new EntryPruner($this->em, $this->clock, maxEntriesPerFeed: 0);
+
+        $feed = $this->feedWithEntries(25, $this->daysAgo(1));
+
+        self::assertSame(5, $pruner->prune());
+        self::assertCount(20, $this->findAllEntries($feed));
     }
 
     public function testCapIsPerFeedNotGlobal(): void
