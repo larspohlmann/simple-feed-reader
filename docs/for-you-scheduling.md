@@ -40,6 +40,24 @@ Example GitHub Actions schedule (store the token as the repository secret
 
 The response is JSON: `{ "startedRuns": n, "advancedRuns": m, "activeRuns": k }`.
 
+## The on-demand drainer
+
+Worker-less installs do not depend on the cron cadence for interactive
+runs. Starting or resuming a run from the web spawns a short-lived,
+detached CLI process (`app:recommendations:drain`) that advances every
+active run at full worker concurrency until none is left, then exits. The
+spawn only happens while no worker heartbeat is fresh, a global
+`recommendation-drain` lock guarantees at most one drainer, and the
+maintenance tick respawns a drainer as a safety net if one died with runs
+still active. If the host cannot spawn processes (`exec` disabled, no CLI
+binary configured), the launch silently no-ops and the cron sweep above
+carries the runs exactly as before.
+
+The CLI binary is named by `DRAIN_PHP_CLI_BINARY`; a web SAPI must not run
+`bin/console` with its own binary (on Strato the web SAPI is `cgi-fcgi`
+with a 240 s execution cap, while `/opt/RZphp84/bin/php-cli` is unbounded).
+Empty is fine wherever PHP already runs as `cli` or a real worker exists.
+
 ## One call for everything
 
 To drive both jobs from a single cron line, ping the combined endpoint instead

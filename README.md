@@ -68,6 +68,8 @@ Run these from inside the `simple-feed-reader` directory:
   operators, and the redirect/exchange contract for the SPA.
 - [Local Docker environment](docs/local-docker.md) — run the whole stack
   (MySQL, PHP, nginx with TLS, Mailpit) in Docker.
+- [How a "For you" run works](docs/recommendations-runs.md) — what happens
+  after "Get recommendations", closing the browser, stopping, resuming.
 - [Running in production (Docker)](docs/docker-production.md) — the prod
   stack: MySQL or SQLite, real mail transport, TLS or reverse proxy, updates,
   backups.
