@@ -11,6 +11,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Lock\Exception\ExceptionInterface as LockExceptionInterface;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\LockInterface;
 
@@ -123,7 +124,19 @@ final class RecommendationDrainCommand extends Command
                 return;
             }
 
-            $lock->refresh();
+            try {
+                $lock->refresh();
+            } catch (LockExceptionInterface) {
+                // A sweep's duration is the SUM over every active run
+                // (WorkerRunSweep::sweep()), so a sweep spanning many users
+                // can outrun LOCK_TTL_SECONDS between refreshes. Losing the
+                // lock here means another drainer already re-acquired it
+                // and now owns the work -- the same benign handoff as never
+                // winning acquire() above, not a failure worth a non-SUCCESS
+                // exit.
+                return;
+            }
+
             $this->clock->sleep(self::SWEEP_PAUSE_SECONDS);
         }
     }

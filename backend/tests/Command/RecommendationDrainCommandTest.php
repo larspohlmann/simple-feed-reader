@@ -7,15 +7,19 @@ namespace App\Tests\Command;
 use App\Command\RecommendationDrainCommand;
 use App\Entity\Feed;
 use App\Entity\RecommendationRun;
+use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
+use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Worker\WorkerPresence;
 use App\Service\Worker\WorkerRunSweep;
 use App\Tests\DbTestCase;
+use App\Tests\Support\LockLostAfterFirstRefreshStore;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\TickingClock;
@@ -24,10 +28,21 @@ use Psr\Log\NullLogger;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\DoctrineDbalStore;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class RecommendationDrainCommandTest extends DbTestCase
 {
+    /**
+     * candidatePoolSize 20 with the batchCount expert override forced to 2
+     * makes packBatches produce exactly two batches of 10 (see
+     * seedTwoBatchFixture) -- enough to prove the drain command's loop
+     * actually loops, which a single-batch fixture cannot: one sweep
+     * finalizes a single-batch run outright, so a command that replaced its
+     * `while` with a one-shot `if` would still pass a single-batch test.
+     */
+    private const int TWO_BATCH_ENTRY_COUNT = 20;
+
     private RecommendationRunFixtures $fixtures;
 
     protected function setUp(): void
@@ -41,16 +56,21 @@ final class RecommendationDrainCommandTest extends DbTestCase
 
     /**
      * The whole point of the drainer: it does not advance once and exit, it
-     * loops until nothing is active. A snapshotted single-batch run needs
-     * one sweep to bank the batch and finish, and a second sweep to observe
-     * that nothing is left -- completion proves both happened.
+     * loops until nothing is active. batchConcurrency defaults to 1, so a
+     * snapshotted two-batch run needs three sweeps to complete -- one
+     * provider tick per batch, then one dedup tick -- and a fourth sweep to
+     * observe that nothing is left; a one-shot `if` instead of the `while`
+     * would leave this run running forever, one sweep short. Completion
+     * proves the loop really looped, not just that it fired once.
      */
     public function testDrainsAnActiveRunToCompletionAndReleasesTheLock(): void
     {
         $user = $this->user('drain-to-completion@example.test');
-        $this->seedSingleBatchFixture($user);
+        $this->seedTwoBatchFixture($user);
         $run = $this->startAndSnapshot($user);
-        $this->requeueCleanReplyFor($run->getCandidateBatches()[0]);
+        $this->queueBatchReply($run->getCandidateBatches()[0]);
+        $this->queueBatchReply($run->getCandidateBatches()[1]);
+        $this->queueCleanDedupReply();
 
         $exitCode = $this->execute($this->command());
 
@@ -115,6 +135,29 @@ final class RecommendationDrainCommandTest extends DbTestCase
         self::assertNotNull($this->runs()->findActiveForUser($user));
     }
 
+    /**
+     * A lost lock between sweeps must degrade to the same clean handoff as
+     * never winning acquire() in the first place -- another drainer already
+     * owns the work, so the exception refresh() throws must never escape
+     * the command and turn a benign handoff into a hard failure.
+     */
+    public function testEndsCleanlyWhenTheLockIsLostBetweenSweeps(): void
+    {
+        $user = $this->user('drain-lost-lock@example.test');
+        $this->seedSingleBatchFixture($user);
+        $this->starter()->start($user);
+
+        $command = new RecommendationDrainCommand(
+            $this->lockFactoryThatLosesTheLockAfterFirstRefresh(),
+            $this->sweep(),
+            new TickingClock(new \DateTimeImmutable('2026-08-14 00:00:00'), 1),
+        );
+
+        $exitCode = $this->execute($command);
+
+        self::assertSame(Command::SUCCESS, $exitCode);
+    }
+
     private function execute(RecommendationDrainCommand $command): int
     {
         return (new CommandTester($command))->execute([]);
@@ -150,6 +193,18 @@ final class RecommendationDrainCommandTest extends DbTestCase
         return $factory;
     }
 
+    /**
+     * A LockFactory backed by the same Doctrine table the real one uses, so
+     * the initial acquire() genuinely succeeds, but every refresh after the
+     * first fails as if a second drainer had already re-acquired the key.
+     */
+    private function lockFactoryThatLosesTheLockAfterFirstRefresh(): LockFactory
+    {
+        $store = new LockLostAfterFirstRefreshStore(new DoctrineDbalStore($this->em->getConnection()));
+
+        return new LockFactory($store);
+    }
+
     private function startAndSnapshot(User $user): RecommendationRun
     {
         $this->starter()->start($user);
@@ -163,7 +218,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
     /**
      * @param list<int> $batchIds
      */
-    private function requeueCleanReplyFor(array $batchIds): void
+    private function queueBatchReply(array $batchIds): void
     {
         /** @var StubChatClient $client */
         $client = self::getContainer()->get(StubChatClient::class);
@@ -180,18 +235,57 @@ final class RecommendationDrainCommandTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
     }
 
+    private function queueCleanDedupReply(): void
+    {
+        /** @var StubChatClient $client */
+        $client = self::getContainer()->get(StubChatClient::class);
+        $client->queueContent(json_encode(['duplicates' => []], \JSON_THROW_ON_ERROR));
+    }
+
     private function seedSingleBatchFixture(User $user): void
     {
         $this->fixtures->seedReadyAiSettings($user);
+        $this->seedFeedWithEntries($user, 5);
+    }
 
+    /**
+     * The batchCount expert override forces packBatches to split the pool
+     * into exactly two batches of 10 regardless of the context window (see
+     * RecommendationPromptBuilder::batchCap) -- unlike seedSingleBatchFixture,
+     * this fixture cannot complete in one provider tick.
+     */
+    private function seedTwoBatchFixture(User $user): void
+    {
+        $this->fixtures->seedReadyAiSettings($user);
+        $this->seedFeedWithEntries($user, self::TWO_BATCH_ENTRY_COUNT);
+
+        $settings = new RecommendationSettings($user);
+        $settings->update(new RecommendationSettingsValues(
+            guidancePrompt: null,
+            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
+            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
+            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
+            candidatePoolSize: self::TWO_BATCH_ENTRY_COUNT,
+            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+            contextWindow: null,
+            batchCount: 2,
+            debugEnabled: false,
+        ));
+        $this->em->persist($settings);
+        $this->em->flush();
+    }
+
+    private function seedFeedWithEntries(User $user, int $entryCount): void
+    {
         $feed = new Feed('https://example.com/' . $user->getEmail() . '/feed.xml');
         $feed->setTitle('Example');
         $this->em->persist($feed);
         $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $this->em->flush();
 
-        for ($i = 0; $i < 5; $i++) {
-            $this->fixtures->entry($feed, $user->getEmail() . '-entry-' . $i, 60 - $i);
+        for ($i = 0; $i < $entryCount; $i++) {
+            $this->fixtures->entry($feed, $user->getEmail() . '-entry-' . $i, $entryCount - $i);
         }
     }
 
