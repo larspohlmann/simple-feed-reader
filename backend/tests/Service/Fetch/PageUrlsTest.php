@@ -75,9 +75,19 @@ final class PageUrlsTest extends TestCase
         self::assertNull($page->httpUrl('data:text/html,x'));
     }
 
+    public function testHttpUrlIsNullForANonHttpSchemeWhateverItsCase(): void
+    {
+        self::assertNull((new PageUrls('https://site.test/'))->httpUrl('JavaScript:alert(1)'));
+    }
+
     public function testHttpUrlKeepsAnAbsoluteHttpReference(): void
     {
         self::assertSame('http://other.test/a', (new PageUrls('https://site.test/'))->httpUrl('http://other.test/a'));
+    }
+
+    public function testHttpUrlKeepsAnAbsoluteReferenceWhoseSchemeIsUppercased(): void
+    {
+        self::assertSame('HTTPS://other.test/a', (new PageUrls('https://site.test/'))->httpUrl('HTTPS://other.test/a'));
     }
 
     public function testHttpUrlIsNullWhenThePageNamesNoHost(): void
