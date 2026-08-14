@@ -26,9 +26,10 @@ import { RecommendationSettingsService } from './recommendation-settings.service
  * switch. The fixed prompt layers are read-only here — they ship with the
  * app, not with the account — so they sit in a `<details>` rather than a
  * form field. The six numeric tuning fields, the context window and the
- * fixed prompt all fold into one "Expert settings" disclosure (#321 decision
- * 6A): they are the knobs most accounts never touch, so only the guidance
- * prompt and Save stay visible by default. The purge below is its own
+ * fixed prompt fold into one "Expert settings" disclosure (#321 decision
+ * 6A); the auto-generate cadence and the look-back window (#386) stay
+ * outside it, because they are the two choices an ordinary account does
+ * make. The purge below is its own
  * danger zone, always visible, copying the confirm-then-act pattern from
  * `account-section.component.ts`.
  */
@@ -68,6 +69,7 @@ export class RecommendationSettingsCardComponent {
   readonly autoGenerateIntervalHours = linkedSignal<number | null>(
     () => this.svc.state()?.autoGenerateIntervalHours ?? null,
   );
+  readonly lookbackDays = linkedSignal<number>(() => this.svc.state()?.lookbackDays ?? 2);
   readonly workerAlive = computed<boolean>(() => this.svc.state()?.workerAlive ?? false);
 
   /** The six cadence choices; null is "only manually". */
@@ -78,6 +80,17 @@ export class RecommendationSettingsCardComponent {
     { value: 6, key: 'settings.ai.recommendations.autoGenerate6' },
     { value: 12, key: 'settings.ai.recommendations.autoGenerate12' },
     { value: 24, key: 'settings.ai.recommendations.autoGenerate24' },
+  ];
+
+  /** The seven look-back choices, one per day (#386). */
+  readonly lookbackOptions: readonly { readonly value: number; readonly key: string }[] = [
+    { value: 1, key: 'settings.ai.recommendations.lookback1' },
+    { value: 2, key: 'settings.ai.recommendations.lookback2' },
+    { value: 3, key: 'settings.ai.recommendations.lookback3' },
+    { value: 4, key: 'settings.ai.recommendations.lookback4' },
+    { value: 5, key: 'settings.ai.recommendations.lookback5' },
+    { value: 6, key: 'settings.ai.recommendations.lookback6' },
+    { value: 7, key: 'settings.ai.recommendations.lookback7' },
   ];
 
   /** The key for the hint line, decided by where the effective value came from. */
@@ -120,6 +133,10 @@ export class RecommendationSettingsCardComponent {
     this.autoGenerateIntervalHours.set(raw === '' ? null : +raw);
   }
 
+  setLookbackDays(event: Event): void {
+    this.lookbackDays.set(+(event.target as HTMLSelectElement).value);
+  }
+
   nullableNumberValue(event: Event): number | null {
     const raw = (event.target as HTMLInputElement).value;
     return raw === '' ? null : +raw;
@@ -141,6 +158,7 @@ export class RecommendationSettingsCardComponent {
       keptCap: this.keptCap(),
       viewedCap: this.viewedCap(),
       candidatePoolSize: this.candidatePoolSize(),
+      lookbackDays: this.lookbackDays(),
       picksLimit: this.picksLimit(),
       batchCount: this.batchCount(),
       contextWindow: this.contextWindow(),

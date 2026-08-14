@@ -21,6 +21,8 @@ export interface RecommendationSettingsState {
   readonly keptCap: number;
   readonly viewedCap: number;
   readonly candidatePoolSize: number;
+  /** How many days back the candidate pool reaches; 1-7, default 2 (#386). */
+  readonly lookbackDays: number;
   readonly picksLimit: number;
   /** How many entries the provider scores per call. `null` packs batches
    *  automatically; see Task 5's `RecommendationPackingSettings`. */
@@ -36,13 +38,14 @@ export interface RecommendationSettingsState {
   readonly workerAlive: boolean;
 }
 
-/** The ten writable fields of the PUT body. */
+/** The eleven writable fields of the PUT body. */
 export interface SaveRecommendationSettings {
   readonly guidancePrompt: string | null;
   readonly favoritesCap: number;
   readonly keptCap: number;
   readonly viewedCap: number;
   readonly candidatePoolSize: number;
+  readonly lookbackDays: number;
   readonly picksLimit: number;
   readonly batchCount: number | null;
   readonly contextWindow: number | null;
