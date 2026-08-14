@@ -132,6 +132,21 @@ final class FeedLinkScannerTest extends TestCase
         self::assertCount(5, $this->urls('<!doctype html><html><body>' . $links . '</body></html>'));
     }
 
+    public function testItNeverOffersAPseudoSchemeActionEvenWhenItCallsItselfAFeed(): void
+    {
+        // Resolving a pseudo scheme against the page rather than rejecting it
+        // yields https://example.com/blog/javascript:… — a candidate shaped
+        // like a URL that nothing can ever subscribe to.
+        $html = /** @lang TEXT */ <<<'HTML'
+            <!doctype html><html><body>
+              <a href="javascript:openFeedDialog()">RSS</a>
+              <a href="mailto:feed@example.com">Atom feed by mail</a>
+            </body></html>
+            HTML;
+
+        self::assertSame([], $this->urls($html));
+    }
+
     public function testItReadsNothingFromAnEmptyPage(): void
     {
         self::assertSame([], $this->urls('   '));

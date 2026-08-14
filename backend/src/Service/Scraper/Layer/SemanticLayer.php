@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Scraper\Layer;
 
+use App\Service\Fetch\PageUrls;
 use App\Service\Scraper\CardFields;
 use Dom\Element;
 use Dom\HTMLDocument;
@@ -25,13 +26,15 @@ final class SemanticLayer implements ScrapeLayerInterface
             return [];
         }
 
+        $cardFields = new CardFields(new PageUrls($baseUrl));
+
         $items = [];
         foreach ($articles as $article) {
             $anchor = $article->querySelector('a[href]');
             if (!$anchor instanceof Element) {
                 continue;
             }
-            $item = CardFields::item($article, $anchor, $baseUrl);
+            $item = $cardFields->item($article, $anchor);
             if ($item !== null) {
                 $items[] = $item;
             }

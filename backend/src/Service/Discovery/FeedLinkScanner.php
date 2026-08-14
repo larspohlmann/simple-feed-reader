@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Discovery;
 
-use App\Service\Fetch\UrlResolver;
+use App\Service\Fetch\PageUrls;
 use App\Service\Scraper\TextNormalizer;
 use Dom\Element;
 use Dom\HTMLDocument;
@@ -71,9 +71,10 @@ final readonly class FeedLinkScanner
             return [];
         }
 
-        $advertised = $this->advertisedFeeds($document, $baseUrl);
+        $pageUrls = new PageUrls($baseUrl);
+        $advertised = $this->advertisedFeeds($document, $pageUrls);
 
-        return [] !== $advertised ? $advertised : $this->feedShapedLinks($document, $baseUrl);
+        return [] !== $advertised ? $advertised : $this->feedShapedLinks($document, $pageUrls);
     }
 
     private function parse(string $html): ?HTMLDocument
@@ -94,12 +95,12 @@ final readonly class FeedLinkScanner
     }
 
     /** @return list<FeedCandidate> */
-    private function advertisedFeeds(HTMLDocument $document, string $baseUrl): array
+    private function advertisedFeeds(HTMLDocument $document, PageUrls $pageUrls): array
     {
         $candidates = [];
         foreach ($document->querySelectorAll('link[rel~="alternate" i][type]') as $link) {
             $format = self::ADVERTISED_TYPES[$this->attribute($link, 'type')] ?? null;
-            $url = null === $format ? null : $this->subscribableUrl($link, $baseUrl);
+            $url = null === $format ? null : $this->subscribableUrl($link, $pageUrls);
             if (null === $url || null === $format || isset($candidates[$url])) {
                 continue;
             }
@@ -111,11 +112,11 @@ final readonly class FeedLinkScanner
     }
 
     /** @return list<FeedCandidate> */
-    private function feedShapedLinks(HTMLDocument $document, string $baseUrl): array
+    private function feedShapedLinks(HTMLDocument $document, PageUrls $pageUrls): array
     {
         $candidates = [];
         foreach ($document->querySelectorAll('link[rel~="alternate" i][type], a[href]') as $link) {
-            $url = $this->subscribableUrl($link, $baseUrl);
+            $url = $this->subscribableUrl($link, $pageUrls);
             if (null === $url || isset($candidates[$url])) {
                 continue;
             }
@@ -157,19 +158,19 @@ final readonly class FeedLinkScanner
      * how a "subscribe" anchor in a nav bar becomes a candidate that cannot
      * work.
      */
-    private function subscribableUrl(Element $link, string $baseUrl): ?string
+    private function subscribableUrl(Element $link, PageUrls $pageUrls): ?string
     {
         $href = trim($link->getAttribute('href') ?? '');
-        if ('' === $href || str_starts_with($href, '#')) {
+        // A bare fragment addresses the page itself, which resolves to an
+        // http(s) URL the check below would not catch: it differs from the page
+        // by the fragment alone.
+        if (str_starts_with($href, '#')) {
             return null;
         }
 
-        $resolved = UrlResolver::resolve($baseUrl, $href);
-        if (1 !== preg_match('#^https?://#i', $resolved)) {
-            return null;
-        }
+        $resolved = $pageUrls->httpUrl($href);
 
-        return rtrim($resolved, '/') === rtrim($baseUrl, '/') ? null : $resolved;
+        return null === $resolved || $pageUrls->isPageItself($resolved) ? null : $resolved;
     }
 
     /** The link's own name: its title attribute, or the text a reader sees. */

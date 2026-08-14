@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Service\Scraper;
 
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\UrlResolver;
+use App\Service\Fetch\PageUrls;
 use App\Service\Parser\DateParser;
 use Dom\Element;
 
 /**
  * Extracts ScrapedItem fields from one card container + its anchor.
+ *
+ * Bound to the page the cards were found on: every URL a card carries resolves
+ * against it, so a layer builds one instance per pass instead of handing the
+ * page URL to each field in turn.
  *
  * Field rules (per the scraper design spec):
  * - title: candidate order lives in CardTitle; length rules (min 5,
@@ -21,7 +24,7 @@ use Dom\Element;
  * - image: first img in the container (src, data-src, or first srcset URL).
  * - date: first time[datetime], parsed leniently.
  */
-final class CardFields
+final readonly class CardFields
 {
     public const int MIN_TITLE_LENGTH = 5;
     public const int MAX_TITLE_LENGTH = 300;
@@ -32,9 +35,13 @@ final class CardFields
     /** Child tags that make an element a wrapper rather than a text block. */
     private const array NON_LEAF_CHILDREN = ['P', 'DIV', 'UL', 'OL', 'H1', 'H2', 'H3', 'H4', 'ARTICLE', 'SECTION'];
 
-    public static function item(Element $container, Element $anchor, string $baseUrl): ?ScrapedItem
+    public function __construct(private PageUrls $pageUrls)
     {
-        $url = self::httpUrl($anchor->getAttribute('href'), $baseUrl);
+    }
+
+    public function item(Element $container, Element $anchor): ?ScrapedItem
+    {
+        $url = $this->pageUrls->httpUrl($anchor->getAttribute('href'));
         if ($url === null) {
             return null;
         }
@@ -48,33 +55,9 @@ final class CardFields
             url: $url,
             title: $title,
             teaser: self::teaser($container, $title),
-            imageUrl: self::image($container, $baseUrl),
+            imageUrl: $this->image($container),
             publishedAt: self::publishedAt($container),
         );
-    }
-
-    /**
-     * Resolves a scraped href/src against the page URL; only http(s) results
-     * survive. Public because the extraction layers share it for URLs that do
-     * not come from a card (e.g. JSON-LD url fields).
-     */
-    public static function httpUrl(?string $href, string $baseUrl): ?string
-    {
-        $href = trim($href ?? '');
-        // Reject empty hrefs and non-http(s) schemes (javascript:, mailto:,
-        // data:, …) up front — resolving such a scheme against the base would
-        // otherwise produce a syntactically valid-looking https URL.
-        if ($href === '' || preg_match('#^(?!https?://)[a-z][a-z0-9+.-]*:#i', $href) === 1) {
-            return null;
-        }
-
-        try {
-            $resolved = UrlResolver::resolve($baseUrl, $href);
-        } catch (FeedUnreachableException) {
-            return null;
-        }
-
-        return preg_match('#^https?://#i', $resolved) === 1 ? $resolved : null;
     }
 
     private static function title(Element $container, Element $anchor): ?string
@@ -141,7 +124,7 @@ final class CardFields
         return null;
     }
 
-    private static function image(Element $container, string $baseUrl): ?string
+    private function image(Element $container): ?string
     {
         $img = $container->querySelector('img');
         if (!$img instanceof Element) {
@@ -151,7 +134,7 @@ final class CardFields
             ?? self::nonEmpty($img->getAttribute('data-src'))
             ?? self::srcsetFirst($img->getAttribute('srcset'));
 
-        return self::httpUrl($candidate, $baseUrl);
+        return $this->pageUrls->httpUrl($candidate);
     }
 
     private static function nonEmpty(?string $value): ?string

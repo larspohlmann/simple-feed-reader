@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Scraper\Layer;
 
+use App\Service\Fetch\PageUrls;
 use App\Service\Scraper\CardFields;
 use App\Service\Scraper\ScrapedItem;
 use Dom\Element;
@@ -54,12 +55,14 @@ final class ClusterLayer implements ScrapeLayerInterface
             }
         }
 
+        $cardFields = new CardFields(new PageUrls($baseUrl));
+
         $best = [];
         foreach ($groups as $anchors) {
             if (\count($anchors) < self::MIN_CLUSTER_SIZE) {
                 continue;
             }
-            $items = $this->items($anchors, $baseUrl, $counts, $built);
+            $items = $this->items($anchors, $cardFields, $counts, $built);
             if (\count($items) >= self::MIN_CLUSTER_SIZE && $this->beats($items, $best)) {
                 $best = $items;
             }
@@ -105,12 +108,16 @@ final class ClusterLayer implements ScrapeLayerInterface
      * @param \SplObjectStorage<Element, ScrapedItem|null> $built
      * @return list<ScrapedItem>
      */
-    private function items(array $anchors, string $baseUrl, \SplObjectStorage $counts, \SplObjectStorage $built): array
-    {
+    private function items(
+        array $anchors,
+        CardFields $cardFields,
+        \SplObjectStorage $counts,
+        \SplObjectStorage $built,
+    ): array {
         $items = [];
         foreach ($anchors as $anchor) {
             if (!$built->contains($anchor)) {
-                $built[$anchor] = CardFields::item($this->container($anchor, $counts), $anchor, $baseUrl);
+                $built[$anchor] = $cardFields->item($this->container($anchor, $counts), $anchor);
             }
             $item = $built[$anchor];
             if ($item !== null && !isset($items[$item->url])) {

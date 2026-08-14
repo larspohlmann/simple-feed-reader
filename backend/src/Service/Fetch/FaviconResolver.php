@@ -103,11 +103,11 @@ final readonly class FaviconResolver implements FaviconResolverInterface
         $response = $outcome->responseOrThrow();
         $body = $response->body ?? '';
 
-        return '' === trim($body) ? null : $this->pickIcon($body, $response->finalUrl);
+        return '' === trim($body) ? null : $this->pickIcon($body, new PageUrls($response->finalUrl));
     }
 
     /** The best https icon a page's <link> tags advertise, or null. */
-    private function pickIcon(string $html, string $baseUrl): ?string
+    private function pickIcon(string $html, PageUrls $pageUrls): ?string
     {
         $dom = new \DOMDocument();
         $previous = libxml_use_internal_errors(true);
@@ -128,7 +128,7 @@ final readonly class FaviconResolver implements FaviconResolverInterface
                 continue;
             }
 
-            $resolved = UrlResolver::resolve($baseUrl, $href);
+            $resolved = $pageUrls->resolve($href);
             // The app is https, so a http icon would be mixed-content blocked.
             if (!str_starts_with($resolved, 'https://')) {
                 continue;

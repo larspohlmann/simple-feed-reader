@@ -7,7 +7,7 @@ namespace App\Service\Discovery;
 use App\Service\Fetch\BatchFeedFetcherInterface;
 use App\Service\Fetch\FetchOutcome;
 use App\Service\Fetch\FetchTicket;
-use App\Service\Fetch\UrlResolver;
+use App\Service\Fetch\PageUrls;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
 
@@ -51,7 +51,7 @@ final readonly class WellKnownFeedProbe
      */
     public function probe(string $pageUrl): ?DiscoveredFeed
     {
-        $candidateUrls = $this->candidateUrls($pageUrl);
+        $candidateUrls = $this->candidateUrls(new PageUrls($pageUrl));
         if ([] === $candidateUrls) {
             return null;
         }
@@ -126,15 +126,14 @@ final readonly class WellKnownFeedProbe
      *
      * @return array<int, string>
      */
-    private function candidateUrls(string $pageUrl): array
+    private function candidateUrls(PageUrls $pageUrls): array
     {
-        $origin = UrlResolver::origin($pageUrl);
+        $origin = $pageUrls->origin();
         if (null === $origin) {
             return [];
         }
 
-        $path = parse_url($pageUrl, \PHP_URL_PATH);
-        $path = \is_string($path) && '' !== $path ? $path : '/';
+        $path = $pageUrls->path();
         if (\in_array(basename($path), self::SUFFIXES, true)) {
             return [];
         }
