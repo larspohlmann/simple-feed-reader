@@ -49,6 +49,9 @@ final class ReaderJourneyE2eTest extends E2eTestCase
         'spiegel' => 'https://www.spiegel.de',
     ];
 
+    /** Every reason FeedDiscoveryResult can name, and the dialog can word. */
+    private const array SCRAPE_FAILURE_REASONS = ['blocked', 'throttled', 'unreachable', 'not_scrapable'];
+
     /** One admin login for the whole class — the JWT is cached here. */
     private static ?string $adminJwt = null;
 
@@ -57,10 +60,16 @@ final class ReaderJourneyE2eTest extends E2eTestCase
      * 200 with a non-empty, well-formed `candidates` list — native rss/atom
      * candidates when the homepage advertises `<link rel="alternate">` feeds,
      * or the synthetic 'scraped' fallback candidate when it does not (heise's
-     * homepage, for one, offers none). Discovery no longer answers 422 for a
-     * feedless page; only a homepage the scraper cannot handle either comes
-     * back with an empty list plus a `scrapeFailureReason`, and that being a
-     * real, uncontrollable property of the site, the case is skipped.
+     * homepage, for one, offers none) — the seeded admin has the scrape
+     * fallback on, so that candidate is offered to it. Discovery no longer
+     * answers 422 for a feedless page; a homepage the scraper cannot handle
+     * either comes back with an empty list, which being a real, uncontrollable
+     * property of the site is skipped rather than failed.
+     *
+     * An empty list carries a `scrapeFailureReason` only when the site itself
+     * is the obstacle. "Nothing advertised and nothing scrapable" is not one of
+     * those reasons, so the reason is asserted for its shape when present and
+     * never demanded — the dialog renders a bare empty list as "no feeds found".
      */
     #[DataProvider('provideDomains')]
     public function testHomepageFeedDiscovery(string $label, string $homepage): void
@@ -74,8 +83,19 @@ final class ReaderJourneyE2eTest extends E2eTestCase
 
         if ([] === ($response->toArray()['candidates'] ?? [])) {
             $reason = $response->toArray()['scrapeFailureReason'] ?? null;
-            self::assertIsString($reason, $label . ' an empty candidate list must carry a scrapeFailureReason');
-            self::markTestSkipped(sprintf('%s homepage offered no candidates (%s)', $label, $reason));
+            if (null !== $reason) {
+                self::assertContains(
+                    $reason,
+                    self::SCRAPE_FAILURE_REASONS,
+                    $label . ' a scrapeFailureReason must be one the dialog can render',
+                );
+            }
+
+            self::markTestSkipped(sprintf(
+                '%s homepage offered no candidates (%s)',
+                $label,
+                \is_string($reason) ? $reason : 'no reason given',
+            ));
         }
 
         $candidates = $response->toArray()['candidates'] ?? null;
