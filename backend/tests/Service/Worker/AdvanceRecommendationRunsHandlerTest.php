@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Worker;
 
 use App\Entity\AiProviderSettings;
-use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationSettings;
-use App\Entity\Subscription;
 use App\Entity\User;
 use App\Entity\WorkerHeartbeat;
 use App\Repository\EntryRepository;
@@ -36,7 +34,7 @@ use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Recommendation\RecommendationWinnerRanker;
 use App\Service\Worker\Handler\AdvanceRecommendationRunsHandler;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
-use App\Service\Worker\PersistentWorkerPresence;
+use App\Service\Worker\RecommendationDriverKind;
 use App\Service\Worker\WorkerPresence;
 use App\Service\Worker\WorkerRunSweep;
 use App\Tests\DbTestCase;
@@ -90,19 +88,19 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
      * itself, hits the per-user lock and gives up on a healthy run (#311
      * final review, Critical 2a).
      *
-     * A ticking clock makes the number of touches observable: one before the
-     * loop -- a firing with nothing to do must still report liveness -- plus
-     * one per run, so two runs must leave the heartbeat two steps past the
-     * start rather than at it.
+     * A ticking clock makes the number of touches observable: one touch per
+     * run, so two runs must leave the heartbeat one step past the start
+     * rather than at it. (A firing with nothing to do still touches once --
+     * testFiringTouchesTheHeartbeatEvenWithNoRuns covers that path.)
      */
     public function testEachRunInAFiringGetsItsOwnHeartbeatTouch(): void
     {
         $first = $this->user('heartbeat-first@example.test');
-        $this->seedSingleBatchFixture($first);
+        $this->fixtures->seedSingleBatchFixture($first);
         $this->starter()->start($first);
 
         $second = $this->user('heartbeat-second@example.test');
-        $this->seedSingleBatchFixture($second);
+        $this->fixtures->seedSingleBatchFixture($second);
         $this->starter()->start($second);
 
         $startedAt = new \DateTimeImmutable('2026-08-08 00:00:00');
@@ -111,15 +109,15 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             ->__invoke(new AdvanceRecommendationRuns());
 
         self::assertEquals(
-            $startedAt->modify(sprintf('+%d seconds', 2 * $stepSeconds)),
-            $this->heartbeats()->findTouchedAt(WorkerPresence::RECOMMENDATION_SWEEP),
+            $startedAt->modify(sprintf('+%d seconds', $stepSeconds)),
+            $this->heartbeats()->findTouchedAt(RecommendationDriverKind::PersistentWorker->heartbeatName()),
         );
     }
 
     public function testDrivesARunToCompletionAcrossFirings(): void
     {
         $user = $this->user('single-batch@example.test');
-        $this->seedSingleBatchFixture($user);
+        $this->fixtures->seedSingleBatchFixture($user);
         $this->starter()->start($user);
 
         // Snapshot firing: moves the run from pending into running with its
@@ -181,11 +179,11 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     public function testProviderFailureIsLoggedAndDoesNotThrow(): void
     {
         $strugglingUser = $this->user('struggling@example.test');
-        $this->seedSingleBatchFixture($strugglingUser);
+        $this->fixtures->seedSingleBatchFixture($strugglingUser);
         $strugglingRun = $this->startAndSnapshot($strugglingUser);
 
         $healthyUser = $this->user('healthy@example.test');
-        $this->seedSingleBatchFixture($healthyUser);
+        $this->fixtures->seedSingleBatchFixture($healthyUser);
         $healthyRun = $this->startAndSnapshot($healthyUser);
 
         // Runs are processed oldest-first, so the failure the struggling
@@ -218,7 +216,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     public function testCredentialsRejectedIsLoggedAndDoesNotThrow(): void
     {
         $user = $this->user('bad-credentials@example.test');
-        $this->seedSingleBatchFixture($user);
+        $this->fixtures->seedSingleBatchFixture($user);
         $run = $this->startAndSnapshot($user);
 
         $this->stubChatClient()->queueFailure(new CredentialsRejectedException('nope'));
@@ -249,7 +247,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     public function testApiKeyUnreadableFailsTheRunWithItsOwnMessage(): void
     {
         $user = $this->user('key-mismatch@example.test');
-        $this->seedSingleBatchFixture($user);
+        $this->fixtures->seedSingleBatchFixture($user);
         $this->startAndSnapshot($user);
 
         $keyDonor = $this->user('key-mismatch-donor@example.test');
@@ -284,8 +282,13 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     {
         $clearTracker = new ClearTrackingEntityManager($this->em);
         $handler = new AdvanceRecommendationRunsHandler(
-            new WorkerRunSweep($this->runs(), $this->advancer(), $clearTracker, new NullLogger()),
-            $this->persistentWorker(),
+            new WorkerRunSweep(
+                $this->runs(),
+                $this->advancer(),
+                $this->presence(),
+                $clearTracker,
+                new NullLogger(),
+            ),
         );
 
         $handler->__invoke(new AdvanceRecommendationRuns());
@@ -304,7 +307,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     public function testUnconfiguredUsersRunIsFailedNotSweptForever(): void
     {
         $user = $this->user('unconfigured@example.test');
-        $this->seedSingleBatchFixture($user);
+        $this->fixtures->seedSingleBatchFixture($user);
         $this->startAndSnapshot($user);
         $this->deleteAiSettingsFor($user);
 
@@ -329,7 +332,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     public function testPendingRunLosingConfigurationBeforeItsFirstSnapshotIsFailed(): void
     {
         $user = $this->user('never-snapshotted@example.test');
-        $this->seedSingleBatchFixture($user);
+        $this->fixtures->seedSingleBatchFixture($user);
         $this->starter()->start($user);
         self::assertSame(RecommendationRun::STATUS_PENDING, $this->activeRun($user)->getStatus());
 
@@ -354,13 +357,13 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     public function testFairnessWhenAPendingRunFailsBeforeItsFirstSnapshot(): void
     {
         $strugglingUser = $this->user('never-snapshotted-struggling@example.test');
-        $this->seedSingleBatchFixture($strugglingUser);
+        $this->fixtures->seedSingleBatchFixture($strugglingUser);
         $this->starter()->start($strugglingUser);
         self::assertSame(RecommendationRun::STATUS_PENDING, $this->activeRun($strugglingUser)->getStatus());
         $this->deleteAiSettingsFor($strugglingUser);
 
         $healthyUser = $this->user('healthy-after-pending-failure@example.test');
-        $this->seedSingleBatchFixture($healthyUser);
+        $this->fixtures->seedSingleBatchFixture($healthyUser);
         $healthyRun = $this->startAndSnapshot($healthyUser);
         $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
 
@@ -396,14 +399,14 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     public function testFlushFailureRecordingOneRunsFailureDoesNotStarveTheNext(): void
     {
         $strugglingUser = $this->user('flush-failure-struggling@example.test');
-        $this->seedSingleBatchFixture($strugglingUser);
+        $this->fixtures->seedSingleBatchFixture($strugglingUser);
         $this->starter()->start($strugglingUser);
         $strugglingRun = $this->activeRun($strugglingUser);
         self::assertSame(RecommendationRun::STATUS_PENDING, $strugglingRun->getStatus());
         $this->deleteAiSettingsFor($strugglingUser);
 
         $healthyUser = $this->user('flush-failure-healthy@example.test');
-        $this->seedSingleBatchFixture($healthyUser);
+        $this->fixtures->seedSingleBatchFixture($healthyUser);
         $healthyRun = $this->startAndSnapshot($healthyUser);
         $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
 
@@ -471,8 +474,13 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     private function handlerWithFlushFailingEntityManager(LoggerInterface $logger): AdvanceRecommendationRunsHandler
     {
         return new AdvanceRecommendationRunsHandler(
-            new WorkerRunSweep($this->runs(), $this->advancerWithFlushFailingEntityManager(), $this->em, $logger),
-            $this->persistentWorker(),
+            new WorkerRunSweep(
+                $this->runs(),
+                $this->advancerWithFlushFailingEntityManager(),
+                $this->presence(),
+                $this->em,
+                $logger,
+            ),
         );
     }
 
@@ -513,22 +521,21 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     private function handlerWithLogger(LoggerInterface $logger): AdvanceRecommendationRunsHandler
     {
         return new AdvanceRecommendationRunsHandler(
-            new WorkerRunSweep($this->runs(), $this->advancer(), $this->em, $logger),
-            $this->persistentWorker(),
+            new WorkerRunSweep($this->runs(), $this->advancer(), $this->presence(), $this->em, $logger),
         );
     }
 
     private function handlerWithPresenceClock(ClockInterface $presenceClock): AdvanceRecommendationRunsHandler
     {
         return new AdvanceRecommendationRunsHandler(
-            new WorkerRunSweep($this->runs(), $this->advancer(), $this->em, new NullLogger()),
-            new PersistentWorkerPresence(new WorkerPresence($this->heartbeats(), $presenceClock)),
+            new WorkerRunSweep(
+                $this->runs(),
+                $this->advancer(),
+                new WorkerPresence($this->heartbeats(), $presenceClock),
+                $this->em,
+                new NullLogger(),
+            ),
         );
-    }
-
-    private function persistentWorker(): PersistentWorkerPresence
-    {
-        return new PersistentWorkerPresence($this->presence());
     }
 
     private function heartbeats(): WorkerHeartbeatRepository
@@ -593,22 +600,6 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
     }
 
-    private function seedSingleBatchFixture(User $user): void
-    {
-        $this->fixtures->seedReadyAiSettings($user);
-
-        $feed = new Feed('https://example.com/' . $user->getEmail() . '/feed.xml');
-        $feed->setTitle('Example');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $this->em->flush();
-
-        for ($i = 0; $i < 5; $i++) {
-            $guid = $user->getEmail() . '-entry-' . $i;
-            $this->fixtures->entry($feed, $guid, 60 - $i);
-        }
-    }
-
     /**
      * Forces an exact batch count through the expert batchCount override, so a
      * worker-regime test can pin how many batches a wave has to work with (the
@@ -619,16 +610,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     {
         $this->fixtures->seedReadyAiSettings($user);
 
-        $feed = new Feed('https://example.com/' . $user->getEmail() . '/feed.xml');
-        $feed->setTitle('Example');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $this->em->flush();
-
         $summary = str_repeat('Lorem ipsum dolor sit amet consectetur adipiscing elit. ', 5);
-        for ($i = 0; $i < $entryCount; $i++) {
-            // One distinct minute per entry, all inside the default 2-day window.
-            $entry = $this->fixtures->entry($feed, $user->getEmail() . '-entry-' . $i, $entryCount - $i);
+        foreach ($this->fixtures->seedFeedWithEntries($user, $entryCount) as $entry) {
             $entry->setSummary($summary);
         }
         $this->em->flush();

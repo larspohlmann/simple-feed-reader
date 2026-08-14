@@ -16,7 +16,7 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Worker\WorkerPresence;
+use App\Service\Worker\RecommendationDriverKind;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
@@ -164,12 +164,12 @@ final class RecommendationRunControllerTest extends WebTestCase
      */
     private function touchWorkerHeartbeatNow(): void
     {
-        $this->touchHeartbeatNow(WorkerPresence::RECOMMENDATION_SWEEP);
+        $this->touchHeartbeatNow(RecommendationDriverKind::PersistentWorker->heartbeatName());
     }
 
     private function touchDrainerHeartbeatNow(): void
     {
-        $this->touchHeartbeatNow(WorkerPresence::RECOMMENDATION_DRAIN_SWEEP);
+        $this->touchHeartbeatNow(RecommendationDriverKind::OnDemandDrainer->heartbeatName());
     }
 
     private function touchHeartbeatNow(string $name): void

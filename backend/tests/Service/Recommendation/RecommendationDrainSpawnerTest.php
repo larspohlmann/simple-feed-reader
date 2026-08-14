@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation;
 
 use App\Service\Recommendation\RecommendationDrainSpawner;
+use App\Service\Worker\RecommendationDriverKind;
 use App\Service\Worker\WorkerPresence;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecordingProcessLauncher;
@@ -45,7 +46,7 @@ final class RecommendationDrainSpawnerTest extends DbTestCase
     public function testAFreshWorkerHeartbeatSuppressesTheSpawn(): void
     {
         $launcher = new RecordingProcessLauncher();
-        $this->presence()->markPersistentWorkerSweep();
+        $this->presence()->mark(RecommendationDriverKind::PersistentWorker);
 
         (new RecommendationDrainSpawner($this->presence(), $launcher))->spawnIfNoWorker();
 
@@ -61,7 +62,7 @@ final class RecommendationDrainSpawnerTest extends DbTestCase
     public function testALiveDrainerAlsoSuppressesTheSpawn(): void
     {
         $launcher = new RecordingProcessLauncher();
-        $this->presence()->markOnDemandDrainerSweep();
+        $this->presence()->mark(RecommendationDriverKind::OnDemandDrainer);
 
         (new RecommendationDrainSpawner($this->presence(), $launcher))->spawnIfNoWorker();
 

@@ -23,21 +23,11 @@ use Symfony\Component\Clock\ClockInterface;
  *   is still genuinely required. One shared key answered "you need no cron"
  *   to anyone who opened Settings during a drain.
  *
- * Hence one key per kind of worker. The per-user run lock is still what
- * actually stops a double run if either signal is ever wrong (#311).
+ * Hence one key per RecommendationDriverKind. The per-user run lock is still
+ * what actually stops a double run if either signal is ever wrong (#311).
  */
 final readonly class WorkerPresence
 {
-    public const string RECOMMENDATION_SWEEP = 'recommendation-sweep';
-
-    /**
-     * The on-demand drainer's own key (#371). Separate from the persistent
-     * worker's, so a transient drainer can claim and surrender liveness
-     * without ever writing to a real worker's row — which is also why the
-     * drainer's unconditional clear-on-exit is safe next to a live worker.
-     */
-    public const string RECOMMENDATION_DRAIN_SWEEP = 'recommendation-drain-sweep';
-
     /**
      * Sized against the longest gap between two touches, NOT against the
      * sweep cadence. The sweep touches the heartbeat once per run it
@@ -71,59 +61,75 @@ final readonly class WorkerPresence
     ) {
     }
 
-    public function markPersistentWorkerSweep(): void
+    public function mark(RecommendationDriverKind $kind): void
     {
-        $this->heartbeats->touch(self::RECOMMENDATION_SWEEP, $this->clock->now());
-    }
-
-    public function markOnDemandDrainerSweep(): void
-    {
-        $this->heartbeats->touch(self::RECOMMENDATION_DRAIN_SWEEP, $this->clock->now());
+        $this->heartbeats->touch($kind->heartbeatName(), $this->clock->now());
     }
 
     /**
-     * Surrenders the drainer's liveness claim immediately instead of waiting
-     * out FRESH_SECONDS. The drainer is a worker only for as long as it
-     * lives, and one that exits with runs still active would otherwise keep
-     * the poll driver deferring to a process that is gone, and keep the
-     * cron's respawn net from firing, for the full freshness window. It
-     * touches the drain key only, so a drainer that happened to run beside a
-     * real worker cannot clear that worker's heartbeat.
+     * Surrenders a liveness claim immediately instead of waiting out
+     * FRESH_SECONDS. A drainer is a worker only for as long as it lives, and
+     * one that exits with runs still active would otherwise keep the poll
+     * driver deferring to a process that is gone, and keep the cron's respawn
+     * net from firing, for the full freshness window.
+     *
+     * Guarded rather than open, because forgetting the persistent worker's
+     * key would be an outright lie in the other direction: that key is the
+     * only evidence the settings card has, and its owner is a process that
+     * cannot be asked whether it is still there.
      */
-    public function forgetOnDemandDrainer(): void
+    public function forget(RecommendationDriverKind $kind): void
     {
-        $this->heartbeats->forget(self::RECOMMENDATION_DRAIN_SWEEP);
+        if (!$kind->surrendersItsKeyOnExit()) {
+            throw new \LogicException(\sprintf('%s never surrenders its heartbeat.', $kind->name));
+        }
+
+        $this->heartbeats->forget($kind->heartbeatName());
     }
 
     /**
-     * Somebody else owns execution right now: either the persistent worker or
-     * a live on-demand drainer. Read by the poll driver (which then reports
-     * instead of driving) and by the drain spawner (which then does not fork).
+     * Somebody else owns execution right now: any driver kind at all. Read by
+     * the poll driver (which then reports instead of driving) and by the drain
+     * spawner (which then does not fork). Asked of every case rather than of a
+     * named pair, so a driver kind added later counts without anyone having to
+     * remember this line.
      */
     public function isAnybodyDrivingRecommendationRuns(): bool
     {
-        return $this->hasPersistentRecommendationWorker()
-            || $this->isFresh(self::RECOMMENDATION_DRAIN_SWEEP);
+        $names = array_map(
+            static fn (RecommendationDriverKind $kind): string => $kind->heartbeatName(),
+            RecommendationDriverKind::cases(),
+        );
+
+        // One query for every name: this runs on the poll path, which every
+        // open tab hits repeatedly, and on the install this feature exists
+        // for the persistent worker's row is never fresh -- so a per-name
+        // read would pay for the whole list every time.
+        foreach ($this->heartbeats->findTouchedAtByNames($names) as $touchedAt) {
+            if ($this->isFresh($touchedAt)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
      * This install runs a background worker that also starts due runs, so
-     * scheduled auto-generation needs no cron entry. A drainer never starts a
-     * due run, so it deliberately does not answer this question.
+     * scheduled auto-generation needs no cron entry. See the class doc for why
+     * a drainer deliberately does not answer this question.
      */
     public function hasPersistentRecommendationWorker(): bool
     {
-        return $this->isFresh(self::RECOMMENDATION_SWEEP);
+        $touchedAt = $this->heartbeats->findTouchedAt(
+            RecommendationDriverKind::PersistentWorker->heartbeatName(),
+        );
+
+        return null !== $touchedAt && $this->isFresh($touchedAt);
     }
 
-    private function isFresh(string $name): bool
+    private function isFresh(\DateTimeImmutable $touchedAt): bool
     {
-        $touchedAt = $this->heartbeats->findTouchedAt($name);
-
-        if (null === $touchedAt) {
-            return false;
-        }
-
         $ageInSeconds = $this->clock->now()->getTimestamp() - $touchedAt->getTimestamp();
 
         return $ageInSeconds <= self::FRESH_SECONDS;

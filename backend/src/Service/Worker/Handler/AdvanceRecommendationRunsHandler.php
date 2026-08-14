@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Worker\Handler;
 
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
-use App\Service\Worker\PersistentWorkerPresence;
+use App\Service\Worker\RecommendationDriverKind;
 use App\Service\Worker\WorkerRunSweep;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
@@ -22,14 +22,12 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 #[AsMessageHandler]
 final readonly class AdvanceRecommendationRunsHandler
 {
-    public function __construct(
-        private WorkerRunSweep $sweep,
-        private PersistentWorkerPresence $presence,
-    ) {
+    public function __construct(private WorkerRunSweep $sweep)
+    {
     }
 
     public function __invoke(AdvanceRecommendationRuns $message): void
     {
-        $this->sweep->sweep($this->presence);
+        $this->sweep->sweep(RecommendationDriverKind::PersistentWorker);
     }
 }

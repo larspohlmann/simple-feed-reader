@@ -25,15 +25,16 @@ use Psr\Log\LoggerInterface;
  * this: the cron/poll sweep runs the Poll regime and marks no liveness at all
  * -- it is not a background worker.
  *
- * Which worker is sweeping is the caller's business, not this class's, so the
- * caller hands itself in as a SweepingWorker rather than this class picking a
- * heartbeat key.
+ * Which regime is sweeping is the caller's business, not this class's, so the
+ * caller names its own RecommendationDriverKind rather than this class
+ * picking a heartbeat key.
  */
 final readonly class WorkerRunSweep
 {
     public function __construct(
         private RecommendationRunRepository $runs,
         private RecommendationRunAdvancer $advancer,
+        private WorkerPresence $presence,
         private EntityManagerInterface $entityManager,
         private LoggerInterface $logger,
     ) {
@@ -46,21 +47,29 @@ final readonly class WorkerRunSweep
      * recorded the failure against the run, which will drop out of
      * findAllActive() once its failure ceiling is hit).
      */
-    public function sweep(SweepingWorker $sweepingWorker): int
+    public function sweep(RecommendationDriverKind $kind): int
     {
-        // Marked every sweep, work or not: the heartbeat is the liveness
-        // signal the poll driver defers to, not a work log.
-        $sweepingWorker->markSweeping();
         $attemptedRuns = 0;
 
         try {
-            foreach ($this->runs->findAllActive() as $run) {
-                // Again before each run, because a sweep's duration is the
-                // SUM over its runs and one run can spend a whole provider
-                // timeout. Marking only once per sweep let the heartbeat go
-                // stale mid-sweep, and the client then took the healthy
-                // worker for a dead one (#311 final review, Critical 2).
-                $sweepingWorker->markSweeping();
+            $activeRuns = $this->runs->findAllActive();
+
+            if ([] === $activeRuns) {
+                // Marked with nothing to do as well: the heartbeat is the
+                // liveness signal the poll driver defers to, not a work log,
+                // and an idle worker is still a worker.
+                $this->presence->mark($kind);
+
+                return 0;
+            }
+
+            foreach ($activeRuns as $run) {
+                // Before each run, because a sweep's duration is the SUM over
+                // its runs and one run can spend a whole provider timeout.
+                // Marking only once per sweep let the heartbeat go stale
+                // mid-sweep, and the client then took the healthy worker for
+                // a dead one (#311 final review, Critical 2).
+                $this->presence->mark($kind);
                 $this->advanceOne($run);
                 ++$attemptedRuns;
             }

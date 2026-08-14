@@ -43,6 +43,34 @@ final class WorkerHeartbeatRepository extends ServiceEntityRepository
     }
 
     /**
+     * The touch instants of the names that have a row, keyed by name; names
+     * without one are simply absent. One query rather than one per name,
+     * because the caller on the poll path asks about every driver kind on
+     * every request from every open tab.
+     *
+     * @param list<string> $names
+     *
+     * @return array<string, \DateTimeImmutable>
+     */
+    public function findTouchedAtByNames(array $names): array
+    {
+        $touchedAt = [];
+
+        /** @var list<WorkerHeartbeat> $heartbeats */
+        $heartbeats = $this->createQueryBuilder('heartbeat')
+            ->andWhere('heartbeat.name IN (:names)')
+            ->setParameter('names', $names)
+            ->getQuery()
+            ->getResult();
+
+        foreach ($heartbeats as $heartbeat) {
+            $touchedAt[$heartbeat->getName()] = $heartbeat->getTouchedAt();
+        }
+
+        return $touchedAt;
+    }
+
+    /**
      * Removes the row rather than back-dating it, so "no worker" is the
      * absence of a heartbeat — the same state a host that never ran one is
      * in. A name that was never touched is already forgotten, so this is

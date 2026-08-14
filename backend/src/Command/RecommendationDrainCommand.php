@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Service\Worker\OnDemandDrainerPresence;
+use App\Service\Worker\RecommendationDriverKind;
+use App\Service\Worker\WorkerPresence;
 use App\Service\Worker\WorkerRunSweep;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -20,14 +21,12 @@ use Symfony\Component\Lock\LockInterface;
  * The on-demand drainer (#371): a short-lived worker that drives every
  * active recommendation run to completion at worker concurrency, spawned by
  * a web request on installs that have no persistent worker. Each sweep marks
- * the drainer's own liveness key, so open browsers demote to the read-only
- * /current poll while this runs; on the way out it clears that key again, so
- * the poll and cron paths take over immediately rather than after the
- * freshness window has aged out a worker that no longer exists. The key is
- * the drainer's alone -- it never writes the persistent worker's, so this
- * process cannot make the settings card claim an install has a background
- * worker it does not have, and cannot clear a real worker's heartbeat on the
- * way out.
+ * RecommendationDriverKind::OnDemandDrainer's liveness key, so open browsers
+ * demote to the read-only /current poll while this runs; on the way out it
+ * clears that key again, so the poll and cron paths take over immediately
+ * rather than after the freshness window has aged out a worker that no longer
+ * exists. Why the drainer has a key of its own is written out on
+ * {@see WorkerPresence}.
  *
  * It only ever advances existing runs -- starting runs (and their spend
  * budget, #308) stays with the callers that already own it.
@@ -79,11 +78,19 @@ final class RecommendationDrainCommand extends Command
      */
     public const float SWEEP_PAUSE_SECONDS = 1.0;
 
+    /**
+     * Set by the `finally` that does the ordinary cleanup, read by the
+     * shutdown hook that exists only for the crash that skips it. Command
+     * state rather than a captured local, so the hook's check reads the value
+     * at shutdown time and not the one it closed over.
+     */
+    private bool $cleanedUp = false;
+
     public function __construct(
         private readonly LockFactory $lockFactory,
         private readonly WorkerRunSweep $sweep,
         private readonly ClockInterface $clock,
-        private readonly OnDemandDrainerPresence $presence,
+        private readonly WorkerPresence $presence,
     ) {
         parent::__construct();
     }
@@ -115,12 +122,20 @@ final class RecommendationDrainCommand extends Command
             return Command::SUCCESS;
         }
 
-        // A crash skips finally, and this CLI process has no request
+        // A fatal error skips finally, and this CLI process has no request
         // timeout watching over it; same belt-and-braces as
         // RecommendationRunAdvancer::advance() -- the release is
         // token-scoped, so it can never free a lock this process no longer
-        // owns, and SIGKILL still falls back to the TTL.
+        // owns, and SIGKILL still falls back to the TTL. The flag is what
+        // keeps it a safety net rather than a second cleanup: this closure
+        // runs on EVERY termination, so without it the ordinary path
+        // released the lock and surrendered the key twice.
+        $this->cleanedUp = false;
         register_shutdown_function(function () use ($lock): void {
+            if ($this->cleanedUp) {
+                return;
+            }
+
             try {
                 $lock->release();
             } catch (\Throwable) {
@@ -136,6 +151,7 @@ final class RecommendationDrainCommand extends Command
         } finally {
             $lock->release();
             $this->surrenderTheDrainerLiveness();
+            $this->cleanedUp = true;
         }
 
         return Command::SUCCESS;
@@ -147,16 +163,16 @@ final class RecommendationDrainCommand extends Command
      * running in the background, and stops the cron's respawn net from
      * bringing a replacement up, for up to WorkerPresence::FRESH_SECONDS --
      * eleven minutes of a frozen run on a worker-less install. Unconditional,
-     * and safe to be so: the drainer owns its own key, so this cannot touch a
-     * persistent worker's heartbeat even when both run at once. Best-effort
-     * like the lock release, because this also runs from the shutdown hook,
-     * where a throw would pile a second fatal on whatever ended the process;
-     * a clear that fails simply leaves the old behavior, a key that ages out.
+     * and safe to be so: it names the drainer's own kind, so it cannot touch a
+     * persistent worker's heartbeat even when both run at once. Best-effort,
+     * because this also runs from the shutdown hook, where a throw would pile
+     * a second fatal on whatever ended the process; a clear that fails simply
+     * leaves the old behavior, a key that ages out.
      */
     private function surrenderTheDrainerLiveness(): void
     {
         try {
-            $this->presence->surrender();
+            $this->presence->forget(RecommendationDriverKind::OnDemandDrainer);
         } catch (\Throwable) {
             // Deliberately silent: see this method's doc comment.
         }
@@ -166,7 +182,7 @@ final class RecommendationDrainCommand extends Command
     {
         $startedAt = $this->clock->now();
 
-        while ($this->sweep->sweep($this->presence) > 0) {
+        while ($this->sweep->sweep(RecommendationDriverKind::OnDemandDrainer) > 0) {
             if ($this->clock->now()->getTimestamp() - $startedAt->getTimestamp() >= self::MAX_RUNTIME_SECONDS) {
                 return;
             }

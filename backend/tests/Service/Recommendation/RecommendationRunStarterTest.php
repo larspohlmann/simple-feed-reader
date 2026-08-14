@@ -17,6 +17,7 @@ use App\Service\Process\DetachedProcessLauncherInterface;
 use App\Service\Recommendation\Exception\NoResumableRecommendationRunException;
 use App\Service\Recommendation\RecommendationDrainSpawner;
 use App\Service\Recommendation\RecommendationRunStarter;
+use App\Service\Worker\RecommendationDriverKind;
 use App\Service\Worker\WorkerPresence;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecordingProcessLauncher;
@@ -214,7 +215,7 @@ final class RecommendationRunStarterTest extends DbTestCase
     {
         $this->seedReadyAiSettings($this->user);
         $launcher = new RecordingProcessLauncher();
-        $this->presence()->markPersistentWorkerSweep();
+        $this->presence()->mark(RecommendationDriverKind::PersistentWorker);
 
         $this->starterWith($launcher)->start($this->user);
 

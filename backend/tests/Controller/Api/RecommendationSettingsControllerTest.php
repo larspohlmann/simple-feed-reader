@@ -9,7 +9,7 @@ use App\Entity\User;
 use App\Entity\WorkerHeartbeat;
 use App\Repository\WorkerHeartbeatRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Worker\WorkerPresence;
+use App\Service\Worker\RecommendationDriverKind;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -454,7 +454,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     {
         $client = static::createClient();
         [$headers] = $this->auth('recsettings-drainer-alive@example.test');
-        $this->touchHeartbeatNow(WorkerPresence::RECOMMENDATION_DRAIN_SWEEP);
+        $this->touchHeartbeatNow(RecommendationDriverKind::OnDemandDrainer->heartbeatName());
 
         $client->request('GET', self::URI, server: $headers);
 
@@ -466,7 +466,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     {
         $client = static::createClient();
         [$headers] = $this->auth('recsettings-worker-alive@example.test');
-        $this->touchHeartbeatNow(WorkerPresence::RECOMMENDATION_SWEEP);
+        $this->touchHeartbeatNow(RecommendationDriverKind::PersistentWorker->heartbeatName());
 
         $client->request('GET', self::URI, server: $headers);
 

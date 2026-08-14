@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Worker;
 
-use App\Entity\Feed;
 use App\Entity\RecommendationRun;
-use App\Entity\Subscription;
 use App\Entity\User;
 use App\Entity\WorkerHeartbeat;
 use App\Repository\RecommendationRunRepository;
@@ -14,8 +12,7 @@ use App\Repository\WorkerHeartbeatRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
-use App\Service\Worker\OnDemandDrainerPresence;
-use App\Service\Worker\PersistentWorkerPresence;
+use App\Service\Worker\RecommendationDriverKind;
 use App\Service\Worker\WorkerPresence;
 use App\Service\Worker\WorkerRunSweep;
 use App\Tests\DbTestCase;
@@ -49,7 +46,7 @@ final class WorkerRunSweepTest extends DbTestCase
 
     public function testSweepWithNoActiveRunsReturnsZeroAndStillReportsLiveness(): void
     {
-        self::assertSame(0, $this->sweep()->sweep($this->persistentWorker()));
+        self::assertSame(0, $this->sweep()->sweep(RecommendationDriverKind::PersistentWorker));
         self::assertTrue($this->presence()->hasPersistentRecommendationWorker());
     }
 
@@ -61,7 +58,7 @@ final class WorkerRunSweepTest extends DbTestCase
      */
     public function testASweepRunByTheDrainerClaimsOnlyTheDrainerKey(): void
     {
-        $this->sweep()->sweep($this->onDemandDrainer());
+        $this->sweep()->sweep(RecommendationDriverKind::OnDemandDrainer);
 
         self::assertTrue($this->presence()->isAnybodyDrivingRecommendationRuns());
         self::assertFalse($this->presence()->hasPersistentRecommendationWorker());
@@ -70,17 +67,17 @@ final class WorkerRunSweepTest extends DbTestCase
     public function testSweepReturnsOneAttemptPerActiveRun(): void
     {
         $first = $this->user('sweep-count-first@example.test');
-        $this->seedSingleBatchFixture($first);
+        $this->fixtures->seedSingleBatchFixture($first);
         $this->starter()->start($first);
 
         $second = $this->user('sweep-count-second@example.test');
-        $this->seedSingleBatchFixture($second);
+        $this->fixtures->seedSingleBatchFixture($second);
         $this->starter()->start($second);
 
         // Both runs are PENDING; the sweep's snapshot tick advances each
         // without a provider call, so the count is observable without
         // stubbing replies.
-        self::assertSame(2, $this->sweep()->sweep($this->persistentWorker()));
+        self::assertSame(2, $this->sweep()->sweep(RecommendationDriverKind::PersistentWorker));
         foreach ([$first, $second] as $user) {
             $run = $this->runs()->findActiveForUser($user);
             self::assertNotNull($run);
@@ -92,46 +89,39 @@ final class WorkerRunSweepTest extends DbTestCase
      * The identity map is per-sweep state, so its cleanup is a `finally` and
      * not a trailing statement -- a sweep that dies mid-run must not leave a
      * dirty map for the next one, and the drain command runs sweep after
-     * sweep in one process (#371 final review, Finding 9). The presence
-     * clock is the seam: the sweep marks the heartbeat once before the loop
-     * and once per run, so a clock good for exactly one reading fails inside
-     * the loop, after findAllActive() has already filled the map.
+     * sweep in one process (#371 final review, Finding 9). The presence clock
+     * is the seam: the sweep marks the heartbeat once per run it advances, so
+     * a clock good for exactly one reading carries the first of these two runs
+     * and then fails inside the loop, after findAllActive() has already filled
+     * the map.
      */
     public function testClearsTheIdentityMapEvenWhenTheSweepBodyThrows(): void
     {
-        $user = $this->user('sweep-clear-on-throw@example.test');
-        $this->seedSingleBatchFixture($user);
-        $this->starter()->start($user);
+        $first = $this->user('sweep-clear-on-throw-first@example.test');
+        $this->fixtures->seedSingleBatchFixture($first);
+        $this->starter()->start($first);
+
+        $second = $this->user('sweep-clear-on-throw-second@example.test');
+        $this->fixtures->seedSingleBatchFixture($second);
+        $this->starter()->start($second);
 
         $clearTracker = new ClearTrackingEntityManager($this->em);
-        $sweep = new WorkerRunSweep($this->runs(), $this->advancer(), $clearTracker, new NullLogger());
-        $throwingWorker = new PersistentWorkerPresence(
+        $sweep = new WorkerRunSweep(
+            $this->runs(),
+            $this->advancer(),
             new WorkerPresence($this->heartbeats(), new ThrowingClock(1)),
+            $clearTracker,
+            new NullLogger(),
         );
 
         try {
-            $sweep->sweep($throwingWorker);
+            $sweep->sweep(RecommendationDriverKind::PersistentWorker);
             self::fail('The throwing clock must have surfaced.');
         } catch (\RuntimeException $expected) {
             self::assertSame(ThrowingClock::MESSAGE, $expected->getMessage());
         }
 
         self::assertTrue($clearTracker->wasCleared());
-    }
-
-    private function seedSingleBatchFixture(User $user): void
-    {
-        $this->fixtures->seedReadyAiSettings($user);
-
-        $feed = new Feed('https://example.com/' . $user->getEmail() . '/feed.xml');
-        $feed->setTitle('Example');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $this->em->flush();
-
-        for ($i = 0; $i < 5; $i++) {
-            $this->fixtures->entry($feed, $user->getEmail() . '-entry-' . $i, 60 - $i);
-        }
     }
 
     private function user(string $email): User
@@ -175,17 +165,13 @@ final class WorkerRunSweepTest extends DbTestCase
      */
     private function sweep(): WorkerRunSweep
     {
-        return new WorkerRunSweep($this->runs(), $this->advancer(), $this->em, new NullLogger());
-    }
-
-    private function persistentWorker(): PersistentWorkerPresence
-    {
-        return new PersistentWorkerPresence($this->presence());
-    }
-
-    private function onDemandDrainer(): OnDemandDrainerPresence
-    {
-        return new OnDemandDrainerPresence($this->presence());
+        return new WorkerRunSweep(
+            $this->runs(),
+            $this->advancer(),
+            $this->presence(),
+            $this->em,
+            new NullLogger(),
+        );
     }
 
     private function advancer(): RecommendationRunAdvancer

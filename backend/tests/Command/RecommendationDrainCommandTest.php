@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Command;
 
 use App\Command\RecommendationDrainCommand;
-use App\Entity\Feed;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationSettings;
-use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
@@ -17,7 +15,6 @@ use App\Service\Recommendation\OpenAiCompatibleChatClient;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Recommendation\RecommendationSettingsValues;
-use App\Service\Worker\OnDemandDrainerPresence;
 use App\Service\Worker\WorkerPresence;
 use App\Service\Worker\WorkerRunSweep;
 use App\Tests\DbTestCase;
@@ -99,7 +96,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
     public function testExitsImmediatelyWithoutAdvancingWhenTheLockIsHeld(): void
     {
         $user = $this->user('drain-lock-contention@example.test');
-        $this->seedSingleBatchFixture($user);
+        $this->fixtures->seedSingleBatchFixture($user);
         $this->starter()->start($user);
 
         $heldByAnotherDrainer = $this->lockFactory()->createLock(RecommendationDrainCommand::LOCK_NAME);
@@ -127,7 +124,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
     public function testStopsAtTheWallClockCapWithTheRunStillActive(): void
     {
         $user = $this->user('drain-wall-cap@example.test');
-        $this->seedSingleBatchFixture($user);
+        $this->fixtures->seedSingleBatchFixture($user);
         $this->starter()->start($user);
 
         $hourPerReading = new TickingClock(
@@ -208,7 +205,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
     public function testSurrendersTheWorkerHeartbeatWhenItExitsWithRunsStillActive(): void
     {
         $user = $this->user('drain-heartbeat-surrender@example.test');
-        $this->seedSingleBatchFixture($user);
+        $this->fixtures->seedSingleBatchFixture($user);
         $this->starter()->start($user);
 
         $hourPerReading = new TickingClock(
@@ -297,13 +294,8 @@ final class RecommendationDrainCommandTest extends DbTestCase
             $lockFactory,
             $this->sweep(),
             $clock ?? new TickingClock(new \DateTimeImmutable('2026-08-14 00:00:00'), 1),
-            $this->drainerPresence(),
+            $this->presence(),
         );
-    }
-
-    private function drainerPresence(): OnDemandDrainerPresence
-    {
-        return new OnDemandDrainerPresence($this->presence());
     }
 
     private function presence(): WorkerPresence
@@ -321,7 +313,13 @@ final class RecommendationDrainCommandTest extends DbTestCase
      */
     private function sweep(): WorkerRunSweep
     {
-        return new WorkerRunSweep($this->runs(), $this->advancer(), $this->em, new NullLogger());
+        return new WorkerRunSweep(
+            $this->runs(),
+            $this->advancer(),
+            $this->presence(),
+            $this->em,
+            new NullLogger(),
+        );
     }
 
     private function lockFactory(): LockFactory
@@ -369,12 +367,6 @@ final class RecommendationDrainCommandTest extends DbTestCase
         $client->queueContent(json_encode(['duplicates' => []], \JSON_THROW_ON_ERROR));
     }
 
-    private function seedSingleBatchFixture(User $user): void
-    {
-        $this->fixtures->seedReadyAiSettings($user);
-        $this->seedFeedWithEntries($user, 5);
-    }
-
     /**
      * The batchCount expert override forces packBatches to split the pool
      * into exactly two batches of 10 regardless of the context window (see
@@ -384,7 +376,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
     private function seedTwoBatchFixture(User $user): void
     {
         $this->fixtures->seedReadyAiSettings($user);
-        $this->seedFeedWithEntries($user, self::TWO_BATCH_ENTRY_COUNT);
+        $this->fixtures->seedFeedWithEntries($user, self::TWO_BATCH_ENTRY_COUNT);
 
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
@@ -401,19 +393,6 @@ final class RecommendationDrainCommandTest extends DbTestCase
         ));
         $this->em->persist($settings);
         $this->em->flush();
-    }
-
-    private function seedFeedWithEntries(User $user, int $entryCount): void
-    {
-        $feed = new Feed('https://example.com/' . $user->getEmail() . '/feed.xml');
-        $feed->setTitle('Example');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $this->em->flush();
-
-        for ($i = 0; $i < $entryCount; $i++) {
-            $this->fixtures->entry($feed, $user->getEmail() . '-entry-' . $i, $entryCount - $i);
-        }
     }
 
     private function user(string $email): User

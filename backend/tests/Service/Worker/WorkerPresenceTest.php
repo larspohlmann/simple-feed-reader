@@ -7,6 +7,7 @@ namespace App\Tests\Service\Worker;
 use App\Entity\WorkerHeartbeat;
 use App\Repository\WorkerHeartbeatRepository;
 use App\Service\Recommendation\OpenAiCompatibleChatClient;
+use App\Service\Worker\RecommendationDriverKind;
 use App\Service\Worker\WorkerPresence;
 use App\Tests\DbTestCase;
 use Symfony\Component\Clock\MockClock;
@@ -18,7 +19,7 @@ final class WorkerPresenceTest extends DbTestCase
         /** @var WorkerPresence $presence */
         $presence = self::getContainer()->get(WorkerPresence::class);
 
-        $presence->markPersistentWorkerSweep();
+        $presence->mark(RecommendationDriverKind::PersistentWorker);
 
         self::assertTrue($presence->hasPersistentRecommendationWorker());
     }
@@ -30,7 +31,10 @@ final class WorkerPresenceTest extends DbTestCase
 
     public function testAFreshHeartbeatMeansAlive(): void
     {
-        $this->repository()->touch(WorkerPresence::RECOMMENDATION_SWEEP, new \DateTimeImmutable('2026-08-07 11:59:40'));
+        $this->repository()->touch(
+            RecommendationDriverKind::PersistentWorker->heartbeatName(),
+            new \DateTimeImmutable('2026-08-07 11:59:40'),
+        );
 
         self::assertTrue($this->presenceAt('2026-08-07 12:00:00')->hasPersistentRecommendationWorker());
     }
@@ -38,7 +42,7 @@ final class WorkerPresenceTest extends DbTestCase
     public function testTheHeartbeatIsAliveExactlyUpToTheEdgeOfTheWindow(): void
     {
         $this->repository()->touch(
-            WorkerPresence::RECOMMENDATION_SWEEP,
+            RecommendationDriverKind::PersistentWorker->heartbeatName(),
             $this->secondsBeforeNoon(WorkerPresence::FRESH_SECONDS),
         );
 
@@ -48,7 +52,7 @@ final class WorkerPresenceTest extends DbTestCase
     public function testOneSecondPastTheWindowIsDead(): void
     {
         $this->repository()->touch(
-            WorkerPresence::RECOMMENDATION_SWEEP,
+            RecommendationDriverKind::PersistentWorker->heartbeatName(),
             $this->secondsBeforeNoon(WorkerPresence::FRESH_SECONDS + 1),
         );
 
@@ -122,6 +126,94 @@ final class WorkerPresenceTest extends DbTestCase
         $this->repository()->forget('x');
 
         self::assertNull($this->repository()->findTouchedAt('x'));
+    }
+
+    /**
+     * "Somebody is driving" is asked of every driver kind, not of a named
+     * pair: a kind added later must count without anyone remembering to
+     * extend an OR chain. A live drainer alone is the case that proves the
+     * question is not simply the persistent worker's.
+     */
+    public function testALiveDrainerAloneCountsAsSomebodyDriving(): void
+    {
+        $this->repository()->touch(
+            RecommendationDriverKind::OnDemandDrainer->heartbeatName(),
+            $this->secondsBeforeNoon(WorkerPresence::FRESH_SECONDS),
+        );
+
+        $presence = $this->presenceAt('2026-08-07 12:00:00');
+        self::assertTrue($presence->isAnybodyDrivingRecommendationRuns());
+        self::assertFalse($presence->hasPersistentRecommendationWorker());
+    }
+
+    public function testAStaleHeartbeatOfEveryKindMeansNobodyIsDriving(): void
+    {
+        foreach (RecommendationDriverKind::cases() as $kind) {
+            $this->repository()->touch(
+                $kind->heartbeatName(),
+                $this->secondsBeforeNoon(WorkerPresence::FRESH_SECONDS + 1),
+            );
+        }
+
+        self::assertFalse($this->presenceAt('2026-08-07 12:00:00')->isAnybodyDrivingRecommendationRuns());
+    }
+
+    public function testMarkingTheDrainerLeavesThePersistentWorkersKeyUntouched(): void
+    {
+        $presence = $this->presenceAt('2026-08-07 12:00:00');
+
+        $presence->mark(RecommendationDriverKind::OnDemandDrainer);
+
+        self::assertNull(
+            $this->repository()->findTouchedAt(RecommendationDriverKind::PersistentWorker->heartbeatName()),
+        );
+    }
+
+    public function testForgettingTheDrainerRemovesItsRow(): void
+    {
+        $presence = $this->presenceAt('2026-08-07 12:00:00');
+        $presence->mark(RecommendationDriverKind::OnDemandDrainer);
+
+        $presence->forget(RecommendationDriverKind::OnDemandDrainer);
+
+        self::assertFalse($presence->isAnybodyDrivingRecommendationRuns());
+    }
+
+    /**
+     * The persistent worker's key is the settings card's only evidence, and
+     * its owner is a process nobody can ask whether it is still there — so
+     * clearing it is refused rather than merely avoided by every current
+     * caller.
+     */
+    public function testThePersistentWorkersKeyCannotBeSurrendered(): void
+    {
+        $presence = $this->presenceAt('2026-08-07 12:00:00');
+        $presence->mark(RecommendationDriverKind::PersistentWorker);
+
+        $this->expectException(\LogicException::class);
+
+        try {
+            $presence->forget(RecommendationDriverKind::PersistentWorker);
+        } finally {
+            self::assertTrue($presence->hasPersistentRecommendationWorker());
+        }
+    }
+
+    /**
+     * The poll path asks about every driver kind on every request from every
+     * open tab, so the read is one query rather than one per name. Names
+     * without a row are absent rather than null, which is what lets the
+     * caller treat "present" as "has a touch instant".
+     */
+    public function testTheBatchedHeartbeatReadReturnsOnlyTheNamesThatHaveARow(): void
+    {
+        $touchedAt = new \DateTimeImmutable('2026-08-07 11:00:00');
+        $this->repository()->touch('present', $touchedAt);
+
+        self::assertEquals(
+            ['present' => $touchedAt],
+            $this->repository()->findTouchedAtByNames(['present', 'absent']),
+        );
     }
 
     private function presenceAt(string $now): WorkerPresence
