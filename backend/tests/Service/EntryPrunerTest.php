@@ -98,7 +98,11 @@ final class EntryPrunerTest extends DbTestCase
 
     public function testKeepsAnOldArticleThatWasFetchedRecently(): void
     {
-        $feed = $this->feedWithEntries(1);
+        // Twenty recent filler entries hold the feed above the floor, so the
+        // archive entry below falls beyond the newest-twenty boundary — this
+        // isolates the age check itself, since a below-floor feed would
+        // survive regardless of which date the age pass reads.
+        $feed = $this->feedWithEntries(20, $this->daysAgo(1));
         $this->seedEntry($feed, 'archive', $this->daysAgo(2), $this->daysAgo(2000));
 
         $this->pruner->prune();
@@ -297,6 +301,73 @@ final class EntryPrunerTest extends DbTestCase
         );
         sort($remaining);
         self::assertSame(['e1-oldest', 'e3', 'e4', 'e5-newest'], $remaining);
+    }
+
+    /**
+     * A read-but-not-favorited-or-kept entry is not protected: only
+     * favoriting or keeping guards an entry, so the cap pass must still
+     * delete it once it falls beyond the cap.
+     */
+    public function testCapPassDeletesEntryWithOnlyAReadState(): void
+    {
+        $pruner = new EntryPruner($this->em, $this->clock, maxEntriesPerFeed: 3);
+
+        $feed = new Feed('https://example.com/feed');
+        $user = new User('reader@example.com', $this->clock->now());
+        $this->em->persist($feed);
+        $this->em->persist($user);
+
+        $oldest = $this->persistEntry($feed, 'oldest', $this->daysAgo(4));
+        $this->persistEntry($feed, 'n1', $this->daysAgo(3));
+        $this->persistEntry($feed, 'n2', $this->daysAgo(2));
+        $this->persistEntry($feed, 'n3', $this->daysAgo(1));
+
+        $readState = new EntryState($user, $oldest);
+        $readState->setIsRead(true);
+        $this->em->persist($readState);
+        $this->em->flush();
+
+        self::assertSame(1, $pruner->prune());
+        self::assertNull($this->findByGuid($feed, 'oldest'));
+    }
+
+    /**
+     * Pins the semantic this task chose over the pre-existing one: a
+     * protected entry still occupies a ranking slot among the newest `keep`,
+     * rather than being excluded from the ranking before the cap is applied.
+     * With the favorite at the very top, cap 3 keeps only its two youngest
+     * non-protected neighbours and drops the two oldest — not just one.
+     */
+    public function testProtectedNewestEntryStillOccupiesARankingSlot(): void
+    {
+        $pruner = new EntryPruner($this->em, $this->clock, maxEntriesPerFeed: 3);
+
+        $feed = new Feed('https://example.com/feed');
+        $user = new User('reader@example.com', $this->clock->now());
+        $this->em->persist($feed);
+        $this->em->persist($user);
+
+        // Newest → oldest: favorite, n1, n2, n3, n4.
+        $favorite = $this->persistEntry($feed, 'favorite-newest', $this->daysAgo(1));
+        $this->persistEntry($feed, 'n1', $this->daysAgo(2));
+        $this->persistEntry($feed, 'n2', $this->daysAgo(3));
+        $this->persistEntry($feed, 'n3', $this->daysAgo(4));
+        $this->persistEntry($feed, 'n4', $this->daysAgo(5));
+
+        $favoriteState = new EntryState($user, $favorite);
+        $favoriteState->setIsFavorite(true);
+        $this->em->persist($favoriteState);
+        $this->em->flush();
+
+        // Ranked over all 5 entries: favorite,n1,n2,n3,n4 → cap 3 keeps the
+        // top 3 (favorite,n1,n2) and drops n3,n4 — two deletions, not one.
+        self::assertSame(2, $pruner->prune());
+        $remaining = array_map(
+            static fn (Entry $entry): string => $entry->getGuid(),
+            $this->findAllEntries($feed),
+        );
+        sort($remaining);
+        self::assertSame(['favorite-newest', 'n1', 'n2'], $remaining);
     }
 
     public function testFeedAtOrUnderCapIsUntouched(): void

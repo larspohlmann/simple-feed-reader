@@ -14,6 +14,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_entry_effective', columns: ['effective_date', 'id'])]
 #[ORM\Index(name: 'idx_entry_feed_effective', columns: ['feed_id', 'effective_date'])]
 #[ORM\Index(name: 'idx_entry_list', columns: ['created_at', 'published_at', 'id'])]
+#[ORM\Index(name: 'idx_entry_feed_created', columns: ['feed_id', 'created_at', 'id'])]
 class Entry
 {
     #[ORM\Id]

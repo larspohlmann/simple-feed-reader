@@ -86,117 +86,68 @@ final class EntryPruner
     {
         $cutoff = $this->clock->now()->modify(sprintf('-%d days', self::RETENTION_DAYS));
 
-        $deleted = 0;
-        foreach ($this->feedIdsFetchedBefore($cutoff) as $feedId) {
-            $deleted += $this->deleteByIds($this->staleEntryIdsBeyondFloor((int) $feedId, $cutoff));
-        }
-
-        return $deleted;
-    }
-
-    /**
-     * @return list<int> — only feeds with at least one stale entry are worth scanning.
-     */
-    private function feedIdsFetchedBefore(\DateTimeImmutable $cutoff): array
-    {
-        /** @var list<int> $feedIds */
-        $feedIds = $this->em->createQuery(sprintf(
-            'SELECT DISTINCT IDENTITY(e.feed) FROM %s e WHERE e.createdAt < :cutoff',
-            Entry::class,
-        ))
-            ->setParameter('cutoff', $cutoff)
-            ->getSingleColumnResult();
-
-        return $feedIds;
-    }
-
-    /**
-     * A feed's entries beyond its newest-twenty floor, narrowed to the ones
-     * fetched before the retention cutoff. The floor and the age cutoff are
-     * two independent conditions on the same candidate set, not one query, so
-     * a feed just over the floor with entries of mixed age is not all-or-
-     * nothing: only the stale ones among the excess are deleted.
-     *
-     * @return list<int>
-     */
-    private function staleEntryIdsBeyondFloor(int $feedId, \DateTimeImmutable $cutoff): array
-    {
-        $beyondFloor = $this->entryIdsBeyond($feedId, self::MIN_ENTRIES_PER_FEED);
-
         /** @var list<int> $ids */
         $ids = $this->em->createQuery(sprintf(
-            'SELECT e.id FROM %s e WHERE e.id IN (:ids) AND e.createdAt < :cutoff',
+            'SELECT e.id FROM %s e
+             WHERE e.createdAt < :cutoff
+             AND %s
+             AND %s',
             Entry::class,
+            $this->beyondKeepDql(),
+            $this->notProtectedDql(),
         ))
-            ->setParameter('ids', $beyondFloor)
             ->setParameter('cutoff', $cutoff)
+            ->setParameter('keep', self::MIN_ENTRIES_PER_FEED)
+            ->setParameter('true', true, Types::BOOLEAN)
             ->getSingleColumnResult();
 
-        return $ids;
+        return $this->deleteByIds($ids);
     }
 
     private function pruneByFeedCap(): int
     {
-        $deleted = 0;
-        foreach ($this->feedIdsOverCap() as $feedId) {
-            $deleted += $this->deleteByIds($this->entryIdsBeyond((int) $feedId, $this->maxEntriesPerFeed));
-        }
-
-        return $deleted;
-    }
-
-    /**
-     * @return list<int> — only feeds over the cap are worth scanning.
-     */
-    private function feedIdsOverCap(): array
-    {
-        /** @var list<int> $feedIds */
-        $feedIds = $this->em->createQuery(sprintf(
-            'SELECT IDENTITY(e.feed) FROM %s e GROUP BY e.feed HAVING COUNT(e.id) > :cap',
-            Entry::class,
-        ))
-            ->setParameter('cap', $this->maxEntriesPerFeed)
-            ->getSingleColumnResult();
-
-        return $feedIds;
-    }
-
-    /**
-     * A feed's non-protected entry ids beyond its newest `$keep`, in fetch
-     * order (later fetch = newer; id breaks a tie inside one run). Used by
-     * both passes: the floor that spares a small feed, and the cap that
-     * bounds a huge one.
-     *
-     * The newest-`$keep` boundary spans every entry in the feed, favorites
-     * and kept included, so a handful of protected articles cannot push it
-     * around; a protected entry beyond that boundary still survives, since
-     * only the non-protected ones among the excess come back.
-     *
-     * @return list<int>
-     */
-    private function entryIdsBeyond(int $feedId, int $keep): array
-    {
-        /** @var list<int> $orderedIds */
-        $orderedIds = $this->em->createQuery(sprintf(
-            'SELECT e.id FROM %s e WHERE e.feed = :feed ORDER BY e.createdAt DESC, e.id DESC',
-            Entry::class,
-        ))
-            ->setParameter('feed', $feedId)
-            ->getSingleColumnResult();
-
-        $excessIds = \array_slice($orderedIds, $keep);
-
         /** @var list<int> $ids */
         $ids = $this->em->createQuery(sprintf(
-            'SELECT e.id FROM %s e WHERE e.id IN (:ids) AND %s',
+            'SELECT e.id FROM %s e
+             WHERE %s
+             AND %s',
             Entry::class,
+            $this->beyondKeepDql(),
             $this->notProtectedDql(),
         ))
-            ->setParameter('ids', $excessIds)
+            ->setParameter('keep', $this->maxEntriesPerFeed)
             ->setParameter('true', true, Types::BOOLEAN)
             ->getSingleColumnResult();
 
-        return $ids;
+        return $this->deleteByIds($ids);
+    }
+
+    /**
+     * True when `e` ranks beyond the newest `:keep` entries of its own feed,
+     * in fetch order (later fetch = newer; id breaks a tie inside one run).
+     * Used by both passes: the floor that spares a small feed, and the cap
+     * that bounds a huge one — one shared ordering, so the two can never
+     * disagree about which entries are old.
+     *
+     * A correlated count rather than a per-feed `OFFSET`, so the whole table
+     * is ranked in a single query instead of one round trip per feed, and no
+     * excess-id list ever has to travel back through PHP as an `IN (...)`
+     * parameter — both scale with rows changed, not with feed count. The
+     * count spans every entry in the feed, favorites and kept included, so a
+     * handful of protected articles cannot shift the boundary; a protected
+     * entry beyond it still survives via `notProtectedDql()` in the caller.
+     * `idx_entry_feed_created (feed_id, created_at, id)` serves the
+     * correlated scan on both sides.
+     */
+    private function beyondKeepDql(): string
+    {
+        return sprintf(
+            '(SELECT COUNT(newer.id) FROM %s newer
+              WHERE newer.feed = e.feed
+              AND (newer.createdAt > e.createdAt OR (newer.createdAt = e.createdAt AND newer.id > e.id))
+             ) >= :keep',
+            Entry::class,
+        );
     }
 
     /**

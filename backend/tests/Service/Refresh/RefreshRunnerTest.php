@@ -852,6 +852,20 @@ final class RefreshRunnerTest extends DbTestCase
         $user = new User('reader@example.com', $this->clock->now());
         $this->em->persist($user);
         $feed = $this->dueFeed('https://a.example.com/feed');
+
+        // Twenty recent filler entries hold the feed above EntryPruner's
+        // per-feed floor, so the ancient entry below falls beyond the
+        // newest-twenty boundary and would be eligible for the age pass —
+        // this isolates the user-scope check itself, since a below-floor
+        // feed would survive pruning regardless of whether this run scope
+        // is meant to prune at all.
+        $recentDate = $this->clock->now()->modify('-1 day');
+        for ($i = 0; $i < 20; ++$i) {
+            $filler = new Entry($feed, 'filler-' . $i, null, 'Filler ' . $i, $recentDate, $recentDate);
+            $filler->setPublishedAt($recentDate);
+            $this->em->persist($filler);
+        }
+
         $ancientDate = $this->clock->now()->modify('-200 days');
         $ancient = new Entry($feed, 'ancient', null, 'Ancient', $ancientDate, $ancientDate);
         $ancient->setPublishedAt($ancientDate);
@@ -866,7 +880,7 @@ final class RefreshRunnerTest extends DbTestCase
         $report = $this->runner()->run(RefreshRequest::forUser($userId, 60));
 
         self::assertSame(0, $report->pruned);
-        self::assertCount(1, $this->em->getRepository(Entry::class)->findAll());
+        self::assertCount(21, $this->em->getRepository(Entry::class)->findAll());
     }
 
     public function testScrapedFeedSynthesizesEntriesFromTheListingPage(): void
