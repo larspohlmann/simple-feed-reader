@@ -17,6 +17,7 @@ import {
 import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../shared/field/field.component';
+import { InfoTipComponent } from '../shared/info-tip/info-tip.component';
 import {
   SearchableSelectComponent,
   SelectOption,
@@ -44,6 +45,7 @@ import { RecommendationSettingsCardComponent } from './recommendation-settings-c
     DisclosureComponent,
     ErrorBannerComponent,
     FieldComponent,
+    InfoTipComponent,
     RecommendationDebugLogComponent,
     RecommendationSettingsCardComponent,
     SearchableSelectComponent,

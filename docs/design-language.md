@@ -265,6 +265,7 @@ optional hint and an optional error.
 | `label` | `string` (required) | — |
 | `error` | `string \| null` | `null` |
 | `hint` | `string \| null` | `null` |
+| `info` | `string \| null` | `null` — an already-translated explanation; renders an `<app-info-tip>` in the label row (#372) |
 | `required` | `boolean` | `false` |
 
 ```html
@@ -632,6 +633,49 @@ Extracted in #321 from the two places this shape had been hand-rolled
 layout — margin, base font-size, the bordered entry rows — keeps that on its
 own wrapping class, the same way `recommendation-debug-log.component.scss`'s
 `.debug-panel` still does.
+
+---
+
+### `<app-info-tip>`
+
+The one info affordance (#372): a small ⓘ icon button that toggles an
+explanation panel. The panel renders **in flow** and pushes content down —
+deliberately not a floating popover, so it cannot clip or overflow on a
+phone. Click/tap to toggle; Escape or a press outside dismisses (via
+`DismissOnOutsideDirective`). The trigger is a real button with
+`aria-expanded`/`aria-controls`; the panel is `role="note"`. Under
+`pointer: coarse` the trigger grows to `--tap-target`.
+
+| Input | Type | Default |
+|---|---|---|
+| `text` | `string` (required) | — |
+| `label` | `string` (required) | — |
+| `corner` | `boolean` (accepts the bare `corner` attribute) | `false` |
+
+```html
+<app-info-tip
+  [text]="'settings.ai.info.rowActions' | transloco"
+  [label]="'settings.ai.info.actionsLabel' | transloco"
+/>
+```
+
+`text` and `label` take **already-translated strings** (shared component, no
+feature keys). `label` is the accessible name of the trigger — pass the label
+of the control being explained. `corner` anchors the trigger at the top-right
+of the nearest **positioned** ancestor; `<app-field>` uses it to put the ⓘ in
+its label row (see the `info` input there). It is a `booleanAttribute` input
+reflected as the host class `.corner`, which the styles key on — so `corner`
+and `[corner]="true"` behave the same. A consumer that turns it on owes the
+row the trigger's height: under `pointer: coarse` the trigger is a full
+`--tap-target`, and a shorter row lets its hit box hang over the control
+below (`app-field` reserves that height with `:host(.has-info) .lbl`).
+Never place a tip inside a
+`<summary>` or inside a wrapping `<label>`: a click on non-interactive panel
+content would toggle the `<details>` or the control.
+
+**Not for:** validation or state messages (that is `app-field`'s `error`/
+`hint`), or anything that must be visible without interaction — a danger
+zone keeps its always-visible note.
 
 ---
 

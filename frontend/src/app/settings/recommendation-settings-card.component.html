@@ -1,5 +1,8 @@
 @if (svc.state(); as state) {
-  <app-field [label]="'settings.ai.recommendations.autoGenerate' | transloco">
+  <app-field
+    [label]="'settings.ai.recommendations.autoGenerate' | transloco"
+    [info]="'settings.ai.info.autoGenerate' | transloco"
+  >
     <select data-testid="auto-generate" (change)="setAutoGenerate($event)">
       @for (opt of intervalOptions; track opt.value) {
         <option [value]="opt.value ?? ''" [selected]="autoGenerateIntervalHours() === opt.value">
@@ -9,7 +12,10 @@
     </select>
   </app-field>
 
-  <app-field [label]="'settings.ai.recommendations.lookback' | transloco">
+  <app-field
+    [label]="'settings.ai.recommendations.lookback' | transloco"
+    [info]="'settings.ai.info.lookback' | transloco"
+  >
     <select data-testid="lookback-days" (change)="setLookbackDays($event)">
       @for (opt of lookbackOptions; track opt.value) {
         <option [value]="opt.value" [selected]="lookbackDays() === opt.value">
@@ -28,7 +34,10 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
 
   <app-disclosure [label]="'settings.ai.recommendations.expertTitle' | transloco">
     <div class="group">
-      <app-field [label]="'settings.ai.recommendations.guidance' | transloco">
+      <app-field
+        [label]="'settings.ai.recommendations.guidance' | transloco"
+        [info]="'settings.ai.info.guidance' | transloco"
+      >
         <textarea
           [placeholder]="state.defaultGuidancePrompt"
           [value]="guidance()"
@@ -41,7 +50,10 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
     </div>
 
     <div class="expert-grid">
-      <app-field [label]="'settings.ai.recommendations.favoritesCap' | transloco">
+      <app-field
+        [label]="'settings.ai.recommendations.favoritesCap' | transloco"
+        [info]="'settings.ai.info.favoritesCap' | transloco"
+      >
         <input
           type="number"
           min="0"
@@ -51,7 +63,10 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
         />
       </app-field>
 
-      <app-field [label]="'settings.ai.recommendations.keptCap' | transloco">
+      <app-field
+        [label]="'settings.ai.recommendations.keptCap' | transloco"
+        [info]="'settings.ai.info.keptCap' | transloco"
+      >
         <input
           type="number"
           min="0"
@@ -61,7 +76,10 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
         />
       </app-field>
 
-      <app-field [label]="'settings.ai.recommendations.viewedCap' | transloco">
+      <app-field
+        [label]="'settings.ai.recommendations.viewedCap' | transloco"
+        [info]="'settings.ai.info.viewedCap' | transloco"
+      >
         <input
           type="number"
           min="0"
@@ -71,7 +89,10 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
         />
       </app-field>
 
-      <app-field [label]="'settings.ai.recommendations.candidatePool' | transloco">
+      <app-field
+        [label]="'settings.ai.recommendations.candidatePool' | transloco"
+        [info]="'settings.ai.info.candidatePool' | transloco"
+      >
         <input
           type="number"
           min="10"
@@ -81,7 +102,10 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
         />
       </app-field>
 
-      <app-field [label]="'settings.ai.recommendations.picksLimit' | transloco">
+      <app-field
+        [label]="'settings.ai.recommendations.picksLimit' | transloco"
+        [info]="'settings.ai.info.picksLimit' | transloco"
+      >
         <input
           type="number"
           min="1"
@@ -91,7 +115,10 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
         />
       </app-field>
 
-      <app-field [label]="'settings.ai.recommendations.batchCount' | transloco">
+      <app-field
+        [label]="'settings.ai.recommendations.batchCount' | transloco"
+        [info]="'settings.ai.info.batchCount' | transloco"
+      >
         <input
           type="number"
           min="1"
@@ -105,6 +132,7 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
     <app-field
       [label]="'settings.ai.recommendations.contextWindow' | transloco"
       [hint]="contextWindowSourceKey() | transloco"
+      [info]="'settings.ai.info.contextWindow' | transloco"
     >
       <input
         type="number"
@@ -121,12 +149,23 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
 
 {{ state.fixedPrompt.outputContract }}</pre>
     </app-disclosure>
+    <app-info-tip
+      class="fixed-info"
+      [text]="'settings.ai.info.fixedPrompt' | transloco"
+      [label]="'settings.ai.recommendations.fixedShow' | transloco"
+    />
 
     <div class="debug-row">
       <span class="debug-text">
-        <label class="debug-label" for="rec-debug-toggle">{{
-          'settings.ai.recommendations.debug' | transloco
-        }}</label>
+        <span class="debug-title">
+          <label class="debug-label" for="rec-debug-toggle">{{
+            'settings.ai.recommendations.debug' | transloco
+          }}</label>
+          <app-info-tip
+            [text]="'settings.ai.info.debug' | transloco"
+            [label]="'settings.ai.recommendations.debug' | transloco"
+          />
+        </span>
         <span class="debug-hint">{{ 'settings.ai.recommendations.debugHint' | transloco }}</span>
       </span>
       <app-toggle
@@ -151,7 +190,13 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
   </app-button>
 
   <div class="danger-zone">
-    <p class="danger-zone__note">{{ 'settings.ai.recommendations.purgeExplain' | transloco }}</p>
+    <p class="danger-zone__note">
+      {{ 'settings.ai.recommendations.purgeExplain' | transloco }}
+      <app-info-tip
+        [text]="'settings.ai.info.purge' | transloco"
+        [label]="'settings.ai.recommendations.purge' | transloco"
+      />
+    </p>
     <app-button variant="danger-outline" [disabled]="svc.purging()" (click)="confirmPurge()">
       {{ 'settings.ai.recommendations.purge' | transloco }}
     </app-button>

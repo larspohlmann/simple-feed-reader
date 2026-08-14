@@ -90,6 +90,13 @@ app-searchable-select {
   gap: var(--space-2);
 }
 
+.reasoning-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
 .saved {
   font-size: var(--fs-sm);
   color: var(--success);
@@ -101,4 +108,24 @@ app-searchable-select {
   align-items: flex-start;
   gap: var(--space-2);
   width: 100%;
+}
+
+.guide-intro {
+  margin: 0 0 var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.guide h3 {
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: 1em;
+}
+
+.guide ol {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+
+.guide li {
+  margin-bottom: var(--space-1);
 }

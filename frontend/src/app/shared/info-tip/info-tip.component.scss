@@ -1,0 +1,56 @@
+/* The host and .wrap are deliberately never `position`ed: in corner mode the
+   trigger's `absolute` must resolve against the consumer's own positioned
+   ancestor (app-field's host), which is what puts the ⓘ in the label row. */
+:host {
+  display: inline-block;
+}
+
+:host(.corner) {
+  display: block;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.trigger:hover,
+.trigger:focus-visible,
+.trigger.is-open {
+  color: var(--text-primary);
+}
+
+:host(.corner) .trigger {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.panel {
+  display: block;
+  margin-top: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+  max-width: 60ch;
+}
+
+/* Touch density: the trigger grows to a full tap target for coarse pointers
+   only, the documented local pattern (design-language §3). */
+@media (pointer: coarse) {
+  .trigger {
+    min-width: var(--tap-target);
+    min-height: var(--tap-target);
+    padding: 0;
+  }
+}

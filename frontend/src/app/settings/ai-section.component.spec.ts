@@ -121,6 +121,16 @@ describe('AiSectionComponent', () => {
     fixture.detectChanges();
   };
 
+  const CONFIG = config({ id: 7 });
+
+  const mountWithConfigs = (configs: readonly AiConfig[]): ComponentFixture<AiSectionComponent> => {
+    const fixture = mount();
+    ai.configs.set(configs);
+    fixture.detectChanges();
+    if (configs.length) expandRow(fixture, 0);
+    return fixture;
+  };
+
   beforeEach(() => dialogStub.open.mockReset());
   afterEach(() => http.verify());
 
@@ -272,9 +282,7 @@ describe('AiSectionComponent', () => {
       fixture.nativeElement.querySelector('.reasoning-toggle input');
     expect(checkbox).not.toBeNull();
     expect(checkbox.checked).toBe(true);
-    expect(row(fixture, 0).querySelector('.reasoning-toggle .hint')?.textContent).toContain(
-      'rejects the request',
-    );
+    expect(row(fixture, 0).querySelector('.reasoning-toggle .hint')).toBeNull();
 
     checkbox.checked = false;
     checkbox.dispatchEvent(new Event('change'));
@@ -296,7 +304,15 @@ describe('AiSectionComponent', () => {
     expect(select).not.toBeNull();
     expect(Array.from(select.options).map((option) => option.value)).toEqual(['1', '2', '3', '4']);
     expect(select.value).toBe('1');
-    expect(row(fixture, 0).querySelector('app-field .hint')?.textContent).toContain('local model');
+    const concurrencyTip = row(fixture, 0).querySelector(
+      'app-field app-info-tip button.trigger',
+    ) as HTMLButtonElement;
+    expect(concurrencyTip).not.toBeNull();
+    concurrencyTip.click();
+    fixture.detectChanges();
+    expect(row(fixture, 0).querySelector('app-field .panel')?.textContent).toContain(
+      'local model server',
+    );
 
     select.value = '3';
     select.dispatchEvent(new Event('change'));
@@ -508,7 +524,7 @@ describe('AiSectionComponent', () => {
     const cards = Array.from(
       fixture.nativeElement.querySelectorAll('app-settings-card'),
     ) as HTMLElement[];
-    expect(cards.length).toBe(2);
+    expect(cards.length).toBe(3);
 
     const listCard = cards.find((card) => card.querySelector('.configs')) as HTMLElement;
     const addCard = cards.find((card) => card.querySelector('.add-config')) as HTMLElement;
@@ -541,5 +557,61 @@ describe('AiSectionComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('app-recommendation-settings-card')).not.toBeNull();
+  });
+
+  it('gives the add-form fields info tips and keeps the short hints', () => {
+    const fixture = mountWithConfigs([]);
+
+    const addGroup = fixture.nativeElement.querySelector('.add-group') as HTMLElement;
+    const triggers = Array.from(
+      addGroup.querySelectorAll('app-info-tip button.trigger'),
+    ) as HTMLButtonElement[];
+    expect(triggers.map((el) => el.getAttribute('aria-label'))).toEqual([
+      'Optional name',
+      'Endpoint',
+      'API key',
+    ]);
+
+    const hints = Array.from(addGroup.querySelectorAll('app-field .hint')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(hints).toEqual([
+      'The full API root, including any version path — for example https://api.openai.com/v1',
+      'The key is sent once and stored encrypted. Enter it again to replace it.',
+    ]);
+  });
+
+  it('renders the setup guide as the first card, collapsed by default', () => {
+    const fixture = mountWithConfigs([]);
+
+    const firstCard = fixture.nativeElement.querySelector('app-settings-card') as HTMLElement;
+    expect(firstCard.querySelector('h2')?.textContent).toContain('Step-by-step setup');
+
+    const details = firstCard.querySelector('details') as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+
+    const steps = firstCard.querySelectorAll('.guide ol li');
+    expect(steps.length).toBe(9);
+  });
+
+  it('explains the row actions with one tip and the reasoning toggle with its own', () => {
+    const fixture = mountWithConfigs([CONFIG]);
+
+    const body = fixture.nativeElement.querySelector('.config-body') as HTMLElement;
+    const actionsTrigger = body.querySelector('.acts-info button.trigger') as HTMLButtonElement;
+    expect(actionsTrigger.getAttribute('aria-label')).toBe('What these buttons do');
+
+    actionsTrigger.click();
+    fixture.detectChanges();
+    const actionsPanel = body.querySelector('.acts-info .panel')?.textContent ?? '';
+    expect(actionsPanel).toContain('makes this configuration the active one');
+    expect(actionsPanel).toContain('copies the configuration together with its stored key');
+    expect(actionsPanel).toContain('removes the endpoint, the stored key and the model');
+
+    const reasoningTrigger = body.querySelector(
+      '.reasoning-toggle app-info-tip button.trigger',
+    ) as HTMLButtonElement;
+    expect(reasoningTrigger).not.toBeNull();
+    expect(body.querySelector('.reasoning-toggle .hint')).toBeNull();
   });
 });
