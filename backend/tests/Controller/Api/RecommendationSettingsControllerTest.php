@@ -275,6 +275,45 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         self::assertArrayHasKey($field, $payload['errors']);
     }
 
+    /**
+     * The floor and ceiling in {@see rejectedLoadBearingBounds()} are proven
+     * only from the outside: those cases show 0 and 8 are refused, but say
+     * nothing about whether 1 and 7 themselves — the values `Assert\Range`
+     * is actually supposed to let through — still are.
+     *
+     * @return iterable<string, array{int}>
+     */
+    public static function acceptedLookbackDaysBounds(): iterable
+    {
+        yield 'lookbackDays at its floor of 1' => [1];
+        yield 'lookbackDays at its ceiling of 7' => [7];
+    }
+
+    #[DataProvider('acceptedLookbackDaysBounds')]
+    public function testAnAcceptedLookbackDaysBoundIsPersisted(int $acceptedValue): void
+    {
+        $client = static::createClient();
+        [$headers] = $this->auth('recsettings-lookback-bound-' . $acceptedValue . '@example.test');
+
+        $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        $body['lookbackDays'] = $acceptedValue;
+
+        $client->request(
+            'PUT',
+            self::URI,
+            server: array_merge($headers, ['CONTENT_TYPE' => 'application/json']),
+            content: json_encode($body, \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseIsSuccessful();
+        self::assertSame($acceptedValue, $this->payload($client)['lookbackDays']);
+
+        $client->request('GET', self::URI, server: $headers);
+        self::assertResponseIsSuccessful();
+        self::assertSame($acceptedValue, $this->payload($client)['lookbackDays']);
+    }
+
     public function testClearingAContextWindowOverrideFallsBackToTheProvider(): void
     {
         $client = static::createClient();
