@@ -343,6 +343,14 @@ services:
         autowire: true
         public: true
 
+    # Test environment only: no container-wired code path may ever exec() a
+    # real drainer child process against the test database. Same swap pattern
+    # as StubChatClient above.
+    App\Tests\Support\NullShellCommandRunner:
+        autowire: true
+    App\Service\Process\ShellCommandRunnerInterface:
+        alias: App\Tests\Support\NullShellCommandRunner
+
     # RecommendationRunAdvancerTest drives advance() directly to prove the
     # lock, the snapshot-phase batching and the zero-candidate completion. Same
     # "no production caller yet" caveat as RecommendationRunStarter above.
