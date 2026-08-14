@@ -91,9 +91,13 @@ final class EntryPrunerTest extends DbTestCase
         return $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]);
     }
 
-    private function countEntries(Feed $feed): int
+    /** @return list<string> */
+    private function remainingGuids(Feed $feed): array
     {
-        return $this->em->getRepository(Entry::class)->count(['feed' => $feed]);
+        return array_map(
+            static fn (Entry $entry): string => $entry->getGuid(),
+            $this->findAllEntries($feed),
+        );
     }
 
     public function testKeepsAnOldArticleThatWasFetchedRecently(): void
@@ -110,20 +114,36 @@ final class EntryPrunerTest extends DbTestCase
         self::assertNotNull($this->findByGuid($feed, 'archive'));
     }
 
+    /**
+     * 30 entries sharing one `createdAt`, all 100 days old: the floor keeps
+     * exactly 20, tie-broken by id — the 10 lowest ids (entry-0..entry-9,
+     * the ones fetched first in the burst) go, the 20 highest survive.
+     */
     public function testDeletesAnArticleFetchedBeforeTheRetentionWindow(): void
     {
-        $this->feedWithEntries(30, $this->daysAgo(100));
+        $feed = $this->feedWithEntries(30, $this->daysAgo(100));
 
         self::assertSame(10, $this->pruner->prune());
+        self::assertEqualsCanonicalizing(
+            array_map(static fn (int $i): string => "entry-{$i}", range(10, 29)),
+            $this->remainingGuids($feed),
+        );
     }
 
+    /**
+     * 25 entries sharing one `createdAt`, all 100 days old: the floor keeps
+     * the 20 highest ids (entry-5..entry-24) and drops the 5 lowest.
+     */
     public function testNeverDeletesAFeedsNewestTwentyEntries(): void
     {
         $feed = $this->feedWithEntries(25, $this->daysAgo(100));
 
         $this->pruner->prune();
 
-        self::assertSame(20, $this->countEntries($feed));
+        self::assertEqualsCanonicalizing(
+            array_map(static fn (int $i): string => "entry-{$i}", range(5, 24)),
+            $this->remainingGuids($feed),
+        );
     }
 
     public function testAFeedOfTwentyOldEntriesLosesNone(): void
@@ -134,15 +154,25 @@ final class EntryPrunerTest extends DbTestCase
     }
 
     /**
-     * Two separate feeds, each one entry past its floor: the total must be
-     * the sum across feeds, not just the last feed scanned.
+     * Two separate feeds, each 21 entries sharing one `createdAt`, all 100
+     * days old: the floor keeps 20 per feed and drops exactly the lowest id
+     * (entry-0) in each — the total must be the sum across feeds, not just
+     * the last feed scanned.
      */
     public function testAgePassSumsDeletionsAcrossFeeds(): void
     {
-        $this->feedWithEntries(21, $this->daysAgo(100));
-        $this->feedWithEntries(21, $this->daysAgo(100));
+        $feedA = $this->feedWithEntries(21, $this->daysAgo(100));
+        $feedB = $this->feedWithEntries(21, $this->daysAgo(100));
 
         self::assertSame(2, $this->pruner->prune());
+        self::assertEqualsCanonicalizing(
+            array_map(static fn (int $i): string => "entry-{$i}", range(1, 20)),
+            $this->remainingGuids($feedA),
+        );
+        self::assertEqualsCanonicalizing(
+            array_map(static fn (int $i): string => "entry-{$i}", range(1, 20)),
+            $this->remainingGuids($feedB),
+        );
     }
 
     /**
@@ -161,7 +191,8 @@ final class EntryPrunerTest extends DbTestCase
 
     /**
      * Five entries sharing one `createdAt` (a burst fetch): cap 3 keeps the
-     * three highest ids and drops the two lowest, tie-broken by id alone.
+     * three highest ids (entry-2..entry-4) and drops the two lowest
+     * (entry-0, entry-1), tie-broken by id alone.
      */
     public function testCapPassBreaksATieById(): void
     {
@@ -170,7 +201,7 @@ final class EntryPrunerTest extends DbTestCase
         $feed = $this->feedWithEntries(5, $this->daysAgo(1));
 
         self::assertSame(2, $pruner->prune());
-        self::assertSame(3, $this->countEntries($feed));
+        self::assertEqualsCanonicalizing(['entry-2', 'entry-3', 'entry-4'], $this->remainingGuids($feed));
     }
 
     public function testPrunesOldEntriesButKeepsProtectedAndRecent(): void

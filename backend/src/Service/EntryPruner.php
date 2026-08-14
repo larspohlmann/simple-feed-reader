@@ -86,35 +86,16 @@ final class EntryPruner
     {
         $cutoff = $this->clock->now()->modify(sprintf('-%d days', self::RETENTION_DAYS));
 
-        $feedIds = $this->feedIdsFetchedBefore($cutoff);
-        if ($feedIds === []) {
-            return 0;
+        $deleted = 0;
+        foreach ($this->feedIdsFetchedBefore($cutoff) as $feedId) {
+            $deleted += $this->deleteByIds($this->staleIdsBeyondFloor((int) $feedId, $cutoff));
         }
 
-        /** @var list<int> $ids */
-        $ids = $this->em->createQuery(sprintf(
-            'SELECT e.id FROM %s e
-             WHERE IDENTITY(e.feed) IN (:feedIds)
-             AND e.createdAt < :cutoff
-             AND %s
-             AND %s',
-            Entry::class,
-            $this->beyondKeepDql(),
-            $this->notProtectedDql(),
-        ))
-            ->setParameter('feedIds', $feedIds)
-            ->setParameter('cutoff', $cutoff)
-            ->setParameter('keep', self::MIN_ENTRIES_PER_FEED)
-            ->setParameter('true', true, Types::BOOLEAN)
-            ->getSingleColumnResult();
-
-        return $this->deleteByIds($ids);
+        return $deleted;
     }
 
     /**
-     * @return list<int> — only feeds with a stale entry are worth ranking at
-     * all; this keeps the correlated count in `beyondKeepDql()` from ever
-     * running over a feed that has nothing to lose.
+     * @return list<int> — only feeds with a stale entry are worth ranking at all.
      */
     private function feedIdsFetchedBefore(\DateTimeImmutable $cutoff): array
     {
@@ -129,35 +110,55 @@ final class EntryPruner
         return $feedIds;
     }
 
-    private function pruneByFeedCap(): int
+    /**
+     * A feed's entries beyond its newest-twenty floor, narrowed to the ones
+     * fetched before the retention cutoff. The floor and the age cutoff are
+     * two independent conditions on the same candidate set, not one query, so
+     * a feed just over the floor with entries of mixed age is not all-or-
+     * nothing: only the stale ones among the excess are deleted.
+     *
+     * @return list<int>
+     */
+    private function staleIdsBeyondFloor(int $feedId, \DateTimeImmutable $cutoff): array
     {
-        $feedIds = $this->feedIdsOverCap();
-        if ($feedIds === []) {
-            return 0;
+        $boundary = $this->rankBoundaryBeyond($feedId, self::MIN_ENTRIES_PER_FEED);
+        if ($boundary === null) {
+            return [];
         }
 
         /** @var list<int> $ids */
         $ids = $this->em->createQuery(sprintf(
             'SELECT e.id FROM %s e
-             WHERE IDENTITY(e.feed) IN (:feedIds)
+             WHERE e.feed = :feed
              AND %s
+             AND e.createdAt < :cutoff
              AND %s',
             Entry::class,
-            $this->beyondKeepDql(),
+            $this->pastBoundaryDql(),
             $this->notProtectedDql(),
         ))
-            ->setParameter('feedIds', $feedIds)
-            ->setParameter('keep', $this->maxEntriesPerFeed)
+            ->setParameter('feed', $feedId)
+            ->setParameter('boundaryCreatedAt', $boundary->createdAt)
+            ->setParameter('boundaryId', $boundary->id)
+            ->setParameter('cutoff', $cutoff)
             ->setParameter('true', true, Types::BOOLEAN)
             ->getSingleColumnResult();
 
-        return $this->deleteByIds($ids);
+        return $ids;
+    }
+
+    private function pruneByFeedCap(): int
+    {
+        $deleted = 0;
+        foreach ($this->feedIdsOverCap() as $feedId) {
+            $deleted += $this->deleteByIds($this->idsBeyondCap((int) $feedId));
+        }
+
+        return $deleted;
     }
 
     /**
-     * @return list<int> — only feeds over the cap are worth ranking at all;
-     * this keeps the correlated count in `beyondKeepDql()` from ever running
-     * over a feed that can't possibly have anything beyond the cap.
+     * @return list<int> — only feeds over the cap are worth ranking at all.
      */
     private function feedIdsOverCap(): array
     {
@@ -173,40 +174,85 @@ final class EntryPruner
     }
 
     /**
-     * True when `e` ranks beyond the newest `:keep` entries of its own feed,
-     * in fetch order (later fetch = newer; id breaks a tie inside one run).
-     * Used by both passes: the floor that spares a small feed, and the cap
-     * that bounds a huge one — one shared ordering, so the two can never
-     * disagree about which entries are old.
+     * A feed's non-protected entries beyond the newest `maxEntriesPerFeed`.
      *
-     * A correlated count rather than a per-feed `OFFSET`, so ranking a
-     * multi-feed candidate set costs one query instead of one round trip per
-     * feed, and no excess-id list ever has to travel back through PHP as an
-     * `IN (...)` parameter. This alone is not enough: without an outer
-     * predicate restricting `e` to feeds that can plausibly lose something,
-     * the correlated count runs once per row of the *entire* table — Σ over
-     * every feed of that feed's row count squared, since each evaluation
-     * re-scans its own feed's segment. Both callers apply an
-     * `IDENTITY(e.feed) IN (:feedIds)` guard first (mirroring the candidate-
-     * feed query the per-feed loop used to run), so this only ever executes
-     * for feeds already known to have something prunable — cost tracks rows
-     * that can change, not table size (#384 round 2).
-     *
-     * The count spans every entry in the feed, favorites and kept included,
-     * so a handful of protected articles cannot shift the boundary; a
-     * protected entry beyond it still survives via `notProtectedDql()` in
-     * the caller. `idx_entry_feed_created (feed_id, created_at, id)` covers
-     * the correlated scan on both sides.
+     * @return list<int>
      */
-    private function beyondKeepDql(): string
+    private function idsBeyondCap(int $feedId): array
     {
-        return sprintf(
-            '(SELECT COUNT(newer.id) FROM %s newer
-              WHERE newer.feed = e.feed
-              AND (newer.createdAt > e.createdAt OR (newer.createdAt = e.createdAt AND newer.id > e.id))
-             ) >= :keep',
+        $boundary = $this->rankBoundaryBeyond($feedId, $this->maxEntriesPerFeed);
+        if ($boundary === null) {
+            return [];
+        }
+
+        /** @var list<int> $ids */
+        $ids = $this->em->createQuery(sprintf(
+            'SELECT e.id FROM %s e
+             WHERE e.feed = :feed
+             AND %s
+             AND %s',
             Entry::class,
-        );
+            $this->pastBoundaryDql(),
+            $this->notProtectedDql(),
+        ))
+            ->setParameter('feed', $feedId)
+            ->setParameter('boundaryCreatedAt', $boundary->createdAt)
+            ->setParameter('boundaryId', $boundary->id)
+            ->setParameter('true', true, Types::BOOLEAN)
+            ->getSingleColumnResult();
+
+        return $ids;
+    }
+
+    /**
+     * The fetch-order position of a feed's `keep`-th newest entry (later
+     * fetch = newer; id breaks a tie inside one run), or null when the feed
+     * doesn't have that many entries — the floor and the cap share this one
+     * ordering, so the two can never disagree about which entries are old.
+     *
+     * `setFirstResult($keep - 1)` + `setMaxResults(1)` walks exactly `keep`
+     * rows of `idx_entry_feed_created (feed_id, created_at, id)` and stops:
+     * cost is O(keep), not O(feed size). A correlated `COUNT` here looked
+     * equivalent on paper but re-scanned the whole feed once per row —
+     * quadratic in feed size and, since the feed over the cap is by
+     * definition the database's largest, dominant regardless of how many
+     * other feeds exist to guard against (#384 round 3).
+     *
+     * Ranks every entry in the feed, favorites and kept included, so a
+     * handful of protected articles cannot shift the boundary; a protected
+     * entry beyond it still survives via `notProtectedDql()` in the caller.
+     */
+    private function rankBoundaryBeyond(int $feedId, int $keep): ?EntryRankBoundary
+    {
+        /** @var list<array{createdAt: \DateTimeImmutable, id: int}> $rows */
+        $rows = $this->em->createQuery(sprintf(
+            'SELECT e.createdAt AS createdAt, e.id AS id FROM %s e
+             WHERE e.feed = :feed
+             ORDER BY e.createdAt DESC, e.id DESC',
+            Entry::class,
+        ))
+            ->setParameter('feed', $feedId)
+            ->setFirstResult($keep - 1)
+            ->setMaxResults(1)
+            ->getResult();
+
+        if ($rows === []) {
+            return null;
+        }
+
+        return new EntryRankBoundary($rows[0]['createdAt'], $rows[0]['id']);
+    }
+
+    /**
+     * True when `e` ranks strictly older than `:boundaryCreatedAt`/
+     * `:boundaryId` — an index-servable keyset range on
+     * `idx_entry_feed_created`, the same two-column comparison Task 4 uses
+     * for the entry list's own cursor.
+     */
+    private function pastBoundaryDql(): string
+    {
+        return '(e.createdAt < :boundaryCreatedAt
+                 OR (e.createdAt = :boundaryCreatedAt AND e.id < :boundaryId))';
     }
 
     /**
