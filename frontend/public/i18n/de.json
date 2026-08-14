@@ -93,9 +93,7 @@
         "namePlaceholder": "Optionaler Name",
         "add": "Konfiguration hinzufügen",
         "reasoning": "Das Modell nicht nachdenken lassen",
-        "reasoningHint": "Für die meisten Anbieter aktiviert lassen. Nur ausschalten, wenn der Endpunkt die Anfrage ablehnt (zum Beispiel eine direkte OpenAI-URL).",
         "batchConcurrency": "Parallele Anfragen",
-        "batchConcurrencyHint": "Wie viele Batch-Prompts gleichzeitig gesendet werden (1–4). Bei einem gehosteten Anbieter erhöht das den Wert für einen schnelleren Durchlauf; bei einem lokalen Modell bei 1 belassen.",
         "saved": "Gespeichert"
       },
       "errors": {
@@ -105,6 +103,16 @@
         "notConfigured": "Speichere zuerst einen Endpunkt und einen API-Schlüssel.",
         "limit": "Du hast die maximale Anzahl gespeicherter Konfigurationen erreicht.",
         "unknown": "Etwas ist schiefgelaufen. Versuche es erneut."
+      },
+      "info": {
+        "actionsLabel": "Was diese Buttons tun",
+        "rowActions": "„Diesen verwenden“ macht diese Konfiguration zur aktiven — das Aktiv-Abzeichen markiert sie, und KI-Funktionen nutzen immer die aktive Konfiguration. „Modell ändern“ lädt die Modellliste vom Endpunkt, damit du eines auswählen kannst. „Duplizieren“ kopiert die Konfiguration samt gespeichertem Schlüssel — nützlich, um ein zweites Modell parallel auszuprobieren. „Umbenennen“ ändert den Namen in dieser Liste. „Löschen“ entfernt den Endpunkt, den gespeicherten Schlüssel und das Modell; KI-Funktionen stehen nicht mehr zur Verfügung, wenn es die aktive Konfiguration war.",
+        "reasoning": "Bittet das Modell, ohne separate Denkphase zu antworten — das spart Zeit und Tokens. Für die meisten Anbieter aktiviert lassen. Nur ausschalten, wenn der Endpunkt die Anfrage ablehnt (zum Beispiel eine direkte OpenAI-URL).",
+        "batchConcurrency": "Wie viele Batch-Anfragen ein Lauf gleichzeitig sendet (1–4). Ein gehosteter Anbieter verkraftet meist 3–4 und beendet den Lauf schneller; ein lokaler Modell-Server läuft oft am besten mit 1. Senke den Wert, wenn der Anbieter dich drosselt.",
+        "modelPicker": "Die Liste wird live vom Endpunkt dieser Konfiguration geladen. Wähle das Modell, das die KI-Funktionen nutzen sollen — die Konfiguration ist einsatzbereit, sobald ein Modell gespeichert ist.",
+        "name": "Ein freier Name für diese Konfiguration, nur in dieser Liste sichtbar. Leer lassen, um stattdessen den Host des Endpunkts anzuzeigen.",
+        "baseUrl": "Die Basis-URL einer OpenAI-kompatiblen API, inklusive Versionspfad — zum Beispiel https://api.openai.com/v1 für OpenAI selbst oder die Adresse eines lokalen Servers wie LM Studio. Jeder Anbieter, der die OpenAI-Chat-API spricht, funktioniert.",
+        "apiKey": "Der Schlüssel wird einmal gesendet und verschlüsselt gespeichert; er wird nie wieder angezeigt. Danach zeigt die Liste nur seine letzten Zeichen, damit du Schlüssel unterscheiden kannst. Gib einen neuen Schlüssel ein, um den gespeicherten zu ersetzen."
       },
       "recommendations": {
         "title": "Empfehlungen",

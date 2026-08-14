@@ -45,21 +45,26 @@
                   </app-button>
                 </div>
               } @else {
-                <label class="reasoning-toggle">
+                <div class="reasoning-toggle">
                   <span class="reasoning-toggle-row">
-                    <input
-                      type="checkbox"
-                      [checked]="config.suppressReasoning"
-                      [disabled]="ai.busy()"
-                      (change)="toggleReasoning(config, $event)"
+                    <label class="reasoning-check">
+                      <input
+                        type="checkbox"
+                        [checked]="config.suppressReasoning"
+                        [disabled]="ai.busy()"
+                        (change)="toggleReasoning(config, $event)"
+                      />
+                      <span>{{ 'settings.ai.configs.reasoning' | transloco }}</span>
+                    </label>
+                    <app-info-tip
+                      [text]="'settings.ai.info.reasoning' | transloco"
+                      [label]="'settings.ai.configs.reasoning' | transloco"
                     />
-                    <span>{{ 'settings.ai.configs.reasoning' | transloco }}</span>
                   </span>
-                  <span class="hint">{{ 'settings.ai.configs.reasoningHint' | transloco }}</span>
-                </label>
+                </div>
                 <app-field
                   [label]="'settings.ai.configs.batchConcurrency' | transloco"
-                  [hint]="'settings.ai.configs.batchConcurrencyHint' | transloco"
+                  [info]="'settings.ai.info.batchConcurrency' | transloco"
                 >
                   <select [disabled]="ai.busy()" (change)="setBatchConcurrency(config, $event)">
                     @for (option of concurrencyOptions; track option) {
@@ -76,7 +81,10 @@
 
               @if (ai.choosingModelFor() === config.id && ai.models().length) {
                 <div class="model-picker">
-                  <app-field [label]="'settings.ai.model' | transloco">
+                  <app-field
+                    [label]="'settings.ai.model' | transloco"
+                    [info]="'settings.ai.info.modelPicker' | transloco"
+                  >
                     <app-searchable-select
                       [inputId]="'ai-model-' + config.id"
                       [options]="modelOptions()"
@@ -131,6 +139,11 @@
                     {{ 'settings.ai.configs.delete' | transloco }}
                   </app-button>
                 </div>
+                <app-info-tip
+                  class="acts-info"
+                  [text]="'settings.ai.info.rowActions' | transloco"
+                  [label]="'settings.ai.info.actionsLabel' | transloco"
+                />
               }
             </div>
           </app-disclosure>
@@ -148,7 +161,10 @@
 
 <app-settings-card [heading]="'settings.ai.addTitle' | transloco" [collapsible]="true">
   <div class="group add-group">
-    <app-field [label]="'settings.ai.configs.namePlaceholder' | transloco">
+    <app-field
+      [label]="'settings.ai.configs.namePlaceholder' | transloco"
+      [info]="'settings.ai.info.name' | transloco"
+    >
       <input
         type="text"
         autocomplete="off"
@@ -160,6 +176,7 @@
     <app-field
       [label]="'settings.ai.baseUrl' | transloco"
       [hint]="'settings.ai.baseUrlHint' | transloco"
+      [info]="'settings.ai.info.baseUrl' | transloco"
     >
       <input
         type="url"
@@ -173,6 +190,7 @@
     <app-field
       [label]="'settings.ai.apiKey' | transloco"
       [hint]="'settings.ai.apiKeyHint' | transloco"
+      [info]="'settings.ai.info.apiKey' | transloco"
     >
       <input
         type="password"

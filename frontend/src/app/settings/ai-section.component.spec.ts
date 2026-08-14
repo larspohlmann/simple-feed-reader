@@ -121,6 +121,16 @@ describe('AiSectionComponent', () => {
     fixture.detectChanges();
   };
 
+  const CONFIG = config({ id: 7 });
+
+  const mountWithConfigs = (configs: readonly AiConfig[]): ComponentFixture<AiSectionComponent> => {
+    const fixture = mount();
+    ai.configs.set(configs);
+    fixture.detectChanges();
+    if (configs.length) expandRow(fixture, 0);
+    return fixture;
+  };
+
   beforeEach(() => dialogStub.open.mockReset());
   afterEach(() => http.verify());
 
@@ -272,9 +282,7 @@ describe('AiSectionComponent', () => {
       fixture.nativeElement.querySelector('.reasoning-toggle input');
     expect(checkbox).not.toBeNull();
     expect(checkbox.checked).toBe(true);
-    expect(row(fixture, 0).querySelector('.reasoning-toggle .hint')?.textContent).toContain(
-      'rejects the request',
-    );
+    expect(row(fixture, 0).querySelector('.reasoning-toggle .hint')).toBeNull();
 
     checkbox.checked = false;
     checkbox.dispatchEvent(new Event('change'));
@@ -296,7 +304,15 @@ describe('AiSectionComponent', () => {
     expect(select).not.toBeNull();
     expect(Array.from(select.options).map((option) => option.value)).toEqual(['1', '2', '3', '4']);
     expect(select.value).toBe('1');
-    expect(row(fixture, 0).querySelector('app-field .hint')?.textContent).toContain('local model');
+    const concurrencyTip = row(fixture, 0).querySelector(
+      'app-field app-info-tip button.trigger',
+    ) as HTMLButtonElement;
+    expect(concurrencyTip).not.toBeNull();
+    concurrencyTip.click();
+    fixture.detectChanges();
+    expect(row(fixture, 0).querySelector('app-field .panel')?.textContent).toContain(
+      'local model server',
+    );
 
     select.value = '3';
     select.dispatchEvent(new Event('change'));
@@ -541,5 +557,36 @@ describe('AiSectionComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('app-recommendation-settings-card')).not.toBeNull();
+  });
+
+  it('gives the add-form fields info tips and keeps the short hints', () => {
+    const fixture = mountWithConfigs([]);
+
+    const triggers = Array.from(
+      fixture.nativeElement.querySelectorAll('.add-group app-info-tip button.trigger'),
+    ) as HTMLButtonElement[];
+    expect(triggers.map((el) => el.getAttribute('aria-label'))).toEqual([
+      'Optional name',
+      'Endpoint',
+      'API key',
+    ]);
+  });
+
+  it('explains the row actions with one tip and the reasoning toggle with its own', () => {
+    const fixture = mountWithConfigs([CONFIG]);
+
+    const body = fixture.nativeElement.querySelector('.config-body') as HTMLElement;
+    const actionsTrigger = body.querySelector('.acts-info button.trigger') as HTMLButtonElement;
+    expect(actionsTrigger.getAttribute('aria-label')).toBe('What these buttons do');
+
+    actionsTrigger.click();
+    fixture.detectChanges();
+    expect(body.querySelector('.acts-info .panel')?.textContent).toContain('active');
+
+    const reasoningTrigger = body.querySelector(
+      '.reasoning-toggle app-info-tip button.trigger',
+    ) as HTMLButtonElement;
+    expect(reasoningTrigger).not.toBeNull();
+    expect(body.querySelector('.reasoning-toggle .hint')).toBeNull();
   });
 });

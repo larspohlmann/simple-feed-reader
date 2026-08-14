@@ -90,6 +90,13 @@ app-searchable-select {
   gap: var(--space-2);
 }
 
+.reasoning-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
 .saved {
   font-size: var(--fs-sm);
   color: var(--success);
