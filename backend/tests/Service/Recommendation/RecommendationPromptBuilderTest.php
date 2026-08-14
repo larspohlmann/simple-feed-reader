@@ -468,13 +468,39 @@ final class RecommendationPromptBuilderTest extends TestCase
                 ],
                 [
                     'role' => 'user',
-                    'content' => "RANKED (best first):\n"
+                    'content' => 'This list holds 2 entries. Most lists hold few duplicates and many hold none, '
+                        . 'so expect to name none or a handful. Never name more than 1 of them: a reply naming '
+                        . 'more is discarded whole, and the reader is then shown the list with its real '
+                        . "duplicates still in it.\n\n"
+                        . "RANKED (best first):\n"
                         . "- [2] Title Two — Feed B — 2026-01-06 — Strong match\n"
                         . '- [1] Title One — Feed A — 2026-01-05 — Loose match',
                 ],
             ],
             $messages,
         );
+    }
+
+    /**
+     * The ceiling the prompt names is the one the parser enforces, and it
+     * counts the lines the model actually sees -- a pool entry whose line has
+     * gone missing is not in the list and must not raise the number (#396).
+     */
+    public function testTheDedupFrameNamesTheCeilingTheParserEnforces(): void
+    {
+        $rankedPool = array_map(
+            static fn (int $id): array => ['id' => $id, 'score' => 50, 'reason' => 'match'],
+            range(1, 21),
+        );
+        $linesById = [];
+        foreach (range(1, 20) as $id) {
+            $linesById[$id] = new PromptLine($id, 'Title ' . $id, 'Feed', '2026-01-05', null);
+        }
+
+        $user = $this->builder->dedupMessages($rankedPool, $linesById)[1]['content'];
+
+        self::assertStringContainsString('This list holds 20 entries.', $user);
+        self::assertStringContainsString('Never name more than 10 of them', $user);
     }
 
     public function testDedupMessagesSkipsAPoolEntryWhoseLineIsMissing(): void

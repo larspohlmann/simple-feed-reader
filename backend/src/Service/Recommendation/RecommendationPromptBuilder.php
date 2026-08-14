@@ -196,8 +196,30 @@ final class RecommendationPromptBuilder
                 'content' => RecommendationPromptText::DEDUP_ROLE
                     . "\n\n" . RecommendationPromptText::DEDUP_OUTPUT_CONTRACT,
             ],
-            ['role' => 'user', 'content' => "RANKED (best first):\n" . implode("\n", $lines)],
+            [
+                'role' => 'user',
+                'content' => $this->dedupSizeFrame(\count($lines))
+                    . "\n\nRANKED (best first):\n" . implode("\n", $lines),
+            ],
         ];
+    }
+
+    /**
+     * Names the size of the list and the most duplicates it can hold, both as
+     * numbers. The model was previously asked for a judgement with no sense of
+     * scale, and answered that 98 of 100 entries were duplicates (#396); the
+     * ceiling is the same one PlausibleDuplicateShare enforces on the reply,
+     * so the model is held only to a rule it was given.
+     */
+    private function dedupSizeFrame(int $entryCount): string
+    {
+        return \sprintf(
+            'This list holds %d entries. Most lists hold few duplicates and many hold none, so expect to name '
+                . 'none or a handful. Never name more than %d of them: a reply naming more is discarded whole, '
+                . 'and the reader is then shown the list with its real duplicates still in it.',
+            $entryCount,
+            PlausibleDuplicateShare::maximumFor($entryCount),
+        );
     }
 
     /**

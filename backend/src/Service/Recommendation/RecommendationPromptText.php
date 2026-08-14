@@ -34,9 +34,8 @@ final class RecommendationPromptText
         . 'duplicates only when they report the same specific event or announcement — the same occurrence, told '
         . 'by different sources. Entries that merely share a topic, a subject area, a company, a technology or a '
         . 'person are not duplicates, and separate developments in one ongoing story are not duplicates either. '
-        . 'Most lists hold few duplicates and many hold none, so naming a large share of the list is always '
-        . 'wrong; when you are not certain two entries are the same story, name neither. When several entries do '
-        . 'cover the same story, keep the best-ranked source and name the others as duplicates.';
+        . 'When you are not certain two entries are the same story, name neither. When several entries do cover '
+        . 'the same story, keep the best-ranked source and name the others as duplicates.';
 
     public const string DEDUP_OUTPUT_CONTRACT = 'Reply with JSON only, no prose: {"duplicates": '
         . '[<entry id>, ...]}. List only ids of entries that duplicate a better-ranked entry. If there are no '
