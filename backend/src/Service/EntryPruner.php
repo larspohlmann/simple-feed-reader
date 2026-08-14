@@ -122,9 +122,6 @@ final class EntryPruner
     private function staleEntryIdsBeyondFloor(int $feedId, \DateTimeImmutable $cutoff): array
     {
         $beyondFloor = $this->entryIdsBeyond($feedId, self::MIN_ENTRIES_PER_FEED);
-        if ($beyondFloor === []) {
-            return [];
-        }
 
         /** @var list<int> $ids */
         $ids = $this->em->createQuery(sprintf(
@@ -188,9 +185,6 @@ final class EntryPruner
             ->getSingleColumnResult();
 
         $excessIds = \array_slice($orderedIds, $keep);
-        if ($excessIds === []) {
-            return [];
-        }
 
         /** @var list<int> $ids */
         $ids = $this->em->createQuery(sprintf(

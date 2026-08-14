@@ -129,6 +129,32 @@ final class EntryPrunerTest extends DbTestCase
         self::assertSame(0, $this->pruner->prune());
     }
 
+    /**
+     * Two separate feeds, each one entry past its floor: the total must be
+     * the sum across feeds, not just the last feed scanned.
+     */
+    public function testAgePassSumsDeletionsAcrossFeeds(): void
+    {
+        $this->feedWithEntries(21, $this->daysAgo(100));
+        $this->feedWithEntries(21, $this->daysAgo(100));
+
+        self::assertSame(2, $this->pruner->prune());
+    }
+
+    /**
+     * Two separate feeds, each one entry past the cap: the total must be the
+     * sum across feeds, not just the last feed scanned.
+     */
+    public function testCapPassSumsDeletionsAcrossFeeds(): void
+    {
+        $pruner = new EntryPruner($this->em, $this->clock, maxEntriesPerFeed: 3);
+
+        $this->feedWithEntries(4, $this->daysAgo(1));
+        $this->feedWithEntries(4, $this->daysAgo(1));
+
+        self::assertSame(2, $pruner->prune());
+    }
+
     public function testPrunesOldEntriesButKeepsProtectedAndRecent(): void
     {
         $user = new User('reader@example.com', $this->clock->now());
