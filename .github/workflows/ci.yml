@@ -60,6 +60,16 @@ jobs:
       - name: PHPMD (codesize)
         run: composer md
 
+      # This repository doubles as phptramp's proving ground, so the gate runs
+      # the tip of its develop branch rather than the commit in composer.lock —
+      # a pin would report against stale code exactly while phptramp is being
+      # worked on. Only that one package is re-resolved; everything else stays
+      # lock-pinned and reproducible. The consequence is deliberate: CI here can
+      # go red because phptramp changed, with no commit in this repo to explain
+      # it (see #380).
+      - name: Update phptramp to the tip of develop
+        run: composer tramp:update
+
       # Tramp data: a parameter forwarded through a chain of methods that never
       # read it. #373 and #374 were both found by a manual sweep months after
       # the chains grew, which is the argument for a gate rather than a habit.
@@ -67,7 +77,9 @@ jobs:
       # offending hop inline, the way the mutation leg annotates escaped
       # mutants. Static, so the database matrix leg does not affect it.
       - name: phptramp (tramp data)
-        run: composer tramp -- --format github
+        run: |
+          composer show larspohlmann/phptramp | grep -E '^(name|source|versions)'
+          composer tramp -- --format github
 
       # Both DSNs are chosen here, in one place. MIGRATION_DATABASE_URL is
       # deliberately a different database from the one PHPUnit uses, so the

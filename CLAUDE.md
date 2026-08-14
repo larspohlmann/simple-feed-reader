@@ -20,6 +20,7 @@ composer cs          # PHP_CodeSniffer, PSR-12 (composer cs:fix to autofix)
 composer stan        # PHPStan level max (needs a warm dev cache: bin/console cache:warmup)
 composer md          # PHPMD, codesize ruleset
 composer tramp       # phptramp, tramp-data chains (thresholds in phptramp.dist.json)
+composer tramp:update     # re-resolve phptramp to the tip of its develop branch
 composer check       # cs + stan + tramp
 php bin/phpunit      # unit/integration suite (SQLite natively)
 composer infection   # mutation testing over all of src (needs pcov or xdebug)
@@ -119,6 +120,12 @@ Enforced mechanically by `composer check` and `composer md`:
   and `Service/Scraper/JsonLdArticles.php`). A ratchet like `minMsi` — tighten it
   as the tree catches up, never loosen it to make a branch pass, and never add a
   `--baseline` to a clean tree.
+  **CI runs the tip of phptramp's `develop`, not the commit in `composer.lock`**
+  — this repository doubles as that tool's proving ground, so a pin would report
+  against stale code exactly while phptramp is being worked on. The cost is real:
+  a red build here can be caused by a phptramp change with no commit in this repo
+  to explain it. Check `composer show larspohlmann/phptramp` (CI prints it above
+  the gate) before hunting for the cause in application code.
 - PhpStorm inspections (`mcp__phpstorm__lint_files`) on changed PHP: block on
   ERROR and WARNING; weak warnings are advisory.
 
