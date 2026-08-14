@@ -8,6 +8,16 @@ import { InfoTipComponent } from './info-tip.component';
 })
 class HostComponent {}
 
+@Component({
+  imports: [InfoTipComponent],
+  template: `
+    <app-info-tip corner [text]="'A.'" [label]="'Static'" />
+    <app-info-tip [corner]="true" [text]="'B.'" [label]="'Bound'" />
+    <app-info-tip [text]="'C.'" [label]="'Plain'" />
+  `,
+})
+class CornerHostComponent {}
+
 describe('InfoTipComponent', () => {
   function mount(): ComponentFixture<HostComponent> {
     const fixture = TestBed.createComponent(HostComponent);
@@ -27,6 +37,33 @@ describe('InfoTipComponent', () => {
     expect(trigger(fixture).getAttribute('aria-label')).toBe('Endpoint');
     expect(trigger(fixture).getAttribute('aria-expanded')).toBe('false');
     expect(panel(fixture)).toBeNull();
+  });
+
+  it('drops aria-controls while closed, because the panel it names does not exist', () => {
+    const fixture = mount();
+
+    expect(trigger(fixture).hasAttribute('aria-controls')).toBe(false);
+
+    trigger(fixture).click();
+    fixture.detectChanges();
+
+    expect(trigger(fixture).getAttribute('aria-controls')).toBe(panel(fixture)!.id);
+  });
+
+  /**
+   * The corner anchoring keys on a host class the component binds, so both
+   * spellings of the input work. It used to key on the `corner` attribute,
+   * which the bound form never writes — that anchored nothing, silently.
+   */
+  it('marks corner mode on the host for the static and the bound input alike', () => {
+    const fixture = TestBed.createComponent(CornerHostComponent);
+    fixture.detectChanges();
+
+    const tips = Array.from(
+      fixture.nativeElement.querySelectorAll('app-info-tip'),
+    ) as HTMLElement[];
+
+    expect(tips.map((tip) => tip.classList.contains('corner'))).toEqual([true, true, false]);
   });
 
   it('opens on click and wires the panel to the trigger', () => {

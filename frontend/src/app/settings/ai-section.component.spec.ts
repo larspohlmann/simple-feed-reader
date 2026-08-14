@@ -562,13 +562,22 @@ describe('AiSectionComponent', () => {
   it('gives the add-form fields info tips and keeps the short hints', () => {
     const fixture = mountWithConfigs([]);
 
+    const addGroup = fixture.nativeElement.querySelector('.add-group') as HTMLElement;
     const triggers = Array.from(
-      fixture.nativeElement.querySelectorAll('.add-group app-info-tip button.trigger'),
+      addGroup.querySelectorAll('app-info-tip button.trigger'),
     ) as HTMLButtonElement[];
     expect(triggers.map((el) => el.getAttribute('aria-label'))).toEqual([
       'Optional name',
       'Endpoint',
       'API key',
+    ]);
+
+    const hints = Array.from(addGroup.querySelectorAll('app-field .hint')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(hints).toEqual([
+      'The full API root, including any version path — for example https://api.openai.com/v1',
+      'The key is sent once and stored encrypted. Enter it again to replace it.',
     ]);
   });
 
@@ -594,7 +603,10 @@ describe('AiSectionComponent', () => {
 
     actionsTrigger.click();
     fixture.detectChanges();
-    expect(body.querySelector('.acts-info .panel')?.textContent).toContain('active');
+    const actionsPanel = body.querySelector('.acts-info .panel')?.textContent ?? '';
+    expect(actionsPanel).toContain('makes this configuration the active one');
+    expect(actionsPanel).toContain('copies the configuration together with its stored key');
+    expect(actionsPanel).toContain('removes the endpoint, the stored key and the model');
 
     const reasoningTrigger = body.querySelector(
       '.reasoning-toggle app-info-tip button.trigger',

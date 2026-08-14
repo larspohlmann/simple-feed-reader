@@ -650,7 +650,7 @@ phone. Click/tap to toggle; Escape or a press outside dismisses (via
 |---|---|---|
 | `text` | `string` (required) | — |
 | `label` | `string` (required) | — |
-| `corner` | boolean attribute | `false` |
+| `corner` | `boolean` (accepts the bare `corner` attribute) | `false` |
 
 ```html
 <app-info-tip
@@ -663,7 +663,13 @@ phone. Click/tap to toggle; Escape or a press outside dismisses (via
 feature keys). `label` is the accessible name of the trigger — pass the label
 of the control being explained. `corner` anchors the trigger at the top-right
 of the nearest **positioned** ancestor; `<app-field>` uses it to put the ⓘ in
-its label row (see the `info` input there). Never place a tip inside a
+its label row (see the `info` input there). It is a `booleanAttribute` input
+reflected as the host class `.corner`, which the styles key on — so `corner`
+and `[corner]="true"` behave the same. A consumer that turns it on owes the
+row the trigger's height: under `pointer: coarse` the trigger is a full
+`--tap-target`, and a shorter row lets its hit box hang over the control
+below (`app-field` reserves that height with `:host(.has-info) .lbl`).
+Never place a tip inside a
 `<summary>` or inside a wrapping `<label>`: a click on non-interactive panel
 content would toggle the `<details>` or the control.
 

@@ -4,7 +4,7 @@
     class="trigger"
     [class.is-open]="open()"
     [attr.aria-expanded]="open()"
-    [attr.aria-controls]="panelId"
+    [attr.aria-controls]="open() ? panelId : null"
     [attr.aria-label]="label()"
     (click)="toggle($event)"
   >

@@ -5,7 +5,7 @@
   display: inline-block;
 }
 
-:host([corner]) {
+:host(.corner) {
   display: block;
 }
 
@@ -27,7 +27,7 @@
   color: var(--text-primary);
 }
 
-:host([corner]) .trigger {
+:host(.corner) .trigger {
   position: absolute;
   top: 0;
   right: 0;

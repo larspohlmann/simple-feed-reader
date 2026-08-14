@@ -22,12 +22,21 @@ let nextId = 0;
  * this to put the ⓘ in its label row while the panel stays in the field's
  * flow. The host itself must stay unpositioned in corner mode for that
  * anchoring to work, which is why the styles never give it `position`.
+ * A consumer that turns this on owes the label row the height of a full tap
+ * target, or the coarse-pointer trigger reaches down over the control — see
+ * `app-field`'s `.has-info` rule.
+ *
+ * The styles key on the host *class*, which this component binds from the
+ * input, not on the `corner` attribute: an attribute is only present for the
+ * static `corner` form, so `[corner]="true"` would have set the input and
+ * anchored nothing.
  */
 @Component({
   selector: 'app-info-tip',
   imports: [DismissOnOutsideDirective, IconComponent],
   templateUrl: './info-tip.component.html',
   styleUrl: './info-tip.component.scss',
+  host: { '[class.corner]': 'corner()' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InfoTipComponent {

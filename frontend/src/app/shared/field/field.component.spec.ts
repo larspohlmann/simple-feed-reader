@@ -97,4 +97,23 @@ describe('FieldComponent', () => {
 
     expect(fixture.nativeElement.querySelector('app-info-tip')).toBeNull();
   });
+
+  /**
+   * The tip's trigger is anchored to the field's corner and grows to
+   * `--tap-target` on coarse pointers, so the label row has to reserve that
+   * height or the hit box reaches down over the control (#372). jsdom has no
+   * layout, so this pins the hook the reservation keys on — the host class and
+   * the tip's corner mode — not the resulting geometry.
+   */
+  it('flags the host while a tip is rendered so the label row can reserve the tap target', async () => {
+    const fixture = await mountField({ label: 'Endpoint', info: null });
+    const field: HTMLElement = fixture.nativeElement.querySelector('app-field');
+    expect(field.classList).not.toContain('has-info');
+
+    fixture.componentInstance.info.set('What this endpoint is for.');
+    fixture.detectChanges();
+
+    expect(field.classList).toContain('has-info');
+    expect(field.querySelector('app-info-tip')?.classList).toContain('corner');
+  });
 });
