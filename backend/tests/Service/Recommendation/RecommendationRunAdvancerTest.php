@@ -155,6 +155,46 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame(0, $report->batchesTotal);
     }
 
+    /**
+     * Proves the window comes from the reader's own setting, not a hardcoded
+     * default: an entry 3 days old is outside DEFAULT_LOOKBACK_DAYS (2) but
+     * inside this reader's configured 5-day window, while an entry 10 days
+     * old is outside both. A snapshot that ignored lookbackDays, or that
+     * hardcoded any single window, would fail this assertion.
+     */
+    public function testSnapshotUsesTheUsersConfiguredLookbackWindow(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $settings = new RecommendationSettings($this->user);
+        $settings->update(new RecommendationSettingsValues(
+            guidancePrompt: null,
+            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
+            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
+            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
+            candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+            lookbackDays: 5,
+            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+            contextWindow: null,
+            batchCount: null,
+            debugEnabled: false,
+        ));
+        $this->em->persist($settings);
+        $this->em->flush();
+
+        $insideWiderWindow = $this->entry('inside-wider-window', 60 * 24 * 3);
+        $this->entry('outside-both-windows', 60 * 24 * 10);
+        $this->starter()->start($this->user);
+        $runId = $this->runs()->findActiveForUser($this->user)?->getId();
+        self::assertNotNull($runId);
+
+        $this->advancer()->advance($this->user);
+
+        $this->em->clear();
+        $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
+        self::assertNotNull($persisted);
+        self::assertSame([[$insideWiderWindow->getId()]], $persisted->getCandidateBatches());
+    }
+
     public function testBusyWhenTheLockIsHeld(): void
     {
         $userId = $this->user->getId();
