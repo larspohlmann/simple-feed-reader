@@ -58,6 +58,17 @@ final class Version20260814130000 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
+        $platform = $this->connection->getDatabasePlatform();
+
+        $mysql = $platform instanceof AbstractMySQLPlatform;
+        $sqlite = $platform instanceof SQLitePlatform;
+
+        // Better a refusal than DDL invented for a platform nobody tested.
+        $this->abortIf(!$mysql && !$sqlite, \sprintf(
+            'No DDL defined for platform %s; only MySQL and SQLite are supported.',
+            $platform::class,
+        ));
+
         $entry = $schema->getTable('entry');
 
         if (!$entry->hasIndex('idx_entry_list')) {
