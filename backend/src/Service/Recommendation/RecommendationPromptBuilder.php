@@ -203,11 +203,11 @@ final class RecommendationPromptBuilder
     /**
      * @return list<array{role: string, content: string}>
      */
-    public function correctiveTail(string $invalidReply): array
+    public function correctiveTail(string $invalidReply, string $correction): array
     {
         return [
             ['role' => 'assistant', 'content' => $invalidReply],
-            ['role' => 'user', 'content' => RecommendationPromptText::CORRECTIVE],
+            ['role' => 'user', 'content' => $correction],
         ];
     }
 
@@ -218,17 +218,25 @@ final class RecommendationPromptBuilder
      * the call being retried: the batch phase passes each batch's own local
      * last invalid reply, the dedup phase the run's cross-tick one (#344).
      *
+     * The correction comes in with it, because the two phases reject a reply
+     * for different reasons and must ask for different things back (#396):
+     * telling a dedup model to use "candidate ids" names a section it was
+     * never shown, and leaves the over-flagging it was rejected for unsaid.
+     *
      * @param list<array{role: string, content: string}> $messages
      *
      * @return list<array{role: string, content: string}>
      */
-    public function messagesWithCorrectiveTail(array $messages, ?string $lastInvalidReply): array
-    {
+    public function messagesWithCorrectiveTail(
+        array $messages,
+        ?string $lastInvalidReply,
+        string $correction,
+    ): array {
         if (null === $lastInvalidReply) {
             return $messages;
         }
 
-        return [...$messages, ...$this->correctiveTail($lastInvalidReply)];
+        return [...$messages, ...$this->correctiveTail($lastInvalidReply, $correction)];
     }
 
     /**

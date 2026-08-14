@@ -355,7 +355,11 @@ final readonly class RecommendationBatchWave
             $poolSummary,
         );
 
-        return $this->promptBuilder->messagesWithCorrectiveTail($messages, $lastInvalidReply);
+        return $this->promptBuilder->messagesWithCorrectiveTail(
+            $messages,
+            $lastInvalidReply,
+            RecommendationPromptText::CORRECTIVE,
+        );
     }
 
     /**

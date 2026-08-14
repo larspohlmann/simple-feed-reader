@@ -280,7 +280,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testCorrectiveTailEchoesTheInvalidReply(): void
     {
-        $tail = $this->builder->correctiveTail('not json');
+        $tail = $this->builder->correctiveTail('not json', RecommendationPromptText::CORRECTIVE);
 
         self::assertSame(
             [
@@ -289,6 +289,29 @@ final class RecommendationPromptBuilderTest extends TestCase
             ],
             $tail,
         );
+    }
+
+    /** The caller names the correction, so the dedup phase can ask for its own thing back (#396). */
+    public function testTheCorrectionIsTheOnePassedIn(): void
+    {
+        $messages = $this->builder->messagesWithCorrectiveTail(
+            [['role' => 'system', 'content' => 'role']],
+            '{"duplicates": [1]}',
+            RecommendationPromptText::DEDUP_CORRECTIVE,
+        );
+
+        self::assertSame(RecommendationPromptText::DEDUP_CORRECTIVE, $messages[2]['content']);
+    }
+
+    public function testNoCorrectiveTailIsAppendedWithoutAnInvalidReply(): void
+    {
+        $messages = $this->builder->messagesWithCorrectiveTail(
+            [['role' => 'system', 'content' => 'role']],
+            null,
+            RecommendationPromptText::DEDUP_CORRECTIVE,
+        );
+
+        self::assertCount(1, $messages);
     }
 
     public function testPackBatchesFallsBackToZeroForACandidateWithoutAnEntryId(): void
