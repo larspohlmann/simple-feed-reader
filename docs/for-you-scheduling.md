@@ -40,6 +40,35 @@ Example GitHub Actions schedule (store the token as the repository secret
 
 The response is JSON: `{ "startedRuns": n, "advancedRuns": m, "activeRuns": k }`.
 
+## The on-demand drainer
+
+Worker-less installs do not depend on the cron cadence for interactive
+runs. Starting or resuming a run from the web spawns a short-lived,
+detached CLI process (`app:recommendations:drain`) that advances every
+active run at full worker concurrency until none is left, then exits. The
+spawn only happens while nothing is already driving the runs, at most one
+spawn is issued per web request or cron tick, a global `recommendation-drain`
+lock guarantees at most one drainer, and the maintenance tick respawns a
+drainer as a safety net if one died with runs still active. A drainer marks a
+liveness key of its **own** while it sweeps and clears it again on its way
+out, so the poll and cron paths resume the moment it exits instead of waiting
+out the freshness window.
+
+The two keys are read for two different questions. "Is anybody driving the
+runs right now?" counts both the persistent worker and a live drainer — the
+poll tick reports instead of driving, and no second drainer is spawned.
+"Does this install run a persistent worker?" counts the worker only; that is
+what the settings card's worker hint reads, because a drainer advances runs
+that exist but never starts a due one, so scheduled auto-generation still
+needs the cron entry. If the host cannot spawn processes (`exec` disabled, no CLI
+binary configured), the launch silently no-ops and the cron sweep above
+carries the runs exactly as before.
+
+The CLI binary is named by `DRAIN_PHP_CLI_BINARY`; a web SAPI must not run
+`bin/console` with its own binary (on Strato the web SAPI is `cgi-fcgi`
+with a 240 s execution cap, while `/opt/RZphp84/bin/php-cli` is unbounded).
+Empty is fine wherever PHP already runs as `cli` or a real worker exists.
+
 ## One call for everything
 
 To drive both jobs from a single cron line, ping the combined endpoint instead

@@ -10,6 +10,7 @@ use App\Entity\Feed;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
+use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
@@ -46,6 +47,52 @@ final readonly class RecommendationRunFixtures
         $settings->chooseModel('m', $now, 32768);
         $user->setActiveAiProviderSettings($settings);
         $this->em->flush();
+    }
+
+    /**
+     * The smallest account that can actually run: a ready AI connection and
+     * five candidate entries, which the packer fits into a single batch. Three
+     * worker-regime tests drive exactly this shape --
+     * AdvanceRecommendationRunsHandlerTest, WorkerRunSweepTest and
+     * RecommendationDrainCommandTest -- and a copy per test drifts the moment
+     * one of them changes a default (#371 follow-up).
+     */
+    public function seedSingleBatchFixture(User $user): void
+    {
+        $this->seedReadyAiSettings($user);
+        $this->seedFeedWithEntries($user, 5);
+    }
+
+    /**
+     * A subscribed feed carrying $entryCount candidate entries, the most
+     * recent first. Returned so a caller that needs to enrich the entries
+     * (a summary, a stamp) can reach them.
+     *
+     * @return list<Entry>
+     */
+    public function seedFeedWithEntries(User $user, int $entryCount): array
+    {
+        $feed = $this->subscribedFeed($user);
+        $entries = [];
+
+        for ($index = 0; $index < $entryCount; $index++) {
+            // One distinct minute per entry, all well inside the look-back
+            // window, and never zero minutes ago.
+            $entries[] = $this->entry($feed, $user->getEmail() . '-entry-' . $index, $entryCount - $index);
+        }
+
+        return $entries;
+    }
+
+    public function subscribedFeed(User $user): Feed
+    {
+        $feed = new Feed('https://example.com/' . $user->getEmail() . '/feed.xml');
+        $feed->setTitle('Example');
+        $this->em->persist($feed);
+        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->em->flush();
+
+        return $feed;
     }
 
     /**

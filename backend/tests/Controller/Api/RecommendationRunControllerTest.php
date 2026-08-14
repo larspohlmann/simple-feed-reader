@@ -16,7 +16,7 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Worker\WorkerPresence;
+use App\Service\Worker\RecommendationDriverKind;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
@@ -164,6 +164,16 @@ final class RecommendationRunControllerTest extends WebTestCase
      */
     private function touchWorkerHeartbeatNow(): void
     {
+        $this->touchHeartbeatNow(RecommendationDriverKind::PersistentWorker->heartbeatName());
+    }
+
+    private function touchDrainerHeartbeatNow(): void
+    {
+        $this->touchHeartbeatNow(RecommendationDriverKind::OnDemandDrainer->heartbeatName());
+    }
+
+    private function touchHeartbeatNow(string $name): void
+    {
         $em = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $em);
         /** @var WorkerHeartbeatRepository $repository */
@@ -172,7 +182,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         $clock = self::getContainer()->get(ClockInterface::class);
         self::assertInstanceOf(ClockInterface::class, $clock);
 
-        $repository->touch(WorkerPresence::RECOMMENDATION_SWEEP, $clock->now());
+        $repository->touch($name, $clock->now());
     }
 
     /** @return array<string, mixed> */
@@ -343,6 +353,30 @@ final class RecommendationRunControllerTest extends WebTestCase
         $this->seedOneCandidateEntry($user);
         $this->startRun($client, $headers);
         $this->touchWorkerHeartbeatNow();
+
+        $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $report = $this->payload($client->getResponse());
+        self::assertSame('pending', $report['status']);
+        self::assertTrue($report['background']);
+        self::assertSame([], $this->stubChatClient()->calls());
+    }
+
+    /**
+     * A live on-demand drainer owns execution just as the persistent worker
+     * does, so the tick must defer to it too — driving the run from the
+     * request would only collide with the drainer on the per-user lock (#371
+     * follow-up, where the two liveness keys were split apart).
+     */
+    public function testTickDefersToALiveDrainer(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers, $user] = $this->authWithReadyAi('defer-to-drainer@example.test');
+        $this->seedOneCandidateEntry($user);
+        $this->startRun($client, $headers);
+        $this->touchDrainerHeartbeatNow();
 
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
 

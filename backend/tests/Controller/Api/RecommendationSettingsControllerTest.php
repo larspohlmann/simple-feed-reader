@@ -6,13 +6,17 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
+use App\Entity\WorkerHeartbeat;
+use App\Repository\WorkerHeartbeatRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Worker\RecommendationDriverKind;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
@@ -437,6 +441,55 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         self::assertNull($payload['autoGenerateIntervalHours']);
         self::assertArrayHasKey('workerAlive', $payload);
         self::assertIsBool($payload['workerAlive']);
+    }
+
+    /**
+     * `workerAlive` hides the "you still need a cron entry for scheduled
+     * auto-generation" hint, so it must mean a PERSISTENT worker. The
+     * on-demand drainer only advances runs that already exist — it never
+     * starts a due one — so an operator who opens Settings while a drain
+     * happens to run must still be told to set the cron up (#371 follow-up).
+     */
+    public function testALiveDrainerIsNotReportedAsAWorker(): void
+    {
+        $client = static::createClient();
+        [$headers] = $this->auth('recsettings-drainer-alive@example.test');
+        $this->touchHeartbeatNow(RecommendationDriverKind::OnDemandDrainer->heartbeatName());
+
+        $client->request('GET', self::URI, server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertFalse($this->payload($client)['workerAlive']);
+    }
+
+    public function testAPersistentWorkerIsReportedAsAWorker(): void
+    {
+        $client = static::createClient();
+        [$headers] = $this->auth('recsettings-worker-alive@example.test');
+        $this->touchHeartbeatNow(RecommendationDriverKind::PersistentWorker->heartbeatName());
+
+        $client->request('GET', self::URI, server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertTrue($this->payload($client)['workerAlive']);
+    }
+
+    /**
+     * Through the real repository and the container's own clock, so this
+     * proves something about the wiring the request path uses rather than
+     * about a stand-in.
+     */
+    private function touchHeartbeatNow(string $name): void
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        /** @var WorkerHeartbeatRepository $repository */
+        $repository = $em->getRepository(WorkerHeartbeat::class);
+
+        $clock = self::getContainer()->get(ClockInterface::class);
+        self::assertInstanceOf(ClockInterface::class, $clock);
+
+        $repository->touch($name, $clock->now());
     }
 
     public function testSaveAcceptsAnAllowedInterval(): void

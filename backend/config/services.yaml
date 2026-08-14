@@ -83,6 +83,8 @@ services:
     App\Service\Version\ReleaseVersionReader: '@App\Service\Version\FileReleaseVersionReader'
     App\Service\Ai\ModelCatalog: '@App\Service\Ai\OpenAiCompatibleCatalog'
     App\Service\Recommendation\ChatCompletionClient: '@App\Service\Recommendation\OpenAiCompatibleChatClient'
+    App\Service\Process\ShellCommandRunnerInterface: '@App\Service\Process\ExecShellCommandRunner'
+    App\Service\Process\DetachedProcessLauncherInterface: '@App\Service\Process\DetachedProcessLauncher'
 
     # Two classes implement AccountMailerInterface (AccountMailer and its
     # #[AsDecorator] MailGatedAccountMailer below), so the container will not
