@@ -91,14 +91,16 @@ final readonly class FirstFetchRecorder
      * null publishedAt sorts last. PHP's usort has been stable since 8.0, so
      * entries sharing a publication date keep the feed's own relative order
      * without any extra bookkeeping here.
+     *
+     * Sorting runs unconditionally, even when the document is already under
+     * the cap: EntryIngestor persists in array order, and a feed's own order
+     * is not a publication-date order, so a size-based shortcut here would
+     * make "newest first" true only for the feeds large enough to need the
+     * cap at all — every subscribe deserves the same guarantee.
      */
     private function newest(ParsedFeed $document): ParsedFeed
     {
         $entries = $document->entries;
-        if (count($entries) <= self::FIRST_FETCH_MAX_ENTRIES) {
-            return $document;
-        }
-
         usort($entries, self::byPublicationDateDescending(...));
         $newest = array_slice($entries, 0, self::FIRST_FETCH_MAX_ENTRIES);
 
