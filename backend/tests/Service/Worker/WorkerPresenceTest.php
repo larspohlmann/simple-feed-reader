@@ -201,18 +201,22 @@ final class WorkerPresenceTest extends DbTestCase
 
     /**
      * The poll path asks about every driver kind on every request from every
-     * open tab, so the read is one query rather than one per name. Names
-     * without a row are absent rather than null, which is what lets the
-     * caller treat "present" as "has a touch instant".
+     * open tab, so the read is one query rather than one per name. Every name
+     * that has a row comes back -- a read that stopped at the first would let
+     * a live drainer go unnoticed behind a dead worker -- and names without a
+     * row are absent rather than null, which is what lets the caller treat
+     * "present" as "has a touch instant".
      */
-    public function testTheBatchedHeartbeatReadReturnsOnlyTheNamesThatHaveARow(): void
+    public function testTheBatchedHeartbeatReadReturnsEveryNameThatHasARow(): void
     {
-        $touchedAt = new \DateTimeImmutable('2026-08-07 11:00:00');
-        $this->repository()->touch('present', $touchedAt);
+        $firstTouchedAt = new \DateTimeImmutable('2026-08-07 11:00:00');
+        $secondTouchedAt = new \DateTimeImmutable('2026-08-07 11:30:00');
+        $this->repository()->touch('first-present', $firstTouchedAt);
+        $this->repository()->touch('second-present', $secondTouchedAt);
 
         self::assertEquals(
-            ['present' => $touchedAt],
-            $this->repository()->findTouchedAtByNames(['present', 'absent']),
+            ['first-present' => $firstTouchedAt, 'second-present' => $secondTouchedAt],
+            $this->repository()->findTouchedAtByNames(['first-present', 'second-present', 'absent']),
         );
     }
 
