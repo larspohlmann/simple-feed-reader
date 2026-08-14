@@ -37,6 +37,7 @@ final readonly class RecommendationRunStarter
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
         private RecommendationRunLogRepository $logs,
+        private RecommendationDrainSpawner $drainSpawner,
     ) {
     }
 
@@ -51,6 +52,11 @@ final readonly class RecommendationRunStarter
 
         $active = $this->runs->findActiveForUser($user);
         if (null !== $active) {
+            // A click on a run whose drainer died is exactly the moment a
+            // respawn helps; the launch is a cheap heartbeat read on a
+            // worker install (#371).
+            $this->drainSpawner->spawnIfNoWorker();
+
             return RecommendationRunReport::fromRun($active);
         }
 
@@ -61,6 +67,11 @@ final readonly class RecommendationRunStarter
         $run = new RecommendationRun($user, $this->clock->now());
         $this->entityManager->persist($run);
         $this->entityManager->flush();
+
+        // After the flush, so the detached drainer's first findAllActive() can
+        // already see this run. Fire-and-forget: on a worker install the
+        // heartbeat is fresh and this is a no-op (#371).
+        $this->drainSpawner->spawnIfNoWorker();
 
         return RecommendationRunReport::fromRun($run);
     }
@@ -87,6 +98,8 @@ final readonly class RecommendationRunStarter
 
         $latest->resume();
         $this->entityManager->flush();
+
+        $this->drainSpawner->spawnIfNoWorker();
 
         return RecommendationRunReport::fromRun($latest);
     }

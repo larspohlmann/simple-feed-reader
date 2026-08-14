@@ -10,12 +10,17 @@ use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
+use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiNotConfiguredException;
+use App\Service\Process\DetachedProcessLauncherInterface;
 use App\Service\Recommendation\Exception\NoResumableRecommendationRunException;
+use App\Service\Recommendation\RecommendationDrainSpawner;
 use App\Service\Recommendation\RecommendationRunStarter;
+use App\Service\Worker\WorkerPresence;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
+use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
@@ -154,6 +159,98 @@ final class RecommendationRunStarterTest extends DbTestCase
         // The wipe is bulk DQL when it runs, so clear before asserting survival.
         $this->em->clear();
         self::assertCount(1, $this->runLogs()->listForUser($this->user));
+    }
+
+    public function testStartSpawnsTheDrainerWhenNoWorkerIsAlive(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $launcher = $this->recordingLauncher();
+
+        $this->starterWith($launcher)->start($this->user);
+
+        self::assertSame([['app:recommendations:drain', '--detach']], $launcher->launches);
+    }
+
+    public function testStartReturningAnAlreadyActiveRunStillSpawns(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $launcher = $this->recordingLauncher();
+        $starter = $this->starterWith($launcher);
+
+        $starter->start($this->user);
+        $starter->start($this->user);
+
+        // A second click while no drainer lives is exactly when a respawn
+        // helps; the drain lock makes a duplicate spawn harmless.
+        self::assertCount(2, $launcher->launches);
+    }
+
+    public function testStartDoesNotSpawnNextToAFreshWorkerHeartbeat(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $launcher = $this->recordingLauncher();
+        $this->presence()->markRecommendationSweep();
+
+        $this->starterWith($launcher)->start($this->user);
+
+        self::assertSame([], $launcher->launches);
+    }
+
+    public function testResumeSpawnsTheDrainer(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $this->persistFailedRunWithOneWinner();
+        $launcher = $this->recordingLauncher();
+
+        $this->starterWith($launcher)->resume($this->user);
+
+        self::assertSame([['app:recommendations:drain', '--detach']], $launcher->launches);
+    }
+
+    /**
+     * @return DetachedProcessLauncherInterface&object{launches: list<list<string>>}
+     */
+    private function recordingLauncher(): DetachedProcessLauncherInterface
+    {
+        return new class implements DetachedProcessLauncherInterface {
+            /** @var list<list<string>> */
+            public array $launches = [];
+
+            public function launch(string $consoleCommandName, string ...$arguments): void
+            {
+                $this->launches[] = array_values([$consoleCommandName, ...$arguments]);
+            }
+        };
+    }
+
+    /**
+     * Built by hand so only the launcher is a stub: every other collaborator is
+     * the container's real instance, and the spawner's presence read is a real
+     * repository query.
+     */
+    private function starterWith(DetachedProcessLauncherInterface $launcher): RecommendationRunStarter
+    {
+        /** @var AiProviderConfigurator $configurator */
+        $configurator = self::getContainer()->get(AiProviderConfigurator::class);
+        /** @var ClockInterface $clock */
+        $clock = self::getContainer()->get(ClockInterface::class);
+
+        return new RecommendationRunStarter(
+            $this->runs(),
+            $configurator,
+            $this->em,
+            $clock,
+            $this->runLogs(),
+            new RecommendationDrainSpawner($this->presence(), $launcher),
+        );
+    }
+
+    private function presence(): WorkerPresence
+    {
+        /** @var WorkerPresence $presence */
+        $presence = self::getContainer()->get(WorkerPresence::class);
+
+        return $presence;
     }
 
     private function runLogs(): RecommendationRunLogRepository
