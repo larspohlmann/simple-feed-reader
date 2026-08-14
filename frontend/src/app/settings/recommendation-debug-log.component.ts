@@ -15,7 +15,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoModule } from '@jsverse/transloco';
 import { ReaderApi } from '../reader/reader-api';
 import { bytesToKb, formatTime } from '../reader/format';
-import { DebugLogDetail, DebugLogEntry, DebugLogRunSummary } from '../reader/models';
+import {
+  DebugLogDetail,
+  DebugLogEntry,
+  DebugLogRunChoice,
+  DebugLogRunSummary,
+} from '../reader/models';
 import { RecommendationsService } from '../reader/recommendations.service';
 import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
 
@@ -72,6 +77,14 @@ export class RecommendationDebugLogComponent implements OnInit {
   /** The latest run's own summary; null when the user has never run. Drives
    *  the panel's summary strip, distinct from any one row's `errorDetail`. */
   readonly run = signal<DebugLogRunSummary | null>(null);
+  /** The retained runs, newest first — what the picker offers (#401). */
+  readonly runs = signal<DebugLogRunChoice[]>([]);
+  /** The run the panel is reading, or null for "whatever is newest". A null
+   *  selection keeps following the newest run as new ones start; an explicit
+   *  one stays where the user put it. */
+  readonly selectedRunId = signal<number | null>(null);
+  /** The picker is worth showing only once there is somewhere else to go. */
+  readonly hasOlderRuns = computed(() => this.runs().length > 1);
   /** Fetched bodies by entry id; an id maps once and expanding is then
    *  local -- except a detail cached while its verdict was still null,
    *  which the next poll evicts once the call settles (see
@@ -97,7 +110,9 @@ export class RecommendationDebugLogComponent implements OnInit {
 
   ngOnInit(): void {
     this.timer = setInterval(() => {
-      if (this.recs.running()) this.fetch();
+      // An older run is finished by definition, so polling it would re-fetch
+      // an unchanging payload every two seconds.
+      if (this.recs.running() && this.isViewingNewestRun()) this.fetch();
     }, POLL_MS);
     this.destroyRef.onDestroy(() => this.stopPolling());
   }
@@ -194,13 +209,33 @@ export class RecommendationDebugLogComponent implements OnInit {
       });
   }
 
+  /** Switches the panel to another retained run. Selecting the newest is the
+   *  same as following it, so it clears the selection rather than pinning it —
+   *  otherwise the panel would stop tracking the next run that starts. */
+  selectRun(runId: number): void {
+    const newest = this.runs()[0]?.id ?? null;
+    this.selectedRunId.set(runId === newest ? null : runId);
+    this.details.set(new Map());
+    this.fetch();
+  }
+
+  protected onRunPicked(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.selectRun(Number(value));
+  }
+
+  private isViewingNewestRun(): boolean {
+    return this.selectedRunId() === null;
+  }
+
   private fetch(): void {
     this.api
-      .debugLog()
+      .debugLog(this.selectedRunId() ?? undefined)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (r) => {
           this.run.set(r.run);
+          this.runs.set(r.runs);
           this.applyEntries(r.entries);
         },
         error: () => {

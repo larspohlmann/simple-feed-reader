@@ -18,18 +18,40 @@ final class RecommendationDebugLogJson
      * @param list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
      *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
      *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}> $rows
-     * @param array<int, string> $streamingTextById
+     * @param array<int, string>       $streamingTextById
+     * @param list<RecommendationRun>  $retainedRuns newest first, the runs the panel may switch to
      *
-     * @return array{entries: list<array<string, mixed>>, run: ?array<string, mixed>}
+     * @return array{entries: list<array<string, mixed>>, run: ?array<string, mixed>,
+     *     runs: list<array<string, mixed>>}
      */
-    public static function list(array $rows, array $streamingTextById, ?RecommendationRun $run): array
-    {
+    public static function list(
+        array $rows,
+        array $streamingTextById,
+        ?RecommendationRun $run,
+        array $retainedRuns,
+    ): array {
         return [
             'entries' => array_map(
                 static fn (array $row): array => [...$row, 'streamingText' => $streamingTextById[$row['id']] ?? null],
                 $rows,
             ),
             'run' => null === $run ? null : self::run($run),
+            'runs' => array_map(self::choice(...), $retainedRuns),
+        ];
+    }
+
+    /**
+     * One entry of the run picker: enough to label it and no more. The
+     * selected run's own counters ride in `run` instead.
+     *
+     * @return array<string, mixed>
+     */
+    private static function choice(RecommendationRun $run): array
+    {
+        return [
+            'id' => $run->getId(),
+            'status' => $run->getStatus(),
+            'createdAt' => $run->getCreatedAt()->format(\DATE_ATOM),
         ];
     }
 

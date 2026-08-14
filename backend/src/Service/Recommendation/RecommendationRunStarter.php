@@ -60,13 +60,11 @@ final readonly class RecommendationRunStarter
             return RecommendationRunReport::fromRun($active);
         }
 
-        // The debug log lives only for the latest run (#309): a genuinely new
-        // run starts its record clean. resume() keeps its own log instead.
-        $this->logs->deleteForUser($user);
-
         $run = new RecommendationRun($user, $this->clock->now());
         $this->entityManager->persist($run);
         $this->entityManager->flush();
+
+        $this->trimDebugLog($user);
 
         // After the flush, so the detached drainer's first findAllActive() can
         // already see this run. Fire-and-forget: on a worker install the
@@ -74,6 +72,22 @@ final readonly class RecommendationRunStarter
         $this->drainSpawner->spawnIfNoWorker();
 
         return RecommendationRunReport::fromRun($run);
+    }
+
+    /**
+     * Trims the account's debug log to the retention window. It runs after the
+     * new run is flushed, so the new run is inside the window it is counted
+     * against and the number of runs holding a log is exactly the constant --
+     * trimming first would keep the window's worth of old runs plus this one.
+     * resume() never comes here: a resumed run appends to the log it already
+     * has (#309).
+     */
+    private function trimDebugLog(User $user): void
+    {
+        $this->logs->deleteForUserOutsideRuns(
+            $user,
+            $this->runs->findNewestIdsForUser($user, DebugLogRetention::RUNS),
+        );
     }
 
     /**

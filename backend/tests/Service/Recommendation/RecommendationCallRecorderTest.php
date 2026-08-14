@@ -74,7 +74,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
             'm',
         );
 
-        $rows = $this->logs()->listForUser($this->user);
+        $rows = $this->logRows();
         self::assertCount(1, $rows);
         self::assertSame('batch', $rows[0]['phase']);
         self::assertSame(2, $rows[0]['batchNumber']);
@@ -92,14 +92,14 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
         $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
 
-        self::assertSame([], $this->logs()->listForUser($this->user));
+        self::assertSame([], $this->logRows());
     }
 
     public function testCheckpointsAreThrottledToTheInterval(): void
     {
         $this->fixtures->debugEnabledSettings($this->user);
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
-        $logId = $this->logs()->listForUser($this->user)[0]['id'];
+        $logId = $this->logRows()[0]['id'];
 
         $call->streamProgressed(new CompletionStreamProgress('He', 40));
         self::assertSame(
@@ -133,7 +133,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
     {
         $this->fixtures->debugEnabledSettings($this->user);
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
-        $logId = $this->logs()->listForUser($this->user)[0]['id'];
+        $logId = $this->logRows()[0]['id'];
         $this->clock->modify('+3 seconds');
         $call->streamProgressed(new CompletionStreamProgress('partial', 7_000));
 
@@ -151,7 +151,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
     {
         $this->fixtures->debugEnabledSettings($this->user);
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
-        $logId = $this->logs()->listForUser($this->user)[0]['id'];
+        $logId = $this->logRows()[0]['id'];
         $this->clock->modify('+3 seconds');
         $call->streamProgressed(new CompletionStreamProgress('cut off', 9_001));
 
@@ -175,7 +175,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
     {
         $this->fixtures->debugEnabledSettings($this->user);
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
-        $logId = $this->logs()->listForUser($this->user)[0]['id'];
+        $logId = $this->logRows()[0]['id'];
 
         // Inside the checkpoint interval on purpose: no write has happened,
         // so the count can only reach the row if every report tracks it.
@@ -222,7 +222,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm')->finishUnusable('bad');
         $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
 
-        $rows = $this->logs()->listForUser($this->user);
+        $rows = $this->logRows();
         self::assertSame([1, 2], array_column($rows, 'attempt'));
     }
 
@@ -276,6 +276,20 @@ final class RecommendationCallRecorderTest extends DbTestCase
         self::assertNotNull($otherLog);
         self::assertSame('other original text', $otherLog->getResponseText());
         self::assertSame(RecommendationRunLog::VERDICT_USABLE, $otherLog->getVerdict());
+    }
+
+    /**
+     * The rows of the run under test. The log keeps ten runs (#401), so a
+     * read names one; every test here drives a single run.
+     *
+    /**
+     * @return list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
+     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
+     *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}>
+     */
+    private function logRows(): array
+    {
+        return $this->logs()->listForRun($this->user, $this->run->getId() ?? 0);
     }
 
     private function logs(): RecommendationRunLogRepository

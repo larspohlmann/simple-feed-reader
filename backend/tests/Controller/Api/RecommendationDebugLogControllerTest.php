@@ -152,7 +152,10 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         $client->request('GET', '/api/recommendations/runs/debug-log', server: $headers);
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['entries' => [], 'run' => null], $this->payload($client->getResponse()));
+        self::assertSame(
+            ['entries' => [], 'run' => null, 'runs' => []],
+            $this->payload($client->getResponse()),
+        );
     }
 
     public function testListCarriesTheLatestRunsStatusAndRetryCounters(): void
@@ -182,6 +185,87 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
             ],
             $runSummary,
         );
+    }
+
+    /**
+     * The panel reads one run at a time, so the payload names the runs it may
+     * switch to (#401) -- newest first, and by default the newest is the one
+     * whose rows come with it.
+     */
+    public function testListNamesTheRetainedRunsAndDefaultsToTheNewest(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('debug-log-run-list@example.test');
+        $older = $this->fixtures()->createRun($user);
+        $this->fixtures()->log($older, RecommendationRunLog::PHASE_BATCH, 1, 1, 'older request');
+        $newer = $this->fixtures()->createRun($user);
+        $this->fixtures()->log($newer, RecommendationRunLog::PHASE_BATCH, 1, 1, 'newer request');
+        $this->em()->flush();
+
+        $client->request('GET', '/api/recommendations/runs/debug-log', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        /** @var array{entries: list<array<string, mixed>>, runs: list<array<string, mixed>>} $payload */
+        $payload = $this->payload($client->getResponse());
+        self::assertSame(
+            [
+                [
+                    'id' => $newer->getId(),
+                    'status' => 'pending',
+                    'createdAt' => $newer->getCreatedAt()->format(\DATE_ATOM),
+                ],
+                [
+                    'id' => $older->getId(),
+                    'status' => 'pending',
+                    'createdAt' => $older->getCreatedAt()->format(\DATE_ATOM),
+                ],
+            ],
+            $payload['runs'],
+        );
+        self::assertSame([$newer->getId()], array_column($payload['entries'], 'runId'));
+    }
+
+    public function testListReturnsTheRequestedRunsRows(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('debug-log-run-pick@example.test');
+        $older = $this->fixtures()->createRun($user);
+        $this->fixtures()->log($older, RecommendationRunLog::PHASE_BATCH, 1, 1, 'older request');
+        $newer = $this->fixtures()->createRun($user);
+        $this->fixtures()->log($newer, RecommendationRunLog::PHASE_BATCH, 1, 1, 'newer request');
+        $this->em()->flush();
+
+        $client->request('GET', '/api/recommendations/runs/debug-log?run=' . $older->getId(), server: $headers);
+
+        self::assertResponseIsSuccessful();
+        /** @var array{entries: list<array<string, mixed>>, run: array<string, mixed>} $payload */
+        $payload = $this->payload($client->getResponse());
+        self::assertSame([$older->getId()], array_column($payload['entries'], 'runId'));
+        self::assertSame(
+            $older->getCreatedAt()->format(\DATE_ATOM),
+            $payload['run']['createdAt'],
+        );
+    }
+
+    /**
+     * A selection the retention window has since dropped -- or another
+     * account's run id -- lands on the newest run rather than on an empty
+     * panel with no explanation.
+     */
+    public function testAnUnknownRunFallsBackToTheNewest(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('debug-log-run-stale@example.test');
+        $run = $this->fixtures()->createRun($user);
+        $this->fixtures()->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'request');
+        $this->em()->flush();
+
+        $client->request('GET', '/api/recommendations/runs/debug-log?run=999999', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        /** @var array{entries: list<array<string, mixed>>} $payload */
+        $payload = $this->payload($client->getResponse());
+        self::assertSame([$run->getId()], array_column($payload['entries'], 'runId'));
     }
 
     public function testDetailReturnsFullBodies(): void
