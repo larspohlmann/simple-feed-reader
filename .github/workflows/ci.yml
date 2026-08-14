@@ -78,7 +78,7 @@ jobs:
       # mutants. Static, so the database matrix leg does not affect it.
       - name: phptramp (tramp data)
         run: |
-          composer show larspohlmann/phptramp | grep -E '^(name|source|versions)'
+          composer show phptramp/phptramp | grep -E '^(name|source|versions)'
           composer tramp -- --format github
 
       # Both DSNs are chosen here, in one place. MIGRATION_DATABASE_URL is
