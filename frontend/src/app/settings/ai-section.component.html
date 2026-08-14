@@ -1,3 +1,26 @@
+<app-settings-card [heading]="'settings.ai.guide.title' | transloco" [collapsible]="true">
+  <div class="guide">
+    <p class="guide-intro">{{ 'settings.ai.guide.intro' | transloco }}</p>
+
+    <h3>{{ 'settings.ai.guide.connectionTitle' | transloco }}</h3>
+    <ol>
+      <li>{{ 'settings.ai.guide.connectionStep1' | transloco }}</li>
+      <li>{{ 'settings.ai.guide.connectionStep2' | transloco }}</li>
+      <li>{{ 'settings.ai.guide.connectionStep3' | transloco }}</li>
+      <li>{{ 'settings.ai.guide.connectionStep4' | transloco }}</li>
+      <li>{{ 'settings.ai.guide.connectionStep5' | transloco }}</li>
+    </ol>
+
+    <h3>{{ 'settings.ai.guide.recommendationsTitle' | transloco }}</h3>
+    <ol>
+      <li>{{ 'settings.ai.guide.recommendationsStep1' | transloco }}</li>
+      <li>{{ 'settings.ai.guide.recommendationsStep2' | transloco }}</li>
+      <li>{{ 'settings.ai.guide.recommendationsStep3' | transloco }}</li>
+      <li>{{ 'settings.ai.guide.recommendationsStep4' | transloco }}</li>
+    </ol>
+  </div>
+</app-settings-card>
+
 <app-settings-card
   [heading]="'settings.ai.title' | transloco"
   [description]="'settings.ai.lead' | transloco"

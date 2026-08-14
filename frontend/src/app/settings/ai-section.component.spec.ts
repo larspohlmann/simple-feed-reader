@@ -524,7 +524,7 @@ describe('AiSectionComponent', () => {
     const cards = Array.from(
       fixture.nativeElement.querySelectorAll('app-settings-card'),
     ) as HTMLElement[];
-    expect(cards.length).toBe(2);
+    expect(cards.length).toBe(3);
 
     const listCard = cards.find((card) => card.querySelector('.configs')) as HTMLElement;
     const addCard = cards.find((card) => card.querySelector('.add-config')) as HTMLElement;
@@ -570,6 +570,19 @@ describe('AiSectionComponent', () => {
       'Endpoint',
       'API key',
     ]);
+  });
+
+  it('renders the setup guide as the first card, collapsed by default', () => {
+    const fixture = mountWithConfigs([]);
+
+    const firstCard = fixture.nativeElement.querySelector('app-settings-card') as HTMLElement;
+    expect(firstCard.querySelector('h2')?.textContent).toContain('Step-by-step setup');
+
+    const details = firstCard.querySelector('details') as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+
+    const steps = firstCard.querySelectorAll('.guide ol li');
+    expect(steps.length).toBe(9);
   });
 
   it('explains the row actions with one tip and the reasoning toggle with its own', () => {

@@ -127,6 +127,21 @@
         "debug": "Wenn aktiv, behält jeder Lauf sein vollständiges Anfrage- und Antwortprotokoll, und Empfehlungen zeigen ihre Bewertung. Das Protokoll erscheint unten im Bereich „Debug-Protokoll“, sobald ein Lauf Einträge erzeugt hat.",
         "purge": "Entfernt alle empfohlenen Beiträge aus „Für dich“ für dieses Konto. Die Beiträge selbst und ihr Lesestatus bleiben unberührt. Das lässt sich nicht rückgängig machen — der nächste Lauf baut eine neue Liste auf."
       },
+      "guide": {
+        "title": "Schritt-für-Schritt-Einrichtung",
+        "intro": "Zwei kurze Anleitungen: zuerst einen KI-Endpunkt verbinden, dann die „Für dich“-Empfehlungen einstellen.",
+        "connectionTitle": "KI-Verbindung einrichten",
+        "connectionStep1": "Öffne unten „Konfiguration hinzufügen“.",
+        "connectionStep2": "Trage den Endpunkt einer OpenAI-kompatiblen API ein — zum Beispiel https://api.openai.com/v1.",
+        "connectionStep3": "Trage den API-Schlüssel für diesen Endpunkt ein.",
+        "connectionStep4": "Drücke „Konfiguration hinzufügen“, lade dann mit „Modell ändern“ die Modellliste und speichere ein Modell.",
+        "connectionStep5": "Drücke „Diesen verwenden“, um die Konfiguration zu aktivieren.",
+        "recommendationsTitle": "Empfehlungen einstellen",
+        "recommendationsStep1": "Prüfe die aktive Konfiguration: Sie zeigt ein Modell, und die Karte „Empfehlungen“ unten meldet, dass KI-Funktionen verfügbar sind.",
+        "recommendationsStep2": "Wähle einen Zeitplan für „Für dich“ oder belasse es bei „Nur manuell“. Der Zeitplan braucht den Hintergrund-Worker oder den Wartungs-Cron.",
+        "recommendationsStep3": "Öffne bei Bedarf die „Experteneinstellungen“ und passe Historien-Limits, Artikel- und Auswahl-Grenzen sowie den Leitprompt an.",
+        "recommendationsStep4": "Speichern. Schalte den Debug-Modus ein, um den nächsten Lauf im Debug-Protokoll zu untersuchen."
+      },
       "recommendations": {
         "title": "Empfehlungen",
         "autoGenerate": "„Für dich“ automatisch erzeugen",

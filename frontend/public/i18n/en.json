@@ -127,6 +127,21 @@
         "debug": "When on, every run keeps its full request and response log and recommendations show their scores. The log appears in the “Debug log” panel below once a run has produced entries.",
         "purge": "Deletes every recommended article from “For you” for this account. The articles themselves and their read state stay untouched. This cannot be undone — the next run builds a fresh list."
       },
+      "guide": {
+        "title": "Step-by-step setup",
+        "intro": "Two short walkthroughs: connect an AI endpoint first, then tune the “For you” recommendations.",
+        "connectionTitle": "Configure the AI connection",
+        "connectionStep1": "Open “Add a configuration” below.",
+        "connectionStep2": "Enter the endpoint of an OpenAI-compatible API — for example https://api.openai.com/v1.",
+        "connectionStep3": "Enter the API key for that endpoint.",
+        "connectionStep4": "Press “Add configuration”, then fetch the model list with “Change model” and save a model.",
+        "connectionStep5": "Press “Use this one” to make the configuration active.",
+        "recommendationsTitle": "Configure the recommendations",
+        "recommendationsStep1": "Check the active configuration: it shows a model, and the “Recommendations” card below says AI features are available.",
+        "recommendationsStep2": "Pick an auto-generate schedule, or keep “Only manually”. The schedule needs the background worker or the maintenance cron.",
+        "recommendationsStep3": "Optionally open “Expert settings” and adjust the history caps, the article and pick limits, and the guidance prompt.",
+        "recommendationsStep4": "Save. Turn on Debug mode to inspect the next run in the debug log."
+      },
       "recommendations": {
         "title": "Recommendations",
         "autoGenerate": "Auto-generate For you",
