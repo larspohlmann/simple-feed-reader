@@ -182,9 +182,8 @@ final class FirstFetchRecorderTest extends DbTestCase
     /**
      * The order EntryIngestor persisted the entries in, read back through the
      * auto-increment id rather than any query-time ORDER BY — the repository
-     * sorts a feed's list by (createdAt, publishedAt, id) for the reader, which
-     * would mask a wrong ingest order behind an incidentally-correct display
-     * order.
+     * sorts a feed's list by (effectiveDate, id) for the reader, which would
+     * mask a wrong ingest order behind an incidentally-correct display order.
      *
      * @return list<string>
      */
