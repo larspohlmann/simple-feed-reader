@@ -19,15 +19,19 @@ use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Worker\WorkerPresence;
 use App\Service\Worker\WorkerRunSweep;
 use App\Tests\DbTestCase;
+use App\Tests\Support\LockKeyExpiringBeforeEveryRefreshStore;
 use App\Tests\Support\LockLostAfterFirstRefreshStore;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
+use App\Tests\Support\ThrowingClock;
 use App\Tests\Support\TickingClock;
 use App\Tests\Support\UserFactory;
 use Psr\Log\NullLogger;
+use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\PersistingStoreInterface;
 use Symfony\Component\Lock\Store\DoctrineDbalStore;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -136,26 +140,117 @@ final class RecommendationDrainCommandTest extends DbTestCase
     }
 
     /**
-     * A lost lock between sweeps must degrade to the same clean handoff as
-     * never winning acquire() in the first place -- another drainer already
-     * owns the work, so the exception refresh() throws must never escape
-     * the command and turn a benign handoff into a hard failure.
+     * A lock genuinely taken over by a second drainer must degrade to the
+     * same clean handoff as never winning acquire() in the first place: the
+     * exception refresh() throws must never escape the command, and the bid
+     * to take the key back must lose, leaving the work to its new owner. The
+     * two-batch fixture is what makes the handoff observable -- the run is
+     * still active when this drainer walks away, one sweep short of done.
      */
-    public function testEndsCleanlyWhenTheLockIsLostBetweenSweeps(): void
+    public function testHandsOverCleanlyWhenAnotherDrainerHoldsTheLock(): void
     {
         $user = $this->user('drain-lost-lock@example.test');
-        $this->seedSingleBatchFixture($user);
-        $this->starter()->start($user);
+        $this->seedTwoBatchFixture($user);
+        $run = $this->startAndSnapshot($user);
+        $this->queueBatchReply($run->getCandidateBatches()[0]);
 
-        $command = new RecommendationDrainCommand(
-            $this->lockFactoryThatLosesTheLockAfterFirstRefresh(),
-            $this->sweep(),
-            new TickingClock(new \DateTimeImmutable('2026-08-14 00:00:00'), 1),
+        $command = $this->commandWithLockStore(
+            new LockLostAfterFirstRefreshStore(new DoctrineDbalStore($this->em->getConnection())),
         );
 
         $exitCode = $this->execute($command);
 
         self::assertSame(Command::SUCCESS, $exitCode);
+        $this->em->clear();
+        self::assertNotNull($this->runs()->findActiveForUser($user));
+    }
+
+    /**
+     * A refresh that fails only proves the key is gone, not that anyone else
+     * took it -- and abandoning a healthy drain on that reading drops the run
+     * back to the once-a-minute cron. So the drainer bids for the key again
+     * and keeps going, which is what carrying this two-batch run all the way
+     * to COMPLETED proves: every refresh in this store lapses the key.
+     */
+    public function testKeepsDrainingWhenTheLockKeyMerelyExpired(): void
+    {
+        $user = $this->user('drain-lock-expired@example.test');
+        $this->seedTwoBatchFixture($user);
+        $run = $this->startAndSnapshot($user);
+        $this->queueBatchReply($run->getCandidateBatches()[0]);
+        $this->queueBatchReply($run->getCandidateBatches()[1]);
+        $this->queueCleanDedupReply();
+
+        $command = $this->commandWithLockStore(
+            new LockKeyExpiringBeforeEveryRefreshStore(new DoctrineDbalStore($this->em->getConnection())),
+        );
+
+        $exitCode = $this->execute($command);
+
+        self::assertSame(Command::SUCCESS, $exitCode);
+        $this->em->clear();
+        $persisted = $this->runs()->findLatestForUser($user);
+        self::assertNotNull($persisted);
+        self::assertSame(RecommendationRun::STATUS_COMPLETED, $persisted->getStatus());
+    }
+
+    /**
+     * The drainer is a worker only while it lives. Leaving the heartbeat
+     * fresh on the way out makes the poll driver report the run as running in
+     * the background, and stops the cron's respawn net from spawning a
+     * replacement, for up to WorkerPresence::FRESH_SECONDS -- eleven minutes
+     * of a frozen run on a worker-less install (#371 final review, Finding 1).
+     * The wall cap is the cheapest way to leave the command with a run still
+     * active, which is exactly the state that would freeze.
+     */
+    public function testSurrendersTheWorkerHeartbeatWhenItExitsWithRunsStillActive(): void
+    {
+        $user = $this->user('drain-heartbeat-surrender@example.test');
+        $this->seedSingleBatchFixture($user);
+        $this->starter()->start($user);
+
+        $hourPerReading = new TickingClock(
+            new \DateTimeImmutable('2026-08-14 00:00:00'),
+            RecommendationDrainCommand::MAX_RUNTIME_SECONDS,
+        );
+        $this->execute($this->command($hourPerReading));
+
+        $this->em->clear();
+        self::assertNotNull($this->runs()->findActiveForUser($user));
+        self::assertFalse($this->presence()->isRecommendationWorkerAlive());
+    }
+
+    /**
+     * The spawner launches the command with --detach so the child leaves the
+     * spawning request's session; an option the command never declared would
+     * make every launch die on an unrecognised argument.
+     */
+    public function testTheDetachOptionIsDeclared(): void
+    {
+        self::assertTrue($this->command()->getDefinition()->hasOption('detach'));
+    }
+
+    /**
+     * The lock release is a `finally`, not a trailing statement, and a
+     * drainer that dies mid-drain without releasing parks the key for
+     * LOCK_TTL_SECONDS. A clock that throws on its first reading is the
+     * cheapest way to make the drain body fail; what matters is that the key
+     * is free afterwards.
+     */
+    public function testReleasesTheLockEvenWhenTheDrainBodyThrows(): void
+    {
+        $command = $this->command(new ThrowingClock());
+
+        try {
+            $this->execute($command);
+            self::fail('The throwing clock must have surfaced.');
+        } catch (\RuntimeException $expected) {
+            self::assertSame(ThrowingClock::MESSAGE, $expected->getMessage());
+        }
+
+        $lock = $this->lockFactory()->createLock(RecommendationDrainCommand::LOCK_NAME);
+        self::assertTrue($lock->acquire());
+        $lock->release();
     }
 
     private function execute(RecommendationDrainCommand $command): int
@@ -163,13 +258,32 @@ final class RecommendationDrainCommandTest extends DbTestCase
         return (new CommandTester($command))->execute([]);
     }
 
-    private function command(?TickingClock $clock = null): RecommendationDrainCommand
+    private function command(?ClockInterface $clock = null): RecommendationDrainCommand
+    {
+        return $this->commandWith($this->lockFactory(), $clock);
+    }
+
+    private function commandWithLockStore(PersistingStoreInterface $store): RecommendationDrainCommand
+    {
+        return $this->commandWith(new LockFactory($store));
+    }
+
+    private function commandWith(LockFactory $lockFactory, ?ClockInterface $clock = null): RecommendationDrainCommand
     {
         return new RecommendationDrainCommand(
-            $this->lockFactory(),
+            $lockFactory,
             $this->sweep(),
             $clock ?? new TickingClock(new \DateTimeImmutable('2026-08-14 00:00:00'), 1),
+            $this->presence(),
         );
+    }
+
+    private function presence(): WorkerPresence
+    {
+        /** @var WorkerPresence $presence */
+        $presence = self::getContainer()->get(WorkerPresence::class);
+
+        return $presence;
     }
 
     /**
@@ -179,10 +293,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
      */
     private function sweep(): WorkerRunSweep
     {
-        /** @var WorkerPresence $presence */
-        $presence = self::getContainer()->get(WorkerPresence::class);
-
-        return new WorkerRunSweep($this->runs(), $this->advancer(), $presence, $this->em, new NullLogger());
+        return new WorkerRunSweep($this->runs(), $this->advancer(), $this->presence(), $this->em, new NullLogger());
     }
 
     private function lockFactory(): LockFactory
@@ -191,18 +302,6 @@ final class RecommendationDrainCommandTest extends DbTestCase
         $factory = self::getContainer()->get(LockFactory::class);
 
         return $factory;
-    }
-
-    /**
-     * A LockFactory backed by the same Doctrine table the real one uses, so
-     * the initial acquire() genuinely succeeds, but every refresh after the
-     * first fails as if a second drainer had already re-acquired the key.
-     */
-    private function lockFactoryThatLosesTheLockAfterFirstRefresh(): LockFactory
-    {
-        $store = new LockLostAfterFirstRefreshStore(new DoctrineDbalStore($this->em->getConnection()));
-
-        return new LockFactory($store);
     }
 
     private function startAndSnapshot(User $user): RecommendationRun

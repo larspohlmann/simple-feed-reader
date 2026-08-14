@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Entity\RecommendationRun;
+use App\Repository\RecommendationRunRepository;
+use App\Service\Recommendation\OpenAiCompatibleChatClient;
+use App\Service\Worker\WorkerPresence;
 use App\Service\Worker\WorkerRunSweep;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -20,8 +24,9 @@ use Symfony\Component\Lock\LockInterface;
  * active recommendation run to completion at worker concurrency, spawned by
  * a web request on installs that have no persistent worker. Each sweep marks
  * the heartbeat, so open browsers demote to the read-only /current poll
- * while this runs; when it exits and the heartbeat goes stale, the poll and
- * cron paths take over again seamlessly.
+ * while this runs; on the way out it clears that heartbeat again, so the poll
+ * and cron paths take over immediately rather than after the freshness window
+ * has aged out a worker that no longer exists.
  *
  * It only ever advances existing runs -- starting runs (and their spend
  * budget, #308) stays with the callers that already own it.
@@ -35,18 +40,34 @@ final class RecommendationDrainCommand extends Command
     public const string LOCK_NAME = 'recommendation-drain';
 
     /**
-     * Refreshed between sweeps, so it needs to outlive one sweep iteration,
-     * not the whole drain. A crashed drainer therefore blocks a respawn for
-     * at most this long -- and only the *fast* path: the per-minute cron
-     * sweep keeps advancing the runs regardless, because it takes the
-     * per-user run locks, never this one.
+     * Refreshed between sweeps, so it must outlive one whole sweep, not the
+     * whole drain. A sweep's duration is the SUM over the runs it touches:
+     * RecommendationRunRepository::MAXIMUM_RUNS_PER_SWEEP runs, each of which
+     * can spend RecommendationRun::MAX_ATTEMPTS in-tick retry rounds bounded
+     * by OpenAiCompatibleChatClient::TIMEOUT_SECONDS -- the same provider
+     * ceiling RecommendationRunAdvancer's per-user lock and
+     * WorkerPresence::FRESH_SECONDS are both derived from. Derived from those
+     * published constants, plus a margin for the surrounding bookkeeping,
+     * rather than a bare number: the earlier flat 900 s was shorter than one
+     * busy sweep, so the key could lapse mid-sweep while this process was
+     * still working.
+     *
+     * The cost is that a drainer killed hard -- SIGKILL skips both the
+     * `finally` and the shutdown hook -- parks the key for the full TTL. That
+     * blocks only a second drainer: the per-minute cron sweep keeps advancing
+     * the runs regardless, because it takes the per-user run locks, never
+     * this one.
      */
-    public const float LOCK_TTL_SECONDS = 900.0;
+    public const float LOCK_TTL_SECONDS = RecommendationRunRepository::MAXIMUM_RUNS_PER_SWEEP
+        * RecommendationRun::MAX_ATTEMPTS * OpenAiCompatibleChatClient::TIMEOUT_SECONDS
+        + 300.0;
 
     /**
-     * A stuck run must never pin a process forever: past the cap the
-     * drainer exits and the next cron tick spawns a fresh one, which
-     * resumes from the last committed checkpoint.
+     * Bounds the drain *loop*, not the process: the cap is read between
+     * sweeps, so the sweep in flight when it passes still runs to its own
+     * end. Past the cap the drainer starts no further sweep and exits,
+     * surrendering both the lock and the heartbeat, and the next cron tick
+     * spawns a fresh one that resumes from the last committed checkpoint.
      */
     public const int MAX_RUNTIME_SECONDS = 3600;
 
@@ -61,6 +82,7 @@ final class RecommendationDrainCommand extends Command
         private readonly LockFactory $lockFactory,
         private readonly WorkerRunSweep $sweep,
         private readonly ClockInterface $clock,
+        private readonly WorkerPresence $presence,
     ) {
         parent::__construct();
     }
@@ -97,22 +119,46 @@ final class RecommendationDrainCommand extends Command
         // RecommendationRunAdvancer::advance() -- the release is
         // token-scoped, so it can never free a lock this process no longer
         // owns, and SIGKILL still falls back to the TTL.
-        register_shutdown_function(static function () use ($lock): void {
+        register_shutdown_function(function () use ($lock): void {
             try {
                 $lock->release();
             } catch (\Throwable) {
                 // Best-effort: a failure to release during shutdown must
                 // not raise a second fatal. The TTL still bounds the stall.
             }
+
+            $this->surrenderTheWorkerHeartbeat();
         });
 
         try {
             $this->drainUntilDoneOrCapped($lock);
         } finally {
             $lock->release();
+            $this->surrenderTheWorkerHeartbeat();
         }
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * This process was the worker only for as long as it lived. Leaving the
+     * heartbeat fresh behind it makes the poll driver report the run as
+     * running in the background, and stops the cron's respawn net from
+     * bringing a replacement up, for up to WorkerPresence::FRESH_SECONDS --
+     * eleven minutes of a frozen run on a worker-less install. On a Docker
+     * install the real worker re-marks within ten seconds, so clearing costs
+     * nothing there. Best-effort like the lock release, because this also
+     * runs from the shutdown hook, where a throw would pile a second fatal on
+     * whatever ended the process; a clear that fails simply leaves the old
+     * behavior, a heartbeat that ages out.
+     */
+    private function surrenderTheWorkerHeartbeat(): void
+    {
+        try {
+            $this->presence->forgetRecommendationSweep();
+        } catch (\Throwable) {
+            // Deliberately silent: see this method's doc comment.
+        }
     }
 
     private function drainUntilDoneOrCapped(LockInterface $lock): void
@@ -124,20 +170,40 @@ final class RecommendationDrainCommand extends Command
                 return;
             }
 
-            try {
-                $lock->refresh();
-            } catch (LockExceptionInterface) {
-                // A sweep's duration is the SUM over every active run
-                // (WorkerRunSweep::sweep()), so a sweep spanning many users
-                // can outrun LOCK_TTL_SECONDS between refreshes. Losing the
-                // lock here means another drainer already re-acquired it
-                // and now owns the work -- the same benign handoff as never
-                // winning acquire() above, not a failure worth a non-SUCCESS
-                // exit.
+            if (!$this->keepsHoldingTheLock($lock)) {
                 return;
             }
 
             $this->clock->sleep(self::SWEEP_PAUSE_SECONDS);
+        }
+    }
+
+    /**
+     * A failed refresh() only proves the key is gone, which is not the same
+     * as another drainer owning it: nothing has been handed over, and walking
+     * away drops healthy in-flight work back to the once-a-minute cron. So
+     * this bids for the key again and carries on when the bid wins. Only a
+     * lost bid proves a second drainer really does hold it, and that handoff
+     * is as benign as never winning acquire() in the first place -- not a
+     * failure worth a non-SUCCESS exit.
+     */
+    private function keepsHoldingTheLock(LockInterface $lock): bool
+    {
+        try {
+            $lock->refresh();
+
+            return true;
+        } catch (LockExceptionInterface) {
+            // Fall through to the bid below.
+        }
+
+        try {
+            return $lock->acquire();
+        } catch (LockExceptionInterface) {
+            // The store itself refused the bid, so this process can no longer
+            // prove it owns the drain. Stopping is the safe reading, and the
+            // cron path still carries the runs.
+            return false;
         }
     }
 }

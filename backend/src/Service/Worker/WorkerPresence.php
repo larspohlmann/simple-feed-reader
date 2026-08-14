@@ -55,6 +55,20 @@ final readonly class WorkerPresence
         $this->heartbeats->touch(self::RECOMMENDATION_SWEEP, $this->clock->now());
     }
 
+    /**
+     * Surrenders the liveness claim immediately instead of waiting out
+     * FRESH_SECONDS. The on-demand drainer (#371) is the caller: it is a
+     * worker only for as long as it lives, and a drainer that exits with runs
+     * still active would otherwise keep the poll driver deferring to a dead
+     * worker, and keep the cron's respawn net from firing, for the full
+     * freshness window. A Docker install's real worker re-marks within its
+     * ten-second cadence, so clearing costs nothing there.
+     */
+    public function forgetRecommendationSweep(): void
+    {
+        $this->heartbeats->forget(self::RECOMMENDATION_SWEEP);
+    }
+
     public function isRecommendationWorkerAlive(): bool
     {
         $touchedAt = $this->heartbeats->findTouchedAt(self::RECOMMENDATION_SWEEP);

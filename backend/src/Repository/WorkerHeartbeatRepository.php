@@ -41,4 +41,23 @@ final class WorkerHeartbeatRepository extends ServiceEntityRepository
     {
         return $this->find($name)?->getTouchedAt();
     }
+
+    /**
+     * Removes the row rather than back-dating it, so "no worker" is the
+     * absence of a heartbeat — the same state a host that never ran one is
+     * in. A name that was never touched is already forgotten, so this is
+     * idempotent by design: the drain command calls it from both its
+     * `finally` and its shutdown hook (#371).
+     */
+    public function forget(string $name): void
+    {
+        $heartbeat = $this->find($name);
+
+        if (null === $heartbeat) {
+            return;
+        }
+
+        $this->getEntityManager()->remove($heartbeat);
+        $this->getEntityManager()->flush();
+    }
 }

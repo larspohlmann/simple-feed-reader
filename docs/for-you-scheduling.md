@@ -46,10 +46,13 @@ Worker-less installs do not depend on the cron cadence for interactive
 runs. Starting or resuming a run from the web spawns a short-lived,
 detached CLI process (`app:recommendations:drain`) that advances every
 active run at full worker concurrency until none is left, then exits. The
-spawn only happens while no worker heartbeat is fresh, a global
-`recommendation-drain` lock guarantees at most one drainer, and the
-maintenance tick respawns a drainer as a safety net if one died with runs
-still active. If the host cannot spawn processes (`exec` disabled, no CLI
+spawn only happens while no worker heartbeat is fresh, at most one spawn is
+issued per web request or cron tick, a global `recommendation-drain` lock
+guarantees at most one drainer, and the maintenance tick respawns a drainer
+as a safety net if one died with runs still active. A drainer marks that
+worker heartbeat while it sweeps and clears it again on its way out, so the
+poll and cron paths resume the moment it exits instead of waiting out the
+freshness window. If the host cannot spawn processes (`exec` disabled, no CLI
 binary configured), the launch silently no-ops and the cron sweep above
 carries the runs exactly as before.
 

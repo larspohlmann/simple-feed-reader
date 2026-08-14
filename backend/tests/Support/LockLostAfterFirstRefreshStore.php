@@ -10,12 +10,17 @@ use Symfony\Component\Lock\PersistingStoreInterface;
 
 /**
  * Wraps a real lock store and lets exactly one `putOffExpiration()` call
- * through -- the one `Lock::acquire()` makes internally to seed the TTL --
- * before every later call throws, as if another process had already
- * re-acquired the same key. Pins RecommendationDrainCommand's handling of a
- * lock lost between sweeps (WorkerRunSweep::sweep() duration is the SUM
- * over every active run, so a sweep spanning many users can outrun
- * LOCK_TTL_SECONDS between the drain loop's own refresh() calls).
+ * through -- the one `Lock::acquire()` makes internally, through its own
+ * `refresh()` call, to seed the TTL (see Symfony's Lock::acquire()) -- before
+ * every later call throws, as if another process had already re-acquired the
+ * same key. The key deliberately stays in place, which is what makes the
+ * drainer's bid to take it back lose: this store models the one reading that
+ * really does mean somebody else owns the drain, and
+ * LockKeyExpiringBeforeEveryRefreshStore models the other one.
+ * Pins RecommendationDrainCommand's handling of a lock lost between sweeps
+ * (WorkerRunSweep::sweep() duration is the SUM over every active run, so a
+ * sweep spanning many users can outrun LOCK_TTL_SECONDS between the drain
+ * loop's own refresh() calls).
  */
 final class LockLostAfterFirstRefreshStore implements PersistingStoreInterface
 {
