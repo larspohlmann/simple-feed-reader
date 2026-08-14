@@ -227,13 +227,16 @@ final class RefreshRunnerTest extends DbTestCase
 
     /**
      * The #384 ordering trap: EntryIngestContext's previousFetchAt must be read
-     * BEFORE recordSuccess() stamps the feed's new lastFetchedAt, or every
-     * article — however old — would read as published since we last looked.
+     * BEFORE recordSuccess() stamps the feed's new lastSuccessfulFetchAt, or
+     * every article — however old — would read as published since we last
+     * looked.
      */
     public function testARefreshSinksAnArticleTheFeedServedBeforeTheLastFetch(): void
     {
         $feed = $this->dueFeed('https://old-news.example.com/feed');
+        // A normal previous fetch: it succeeded, so it stamped both fields alike.
         $feed->setLastFetchedAt(new \DateTimeImmutable('2026-07-21 06:00:00'));
+        $feed->setLastSuccessfulFetchAt(new \DateTimeImmutable('2026-07-21 06:00:00'));
         $this->em->flush();
 
         // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
@@ -261,6 +264,48 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(
             $this->clock->now()->format('Y-m-d H:i:s'),
             $this->effectiveDateOf($feed, 'new'),
+        );
+    }
+
+    /**
+     * The #384 grace-window defect: FeedScheduler::recordFailure() also stamps
+     * lastFetchedAt, so a feed that failed for nine days and just recovered
+     * has a lastFetchedAt from minutes ago. Reading THAT as "the previous
+     * fetch" makes every article published during the outage look like one
+     * the feed was already serving, so it sinks to its own publication date
+     * instead of surfacing. The fix reads lastSuccessfulFetchAt instead, which
+     * only recordSuccess() advances — a failed attempt is not evidence about
+     * what the feed was serving.
+     */
+    public function testARefreshSurfacesBacklogPublishedDuringAFeedOutage(): void
+    {
+        $feed = $this->dueFeed('https://recovered.example.com/feed');
+        // Last real success was nine days ago; every attempt since failed but
+        // still stamped lastFetchedAt (FeedScheduler::recordFailure()).
+        $feed->setLastSuccessfulFetchAt(new \DateTimeImmutable('2026-07-12 06:00:00'));
+        $feed->setLastFetchedAt(new \DateTimeImmutable('2026-07-21 11:00:00'));
+        $this->em->flush();
+
+        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
+        // starts with whitespace and it wrongly flags the declaration. The
+        // closing marker strips that indentation before the parser sees it.
+        $body = /** @lang TEXT */ <<<XML
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rss version="2.0"><channel><title>T</title>
+            <item><title>Backlog</title><link>https://recovered.example.com/backlog</link><guid>backlog</guid>
+            <pubDate>Wed, 15 Jul 2026 00:00:00 GMT</pubDate></item>
+            </channel></rss>
+            XML;
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($feed->getUrl(), false, $body, null, null),
+        );
+
+        $this->runner()->run(RefreshRequest::allDue(300, prune: false));
+
+        self::assertSame(
+            $this->clock->now()->format('Y-m-d H:i:s'),
+            $this->effectiveDateOf($feed, 'backlog'),
         );
     }
 

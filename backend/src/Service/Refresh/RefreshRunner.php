@@ -240,11 +240,11 @@ final class RefreshRunner
      */
     private function applyOutcome(Feed $feed, FetchOutcome $outcome, \DateTimeImmutable $now): FeedOutcome
     {
-        // Built here, not inside persistOutcome(): reading lastFetchedAt is only
-        // safe before recordSuccess() stamps the new one, and building the
-        // context at the call site — rather than threading $now through it —
-        // keeps $now from becoming tramp data phptramp would flag.
-        $context = new FeedIngestContext($now, $feed->getLastFetchedAt());
+        // Built here, not inside persistOutcome(): reading lastSuccessfulFetchAt
+        // is only safe before recordSuccess() stamps the new one, and building
+        // the context at the call site — rather than threading $now through it
+        // — keeps $now from becoming tramp data phptramp would flag.
+        $context = new FeedIngestContext($now, $feed->getLastSuccessfulFetchAt());
 
         try {
             return $this->persistOutcome($feed, $outcome, $context);

@@ -33,6 +33,7 @@ final class FeedSchedulerTest extends TestCase
         self::assertSame(0, $feed->getConsecutiveFailures());
         self::assertSame(FeedStatus::Active, $feed->getStatus());
         self::assertSame('2026-07-21 12:00:00', $feed->getLastFetchedAt()?->format('Y-m-d H:i:s'));
+        self::assertSame('2026-07-21 12:00:00', $feed->getLastSuccessfulFetchAt()?->format('Y-m-d H:i:s'));
         self::assertSame('2026-07-21 13:00:00', $feed->getNextFetchAt()?->format('Y-m-d H:i:s'));
 
         $feed->setFetchIntervalMinutes(8);
@@ -190,5 +191,26 @@ final class FeedSchedulerTest extends TestCase
         self::assertSame(FeedStatus::Gone, $feed->getStatus());
         self::assertNull($feed->getNextFetchAt());
         self::assertSame('HTTP 410 Gone', $feed->getLastErrorMessage());
+    }
+
+    /**
+     * The #384 fix's core guarantee: only a fetch that actually delivered may
+     * advance lastSuccessfulFetchAt. recordFailure() and recordGone() still
+     * stamp lastFetchedAt — the manual-refresh cooldown and "has this feed
+     * ever been fetched" both need that — but a failed or gone attempt is not
+     * evidence about what the feed was serving, so lastSuccessfulFetchAt must
+     * stay untouched.
+     */
+    public function testOnlyRecordSuccessAdvancesLastSuccessfulFetchAt(): void
+    {
+        $failed = new Feed('https://failed.example.com/feed');
+        $this->scheduler->recordFailure($failed, 'timeout');
+        self::assertNotNull($failed->getLastFetchedAt());
+        self::assertNull($failed->getLastSuccessfulFetchAt());
+
+        $gone = new Feed('https://gone.example.com/feed');
+        $this->scheduler->recordGone($gone, 'HTTP 410 Gone');
+        self::assertNotNull($gone->getLastFetchedAt());
+        self::assertNull($gone->getLastSuccessfulFetchAt());
     }
 }

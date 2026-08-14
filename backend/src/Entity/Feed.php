@@ -47,20 +47,8 @@ class Feed
     #[ORM\Column(length: 20, options: ['default' => 'xml'])]
     private string $sourceFormat = 'xml';
 
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    private ?\DateTimeImmutable $lastFetchedAt = null;
-
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    private ?\DateTimeImmutable $nextFetchAt = null;
-
-    #[ORM\Column]
-    private int $fetchIntervalMinutes = 60;
-
-    #[ORM\Column]
-    private int $consecutiveFailures = 0;
-
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
-    private ?string $lastErrorMessage = null;
+    #[ORM\Embedded(class: FetchSchedule::class, columnPrefix: false)]
+    private FetchSchedule $fetchSchedule;
 
     #[ORM\Column(length: 512, nullable: true)]
     private ?string $etag = null;
@@ -71,6 +59,7 @@ class Feed
     public function __construct(string $url)
     {
         $this->url = $url;
+        $this->fetchSchedule = new FetchSchedule();
     }
 
     public function getId(): ?int
@@ -150,52 +139,62 @@ class Feed
 
     public function getLastFetchedAt(): ?\DateTimeImmutable
     {
-        return $this->lastFetchedAt;
+        return $this->fetchSchedule->getLastFetchedAt();
     }
 
     public function setLastFetchedAt(?\DateTimeImmutable $lastFetchedAt): void
     {
-        $this->lastFetchedAt = $lastFetchedAt;
+        $this->fetchSchedule->setLastFetchedAt($lastFetchedAt);
+    }
+
+    public function getLastSuccessfulFetchAt(): ?\DateTimeImmutable
+    {
+        return $this->fetchSchedule->getLastSuccessfulFetchAt();
+    }
+
+    public function setLastSuccessfulFetchAt(?\DateTimeImmutable $lastSuccessfulFetchAt): void
+    {
+        $this->fetchSchedule->setLastSuccessfulFetchAt($lastSuccessfulFetchAt);
     }
 
     public function getNextFetchAt(): ?\DateTimeImmutable
     {
-        return $this->nextFetchAt;
+        return $this->fetchSchedule->getNextFetchAt();
     }
 
     public function setNextFetchAt(?\DateTimeImmutable $nextFetchAt): void
     {
-        $this->nextFetchAt = $nextFetchAt;
+        $this->fetchSchedule->setNextFetchAt($nextFetchAt);
     }
 
     public function getFetchIntervalMinutes(): int
     {
-        return $this->fetchIntervalMinutes;
+        return $this->fetchSchedule->getFetchIntervalMinutes();
     }
 
     public function setFetchIntervalMinutes(int $minutes): void
     {
-        $this->fetchIntervalMinutes = $minutes;
+        $this->fetchSchedule->setFetchIntervalMinutes($minutes);
     }
 
     public function getConsecutiveFailures(): int
     {
-        return $this->consecutiveFailures;
+        return $this->fetchSchedule->getConsecutiveFailures();
     }
 
     public function setConsecutiveFailures(int $consecutiveFailures): void
     {
-        $this->consecutiveFailures = $consecutiveFailures;
+        $this->fetchSchedule->setConsecutiveFailures($consecutiveFailures);
     }
 
     public function getLastErrorMessage(): ?string
     {
-        return $this->lastErrorMessage;
+        return $this->fetchSchedule->getLastErrorMessage();
     }
 
     public function setLastErrorMessage(?string $lastErrorMessage): void
     {
-        $this->lastErrorMessage = $lastErrorMessage;
+        $this->fetchSchedule->setLastErrorMessage($lastErrorMessage);
     }
 
     public function getEtag(): ?string
