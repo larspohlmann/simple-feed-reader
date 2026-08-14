@@ -92,7 +92,9 @@ report shows `"status": "aborted"`), the recommendations half is skipped for
 that tick — its report keeps the run counts at zero and adds a `"skipped"`
 reason — and the call still returns `200`; the next tick tries the sweep again.
 
-Example cron line (every minute for the sweep cadence; the refresh half only
-touches feeds that are already due):
+Example cron line — pick the interval to suit the install. It sets how often
+due feeds are picked up, and it is the pace a recommendation run advances at
+on a host that cannot spawn a drainer; the refresh half only touches feeds
+that are already due, so a short interval is cheap:
 
-    * * * * * curl -fsS -X POST "https://YOUR_HOST/maintenance/tick" -H "X-Maintenance-Token: $MAINTENANCE_TOKEN"
+    */5 * * * * curl -fsS -X POST "https://YOUR_HOST/maintenance/tick" -H "X-Maintenance-Token: $MAINTENANCE_TOKEN"

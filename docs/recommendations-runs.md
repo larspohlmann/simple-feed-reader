@@ -31,8 +31,9 @@ Speed depends on how the server drives the run:
   active, the run advances continuously at full speed and typically
   finishes in one go.
 - **Slower fallback:** on a host that cannot spawn a background process,
-  the run advances roughly one step per minute, driven by a scheduled
-  maintenance ping. It still finishes on its own — it just takes longer.
+  the run advances one step per scheduled maintenance ping, so it moves at
+  whatever interval the server is set to. It still finishes on its own — it
+  just takes longer.
 
 The reader picks the fast path automatically whenever the host allows it;
 there is nothing to configure in the UI.
@@ -65,6 +66,6 @@ How the fast path is provided depends on the deployment:
   run; nothing else is needed.
 - **Worker-less installs** (for example, shared hosting such as Strato)
   rely on an on-demand drainer process that the server starts when your run
-  begins, backed by a once-per-minute maintenance ping as the safety net.
-  If the host cannot start processes at all, the ping alone carries the run
-  at the slower pace described above.
+  begins, backed by a scheduled maintenance ping as the safety net. If the
+  host cannot start processes at all, the ping alone carries the run at the
+  slower pace described above.

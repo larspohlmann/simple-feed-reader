@@ -161,7 +161,7 @@ while the URL 404s. Verification step 1 is what catches that.
 
    Also set `DRAIN_PHP_CLI_BINARY=/opt/RZphp84/bin/php-cli`: it names the CLI binary the web
    request uses to spawn the recommendation drainer; without it, runs fall back to the
-   per-minute cron pace.
+   maintenance cron's pace.
 9. **Remove the placeholder `current`** — `~/simplefeedreader/current` exists on the host
    as a **real directory**, holding a placeholder `public/index.html` from before this
    deployment was built. It has to be gone before the first deploy:
