@@ -340,7 +340,8 @@ final class EntryPrunerTest extends DbTestCase
         $this->seedEntry($feed, 'old-unprotected', $this->daysAgo(3));
         $protected = $this->seedEntry($feed, 'old-protected', $this->daysAgo(2));
 
-        // The older of the two is kept, so it survives despite being beyond the cap.
+        // One of the two is kept, so it survives despite being beyond the cap;
+        // its unprotected sibling is the only entry this prune may delete.
         $keptState = new EntryState($user, $protected);
         $keptState->setIsKept(true);
         $this->em->persist($keptState);
