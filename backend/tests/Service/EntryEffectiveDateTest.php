@@ -63,6 +63,25 @@ final class EntryEffectiveDateTest extends TestCase
         self::assertSame(self::RUN, $this->resolve('2027-01-01 00:00:00', self::firstFetch()));
     }
 
+    /**
+     * The clamp guard is `$publishedAt > $context->fetchedAt`: strictly later,
+     * not later-or-equal. An article stamped at exactly the fetch instant is
+     * not "later than" it, so the guard must not fire — the resolution has to
+     * fall through to the first-fetch rule and hand back the caller's own
+     * $publishedAt object, not a substitute built from $context->fetchedAt.
+     *
+     * A formatted-string assertion cannot tell the two apart: both objects
+     * carry the same instant, so they format identically whether the guard
+     * fired or not. Only object identity exposes which branch ran, so this
+     * test asserts assertSame() on the object itself.
+     */
+    public function testAPublishedDateEqualToTheFetchInstantOnAFirstFetchKeepsTheCallersOwnObject(): void
+    {
+        $publishedAt = new \DateTimeImmutable(self::RUN);
+
+        self::assertSame($publishedAt, EntryEffectiveDate::for($publishedAt, self::firstFetch()));
+    }
+
     private function resolve(?string $publishedAt, FeedIngestContext $context): string
     {
         return EntryEffectiveDate::for(
