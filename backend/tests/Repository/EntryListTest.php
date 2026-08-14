@@ -129,11 +129,15 @@ final class EntryListTest extends DbTestCase
     {
         // A whole refresh run shares one effective date; id DESC is the only
         // tiebreaker, so a page boundary that falls inside the tied group must
-        // neither skip nor repeat a row.
+        // neither skip nor repeat a row. An older row on a distinct date sits
+        // right after the tied group, so the same query also exercises the
+        // `effectiveDate <` disjunct of applyCursor()'s two-part predicate —
+        // the strict-less branch never fires on its own inside a tie.
         $tied = '2026-07-01T00:00:00Z';
         $e1 = $this->entryAt('e1', $tied, $tied);
         $e2 = $this->entryAt('e2', $tied, $tied);
         $e3 = $this->entryAt('e3', $tied, $tied);
+        $older = $this->entryAt('older', '2026-06-01T00:00:00Z', '2026-06-01T00:00:00Z');
 
         $page1 = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0, limit: 2));
         self::assertSame([$e3->getGuid(), $e2->getGuid()], array_map(
@@ -141,10 +145,13 @@ final class EntryListTest extends DbTestCase
             $page1,
         ));
 
-        $cursor = new EntryCursor($page1[1]->entry->getEffectiveDate(), $page1[1]->entry->getId() ?? 0);
+        $cursor = new EntryCursor(
+            $page1[1]->entry->getEffectiveDate(),
+            $page1[1]->entry->getId() ?? throw new \LogicException('A persisted entry must have an id.'),
+        );
         $page2 = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0, cursor: $cursor, limit: 2));
 
-        self::assertSame([$e1->getGuid()], array_map(
+        self::assertSame([$e1->getGuid(), $older->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
             $page2,
         ));
@@ -251,7 +258,10 @@ final class EntryListTest extends DbTestCase
         self::assertSame('e3', $page1[0]->entry->getGuid());
         self::assertSame('e2', $page1[1]->entry->getGuid());
 
-        $cursor = new EntryCursor($page1[1]->entry->getEffectiveDate(), $page1[1]->entry->getId() ?? 0);
+        $cursor = new EntryCursor(
+            $page1[1]->entry->getEffectiveDate(),
+            $page1[1]->entry->getId() ?? throw new \LogicException('A persisted entry must have an id.'),
+        );
         $page2 = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0, cursor: $cursor, limit: 2));
         self::assertCount(1, $page2);
         self::assertSame('e1', $page2[0]->entry->getGuid());
