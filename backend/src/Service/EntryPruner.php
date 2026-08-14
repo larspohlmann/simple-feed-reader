@@ -15,8 +15,13 @@ use Symfony\Component\Clock\ClockInterface;
 /**
  * Retention runs three independent passes:
  *
- *  1. By age — deletes entries older than 90 days, sparing any a user marked
- *     favorite or kept.
+ *  1. By age — deletes entries **fetched** more than 90 days ago, sparing any
+ *     a user marked favorite or kept, and never a feed's newest 20 regardless
+ *     of age. Age is measured from the fetch (`createdAt`), not from
+ *     `effectiveDate`: `effectiveDate` is the list-sort instant and, for a
+ *     backfilled or republished article, can sit far in the past on the very
+ *     fetch that stored it — measuring retention from it deleted such an
+ *     entry immediately, and the next refresh re-added it, forever (#384).
  *  2. By per-feed count — deletes a feed's oldest entries beyond a cap, same
  *     sparing rule.
  *  3. Empty completed recommendation runs — a run whose entries were all
@@ -42,6 +47,14 @@ final class EntryPruner
      * for operators who want it tighter.
      */
     private const int DEFAULT_MAX_ENTRIES_PER_FEED = 2000;
+
+    /**
+     * A feed's floor. Retention now measures from the fetch, so a low-volume
+     * feed whose articles are all older than the window would otherwise
+     * empty itself completely. A floor, not a skip: "spare feeds with 20 or
+     * fewer" would still let a feed of 25 old entries drop to zero.
+     */
+    private const int MIN_ENTRIES_PER_FEED = 20;
 
     public function __construct(
         private readonly EntityManagerInterface $em,
@@ -73,63 +86,170 @@ final class EntryPruner
     {
         $cutoff = $this->clock->now()->modify(sprintf('-%d days', self::RETENTION_DAYS));
 
-        /** @var list<int> $ids */
-        $ids = $this->em->createQuery(sprintf(
-            'SELECT e.id FROM %s e
-             WHERE e.effectiveDate < :cutoff
-             AND %s',
-            Entry::class,
-            $this->notProtectedDql(),
-        ))
-            ->setParameter('cutoff', $cutoff)
-            ->setParameter('true', true, Types::BOOLEAN)
-            ->getSingleColumnResult();
-
-        return $this->deleteByIds($ids);
-    }
-
-    private function pruneByFeedCap(): int
-    {
-        /** @var list<int> $feedIds — only feeds over the cap are worth scanning. */
-        $feedIds = $this->em->createQuery(sprintf(
-            'SELECT IDENTITY(e.feed) FROM %s e GROUP BY e.feed HAVING COUNT(e.id) > :cap',
-            Entry::class,
-        ))
-            ->setParameter('cap', $this->maxEntriesPerFeed)
-            ->getSingleColumnResult();
-
         $deleted = 0;
-        foreach ($feedIds as $feedId) {
-            $deleted += $this->deleteByIds($this->excessEntryIds((int) $feedId));
+        foreach ($this->feedIdsFetchedBefore($cutoff) as $feedId) {
+            $deleted += $this->deleteByIds(
+                $this->deletableIdsPastBoundary((int) $feedId, self::MIN_ENTRIES_PER_FEED, $cutoff),
+            );
         }
 
         return $deleted;
     }
 
     /**
-     * A feed's non-protected entries beyond the newest `maxEntriesPerFeed`,
-     * newest-first ordering so the OFFSET drops the oldest. Ties on the
-     * effective date fall back to id (later insert = newer).
+     * @return list<int> — only feeds with a stale entry are worth ranking at all.
+     */
+    private function feedIdsFetchedBefore(\DateTimeImmutable $cutoff): array
+    {
+        /** @var list<int> $feedIds */
+        $feedIds = $this->em->createQuery(sprintf(
+            'SELECT DISTINCT IDENTITY(e.feed) FROM %s e WHERE e.createdAt < :cutoff',
+            Entry::class,
+        ))
+            ->setParameter('cutoff', $cutoff)
+            ->getSingleColumnResult();
+
+        return $feedIds;
+    }
+
+    private function pruneByFeedCap(): int
+    {
+        $cap = $this->clampedMaxEntriesPerFeed();
+
+        $deleted = 0;
+        foreach ($this->feedIdsOverCap($cap) as $feedId) {
+            $deleted += $this->deleteByIds(
+                $this->deletableIdsPastBoundary((int) $feedId, $cap, null),
+            );
+        }
+
+        return $deleted;
+    }
+
+    /**
+     * `maxEntriesPerFeed` is a constructor argument an operator can override
+     * via the service definition; clamping it here, rather than trusting the
+     * configured value, keeps the floor structural instead of
+     * configuration-dependent — a value below it would silently defeat
+     * `MIN_ENTRIES_PER_FEED`, and zero would turn `rankBoundaryBeyond()`'s
+     * `setFirstResult($keep - 1)` negative.
+     */
+    private function clampedMaxEntriesPerFeed(): int
+    {
+        return max(self::MIN_ENTRIES_PER_FEED, $this->maxEntriesPerFeed);
+    }
+
+    /**
+     * @return list<int> — only feeds over the cap are worth ranking at all.
+     */
+    private function feedIdsOverCap(int $cap): array
+    {
+        /** @var list<int> $feedIds */
+        $feedIds = $this->em->createQuery(sprintf(
+            'SELECT IDENTITY(e.feed) FROM %s e GROUP BY e.feed HAVING COUNT(e.id) > :cap',
+            Entry::class,
+        ))
+            ->setParameter('cap', $cap)
+            ->getSingleColumnResult();
+
+        return $feedIds;
+    }
+
+    /**
+     * A feed's deletable entries past its `keep`-th newest — the shape both
+     * passes need, differing only in where they put the boundary and whether
+     * they also demand staleness.
+     *
+     * The cap pass passes no cutoff: everything past the boundary goes. The
+     * age pass passes one, and the two conditions stay independent rather than
+     * collapsing into a single query, so a feed just over the floor holding
+     * entries of mixed age is not all-or-nothing — only the stale ones among
+     * the excess are deleted.
      *
      * @return list<int>
      */
-    private function excessEntryIds(int $feedId): array
+    private function deletableIdsPastBoundary(int $feedId, int $keep, ?\DateTimeImmutable $cutoff): array
     {
-        /** @var list<int> $ids */
-        $ids = $this->em->createQuery(sprintf(
+        $boundary = $this->rankBoundaryBeyond($feedId, $keep);
+        if ($boundary === null) {
+            return [];
+        }
+
+        $query = $this->em->createQuery(sprintf(
             'SELECT e.id FROM %s e
              WHERE e.feed = :feed
              AND %s
-             ORDER BY e.effectiveDate DESC, e.id DESC',
+             %s
+             AND %s',
             Entry::class,
+            $this->pastBoundaryDql(),
+            $cutoff === null ? '' : 'AND e.createdAt < :cutoff',
             $this->notProtectedDql(),
         ))
             ->setParameter('feed', $feedId)
-            ->setParameter('true', true, Types::BOOLEAN)
-            ->setFirstResult($this->maxEntriesPerFeed)
-            ->getSingleColumnResult();
+            ->setParameter('boundaryCreatedAt', $boundary->createdAt)
+            ->setParameter('boundaryId', $boundary->id)
+            ->setParameter('true', true, Types::BOOLEAN);
+
+        if ($cutoff !== null) {
+            $query->setParameter('cutoff', $cutoff);
+        }
+
+        /** @var list<int> $ids */
+        $ids = $query->getSingleColumnResult();
 
         return $ids;
+    }
+
+    /**
+     * The fetch-order position of a feed's `keep`-th newest entry (later
+     * fetch = newer; id breaks a tie inside one run), or null when the feed
+     * doesn't have that many entries — the floor and the cap share this one
+     * ordering, so the two can never disagree about which entries are old.
+     *
+     * `setFirstResult($keep - 1)` + `setMaxResults(1)` walks exactly `keep`
+     * rows of `idx_entry_feed_created (feed_id, created_at, id)` and stops:
+     * cost is O(keep), not O(feed size). A correlated `COUNT` here looked
+     * equivalent on paper but re-scanned the whole feed once per row —
+     * quadratic in feed size and, since the feed over the cap is by
+     * definition the database's largest, dominant regardless of how many
+     * other feeds exist to guard against (#384 round 3).
+     *
+     * Ranks every entry in the feed, favorites and kept included, so a
+     * handful of protected articles cannot shift the boundary; a protected
+     * entry beyond it still survives via `notProtectedDql()` in the caller.
+     */
+    private function rankBoundaryBeyond(int $feedId, int $keep): ?EntryRankBoundary
+    {
+        /** @var list<array{createdAt: \DateTimeImmutable, id: int}> $rows */
+        $rows = $this->em->createQuery(sprintf(
+            'SELECT e.createdAt AS createdAt, e.id AS id FROM %s e
+             WHERE e.feed = :feed
+             ORDER BY e.createdAt DESC, e.id DESC',
+            Entry::class,
+        ))
+            ->setParameter('feed', $feedId)
+            ->setFirstResult($keep - 1)
+            ->setMaxResults(1)
+            ->getResult();
+
+        if ($rows === []) {
+            return null;
+        }
+
+        return new EntryRankBoundary($rows[0]['createdAt'], $rows[0]['id']);
+    }
+
+    /**
+     * True when `e` ranks strictly older than `:boundaryCreatedAt`/
+     * `:boundaryId` — an index-servable keyset range on
+     * `idx_entry_feed_created`, the same two-column comparison
+     * EntryRepository::applyCursor() builds for the entry list's own cursor.
+     */
+    private function pastBoundaryDql(): string
+    {
+        return '(e.createdAt < :boundaryCreatedAt
+                 OR (e.createdAt = :boundaryCreatedAt AND e.id < :boundaryId))';
     }
 
     /**

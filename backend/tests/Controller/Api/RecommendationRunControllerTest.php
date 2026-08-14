@@ -103,14 +103,16 @@ final class RecommendationRunControllerTest extends WebTestCase
         $em->persist($feed);
         $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
 
+        $publishedAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $entry = new Entry(
             $feed,
             'g1',
             'https://example.com/1',
             'Post 1',
-            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            $publishedAt,
+            $publishedAt,
         );
-        $entry->setPublishedAt(new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $entry->setPublishedAt($publishedAt);
         $em->persist($entry);
         $em->flush();
     }

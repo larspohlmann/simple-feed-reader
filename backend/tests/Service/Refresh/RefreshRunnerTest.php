@@ -148,6 +148,14 @@ final class RefreshRunnerTest extends DbTestCase
         return $feed;
     }
 
+    private function effectiveDateOf(Feed $feed, string $guid): string
+    {
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed, 'guid' => $guid]);
+        self::assertNotNull($entry);
+
+        return $entry->getEffectiveDate()->format('Y-m-d H:i:s');
+    }
+
     private function rss(string $title, string $guid): string
     {
         // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
@@ -217,6 +225,90 @@ final class RefreshRunnerTest extends DbTestCase
         }
     }
 
+    /**
+     * The #384 ordering trap: EntryIngestContext's previousFetchAt must be read
+     * BEFORE recordSuccess() stamps the feed's new lastSuccessfulFetchAt, or
+     * every article — however old — would read as published since we last
+     * looked.
+     */
+    public function testARefreshSinksAnArticleTheFeedServedBeforeTheLastFetch(): void
+    {
+        $feed = $this->dueFeed('https://old-news.example.com/feed');
+        // A normal previous fetch: it succeeded, so it stamped both fields alike.
+        $feed->setLastFetchedAt(new \DateTimeImmutable('2026-07-21 06:00:00'));
+        $feed->setLastSuccessfulFetchAt(new \DateTimeImmutable('2026-07-21 06:00:00'));
+        $this->em->flush();
+
+        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
+        // starts with whitespace and it wrongly flags the declaration. The
+        // closing marker strips that indentation before the parser sees it.
+        $body = /** @lang TEXT */ <<<XML
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rss version="2.0"><channel><title>T</title>
+            <item><title>Old</title><link>https://old-news.example.com/old</link><guid>old</guid>
+            <pubDate>Sun, 01 Mar 2020 00:00:00 GMT</pubDate></item>
+            <item><title>New</title><link>https://old-news.example.com/new</link><guid>new</guid>
+            <pubDate>Tue, 21 Jul 2026 09:00:00 GMT</pubDate></item>
+            </channel></rss>
+            XML;
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($feed->getUrl(), false, $body, null, null),
+        );
+
+        // Pruning disabled: an entry this old would otherwise be swept by the
+        // same run, which is not what this test is about.
+        $this->runner()->run(RefreshRequest::allDue(300, prune: false));
+
+        self::assertSame('2020-03-01 00:00:00', $this->effectiveDateOf($feed, 'old'));
+        self::assertSame(
+            $this->clock->now()->format('Y-m-d H:i:s'),
+            $this->effectiveDateOf($feed, 'new'),
+        );
+    }
+
+    /**
+     * The #384 grace-window defect: FeedScheduler::recordFailure() also stamps
+     * lastFetchedAt, so a feed that failed for nine days and just recovered
+     * has a lastFetchedAt from minutes ago. Reading THAT as "the previous
+     * fetch" makes every article published during the outage look like one
+     * the feed was already serving, so it sinks to its own publication date
+     * instead of surfacing. The fix reads lastSuccessfulFetchAt instead, which
+     * only recordSuccess() advances — a failed attempt is not evidence about
+     * what the feed was serving.
+     */
+    public function testARefreshSurfacesBacklogPublishedDuringAFeedOutage(): void
+    {
+        $feed = $this->dueFeed('https://recovered.example.com/feed');
+        // Last real success was nine days ago; every attempt since failed but
+        // still stamped lastFetchedAt (FeedScheduler::recordFailure()).
+        $feed->setLastSuccessfulFetchAt(new \DateTimeImmutable('2026-07-12 06:00:00'));
+        $feed->setLastFetchedAt(new \DateTimeImmutable('2026-07-21 11:00:00'));
+        $this->em->flush();
+
+        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
+        // starts with whitespace and it wrongly flags the declaration. The
+        // closing marker strips that indentation before the parser sees it.
+        $body = /** @lang TEXT */ <<<XML
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rss version="2.0"><channel><title>T</title>
+            <item><title>Backlog</title><link>https://recovered.example.com/backlog</link><guid>backlog</guid>
+            <pubDate>Wed, 15 Jul 2026 00:00:00 GMT</pubDate></item>
+            </channel></rss>
+            XML;
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($feed->getUrl(), false, $body, null, null),
+        );
+
+        $this->runner()->run(RefreshRequest::allDue(300, prune: false));
+
+        self::assertSame(
+            $this->clock->now()->format('Y-m-d H:i:s'),
+            $this->effectiveDateOf($feed, 'backlog'),
+        );
+    }
+
     public function testRefreshBackfillsTheImageOntoAnAlreadyStoredEntryThatLacksOne(): void
     {
         // A functional guard on the #148 wiring: FillMissingImagesTest exercises
@@ -224,7 +316,14 @@ final class RefreshRunnerTest extends DbTestCase
         // actually calls it inside persistOutcome's unit of work. Pre-store an
         // imageless entry, then serve the same guid carrying a media image.
         $feed = $this->dueFeed('https://img.example.com/feed');
-        $stored = new Entry($feed, 'has-image', 'https://img.example.com/p', 'Post', $this->clock->now());
+        $stored = new Entry(
+            $feed,
+            'has-image',
+            'https://img.example.com/p',
+            'Post',
+            $this->clock->now(),
+            $this->clock->now(),
+        );
         $this->em->persist($stored);
         $this->em->flush();
         self::assertNull($stored->getImageUrl());
@@ -769,8 +868,20 @@ final class RefreshRunnerTest extends DbTestCase
     public function testAllDueRunPrunesOldEntries(): void
     {
         $feed = $this->dueFeed('https://a.example.com/feed');
-        $ancient = new Entry($feed, 'ancient', null, 'Ancient', $this->clock->now()->modify('-200 days'));
-        $ancient->setPublishedAt($this->clock->now()->modify('-200 days'));
+
+        // Twenty recent filler entries hold the feed above EntryPruner's
+        // per-feed floor, so the ancient entry below falls beyond the
+        // newest-twenty boundary and is eligible for the age pass.
+        $recentDate = $this->clock->now()->modify('-1 day');
+        for ($i = 0; $i < 20; ++$i) {
+            $filler = new Entry($feed, 'filler-' . $i, null, 'Filler ' . $i, $recentDate, $recentDate);
+            $filler->setPublishedAt($recentDate);
+            $this->em->persist($filler);
+        }
+
+        $ancientDate = $this->clock->now()->modify('-200 days');
+        $ancient = new Entry($feed, 'ancient', null, 'Ancient', $ancientDate, $ancientDate);
+        $ancient->setPublishedAt($ancientDate);
         $this->em->persist($ancient);
         $this->em->flush();
 
@@ -786,8 +897,23 @@ final class RefreshRunnerTest extends DbTestCase
         $user = new User('reader@example.com', $this->clock->now());
         $this->em->persist($user);
         $feed = $this->dueFeed('https://a.example.com/feed');
-        $ancient = new Entry($feed, 'ancient', null, 'Ancient', $this->clock->now()->modify('-200 days'));
-        $ancient->setPublishedAt($this->clock->now()->modify('-200 days'));
+
+        // Twenty recent filler entries hold the feed above EntryPruner's
+        // per-feed floor, so the ancient entry below falls beyond the
+        // newest-twenty boundary and would be eligible for the age pass —
+        // this isolates the user-scope check itself, since a below-floor
+        // feed would survive pruning regardless of whether this run scope
+        // is meant to prune at all.
+        $recentDate = $this->clock->now()->modify('-1 day');
+        for ($i = 0; $i < 20; ++$i) {
+            $filler = new Entry($feed, 'filler-' . $i, null, 'Filler ' . $i, $recentDate, $recentDate);
+            $filler->setPublishedAt($recentDate);
+            $this->em->persist($filler);
+        }
+
+        $ancientDate = $this->clock->now()->modify('-200 days');
+        $ancient = new Entry($feed, 'ancient', null, 'Ancient', $ancientDate, $ancientDate);
+        $ancient->setPublishedAt($ancientDate);
         $this->em->persist($ancient);
         $this->em->persist(new Subscription($user, $feed, $this->clock->now()));
         $this->em->flush();
@@ -799,7 +925,7 @@ final class RefreshRunnerTest extends DbTestCase
         $report = $this->runner()->run(RefreshRequest::forUser($userId, 60));
 
         self::assertSame(0, $report->pruned);
-        self::assertCount(1, $this->em->getRepository(Entry::class)->findAll());
+        self::assertCount(21, $this->em->getRepository(Entry::class)->findAll());
     }
 
     public function testScrapedFeedSynthesizesEntriesFromTheListingPage(): void

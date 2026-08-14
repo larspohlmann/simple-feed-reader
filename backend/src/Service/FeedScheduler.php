@@ -52,6 +52,7 @@ final class FeedScheduler
         $feed->setLastErrorMessage(null);
         $feed->setStatus(FeedStatus::Active);
         $feed->setLastFetchedAt($now);
+        $feed->setLastSuccessfulFetchAt($now);
         $feed->setNextFetchAt($now->modify(sprintf('+%d minutes', $interval)));
     }
 

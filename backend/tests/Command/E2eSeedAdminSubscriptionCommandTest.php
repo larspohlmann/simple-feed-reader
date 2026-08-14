@@ -125,6 +125,23 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
     }
 
     /**
+     * The fixture entry's publishedAt feeds App\Http\EntryJson's 'publishedAt'
+     * field, the same field a normally-ingested entry always carries. Leaving
+     * it unset would make the fixture diverge from every real entry the
+     * magazine-kicker smokes otherwise render, silently changing what those
+     * smokes are exercising.
+     */
+    public function testSeedsTheEntryWithAPublishedDate(): void
+    {
+        $this->seedAdmin();
+
+        $this->tester()->execute([]);
+
+        $entry = $this->fixtureEntry($this->fixtureFeed());
+        self::assertSame($entry->getCreatedAt(), $entry->getPublishedAt());
+    }
+
+    /**
      * Idempotent: a second run finds everything already in place and adds
      * nothing, so repeated e2e runs never pile up fixture rows.
      */

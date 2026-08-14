@@ -85,6 +85,7 @@ final class RecommendationFeedJsonTest extends TestCase
             'https://example.com/1',
             'Post 1',
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
 
         $listRow = new EntryListRow(

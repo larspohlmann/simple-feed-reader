@@ -49,14 +49,16 @@ final class EntryControllerTest extends WebTestCase
         $em->persist($sub);
 
         for ($i = 1; $i <= $count; $i++) {
+            $publishedAt = new \DateTimeImmutable(sprintf('2026-07-%02dT00:00:00Z', $i));
             $e = new Entry(
                 $feed,
                 "g$i",
                 "https://example.com/$i",
                 "Post $i",
                 new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+                $publishedAt,
             );
-            $e->setPublishedAt(new \DateTimeImmutable(sprintf('2026-07-%02dT00:00:00Z', $i)));
+            $e->setPublishedAt($publishedAt);
             $em->persist($e);
         }
         $em->flush();
@@ -117,10 +119,10 @@ final class EntryControllerTest extends WebTestCase
         $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $july2 = new \DateTimeImmutable('2026-07-02T00:00:00Z');
-        $withImage = new Entry($feed, 'img-1', 'https://example.com/1', 'Post', $july1);
+        $withImage = new Entry($feed, 'img-1', 'https://example.com/1', 'Post', $july1, $july1);
         $withImage->setImage('https://i.example.com/big.jpg', 948, 474);
         $em->persist($withImage);
-        $em->persist(new Entry($feed, 'img-2', 'https://example.com/2', 'Post 2', $july2));
+        $em->persist(new Entry($feed, 'img-2', 'https://example.com/2', 'Post 2', $july2, $july2));
         $em->flush();
 
         $client->request('GET', '/api/entries', server: $headers);
@@ -166,6 +168,56 @@ final class EntryControllerTest extends WebTestCase
         self::assertIsArray($firstOfPage2);
         self::assertSame('Post 1', $firstOfPage2['title']);
         self::assertNull($page2['nextCursor']);
+    }
+
+    public function testPaginatesWithoutSkippingOrRepeatingWhenEntriesShareAnEffectiveDate(): void
+    {
+        // A whole refresh run shares one effective date, so the id embedded in
+        // the cursor is the only tiebreaker: if it defaulted to 0 instead of
+        // the real row id, the tied group would skip or repeat across pages.
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-tied-cursor@example.com');
+
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $feed = new Feed('https://example.com/tied-feed.xml');
+        $feed->setTitle('Tied');
+        $em->persist($feed);
+        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+
+        $tied = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        for ($i = 1; $i <= 3; $i++) {
+            $em->persist(new Entry($feed, "tied-$i", "https://example.com/tied-$i", "Tied $i", $tied, $tied));
+        }
+        $em->flush();
+
+        $client->request('GET', '/api/entries?limit=2', server: $headers);
+        $page1 = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($page1);
+        self::assertIsArray($page1['entries']);
+        self::assertCount(2, $page1['entries']);
+        self::assertIsString($page1['nextCursor']);
+
+        $client->request(
+            'GET',
+            '/api/entries?limit=2&cursor=' . urlencode($page1['nextCursor']),
+            server: $headers,
+        );
+        $page2 = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($page2);
+        self::assertIsArray($page2['entries']);
+        self::assertCount(1, $page2['entries']);
+
+        $titles = array_map(
+            static function (mixed $entry): mixed {
+                self::assertIsArray($entry);
+
+                return $entry['title'];
+            },
+            [...$page1['entries'], ...$page2['entries']],
+        );
+        sort($titles);
+        self::assertSame(['Tied 1', 'Tied 2', 'Tied 3'], $titles);
     }
 
     public function testRejectsUnknownView(): void

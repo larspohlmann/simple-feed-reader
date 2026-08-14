@@ -54,6 +54,7 @@ final class EntryStateTest extends TestCase
             'https://example.com/1',
             'Post',
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
 
         return new EntryState($user, $entry);

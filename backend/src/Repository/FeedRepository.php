@@ -30,7 +30,7 @@ class FeedRepository extends ServiceEntityRepository
     {
         /** @var list<Feed> $feeds */
         $feeds = $this->dueQueryBuilder($criteria)
-            ->addSelect('COALESCE(f.nextFetchAt, :epoch) AS HIDDEN dueOrder')
+            ->addSelect('COALESCE(f.fetchSchedule.nextFetchAt, :epoch) AS HIDDEN dueOrder')
             ->setParameter('epoch', new \DateTimeImmutable('@0'))
             ->orderBy('dueOrder', 'ASC')
             ->addOrderBy('f.id', 'ASC')
@@ -125,7 +125,7 @@ class FeedRepository extends ServiceEntityRepository
             return;
         }
 
-        $qb->andWhere('(f.nextFetchAt IS NULL OR f.nextFetchAt <= :now)')
+        $qb->andWhere('(f.fetchSchedule.nextFetchAt IS NULL OR f.fetchSchedule.nextFetchAt <= :now)')
             ->setParameter('now', $criteria->now);
     }
 
@@ -140,7 +140,11 @@ class FeedRepository extends ServiceEntityRepository
         // that in #151, before the kernel pinned UTC. Treat it as stale rather
         // than let it read as "just fetched" and freeze the feed out of every
         // refresh in silence, which is a costly failure to notice.
-        $qb->andWhere('(f.lastFetchedAt IS NULL OR f.lastFetchedAt <= :cooldownCutoff OR f.lastFetchedAt > :now)')
+        $qb->andWhere(
+            '(f.fetchSchedule.lastFetchedAt IS NULL'
+            . ' OR f.fetchSchedule.lastFetchedAt <= :cooldownCutoff'
+            . ' OR f.fetchSchedule.lastFetchedAt > :now)',
+        )
             ->setParameter('cooldownCutoff', $criteria->cooldownCutoff)
             ->setParameter('now', $criteria->now);
     }

@@ -55,6 +55,7 @@ final class KernelTimezoneTest extends KernelTestCase
             'https://example.com/article',
             'Timezone probe',
             new \DateTimeImmutable('2026-07-27 23:23:05', new \DateTimeZone('UTC')),
+            new \DateTimeImmutable('2026-07-27 23:23:05', new \DateTimeZone('UTC')),
         );
         $em->persist($feed);
         $em->persist($entry);

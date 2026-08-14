@@ -43,7 +43,8 @@ final class ForYouFeedResponderTest extends DbTestCase
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $this->em->persist($run);
 
-        $entry = new Entry($feed, 'g1', null, 'Title g1', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $createdAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        $entry = new Entry($feed, 'g1', null, 'Title g1', $createdAt, $createdAt);
         $this->em->persist($entry);
         $this->em->persist(new RecommendationItem($run, $entry, 1, 'reason g1', 88));
         $this->em->flush();

@@ -13,7 +13,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\UniqueConstraint(name: 'uniq_entry_feed_guid', columns: ['feed_id', 'guid_hash'])]
 #[ORM\Index(name: 'idx_entry_effective', columns: ['effective_date', 'id'])]
 #[ORM\Index(name: 'idx_entry_feed_effective', columns: ['feed_id', 'effective_date'])]
-#[ORM\Index(name: 'idx_entry_list', columns: ['created_at', 'published_at', 'id'])]
+#[ORM\Index(name: 'idx_entry_feed_created', columns: ['feed_id', 'created_at', 'id'])]
 class Entry
 {
     #[ORM\Id]
@@ -63,13 +63,14 @@ class Entry
     private \DateTimeImmutable $createdAt;
 
     /**
-     * The list-sort instant: publishedAt when the feed supplied one, createdAt
-     * otherwise. Materialized (rather than COALESCE'd in queries) so an index
-     * can serve the reader's newest-first sort. Maintained exclusively by the
-     * constructor and setPublishedAt() — no public setter — so it cannot drift
-     * from its sources. The column default exists only for the migration on
-     * SQLite, which cannot add a NOT NULL column without one; every real row
-     * is written by this class or backfilled by the migration.
+     * The list-sort instant, decided by EntryEffectiveDate at ingest and never
+     * recomputed here. It used to be `publishedAt ?? createdAt`, derived in this
+     * class so it could not drift; the rule now needs the fetch that stored the
+     * entry and the feed's previous fetch, which an entity has no business
+     * knowing. The invariant moved to one policy with its own tests (#384).
+     * Materialized rather than COALESCE'd so idx_entry_effective can serve the
+     * reader's sort. The column default exists only for the migration on SQLite,
+     * which cannot add a NOT NULL column without one.
      */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, options: ['default' => '1970-01-01 00:00:00'])]
     private \DateTimeImmutable $effectiveDate;
@@ -80,6 +81,7 @@ class Entry
         ?string $url,
         string $title,
         \DateTimeImmutable $createdAt,
+        \DateTimeImmutable $effectiveDate,
     ) {
         $this->feed = $feed;
         $this->guid = $guid;
@@ -87,7 +89,7 @@ class Entry
         $this->url = $url;
         $this->title = $title;
         $this->createdAt = $createdAt;
-        $this->effectiveDate = $createdAt;
+        $this->effectiveDate = $effectiveDate;
     }
 
     public function getId(): ?int
@@ -185,7 +187,6 @@ class Entry
     public function setPublishedAt(?\DateTimeImmutable $publishedAt): void
     {
         $this->publishedAt = $publishedAt;
-        $this->effectiveDate = $publishedAt ?? $this->createdAt;
     }
 
     public function getEffectiveDate(): \DateTimeImmutable

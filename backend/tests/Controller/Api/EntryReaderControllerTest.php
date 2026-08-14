@@ -62,6 +62,7 @@ final class EntryReaderControllerTest extends WebTestCase
             $url,
             'Post',
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
         $em->persist($entry);
         $em->flush();
