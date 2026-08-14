@@ -265,6 +265,7 @@ optional hint and an optional error.
 | `label` | `string` (required) | — |
 | `error` | `string \| null` | `null` |
 | `hint` | `string \| null` | `null` |
+| `info` | `string \| null` | `null` — an already-translated explanation; renders an `<app-info-tip>` in the label row (#372) |
 | `required` | `boolean` | `false` |
 
 ```html

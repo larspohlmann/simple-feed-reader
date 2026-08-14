@@ -12,6 +12,9 @@
   </span>
   <ng-content />
 </label>
+@if (info(); as text) {
+  <app-info-tip corner [text]="text" [label]="label()" />
+}
 @if (hint(); as text) {
   <p class="hint">{{ text }}</p>
 }
