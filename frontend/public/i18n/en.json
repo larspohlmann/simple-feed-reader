@@ -112,7 +112,20 @@
         "modelPicker": "The list is fetched live from this configuration's endpoint. Pick the model AI features should use — the configuration is ready once a model is saved.",
         "name": "A free label for this configuration, shown only in this list. Leave it empty to show the endpoint's host instead.",
         "baseUrl": "The root URL of an OpenAI-compatible API, including the version path — for example https://api.openai.com/v1 for OpenAI itself, or the address of a local server such as LM Studio. Any provider that speaks the OpenAI chat API works.",
-        "apiKey": "The key is sent to the server once and stored encrypted; it is never shown again. Afterwards the list only shows its last characters so you can tell keys apart. Enter a new key to replace the stored one."
+        "apiKey": "The key is sent to the server once and stored encrypted; it is never shown again. Afterwards the list only shows its last characters so you can tell keys apart. Enter a new key to replace the stored one.",
+        "autoGenerate": "How often a new “For you” run starts on its own. The schedule needs the background worker (Docker) or the maintenance cron — without one, nothing starts by itself and a note appears below with the call to trigger runs externally. “Only manually” disables the schedule; you can always start a run yourself.",
+        "lookback": "How many days back a run looks for candidate articles. Only unread articles inside this window are considered; “Maximum articles” caps how many of them one run may take.",
+        "guidance": "Your own steering text for the picks — topics to prefer, topics to avoid, tone. It is sent on top of the fixed prompt below. Leave it empty to use the built-in default (shown as the placeholder); “Reset to default” clears your text.",
+        "favoritesCap": "How many of your most recently favorited articles are shown to the model as taste history. 0 leaves favorites out.",
+        "keptCap": "How many of your most recently kept articles are shown to the model as taste history. 0 leaves kept articles out.",
+        "viewedCap": "How many of your most recently viewed articles are shown to the model as taste history. 0 leaves viewed articles out.",
+        "candidatePool": "The upper bound on unread articles one run considers, taken newest-first inside the look-back window. A larger pool sees more of your backlog but costs more tokens and time.",
+        "picksLimit": "How many recommendations one run may produce at most.",
+        "batchCount": "How the candidate pool is split into requests. Empty means automatic: the run packs as many articles per request as the context window allows. A fixed number forces exactly that many batches — useful when a provider struggles with large requests.",
+        "contextWindow": "The token budget one request may use. The line below says where the current value comes from: your override here, the limit your provider reports, or the built-in default. Leave the field empty to use the provider value or the default.",
+        "fixedPrompt": "The role and output contract every run sends. They are fixed so the response stays machine-readable — the guidance prompt above is the place for your own instructions.",
+        "debug": "When on, every run keeps its full request and response log and recommendations show their scores. The log appears in the “Debug log” panel below once a run has produced entries.",
+        "purge": "Deletes every recommended article from “For you” for this account. The articles themselves and their read state stay untouched. This cannot be undone — the next run builds a fresh list."
       },
       "recommendations": {
         "title": "Recommendations",

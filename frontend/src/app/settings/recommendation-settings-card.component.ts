@@ -17,6 +17,7 @@ import {
 import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../shared/field/field.component';
+import { InfoTipComponent } from '../shared/info-tip/info-tip.component';
 import { ToggleComponent } from '../shared/toggle/toggle.component';
 import { RecommendationSettingsService } from './recommendation-settings.service';
 
@@ -40,6 +41,7 @@ import { RecommendationSettingsService } from './recommendation-settings.service
     DisclosureComponent,
     ErrorBannerComponent,
     FieldComponent,
+    InfoTipComponent,
     ToggleComponent,
     TranslocoPipe,
   ],

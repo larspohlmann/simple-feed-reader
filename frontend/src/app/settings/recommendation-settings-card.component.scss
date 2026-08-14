@@ -29,6 +29,12 @@ app-disclosure {
   gap: var(--space-1);
 }
 
+.debug-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
 .debug-label {
   color: var(--text-primary);
   font-size: var(--fs-sm);
@@ -93,6 +99,11 @@ select {
   color: var(--text-muted);
   font-size: var(--fs-sm);
   white-space: pre-wrap;
+}
+
+.fixed-info {
+  display: block;
+  margin-bottom: var(--space-3);
 }
 
 .saved {

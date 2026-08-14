@@ -414,4 +414,58 @@ describe('RecommendationSettingsCardComponent', () => {
     expect(request.request.body.lookbackDays).toBe(7);
     request.flush({ ...STATE, lookbackDays: 7 });
   });
+
+  it('gives every expert field an info tip', () => {
+    const fixture = mount();
+
+    const grid = fixture.nativeElement.querySelector('.expert-grid') as HTMLElement;
+    const triggers = Array.from(
+      grid.querySelectorAll('app-info-tip button.trigger'),
+    ) as HTMLButtonElement[];
+    expect(triggers.map((el) => el.getAttribute('aria-label'))).toEqual([
+      'Favorites in history',
+      'Kept in history',
+      'Viewed in history',
+      'Maximum articles',
+      'Maximum picks',
+      'Batches (empty = automatic)',
+    ]);
+  });
+
+  it('explains the schedule, the look-back and the context window on their fields', () => {
+    const fixture = mount();
+
+    const labelled = (label: string): HTMLButtonElement | undefined =>
+      (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('app-field app-info-tip button.trigger'),
+        ) as HTMLButtonElement[]
+      ).find((el) => el.getAttribute('aria-label') === label);
+
+    expect(labelled('Auto-generate For you')).toBeDefined();
+    expect(labelled('Look back')).toBeDefined();
+    expect(labelled('Context window (tokens)')).toBeDefined();
+  });
+
+  it('keeps the danger-zone note visible and adds a tip beside it', () => {
+    const fixture = mount();
+
+    const zone = fixture.nativeElement.querySelector('.danger-zone') as HTMLElement;
+    expect(zone.querySelector('.danger-zone__note')?.textContent).toContain(
+      'Removes every recommended post',
+    );
+
+    const trigger = zone.querySelector('app-info-tip button.trigger') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+    expect(zone.querySelector('app-info-tip .panel')?.textContent).toContain('cannot be undone');
+  });
+
+  it('adds a tip to the debug row without touching the toggle wiring', () => {
+    const fixture = mount();
+
+    const row = fixture.nativeElement.querySelector('.debug-row') as HTMLElement;
+    expect(row.querySelector('app-info-tip button.trigger')).not.toBeNull();
+    expect(row.querySelector('#rec-debug-toggle')).not.toBeNull();
+  });
 });
