@@ -26,28 +26,124 @@ final class EntryPrunerTest extends DbTestCase
         $this->pruner = new EntryPruner($this->em, $this->clock);
     }
 
-    private function entry(Feed $feed, string $guid, \DateTimeImmutable $publishedAt): Entry
+    private function daysAgo(int $days): \DateTimeImmutable
     {
-        $entry = new Entry($feed, $guid, null, 'Title ' . $guid, $publishedAt, $publishedAt);
-        $entry->setPublishedAt($publishedAt);
+        return $this->clock->now()->modify(sprintf('-%d days', $days));
+    }
+
+    /**
+     * A feed with `$count` entries, all fetched at `$createdAt` (defaults to
+     * now). Entries rank newest-first by insertion order for callers that
+     * care about which ones a floor or a cap would drop.
+     */
+    private function feedWithEntries(int $count, ?\DateTimeImmutable $createdAt = null): Feed
+    {
+        $feed = new Feed('https://example.com/feed-' . uniqid('', true));
+        $this->em->persist($feed);
+        $this->em->flush();
+
+        $fetchedAt = $createdAt ?? $this->clock->now();
+        for ($i = 0; $i < $count; ++$i) {
+            $this->persistEntry($feed, sprintf('entry-%d', $i), $fetchedAt);
+        }
+        $this->em->flush();
+
+        return $feed;
+    }
+
+    /**
+     * One extra entry on an existing feed, fetched at `$createdAt` and sorted
+     * at `$effectiveDate` (defaults to `$createdAt`).
+     */
+    private function seedEntry(
+        Feed $feed,
+        string $guid,
+        \DateTimeImmutable $createdAt,
+        ?\DateTimeImmutable $effectiveDate = null,
+    ): Entry {
+        $entry = $this->persistEntry($feed, $guid, $createdAt, $effectiveDate);
+        $this->em->flush();
+
+        return $entry;
+    }
+
+    private function persistEntry(
+        Feed $feed,
+        string $guid,
+        \DateTimeImmutable $createdAt,
+        ?\DateTimeImmutable $effectiveDate = null,
+    ): Entry {
+        $entry = new Entry($feed, $guid, null, 'Title ' . $guid, $createdAt, $effectiveDate ?? $createdAt);
+        $entry->setPublishedAt($createdAt);
         $this->em->persist($entry);
 
         return $entry;
     }
 
+    private function findByGuid(Feed $feed, string $guid): ?Entry
+    {
+        return $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed, 'guid' => $guid]);
+    }
+
+    /** @return list<Entry> */
+    private function findAllEntries(Feed $feed): array
+    {
+        return $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]);
+    }
+
+    private function countEntries(Feed $feed): int
+    {
+        return $this->em->getRepository(Entry::class)->count(['feed' => $feed]);
+    }
+
+    public function testKeepsAnOldArticleThatWasFetchedRecently(): void
+    {
+        $feed = $this->feedWithEntries(1);
+        $this->seedEntry($feed, 'archive', $this->daysAgo(2), $this->daysAgo(2000));
+
+        $this->pruner->prune();
+
+        self::assertNotNull($this->findByGuid($feed, 'archive'));
+    }
+
+    public function testDeletesAnArticleFetchedBeforeTheRetentionWindow(): void
+    {
+        $this->feedWithEntries(30, $this->daysAgo(100));
+
+        self::assertSame(10, $this->pruner->prune());
+    }
+
+    public function testNeverDeletesAFeedsNewestTwentyEntries(): void
+    {
+        $feed = $this->feedWithEntries(25, $this->daysAgo(100));
+
+        $this->pruner->prune();
+
+        self::assertSame(20, $this->countEntries($feed));
+    }
+
+    public function testAFeedOfTwentyOldEntriesLosesNone(): void
+    {
+        $this->feedWithEntries(20, $this->daysAgo(100));
+
+        self::assertSame(0, $this->pruner->prune());
+    }
+
     public function testPrunesOldEntriesButKeepsProtectedAndRecent(): void
     {
-        $feed = new Feed('https://example.com/feed');
         $user = new User('reader@example.com', $this->clock->now());
-        $this->em->persist($feed);
         $this->em->persist($user);
+        $this->em->flush();
 
-        $old = $this->clock->now()->modify('-120 days');
-        $this->entry($feed, 'old-plain', $old);
-        $favorite = $this->entry($feed, 'old-favorite', $old);
-        $kept = $this->entry($feed, 'old-kept', $old);
-        $oldButRead = $this->entry($feed, 'old-read', $old);
-        $this->entry($feed, 'recent', $this->clock->now()->modify('-5 days'));
+        // Twenty recent filler entries hold the feed above the floor, so the
+        // four old entries below all fall beyond the newest-twenty boundary.
+        $feed = $this->feedWithEntries(20, $this->daysAgo(5));
+
+        $old = $this->daysAgo(120);
+        $this->seedEntry($feed, 'old-plain', $old);
+        $favorite = $this->seedEntry($feed, 'old-favorite', $old);
+        $kept = $this->seedEntry($feed, 'old-kept', $old);
+        $oldButRead = $this->seedEntry($feed, 'old-read', $old);
 
         $favoriteState = new EntryState($user, $favorite);
         $favoriteState->setIsFavorite(true);
@@ -59,17 +155,19 @@ final class EntryPrunerTest extends DbTestCase
         $this->em->persist($keptState);
         $this->em->persist($readState);
         $this->em->flush();
-        $this->em->clear();
 
         $pruned = $this->pruner->prune();
 
         self::assertSame(2, $pruned);
         $remainingGuids = array_map(
             static fn (Entry $entry): string => $entry->getGuid(),
-            $this->em->getRepository(Entry::class)->findAll(),
+            array_filter($this->findAllEntries($feed), static fn (Entry $entry): bool => !str_starts_with(
+                $entry->getGuid(),
+                'entry-',
+            )),
         );
         sort($remainingGuids);
-        self::assertSame(['old-favorite', 'old-kept', 'recent'], $remainingGuids);
+        self::assertSame(['old-favorite', 'old-kept'], $remainingGuids);
     }
 
     public function testProtectionAppliesAcrossUsers(): void
@@ -81,7 +179,8 @@ final class EntryPrunerTest extends DbTestCase
         $this->em->persist($alice);
         $this->em->persist($bob);
 
-        $shared = $this->entry($feed, 'shared', $this->clock->now()->modify('-200 days'));
+        $shared = $this->persistEntry($feed, 'shared', $this->daysAgo(200));
+        $this->em->flush();
 
         $aliceRead = new EntryState($alice, $shared);
         $aliceRead->setIsRead(true);
@@ -90,25 +189,24 @@ final class EntryPrunerTest extends DbTestCase
         $this->em->persist($aliceRead);
         $this->em->persist($bobKept);
         $this->em->flush();
-        $this->em->clear();
 
         self::assertSame(0, $this->pruner->prune());
-        self::assertCount(1, $this->em->getRepository(Entry::class)->findAll());
+        self::assertCount(1, $this->findAllEntries($feed));
     }
 
     public function testDeletingEntryRemovesItsStateRows(): void
     {
-        $feed = new Feed('https://example.com/feed');
         $user = new User('reader@example.com', $this->clock->now());
-        $this->em->persist($feed);
         $this->em->persist($user);
 
-        $doomed = $this->entry($feed, 'doomed', $this->clock->now()->modify('-200 days'));
+        // Twenty recent filler entries hold the feed above the floor, so the
+        // doomed entry below falls beyond the newest-twenty boundary.
+        $feed = $this->feedWithEntries(20, $this->daysAgo(5));
+        $doomed = $this->seedEntry($feed, 'doomed', $this->daysAgo(200));
         $state = new EntryState($user, $doomed);
         $state->setIsRead(true);
         $this->em->persist($state);
         $this->em->flush();
-        $this->em->clear();
 
         self::assertSame(1, $this->pruner->prune());
         self::assertCount(0, $this->em->getRepository(EntryState::class)->findAll());
@@ -116,13 +214,11 @@ final class EntryPrunerTest extends DbTestCase
 
     public function testEntryWithoutPublishedAtUsesCreatedAt(): void
     {
-        $feed = new Feed('https://example.com/feed');
-        $this->em->persist($feed);
-        $undatedCreatedAt = $this->clock->now()->modify('-200 days');
+        $feed = $this->feedWithEntries(20, $this->daysAgo(5));
+        $undatedCreatedAt = $this->daysAgo(200);
         $undated = new Entry($feed, 'undated', null, 'No date', $undatedCreatedAt, $undatedCreatedAt);
         $this->em->persist($undated);
         $this->em->flush();
-        $this->em->clear();
 
         self::assertSame(1, $this->pruner->prune());
     }
@@ -131,11 +227,10 @@ final class EntryPrunerTest extends DbTestCase
     {
         $feed = new Feed('https://example.com/feed');
         $this->em->persist($feed);
-        $freshCreatedAt = $this->clock->now()->modify('-2 days');
+        $freshCreatedAt = $this->daysAgo(2);
         $fresh = new Entry($feed, 'fresh-undated', null, 'No date', $freshCreatedAt, $freshCreatedAt);
         $this->em->persist($fresh);
         $this->em->flush();
-        $this->em->clear();
 
         self::assertSame(0, $this->pruner->prune());
     }
@@ -156,24 +251,23 @@ final class EntryPrunerTest extends DbTestCase
         $this->em->persist($user);
 
         // Five RECENT entries (age pass leaves them all), oldest → newest.
-        $e1 = $this->entry($feed, 'e1-oldest', $this->clock->now()->modify('-5 days'));
-        $this->entry($feed, 'e2', $this->clock->now()->modify('-4 days'));
-        $this->entry($feed, 'e3', $this->clock->now()->modify('-3 days'));
-        $this->entry($feed, 'e4', $this->clock->now()->modify('-2 days'));
-        $this->entry($feed, 'e5-newest', $this->clock->now()->modify('-1 days'));
+        $e1 = $this->persistEntry($feed, 'e1-oldest', $this->daysAgo(5));
+        $this->persistEntry($feed, 'e2', $this->daysAgo(4));
+        $this->persistEntry($feed, 'e3', $this->daysAgo(3));
+        $this->persistEntry($feed, 'e4', $this->daysAgo(2));
+        $this->persistEntry($feed, 'e5-newest', $this->daysAgo(1));
 
         // The oldest is kept, so it survives despite being beyond the cap.
         $keptState = new EntryState($user, $e1);
         $keptState->setIsKept(true);
         $this->em->persist($keptState);
         $this->em->flush();
-        $this->em->clear();
 
         // Non-protected newest-first: e5,e4,e3,e2 → cap 3 keeps e5,e4,e3, drops e2.
         self::assertSame(1, $pruner->prune());
         $remaining = array_map(
             static fn (Entry $entry): string => $entry->getGuid(),
-            $this->em->getRepository(Entry::class)->findAll(),
+            $this->findAllEntries($feed),
         );
         sort($remaining);
         self::assertSame(['e1-oldest', 'e3', 'e4', 'e5-newest'], $remaining);
@@ -186,24 +280,23 @@ final class EntryPrunerTest extends DbTestCase
         $feed = new Feed('https://example.com/feed');
         $this->em->persist($feed);
         for ($i = 0; $i < 3; ++$i) {
-            $this->entry($feed, 'entry-' . $i, $this->clock->now()->modify(sprintf('-%d days', $i + 1)));
+            $this->persistEntry($feed, 'entry-' . $i, $this->daysAgo($i + 1));
         }
         $this->em->flush();
-        $this->em->clear();
 
         self::assertSame(0, $pruner->prune());
-        self::assertCount(3, $this->em->getRepository(Entry::class)->findAll());
+        self::assertCount(3, $this->findAllEntries($feed));
     }
 
     public function testPruningTheLastEntryOfACompletedRunAlsoDropsTheRun(): void
     {
-        $feed = new Feed('https://example.com/feed');
         $user = new User('reader@example.com', $this->clock->now());
-        $this->em->persist($feed);
         $this->em->persist($user);
 
-        $doomed = $this->entry($feed, 'doomed', $this->clock->now()->modify('-200 days'));
-        $this->em->flush();
+        // Twenty recent filler entries hold the feed above the floor, so the
+        // doomed entry below falls beyond the newest-twenty boundary.
+        $feed = $this->feedWithEntries(20, $this->daysAgo(5));
+        $doomed = $this->seedEntry($feed, 'doomed', $this->daysAgo(200));
 
         $run = new RecommendationRun($user, $this->clock->now());
         $run->snapshot([[1]]);
@@ -212,7 +305,6 @@ final class EntryPrunerTest extends DbTestCase
         $this->em->persist(new RecommendationItem($run, $doomed, 1, 'because'));
         $this->em->flush();
         $runId = $run->getId();
-        $this->em->clear();
 
         // The run left empty by the doomed entry's deletion is bookkeeping,
         // not an entry: it must not inflate the count the refresh summary
@@ -273,11 +365,10 @@ final class EntryPrunerTest extends DbTestCase
         foreach (['https://a.example/feed', 'https://b.example/feed'] as $n => $url) {
             $feed = new Feed($url);
             $this->em->persist($feed);
-            $this->entry($feed, "feed{$n}-a", $this->clock->now()->modify('-2 days'));
-            $this->entry($feed, "feed{$n}-b", $this->clock->now()->modify('-1 days'));
+            $this->persistEntry($feed, "feed{$n}-a", $this->daysAgo(2));
+            $this->persistEntry($feed, "feed{$n}-b", $this->daysAgo(1));
         }
         $this->em->flush();
-        $this->em->clear();
 
         self::assertSame(0, $pruner->prune());
         self::assertCount(4, $this->em->getRepository(Entry::class)->findAll());

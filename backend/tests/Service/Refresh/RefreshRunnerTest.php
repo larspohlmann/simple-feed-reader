@@ -823,6 +823,17 @@ final class RefreshRunnerTest extends DbTestCase
     public function testAllDueRunPrunesOldEntries(): void
     {
         $feed = $this->dueFeed('https://a.example.com/feed');
+
+        // Twenty recent filler entries hold the feed above EntryPruner's
+        // per-feed floor, so the ancient entry below falls beyond the
+        // newest-twenty boundary and is eligible for the age pass.
+        $recentDate = $this->clock->now()->modify('-1 day');
+        for ($i = 0; $i < 20; ++$i) {
+            $filler = new Entry($feed, 'filler-' . $i, null, 'Filler ' . $i, $recentDate, $recentDate);
+            $filler->setPublishedAt($recentDate);
+            $this->em->persist($filler);
+        }
+
         $ancientDate = $this->clock->now()->modify('-200 days');
         $ancient = new Entry($feed, 'ancient', null, 'Ancient', $ancientDate, $ancientDate);
         $ancient->setPublishedAt($ancientDate);
