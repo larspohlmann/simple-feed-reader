@@ -902,7 +902,9 @@ git add backend/src/Service/Process/ backend/tests/Service/Process/ backend/test
 git commit -m "feat(#371): add the best-effort detached process launcher"
 ```
 
----### Task 4: `RecommendationDrainSpawner` — the single spawn policy
+---
+
+### Task 4: `RecommendationDrainSpawner` — the single spawn policy
 
 One method, called by every trigger site: launch the drain command only when no worker heartbeat is fresh. On a Docker install the real worker keeps the heartbeat fresh, so this correctly never fires there.
 
