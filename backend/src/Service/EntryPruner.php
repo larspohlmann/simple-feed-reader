@@ -88,7 +88,9 @@ final class EntryPruner
 
         $deleted = 0;
         foreach ($this->feedIdsFetchedBefore($cutoff) as $feedId) {
-            $deleted += $this->deleteByIds($this->staleIdsBeyondFloor((int) $feedId, $cutoff));
+            $deleted += $this->deleteByIds(
+                $this->deletableIdsPastBoundary((int) $feedId, self::MIN_ENTRIES_PER_FEED, $cutoff),
+            );
         }
 
         return $deleted;
@@ -110,48 +112,13 @@ final class EntryPruner
         return $feedIds;
     }
 
-    /**
-     * A feed's entries beyond its newest-twenty floor, narrowed to the ones
-     * fetched before the retention cutoff. The floor and the age cutoff are
-     * two independent conditions on the same candidate set, not one query, so
-     * a feed just over the floor with entries of mixed age is not all-or-
-     * nothing: only the stale ones among the excess are deleted.
-     *
-     * @return list<int>
-     */
-    private function staleIdsBeyondFloor(int $feedId, \DateTimeImmutable $cutoff): array
-    {
-        $boundary = $this->rankBoundaryBeyond($feedId, self::MIN_ENTRIES_PER_FEED);
-        if ($boundary === null) {
-            return [];
-        }
-
-        /** @var list<int> $ids */
-        $ids = $this->em->createQuery(sprintf(
-            'SELECT e.id FROM %s e
-             WHERE e.feed = :feed
-             AND %s
-             AND e.createdAt < :cutoff
-             AND %s',
-            Entry::class,
-            $this->pastBoundaryDql(),
-            $this->notProtectedDql(),
-        ))
-            ->setParameter('feed', $feedId)
-            ->setParameter('boundaryCreatedAt', $boundary->createdAt)
-            ->setParameter('boundaryId', $boundary->id)
-            ->setParameter('cutoff', $cutoff)
-            ->setParameter('true', true, Types::BOOLEAN)
-            ->getSingleColumnResult();
-
-        return $ids;
-    }
-
     private function pruneByFeedCap(): int
     {
         $deleted = 0;
         foreach ($this->feedIdsOverCap() as $feedId) {
-            $deleted += $this->deleteByIds($this->idsBeyondCap((int) $feedId));
+            $deleted += $this->deleteByIds(
+                $this->deletableIdsPastBoundary((int) $feedId, $this->maxEntriesPerFeed, null),
+            );
         }
 
         return $deleted;
@@ -174,32 +141,47 @@ final class EntryPruner
     }
 
     /**
-     * A feed's non-protected entries beyond the newest `maxEntriesPerFeed`.
+     * A feed's deletable entries past its `keep`-th newest — the shape both
+     * passes need, differing only in where they put the boundary and whether
+     * they also demand staleness.
+     *
+     * The cap pass passes no cutoff: everything past the boundary goes. The
+     * age pass passes one, and the two conditions stay independent rather than
+     * collapsing into a single query, so a feed just over the floor holding
+     * entries of mixed age is not all-or-nothing — only the stale ones among
+     * the excess are deleted.
      *
      * @return list<int>
      */
-    private function idsBeyondCap(int $feedId): array
+    private function deletableIdsPastBoundary(int $feedId, int $keep, ?\DateTimeImmutable $cutoff): array
     {
-        $boundary = $this->rankBoundaryBeyond($feedId, $this->maxEntriesPerFeed);
+        $boundary = $this->rankBoundaryBeyond($feedId, $keep);
         if ($boundary === null) {
             return [];
         }
 
-        /** @var list<int> $ids */
-        $ids = $this->em->createQuery(sprintf(
+        $query = $this->em->createQuery(sprintf(
             'SELECT e.id FROM %s e
              WHERE e.feed = :feed
              AND %s
+             %s
              AND %s',
             Entry::class,
             $this->pastBoundaryDql(),
+            $cutoff === null ? '' : 'AND e.createdAt < :cutoff',
             $this->notProtectedDql(),
         ))
             ->setParameter('feed', $feedId)
             ->setParameter('boundaryCreatedAt', $boundary->createdAt)
             ->setParameter('boundaryId', $boundary->id)
-            ->setParameter('true', true, Types::BOOLEAN)
-            ->getSingleColumnResult();
+            ->setParameter('true', true, Types::BOOLEAN);
+
+        if ($cutoff !== null) {
+            $query->setParameter('cutoff', $cutoff);
+        }
+
+        /** @var list<int> $ids */
+        $ids = $query->getSingleColumnResult();
 
         return $ids;
     }
@@ -246,8 +228,8 @@ final class EntryPruner
     /**
      * True when `e` ranks strictly older than `:boundaryCreatedAt`/
      * `:boundaryId` — an index-servable keyset range on
-     * `idx_entry_feed_created`, the same two-column comparison Task 4 uses
-     * for the entry list's own cursor.
+     * `idx_entry_feed_created`, the same two-column comparison
+     * EntryRepository::applyCursor() builds for the entry list's own cursor.
      */
     private function pastBoundaryDql(): string
     {
