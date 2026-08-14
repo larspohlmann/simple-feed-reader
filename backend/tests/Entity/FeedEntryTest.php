@@ -44,24 +44,28 @@ final class FeedEntryTest extends DbTestCase
         $feed = new Feed('https://example.com/a.xml');
         $this->em->persist($feed);
 
+        $firstCreatedAt = new \DateTimeImmutable();
         $entry = new Entry(
             feed: $feed,
             guid: 'urn:uuid:1234',
             url: 'https://example.com/post/1',
             title: 'First post',
-            createdAt: new \DateTimeImmutable(),
+            createdAt: $firstCreatedAt,
+            effectiveDate: $firstCreatedAt,
         );
         $this->em->persist($entry);
         $this->em->flush();
 
         self::assertSame(hash('sha256', 'urn:uuid:1234'), $entry->getGuidHash());
 
+        $duplicateCreatedAt = new \DateTimeImmutable();
         $duplicate = new Entry(
             feed: $feed,
             guid: 'urn:uuid:1234',
             url: 'https://example.com/post/1-copy',
             title: 'Same guid again',
-            createdAt: new \DateTimeImmutable(),
+            createdAt: $duplicateCreatedAt,
+            effectiveDate: $duplicateCreatedAt,
         );
         $this->em->persist($duplicate);
 
@@ -77,8 +81,8 @@ final class FeedEntryTest extends DbTestCase
         $this->em->persist($feedB);
         $now = new \DateTimeImmutable();
 
-        $this->em->persist(new Entry($feedA, 'shared-guid', 'https://a.example.com/1', 'A', $now));
-        $this->em->persist(new Entry($feedB, 'shared-guid', 'https://b.example.com/1', 'B', $now));
+        $this->em->persist(new Entry($feedA, 'shared-guid', 'https://a.example.com/1', 'A', $now, $now));
+        $this->em->persist(new Entry($feedB, 'shared-guid', 'https://b.example.com/1', 'B', $now, $now));
         $this->em->flush();
 
         $this->addToAssertionCount(1);
@@ -88,7 +92,8 @@ final class FeedEntryTest extends DbTestCase
     {
         $feed = new Feed('https://cascade.example.com/feed.xml');
         $this->em->persist($feed);
-        $entry = new Entry($feed, 'guid-c', 'https://cascade.example.com/1', 'Post', new \DateTimeImmutable());
+        $now = new \DateTimeImmutable();
+        $entry = new Entry($feed, 'guid-c', 'https://cascade.example.com/1', 'Post', $now, $now);
         $this->em->persist($entry);
         $this->em->flush();
         $entryId = $entry->getId();
@@ -102,5 +107,38 @@ final class FeedEntryTest extends DbTestCase
         $this->em->clear();
 
         self::assertNull($this->em->find(Entry::class, $entryId));
+    }
+
+    public function testEntryKeepsTheEffectiveDateItWasGiven(): void
+    {
+        $feed = new Feed('https://example.test/feed.xml');
+        $entry = new Entry(
+            $feed,
+            'guid-1',
+            'https://example.test/a',
+            'A',
+            new \DateTimeImmutable('2026-08-14 12:00:00'),
+            new \DateTimeImmutable('2020-03-01 00:00:00'),
+        );
+
+        self::assertSame('2020-03-01 00:00:00', $entry->getEffectiveDate()->format('Y-m-d H:i:s'));
+    }
+
+    public function testSettingThePublishedDateDoesNotMoveTheEffectiveDate(): void
+    {
+        $feed = new Feed('https://example.test/feed.xml');
+        $entry = new Entry(
+            $feed,
+            'guid-2',
+            'https://example.test/b',
+            'B',
+            new \DateTimeImmutable('2026-08-14 12:00:00'),
+            new \DateTimeImmutable('2026-08-14 12:00:00'),
+        );
+
+        $entry->setPublishedAt(new \DateTimeImmutable('2019-01-01 00:00:00'));
+
+        self::assertSame('2026-08-14 12:00:00', $entry->getEffectiveDate()->format('Y-m-d H:i:s'));
+        self::assertSame('2019-01-01 00:00:00', $entry->getPublishedAt()?->format('Y-m-d H:i:s'));
     }
 }

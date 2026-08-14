@@ -62,6 +62,7 @@ final class RecommendationRunPurgerTest extends DbTestCase
             'https://example.com/' . $guid,
             'Title ' . $guid,
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
         $this->em->persist($entry);
         $this->em->flush();

@@ -146,14 +146,16 @@ final readonly class RecommendationRunFixtures
 
     public function entry(Feed $feed, string $guid, string $published): Entry
     {
+        $publishedAt = new \DateTimeImmutable($published);
         $entry = new Entry(
             $feed,
             $guid,
             'https://example.com/' . $guid,
             $guid,
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            $publishedAt,
         );
-        $entry->setPublishedAt(new \DateTimeImmutable($published));
+        $entry->setPublishedAt($publishedAt);
         $this->em->persist($entry);
         $this->em->flush();
 

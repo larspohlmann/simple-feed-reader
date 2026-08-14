@@ -367,14 +367,16 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $otherFeed = new Feed('https://example.com/other.xml');
         $otherFeed->setTitle('Other');
         $this->em->persist($otherFeed);
+        $foreignPublishedAt = new \DateTimeImmutable('2026-08-01T00:00:00Z');
         $foreign = new Entry(
             $otherFeed,
             'foreign',
             'https://example.com/foreign',
             'foreign',
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            $foreignPublishedAt,
         );
-        $foreign->setPublishedAt(new \DateTimeImmutable('2026-08-01T00:00:00Z'));
+        $foreign->setPublishedAt($foreignPublishedAt);
         $this->em->persist($foreign);
         $this->em->flush();
 
@@ -406,14 +408,16 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
     private function entry(string $guid, string $published): Entry
     {
+        $publishedAt = new \DateTimeImmutable($published);
         $entry = new Entry(
             $this->feed,
             $guid,
             'https://example.com/' . $guid,
             $guid,
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            $publishedAt,
         );
-        $entry->setPublishedAt(new \DateTimeImmutable($published));
+        $entry->setPublishedAt($publishedAt);
         $this->em->persist($entry);
         $this->em->flush();
 

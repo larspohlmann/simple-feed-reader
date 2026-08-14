@@ -7,6 +7,7 @@ namespace App\Service\Subscription;
 use App\Entity\Feed;
 use App\Service\Discovery\DiscoveredFeed;
 use App\Service\EntryIngestor;
+use App\Service\FeedIngestContext;
 use App\Service\FeedScheduler;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
@@ -55,7 +56,11 @@ final readonly class FirstFetchRecorder
             return 0;
         }
 
-        $created = $this->ingestor->ingest($feed, $discovered->document, $this->clock->now());
+        $created = $this->ingestor->ingest(
+            $feed,
+            $discovered->document,
+            new FeedIngestContext($this->clock->now(), null),
+        );
         $feed->setEtag($this->truncate($discovered->etag, self::ETAG_MAX));
         $feed->setLastModified($this->truncate($discovered->lastModified, self::LAST_MODIFIED_MAX));
         $this->scheduler->recordSuccess($feed, $created);

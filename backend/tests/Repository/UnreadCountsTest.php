@@ -34,8 +34,9 @@ final class UnreadCountsTest extends DbTestCase
 
         // under watermark → read; above → unread; explicit read; explicit unread.
         foreach ([['a', '2026-07-05'], ['b', '2026-07-20'], ['c', '2026-07-21'], ['d', '2026-07-22']] as [$g, $d]) {
-            $e = new Entry($feed, $g, null, $g, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-            $e->setPublishedAt(new \DateTimeImmutable($d . 'T00:00:00Z'));
+            $publishedAt = new \DateTimeImmutable($d . 'T00:00:00Z');
+            $e = new Entry($feed, $g, null, $g, new \DateTimeImmutable('2026-07-01T00:00:00Z'), $publishedAt);
+            $e->setPublishedAt($publishedAt);
             $this->em->persist($e);
             if ($g === 'c') {
                 $st = new EntryState($user, $e);

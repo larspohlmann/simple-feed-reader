@@ -24,7 +24,8 @@ final class FavoriteKeptCountsTest extends DbTestCase
 
     private function entry(Feed $feed, string $g): Entry
     {
-        $e = new Entry($feed, $g, null, $g, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $createdAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        $e = new Entry($feed, $g, null, $g, $createdAt, $createdAt);
         $this->em->persist($e);
 
         return $e;

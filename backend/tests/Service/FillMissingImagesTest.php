@@ -7,6 +7,7 @@ namespace App\Tests\Service;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Service\EntryIngestor;
+use App\Service\FeedIngestContext;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
 use App\Service\Parser\ParsedImage;
@@ -27,6 +28,11 @@ final class FillMissingImagesTest extends DbTestCase
         return new \DateTimeImmutable('2026-07-21T12:00:00Z');
     }
 
+    private static function context(): FeedIngestContext
+    {
+        return new FeedIngestContext(self::fetchedAt(), null);
+    }
+
     private function feed(string $url = 'https://example.com/feed'): Feed
     {
         $feed = new Feed($url);
@@ -45,7 +51,7 @@ final class FillMissingImagesTest extends DbTestCase
     {
         $feed = $this->feed();
         $withoutImage = new ParsedFeed('T', null, null, [$this->parsedEntry('g2', null)]);
-        $this->ingestor()->ingest($feed, $withoutImage, self::fetchedAt());
+        $this->ingestor()->ingest($feed, $withoutImage, self::context());
         $this->em->flush();
 
         $withImage = new ParsedFeed('T', null, null, [
@@ -67,7 +73,7 @@ final class FillMissingImagesTest extends DbTestCase
         $feed = $this->feed();
         $this->ingestor()->ingest($feed, new ParsedFeed('T', null, null, [
             $this->parsedEntry('g3', new ParsedImage('https://i/original.jpg', 900, 600)),
-        ]), self::fetchedAt());
+        ]), self::context());
         $this->em->flush();
 
         $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeed('T', null, null, [
@@ -96,7 +102,7 @@ final class FillMissingImagesTest extends DbTestCase
     {
         $feed = $this->feed();
         $g5 = new ParsedFeed('T', null, null, [$this->parsedEntry('g5', null)]);
-        $this->ingestor()->ingest($feed, $g5, self::fetchedAt());
+        $this->ingestor()->ingest($feed, $g5, self::context());
         $this->em->flush();
 
         $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeed('T', null, null, [
@@ -113,7 +119,7 @@ final class FillMissingImagesTest extends DbTestCase
     {
         $feed = $this->feed();
         $g6 = new ParsedFeed('T', null, null, [$this->parsedEntry('g6', null)]);
-        $this->ingestor()->ingest($feed, $g6, self::fetchedAt());
+        $this->ingestor()->ingest($feed, $g6, self::context());
         $this->em->flush();
 
         $overlongUrl = 'https://i/' . str_repeat('u', 2048) . '.jpg';
@@ -131,7 +137,7 @@ final class FillMissingImagesTest extends DbTestCase
     {
         $feed = $this->feed();
         $g7 = new ParsedFeed('T', null, null, [$this->parsedEntry('g7', null)]);
-        $this->ingestor()->ingest($feed, $g7, self::fetchedAt());
+        $this->ingestor()->ingest($feed, $g7, self::context());
         $this->em->flush();
 
         $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeed('T', null, null, [

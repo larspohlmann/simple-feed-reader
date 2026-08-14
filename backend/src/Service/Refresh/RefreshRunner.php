@@ -9,6 +9,7 @@ use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
 use App\Service\EntryIngestor;
 use App\Service\EntryPruner;
+use App\Service\FeedIngestContext;
 use App\Service\FeedScheduler;
 use App\Service\Fetch\BatchFeedFetcherInterface;
 use App\Service\Fetch\Exception\FeedGoneException;
@@ -239,8 +240,14 @@ final class RefreshRunner
      */
     private function applyOutcome(Feed $feed, FetchOutcome $outcome, \DateTimeImmutable $now): FeedOutcome
     {
+        // Built here, not inside persistOutcome(): reading lastFetchedAt is only
+        // safe before recordSuccess() stamps the new one, and building the
+        // context at the call site — rather than threading $now through it —
+        // keeps $now from becoming tramp data phptramp would flag.
+        $context = new FeedIngestContext($now, $feed->getLastFetchedAt());
+
         try {
-            return $this->persistOutcome($feed, $outcome, $now);
+            return $this->persistOutcome($feed, $outcome, $context);
         } catch (UniqueConstraintViolationException | ForeignKeyConstraintViolationException | ORMException $e) {
             // A failed flush rolls back AND closes the EntityManager, so every
             // later persist/flush would throw "EntityManager is closed".
@@ -300,7 +307,7 @@ final class RefreshRunner
      * @throws NotFoundExceptionInterface
      * @throws ContainerExceptionInterface
      */
-    private function persistOutcome(Feed $feed, FetchOutcome $outcome, \DateTimeImmutable $now): FeedOutcome
+    private function persistOutcome(Feed $feed, FetchOutcome $outcome, FeedIngestContext $context): FeedOutcome
     {
         try {
             $response = $outcome->responseOrThrow();
@@ -324,7 +331,7 @@ final class RefreshRunner
             }
 
             $parsed = $this->bodyParser->parse($feed, $body);
-            $created = $this->ingestor->ingest($feed, $parsed, $now);
+            $created = $this->ingestor->ingest($feed, $parsed, $context);
             // Opportunistically fill images onto entries stored before the image
             // column existed (#148). The count is discarded on purpose: the
             // refresh's success signal is NEW content, and a backfilled image is

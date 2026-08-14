@@ -35,10 +35,12 @@ final class MarkReadServiceTest extends DbTestCase
         $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->em->persist($sub);
 
-        $old = new Entry($feed, 'old', null, 'Old', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $old->setPublishedAt(new \DateTimeImmutable('2026-07-05T00:00:00Z'));
-        $new = new Entry($feed, 'new', null, 'New', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $new->setPublishedAt(new \DateTimeImmutable('2026-07-20T00:00:00Z'));
+        $oldPublishedAt = new \DateTimeImmutable('2026-07-05T00:00:00Z');
+        $old = new Entry($feed, 'old', null, 'Old', new \DateTimeImmutable('2026-07-01T00:00:00Z'), $oldPublishedAt);
+        $old->setPublishedAt($oldPublishedAt);
+        $newPublishedAt = new \DateTimeImmutable('2026-07-20T00:00:00Z');
+        $new = new Entry($feed, 'new', null, 'New', new \DateTimeImmutable('2026-07-01T00:00:00Z'), $newPublishedAt);
+        $new->setPublishedAt($newPublishedAt);
         $this->em->persist($old);
         $this->em->persist($new);
         $this->em->flush();

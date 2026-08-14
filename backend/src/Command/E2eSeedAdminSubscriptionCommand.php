@@ -207,16 +207,17 @@ final class E2eSeedAdminSubscriptionCommand extends Command
         }
     }
 
-    private function sampleEntry(Feed $feed, \DateTimeImmutable $publishedAt): Entry
+    private function sampleEntry(Feed $feed, \DateTimeImmutable $createdAt): Entry
     {
         $entry = new Entry(
             $feed,
             'sfr-e2e-fixture-entry-1',
             'https://fixtures.sfr-e2e.example/entry-1',
             'A sample entry for the e2e reader fixture',
-            $publishedAt,
+            $createdAt,
+            $createdAt,
         );
-        $entry->setPublishedAt($publishedAt);
+        $entry->setPublishedAt($createdAt);
         $entry->setContentHtml('<p>Fixture entry body; this feed never resolves, the row is seeded for smokes.</p>');
 
         return $entry;

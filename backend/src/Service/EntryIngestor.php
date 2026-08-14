@@ -32,10 +32,11 @@ final class EntryIngestor
     }
 
     /**
-     * @param \DateTimeImmutable $fetchedAt the refresh run-start shared by
-     *        every entry this call ingests — drives the list's run-first sort
+     * @param FeedIngestContext $context the run instant shared by every entry
+     *        this call ingests, and the feed's previous fetch — together they
+     *        decide where each entry lands in the list (see EntryEffectiveDate)
      */
-    public function ingest(Feed $feed, ParsedFeed $parsed, \DateTimeImmutable $fetchedAt): int
+    public function ingest(Feed $feed, ParsedFeed $parsed, FeedIngestContext $context): int
     {
         $this->updateFeedMetadata($feed, $parsed);
 
@@ -59,7 +60,8 @@ final class EntryIngestor
                 $parsedEntry->guid,
                 $parsedEntry->url === null ? null : mb_substr($parsedEntry->url, 0, self::URL_MAX),
                 mb_substr($parsedEntry->title, 0, self::TITLE_MAX),
-                $fetchedAt,
+                $context->fetchedAt,
+                EntryEffectiveDate::for($parsedEntry->publishedAt, $context),
             );
             $entry->setAuthor(
                 $parsedEntry->author === null ? null : mb_substr($parsedEntry->author, 0, self::AUTHOR_MAX),

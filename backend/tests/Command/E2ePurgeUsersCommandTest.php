@@ -135,7 +135,8 @@ final class E2ePurgeUsersCommandTest extends DbTestCase
         $fixture = $this->seedUser('e2e-owner@example.com');
 
         $feed = new Feed('https://example.com/feed.xml');
-        $entry = new Entry($feed, 'guid-1', 'https://example.com/1', 'First', new \DateTimeImmutable('-1 day'));
+        $entryCreatedAt = new \DateTimeImmutable('-1 day');
+        $entry = new Entry($feed, 'guid-1', 'https://example.com/1', 'First', $entryCreatedAt, $entryCreatedAt);
         $this->em->persist($feed);
         $this->em->persist($entry);
         $this->em->persist(new Subscription($fixture, $feed, new \DateTimeImmutable('-1 day')));

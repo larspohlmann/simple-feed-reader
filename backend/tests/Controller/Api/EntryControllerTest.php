@@ -49,14 +49,16 @@ final class EntryControllerTest extends WebTestCase
         $em->persist($sub);
 
         for ($i = 1; $i <= $count; $i++) {
+            $publishedAt = new \DateTimeImmutable(sprintf('2026-07-%02dT00:00:00Z', $i));
             $e = new Entry(
                 $feed,
                 "g$i",
                 "https://example.com/$i",
                 "Post $i",
                 new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+                $publishedAt,
             );
-            $e->setPublishedAt(new \DateTimeImmutable(sprintf('2026-07-%02dT00:00:00Z', $i)));
+            $e->setPublishedAt($publishedAt);
             $em->persist($e);
         }
         $em->flush();
@@ -117,10 +119,10 @@ final class EntryControllerTest extends WebTestCase
         $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $july2 = new \DateTimeImmutable('2026-07-02T00:00:00Z');
-        $withImage = new Entry($feed, 'img-1', 'https://example.com/1', 'Post', $july1);
+        $withImage = new Entry($feed, 'img-1', 'https://example.com/1', 'Post', $july1, $july1);
         $withImage->setImage('https://i.example.com/big.jpg', 948, 474);
         $em->persist($withImage);
-        $em->persist(new Entry($feed, 'img-2', 'https://example.com/2', 'Post 2', $july2));
+        $em->persist(new Entry($feed, 'img-2', 'https://example.com/2', 'Post 2', $july2, $july2));
         $em->flush();
 
         $client->request('GET', '/api/entries', server: $headers);

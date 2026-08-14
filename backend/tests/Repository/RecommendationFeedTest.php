@@ -40,12 +40,14 @@ final class RecommendationFeedTest extends DbTestCase
 
     private function entry(string $guid): Entry
     {
+        $createdAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $entry = new Entry(
             $this->feed,
             $guid,
             'https://example.com/' . $guid,
             'Title ' . $guid,
-            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            $createdAt,
+            $createdAt,
         );
         $this->em->persist($entry);
         $this->em->flush();
@@ -112,12 +114,14 @@ final class RecommendationFeedTest extends DbTestCase
         $this->em->persist($strangerFeed);
         $this->em->persist(new Subscription($stranger, $strangerFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $this->em->flush();
+        $strangerCreatedAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $strangerEntry = new Entry(
             $strangerFeed,
             'stranger-entry',
             'https://stranger.example.com/1',
             'Stranger',
-            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            $strangerCreatedAt,
+            $strangerCreatedAt,
         );
         $this->em->persist($strangerEntry);
         $this->em->flush();
@@ -222,12 +226,14 @@ final class RecommendationFeedTest extends DbTestCase
         $customSub = new Subscription($this->user, $customFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $customSub->setCustomTitle('My Custom Title');
         $this->em->persist($customSub);
+        $customCreatedAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $customEntry = new Entry(
             $customFeed,
             'custom-titled',
             'https://custom.example.com/1',
             'Custom',
-            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            $customCreatedAt,
+            $customCreatedAt,
         );
         $this->em->persist($customEntry);
         $this->em->flush();
@@ -246,12 +252,14 @@ final class RecommendationFeedTest extends DbTestCase
         $this->em->persist($untitledFeed);
         $untitledSub = new Subscription($this->user, $untitledFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->em->persist($untitledSub);
+        $untitledCreatedAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $untitledEntry = new Entry(
             $untitledFeed,
             'untitled',
             'https://untitled.example.com/1',
             'Untitled',
-            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            $untitledCreatedAt,
+            $untitledCreatedAt,
         );
         $this->em->persist($untitledEntry);
         $this->em->flush();

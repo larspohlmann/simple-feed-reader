@@ -40,14 +40,16 @@ final class EntryListTest extends DbTestCase
 
     private function entry(string $guid, string $published): Entry
     {
+        $publishedAt = new \DateTimeImmutable($published);
         $e = new Entry(
             $this->feed,
             $guid,
             'https://example.com/' . $guid,
             'Title ' . $guid,
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            $publishedAt,
         );
-        $e->setPublishedAt(new \DateTimeImmutable($published));
+        $e->setPublishedAt($publishedAt);
         $this->em->persist($e);
         $this->em->flush();
 
@@ -56,15 +58,17 @@ final class EntryListTest extends DbTestCase
 
     private function entryAt(string $guid, string $createdAt, ?string $publishedAt = null): Entry
     {
+        $publishedAtValue = $publishedAt === null ? null : new \DateTimeImmutable($publishedAt);
         $e = new Entry(
             $this->feed,
             $guid,
             'https://example.com/' . $guid,
             'Title ' . $guid,
             new \DateTimeImmutable($createdAt),
+            $publishedAtValue ?? new \DateTimeImmutable($createdAt),
         );
-        if ($publishedAt !== null) {
-            $e->setPublishedAt(new \DateTimeImmutable($publishedAt));
+        if ($publishedAtValue !== null) {
+            $e->setPublishedAt($publishedAtValue);
         }
         $this->em->persist($e);
         $this->em->flush();
@@ -246,6 +250,7 @@ final class EntryListTest extends DbTestCase
             'https://other.example.com/1',
             'Tagged',
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
         $tagged->setPublishedAt(new \DateTimeImmutable('2026-07-06T00:00:00Z'));
         $this->em->persist($tagged);
@@ -283,7 +288,8 @@ final class EntryListTest extends DbTestCase
     {
         $strangerFeed = new Feed('https://stranger.example.com/feed.xml');
         $this->em->persist($strangerFeed);
-        $orphan = new Entry($strangerFeed, 'orphan', null, 'Orphan', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $orphanCreatedAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        $orphan = new Entry($strangerFeed, 'orphan', null, 'Orphan', $orphanCreatedAt, $orphanCreatedAt);
         $orphan->setPublishedAt(new \DateTimeImmutable('2026-07-20T00:00:00Z'));
         $this->em->persist($orphan);
         $this->em->flush();

@@ -55,6 +55,7 @@ final class OrphanedFeedReclaimerTest extends DbTestCase
             'https://withentries.example.com/1',
             'Title',
             new \DateTimeImmutable(self::NOW),
+            new \DateTimeImmutable(self::NOW),
         ));
         $this->em->flush();
 

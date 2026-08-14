@@ -91,7 +91,8 @@ final class SubscriptionTest extends DbTestCase
     {
         $user = $this->makeUser();
         $feed = $this->makeFeed();
-        $entry = new Entry($feed, 'guid-1', 'https://example.com/1', 'Post', new \DateTimeImmutable());
+        $now = new \DateTimeImmutable();
+        $entry = new Entry($feed, 'guid-1', 'https://example.com/1', 'Post', $now, $now);
         $this->em->persist($entry);
         $this->em->flush();
 
@@ -137,7 +138,8 @@ final class SubscriptionTest extends DbTestCase
     {
         $user = $this->makeUser();
         $feed = $this->makeFeed();
-        $entry = new Entry($feed, 'guid-2', 'https://example.com/2', 'Keeper', new \DateTimeImmutable());
+        $now = new \DateTimeImmutable();
+        $entry = new Entry($feed, 'guid-2', 'https://example.com/2', 'Keeper', $now, $now);
         $this->em->persist($entry);
         $this->em->flush();
 

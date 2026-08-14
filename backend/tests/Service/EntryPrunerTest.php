@@ -28,7 +28,7 @@ final class EntryPrunerTest extends DbTestCase
 
     private function entry(Feed $feed, string $guid, \DateTimeImmutable $publishedAt): Entry
     {
-        $entry = new Entry($feed, $guid, null, 'Title ' . $guid, $publishedAt);
+        $entry = new Entry($feed, $guid, null, 'Title ' . $guid, $publishedAt, $publishedAt);
         $entry->setPublishedAt($publishedAt);
         $this->em->persist($entry);
 
@@ -118,7 +118,8 @@ final class EntryPrunerTest extends DbTestCase
     {
         $feed = new Feed('https://example.com/feed');
         $this->em->persist($feed);
-        $undated = new Entry($feed, 'undated', null, 'No date', $this->clock->now()->modify('-200 days'));
+        $undatedCreatedAt = $this->clock->now()->modify('-200 days');
+        $undated = new Entry($feed, 'undated', null, 'No date', $undatedCreatedAt, $undatedCreatedAt);
         $this->em->persist($undated);
         $this->em->flush();
         $this->em->clear();
@@ -130,7 +131,8 @@ final class EntryPrunerTest extends DbTestCase
     {
         $feed = new Feed('https://example.com/feed');
         $this->em->persist($feed);
-        $fresh = new Entry($feed, 'fresh-undated', null, 'No date', $this->clock->now()->modify('-2 days'));
+        $freshCreatedAt = $this->clock->now()->modify('-2 days');
+        $fresh = new Entry($feed, 'fresh-undated', null, 'No date', $freshCreatedAt, $freshCreatedAt);
         $this->em->persist($fresh);
         $this->em->flush();
         $this->em->clear();

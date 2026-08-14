@@ -35,7 +35,8 @@ final class RecommendationFeedPagerTest extends DbTestCase
         $this->em->persist($run);
 
         foreach (['a', 'b'] as $position => $guid) {
-            $entry = new Entry($feed, $guid, null, 'Title ' . $guid, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+            $createdAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+            $entry = new Entry($feed, $guid, null, 'Title ' . $guid, $createdAt, $createdAt);
             $this->em->persist($entry);
             $this->em->persist(new RecommendationItem($run, $entry, $position + 1, 'reason ' . $guid));
         }
