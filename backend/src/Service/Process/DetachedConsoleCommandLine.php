@@ -17,9 +17,12 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * is the SAPI binary (Strato: cgi-fcgi) and must never be used to run
  * bin/console, so it has to be named explicitly via DRAIN_PHP_CLI_BINARY.
  * Only under the cli SAPI is \PHP_BINARY itself already the right answer,
- * which is what lets developer machines and the Docker containers spawn
- * without configuration. With neither, forCommand() returns null and the
- * caller must treat the launch as unavailable.
+ * which is what lets a CLI process spawn without configuration -- a developer
+ * shell, a console command, the Docker worker container. The Docker *web*
+ * container runs fpm-fcgi, so a request there builds no line at all unless
+ * DRAIN_PHP_CLI_BINARY names one; it needs none, because its worker keeps the
+ * heartbeat fresh and the spawn is suppressed anyway. With neither, forCommand()
+ * returns null and the caller must treat the launch as unavailable.
  */
 final readonly class DetachedConsoleCommandLine
 {

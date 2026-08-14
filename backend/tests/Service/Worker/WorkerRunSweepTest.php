@@ -8,14 +8,18 @@ use App\Entity\Feed;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Entity\WorkerHeartbeat;
 use App\Repository\RecommendationRunRepository;
+use App\Repository\WorkerHeartbeatRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Worker\WorkerPresence;
 use App\Service\Worker\WorkerRunSweep;
 use App\Tests\DbTestCase;
+use App\Tests\Support\ClearTrackingEntityManager;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\ThrowingClock;
 use App\Tests\Support\UserFactory;
 use Psr\Log\NullLogger;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -66,6 +70,40 @@ final class WorkerRunSweepTest extends DbTestCase
             self::assertNotNull($run);
             self::assertSame(RecommendationRun::STATUS_RUNNING, $run->getStatus());
         }
+    }
+
+    /**
+     * The identity map is per-sweep state, so its cleanup is a `finally` and
+     * not a trailing statement -- a sweep that dies mid-run must not leave a
+     * dirty map for the next one, and the drain command runs sweep after
+     * sweep in one process (#371 final review, Finding 9). The presence
+     * clock is the seam: the sweep marks the heartbeat once before the loop
+     * and once per run, so a clock good for exactly one reading fails inside
+     * the loop, after findAllActive() has already filled the map.
+     */
+    public function testClearsTheIdentityMapEvenWhenTheSweepBodyThrows(): void
+    {
+        $user = $this->user('sweep-clear-on-throw@example.test');
+        $this->seedSingleBatchFixture($user);
+        $this->starter()->start($user);
+
+        $clearTracker = new ClearTrackingEntityManager($this->em);
+        $sweep = new WorkerRunSweep(
+            $this->runs(),
+            $this->advancer(),
+            new WorkerPresence($this->heartbeats(), new ThrowingClock(1)),
+            $clearTracker,
+            new NullLogger(),
+        );
+
+        try {
+            $sweep->sweep();
+            self::fail('The throwing clock must have surfaced.');
+        } catch (\RuntimeException $expected) {
+            self::assertSame(ThrowingClock::MESSAGE, $expected->getMessage());
+        }
+
+        self::assertTrue($clearTracker->wasCleared());
     }
 
     private function seedSingleBatchFixture(User $user): void
@@ -124,9 +162,27 @@ final class WorkerRunSweepTest extends DbTestCase
      */
     private function sweep(): WorkerRunSweep
     {
+        return new WorkerRunSweep($this->runs(), $this->advancer(), $this->presence(), $this->em, new NullLogger());
+    }
+
+    private function advancer(): RecommendationRunAdvancer
+    {
         /** @var RecommendationRunAdvancer $advancer */
         $advancer = self::getContainer()->get(RecommendationRunAdvancer::class);
 
-        return new WorkerRunSweep($this->runs(), $advancer, $this->presence(), $this->em, new NullLogger());
+        return $advancer;
+    }
+
+    /**
+     * Through the EntityManager rather than the container: the repository has
+     * a single referrer (WorkerPresence), and the compiler inlines
+     * single-reference private services away.
+     */
+    private function heartbeats(): WorkerHeartbeatRepository
+    {
+        /** @var WorkerHeartbeatRepository $repository */
+        $repository = $this->em->getRepository(WorkerHeartbeat::class);
+
+        return $repository;
     }
 }

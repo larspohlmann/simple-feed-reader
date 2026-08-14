@@ -274,9 +274,10 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 
     /**
      * The per-firing identity map cleanup is a `finally`, not a plain
-     * trailing statement (see the handler's own doc comment); this proves at
-     * least that clear() itself is not simply dropped from the successful
-     * path.
+     * trailing statement (the rationale now lives on WorkerRunSweep::sweep(),
+     * which the handler delegates to); this proves at least that clear()
+     * itself is not simply dropped from the successful path. That it also
+     * runs when the sweep body throws is WorkerRunSweepTest's job.
      */
     public function testFiringClearsTheIdentityMapAfterwards(): void
     {

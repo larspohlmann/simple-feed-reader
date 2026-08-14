@@ -4,18 +4,35 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation;
 
-use App\Service\Process\DetachedProcessLauncherInterface;
 use App\Service\Recommendation\RecommendationDrainSpawner;
 use App\Service\Worker\WorkerPresence;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RecordingProcessLauncher;
 
 final class RecommendationDrainSpawnerTest extends DbTestCase
 {
     public function testSpawnsTheDetachedDrainerWhenNoWorkerIsAlive(): void
     {
-        $launcher = $this->recordingLauncher();
+        $launcher = new RecordingProcessLauncher();
 
         (new RecommendationDrainSpawner($this->presence(), $launcher))->spawnIfNoWorker();
+
+        self::assertSame([['app:recommendations:drain', '--detach']], $launcher->launches);
+    }
+
+    /**
+     * One launch per process, however many trigger sites fire in it. A single
+     * maintenance tick asks once per due run it starts and once more for its
+     * own respawn net, and every extra fork boots a full Symfony kernel only
+     * to lose the drain lock and exit (#371 final review, Finding 3).
+     */
+    public function testASecondSpawnInTheSameProcessDoesNotLaunchAgain(): void
+    {
+        $launcher = new RecordingProcessLauncher();
+        $spawner = new RecommendationDrainSpawner($this->presence(), $launcher);
+
+        $spawner->spawnIfNoWorker();
+        $spawner->spawnIfNoWorker();
 
         self::assertSame([['app:recommendations:drain', '--detach']], $launcher->launches);
     }
@@ -27,28 +44,12 @@ final class RecommendationDrainSpawnerTest extends DbTestCase
      */
     public function testAFreshWorkerHeartbeatSuppressesTheSpawn(): void
     {
-        $launcher = $this->recordingLauncher();
+        $launcher = new RecordingProcessLauncher();
         $this->presence()->markRecommendationSweep();
 
         (new RecommendationDrainSpawner($this->presence(), $launcher))->spawnIfNoWorker();
 
         self::assertSame([], $launcher->launches);
-    }
-
-    /**
-     * @return DetachedProcessLauncherInterface&object{launches: list<list<string>>}
-     */
-    private function recordingLauncher(): DetachedProcessLauncherInterface
-    {
-        return new class implements DetachedProcessLauncherInterface {
-            /** @var list<list<string>> */
-            public array $launches = [];
-
-            public function launch(string $consoleCommandName, string ...$arguments): void
-            {
-                $this->launches[] = array_values([$consoleCommandName, ...$arguments]);
-            }
-        };
     }
 
     private function presence(): WorkerPresence

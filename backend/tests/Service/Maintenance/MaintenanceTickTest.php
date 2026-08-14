@@ -28,6 +28,7 @@ use App\Service\Refresh\RefreshRunner;
 use App\Service\Worker\WorkerPresence;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\RecordingProcessLauncher;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\UserFactory;
 use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
@@ -136,7 +137,7 @@ final class MaintenanceTickTest extends DbTestCase
         $forYouSweep = self::getContainer()->get(ForYouSweep::class);
         self::assertInstanceOf(ForYouSweep::class, $forYouSweep);
 
-        $launcher = $this->recordingLauncher();
+        $launcher = new RecordingProcessLauncher();
         $tick = new MaintenanceTick($refreshRunner, $forYouSweep, $this->spawnerWith($launcher));
 
         $report = $tick->run()->toArray();
@@ -163,6 +164,10 @@ final class MaintenanceTickTest extends DbTestCase
         // batch plan instead of completing immediately on an empty pool -- the
         // run must still be active for the respawn net to have anything to see.
         $feed = new Feed('https://tick-respawn-net.example.test/feed.xml');
+        // The tick refreshes every due feed, and a fresh Feed is due at once:
+        // without this the real ConcurrentFeedFetcher tries to resolve a
+        // .test host over the network on every run of this test.
+        $feed->setNextFetchAt(new \DateTimeImmutable('+1 year'));
         $this->em->persist($feed);
         $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-08-08T00:00:00Z')));
         $this->em->flush();
@@ -174,7 +179,7 @@ final class MaintenanceTickTest extends DbTestCase
         self::assertInstanceOf(RecommendationRunStarter::class, $starter);
         $starter->start($user);
 
-        $launcher = $this->recordingLauncher();
+        $launcher = new RecordingProcessLauncher();
         $tick = new MaintenanceTick(
             $this->containerRefreshRunner(),
             $this->containerForYouSweep(),
@@ -190,7 +195,7 @@ final class MaintenanceTickTest extends DbTestCase
 
     public function testTickWithNoActiveRunsDoesNotSpawn(): void
     {
-        $launcher = $this->recordingLauncher();
+        $launcher = new RecordingProcessLauncher();
         $tick = new MaintenanceTick(
             $this->containerRefreshRunner(),
             $this->containerForYouSweep(),
@@ -200,22 +205,6 @@ final class MaintenanceTickTest extends DbTestCase
         $tick->run();
 
         self::assertSame([], $launcher->launches);
-    }
-
-    /**
-     * @return DetachedProcessLauncherInterface&object{launches: list<list<string>>}
-     */
-    private function recordingLauncher(): DetachedProcessLauncherInterface
-    {
-        return new class implements DetachedProcessLauncherInterface {
-            /** @var list<list<string>> */
-            public array $launches = [];
-
-            public function launch(string $consoleCommandName, string ...$arguments): void
-            {
-                $this->launches[] = array_values([$consoleCommandName, ...$arguments]);
-            }
-        };
     }
 
     private function spawnerWith(DetachedProcessLauncherInterface $launcher): RecommendationDrainSpawner

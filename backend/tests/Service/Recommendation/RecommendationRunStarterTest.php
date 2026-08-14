@@ -19,6 +19,7 @@ use App\Service\Recommendation\RecommendationDrainSpawner;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Worker\WorkerPresence;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RecordingProcessLauncher;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -164,31 +165,37 @@ final class RecommendationRunStarterTest extends DbTestCase
     public function testStartSpawnsTheDrainerWhenNoWorkerIsAlive(): void
     {
         $this->seedReadyAiSettings($this->user);
-        $launcher = $this->recordingLauncher();
+        $launcher = new RecordingProcessLauncher();
 
         $this->starterWith($launcher)->start($this->user);
 
         self::assertSame([['app:recommendations:drain', '--detach']], $launcher->launches);
     }
 
-    public function testStartReturningAnAlreadyActiveRunStillSpawns(): void
+    /**
+     * A second start() in the same process must NOT fork a second drainer:
+     * the first launch is still the one that drains this run, and every extra
+     * fork boots a full Symfony kernel only to lose the drain lock and exit
+     * (#371 final review, Finding 3). This is the caller-side proof of the
+     * spawner's one-launch-per-process guard -- a repeated click, and, through
+     * the same code path, a maintenance tick that starts several due runs.
+     */
+    public function testASecondStartInTheSameProcessDoesNotSpawnAgain(): void
     {
         $this->seedReadyAiSettings($this->user);
-        $launcher = $this->recordingLauncher();
+        $launcher = new RecordingProcessLauncher();
         $starter = $this->starterWith($launcher);
 
         $starter->start($this->user);
         $starter->start($this->user);
 
-        // A second click while no drainer lives is exactly when a respawn
-        // helps; the drain lock makes a duplicate spawn harmless.
-        self::assertCount(2, $launcher->launches);
+        self::assertSame([['app:recommendations:drain', '--detach']], $launcher->launches);
     }
 
     public function testStartDoesNotSpawnNextToAFreshWorkerHeartbeat(): void
     {
         $this->seedReadyAiSettings($this->user);
-        $launcher = $this->recordingLauncher();
+        $launcher = new RecordingProcessLauncher();
         $this->presence()->markRecommendationSweep();
 
         $this->starterWith($launcher)->start($this->user);
@@ -200,27 +207,11 @@ final class RecommendationRunStarterTest extends DbTestCase
     {
         $this->seedReadyAiSettings($this->user);
         $this->persistFailedRunWithOneWinner();
-        $launcher = $this->recordingLauncher();
+        $launcher = new RecordingProcessLauncher();
 
         $this->starterWith($launcher)->resume($this->user);
 
         self::assertSame([['app:recommendations:drain', '--detach']], $launcher->launches);
-    }
-
-    /**
-     * @return DetachedProcessLauncherInterface&object{launches: list<list<string>>}
-     */
-    private function recordingLauncher(): DetachedProcessLauncherInterface
-    {
-        return new class implements DetachedProcessLauncherInterface {
-            /** @var list<list<string>> */
-            public array $launches = [];
-
-            public function launch(string $consoleCommandName, string ...$arguments): void
-            {
-                $this->launches[] = array_values([$consoleCommandName, ...$arguments]);
-            }
-        };
     }
 
     /**

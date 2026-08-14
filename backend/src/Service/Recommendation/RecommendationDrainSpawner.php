@@ -14,22 +14,42 @@ use App\Service\Worker\WorkerPresence;
  * A stale read here is harmless -- the drain command's own global lock and
  * the per-user run lock are the real guards against double work; this check
  * only avoids pointlessly forking next to a healthy worker.
+ *
+ * Deliberately not `readonly`: one launch per process is enough, and the
+ * spawner remembers that it made it. Without that memory a single maintenance
+ * tick forks once per due run it starts (RecommendationRunStarter::start())
+ * plus once for its own respawn net, so five due runs cost six full Symfony
+ * boots on a shared host of which exactly one wins the drain lock. The same
+ * memory caps a user clicking start repeatedly inside one request. The flag is
+ * process-scoped, which is the right scope: every caller is a short-lived web
+ * request or cron tick, and the one long-lived process that holds this service
+ * -- the Docker worker -- keeps its own heartbeat fresh and so never launches
+ * at all.
  */
-final readonly class RecommendationDrainSpawner
+final class RecommendationDrainSpawner
 {
     public const string DRAIN_COMMAND = 'app:recommendations:drain';
 
+    private bool $launched = false;
+
     public function __construct(
-        private WorkerPresence $presence,
-        private DetachedProcessLauncherInterface $launcher,
+        private readonly WorkerPresence $presence,
+        private readonly DetachedProcessLauncherInterface $launcher,
     ) {
     }
 
     public function spawnIfNoWorker(): void
     {
+        // Checked before the heartbeat read, so a repeat call costs no query.
+        if ($this->launched) {
+            return;
+        }
+
         if ($this->presence->isRecommendationWorkerAlive()) {
             return;
         }
+
+        $this->launched = true;
 
         // --detach makes the spawned process leave the request's session
         // (posix_setsid); the flag exists so an in-process test run of the
