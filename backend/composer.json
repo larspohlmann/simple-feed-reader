@@ -102,6 +102,7 @@
         "stan": "phpstan analyse --memory-limit=512M",
         "md": "phpmd src text phpmd.xml.dist",
         "tramp": "phptramp",
+        "tramp:update": "composer update larspohlmann/phptramp --no-interaction --no-progress --no-scripts",
         "check": ["@cs", "@stan", "@tramp"],
         "infection": "infection --threads=max",
         "infection:diff": "infection --git-diff-filter=AM --git-diff-base=origin/develop --threads=max --ignore-msi-with-no-mutations",
