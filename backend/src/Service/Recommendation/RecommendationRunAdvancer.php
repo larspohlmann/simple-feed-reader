@@ -225,11 +225,12 @@ final class RecommendationRunAdvancer
     {
         $userId = $this->requireUserId($user);
         $effectiveSettings = $this->settingsResolver->forUser($user);
-        $candidates = $this->candidateLoader->load(
-            $userId,
-            $effectiveSettings->candidatePoolSize,
-            (int) $this->clock->now()->getTimestamp(),
-        );
+        $now = $this->clock->now();
+        $candidates = $this->candidateLoader->load($userId, new CandidatePoolRequest(
+            since: $now->sub(new \DateInterval(\sprintf('P%dD', $effectiveSettings->lookbackDays))),
+            poolSize: $effectiveSettings->candidatePoolSize,
+            orderSeed: (int) $now->getTimestamp(),
+        ));
 
         if ([] === $candidates) {
             // An empty feed is not an error: freeze an empty batch plan (the

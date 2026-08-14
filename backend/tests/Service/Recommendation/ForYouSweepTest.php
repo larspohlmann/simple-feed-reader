@@ -88,7 +88,7 @@ final class ForYouSweepTest extends DbTestCase
         $this->em->flush();
 
         for ($i = 0; $i < 5; $i++) {
-            $this->fixtures->entry($feed, $email . '-entry-' . $i, sprintf('2026-07-%02dT00:00:00Z', 10 + $i));
+            $this->fixtures->entry($feed, $email . '-entry-' . $i, 60 - $i);
         }
 
         return $user;

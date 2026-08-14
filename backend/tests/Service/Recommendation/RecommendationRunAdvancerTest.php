@@ -82,7 +82,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedReadyAiSettings($this->user);
         for ($i = 0; $i < 5; $i++) {
-            $this->entry('entry-' . $i, sprintf('2026-07-%02dT00:00:00Z', 10 + $i));
+            $this->entry('entry-' . $i, 60 - $i);
         }
         $this->starter()->start($this->user);
         $runId = $this->runs()->findActiveForUser($this->user)?->getId();
@@ -123,6 +123,38 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame(RecommendationRun::STATUS_COMPLETED, $persisted?->getStatus());
     }
 
+    public function testSnapshotExcludesCandidatesOlderThanTheLookbackWindow(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        // Default window is 2 days: 30 minutes ago is inside, 5 days ago is not.
+        $inside = $this->entry('inside-window', 30);
+        $this->entry('outside-window', 60 * 24 * 5);
+        $this->starter()->start($this->user);
+        $runId = $this->runs()->findActiveForUser($this->user)?->getId();
+        self::assertNotNull($runId);
+
+        $this->advancer()->advance($this->user);
+
+        $this->em->clear();
+        $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
+        self::assertNotNull($persisted);
+        self::assertSame([[$inside->getId()]], $persisted->getCandidateBatches());
+    }
+
+    public function testSnapshotWithEveryCandidateOutsideTheWindowCompletesEmpty(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $this->entry('long-gone', 60 * 24 * 30);
+        $this->starter()->start($this->user);
+
+        $report = $this->advancer()->advance($this->user);
+
+        // Not a failure: an empty window freezes an empty plan, exactly like
+        // an account with no unread entries at all.
+        self::assertSame('completed', $report->status);
+        self::assertSame(0, $report->batchesTotal);
+    }
+
     public function testBusyWhenTheLockIsHeld(): void
     {
         $userId = $this->user->getId();
@@ -159,7 +191,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testAPollTickFailsAPendingRunWhenTheConfigurationDisappears(): void
     {
         $this->seedReadyAiSettings($this->user);
-        $this->entry('entry-configless', '2026-07-10T00:00:00Z');
+        $this->entry('entry-configless', 30);
         $this->starter()->start($this->user);
         $runId = $this->activeRun()->getId();
         self::assertNotNull($runId);
@@ -593,7 +625,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->em->flush();
 
         for ($i = 0; $i < 3; $i++) {
-            $this->entry('entry-' . $i, sprintf('2026-07-%02dT00:00:00Z', 10 + $i));
+            $this->entry('entry-' . $i, 60 - $i);
         }
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user); // snapshot tick
@@ -1057,7 +1089,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedReadyAiSettings($this->user);
         for ($i = 0; $i < 5; $i++) {
-            $this->entry('entry-' . $i, sprintf('2026-07-%02dT00:00:00Z', 10 + $i));
+            $this->entry('entry-' . $i, 60 - $i);
         }
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user);
@@ -1646,7 +1678,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         for ($i = 0; $i < self::MULTI_BATCH_ENTRY_COUNT; $i++) {
             $entry = $this->entry(
                 sprintf('entry-%02d', $i),
-                sprintf('2026-07-10T%02d:%02d:00Z', intdiv($i, 60), $i % 60),
+                1440 - $i,
             );
             $entry->setSummary($summary);
         }
@@ -1665,7 +1697,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->seedReadyAiSettings($this->user);
 
         for ($i = 0; $i < self::SINGLE_BATCH_ENTRY_COUNT; $i++) {
-            $this->entry('entry-' . $i, sprintf('2026-07-%02dT00:00:00Z', 10 + $i));
+            $this->entry('entry-' . $i, 60 - $i);
         }
         $this->em->flush();
 
@@ -1706,7 +1738,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         for ($i = 0; $i < $entryCount; $i++) {
             $entry = $this->entry(
                 sprintf('entry-%02d', $i),
-                sprintf('2026-07-10T%02d:%02d:00Z', intdiv($i, 60), $i % 60),
+                1440 - $i,
             );
             $entry->setSummary($summary);
         }
@@ -1754,9 +1786,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         return $run;
     }
 
-    private function entry(string $guid, string $published): Entry
+    private function entry(string $guid, int $minutesAgo): Entry
     {
-        return $this->fixtures->entry($this->feed, $guid, $published);
+        return $this->fixtures->entry($this->feed, $guid, $minutesAgo);
     }
 
     private function seedReadyAiSettings(User $user): void

@@ -9,6 +9,7 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Service\Recommendation\CandidatePoolRequest;
 use App\Service\Recommendation\RecommendationCandidateLoader;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
@@ -54,7 +55,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         $this->em->flush();
 
-        $lines = $this->loader()->load($this->userId(), 100, 1);
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
         self::assertSame([$unread->getId()], array_map(static fn ($l) => $l->entryId, $lines));
     }
@@ -67,7 +68,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $this->em->persist($state);
         $this->em->flush();
 
-        $lines = $this->loader()->load($this->userId(), 100, 1);
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
         self::assertSame([], array_map(static fn ($l) => $l->entryId, $lines));
     }
@@ -80,7 +81,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $this->em->persist($state);
         $this->em->flush();
 
-        $lines = $this->loader()->load($this->userId(), 100, 1);
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
         self::assertSame([], array_map(static fn ($l) => $l->entryId, $lines));
     }
@@ -93,7 +94,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $this->em->persist($state);
         $this->em->flush();
 
-        $lines = $this->loader()->load($this->userId(), 100, 1);
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
         self::assertSame([], array_map(static fn ($l) => $l->entryId, $lines));
     }
@@ -102,7 +103,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $noState = $this->entry('no-state', '2026-07-10T00:00:00Z');
 
-        $lines = $this->loader()->load($this->userId(), 100, 1);
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
         self::assertSame([$noState->getId()], array_map(static fn ($l) => $l->entryId, $lines));
     }
@@ -116,7 +117,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $this->em->persist($state);
         $this->em->flush();
 
-        $lines = $this->loader()->load($this->userId(), 100, 1);
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
         self::assertSame([$untouched->getId()], array_map(static fn ($l) => $l->entryId, $lines));
     }
@@ -129,7 +130,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         // load() no longer promises newest-first order — it selects the
         // newest N, then shuffles — so only membership and count are the
         // contract now.
-        $lines = $this->loader()->load($this->userId(), 100, 1);
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
         self::assertEqualsCanonicalizing(
             ['newer', 'older'],
@@ -143,7 +144,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $this->entry('b', '2026-07-11T00:00:00Z');
         $this->entry('c', '2026-07-12T00:00:00Z');
 
-        $lines = $this->loader()->load($this->userId(), 2, 1);
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest(poolSize: 2));
 
         // The selection is still the newest $poolSize; the oldest ('a') is
         // outside the newest-2 window and never appears, whatever the shuffle
@@ -161,8 +162,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
             $this->entry('entry-' . $index, sprintf('2026-07-%02dT00:00:00Z', 10 + $index));
         }
 
-        $first = $this->loader()->load($this->userId(), 100, 4242);
-        $second = $this->loader()->load($this->userId(), 100, 4242);
+        $first = $this->loader()->load($this->userId(), $this->poolRequest(orderSeed: 4242));
+        $second = $this->loader()->load($this->userId(), $this->poolRequest(orderSeed: 4242));
 
         self::assertSame(
             array_map(static fn ($l) => $l->title, $first),
@@ -185,7 +186,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         $shuffled = array_map(
             static fn ($l) => $l->title,
-            $this->loader()->load($this->userId(), 100, 4242),
+            $this->loader()->load($this->userId(), $this->poolRequest(orderSeed: 4242)),
         );
 
         // Same multiset, different order — the shuffle actually happens.
@@ -203,7 +204,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         $ids = array_map(
             static fn ($l) => $l->entryId,
-            $this->loader()->load($this->userId(), 100, 4242),
+            $this->loader()->load($this->userId(), $this->poolRequest(orderSeed: 4242)),
         );
 
         self::assertCount(\count($expected), $ids);
@@ -212,14 +213,14 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
     public function testAnEmptyPoolPassesThroughUnchanged(): void
     {
-        self::assertSame([], $this->loader()->load($this->userId(), 100, 4242));
+        self::assertSame([], $this->loader()->load($this->userId(), $this->poolRequest(orderSeed: 4242)));
     }
 
     public function testASingleItemPoolPassesThroughUnchanged(): void
     {
         $only = $this->entry('only', '2026-07-10T00:00:00Z');
 
-        $lines = $this->loader()->load($this->userId(), 100, 4242);
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest(orderSeed: 4242));
 
         self::assertSame([$only->getId()], array_map(static fn ($l) => $l->entryId, $lines));
     }
@@ -301,7 +302,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $this->em->flush();
         $this->entry('titled', '2026-07-10T00:00:00Z');
 
-        $lines = $this->loader()->load($this->userId(), 100, 1);
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
         self::assertSame('My Custom Feed', $lines[0]->feedName);
     }
@@ -313,7 +314,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $entry->setContentHtml('<p>Content text</p>');
         $this->em->flush();
 
-        $lines = $this->loader()->load($this->userId(), 100, 1);
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
         self::assertSame('Summary text', $lines[0]->description);
     }
@@ -322,7 +323,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $this->entry('untitled', '2026-07-10T00:00:00Z');
 
-        $lines = $this->loader()->load($this->userId(), 100, 1);
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
         self::assertSame('Example', $lines[0]->feedName);
     }
@@ -404,6 +405,59 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $this->loader()->summarize($this->userId(), []);
 
         self::assertSame([], $recorder->queries());
+    }
+
+    public function testAnEntryOlderThanTheWindowIsExcluded(): void
+    {
+        $this->entry('too-old', '2026-07-09T23:59:59Z');
+        $inside = $this->entry('inside', '2026-07-11T00:00:00Z');
+
+        $lines = $this->loader()->load(
+            $this->userId(),
+            $this->poolRequest(since: '2026-07-10T00:00:00Z'),
+        );
+
+        self::assertSame([$inside->getId()], array_map(static fn ($l) => $l->entryId, $lines));
+    }
+
+    public function testAnEntryExactlyOnTheWindowBoundaryIsIncluded(): void
+    {
+        $onBoundary = $this->entry('on-boundary', '2026-07-10T00:00:00Z');
+
+        $lines = $this->loader()->load(
+            $this->userId(),
+            $this->poolRequest(since: '2026-07-10T00:00:00Z'),
+        );
+
+        // `>=`, not `>`: the boundary instant belongs to the window.
+        self::assertSame([$onBoundary->getId()], array_map(static fn ($l) => $l->entryId, $lines));
+    }
+
+    public function testThePoolSizeStillCapsTheCandidatesInsideTheWindow(): void
+    {
+        $this->entry('older-inside', '2026-07-11T00:00:00Z');
+        $this->entry('newer-inside', '2026-07-12T00:00:00Z');
+        $this->entry('outside', '2026-07-09T00:00:00Z');
+
+        $lines = $this->loader()->load(
+            $this->userId(),
+            $this->poolRequest(poolSize: 1, since: '2026-07-10T00:00:00Z'),
+        );
+
+        // The cap selects the newest inside the window, never reaching past it.
+        self::assertSame(['newer-inside'], array_map(static fn ($l) => $l->title, $lines));
+    }
+
+    private function poolRequest(
+        int $poolSize = 100,
+        int $orderSeed = 1,
+        string $since = '2000-01-01T00:00:00Z',
+    ): CandidatePoolRequest {
+        return new CandidatePoolRequest(
+            since: new \DateTimeImmutable($since),
+            poolSize: $poolSize,
+            orderSeed: $orderSeed,
+        );
     }
 
     private function entry(string $guid, string $published): Entry

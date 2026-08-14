@@ -39,14 +39,15 @@ final readonly class RecommendationCandidateLoader
 
     /**
      * Unread candidates, excluding anything the reader has already favorited,
-     * kept, or viewed, in feeds the reader subscribes to. The newest
-     * $poolSize are selected, then returned in a randomized order seeded by
-     * $orderSeed, so batches sample the pool rather than cluster by recency
-     * (#344). The same seed always produces the same order.
+     * kept, or viewed, in feeds the reader subscribes to, and no older than
+     * the request's window (#386). The newest $request->poolSize of those are
+     * selected, then returned in a randomized order seeded by
+     * $request->orderSeed, so batches sample the pool rather than cluster by
+     * recency (#344). The same seed always produces the same order.
      *
      * @return list<PromptLine>
      */
-    public function load(int $userId, int $poolSize, int $orderSeed): array
+    public function load(int $userId, CandidatePoolRequest $request): array
     {
         $qb = $this->candidateQueryBuilder($userId)
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
@@ -66,9 +67,14 @@ final readonly class RecommendationCandidateLoader
                 . ' AND (es.isKept = :notInteracted OR es.isKept IS NULL)'
                 . ' AND (es.isViewed = :notInteracted OR es.isViewed IS NULL)',
             )
+            // The window is the reader's own look-back setting, already
+            // resolved to an instant by the caller. Inclusive: an entry
+            // stamped exactly at the boundary is inside the window.
+            ->andWhere('e.effectiveDate >= :since')
             ->orderBy('e.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
-            ->setMaxResults($poolSize)
+            ->setMaxResults($request->poolSize)
+            ->setParameter('since', $request->since)
             ->setParameter('readFalse', false, Types::BOOLEAN)
             ->setParameter('notInteracted', false, Types::BOOLEAN);
 
@@ -79,7 +85,7 @@ final readonly class RecommendationCandidateLoader
         // type promises -- shuffling reorders $lines, it cannot change what
         // is in it.
         /** @var list<PromptLine> $shuffled */
-        $shuffled = (new Randomizer(new Mt19937($orderSeed)))->shuffleArray($lines);
+        $shuffled = (new Randomizer(new Mt19937($request->orderSeed)))->shuffleArray($lines);
 
         return $shuffled;
     }
