@@ -235,7 +235,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         $system = $withGuidance[0]['content'];
         self::assertStringContainsString(RecommendationPromptText::SYSTEM_ROLE, $system);
         self::assertStringContainsString('Focus on cats.', $system);
-        self::assertStringContainsString('Score every candidate.', $system);
+        self::assertStringContainsString('Return one object for every candidate line', $system);
 
         self::assertStringContainsString(RecommendationPromptText::DEFAULT_GUIDANCE, $withoutGuidance[0]['content']);
 
@@ -243,6 +243,47 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertStringContainsString('FAVORITES (newest first):', $user);
         self::assertStringContainsString("KEPT (newest first):\n- none", $user);
         self::assertStringContainsString('- [7] ', $user);
+    }
+
+    /**
+     * The batch prompt asked for every candidate and, in the same breath, told
+     * the model to omit the duplicates of a story it had already scored. It
+     * resolved the conflict by omitting: 3.2% of production candidates were
+     * never scored, and an unscored candidate can never be recommended (#399).
+     * Duplicates belong to the dedup phase, which sees the whole ranked list
+     * rather than one random sample of it.
+     */
+    public function testTheBatchPromptNeverAsksForACandidateToBeLeftOut(): void
+    {
+        $system = $this->builder->batchMessages(
+            $this->emptyHistory(),
+            [self::line(7, 'Candidate seven', 10)],
+            $this->settings(32768, 100),
+        )[0]['content'];
+
+        self::assertStringContainsString('never leave a candidate out', $system);
+        self::assertStringNotContainsString('omit the others', $system);
+    }
+
+    /**
+     * The count is the model's own check on "return one object per line", and
+     * it counts the lines rendered into this batch -- not the pool, and not the
+     * batch cap (#399, and the same reasoning as the dedup frame in #396).
+     */
+    public function testTheCandidateHeaderNamesHowManyLinesTheBatchHolds(): void
+    {
+        $candidateLines = array_map(
+            static fn (int $id): PromptLine => new PromptLine($id, 'Title ' . $id, 'Feed', '2026-01-05', null),
+            range(1, 17),
+        );
+
+        $user = $this->builder->batchMessages(
+            $this->emptyHistory(),
+            $candidateLines,
+            $this->settings(32768, 100),
+        )[1]['content'];
+
+        self::assertStringContainsString('CANDIDATES (17 posts — return 17 objects, one per line):', $user);
     }
 
     public function testBatchMessagesAddsThePoolFrameLineWhenASummaryIsPassed(): void
@@ -264,7 +305,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             $user,
         );
         // The frame sits before the candidate lines it frames.
-        self::assertLessThan(strpos($user, 'CANDIDATES:'), strpos($user, 'The full candidate set has'));
+        self::assertLessThan(strpos($user, 'CANDIDATES ('), strpos($user, 'The full candidate set has'));
     }
 
     public function testBatchMessagesOmitsThePoolFrameLineWhenNoSummaryIsPassed(): void
@@ -347,7 +388,9 @@ final class RecommendationPromptBuilderTest extends TestCase
             "FAVORITES (newest first):\n- Fav Title — Feed A — 2026-01-01 — fav desc",
             "KEPT (newest first):\n- none",
             "VIEWED (newest first):\n- View Title — Feed B — 2026-01-02",
-            "CANDIDATES:\n- [5] Cand Title — Feed C — 2026-01-03 — cand desc\n- [0] No Id — Feed D — 2026-01-04",
+            "CANDIDATES (2 posts — return 2 objects, one per line):\n"
+                . "- [5] Cand Title — Feed C — 2026-01-03 — cand desc\n"
+                . '- [0] No Id — Feed D — 2026-01-04',
         ]);
 
         self::assertSame(

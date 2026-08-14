@@ -333,12 +333,23 @@ final class RecommendationPromptBuilder
             return "CANDIDATES:\n- none";
         }
 
+        // The count is the model's own check on "score every candidate": the
+        // instruction alone is unverifiable from inside the reply, and 3.2% of
+        // candidates went unscored without it (#399). Same reason the dedup
+        // call is told the size of its list (#396).
+        $candidateCount = \count($candidateLines);
+        $header = \sprintf(
+            'CANDIDATES (%d posts — return %d objects, one per line):',
+            $candidateCount,
+            $candidateCount,
+        );
+
         $rendered = array_map(
             fn (PromptLine $line): string => $this->candidateLine($line, $descriptionLength),
             $candidateLines,
         );
 
-        return "CANDIDATES:\n" . implode("\n", $rendered);
+        return $header . "\n" . implode("\n", $rendered);
     }
 
     private function historyLine(PromptLine $line, int $descriptionLength): string
