@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace DoctrineMigrations;
 
-use App\Service\Recommendation\EffectiveRecommendationSettings;
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\Schema;
@@ -19,6 +18,13 @@ use Doctrine\Migrations\AbstractMigration;
  * diffed on one platform does not parse on the other, and the suite cannot
  * catch it because tests build their schema from ORM metadata, not this
  * chain.
+ *
+ * The default is the literal 2, not
+ * EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS: a migration
+ * records what was applied at a point in time, and a constant a migration
+ * imports can move after the migration has already run, silently changing
+ * what an already-applied migration claims and diverging fresh installs
+ * from migrated ones.
  */
 final class Version20260814150000 extends AbstractMigration
 {
@@ -51,11 +57,9 @@ final class Version20260814150000 extends AbstractMigration
             return;
         }
 
-        $default = EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS;
-
         $this->addSql($mysql
-            ? \sprintf('ALTER TABLE user_recommendation_settings ADD lookback_days INT DEFAULT %d NOT NULL', $default)
-            : \sprintf('ALTER TABLE user_recommendation_settings ADD COLUMN lookback_days INTEGER DEFAULT %d NOT NULL', $default));
+            ? 'ALTER TABLE user_recommendation_settings ADD lookback_days INT DEFAULT 2 NOT NULL'
+            : 'ALTER TABLE user_recommendation_settings ADD COLUMN lookback_days INTEGER DEFAULT 2 NOT NULL');
     }
 
     public function down(Schema $schema): void

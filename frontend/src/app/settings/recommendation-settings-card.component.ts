@@ -69,7 +69,7 @@ export class RecommendationSettingsCardComponent {
   readonly autoGenerateIntervalHours = linkedSignal<number | null>(
     () => this.svc.state()?.autoGenerateIntervalHours ?? null,
   );
-  readonly lookbackDays = linkedSignal<number>(() => this.svc.state()?.lookbackDays ?? 2);
+  readonly lookbackDays = linkedSignal<number>(() => this.svc.state()?.lookbackDays ?? 0);
   readonly workerAlive = computed<boolean>(() => this.svc.state()?.workerAlive ?? false);
 
   /** The six cadence choices; null is "only manually". */

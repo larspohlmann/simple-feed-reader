@@ -227,6 +227,9 @@ final class RecommendationRunAdvancer
         $effectiveSettings = $this->settingsResolver->forUser($user);
         $now = $this->clock->now();
         $candidates = $this->candidateLoader->load($userId, new CandidatePoolRequest(
+            // P<N>D is calendar-day arithmetic; it only equals N x 24h because
+            // Kernel.php pins the process timezone to UTC, where every day is
+            // exactly 24h (no DST shift to absorb).
             since: $now->sub(new \DateInterval(\sprintf('P%dD', $effectiveSettings->lookbackDays))),
             poolSize: $effectiveSettings->candidatePoolSize,
             orderSeed: (int) $now->getTimestamp(),
