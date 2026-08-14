@@ -609,7 +609,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 
         for ($i = 0; $i < 5; $i++) {
             $guid = $user->getEmail() . '-entry-' . $i;
-            $this->fixtures->entry($feed, $guid, sprintf('2026-07-%02dT00:00:00Z', 10 + $i));
+            $this->fixtures->entry($feed, $guid, 60 - $i);
         }
     }
 
@@ -631,11 +631,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 
         $summary = str_repeat('Lorem ipsum dolor sit amet consectetur adipiscing elit. ', 5);
         for ($i = 0; $i < $entryCount; $i++) {
-            $entry = $this->fixtures->entry($feed, $user->getEmail() . '-entry-' . $i, sprintf(
-                '2026-07-10T%02d:%02d:00Z',
-                intdiv($i, 60),
-                $i % 60,
-            ));
+            // One distinct minute per entry, all inside the default 2-day window.
+            $entry = $this->fixtures->entry($feed, $user->getEmail() . '-entry-' . $i, $entryCount - $i);
             $entry->setSummary($summary);
         }
         $this->em->flush();
@@ -647,6 +644,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
             viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
             candidatePoolSize: $entryCount,
+            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
             contextWindow: 2500,
             batchCount: $batchCount,

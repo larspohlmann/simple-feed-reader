@@ -9,6 +9,16 @@
     </select>
   </app-field>
 
+  <app-field [label]="'settings.ai.recommendations.lookback' | transloco">
+    <select data-testid="lookback-days" (change)="setLookbackDays($event)">
+      @for (opt of lookbackOptions; track opt.value) {
+        <option [value]="opt.value" [selected]="lookbackDays() === opt.value">
+          {{ opt.key | transloco }}
+        </option>
+      }
+    </select>
+  </app-field>
+
   @if (!workerAlive()) {
     <p class="no-worker">{{ 'settings.ai.recommendations.autoGenerateNoWorker' | transloco }}</p>
     <pre class="cron-example">

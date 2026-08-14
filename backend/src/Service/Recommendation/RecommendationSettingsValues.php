@@ -21,6 +21,7 @@ final readonly class RecommendationSettingsValues
         public int $keptCap,
         public int $viewedCap,
         public int $candidatePoolSize,
+        public int $lookbackDays,
         public int $picksLimit,
         public ?int $contextWindow,
         public ?int $batchCount,

@@ -30,6 +30,8 @@ final readonly class SaveRecommendationSettingsRequest
         public int $viewedCap,
         #[Assert\Range(min: 10, max: 5000)]
         public int $candidatePoolSize,
+        #[Assert\Range(min: 1, max: 7)]
+        public int $lookbackDays,
         #[Assert\Range(min: 1, max: 500)]
         public int $picksLimit,
         #[Assert\Range(min: 4096, max: 2097152)]
@@ -50,6 +52,7 @@ final readonly class SaveRecommendationSettingsRequest
             keptCap: $this->keptCap,
             viewedCap: $this->viewedCap,
             candidatePoolSize: $this->candidatePoolSize,
+            lookbackDays: $this->lookbackDays,
             picksLimit: $this->picksLimit,
             contextWindow: $this->contextWindow,
             batchCount: $this->batchCount,

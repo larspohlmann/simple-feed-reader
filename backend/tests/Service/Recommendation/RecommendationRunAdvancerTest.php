@@ -82,7 +82,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedReadyAiSettings($this->user);
         for ($i = 0; $i < 5; $i++) {
-            $this->entry('entry-' . $i, sprintf('2026-07-%02dT00:00:00Z', 10 + $i));
+            $this->entry('entry-' . $i, 60 - $i);
         }
         $this->starter()->start($this->user);
         $runId = $this->runs()->findActiveForUser($this->user)?->getId();
@@ -123,6 +123,78 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame(RecommendationRun::STATUS_COMPLETED, $persisted?->getStatus());
     }
 
+    public function testSnapshotExcludesCandidatesOlderThanTheLookbackWindow(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        // Default window is 2 days: 30 minutes ago is inside, 5 days ago is not.
+        $inside = $this->entry('inside-window', 30);
+        $this->entry('outside-window', 60 * 24 * 5);
+        $this->starter()->start($this->user);
+        $runId = $this->runs()->findActiveForUser($this->user)?->getId();
+        self::assertNotNull($runId);
+
+        $this->advancer()->advance($this->user);
+
+        $this->em->clear();
+        $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
+        self::assertNotNull($persisted);
+        self::assertSame([[$inside->getId()]], $persisted->getCandidateBatches());
+    }
+
+    public function testSnapshotWithEveryCandidateOutsideTheWindowCompletesEmpty(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $this->entry('long-gone', 60 * 24 * 30);
+        $this->starter()->start($this->user);
+
+        $report = $this->advancer()->advance($this->user);
+
+        // Not a failure: an empty window freezes an empty plan, exactly like
+        // an account with no unread entries at all.
+        self::assertSame('completed', $report->status);
+        self::assertSame(0, $report->batchesTotal);
+    }
+
+    /**
+     * Proves the window comes from the reader's own setting, not a hardcoded
+     * default: an entry 3 days old is outside DEFAULT_LOOKBACK_DAYS (2) but
+     * inside this reader's configured 5-day window, while an entry 10 days
+     * old is outside both. A snapshot that ignored lookbackDays, or that
+     * hardcoded any single window, would fail this assertion.
+     */
+    public function testSnapshotUsesTheUsersConfiguredLookbackWindow(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $settings = new RecommendationSettings($this->user);
+        $settings->update(new RecommendationSettingsValues(
+            guidancePrompt: null,
+            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
+            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
+            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
+            candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+            lookbackDays: 5,
+            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+            contextWindow: null,
+            batchCount: null,
+            debugEnabled: false,
+        ));
+        $this->em->persist($settings);
+        $this->em->flush();
+
+        $insideWiderWindow = $this->entry('inside-wider-window', 60 * 24 * 3);
+        $this->entry('outside-both-windows', 60 * 24 * 10);
+        $this->starter()->start($this->user);
+        $runId = $this->runs()->findActiveForUser($this->user)?->getId();
+        self::assertNotNull($runId);
+
+        $this->advancer()->advance($this->user);
+
+        $this->em->clear();
+        $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
+        self::assertNotNull($persisted);
+        self::assertSame([[$insideWiderWindow->getId()]], $persisted->getCandidateBatches());
+    }
+
     public function testBusyWhenTheLockIsHeld(): void
     {
         $userId = $this->user->getId();
@@ -159,7 +231,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testAPollTickFailsAPendingRunWhenTheConfigurationDisappears(): void
     {
         $this->seedReadyAiSettings($this->user);
-        $this->entry('entry-configless', '2026-07-10T00:00:00Z');
+        $this->entry('entry-configless', 30);
         $this->starter()->start($this->user);
         $runId = $this->activeRun()->getId();
         self::assertNotNull($runId);
@@ -593,7 +665,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->em->flush();
 
         for ($i = 0; $i < 3; $i++) {
-            $this->entry('entry-' . $i, sprintf('2026-07-%02dT00:00:00Z', 10 + $i));
+            $this->entry('entry-' . $i, 60 - $i);
         }
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user); // snapshot tick
@@ -1057,7 +1129,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedReadyAiSettings($this->user);
         for ($i = 0; $i < 5; $i++) {
-            $this->entry('entry-' . $i, sprintf('2026-07-%02dT00:00:00Z', 10 + $i));
+            $this->entry('entry-' . $i, 60 - $i);
         }
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user);
@@ -1646,7 +1718,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         for ($i = 0; $i < self::MULTI_BATCH_ENTRY_COUNT; $i++) {
             $entry = $this->entry(
                 sprintf('entry-%02d', $i),
-                sprintf('2026-07-10T%02d:%02d:00Z', intdiv($i, 60), $i % 60),
+                1440 - $i,
             );
             $entry->setSummary($summary);
         }
@@ -1665,7 +1737,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->seedReadyAiSettings($this->user);
 
         for ($i = 0; $i < self::SINGLE_BATCH_ENTRY_COUNT; $i++) {
-            $this->entry('entry-' . $i, sprintf('2026-07-%02dT00:00:00Z', 10 + $i));
+            $this->entry('entry-' . $i, 60 - $i);
         }
         $this->em->flush();
 
@@ -1681,6 +1753,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
             viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
             candidatePoolSize: $candidatePoolSize,
+            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: $picksLimit,
             contextWindow: self::MULTI_BATCH_CONTEXT_WINDOW,
             batchCount: $batchCount,
@@ -1705,7 +1778,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         for ($i = 0; $i < $entryCount; $i++) {
             $entry = $this->entry(
                 sprintf('entry-%02d', $i),
-                sprintf('2026-07-10T%02d:%02d:00Z', intdiv($i, 60), $i % 60),
+                1440 - $i,
             );
             $entry->setSummary($summary);
         }
@@ -1753,9 +1826,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         return $run;
     }
 
-    private function entry(string $guid, string $published): Entry
+    private function entry(string $guid, int $minutesAgo): Entry
     {
-        return $this->fixtures->entry($this->feed, $guid, $published);
+        return $this->fixtures->entry($this->feed, $guid, $minutesAgo);
     }
 
     private function seedReadyAiSettings(User $user): void
@@ -1779,6 +1852,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             keptCap: $current->keptCap,
             viewedCap: $current->viewedCap,
             candidatePoolSize: $current->candidatePoolSize,
+            lookbackDays: $current->lookbackDays,
             picksLimit: $current->picksLimit,
             contextWindow: $current->contextWindow,
             batchCount: $current->batchCount,

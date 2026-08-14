@@ -504,6 +504,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             keptCap: 40,
             viewedCap: 80,
             candidatePoolSize: 500,
+            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: $picksLimit,
             packing: new RecommendationPackingSettings(
                 contextWindow: $contextWindow,

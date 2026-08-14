@@ -210,6 +210,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
             keptCap: $keptCap,
             viewedCap: $viewedCap,
             candidatePoolSize: 500,
+            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: 50,
             packing: new RecommendationPackingSettings(
                 contextWindow: 32768,

@@ -133,6 +133,7 @@ final readonly class RecommendationRunFixtures
             keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
             viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
             candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
             contextWindow: null,
             batchCount: null,
@@ -144,18 +145,24 @@ final readonly class RecommendationRunFixtures
         return $settings;
     }
 
-    public function entry(Feed $feed, string $guid, string $published): Entry
+    /**
+     * A candidate entry stamped $minutesAgo before now. Relative on purpose:
+     * the recommendation pool has a look-back window (#386), so an absolute
+     * date in a fixture silently ages out of it and leaves the run with
+     * nothing to snapshot.
+     */
+    public function entry(Feed $feed, string $guid, int $minutesAgo): Entry
     {
-        $publishedAt = new \DateTimeImmutable($published);
+        $effectiveDate = new \DateTimeImmutable(\sprintf('-%d minutes', $minutesAgo));
         $entry = new Entry(
             $feed,
             $guid,
             'https://example.com/' . $guid,
             $guid,
-            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
-            $publishedAt,
+            new \DateTimeImmutable('-1 year'),
+            $effectiveDate,
         );
-        $entry->setPublishedAt($publishedAt);
+        $entry->setPublishedAt($effectiveDate);
         $this->em->persist($entry);
         $this->em->flush();
 

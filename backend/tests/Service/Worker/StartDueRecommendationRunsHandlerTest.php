@@ -47,6 +47,7 @@ final class StartDueRecommendationRunsHandlerTest extends DbTestCase
                 keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
                 viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
                 candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+                lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
                 picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
                 contextWindow: null,
                 batchCount: null,

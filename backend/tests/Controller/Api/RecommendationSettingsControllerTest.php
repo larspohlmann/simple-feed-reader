@@ -58,6 +58,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
             'keptCap' => 15,
             'viewedCap' => 30,
             'candidatePoolSize' => 500,
+            'lookbackDays' => 3,
             'picksLimit' => 25,
             'contextWindow' => 65536,
             'batchCount' => 12,
@@ -113,6 +114,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         self::assertSame(40, $payload['keptCap']);
         self::assertSame(80, $payload['viewedCap']);
         self::assertSame(500, $payload['candidatePoolSize']);
+        self::assertSame(2, $payload['lookbackDays']);
         self::assertSame(50, $payload['picksLimit']);
         self::assertSame(32768, $payload['contextWindow']);
         self::assertNull($payload['contextWindowOverride']);
@@ -164,6 +166,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         self::assertSame(15, $payload['keptCap']);
         self::assertSame(30, $payload['viewedCap']);
         self::assertSame(500, $payload['candidatePoolSize']);
+        self::assertSame(3, $payload['lookbackDays']);
         self::assertSame(25, $payload['picksLimit']);
         self::assertSame(65536, $payload['contextWindow']);
         self::assertSame(65536, $payload['contextWindowOverride']);
@@ -233,6 +236,9 @@ final class RecommendationSettingsControllerTest extends WebTestCase
      * recommendations silently, and a context window below 4096 breaks the
      * downstream prompt-budgeting maths. The maxima and the other minima are
      * UI ceilings with no failure mode and are deliberately not swept here.
+     * lookbackDays is the one field whose maximum is also swept: unlike the
+     * other maxima, 8 is a real ceiling, since a window nobody can reach past
+     * is the entire point of the setting.
      *
      * @return iterable<string, array{string, int|null}>
      */
@@ -241,6 +247,8 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         yield 'picksLimit below its floor of 1' => ['picksLimit', 0];
         yield 'candidatePoolSize below its floor of 10' => ['candidatePoolSize', 9];
         yield 'contextWindow below its floor of 4096' => ['contextWindow', 4095];
+        yield 'lookbackDays below its floor of 1' => ['lookbackDays', 0];
+        yield 'lookbackDays above its ceiling of 7' => ['lookbackDays', 8];
     }
 
     #[DataProvider('rejectedLoadBearingBounds')]
@@ -265,6 +273,45 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         self::assertSame('validation_error', $payload['type']);
         self::assertIsArray($payload['errors']);
         self::assertArrayHasKey($field, $payload['errors']);
+    }
+
+    /**
+     * The floor and ceiling in {@see rejectedLoadBearingBounds()} are proven
+     * only from the outside: those cases show 0 and 8 are refused, but say
+     * nothing about whether 1 and 7 themselves — the values `Assert\Range`
+     * is actually supposed to let through — still are.
+     *
+     * @return iterable<string, array{int}>
+     */
+    public static function acceptedLookbackDaysBounds(): iterable
+    {
+        yield 'lookbackDays at its floor of 1' => [1];
+        yield 'lookbackDays at its ceiling of 7' => [7];
+    }
+
+    #[DataProvider('acceptedLookbackDaysBounds')]
+    public function testAnAcceptedLookbackDaysBoundIsPersisted(int $acceptedValue): void
+    {
+        $client = static::createClient();
+        [$headers] = $this->auth('recsettings-lookback-bound-' . $acceptedValue . '@example.test');
+
+        $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        $body['lookbackDays'] = $acceptedValue;
+
+        $client->request(
+            'PUT',
+            self::URI,
+            server: array_merge($headers, ['CONTENT_TYPE' => 'application/json']),
+            content: json_encode($body, \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseIsSuccessful();
+        self::assertSame($acceptedValue, $this->payload($client)['lookbackDays']);
+
+        $client->request('GET', self::URI, server: $headers);
+        self::assertResponseIsSuccessful();
+        self::assertSame($acceptedValue, $this->payload($client)['lookbackDays']);
     }
 
     public function testClearingAContextWindowOverrideFallsBackToTheProvider(): void

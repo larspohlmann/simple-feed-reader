@@ -31,6 +31,7 @@ describe('RecommendationSettingsCardComponent', () => {
     contextWindowSource: 'provider',
     debugEnabled: false,
     autoGenerateIntervalHours: null,
+    lookbackDays: 2,
     workerAlive: true,
   };
 
@@ -109,7 +110,7 @@ describe('RecommendationSettingsCardComponent', () => {
         expect.stringContaining('Favorites in history'),
         expect.stringContaining('Kept in history'),
         expect.stringContaining('Viewed in history'),
-        expect.stringContaining('Candidate pool size'),
+        expect.stringContaining('Maximum articles'),
         expect.stringContaining('Maximum picks'),
         expect.stringContaining('Batches (empty = automatic)'),
       ]),
@@ -154,6 +155,7 @@ describe('RecommendationSettingsCardComponent', () => {
       contextWindow: null,
       debugEnabled: true,
       autoGenerateIntervalHours: null,
+      lookbackDays: 2,
     });
 
     request.flush({ ...STATE, picksLimit: 30, contextWindow: 128000, debugEnabled: true });
@@ -384,5 +386,32 @@ describe('RecommendationSettingsCardComponent', () => {
       expect(config.data.confirmLabel).toBe('Clear recommendations');
       expect(config.data.danger).toBe(true);
     });
+  });
+
+  it('renders the look-back select outside the expert disclosure', () => {
+    const fixture = mount({ ...STATE, lookbackDays: 5 });
+
+    const select = fixture.nativeElement.querySelector(
+      '[data-testid="lookback-days"]',
+    ) as HTMLSelectElement | null;
+    expect(select).not.toBeNull();
+    expect(select!.closest('app-disclosure')).toBeNull();
+    expect(fixture.componentInstance.lookbackDays()).toBe(5);
+  });
+
+  it('sends the chosen look-back window on save', () => {
+    const fixture = mount();
+
+    const select = fixture.nativeElement.querySelector(
+      '[data-testid="lookback-days"]',
+    ) as HTMLSelectElement;
+    select.value = '7';
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    fixture.componentInstance.save();
+
+    const request = http.expectOne('/api/me/ai/recommendations');
+    expect(request.request.body.lookbackDays).toBe(7);
+    request.flush({ ...STATE, lookbackDays: 7 });
   });
 });

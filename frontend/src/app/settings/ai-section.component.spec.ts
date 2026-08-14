@@ -53,6 +53,7 @@ const RECOMMENDATIONS = {
   keptCap: 50,
   viewedCap: 200,
   candidatePoolSize: 400,
+  lookbackDays: 2,
   picksLimit: 20,
   contextWindow: 128000,
   contextWindowOverride: null,

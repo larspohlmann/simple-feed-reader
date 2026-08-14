@@ -65,6 +65,7 @@ final class ForYouSweepTest extends DbTestCase
             keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
             viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
             candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
             contextWindow: null,
             batchCount: null,
@@ -87,7 +88,7 @@ final class ForYouSweepTest extends DbTestCase
         $this->em->flush();
 
         for ($i = 0; $i < 5; $i++) {
-            $this->fixtures->entry($feed, $email . '-entry-' . $i, sprintf('2026-07-%02dT00:00:00Z', 10 + $i));
+            $this->fixtures->entry($feed, $email . '-entry-' . $i, 60 - $i);
         }
 
         return $user;
