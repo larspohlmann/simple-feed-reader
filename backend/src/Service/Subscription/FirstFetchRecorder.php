@@ -9,6 +9,8 @@ use App\Service\Discovery\DiscoveredFeed;
 use App\Service\EntryIngestor;
 use App\Service\FeedIngestContext;
 use App\Service\FeedScheduler;
+use App\Service\Parser\ParsedEntry;
+use App\Service\Parser\ParsedFeed;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
@@ -29,6 +31,16 @@ final readonly class FirstFetchRecorder
 {
     private const int ETAG_MAX = 512;
     private const int LAST_MODIFIED_MAX = 255;
+
+    /**
+     * A subscribe inserts every stored entry inside one HTTP request, and a feed
+     * that serves its whole archive (841 items for one measured in #384) makes
+     * that request crawl. This bounds the request, NOT retention: whatever is cut
+     * arrives on the next refresh, with the same effective date it would have had,
+     * because an article older than the previous fetch keeps its publication date
+     * either way.
+     */
+    private const int FIRST_FETCH_MAX_ENTRIES = 200;
 
     public function __construct(
         private EntryIngestor $ingestor,
@@ -58,7 +70,7 @@ final readonly class FirstFetchRecorder
 
         $created = $this->ingestor->ingest(
             $feed,
-            $discovered->document,
+            $this->newest($discovered->document),
             new FeedIngestContext($this->clock->now(), null),
         );
         $feed->setEtag($this->truncate($discovered->etag, self::ETAG_MAX));
@@ -72,5 +84,36 @@ final readonly class FirstFetchRecorder
     private function truncate(?string $value, int $max): ?string
     {
         return null === $value ? null : mb_substr($value, 0, $max);
+    }
+
+    /**
+     * The newest FIRST_FETCH_MAX_ENTRIES entries, newest publication first. A
+     * null publishedAt sorts last. PHP's usort has been stable since 8.0, so
+     * entries sharing a publication date keep the feed's own relative order
+     * without any extra bookkeeping here.
+     */
+    private function newest(ParsedFeed $document): ParsedFeed
+    {
+        $entries = $document->entries;
+        if (count($entries) <= self::FIRST_FETCH_MAX_ENTRIES) {
+            return $document;
+        }
+
+        usort($entries, self::byPublicationDateDescending(...));
+        $newest = array_slice($entries, 0, self::FIRST_FETCH_MAX_ENTRIES);
+
+        return new ParsedFeed($document->title, $document->siteUrl, $document->description, $newest);
+    }
+
+    private static function byPublicationDateDescending(ParsedEntry $left, ParsedEntry $right): int
+    {
+        if ($left->publishedAt === null) {
+            return $right->publishedAt === null ? 0 : 1;
+        }
+        if ($right->publishedAt === null) {
+            return -1;
+        }
+
+        return $right->publishedAt <=> $left->publishedAt;
     }
 }
