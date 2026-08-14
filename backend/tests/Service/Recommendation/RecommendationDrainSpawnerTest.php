@@ -45,7 +45,23 @@ final class RecommendationDrainSpawnerTest extends DbTestCase
     public function testAFreshWorkerHeartbeatSuppressesTheSpawn(): void
     {
         $launcher = new RecordingProcessLauncher();
-        $this->presence()->markRecommendationSweep();
+        $this->presence()->markPersistentWorkerSweep();
+
+        (new RecommendationDrainSpawner($this->presence(), $launcher))->spawnIfNoWorker();
+
+        self::assertSame([], $launcher->launches);
+    }
+
+    /**
+     * A live drainer is a driver too, and it holds the drain lock: a second
+     * one would pay a full Symfony boot only to lose the lock and exit. The
+     * spawn question is "is anybody driving?", not "is there a persistent
+     * worker?" -- the two answers differ exactly here (#371 follow-up).
+     */
+    public function testALiveDrainerAlsoSuppressesTheSpawn(): void
+    {
+        $launcher = new RecordingProcessLauncher();
+        $this->presence()->markOnDemandDrainerSweep();
 
         (new RecommendationDrainSpawner($this->presence(), $launcher))->spawnIfNoWorker();
 

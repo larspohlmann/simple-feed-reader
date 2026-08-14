@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Entity\RecommendationRun;
-use App\Repository\RecommendationRunRepository;
-use App\Service\Recommendation\OpenAiCompatibleChatClient;
-use App\Service\Worker\WorkerPresence;
+use App\Service\Worker\OnDemandDrainerPresence;
 use App\Service\Worker\WorkerRunSweep;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -23,10 +20,14 @@ use Symfony\Component\Lock\LockInterface;
  * The on-demand drainer (#371): a short-lived worker that drives every
  * active recommendation run to completion at worker concurrency, spawned by
  * a web request on installs that have no persistent worker. Each sweep marks
- * the heartbeat, so open browsers demote to the read-only /current poll
- * while this runs; on the way out it clears that heartbeat again, so the poll
- * and cron paths take over immediately rather than after the freshness window
- * has aged out a worker that no longer exists.
+ * the drainer's own liveness key, so open browsers demote to the read-only
+ * /current poll while this runs; on the way out it clears that key again, so
+ * the poll and cron paths take over immediately rather than after the
+ * freshness window has aged out a worker that no longer exists. The key is
+ * the drainer's alone -- it never writes the persistent worker's, so this
+ * process cannot make the settings card claim an install has a background
+ * worker it does not have, and cannot clear a real worker's heartbeat on the
+ * way out.
  *
  * It only ever advances existing runs -- starting runs (and their spend
  * budget, #308) stays with the callers that already own it.
@@ -40,33 +41,33 @@ final class RecommendationDrainCommand extends Command
     public const string LOCK_NAME = 'recommendation-drain';
 
     /**
-     * Refreshed between sweeps, so it must outlive one whole sweep, not the
-     * whole drain. A sweep's duration is the SUM over the runs it touches:
-     * RecommendationRunRepository::MAXIMUM_RUNS_PER_SWEEP runs, each of which
-     * can spend RecommendationRun::MAX_ATTEMPTS in-tick retry rounds bounded
-     * by OpenAiCompatibleChatClient::TIMEOUT_SECONDS -- the same provider
-     * ceiling RecommendationRunAdvancer's per-user lock and
-     * WorkerPresence::FRESH_SECONDS are both derived from. Derived from those
-     * published constants, plus a margin for the surrounding bookkeeping,
-     * rather than a bare number: the earlier flat 900 s was shorter than one
-     * busy sweep, so the key could lapse mid-sweep while this process was
-     * still working.
+     * What a SIGKILL costs, and nothing else -- this is the one thing the TTL
+     * still decides. A hard kill skips both the `finally` and the shutdown
+     * hook, so the key sits there until it lapses, and no replacement drainer
+     * can be spawned in the meantime; 900 s bounds that blackout at fifteen
+     * minutes.
      *
-     * The cost is that a drainer killed hard -- SIGKILL skips both the
-     * `finally` and the shutdown hook -- parks the key for the full TTL. That
-     * blocks only a second drainer: the per-minute cron sweep keeps advancing
-     * the runs regardless, because it takes the per-user run locks, never
-     * this one.
+     * It deliberately does NOT bound one sweep's worst case (ten runs x
+     * MAX_ATTEMPTS x the provider timeout, i.e. five hours), even though the
+     * key is only refreshed between sweeps. A lapse mid-sweep no longer ends
+     * the drain: keepsHoldingTheLock() bids for the key again and carries on
+     * when the bid wins, so the long TTL that would prevent the lapse buys
+     * nothing while multiplying the post-SIGKILL blackout by twenty.
+     *
+     * A lapse can let a second drainer in for the rest of the sweep in
+     * flight, after which the incumbent's re-bid loses and it hands over
+     * cleanly. Overlapping drainers cannot double-advance a run anyway: every
+     * advance takes RecommendationRunAdvancer's per-user lock, which is also
+     * why runs keep progressing under the cron path no matter who holds this
+     * one.
      */
-    public const float LOCK_TTL_SECONDS = RecommendationRunRepository::MAXIMUM_RUNS_PER_SWEEP
-        * RecommendationRun::MAX_ATTEMPTS * OpenAiCompatibleChatClient::TIMEOUT_SECONDS
-        + 300.0;
+    public const float LOCK_TTL_SECONDS = 900.0;
 
     /**
      * Bounds the drain *loop*, not the process: the cap is read between
      * sweeps, so the sweep in flight when it passes still runs to its own
      * end. Past the cap the drainer starts no further sweep and exits,
-     * surrendering both the lock and the heartbeat, and the next cron tick
+     * surrendering both the lock and its liveness key, and the next cron tick
      * spawns a fresh one that resumes from the last committed checkpoint.
      */
     public const int MAX_RUNTIME_SECONDS = 3600;
@@ -82,7 +83,7 @@ final class RecommendationDrainCommand extends Command
         private readonly LockFactory $lockFactory,
         private readonly WorkerRunSweep $sweep,
         private readonly ClockInterface $clock,
-        private readonly WorkerPresence $presence,
+        private readonly OnDemandDrainerPresence $presence,
     ) {
         parent::__construct();
     }
@@ -127,35 +128,35 @@ final class RecommendationDrainCommand extends Command
                 // not raise a second fatal. The TTL still bounds the stall.
             }
 
-            $this->surrenderTheWorkerHeartbeat();
+            $this->surrenderTheDrainerLiveness();
         });
 
         try {
             $this->drainUntilDoneOrCapped($lock);
         } finally {
             $lock->release();
-            $this->surrenderTheWorkerHeartbeat();
+            $this->surrenderTheDrainerLiveness();
         }
 
         return Command::SUCCESS;
     }
 
     /**
-     * This process was the worker only for as long as it lived. Leaving the
-     * heartbeat fresh behind it makes the poll driver report the run as
+     * This process was a worker only for as long as it lived. Leaving its
+     * liveness key fresh behind it makes the poll driver report the run as
      * running in the background, and stops the cron's respawn net from
      * bringing a replacement up, for up to WorkerPresence::FRESH_SECONDS --
-     * eleven minutes of a frozen run on a worker-less install. On a Docker
-     * install the real worker re-marks within ten seconds, so clearing costs
-     * nothing there. Best-effort like the lock release, because this also
-     * runs from the shutdown hook, where a throw would pile a second fatal on
-     * whatever ended the process; a clear that fails simply leaves the old
-     * behavior, a heartbeat that ages out.
+     * eleven minutes of a frozen run on a worker-less install. Unconditional,
+     * and safe to be so: the drainer owns its own key, so this cannot touch a
+     * persistent worker's heartbeat even when both run at once. Best-effort
+     * like the lock release, because this also runs from the shutdown hook,
+     * where a throw would pile a second fatal on whatever ended the process;
+     * a clear that fails simply leaves the old behavior, a key that ages out.
      */
-    private function surrenderTheWorkerHeartbeat(): void
+    private function surrenderTheDrainerLiveness(): void
     {
         try {
-            $this->presence->forgetRecommendationSweep();
+            $this->presence->surrender();
         } catch (\Throwable) {
             // Deliberately silent: see this method's doc comment.
         }
@@ -165,7 +166,7 @@ final class RecommendationDrainCommand extends Command
     {
         $startedAt = $this->clock->now();
 
-        while ($this->sweep->sweep() > 0) {
+        while ($this->sweep->sweep($this->presence) > 0) {
             if ($this->clock->now()->getTimestamp() - $startedAt->getTimestamp() >= self::MAX_RUNTIME_SECONDS) {
                 return;
             }

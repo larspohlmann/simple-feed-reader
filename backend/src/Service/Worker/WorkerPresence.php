@@ -8,14 +8,35 @@ use App\Repository\WorkerHeartbeatRepository;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Whether a background worker is currently sweeping. The poll driver reads
- * this to decide whether it still owes the work itself; the per-user run
- * lock is what actually stops a double run if this signal is ever wrong
- * (#311).
+ * Who is sweeping recommendation runs right now. Two different questions are
+ * asked of this class and they do NOT have the same answer (#371 follow-up):
+ *
+ * - "Is anybody driving the runs at this moment?" — the poll driver and the
+ *   drain spawner ask this, and a short-lived on-demand drainer counts for
+ *   both: the poll tick must not drive a run somebody else is advancing, and
+ *   the spawner must not fork next to a live drainer.
+ * - "Does this install run a persistent worker?" — the settings card asks
+ *   this to decide whether the operator still needs a cron entry for
+ *   scheduled auto-generation. A drainer must NOT count: it only advances
+ *   runs that already exist and never starts due ones
+ *   (ForYouSweep::startDueRuns() is no part of WorkerRunSweep), so the cron
+ *   is still genuinely required. One shared key answered "you need no cron"
+ *   to anyone who opened Settings during a drain.
+ *
+ * Hence one key per kind of worker. The per-user run lock is still what
+ * actually stops a double run if either signal is ever wrong (#311).
  */
 final readonly class WorkerPresence
 {
     public const string RECOMMENDATION_SWEEP = 'recommendation-sweep';
+
+    /**
+     * The on-demand drainer's own key (#371). Separate from the persistent
+     * worker's, so a transient drainer can claim and surrender liveness
+     * without ever writing to a real worker's row — which is also why the
+     * drainer's unconditional clear-on-exit is safe next to a live worker.
+     */
+    public const string RECOMMENDATION_DRAIN_SWEEP = 'recommendation-drain-sweep';
 
     /**
      * Sized against the longest gap between two touches, NOT against the
@@ -50,28 +71,54 @@ final readonly class WorkerPresence
     ) {
     }
 
-    public function markRecommendationSweep(): void
+    public function markPersistentWorkerSweep(): void
     {
         $this->heartbeats->touch(self::RECOMMENDATION_SWEEP, $this->clock->now());
     }
 
-    /**
-     * Surrenders the liveness claim immediately instead of waiting out
-     * FRESH_SECONDS. The on-demand drainer (#371) is the caller: it is a
-     * worker only for as long as it lives, and a drainer that exits with runs
-     * still active would otherwise keep the poll driver deferring to a dead
-     * worker, and keep the cron's respawn net from firing, for the full
-     * freshness window. A Docker install's real worker re-marks within its
-     * ten-second cadence, so clearing costs nothing there.
-     */
-    public function forgetRecommendationSweep(): void
+    public function markOnDemandDrainerSweep(): void
     {
-        $this->heartbeats->forget(self::RECOMMENDATION_SWEEP);
+        $this->heartbeats->touch(self::RECOMMENDATION_DRAIN_SWEEP, $this->clock->now());
     }
 
-    public function isRecommendationWorkerAlive(): bool
+    /**
+     * Surrenders the drainer's liveness claim immediately instead of waiting
+     * out FRESH_SECONDS. The drainer is a worker only for as long as it
+     * lives, and one that exits with runs still active would otherwise keep
+     * the poll driver deferring to a process that is gone, and keep the
+     * cron's respawn net from firing, for the full freshness window. It
+     * touches the drain key only, so a drainer that happened to run beside a
+     * real worker cannot clear that worker's heartbeat.
+     */
+    public function forgetOnDemandDrainer(): void
     {
-        $touchedAt = $this->heartbeats->findTouchedAt(self::RECOMMENDATION_SWEEP);
+        $this->heartbeats->forget(self::RECOMMENDATION_DRAIN_SWEEP);
+    }
+
+    /**
+     * Somebody else owns execution right now: either the persistent worker or
+     * a live on-demand drainer. Read by the poll driver (which then reports
+     * instead of driving) and by the drain spawner (which then does not fork).
+     */
+    public function isAnybodyDrivingRecommendationRuns(): bool
+    {
+        return $this->hasPersistentRecommendationWorker()
+            || $this->isFresh(self::RECOMMENDATION_DRAIN_SWEEP);
+    }
+
+    /**
+     * This install runs a background worker that also starts due runs, so
+     * scheduled auto-generation needs no cron entry. A drainer never starts a
+     * due run, so it deliberately does not answer this question.
+     */
+    public function hasPersistentRecommendationWorker(): bool
+    {
+        return $this->isFresh(self::RECOMMENDATION_SWEEP);
+    }
+
+    private function isFresh(string $name): bool
+    {
+        $touchedAt = $this->heartbeats->findTouchedAt($name);
 
         if (null === $touchedAt) {
             return false;

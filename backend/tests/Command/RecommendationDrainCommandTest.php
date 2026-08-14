@@ -13,9 +13,11 @@ use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
+use App\Service\Recommendation\OpenAiCompatibleChatClient;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Recommendation\RecommendationSettingsValues;
+use App\Service\Worker\OnDemandDrainerPresence;
 use App\Service\Worker\WorkerPresence;
 use App\Service\Worker\WorkerRunSweep;
 use App\Tests\DbTestCase;
@@ -217,7 +219,28 @@ final class RecommendationDrainCommandTest extends DbTestCase
 
         $this->em->clear();
         self::assertNotNull($this->runs()->findActiveForUser($user));
-        self::assertFalse($this->presence()->isRecommendationWorkerAlive());
+        self::assertFalse($this->presence()->isAnybodyDrivingRecommendationRuns());
+    }
+
+    /**
+     * The lock TTL is pinned as a RELATIONSHIP, because that is what the
+     * choice actually is (#371 follow-up). Above one provider call, so the
+     * usual sweep -- one run, one call -- never lapses at all. Below one
+     * worst-case sweep, deliberately: the TTL is what a SIGKILLed drainer
+     * costs a replacement, and sizing it for the worst sweep bought a
+     * five-hour respawn blackout to prevent a lapse that
+     * testKeepsDrainingWhenTheLockKeyMerelyExpired proves is survivable.
+     */
+    public function testTheLockOutlivesOneProviderCallButNotAWorstCaseSweep(): void
+    {
+        self::assertGreaterThan(
+            OpenAiCompatibleChatClient::TIMEOUT_SECONDS,
+            RecommendationDrainCommand::LOCK_TTL_SECONDS,
+        );
+        self::assertLessThan(
+            RecommendationRun::MAX_ATTEMPTS * OpenAiCompatibleChatClient::TIMEOUT_SECONDS,
+            RecommendationDrainCommand::LOCK_TTL_SECONDS,
+        );
     }
 
     /**
@@ -274,8 +297,13 @@ final class RecommendationDrainCommandTest extends DbTestCase
             $lockFactory,
             $this->sweep(),
             $clock ?? new TickingClock(new \DateTimeImmutable('2026-08-14 00:00:00'), 1),
-            $this->presence(),
+            $this->drainerPresence(),
         );
+    }
+
+    private function drainerPresence(): OnDemandDrainerPresence
+    {
+        return new OnDemandDrainerPresence($this->presence());
     }
 
     private function presence(): WorkerPresence
@@ -293,7 +321,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
      */
     private function sweep(): WorkerRunSweep
     {
-        return new WorkerRunSweep($this->runs(), $this->advancer(), $this->presence(), $this->em, new NullLogger());
+        return new WorkerRunSweep($this->runs(), $this->advancer(), $this->em, new NullLogger());
     }
 
     private function lockFactory(): LockFactory

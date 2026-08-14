@@ -36,6 +36,7 @@ use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Recommendation\RecommendationWinnerRanker;
 use App\Service\Worker\Handler\AdvanceRecommendationRunsHandler;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
+use App\Service\Worker\PersistentWorkerPresence;
 use App\Service\Worker\WorkerPresence;
 use App\Service\Worker\WorkerRunSweep;
 use App\Tests\DbTestCase;
@@ -78,7 +79,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     {
         $this->handler()->__invoke(new AdvanceRecommendationRuns());
 
-        self::assertTrue($this->presence()->isRecommendationWorkerAlive());
+        self::assertTrue($this->presence()->hasPersistentRecommendationWorker());
     }
 
     /**
@@ -282,13 +283,10 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     public function testFiringClearsTheIdentityMapAfterwards(): void
     {
         $clearTracker = new ClearTrackingEntityManager($this->em);
-        $handler = new AdvanceRecommendationRunsHandler(new WorkerRunSweep(
-            $this->runs(),
-            $this->advancer(),
-            $this->presence(),
-            $clearTracker,
-            new NullLogger(),
-        ));
+        $handler = new AdvanceRecommendationRunsHandler(
+            new WorkerRunSweep($this->runs(), $this->advancer(), $clearTracker, new NullLogger()),
+            $this->persistentWorker(),
+        );
 
         $handler->__invoke(new AdvanceRecommendationRuns());
 
@@ -472,13 +470,10 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
      */
     private function handlerWithFlushFailingEntityManager(LoggerInterface $logger): AdvanceRecommendationRunsHandler
     {
-        return new AdvanceRecommendationRunsHandler(new WorkerRunSweep(
-            $this->runs(),
-            $this->advancerWithFlushFailingEntityManager(),
-            $this->presence(),
-            $this->em,
-            $logger,
-        ));
+        return new AdvanceRecommendationRunsHandler(
+            new WorkerRunSweep($this->runs(), $this->advancerWithFlushFailingEntityManager(), $this->em, $logger),
+            $this->persistentWorker(),
+        );
     }
 
     /**
@@ -517,24 +512,23 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
      */
     private function handlerWithLogger(LoggerInterface $logger): AdvanceRecommendationRunsHandler
     {
-        return new AdvanceRecommendationRunsHandler(new WorkerRunSweep(
-            $this->runs(),
-            $this->advancer(),
-            $this->presence(),
-            $this->em,
-            $logger,
-        ));
+        return new AdvanceRecommendationRunsHandler(
+            new WorkerRunSweep($this->runs(), $this->advancer(), $this->em, $logger),
+            $this->persistentWorker(),
+        );
     }
 
     private function handlerWithPresenceClock(ClockInterface $presenceClock): AdvanceRecommendationRunsHandler
     {
-        return new AdvanceRecommendationRunsHandler(new WorkerRunSweep(
-            $this->runs(),
-            $this->advancer(),
-            new WorkerPresence($this->heartbeats(), $presenceClock),
-            $this->em,
-            new NullLogger(),
-        ));
+        return new AdvanceRecommendationRunsHandler(
+            new WorkerRunSweep($this->runs(), $this->advancer(), $this->em, new NullLogger()),
+            new PersistentWorkerPresence(new WorkerPresence($this->heartbeats(), $presenceClock)),
+        );
+    }
+
+    private function persistentWorker(): PersistentWorkerPresence
+    {
+        return new PersistentWorkerPresence($this->presence());
     }
 
     private function heartbeats(): WorkerHeartbeatRepository

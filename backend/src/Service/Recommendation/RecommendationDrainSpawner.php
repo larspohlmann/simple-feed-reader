@@ -10,7 +10,8 @@ use App\Service\Worker\WorkerPresence;
 /**
  * The one spawn policy for the on-demand drainer (#371): every trigger site
  * (run start, run resume, the cron tick's respawn net) goes through this
- * method, so "only when no worker is alive" is decided in exactly one place.
+ * method, so "only when nobody is already driving the runs" is decided in
+ * exactly one place.
  * A stale read here is harmless -- the drain command's own global lock and
  * the per-user run lock are the real guards against double work; this check
  * only avoids pointlessly forking next to a healthy worker.
@@ -45,7 +46,10 @@ final class RecommendationDrainSpawner
             return;
         }
 
-        if ($this->presence->isRecommendationWorkerAlive()) {
+        // Either kind of worker counts: forking beside a live drainer is as
+        // pointless as forking beside the persistent worker, and the new
+        // process would only lose the drain lock.
+        if ($this->presence->isAnybodyDrivingRecommendationRuns()) {
             return;
         }
 

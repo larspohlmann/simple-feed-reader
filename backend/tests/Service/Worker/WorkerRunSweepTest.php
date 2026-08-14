@@ -14,6 +14,8 @@ use App\Repository\WorkerHeartbeatRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
+use App\Service\Worker\OnDemandDrainerPresence;
+use App\Service\Worker\PersistentWorkerPresence;
 use App\Service\Worker\WorkerPresence;
 use App\Service\Worker\WorkerRunSweep;
 use App\Tests\DbTestCase;
@@ -47,8 +49,22 @@ final class WorkerRunSweepTest extends DbTestCase
 
     public function testSweepWithNoActiveRunsReturnsZeroAndStillReportsLiveness(): void
     {
-        self::assertSame(0, $this->sweep()->sweep());
-        self::assertTrue($this->presence()->isRecommendationWorkerAlive());
+        self::assertSame(0, $this->sweep()->sweep($this->persistentWorker()));
+        self::assertTrue($this->presence()->hasPersistentRecommendationWorker());
+    }
+
+    /**
+     * The sweep marks whoever runs it and nothing else (#371 follow-up). Run
+     * by the drainer, it must claim the drainer's key alone: the settings card
+     * reads the persistent worker's key to decide whether the install still
+     * needs a cron, and a drainer never starts a due run.
+     */
+    public function testASweepRunByTheDrainerClaimsOnlyTheDrainerKey(): void
+    {
+        $this->sweep()->sweep($this->onDemandDrainer());
+
+        self::assertTrue($this->presence()->isAnybodyDrivingRecommendationRuns());
+        self::assertFalse($this->presence()->hasPersistentRecommendationWorker());
     }
 
     public function testSweepReturnsOneAttemptPerActiveRun(): void
@@ -64,7 +80,7 @@ final class WorkerRunSweepTest extends DbTestCase
         // Both runs are PENDING; the sweep's snapshot tick advances each
         // without a provider call, so the count is observable without
         // stubbing replies.
-        self::assertSame(2, $this->sweep()->sweep());
+        self::assertSame(2, $this->sweep()->sweep($this->persistentWorker()));
         foreach ([$first, $second] as $user) {
             $run = $this->runs()->findActiveForUser($user);
             self::assertNotNull($run);
@@ -88,16 +104,13 @@ final class WorkerRunSweepTest extends DbTestCase
         $this->starter()->start($user);
 
         $clearTracker = new ClearTrackingEntityManager($this->em);
-        $sweep = new WorkerRunSweep(
-            $this->runs(),
-            $this->advancer(),
+        $sweep = new WorkerRunSweep($this->runs(), $this->advancer(), $clearTracker, new NullLogger());
+        $throwingWorker = new PersistentWorkerPresence(
             new WorkerPresence($this->heartbeats(), new ThrowingClock(1)),
-            $clearTracker,
-            new NullLogger(),
         );
 
         try {
-            $sweep->sweep();
+            $sweep->sweep($throwingWorker);
             self::fail('The throwing clock must have surfaced.');
         } catch (\RuntimeException $expected) {
             self::assertSame(ThrowingClock::MESSAGE, $expected->getMessage());
@@ -162,7 +175,17 @@ final class WorkerRunSweepTest extends DbTestCase
      */
     private function sweep(): WorkerRunSweep
     {
-        return new WorkerRunSweep($this->runs(), $this->advancer(), $this->presence(), $this->em, new NullLogger());
+        return new WorkerRunSweep($this->runs(), $this->advancer(), $this->em, new NullLogger());
+    }
+
+    private function persistentWorker(): PersistentWorkerPresence
+    {
+        return new PersistentWorkerPresence($this->presence());
+    }
+
+    private function onDemandDrainer(): OnDemandDrainerPresence
+    {
+        return new OnDemandDrainerPresence($this->presence());
     }
 
     private function advancer(): RecommendationRunAdvancer

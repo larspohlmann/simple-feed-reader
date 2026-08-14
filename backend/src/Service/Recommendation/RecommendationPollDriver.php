@@ -9,11 +9,12 @@ use App\Repository\RecommendationRunRepository;
 use App\Service\Worker\WorkerPresence;
 
 /**
- * The poll driver's side of #311's arbitration: a fresh worker heartbeat
- * means the worker owns execution, so a poll tick becomes a pure status
- * read; a stale one means the #308 poll behaviour applies untouched. Kill
- * the worker mid-run and the next poll tick advances from the checkpoint --
- * the fallback is automatic in both directions, with no config switch.
+ * The poll driver's side of #311's arbitration: while somebody else drives
+ * the runs -- the persistent worker, or an on-demand drainer (#371) -- that
+ * driver owns execution, so a poll tick becomes a pure status read; with
+ * nobody driving, the #308 poll behaviour applies untouched. Kill the driver
+ * mid-run and the next poll tick advances from the checkpoint -- the fallback
+ * is automatic in both directions, with no config switch.
  *
  * The heartbeat is a hint, the per-user lock is the truth: an advance that
  * comes back busy is answered the same way a fresh heartbeat is, because
@@ -30,7 +31,7 @@ final readonly class RecommendationPollDriver
 
     public function poll(User $user): RecommendationRunReport
     {
-        if ($this->presence->isRecommendationWorkerAlive()) {
+        if ($this->presence->isAnybodyDrivingRecommendationRuns()) {
             return $this->latestReport($user)->inBackground();
         }
 
@@ -52,7 +53,7 @@ final readonly class RecommendationPollDriver
     {
         $report = $this->latestReport($user);
 
-        return $this->presence->isRecommendationWorkerAlive() ? $report->inBackground() : $report;
+        return $this->presence->isAnybodyDrivingRecommendationRuns() ? $report->inBackground() : $report;
     }
 
     private function latestReport(User $user): RecommendationRunReport

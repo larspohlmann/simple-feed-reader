@@ -214,7 +214,7 @@ final class RecommendationRunStarterTest extends DbTestCase
     {
         $this->seedReadyAiSettings($this->user);
         $launcher = new RecordingProcessLauncher();
-        $this->presence()->markRecommendationSweep();
+        $this->presence()->markPersistentWorkerSweep();
 
         $this->starterWith($launcher)->start($this->user);
 

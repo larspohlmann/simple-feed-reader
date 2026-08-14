@@ -46,13 +46,21 @@ Worker-less installs do not depend on the cron cadence for interactive
 runs. Starting or resuming a run from the web spawns a short-lived,
 detached CLI process (`app:recommendations:drain`) that advances every
 active run at full worker concurrency until none is left, then exits. The
-spawn only happens while no worker heartbeat is fresh, at most one spawn is
-issued per web request or cron tick, a global `recommendation-drain` lock
-guarantees at most one drainer, and the maintenance tick respawns a drainer
-as a safety net if one died with runs still active. A drainer marks that
-worker heartbeat while it sweeps and clears it again on its way out, so the
-poll and cron paths resume the moment it exits instead of waiting out the
-freshness window. If the host cannot spawn processes (`exec` disabled, no CLI
+spawn only happens while nothing is already driving the runs, at most one
+spawn is issued per web request or cron tick, a global `recommendation-drain`
+lock guarantees at most one drainer, and the maintenance tick respawns a
+drainer as a safety net if one died with runs still active. A drainer marks a
+liveness key of its **own** while it sweeps and clears it again on its way
+out, so the poll and cron paths resume the moment it exits instead of waiting
+out the freshness window.
+
+The two keys are read for two different questions. "Is anybody driving the
+runs right now?" counts both the persistent worker and a live drainer — the
+poll tick reports instead of driving, and no second drainer is spawned.
+"Does this install run a persistent worker?" counts the worker only; that is
+what the settings card's worker hint reads, because a drainer advances runs
+that exist but never starts a due one, so scheduled auto-generation still
+needs the cron entry. If the host cannot spawn processes (`exec` disabled, no CLI
 binary configured), the launch silently no-ops and the cron sweep above
 carries the runs exactly as before.
 

@@ -18,21 +18,21 @@ final class WorkerPresenceTest extends DbTestCase
         /** @var WorkerPresence $presence */
         $presence = self::getContainer()->get(WorkerPresence::class);
 
-        $presence->markRecommendationSweep();
+        $presence->markPersistentWorkerSweep();
 
-        self::assertTrue($presence->isRecommendationWorkerAlive());
+        self::assertTrue($presence->hasPersistentRecommendationWorker());
     }
 
     public function testNoHeartbeatMeansNoWorker(): void
     {
-        self::assertFalse($this->presenceAt('2026-08-07 12:00:00')->isRecommendationWorkerAlive());
+        self::assertFalse($this->presenceAt('2026-08-07 12:00:00')->hasPersistentRecommendationWorker());
     }
 
     public function testAFreshHeartbeatMeansAlive(): void
     {
         $this->repository()->touch(WorkerPresence::RECOMMENDATION_SWEEP, new \DateTimeImmutable('2026-08-07 11:59:40'));
 
-        self::assertTrue($this->presenceAt('2026-08-07 12:00:00')->isRecommendationWorkerAlive());
+        self::assertTrue($this->presenceAt('2026-08-07 12:00:00')->hasPersistentRecommendationWorker());
     }
 
     public function testTheHeartbeatIsAliveExactlyUpToTheEdgeOfTheWindow(): void
@@ -42,7 +42,7 @@ final class WorkerPresenceTest extends DbTestCase
             $this->secondsBeforeNoon(WorkerPresence::FRESH_SECONDS),
         );
 
-        self::assertTrue($this->presenceAt('2026-08-07 12:00:00')->isRecommendationWorkerAlive());
+        self::assertTrue($this->presenceAt('2026-08-07 12:00:00')->hasPersistentRecommendationWorker());
     }
 
     public function testOneSecondPastTheWindowIsDead(): void
@@ -52,7 +52,7 @@ final class WorkerPresenceTest extends DbTestCase
             $this->secondsBeforeNoon(WorkerPresence::FRESH_SECONDS + 1),
         );
 
-        self::assertFalse($this->presenceAt('2026-08-07 12:00:00')->isRecommendationWorkerAlive());
+        self::assertFalse($this->presenceAt('2026-08-07 12:00:00')->hasPersistentRecommendationWorker());
     }
 
     /**
