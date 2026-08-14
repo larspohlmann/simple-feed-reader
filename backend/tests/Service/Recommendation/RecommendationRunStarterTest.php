@@ -192,6 +192,24 @@ final class RecommendationRunStarterTest extends DbTestCase
         self::assertSame([['app:recommendations:drain', '--detach']], $launcher->launches);
     }
 
+    /**
+     * The other half of that guard: it is per process, not per run. A later
+     * request that finds the run already active is exactly the moment a
+     * respawn helps -- the drainer that started it may be long dead -- so a
+     * fresh starter, standing in for that fresh request, must still spawn even
+     * though it opens no new run.
+     */
+    public function testStartInALaterRequestSpawnsForAnAlreadyActiveRun(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $this->starterWith(new RecordingProcessLauncher())->start($this->user);
+
+        $laterRequest = new RecordingProcessLauncher();
+        $this->starterWith($laterRequest)->start($this->user);
+
+        self::assertSame([['app:recommendations:drain', '--detach']], $laterRequest->launches);
+    }
+
     public function testStartDoesNotSpawnNextToAFreshWorkerHeartbeat(): void
     {
         $this->seedReadyAiSettings($this->user);

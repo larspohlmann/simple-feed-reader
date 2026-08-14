@@ -102,6 +102,28 @@ final class WorkerPresenceTest extends DbTestCase
         self::assertEquals(new \DateTimeImmutable('2026-08-07 11:00:10'), $this->repository()->findTouchedAt('x'));
     }
 
+    /**
+     * The drainer surrenders liveness on the way out, and the exit paths that
+     * do so run whether or not it ever marked anything: a command that dies
+     * before its first sweep still reaches the same `finally`. Forgetting a
+     * name that was never touched must therefore be a no-op, not a failure.
+     */
+    public function testForgettingAHeartbeatThatWasNeverTouchedDoesNothing(): void
+    {
+        $this->repository()->forget('never-touched');
+
+        self::assertNull($this->repository()->findTouchedAt('never-touched'));
+    }
+
+    public function testForgettingAHeartbeatRemovesItsRow(): void
+    {
+        $this->repository()->touch('x', new \DateTimeImmutable('2026-08-07 11:00:00'));
+
+        $this->repository()->forget('x');
+
+        self::assertNull($this->repository()->findTouchedAt('x'));
+    }
+
     private function presenceAt(string $now): WorkerPresence
     {
         return new WorkerPresence($this->repository(), new MockClock($now));
