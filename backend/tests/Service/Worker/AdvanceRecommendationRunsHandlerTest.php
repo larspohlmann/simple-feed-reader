@@ -37,6 +37,7 @@ use App\Service\Recommendation\RecommendationWinnerRanker;
 use App\Service\Worker\Handler\AdvanceRecommendationRunsHandler;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
 use App\Service\Worker\WorkerPresence;
+use App\Service\Worker\WorkerRunSweep;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiSettingsRowMover;
 use App\Tests\Support\ClearTrackingEntityManager;
@@ -280,13 +281,13 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     public function testFiringClearsTheIdentityMapAfterwards(): void
     {
         $clearTracker = new ClearTrackingEntityManager($this->em);
-        $handler = new AdvanceRecommendationRunsHandler(
+        $handler = new AdvanceRecommendationRunsHandler(new WorkerRunSweep(
             $this->runs(),
             $this->advancer(),
             $this->presence(),
             $clearTracker,
             new NullLogger(),
-        );
+        ));
 
         $handler->__invoke(new AdvanceRecommendationRuns());
 
@@ -460,8 +461,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 
     /**
      * Built by hand rather than fetched from the container: the advancer
-     * this handler uses is wired with a decorator whose first flush()
-     * throws, so the struggling run's fail()-recording write (now inside
+     * this sweep uses is wired with a decorator whose first flush() throws,
+     * so the struggling run's fail()-recording write (now inside
      * RecommendationRunAdvancer::tick(), see the test above) fails exactly
      * once. Every other collaborator -- the repository, and every one of the
      * advancer's own collaborators besides its EntityManager -- is the
@@ -470,13 +471,13 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
      */
     private function handlerWithFlushFailingEntityManager(LoggerInterface $logger): AdvanceRecommendationRunsHandler
     {
-        return new AdvanceRecommendationRunsHandler(
+        return new AdvanceRecommendationRunsHandler(new WorkerRunSweep(
             $this->runs(),
             $this->advancerWithFlushFailingEntityManager(),
             $this->presence(),
             $this->em,
             $logger,
-        );
+        ));
     }
 
     /**
@@ -515,24 +516,24 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
      */
     private function handlerWithLogger(LoggerInterface $logger): AdvanceRecommendationRunsHandler
     {
-        return new AdvanceRecommendationRunsHandler(
+        return new AdvanceRecommendationRunsHandler(new WorkerRunSweep(
             $this->runs(),
             $this->advancer(),
             $this->presence(),
             $this->em,
             $logger,
-        );
+        ));
     }
 
     private function handlerWithPresenceClock(ClockInterface $presenceClock): AdvanceRecommendationRunsHandler
     {
-        return new AdvanceRecommendationRunsHandler(
+        return new AdvanceRecommendationRunsHandler(new WorkerRunSweep(
             $this->runs(),
             $this->advancer(),
             new WorkerPresence($this->heartbeats(), $presenceClock),
             $this->em,
             new NullLogger(),
-        );
+        ));
     }
 
     private function heartbeats(): WorkerHeartbeatRepository
