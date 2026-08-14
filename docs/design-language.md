@@ -635,6 +635,43 @@ own wrapping class, the same way `recommendation-debug-log.component.scss`'s
 
 ---
 
+### `<app-info-tip>`
+
+The one info affordance (#372): a small ⓘ icon button that toggles an
+explanation panel. The panel renders **in flow** and pushes content down —
+deliberately not a floating popover, so it cannot clip or overflow on a
+phone. Click/tap to toggle; Escape or a press outside dismisses (via
+`DismissOnOutsideDirective`). The trigger is a real button with
+`aria-expanded`/`aria-controls`; the panel is `role="note"`. Under
+`pointer: coarse` the trigger grows to `--tap-target`.
+
+| Input | Type | Default |
+|---|---|---|
+| `text` | `string` (required) | — |
+| `label` | `string` (required) | — |
+| `corner` | boolean attribute | `false` |
+
+```html
+<app-info-tip
+  [text]="'settings.ai.info.rowActions' | transloco"
+  [label]="'settings.ai.info.actionsLabel' | transloco"
+/>
+```
+
+`text` and `label` take **already-translated strings** (shared component, no
+feature keys). `label` is the accessible name of the trigger — pass the label
+of the control being explained. `corner` anchors the trigger at the top-right
+of the nearest **positioned** ancestor; `<app-field>` uses it to put the ⓘ in
+its label row (see the `info` input there). Never place a tip inside a
+`<summary>` or inside a wrapping `<label>`: a click on non-interactive panel
+content would toggle the `<details>` or the control.
+
+**Not for:** validation or state messages (that is `app-field`'s `error`/
+`hint`), or anything that must be visible without interaction — a danger
+zone keeps its always-visible note.
+
+---
+
 ### `<app-action-sheet>` (via the `ActionSheet` service)
 
 The row-menu surface for coarse pointers: a sheet pinned to the bottom of the

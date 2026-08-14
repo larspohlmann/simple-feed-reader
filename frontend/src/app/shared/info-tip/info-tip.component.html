@@ -1,0 +1,16 @@
+<span class="wrap" [appDismissOnOutside]="open()" (dismiss)="close()">
+  <button
+    type="button"
+    class="trigger"
+    [class.is-open]="open()"
+    [attr.aria-expanded]="open()"
+    [attr.aria-controls]="panelId"
+    [attr.aria-label]="label()"
+    (click)="toggle($event)"
+  >
+    <app-icon name="info" size="text" />
+  </button>
+  @if (open()) {
+    <span class="panel" [id]="panelId" role="note">{{ text() }}</span>
+  }
+</span>
