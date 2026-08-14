@@ -1,0 +1,6 @@
+{
+    "paths": ["src"],
+    "limit": 4,
+    "warnLimit": 3,
+    "minClasses": 2
+}

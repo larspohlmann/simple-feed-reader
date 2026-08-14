@@ -60,6 +60,15 @@ jobs:
       - name: PHPMD (codesize)
         run: composer md
 
+      # Tramp data: a parameter forwarded through a chain of methods that never
+      # read it. #373 and #374 were both found by a manual sweep months after
+      # the chains grew, which is the argument for a gate rather than a habit.
+      # Thresholds live in phptramp.dist.json; --format github annotates the
+      # offending hop inline, the way the mutation leg annotates escaped
+      # mutants. Static, so the database matrix leg does not affect it.
+      - name: phptramp (tramp data)
+        run: composer tramp -- --format github
+
       # Both DSNs are chosen here, in one place. MIGRATION_DATABASE_URL is
       # deliberately a different database from the one PHPUnit uses, so the
       # migration check below cannot disturb the suite: it also runs in dev,

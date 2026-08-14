@@ -43,6 +43,7 @@
         "ext-openssl": "*",
         "dama/doctrine-test-bundle": "^8.6",
         "infection/infection": "^0.34.1",
+        "larspohlmann/phptramp": "dev-develop",
         "phpmd/phpmd": "^2.15",
         "phpstan/phpstan": "^2.2.5",
         "phpstan/phpstan-doctrine": "^2.0.28",
@@ -100,7 +101,8 @@
         "cs:fix": "phpcbf",
         "stan": "phpstan analyse --memory-limit=512M",
         "md": "phpmd src text phpmd.xml.dist",
-        "check": ["@cs", "@stan"],
+        "tramp": "phptramp",
+        "check": ["@cs", "@stan", "@tramp"],
         "infection": "infection --threads=max",
         "infection:diff": "infection --git-diff-filter=AM --git-diff-base=origin/develop --threads=max --ignore-msi-with-no-mutations",
         "e2e": "bin/e2e.sh"
@@ -112,6 +114,12 @@
         "symfony": {
             "allow-contrib": false,
             "require": "7.4.*"
+        }
+    },
+    "repositories": {
+        "phptramp": {
+            "type": "vcs",
+            "url": "https://github.com/larspohlmann/phptramp"
         }
     }
 }

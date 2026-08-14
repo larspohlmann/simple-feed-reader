@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7ba9807fa47f094336fab369d1dc4c9d",
+    "content-hash": "7007c6f705acb36f2696642ff86fe592",
     "packages": [
         {
             "name": "brick/math",
@@ -8201,6 +8201,100 @@
             "time": "2026-06-16T20:50:26+00:00"
         },
         {
+            "name": "larspohlmann/phptramp",
+            "version": "dev-develop",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/larspohlmann/phptramp.git",
+                "reference": "5f591e8d714264bef1e780ef1b23bae16a080271"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/larspohlmann/phptramp/zipball/5f591e8d714264bef1e780ef1b23bae16a080271",
+                "reference": "5f591e8d714264bef1e780ef1b23bae16a080271",
+                "shasum": ""
+            },
+            "require": {
+                "nikic/php-parser": "^5.0",
+                "php": ">=8.2"
+            },
+            "require-dev": {
+                "infection/infection": "^0.29.14 || ^0.34",
+                "phpmd/phpmd": "^2.15",
+                "phpstan/phpstan": "^2.0",
+                "phpunit/phpunit": "^11.5 || ^12.0",
+                "squizlabs/php_codesniffer": "^3.13"
+            },
+            "default-branch": true,
+            "bin": [
+                "bin/phptramp"
+            ],
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "PhpTramp\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "PhpTramp\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "phpunit"
+                ],
+                "stan": [
+                    "phpstan analyse --no-progress"
+                ],
+                "cs": [
+                    "phpcs"
+                ],
+                "cs:fix": [
+                    "phpcbf"
+                ],
+                "md": [
+                    "phpmd src text phpmd.xml.dist"
+                ],
+                "check": [
+                    "@cs",
+                    "@stan",
+                    "@md",
+                    "@test"
+                ],
+                "tramp": [
+                    "@php bin/phptramp"
+                ],
+                "infection": [
+                    "infection --threads=max"
+                ],
+                "infection:diff": [
+                    "infection --git-diff-filter=AM --git-diff-base=origin/main --threads=max --ignore-msi-with-no-mutations"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Lars Pohlmann"
+                }
+            ],
+            "description": "Static analyzer that detects tramp data: parameters passed through chains of PHP methods that never use them.",
+            "keywords": [
+                "ci",
+                "code quality",
+                "dev",
+                "static analysis",
+                "tramp data"
+            ],
+            "support": {
+                "source": "https://github.com/larspohlmann/phptramp/tree/develop",
+                "issues": "https://github.com/larspohlmann/phptramp/issues"
+            },
+            "time": "2026-08-12T12:35:54+00:00"
+        },
+        {
             "name": "marc-mabe/php-enum",
             "version": "v4.7.2",
             "source": {
@@ -11237,7 +11331,9 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {},
+    "stability-flags": {
+        "larspohlmann/phptramp": 20
+    },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
