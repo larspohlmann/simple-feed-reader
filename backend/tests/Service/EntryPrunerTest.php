@@ -159,6 +159,20 @@ final class EntryPrunerTest extends DbTestCase
         self::assertSame(2, $pruner->prune());
     }
 
+    /**
+     * Five entries sharing one `createdAt` (a burst fetch): cap 3 keeps the
+     * three highest ids and drops the two lowest, tie-broken by id alone.
+     */
+    public function testCapPassBreaksATieById(): void
+    {
+        $pruner = new EntryPruner($this->em, $this->clock, maxEntriesPerFeed: 3);
+
+        $feed = $this->feedWithEntries(5, $this->daysAgo(1));
+
+        self::assertSame(2, $pruner->prune());
+        self::assertSame(3, $this->countEntries($feed));
+    }
+
     public function testPrunesOldEntriesButKeepsProtectedAndRecent(): void
     {
         $user = new User('reader@example.com', $this->clock->now());

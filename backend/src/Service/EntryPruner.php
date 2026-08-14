@@ -86,16 +86,23 @@ final class EntryPruner
     {
         $cutoff = $this->clock->now()->modify(sprintf('-%d days', self::RETENTION_DAYS));
 
+        $feedIds = $this->feedIdsFetchedBefore($cutoff);
+        if ($feedIds === []) {
+            return 0;
+        }
+
         /** @var list<int> $ids */
         $ids = $this->em->createQuery(sprintf(
             'SELECT e.id FROM %s e
-             WHERE e.createdAt < :cutoff
+             WHERE IDENTITY(e.feed) IN (:feedIds)
+             AND e.createdAt < :cutoff
              AND %s
              AND %s',
             Entry::class,
             $this->beyondKeepDql(),
             $this->notProtectedDql(),
         ))
+            ->setParameter('feedIds', $feedIds)
             ->setParameter('cutoff', $cutoff)
             ->setParameter('keep', self::MIN_ENTRIES_PER_FEED)
             ->setParameter('true', true, Types::BOOLEAN)
@@ -104,22 +111,65 @@ final class EntryPruner
         return $this->deleteByIds($ids);
     }
 
+    /**
+     * @return list<int> — only feeds with a stale entry are worth ranking at
+     * all; this keeps the correlated count in `beyondKeepDql()` from ever
+     * running over a feed that has nothing to lose.
+     */
+    private function feedIdsFetchedBefore(\DateTimeImmutable $cutoff): array
+    {
+        /** @var list<int> $feedIds */
+        $feedIds = $this->em->createQuery(sprintf(
+            'SELECT DISTINCT IDENTITY(e.feed) FROM %s e WHERE e.createdAt < :cutoff',
+            Entry::class,
+        ))
+            ->setParameter('cutoff', $cutoff)
+            ->getSingleColumnResult();
+
+        return $feedIds;
+    }
+
     private function pruneByFeedCap(): int
     {
+        $feedIds = $this->feedIdsOverCap();
+        if ($feedIds === []) {
+            return 0;
+        }
+
         /** @var list<int> $ids */
         $ids = $this->em->createQuery(sprintf(
             'SELECT e.id FROM %s e
-             WHERE %s
+             WHERE IDENTITY(e.feed) IN (:feedIds)
+             AND %s
              AND %s',
             Entry::class,
             $this->beyondKeepDql(),
             $this->notProtectedDql(),
         ))
+            ->setParameter('feedIds', $feedIds)
             ->setParameter('keep', $this->maxEntriesPerFeed)
             ->setParameter('true', true, Types::BOOLEAN)
             ->getSingleColumnResult();
 
         return $this->deleteByIds($ids);
+    }
+
+    /**
+     * @return list<int> — only feeds over the cap are worth ranking at all;
+     * this keeps the correlated count in `beyondKeepDql()` from ever running
+     * over a feed that can't possibly have anything beyond the cap.
+     */
+    private function feedIdsOverCap(): array
+    {
+        /** @var list<int> $feedIds */
+        $feedIds = $this->em->createQuery(sprintf(
+            'SELECT IDENTITY(e.feed) FROM %s e GROUP BY e.feed HAVING COUNT(e.id) > :cap',
+            Entry::class,
+        ))
+            ->setParameter('cap', $this->maxEntriesPerFeed)
+            ->getSingleColumnResult();
+
+        return $feedIds;
     }
 
     /**
@@ -129,15 +179,24 @@ final class EntryPruner
      * that bounds a huge one — one shared ordering, so the two can never
      * disagree about which entries are old.
      *
-     * A correlated count rather than a per-feed `OFFSET`, so the whole table
-     * is ranked in a single query instead of one round trip per feed, and no
-     * excess-id list ever has to travel back through PHP as an `IN (...)`
-     * parameter — both scale with rows changed, not with feed count. The
-     * count spans every entry in the feed, favorites and kept included, so a
-     * handful of protected articles cannot shift the boundary; a protected
-     * entry beyond it still survives via `notProtectedDql()` in the caller.
-     * `idx_entry_feed_created (feed_id, created_at, id)` serves the
-     * correlated scan on both sides.
+     * A correlated count rather than a per-feed `OFFSET`, so ranking a
+     * multi-feed candidate set costs one query instead of one round trip per
+     * feed, and no excess-id list ever has to travel back through PHP as an
+     * `IN (...)` parameter. This alone is not enough: without an outer
+     * predicate restricting `e` to feeds that can plausibly lose something,
+     * the correlated count runs once per row of the *entire* table — Σ over
+     * every feed of that feed's row count squared, since each evaluation
+     * re-scans its own feed's segment. Both callers apply an
+     * `IDENTITY(e.feed) IN (:feedIds)` guard first (mirroring the candidate-
+     * feed query the per-feed loop used to run), so this only ever executes
+     * for feeds already known to have something prunable — cost tracks rows
+     * that can change, not table size (#384 round 2).
+     *
+     * The count spans every entry in the feed, favorites and kept included,
+     * so a handful of protected articles cannot shift the boundary; a
+     * protected entry beyond it still survives via `notProtectedDql()` in
+     * the caller. `idx_entry_feed_created (feed_id, created_at, id)` covers
+     * the correlated scan on both sides.
      */
     private function beyondKeepDql(): string
     {
