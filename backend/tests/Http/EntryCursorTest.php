@@ -9,35 +9,27 @@ use PHPUnit\Framework\TestCase;
 
 final class EntryCursorTest extends TestCase
 {
-    public function testRoundTripsWithPublishedAt(): void
+    public function testRoundTripsTheEffectiveDateAndId(): void
     {
-        $createdAt = new \DateTimeImmutable('2026-07-20T08:30:00+02:00');
-        $publishedAt = new \DateTimeImmutable('2026-07-19T10:00:00+02:00');
-        $encoded = EntryCursor::encode($createdAt, $publishedAt, 4242);
+        $cursor = EntryCursor::decode(
+            EntryCursor::encode(new \DateTimeImmutable('2026-08-14 12:00:00'), 42),
+        );
 
-        $decoded = EntryCursor::decode($encoded);
-        self::assertNotNull($decoded);
-        self::assertSame($createdAt->getTimestamp(), $decoded->createdAt->getTimestamp());
-        self::assertNotNull($decoded->publishedAt);
-        self::assertSame($publishedAt->getTimestamp(), $decoded->publishedAt->getTimestamp());
-        self::assertSame(4242, $decoded->id);
+        self::assertNotNull($cursor);
+        self::assertSame('2026-08-14 12:00:00', $cursor->effectiveDate->format('Y-m-d H:i:s'));
+        self::assertSame(42, $cursor->id);
     }
 
-    public function testRoundTripsWithNullPublishedAt(): void
+    public function testRejectsAThreePartCursorFromTheOldFormat(): void
     {
-        $createdAt = new \DateTimeImmutable('2026-07-20T08:30:00+02:00');
-        $encoded = EntryCursor::encode($createdAt, null, 4242);
+        $stale = rtrim(strtr(base64_encode('2026-08-14T12:00:00+00:00||42'), '+/', '-_'), '=');
 
-        $decoded = EntryCursor::decode($encoded);
-        self::assertNotNull($decoded);
-        self::assertSame($createdAt->getTimestamp(), $decoded->createdAt->getTimestamp());
-        self::assertNull($decoded->publishedAt);
-        self::assertSame(4242, $decoded->id);
+        self::assertNull(EntryCursor::decode($stale));
     }
 
     public function testEncodeIsUrlSafeAndOpaque(): void
     {
-        $encoded = EntryCursor::encode(new \DateTimeImmutable('2026-01-01T00:00:00Z'), null, 1);
+        $encoded = EntryCursor::encode(new \DateTimeImmutable('2026-01-01T00:00:00Z'), 1);
         self::assertSame($encoded, rawurlencode($encoded)); // no +, /, = to escape
         self::assertStringNotContainsString('|', $encoded);
     }
@@ -46,9 +38,8 @@ final class EntryCursorTest extends TestCase
     {
         self::assertNull(EntryCursor::decode('not-a-cursor'));
         self::assertNull(EntryCursor::decode(base64_encode('only-one-part')));
-        self::assertNull(EntryCursor::decode(base64_encode('bad-date||1')));
-        self::assertNull(EntryCursor::decode(base64_encode('2026-01-01T00:00:00+00:00||notint')));
-        self::assertNull(EntryCursor::decode(base64_encode('2026-01-01T00:00:00+00:00|bad-date|1')));
+        self::assertNull(EntryCursor::decode(base64_encode('bad-date|1')));
+        self::assertNull(EntryCursor::decode(base64_encode('2026-01-01T00:00:00+00:00|notint')));
         self::assertNull(EntryCursor::decode(''));
     }
 }

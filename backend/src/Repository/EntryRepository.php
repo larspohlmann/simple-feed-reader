@@ -104,10 +104,10 @@ class EntryRepository extends ServiceEntityRepository
     }
 
     /**
-     * Entries in feeds the caller subscribes to, sorted by refresh run DESC
-     * (createdAt = run-start), then article publication time DESC within the
-     * run (null publishedAt sorts last), then id DESC as the final tiebreaker.
-     * Keyset-paginated on (createdAt, publishedAt, id). LEFT JOINs the caller's
+     * Entries in feeds the caller subscribes to, sorted by effectiveDate DESC
+     * (the entry's list-sort instant — see EntryEffectiveDate), then id DESC
+     * as the tiebreaker a whole refresh run's worth of tied dates needs.
+     * Keyset-paginated on (effectiveDate, id). LEFT JOINs the caller's
      * EntryState and folds Subscription.markedReadUntil into an effective
      * isRead. `view` narrows to unread/favorites/kept.
      *
@@ -118,8 +118,7 @@ class EntryRepository extends ServiceEntityRepository
         $limit = max(1, min($query->limit, EntryQuery::MAX_LIMIT));
 
         $qb = $this->rowQueryBuilder($query->userId)
-            ->orderBy('e.createdAt', 'DESC')
-            ->addOrderBy('e.publishedAt', 'DESC')
+            ->orderBy('e.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($limit);
 
@@ -228,29 +227,14 @@ class EntryRepository extends ServiceEntityRepository
             return;
         }
 
-        // Keyset "before" predicate for (createdAt, publishedAt, id) DESC, with
-        // nulls sorting last within a run (SQL DESC default). A null cursor
-        // publishedAt is the boundary between the run's publishedAt-bearing
-        // rows and its null-publishedAt tail; once past it, only null-publishedAt
-        // rows remain, ranked by id DESC.
-        if ($cursor->publishedAt === null) {
-            $qb->andWhere(
-                '(e.createdAt < :curCreatedAt '
-                . 'OR (e.createdAt = :curCreatedAt AND e.publishedAt IS NULL AND e.id < :curId))',
-            )
-                ->setParameter('curCreatedAt', $cursor->createdAt, Types::DATETIME_IMMUTABLE)
-                ->setParameter('curId', $cursor->id);
-        } else {
-            $qb->andWhere(
-                '(e.createdAt < :curCreatedAt '
-                . 'OR (e.createdAt = :curCreatedAt AND e.publishedAt IS NULL) '
-                . 'OR (e.createdAt = :curCreatedAt AND e.publishedAt = :curPublishedAt AND e.id < :curId) '
-                . 'OR (e.createdAt = :curCreatedAt AND e.publishedAt < :curPublishedAt))',
-            )
-                ->setParameter('curCreatedAt', $cursor->createdAt, Types::DATETIME_IMMUTABLE)
-                ->setParameter('curPublishedAt', $cursor->publishedAt, Types::DATETIME_IMMUTABLE)
-                ->setParameter('curId', $cursor->id);
-        }
+        // Keyset "before" predicate for (effectiveDate, id) DESC: strictly
+        // earlier dates, or the same date with a strictly smaller id.
+        $qb->andWhere(
+            '(e.effectiveDate < :curEffectiveDate '
+            . 'OR (e.effectiveDate = :curEffectiveDate AND e.id < :curId))',
+        )
+            ->setParameter('curEffectiveDate', $cursor->effectiveDate, Types::DATETIME_IMMUTABLE)
+            ->setParameter('curId', $cursor->id);
     }
 
     /**

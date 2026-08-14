@@ -56,20 +56,21 @@ final class EntryListTest extends DbTestCase
         return $e;
     }
 
-    private function entryAt(string $guid, string $createdAt, ?string $publishedAt = null): Entry
+    /**
+     * Seeds an entry with an explicit list-sort instant, independent of
+     * fetch time — the shape the effective-date sort and its keyset actually
+     * key on.
+     */
+    private function entryAt(string $guid, string $createdAt, string $effectiveDate): Entry
     {
-        $publishedAtValue = $publishedAt === null ? null : new \DateTimeImmutable($publishedAt);
         $e = new Entry(
             $this->feed,
             $guid,
             'https://example.com/' . $guid,
             'Title ' . $guid,
             new \DateTimeImmutable($createdAt),
-            $publishedAtValue ?? new \DateTimeImmutable($createdAt),
+            new \DateTimeImmutable($effectiveDate),
         );
-        if ($publishedAtValue !== null) {
-            $e->setPublishedAt($publishedAtValue);
-        }
         $this->em->persist($e);
         $this->em->flush();
 
@@ -98,79 +99,55 @@ final class EntryListTest extends DbTestCase
         self::assertFalse($rows[0]->isRead);
     }
 
-    public function testNewerRunSortsAheadOfOlderRunEvenWhenItsArticlesAreOlder(): void
+    public function testSortsByEffectiveDateNotByFetchInstant(): void
     {
-        // Two refresh runs of the same feed.
-        $this->entryAt('old-run-new-article', '2026-07-01T00:00:00Z', '2026-07-15T00:00:00Z');
-        $this->entryAt('new-run-old-article', '2026-07-02T00:00:00Z', '2026-07-10T00:00:00Z');
+        // Both fetched in the same run; the older article sank to its publication date.
+        $fetchedAt = '2026-08-14T12:00:00Z';
+        $this->entryAt('sunk', $fetchedAt, '2020-03-01T00:00:00Z');
+        $this->entryAt('fresh', $fetchedAt, $fetchedAt);
 
         $rows = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0));
 
-        // The newer run (2026-07-02) sorts first even though its article is older.
-        self::assertSame('new-run-old-article', $rows[0]->entry->getGuid());
-        self::assertSame('old-run-new-article', $rows[1]->entry->getGuid());
+        self::assertSame(['fresh', 'sunk'], array_map(
+            static fn ($row) => $row->entry->getGuid(),
+            $rows,
+        ));
     }
 
-    public function testWithinARunNewerPublishedAtSortsFirst(): void
+    public function testNewerEffectiveDateSortsFirst(): void
     {
-        // Same run (same createdAt), different publishedAt.
-        $this->entryAt('older-pub', '2026-07-01T00:00:00Z', '2026-07-10T00:00:00Z');
-        $this->entryAt('newer-pub', '2026-07-01T00:00:00Z', '2026-07-15T00:00:00Z');
-
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0));
-
-        self::assertSame('newer-pub', $rows[0]->entry->getGuid());
-        self::assertSame('older-pub', $rows[1]->entry->getGuid());
-    }
-
-    public function testWithinARunNullPublishedAtSortsLast(): void
-    {
-        $this->entryAt('with-pub', '2026-07-01T00:00:00Z', '2026-07-10T00:00:00Z');
-        $this->entryAt('without-pub', '2026-07-01T00:00:00Z', null);
-
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0));
-
-        self::assertSame('with-pub', $rows[0]->entry->getGuid());
-        self::assertSame('without-pub', $rows[1]->entry->getGuid());
-    }
-
-    public function testKeysetPaginatesAcrossMixedNullPublishedAtWithinARun(): void
-    {
-        // One run (same createdAt), four entries: newest-pub → older-pub → null-pub-1 → null-pub-2.
-        $this->entryAt('newest', '2026-07-01T00:00:00Z', '2026-07-15T00:00:00Z');
         $this->entryAt('older', '2026-07-01T00:00:00Z', '2026-07-10T00:00:00Z');
-        $this->entryAt('nullA', '2026-07-01T00:00:00Z', null);
-        $this->entryAt('nullB', '2026-07-01T00:00:00Z', null);
+        $this->entryAt('newer', '2026-07-01T00:00:00Z', '2026-07-15T00:00:00Z');
 
-        // Page 1: first two by publishedAt DESC.
-        $page1 = $this->repo()->listForUser(
-            new EntryQuery($this->user->getId() ?? 0, limit: 2),
-        );
-        self::assertSame('newest', $page1[0]->entry->getGuid());
-        self::assertSame('older', $page1[1]->entry->getGuid());
+        $rows = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0));
 
-        // Cursor past 'older' skips to the null-pub rows.
-        $cursor = new EntryCursor(
-            $page1[1]->entry->getCreatedAt(),
-            $page1[1]->entry->getPublishedAt(),
-            $page1[1]->entry->getId() ?? 0,
-        );
+        self::assertSame('newer', $rows[0]->entry->getGuid());
+        self::assertSame('older', $rows[1]->entry->getGuid());
+    }
+
+    public function testKeysetPaginatesCorrectlyAcrossATiedEffectiveDate(): void
+    {
+        // A whole refresh run shares one effective date; id DESC is the only
+        // tiebreaker, so a page boundary that falls inside the tied group must
+        // neither skip nor repeat a row.
+        $tied = '2026-07-01T00:00:00Z';
+        $e1 = $this->entryAt('e1', $tied, $tied);
+        $e2 = $this->entryAt('e2', $tied, $tied);
+        $e3 = $this->entryAt('e3', $tied, $tied);
+
+        $page1 = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0, limit: 2));
+        self::assertSame([$e3->getGuid(), $e2->getGuid()], array_map(
+            static fn ($row) => $row->entry->getGuid(),
+            $page1,
+        ));
+
+        $cursor = new EntryCursor($page1[1]->entry->getEffectiveDate(), $page1[1]->entry->getId() ?? 0);
         $page2 = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0, cursor: $cursor, limit: 2));
-        // id DESC within the null-publishedAt tail: nullB (inserted later) first.
-        self::assertSame('nullB', $page2[0]->entry->getGuid());
-        self::assertSame('nullA', $page2[1]->entry->getGuid());
 
-        // Cursor past 'nullB' (a null publishedAt row) skips to the remaining row.
-        $cursorAfterNull = new EntryCursor(
-            $page2[0]->entry->getCreatedAt(),
-            $page2[0]->entry->getPublishedAt(),
-            $page2[0]->entry->getId() ?? 0,
-        );
-        $page3 = $this->repo()->listForUser(
-            new EntryQuery($this->user->getId() ?? 0, cursor: $cursorAfterNull, limit: 2),
-        );
-        self::assertCount(1, $page3);
-        self::assertSame('nullA', $page3[0]->entry->getGuid());
+        self::assertSame([$e1->getGuid()], array_map(
+            static fn ($row) => $row->entry->getGuid(),
+            $page2,
+        ));
     }
 
     public function testWatermarkFoldsIntoIsReadAndUnreadFilter(): void
@@ -274,11 +251,7 @@ final class EntryListTest extends DbTestCase
         self::assertSame('e3', $page1[0]->entry->getGuid());
         self::assertSame('e2', $page1[1]->entry->getGuid());
 
-        $cursor = new EntryCursor(
-            $page1[1]->entry->getCreatedAt(),
-            $page1[1]->entry->getPublishedAt(),
-            $page1[1]->entry->getId() ?? 0,
-        );
+        $cursor = new EntryCursor($page1[1]->entry->getEffectiveDate(), $page1[1]->entry->getId() ?? 0);
         $page2 = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0, cursor: $cursor, limit: 2));
         self::assertCount(1, $page2);
         self::assertSame('e1', $page2[0]->entry->getGuid());
