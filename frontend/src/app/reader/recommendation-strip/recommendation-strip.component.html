@@ -3,7 +3,7 @@
   @if (e.recommendationReason) {
     <p class="reason">
       @if (e.recommendationScore !== null && e.recommendationScore !== undefined) {
-        <span class="score">Score: {{ e.recommendationScore }}</span>
+        <span class="score">Score: {{ displayScore(e.recommendationScore) }}</span>
       }
       {{ e.recommendationReason }}
     </p>

@@ -250,7 +250,7 @@ final class RecommendationPickParserTest extends TestCase
     {
         $content = self::encode([
             'recommendations' => [
-                ['id' => 1, 'score' => 150, 'reason' => 'Too high'],
+                ['id' => 1, 'score' => 1500, 'reason' => 'Too high'],
                 ['id' => 2, 'score' => -5, 'reason' => 'Too low'],
             ],
         ]);
@@ -258,7 +258,7 @@ final class RecommendationPickParserTest extends TestCase
         $result = $this->parser->parse($content, [1, 2]);
 
         self::assertTrue($result->usable);
-        self::assertSame([100, 0], array_map(static fn ($pick) => $pick->score, $result->picks));
+        self::assertSame([1000, 0], array_map(static fn ($pick) => $pick->score, $result->picks));
     }
 
     public function testAPickWithoutAScoreIsDiscarded(): void

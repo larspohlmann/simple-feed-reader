@@ -246,6 +246,26 @@ final class RecommendationPromptBuilderTest extends TestCase
     }
 
     /**
+     * The model quantises: 29 of one run's 50 picks scored exactly 85, and the
+     * prose asking it to separate near-equals made it worse, not better. The
+     * scale is now 0-1000 and the prompt says outright what to do with the
+     * room (#403).
+     */
+    public function testTheRubricAsksForExactValuesOnAThousandPointScale(): void
+    {
+        $system = $this->builder->batchMessages(
+            $this->emptyHistory(),
+            [self::line(7, 'Candidate seven', 10)],
+            $this->settings(32768, 100),
+        )[0]['content'];
+
+        self::assertStringContainsString('from 0 to 1000', $system);
+        self::assertStringContainsString('Do not round to multiples of ten', $system);
+        self::assertStringContainsString('"score": <0-1000>', $system);
+        self::assertStringNotContainsString('0 to 100 ', $system);
+    }
+
+    /**
      * The batch prompt asked for every candidate and, in the same breath, told
      * the model to omit the duplicates of a story it had already scored. It
      * resolved the conflict by omitting: 3.2% of production candidates were

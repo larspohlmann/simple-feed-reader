@@ -62,13 +62,24 @@ describe('RecommendationStripComponent', () => {
   });
 
   it('renders the score pill only when the score is a number', () => {
-    const withScore = mount(entry({ recommendationReason: 'r', recommendationScore: 82 }));
+    const withScore = mount(entry({ recommendationReason: 'r', recommendationScore: 823 }));
     expect(withScore.querySelector('.reason .score')!.textContent).toContain('82');
+    expect(withScore.querySelector('.reason .score')!.textContent).not.toContain('823');
 
     const noScore = mount(entry({ recommendationReason: 'r' }));
     expect(noScore.querySelector('.reason .score')).toBeNull();
 
     const nullScore = mount(entry({ recommendationReason: 'r', recommendationScore: null }));
     expect(nullScore.querySelector('.reason .score')).toBeNull();
+  });
+
+  // The model scores on 0-1000 so it can separate candidates; the reader is
+  // shown a figure out of 100, rounded rather than truncated (#403).
+  it('shows the 0-1000 score out of 100, rounded', () => {
+    const rounded = mount(entry({ recommendationReason: 'r', recommendationScore: 856 }));
+    expect(rounded.querySelector('.reason .score')!.textContent).toContain('86');
+
+    const zero = mount(entry({ recommendationReason: 'r', recommendationScore: 0 }));
+    expect(zero.querySelector('.reason .score')!.textContent).toContain('0');
   });
 });

@@ -17,6 +17,15 @@ namespace App\Service\Recommendation;
  */
 final readonly class RecommendationPickParser
 {
+    /**
+     * The top of the scale the prompt asks for. It is 1000 rather than 100 so
+     * the model has room to separate candidates instead of stacking them on
+     * one round number -- 29 of one run's 50 picks scored exactly 85 (#403).
+     * Scores persisted before that change are on the old scale and are never
+     * compared with these.
+     */
+    private const float MAXIMUM_SCORE = 1000.0;
+
     public function __construct(private ModelReplyJsonDecoder $decoder)
     {
     }
@@ -105,7 +114,7 @@ final readonly class RecommendationPickParser
             return null;
         }
 
-        return (int) min(100.0, max(0.0, round($numeric)));
+        return (int) min(self::MAXIMUM_SCORE, max(0.0, round($numeric)));
     }
 
     /** @param list<int> $validIds */
