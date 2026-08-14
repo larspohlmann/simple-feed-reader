@@ -280,7 +280,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testCorrectiveTailEchoesTheInvalidReply(): void
     {
-        $tail = $this->builder->correctiveTail('not json');
+        $tail = $this->builder->correctiveTail('not json', RecommendationPromptText::CORRECTIVE);
 
         self::assertSame(
             [
@@ -289,6 +289,29 @@ final class RecommendationPromptBuilderTest extends TestCase
             ],
             $tail,
         );
+    }
+
+    /** The caller names the correction, so the dedup phase can ask for its own thing back (#396). */
+    public function testTheCorrectionIsTheOnePassedIn(): void
+    {
+        $messages = $this->builder->messagesWithCorrectiveTail(
+            [['role' => 'system', 'content' => 'role']],
+            '{"duplicates": [1]}',
+            RecommendationPromptText::DEDUP_CORRECTIVE,
+        );
+
+        self::assertSame(RecommendationPromptText::DEDUP_CORRECTIVE, $messages[2]['content']);
+    }
+
+    public function testNoCorrectiveTailIsAppendedWithoutAnInvalidReply(): void
+    {
+        $messages = $this->builder->messagesWithCorrectiveTail(
+            [['role' => 'system', 'content' => 'role']],
+            null,
+            RecommendationPromptText::DEDUP_CORRECTIVE,
+        );
+
+        self::assertCount(1, $messages);
     }
 
     public function testPackBatchesFallsBackToZeroForACandidateWithoutAnEntryId(): void
@@ -445,13 +468,39 @@ final class RecommendationPromptBuilderTest extends TestCase
                 ],
                 [
                     'role' => 'user',
-                    'content' => "RANKED (best first):\n"
+                    'content' => 'This list holds 2 entries. Most lists hold few duplicates and many hold none, '
+                        . 'so expect to name none or a handful. Never name more than 1 of them: a reply naming '
+                        . 'more is discarded whole, and the reader is then shown the list with its real '
+                        . "duplicates still in it.\n\n"
+                        . "RANKED (best first):\n"
                         . "- [2] Title Two — Feed B — 2026-01-06 — Strong match\n"
                         . '- [1] Title One — Feed A — 2026-01-05 — Loose match',
                 ],
             ],
             $messages,
         );
+    }
+
+    /**
+     * The ceiling the prompt names is the one the parser enforces, and it
+     * counts the lines the model actually sees -- a pool entry whose line has
+     * gone missing is not in the list and must not raise the number (#396).
+     */
+    public function testTheDedupFrameNamesTheCeilingTheParserEnforces(): void
+    {
+        $rankedPool = array_map(
+            static fn (int $id): array => ['id' => $id, 'score' => 50, 'reason' => 'match'],
+            range(1, 21),
+        );
+        $linesById = [];
+        foreach (range(1, 20) as $id) {
+            $linesById[$id] = new PromptLine($id, 'Title ' . $id, 'Feed', '2026-01-05', null);
+        }
+
+        $user = $this->builder->dedupMessages($rankedPool, $linesById)[1]['content'];
+
+        self::assertStringContainsString('This list holds 20 entries.', $user);
+        self::assertStringContainsString('Never name more than 10 of them', $user);
     }
 
     public function testDedupMessagesSkipsAPoolEntryWhoseLineIsMissing(): void

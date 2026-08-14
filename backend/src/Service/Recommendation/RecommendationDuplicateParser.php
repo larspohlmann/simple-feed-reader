@@ -9,6 +9,13 @@ namespace App\Service\Recommendation;
  * defensive boundary RecommendationPickParser is for pick replies. Ids the
  * model was never shown are ignored rather than poisoning the reply:
  * partial credit is still credit.
+ *
+ * A well-formed reply can still be wrong, and this parser judges that too:
+ * one naming more than PlausibleDuplicateShare allows is read as a mistake
+ * rather than as an answer, and goes back as unusable — the dedup phase then
+ * retries once with a corrective tail and, failing that, degrades to the
+ * undeduped list. The prompt states the same bound, so this rejects only a
+ * reply that was told the rule and broke it anyway.
  */
 final readonly class RecommendationDuplicateParser
 {
@@ -31,7 +38,13 @@ final readonly class RecommendationDuplicateParser
             return DuplicateParseResult::unusable();
         }
 
-        return DuplicateParseResult::usable($this->salvageIds($duplicates, $shownIds));
+        $duplicateIds = $this->salvageIds($duplicates, $shownIds);
+
+        if (PlausibleDuplicateShare::exceededBy(\count($duplicateIds), \count($shownIds))) {
+            return DuplicateParseResult::unusable();
+        }
+
+        return DuplicateParseResult::usable($duplicateIds);
     }
 
     /**

@@ -369,6 +369,7 @@ final class RecommendationRunAdvancer
         $messages = $this->promptBuilder->messagesWithCorrectiveTail(
             $this->promptBuilder->dedupMessages($pool, $linesById),
             $run->getLastInvalidReply(),
+            RecommendationPromptText::DEDUP_CORRECTIVE,
         );
 
         $recordedCall = $this->callRecorder->begin(
@@ -443,26 +444,25 @@ final class RecommendationRunAdvancer
      * unchecked duplicates. A final list shorter than the picks limit is the
      * accepted cost.
      *
-     * The best-ranked entry is exempt from the filter because it cannot, by
-     * definition, duplicate a better-ranked entry. Without that exemption a
-     * reply naming every id it was shown -- which the duplicate parser
-     * rightly reads as usable -- would complete the run with an empty list
-     * and no error.
+     * How much shorter is bounded at the parser, not here: a reply naming
+     * more than half of the entries it was shown never reaches this method,
+     * so at least half the pool always survives and a completed run always
+     * has recommendations in it. This used to be guarded here instead, by
+     * exempting the best-ranked entry -- it cannot duplicate a better-ranked
+     * one -- which kept the list off zero but let it be gutted down to one
+     * (#396).
      *
      * @param non-empty-list<array{id: int, score: int, reason: string}> $pool
      * @param list<int>                                                  $duplicateIds
      *
-     * @return non-empty-list<array{id: int, score: int, reason: string}>
+     * @return list<array{id: int, score: int, reason: string}>
      */
     private function withoutDuplicates(array $pool, array $duplicateIds): array
     {
-        $bestRanked = $pool[0];
-        $survivors = array_values(array_filter(
-            \array_slice($pool, 1),
+        return array_values(array_filter(
+            $pool,
             static fn (array $winner): bool => !\in_array($winner['id'], $duplicateIds, true),
         ));
-
-        return [$bestRanked, ...$survivors];
     }
 
     /**

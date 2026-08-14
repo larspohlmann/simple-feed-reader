@@ -23,6 +23,7 @@ use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\OpenAiCompatibleChatClient;
 use App\Service\Recommendation\RecommendationPromptBuilder;
+use App\Service\Recommendation\RecommendationPromptText;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Recommendation\RecommendationSettingsValues;
@@ -1303,13 +1304,13 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * A dedup reply may legally name every id it was shown -- the duplicate
-     * parser has no reason to call that unusable. The best-ranked entry
-     * cannot duplicate a better-ranked one, though, so it survives and the
-     * run still completes with a non-empty list instead of silently writing
-     * zero recommendations.
+     * The production failure of #396: a well-formed dedup reply that names
+     * almost the whole list (98 of 100 there). It is read as a mistake, not
+     * obeyed, so the run spends its retries and then completes with the
+     * undeduped list -- rather than handing the reader the one entry the old
+     * best-ranked exemption would have salvaged.
      */
-    public function testADedupReplyNamingEveryPooledIdStillKeepsTheTopRankedEntry(): void
+    public function testADedupReplyNamingEveryPooledIdIsRejectedAndTheRunDegrades(): void
     {
         $this->seedMultiBatchFixture();
         $run = $this->startAndSnapshot();
@@ -1326,9 +1327,24 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
-        $this->stubChatClient()->queueContent(json_encode([
-            'duplicates' => [$firstBatch[0], $secondBatch[0]],
-        ], \JSON_THROW_ON_ERROR));
+        $overFlagging = json_encode(
+            ['duplicates' => [$firstBatch[0], $secondBatch[0]]],
+            \JSON_THROW_ON_ERROR,
+        );
+        $this->stubChatClient()->queueContent($overFlagging);
+        $this->stubChatClient()->queueContent($overFlagging);
+        $this->stubChatClient()->queueContent($overFlagging);
+
+        self::assertSame('running', $this->advancer()->advance($this->user)->status);
+        self::assertSame('running', $this->advancer()->advance($this->user)->status);
+
+        // The retry asks for the dedup phase's own correction, not the batch
+        // phase's "use only candidate ids" -- the model was never shown a
+        // candidate section.
+        $retryMessages = $this->stubChatClient()->calls()[3]['messages'];
+        self::assertSame($overFlagging, $retryMessages[2]['content']);
+        self::assertSame(RecommendationPromptText::DEDUP_CORRECTIVE, $retryMessages[3]['content']);
+
         $report = $this->advancer()->advance($this->user);
 
         self::assertSame('completed', $report->status);
@@ -1336,9 +1352,10 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $this->em->clear();
         $items = $this->recommendationItems($run);
-        self::assertCount(1, $items);
-        self::assertSame($secondBatch[0], $this->entryIdOf($items[0]));
-        self::assertSame('best of all', $items[0]->getReason());
+        self::assertSame([$secondBatch[0], $firstBatch[0]], array_map(
+            fn (RecommendationItem $item): int => $this->entryIdOf($item),
+            $items,
+        ));
     }
 
     /**

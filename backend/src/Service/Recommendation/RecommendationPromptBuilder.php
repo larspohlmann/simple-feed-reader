@@ -196,18 +196,40 @@ final class RecommendationPromptBuilder
                 'content' => RecommendationPromptText::DEDUP_ROLE
                     . "\n\n" . RecommendationPromptText::DEDUP_OUTPUT_CONTRACT,
             ],
-            ['role' => 'user', 'content' => "RANKED (best first):\n" . implode("\n", $lines)],
+            [
+                'role' => 'user',
+                'content' => $this->dedupSizeFrame(\count($lines))
+                    . "\n\nRANKED (best first):\n" . implode("\n", $lines),
+            ],
         ];
+    }
+
+    /**
+     * Names the size of the list and the most duplicates it can hold, both as
+     * numbers. The model was previously asked for a judgement with no sense of
+     * scale, and answered that 98 of 100 entries were duplicates (#396); the
+     * ceiling is the same one PlausibleDuplicateShare enforces on the reply,
+     * so the model is held only to a rule it was given.
+     */
+    private function dedupSizeFrame(int $entryCount): string
+    {
+        return \sprintf(
+            'This list holds %d entries. Most lists hold few duplicates and many hold none, so expect to name '
+                . 'none or a handful. Never name more than %d of them: a reply naming more is discarded whole, '
+                . 'and the reader is then shown the list with its real duplicates still in it.',
+            $entryCount,
+            PlausibleDuplicateShare::maximumFor($entryCount),
+        );
     }
 
     /**
      * @return list<array{role: string, content: string}>
      */
-    public function correctiveTail(string $invalidReply): array
+    public function correctiveTail(string $invalidReply, string $correction): array
     {
         return [
             ['role' => 'assistant', 'content' => $invalidReply],
-            ['role' => 'user', 'content' => RecommendationPromptText::CORRECTIVE],
+            ['role' => 'user', 'content' => $correction],
         ];
     }
 
@@ -218,17 +240,25 @@ final class RecommendationPromptBuilder
      * the call being retried: the batch phase passes each batch's own local
      * last invalid reply, the dedup phase the run's cross-tick one (#344).
      *
+     * The correction comes in with it, because the two phases reject a reply
+     * for different reasons and must ask for different things back (#396):
+     * telling a dedup model to use "candidate ids" names a section it was
+     * never shown, and leaves the over-flagging it was rejected for unsaid.
+     *
      * @param list<array{role: string, content: string}> $messages
      *
      * @return list<array{role: string, content: string}>
      */
-    public function messagesWithCorrectiveTail(array $messages, ?string $lastInvalidReply): array
-    {
+    public function messagesWithCorrectiveTail(
+        array $messages,
+        ?string $lastInvalidReply,
+        string $correction,
+    ): array {
         if (null === $lastInvalidReply) {
             return $messages;
         }
 
-        return [...$messages, ...$this->correctiveTail($lastInvalidReply)];
+        return [...$messages, ...$this->correctiveTail($lastInvalidReply, $correction)];
     }
 
     /**

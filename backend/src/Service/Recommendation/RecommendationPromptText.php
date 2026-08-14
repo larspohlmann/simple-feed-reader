@@ -30,8 +30,12 @@ final class RecommendationPromptText
 
     public const string DEDUP_ROLE = 'You remove duplicate stories from a ranked list built for one reader of '
         . 'an RSS reader. The user message lists RANKED entries, best first; each line starts with the entry id '
-        . 'in square brackets, followed by title, source, date and the reason it was chosen. When several '
-        . 'entries cover the same story, keep the best-ranked source and name the others as duplicates.';
+        . 'in square brackets, followed by title, source, date and the reason it was chosen. Two entries are '
+        . 'duplicates only when they report the same specific event or announcement — the same occurrence, told '
+        . 'by different sources. Entries that merely share a topic, a subject area, a company, a technology or a '
+        . 'person are not duplicates, and separate developments in one ongoing story are not duplicates either. '
+        . 'When you are not certain two entries are the same story, name neither. When several entries do cover '
+        . 'the same story, keep the best-ranked source and name the others as duplicates.';
 
     public const string DEDUP_OUTPUT_CONTRACT = 'Reply with JSON only, no prose: {"duplicates": '
         . '[<entry id>, ...]}. List only ids of entries that duplicate a better-ranked entry. If there are no '
@@ -43,6 +47,17 @@ final class RecommendationPromptText
 
     public const string CORRECTIVE = 'Your previous reply was not usable. Reply again with JSON only, exactly '
         . 'in the required shape, using only candidate ids.';
+
+    /**
+     * The dedup phase's own correction. A dedup reply is rejected for either
+     * of two reasons — it did not parse, or it named an implausible share of
+     * the list — and the run stores only the reply itself, not which of the
+     * two it was. So this says both, and each half is sound advice whichever
+     * rejection produced it (#396).
+     */
+    public const string DEDUP_CORRECTIVE = 'Your previous reply was not usable. Reply again with JSON only, '
+        . 'exactly in the required shape, using only ids that appear in the lines. Name an entry only when it '
+        . 'reports the same specific story as a better-ranked entry; when in doubt, leave it out.';
 
     public const string DEFAULT_GUIDANCE = 'Recommend the posts this reader is most likely to open next, '
         . 'judged by how strongly they match the interests visible in the reading history.';
