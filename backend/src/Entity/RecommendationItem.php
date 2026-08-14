@@ -34,8 +34,9 @@ final class RecommendationItem
     #[ORM\Column(type: Types::TEXT)]
     private string $reason;
 
-    /** The model's 0-100 score for this pick. Null only on rows written
-     *  before the column existed (#321). */
+    /** The model's 0-1000 score for this pick — 0-100 on rows written before
+     *  #403 rescaled it, which are never compared with newer ones. Null only
+     *  on rows written before the column existed (#321). */
     #[ORM\Column(nullable: true)]
     private ?int $score;
 

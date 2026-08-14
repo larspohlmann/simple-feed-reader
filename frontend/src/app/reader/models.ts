@@ -76,7 +76,8 @@ export interface EntryDto {
   isViewed: boolean;
   /** Why the recommender picked this entry; set only on for-you results. */
   recommendationReason?: string | null;
-  /** The model's 0-100 score for this entry; present only on for-you results
+  /** The model's 0-1000 score for this entry (0-100 before #403); present
+   *  only on for-you results
    *  and only when the user's debug setting is on. */
   recommendationScore?: number | null;
   /** The recommendation run this entry belongs to; set only on for-you results.

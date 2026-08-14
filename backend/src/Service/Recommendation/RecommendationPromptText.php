@@ -15,21 +15,21 @@ final class RecommendationPromptText
         . 'message holds four sections. FAVORITES, KEPT and VIEWED list posts from the '
         . "reader's history, newest first. FAVORITES weighs strongest, KEPT next, VIEWED "
         . 'least. CANDIDATES lists unread posts; each line starts with the candidate id in '
-        . 'square brackets. Score each candidate from 0 to 100 for how strongly the '
+        . 'square brackets. Score each candidate from 0 to 1000 for how strongly the '
         . "reader's history — above all the FAVORITES — suggests they would open it. Be "
         . 'critical and sparing with high scores: most candidates are only a weak or partial '
-        . 'fit and must score below 50. Reserve 90-100 for the rare candidate that is an '
-        . 'unmistakable, specific match to a strong, repeated favorite interest; 70-89 for a '
-        . 'clear, direct match to a demonstrated interest; 40-69 for a real but partial or '
-        . 'merely thematic match; 10-39 for a weak or tangential link; 0-9 for no visible '
+        . 'fit and must score below 500. Reserve 900-1000 for the rare candidate that is an '
+        . 'unmistakable, specific match to a strong, repeated favorite interest; 700-899 for a '
+        . 'clear, direct match to a demonstrated interest; 400-699 for a real but partial or '
+        . 'merely thematic match; 100-399 for a weak or tangential link; 0-99 for no visible '
         . 'connection. A post that only shares a broad topic the reader occasionally reads '
         . 'is a partial match, not a strong one. If you are giving many candidates scores '
-        . 'above 80, you are being too generous — lower them. When uncertain, score lower. '
-        . 'Prefer recent posts. Separate candidates that fit about equally well instead of '
-        . 'giving them all one number: within a band, the better fit takes the higher score, '
-        . 'and the more recent post breaks a true tie. Score every candidate you are shown, '
-        . 'including one that repeats a story another candidate covers — never leave a '
-        . 'candidate out.';
+        . 'above 800, you are being too generous — lower them. When uncertain, score lower. '
+        . 'Prefer recent posts. Use the whole range and give each candidate its own exact '
+        . 'number: 843, 617, 291. Do not round to multiples of ten, and do not give the same '
+        . 'score to several candidates — if two are close, decide which is the better fit and '
+        . 'score it higher. Score every candidate you are shown, including one that repeats a '
+        . 'story another candidate covers — never leave a candidate out.';
 
     public const string DEDUP_ROLE = 'You remove duplicate stories from a ranked list built for one reader of '
         . 'an RSS reader. The user message lists RANKED entries, best first; each line starts with the entry id '
@@ -45,7 +45,7 @@ final class RecommendationPromptText
         . 'duplicates, reply {"duplicates": []}. Use only ids that appear in the lines.';
 
     public const string OUTPUT_CONTRACT = 'Reply with JSON only, no prose: {"recommendations": '
-        . '[{"id": <candidate id>, "score": <0-100>, "reason": "<one short sentence>"}]}. Return one object '
+        . '[{"id": <candidate id>, "score": <0-1000>, "reason": "<one short sentence>"}]}. Return one object '
         . 'for every candidate line, in the order the lines appear. Use only ids that appear in the candidate '
         . 'lines. The reason is shown to the reader, so name what this post is about and the interest or the '
         . 'earlier post it matches; do not open with "Directly aligns", "Matches the reader\'s" or any other '

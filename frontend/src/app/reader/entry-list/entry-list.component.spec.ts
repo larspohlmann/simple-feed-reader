@@ -121,7 +121,7 @@ describe('EntryListComponent', () => {
 
   describe('recommendation strip', () => {
     const recommended = [
-      entry(1, { recommendationReason: 'because you read src', recommendationScore: 91 }),
+      entry(1, { recommendationReason: 'because you read src', recommendationScore: 910 }),
       entry(2, { recommendationReason: 'similar to your favorites' }),
     ];
     const forYou = { kind: 'for-you', id: null, unread: false };
