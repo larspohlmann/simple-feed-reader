@@ -19,7 +19,8 @@ Backend (from `backend/`):
 composer cs          # PHP_CodeSniffer, PSR-12 (composer cs:fix to autofix)
 composer stan        # PHPStan level max (needs a warm dev cache: bin/console cache:warmup)
 composer md          # PHPMD, codesize ruleset
-composer check       # cs + stan
+composer tramp       # phptramp, tramp-data chains (thresholds in phptramp.dist.json)
+composer check       # cs + stan + tramp
 php bin/phpunit      # unit/integration suite (SQLite natively)
 composer infection   # mutation testing over all of src (needs pcov or xdebug)
 composer infection:diff   # …over the files this branch changes — what CI gates
@@ -108,6 +109,16 @@ Enforced mechanically by `composer check` and `composer md`:
   parameter/field counts. **Standing rule: every `src` file you touch must be
   PHPMD-clean before commit**, not merely free of *new* findings. Fix the design
   the metric is pointing at; do not tune the threshold.
+- **phptramp** (`phptramp.dist.json`, run by `composer tramp` and CI) — a chain
+  of **4** or more methods forwarding a parameter none of them reads fails the
+  build; **3** hops warns. Only chains crossing **2** or more classes count
+  (`minClasses`): a value threaded through one class's own private helpers is
+  decomposition, and counting it buries the real tunnels. Tramp data means the
+  value has no home: the fix is a context object or a per-pass collaborator that
+  holds it as a field, not a longer signature (see `Service/Fetch/PageUrls.php`
+  and `Service/Scraper/JsonLdArticles.php`). A ratchet like `minMsi` — tighten it
+  as the tree catches up, never loosen it to make a branch pass, and never add a
+  `--baseline` to a clean tree.
 - PhpStorm inspections (`mcp__phpstorm__lint_files`) on changed PHP: block on
   ERROR and WARNING; weak warnings are advisory.
 
