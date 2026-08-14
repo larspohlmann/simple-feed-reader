@@ -14,14 +14,17 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class RecommendationSettingsRoundTripTest extends KernelTestCase
 {
-    private function values(?int $autoGenerateIntervalHours): RecommendationSettingsValues
-    {
+    private function values(
+        ?int $autoGenerateIntervalHours,
+        int $lookbackDays = EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+    ): RecommendationSettingsValues {
         return new RecommendationSettingsValues(
             guidancePrompt: null,
             favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
             keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
             viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
             candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+            lookbackDays: $lookbackDays,
             picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
             contextWindow: null,
             batchCount: null,
@@ -49,5 +52,27 @@ final class RecommendationSettingsRoundTripTest extends KernelTestCase
         $writer->save($user, $this->values(3));
 
         self::assertSame(3, $resolver->forUser($user)->autoGenerateIntervalHours);
+    }
+
+    public function testTheLookbackWindowPersistsAndResolves(): void
+    {
+        self::bootKernel();
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $writer = self::getContainer()->get(RecommendationSettingsWriter::class);
+        self::assertInstanceOf(RecommendationSettingsWriter::class, $writer);
+        $resolver = self::getContainer()->get(RecommendationSettingsResolver::class);
+        self::assertInstanceOf(RecommendationSettingsResolver::class, $resolver);
+
+        $user = new User('lookback-roundtrip@example.com', new \DateTimeImmutable());
+        $em->persist($user);
+        $em->flush();
+
+        // No row at all resolves to the default, not to zero.
+        self::assertSame(2, $resolver->forUser($user)->lookbackDays);
+
+        $writer->save($user, $this->values(null, 5));
+
+        self::assertSame(5, $resolver->forUser($user)->lookbackDays);
     }
 }

@@ -647,6 +647,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
             viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
             candidatePoolSize: $entryCount,
+            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
             contextWindow: 2500,
             batchCount: $batchCount,

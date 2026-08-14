@@ -8,6 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Entity\RecommendationSettings;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationSettingsResolver;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Tests\DbTestCase;
@@ -68,6 +69,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
             keptCap: 20,
             viewedCap: 30,
             candidatePoolSize: 500,
+            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: 50,
             contextWindow: 65536,
             batchCount: 12,

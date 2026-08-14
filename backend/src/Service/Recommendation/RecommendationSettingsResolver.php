@@ -38,6 +38,8 @@ final readonly class RecommendationSettingsResolver
             viewedCap: $row?->values()->viewedCap ?? EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
             candidatePoolSize: $row?->values()->candidatePoolSize
                 ?? EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+            lookbackDays: $row?->values()->lookbackDays
+                ?? EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: $row?->values()->picksLimit ?? EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
             packing: new RecommendationPackingSettings(
                 contextWindow: $window,

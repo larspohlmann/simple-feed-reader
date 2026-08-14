@@ -43,6 +43,13 @@ class RecommendationSettings
     #[ORM\Column(options: ['default' => EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE])]
     private int $candidatePoolSize = EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE;
 
+    /**
+     * How many days back a run's candidate pool reaches (#386). The cap in
+     * candidatePoolSize applies inside this window.
+     */
+    #[ORM\Column(options: ['default' => EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS])]
+    private int $lookbackDays = EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS;
+
     #[ORM\Column(options: ['default' => EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT])]
     private int $picksLimit = EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT;
 
@@ -79,6 +86,7 @@ class RecommendationSettings
         $this->keptCap = $values->keptCap;
         $this->viewedCap = $values->viewedCap;
         $this->candidatePoolSize = $values->candidatePoolSize;
+        $this->lookbackDays = $values->lookbackDays;
         $this->picksLimit = $values->picksLimit;
         $this->contextWindow = $values->contextWindow;
         $this->batchCount = $values->batchCount;
@@ -94,6 +102,7 @@ class RecommendationSettings
             keptCap: $this->keptCap,
             viewedCap: $this->viewedCap,
             candidatePoolSize: $this->candidatePoolSize,
+            lookbackDays: $this->lookbackDays,
             picksLimit: $this->picksLimit,
             contextWindow: $this->contextWindow,
             batchCount: $this->batchCount,

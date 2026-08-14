@@ -51,6 +51,7 @@ final readonly class RecommendationSettingsWriter
             keptCap: $values->keptCap,
             viewedCap: $values->viewedCap,
             candidatePoolSize: $values->candidatePoolSize,
+            lookbackDays: $values->lookbackDays,
             picksLimit: $values->picksLimit,
             contextWindow: $values->contextWindow,
             batchCount: $values->batchCount,

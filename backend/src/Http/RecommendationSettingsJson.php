@@ -36,6 +36,7 @@ final class RecommendationSettingsJson
             'keptCap' => $effective->keptCap,
             'viewedCap' => $effective->viewedCap,
             'candidatePoolSize' => $effective->candidatePoolSize,
+            'lookbackDays' => $effective->lookbackDays,
             'picksLimit' => $effective->picksLimit,
             'contextWindow' => $effective->packing->contextWindow,
             'contextWindowOverride' => 'user' === $effective->packing->contextWindowSource
