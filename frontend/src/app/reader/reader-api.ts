@@ -7,8 +7,7 @@ import { PAGE_SIZE } from './paging';
 import { RefreshScope } from './query';
 import {
   DebugLogDetail,
-  DebugLogEntry,
-  DebugLogRunSummary,
+  DebugLogPayload,
   EntriesPage,
   EntryDto,
   EntryQuery,
@@ -183,11 +182,13 @@ export class ReaderApi {
     return this.http.get<RecommendationRunReport>(`${this.base}/api/recommendations/runs/current`);
   }
 
-  /** The provider calls logged for the most recent for-you run, in call
-   *  order, plus that run's own summary -- null when the user has never run. */
-  debugLog(): Observable<{ run: DebugLogRunSummary | null; entries: DebugLogEntry[] }> {
-    return this.http.get<{ run: DebugLogRunSummary | null; entries: DebugLogEntry[] }>(
-      `${this.base}/api/recommendations/runs/debug-log`,
+  /** The provider calls logged for one for-you run, in call order, plus that
+   *  run's own summary and the retained runs the panel may switch to. Without
+   *  a runId the newest run answers -- null when the user has never run. */
+  debugLog(runId?: number): Observable<DebugLogPayload> {
+    const query = runId === undefined ? '' : `?run=${runId}`;
+    return this.http.get<DebugLogPayload>(
+      `${this.base}/api/recommendations/runs/debug-log${query}`,
     );
   }
 

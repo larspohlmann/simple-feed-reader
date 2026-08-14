@@ -137,7 +137,7 @@ describe('RecommendationDebugLogComponent', () => {
   }
 
   beforeEach(() => {
-    debugLog = jest.fn().mockReturnValue(of({ run: null, entries: [] }));
+    debugLog = jest.fn().mockReturnValue(of({ run: null, runs: [], entries: [] }));
     debugLogEntry = jest.fn().mockReturnValue(of(DETAIL));
     running = signal(false);
     completedStamp = signal(0);
@@ -161,7 +161,7 @@ describe('RecommendationDebugLogComponent', () => {
   });
 
   it('renders one row per entry with the composed label', () => {
-    debugLog.mockReturnValue(of({ run: null, entries: [BATCH_ENTRY, DEDUP_ENTRY] }));
+    debugLog.mockReturnValue(of({ run: null, runs: [], entries: [BATCH_ENTRY, DEDUP_ENTRY] }));
     const f = mount();
     const text = (f.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Batch 2');
@@ -172,7 +172,7 @@ describe('RecommendationDebugLogComponent', () => {
 
   it('polls debugLog every 2s while a run is running, and stops once it flips false', () => {
     jest.useFakeTimers();
-    debugLog.mockReturnValue(of({ run: RUNNING_RUN_SUMMARY, entries: [BATCH_ENTRY] }));
+    debugLog.mockReturnValue(of({ run: RUNNING_RUN_SUMMARY, runs: [], entries: [BATCH_ENTRY] }));
     running.set(true);
     const f = mount();
     expect(debugLog).toHaveBeenCalledTimes(1);
@@ -197,7 +197,7 @@ describe('RecommendationDebugLogComponent', () => {
   });
 
   it("lazily loads a row's request body on toggle, once", () => {
-    debugLog.mockReturnValue(of({ run: null, entries: [BATCH_ENTRY] }));
+    debugLog.mockReturnValue(of({ run: null, runs: [], entries: [BATCH_ENTRY] }));
     const f = mount();
 
     const el = f.nativeElement as HTMLElement;
@@ -216,7 +216,7 @@ describe('RecommendationDebugLogComponent', () => {
   });
 
   it('does not re-fetch a request body still in flight from an earlier toggle', () => {
-    debugLog.mockReturnValue(of({ run: null, entries: [BATCH_ENTRY] }));
+    debugLog.mockReturnValue(of({ run: null, runs: [], entries: [BATCH_ENTRY] }));
     const pending = new Subject<DebugLogDetail>();
     debugLogEntry.mockReturnValue(pending.asObservable());
     const f = mount();
@@ -241,7 +241,7 @@ describe('RecommendationDebugLogComponent', () => {
   });
 
   it('shows the streaming row text without any detail fetch', () => {
-    debugLog.mockReturnValue(of({ run: null, entries: [STREAMING_ENTRY] }));
+    debugLog.mockReturnValue(of({ run: null, runs: [], entries: [STREAMING_ENTRY] }));
     const f = mount();
     const el = f.nativeElement as HTMLElement;
     expect(el.querySelector('.debug-panel__stream')!.textContent).toContain('partial…');
@@ -251,7 +251,7 @@ describe('RecommendationDebugLogComponent', () => {
   it('replaces a cached mid-stream detail with the finished text once the poll settles the verdict', () => {
     jest.useFakeTimers();
     running.set(true);
-    debugLog.mockReturnValue(of({ run: null, entries: [STREAMING_ENTRY] }));
+    debugLog.mockReturnValue(of({ run: null, runs: [], entries: [STREAMING_ENTRY] }));
     debugLogEntry.mockReturnValue(
       of({ ...DETAIL, id: 3, verdict: null, responseText: 'partial…' }),
     );
@@ -270,6 +270,7 @@ describe('RecommendationDebugLogComponent', () => {
     debugLog.mockReturnValue(
       of({
         run: null,
+        runs: [],
         entries: [
           { ...STREAMING_ENTRY, verdict: 'usable', streamingText: null, responseBytes: 11 },
         ],
@@ -292,10 +293,74 @@ describe('RecommendationDebugLogComponent', () => {
    * megabytes and answers nothing, which without this line looks exactly
    * like a provider that never spoke.
    */
+
+  it('offers no run picker while only one run is retained', () => {
+    debugLog.mockReturnValue(
+      of({
+        run: null,
+        runs: [{ id: 7, status: 'completed', createdAt: '2026-08-08T10:00:00Z' }],
+        entries: [BATCH_ENTRY],
+      }),
+    );
+    const f = mount();
+
+    expect((f.nativeElement as HTMLElement).querySelector('.debug-panel__runs-select')).toBeNull();
+  });
+
+  it('offers one option per retained run and asks for the one picked', () => {
+    debugLog.mockReturnValue(
+      of({
+        run: null,
+        runs: [
+          { id: 9, status: 'completed', createdAt: '2026-08-08T10:00:00Z' },
+          { id: 7, status: 'failed', createdAt: '2026-08-08T10:00:00Z' },
+        ],
+        entries: [BATCH_ENTRY],
+      }),
+    );
+    const f = mount();
+    const select = (f.nativeElement as HTMLElement).querySelector(
+      '.debug-panel__runs-select',
+    ) as HTMLSelectElement;
+    expect(select.options).toHaveLength(2);
+
+    select.value = '7';
+    select.dispatchEvent(new Event('change'));
+    f.detectChanges();
+
+    expect(debugLog).toHaveBeenLastCalledWith(7);
+  });
+
+  it('follows the newest run rather than pinning it when the newest is picked', () => {
+    debugLog.mockReturnValue(
+      of({
+        run: null,
+        runs: [
+          { id: 9, status: 'completed', createdAt: '2026-08-08T10:00:00Z' },
+          { id: 7, status: 'failed', createdAt: '2026-08-08T10:00:00Z' },
+        ],
+        entries: [BATCH_ENTRY],
+      }),
+    );
+    const f = mount();
+    const select = (f.nativeElement as HTMLElement).querySelector(
+      '.debug-panel__runs-select',
+    ) as HTMLSelectElement;
+
+    select.value = '9';
+    select.dispatchEvent(new Event('change'));
+    f.detectChanges();
+
+    // undefined, not 9: an explicit pin would stop the panel following the
+    // next run that starts.
+    expect(debugLog).toHaveBeenLastCalledWith(undefined);
+  });
+
   it('reports bytes streamed without an answer', () => {
     debugLog.mockReturnValue(
       of({
         run: null,
+        runs: [],
         entries: [
           {
             ...STREAMING_ENTRY,
@@ -316,7 +381,7 @@ describe('RecommendationDebugLogComponent', () => {
   });
 
   it('reports bytes streamed alongside an answer', () => {
-    debugLog.mockReturnValue(of({ run: null, entries: [DEDUP_ENTRY] }));
+    debugLog.mockReturnValue(of({ run: null, runs: [], entries: [DEDUP_ENTRY] }));
     const f = TestBed.createComponent(RecommendationDebugLogComponent);
     f.detectChanges();
 
@@ -326,7 +391,7 @@ describe('RecommendationDebugLogComponent', () => {
   });
 
   it('hides the wire line when nothing was streamed', () => {
-    debugLog.mockReturnValue(of({ run: null, entries: [STREAMING_ENTRY] }));
+    debugLog.mockReturnValue(of({ run: null, runs: [], entries: [STREAMING_ENTRY] }));
     const f = TestBed.createComponent(RecommendationDebugLogComponent);
     f.detectChanges();
 
@@ -334,7 +399,7 @@ describe('RecommendationDebugLogComponent', () => {
   });
 
   it('names max_tokens truncation when the provider stopped on length', () => {
-    debugLog.mockReturnValue(of({ run: null, entries: [TRANSPORT_FAILED_ENTRY] }));
+    debugLog.mockReturnValue(of({ run: null, runs: [], entries: [TRANSPORT_FAILED_ENTRY] }));
     const f = TestBed.createComponent(RecommendationDebugLogComponent);
     f.detectChanges();
 
@@ -344,7 +409,7 @@ describe('RecommendationDebugLogComponent', () => {
   });
 
   it('reports a natural stop without the truncation styling', () => {
-    debugLog.mockReturnValue(of({ run: null, entries: [DEDUP_ENTRY] }));
+    debugLog.mockReturnValue(of({ run: null, runs: [], entries: [DEDUP_ENTRY] }));
     const f = TestBed.createComponent(RecommendationDebugLogComponent);
     f.detectChanges();
 
@@ -354,7 +419,7 @@ describe('RecommendationDebugLogComponent', () => {
   });
 
   it('shows no finish line until the provider stamps a reason', () => {
-    debugLog.mockReturnValue(of({ run: null, entries: [STREAMING_ENTRY] }));
+    debugLog.mockReturnValue(of({ run: null, runs: [], entries: [STREAMING_ENTRY] }));
     const f = TestBed.createComponent(RecommendationDebugLogComponent);
     f.detectChanges();
 
@@ -362,7 +427,7 @@ describe('RecommendationDebugLogComponent', () => {
   });
 
   it('renders the summary strip from a completed run', () => {
-    debugLog.mockReturnValue(of({ run: RUN_SUMMARY, entries: [DEDUP_ENTRY] }));
+    debugLog.mockReturnValue(of({ run: RUN_SUMMARY, runs: [], entries: [DEDUP_ENTRY] }));
     const f = mount();
     const el = f.nativeElement as HTMLElement;
 
@@ -379,7 +444,9 @@ describe('RecommendationDebugLogComponent', () => {
   });
 
   it('shows the run-level error on a failed run, styled as danger', () => {
-    debugLog.mockReturnValue(of({ run: FAILED_RUN_SUMMARY, entries: [TRANSPORT_FAILED_ENTRY] }));
+    debugLog.mockReturnValue(
+      of({ run: FAILED_RUN_SUMMARY, runs: [], entries: [TRANSPORT_FAILED_ENTRY] }),
+    );
     const f = mount();
     const el = f.nativeElement as HTMLElement;
 
@@ -391,20 +458,20 @@ describe('RecommendationDebugLogComponent', () => {
   });
 
   it('does not render a half-empty summary strip when the user has never run', () => {
-    debugLog.mockReturnValue(of({ run: null, entries: [BATCH_ENTRY] }));
+    debugLog.mockReturnValue(of({ run: null, runs: [], entries: [BATCH_ENTRY] }));
     const f = mount();
     expect((f.nativeElement as HTMLElement).querySelector('.debug-panel__summary')).toBeNull();
   });
 
   it('shows an in-progress timeline without a completion time while the run is still going', () => {
-    debugLog.mockReturnValue(of({ run: RUNNING_RUN_SUMMARY, entries: [BATCH_ENTRY] }));
+    debugLog.mockReturnValue(of({ run: RUNNING_RUN_SUMMARY, runs: [], entries: [BATCH_ENTRY] }));
     const f = mount();
     const timeline = (f.nativeElement as HTMLElement).querySelector('.debug-panel__timeline');
     expect(timeline!.textContent!.trim()).toMatch(/^\d{2}:\d{2} → …$/);
   });
 
   it("renders a transport-failed row's errorDetail as a full-width danger line", () => {
-    debugLog.mockReturnValue(of({ run: null, entries: [TRANSPORT_FAILED_ENTRY] }));
+    debugLog.mockReturnValue(of({ run: null, runs: [], entries: [TRANSPORT_FAILED_ENTRY] }));
     const f = mount();
     const el = f.nativeElement as HTMLElement;
 
@@ -414,13 +481,13 @@ describe('RecommendationDebugLogComponent', () => {
   });
 
   it('shows no error line for a completed call', () => {
-    debugLog.mockReturnValue(of({ run: null, entries: [DEDUP_ENTRY] }));
+    debugLog.mockReturnValue(of({ run: null, runs: [], entries: [DEDUP_ENTRY] }));
     const f = mount();
     expect((f.nativeElement as HTMLElement).querySelector('.debug-panel__error')).toBeNull();
   });
 
   it('renders a settled call’s duration on the row, in seconds, without expanding', () => {
-    debugLog.mockReturnValue(of({ run: null, entries: [DEDUP_ENTRY] }));
+    debugLog.mockReturnValue(of({ run: null, runs: [], entries: [DEDUP_ENTRY] }));
     const f = mount();
     const el = f.nativeElement as HTMLElement;
 
@@ -428,7 +495,7 @@ describe('RecommendationDebugLogComponent', () => {
   });
 
   it('leaves the duration cell empty for the row still streaming (no NaN, no negative)', () => {
-    debugLog.mockReturnValue(of({ run: null, entries: [BATCH_ENTRY] }));
+    debugLog.mockReturnValue(of({ run: null, runs: [], entries: [BATCH_ENTRY] }));
     const f = mount();
     const el = f.nativeElement as HTMLElement;
 
@@ -441,7 +508,7 @@ describe('RecommendationDebugLogComponent', () => {
       createdAt: '2026-08-08T10:01:00Z',
       finishedAt: '2026-08-08T10:01:00Z',
     };
-    debugLog.mockReturnValue(of({ run: null, entries: [instant] }));
+    debugLog.mockReturnValue(of({ run: null, runs: [], entries: [instant] }));
     const f = mount();
     const el = f.nativeElement as HTMLElement;
 
@@ -451,7 +518,7 @@ describe('RecommendationDebugLogComponent', () => {
   it('clusters entries by run, newest run first, under one header each', () => {
     const older = { ...BATCH_ENTRY, id: 1, runId: 7 };
     const newer = { ...DEDUP_ENTRY, id: 2, runId: 8 };
-    debugLog.mockReturnValue(of({ run: null, entries: [older, newer] }));
+    debugLog.mockReturnValue(of({ run: null, runs: [], entries: [older, newer] }));
     const f = mount();
     const el = f.nativeElement as HTMLElement;
 
@@ -466,7 +533,7 @@ describe('RecommendationDebugLogComponent', () => {
   it('keeps one run’s calls in a single group', () => {
     const first = { ...BATCH_ENTRY, id: 1, runId: 7 };
     const second = { ...DEDUP_ENTRY, id: 2, runId: 7 };
-    debugLog.mockReturnValue(of({ run: null, entries: [first, second] }));
+    debugLog.mockReturnValue(of({ run: null, runs: [], entries: [first, second] }));
     const f = mount();
     const el = f.nativeElement as HTMLElement;
 

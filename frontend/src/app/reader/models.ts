@@ -273,6 +273,15 @@ export interface DebugLogEntry {
 /** The latest for-you run, as the debug log's summary strip shows it: distinct
  *  from the per-row `errorDetail` above, `error` here is the run's own
  *  failure, not any one call's. Null when the user has never run. */
+/** One run the debug panel may switch to. The log keeps the last ten runs,
+ *  and the panel reads one at a time -- shipping all ten on every two-second
+ *  poll would cost ten times what the panel costs today. */
+export interface DebugLogRunChoice {
+  id: number;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  createdAt: string;
+}
+
 export interface DebugLogRunSummary {
   status: 'pending' | 'running' | 'completed' | 'failed';
   error: string | null;
@@ -282,6 +291,13 @@ export interface DebugLogRunSummary {
   maxTransportFailures: number;
   createdAt: string;
   completedAt: string | null;
+}
+
+/** What the debug panel's list route answers with. */
+export interface DebugLogPayload {
+  run: DebugLogRunSummary | null;
+  runs: DebugLogRunChoice[];
+  entries: DebugLogEntry[];
 }
 
 /** The full request/response pair for one logged provider call. */

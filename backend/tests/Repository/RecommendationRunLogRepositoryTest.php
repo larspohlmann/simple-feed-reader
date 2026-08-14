@@ -58,7 +58,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $this->fixtures->log($run, RecommendationRunLog::PHASE_DEDUP, null, 1, 'req-body-longer');
         $this->em->flush();
 
-        $rows = $this->logs->listForUser($this->user);
+        $rows = $this->logs->listForRun($this->user, $run->getId() ?? 0);
 
         self::assertSame(
             [
@@ -113,7 +113,10 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
 
         $streamingId = $streaming->getId();
         self::assertNotNull($streamingId);
-        self::assertSame([$streamingId => ''], $this->logs->streamingTextForUser($this->user));
+        self::assertSame(
+            [$streamingId => ''],
+            $this->logs->streamingTextForRun($this->user, $run->getId() ?? 0),
+        );
     }
 
     public function testCountAttemptsMatchesOnBatchNumberIsNullForTheDedupPhase(): void
@@ -158,7 +161,8 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
 
     public function testDeleteForUserLeavesOtherUsersRows(): void
     {
-        $this->fixtures->log($this->fixtures->createRun($this->user), RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
+        $run = $this->fixtures->createRun($this->user);
+        $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
         $otherRun = $this->fixtures->createRun($this->otherUser);
         $kept = $this->fixtures->log($otherRun, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
         $this->em->flush();
@@ -170,7 +174,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         // Bulk DQL bypasses the identity map: clear before asserting survival,
         // or find() serves the stale in-memory row (see the #237 lesson).
         $this->em->clear();
-        self::assertSame([], $this->logs->listForUser($this->user));
+        self::assertSame([], $this->logs->listForRun($this->user, $run->getId() ?? 0));
         self::assertNotNull($this->em->find(RecommendationRunLog::class, $keptId));
     }
 }

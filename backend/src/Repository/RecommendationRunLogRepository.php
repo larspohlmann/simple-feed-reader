@@ -31,7 +31,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
      *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
      *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}>
      */
-    public function listForUser(User $user): array
+    public function listForRun(User $user, int $runId): array
     {
         /** @var list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
          *     verdict: ?string, requestBytes: int|string, responseBytes: int|string,
@@ -55,7 +55,9 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
             )
             ->join('l.run', 'r')
             ->where('r.user = :user')
+            ->andWhere('r.id = :run')
             ->setParameter('user', $user)
+            ->setParameter('run', $runId)
             ->orderBy('l.id', 'ASC')
             ->getQuery()
             ->getArrayResult();
@@ -114,15 +116,17 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
      *
      * @return array<int, string> log id => response text so far
      */
-    public function streamingTextForUser(User $user): array
+    public function streamingTextForRun(User $user, int $runId): array
     {
         /** @var list<array{id: int, responseText: string}> $rows */
         $rows = $this->createQueryBuilder('l')
             ->select('l.id AS id', 'l.responseText AS responseText')
             ->join('l.run', 'r')
             ->where('r.user = :user')
+            ->andWhere('r.id = :run')
             ->andWhere('l.verdict IS NULL')
             ->setParameter('user', $user)
+            ->setParameter('run', $runId)
             ->getQuery()
             ->getArrayResult();
 
@@ -155,18 +159,47 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
      */
     public function deleteForUser(User $user): void
     {
-        /** @var list<int> $ids */
-        $ids = array_column(
-            $this->createQueryBuilder('l')
-                ->select('l.id AS id')
-                ->join('l.run', 'r')
-                ->where('r.user = :user')
-                ->setParameter('user', $user)
-                ->getQuery()
-                ->getArrayResult(),
-            'id',
-        );
+        $this->deleteIds($this->idsForUser($user, null));
+    }
 
+    /**
+     * Drops every log row of the account except those belonging to the named
+     * runs — the retention window at the start of a run (#401). An empty keep
+     * list is a full wipe, which is what deleteForUser() asks for.
+     *
+     * @param list<int> $keptRunIds
+     */
+    public function deleteForUserOutsideRuns(User $user, array $keptRunIds): void
+    {
+        $this->deleteIds($this->idsForUser($user, $keptRunIds));
+    }
+
+    /**
+     * @param ?list<int> $keptRunIds null keeps nothing
+     *
+     * @return list<int>
+     */
+    private function idsForUser(User $user, ?array $keptRunIds): array
+    {
+        $query = $this->createQueryBuilder('l')
+            ->select('l.id AS id')
+            ->join('l.run', 'r')
+            ->where('r.user = :user')
+            ->setParameter('user', $user);
+
+        if (null !== $keptRunIds && [] !== $keptRunIds) {
+            $query->andWhere('r.id NOT IN (:kept)')->setParameter('kept', $keptRunIds);
+        }
+
+        /** @var list<int> $ids */
+        $ids = array_column($query->getQuery()->getArrayResult(), 'id');
+
+        return $ids;
+    }
+
+    /** @param list<int> $ids */
+    private function deleteIds(array $ids): void
+    {
         if ([] === $ids) {
             return;
         }

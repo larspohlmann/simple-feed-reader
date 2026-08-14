@@ -133,6 +133,47 @@ final class RecommendationRunRepository extends ServiceEntityRepository
     }
 
     /**
+     * The account's newest runs, newest first — the retention window the
+     * debug log is trimmed to, and the list the debug panel offers to switch
+     * between (#401).
+     *
+     * @return list<RecommendationRun>
+     */
+    public function findNewestForUser(User $user, int $limit): array
+    {
+        /** @var list<RecommendationRun> $runs */
+        $runs = $this->createQueryBuilder('r')
+            ->andWhere('r.user = :user')->setParameter('user', $user)
+            ->orderBy('r.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return $runs;
+    }
+
+    /**
+     * The same window as findNewestForUser(), as ids — what the log's
+     * retention delete needs, without hydrating ten entities to read one
+     * field off each.
+     *
+     * @return list<int>
+     */
+    public function findNewestIdsForUser(User $user, int $limit): array
+    {
+        /** @var list<array{id: int}> $rows */
+        $rows = $this->createQueryBuilder('r')
+            ->select('r.id AS id')
+            ->andWhere('r.user = :user')->setParameter('user', $user)
+            ->orderBy('r.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_column($rows, 'id');
+    }
+
+    /**
      * Runs carry no further children of their own by this point — the
      * caller deletes logs and items first — so this deletes directly by
      * user rather than the select-ids-then-delete shape those two need.

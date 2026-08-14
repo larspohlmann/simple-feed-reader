@@ -188,6 +188,7 @@
         "debugFinishReason": "Anbieter gestoppt: {{ reason }}",
         "debugFinishTruncated": "Antwort durch max_tokens abgeschnitten (Grund: length)",
         "debugRunGroup": "Lauf · {{ start }} → {{ end }}",
+        "debugRunPicker": "Lauf zum Ansehen",
         "debugRunSummary": "Versuche {{ a }}/{{ am }} · Transport {{ t }}/{{ tm }}",
         "debugDuration": "{{ s }} s",
         "debugDetails": "Details",

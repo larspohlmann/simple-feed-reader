@@ -7,8 +7,9 @@ namespace App\Controller\Api;
 use App\Entity\User;
 use App\Http\RecommendationDebugLogJson;
 use App\Repository\RecommendationRunLogRepository;
-use App\Repository\RecommendationRunRepository;
+use App\Service\Recommendation\RecommendationDebugLogView;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -23,18 +24,19 @@ final readonly class RecommendationDebugLogController
 {
     public function __construct(
         private RecommendationRunLogRepository $logs,
-        private RecommendationRunRepository $runs,
+        private RecommendationDebugLogView $view,
     ) {
     }
 
+    /**
+     * `?run=<id>` picks one of the retained runs (#401); without it the panel
+     * gets the newest, which is what it asked for before the log kept more
+     * than one.
+     */
     #[Route('', name: 'api_recommendations_debug_log', methods: ['GET'])]
-    public function list(#[CurrentUser] User $user): JsonResponse
+    public function list(#[CurrentUser] User $user, Request $request): JsonResponse
     {
-        return new JsonResponse(RecommendationDebugLogJson::list(
-            $this->logs->listForUser($user),
-            $this->logs->streamingTextForUser($user),
-            $this->runs->findLatestForUser($user),
-        ));
+        return new JsonResponse($this->view->forUser($user, $request->query->getInt('run')));
     }
 
     #[Route('/{id}', name: 'api_recommendations_debug_log_entry', requirements: ['id' => '\d+'], methods: ['GET'])]

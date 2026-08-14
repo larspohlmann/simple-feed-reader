@@ -32,6 +32,23 @@
       </div>
     }
 
+    @if (hasOlderRuns()) {
+      <label class="debug-panel__runs">
+        <span class="debug-panel__meta">{{
+          'settings.ai.recommendations.debugRunPicker' | transloco
+        }}</span>
+        <select
+          class="debug-panel__runs-select"
+          [value]="selectedRunId() ?? runs()[0].id"
+          (change)="onRunPicked($event)"
+        >
+          @for (choice of runs(); track choice.id) {
+            <option [value]="choice.id">{{ time(choice.createdAt) }} · {{ choice.status }}</option>
+          }
+        </select>
+      </label>
+    }
+
     <div class="debug-panel__grid-wrap">
       @for (group of groups(); track group.runId) {
         <section class="debug-panel__group">

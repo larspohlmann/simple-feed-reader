@@ -116,26 +116,65 @@ final class RecommendationRunStarterTest extends DbTestCase
         $this->starter()->resume($this->user);
     }
 
-    public function testANewRunWipesTheDebugLogOfThePreviousRun(): void
+    /**
+     * The window used to be one run wide, so this asserted the opposite: a new
+     * run wiped what the last one recorded. Prompt regressions are only
+     * visible as a difference between runs, so the previous run's log is
+     * exactly what the next investigation needs (#401).
+     */
+    public function testANewRunKeepsThePreviousRunsDebugLog(): void
     {
         $this->seedReadyAiSettings($this->user);
-        $previous = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-08T09:00:00Z'));
-        $previous->snapshot([]);
-        $previous->complete(new \DateTimeImmutable('2026-08-08T09:01:00Z'));
-        $this->em->persist($previous);
-        $this->em->persist(new RecommendationRunLog(
-            $previous,
-            RecommendationRunLog::PHASE_BATCH,
-            1,
-            1,
-            'old request',
-            new \DateTimeImmutable('2026-08-08T09:00:30Z'),
-        ));
+        $previous = $this->seedCompletedRunWithLog('old request', 1);
         $this->em->flush();
 
         $this->starter()->start($this->user);
 
-        self::assertSame([], $this->runLogs()->listForUser($this->user));
+        self::assertSame([$previous->getId()], $this->runIdsHoldingLogs());
+    }
+
+    /**
+     * Eleven runs, each with a log row, then a twelfth starts. The window
+     * counts the new run too, so the two oldest lose their rows and nine
+     * seeded runs keep theirs.
+     */
+    public function testOnlyTheNewestRunsInsideTheWindowKeepTheirDebugLog(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $seeded = [];
+        foreach (range(1, 11) as $index) {
+            $seeded[] = $this->seedCompletedRunWithLog('request ' . $index, $index);
+        }
+        $this->em->flush();
+
+        $this->starter()->start($this->user);
+
+        $survivingRunIds = $this->runIdsHoldingLogs();
+        $expected = array_map(
+            static fn (RecommendationRun $run): int => $run->getId() ?? 0,
+            \array_slice($seeded, 2),
+        );
+
+        self::assertSame($expected, $survivingRunIds);
+    }
+
+    private function seedCompletedRunWithLog(string $requestBody, int $minute): RecommendationRun
+    {
+        $startedAt = new \DateTimeImmutable(\sprintf('2026-08-08T09:%02d:00Z', $minute));
+        $run = new RecommendationRun($this->user, $startedAt);
+        $run->snapshot([]);
+        $run->complete($startedAt->modify('+30 seconds'));
+        $this->em->persist($run);
+        $this->em->persist(new RecommendationRunLog(
+            $run,
+            RecommendationRunLog::PHASE_BATCH,
+            1,
+            1,
+            $requestBody,
+            $startedAt->modify('+10 seconds'),
+        ));
+
+        return $run;
     }
 
     public function testResumingAFailedRunKeepsItsDebugLog(): void
@@ -160,7 +199,7 @@ final class RecommendationRunStarterTest extends DbTestCase
         self::assertSame(RecommendationRun::STATUS_RUNNING, $report->status);
         // The wipe is bulk DQL when it runs, so clear before asserting survival.
         $this->em->clear();
-        self::assertCount(1, $this->runLogs()->listForUser($this->user));
+        self::assertCount(1, $this->logRowsOfLatestRun());
     }
 
     public function testStartSpawnsTheDrainerWhenNoWorkerIsAlive(): void
@@ -261,6 +300,41 @@ final class RecommendationRunStarterTest extends DbTestCase
         $presence = self::getContainer()->get(WorkerPresence::class);
 
         return $presence;
+    }
+
+    /**
+     * Every run of the account that still holds debug rows, oldest first —
+     * the retention window seen from the outside. Read across runs on
+     * purpose: what the window drops is invisible from any single run.
+     *
+     * @return list<int>
+     */
+    private function runIdsHoldingLogs(): array
+    {
+        /** @var list<array{runId: int|string}> $rows */
+        $rows = $this->em->createQuery(
+            'SELECT IDENTITY(l.run) AS runId FROM App\\Entity\\RecommendationRunLog l '
+                . 'JOIN l.run r WHERE r.user = :user ORDER BY l.id ASC',
+        )->setParameter('user', $this->user)->getArrayResult();
+
+        return array_values(array_unique(array_map(
+            static fn (array $row): int => (int) $row['runId'],
+            $rows,
+        )));
+    }
+
+    /**
+    /**
+     * @return list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
+     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
+     *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}>
+     */
+    private function logRowsOfLatestRun(): array
+    {
+        $run = $this->runs()->findLatestForUser($this->user);
+        self::assertNotNull($run);
+
+        return $this->runLogs()->listForRun($this->user, $run->getId() ?? 0);
     }
 
     private function runLogs(): RecommendationRunLogRepository

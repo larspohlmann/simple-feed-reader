@@ -1554,7 +1554,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->stubChatClient()->queueContent(json_encode(['duplicates' => []], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
-        $rows = $this->runLogs()->listForUser($this->user);
+        $rows = $this->logRowsOfLatestRun();
         self::assertSame(
             [['batch', 1, 'usable'], ['batch', 2, 'usable'], ['dedup', null, 'usable']],
             array_map(
@@ -1586,7 +1586,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
-        $rows = $this->runLogs()->listForUser($this->user);
+        $rows = $this->logRowsOfLatestRun();
         self::assertSame([1, 2], array_column($rows, 'attempt'));
         self::assertSame(['unusable', 'usable'], array_column($rows, 'verdict'));
         self::assertSame('not json', $this->freshRunLog($rows[0]['id'])->getResponseText());
@@ -1609,7 +1609,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         } catch (ProviderUnreachableException) {
         }
 
-        $rows = $this->runLogs()->listForUser($this->user);
+        $rows = $this->logRowsOfLatestRun();
         self::assertSame(['transport-failed'], array_column($rows, 'verdict'));
         $log = $this->freshRunLog($rows[0]['id']);
         self::assertSame('gone', $log->getErrorDetail());
@@ -1627,7 +1627,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
-        self::assertSame([], $this->runLogs()->listForUser($this->user));
+        self::assertSame([], $this->logRowsOfLatestRun());
     }
 
     /**
@@ -1664,7 +1664,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         } catch (ApiKeyUnreadableException) {
         }
 
-        $rows = $this->runLogs()->listForUser($this->user);
+        $rows = $this->logRowsOfLatestRun();
         self::assertSame(['transport-failed'], array_column($rows, 'verdict'));
         $log = $this->freshRunLog($rows[0]['id']);
         self::assertNotNull($log->getErrorDetail());
@@ -1876,6 +1876,23 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             debugEnabled: true,
         ));
         $this->em->flush();
+    }
+
+    /**
+     * The debug rows of the account's newest run. The log keeps ten runs
+     * (#401), so a read has to name one; every test here drives a single run.
+     *
+    /**
+     * @return list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
+     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
+     *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}>
+     */
+    private function logRowsOfLatestRun(): array
+    {
+        $run = $this->runs()->findLatestForUser($this->user);
+        self::assertNotNull($run);
+
+        return $this->runLogs()->listForRun($this->user, $run->getId() ?? 0);
     }
 
     private function runLogs(): RecommendationRunLogRepository

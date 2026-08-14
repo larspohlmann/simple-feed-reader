@@ -188,6 +188,7 @@
         "debugFinishReason": "Provider stopped: {{ reason }}",
         "debugFinishTruncated": "Answer truncated by max_tokens (finish reason: length)",
         "debugRunGroup": "Run · {{ start }} → {{ end }}",
+        "debugRunPicker": "Run to inspect",
         "debugRunSummary": "attempts {{ a }}/{{ am }} · transport {{ t }}/{{ tm }}",
         "debugDuration": "{{ s }} s",
         "debugDetails": "Details",
