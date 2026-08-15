@@ -23,6 +23,12 @@ describe('scrollKey', () => {
   it('is stable for the same selection', () => {
     expect(scrollKey(sel({ kind: 'tag', id: 3 }))).toBe(scrollKey(sel({ kind: 'tag', id: 3 })));
   });
+
+  it('is distinct per search term', () => {
+    const angular = scrollKey(sel({ kind: 'search', term: 'angular' }));
+    const react = scrollKey(sel({ kind: 'search', term: 'react' }));
+    expect(angular).not.toBe(react);
+  });
 });
 
 describe('ListScrollMemory', () => {

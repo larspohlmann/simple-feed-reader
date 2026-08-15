@@ -49,6 +49,29 @@ describe('selectionFromParams', () => {
     expect(selectionFromParams(pm({ subscription: '0' })).selection.kind).toBe('all');
     expect(selectionFromParams(pm({ tag: 'x' })).selection.kind).toBe('all');
   });
+  it('reads a search selection from a q of 3+ characters', () => {
+    expect(selectionFromParams(pm({ q: 'angular' })).selection).toEqual({
+      kind: 'search',
+      id: null,
+      unread: false,
+      term: 'angular',
+    });
+  });
+  it('lets q win over a tag present in the same URL', () => {
+    expect(selectionFromParams(pm({ q: 'angular', tag: '3' })).selection).toEqual({
+      kind: 'search',
+      id: null,
+      unread: false,
+      term: 'angular',
+    });
+  });
+  it('ignores a q shorter than the minimum and falls back to all', () => {
+    expect(selectionFromParams(pm({ q: 'an' })).selection.kind).toBe('all');
+  });
+  it('ignores an empty or whitespace-only q', () => {
+    expect(selectionFromParams(pm({ q: '' })).selection.kind).toBe('all');
+    expect(selectionFromParams(pm({ q: '   ' })).selection.kind).toBe('all');
+  });
 });
 
 describe('queryFromSelection', () => {
@@ -72,6 +95,11 @@ describe('queryFromSelection', () => {
     expect(queryFromSelection({ kind: 'for-you', id: null, unread: false })).toEqual({
       view: 'for-you',
     });
+  });
+  it('maps a search selection to view=all with q', () => {
+    expect(
+      queryFromSelection({ kind: 'search', id: null, unread: false, term: 'angular' }),
+    ).toEqual({ view: 'all', q: 'angular' });
   });
 });
 
@@ -125,6 +153,14 @@ describe('sameSelection', () => {
       sameSelection(
         { kind: 'all', id: null, unread: true },
         { kind: 'all', id: null, unread: false },
+      ),
+    ).toBe(false);
+  });
+  it('separates two search selections with different terms', () => {
+    expect(
+      sameSelection(
+        { kind: 'search', id: null, unread: false, term: 'angular' },
+        { kind: 'search', id: null, unread: false, term: 'react' },
       ),
     ).toBe(false);
   });

@@ -4,10 +4,17 @@ import { EntryQuery, MarkReadScope } from './models';
 import { entryIdFromParam } from './slug';
 
 export interface Selection {
-  kind: 'all' | 'tag' | 'subscription' | 'favorites' | 'kept' | 'for-you';
+  kind: 'all' | 'tag' | 'subscription' | 'favorites' | 'kept' | 'for-you' | 'search';
   id: number | null;
   unread: boolean;
+  /** Only a search carries one. Part of the list's identity, so it belongs to
+   *  the selection rather than to a service beside it. */
+  term?: string;
 }
+
+/** The shortest term the backend will accept. A shorter one is not an error
+ *  here — it is a half-typed word, so the URL simply carries no search yet. */
+export const MIN_SEARCH_LENGTH = 3;
 
 /** How a scoped refresh is keyed. Empty = all the user's due feeds; feedId =
  *  one feed; tagId = every feed carrying that tag. */
@@ -19,7 +26,7 @@ export interface RefreshScope {
 /** Whether two selections name the same list. Selections are rebuilt from the
  *  route on every navigation, so they are never reference-equal. */
 export function sameSelection(a: Selection, b: Selection): boolean {
-  return a.kind === b.kind && a.id === b.id && a.unread === b.unread;
+  return a.kind === b.kind && a.id === b.id && a.unread === b.unread && a.term === b.term;
 }
 
 /** Whether the current selection supports a scoped refresh — the cross-feed
@@ -46,6 +53,13 @@ export function selectionFromParams(p: ParamMap): {
   const unread = p.get('unread') !== '0';
   // The entry param is an id or an id-prefixed slug ("514-some-title").
   const entryId = entryIdFromParam(p.get('entry'));
+
+  const term = (p.get('q') ?? '').trim();
+  if (term.length >= MIN_SEARCH_LENGTH) {
+    // A search is its own view over every subscription, so a tag or feed
+    // parameter left in the URL by hand is ignored rather than combined.
+    return { selection: { kind: 'search', id: null, unread: false, term }, entryId };
+  }
 
   let selection: Selection;
   if (view === 'favorites' || view === 'kept' || view === 'for-you') {
@@ -74,6 +88,8 @@ export function queryFromSelection(s: Selection): EntryQuery {
       return { view: s.unread ? 'unread' : 'all', subscription: s.id ?? undefined };
     case 'all':
       return { view: s.unread ? 'unread' : 'all' };
+    case 'search':
+      return { view: 'all', q: s.term };
   }
 }
 
