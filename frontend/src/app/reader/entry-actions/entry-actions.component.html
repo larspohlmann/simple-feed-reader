@@ -4,6 +4,8 @@
   [class.on]="entry().isFavorite"
   [attr.aria-pressed]="entry().isFavorite"
   (click)="$event.stopPropagation(); favorite.emit(entry())"
+  (keydown.enter)="$event.stopPropagation()"
+  (keydown.space)="$event.stopPropagation()"
 >
   <app-icon name="star" size="sm" />
 </button>
@@ -13,6 +15,8 @@
   [class.on]="entry().isKept"
   [attr.aria-pressed]="entry().isKept"
   (click)="$event.stopPropagation(); keep.emit(entry())"
+  (keydown.enter)="$event.stopPropagation()"
+  (keydown.space)="$event.stopPropagation()"
 >
   <app-icon name="bookmark" size="sm" />
 </button>
@@ -21,6 +25,8 @@
   [attr.aria-label]="'reader.toggleRead' | transloco"
   [attr.aria-pressed]="entry().isRead"
   (click)="$event.stopPropagation(); read.emit(entry())"
+  (keydown.enter)="$event.stopPropagation()"
+  (keydown.space)="$event.stopPropagation()"
 >
   <app-icon [name]="entry().isRead ? 'mark_email_unread' : 'check'" size="sm" />
 </button>

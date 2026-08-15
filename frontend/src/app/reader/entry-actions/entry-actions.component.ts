@@ -11,7 +11,12 @@ import { EntryDto } from '../models';
  * (#414).
  *
  * Clicks stop propagating, because the card around it is itself clickable and
- * would otherwise open the entry instead of toggling the flag.
+ * would otherwise open the entry instead of toggling the flag. Enter and Space
+ * keydowns stop propagating too, for the same reason — every card also binds
+ * `keydown.enter`/`keydown.space` on itself to open on keyboard activation.
+ * Neither keydown calls `preventDefault()`: that would cancel the button's own
+ * native activation (Enter fires its click on keydown, Space on keyup), which
+ * is what must still happen for the action to fire.
  */
 @Component({
   selector: 'app-entry-actions',

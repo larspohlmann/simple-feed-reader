@@ -101,13 +101,13 @@ describe('EntryCompactComponent', () => {
     const el = mount().nativeElement as HTMLElement;
     const actions = el.querySelector('app-entry-actions');
     expect(actions).not.toBeNull();
-    // Inside the kicker's own <p>: a block-level wrapper would close the
-    // paragraph and drop the icons onto a second line.
+    // Proves the actions render inside the kicker's own <p>, not as a sibling
+    // block below it — which is what would drop the icons onto a second line.
     expect(actions!.closest('p.kicker')).not.toBeNull();
     expect(el.querySelector('app-entry-meta')).toBeNull();
   });
 
-  it('keeps the actions inside a source group, where there are no tags', () => {
+  it('renders the three actions with showSource false and no tags to sit beside', () => {
     const f = mount();
     f.componentRef.setInput('showSource', false);
     f.detectChanges();

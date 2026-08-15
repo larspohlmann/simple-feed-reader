@@ -145,3 +145,95 @@ test('the compact card flushes its actions to the card edge', async ({ page }) =
 
   expect(strays, `compact actions left short of the card edge by (px): ${strays}`).toEqual([]);
 });
+
+/**
+ * A second, independent fixture: six entries, each with a distinct
+ * `subscriptionId` (so run-collapse never groups them into a widget) and a
+ * portrait 600x800 image. `magazine-planner.ts`'s `fits('split', …)`
+ * trusts any declared width of 300+ regardless of orientation, but
+ * `fits('hero'/'wide', …)` refuses a portrait image outright — so every one of
+ * these demotes down to `app-entry-split` rather than `hero`/`wide`. A
+ * portrait tall enough that the image, not the two lines of kicker/title/dek,
+ * sets the card's height is exactly what exercises the bottom-drop layout.
+ */
+function splitEntry(id: number) {
+  return {
+    id,
+    title: `Split fixture ${id}`,
+    url: `https://fixtures.invalid/${id}`,
+    author: null,
+    summary: null,
+    contentHtml: '<p>Fixture body.</p>',
+    imageUrl: `https://fixtures.invalid/${id}.jpg`,
+    imageWidth: 600,
+    imageHeight: 800,
+    publishedAt: '2026-08-01T12:50:34+00:00',
+    createdAt: '2026-08-01T12:50:34+00:00',
+    subscriptionId: 100 + id,
+    source: `Split source ${id}`,
+    faviconUrl: null,
+    isRead: false,
+    isFavorite: false,
+    isKept: false,
+  };
+}
+
+const SPLIT_ENTRIES = Array.from({ length: 6 }, (_, index) => splitEntry(index + 1));
+
+/** A single opaque pixel, served for every fixture image so the `<img>` loads
+ *  instead of erroring — an errored image sets `imgError`, which removes the
+ *  element via `@if (showImage())` and would silently defeat the whole test. */
+const ONE_PIXEL_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  'base64',
+);
+
+async function stubSplitEntries(page: Page): Promise<void> {
+  await page.route(
+    (url) => url.pathname === '/api/entries',
+    async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      await route.fulfill({ status: 200, json: { entries: SPLIT_ENTRIES, nextCursor: null } });
+    },
+  );
+  await page.route(
+    (url) => url.hostname === 'fixtures.invalid' && url.pathname.endsWith('.jpg'),
+    async (route) => {
+      await route.fulfill({ status: 200, contentType: 'image/png', body: ONE_PIXEL_PNG });
+    },
+  );
+}
+
+async function signInForSplitFixture(page: Page): Promise<boolean> {
+  await stubSplitEntries(page);
+  await page.goto('/login');
+  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
+  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+
+  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
+  const loginError = page.getByRole('alert');
+  await expect(sidebar.or(loginError)).toBeVisible();
+  return sidebar.isVisible();
+}
+
+test('the split card drops its meta row to the bottom under a tall image', async ({ page }) => {
+  const signedIn = await signInForSplitFixture(page);
+  test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
+
+  const split = page.locator('app-entry-split .split').first();
+  await expect(split).toBeVisible();
+  await expect(split.locator('img.img')).toBeVisible();
+
+  const gap = await split.evaluate((card) => {
+    const meta = card.querySelector('app-entry-meta');
+    if (!meta) return null;
+    const paddingBottom = parseFloat(getComputedStyle(card).paddingBottom);
+    return Math.abs(
+      card.getBoundingClientRect().bottom - paddingBottom - meta.getBoundingClientRect().bottom,
+    );
+  });
+
+  expect(gap, 'app-entry-meta was not found inside the split card').not.toBeNull();
+  expect(gap, 'the meta row did not sit at the bottom of the card').toBeLessThanOrEqual(2);
+});

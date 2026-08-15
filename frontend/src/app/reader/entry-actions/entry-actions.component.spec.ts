@@ -28,7 +28,10 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
 
 /** A stand-in for the card: clickable, and it must NOT open when an action is
  *  pressed. Testing that through a real parent is the only way to prove the
- *  click never reaches the card. */
+ *  click never reaches the card. The two keydown bindings mirror exactly what
+ *  every real magazine card binds on its own `<article>` (see
+ *  `entry-compact.component.html`), `preventDefault()` on Space included — a
+ *  host that does not reproduce that wiring would not exercise the bug. */
 @Component({
   imports: [EntryActionsComponent],
   template: `<article
@@ -36,11 +39,12 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
     role="button"
     tabindex="0"
     (click)="cardOpened = true"
-    (keyup.enter)="cardOpened = true"
+    (keydown.enter)="cardOpened = true"
+    (keydown.space)="$event.preventDefault(); cardOpened = true"
   >
     <app-entry-actions
       [entry]="entry"
-      (favorite)="favorited = $event"
+      (favorite)="favoriteCount = favoriteCount + 1"
       (keep)="kept = $event"
       (read)="marked = $event"
     />
@@ -49,9 +53,32 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
 class HostComponent {
   entry: EntryDto = entry();
   cardOpened = false;
-  favorited: EntryDto | null = null;
+  favoriteCount = 0;
   kept: EntryDto | null = null;
   marked: EntryDto | null = null;
+}
+
+/** Reproduces what a real browser does with a focused `<button>`, which jsdom
+ *  does not simulate on its own: Enter fires `click` as part of the keydown's
+ *  default action, Space defers it to the keyup's default action — and either
+ *  is skipped once its governing keydown (and, for Space, keyup too) had
+ *  `preventDefault()` called on it. */
+function pressEnter(target: HTMLElement): void {
+  const keydown = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+  target.dispatchEvent(keydown);
+  if (!keydown.defaultPrevented) {
+    target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  }
+}
+
+function pressSpace(target: HTMLElement): void {
+  const keydown = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+  target.dispatchEvent(keydown);
+  const keyup = new KeyboardEvent('keyup', { key: ' ', bubbles: true, cancelable: true });
+  target.dispatchEvent(keyup);
+  if (!keydown.defaultPrevented && !keyup.defaultPrevented) {
+    target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  }
 }
 
 function mount(e: EntryDto = entry()) {
@@ -100,9 +127,31 @@ describe('EntryActionsComponent', () => {
     read.click();
     f.detectChanges();
 
-    expect(f.componentInstance.favorited).toBe(f.componentInstance.entry);
+    expect(f.componentInstance.favoriteCount).toBe(1);
     expect(f.componentInstance.kept).toBe(f.componentInstance.entry);
     expect(f.componentInstance.marked).toBe(f.componentInstance.entry);
+    expect(f.componentInstance.cardOpened).toBe(false);
+  });
+
+  it('favorites exactly once on Enter, and does not open the card', () => {
+    const f = mount();
+    const [favorite] = buttons(f);
+
+    pressEnter(favorite);
+    f.detectChanges();
+
+    expect(f.componentInstance.favoriteCount).toBe(1);
+    expect(f.componentInstance.cardOpened).toBe(false);
+  });
+
+  it('favorites exactly once on Space, and does not open the card', () => {
+    const f = mount();
+    const [favorite] = buttons(f);
+
+    pressSpace(favorite);
+    f.detectChanges();
+
+    expect(f.componentInstance.favoriteCount).toBe(1);
     expect(f.componentInstance.cardOpened).toBe(false);
   });
 });
