@@ -3,12 +3,25 @@
      rows stay put under the finger (#87). -->
 <header class="list-header" #listHdr [class.collapsed]="collapsed()">
   <div class="heading">
-    <h2 #listTitle tabindex="-1">
+    <h2
+      #listTitle
+      tabindex="-1"
+      [attr.aria-describedby]="showWholeWordBadge() ? 'whole-word-badge' : null"
+    >
       @if (titleTag(); as tag) {
         <app-tag-glyph [name]="tag.icon" [color]="tag.color" size="text" />
       }
       <span>{{ title() }}</span>
     </h2>
+    @if (showWholeWordBadge()) {
+      <span
+        class="whole-word-badge"
+        id="whole-word-badge"
+        [attr.title]="'reader.searchWholeWordHint' | transloco"
+      >
+        {{ 'reader.searchWholeWord' | transloco }}
+      </span>
+    }
     @if (lastRefreshedLabel()) {
       <span class="last-refreshed"
         >{{ 'reader.lastRefreshed' | transloco }} {{ lastRefreshedLabel() }}</span

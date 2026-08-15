@@ -1,6 +1,7 @@
 import { convertToParamMap } from '@angular/router';
 import {
   canScopedRefresh,
+  isWholeWordTerm,
   markReadTarget,
   normalizeSearchInput,
   queryFromSelection,
@@ -265,6 +266,21 @@ describe('visibleSearchTerm', () => {
   });
   it('leaves inner spacing between terms untouched', () => {
     expect(visibleSearchTerm('daft punk ')).toBe('daft punk');
+  });
+});
+
+describe('isWholeWordTerm (#408 follow-up)', () => {
+  it('is true for a term ending in a plain ASCII space', () => {
+    expect(isWholeWordTerm('punk ')).toBe(true);
+  });
+  it('is true for a term ending in a non-breaking space', () => {
+    expect(isWholeWordTerm(`punk\u00A0`)).toBe(true);
+  });
+  it('is false for a term with no trailing whitespace', () => {
+    expect(isWholeWordTerm('punk')).toBe(false);
+  });
+  it('is false for an empty term', () => {
+    expect(isWholeWordTerm('')).toBe(false);
   });
 });
 

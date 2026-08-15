@@ -83,6 +83,23 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
      the number the scroller reserves. */
 }
 
+/* Explains why a whole-word search's result set differs from the same text
+   without the trailing space — otherwise the title alone doesn't show the
+   mode, and an accidental trailing space reads as a silently different
+   search (#408 follow-up). Sits on its own row under the title, since
+   `.heading` stacks in a column; `align-self: flex-start` keeps it from
+   stretching to the heading's full (often ellipsis-truncated) width. */
+.whole-word-badge {
+  align-self: flex-start;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--fs-xs, var(--fs-sm));
+  line-height: var(--lh-tight);
+  white-space: nowrap;
+}
+
 /* "Last refreshed …" hint under a single-feed or for-you title. Shown at
    every width — the phone mock wants it visible too — but dropped in the
    narrow header's collapsed state below, alongside the other secondary
@@ -112,7 +129,8 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
     display: none;
   }
 
-  .list-header.collapsed .last-refreshed {
+  .list-header.collapsed .last-refreshed,
+  .list-header.collapsed .whole-word-badge {
     display: none;
   }
 }

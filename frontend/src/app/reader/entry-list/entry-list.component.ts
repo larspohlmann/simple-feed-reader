@@ -45,6 +45,7 @@ import {
   Selection,
   canScopedRefresh,
   isSingleStreamView,
+  isWholeWordTerm,
   sameSelection,
   visibleSearchTerm,
 } from '../query';
@@ -169,6 +170,16 @@ export class EntryListComponent implements OnDestroy {
    *  server's whole-word-match signal, not part of what the user typed, so it
    *  must not appear in text a human reads (#408 follow-up). */
   readonly displayedSearchTerm = computed(() => visibleSearchTerm(this.selection().term ?? ''));
+
+  /** Whether the current selection is a search whose trailing space put it in
+   *  whole-word mode. The badge that surfaces this is the only display of the
+   *  mode — without it, `punk` and `punk ` render the identical title while
+   *  returning very different result sets, with nothing on screen to explain
+   *  why (#408 follow-up). */
+  readonly showWholeWordBadge = computed(() => {
+    const s = this.selection();
+    return s.kind === 'search' && isWholeWordTerm(s.term ?? '');
+  });
 
   /** A search never renders as a magazine — its rows carry marked terms, and a
    *  spread would scatter them across eight block templates. */

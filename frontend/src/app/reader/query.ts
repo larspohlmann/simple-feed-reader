@@ -16,6 +16,21 @@ export interface Selection {
  *  here — it is a half-typed word, so the URL simply carries no search yet. */
 export const MIN_SEARCH_LENGTH = 3;
 
+/** Whether a search term ends in a Unicode separator, which the backend
+ *  (`SearchTerms::fromInput`) reads as "match whole words only" rather than
+ *  substrings. Exported — not inlined at each call site — because this
+ *  exact question already has three answers on this branch that disagreed
+ *  (a comparator, a parameter vocabulary, a header-visibility rule, each
+ *  duplicated and drifted, #408). `normalizeSearchInput` below and the
+ *  whole-word badge in `entry-list.component.ts` both call this one
+ *  function so a fourth divergence can't happen. `\p{Z}` (Unicode
+ *  "separator" category, `/u` flag) matches the backend's character class —
+ *  plain `\s` would miss/include a different set of code points on a term
+ *  the server disagrees with. */
+export function isWholeWordTerm(term: string): boolean {
+  return /\p{Z}$/u.test(term);
+}
+
 /** Strips leading whitespace and collapses inner runs to a single space, but
  *  — unlike `String.trim()` — keeps exactly one trailing space when the raw
  *  input ended in whitespace. The server reads a trailing space as "match
@@ -25,7 +40,7 @@ export const MIN_SEARCH_LENGTH = 3;
  *  and by `selectionFromParams`, the two places a raw `q` value is turned
  *  into a term — both must agree on what "the term" is. */
 export function normalizeSearchInput(raw: string): string {
-  const hasTrailingSpace = /\s$/.test(raw);
+  const hasTrailingSpace = isWholeWordTerm(raw);
   const collapsed = raw.trim().replace(/\s+/g, ' ');
   if (collapsed.length === 0) return '';
   return hasTrailingSpace ? `${collapsed} ` : collapsed;

@@ -365,6 +365,31 @@ describe('EntryListComponent', () => {
     },
   );
 
+  describe('whole-word search badge (#408 follow-up)', () => {
+    it('renders the badge for a whole-word (trailing-space) search selection', () => {
+      const el = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
+      }).nativeElement as HTMLElement;
+      const badge = el.querySelector('.whole-word-badge');
+      expect(badge).not.toBeNull();
+      expect(badge!.textContent).toContain('Whole words');
+    });
+
+    it('does not render the badge for a substring search selection', () => {
+      const el = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+      }).nativeElement as HTMLElement;
+      expect(el.querySelector('.whole-word-badge')).toBeNull();
+    });
+
+    it('does not render the badge for a non-search selection', () => {
+      const el = mount({
+        selection: { kind: 'all', id: null, unread: true },
+      }).nativeElement as HTMLElement;
+      expect(el.querySelector('.whole-word-badge')).toBeNull();
+    });
+  });
+
   it('hides the whole-word-mode trailing space from the empty-state message (#408 follow-up)', () => {
     const el = mount({
       loading: false,
