@@ -91,6 +91,13 @@ services:
         alias: App\Service\Reader\ArticleExtractor
         public: true
 
+    # LikeEntrySearchTest resolves the interface by name on purpose: a missing
+    # alias is exactly the failure this test must catch. Autowiring a plain
+    # application interface is not automatic.
+    App\Service\Search\EntrySearchInterface:
+        alias: App\Service\Search\LikeEntrySearch
+        public: true
+
     # MailGatedAccountMailerWiringTest fetches this to prove the container
     # resolves the interface to the decorator (MailGatedAccountMailer), not the
     # plain AccountMailer it wraps — the ambiguity that made the explicit alias
