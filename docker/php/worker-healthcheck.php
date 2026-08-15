@@ -11,10 +11,14 @@
  * (AdvanceRecommendationRunsHandler), so the row's age is the honest liveness
  * signal — the same one the poll driver arbitrates on.
  *
- * The staleness bound and the heartbeat's name are taken from WorkerPresence
- * itself rather than copied: a duplicated 360 would silently disagree the next
- * time the provider timeout moves, and the failure mode of disagreeing is a
- * healthy worker reported dead in the middle of every long call.
+ * The staleness bound and the heartbeat's name are taken from the classes that
+ * define them rather than copied: a duplicated 360 would silently disagree the
+ * next time the provider timeout moves, and the failure mode of disagreeing is
+ * a healthy worker reported dead in the middle of every long call. The name
+ * comes from RecommendationDriverKind, which is what the consumer writes; it
+ * lived on WorkerPresence when this file was written, and reading a constant
+ * that had since moved made the healthcheck die on an undefined constant and
+ * report every worker unhealthy.
  *
  * Only the autoloader is required for that — the class is never constructed,
  * so this stays what a healthcheck must be: no kernel, no container, no
@@ -24,6 +28,7 @@
 
 declare(strict_types=1);
 
+use App\Service\Worker\RecommendationDriverKind;
 use App\Service\Worker\WorkerPresence;
 
 // Absolute, not relative to __DIR__: the file is mounted into the image's bin
@@ -61,7 +66,7 @@ try {
     );
 
     $statement = $connection->prepare('SELECT touched_at FROM worker_heartbeat WHERE name = ?');
-    $statement->execute([WorkerPresence::RECOMMENDATION_SWEEP]);
+    $statement->execute([RecommendationDriverKind::PersistentWorker->value]);
     $touchedAt = $statement->fetchColumn();
 } catch (PDOException $e) {
     fwrite(STDERR, 'Cannot read the heartbeat: ' . $e->getMessage() . "\n");
