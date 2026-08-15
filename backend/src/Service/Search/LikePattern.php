@@ -29,10 +29,19 @@ final readonly class LikePattern
      * a haystack that CONCAT(' ', …, ' ') has padded the same way. Pairs with
      * NormalizeWordBoundariesFunction, which turns bordering punctuation into
      * spaces so the padding lines up on a real word boundary.
+     *
+     * The term is normalized with the SAME replacement before escaping, so
+     * both sides of the comparison speak one alphabet. Without that, a term
+     * carrying punctuation could never match: "E-Mail" was searched for
+     * verbatim in a haystack whose hyphen had already become a space, so a
+     * whole-word search found nothing where the substring search found
+     * plenty. Normalizing first also disposes of the escape character — "!"
+     * is itself a boundary character, so it is a space by the time escape()
+     * runs and can never arrive doubled.
      */
     public static function wholeWord(string $term): string
     {
-        return '% ' . self::escape($term) . ' %';
+        return '% ' . self::escape(WordBoundaries::normalize($term)) . ' %';
     }
 
     private static function escape(string $term): string

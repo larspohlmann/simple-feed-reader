@@ -11,6 +11,7 @@ use App\Entity\Subscription;
 use App\Http\EntryCursor;
 use App\Service\Search\LikePattern;
 use App\Service\Search\SearchTerms;
+use App\Service\Search\WordBoundaries;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
@@ -283,37 +284,56 @@ class EntryRepository extends ServiceEntityRepository
      * check on purpose: it rejects almost every row with a cheap scan before
      * the expensive REPLACE chain runs, and costs nothing extra on the rows
      * where it does match.
+     *
+     * It is sound only while the raw term is a substring of every row the
+     * normalized check would accept — true for a term of letters and digits,
+     * FALSE as soon as the term carries boundary punctuation, because the two
+     * sides then differ in exactly that punctuation. "E-Mail" and "E–Mail"
+     * (en dash) normalize alike and must both match, yet neither is a raw
+     * substring of the other. Such a term skips the prefilter and pays for the
+     * chain; it is the rare shape, and a wrong answer is not worth the scan.
      */
     private function applyWholeWordTerm(QueryBuilder $qb, string $parameter, string $term): void
     {
-        $cheap = $parameter . 'Cheap';
         $word = $parameter . 'Word';
+        $cheap = WordBoundaries::areIn($term) ? null : $parameter . 'Cheap';
 
         $qb->andWhere(\sprintf(
             '(%s OR %s)',
             $this->wholeWordColumnPredicate('title', $cheap, $word),
             $this->wholeWordColumnPredicate('summary', $cheap, $word),
-        ))
-            ->setParameter($cheap, LikePattern::containing($term))
-            ->setParameter($word, LikePattern::wholeWord($term));
+        ))->setParameter($word, LikePattern::wholeWord($term));
+
+        if ($cheap !== null) {
+            $qb->setParameter($cheap, LikePattern::containing($term));
+        }
     }
 
     /**
-     * One column's half of applyWholeWordTerm: the cheap "%term%" scan first,
-     * the normalized boundary check only for the rows that survive it.
+     * One column's half of applyWholeWordTerm: the cheap "%term%" scan first
+     * when it is sound, the normalized boundary check for the rows that
+     * survive it.
      */
-    private function wholeWordColumnPredicate(string $column, string $cheap, string $word): string
+    private function wholeWordColumnPredicate(string $column, ?string $cheap, string $word): string
     {
         $escape = LikePattern::ESCAPE_CHARACTER;
-
-        return \sprintf(
-            "(e.%s LIKE :%s ESCAPE '%s' AND CONCAT(' ', NORMALIZE_WORD_BOUNDARIES(e.%s), ' ') LIKE :%s ESCAPE '%s')",
-            $column,
-            $cheap,
-            $escape,
+        $normalized = \sprintf(
+            "CONCAT(' ', NORMALIZE_WORD_BOUNDARIES(e.%s), ' ') LIKE :%s ESCAPE '%s'",
             $column,
             $word,
             $escape,
+        );
+
+        if ($cheap === null) {
+            return '(' . $normalized . ')';
+        }
+
+        return \sprintf(
+            "(e.%s LIKE :%s ESCAPE '%s' AND %s)",
+            $column,
+            $cheap,
+            $escape,
+            $normalized,
         );
     }
 

@@ -221,6 +221,47 @@ final class EntrySearchTest extends DbTestCase
         self::assertSame(['leading'], $this->search('punk '));
     }
 
+    // A whole-word match normalizes the HAYSTACK's punctuation to spaces. When
+    // the term was left un-normalized, any term carrying punctuation searched
+    // for something the haystack no longer contained and matched nothing at
+    // all, while the plain substring search matched fine. German prose makes
+    // that the common case rather than an exotic one.
+    public function testATrailingSpaceMatchesAHyphenatedTerm(): void
+    {
+        $this->entry('hyphen', 'Die neue E-Mail-Adresse ist da');
+
+        self::assertSame(['hyphen'], $this->search('E-Mail '));
+    }
+
+    public function testATrailingSpaceMatchesATermCarryingASlash(): void
+    {
+        $this->entry('slash', 'The TCP/IP stack explained');
+
+        self::assertSame(['slash'], $this->search('TCP/IP '));
+    }
+
+    public function testAHyphenatedTermMatchesTheSameWordWrittenWithAnEnDash(): void
+    {
+        // Both sides normalize to "E Mail", so both must match. This is also
+        // the case that makes the cheap "%term%" prefilter unsound for a
+        // punctuated term: "E-Mail" is not a raw substring of "E–Mail", so a
+        // prefilter applied here would reject the row before the normalized
+        // check ever ran.
+        $this->entry('endash', 'Die neue E–Mail kam an');
+
+        self::assertSame(['endash'], $this->search('E-Mail '));
+    }
+
+    public function testAHyphenatedTermStillDoesNotMatchAWordItOnlyStarts(): void
+    {
+        // Normalizing the term must not have widened whole-word mode back into
+        // substring mode: "E-Mail" normalizes to "E Mail", which must not be
+        // found inside "E-Mailadresse" ("E Mailadresse").
+        $this->entry('miss', 'Die E-Mailadresse fehlt');
+
+        self::assertSame([], $this->search('E-Mail '));
+    }
+
     public function testATrailingSpaceMatchesTheWordFollowedByAComma(): void
     {
         $this->entry('comma', 'punk, and proud of it');
