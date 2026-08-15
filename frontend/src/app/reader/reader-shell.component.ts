@@ -31,6 +31,7 @@ import {
   RefreshScope,
   markReadTarget,
   queryFromSelection,
+  sameSelection,
   selectionFromParams,
   selectionQueryParams,
 } from './query';
@@ -168,9 +169,12 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly parsed = computed(() => selectionFromParams(this.params()));
   // Structural equality so an entry-only URL change does not produce a new
   // selection reference — the reload effect must react to selection, not the
-  // open entry.
+  // open entry. Delegates to `sameSelection` rather than re-listing
+  // `Selection`'s fields here: a hand-rolled copy once fell out of step when
+  // `term` was added, silently freezing the list on every second search
+  // (#408 follow-up) — one comparator, one definition.
   readonly selection = computed(() => this.parsed().selection, {
-    equal: (a, b) => a.kind === b.kind && a.id === b.id && a.unread === b.unread,
+    equal: sameSelection,
   });
   readonly entryId = computed(() => this.parsed().entryId);
 

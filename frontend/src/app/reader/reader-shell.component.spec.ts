@@ -840,6 +840,102 @@ describe('ReaderShellComponent', () => {
         .expectOne((r) => r.url === 'https://api.test/api/entries/search')
         .flush({ entries: [], nextCursor: null });
     });
+
+    // The regression this section exists to close: typing past the first
+    // search term must reload the list. `selection`'s equality check once
+    // reimplemented `sameSelection` inline and forgot `term`, so two search
+    // selections compared equal, the computed never produced a new
+    // reference, and the reload effect (which depends on `selection()`)
+    // never re-ran for a second search in the same session.
+    it('reloads the list when the search term changes (#408 follow-up)', () => {
+      const f = boot();
+      qp.next(convertToParamMap({ q: 'daft' }));
+      f.detectChanges();
+      ctrl
+        .expectOne(
+          (r) => r.url === 'https://api.test/api/entries/search' && r.params.get('q') === 'daft',
+        )
+        .flush({ entries: [{ ...entry, id: 1, title: 'daft' }], nextCursor: null });
+      f.detectChanges();
+
+      expect(f.componentInstance.entries.entries().map((e) => e.id)).toEqual([1]);
+
+      qp.next(convertToParamMap({ q: 'daft punk' }));
+      f.detectChanges();
+
+      // A second request for the new term must actually go out — this is
+      // the assertion that catches the bug: with the stale comparator, no
+      // request fires here at all, and the entries array (and the title
+      // built from it) stay frozen on the first search's result.
+      const secondRequest = ctrl.expectOne(
+        (r) => r.url === 'https://api.test/api/entries/search' && r.params.get('q') === 'daft punk',
+      );
+      secondRequest.flush({ entries: [{ ...entry, id: 2, title: 'daft punk' }], nextCursor: null });
+      f.detectChanges();
+
+      expect(f.componentInstance.entries.entries().map((e) => e.id)).toEqual([2]);
+      expect(f.componentInstance.title()).toContain('daft punk');
+    });
+
+    it('does not reload the list for an entry-only URL change (original comparator intent)', () => {
+      const f = boot();
+      qp.next(convertToParamMap({ q: 'daft punk' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [{ ...entry, id: 2 }], nextCursor: null });
+      f.detectChanges();
+
+      // Opening an entry changes only the `entry` param, not the selection —
+      // no second list request must fire.
+      qp.next(convertToParamMap({ q: 'daft punk', entry: '2-daft-punk' }));
+      f.detectChanges();
+
+      ctrl.expectNone((r) => r.url === 'https://api.test/api/entries/search');
+    });
+
+    it('treats two search selections with the same term as the same selection, and a different term as different', () => {
+      const f = boot();
+      qp.next(convertToParamMap({ q: 'daft' }));
+      f.detectChanges();
+      const first = f.componentInstance.selection();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+      f.detectChanges();
+
+      // Same params again (e.g. a re-emit with no real change) must not be a
+      // new selection reference's worth of behaviour.
+      qp.next(convertToParamMap({ q: 'daft' }));
+      f.detectChanges();
+      expect(f.componentInstance.selection()).toBe(first);
+      ctrl.expectNone((r) => r.url === 'https://api.test/api/entries/search');
+
+      qp.next(convertToParamMap({ q: 'daft punk' }));
+      f.detectChanges();
+      expect(f.componentInstance.selection()).not.toBe(first);
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+    });
+
+    it('distinguishes a search selection from a non-search selection sharing kind/id/unread', () => {
+      // A search selection always has kind 'search', id null, unread false —
+      // the same triple every non-search "all items" selection has too. The
+      // comparator must still tell them apart via `term`.
+      const f = boot();
+      qp.next(convertToParamMap({}));
+      f.detectChanges();
+      expect(f.componentInstance.selection().kind).toBe('all');
+
+      qp.next(convertToParamMap({ q: 'daft punk' }));
+      f.detectChanges();
+
+      expect(f.componentInstance.selection().kind).toBe('search');
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+    });
   });
 
   describe('selection query params (#408 follow-up)', () => {
