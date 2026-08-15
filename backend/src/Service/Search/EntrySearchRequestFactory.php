@@ -49,11 +49,20 @@ final readonly class EntrySearchRequestFactory
     }
 
     /**
-     * Reads one query parameter as a plain string, rather than trusting
-     * Symfony's own getString()/getInt(): those throw an untyped exception
-     * on `foo[]=x`, which the API's exception listener has no branch for and
-     * answers with a 500. A shape the caller did not intend is invalid input,
-     * not a server failure, so it becomes a 422 here instead.
+     * Reads one query parameter as a plain string rather than through
+     * `getString()`, so that `q[]=x` reports the same `validation_error`
+     * problem — with a message naming the field — as every other invalid
+     * input to this endpoint.
+     *
+     * `getString()` would not break: it throws `BadRequestException`, which
+     * `HttpKernel::handle()` converts to `BadRequestHttpException` BEFORE
+     * `kernel.exception` fires, so `ApiExceptionListener` already answers a
+     * clean 400 `request_error`. An earlier version of this comment claimed
+     * it produced a 500 and that this method existed to prevent one; that was
+     * measured and is false — see the correction on #410. What is left is a
+     * smaller, real choice: a 400 with no field detail, or a 422 that tells
+     * the client WHICH parameter was malformed, matching the 422 this
+     * endpoint already answers for a too-short or over-long `q`.
      */
     private function singleValue(Request $request, string $name): string
     {
