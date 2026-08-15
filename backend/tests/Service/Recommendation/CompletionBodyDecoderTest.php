@@ -132,7 +132,7 @@ final class CompletionBodyDecoderTest extends TestCase
     public function testAStreamEventOfMalformedJsonIsAllNulls(): void
     {
         self::assertSame(
-            ['content' => null, 'reasoning' => null, 'finishReason' => null],
+            ['content' => null, 'reasoning' => null, 'finishReason' => null, 'usage' => null],
             $this->decoder->streamEvent('not json'),
         );
     }
@@ -211,5 +211,86 @@ final class CompletionBodyDecoderTest extends TestCase
     {
         self::assertNull($this->decoder->envelopeReasoning('{"choices":[{"message":{"content":"x"}}]}'));
         self::assertNull($this->decoder->envelopeReasoning('not json'));
+    }
+
+    public function testReadsTheUsageObjectOfTheFinalStreamMessage(): void
+    {
+        $usage = $this->decoder->usage(
+            '{"choices":[],"usage":{"prompt_tokens":118432,"completion_tokens":2216,'
+            . '"cost":0.04123,"prompt_tokens_details":{"cached_tokens":117000},'
+            . '"completion_tokens_details":{"reasoning_tokens":880}}}',
+        );
+
+        self::assertNotNull($usage);
+        self::assertSame(118432, $usage->promptTokens);
+        self::assertSame(2216, $usage->completionTokens);
+        self::assertSame(880, $usage->reasoningTokens);
+        self::assertSame(117000, $usage->cachedTokens);
+        self::assertSame(41_230_000, $usage->costNanoCredits);
+    }
+
+    public function testReadsUsageWithoutACostAsUnpriced(): void
+    {
+        $usage = $this->decoder->usage('{"choices":[],"usage":{"prompt_tokens":40,"completion_tokens":9}}');
+
+        self::assertNotNull($usage);
+        self::assertSame(40, $usage->promptTokens);
+        self::assertSame(9, $usage->completionTokens);
+        self::assertSame(0, $usage->reasoningTokens);
+        self::assertSame(0, $usage->cachedTokens);
+        self::assertNull($usage->costNanoCredits);
+    }
+
+    public function testReadsAnIntegerCostTheSameWayAsAFloatOne(): void
+    {
+        $usage = $this->decoder->usage('{"usage":{"prompt_tokens":1,"completion_tokens":1,"cost":2}}');
+
+        self::assertNotNull($usage);
+        self::assertSame(2_000_000_000, $usage->costNanoCredits);
+    }
+
+    public function testHasNoUsageWhenTheProviderSentNone(): void
+    {
+        self::assertNull($this->decoder->usage('{"choices":[{"delta":{"content":"hi"}}]}'));
+    }
+
+    public function testHasNoUsageWhenTheMemberIsNotAnObject(): void
+    {
+        self::assertNull($this->decoder->usage('{"usage":"none"}'));
+    }
+
+    public function testHasNoUsageWhenThePayloadIsNotJson(): void
+    {
+        self::assertNull($this->decoder->usage('not json'));
+    }
+
+    public function testIgnoresNonNumericProviderFields(): void
+    {
+        $usage = $this->decoder->usage(
+            '{"usage":{"prompt_tokens":"lots","completion_tokens":3,"cost":"free"}}',
+        );
+
+        self::assertNotNull($usage);
+        self::assertSame(0, $usage->promptTokens);
+        self::assertSame(3, $usage->completionTokens);
+        self::assertNull($usage->costNanoCredits);
+    }
+
+    public function testStreamEventCarriesTheUsageAlongsideTheAnswerFields(): void
+    {
+        $event = $this->decoder->streamEvent('{"choices":[],"usage":{"prompt_tokens":7,"completion_tokens":2}}');
+
+        self::assertNull($event['content']);
+        self::assertNull($event['finishReason']);
+        self::assertNotNull($event['usage']);
+        self::assertSame(7, $event['usage']->promptTokens);
+    }
+
+    public function testStreamEventHasNoUsageOnAnOrdinaryDelta(): void
+    {
+        $event = $this->decoder->streamEvent('{"choices":[{"delta":{"content":"hi"}}]}');
+
+        self::assertSame('hi', $event['content']);
+        self::assertNull($event['usage']);
     }
 }
