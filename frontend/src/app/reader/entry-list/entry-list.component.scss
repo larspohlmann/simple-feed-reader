@@ -54,6 +54,16 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   min-width: 0; /* let the title truncate instead of shoving the tools away */
 }
 
+/* The title's own row: the h2 plus the whole-word badge beside it. The h2
+   shrinks (it truncates), the badge does not — a long title must eat the
+   ellipsis rather than push the badge out of the bar. */
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
 /* The tag's glyph, inline before its name — the same glyph and colour the
    sidebar row shows, so the heading and the row that led here read as the same
    tag. It sits inside the ellipsised h2 on purpose: the clip runs from the end,
@@ -86,11 +96,12 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 /* Explains why a whole-word search's result set differs from the same text
    without the trailing space — otherwise the title alone doesn't show the
    mode, and an accidental trailing space reads as a silently different
-   search (#408 follow-up). Sits on its own row under the title, since
-   `.heading` stacks in a column; `align-self: flex-start` keeps it from
-   stretching to the heading's full (often ellipsis-truncated) width. */
+   search (#408 follow-up). Sits beside the title rather than under it: a
+   second row raises the bar, and the scroller reserves the bar's height, so
+   the rows would move (#419). `flex: none` keeps the pill at its text width
+   while the title takes the truncation. */
 .whole-word-badge {
-  align-self: flex-start;
+  flex: none;
   padding: 0 var(--space-2);
   border-radius: var(--radius-pill);
   background: var(--accent-soft);

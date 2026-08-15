@@ -3,30 +3,35 @@
      rows stay put under the finger (#87). -->
 <header class="list-header" #listHdr [class.collapsed]="collapsed()">
   <div class="heading">
-    <h2 #listTitle tabindex="-1">
-      @if (titleTag(); as tag) {
-        <app-tag-glyph [name]="tag.icon" [color]="tag.color" size="text" />
-      }
-      <span>{{ title() }}</span>
+    <!-- Title and badge share one row so the badge never adds a second one:
+         the scroller reserves this bar's height, so a taller header moves the
+         rows (#419). -->
+    <div class="title-row">
+      <h2 #listTitle tabindex="-1">
+        @if (titleTag(); as tag) {
+          <app-tag-glyph [name]="tag.icon" [color]="tag.color" size="text" />
+        }
+        <span>{{ title() }}</span>
+        @if (showWholeWordBadge()) {
+          <!-- Carries the mode into the heading's own accessible name, so a
+               screen-reader user hears it whichever way they reached the
+               heading (focus, or heading navigation) — aria-describedby only
+               fires on focus (#408 follow-up fix round 2). The visible badge
+               beside it renders the same word for sighted users; it is
+               aria-hidden so the two don't announce it twice. -->
+          <span class="sr-only">{{ 'reader.searchWholeWord' | transloco }}</span>
+        }
+      </h2>
       @if (showWholeWordBadge()) {
-        <!-- Carries the mode into the heading's own accessible name, so a
-             screen-reader user hears it whichever way they reached the
-             heading (focus, or heading navigation) — aria-describedby only
-             fires on focus (#408 follow-up fix round 2). The visible badge
-             below renders the same word for sighted users; it is
-             aria-hidden so the two don't announce it twice. -->
-        <span class="sr-only">{{ 'reader.searchWholeWord' | transloco }}</span>
+        <span
+          class="whole-word-badge"
+          aria-hidden="true"
+          [attr.title]="'reader.searchWholeWordHint' | transloco"
+        >
+          {{ 'reader.searchWholeWord' | transloco }}
+        </span>
       }
-    </h2>
-    @if (showWholeWordBadge()) {
-      <span
-        class="whole-word-badge"
-        aria-hidden="true"
-        [attr.title]="'reader.searchWholeWordHint' | transloco"
-      >
-        {{ 'reader.searchWholeWord' | transloco }}
-      </span>
-    }
+    </div>
     @if (lastRefreshedLabel()) {
       <span class="last-refreshed"
         >{{ 'reader.lastRefreshed' | transloco }} {{ lastRefreshedLabel() }}</span
