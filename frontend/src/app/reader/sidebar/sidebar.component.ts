@@ -29,7 +29,7 @@ import { ViewControlsComponent } from '../view-controls/view-controls.component'
 import { SearchFieldComponent } from '../search-field/search-field.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { TagNode } from '../subscriptions.store';
-import { Selection } from '../query';
+import { Selection, selectionQueryParams } from '../query';
 import { SubscriptionDto, TagDto } from '../models';
 import { RefreshService } from '../refresh.service';
 import { RecommendationsService } from '../recommendations.service';
@@ -65,6 +65,8 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
 export class SidebarComponent {
   /** Baked in at build time, so it names the bundle actually running. */
   readonly version = buildVersion.version;
+
+  protected readonly selectionQueryParams = selectionQueryParams;
 
   readonly tagTree = input.required<TagNode[]>();
   readonly untagged = input.required<SubscriptionDto[]>();

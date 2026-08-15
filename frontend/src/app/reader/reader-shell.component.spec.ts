@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { Dialog } from '@angular/cdk/dialog';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { provideHttpClient } from '@angular/common/http';
 import {
@@ -838,6 +839,69 @@ describe('ReaderShellComponent', () => {
       ctrl
         .expectOne((r) => r.url === 'https://api.test/api/entries/search')
         .flush({ entries: [], nextCursor: null });
+    });
+  });
+
+  describe('selection query params (#408 follow-up)', () => {
+    // Opening/closing an article must NOT go through selectionQueryParams: it
+    // does not change which list is shown, so `q` (and any other selection
+    // param) must survive both the open and the close, letting a Back from an
+    // article opened out of search results land back on those results.
+    it('keeps q when opening an article', () => {
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = boot();
+
+      f.componentInstance.onOpen(entry);
+
+      const queryParams = nav.mock.calls[0][1]?.queryParams as Record<string, unknown>;
+      expect(queryParams).not.toHaveProperty('q');
+    });
+
+    it('keeps q when closing an article', () => {
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = boot();
+
+      f.componentInstance.onCloseReader();
+
+      const queryParams = nav.mock.calls[0][1]?.queryParams as Record<string, unknown>;
+      expect(queryParams).not.toHaveProperty('q');
+    });
+
+    it('clears q along with the rest when adding a feed selects its subscription (#408)', () => {
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = boot();
+      qp.next(convertToParamMap({ q: 'angular' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+
+      const ref = { closed: of({ id: 9, lastFetchedAt: 'x' }) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+      f.componentInstance.onAddFeed();
+      ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+
+      expect(nav).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({
+          queryParams: { view: null, tag: null, subscription: 9, entry: null, q: null },
+        }),
+      );
+      ctrl.match(() => true).forEach((r) => r.flush({ entries: [], nextCursor: null }));
+    });
+
+    it("onSearch('') clears q along with every other selection param", () => {
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = boot();
+
+      f.componentInstance.onSearch('');
+
+      expect(nav).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({
+          queryParams: { view: null, tag: null, subscription: null, entry: null, q: null },
+        }),
+      );
     });
   });
 

@@ -5,6 +5,7 @@ import { EntryDto } from '../models';
 import { relativeTime } from '../format';
 import { LanguageService } from '../../core/language.service';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
+import { selectionQueryParams } from '../query';
 
 /**
  * The one-line attribution every magazine block carries: unread dot, favicon,
@@ -20,6 +21,8 @@ import { FaviconComponent } from '../../shared/favicon/favicon.component';
   styleUrl: './entry-kicker-line.component.scss',
 })
 export class EntryKickerLineComponent {
+  protected readonly selectionQueryParams = selectionQueryParams;
+
   readonly entry = input.required<EntryDto>();
   /** Off for a block that draws its own dot outside the line (compact). */
   readonly showDot = input(true);

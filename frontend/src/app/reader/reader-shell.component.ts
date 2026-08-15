@@ -27,7 +27,13 @@ import { refreshFailureKey } from './refresh-message';
 import { AiAvailabilityService } from '../core/ai-availability.service';
 import { ReadingLayoutService } from './reading-layout.service';
 import { LayoutService } from './layout.service';
-import { RefreshScope, markReadTarget, queryFromSelection, selectionFromParams } from './query';
+import {
+  RefreshScope,
+  markReadTarget,
+  queryFromSelection,
+  selectionFromParams,
+  selectionQueryParams,
+} from './query';
 import { ListScrollReset } from './list-scroll-reset';
 import { entryParam } from './slug';
 import { EntryDto, EntryStatePatch, SubscriptionDto, SubscriptionTagDto, TagDto } from './models';
@@ -655,7 +661,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   onSearch(term: string): void {
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { q: term || null, view: null, tag: null, subscription: null, entry: null },
+      queryParams: selectionQueryParams({ q: term || null }),
       queryParamsHandling: 'merge',
     });
   }
@@ -758,7 +764,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       this.subs.load();
       void this.router.navigate([], {
         relativeTo: this.route,
-        queryParams: { subscription: sub.id, view: null, tag: null, entry: null },
+        queryParams: selectionQueryParams({ subscription: sub.id }),
         queryParamsHandling: 'merge',
       });
       // A feed discovery could read arrives with its entries already stored

@@ -4,7 +4,7 @@
       <a
         class="pill"
         [routerLink]="[]"
-        [queryParams]="{ tag: t.id, view: null, subscription: null, entry: null }"
+        [queryParams]="selectionQueryParams({ tag: t.id })"
         queryParamsHandling="merge"
         [attr.title]="'reader.filterByTag' | transloco: { name: t.name }"
         (click)="$event.stopPropagation()"

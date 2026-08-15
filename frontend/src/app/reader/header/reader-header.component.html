@@ -11,7 +11,7 @@
       <a
         class="brand"
         [routerLink]="[]"
-        [queryParams]="{ view: null, tag: null, subscription: null, entry: null }"
+        [queryParams]="selectionQueryParams({})"
         queryParamsHandling="merge"
       >
         <app-spinner
@@ -111,7 +111,7 @@
       class="chip all"
       [class.active]="allItemsActive()"
       [routerLink]="[]"
-      [queryParams]="{ view: null, tag: null, subscription: null, entry: null }"
+      [queryParams]="selectionQueryParams({})"
       queryParamsHandling="merge"
     >
       {{ 'reader.allItems' | transloco }}
@@ -121,7 +121,7 @@
         class="chip"
         [class.active]="t.id === activeTagId()"
         [routerLink]="[]"
-        [queryParams]="{ tag: t.id, view: null, subscription: null, entry: null }"
+        [queryParams]="selectionQueryParams({ tag: t.id })"
         queryParamsHandling="merge"
       >
         <app-tag-glyph [name]="t.icon" [color]="t.color" size="sm" />

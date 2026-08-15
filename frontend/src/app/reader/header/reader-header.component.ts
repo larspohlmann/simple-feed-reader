@@ -22,6 +22,7 @@ import { AuthService } from '../../core/auth.service';
 import { RefreshService } from '../refresh.service';
 import { LayoutService } from '../layout.service';
 import { TagDto } from '../models';
+import { selectionQueryParams } from '../query';
 
 /**
  * The app bar — the LIST's chrome, and only the list's. A full-screen article
@@ -44,6 +45,8 @@ import { TagDto } from '../models';
   styleUrl: './reader-header.component.scss',
 })
 export class ReaderHeaderComponent {
+  protected readonly selectionQueryParams = selectionQueryParams;
+
   /** Tags for the mobile swipe row; empty hides the row (and on wider screens
    *  CSS hides it regardless). */
   readonly tags = input<TagDto[]>([]);

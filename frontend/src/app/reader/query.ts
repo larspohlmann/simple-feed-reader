@@ -43,6 +43,27 @@ export function isSingleStreamView(s: Selection): boolean {
   return s.kind === 'subscription' || s.kind === 'for-you';
 }
 
+/** Every query parameter that names which list is on screen. A navigation
+ *  that changes the list must clear all of them, not just the ones a
+ *  template happens to mention — `selectionFromParams` gives `q` priority
+ *  over `view`/`tag`/`subscription`, so a leftover `q` the caller forgot to
+ *  null silently wins and strands the user in search results (#408). */
+const SELECTION_PARAM_NAMES = ['view', 'tag', 'subscription', 'entry', 'q'] as const;
+
+type SelectionParamValue = string | number | null;
+type SelectionParams = Record<(typeof SELECTION_PARAM_NAMES)[number], SelectionParamValue>;
+
+/** Build a `[queryParams]` object that selects exactly one list: the given
+ *  params are set, every other name in the selection vocabulary is nulled.
+ *  Callers state only what they set — a new vocabulary entry only needs to
+ *  be added here, not at every call site. */
+export function selectionQueryParams(set: Partial<SelectionParams>): SelectionParams {
+  const cleared = Object.fromEntries(
+    SELECTION_PARAM_NAMES.map((name) => [name, null]),
+  ) as SelectionParams;
+  return { ...cleared, ...set };
+}
+
 export function selectionFromParams(p: ParamMap): {
   selection: Selection;
   entryId: number | null;

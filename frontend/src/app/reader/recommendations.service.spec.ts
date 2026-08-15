@@ -109,7 +109,7 @@ describe('RecommendationsService', () => {
     call.action?.();
 
     expect(navigate).toHaveBeenCalledWith(['/'], {
-      queryParams: { view: 'for-you', tag: null, subscription: null, entry: null },
+      queryParams: { view: 'for-you', tag: null, subscription: null, entry: null, q: null },
     });
   });
 

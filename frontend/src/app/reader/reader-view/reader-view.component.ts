@@ -41,6 +41,7 @@ import {
 import { relativeTime } from '../format';
 import { markLeadParagraph } from '../lead-paragraph';
 import { estimateReadingMinutes } from '../reading-time';
+import { selectionQueryParams } from '../query';
 
 /** Give up on a hung extraction and fall back to feed content (backend caps a
  *  fetch at ~20s; this is the client-side backstop for a stalled connection). */
@@ -91,6 +92,8 @@ function slugify(text: string): string {
   styleUrl: './reader-view.component.scss',
 })
 export class ReaderViewComponent {
+  protected readonly selectionQueryParams = selectionQueryParams;
+
   readonly entry = input.required<EntryDto | null>();
   readonly tags = input<SubscriptionTagDto[]>([]);
   /** Full-screen reading (the mobile overlay) as opposed to the split pane.

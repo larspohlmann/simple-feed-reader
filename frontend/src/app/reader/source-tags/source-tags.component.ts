@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { SubscriptionTagDto } from '../models';
+import { selectionQueryParams } from '../query';
 
 /**
  * The tag pills shown in front of / below a source name across the reading UI
@@ -18,5 +19,7 @@ import { SubscriptionTagDto } from '../models';
   styleUrl: './source-tags.component.scss',
 })
 export class SourceTagsComponent {
+  protected readonly selectionQueryParams = selectionQueryParams;
+
   readonly tags = input.required<SubscriptionTagDto[]>();
 }

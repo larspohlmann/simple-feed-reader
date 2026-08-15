@@ -34,7 +34,7 @@
       class="nav all"
       [class.active]="selection().kind === 'all'"
       [routerLink]="[]"
-      [queryParams]="{ view: null, tag: null, subscription: null, entry: null }"
+      [queryParams]="selectionQueryParams({})"
       queryParamsHandling="merge"
     >
       <app-icon name="inbox" size="sm" /><span>{{ 'reader.allItems' | transloco }}</span>
@@ -46,7 +46,7 @@
       class="nav"
       [class.active]="selection().kind === 'favorites'"
       [routerLink]="[]"
-      [queryParams]="{ view: 'favorites', tag: null, subscription: null, entry: null }"
+      [queryParams]="selectionQueryParams({ view: 'favorites' })"
       queryParamsHandling="merge"
     >
       <app-icon name="star" size="sm" /><span>{{ 'reader.favorites' | transloco }}</span>
@@ -58,7 +58,7 @@
       class="nav"
       [class.active]="selection().kind === 'kept'"
       [routerLink]="[]"
-      [queryParams]="{ view: 'kept', tag: null, subscription: null, entry: null }"
+      [queryParams]="selectionQueryParams({ view: 'kept' })"
       queryParamsHandling="merge"
     >
       <app-icon name="bookmark" size="sm" /><span>{{ 'reader.kept' | transloco }}</span>
@@ -71,7 +71,7 @@
         class="nav for-you"
         [class.active]="selection().kind === 'for-you'"
         [routerLink]="[]"
-        [queryParams]="{ view: 'for-you', tag: null, subscription: null, entry: null }"
+        [queryParams]="selectionQueryParams({ view: 'for-you' })"
         queryParamsHandling="merge"
       >
         <app-icon name="auto_awesome" size="sm" [class.pulse]="recs.running()" />
@@ -156,7 +156,7 @@
                 class="nav grow"
                 [class.active]="selection().kind === 'tag' && selection().id === node.tag.id"
                 [routerLink]="[]"
-                [queryParams]="{ tag: node.tag.id, view: null, subscription: null, entry: null }"
+                [queryParams]="selectionQueryParams({ tag: node.tag.id })"
                 queryParamsHandling="merge"
               >
                 <span class="lead">
@@ -249,7 +249,7 @@
                     class="nav tag-sub"
                     [class.active]="selection().kind === 'subscription' && selection().id === s.id"
                     [routerLink]="[]"
-                    [queryParams]="{ subscription: s.id, view: null, tag: null, entry: null }"
+                    [queryParams]="selectionQueryParams({ subscription: s.id })"
                     queryParamsHandling="merge"
                   >
                     <app-favicon [url]="s.faviconUrl" /><span>{{ s.title }}</span>
@@ -333,7 +333,7 @@
             class="nav"
             [class.active]="selection().kind === 'subscription' && selection().id === s.id"
             [routerLink]="[]"
-            [queryParams]="{ subscription: s.id, view: null, tag: null, entry: null }"
+            [queryParams]="selectionQueryParams({ subscription: s.id })"
             queryParamsHandling="merge"
           >
             <app-favicon [url]="s.faviconUrl" /><span>{{ s.title }}</span>

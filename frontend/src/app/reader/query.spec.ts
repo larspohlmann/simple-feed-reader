@@ -5,6 +5,7 @@ import {
   queryFromSelection,
   sameSelection,
   selectionFromParams,
+  selectionQueryParams,
 } from './query';
 
 const pm = (o: Record<string, string>) => convertToParamMap(o);
@@ -71,6 +72,59 @@ describe('selectionFromParams', () => {
   it('ignores an empty or whitespace-only q', () => {
     expect(selectionFromParams(pm({ q: '' })).selection.kind).toBe('all');
     expect(selectionFromParams(pm({ q: '   ' })).selection.kind).toBe('all');
+  });
+});
+
+describe('selectionQueryParams', () => {
+  it('nulls every selection parameter the caller did not set', () => {
+    expect(selectionQueryParams({})).toEqual({
+      view: null,
+      tag: null,
+      subscription: null,
+      entry: null,
+      q: null,
+    });
+  });
+  it('keeps only the params the caller set, nulling the rest', () => {
+    expect(selectionQueryParams({ tag: 3 })).toEqual({
+      view: null,
+      tag: 3,
+      subscription: null,
+      entry: null,
+      q: null,
+    });
+    expect(selectionQueryParams({ subscription: 7 })).toEqual({
+      view: null,
+      tag: null,
+      subscription: 7,
+      entry: null,
+      q: null,
+    });
+    expect(selectionQueryParams({ view: 'favorites' })).toEqual({
+      view: 'favorites',
+      tag: null,
+      subscription: null,
+      entry: null,
+      q: null,
+    });
+  });
+  it("clears q along with everything else, e.g. for onSearch('')", () => {
+    expect(selectionQueryParams({ q: null })).toEqual({
+      view: null,
+      tag: null,
+      subscription: null,
+      entry: null,
+      q: null,
+    });
+  });
+  it('sets q and clears the rest for a search', () => {
+    expect(selectionQueryParams({ q: 'angular' })).toEqual({
+      view: null,
+      tag: null,
+      subscription: null,
+      entry: null,
+      q: 'angular',
+    });
   });
 });
 
