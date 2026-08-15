@@ -34,7 +34,7 @@
 | `frontend/src/app/settings/ai-section.component.html` | **Modify.** Three banner sites: the list card, each row, the add card. |
 | `frontend/src/app/settings/ai-section.component.spec.ts` | **Modify.** Asserts placement, retention and message text. |
 | `frontend/public/i18n/en.json`, `de.json` | **Modify.** A fallback for the new `validation` kind, and the field labels the banner names. |
-| `frontend/e2e/ai-config-rejected.spec.ts` | **Create.** One Playwright smoke over a stubbed route: rejected add keeps the values and shows the server's reason under the form. |
+| `frontend/e2e/ai-config-rejected.spec.ts` | **Create.** One Playwright smoke over stubbed routes: a rejected add keeps the values and shows the server's reason under the form, with the list card left clean. |
 
 **Why the draft stays in the component.** The obvious alternative — move `newName` / `newBaseUrl` / `newApiKey` into the service so `add()` can clear them itself — is rejected. `AiSettingsService`'s class comment records a deliberate decision: *"The typed key is a parameter and never a field: it goes into one request body and is gone."* A draft signal on the service would make the plaintext API key a service field. The success callback keeps that promise.
 
@@ -250,14 +250,93 @@ git commit -m "fix(#415): keep the server's reason and name the validation failu
 
 ---
 
-### Task 2: Give every write a scope, and let `add` report success
+### Task 2: Add the translations the banner needs
+
+Two keys per locale: the fallback for the new kind, and the field labels the banner names when it lists field messages. Done before Task 3 so its component tests have real strings to assert against.
+
+**Files:**
+- Modify: `frontend/public/i18n/en.json`
+- Modify: `frontend/public/i18n/de.json`
+
+**Interfaces:**
+- Produces: `settings.ai.errors.validation`, and `settings.ai.fields.{name,baseUrl,apiKey}`.
+
+- [ ] **Step 1: Add the English keys**
+
+In `frontend/public/i18n/en.json`, inside `settings.ai.errors`, after `"limit"`:
+
+```json
+        "validation": "Check the values you entered.",
+```
+
+And add a new `fields` object as a sibling of `errors` inside `settings.ai`:
+
+```json
+      "fields": {
+        "name": "Optional name",
+        "baseUrl": "Endpoint",
+        "apiKey": "API key"
+      },
+```
+
+These three deliberately repeat the wording of `settings.ai.configs.namePlaceholder`, `settings.ai.baseUrl` and `settings.ai.apiKey`. They are a separate map because they are keyed by the server's property path, not by the form's layout: reusing the form keys would silently break the banner the day a label is reworded for the form alone.
+
+- [ ] **Step 2: Add the German keys**
+
+In `frontend/public/i18n/de.json`, inside `settings.ai.errors`, after `"limit"`:
+
+```json
+        "validation": "Prüfe die eingegebenen Werte.",
+```
+
+And as a sibling of `errors` inside `settings.ai`:
+
+```json
+      "fields": {
+        "name": "Optionaler Name",
+        "baseUrl": "Endpunkt",
+        "apiKey": "API-Schlüssel"
+      },
+```
+
+- [ ] **Step 3: Verify both files still parse and hold the same keys**
+
+```bash
+cd frontend && python3 -c "
+import json
+en=json.load(open('public/i18n/en.json'))['settings']['ai']
+de=json.load(open('public/i18n/de.json'))['settings']['ai']
+assert sorted(en['errors'])==sorted(de['errors']), (sorted(en['errors']), sorted(de['errors']))
+assert sorted(en['fields'])==sorted(de['fields']), (sorted(en['fields']), sorted(de['fields']))
+assert 'validation' in en['errors']
+print('ok', sorted(en['errors']), sorted(en['fields']))
+"
+```
+
+Expected: `ok ['limit', 'notConfigured', 'provider', 'rateLimited', 'unknown', 'unreadableKey', 'validation'] ['apiKey', 'baseUrl', 'name']`
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add frontend/public/i18n/en.json frontend/public/i18n/de.json
+git commit -m "fix(#415): add the validation fallback and the field labels"
+```
+
+---
+
+### Task 3: Scope every failure, render it where it happened, and keep the draft
+
+One task, one commit, in two halves. The service change (Steps 1-4) renames `add()` and reshapes the `failure` signal; the component is its only consumer, so the tree does not compile until the second half (Steps 5-11) lands. Splitting them would commit a red tree, which the Global Constraints forbid.
 
 **Files:**
 - Modify: `frontend/src/app/settings/ai-settings.service.ts`
 - Test: `frontend/src/app/settings/ai-settings.service.spec.ts`
+- Modify: `frontend/src/app/settings/ai-section.component.ts`
+- Modify: `frontend/src/app/settings/ai-section.component.html`
+- Test: `frontend/src/app/settings/ai-section.component.spec.ts`
 
 **Interfaces:**
-- Consumes: `AiFailure`, `AiFailureScope`, `ScopedAiFailure`, `aiFailure` from `./ai-failure` (Task 1).
+- Consumes: `AiFailure`, `AiFailureScope`, `ScopedAiFailure`, `aiFailure`, `SERVER_TEXT_KINDS` from `./ai-failure` (Task 1); the `settings.ai.errors.validation` and `settings.ai.fields.*` keys (Task 2).
 - Produces:
   - `interface AiDraft { readonly name: string | null; readonly baseUrl: string; readonly apiKey: string }`
   - `readonly failure: WritableSignal<ScopedAiFailure | null>` — replaces the old `WritableSignal<AiFailure | null>`
@@ -534,110 +613,20 @@ export interface AiDraft {
 cd frontend && npx jest src/app/settings/ai-settings.service.spec.ts
 ```
 
-Expected: PASS. `AiSectionComponent` does not compile yet; that is Task 3.
+Expected: PASS for this file. The component still calls the old API, so its own spec stays red until Step 8 — that is why this task carries both halves and commits once, keeping every commit green.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 4b: Do not commit yet — the tree does not compile until Step 8**
 
-```bash
-git add frontend/src/app/settings/ai-settings.service.ts frontend/src/app/settings/ai-settings.service.spec.ts
-git commit -m "fix(#415): record which write a failure came from"
-```
+The second half of this task follows. The component owns the translator, so it composes the sentence. Three surfaces get a banner: the list card, each row, and the add card.
 
----
-
-### Task 3: Add the translations the banner needs
-
-Two keys per locale: the fallback for the new kind, and the field labels the banner names when it lists field messages. Done before the component so Task 4's tests have real strings to assert against.
-
-**Files:**
-- Modify: `frontend/public/i18n/en.json`
-- Modify: `frontend/public/i18n/de.json`
-
-**Interfaces:**
-- Produces: `settings.ai.errors.validation`, and `settings.ai.fields.{name,baseUrl,apiKey}`.
-
-- [ ] **Step 1: Add the English keys**
-
-In `frontend/public/i18n/en.json`, inside `settings.ai.errors`, after `"limit"`:
-
-```json
-        "validation": "Check the values you entered.",
-```
-
-And add a new `fields` object as a sibling of `errors` inside `settings.ai`:
-
-```json
-      "fields": {
-        "name": "Optional name",
-        "baseUrl": "Endpoint",
-        "apiKey": "API key"
-      },
-```
-
-These three deliberately repeat the wording of `settings.ai.configs.namePlaceholder`, `settings.ai.baseUrl` and `settings.ai.apiKey`. They are a separate map because they are keyed by the server's property path, not by the form's layout: reusing the form keys would silently break the banner the day a label is reworded for the form alone.
-
-- [ ] **Step 2: Add the German keys**
-
-In `frontend/public/i18n/de.json`, inside `settings.ai.errors`, after `"limit"`:
-
-```json
-        "validation": "Prüfe die eingegebenen Werte.",
-```
-
-And as a sibling of `errors` inside `settings.ai`:
-
-```json
-      "fields": {
-        "name": "Optionaler Name",
-        "baseUrl": "Endpunkt",
-        "apiKey": "API-Schlüssel"
-      },
-```
-
-- [ ] **Step 3: Verify both files still parse and hold the same keys**
-
-```bash
-cd frontend && python3 -c "
-import json
-en=json.load(open('public/i18n/en.json'))['settings']['ai']
-de=json.load(open('public/i18n/de.json'))['settings']['ai']
-assert sorted(en['errors'])==sorted(de['errors']), (sorted(en['errors']), sorted(de['errors']))
-assert sorted(en['fields'])==sorted(de['fields']), (sorted(en['fields']), sorted(de['fields']))
-assert 'validation' in en['errors']
-print('ok', sorted(en['errors']), sorted(en['fields']))
-"
-```
-
-Expected: `ok ['limit', 'notConfigured', 'provider', 'rateLimited', 'unknown', 'unreadableKey', 'validation'] ['apiKey', 'baseUrl', 'name']`
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add frontend/public/i18n/en.json frontend/public/i18n/de.json
-git commit -m "fix(#415): add the validation fallback and the field labels"
-```
-
----
-
-### Task 4: Render each failure where it happened, and keep the draft
-
-The component owns the translator, so it composes the sentence. Three surfaces get a banner: the list card, each row, and the add card.
-
-**Files:**
-- Modify: `frontend/src/app/settings/ai-section.component.ts`
-- Modify: `frontend/src/app/settings/ai-section.component.html`
-- Test: `frontend/src/app/settings/ai-section.component.spec.ts`
-
-**Interfaces:**
-- Consumes: `ScopedAiFailure`, `AiFailure`, `SERVER_TEXT_KINDS` from `./ai-failure` (Task 1); `AiDraft`, the scoped `failure` signal and `add(draft, onAdded)` from `./ai-settings.service` (Task 2); the keys from Task 3.
-- Produces (all read from the template):
+**Produced by the second half** (all read from the template):
   - `readonly listFailure: Signal<string | null>`
   - `readonly addFailure: Signal<string | null>`
   - `rowFailure(configId: number): string | null`
 
-- [ ] **Step 1: Write the failing tests**
+- [ ] **Step 5: Write the failing component tests**
 
-In `frontend/src/app/settings/ai-section.component.spec.ts`, first update the stub so it compiles against Task 2. Change the `AiSettingsStub` interface member:
+In `frontend/src/app/settings/ai-section.component.spec.ts`, first update the stub so it compiles against the service change in Step 3. Change the `AiSettingsStub` interface member:
 
 ```ts
   failure: WritableSignal<ScopedAiFailure | null>;
@@ -831,7 +820,7 @@ Now replace the pre-existing add test at line 187 (`'adds a configuration and cl
   });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [ ] **Step 6: Run the component tests to verify they fail**
 
 ```bash
 cd frontend && npx jest src/app/settings/ai-section.component.spec.ts
@@ -839,7 +828,7 @@ cd frontend && npx jest src/app/settings/ai-section.component.spec.ts
 
 Expected: FAIL. `listFailure` / `addFailure` / `rowFailure` do not exist, and `add()` still calls the old three-argument signature.
 
-- [ ] **Step 3: Write the component**
+- [ ] **Step 7: Write the component**
 
 In `frontend/src/app/settings/ai-section.component.ts`:
 
@@ -946,7 +935,7 @@ import { AiConfig, AiSettingsService } from './ai-settings.service';
   }
 ```
 
-- [ ] **Step 4: Write the template**
+- [ ] **Step 8: Write the template**
 
 In `frontend/src/app/settings/ai-section.component.html`:
 
@@ -974,7 +963,7 @@ In `frontend/src/app/settings/ai-section.component.html`:
     }
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [ ] **Step 9: Run the component tests to verify they pass**
 
 ```bash
 cd frontend && npx jest src/app/settings/ai-section.component.spec.ts
@@ -982,7 +971,7 @@ cd frontend && npx jest src/app/settings/ai-section.component.spec.ts
 
 Expected: PASS, including the pre-existing tests at lines 519, 537 and 562 that assert the card layout.
 
-- [ ] **Step 6: Run the whole gate**
+- [ ] **Step 10: Run the whole gate**
 
 ```bash
 cd frontend && npm run check
@@ -990,16 +979,16 @@ cd frontend && npm run check
 
 Expected: ESLint, Prettier, Stylelint and the full Jest suite all pass. If Prettier complains, it is almost certainly a line over 100 columns in the test code above — break it rather than reflowing the source.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 11: Commit both halves together**
 
 ```bash
-git add frontend/src/app/settings/ai-section.component.ts frontend/src/app/settings/ai-section.component.html frontend/src/app/settings/ai-section.component.spec.ts
+git add frontend/src/app/settings/ai-settings.service.ts frontend/src/app/settings/ai-settings.service.spec.ts frontend/src/app/settings/ai-section.component.ts frontend/src/app/settings/ai-section.component.html frontend/src/app/settings/ai-section.component.spec.ts
 git commit -m "fix(#415): answer each failure where it happened and keep the draft"
 ```
 
 ---
 
-### Task 5: Prove it end to end against a stubbed rejection
+### Task 4: Prove it end to end against a stubbed rejection
 
 A Jest test drives the component; this drives the browser, which is the only place the three faults were visible together.
 
@@ -1032,17 +1021,34 @@ const TOO_SHORT_KEY = 'short';
 const SERVER_MESSAGE = 'This value is too short. It should have 8 characters or more.';
 
 /**
- * An empty list and a rejected add. Both are stubbed so the spec owns every
- * value it asserts on: nothing is created, nothing seeded is read, and no
- * outbound call reaches a real provider.
+ * One saved configuration and a rejected add. Both are stubbed so the spec
+ * owns every value it asserts on: nothing is created, nothing seeded is read,
+ * and no outbound call reaches a real provider.
+ *
+ * The list holds one row on purpose. With an empty list the configuration
+ * card renders no `.configs` list at all, and "no banner on the list card"
+ * would assert against an element that does not exist — a green test proving
+ * nothing. One row makes the negative real.
  *
  * Matched on the pathname, so `/api/me/ai` and `/api/me/ai/configs` do not
  * catch each other.
  */
+const EXISTING = {
+  id: 1,
+  name: 'Existing provider',
+  baseUrl: 'https://existing.example.test/v1',
+  apiKeyHint: '9876',
+  model: 'some-model',
+  ready: true,
+  active: true,
+  suppressReasoning: true,
+  batchConcurrency: 1,
+};
+
 async function stubAi(page: Page): Promise<void> {
   await page.route(
     (url) => url.pathname === '/api/me/ai',
-    (route) => route.fulfill({ status: 200, json: { configs: [], activeId: null } }),
+    (route) => route.fulfill({ status: 200, json: { configs: [EXISTING], activeId: EXISTING.id } }),
   );
 
   await page.route(
@@ -1101,6 +1107,7 @@ test('a rejected configuration keeps the typed values and names the field', asyn
   await expect(addCard.locator('app-error-banner')).toHaveText(`API key: ${SERVER_MESSAGE}`);
 
   const listCard = page.locator('app-settings-card').filter({ has: page.locator('.configs') });
+  await expect(listCard).toHaveCount(1); // else the assertion below proves nothing
   await expect(listCard.locator('app-error-banner')).toHaveCount(0);
 
   // 3. the values survive the rejection.
@@ -1109,7 +1116,7 @@ test('a rejected configuration keeps the typed values and names the field', asyn
 });
 ```
 
-Note on the `listCard` assertion: with the list stubbed empty there is no `.configs` list, so that locator resolves to nothing and `toHaveCount(0)` passes trivially. That is intended — the placement claim is carried by the `addCard` assertion above it, and the Jest test `'shows a failed add under the add form, not above the configs list'` in Task 4 is what proves the negative against a populated list.
+Note on the `listCard` assertion: the stub returns one configuration precisely so this locator resolves to a real card. If it ever resolves to nothing, `toHaveCount(0)` would pass without proving anything — so the spec asserts the card itself is present first.
 
 - [ ] **Step 2: Bring up the stack and run it**
 
@@ -1142,7 +1149,7 @@ git commit -m "test(#415): prove a rejected add keeps its values and names the f
 
 ---
 
-### Task 6: Check the real page, then open the PR
+### Task 5: Check the real page, then open the PR
 
 **Files:** none.
 
