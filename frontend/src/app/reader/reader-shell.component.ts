@@ -276,6 +276,14 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     if (s.kind === 'all') return 'All items';
     if (s.kind === 'tag') return this.selectedTag()?.name ?? 'Tag';
     if (s.kind === 'search') {
+      // No count while the search is in flight: EntriesStore.load() clears
+      // nextCursor synchronously but deliberately keeps the PREVIOUS list
+      // rendered until the response lands (#254) — so for that whole window
+      // `entries()` still holds the old term's rows and `hasMore()` reads as
+      // false regardless of what the new term will return. Counting them
+      // would flash a stale, or even a false "no matches", number. Gated on
+      // the same condition the spinner uses, so the two can never disagree.
+      if (this.searching()) return this.i18n.translate('reader.searchResults', { term: s.term });
       // The loaded count, not a COUNT(*) total — the list pages 50 at a time,
       // so it lies unless it is labelled: a trailing '+' when another page is
       // still out there, the exact number once there isn't.

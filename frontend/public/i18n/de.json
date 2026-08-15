@@ -493,6 +493,7 @@
     "nothingHere": "Noch nichts vorhanden.",
     "search": "Suchen",
     "searchPlaceholder": "Artikel suchen",
+    "searchResults": "Ergebnisse für „{{term}}“",
     "searchResultsCount": "Ergebnisse für „{{term}}“ — {{count}}",
     "searchResultsCountMore": "Ergebnisse für „{{term}}“ — {{count}}+",
     "searchTooShort": "Geben Sie mindestens 3 Zeichen ein.",

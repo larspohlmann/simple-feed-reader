@@ -905,6 +905,37 @@ describe('ReaderShellComponent', () => {
     });
   });
 
+  it(
+    'shows no count for a search that is loading, even though entries() still ' +
+      'holds the PREVIOUS list rows (#254 stale-list regression, fix round 2)',
+    () => {
+      const f = boot();
+      // Establish the fixture deliberately: boot() has already landed one row
+      // from the 'all' selection's list, and that row is still mounted — this
+      // is exactly the #254 behaviour (load() clears nextCursor synchronously
+      // but leaves the outgoing list rendered until the response lands).
+      expect(f.componentInstance.entries.entries().length).toBe(1);
+
+      qp.next(convertToParamMap({ q: 'angular' }));
+      f.detectChanges();
+
+      // The search request is now in flight. Prove the trap is live before
+      // asserting the title: the stale row from 'all' is still all
+      // entries() has, and hasMore() reads false because nextCursor was
+      // already cleared — a naive count/hasMore read here would show
+      // "— 1" for a term that has not answered yet.
+      expect(f.componentInstance.entries.entries().length).toBe(1);
+      expect(f.componentInstance.hasMore()).toBe(false);
+      expect(f.componentInstance.searching()).toBe(true);
+
+      expect(f.componentInstance.title()).toBe('Results for "angular"');
+
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+    },
+  );
+
   it('titles a search selection with the translated term and the exact loaded count when there is no further page', () => {
     const f = boot();
     qp.next(convertToParamMap({ q: 'angular' }));
