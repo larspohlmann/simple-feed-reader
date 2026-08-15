@@ -73,6 +73,29 @@ describe('selectionFromParams', () => {
     expect(selectionFromParams(pm({ q: '' })).selection.kind).toBe('all');
     expect(selectionFromParams(pm({ q: '   ' })).selection.kind).toBe('all');
   });
+
+  describe('trailing space as the whole-word signal (#408 follow-up)', () => {
+    it('keeps a trailing space in the selection term', () => {
+      expect(selectionFromParams(pm({ q: 'punk ' })).selection).toEqual({
+        kind: 'search',
+        id: null,
+        unread: false,
+        term: 'punk ',
+      });
+    });
+    it('strips leading whitespace and collapses inner runs, but keeps the one trailing space', () => {
+      expect(selectionFromParams(pm({ q: '  angular   js  ' })).selection).toEqual({
+        kind: 'search',
+        id: null,
+        unread: false,
+        term: 'angular js ',
+      });
+    });
+    it('measures the minimum length on the trimmed value, so a trailing space does not buy an extra character', () => {
+      // 'ab ' is 3 raw characters but 2 once the trailing space is set aside.
+      expect(selectionFromParams(pm({ q: 'ab ' })).selection.kind).toBe('all');
+    });
+  });
 });
 
 describe('selectionQueryParams', () => {
@@ -159,6 +182,12 @@ describe('queryFromSelection', () => {
     expect(
       queryFromSelection({ kind: 'search', id: null, unread: false, term: 'angular' }),
     ).toEqual({ view: 'all', q: 'angular' });
+  });
+  it('passes a trailing space through unchanged — the server reads it as whole-word match', () => {
+    expect(queryFromSelection({ kind: 'search', id: null, unread: false, term: 'punk ' })).toEqual({
+      view: 'all',
+      q: 'punk ',
+    });
   });
 });
 

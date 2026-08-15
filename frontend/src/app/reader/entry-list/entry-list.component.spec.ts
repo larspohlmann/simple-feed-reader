@@ -353,6 +353,18 @@ describe('EntryListComponent', () => {
     expect(empty.querySelector('a')).toBeNull();
   });
 
+  it(
+    'derives highlighting terms from a trailing-space term without a trailing empty ' +
+      "entry (#408 follow-up: the trailing space is the server's whole-word signal, " +
+      'not a word of its own)',
+    () => {
+      const f = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
+      });
+      expect(f.componentInstance.searchTerms()).toEqual(['punk']);
+    },
+  );
+
   it('keeps the existing empty state and its catalog link for a non-search selection', () => {
     const el = mount({
       loading: false,

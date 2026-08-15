@@ -22,20 +22,25 @@ function typeInto(fixture: ReturnType<typeof mount>, value: string): void {
 }
 
 describe('SearchFieldComponent', () => {
-  it('emits nothing before the debounce elapses, and the trimmed term after it', fakeAsync(() => {
-    const fixture = mount();
-    const emitted: string[] = [];
-    fixture.componentInstance.search.subscribe((term) => emitted.push(term));
+  it(
+    'emits nothing before the debounce elapses, and the term after it with leading ' +
+      'whitespace stripped but a single trailing space kept (#408 follow-up: the server ' +
+      'reads a trailing space as whole-word match, so it is no longer a plain trim)',
+    fakeAsync(() => {
+      const fixture = mount();
+      const emitted: string[] = [];
+      fixture.componentInstance.search.subscribe((term) => emitted.push(term));
 
-    typeInto(fixture, '  cats  ');
-    expect(emitted).toEqual([]);
+      typeInto(fixture, '  cats  ');
+      expect(emitted).toEqual([]);
 
-    tick(299);
-    expect(emitted).toEqual([]);
+      tick(299);
+      expect(emitted).toEqual([]);
 
-    tick(1);
-    expect(emitted).toEqual(['cats']);
-  }));
+      tick(1);
+      expect(emitted).toEqual(['cats ']);
+    }),
+  );
 
   it('re-emits a term typed again right after it was cleared', fakeAsync(() => {
     const fixture = mount();
@@ -241,6 +246,68 @@ describe('SearchFieldComponent', () => {
   // pass whether or not the CSS fix is present or later reverted — that is not
   // coverage, it is a test that cannot fail. The chrome reset is checked by eye
   // instead; see search-field.component.scss for the reasoning.
+
+  describe('trailing space as the whole-word signal (#408 follow-up)', () => {
+    it('emits a trailing space unchanged when the user typed one', fakeAsync(() => {
+      const fixture = mount();
+      const emitted: string[] = [];
+      fixture.componentInstance.search.subscribe((term) => emitted.push(term));
+
+      typeInto(fixture, 'punk ');
+      tick(300);
+
+      expect(emitted).toEqual(['punk ']);
+    }));
+
+    it('emits no trailing space when the user did not type one', fakeAsync(() => {
+      const fixture = mount();
+      const emitted: string[] = [];
+      fixture.componentInstance.search.subscribe((term) => emitted.push(term));
+
+      typeInto(fixture, 'punk');
+      tick(300);
+
+      expect(emitted).toEqual(['punk']);
+    }));
+
+    it('strips leading whitespace and collapses inner runs while keeping the trailing space', fakeAsync(() => {
+      const fixture = mount();
+      const emitted: string[] = [];
+      fixture.componentInstance.search.subscribe((term) => emitted.push(term));
+
+      typeInto(fixture, '  angular   js  ');
+      tick(300);
+
+      expect(emitted).toEqual(['angular js ']);
+    }));
+
+    it('does not search for a trailing-space term that is below the floor once trimmed', fakeAsync(() => {
+      const fixture = mount();
+      const emitted: string[] = [];
+      fixture.componentInstance.search.subscribe((term) => emitted.push(term));
+
+      // 'ab ' is 3 raw characters but 2 once the trailing space is set aside.
+      typeInto(fixture, 'ab ');
+      tick(300);
+
+      expect(emitted).toEqual([]);
+    }));
+
+    it('treats adding a trailing space to the active term as a new search, not a repeat', fakeAsync(() => {
+      const fixture = mount();
+      const emitted: string[] = [];
+      fixture.componentInstance.search.subscribe((term) => emitted.push(term));
+
+      typeInto(fixture, 'punk');
+      tick(300);
+      expect(emitted).toEqual(['punk']);
+
+      typeInto(fixture, 'punk ');
+      tick(300);
+
+      expect(emitted).toEqual(['punk', 'punk ']);
+    }));
+  });
 
   describe('the / shortcut (#408)', () => {
     function pressSlash(target: EventTarget, modifiers: Partial<KeyboardEventInit> = {}) {

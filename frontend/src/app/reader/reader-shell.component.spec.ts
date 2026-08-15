@@ -948,6 +948,19 @@ describe('ReaderShellComponent', () => {
     expect(f.componentInstance.title()).toBe('Results for "angular" — 2');
   });
 
+  it('titles a settled search with zero results as the exact count, not the loading form', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ q: 'angular' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    expect(f.componentInstance.searching()).toBe(false);
+    expect(f.componentInstance.title()).toBe('Results for "angular" — 0');
+  });
+
   it('titles a search selection with a trailing + when another page exists', () => {
     const f = boot();
     qp.next(convertToParamMap({ q: 'angular' }));

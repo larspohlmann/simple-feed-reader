@@ -18,7 +18,7 @@ import { Subject, debounceTime } from 'rxjs';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
-import { MIN_SEARCH_LENGTH } from '../query';
+import { MIN_SEARCH_LENGTH, normalizeSearchInput } from '../query';
 
 const DEBOUNCE_MS = 300;
 
@@ -159,10 +159,23 @@ export class SearchFieldComponent {
   }
 
   private emitSettled(raw: string): void {
-    const trimmed = raw.trim();
-    if (trimmed.length > 0 && trimmed.length < this.minLength) return;
-    if (trimmed === this.activeTerm) return;
-    this.activeTerm = trimmed;
-    this.search.emit(trimmed);
+    // Not a plain trim(): a trailing space tells the server to match whole
+    // words instead of substrings (#408 follow-up), one mode for the whole
+    // query, so it must reach the request unchanged. Only the meaningless
+    // whitespace — leading, and runs collapsed between terms — is removed.
+    const normalized = normalizeSearchInput(raw);
+    // The floor is measured on the trimmed value: 'ab ' is 3 raw characters
+    // but 2 once the trailing space is set aside, so it stays below the
+    // floor rather than searching.
+    const trimmedLength = normalized.trim().length;
+    if (trimmedLength > 0 && trimmedLength < this.minLength) return;
+    // 'punk' and 'punk ' are different searches now (substring vs. whole
+    // word), so this dedup — which exists to stop a debounce burst that
+    // settles on a genuine repeat — must compare the raw normalized string,
+    // not its trimmed form, or adding the trailing space would be silently
+    // swallowed as "no change".
+    if (normalized === this.activeTerm) return;
+    this.activeTerm = normalized;
+    this.search.emit(normalized);
   }
 }

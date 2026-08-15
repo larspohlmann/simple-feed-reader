@@ -154,8 +154,10 @@ export class EntryListComponent implements OnDestroy {
   readonly canRefresh = computed(() => canScopedRefresh(this.selection()));
 
   /** The current search's words, passed down to every row for marking. Empty
-   *  outside a search. */
-  readonly searchTerms = computed(() => this.selection().term?.split(/\s+/) ?? []);
+   *  outside a search. A trailing space in the term (the server's whole-word
+   *  signal, #408 follow-up) would otherwise split into a trailing empty
+   *  string — `.trim()` first so the last real word is the last entry. */
+  readonly searchTerms = computed(() => this.selection().term?.trim().split(/\s+/) ?? []);
 
   /** A search never renders as a magazine — its rows carry marked terms, and a
    *  spread would scatter them across eight block templates. */

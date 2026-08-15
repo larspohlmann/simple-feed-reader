@@ -16,6 +16,21 @@ export interface Selection {
  *  here — it is a half-typed word, so the URL simply carries no search yet. */
 export const MIN_SEARCH_LENGTH = 3;
 
+/** Strips leading whitespace and collapses inner runs to a single space, but
+ *  — unlike `String.trim()` — keeps exactly one trailing space when the raw
+ *  input ended in whitespace. The server reads a trailing space as "match
+ *  whole words only" versus substring matching, one mode for the whole query
+ *  (#408 follow-up); a plain `trim()` here would destroy that signal before
+ *  it ever reaches the request. Shared by the field's settled-emission path
+ *  and by `selectionFromParams`, the two places a raw `q` value is turned
+ *  into a term — both must agree on what "the term" is. */
+export function normalizeSearchInput(raw: string): string {
+  const hasTrailingSpace = /\s$/.test(raw);
+  const collapsed = raw.trim().replace(/\s+/g, ' ');
+  if (collapsed.length === 0) return '';
+  return hasTrailingSpace ? `${collapsed} ` : collapsed;
+}
+
 /** How a scoped refresh is keyed. Empty = all the user's due feeds; feedId =
  *  one feed; tagId = every feed carrying that tag. */
 export interface RefreshScope {
@@ -96,8 +111,15 @@ export function selectionFromParams(p: ParamMap): {
   // The entry param is an id or an id-prefixed slug ("514-some-title").
   const entryId = entryIdFromParam(selectionParam(p, 'entry'));
 
-  const term = (selectionParam(p, 'q') ?? '').trim();
-  if (term.length >= MIN_SEARCH_LENGTH) {
+  // Not a plain trim(): a trailing space is the whole-word-match signal
+  // (#408 follow-up) and must survive into `Selection.term`, so only the
+  // MEANINGLESS whitespace — leading, and runs collapsed between terms — is
+  // removed here.
+  const term = normalizeSearchInput(selectionParam(p, 'q') ?? '');
+  // The floor is measured on the trimmed value: 'ab ' is 3 raw characters
+  // but 2 once the trailing space (not a real character of the word) is set
+  // aside, so it must stay below MIN_SEARCH_LENGTH rather than search.
+  if (term.trim().length >= MIN_SEARCH_LENGTH) {
     // A search is its own view over every subscription, so a tag or feed
     // parameter left in the URL by hand is ignored rather than combined.
     return { selection: { kind: 'search', id: null, unread: false, term }, entryId };
