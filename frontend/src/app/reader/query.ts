@@ -54,6 +54,37 @@ export function normalizeSearchInput(raw: string): string {
   return hasTrailingSpace ? `${collapsed} ` : collapsed;
 }
 
+/** Whether a term is long enough to search on. Measured on the TRIMMED value,
+ *  which is the whole subtlety: 'ab ' is three raw characters but two real
+ *  ones, because the trailing space is the whole-word-match signal rather
+ *  than a character of the word (see `isWholeWordTerm`).
+ *
+ *  Exported for the same reason `isWholeWordTerm` is: the rule had three
+ *  writers — `selectionFromParams` deciding whether the URL names a search,
+ *  and the field deciding both when to show its too-short hint and when to
+ *  emit — each with its own phrasing and its own copy of this comment. That
+ *  is precisely how the comparator, the parameter vocabulary and the header
+ *  rule each drifted on this branch (#408). */
+export function isSearchableTerm(term: string): boolean {
+  return term.trim().length >= MIN_SEARCH_LENGTH;
+}
+
+/** A term the user has begun but not finished: something is typed, but not yet
+ *  enough to search on. The empty box is NOT too short — it means "no search",
+ *  which is always a valid state. */
+export function isTooShortToSearch(term: string): boolean {
+  return term.trim().length > 0 && !isSearchableTerm(term);
+}
+
+/** The individual words of a term, for marking them in the result rows. Splits
+ *  on the same whitespace class the rest of the vocabulary uses, and drops the
+ *  empty piece a trailing space would otherwise leave behind. Lives here beside
+ *  `normalizeSearchInput`, `visibleSearchTerm` and `isWholeWordTerm` so that
+ *  every answer to "what is a term made of" has one home. */
+export function searchWords(term: string): string[] {
+  return term.split(/[\s\p{Z}]+/u).filter((word) => word.length > 0);
+}
+
 /** How a scoped refresh is keyed. Empty = all the user's due feeds; feedId =
  *  one feed; tagId = every feed carrying that tag. */
 export interface RefreshScope {
@@ -148,10 +179,7 @@ export function selectionFromParams(p: ParamMap): {
   // MEANINGLESS whitespace — leading, and runs collapsed between terms — is
   // removed here.
   const term = normalizeSearchInput(selectionParam(p, 'q') ?? '');
-  // The floor is measured on the trimmed value: 'ab ' is 3 raw characters
-  // but 2 once the trailing space (not a real character of the word) is set
-  // aside, so it must stay below MIN_SEARCH_LENGTH rather than search.
-  if (term.trim().length >= MIN_SEARCH_LENGTH) {
+  if (isSearchableTerm(term)) {
     // A search is its own view over every subscription, so a tag or feed
     // parameter left in the URL by hand is ignored rather than combined.
     return { selection: { kind: 'search', id: null, unread: false, term }, entryId };

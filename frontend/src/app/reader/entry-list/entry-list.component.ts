@@ -47,6 +47,7 @@ import {
   isSingleStreamView,
   isWholeWordTerm,
   sameSelection,
+  searchWords,
   visibleSearchTerm,
 } from '../query';
 import { atTop, pullTriggersRefresh, rubberBand } from '../reader-gestures';
@@ -161,10 +162,8 @@ export class EntryListComponent implements OnDestroy {
   readonly canRefresh = computed(() => canScopedRefresh(this.selection()));
 
   /** The current search's words, passed down to every row for marking. Empty
-   *  outside a search. A trailing space in the term (the server's whole-word
-   *  signal, #408 follow-up) would otherwise split into a trailing empty
-   *  string — `.trim()` first so the last real word is the last entry. */
-  readonly searchTerms = computed(() => this.selection().term?.trim().split(/\s+/) ?? []);
+   *  outside a search. */
+  readonly searchTerms = computed(() => searchWords(this.selection().term ?? ''));
 
   /** The search term for the empty-state message — the trailing space is the
    *  server's whole-word-match signal, not part of what the user typed, so it

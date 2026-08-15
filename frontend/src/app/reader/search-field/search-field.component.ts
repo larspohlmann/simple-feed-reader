@@ -18,7 +18,7 @@ import { Subject, debounceTime } from 'rxjs';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
-import { MIN_SEARCH_LENGTH, normalizeSearchInput } from '../query';
+import { isTooShortToSearch, normalizeSearchInput } from '../query';
 
 const DEBOUNCE_MS = 300;
 
@@ -58,15 +58,11 @@ export class SearchFieldComponent {
    *  there was nothing left to clear. */
   readonly escapedWhileEmpty = output<void>();
 
-  private readonly minLength = MIN_SEARCH_LENGTH;
   /** What the field currently shows — updates on every keystroke, unlike the
    *  debounced `search` output, so the too-short hint reacts immediately. */
   readonly text = signal('');
 
-  readonly tooShort = computed(() => {
-    const length = this.text().trim().length;
-    return length > 0 && length < this.minLength;
-  });
+  readonly tooShort = computed(() => isTooShortToSearch(this.text()));
 
   private readonly inputEl = viewChild<ElementRef<HTMLInputElement>>('inputEl');
 
@@ -164,11 +160,9 @@ export class SearchFieldComponent {
     // query, so it must reach the request unchanged. Only the meaningless
     // whitespace — leading, and runs collapsed between terms — is removed.
     const normalized = normalizeSearchInput(raw);
-    // The floor is measured on the trimmed value: 'ab ' is 3 raw characters
-    // but 2 once the trailing space is set aside, so it stays below the
-    // floor rather than searching.
-    const trimmedLength = normalized.trim().length;
-    if (trimmedLength > 0 && trimmedLength < this.minLength) return;
+    // A half-typed term is not a search yet; an empty one is a real event
+    // (it ends the search), so it must fall through.
+    if (isTooShortToSearch(normalized)) return;
     // 'punk' and 'punk ' are different searches now (substring vs. whole
     // word), so this dedup — which exists to stop a debounce burst that
     // settles on a genuine repeat — must compare the raw normalized string,

@@ -1,11 +1,14 @@
 import { convertToParamMap } from '@angular/router';
 import {
   canScopedRefresh,
+  isSearchableTerm,
+  isTooShortToSearch,
   isWholeWordTerm,
   markReadTarget,
   normalizeSearchInput,
   queryFromSelection,
   sameSelection,
+  searchWords,
   selectionFromParams,
   selectionQueryParams,
   visibleSearchTerm,
@@ -266,6 +269,67 @@ describe('visibleSearchTerm', () => {
   });
   it('leaves inner spacing between terms untouched', () => {
     expect(visibleSearchTerm('daft punk ')).toBe('daft punk');
+  });
+});
+
+// These pin the two predicates at their edges rather than through a call site.
+// The badge round taught the lesson: a consolidation that replaces four
+// expressions with one helper is only safe if something states what the OLD
+// expressions accepted — otherwise every test is written against the new
+// helper and a narrowed rule passes them all.
+describe('isSearchableTerm and isTooShortToSearch (#408 cleanup)', () => {
+  it('accepts a term of exactly the minimum length', () => {
+    expect(isSearchableTerm('ng2')).toBe(true);
+    expect(isTooShortToSearch('ng2')).toBe(false);
+  });
+
+  it('rejects one character below the minimum', () => {
+    expect(isSearchableTerm('ng')).toBe(false);
+    expect(isTooShortToSearch('ng')).toBe(true);
+  });
+
+  it('measures the floor on the trimmed value, so a trailing space does not count', () => {
+    // 'ab ' is three raw characters; the trailing space is the whole-word
+    // signal, not a character of the word.
+    expect(isSearchableTerm('ab ')).toBe(false);
+    expect(isTooShortToSearch('ab ')).toBe(true);
+  });
+
+  it('counts the word when the trailing space rides along on a long-enough term', () => {
+    expect(isSearchableTerm('punk ')).toBe(true);
+    expect(isTooShortToSearch('punk ')).toBe(false);
+  });
+
+  it('treats the empty term as no search rather than as too short', () => {
+    // The distinction matters: the field emits '' to END a search, so an
+    // empty box must fall through the too-short guard rather than be swallowed.
+    expect(isSearchableTerm('')).toBe(false);
+    expect(isTooShortToSearch('')).toBe(false);
+    expect(isTooShortToSearch('   ')).toBe(false);
+  });
+});
+
+describe('searchWords (#408 cleanup)', () => {
+  it('splits a multi-word term', () => {
+    expect(searchWords('daft punk')).toEqual(['daft', 'punk']);
+  });
+
+  it('drops the empty piece a trailing space would leave', () => {
+    expect(searchWords('punk ')).toEqual(['punk']);
+  });
+
+  // Written as an escape, not the literal character: a no-break space is
+  // indistinguishable from a plain space in the source, and the whole point
+  // of the case is that the two are treated alike.
+  it('splits on the same whitespace class as the rest of the vocabulary', () => {
+    expect(searchWords('daft\u00a0punk')).toEqual(['daft', 'punk']);
+    expect(searchWords('daft\tpunk')).toEqual(['daft', 'punk']);
+    expect(searchWords('daft\npunk')).toEqual(['daft', 'punk']);
+  });
+
+  it('is empty for a term with no words', () => {
+    expect(searchWords('')).toEqual([]);
+    expect(searchWords('   ')).toEqual([]);
   });
 });
 
