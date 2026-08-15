@@ -33,7 +33,7 @@ final class RecommendationPromptText
 
     public const string DEDUP_ROLE = 'You remove duplicate stories from a ranked list built for one reader of '
         . 'an RSS reader. The user message lists RANKED entries, best first; each line starts with the entry id '
-        . 'in square brackets, followed by title, source, date and the reason it was chosen. Two entries are '
+        . 'in square brackets, followed by the title, the date and the opening of the post. Two entries are '
         . 'duplicates only when they report the same specific event or announcement — the same occurrence, told '
         . 'by different sources. Entries that merely share a topic, a subject area, a company, a technology or a '
         . 'person are not duplicates, and separate developments in one ongoing story are not duplicates either. '

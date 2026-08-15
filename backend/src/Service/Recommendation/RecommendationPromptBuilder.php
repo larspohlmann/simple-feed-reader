@@ -46,6 +46,16 @@ final class RecommendationPromptBuilder
      * that broke the timeout.
      */
     private const int MAXIMUM_BATCH_SIZE = 45;
+
+    /**
+     * The description length a dedup line carries. Fixed rather than scaled
+     * to the context window like the candidate lines: whether two entries
+     * report the same event is visible in the opening sentences, and the
+     * dedup call renders every line at once, so a generous per-line budget
+     * multiplies straight into one prompt (#406).
+     */
+    private const int DEDUP_DESCRIPTION_CHARS = 250;
+
     private const int DESCRIPTION_MIN_CHARS = 120;
     private const int DESCRIPTION_MAX_CHARS = 480;
     private const int DESCRIPTION_WINDOW_DIVISOR = 137;
@@ -184,7 +194,7 @@ final class RecommendationPromptBuilder
 
         $lines = [];
         foreach ($rankedPool as $winner) {
-            $line = $this->winnerLine($winner, $linesById);
+            $line = $this->winnerLine($winner['id'], $linesById);
             if (null !== $line) {
                 $lines[] = $line;
             }
@@ -386,27 +396,30 @@ final class RecommendationPromptBuilder
     }
 
     /**
+     * The title, the date and the description -- what deciding whether two
+     * entries report the same event actually needs. It used to carry the feed
+     * name and the reason the scoring call wrote, and the reason is about the
+     * reader rather than about the article: two entries covering one story
+     * tend to earn similar reasons, which made the field worse than useless
+     * here (#406).
+     *
      * Null when the entry was pruned since its batch ran, so the caller can
      * simply drop it from the rendered list.
      *
-     * @param array{id: int, score: int, reason: string} $winner
-     * @param array<int, PromptLine>                     $linesById
+     * @param array<int, PromptLine> $linesById
      */
-    private function winnerLine(array $winner, array $linesById): ?string
+    private function winnerLine(int $entryId, array $linesById): ?string
     {
-        $line = $linesById[$winner['id']] ?? null;
+        $line = $linesById[$entryId] ?? null;
         if (null === $line) {
             return null;
         }
 
-        return \sprintf(
-            '- [%d] %s — %s — %s — %s',
-            $winner['id'],
-            $line->title,
-            $line->feedName,
-            $line->date,
-            $winner['reason'],
-        );
+        $description = $this->truncatedDescription($line->description, self::DEDUP_DESCRIPTION_CHARS);
+
+        return null === $description
+            ? \sprintf('- [%d] %s — %s', $entryId, $line->title, $line->date)
+            : \sprintf('- [%d] %s — %s — %s', $entryId, $line->title, $line->date, $description);
     }
 
     private function tokens(string $text): int
