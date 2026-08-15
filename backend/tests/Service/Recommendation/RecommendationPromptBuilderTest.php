@@ -516,7 +516,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             ['id' => 1, 'score' => 40, 'reason' => 'Loose match'],
         ];
         $linesById = [
-            1 => new PromptLine(1, 'Title One', 'Feed A', '2026-01-05', null),
+            1 => new PromptLine(1, 'Title One', 'Feed A', '2026-01-05', 'One opens like this'),
             2 => new PromptLine(2, 'Title Two', 'Feed B', '2026-01-06', null),
         ];
 
@@ -536,8 +536,8 @@ final class RecommendationPromptBuilderTest extends TestCase
                         . 'more is discarded whole, and the reader is then shown the list with its real '
                         . "duplicates still in it.\n\n"
                         . "RANKED (best first):\n"
-                        . "- [2] Title Two — Feed B — 2026-01-06 — Strong match\n"
-                        . '- [1] Title One — Feed A — 2026-01-05 — Loose match',
+                        . "- [2] Title Two — 2026-01-06\n"
+                        . '- [1] Title One — 2026-01-05 — One opens like this',
                 ],
             ],
             $messages,
@@ -564,6 +564,26 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         self::assertStringContainsString('This list holds 20 entries.', $user);
         self::assertStringContainsString('Never name more than 10 of them', $user);
+    }
+
+    /**
+     * The dedup call renders every line into one prompt, so a per-line
+     * description budget multiplies straight into it. 250 characters is
+     * enough to tell one event from another and is fixed rather than scaled
+     * to the context window (#406).
+     */
+    public function testDedupLinesCarryTheDescriptionCutToAFixedLength(): void
+    {
+        $description = str_repeat('x', 400);
+        $messages = $this->builder->dedupMessages(
+            [['id' => 1, 'score' => 90, 'reason' => 'unused here']],
+            [1 => new PromptLine(1, 'Title One', 'Feed A', '2026-01-05', $description)],
+        );
+
+        $user = $messages[1]['content'];
+        self::assertStringContainsString('- [1] Title One — 2026-01-05 — ' . str_repeat('x', 250) . '…', $user);
+        self::assertStringNotContainsString('unused here', $user);
+        self::assertStringNotContainsString('Feed A', $user);
     }
 
     public function testDedupMessagesSkipsAPoolEntryWhoseLineIsMissing(): void
