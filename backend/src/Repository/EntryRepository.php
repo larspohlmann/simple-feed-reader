@@ -9,6 +9,8 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Http\EntryCursor;
+use App\Service\Search\LikePattern;
+use App\Service\Search\SearchTerms;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
@@ -144,6 +146,32 @@ class EntryRepository extends ServiceEntityRepository
     }
 
     /**
+     * Entries whose title or summary contains EVERY search term, newest first,
+     * keyset-paginated exactly like the entry list. The predicate is an AND of
+     * unindexable LIKEs, so the database reads every entry the caller
+     * subscribes to; that cost is accepted for now and measured in #408.
+     *
+     * @return list<EntryListRow>
+     */
+    public function searchForUser(EntrySearchQuery $query): array
+    {
+        $limit = max(1, min($query->limit, EntryQuery::MAX_LIMIT));
+
+        $qb = $this->rowQueryBuilder($query->userId)
+            ->orderBy('e.effectiveDate', 'DESC')
+            ->addOrderBy('e.id', 'DESC')
+            ->setMaxResults($limit);
+
+        $this->applyTerms($qb, $query->terms);
+        $this->applyCursor($qb, $query->cursor);
+
+        /** @var list<array<array-key, mixed>> $rows */
+        $rows = $qb->getQuery()->getResult();
+
+        return array_map(fn (array $row): EntryListRow => $this->hydrateRow($row), $rows);
+    }
+
+    /**
      * The shared "entry list row" projection: the entry plus the caller's
      * subscription, feed, and optional per-entry state. listForUser adds
      * ordering/paging/filters; oneRowForUser adds an id filter.
@@ -218,6 +246,24 @@ class EntryRepository extends ServiceEntityRepository
             default:
                 // 'all' — no state filter.
                 break;
+        }
+    }
+
+    /**
+     * A summary is nullable, and NULL LIKE … is never true, so the OR alone
+     * handles an entry that carries no summary.
+     */
+    private function applyTerms(QueryBuilder $qb, SearchTerms $terms): void
+    {
+        foreach ($terms->terms as $position => $term) {
+            $parameter = 'term' . $position;
+            $qb->andWhere(\sprintf(
+                "(e.title LIKE :%s ESCAPE '%s' OR e.summary LIKE :%s ESCAPE '%s')",
+                $parameter,
+                LikePattern::ESCAPE_CHARACTER,
+                $parameter,
+                LikePattern::ESCAPE_CHARACTER,
+            ))->setParameter($parameter, LikePattern::containing($term));
         }
     }
 
