@@ -171,9 +171,11 @@ export class RecommendationsService {
   readonly workerOwnsRun = computed(() => this.report()?.background ?? false);
 
   /** True while a run is going but its pill is not on screen, because the user
-   *  closed it. Drives the header's offer to raise it again. Reading the
-   *  toast's own visibility rather than tracking a dismissal flag here is exact
-   *  rather than a guess: whatever took the slot, the pill is gone (#398). */
+   *  closed it. Drives the header's offer to raise it again. Reads the toast's
+   *  own visibility rather than tracking a dismissal flag here, which is exact
+   *  for this service's own toasts -- and safe to treat as exact today because
+   *  this service is the only caller of `ToastService.show()` in the app, so
+   *  nothing else can occupy the slot and read as "still up". */
   readonly pillHidden = computed(() => this.running() && !this.toast.visible());
 
   /** The surviving for-you list's item count, for the sidebar badge. */
@@ -231,8 +233,11 @@ export class RecommendationsService {
 
   /** Raises the run's pill. Public because the user can close it from anywhere
    *  and the reader's list header offers it back; `markRunning()` calls this
-   *  rather than holding a second copy of the same `show()`. */
+   *  rather than holding a second copy of the same `show()`. Guarded: called
+   *  with no run live -- stale UI, a race -- it would raise a `durationMs:
+   *  null` toast that nothing would ever dismiss, since only `finish()` does. */
   showRunPill(): void {
+    if (!this.running()) return;
     this.toast.show({
       content: ForYouProgressComponent,
       durationMs: null,
@@ -275,6 +280,11 @@ export class RecommendationsService {
     this.api.currentRecommendations().subscribe({
       next: (r) => {
         this.applyReport(r); // even a finished run carries the for-you summary the sidebar needs
+        // The reader shell calls this on every mount, so reader -> another
+        // route -> reader runs it again mid-run. Re-raising the pill here
+        // would undo a ✕ the user already pressed, and starting a second
+        // `step()` would open a second poll loop against the same run.
+        if (this.running()) return;
         if (r.status !== 'pending' && r.status !== 'running') return;
         this.markRunning();
         this.step(NO_ATTEMPTS);

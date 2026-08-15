@@ -18,14 +18,18 @@ interface ToastBase {
   width?: 'fit' | 'fixed';
 }
 
-/** A toast showing one translated line. */
-export type MessageToast = ToastBase & { message: string };
+/** A toast showing one translated line. The `content?: never` is what makes
+ *  the union below an exclusive-or rather than a union of two optional-ish
+ *  shapes: TypeScript's excess-property check only rejects a key absent from
+ *  *every* constituent, so without it `{ message, content }` would satisfy
+ *  `MessageToast` by simply ignoring `content` and compile clean. */
+export type MessageToast = ToastBase & { message: string; content?: never };
 
 /** A toast hosting a feature's own component, for content this shared shell
  *  cannot render itself -- a live progress readout, for one. The component is
  *  built through the outlet, so it injects and reads its own feature's
  *  services without anything being threaded through here. */
-export type ContentToast = ToastBase & { content: Type<unknown> };
+export type ContentToast = ToastBase & { content: Type<unknown>; message?: never };
 
 export type ToastData = MessageToast | ContentToast;
 

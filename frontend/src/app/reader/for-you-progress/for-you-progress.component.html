@@ -13,7 +13,7 @@
     role="progressbar"
     aria-valuemin="0"
     aria-valuemax="100"
-    [attr.aria-valuenow]="percent()"
+    [attr.aria-valuenow]="batchPercent()"
   >
     <span [style.width.%]="percent()"></span>
   </div>

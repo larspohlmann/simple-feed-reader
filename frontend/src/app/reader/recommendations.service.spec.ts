@@ -149,6 +149,34 @@ describe('RecommendationsService', () => {
     expect(svc.completedStamp()).toBe(1);
   });
 
+  it('a second resume() during a live run neither re-raises a closed pill nor starts a second poll loop', () => {
+    svc.resume();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/current')
+      .flush(report({ status: 'running', batchesTotal: 2, batchesDone: 1 }));
+    const firstTick = ctrl.expectOne('https://api.test/api/recommendations/runs/tick');
+
+    toast.dismiss(); // the user pressed ✕
+    expect(svc.pillHidden()).toBe(true);
+    toast.show.mockClear();
+
+    // The reader shell calls resume() again on every mount (reader -> another
+    // route -> reader), and the server still answers 'running' for the same run.
+    svc.resume();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/current')
+      .flush(report({ status: 'running', batchesTotal: 2, batchesDone: 1 }));
+
+    // The pill must not come back on its own, and no second tick request
+    // should be outstanding alongside the first.
+    expect(toast.show).not.toHaveBeenCalled();
+    expect(svc.pillHidden()).toBe(true);
+    ctrl.expectNone('https://api.test/api/recommendations/runs/tick');
+
+    firstTick.flush(report({ status: 'completed', batchesTotal: 2, batchesDone: 2 }));
+    expect(svc.running()).toBe(false);
+  });
+
   it('resume does nothing for an already-completed run (no toast)', () => {
     svc.resume();
     ctrl
@@ -247,11 +275,11 @@ describe('RecommendationsService', () => {
     ctrl.verify(); // no tick request
     expect(svc.running()).toBe(false);
     expect(svc.failure()?.kind).toBe('http');
-    // The run's only in-reader surface is the progress hairline, gone the moment
-    // the run ends. Without this toast an outright request failure would be
+    // The run's only surface is the app-wide pill, and `finish()` has just
+    // taken it down. Without this toast an outright request failure would be
     // silent (#325).
     expect(toast.show).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'reader.forYouUnreachable' }),
+      expect.objectContaining({ message: 'reader.forYouUnreachable', width: 'fixed' }),
     );
   });
 

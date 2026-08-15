@@ -53,6 +53,18 @@ export class ForYouProgressComponent {
     }
   });
 
-  /** 0..100 fill for the bar. */
+  /** 0..100 fill for the bar's *visual* width only. Includes the anticipatory
+   *  creep (`recs.progress()` moves every 200ms ticker tick), which is exactly
+   *  why `aria-valuenow` must not be bound to this: `role="status"` is
+   *  implicitly `aria-atomic`, so a value that changes every tick would
+   *  re-announce the whole pill continuously. */
   protected readonly percent = computed(() => Math.round(this.recs.progress() * 100));
+
+  /** 0..100 for `aria-valuenow`: the discrete done/total fraction, which only
+   *  moves once per batch -- unlike `percent()` above, it does not read the
+   *  ticker-driven creep. Guarded against a zero total (no report yet). */
+  protected readonly batchPercent = computed(() => {
+    const { done, total } = this.count();
+    return total ? Math.round((done / total) * 100) : 0;
+  });
 }

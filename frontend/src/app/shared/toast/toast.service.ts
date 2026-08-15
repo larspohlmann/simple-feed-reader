@@ -44,6 +44,12 @@ export class ToastService {
       hasBackdrop: false,
       autoFocus: false,
       restoreFocus: false,
+      // The overlay's keyboard dispatcher routes every body-level Escape to
+      // the topmost overlay, and Escape is habitual elsewhere in this app
+      // (the search field's clear/close) -- so an ordinary keystroke aimed at
+      // something else would close a persistent toast (a minutes-long run
+      // readout) out from under the user. Only the ✕ may end one of those.
+      disableClose: this.durationOf(toast) === null,
       data: toast,
     });
     this.ref = ref;
