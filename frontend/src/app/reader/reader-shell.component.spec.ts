@@ -936,6 +936,21 @@ describe('ReaderShellComponent', () => {
         .expectOne((r) => r.url === 'https://api.test/api/entries/search')
         .flush({ entries: [], nextCursor: null });
     });
+
+    it('strips the trailing whole-word-mode space from the title shown to the user', () => {
+      const f = boot();
+      qp.next(convertToParamMap({ q: 'daft ' }));
+      f.detectChanges();
+      ctrl
+        .expectOne(
+          (r) => r.url === 'https://api.test/api/entries/search' && r.params.get('q') === 'daft ',
+        )
+        .flush({ entries: [{ ...entry, id: 1 }], nextCursor: null });
+      f.detectChanges();
+
+      expect(f.componentInstance.title()).not.toContain('daft "');
+      expect(f.componentInstance.title()).toContain('"daft"');
+    });
   });
 
   describe('selection query params (#408 follow-up)', () => {

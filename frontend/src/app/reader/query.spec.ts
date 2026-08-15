@@ -6,6 +6,7 @@ import {
   sameSelection,
   selectionFromParams,
   selectionQueryParams,
+  visibleSearchTerm,
 } from './query';
 
 const pm = (o: Record<string, string>) => convertToParamMap(o);
@@ -251,5 +252,17 @@ describe('sameSelection', () => {
         { kind: 'search', id: null, unread: false, term: 'react' },
       ),
     ).toBe(false);
+  });
+});
+
+describe('visibleSearchTerm', () => {
+  it('strips the trailing whole-word-mode space', () => {
+    expect(visibleSearchTerm('daft ')).toBe('daft');
+  });
+  it('leaves a term without a trailing space unchanged', () => {
+    expect(visibleSearchTerm('daft punk')).toBe('daft punk');
+  });
+  it('leaves inner spacing between terms untouched', () => {
+    expect(visibleSearchTerm('daft punk ')).toBe('daft punk');
   });
 });

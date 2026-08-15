@@ -365,6 +365,17 @@ describe('EntryListComponent', () => {
     },
   );
 
+  it('hides the whole-word-mode trailing space from the empty-state message (#408 follow-up)', () => {
+    const el = mount({
+      loading: false,
+      entries: [],
+      selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
+    }).nativeElement as HTMLElement;
+    const empty = el.querySelector('.empty')!;
+    expect(empty.textContent).toContain('Nothing matches "punk".');
+    expect(empty.textContent).not.toContain('punk "');
+  });
+
   it('keeps the existing empty state and its catalog link for a non-search selection', () => {
     const el = mount({
       loading: false,

@@ -34,6 +34,7 @@ import {
   sameSelection,
   selectionFromParams,
   selectionQueryParams,
+  visibleSearchTerm,
 } from './query';
 import { ListScrollReset } from './list-scroll-reset';
 import { entryParam } from './slug';
@@ -287,13 +288,14 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       // false regardless of what the new term will return. Counting them
       // would flash a stale, or even a false "no matches", number. Gated on
       // the same condition the spinner uses, so the two can never disagree.
-      if (this.searching()) return this.i18n.translate('reader.searchResults', { term: s.term });
+      const term = visibleSearchTerm(s.term ?? '');
+      if (this.searching()) return this.i18n.translate('reader.searchResults', { term });
       // The loaded count, not a COUNT(*) total — the list pages 50 at a time,
       // so it lies unless it is labelled: a trailing '+' when another page is
       // still out there, the exact number once there isn't.
       const count = this.entries.entries().length;
       const key = this.hasMore() ? 'reader.searchResultsCountMore' : 'reader.searchResultsCount';
-      return this.i18n.translate(key, { term: s.term, count });
+      return this.i18n.translate(key, { term, count });
     }
     return this.subs.subscriptions().find((x) => x.id === s.id)?.title ?? 'Feed';
   });

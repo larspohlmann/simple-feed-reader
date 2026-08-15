@@ -41,7 +41,13 @@ import { MagazineBlock } from '../magazine/magazine-block';
 import { planMagazine } from '../magazine/magazine-planner';
 import { ReadingLayout } from '../reading-layout.service';
 import { EntryDto, SubscriptionTagDto, TagDto } from '../models';
-import { Selection, canScopedRefresh, isSingleStreamView, sameSelection } from '../query';
+import {
+  Selection,
+  canScopedRefresh,
+  isSingleStreamView,
+  sameSelection,
+  visibleSearchTerm,
+} from '../query';
 import { atTop, pullTriggersRefresh, rubberBand } from '../reader-gestures';
 import { relativeTime } from '../format';
 import { LanguageService } from '../../core/language.service';
@@ -158,6 +164,11 @@ export class EntryListComponent implements OnDestroy {
    *  signal, #408 follow-up) would otherwise split into a trailing empty
    *  string — `.trim()` first so the last real word is the last entry. */
   readonly searchTerms = computed(() => this.selection().term?.trim().split(/\s+/) ?? []);
+
+  /** The search term for the empty-state message — the trailing space is the
+   *  server's whole-word-match signal, not part of what the user typed, so it
+   *  must not appear in text a human reads (#408 follow-up). */
+  readonly displayedSearchTerm = computed(() => visibleSearchTerm(this.selection().term ?? ''));
 
   /** A search never renders as a magazine — its rows carry marked terms, and a
    *  spread would scatter them across eight block templates. */

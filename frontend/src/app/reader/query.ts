@@ -44,6 +44,15 @@ export function sameSelection(a: Selection, b: Selection): boolean {
   return a.kind === b.kind && a.id === b.id && a.unread === b.unread && a.term === b.term;
 }
 
+/** `Selection.term` with the trailing space — the whole-word-match signal —
+ *  stripped for display. The space must reach the server (`EntryQuery.q`)
+ *  and must stay in `Selection.term` (it is part of the selection's
+ *  identity, see `sameSelection`); this is only for the strings a human
+ *  reads, e.g. the list title and the empty-state message. */
+export function visibleSearchTerm(term: string): string {
+  return term.trimEnd();
+}
+
 /** Whether the current selection supports a scoped refresh — the cross-feed
  *  saved views (favorites/kept) don't map to any feed scope, so they can't. */
 export function canScopedRefresh(s: Selection): boolean {

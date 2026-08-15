@@ -125,7 +125,7 @@
     }
     <p class="empty">
       @if (selection().kind === 'search') {
-        {{ 'reader.searchNoResults' | transloco: { term: selection().term } }}
+        {{ 'reader.searchNoResults' | transloco: { term: displayedSearchTerm() } }}
       } @else {
         {{ (selection().unread ? 'reader.allCaughtUp' : 'reader.nothingHere') | transloco }}
         @if (!catalogEmpty()) {
