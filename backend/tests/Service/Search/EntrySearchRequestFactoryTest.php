@@ -50,6 +50,45 @@ final class EntrySearchRequestFactoryTest extends TestCase
     {
         $request = Request::create('/api/entries/search?q=angular&tag=3');
 
+        try {
+            $this->factory->fromRequest($request, $this->buildUser());
+            self::fail('Expected a ValidationException.');
+        } catch (ValidationException $exception) {
+            self::assertStringContainsString('tag', $exception->errors['query'][0] ?? '');
+        }
+    }
+
+    public function testRejectsQSentAsAList(): void
+    {
+        $request = Request::create('/api/entries/search?q[]=x');
+
+        $this->expectException(ValidationException::class);
+
+        $this->factory->fromRequest($request, $this->buildUser());
+    }
+
+    public function testRejectsCursorSentAsAList(): void
+    {
+        $request = Request::create('/api/entries/search?q=angular&cursor[]=x');
+
+        $this->expectException(ValidationException::class);
+
+        $this->factory->fromRequest($request, $this->buildUser());
+    }
+
+    public function testRejectsLimitSentAsAList(): void
+    {
+        $request = Request::create('/api/entries/search?q=angular&limit[]=x');
+
+        $this->expectException(ValidationException::class);
+
+        $this->factory->fromRequest($request, $this->buildUser());
+    }
+
+    public function testRejectsANonNumericLimit(): void
+    {
+        $request = Request::create('/api/entries/search?q=angular&limit=abc');
+
         $this->expectException(ValidationException::class);
 
         $this->factory->fromRequest($request, $this->buildUser());

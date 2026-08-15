@@ -27,9 +27,9 @@ final readonly class EntrySearchRequestFactory
 
         return new EntrySearchQuery(
             userId: (int) $user->getId(),
-            terms: SearchTerms::fromInput($request->query->getString('q')),
-            cursor: $this->cursor($request->query->getString('cursor')),
-            limit: $request->query->getInt('limit', EntryQuery::DEFAULT_LIMIT),
+            terms: SearchTerms::fromInput($this->singleValue($request, 'q')),
+            cursor: $this->cursor($this->singleValue($request, 'cursor')),
+            limit: $this->limit($request),
         );
     }
 
@@ -48,6 +48,25 @@ final readonly class EntrySearchRequestFactory
         ]);
     }
 
+    /**
+     * Reads one query parameter as a plain string, rather than trusting
+     * Symfony's own getString()/getInt(): those throw an untyped exception
+     * on `foo[]=x`, which the API's exception listener has no branch for and
+     * answers with a 500. A shape the caller did not intend is invalid input,
+     * not a server failure, so it becomes a 422 here instead.
+     */
+    private function singleValue(Request $request, string $name): string
+    {
+        $value = $request->query->all()[$name] ?? '';
+        if (!\is_string($value)) {
+            throw new ValidationException([
+                $name => [\sprintf('Send one value for "%s", not a list.', $name)],
+            ]);
+        }
+
+        return $value;
+    }
+
     private function cursor(string $raw): ?EntryCursor
     {
         if ($raw === '') {
@@ -56,5 +75,19 @@ final readonly class EntrySearchRequestFactory
 
         return EntryCursor::decode($raw)
             ?? throw new ValidationException(['cursor' => ['The cursor is malformed.']]);
+    }
+
+    private function limit(Request $request): int
+    {
+        $raw = $this->singleValue($request, 'limit');
+        if ($raw === '') {
+            return EntryQuery::DEFAULT_LIMIT;
+        }
+
+        if (!ctype_digit($raw)) {
+            throw new ValidationException(['limit' => ['The limit must be a whole number.']]);
+        }
+
+        return (int) $raw;
     }
 }
