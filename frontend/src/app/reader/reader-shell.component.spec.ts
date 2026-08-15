@@ -671,6 +671,18 @@ describe('ReaderShellComponent', () => {
     expect(f.componentInstance.title()).toBe('For you');
   });
 
+  it('titles a search selection with the translated term', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ q: 'angular' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    expect(f.componentInstance.title()).toBe('Results for "angular"');
+  });
+
   it('reloads the for-you list when a run completes while it is open', () => {
     const f = boot();
     qp.next(convertToParamMap({ view: 'for-you' }));

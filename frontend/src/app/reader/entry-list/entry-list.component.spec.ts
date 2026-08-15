@@ -341,6 +341,29 @@ describe('EntryListComponent', () => {
     ).not.toBeNull();
   });
 
+  it('shows the search empty state with the term, and no catalog link', () => {
+    const el = mount({
+      loading: false,
+      entries: [],
+      selection: { kind: 'search', id: null, unread: false, term: 'angular' },
+    }).nativeElement as HTMLElement;
+    const empty = el.querySelector('.empty')!;
+    expect(empty.textContent).toContain('Nothing matches "angular".');
+    expect(empty.textContent).not.toContain('Nothing here yet.');
+    expect(empty.querySelector('a')).toBeNull();
+  });
+
+  it('keeps the existing empty state and its catalog link for a non-search selection', () => {
+    const el = mount({
+      loading: false,
+      entries: [],
+      selection: { kind: 'all', id: null, unread: false },
+    }).nativeElement as HTMLElement;
+    const empty = el.querySelector('.empty')!;
+    expect(empty.textContent).toContain('Nothing here yet.');
+    expect(empty.querySelector('a')).not.toBeNull();
+  });
+
   it('emits loadMore from the fallback button and markAllRead', () => {
     const f = mount({ hasMore: true });
     let more = 0,

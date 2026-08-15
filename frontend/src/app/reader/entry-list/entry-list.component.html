@@ -113,9 +113,13 @@
       <ng-container [ngTemplateOutlet]="block" />
     }
     <p class="empty">
-      {{ (selection().unread ? 'reader.allCaughtUp' : 'reader.nothingHere') | transloco }}
-      @if (!catalogEmpty()) {
-        <a routerLink="/discover">{{ 'discover.browseCatalog' | transloco }}</a>
+      @if (selection().kind === 'search') {
+        {{ 'reader.searchNoResults' | transloco: { term: selection().term } }}
+      } @else {
+        {{ (selection().unread ? 'reader.allCaughtUp' : 'reader.nothingHere') | transloco }}
+        @if (!catalogEmpty()) {
+          <a routerLink="/discover">{{ 'discover.browseCatalog' | transloco }}</a>
+        }
       }
     </p>
   </div>

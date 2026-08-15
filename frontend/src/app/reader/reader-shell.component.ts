@@ -251,6 +251,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     if (s.kind === 'for-you') return 'For you';
     if (s.kind === 'all') return 'All items';
     if (s.kind === 'tag') return this.selectedTag()?.name ?? 'Tag';
+    if (s.kind === 'search') return this.i18n.translate('reader.searchResults', { term: s.term });
     return this.subs.subscriptions().find((x) => x.id === s.id)?.title ?? 'Feed';
   });
 
