@@ -79,24 +79,16 @@ final readonly class EntryController
             return new JsonResponse($this->forYouFeed->page($user, $cursor, $limit));
         }
 
-        $decodedCursor = null;
-        if ($cursor !== null && $cursor !== '') {
-            $decodedCursor = EntryCursor::decode($cursor);
-            if ($decodedCursor === null) {
-                throw new ValidationException(['cursor' => ['The cursor is malformed.']]);
-            }
-        }
-
-        $rows = $this->entries->listForUser(new EntryQuery(
+        $query = new EntryQuery(
             userId: (int) $user->getId(),
             view: $view,
             subscriptionId: $subscription,
             tagId: $tag,
-            cursor: $decodedCursor,
+            cursor: EntryCursor::fromRequestValue($cursor),
             limit: $limit,
-        ));
+        );
 
-        return new JsonResponse(EntryPage::of($rows, $limit));
+        return new JsonResponse(EntryPage::of($this->entries->listForUser($query), $query->limit));
     }
 
     #[Route('/{id}', name: 'api_entries_get', methods: ['GET'], requirements: ['id' => '\d+'])]

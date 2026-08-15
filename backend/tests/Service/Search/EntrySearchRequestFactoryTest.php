@@ -129,16 +129,28 @@ final class EntrySearchRequestFactoryTest extends TestCase
         self::assertSame(7, $query->cursor->id);
     }
 
-    public function testPassesALimitAboveMaxLimitThroughUnclamped(): void
+    public function testClampsALimitAboveMaxLimitToTheCeiling(): void
     {
-        // Clamping to EntryQuery::MAX_LIMIT is EntryRepository::searchForUser's
-        // job. Duplicating the clamp here would put the same rule in two
-        // places, so the factory only proves it forwards the raw value.
+        // The query object clamps at construction, so `$query->limit` is the
+        // EFFECTIVE page size rather than the size the client wished for. That
+        // matters beyond the row count: `EntryPage::of()` decides whether a
+        // page was full by comparing against this number, so a raw 150 here
+        // would read a full page of 100 rows as short and end the list with no
+        // nextCursor.
         $request = Request::create('/api/entries/search?q=angular&limit=' . (EntryQuery::MAX_LIMIT + 50));
 
         $query = $this->factory->fromRequest($request, $this->buildUser());
 
-        self::assertSame(EntryQuery::MAX_LIMIT + 50, $query->limit);
+        self::assertSame(EntryQuery::MAX_LIMIT, $query->limit);
+    }
+
+    public function testRaisesALimitBelowOneToTheFloor(): void
+    {
+        $request = Request::create('/api/entries/search?q=angular&limit=0');
+
+        $query = $this->factory->fromRequest($request, $this->buildUser());
+
+        self::assertSame(1, $query->limit);
     }
 
     public function testRejectsAMissingQ(): void

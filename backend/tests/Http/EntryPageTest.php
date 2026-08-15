@@ -9,6 +9,7 @@ use App\Entity\Feed;
 use App\Http\EntryCursor;
 use App\Http\EntryPage;
 use App\Repository\EntryListRow;
+use App\Repository\EntryQuery;
 use PHPUnit\Framework\TestCase;
 
 final class EntryPageTest extends TestCase
@@ -47,8 +48,7 @@ final class EntryPageTest extends TestCase
 
     public function testASingleRowAtLimitOneOffersACursor(): void
     {
-        // The floor on the "full page" threshold is min(max(1, $limit), MAX):
-        // a $limit of 1 must still require at least 1 row before offering a
+        // A $limit of 1 must still require at least 1 row before offering a
         // cursor. A regression that raised the floor to 2 would make this one
         // row look like a short page and drop the cursor.
         $row = $this->rowForEntry(9, new \DateTimeImmutable('2026-07-12T00:00:00Z'));
@@ -59,6 +59,31 @@ final class EntryPageTest extends TestCase
         $cursor = EntryCursor::decode($page['nextCursor']);
         self::assertNotNull($cursor);
         self::assertSame(9, $cursor->id);
+    }
+
+    /**
+     * The clamp used to live in two places: the repository capped the rows it
+     * read, and EntryPage re-derived the same cap from the raw request value to
+     * decide whether the page was full. The two spellings had to stay
+     * character-identical. They no longer exist — the query object clamps once
+     * at construction and hands the effective size to both — and this states
+     * the failure that would return if a caller ever passed the raw value
+     * again.
+     */
+    public function testAFullPageFromARequestAboveTheCeilingStillOffersACursor(): void
+    {
+        $query = new EntryQuery(userId: 1, limit: EntryQuery::MAX_LIMIT + 50);
+        $rows = [];
+        for ($id = 1; $id <= EntryQuery::MAX_LIMIT; $id++) {
+            $rows[] = $this->rowForEntry($id, new \DateTimeImmutable('2026-07-12T00:00:00Z'));
+        }
+
+        $page = EntryPage::of($rows, $query->limit);
+
+        self::assertNotNull(
+            $page['nextCursor'],
+            'A page filled to MAX_LIMIT is full; passing the unclamped 150 here would read it as short.',
+        );
     }
 
     public function testAnEntryWithNoIdRaisesALogicException(): void

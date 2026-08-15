@@ -20,6 +20,12 @@ final readonly class EntryPage
 
     /**
      * @param list<EntryListRow> $rows
+     * @param int                $limit the EFFECTIVE page size the read used
+     *                                  (`EntryQuery::$limit` / `EntrySearchQuery::$limit`,
+     *                                  both clamped at construction) — never a raw
+     *                                  request value, or a page of MAX_LIMIT rows
+     *                                  answered to `?limit=500` would look short
+     *                                  and silently end the list
      *
      * @return array{entries: list<array<string, mixed>>, nextCursor: string|null}
      */
@@ -29,7 +35,7 @@ final readonly class EntryPage
         $nextCursor = null;
         // A full page implies there may be more; hand back a cursor from the
         // last row. (A short page cannot have a next page.)
-        if ($last !== null && \count($rows) >= min(max(1, $limit), EntryQuery::MAX_LIMIT)) {
+        if ($last !== null && \count($rows) >= $limit) {
             $entry = $last->entry;
             $entryId = $entry->getId() ?? throw new \LogicException(
                 'An entry loaded from the database must have an id.',

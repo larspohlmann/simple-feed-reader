@@ -117,12 +117,10 @@ class EntryRepository extends ServiceEntityRepository
      */
     public function listForUser(EntryQuery $query): array
     {
-        $limit = max(1, min($query->limit, EntryQuery::MAX_LIMIT));
-
         $qb = $this->rowQueryBuilder($query->userId)
             ->orderBy('e.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
-            ->setMaxResults($limit);
+            ->setMaxResults($query->limit);
 
         if ($query->subscriptionId !== null) {
             $qb->andWhere('s.id = :sid')->setParameter('sid', $query->subscriptionId);
@@ -155,12 +153,10 @@ class EntryRepository extends ServiceEntityRepository
      */
     public function searchForUser(EntrySearchQuery $query): array
     {
-        $limit = max(1, min($query->limit, EntryQuery::MAX_LIMIT));
-
         $qb = $this->rowQueryBuilder($query->userId)
             ->orderBy('e.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
-            ->setMaxResults($limit);
+            ->setMaxResults($query->limit);
 
         $this->applyTerms($qb, $query->terms);
         $this->applyCursor($qb, $query->cursor);

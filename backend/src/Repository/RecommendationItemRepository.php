@@ -34,7 +34,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
      */
     public function listForYou(int $userId, ?RecommendationCursor $cursor, int $limit): array
     {
-        $limit = max(1, min($limit, EntryQuery::MAX_LIMIT));
+        $limit = EntryQuery::clampLimit($limit);
 
         $qb = $this->rowQueryBuilder($userId)
             ->orderBy('r.id', 'DESC')

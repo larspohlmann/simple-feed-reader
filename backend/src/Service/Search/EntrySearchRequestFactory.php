@@ -28,7 +28,7 @@ final readonly class EntrySearchRequestFactory
         return new EntrySearchQuery(
             userId: (int) $user->getId(),
             terms: SearchTerms::fromInput($this->singleValue($request, 'q')),
-            cursor: $this->cursor($this->singleValue($request, 'cursor')),
+            cursor: EntryCursor::fromRequestValue($this->singleValue($request, 'cursor')),
             limit: $this->limit($request),
         );
     }
@@ -65,16 +65,6 @@ final readonly class EntrySearchRequestFactory
         }
 
         return $value;
-    }
-
-    private function cursor(string $raw): ?EntryCursor
-    {
-        if ($raw === '') {
-            return null;
-        }
-
-        return EntryCursor::decode($raw)
-            ?? throw new ValidationException(['cursor' => ['The cursor is malformed.']]);
     }
 
     private function limit(Request $request): int
