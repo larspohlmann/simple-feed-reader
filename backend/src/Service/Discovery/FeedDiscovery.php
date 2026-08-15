@@ -43,6 +43,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         private HtmlItemExtractor $extractor,
         private FeedLinkScanner $links,
         private WellKnownFeedProbe $wellKnownFeeds,
+        private BotChallengePage $botChallenge,
     ) {
     }
 
@@ -77,6 +78,13 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
             ));
         } catch (FeedParseException) {
             // Not a feed — treat it as a page that may point at one.
+        }
+
+        // Unless a gate answered for the site. Its page points at no feed and
+        // scrapes to nothing, so every step below would end in "no feed here" —
+        // which is the one thing this answer does not mean.
+        if ($this->botChallenge->wasReturned($body)) {
+            return FeedDiscoveryResult::scrapeFailed('blocked');
         }
 
         $candidates = $this->links->scan($body, $response->finalUrl);
