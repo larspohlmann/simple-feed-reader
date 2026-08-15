@@ -193,6 +193,41 @@ describe('ReaderHeaderComponent', () => {
       expect(el.querySelector('[aria-label="Search"]')).toBeNull();
     });
 
+    // #408 fix round 1: `searchOpen` used to be plain local state that only the
+    // narrow-gated trigger ever set, so growing past NARROW_QUERY mid-search left
+    // it stuck true — the mobile bar (and its own `app-search-field`, a second
+    // `/` listener) stayed mounted on a layout that no longer has a trigger for
+    // it, right alongside the sidebar's own instance.
+    it('closes the bar when the layout stops being narrow', () => {
+      const f = create();
+      const el = f.nativeElement as HTMLElement;
+
+      (el.querySelector('[aria-label="Search"]') as HTMLButtonElement).click();
+      f.detectChanges();
+      expect(f.componentInstance.searchOpen()).toBe(true);
+
+      layout.isNarrow.set(false);
+      f.detectChanges();
+
+      expect(f.componentInstance.searchOpen()).toBe(false);
+      expect(el.querySelector('app-search-field')).toBeNull();
+    });
+
+    it('does not reopen on its own when the layout narrows again', () => {
+      const f = create();
+      const el = f.nativeElement as HTMLElement;
+
+      (el.querySelector('[aria-label="Search"]') as HTMLButtonElement).click();
+      f.detectChanges();
+
+      layout.isNarrow.set(false);
+      f.detectChanges();
+      layout.isNarrow.set(true);
+      f.detectChanges();
+
+      expect(f.componentInstance.searchOpen()).toBe(false);
+    });
+
     it('covers the header with the field on click, hiding the brand and account', () => {
       const f = create();
       const el = f.nativeElement as HTMLElement;

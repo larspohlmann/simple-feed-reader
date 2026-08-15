@@ -80,7 +80,10 @@
 
 @if (selection().kind === 'search') {
   <!-- Announces the count, not the rows: a live region that spoke every row
-       would drown a screen-reader user in noise on every result set. -->
+       would drown a screen-reader user in noise on every result set. The
+       count tracks the loaded entries, so tapping Load more re-announces the
+       new total — a deliberate choice: it's a discrete, manual action, not a
+       stream the user needs shielding from. -->
   <p class="sr-only" aria-live="polite" role="status">
     {{ 'reader.searchCount' | transloco: { count: entries().length } }}
   </p>

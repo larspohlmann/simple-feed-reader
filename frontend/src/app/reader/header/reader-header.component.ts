@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   afterRenderEffect,
+  effect,
   inject,
   input,
   output,
@@ -76,8 +77,27 @@ export class ReaderHeaderComponent {
    *  otherwise a page load would yank focus onto the (not yet interacted with)
    *  search trigger before the user asked for anything. */
   private isFirstFocusRun = true;
+  /** Set just before the layout effect below force-closes the bar, so the
+   *  focus effect can tell "the window grew out from under the user" apart
+   *  from "the user dismissed the bar" — see the focus effect's own comment
+   *  for why that distinction matters. */
+  private closedByLayout = false;
 
   constructor() {
+    // `searchOpen` is local state the narrow-only trigger sets true; nothing
+    // else ever moves it. Growing past NARROW_QUERY mid-search (rotate, or
+    // resize a resizable window) leaves it stuck true, so `app-sidebar`'s own
+    // `!isNarrow()` gate mounts a second `app-search-field` — a second `/`
+    // listener, and the mobile bar still covering the header — on a layout
+    // that no longer has a trigger for it. This is the only place that opens
+    // the bar, so it is also the only place responsible for closing it when
+    // the layout it belongs to goes away.
+    effect(() => {
+      if (this.screen.isNarrow() || !this.searchOpen()) return;
+      this.closedByLayout = true;
+      this.searchOpen.set(false);
+    });
+
     // Move focus with the bar: opening it swaps the trigger out for the field
     // (the trigger unmounts), and closing it swaps the field back out for the
     // trigger, so leaving focus behind either way would drop it to <body> for
@@ -91,8 +111,21 @@ export class ReaderHeaderComponent {
         this.isFirstFocusRun = false;
         return;
       }
-      if (open) this.searchFieldHost()?.nativeElement.querySelector('input')?.focus();
-      else this.searchTrigger()?.nativeElement.focus();
+      if (open) {
+        this.searchFieldHost()?.nativeElement.querySelector('input')?.focus();
+        return;
+      }
+      // A user-initiated close (Escape, the close button, an outside click)
+      // always has a trigger button back on screen to receive focus. A
+      // layout-initiated close does not: the trigger is itself narrow-gated,
+      // so it is absent on exactly the wide layout this close lands on.
+      // Chasing focus onto a nonexistent element would only drop it to
+      // <body> anyway, so it is left wherever the resize/rotate found it.
+      if (this.closedByLayout) {
+        this.closedByLayout = false;
+        return;
+      }
+      this.searchTrigger()?.nativeElement.focus();
     });
   }
 

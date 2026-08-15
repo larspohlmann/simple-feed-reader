@@ -289,6 +289,10 @@ describe('ReaderShellComponent', () => {
       // away under a scroll would hide the text the results depend on.
       const f = boot();
       (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+      // The trigger that sets searchOpen true only ever renders on a narrow
+      // layout (#408): patch isNarrow alongside isWide so the header's own
+      // "close on layout growth" effect doesn't immediately undo the line below.
+      (f.componentInstance.screen as unknown as { isNarrow: () => boolean }).isNarrow = () => true;
       const header = f.debugElement.query(By.directive(ReaderHeaderComponent))
         .componentInstance as ReaderHeaderComponent;
 
@@ -307,6 +311,7 @@ describe('ReaderShellComponent', () => {
     it('returns to the resting state for the current offset once the search bar closes', () => {
       const f = boot();
       (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+      (f.componentInstance.screen as unknown as { isNarrow: () => boolean }).isNarrow = () => true;
       const header = f.debugElement.query(By.directive(ReaderHeaderComponent))
         .componentInstance as ReaderHeaderComponent;
 
@@ -334,6 +339,7 @@ describe('ReaderShellComponent', () => {
       // state in the same "resting state" resolution, wrongly overwriting it.
       const f = boot();
       (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+      (f.componentInstance.screen as unknown as { isNarrow: () => boolean }).isNarrow = () => true;
       const header = f.debugElement.query(By.directive(ReaderHeaderComponent))
         .componentInstance as ReaderHeaderComponent;
 
@@ -360,6 +366,7 @@ describe('ReaderShellComponent', () => {
       // reason enough to keep the header shown.
       const f = boot();
       (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+      (f.componentInstance.screen as unknown as { isNarrow: () => boolean }).isNarrow = () => true;
       const header = f.debugElement.query(By.directive(ReaderHeaderComponent))
         .componentInstance as ReaderHeaderComponent;
 
