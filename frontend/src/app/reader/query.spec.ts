@@ -282,6 +282,18 @@ describe('isWholeWordTerm (#408 follow-up)', () => {
   it('is false for an empty term', () => {
     expect(isWholeWordTerm('')).toBe(false);
   });
+  // The backend's class is [\s\p{Z}] (SearchTerms::WHITESPACE) because PHP's
+  // \s is ASCII-only under /u; \p{Z} alone drops these ASCII control
+  // whitespace characters, which is exactly what round 1 got wrong.
+  it('is true for a term ending in a tab', () => {
+    expect(isWholeWordTerm('punk\t')).toBe(true);
+  });
+  it('is true for a term ending in a newline', () => {
+    expect(isWholeWordTerm('punk\n')).toBe(true);
+  });
+  it('is true for a term ending in a carriage return', () => {
+    expect(isWholeWordTerm('punk\r')).toBe(true);
+  });
 });
 
 describe('normalizeSearchInput and a trailing NBSP (#408 follow-up)', () => {

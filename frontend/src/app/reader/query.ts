@@ -16,19 +16,27 @@ export interface Selection {
  *  here — it is a half-typed word, so the URL simply carries no search yet. */
 export const MIN_SEARCH_LENGTH = 3;
 
-/** Whether a search term ends in a Unicode separator, which the backend
+/** Whether a search term ends in whitespace, which the backend
  *  (`SearchTerms::fromInput`) reads as "match whole words only" rather than
  *  substrings. Exported — not inlined at each call site — because this
  *  exact question already has three answers on this branch that disagreed
  *  (a comparator, a parameter vocabulary, a header-visibility rule, each
  *  duplicated and drifted, #408). `normalizeSearchInput` below and the
  *  whole-word badge in `entry-list.component.ts` both call this one
- *  function so a fourth divergence can't happen. `\p{Z}` (Unicode
- *  "separator" category, `/u` flag) matches the backend's character class —
- *  plain `\s` would miss/include a different set of code points on a term
- *  the server disagrees with. */
+ *  function so a fourth divergence can't happen.
+ *
+ *  The class is `[\s\p{Z}]`, matching the backend's `SearchTerms::WHITESPACE`
+ *  exactly — neither half is redundant. PHP's `\s` under `/u` is ASCII-only,
+ *  so the backend adds `\p{Z}` to also catch a Unicode separator (e.g.
+ *  NBSP). JavaScript's `\s` already covers every `\p{Z}` code point, but it
+ *  additionally matches ASCII control whitespace — tab, newline, vertical
+ *  tab, form feed, carriage return — that `\p{Z}` alone does not. Using only
+ *  `\p{Z}` here (round 1's mistake) silently dropped those characters: a
+ *  term pasted or autocompleted with a trailing tab or newline stopped
+ *  triggering whole-word mode even though the backend still applies it. The
+ *  union is the one set both languages agree on. */
 export function isWholeWordTerm(term: string): boolean {
-  return /\p{Z}$/u.test(term);
+  return /[\s\p{Z}]$/u.test(term);
 }
 
 /** Strips leading whitespace and collapses inner runs to a single space, but
