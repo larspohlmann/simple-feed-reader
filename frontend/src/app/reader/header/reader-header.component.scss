@@ -131,6 +131,42 @@ header {
   gap: var(--space-3);
 }
 
+.search-btn {
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: var(--space-1);
+}
+
+/* Replaces .left and .right for the span of an open search: the field wants
+   the whole bar's width, not just the middle spacer the brand and account
+   controls otherwise leave it. */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.search-bar app-search-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-close {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: var(--space-1);
+}
+
 .account > button {
   display: inline-flex;
   align-items: center;

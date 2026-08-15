@@ -282,6 +282,49 @@ describe('ReaderShellComponent', () => {
       // Back to the resting state the scroll offset implies — minimized.
       expect(f.componentInstance.headerHidden()).toBe(true);
     });
+
+    it('stays shown while the header reports its own search bar open, even across a scroll', () => {
+      // The bar holds the live term and, on a phone, the keyboard — sliding it
+      // away under a scroll would hide the text the results depend on.
+      const f = boot();
+      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+      const header = f.debugElement.query(By.directive(ReaderHeaderComponent))
+        .componentInstance as ReaderHeaderComponent;
+
+      header.searchOpen.set(true);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(false);
+
+      const rows = listScroller(f);
+      rows.scrollTo(100);
+      rows.scrollTo(500);
+      f.detectChanges();
+
+      expect(f.componentInstance.headerHidden()).toBe(false);
+    });
+
+    it('returns to the resting state for the current offset once the search bar closes', () => {
+      const f = boot();
+      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+      const header = f.debugElement.query(By.directive(ReaderHeaderComponent))
+        .componentInstance as ReaderHeaderComponent;
+
+      // Scroll down first so the resting state the bar returns to is minimized,
+      // not just whatever the header happened to hold before opening.
+      const rows = listScroller(f);
+      rows.scrollTo(100);
+      rows.scrollTo(500);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(true);
+
+      header.searchOpen.set(true);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(false);
+
+      header.searchOpen.set(false);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(true);
+    });
   });
 
   /** Drive the entry list's real scroll container: assign an offset and fire the

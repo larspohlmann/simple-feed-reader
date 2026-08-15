@@ -36,6 +36,11 @@ export class SearchFieldComponent {
   // Semantic "settled search term" output, not a DOM element's search event.
   // eslint-disable-next-line @angular-eslint/no-output-native
   readonly search = output<string>();
+  /** Escape pressed while the field was already empty — the second step of the
+   *  two-step Escape contract (first clears, second leaves). The field knows
+   *  nothing about what "leaves" means for its caller; it only reports that
+   *  there was nothing left to clear. */
+  readonly escapedWhileEmpty = output<void>();
 
   private readonly minLength = MIN_SEARCH_LENGTH;
   /** What the field currently shows — updates on every keystroke, unlike the
@@ -109,7 +114,17 @@ export class SearchFieldComponent {
   }
 
   onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape' && this.text() !== '') this.clear();
+    if (event.key !== 'Escape') return;
+    // Stop the key here: a caller wrapping this field in a dismiss-on-Escape
+    // popover (the mobile header bar) must not see the first Escape too — that
+    // would skip straight to closing instead of clearing first.
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.text() !== '') {
+      this.clear();
+      return;
+    }
+    this.escapedWhileEmpty.emit();
   }
 
   private emitSettled(raw: string): void {

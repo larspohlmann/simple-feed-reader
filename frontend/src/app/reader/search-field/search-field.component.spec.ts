@@ -175,6 +175,21 @@ describe('SearchFieldComponent', () => {
     expect(emitted).toEqual(['']);
   }));
 
+  it('emits escapedWhileEmpty on Escape when the field is already empty, without clearing again', () => {
+    const fixture = mount();
+    const emitted: string[] = [];
+    fixture.componentInstance.search.subscribe((term) => emitted.push(term));
+    const escapedWhileEmpty = jest.fn();
+    fixture.componentInstance.escapedWhileEmpty.subscribe(escapedWhileEmpty);
+
+    const input: HTMLInputElement = fixture.debugElement.query(By.css('input')).nativeElement;
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    fixture.detectChanges();
+
+    expect(escapedWhileEmpty).toHaveBeenCalledTimes(1);
+    expect(emitted).toEqual([]);
+  });
+
   it('carries role="search" on its wrapper', () => {
     const fixture = mount();
     const wrapper = fixture.debugElement.query(By.css('[role="search"]'));

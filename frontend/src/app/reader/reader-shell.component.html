@@ -6,6 +6,7 @@
   [class.hidden]="headerHidden()"
   (toggleSidebar)="setSidebarOpen(!sidebarOpen())"
   (scrollTop)="onScrollListTop()"
+  (search)="onSearch($event)"
 />
 <!-- Out of flow, dropped into the seam just under the (absolute, opaque)
      header: an in-flow hairline would paint at y=0 behind the header and add

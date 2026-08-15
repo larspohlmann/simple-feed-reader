@@ -227,6 +227,11 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly hdr = viewChild('hdr', { read: ElementRef });
   /** Only one of the two template branches renders a list at a time. */
   private readonly list = viewChild(EntryListComponent);
+  private readonly header = viewChild(ReaderHeaderComponent);
+  /** Whether the mobile header's own search bar covers it — read from the
+   *  child rather than owned here, since the bar's open/closed state (trigger,
+   *  close button, Escape, outside click) is entirely the header's business. */
+  private readonly headerSearchOpen = computed(() => this.header()?.searchOpen() ?? false);
   private lastListScrollTop = 0;
   private resizeObs?: ResizeObserver;
   /** Mobile drawer state; the sidebar is a fixed overlay below 720px. */
@@ -398,6 +403,17 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     effect(() => {
       if (this.screen.isWide()) untracked(() => this.headerHidden.set(false));
     });
+
+    // Force-show the header while its own mobile search bar is open, and
+    // resolve back to the resting state on close — the same shape
+    // setSidebarOpen() applies for the drawer, beside which this belongs. The
+    // header owns when its bar opens and closes (trigger, close button,
+    // Escape, outside click), so this reacts to that state rather than being
+    // called from it.
+    effect(() => {
+      const open = this.headerSearchOpen();
+      untracked(() => this.headerHidden.set(open ? false : this.restingHeaderHidden()));
+    });
   }
 
   ngOnInit(): void {
@@ -504,6 +520,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     // here. The offset still advances above, so the next real scroll sees no
     // phantom jump once the drawer closes.
     if (this.sidebarOpen()) return;
+    // Same reasoning for the mobile search bar: it holds the live term and the
+    // phone's keyboard, so a scroll sliding it away would hide the text the
+    // results depend on.
+    if (this.headerSearchOpen()) return;
     this.headerHidden.set(
       nextHeaderHidden(this.headerHidden(), previous, top, this.screen.isWide()),
     );
