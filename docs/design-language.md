@@ -210,8 +210,7 @@ any one component's stylesheet.
 All live in `frontend/src/app/shared/` and are standalone, `OnPush`, and use
 signal `input()`s. `app-entry-meta` and `app-entry-actions` are the exceptions:
 they live in `frontend/src/app/reader/` instead, because they know `EntryDto`
-and the reader's i18n keys, and — like the rest of `reader/` — do not set
-`OnPush`.
+and the reader's i18n keys, and neither sets `OnPush`.
 
 ### `<app-icon>`
 
@@ -1169,7 +1168,7 @@ comment at the declaration so a future reader does not migrate it to a
 `--space-*` token anyway.
 
 **`entry-compact` hangs its actions on the kicker line, not on an
-`app-entry-meta` row.** A source group shows up to five compact rows; a meta
+`app-entry-meta` row.** A source group shows up to four compact rows; a meta
 row each would add a full line per item and inflate the group, while the
 right-hand end of the kicker line is already empty — it only holds the time.
 So compact projects `app-entry-actions` into the kicker line and leaves its
