@@ -164,22 +164,21 @@ app-reader-header.hidden {
   min-height: 0;
 }
 
-/* The For You run/stop button lives in the list header (#325). The action is a
-   right-aligned stack: the button on top, and — while a run is in flight — the
-   progress line beneath it. The parent `.tools.has-actions` anchors this stack
-   to the header's top edge, so the caption grows downward without moving the
-   button. */
+/* The header's For-You slot: one row of run controls, right-aligned with the
+   header's other tools. Idle it holds the run button; during a run it holds
+   Stop, preceded by the offer to raise the pill again if the user closed it.
+   The run's count, ETA and bar are not here — they are in the app-wide pill, so
+   they survive the user leaving the reader (#398). */
 .for-you-action {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-1);
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
 }
 
 /* Below the small breakpoint the button drops its label and stands on the icon
    alone — the same rule the header's other tools follow, with the aria-label
-   keeping it named. The progress block hides itself at the same breakpoint (see
-   `for-you-progress.component.scss`). */
+   keeping it named. */
 @media (width <= bp.$bp-sm) {
   .for-you-run .label {
     display: none;

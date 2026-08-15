@@ -55,7 +55,6 @@ import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { CatalogStore } from '../discover/catalog.store';
 import { OnboardingSkip } from '../discover/onboarding-skip';
 import { ProgressHairlineComponent } from '../shared/progress-hairline/progress-hairline.component';
-import { ForYouProgressComponent } from './for-you-progress/for-you-progress.component';
 import { IconComponent } from '../shared/icon/icon.component';
 import { ButtonComponent } from '../shared/button/button.component';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -69,7 +68,6 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
     ReaderViewComponent,
     DrawerSwipeDirective,
     ProgressHairlineComponent,
-    ForYouProgressComponent,
     IconComponent,
     ButtonComponent,
     RouterLink,

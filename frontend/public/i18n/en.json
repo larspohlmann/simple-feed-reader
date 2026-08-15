@@ -550,6 +550,7 @@
     "forYouResume": "Resume unfinished run",
     "forYouStartOver": "Start a new run",
     "forYouStop": "Stop",
+    "forYouShowProgress": "Show progress",
     "forYouStopping": "Stopping…",
     "forYouProgress": "Ranking your feeds — {{done}} of {{total}}",
     "forYouUnfinishedTitle": "You have an unfinished recommendation run",

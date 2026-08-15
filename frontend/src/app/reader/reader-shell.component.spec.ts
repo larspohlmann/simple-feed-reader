@@ -33,6 +33,7 @@ import { LayoutService } from './layout.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { RecommendationsService } from './recommendations.service';
 import { AiAvailabilityService } from '../core/ai-availability.service';
+import { ToastService } from '../shared/toast/toast.service';
 
 describe('ReaderShellComponent', () => {
   let ctrl: HttpTestingController;
@@ -1174,7 +1175,8 @@ describe('ReaderShellComponent', () => {
     ) as HTMLButtonElement;
     expect(button).not.toBeNull();
     expect(button.textContent).toContain('Get recommendations');
-    // No progress caption while idle — it belongs to a live run only.
+    // The header never carries the progress caption: it is the pill's, on
+    // every route, running or not (#398).
     expect(f.nativeElement.querySelector('.for-you-progress')).toBeNull();
 
     // The click only opens the confirmation: nothing is requested until it is
@@ -1261,9 +1263,33 @@ describe('ReaderShellComponent', () => {
     const buttons = [...f.nativeElement.querySelectorAll('.for-you-run')];
     expect(buttons.length).toBe(1);
     expect(buttons[0].querySelector('.label')!.textContent!.trim()).toBe('Stop');
-    const progress = f.nativeElement.querySelector('.for-you-progress') as HTMLElement;
-    expect(progress.textContent).toContain('1 of 3');
+    // The count, the ETA and the bar live in the app-wide pill now, so a live
+    // run leaves nothing but the Stop button behind in the header (#398).
+    expect(f.nativeElement.querySelector('.for-you-progress')).toBeNull();
     expect(f.nativeElement.querySelector('.list-header [role="alert"]')).toBeNull();
+  });
+
+  it('offers a way back to the pill only once the pill has been closed', () => {
+    const f = bootForYou();
+    const recs = TestBed.inject(RecommendationsService);
+    const toast = TestBed.inject(ToastService);
+    recs.running.set(true);
+    recs.report.set(runningReport);
+    toast.show({ message: 'stand-in for the run pill' });
+    f.detectChanges();
+
+    // Nothing to restore while it is on screen.
+    expect(f.nativeElement.querySelector('.for-you-show')).toBeNull();
+
+    toast.dismiss();
+    f.detectChanges();
+
+    const restore = f.nativeElement.querySelector('.for-you-show button') as HTMLButtonElement;
+    expect(restore).not.toBeNull();
+
+    const raise = jest.spyOn(recs, 'showRunPill');
+    restore.click();
+    expect(raise).toHaveBeenCalledTimes(1);
   });
 
   it('stops the run when the stop button is clicked', () => {

@@ -193,6 +193,21 @@
   @if (selection().kind === 'for-you' && ai.ready()) {
     <div class="for-you-action">
       @if (recs.running()) {
+        @if (recs.pillHidden()) {
+          <!-- The run's pill is app-wide, so the user can close it from
+               anywhere. This is the way back to it while the run is still
+               going, and it is offered only when the pill is actually gone —
+               the Stop button beside it is untouched (#398). -->
+          <app-button
+            variant="ghost"
+            size="sm"
+            class="for-you-show"
+            [ariaLabel]="'reader.forYouShowProgress' | transloco"
+            (click)="recs.showRunPill()"
+          >
+            <app-icon name="visibility" size="sm" />
+          </app-button>
+        }
         <app-button
           variant="danger"
           size="sm"
@@ -208,11 +223,6 @@
             (recs.stopping() ? 'reader.forYouStopping' : 'reader.forYouStop') | transloco
           }}</span>
         </app-button>
-        <!-- The run's live count, ETA and progress bar, back in the header under
-             the button. It is desktop-only and the button is anchored to the
-             header's top edge, so this block grows downward without shifting the
-             button (#325, #336). -->
-        <app-for-you-progress />
       } @else {
         <app-button
           variant="primary"
