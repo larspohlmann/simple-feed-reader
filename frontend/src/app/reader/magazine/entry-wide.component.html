@@ -23,6 +23,12 @@
   <div class="body">
     <app-entry-kicker-line [entry]="entry()" />
     <p class="title">{{ entry().title }}</p>
-    <app-source-tags [tags]="tags()" />
+    <app-entry-meta
+      [entry]="entry()"
+      [tags]="tags()"
+      (favorite)="favorite.emit($event)"
+      (keep)="keep.emit($event)"
+      (read)="read.emit($event)"
+    />
   </div>
 </article>

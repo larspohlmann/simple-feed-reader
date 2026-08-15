@@ -187,6 +187,9 @@
               <app-entry-wide
                 [entry]="entryOf(b)"
                 [tags]="tagsFor(entryOf(b).subscriptionId)"
+                (favorite)="favorite.emit($event)"
+                (keep)="keep.emit($event)"
+                (read)="read.emit($event)"
                 (open)="open.emit($event)"
               />
             }
@@ -194,6 +197,9 @@
               <app-entry-quote
                 [entry]="entryOf(b)"
                 [tags]="tagsFor(entryOf(b).subscriptionId)"
+                (favorite)="favorite.emit($event)"
+                (keep)="keep.emit($event)"
+                (read)="read.emit($event)"
                 (open)="open.emit($event)"
               />
             }
@@ -209,6 +215,9 @@
               <app-entry-kicker
                 [entry]="entryOf(b)"
                 [tags]="tagsFor(entryOf(b).subscriptionId)"
+                (favorite)="favorite.emit($event)"
+                (keep)="keep.emit($event)"
+                (read)="read.emit($event)"
                 (open)="open.emit($event)"
               />
             }
