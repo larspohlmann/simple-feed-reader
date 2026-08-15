@@ -76,6 +76,11 @@ describe('selectionFromParams', () => {
 });
 
 describe('selectionQueryParams', () => {
+  it('pins the selection vocabulary — this must not shrink silently', () => {
+    expect(Object.keys(selectionQueryParams({})).sort()).toEqual(
+      ['entry', 'q', 'subscription', 'tag', 'view'].sort(),
+    );
+  });
   it('nulls every selection parameter the caller did not set', () => {
     expect(selectionQueryParams({})).toEqual({
       view: null,

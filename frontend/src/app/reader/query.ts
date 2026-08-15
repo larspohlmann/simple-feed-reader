@@ -50,8 +50,27 @@ export function isSingleStreamView(s: Selection): boolean {
  *  null silently wins and strands the user in search results (#408). */
 const SELECTION_PARAM_NAMES = ['view', 'tag', 'subscription', 'entry', 'q'] as const;
 
+/** The vocabulary as a type. `selectionParam` below accepts only these
+ *  literals, so `selectionFromParams` cannot read a URL parameter into the
+ *  selection without that name already being part of `SELECTION_PARAM_NAMES`
+ *  — add a sixth selection parameter, wire it into `Selection` and a
+ *  template, but forget it here, and the `selectionParam(p, 'foo')` call
+ *  fails to compile instead of silently reading `null` forever (the #408
+ *  failure mode this file exists to close). `unread` deliberately reads
+ *  through plain `ParamMap.get` instead: it refines the current list, it
+ *  does not choose which list is shown, so it is not part of this
+ *  vocabulary and a navigation must not clear it. */
+type SelectionParamName = (typeof SELECTION_PARAM_NAMES)[number];
+
+/** The only way `selectionFromParams` may pull a selection-identity value
+ *  out of the URL. Its parameter type is `SelectionParamName`, so this is
+ *  where the compile error in the comment above actually fires. */
+function selectionParam(p: ParamMap, name: SelectionParamName): string | null {
+  return p.get(name);
+}
+
 type SelectionParamValue = string | number | null;
-type SelectionParams = Record<(typeof SELECTION_PARAM_NAMES)[number], SelectionParamValue>;
+type SelectionParams = Record<SelectionParamName, SelectionParamValue>;
 
 /** Build a `[queryParams]` object that selects exactly one list: the given
  *  params are set, every other name in the selection vocabulary is nulled.
@@ -68,14 +87,16 @@ export function selectionFromParams(p: ParamMap): {
   selection: Selection;
   entryId: number | null;
 } {
-  const view = p.get('view');
-  const tag = posInt(p.get('tag'));
-  const subscription = posInt(p.get('subscription'));
+  const view = selectionParam(p, 'view');
+  const tag = posInt(selectionParam(p, 'tag'));
+  const subscription = posInt(selectionParam(p, 'subscription'));
+  // unread refines the current list rather than choosing it, so it is not
+  // part of the selection vocabulary above and is read directly.
   const unread = p.get('unread') !== '0';
   // The entry param is an id or an id-prefixed slug ("514-some-title").
-  const entryId = entryIdFromParam(p.get('entry'));
+  const entryId = entryIdFromParam(selectionParam(p, 'entry'));
 
-  const term = (p.get('q') ?? '').trim();
+  const term = (selectionParam(p, 'q') ?? '').trim();
   if (term.length >= MIN_SEARCH_LENGTH) {
     // A search is its own view over every subscription, so a tag or feed
     // parameter left in the URL by hand is ignored rather than combined.
