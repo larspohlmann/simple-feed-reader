@@ -3,6 +3,7 @@ import { Component, computed, effect, inject, input, output, signal } from '@ang
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
+import { MarkedTextComponent } from '../../shared/marked-text/marked-text.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
 import { LanguageService } from '../../core/language.service';
 import { EntryDto, SubscriptionTagDto } from '../models';
@@ -11,7 +12,13 @@ import { relativeTime } from '../format';
 
 @Component({
   selector: 'app-entry-row',
-  imports: [IconComponent, FaviconComponent, SourceTagsComponent, TranslocoPipe],
+  imports: [
+    IconComponent,
+    FaviconComponent,
+    MarkedTextComponent,
+    SourceTagsComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './entry-row.component.html',
   styleUrl: './entry-row.component.scss',
 })
@@ -19,6 +26,9 @@ export class EntryRowComponent {
   readonly entry = input.required<EntryDto>();
   readonly imageSide = input<'left' | 'right'>('right');
   readonly tags = input<SubscriptionTagDto[]>([]);
+  /** The current search's words, marked inside the title and the snippet.
+   *  Empty outside a search, where nothing is marked. */
+  readonly terms = input<string[]>([]);
   readonly favorite = output<EntryDto>();
   readonly keep = output<EntryDto>();
   readonly read = output<EntryDto>();

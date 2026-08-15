@@ -153,6 +153,16 @@ export class EntryListComponent implements OnDestroy {
   /** The refresh button + pull gesture are hidden in the cross-feed saved views. */
   readonly canRefresh = computed(() => canScopedRefresh(this.selection()));
 
+  /** The current search's words, passed down to every row for marking. Empty
+   *  outside a search. */
+  readonly searchTerms = computed(() => this.selection().term?.split(/\s+/) ?? []);
+
+  /** A search never renders as a magazine — its rows carry marked terms, and a
+   *  spread would scatter them across eight block templates. */
+  readonly effectiveLayout = computed(() =>
+    this.selection().kind === 'search' ? 'list' : this.layout(),
+  );
+
   private readonly language = inject(LanguageService);
   /** A localised "last refreshed 5 min ago" label for a single-feed selection
    *  or the for-you list, or null when it doesn't apply (neither, or never

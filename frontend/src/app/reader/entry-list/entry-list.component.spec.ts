@@ -558,6 +558,25 @@ describe('EntryListComponent', () => {
     expect(el.querySelector('app-source-group')).toBeNull();
   });
 
+  describe('search forces the list layout (#408)', () => {
+    it('renders rows, not magazine blocks, for a search selection even when layout is magazine', () => {
+      const el = mount({
+        layout: 'magazine',
+        selection: { kind: 'search', id: null, unread: false, term: 'fox' },
+      }).nativeElement as HTMLElement;
+      expect(el.querySelectorAll('app-entry-row').length).toBe(2);
+      expect(el.querySelector('.rows.magazine')).toBeNull();
+    });
+
+    it('still renders magazine blocks for a non-search selection under the magazine layout', () => {
+      const el = mount({
+        layout: 'magazine',
+        selection: { kind: 'all', id: null, unread: true },
+      }).nativeElement as HTMLElement;
+      expect(el.querySelector('.rows.magazine')).not.toBeNull();
+    });
+  });
+
   it('does not collapse the list header by default', () => {
     const el = mount().nativeElement as HTMLElement;
     expect(el.querySelector('.list-header')!.classList).not.toContain('collapsed');
