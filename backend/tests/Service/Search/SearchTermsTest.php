@@ -134,4 +134,25 @@ final class SearchTermsTest extends TestCase
             self::assertSame(['Search for at least 3 characters.'], $exception->errors['q'] ?? null);
         }
     }
+
+    // A trailing no-break space (U+00A0) — left behind by a paste or an
+    // autocorrect — must be read exactly like a trailing plain space: the
+    // frontend's own trailing-space check runs on JavaScript's `\s`, which
+    // already treats an NBSP as whitespace, so the server disagreeing would
+    // silently strand a search (#408 follow-up).
+    public function testATrailingNoBreakSpaceSwitchesToWholeWordMode(): void
+    {
+        $terms = SearchTerms::fromInput("punk\u{00A0}");
+
+        self::assertTrue($terms->isWholeWord);
+        self::assertSame(['punk'], $terms->terms);
+    }
+
+    public function testAnInnerNoBreakSpaceSplitsTermsLikeAnyOtherWhitespace(): void
+    {
+        $terms = SearchTerms::fromInput("daft\u{00A0}punk");
+
+        self::assertSame(['daft', 'punk'], $terms->terms);
+        self::assertFalse($terms->isWholeWord);
+    }
 }

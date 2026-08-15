@@ -2,6 +2,7 @@ import { convertToParamMap } from '@angular/router';
 import {
   canScopedRefresh,
   markReadTarget,
+  normalizeSearchInput,
   queryFromSelection,
   sameSelection,
   selectionFromParams,
@@ -264,5 +265,19 @@ describe('visibleSearchTerm', () => {
   });
   it('leaves inner spacing between terms untouched', () => {
     expect(visibleSearchTerm('daft punk ')).toBe('daft punk');
+  });
+});
+
+describe('normalizeSearchInput and a trailing NBSP (#408 follow-up)', () => {
+  // A pasted or autocorrected string can end in a no-break space (U+00A0)
+  // rather than a plain one. JS's `\s` already treats it as whitespace, so
+  // it must drive the same whole-word signal a plain trailing space does —
+  // agreeing with the backend's `SearchTerms::WHITESPACE`, which now also
+  // matches it via `\p{Z}`.
+  it('reads a trailing NBSP as the whole-word signal, normalized to a plain space', () => {
+    expect(normalizeSearchInput('daft punk ')).toBe('daft punk ');
+  });
+  it('collapses an inner NBSP the same as a plain space', () => {
+    expect(normalizeSearchInput('daft punk')).toBe('daft punk');
   });
 });

@@ -21,6 +21,21 @@ final readonly class SearchTerms
     public const int MAX_INPUT_LENGTH = 100;
     public const int MAX_TERMS = 6;
 
+    /**
+     * What counts as whitespace for the mode check, the trim and the term
+     * split alike — one definition, used everywhere in this class. Plain
+     * `\s` is ASCII-only, but the frontend's own trailing-space detection
+     * (`normalizeSearchInput` in `query.ts`) runs on JavaScript's `\s`,
+     * which also matches a no-break space and the other Unicode "space
+     * separator" characters a paste or an autocorrect can leave behind.
+     * `\p{Z}` (the Unicode separator category) closes that gap: without it,
+     * a trailing no-break space reads as whole-word on the client but as
+     * substring here, and — because neither `trim()` nor a plain `\s+`
+     * split would remove or split on it — the character itself survives
+     * into the last term and the search silently matches nothing.
+     */
+    private const string WHITESPACE = '[\s\p{Z}]';
+
     /** @param list<string> $terms */
     private function __construct(public array $terms, public bool $isWholeWord)
     {
@@ -33,15 +48,22 @@ final readonly class SearchTerms
         // one flag for the whole query, not a per-term one — a per-term rule
         // would make every term but the last "whole word" merely by being
         // followed by a space while typing, which is not what the user meant.
-        $isWholeWord = (bool) preg_match('/\s\z/', $input);
+        $isWholeWord = (bool) preg_match('/' . self::WHITESPACE . '\z/u', $input);
 
-        $trimmed = trim($input);
+        $trimmed = self::stripSurroundingWhitespace($input);
         self::assertLengthIsUsable($trimmed);
 
         /** @var list<string> $terms */
-        $terms = preg_split('/\s+/', $trimmed) ?: [];
+        $terms = preg_split('/' . self::WHITESPACE . '+/u', $trimmed) ?: [];
 
         return new self(\array_slice($terms, 0, self::MAX_TERMS), $isWholeWord);
+    }
+
+    private static function stripSurroundingWhitespace(string $input): string
+    {
+        $pattern = '/\A' . self::WHITESPACE . '+|' . self::WHITESPACE . '+\z/u';
+
+        return preg_replace($pattern, '', $input) ?? $input;
     }
 
     private static function assertLengthIsUsable(string $trimmed): void
