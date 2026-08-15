@@ -232,31 +232,15 @@ describe('SearchFieldComponent', () => {
     });
   });
 
-  describe('the clear button chrome (#408 follow-up)', () => {
-    // jsdom applies a real UA default stylesheet to <button> (background-color:
-    // buttonface, a 2px outset border) — proven by probing a bare <button> in
-    // this same environment. What jsdom's test runner does NOT do is compile or
-    // inject this component's `styleUrl` (jest-preset-angular does not run the
-    // Angular build pipeline that would turn search-field.component.scss into a
-    // loaded stylesheet), so `getComputedStyle` on the mounted button here
-    // still reports the UA default regardless of what the .scss says — that
-    // was checked directly and would make an assertion on computed style a
-    // false pass either way. What IS honestly provable in this environment is
-    // the wiring: the reset lives on the `.clear` class, and this is the class
-    // the template actually applies to the button that needs it.
-    it('renders the clear control as a button carrying the .clear class the chrome reset targets', () => {
-      const fixture = mount();
-      typeInto(fixture, 'cats');
-
-      const clearButton: HTMLButtonElement = fixture.debugElement.query(
-        By.css('.clear'),
-      ).nativeElement;
-
-      expect(clearButton.tagName).toBe('BUTTON');
-      expect(clearButton.getAttribute('type')).toBe('button');
-      expect(clearButton.classList).toContain('clear');
-    });
-  });
+  // No test for the clear button's resting contrast fix (#408 follow-up): jsdom
+  // never compiles or injects this component's styleUrl (jest-preset-angular
+  // does not run the Angular build pipeline that would turn
+  // search-field.component.scss into a loaded stylesheet), so `getComputedStyle`
+  // on the mounted button always reports jsdom's UA default regardless of what
+  // the .scss says. An assertion on `tagName`/`type`/`classList` alone would
+  // pass whether or not the CSS fix is present or later reverted — that is not
+  // coverage, it is a test that cannot fail. The chrome reset is checked by eye
+  // instead; see search-field.component.scss for the reasoning.
 
   describe('the / shortcut (#408)', () => {
     function pressSlash(target: EventTarget, modifiers: Partial<KeyboardEventInit> = {}) {

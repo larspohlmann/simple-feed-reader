@@ -34,6 +34,12 @@
   color: var(--text-muted);
 }
 
+// Resting contrast + chrome reset (#408 follow-up) is checked by eye, not by
+// test: jest-preset-angular never compiles or injects this file under Jest,
+// so a jsdom assertion on the button's computed style or classes would pass
+// whether the fix below is present, wrong, or later reverted — see
+// search-field.component.spec.ts for where that test used to live and why it
+// was removed instead of kept as a check that could not fail.
 .clear {
   display: flex;
   align-items: center;
