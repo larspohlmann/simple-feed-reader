@@ -550,6 +550,7 @@
     "forYouResume": "Nicht beendeten Lauf fortsetzen",
     "forYouStartOver": "Neuen Lauf starten",
     "forYouStop": "Stoppen",
+    "forYouShowProgress": "Fortschritt anzeigen",
     "forYouStopping": "Wird gestoppt…",
     "forYouProgress": "Deine Feeds werden sortiert — {{done}} von {{total}}",
     "forYouUnfinishedTitle": "Du hast einen nicht beendeten Empfehlungslauf",

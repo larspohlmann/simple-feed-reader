@@ -185,14 +185,31 @@
      whichever `.list` the current layout mounts, via `app-entry-list`'s
      `headerActions` input — the split pane and the single pane each build their
      own list column, so one shared template keeps the two from drifting apart.
-     One button in one slot: it starts a run (behind a confirm) while idle and
-     stops one while it is in flight. The run's only in-list signal is the
-     progress hairline pinned in `.list` above; every other detail lives in
-     Settings → AI (#325). -->
+     Idle shows one button (start, behind a confirm); a run in flight shows the
+     Stop button and, whenever the app-wide pill has been closed, a second
+     "show progress" button beside it (#398). The run's progress itself has no
+     in-list signal at all any more — it lives entirely in that pill; the only
+     hairline in `.list` above belongs to the refresh service, not this one.
+     Every other detail lives in Settings → AI (#325). -->
 <ng-template #forYouActions>
   @if (selection().kind === 'for-you' && ai.ready()) {
     <div class="for-you-action">
       @if (recs.running()) {
+        @if (recs.pillHidden()) {
+          <!-- The run's pill is app-wide, so the user can close it from
+               anywhere. This is the way back to it while the run is still
+               going, and it is offered only when the pill is actually gone —
+               the Stop button beside it is untouched (#398). -->
+          <app-button
+            variant="ghost"
+            size="sm"
+            class="for-you-show"
+            [ariaLabel]="'reader.forYouShowProgress' | transloco"
+            (click)="recs.showRunPill()"
+          >
+            <app-icon name="visibility" size="sm" />
+          </app-button>
+        }
         <app-button
           variant="danger"
           size="sm"
@@ -208,11 +225,6 @@
             (recs.stopping() ? 'reader.forYouStopping' : 'reader.forYouStop') | transloco
           }}</span>
         </app-button>
-        <!-- The run's live count, ETA and progress bar, back in the header under
-             the button. It is desktop-only and the button is anchored to the
-             header's top edge, so this block grows downward without shifting the
-             button (#325, #336). -->
-        <app-for-you-progress />
       } @else {
         <app-button
           variant="primary"

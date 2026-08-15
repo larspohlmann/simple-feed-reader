@@ -81,4 +81,49 @@ describe('ForYouProgressComponent', () => {
     expect(el.querySelector('.for-you-progress')).toBeNull();
     expect(el.querySelector('.track')).toBeNull();
   });
+
+  it('hides the ETA from assistive technology, so a per-tick estimate is not announced', () => {
+    etaState.set('eta');
+    etaSeconds.set(30);
+    const el = build().nativeElement as HTMLElement;
+    expect(el.querySelector('.eta')!.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('declares no live region of its own — the toast shell it renders into owns that', () => {
+    const el = build().nativeElement as HTMLElement;
+    const line = el.querySelector('.for-you-progress')!;
+    expect(line.getAttribute('role')).toBeNull();
+    expect(line.getAttribute('aria-live')).toBeNull();
+  });
+
+  it('exposes the bar as a progressbar with the discrete batch fraction as aria-valuenow', () => {
+    const el = build().nativeElement as HTMLElement;
+    const track = el.querySelector('.track')!;
+    expect(track.getAttribute('role')).toBe('progressbar');
+    expect(track.getAttribute('aria-valuemin')).toBe('0');
+    expect(track.getAttribute('aria-valuemax')).toBe('100');
+    expect(track.getAttribute('aria-valuenow')).toBe('17'); // round(4 / 24 * 100)
+  });
+
+  it('does not move aria-valuenow between batches, unlike the creeping visual fill', () => {
+    const fixture = build();
+    const el = fixture.nativeElement as HTMLElement;
+    const track = el.querySelector('.track')!;
+    expect(track.getAttribute('aria-valuenow')).toBe('17');
+
+    // The ticker creeps the visual fill without a fresh report -- report()
+    // (and so batchesDone/batchesTotal) is unchanged.
+    progress.set(0.3);
+    fixture.detectChanges();
+
+    const fill = el.querySelector('.track span') as HTMLElement;
+    expect(fill.style.width).toBe('30%'); // the visual fill did move
+    expect(track.getAttribute('aria-valuenow')).toBe('17'); // the announced value did not
+  });
+
+  it('reports aria-valuenow of 0 rather than dividing by zero when there is no total yet', () => {
+    report.set(makeReport({ batchesTotal: 0, batchesDone: 0 }));
+    const el = build().nativeElement as HTMLElement;
+    expect(el.querySelector('.track')!.getAttribute('aria-valuenow')).toBe('0');
+  });
 });

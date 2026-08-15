@@ -1,4 +1,4 @@
-import { ApplicationRef } from '@angular/core';
+import { ApplicationRef, ChangeDetectionStrategy, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { ToastService } from './toast.service';
@@ -15,6 +15,13 @@ describe('ToastService', () => {
 
   const tick = () => TestBed.inject(ApplicationRef).tick();
   const el = () => container.querySelector<HTMLElement>('.toast');
+
+  @Component({
+    selector: 'app-toast-test-content',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `<p class="hosted">hosted content</p>`,
+  })
+  class HostedContentComponent {}
 
   afterEach(() => jest.useRealTimers());
 
@@ -117,5 +124,63 @@ describe('ToastService', () => {
     const pane = container.querySelector<HTMLElement>('.cdk-overlay-pane')!;
     expect(pane.style.marginBottom).toBe('40px');
     document.documentElement.style.removeProperty('--space-5');
+  });
+
+  it('never auto-dismisses a toast whose durationMs is null', () => {
+    jest.useFakeTimers();
+    toast.show({ message: 'Ranking your feeds', durationMs: null });
+    tick();
+
+    jest.advanceTimersByTime(600_000);
+    tick();
+
+    expect(el()).not.toBeNull();
+  });
+
+  it('lets the close button dismiss a persistent toast', () => {
+    jest.useFakeTimers();
+    toast.show({ message: 'Ranking your feeds', durationMs: null });
+    tick();
+
+    el()!.querySelector<HTMLButtonElement>('.close')!.click();
+    tick();
+
+    expect(el()).toBeNull();
+  });
+
+  it('renders a content toast through the component outlet instead of a message', () => {
+    toast.show({ content: HostedContentComponent });
+    tick();
+
+    expect(el()!.querySelector('.hosted')!.textContent).toBe('hosted content');
+  });
+
+  it('tracks whether a toast is on screen, and stays visible across a replacement', () => {
+    expect(toast.visible()).toBe(false);
+
+    toast.show({ message: 'First' });
+    tick();
+    expect(toast.visible()).toBe(true);
+
+    // The replacement opens before the outgoing ref reports itself closed.
+    toast.show({ message: 'Second' });
+    tick();
+    expect(toast.visible()).toBe(true);
+
+    toast.dismiss();
+    tick();
+    expect(toast.visible()).toBe(false);
+  });
+
+  it('marks the pane fixed-width only when the toast asks for it', () => {
+    toast.show({ message: 'Fits its content' });
+    tick();
+    expect(container.querySelector('.cdk-overlay-pane')!.classList).not.toContain(
+      'app-toast--fixed',
+    );
+
+    toast.show({ message: 'Holds one width', width: 'fixed' });
+    tick();
+    expect(container.querySelector('.cdk-overlay-pane')!.classList).toContain('app-toast--fixed');
   });
 });

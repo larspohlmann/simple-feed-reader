@@ -1,8 +1,14 @@
 <!-- src/app/shared/toast/toast.component.html -->
 <div class="toast" role="status" aria-live="polite">
-  <span class="msg">{{ data.message }}</span>
-  @if (data.actionLabel) {
-    <button type="button" class="act" (click)="onAction()">{{ data.actionLabel }}</button>
+  @if (content) {
+    <div class="msg">
+      <ng-container *ngComponentOutlet="content"></ng-container>
+    </div>
+  } @else {
+    <span class="msg">{{ message }}</span>
+  }
+  @if (actionLabel) {
+    <button type="button" class="act" (click)="onAction()">{{ actionLabel }}</button>
   }
   <button type="button" class="close" (click)="svc.dismiss()" aria-label="✕">✕</button>
 </div>

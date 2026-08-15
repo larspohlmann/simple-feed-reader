@@ -1,5 +1,6 @@
 // src/app/reader/recommendations.service.spec.ts
 import { TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
+import { WritableSignal, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
@@ -8,6 +9,7 @@ import { API_BASE_URL } from '../core/api';
 import { ToastService } from '../shared/toast/toast.service';
 import { MONOTONIC_NOW, RecommendationsService } from './recommendations.service';
 import { RecommendationRunReport } from './models';
+import { ForYouProgressComponent } from './for-you-progress/for-you-progress.component';
 
 const report = (over: Partial<RecommendationRunReport>): RecommendationRunReport => ({
   status: 'pending',
@@ -24,12 +26,17 @@ const report = (over: Partial<RecommendationRunReport>): RecommendationRunReport
 describe('RecommendationsService', () => {
   let svc: RecommendationsService;
   let ctrl: HttpTestingController;
-  let toast: { show: jest.Mock };
+  let toast: { show: jest.Mock; dismiss: jest.Mock; visible: WritableSignal<boolean> };
   let navigate: jest.Mock;
   let nowMs = 0;
 
   beforeEach(() => {
-    toast = { show: jest.fn() };
+    const visible = signal(false);
+    toast = {
+      show: jest.fn(() => visible.set(true)),
+      dismiss: jest.fn(() => visible.set(false)),
+      visible,
+    };
     navigate = jest.fn();
     nowMs = 0;
     TestBed.configureTestingModule({
@@ -78,9 +85,9 @@ describe('RecommendationsService', () => {
 
     expect(svc.running()).toBe(false);
     expect(svc.completedStamp()).toBe(1);
-    expect(toast.show).toHaveBeenCalledTimes(1);
-    expect(toast.show).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'reader.forYouReady' }),
+    expect(toast.show).toHaveBeenCalledTimes(2); // the pill, then the ready message
+    expect(toast.show).toHaveBeenLastCalledWith(
+      expect.objectContaining({ message: 'reader.forYouReady', width: 'fixed' }),
     );
   });
 
@@ -105,7 +112,7 @@ describe('RecommendationsService', () => {
       .expectOne('https://api.test/api/recommendations/runs')
       .flush(report({ status: 'completed', batchesTotal: 1, batchesDone: 1 }));
 
-    const call = toast.show.mock.calls[0][0] as { action?: () => void };
+    const call = toast.show.mock.calls.at(-1)![0] as { action?: () => void };
     call.action?.();
 
     expect(navigate).toHaveBeenCalledWith(['/'], {
@@ -122,9 +129,9 @@ describe('RecommendationsService', () => {
     ctrl.verify(); // no further requests
     expect(svc.running()).toBe(false);
     expect(svc.failure()).toEqual({ kind: 'failed', error: 'boom' });
-    expect(toast.show).toHaveBeenCalledTimes(1);
-    expect(toast.show).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'reader.forYouFailed' }),
+    expect(toast.show).toHaveBeenCalledTimes(2); // the pill, then the failure message
+    expect(toast.show).toHaveBeenLastCalledWith(
+      expect.objectContaining({ message: 'reader.forYouFailed', width: 'fixed' }),
     );
   });
 
@@ -140,6 +147,34 @@ describe('RecommendationsService', () => {
       .flush(report({ status: 'completed', batchesTotal: 2, batchesDone: 2 }));
     expect(svc.running()).toBe(false);
     expect(svc.completedStamp()).toBe(1);
+  });
+
+  it('a second resume() during a live run neither re-raises a closed pill nor starts a second poll loop', () => {
+    svc.resume();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/current')
+      .flush(report({ status: 'running', batchesTotal: 2, batchesDone: 1 }));
+    const firstTick = ctrl.expectOne('https://api.test/api/recommendations/runs/tick');
+
+    toast.dismiss(); // the user pressed ✕
+    expect(svc.pillHidden()).toBe(true);
+    toast.show.mockClear();
+
+    // The reader shell calls resume() again on every mount (reader -> another
+    // route -> reader), and the server still answers 'running' for the same run.
+    svc.resume();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/current')
+      .flush(report({ status: 'running', batchesTotal: 2, batchesDone: 1 }));
+
+    // The pill must not come back on its own, and no second tick request
+    // should be outstanding alongside the first.
+    expect(toast.show).not.toHaveBeenCalled();
+    expect(svc.pillHidden()).toBe(true);
+    ctrl.expectNone('https://api.test/api/recommendations/runs/tick');
+
+    firstTick.flush(report({ status: 'completed', batchesTotal: 2, batchesDone: 2 }));
+    expect(svc.running()).toBe(false);
   });
 
   it('resume does nothing for an already-completed run (no toast)', () => {
@@ -240,11 +275,11 @@ describe('RecommendationsService', () => {
     ctrl.verify(); // no tick request
     expect(svc.running()).toBe(false);
     expect(svc.failure()?.kind).toBe('http');
-    // The run's only in-reader surface is the progress hairline, gone the moment
-    // the run ends. Without this toast an outright request failure would be
+    // The run's only surface is the app-wide pill, and `finish()` has just
+    // taken it down. Without this toast an outright request failure would be
     // silent (#325).
     expect(toast.show).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'reader.forYouUnreachable' }),
+      expect.objectContaining({ message: 'reader.forYouUnreachable', width: 'fixed' }),
     );
   });
 
@@ -267,7 +302,7 @@ describe('RecommendationsService', () => {
       expect(svc.stopping()).toBe(false);
       // The user pressed the button; telling them it worked is noise, and a
       // failure toast would be a lie about what happened.
-      expect(toast.show).not.toHaveBeenCalled();
+      expect(toast.show).toHaveBeenCalledTimes(1); // the pill, and nothing stop adds
       expect(svc.failure()).toBeNull();
 
       // The tick that was already in flight when they pressed stop still
@@ -747,5 +782,70 @@ describe('RecommendationsService', () => {
     ctrl
       .expectOne('https://api.test/api/recommendations/runs/tick')
       .flush(report({ status: 'completed', batchesTotal: 1, batchesDone: 1 }));
+  });
+
+  /** The pill's exact shape, asserted in one place so the three tests below
+   *  read as intent rather than as a repeated object literal. */
+  const PILL = {
+    content: ForYouProgressComponent,
+    durationMs: null,
+    width: 'fixed',
+  };
+
+  it('raises the persistent pill the moment a run starts, before any report arrives', () => {
+    svc.start();
+
+    expect(toast.show).toHaveBeenCalledWith(PILL);
+
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs')
+      .flush(report({ status: 'completed', batchesTotal: 1, batchesDone: 1 }));
+  });
+
+  it('raises the pill for a run resumed from an earlier session', () => {
+    svc.resume();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/current')
+      .flush(report({ status: 'running', batchesTotal: 2, batchesDone: 1 }));
+
+    expect(toast.show).toHaveBeenCalledWith(PILL);
+
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'completed', batchesTotal: 2, batchesDone: 2 }));
+  });
+
+  it('offers the pill again only while a run is live and the pill has been closed', () => {
+    expect(svc.pillHidden()).toBe(false); // no run at all
+
+    svc.start();
+    expect(svc.pillHidden()).toBe(false); // the pill is up
+
+    toast.dismiss(); // the user pressed ✕
+    expect(svc.pillHidden()).toBe(true);
+
+    svc.showRunPill();
+    expect(svc.pillHidden()).toBe(false);
+
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs')
+      .flush(report({ status: 'completed', batchesTotal: 1, batchesDone: 1 }));
+
+    expect(svc.pillHidden()).toBe(false); // the run is over; nothing to restore
+  });
+
+  it('takes the pill down on a cancelled run, which raises no toast of its own', () => {
+    svc.start();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs')
+      .flush(report({ status: 'running', batchesTotal: 2, batchesDone: 1 }));
+
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'cancelled', batchesTotal: 2, batchesDone: 1 }));
+
+    expect(svc.running()).toBe(false);
+    expect(toast.dismiss).toHaveBeenCalled();
+    expect(toast.show).toHaveBeenCalledTimes(1); // the pill, and nothing after it
   });
 });

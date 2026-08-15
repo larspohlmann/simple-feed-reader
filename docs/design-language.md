@@ -523,7 +523,7 @@ that occupies layout where it renders, not an overlay.
 
 ### `<app-toast>` (via the `ToastService`)
 
-The app's one toast: a message pinned to the bottom of the viewport, with an
+The app's one toast: a surface pinned to the bottom of the viewport, with an
 optional single action, auto-dismissing after `durationMs` (default 6000ms).
 Rendered through the CDK overlay, never `position: fixed` — a transformed
 ancestor (an open drawer, a dialog) would re-anchor a fixed child to the wrong
@@ -541,22 +541,56 @@ this.toast.show({
 });
 ```
 
+A toast carries **either** a `message` or a `content` component, never both.
+`ToastData` is a union of the two, so the compiler rejects a toast that tries
+to be both at once.
+
 | `ToastData` field | Type | Default |
 |---|---|---|
-| `message` | `string` (required) | — |
+| `message` | `string` — the message mode | — |
+| `content` | `Type<unknown>` — the content mode | — |
 | `actionLabel` | `string` | `undefined` — omits the button |
 | `action` | `() => void` | `undefined` — runs before the toast closes |
-| `durationMs` | `number` | `6000` |
+| `durationMs` | `number \| null` | `6000`; `null` never auto-dismisses |
+| `width` | `'fit' \| 'fixed'` | `'fit'` — the pane sizes to its content |
+
+`ToastService` also exposes `visible: Signal<boolean>` — whether a toast is on
+screen at all. It is there for the persistent mode: a feature that raises a
+long-lived toast needs to know the user closed it.
 
 `message` and `actionLabel` are already-translated strings — the component
-lives in `shared/` and must not know any feature's i18n keys. `show()`
-replaces whatever toast is already visible, clearing its timer; there is no
-queue. There is only one toast, so `ToastService` is injected directly rather
-than opened against a template reference.
+lives in `shared/` and must not know any feature's i18n keys. `content` is a
+component built through `NgComponentOutlet`, so it injects and reads its own
+feature's services and resolves its own translations; nothing is threaded
+through `ToastData`. `show()` replaces whatever toast is already visible,
+clearing its timer; there is no queue. There is only one toast, so
+`ToastService` is injected directly rather than opened against a template
+reference.
+
+**The persistent modes.** `durationMs: null` and `width: 'fixed'` exist for one
+caller, and adding a second is a design decision, not a convenience: the
+For-You run pill (#398). A recommendation run takes minutes and the user
+navigates away from it, so its progress readout is `ForYouProgressComponent`
+hosted as `content` with no dismiss timer, and `RecommendationsService` puts the
+ready message in the same slot when the run ends. `width: 'fixed'` pins the pane
+to `22rem` across that handover — the pane is otherwise content-sized and
+centre-anchored, so the box would shrink from both edges at the moment of
+completion. Whoever raises a persistent toast owns taking it down: the run's
+`finish()` is the single exit from every end state and calls `dismiss()` there.
+
+A persistent toast must also be recoverable, because the ✕ is always available
+and a minutes-long surface will get closed. `ToastService.visible` is a signal
+for exactly that: the run derives `pillHidden` from `running() && !visible()`
+and the reader's list header offers the pill back beside the Stop button.
+
+**Accessibility.** The toast shell owns the `role="status" aria-live="polite"`
+region. A `content` component must not declare a second one inside it, and must
+hide any value that changes faster than the user can read it — the run pill's
+ETA is `aria-hidden`, so only the batch count is announced.
 
 **Not for:** a failure that blocks the surface it reports on — use
 `<app-error-banner>` instead, which stays in the document until its own
-action or a reload clears it. The toast is for a transient, dismissible
+action or a reload clears it. The message mode is for a transient, dismissible
 confirmation of something that already happened (a background refresh
 finished, a bulk action applied) that the user does not have to act on.
 

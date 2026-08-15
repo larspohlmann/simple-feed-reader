@@ -7,6 +7,7 @@ import { Observable } from 'rxjs';
 import { Problem, parseProblem } from '../core/problem';
 import { ToastService } from '../shared/toast/toast.service';
 import { ReaderApi } from './reader-api';
+import { ForYouProgressComponent } from './for-you-progress/for-you-progress.component';
 import { RecommendationRunReport } from './models';
 import { selectionQueryParams } from './query';
 
@@ -169,6 +170,14 @@ export class RecommendationsService {
    *  directly. */
   readonly workerOwnsRun = computed(() => this.report()?.background ?? false);
 
+  /** True while a run is going but its pill is not on screen, because the user
+   *  closed it. Drives the header's offer to raise it again. Reads the toast's
+   *  own visibility rather than tracking a dismissal flag here, which is exact
+   *  for this service's own toasts -- and safe to treat as exact today because
+   *  this service is the only caller of `ToastService.show()` in the app, so
+   *  nothing else can occupy the slot and read as "still up". */
+  readonly pillHidden = computed(() => this.running() && !this.toast.visible());
+
   /** The surviving for-you list's item count, for the sidebar badge. */
   readonly forYouCount = computed(() => this.report()?.forYou.itemCount ?? 0);
   /** The surviving for-you list's generation time (ISO), for the list
@@ -201,14 +210,38 @@ export class RecommendationsService {
    *  loop. The two differ only in which endpoint opens the run. */
   private beginRun(source: Observable<RecommendationRunReport>): void {
     if (this.running()) return;
-    this.running.set(true);
-    this.startTicker();
+    this.markRunning();
     this.stopping.set(false);
     this.report.set(null);
-    this.failure.set(null);
     source.subscribe({
       next: (r) => this.onReport(r),
       error: (e: HttpErrorResponse) => this.stopWithHttpError(e),
+    });
+  }
+
+  /** The one place a run becomes live, whether it was started here or found
+   *  already in flight by `resume()`. The pill goes up here rather than at
+   *  each call site, which is what makes a resumed run visible too -- and it
+   *  is the app-wide surface, so the run stays visible after the user leaves
+   *  the reader (#398). */
+  private markRunning(): void {
+    this.running.set(true);
+    this.startTicker();
+    this.failure.set(null);
+    this.showRunPill();
+  }
+
+  /** Raises the run's pill. Public because the user can close it from anywhere
+   *  and the reader's list header offers it back; `markRunning()` calls this
+   *  rather than holding a second copy of the same `show()`. Guarded: called
+   *  with no run live -- stale UI, a race -- it would raise a `durationMs:
+   *  null` toast that nothing would ever dismiss, since only `finish()` does. */
+  showRunPill(): void {
+    if (!this.running()) return;
+    this.toast.show({
+      content: ForYouProgressComponent,
+      durationMs: null,
+      width: 'fixed',
     });
   }
 
@@ -247,10 +280,13 @@ export class RecommendationsService {
     this.api.currentRecommendations().subscribe({
       next: (r) => {
         this.applyReport(r); // even a finished run carries the for-you summary the sidebar needs
+        // The reader shell calls this on every mount, so reader -> another
+        // route -> reader runs it again mid-run. Re-raising the pill here
+        // would undo a ✕ the user already pressed, and starting a second
+        // `step()` would open a second poll loop against the same run.
+        if (this.running()) return;
         if (r.status !== 'pending' && r.status !== 'running') return;
-        this.running.set(true);
-        this.startTicker();
-        this.failure.set(null);
+        this.markRunning();
         this.step(NO_ATTEMPTS);
       },
       error: () => {
@@ -316,6 +352,7 @@ export class RecommendationsService {
           message: this.i18n.translate('reader.forYouReady'),
           actionLabel: this.i18n.translate('reader.forYouView'),
           action: () => this.navigateToForYou(),
+          width: 'fixed',
         });
         break;
       case 'cancelled':
@@ -326,7 +363,7 @@ export class RecommendationsService {
       case 'failed':
         this.failure.set({ kind: 'failed', error: r.error });
         this.finish();
-        this.toast.show({ message: this.i18n.translate('reader.forYouFailed') });
+        this.toast.show({ message: this.i18n.translate('reader.forYouFailed'), width: 'fixed' });
         break;
       case 'none':
         // Nothing running and nothing to report -- reachable only from an
@@ -379,12 +416,14 @@ export class RecommendationsService {
   private stopWithHttpError(e: HttpErrorResponse): void {
     this.failure.set({ kind: 'http', problem: parseProblem(e) });
     this.finish();
-    // The run's only in-reader surface is the progress hairline, which vanishes
-    // the moment the run ends. A request that fails outright — the start POST,
-    // or the poll loop giving up after its transport/rate-limit ceiling — would
-    // leave nothing behind without this, so it goes to the same toast the
-    // backend-side failure uses rather than failing silently (#325).
-    this.toast.show({ message: this.i18n.translate('reader.forYouUnreachable') });
+    // The run's only surface is the app-wide pill, and `finish()` has just
+    // taken it down. A request that fails outright — the start POST, or the
+    // poll loop giving up after its transport/rate-limit ceiling — would leave
+    // nothing behind without this (#325).
+    this.toast.show({
+      message: this.i18n.translate('reader.forYouUnreachable'),
+      width: 'fixed',
+    });
   }
 
   private finish(): void {
@@ -392,6 +431,11 @@ export class RecommendationsService {
     this.stopping.set(false);
     this.rateLimited.set(false);
     this.stopTicker();
+    // The single exit from every end state, which is why the pill comes down
+    // here: `cancelled` and `none` raise no toast of their own and would
+    // otherwise leave it up forever. The completed and failed paths call this
+    // first and then put their own message in the same slot.
+    this.toast.dismiss();
   }
 
   private startTicker(): void {

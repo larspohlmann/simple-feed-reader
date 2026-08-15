@@ -11,10 +11,11 @@ interface Phrase {
 }
 
 /**
- * The For-You run's progress surface, shown in the sticky list header beside the
- * Stop button: the "Ranking your feeds — X of Y" count with the live ETA on the
- * same line, and a visible determinate bar beneath it. It reads the run service
- * directly and renders nothing unless a run is in flight.
+ * The For-You run's progress surface: the "Ranking your feeds — X of Y" count
+ * with the live ETA on the same line, and a determinate bar beneath it. It is
+ * the content of the app-wide toast pill (`RecommendationsService` raises it),
+ * so the run stays visible on every route rather than only in the reader. It
+ * reads the run service directly and renders nothing unless a run is in flight.
  */
 @Component({
   selector: 'app-for-you-progress',
@@ -52,6 +53,18 @@ export class ForYouProgressComponent {
     }
   });
 
-  /** 0..100 fill for the bar. */
+  /** 0..100 fill for the bar's *visual* width only. Includes the anticipatory
+   *  creep (`recs.progress()` moves every 200ms ticker tick), which is exactly
+   *  why `aria-valuenow` must not be bound to this: `role="status"` is
+   *  implicitly `aria-atomic`, so a value that changes every tick would
+   *  re-announce the whole pill continuously. */
   protected readonly percent = computed(() => Math.round(this.recs.progress() * 100));
+
+  /** 0..100 for `aria-valuenow`: the discrete done/total fraction, which only
+   *  moves once per batch -- unlike `percent()` above, it does not read the
+   *  ticker-driven creep. Guarded against a zero total (no report yet). */
+  protected readonly batchPercent = computed(() => {
+    const { done, total } = this.count();
+    return total ? Math.round((done / total) * 100) : 0;
+  });
 }
