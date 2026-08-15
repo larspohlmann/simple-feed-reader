@@ -151,6 +151,43 @@ describe('selectionQueryParams', () => {
       q: null,
     });
   });
+  // The results are cached so that a [queryParams] binding — one per sidebar
+  // feed, per tag, per row's source pills — stops allocating a new object on
+  // every change-detection pass and making RouterLink rebuild its href.
+  describe('the shared result objects (#408 cleanup)', () => {
+    it('hands the same reference back for the same argument', () => {
+      expect(selectionQueryParams({ tag: 3 })).toBe(selectionQueryParams({ tag: 3 }));
+      expect(selectionQueryParams({})).toBe(selectionQueryParams({}));
+    });
+
+    it('keeps different arguments apart', () => {
+      expect(selectionQueryParams({ tag: 3 })).not.toBe(selectionQueryParams({ tag: 4 }));
+      expect(selectionQueryParams({ tag: 3 })).not.toBe(selectionQueryParams({ subscription: 3 }));
+      expect(selectionQueryParams({ view: 'favorites' })).not.toBe(
+        selectionQueryParams({ view: 'kept' }),
+      );
+    });
+
+    it('does not cache a search term, whose values are unbounded', () => {
+      // One entry per term the user ever types would grow without limit, and
+      // that call site is a single navigation rather than a template binding.
+      expect(selectionQueryParams({ q: 'punk' })).not.toBe(selectionQueryParams({ q: 'punk' }));
+      expect(selectionQueryParams({ q: 'punk' })).toEqual(selectionQueryParams({ q: 'punk' }));
+    });
+
+    it('still nulls the whole vocabulary on a cache hit', () => {
+      selectionQueryParams({ tag: 9 });
+
+      expect(selectionQueryParams({ tag: 9 })).toEqual({
+        view: null,
+        tag: 9,
+        subscription: null,
+        entry: null,
+        q: null,
+      });
+    });
+  });
+
   it('sets q and clears the rest for a search', () => {
     expect(selectionQueryParams({ q: 'angular' })).toEqual({
       view: null,

@@ -250,9 +250,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly headerSearchOpen = computed(() => this.header()?.searchOpen() ?? false);
   /** Either overlay hanging off the header — the drawer or the search bar —
    *  force-shows it. A single derived signal, read from the single place that
-   *  applies the rule (see the constructor effect below and
-   *  `applyHeaderVisibility()`), so the two overlays can never disagree about
-   *  the header's state the way two independent writers once did. */
+   *  applies the rule (the header-visibility effect in the constructor), so
+   *  the two overlays can never disagree about the header's state the way two
+   *  independent writers once did. */
   private readonly headerOverlayOpen = computed(
     () => this.sidebarOpen() || this.headerSearchOpen(),
   );
@@ -280,25 +280,31 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     if (s.kind === 'for-you') return 'For you';
     if (s.kind === 'all') return 'All items';
     if (s.kind === 'tag') return this.selectedTag()?.name ?? 'Tag';
-    if (s.kind === 'search') {
-      // No count while the search is in flight: EntriesStore.load() clears
-      // nextCursor synchronously but deliberately keeps the PREVIOUS list
-      // rendered until the response lands (#254) — so for that whole window
-      // `entries()` still holds the old term's rows and `hasMore()` reads as
-      // false regardless of what the new term will return. Counting them
-      // would flash a stale, or even a false "no matches", number. Gated on
-      // the same condition the spinner uses, so the two can never disagree.
-      const term = visibleSearchTerm(s.term ?? '');
-      if (this.searching()) return this.i18n.translate('reader.searchResults', { term });
-      // The loaded count, not a COUNT(*) total — the list pages 50 at a time,
-      // so it lies unless it is labelled: a trailing '+' when another page is
-      // still out there, the exact number once there isn't.
-      const count = this.entries.entries().length;
-      const key = this.hasMore() ? 'reader.searchResultsCountMore' : 'reader.searchResultsCount';
-      return this.i18n.translate(key, { term, count });
-    }
+    if (s.kind === 'search') return this.searchTitle(s.term ?? '');
     return this.subs.subscriptions().find((x) => x.id === s.id)?.title ?? 'Feed';
   });
+
+  /** The search heading, which unlike every other title carries a result count
+   *  and therefore its own rules about when that count may be shown. */
+  private searchTitle(rawTerm: string): string {
+    const term = visibleSearchTerm(rawTerm);
+    // No count while the search is in flight: EntriesStore.load() clears
+    // nextCursor synchronously but deliberately keeps the PREVIOUS list
+    // rendered until the response lands (#254) — so for that whole window
+    // `entries()` still holds the old term's rows and `hasMore()` reads as
+    // false regardless of what the new term will return. Counting them would
+    // flash a stale, or even a false "no matches", number. Gated on the same
+    // condition the spinner uses, so the two can never disagree.
+    if (this.searching()) return this.i18n.translate('reader.searchResults', { term });
+
+    // The loaded count, not a COUNT(*) total — the list pages 50 at a time, so
+    // it lies unless it is labelled: a trailing '+' when another page is still
+    // out there, the exact number once there isn't.
+    const count = this.entries.entries().length;
+    const key = this.hasMore() ? 'reader.searchResultsCountMore' : 'reader.searchResultsCount';
+
+    return this.i18n.translate(key, { term, count });
+  }
 
   private readonly markedOnOpen = new Set<number>();
   private readonly viewedOnOpen = new Set<number>();

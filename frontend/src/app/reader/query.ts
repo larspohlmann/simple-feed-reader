@@ -150,15 +150,42 @@ function selectionParam(p: ParamMap, name: SelectionParamName): string | null {
 type SelectionParamValue = string | number | null;
 type SelectionParams = Record<SelectionParamName, SelectionParamValue>;
 
+/** Results handed out by `selectionQueryParams`, keyed by the argument that
+ *  produced them.
+ *
+ *  Most callers are `[queryParams]` bindings in templates — one per sidebar
+ *  feed, per tag, per source pill on every row. Angular caches a literal
+ *  object in a binding, but NOT the result of a function call, so without
+ *  this each of those allocated a fresh object on every change-detection
+ *  pass, and `RouterLink` saw a changed input and rebuilt its href each time.
+ *  Change detection runs on every scroll frame here, and the arguments are
+ *  drawn from a bounded set (the vocabulary's four fixed views plus one entry
+ *  per tag and per subscription), so caching on the argument returns a stable
+ *  reference and the link work happens once. */
+const selectionParamsCache = new Map<string, SelectionParams>();
+
 /** Build a `[queryParams]` object that selects exactly one list: the given
  *  params are set, every other name in the selection vocabulary is nulled.
  *  Callers state only what they set — a new vocabulary entry only needs to
- *  be added here, not at every call site. */
+ *  be added here, not at every call site.
+ *
+ *  The returned object is shared between callers that pass equal arguments
+ *  and must be treated as read-only; `RouterLink` only reads it. */
 export function selectionQueryParams(set: Partial<SelectionParams>): SelectionParams {
+  const key = JSON.stringify(SELECTION_PARAM_NAMES.map((name) => set[name] ?? null));
+  const cached = selectionParamsCache.get(key);
+  if (cached !== undefined) return cached;
+
   const cleared = Object.fromEntries(
     SELECTION_PARAM_NAMES.map((name) => [name, null]),
   ) as SelectionParams;
-  return { ...cleared, ...set };
+  const params = { ...cleared, ...set };
+  // A search term is unbounded — one distinct key per term the user tries —
+  // and that call site is a single navigation rather than a template binding,
+  // so it gains nothing from the cache and must not be allowed to grow it.
+  if (set.q == null) selectionParamsCache.set(key, params);
+
+  return params;
 }
 
 export function selectionFromParams(p: ParamMap): {
