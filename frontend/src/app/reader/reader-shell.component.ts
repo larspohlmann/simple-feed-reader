@@ -269,7 +269,14 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     if (s.kind === 'for-you') return 'For you';
     if (s.kind === 'all') return 'All items';
     if (s.kind === 'tag') return this.selectedTag()?.name ?? 'Tag';
-    if (s.kind === 'search') return this.i18n.translate('reader.searchResults', { term: s.term });
+    if (s.kind === 'search') {
+      // The loaded count, not a COUNT(*) total — the list pages 50 at a time,
+      // so it lies unless it is labelled: a trailing '+' when another page is
+      // still out there, the exact number once there isn't.
+      const count = this.entries.entries().length;
+      const key = this.hasMore() ? 'reader.searchResultsCountMore' : 'reader.searchResultsCount';
+      return this.i18n.translate(key, { term: s.term, count });
+    }
     return this.subs.subscriptions().find((x) => x.id === s.id)?.title ?? 'Feed';
   });
 

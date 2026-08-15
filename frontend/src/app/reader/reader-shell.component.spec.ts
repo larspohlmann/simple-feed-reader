@@ -841,16 +841,28 @@ describe('ReaderShellComponent', () => {
     });
   });
 
-  it('titles a search selection with the translated term', () => {
+  it('titles a search selection with the translated term and the exact loaded count when there is no further page', () => {
     const f = boot();
     qp.next(convertToParamMap({ q: 'angular' }));
     f.detectChanges();
     ctrl
       .expectOne((r) => r.url === 'https://api.test/api/entries/search')
-      .flush({ entries: [], nextCursor: null });
+      .flush({ entries: [entry, { ...entry, id: 2 }], nextCursor: null });
     f.detectChanges();
 
-    expect(f.componentInstance.title()).toBe('Results for "angular"');
+    expect(f.componentInstance.title()).toBe('Results for "angular" — 2');
+  });
+
+  it('titles a search selection with a trailing + when another page exists', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ q: 'angular' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+      .flush({ entries: [entry], nextCursor: 'cursor-2' });
+    f.detectChanges();
+
+    expect(f.componentInstance.title()).toBe('Results for "angular" — 1+');
   });
 
   it('reloads the for-you list when a run completes while it is open', () => {
