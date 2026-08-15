@@ -91,4 +91,17 @@ describe('EntrySplitComponent', () => {
 
     expect(f.componentInstance.imgError()).toBe(false);
   });
+
+  it('carries the three actions on its meta row', () => {
+    const f = mount(entry());
+    expect(f.nativeElement.querySelectorAll('app-entry-meta app-entry-actions button').length).toBe(
+      3,
+    );
+
+    const favorite = jest.fn();
+    f.componentInstance.favorite.subscribe(favorite);
+    const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
+    (buttons[0] as HTMLElement).click();
+    expect(favorite).toHaveBeenCalled();
+  });
 });
