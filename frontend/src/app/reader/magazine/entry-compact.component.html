@@ -10,7 +10,14 @@
 >
   <span class="dot" [class.on]="!entry().isRead" aria-hidden="true"></span>
   <div class="body">
-    <app-entry-kicker-line [entry]="entry()" [showDot]="false" [showSource]="showSource()" />
+    <app-entry-kicker-line [entry]="entry()" [showDot]="false" [showSource]="showSource()">
+      <app-entry-actions
+        [entry]="entry()"
+        (favorite)="favorite.emit($event)"
+        (keep)="keep.emit($event)"
+        (read)="read.emit($event)"
+      />
+    </app-entry-kicker-line>
     <p class="title">{{ entry().title }}</p>
     @if (showSource()) {
       <app-source-tags [tags]="tags()" />

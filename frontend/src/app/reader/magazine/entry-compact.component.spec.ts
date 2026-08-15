@@ -96,4 +96,37 @@ describe('EntryCompactComponent', () => {
     row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     expect(open).toHaveBeenCalledTimes(2);
   });
+
+  it('hangs the actions on the kicker line, not on a row of their own', () => {
+    const el = mount().nativeElement as HTMLElement;
+    const actions = el.querySelector('app-entry-actions');
+    expect(actions).not.toBeNull();
+    // Inside the kicker's own <p>: a block-level wrapper would close the
+    // paragraph and drop the icons onto a second line.
+    expect(actions!.closest('p.kicker')).not.toBeNull();
+    expect(el.querySelector('app-entry-meta')).toBeNull();
+  });
+
+  it('keeps the actions inside a source group, where there are no tags', () => {
+    const f = mount();
+    f.componentRef.setInput('showSource', false);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('app-source-tags')).toBeNull();
+    expect(el.querySelectorAll('app-entry-actions button').length).toBe(3);
+  });
+
+  it('emits keep without opening the entry', () => {
+    const f = mount();
+    const keep = jest.fn();
+    const open = jest.fn();
+    f.componentInstance.keep.subscribe(keep);
+    f.componentInstance.open.subscribe(open);
+
+    const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
+    (buttons[1] as HTMLElement).click();
+
+    expect(keep).toHaveBeenCalled();
+    expect(open).not.toHaveBeenCalled();
+  });
 });

@@ -56,3 +56,13 @@
 .compact.read .title {
   color: var(--text-secondary);
 }
+
+/* The actions ride the kicker line rather than taking a row of their own: a
+   source group shows up to five of these, and a row each would inflate the
+   group by that many lines. `margin-inline-start: auto` is what pushes them
+   past the time to the right edge. Styled from here, not from the kicker line,
+   because the element is projected and so belongs to this component's scope. */
+.compact app-entry-actions {
+  flex: none;
+  margin-inline-start: auto;
+}
