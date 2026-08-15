@@ -82,6 +82,34 @@ describe('ReaderApi', () => {
     for (const r of reqs) r.flush({ entries: [], nextCursor: null });
   });
 
+  it('routes a query with q to the search endpoint', () => {
+    api.entries({ view: 'all', q: 'testing' }).subscribe();
+    const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries/search');
+    expect(req.request.params.get('q')).toBe('testing');
+    expect(req.request.params.get('limit')).toBe(String(PAGE_SIZE));
+    expect(req.request.params.has('view')).toBe(false);
+    expect(req.request.params.has('tag')).toBe(false);
+    expect(req.request.params.has('subscription')).toBe(false);
+    req.flush({ entries: [], nextCursor: null });
+  });
+
+  it('forwards a cursor on the search path', () => {
+    api.entries({ view: 'all', q: 'testing' }, 'SEARCH_CUR').subscribe();
+    const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries/search');
+    expect(req.request.params.get('q')).toBe('testing');
+    expect(req.request.params.get('cursor')).toBe('SEARCH_CUR');
+    expect(req.request.params.get('limit')).toBe(String(PAGE_SIZE));
+    req.flush({ entries: [], nextCursor: null });
+  });
+
+  it('still routes a query without q to the main list', () => {
+    api.entries({ view: 'favorites' }).subscribe();
+    const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
+    expect(req.request.params.get('view')).toBe('favorites');
+    expect(req.request.params.has('q')).toBe(false);
+    req.flush({ entries: [], nextCursor: null });
+  });
+
   it('PATCHes entry state', () => {
     api.updateState(3, { isFavorite: true }).subscribe();
     const req = ctrl.expectOne('https://api.test/api/entries/3/state');

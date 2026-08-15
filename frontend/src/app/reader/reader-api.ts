@@ -51,11 +51,20 @@ export class ReaderApi {
   }
 
   entries(query: EntryQuery, cursor?: string | null): Observable<EntriesPage> {
+    if (query.q) return this.searchEntries(query.q, cursor);
     let params = new HttpParams().set('view', query.view).set('limit', PAGE_SIZE);
     if (query.subscription != null) params = params.set('subscription', query.subscription);
     if (query.tag != null) params = params.set('tag', query.tag);
     if (cursor) params = params.set('cursor', cursor);
     return this.http.get<EntriesPage>(`${this.base}/api/entries`, { params });
+  }
+
+  /** Search carries none of the list's filters — it is its own view over every
+   *  subscription — so it never forwards `view`, `tag` or `subscription`. */
+  private searchEntries(term: string, cursor?: string | null): Observable<EntriesPage> {
+    let params = new HttpParams().set('q', term).set('limit', PAGE_SIZE);
+    if (cursor) params = params.set('cursor', cursor);
+    return this.http.get<EntriesPage>(`${this.base}/api/entries/search`, { params });
   }
 
   updateState(id: number, patch: EntryStatePatch): Observable<{ state: EntryStateDto }> {
