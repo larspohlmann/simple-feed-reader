@@ -26,9 +26,10 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { ViewControlsComponent } from '../view-controls/view-controls.component';
+import { SearchFieldComponent } from '../search-field/search-field.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { TagNode } from '../subscriptions.store';
-import { Selection } from '../query';
+import { Selection, selectionQueryParams } from '../query';
 import { SubscriptionDto, TagDto } from '../models';
 import { RefreshService } from '../refresh.service';
 import { RecommendationsService } from '../recommendations.service';
@@ -50,6 +51,7 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
     TagGlyphComponent,
     FaviconComponent,
     ViewControlsComponent,
+    SearchFieldComponent,
     TranslocoPipe,
     CdkDropListGroup,
     CdkDropList,
@@ -64,6 +66,8 @@ export class SidebarComponent {
   /** Baked in at build time, so it names the bundle actually running. */
   readonly version = buildVersion.version;
 
+  protected readonly selectionQueryParams = selectionQueryParams;
+
   readonly tagTree = input.required<TagNode[]>();
   readonly untagged = input.required<SubscriptionDto[]>();
   readonly totalUnread = input.required<number>();
@@ -71,6 +75,10 @@ export class SidebarComponent {
   readonly keptCount = input(0);
   readonly selection = input.required<Selection>();
   readonly loading = input(false);
+  /** A search request is in flight — distinct from `loading` above, which is
+   *  the subscriptions store's own loading flag; conflating the two would show
+   *  the search spinner while an unrelated subscriptions fetch runs. */
+  readonly searchLoading = input(false);
 
   readonly editTag = output<TagDto>();
   readonly deleteTag = output<TagDto>();
@@ -78,6 +86,10 @@ export class SidebarComponent {
   readonly unsubscribe = output<SubscriptionDto>();
   readonly refresh = output<void>();
   readonly addFeed = output<void>();
+  /** The settled search term from the field, or '' when it is cleared. */
+  // Semantic "settled search term" output, not a DOM element's search event.
+  // eslint-disable-next-line @angular-eslint/no-output-native
+  readonly search = output<string>();
   /** A feed was dropped onto a tag (add) or onto Feeds (clear). */
   readonly retag = output<{ sub: SubscriptionDto; tagIds: number[] }>();
   /** Tags were reordered — the full tag id list in its new order. */

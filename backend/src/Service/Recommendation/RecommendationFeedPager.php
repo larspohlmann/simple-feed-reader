@@ -23,7 +23,7 @@ final readonly class RecommendationFeedPager
      */
     public function page(int $userId, ?string $cursor, int $limit): RecommendationFeedPage
     {
-        $limit = max(1, min($limit, EntryQuery::MAX_LIMIT));
+        $limit = EntryQuery::clampLimit($limit);
         $decodedCursor = $cursor === null || $cursor === '' ? null : RecommendationCursor::decode($cursor);
 
         $rows = $this->items->listForYou($userId, $decodedCursor, $limit);

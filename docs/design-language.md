@@ -755,6 +755,79 @@ know the shape of what is coming.
 
 ---
 
+### `<app-search-field>`
+
+The entry-search input. It owns every timing rule the search has, so no caller
+repeats one: a 300 ms debounce, the three-character floor, the too-short hint,
+the clear button, and `Escape`.
+
+| Input | Type | Default |
+|---|---|---|
+| `term` | `string` | `''` — the term currently in the URL |
+
+| Output | Type | Fires |
+|---|---|---|
+| `search` | `string` | a settled term, or `''` when cleared |
+| `escapedWhileEmpty` | `void` | `Escape` pressed while the field is already empty |
+
+```html
+@if (!screen.isNarrow()) {
+  <app-search-field [term]="selection().term ?? ''" (search)="search.emit($event)" />
+}
+```
+
+The field emits; it never navigates. The shell owns the navigation, so both
+mount points — the desktop sidebar and the mobile header bar — drive one code
+path.
+
+`search` emits the settled term after the debounce, but a **clear** emits `''`
+at once: waiting 300 ms to leave a search makes the view feel stuck. The
+component tracks the term already in effect and moves it from both directions —
+its own emissions and the `term` input — so a term retyped after clearing, or
+after a Back navigation, still emits.
+
+`escapedWhileEmpty` exists so the mobile bar can implement the two-step
+`Escape` (first press clears, second closes) without the field knowing a bar
+exists, or the bar reading the field's text.
+
+A bare `/` anywhere in the document focuses the field. It is ignored when a
+modifier is held or when the event target is an `input`, `textarea` or
+`contenteditable` — including this field's own input, where `/` types a slash.
+
+**Not for:** any other filter. It is bound to the entry search's rules.
+
+---
+
+### `<app-marked-text>`
+
+Renders text with the matched search terms wrapped in `<mark>`.
+
+| Input | Type | Default |
+|---|---|---|
+| `text` | `string` | `''` |
+| `terms` | `string[]` | `[]` |
+
+```html
+<app-marked-text [text]="entry().title" [terms]="terms()" />
+```
+
+The marking is a pure function returning text segments, which the template
+renders as elements. **There is no `innerHTML` anywhere in this path, and there
+must never be** — an entry title is feed-supplied, so a title containing markup
+has to render as visible text.
+
+Used on the entry row's title and lead paragraph, which are the two fields the
+search actually matches on. Do not mark the feed name or the date; they were
+never searched, and a mark there claims a match that does not exist.
+
+Matching is case-insensitive and preserves the original casing. Regular
+expression metacharacters in a term match literally, so a search for `c++`
+behaves.
+
+**Not for:** general emphasis. Use it only where a term genuinely matched.
+
+---
+
 ## 3. Conventions
 
 ### Density

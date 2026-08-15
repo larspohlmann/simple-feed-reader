@@ -3,9 +3,12 @@
   [tags]="headerTags()"
   [activeTagId]="activeTagId()"
   [allItemsActive]="allItemsActive()"
+  [searchLoading]="searching()"
+  [searchTerm]="selection().term ?? ''"
   [class.hidden]="headerHidden()"
   (toggleSidebar)="setSidebarOpen(!sidebarOpen())"
   (scrollTop)="onScrollListTop()"
+  (search)="onSearch($event)"
 />
 <!-- Out of flow, dropped into the seam just under the (absolute, opaque)
      header: an in-flow hairline would paint at y=0 behind the header and add
@@ -69,6 +72,7 @@
       [keptCount]="subs.keptCount()"
       [selection]="selection()"
       [loading]="subs.loading()"
+      [searchLoading]="searching()"
       (editTag)="manage.editTag($event)"
       (deleteTag)="manage.deleteTag($event)"
       (editFeed)="manage.editSubscription($event)"
@@ -79,6 +83,7 @@
       (reorderTagFeeds)="manage.reorderTagFeeds($event.tagId, $event.subscriptionIds)"
       (refresh)="onRefresh()"
       (addFeed)="onAddFeed()"
+      (search)="onSearch($event)"
     />
   </aside>
   <main class="main" [class.split]="paneMode()">

@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { Dialog } from '@angular/cdk/dialog';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { provideHttpClient } from '@angular/common/http';
 import {
@@ -26,6 +27,7 @@ import { ListScrollMemory } from './list-scroll-memory';
 import { EntryDto } from './models';
 import { Selection } from './query';
 import { ReaderHeaderComponent } from './header/reader-header.component';
+import { headerHiddenAtRest } from './header-scroll';
 import { RefreshService } from './refresh.service';
 import { LayoutService } from './layout.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
@@ -281,6 +283,121 @@ describe('ReaderShellComponent', () => {
       f.detectChanges();
       // Back to the resting state the scroll offset implies — minimized.
       expect(f.componentInstance.headerHidden()).toBe(true);
+    });
+
+    it('stays shown while the header reports its own search bar open, even across a scroll', () => {
+      // The bar holds the live term and, on a phone, the keyboard — sliding it
+      // away under a scroll would hide the text the results depend on.
+      const f = boot();
+      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+      // The trigger that sets searchOpen true only ever renders on a narrow
+      // layout (#408): patch isNarrow alongside isWide so the header's own
+      // "close on layout growth" effect doesn't immediately undo the line below.
+      (f.componentInstance.screen as unknown as { isNarrow: () => boolean }).isNarrow = () => true;
+      const header = f.debugElement.query(By.directive(ReaderHeaderComponent))
+        .componentInstance as ReaderHeaderComponent;
+
+      header.searchOpen.set(true);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(false);
+
+      const rows = listScroller(f);
+      rows.scrollTo(100);
+      rows.scrollTo(500);
+      f.detectChanges();
+
+      expect(f.componentInstance.headerHidden()).toBe(false);
+    });
+
+    it('returns to the resting state for the current offset once the search bar closes', () => {
+      const f = boot();
+      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+      (f.componentInstance.screen as unknown as { isNarrow: () => boolean }).isNarrow = () => true;
+      const header = f.debugElement.query(By.directive(ReaderHeaderComponent))
+        .componentInstance as ReaderHeaderComponent;
+
+      // Scroll down first so the resting state the bar returns to is minimized,
+      // not just whatever the header happened to hold before opening.
+      const rows = listScroller(f);
+      rows.scrollTo(100);
+      rows.scrollTo(500);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(true);
+
+      header.searchOpen.set(true);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(false);
+
+      header.searchOpen.set(false);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(true);
+    });
+
+    it('stays shown when the search bar closes while the drawer is still open', () => {
+      // Both overlays open, then only search closes: the drawer alone is
+      // still reason enough to keep the header shown. Two independent
+      // force-show/resolve writers (one per overlay) would have each other's
+      // state in the same "resting state" resolution, wrongly overwriting it.
+      const f = boot();
+      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+      (f.componentInstance.screen as unknown as { isNarrow: () => boolean }).isNarrow = () => true;
+      const header = f.debugElement.query(By.directive(ReaderHeaderComponent))
+        .componentInstance as ReaderHeaderComponent;
+
+      const rows = listScroller(f);
+      rows.scrollTo(100);
+      rows.scrollTo(500);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(true);
+
+      f.componentInstance.setSidebarOpen(true);
+      header.searchOpen.set(true);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(false);
+
+      header.searchOpen.set(false);
+      f.detectChanges();
+      // The drawer is still open — the header must not retract under it.
+      expect(f.componentInstance.headerHidden()).toBe(false);
+    });
+
+    it('stays shown when the drawer closes while the search bar is still open', () => {
+      // The reverse order: search opens first, then the drawer opens and
+      // closes (e.g. the edge-swipe gesture). The search bar alone is still
+      // reason enough to keep the header shown.
+      const f = boot();
+      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+      (f.componentInstance.screen as unknown as { isNarrow: () => boolean }).isNarrow = () => true;
+      const header = f.debugElement.query(By.directive(ReaderHeaderComponent))
+        .componentInstance as ReaderHeaderComponent;
+
+      const rows = listScroller(f);
+      rows.scrollTo(100);
+      rows.scrollTo(500);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(true);
+
+      header.searchOpen.set(true);
+      f.componentInstance.setSidebarOpen(true);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(false);
+
+      f.componentInstance.setSidebarOpen(false);
+      f.detectChanges();
+      // The search bar is still open — the header must not retract under it.
+      expect(f.componentInstance.headerHidden()).toBe(false);
+    });
+
+    it('matches headerHiddenAtRest for the offset once both overlays are closed', () => {
+      const f = boot();
+      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+
+      const rows = listScroller(f);
+      rows.scrollTo(100);
+      rows.scrollTo(500);
+      f.detectChanges();
+
+      expect(f.componentInstance.headerHidden()).toBe(headerHiddenAtRest(500, false));
     });
   });
 
@@ -669,6 +786,302 @@ describe('ReaderShellComponent', () => {
     f.detectChanges();
 
     expect(f.componentInstance.title()).toBe('For you');
+  });
+
+  describe('searching (#408 follow-up)', () => {
+    // The spinner must appear ONLY for a search selection whose list is
+    // actually in flight — entries.loading() alone is true for every list
+    // load, so all four combinations are pinned to guard against a spinner
+    // that lights up for an unrelated feed load.
+    it('is false for a non-search selection while its list is not loading', () => {
+      const f = boot();
+      expect(f.componentInstance.searching()).toBe(false);
+    });
+
+    it('is false for a non-search selection while its list IS loading', () => {
+      const f = boot();
+      qp.next(convertToParamMap({ tag: '9' }));
+      f.detectChanges();
+
+      expect(f.componentInstance.selection().kind).toBe('tag');
+      expect(f.componentInstance.entries.loading()).toBe(true);
+      expect(f.componentInstance.searching()).toBe(false);
+
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({
+          entries: [],
+          nextCursor: null,
+        });
+    });
+
+    it('is false for a search selection once its list has finished loading', () => {
+      const f = boot();
+      qp.next(convertToParamMap({ q: 'angular' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+      f.detectChanges();
+
+      expect(f.componentInstance.searching()).toBe(false);
+    });
+
+    it('is true for a search selection while its list IS loading', () => {
+      const f = boot();
+      qp.next(convertToParamMap({ q: 'angular' }));
+      f.detectChanges();
+
+      expect(f.componentInstance.selection().kind).toBe('search');
+      expect(f.componentInstance.entries.loading()).toBe(true);
+      expect(f.componentInstance.searching()).toBe(true);
+
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+    });
+
+    // The regression this section exists to close: typing past the first
+    // search term must reload the list. `selection`'s equality check once
+    // reimplemented `sameSelection` inline and forgot `term`, so two search
+    // selections compared equal, the computed never produced a new
+    // reference, and the reload effect (which depends on `selection()`)
+    // never re-ran for a second search in the same session.
+    it('reloads the list when the search term changes (#408 follow-up)', () => {
+      const f = boot();
+      qp.next(convertToParamMap({ q: 'daft' }));
+      f.detectChanges();
+      ctrl
+        .expectOne(
+          (r) => r.url === 'https://api.test/api/entries/search' && r.params.get('q') === 'daft',
+        )
+        .flush({ entries: [{ ...entry, id: 1, title: 'daft' }], nextCursor: null });
+      f.detectChanges();
+
+      expect(f.componentInstance.entries.entries().map((e) => e.id)).toEqual([1]);
+
+      qp.next(convertToParamMap({ q: 'daft punk' }));
+      f.detectChanges();
+
+      // A second request for the new term must actually go out — this is
+      // the assertion that catches the bug: with the stale comparator, no
+      // request fires here at all, and the entries array (and the title
+      // built from it) stay frozen on the first search's result.
+      const secondRequest = ctrl.expectOne(
+        (r) => r.url === 'https://api.test/api/entries/search' && r.params.get('q') === 'daft punk',
+      );
+      secondRequest.flush({ entries: [{ ...entry, id: 2, title: 'daft punk' }], nextCursor: null });
+      f.detectChanges();
+
+      expect(f.componentInstance.entries.entries().map((e) => e.id)).toEqual([2]);
+      expect(f.componentInstance.title()).toContain('daft punk');
+    });
+
+    it('does not reload the list for an entry-only URL change (original comparator intent)', () => {
+      const f = boot();
+      qp.next(convertToParamMap({ q: 'daft punk' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [{ ...entry, id: 2 }], nextCursor: null });
+      f.detectChanges();
+
+      // Opening an entry changes only the `entry` param, not the selection —
+      // no second list request must fire.
+      qp.next(convertToParamMap({ q: 'daft punk', entry: '2-daft-punk' }));
+      f.detectChanges();
+
+      ctrl.expectNone((r) => r.url === 'https://api.test/api/entries/search');
+    });
+
+    it('treats two search selections with the same term as the same selection, and a different term as different', () => {
+      const f = boot();
+      qp.next(convertToParamMap({ q: 'daft' }));
+      f.detectChanges();
+      const first = f.componentInstance.selection();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+      f.detectChanges();
+
+      // Same params again (e.g. a re-emit with no real change) must not be a
+      // new selection reference's worth of behaviour.
+      qp.next(convertToParamMap({ q: 'daft' }));
+      f.detectChanges();
+      expect(f.componentInstance.selection()).toBe(first);
+      ctrl.expectNone((r) => r.url === 'https://api.test/api/entries/search');
+
+      qp.next(convertToParamMap({ q: 'daft punk' }));
+      f.detectChanges();
+      expect(f.componentInstance.selection()).not.toBe(first);
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+    });
+
+    it('distinguishes a search selection from a non-search selection sharing kind/id/unread', () => {
+      // A search selection always has kind 'search', id null, unread false —
+      // the same triple every non-search "all items" selection has too. The
+      // comparator must still tell them apart via `term`.
+      const f = boot();
+      qp.next(convertToParamMap({}));
+      f.detectChanges();
+      expect(f.componentInstance.selection().kind).toBe('all');
+
+      qp.next(convertToParamMap({ q: 'daft punk' }));
+      f.detectChanges();
+
+      expect(f.componentInstance.selection().kind).toBe('search');
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+    });
+
+    it('strips the trailing whole-word-mode space from the title shown to the user', () => {
+      const f = boot();
+      qp.next(convertToParamMap({ q: 'daft ' }));
+      f.detectChanges();
+      ctrl
+        .expectOne(
+          (r) => r.url === 'https://api.test/api/entries/search' && r.params.get('q') === 'daft ',
+        )
+        .flush({ entries: [{ ...entry, id: 1 }], nextCursor: null });
+      f.detectChanges();
+
+      expect(f.componentInstance.title()).not.toContain('daft "');
+      expect(f.componentInstance.title()).toContain('"daft"');
+    });
+  });
+
+  describe('selection query params (#408 follow-up)', () => {
+    // Opening/closing an article must NOT go through selectionQueryParams: it
+    // does not change which list is shown, so `q` (and any other selection
+    // param) must survive both the open and the close, letting a Back from an
+    // article opened out of search results land back on those results.
+    it('keeps q when opening an article', () => {
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = boot();
+
+      f.componentInstance.onOpen(entry);
+
+      const queryParams = nav.mock.calls[0][1]?.queryParams as Record<string, unknown>;
+      expect(queryParams).not.toHaveProperty('q');
+    });
+
+    it('keeps q when closing an article', () => {
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = boot();
+
+      f.componentInstance.onCloseReader();
+
+      const queryParams = nav.mock.calls[0][1]?.queryParams as Record<string, unknown>;
+      expect(queryParams).not.toHaveProperty('q');
+    });
+
+    it('clears q along with the rest when adding a feed selects its subscription (#408)', () => {
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = boot();
+      qp.next(convertToParamMap({ q: 'angular' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+
+      const ref = { closed: of({ id: 9, lastFetchedAt: 'x' }) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+      f.componentInstance.onAddFeed();
+      ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+
+      expect(nav).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({
+          queryParams: { view: null, tag: null, subscription: 9, entry: null, q: null },
+        }),
+      );
+      ctrl.match(() => true).forEach((r) => r.flush({ entries: [], nextCursor: null }));
+    });
+
+    it("onSearch('') clears q along with every other selection param", () => {
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = boot();
+
+      f.componentInstance.onSearch('');
+
+      expect(nav).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({
+          queryParams: { view: null, tag: null, subscription: null, entry: null, q: null },
+        }),
+      );
+    });
+  });
+
+  it(
+    'shows no count for a search that is loading, even though entries() still ' +
+      'holds the PREVIOUS list rows (#254 stale-list regression, fix round 2)',
+    () => {
+      const f = boot();
+      // Establish the fixture deliberately: boot() has already landed one row
+      // from the 'all' selection's list, and that row is still mounted — this
+      // is exactly the #254 behaviour (load() clears nextCursor synchronously
+      // but leaves the outgoing list rendered until the response lands).
+      expect(f.componentInstance.entries.entries().length).toBe(1);
+
+      qp.next(convertToParamMap({ q: 'angular' }));
+      f.detectChanges();
+
+      // The search request is now in flight. Prove the trap is live before
+      // asserting the title: the stale row from 'all' is still all
+      // entries() has, and hasMore() reads false because nextCursor was
+      // already cleared — a naive count/hasMore read here would show
+      // "— 1" for a term that has not answered yet.
+      expect(f.componentInstance.entries.entries().length).toBe(1);
+      expect(f.componentInstance.hasMore()).toBe(false);
+      expect(f.componentInstance.searching()).toBe(true);
+
+      expect(f.componentInstance.title()).toBe('Results for "angular"');
+
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+    },
+  );
+
+  it('titles a search selection with the translated term and the exact loaded count when there is no further page', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ q: 'angular' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+      .flush({ entries: [entry, { ...entry, id: 2 }], nextCursor: null });
+    f.detectChanges();
+
+    expect(f.componentInstance.title()).toBe('Results for "angular" — 2');
+  });
+
+  it('titles a settled search with zero results as the exact count, not the loading form', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ q: 'angular' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    expect(f.componentInstance.searching()).toBe(false);
+    expect(f.componentInstance.title()).toBe('Results for "angular" — 0');
+  });
+
+  it('titles a search selection with a trailing + when another page exists', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ q: 'angular' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+      .flush({ entries: [entry], nextCursor: 'cursor-2' });
+    f.detectChanges();
+
+    expect(f.componentInstance.title()).toBe('Results for "angular" — 1+');
   });
 
   it('reloads the for-you list when a run completes while it is open', () => {

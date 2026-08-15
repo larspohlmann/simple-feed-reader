@@ -341,6 +341,102 @@ describe('EntryListComponent', () => {
     ).not.toBeNull();
   });
 
+  it('shows the search empty state with the term, and no catalog link', () => {
+    const el = mount({
+      loading: false,
+      entries: [],
+      selection: { kind: 'search', id: null, unread: false, term: 'angular' },
+    }).nativeElement as HTMLElement;
+    const empty = el.querySelector('.empty')!;
+    expect(empty.textContent).toContain('Nothing matches "angular".');
+    expect(empty.textContent).not.toContain('Nothing here yet.');
+    expect(empty.querySelector('a')).toBeNull();
+  });
+
+  it(
+    'derives highlighting terms from a trailing-space term without a trailing empty ' +
+      "entry (#408 follow-up: the trailing space is the server's whole-word signal, " +
+      'not a word of its own)',
+    () => {
+      const f = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
+      });
+      expect(f.componentInstance.searchTerms()).toEqual(['punk']);
+    },
+  );
+
+  describe('whole-word search badge (#408 follow-up)', () => {
+    it('renders the badge for a whole-word (trailing-space) search selection', () => {
+      const el = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
+      }).nativeElement as HTMLElement;
+      const badge = el.querySelector('.whole-word-badge');
+      expect(badge).not.toBeNull();
+      expect(badge!.textContent).toContain('Whole words');
+    });
+
+    it('does not render the badge for a substring search selection', () => {
+      const el = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+      }).nativeElement as HTMLElement;
+      expect(el.querySelector('.whole-word-badge')).toBeNull();
+    });
+
+    it('does not render the badge for a non-search selection', () => {
+      const el = mount({
+        selection: { kind: 'all', id: null, unread: true },
+      }).nativeElement as HTMLElement;
+      expect(el.querySelector('.whole-word-badge')).toBeNull();
+    });
+
+    // Round 2: aria-describedby only speaks on focus, so a screen-reader
+    // user navigating by headings never heard it. The mode is now part of
+    // the heading's own accessible name via a visually-hidden phrase.
+    it('announces the mode as part of the heading, not only via focus', () => {
+      const el = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
+      }).nativeElement as HTMLElement;
+      const heading = el.querySelector('.list-header h2')!;
+      expect(heading.querySelector('.sr-only')!.textContent).toContain('Whole words');
+    });
+
+    it('marks the visible badge aria-hidden so it is not announced a second time', () => {
+      const el = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
+      }).nativeElement as HTMLElement;
+      expect(el.querySelector('.whole-word-badge')!.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('puts no whole-word phrase in the heading for a substring search', () => {
+      const el = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+      }).nativeElement as HTMLElement;
+      expect(el.querySelector('.list-header h2 .sr-only')).toBeNull();
+    });
+  });
+
+  it('hides the whole-word-mode trailing space from the empty-state message (#408 follow-up)', () => {
+    const el = mount({
+      loading: false,
+      entries: [],
+      selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
+    }).nativeElement as HTMLElement;
+    const empty = el.querySelector('.empty')!;
+    expect(empty.textContent).toContain('Nothing matches "punk".');
+    expect(empty.textContent).not.toContain('punk "');
+  });
+
+  it('keeps the existing empty state and its catalog link for a non-search selection', () => {
+    const el = mount({
+      loading: false,
+      entries: [],
+      selection: { kind: 'all', id: null, unread: false },
+    }).nativeElement as HTMLElement;
+    const empty = el.querySelector('.empty')!;
+    expect(empty.textContent).toContain('Nothing here yet.');
+    expect(empty.querySelector('a')).not.toBeNull();
+  });
+
   it('emits loadMore from the fallback button and markAllRead', () => {
     const f = mount({ hasMore: true });
     let more = 0,
@@ -556,6 +652,44 @@ describe('EntryListComponent', () => {
     const el = mount({ layout: 'list' }).nativeElement as HTMLElement;
     expect(el.querySelectorAll('app-entry-row').length).toBe(2);
     expect(el.querySelector('app-source-group')).toBeNull();
+  });
+
+  describe('search forces the list layout (#408)', () => {
+    it('renders rows, not magazine blocks, for a search selection even when layout is magazine', () => {
+      const el = mount({
+        layout: 'magazine',
+        selection: { kind: 'search', id: null, unread: false, term: 'fox' },
+      }).nativeElement as HTMLElement;
+      expect(el.querySelectorAll('app-entry-row').length).toBe(2);
+      expect(el.querySelector('.rows.magazine')).toBeNull();
+    });
+
+    it('still renders magazine blocks for a non-search selection under the magazine layout', () => {
+      const el = mount({
+        layout: 'magazine',
+        selection: { kind: 'all', id: null, unread: true },
+      }).nativeElement as HTMLElement;
+      expect(el.querySelector('.rows.magazine')).not.toBeNull();
+    });
+  });
+
+  describe('search result live region (#408)', () => {
+    it('announces the loaded count for a search selection', () => {
+      const el = mount({
+        entries: [entry(1), entry(2), entry(3)],
+        selection: { kind: 'search', id: null, unread: false, term: 'fox' },
+      }).nativeElement as HTMLElement;
+      const region = el.querySelector('[aria-live="polite"]');
+      expect(region).not.toBeNull();
+      expect(region!.textContent).toContain('3 results');
+    });
+
+    it('renders no live region for a non-search selection', () => {
+      const el = mount({
+        selection: { kind: 'all', id: null, unread: true },
+      }).nativeElement as HTMLElement;
+      expect(el.querySelector('[aria-live="polite"]')).toBeNull();
+    });
   });
 
   it('does not collapse the list header by default', () => {

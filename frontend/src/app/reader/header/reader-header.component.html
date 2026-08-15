@@ -1,75 +1,106 @@
 <header>
-  <div class="left">
-    <button
-      class="menu-btn"
-      [attr.aria-label]="'reader.toggleSidebar' | transloco"
-      (click)="toggleSidebar.emit()"
-    >
-      <app-icon name="menu" size="md" />
-    </button>
-    <a
-      class="brand"
-      [routerLink]="[]"
-      [queryParams]="{ view: null, tag: null, subscription: null, entry: null }"
-      queryParamsHandling="merge"
-    >
-      <app-spinner
-        class="brand-mark"
-        [size]="22"
-        [decorative]="true"
-        [animate]="refreshSvc.running()"
-      />
-      <span class="name">simple feed reader</span>
-    </a>
-  </div>
-  <!-- Pointer-only duplicate of the corner back-to-top button (iOS status-bar-tap
-       convention). Kept out of both the accessibility tree and the tab order:
-       keyboard and screen-reader users already have the corner button, which is
-       visible and labelled, so this element would only add a second, identically
-       named, invisible control between the brand link and the account button. -->
-  @if (screen.isNarrow()) {
-    <button
-      class="tap-to-top"
-      type="button"
-      aria-hidden="true"
-      tabindex="-1"
-      (click)="scrollTop.emit()"
-    ></button>
-  }
-  <div class="right">
-    <div class="account" [appDismissOnOutside]="menuOpen()" (dismiss)="menuOpen.set(false)">
+  @if (!searchOpen()) {
+    <div class="left">
       <button
-        aria-haspopup="menu"
-        [attr.aria-label]="'reader.account' | transloco"
-        [attr.aria-expanded]="menuOpen()"
-        (click)="menuOpen.set(!menuOpen())"
+        class="menu-btn"
+        [attr.aria-label]="'reader.toggleSidebar' | transloco"
+        (click)="toggleSidebar.emit()"
       >
-        <app-user-avatar [email]="auth.user()?.email ?? null" [size]="26" />
-        <app-icon name="expand_more" size="md" />
+        <app-icon name="menu" size="md" />
       </button>
-      @if (menuOpen()) {
-        <div class="menu" role="menu">
-          @if (auth.user(); as u) {
-            <div class="who">
-              <app-user-avatar [email]="u.email" [size]="32" />
-              <span class="who-email">{{ u.email }}</span>
-            </div>
-          }
-          <a role="menuitem" routerLink="/settings" (click)="menuOpen.set(false)">{{
-            'reader.settings' | transloco
-          }}</a>
-          @if (auth.isAdmin()) {
-            <a role="menuitem" routerLink="/admin/users" (click)="menuOpen.set(false)">{{
-              'reader.admin' | transloco
-            }}</a>
-          }
-          <button role="menuitem" (click)="auth.logout()">
-            {{ 'reader.signOut' | transloco }}
-          </button>
-        </div>
-      }
+      <a
+        class="brand"
+        [routerLink]="[]"
+        [queryParams]="selectionQueryParams({})"
+        queryParamsHandling="merge"
+      >
+        <app-spinner
+          class="brand-mark"
+          [size]="22"
+          [decorative]="true"
+          [animate]="refreshSvc.running()"
+        />
+        <span class="name">simple feed reader</span>
+      </a>
     </div>
-  </div>
+    <!-- Pointer-only duplicate of the corner back-to-top button (iOS status-bar-tap
+         convention). Kept out of both the accessibility tree and the tab order:
+         keyboard and screen-reader users already have the corner button, which is
+         visible and labelled, so this element would only add a second, identically
+         named, invisible control between the brand link and the account button. -->
+    @if (screen.isNarrow()) {
+      <button
+        class="tap-to-top"
+        type="button"
+        aria-hidden="true"
+        tabindex="-1"
+        (click)="scrollTop.emit()"
+      ></button>
+    }
+    <div class="right">
+      @if (screen.isNarrow()) {
+        <button
+          #searchTrigger
+          class="search-btn"
+          type="button"
+          [attr.aria-label]="'reader.search' | transloco"
+          (click)="searchOpen.set(true)"
+        >
+          <app-icon name="search" size="md" />
+        </button>
+      }
+      <div class="account" [appDismissOnOutside]="menuOpen()" (dismiss)="menuOpen.set(false)">
+        <button
+          aria-haspopup="menu"
+          [attr.aria-label]="'reader.account' | transloco"
+          [attr.aria-expanded]="menuOpen()"
+          (click)="menuOpen.set(!menuOpen())"
+        >
+          <app-user-avatar [email]="auth.user()?.email ?? null" [size]="26" />
+          <app-icon name="expand_more" size="md" />
+        </button>
+        @if (menuOpen()) {
+          <div class="menu" role="menu">
+            @if (auth.user(); as u) {
+              <div class="who">
+                <app-user-avatar [email]="u.email" [size]="32" />
+                <span class="who-email">{{ u.email }}</span>
+              </div>
+            }
+            <a role="menuitem" routerLink="/settings" (click)="menuOpen.set(false)">{{
+              'reader.settings' | transloco
+            }}</a>
+            @if (auth.isAdmin()) {
+              <a role="menuitem" routerLink="/admin/users" (click)="menuOpen.set(false)">{{
+                'reader.admin' | transloco
+              }}</a>
+            }
+            <button role="menuitem" (click)="auth.logout()">
+              {{ 'reader.signOut' | transloco }}
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="search-bar" [appDismissOnOutside]="searchOpen()" (dismiss)="closeSearch()">
+      <app-search-field
+        #searchField
+        [term]="searchTerm()"
+        [loading]="searchLoading()"
+        (search)="search.emit($event)"
+        (escapedWhileEmpty)="closeSearch()"
+      />
+      <button
+        type="button"
+        class="search-close"
+        [attr.aria-label]="'reader.searchClose' | transloco"
+        (click)="closeSearch()"
+      >
+        <app-icon name="close" size="md" />
+      </button>
+    </div>
+  }
 </header>
 
 @if (tags().length) {
@@ -81,7 +112,7 @@
       class="chip all"
       [class.active]="allItemsActive()"
       [routerLink]="[]"
-      [queryParams]="{ view: null, tag: null, subscription: null, entry: null }"
+      [queryParams]="selectionQueryParams({})"
       queryParamsHandling="merge"
     >
       {{ 'reader.allItems' | transloco }}
@@ -91,7 +122,7 @@
         class="chip"
         [class.active]="t.id === activeTagId()"
         [routerLink]="[]"
-        [queryParams]="{ tag: t.id, view: null, subscription: null, entry: null }"
+        [queryParams]="selectionQueryParams({ tag: t.id })"
         queryParamsHandling="merge"
       >
         <app-tag-glyph [name]="t.icon" [color]="t.color" size="sm" />

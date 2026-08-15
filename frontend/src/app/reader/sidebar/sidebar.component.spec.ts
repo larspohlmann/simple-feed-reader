@@ -61,8 +61,10 @@ function mount(
     selection: Selection;
     user: CurrentUser | null;
     coarse: boolean;
+    narrow: boolean;
     organising: boolean;
     sheetChoice?: string;
+    searchLoading: boolean;
   }> = {},
 ) {
   TestBed.configureTestingModule({
@@ -73,7 +75,13 @@ function mount(
       provideHttpClientTesting(),
       { provide: API_BASE_URL, useValue: 'https://api.test' },
       { provide: AuthService, useValue: { user: signal(over.user ?? account(null)) } },
-      { provide: LayoutService, useValue: { isCoarse: signal(over.coarse ?? false) } },
+      {
+        provide: LayoutService,
+        useValue: {
+          isCoarse: signal(over.coarse ?? false),
+          isNarrow: signal(over.narrow ?? false),
+        },
+      },
       { provide: ActionSheet, useValue: { open: jest.fn(() => of(over.sheetChoice)) } },
     ],
   });
@@ -85,6 +93,7 @@ function mount(
   f.componentRef.setInput('keptCount', over.keptCount ?? 0);
   f.componentRef.setInput('selection', over.selection ?? { kind: 'all', id: null, unread: true });
   f.componentRef.setInput('loading', false);
+  f.componentRef.setInput('searchLoading', over.searchLoading ?? false);
   f.componentRef.setInput('organising', over.organising ?? false);
   f.detectChanges();
   return f;
@@ -430,6 +439,41 @@ describe('SidebarComponent', () => {
     expect(unsub).toHaveBeenCalledWith(s);
   });
 
+  describe('search field', () => {
+    it('renders on a wide screen', () => {
+      const f = mount({ narrow: false });
+      expect(f.nativeElement.querySelector('app-search-field')).toBeTruthy();
+    });
+
+    it('is absent on a narrow screen, where the mobile header owns search', () => {
+      const f = mount({ narrow: true });
+      expect(f.nativeElement.querySelector('app-search-field')).toBeNull();
+    });
+
+    it('forwards the settled term as the search output', () => {
+      const f = mount({ narrow: false });
+      const search = jest.fn();
+      f.componentInstance.search.subscribe(search);
+
+      const searchField = f.debugElement.query(
+        (de) => de.name === 'app-search-field',
+      )?.componentInstance;
+      searchField.search.emit('cats');
+
+      expect(search).toHaveBeenCalledWith('cats');
+    });
+
+    it('forwards searchLoading to the field, distinct from the subscriptions loading input', () => {
+      const f = mount({ narrow: false, searchLoading: true });
+
+      const searchField = f.debugElement.query(
+        (de) => de.name === 'app-search-field',
+      )?.componentInstance;
+
+      expect(searchField.loading()).toBe(true);
+    });
+  });
+
   it('shows the running build as a link into settings', () => {
     const version = (mount().nativeElement as HTMLElement).querySelector('.version');
 
@@ -467,7 +511,7 @@ describe('for-you row', () => {
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
         { provide: AuthService, useValue: { user: signal(account(null)) } },
-        { provide: LayoutService, useValue: { isCoarse: signal(false) } },
+        { provide: LayoutService, useValue: { isCoarse: signal(false), isNarrow: signal(false) } },
         { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
         { provide: AiAvailabilityService, useValue: { ready: signal(ready) } },
         {
@@ -527,7 +571,7 @@ describe('organise mode', () => {
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
         { provide: AuthService, useValue: { user: signal(account(null)) } },
-        { provide: LayoutService, useValue: { isCoarse } },
+        { provide: LayoutService, useValue: { isCoarse, isNarrow: signal(false) } },
       ],
     });
     const f = TestBed.createComponent(SidebarComponent);
@@ -722,7 +766,7 @@ describe('organise mode', () => {
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
         { provide: AuthService, useValue: { user: signal(account(null)) } },
-        { provide: LayoutService, useValue: { isCoarse } },
+        { provide: LayoutService, useValue: { isCoarse, isNarrow: signal(false) } },
         { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
       ],
     });
@@ -756,7 +800,10 @@ describe('organise mode', () => {
           provideHttpClientTesting(),
           { provide: API_BASE_URL, useValue: 'https://api.test' },
           { provide: AuthService, useValue: { user: signal(account(null)) } },
-          { provide: LayoutService, useValue: { isCoarse: signal(coarse) } },
+          {
+            provide: LayoutService,
+            useValue: { isCoarse: signal(coarse), isNarrow: signal(false) },
+          },
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
         ],
       });

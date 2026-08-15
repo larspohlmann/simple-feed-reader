@@ -78,7 +78,7 @@
         <app-favicon [url]="e.faviconUrl" [size]="16" /><a
           class="source-link"
           [routerLink]="[]"
-          [queryParams]="{ subscription: e.subscriptionId, view: null, tag: null, entry: null }"
+          [queryParams]="selectionQueryParams({ subscription: e.subscriptionId })"
           queryParamsHandling="merge"
           >{{ e.source }}</a
         >

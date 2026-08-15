@@ -41,7 +41,15 @@ import { MagazineBlock } from '../magazine/magazine-block';
 import { planMagazine } from '../magazine/magazine-planner';
 import { ReadingLayout } from '../reading-layout.service';
 import { EntryDto, SubscriptionTagDto, TagDto } from '../models';
-import { Selection, canScopedRefresh, isSingleStreamView, sameSelection } from '../query';
+import {
+  Selection,
+  canScopedRefresh,
+  isSingleStreamView,
+  isWholeWordTerm,
+  sameSelection,
+  searchWords,
+  visibleSearchTerm,
+} from '../query';
 import { atTop, pullTriggersRefresh, rubberBand } from '../reader-gestures';
 import { relativeTime } from '../format';
 import { LanguageService } from '../../core/language.service';
@@ -152,6 +160,31 @@ export class EntryListComponent implements OnDestroy {
 
   /** The refresh button + pull gesture are hidden in the cross-feed saved views. */
   readonly canRefresh = computed(() => canScopedRefresh(this.selection()));
+
+  /** The current search's words, passed down to every row for marking. Empty
+   *  outside a search. */
+  readonly searchTerms = computed(() => searchWords(this.selection().term ?? ''));
+
+  /** The search term for the empty-state message — the trailing space is the
+   *  server's whole-word-match signal, not part of what the user typed, so it
+   *  must not appear in text a human reads (#408 follow-up). */
+  readonly displayedSearchTerm = computed(() => visibleSearchTerm(this.selection().term ?? ''));
+
+  /** Whether the current selection is a search whose trailing space put it in
+   *  whole-word mode. The badge that surfaces this is the only display of the
+   *  mode — without it, `punk` and `punk ` render the identical title while
+   *  returning very different result sets, with nothing on screen to explain
+   *  why (#408 follow-up). */
+  readonly showWholeWordBadge = computed(() => {
+    const s = this.selection();
+    return s.kind === 'search' && isWholeWordTerm(s.term ?? '');
+  });
+
+  /** A search never renders as a magazine — its rows carry marked terms, and a
+   *  spread would scatter them across eight block templates. */
+  readonly effectiveLayout = computed(() =>
+    this.selection().kind === 'search' ? 'list' : this.layout(),
+  );
 
   private readonly language = inject(LanguageService);
   /** A localised "last refreshed 5 min ago" label for a single-feed selection

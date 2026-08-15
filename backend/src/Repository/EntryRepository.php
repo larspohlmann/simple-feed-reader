@@ -9,6 +9,9 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Http\EntryCursor;
+use App\Service\Search\LikePattern;
+use App\Service\Search\SearchTerms;
+use App\Service\Search\WordBoundaries;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
@@ -115,12 +118,10 @@ class EntryRepository extends ServiceEntityRepository
      */
     public function listForUser(EntryQuery $query): array
     {
-        $limit = max(1, min($query->limit, EntryQuery::MAX_LIMIT));
-
         $qb = $this->rowQueryBuilder($query->userId)
             ->orderBy('e.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
-            ->setMaxResults($limit);
+            ->setMaxResults($query->limit);
 
         if ($query->subscriptionId !== null) {
             $qb->andWhere('s.id = :sid')->setParameter('sid', $query->subscriptionId);
@@ -135,6 +136,30 @@ class EntryRepository extends ServiceEntityRepository
         }
 
         $this->applyView($qb, $query->view);
+        $this->applyCursor($qb, $query->cursor);
+
+        /** @var list<array<array-key, mixed>> $rows */
+        $rows = $qb->getQuery()->getResult();
+
+        return array_map(fn (array $row): EntryListRow => $this->hydrateRow($row), $rows);
+    }
+
+    /**
+     * Entries whose title or summary contains EVERY search term, newest first,
+     * keyset-paginated exactly like the entry list. The predicate is an AND of
+     * unindexable LIKEs, so the database reads every entry the caller
+     * subscribes to; that cost is accepted for now and measured in #408.
+     *
+     * @return list<EntryListRow>
+     */
+    public function searchForUser(EntrySearchQuery $query): array
+    {
+        $qb = $this->rowQueryBuilder($query->userId)
+            ->orderBy('e.effectiveDate', 'DESC')
+            ->addOrderBy('e.id', 'DESC')
+            ->setMaxResults($query->limit);
+
+        $this->applyTerms($qb, $query->terms);
         $this->applyCursor($qb, $query->cursor);
 
         /** @var list<array<array-key, mixed>> $rows */
@@ -219,6 +244,97 @@ class EntryRepository extends ServiceEntityRepository
                 // 'all' — no state filter.
                 break;
         }
+    }
+
+    /**
+     * The mode is decided once for the whole query (SearchTerms::$isWholeWord),
+     * not per term — every term takes the same path.
+     */
+    private function applyTerms(QueryBuilder $qb, SearchTerms $terms): void
+    {
+        foreach ($terms->terms as $position => $term) {
+            $parameter = 'term' . $position;
+
+            if ($terms->isWholeWord) {
+                $this->applyWholeWordTerm($qb, $parameter, $term);
+                continue;
+            }
+
+            $this->applySubstringTerm($qb, $parameter, $term);
+        }
+    }
+
+    /**
+     * A summary is nullable, and NULL LIKE … is never true, so the OR alone
+     * handles an entry that carries no summary.
+     */
+    private function applySubstringTerm(QueryBuilder $qb, string $parameter, string $term): void
+    {
+        $qb->andWhere(\sprintf(
+            "(e.title LIKE :%s ESCAPE '%s' OR e.summary LIKE :%s ESCAPE '%s')",
+            $parameter,
+            LikePattern::ESCAPE_CHARACTER,
+            $parameter,
+            LikePattern::ESCAPE_CHARACTER,
+        ))->setParameter($parameter, LikePattern::containing($term));
+    }
+
+    /**
+     * The plain "LIKE %term%" is ANDed in front of the normalized whole-word
+     * check on purpose: it rejects almost every row with a cheap scan before
+     * the expensive REPLACE chain runs, and costs nothing extra on the rows
+     * where it does match.
+     *
+     * It is sound only while the raw term is a substring of every row the
+     * normalized check would accept — true for a term of letters and digits,
+     * FALSE as soon as the term carries boundary punctuation, because the two
+     * sides then differ in exactly that punctuation. "E-Mail" and "E–Mail"
+     * (en dash) normalize alike and must both match, yet neither is a raw
+     * substring of the other. Such a term skips the prefilter and pays for the
+     * chain; it is the rare shape, and a wrong answer is not worth the scan.
+     */
+    private function applyWholeWordTerm(QueryBuilder $qb, string $parameter, string $term): void
+    {
+        $word = $parameter . 'Word';
+        $cheap = WordBoundaries::areIn($term) ? null : $parameter . 'Cheap';
+
+        $qb->andWhere(\sprintf(
+            '(%s OR %s)',
+            $this->wholeWordColumnPredicate('title', $cheap, $word),
+            $this->wholeWordColumnPredicate('summary', $cheap, $word),
+        ))->setParameter($word, LikePattern::wholeWord($term));
+
+        if ($cheap !== null) {
+            $qb->setParameter($cheap, LikePattern::containing($term));
+        }
+    }
+
+    /**
+     * One column's half of applyWholeWordTerm: the cheap "%term%" scan first
+     * when it is sound, the normalized boundary check for the rows that
+     * survive it.
+     */
+    private function wholeWordColumnPredicate(string $column, ?string $cheap, string $word): string
+    {
+        $escape = LikePattern::ESCAPE_CHARACTER;
+        $normalized = \sprintf(
+            "CONCAT(' ', NORMALIZE_WORD_BOUNDARIES(e.%s), ' ') LIKE :%s ESCAPE '%s'",
+            $column,
+            $word,
+            $escape,
+        );
+
+        if ($cheap === null) {
+            return '(' . $normalized . ')';
+        }
+
+        return \sprintf(
+            "(e.%s LIKE :%s ESCAPE '%s' AND %s)",
+            $column,
+            $cheap,
+            $escape,
+            $normalized,
+        );
     }
 
     private function applyCursor(QueryBuilder $qb, ?EntryCursor $cursor): void

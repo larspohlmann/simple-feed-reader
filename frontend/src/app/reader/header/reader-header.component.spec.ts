@@ -1,10 +1,12 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { API_BASE_URL } from '../../core/api';
 import { AuthService } from '../../core/auth.service';
 import { ReaderHeaderComponent } from './reader-header.component';
+import { SearchFieldComponent } from '../search-field/search-field.component';
 import { signal } from '@angular/core';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { LayoutService } from '../layout.service';
@@ -176,6 +178,223 @@ describe('ReaderHeaderComponent', () => {
       layout.isNarrow.set(false);
       const el = create().nativeElement as HTMLElement;
       expect(el.querySelector('.tap-to-top')).toBeNull();
+    });
+  });
+
+  describe('the mobile search bar', () => {
+    it('shows the trigger, labelled, only on a narrow layout', () => {
+      const f = create();
+      const el = f.nativeElement as HTMLElement;
+      const trigger = el.querySelector('[aria-label="Search"]');
+      expect(trigger).not.toBeNull();
+
+      layout.isNarrow.set(false);
+      f.detectChanges();
+      expect(el.querySelector('[aria-label="Search"]')).toBeNull();
+    });
+
+    // #408 fix round 1: `searchOpen` used to be plain local state that only the
+    // narrow-gated trigger ever set, so growing past NARROW_QUERY mid-search left
+    // it stuck true — the mobile bar (and its own `app-search-field`, a second
+    // `/` listener) stayed mounted on a layout that no longer has a trigger for
+    // it, right alongside the sidebar's own instance.
+    it('closes the bar when the layout stops being narrow', () => {
+      const f = create();
+      const el = f.nativeElement as HTMLElement;
+
+      (el.querySelector('[aria-label="Search"]') as HTMLButtonElement).click();
+      f.detectChanges();
+      expect(f.componentInstance.searchOpen()).toBe(true);
+
+      layout.isNarrow.set(false);
+      f.detectChanges();
+
+      expect(f.componentInstance.searchOpen()).toBe(false);
+      expect(el.querySelector('app-search-field')).toBeNull();
+    });
+
+    it('does not reopen on its own when the layout narrows again', () => {
+      const f = create();
+      const el = f.nativeElement as HTMLElement;
+
+      (el.querySelector('[aria-label="Search"]') as HTMLButtonElement).click();
+      f.detectChanges();
+
+      layout.isNarrow.set(false);
+      f.detectChanges();
+      layout.isNarrow.set(true);
+      f.detectChanges();
+
+      expect(f.componentInstance.searchOpen()).toBe(false);
+    });
+
+    // The field is mounted twice — here and in the sidebar — and each mount is
+    // wired by hand. The sidebar's carried `[term]`; this one did not, so a
+    // narrow layout showed the results for `?q=` above an empty box after a
+    // reload or a Back navigation.
+    it('opens the bar showing the term the route already carries', () => {
+      const f = create();
+      f.componentRef.setInput('searchTerm', 'daft punk');
+      f.detectChanges();
+      const el = f.nativeElement as HTMLElement;
+
+      (el.querySelector('[aria-label="Search"]') as HTMLButtonElement).click();
+      f.detectChanges();
+
+      expect((el.querySelector('app-search-field input') as HTMLInputElement).value).toBe(
+        'daft punk',
+      );
+    });
+
+    it('covers the header with the field on click, hiding the brand and account', () => {
+      const f = create();
+      const el = f.nativeElement as HTMLElement;
+
+      (el.querySelector('[aria-label="Search"]') as HTMLButtonElement).click();
+      f.detectChanges();
+
+      expect(f.componentInstance.searchOpen()).toBe(true);
+      expect(el.querySelector('.brand')).toBeNull();
+      expect(el.querySelector('[aria-haspopup="menu"]')).toBeNull();
+      expect(el.querySelector('app-search-field')).not.toBeNull();
+    });
+
+    it('keeps the tag row rendered while the bar is open', () => {
+      const f = create();
+      f.componentRef.setInput('tags', [
+        { id: 1, name: 'News', color: null, icon: null, position: 0 },
+      ]);
+      f.detectChanges();
+      const el = f.nativeElement as HTMLElement;
+
+      (el.querySelector('[aria-label="Search"]') as HTMLButtonElement).click();
+      f.detectChanges();
+
+      expect(el.querySelector('.tagrow')).not.toBeNull();
+    });
+
+    it('forwards the settled term from the field as its own search output', () => {
+      const f = create();
+      const el = f.nativeElement as HTMLElement;
+      const fired: string[] = [];
+      f.componentInstance.search.subscribe((term) => fired.push(term));
+
+      (el.querySelector('[aria-label="Search"]') as HTMLButtonElement).click();
+      f.detectChanges();
+      // The search-field component owns the debounce and the length floor; this
+      // header only forwards whatever it settles on.
+      const field = f.debugElement.query(By.directive(SearchFieldComponent))
+        .componentInstance as SearchFieldComponent;
+      field.search.emit('angular');
+      expect(fired).toEqual(['angular']);
+    });
+
+    it('forwards searchLoading to the mobile bar field', () => {
+      const f = create();
+      const el = f.nativeElement as HTMLElement;
+      f.componentRef.setInput('searchLoading', true);
+
+      (el.querySelector('[aria-label="Search"]') as HTMLButtonElement).click();
+      f.detectChanges();
+
+      const field = f.debugElement.query(By.directive(SearchFieldComponent))
+        .componentInstance as SearchFieldComponent;
+      expect(field.loading()).toBe(true);
+    });
+
+    it('restores the brand and account when the close control is clicked', () => {
+      const f = create();
+      const el = f.nativeElement as HTMLElement;
+
+      (el.querySelector('[aria-label="Search"]') as HTMLButtonElement).click();
+      f.detectChanges();
+      (el.querySelector('[aria-label="Close search"]') as HTMLButtonElement).click();
+      f.detectChanges();
+
+      expect(f.componentInstance.searchOpen()).toBe(false);
+      expect(el.querySelector('.brand')).not.toBeNull();
+      expect(el.querySelector('[aria-haspopup="menu"]')).not.toBeNull();
+    });
+
+    it('closes on a click outside the bar', () => {
+      const f = create();
+      const el = f.nativeElement as HTMLElement;
+
+      (el.querySelector('[aria-label="Search"]') as HTMLButtonElement).click();
+      f.detectChanges();
+      expect(f.componentInstance.searchOpen()).toBe(true);
+
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      f.detectChanges();
+
+      expect(f.componentInstance.searchOpen()).toBe(false);
+    });
+
+    it('clears without closing on a first Escape over a non-empty field', () => {
+      // The two-step contract end to end: the first Escape only clears the
+      // text (proven at the field level already), and here specifically it
+      // must NOT also close the bar at the header level.
+      const f = create();
+      const el = f.nativeElement as HTMLElement;
+
+      (el.querySelector('[aria-label="Search"]') as HTMLButtonElement).click();
+      f.detectChanges();
+
+      const input = el.querySelector('app-search-field input') as HTMLInputElement;
+      input.value = 'cats';
+      input.dispatchEvent(new Event('input'));
+      f.detectChanges();
+
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      f.detectChanges();
+
+      expect(input.value).toBe('');
+      expect(f.componentInstance.searchOpen()).toBe(true);
+    });
+
+    it('closes when the field reports Escape on an already-empty field', () => {
+      const f = create();
+      const el = f.nativeElement as HTMLElement;
+
+      (el.querySelector('[aria-label="Search"]') as HTMLButtonElement).click();
+      f.detectChanges();
+
+      const input = el.querySelector('app-search-field input') as HTMLInputElement;
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      f.detectChanges();
+
+      expect(f.componentInstance.searchOpen()).toBe(false);
+    });
+
+    it('moves focus into the field on open and back to the trigger on close, twice over', () => {
+      const f = create();
+      const el = f.nativeElement as HTMLElement;
+
+      function trigger(): HTMLButtonElement {
+        return el.querySelector('[aria-label="Search"]') as HTMLButtonElement;
+      }
+      function fieldInput(): HTMLInputElement {
+        return el.querySelector('app-search-field input') as HTMLInputElement;
+      }
+      function closeButton(): HTMLButtonElement {
+        return el.querySelector('[aria-label="Close search"]') as HTMLButtonElement;
+      }
+
+      trigger().click();
+      f.detectChanges();
+      expect(document.activeElement).toBe(fieldInput());
+
+      closeButton().click();
+      f.detectChanges();
+      expect(document.activeElement).toBe(trigger());
+
+      trigger().click();
+      f.detectChanges();
+      expect(document.activeElement).toBe(fieldInput());
+
+      closeButton().click();
+      f.detectChanges();
+      expect(document.activeElement).toBe(trigger());
     });
   });
 });

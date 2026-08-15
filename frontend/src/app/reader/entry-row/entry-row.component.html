@@ -10,11 +10,23 @@
 >
   <span class="dot" [class.on]="!entry().isRead" aria-hidden="true"></span>
   <div class="body">
-    <h3 class="title">{{ entry().title }}</h3>
+    <h3 class="title">
+      @if (marking()) {
+        <app-marked-text [text]="entry().title" [terms]="terms()" />
+      } @else {
+        {{ entry().title }}
+      }
+    </h3>
     <p class="meta">
       <app-favicon [url]="entry().faviconUrl" [size]="14" />{{ entry().source }} · {{ when() }}
     </p>
-    <p class="snippet">{{ snippet() }}</p>
+    <p class="snippet">
+      @if (marking()) {
+        <app-marked-text [text]="snippet()" [terms]="terms()" />
+      } @else {
+        {{ snippet() }}
+      }
+    </p>
     <app-source-tags [tags]="tags()" />
     <div class="actions">
       <button

@@ -7,6 +7,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { EntryCompactComponent } from './entry-compact.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
 import { EntryDto, SubscriptionTagDto } from '../models';
+import { selectionQueryParams } from '../query';
 
 @Component({
   selector: 'app-source-group',
@@ -22,6 +23,8 @@ import { EntryDto, SubscriptionTagDto } from '../models';
   styleUrl: './source-group.component.scss',
 })
 export class SourceGroupComponent {
+  protected readonly selectionQueryParams = selectionQueryParams;
+
   readonly source = input.required<string>();
   readonly subscriptionId = input.required<number>();
   /** The run's whole owned tail. */

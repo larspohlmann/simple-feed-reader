@@ -166,6 +166,8 @@ export interface EntryQuery {
   view: EntryView;
   subscription?: number;
   tag?: number;
+  /** Presence selects the search endpoint instead of the main list. */
+  q?: string;
 }
 
 export type MarkReadScope = 'all' | 'feed' | 'tag';

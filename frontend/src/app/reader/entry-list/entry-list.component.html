@@ -8,7 +8,25 @@
         <app-tag-glyph [name]="tag.icon" [color]="tag.color" size="text" />
       }
       <span>{{ title() }}</span>
+      @if (showWholeWordBadge()) {
+        <!-- Carries the mode into the heading's own accessible name, so a
+             screen-reader user hears it whichever way they reached the
+             heading (focus, or heading navigation) — aria-describedby only
+             fires on focus (#408 follow-up fix round 2). The visible badge
+             below renders the same word for sighted users; it is
+             aria-hidden so the two don't announce it twice. -->
+        <span class="sr-only">{{ 'reader.searchWholeWord' | transloco }}</span>
+      }
     </h2>
+    @if (showWholeWordBadge()) {
+      <span
+        class="whole-word-badge"
+        aria-hidden="true"
+        [attr.title]="'reader.searchWholeWordHint' | transloco"
+      >
+        {{ 'reader.searchWholeWord' | transloco }}
+      </span>
+    }
     @if (lastRefreshedLabel()) {
       <span class="last-refreshed"
         >{{ 'reader.lastRefreshed' | transloco }} {{ lastRefreshedLabel() }}</span
@@ -78,6 +96,17 @@
   </div>
 </header>
 
+@if (selection().kind === 'search') {
+  <!-- Announces the count, not the rows: a live region that spoke every row
+       would drown a screen-reader user in noise on every result set. The
+       count tracks the loaded entries, so tapping Load more re-announces the
+       new total — a deliberate choice: it's a discrete, manual action, not a
+       stream the user needs shielding from. -->
+  <p class="sr-only" aria-live="polite" role="status">
+    {{ 'reader.searchCount' | transloco: { count: entries().length } }}
+  </p>
+}
+
 @if (revealVisible()) {
   <div
     class="pull-indicator"
@@ -113,13 +142,17 @@
       <ng-container [ngTemplateOutlet]="block" />
     }
     <p class="empty">
-      {{ (selection().unread ? 'reader.allCaughtUp' : 'reader.nothingHere') | transloco }}
-      @if (!catalogEmpty()) {
-        <a routerLink="/discover">{{ 'discover.browseCatalog' | transloco }}</a>
+      @if (selection().kind === 'search') {
+        {{ 'reader.searchNoResults' | transloco: { term: displayedSearchTerm() } }}
+      } @else {
+        {{ (selection().unread ? 'reader.allCaughtUp' : 'reader.nothingHere') | transloco }}
+        @if (!catalogEmpty()) {
+          <a routerLink="/discover">{{ 'discover.browseCatalog' | transloco }}</a>
+        }
       }
     </p>
   </div>
-} @else if (layout() === 'magazine') {
+} @else if (effectiveLayout() === 'magazine') {
   <div
     class="rows magazine"
     [class.reloading]="loading()"
@@ -244,6 +277,7 @@
           <app-entry-row
             [entry]="e"
             [tags]="tagsFor(e.subscriptionId)"
+            [terms]="searchTerms()"
             [class.open]="openEntryId() === e.id"
             (favorite)="favorite.emit($event)"
             (keep)="keep.emit($event)"

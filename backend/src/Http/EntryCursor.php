@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Exception\ValidationException;
+
 /**
  * Opaque keyset-pagination cursor for the entry list: base64url of
  * "<effectiveDate ISO8601>|<id>". The client treats it as a token; the format
@@ -19,6 +21,27 @@ final readonly class EntryCursor
         public \DateTimeImmutable $effectiveDate,
         public int $id,
     ) {
+    }
+
+    /**
+     * The cursor a request asked for: absent when the client sent none, and a
+     * 422 when it sent one we cannot read.
+     *
+     * `decode()` answers null for both cases, so every caller had to guard the
+     * empty string first and then decide what a null meant. Two callers did,
+     * with the same logic and the same message written twice — which put the
+     * API's malformed-cursor contract in two hands.
+     *
+     * @throws ValidationException when the cursor is present but unreadable
+     */
+    public static function fromRequestValue(?string $raw): ?self
+    {
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        return self::decode($raw)
+            ?? throw new ValidationException(['cursor' => ['The cursor is malformed.']]);
     }
 
     public static function encode(\DateTimeImmutable $effectiveDate, int $id): string

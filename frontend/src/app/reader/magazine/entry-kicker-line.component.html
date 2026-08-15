@@ -7,7 +7,7 @@
     <a
       class="source"
       [routerLink]="[]"
-      [queryParams]="{ subscription: entry().subscriptionId, view: null, tag: null, entry: null }"
+      [queryParams]="selectionQueryParams({ subscription: entry().subscriptionId })"
       queryParamsHandling="merge"
       (click)="$event.stopPropagation()"
       >{{ entry().source }}</a

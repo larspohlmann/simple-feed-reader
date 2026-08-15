@@ -8,6 +8,7 @@ import { Problem, parseProblem } from '../core/problem';
 import { ToastService } from '../shared/toast/toast.service';
 import { ReaderApi } from './reader-api';
 import { RecommendationRunReport } from './models';
+import { selectionQueryParams } from './query';
 
 const BACKOFF_MS = 1500;
 /** Matches `RecommendationRun::MAX_TRANSPORT_FAILURES`: the server tolerates
@@ -406,7 +407,7 @@ export class RecommendationsService {
 
   private navigateToForYou(): void {
     void this.router.navigate(['/'], {
-      queryParams: { view: 'for-you', tag: null, subscription: null, entry: null },
+      queryParams: selectionQueryParams({ view: 'for-you' }),
     });
   }
 }

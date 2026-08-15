@@ -27,7 +27,15 @@ import { refreshFailureKey } from './refresh-message';
 import { AiAvailabilityService } from '../core/ai-availability.service';
 import { ReadingLayoutService } from './reading-layout.service';
 import { LayoutService } from './layout.service';
-import { RefreshScope, markReadTarget, queryFromSelection, selectionFromParams } from './query';
+import {
+  RefreshScope,
+  markReadTarget,
+  queryFromSelection,
+  sameSelection,
+  selectionFromParams,
+  selectionQueryParams,
+  visibleSearchTerm,
+} from './query';
 import { ListScrollReset } from './list-scroll-reset';
 import { entryParam } from './slug';
 import { EntryDto, EntryStatePatch, SubscriptionDto, SubscriptionTagDto, TagDto } from './models';
@@ -162,9 +170,12 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly parsed = computed(() => selectionFromParams(this.params()));
   // Structural equality so an entry-only URL change does not produce a new
   // selection reference — the reload effect must react to selection, not the
-  // open entry.
+  // open entry. Delegates to `sameSelection` rather than re-listing
+  // `Selection`'s fields here: a hand-rolled copy once fell out of step when
+  // `term` was added, silently freezing the list on every second search
+  // (#408 follow-up) — one comparator, one definition.
   readonly selection = computed(() => this.parsed().selection, {
-    equal: (a, b) => a.kind === b.kind && a.id === b.id && a.unread === b.unread,
+    equal: sameSelection,
   });
   readonly entryId = computed(() => this.parsed().entryId);
 
@@ -190,6 +201,11 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     return e ? (this.feedTags().get(e.subscriptionId) ?? []) : [];
   });
   readonly hasMore = computed(() => this.entries.nextCursor() !== null);
+  /** A search request is actually in flight — not merely "some list is
+   *  loading": `entries.loading()` is true for every list load, so gating the
+   *  search field's spinner on that alone would show it while an unrelated
+   *  feed list loads. */
+  readonly searching = computed(() => this.selection().kind === 'search' && this.entries.loading());
   readonly canMarkAllRead = computed(() => markReadTarget(this.selection()) !== null);
   /** What the list header's "Last refreshed" hint shows: a feed's fetch time,
    *  or the for-you list's generation time. Null everywhere else. */
@@ -227,6 +243,19 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly hdr = viewChild('hdr', { read: ElementRef });
   /** Only one of the two template branches renders a list at a time. */
   private readonly list = viewChild(EntryListComponent);
+  private readonly header = viewChild(ReaderHeaderComponent);
+  /** Whether the mobile header's own search bar covers it — read from the
+   *  child rather than owned here, since the bar's open/closed state (trigger,
+   *  close button, Escape, outside click) is entirely the header's business. */
+  private readonly headerSearchOpen = computed(() => this.header()?.searchOpen() ?? false);
+  /** Either overlay hanging off the header — the drawer or the search bar —
+   *  force-shows it. A single derived signal, read from the single place that
+   *  applies the rule (the header-visibility effect in the constructor), so
+   *  the two overlays can never disagree about the header's state the way two
+   *  independent writers once did. */
+  private readonly headerOverlayOpen = computed(
+    () => this.sidebarOpen() || this.headerSearchOpen(),
+  );
   private lastListScrollTop = 0;
   private resizeObs?: ResizeObserver;
   /** Mobile drawer state; the sidebar is a fixed overlay below 720px. */
@@ -251,8 +280,31 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     if (s.kind === 'for-you') return 'For you';
     if (s.kind === 'all') return 'All items';
     if (s.kind === 'tag') return this.selectedTag()?.name ?? 'Tag';
+    if (s.kind === 'search') return this.searchTitle(s.term ?? '');
     return this.subs.subscriptions().find((x) => x.id === s.id)?.title ?? 'Feed';
   });
+
+  /** The search heading, which unlike every other title carries a result count
+   *  and therefore its own rules about when that count may be shown. */
+  private searchTitle(rawTerm: string): string {
+    const term = visibleSearchTerm(rawTerm);
+    // No count while the search is in flight: EntriesStore.load() clears
+    // nextCursor synchronously but deliberately keeps the PREVIOUS list
+    // rendered until the response lands (#254) — so for that whole window
+    // `entries()` still holds the old term's rows and `hasMore()` reads as
+    // false regardless of what the new term will return. Counting them would
+    // flash a stale, or even a false "no matches", number. Gated on the same
+    // condition the spinner uses, so the two can never disagree.
+    if (this.searching()) return this.i18n.translate('reader.searchResults', { term });
+
+    // The loaded count, not a COUNT(*) total — the list pages 50 at a time, so
+    // it lies unless it is labelled: a trailing '+' when another page is still
+    // out there, the exact number once there isn't.
+    const count = this.entries.entries().length;
+    const key = this.hasMore() ? 'reader.searchResultsCountMore' : 'reader.searchResultsCount';
+
+    return this.i18n.translate(key, { term, count });
+  }
 
   private readonly markedOnOpen = new Set<number>();
   private readonly viewedOnOpen = new Set<number>();
@@ -397,6 +449,22 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     effect(() => {
       if (this.screen.isWide()) untracked(() => this.headerHidden.set(false));
     });
+
+    // Force-show the header while either overlay that hangs off it — the
+    // mobile drawer or the search bar — is open, and resolve back to the
+    // scroll-implied resting state once BOTH are closed. One effect reacting
+    // to the single derived `headerOverlayOpen`, rather than one effect per
+    // overlay: two independent writers each resolving to their own "resting
+    // state" on close is exactly what let the drawer and the search bar
+    // fight over the header (one closing would retract it out from under the
+    // other, still open). setSidebarOpen() only ever toggles `sidebarOpen`
+    // now — it does not write `headerHidden` itself — so this is the one
+    // place that turns "an overlay opened or closed" into a header-visibility
+    // decision, for both overlays alike.
+    effect(() => {
+      const open = this.headerOverlayOpen();
+      untracked(() => this.headerHidden.set(open ? false : this.restingHeaderHidden()));
+    });
   }
 
   ngOnInit(): void {
@@ -461,15 +529,17 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    * The mobile drawer hangs below the header, so it must never open under a
    * retracted one — that would leave a strip of backdrop where the bar should
    * be. On close the header returns to what the *list's* scroll position
-   * implies — asked of the list itself, because the last scroller to fire may
-   * have been an article's, whose offset says nothing about the list (#128).
-   * Leaving the bar expanded over a scrolled-down list dead-zones touch-scroll
-   * in the strip it overlays (it covers the list but is not its scroller),
-   * which reads as the list refusing to scroll until the swipe starts below
-   * the bar.
+   * implies, UNLESS the search bar is still open — see the constructor's
+   * `headerOverlayOpen` effect, the single place that turns this (and the
+   * search bar's own open/close) into a header-visibility decision. On close
+   * the resting state is asked of the list itself, because the last scroller
+   * to fire may have been an article's, whose offset says nothing about the
+   * list (#128). Leaving the bar expanded over a scrolled-down list
+   * dead-zones touch-scroll in the strip it overlays (it covers the list but
+   * is not its scroller), which reads as the list refusing to scroll until
+   * the swipe starts below the bar.
    */
   setSidebarOpen(open: boolean): void {
-    this.headerHidden.set(open ? false : this.restingHeaderHidden());
     if (!open) this.sidebarOrganising.set(false);
     this.sidebarOpen.set(open);
   }
@@ -497,12 +567,14 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   onListScrolled(top: number): void {
     const previous = this.lastListScrollTop;
     this.lastListScrollTop = top;
-    // While the drawer is open the header must stay shown (it hangs below the
-    // bar). Inertial scrolling keeps firing scroll events after the open-swipe's
-    // touchend, so the gesture handler cannot be trusted as the last word — guard
-    // here. The offset still advances above, so the next real scroll sees no
-    // phantom jump once the drawer closes.
-    if (this.sidebarOpen()) return;
+    // While either overlay — the drawer or the search bar — is open the header
+    // must stay shown (the drawer hangs below it; the search bar holds the
+    // live term and the phone's keyboard). Inertial scrolling keeps firing
+    // scroll events after the open-swipe's touchend, so the gesture handler
+    // cannot be trusted as the last word — guard here. The offset still
+    // advances above, so the next real scroll sees no phantom jump once
+    // both overlays are closed.
+    if (this.headerOverlayOpen()) return;
     this.headerHidden.set(
       nextHeaderHidden(this.headerHidden(), previous, top, this.screen.isWide()),
     );
@@ -604,6 +676,16 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  /** A term navigates; an empty term returns to All items. Both go through the
+   *  URL, so Back leaves a search the same way it leaves any other list. */
+  onSearch(term: string): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: selectionQueryParams({ q: term || null }),
+      queryParamsHandling: 'merge',
+    });
+  }
+
   onRefresh(): void {
     this.refreshSvc.run(() => {
       this.subs.load();
@@ -702,7 +784,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       this.subs.load();
       void this.router.navigate([], {
         relativeTo: this.route,
-        queryParams: { subscription: sub.id, view: null, tag: null, entry: null },
+        queryParams: selectionQueryParams({ subscription: sub.id }),
         queryParamsHandling: 'merge',
       });
       // A feed discovery could read arrives with its entries already stored

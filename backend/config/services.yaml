@@ -80,6 +80,7 @@ services:
     App\Service\Fetch\BatchFeedFetcherInterface: '@App\Service\Fetch\ConcurrentFeedFetcher'
     App\Service\Discovery\FeedDiscoveryInterface: '@App\Service\Discovery\FeedDiscovery'
     App\Service\Reader\ArticleExtractorInterface: '@App\Service\Reader\ArticleExtractor'
+    App\Service\Search\EntrySearchInterface: '@App\Service\Search\LikeEntrySearch'
     App\Service\Version\ReleaseVersionReader: '@App\Service\Version\FileReleaseVersionReader'
     App\Service\Ai\ModelCatalog: '@App\Service\Ai\OpenAiCompatibleCatalog'
     App\Service\Recommendation\ChatCompletionClient: '@App\Service\Recommendation\OpenAiCompatibleChatClient'

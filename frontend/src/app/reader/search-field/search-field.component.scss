@@ -1,0 +1,65 @@
+.search-field {
+  margin-bottom: var(--space-1);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+
+.row:focus-within {
+  border-color: var(--border-strong);
+}
+
+.icon {
+  color: var(--text-muted);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+// Resting contrast + chrome reset (#408 follow-up) is checked by eye, not by
+// test: jest-preset-angular never compiles or injects this file under Jest,
+// so a jsdom assertion on the button's computed style or classes would pass
+// whether the fix below is present, wrong, or later reverted — see
+// search-field.component.spec.ts for where that test used to live and why it
+// was removed instead of kept as a check that could not fail.
+.clear {
+  display: flex;
+  align-items: center;
+
+  // Reset the UA button chrome: without this the browser paints its own
+  // buttonface background and border, so the control renders as a grey box
+  // instead of sitting flush in the field.
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.clear:hover {
+  color: var(--text-primary);
+}
+
+.hint {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
