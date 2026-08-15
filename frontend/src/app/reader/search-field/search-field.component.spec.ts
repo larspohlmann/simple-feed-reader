@@ -58,6 +58,29 @@ describe('SearchFieldComponent', () => {
     expect(emitted).toEqual(['angular', '', 'angular']);
   }));
 
+  it('re-emits a term typed again after the route moved on without this component', fakeAsync(() => {
+    const fixture = mount();
+    const emitted: string[] = [];
+    fixture.componentInstance.search.subscribe((term) => emitted.push(term));
+
+    // Establish "angular" as the genuinely active term via a real, settled
+    // emission — not merely as the field's initial default — so a stale
+    // memory of it is what the next step must overwrite.
+    typeInto(fixture, 'angular');
+    tick(300);
+    expect(emitted).toEqual(['angular']);
+
+    // Simulate Back/Forward: the URL's term changes to something else while
+    // this component sits there, with no typing of its own.
+    fixture.componentRef.setInput('term', 'python');
+    fixture.detectChanges();
+
+    typeInto(fixture, 'angular');
+    tick(300);
+
+    expect(emitted).toEqual(['angular', 'angular']);
+  }));
+
   it('collapses a debounce burst that settles on a repeat into one emission', fakeAsync(() => {
     const fixture = mount();
     const emitted: string[] = [];
