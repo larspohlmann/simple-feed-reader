@@ -116,9 +116,54 @@ width reaches the same visual result with much less machinery.
   surface is the progress hairline, which vanishes the moment the run ends"
   (#325). The surface is no longer in-reader, so the comment is reworded to
   describe the pill.
-- The ✕ closes the pill. The run continues, and the pill does not come back for
-  that run. The completion message still arrives, because it is a fresh `show()`.
+- The ✕ closes the pill. The run continues, and the pill does not come back on
+  its own. The completion message still arrives, because it is a fresh `show()`.
   The Stop button remains the way to end a run.
+- `showRunPill()` is public, so the header's restore button can raise the pill
+  again. `markRunning()` calls it too, rather than holding a second copy of the
+  same `show()` call.
+- `pillHidden` is a computed signal: `running() && !toast.visible()`. That reads
+  as a guess but is exact. Any toast that replaces the pill has taken its slot,
+  so the pill really is gone and the restore button really should appear.
+
+## Getting a dismissed pill back
+
+A closed pill must be recoverable while its run is still going. The control is a
+`ghost` icon button in the reader's list header, beside the Stop button, shown
+only while `pillHidden()` is true.
+
+`ToastService` gains a `visible` signal to make that condition honest:
+
+```ts
+private readonly _visible = signal(false);
+readonly visible = this._visible.asReadonly();
+```
+
+`show()` sets it true and subscribes to the new `DialogRef.closed`, clearing the
+flag only if that ref is still the current one — a replacement opens the next
+toast before the old ref's `closed` fires, and an unguarded handler would blank
+the flag for a toast that is on screen. `dismiss()` closes the ref and lets the
+same subscription do the bookkeeping, so Escape and the ✕ are covered by one
+path rather than three.
+
+The header's `.for-you-action` becomes a row. It was a column only to stack the
+progress block under the button, and that block is leaving.
+
+The restore button sits **before** the Stop button, so Stop keeps its place at
+the end of the tools stack, as issue #398 requires.
+
+New i18n keys in `en.json` and `de.json`, beside the existing `forYouStop`:
+
+| Key | en | de |
+|---|---|---|
+| `reader.forYouShowProgress` | Show progress | Fortschritt anzeigen |
+
+**Accepted limitation.** The control lives in the reader's list header, so a
+pill dismissed and then abandoned — the user closes it and goes to `/settings` —
+cannot be restored until they return to the reader. The app has no shared chrome
+outside the reader to host it, and building one is far more than this issue
+asks. A user who dismissed the pill and walked away is also the user least
+likely to want it back.
 
 ## `ForYouProgressComponent`
 
@@ -150,6 +195,9 @@ not introduced.
 - Remove `<app-for-you-progress />` from `reader-shell.component.html:215`,
   together with the comment above it about the block growing downward under the
   button.
+- Add the restore button beside Stop, inside the same `@if (recs.running())`
+  branch, guarded by `@if (recs.pillHidden())`.
+- `.for-you-action` becomes a row with a `var(--space-2)` gap.
 - Correct `reader-shell.component.scss:180-182`. It claims the progress block
   hides itself at the small breakpoint and points at
   `for-you-progress.component.scss`. That file has no media query, so the
@@ -160,7 +208,8 @@ not introduced.
 
 - `toast.service.spec.ts` — a `durationMs: null` toast survives past the default
   timer; a `content` toast renders the component; ✕ closes a sticky toast; a
-  `width: 'fixed'` toast carries the panel class.
+  `width: 'fixed'` toast carries the panel class; `visible()` tracks the open
+  toast and stays true across a replacement.
 - `for-you-progress.component.spec.ts` — the existing count, ETA and percent
   assertions hold; the ETA is hidden from assistive technology; the `<p>` no
   longer declares its own live region.
@@ -168,7 +217,8 @@ not introduced.
   replaces it with the ready message and its View action; cancel, failure and
   `none` leave no pill behind.
 - `reader-shell.component.spec.ts` — the list header holds no progress block;
-  the Stop button is unchanged.
+  the Stop button is unchanged; the restore button appears only when the pill is
+  hidden, and clicking it raises the pill again.
 
 `npm run check` is the gate.
 
@@ -193,5 +243,7 @@ It is deliberately left out of this branch and gets its own issue.
 - [ ] The same pill carries the ready message and its View action when the run
       completes
 - [ ] The pill does not auto-dismiss while a run is active
+- [ ] A pill closed by hand can be raised again from the list header while the
+      run is still going
 - [ ] The Stop button is unchanged and stays in the list header
 - [ ] `npm run check` passes; the progress and toast specs cover the new lifetime

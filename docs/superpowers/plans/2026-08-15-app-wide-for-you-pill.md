@@ -4,7 +4,7 @@
 
 **Goal:** Show a running For-You recommendation run's progress in the app-wide toast pill on every route, and let that same pill carry the ready message when the run finishes.
 
-**Architecture:** The pill is a second mode of the existing shared toast, not a new surface. `ToastData` becomes a union of a message toast and a component-backed content toast, gains a persistent mode (`durationMs: null`) and a fixed-width mode. `RecommendationsService` raises the pill the moment a run goes live and takes it down in `finish()`, the single exit from every end state. `ForYouProgressComponent` moves out of the reader's list header and becomes the pill's content; it already reads the service directly, so nothing new is plumbed.
+**Architecture:** The pill is a second mode of the existing shared toast, not a new surface. The user can close it, so the reader's list header offers it back beside the Stop button while the run is still going. `ToastData` becomes a union of a message toast and a component-backed content toast, gains a persistent mode (`durationMs: null`) and a fixed-width mode. `RecommendationsService` raises the pill the moment a run goes live and takes it down in `finish()`, the single exit from every end state. `ForYouProgressComponent` moves out of the reader's list header and becomes the pill's content; it already reads the service directly, so nothing new is plumbed.
 
 **Tech Stack:** Angular 20 standalone components and signals, Angular CDK Dialog/Overlay, Transloco, Jest + jsdom, SCSS with design tokens.
 
@@ -45,6 +45,7 @@ Three capabilities land together, because they describe one thing: a toast that 
   - `MessageToast = ToastBase & { message: string }`, `ContentToast = ToastBase & { content: Type<unknown> }`.
   - `ToastBase` fields: `actionLabel?: string`, `action?: () => void`, `durationMs?: number | null`, `width?: 'fit' | 'fixed'`.
   - `ToastService.show(toast: ToastData): void` and `ToastService.dismiss(): void` keep their existing signatures.
+  - `ToastService.visible: Signal<boolean>` — whether a toast is on screen.
   - CSS class `app-toast--fixed` on the overlay pane when `width: 'fixed'`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -104,6 +105,23 @@ And the tests:
     tick();
 
     expect(el()!.querySelector('.hosted')!.textContent).toBe('hosted content');
+  });
+
+  it('tracks whether a toast is on screen, and stays visible across a replacement', () => {
+    expect(toast.visible()).toBe(false);
+
+    toast.show({ message: 'First' });
+    tick();
+    expect(toast.visible()).toBe(true);
+
+    // The replacement opens before the outgoing ref reports itself closed.
+    toast.show({ message: 'Second' });
+    tick();
+    expect(toast.visible()).toBe(true);
+
+    toast.dismiss();
+    tick();
+    expect(toast.visible()).toBe(false);
   });
 
   it('marks the pane fixed-width only when the toast asks for it', () => {
@@ -217,15 +235,20 @@ In `frontend/src/app/shared/toast/toast.component.scss`, change the `.msg` rule 
 
 - [ ] **Step 5: Teach the service the persistent and fixed-width modes**
 
-In `frontend/src/app/shared/toast/toast.service.ts`, replace the `show()` method and add two private helpers below it:
+In `frontend/src/app/shared/toast/toast.service.ts`, widen the `@angular/core` import to `import { Injectable, Signal, inject, signal } from '@angular/core';`, then replace the `show()` and `dismiss()` methods and add two private helpers below them:
 
 ```ts
+  private readonly _visible = signal(false);
+  /** Whether a toast is on screen. Read by a feature that offers to raise its
+   *  own long-lived toast again after the user closed it (#398). */
+  readonly visible: Signal<boolean> = this._visible.asReadonly();
+
   /** Replaces any toast currently visible. */
   show(toast: ToastData): void {
     this.clearTimer();
     this.ref?.close();
 
-    this.ref = this.dialog.open<void, ToastData, ToastComponent>(ToastComponent, {
+    const ref = this.dialog.open<void, ToastData, ToastComponent>(ToastComponent, {
       panelClass: this.panelClasses(toast),
       positionStrategy: this.overlay
         .position()
@@ -237,10 +260,28 @@ In `frontend/src/app/shared/toast/toast.service.ts`, replace the `show()` method
       restoreFocus: false,
       data: toast,
     });
+    this.ref = ref;
+    this._visible.set(true);
+
+    // Every close lands here -- the ✕, `dismiss()`, Escape -- so the flag has
+    // one owner rather than three. The identity guard is what makes that safe:
+    // a replacement opens the next toast before the outgoing ref reports
+    // itself closed, and an unguarded handler would blank the flag for a toast
+    // that is on screen.
+    ref.closed.subscribe(() => {
+      if (this.ref !== ref) return;
+      this.ref = null;
+      this._visible.set(false);
+    });
 
     const durationMs = this.durationOf(toast);
     if (durationMs === null) return;
     this.timer = setTimeout(() => this.dismiss(), durationMs);
+  }
+
+  dismiss(): void {
+    this.clearTimer();
+    this.ref?.close();
   }
 
   /** Omitting the duration takes the default; an explicit `null` means never.
@@ -436,8 +477,11 @@ git commit -m "refactor(#398): make the progress block pill content, not a heade
 - Test: `frontend/src/app/reader/recommendations.service.spec.ts`
 
 **Interfaces:**
-- Consumes: `ToastData`'s `content`, `durationMs` and `width` fields from Task 1; `ForYouProgressComponent` from Task 2.
-- Produces: no new public API. Private `markRunning(): void` is the single "a run is now live" transition. All four `toast.show()` calls carry `width: 'fixed'`. `finish()` calls `toast.dismiss()`.
+- Consumes: `ToastData`'s `content`, `durationMs` and `width` fields plus `ToastService.visible` from Task 1; `ForYouProgressComponent` from Task 2.
+- Produces:
+  - `RecommendationsService.showRunPill(): void` — public, raises the run pill.
+  - `RecommendationsService.pillHidden: Signal<boolean>` — a run is live and its pill is not on screen. Task 4's header button binds to both.
+  - Private `markRunning(): void` is the single "a run is now live" transition. All four `toast.show()` calls carry `width: 'fixed'`. `finish()` calls `toast.dismiss()`.
 
 Note on the import cycle: `recommendations.service.ts` will import `ForYouProgressComponent`, which imports `RecommendationsService`. This is safe — the component references the service only inside a field initializer that runs at construction time, long after both modules have evaluated — and ESLint here has no `import/no-cycle` rule. Step 6 verifies it at runtime rather than assuming it.
 
@@ -451,15 +495,24 @@ Add the import, after the existing `RecommendationRunReport` import:
 import { ForYouProgressComponent } from './for-you-progress/for-you-progress.component';
 ```
 
-Change the mock's type declaration (currently `let toast: { show: jest.Mock };`) and its construction in `beforeEach` (currently `toast = { show: jest.fn() };`):
+Add `signal` to the existing `@angular/core` import if the file has one; otherwise add `import { signal } from '@angular/core';` beside the other Angular imports.
+
+Change the mock's type declaration (currently `let toast: { show: jest.Mock };`) and its construction in `beforeEach` (currently `toast = { show: jest.fn() };`). The double must move its own `visible` flag, because `pillHidden` is derived from it — a double that always reports `false` would make the service look permanently dismissed:
 
 ```ts
-  let toast: { show: jest.Mock; dismiss: jest.Mock };
+  let toast: { show: jest.Mock; dismiss: jest.Mock; visible: WritableSignal<boolean> };
 ```
 
 ```ts
-    toast = { show: jest.fn(), dismiss: jest.fn() };
+    const visible = signal(false);
+    toast = {
+      show: jest.fn(() => visible.set(true)),
+      dismiss: jest.fn(() => visible.set(false)),
+      visible,
+    };
 ```
+
+That needs `WritableSignal` in the same `@angular/core` import as `signal`.
 
 Add these three tests before the closing `});` of the describe block:
 
@@ -493,6 +546,25 @@ Add these three tests before the closing `});` of the describe block:
     ctrl
       .expectOne('https://api.test/api/recommendations/runs/tick')
       .flush(report({ status: 'completed', batchesTotal: 2, batchesDone: 2 }));
+  });
+
+  it('offers the pill again only while a run is live and the pill has been closed', () => {
+    expect(svc.pillHidden()).toBe(false); // no run at all
+
+    svc.start();
+    expect(svc.pillHidden()).toBe(false); // the pill is up
+
+    toast.dismiss(); // the user pressed ✕
+    expect(svc.pillHidden()).toBe(true);
+
+    svc.showRunPill();
+    expect(svc.pillHidden()).toBe(false);
+
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs')
+      .flush(report({ status: 'completed', batchesTotal: 1, batchesDone: 1 }));
+
+    expect(svc.pillHidden()).toBe(false); // the run is over; nothing to restore
   });
 
   it('takes the pill down on a cancelled run, which raises no toast of its own', () => {
@@ -607,12 +679,29 @@ Replace the body of `beginRun()` so it delegates the shared transition:
     this.running.set(true);
     this.startTicker();
     this.failure.set(null);
+    this.showRunPill();
+  }
+
+  /** Raises the run's pill. Public because the user can close it from anywhere
+   *  and the reader's list header offers it back; `markRunning()` calls this
+   *  rather than holding a second copy of the same `show()`. */
+  showRunPill(): void {
     this.toast.show({
       content: ForYouProgressComponent,
       durationMs: null,
       width: 'fixed',
     });
   }
+```
+
+Add `pillHidden` beside the other computed signals, next to `workerOwnsRun`:
+
+```ts
+  /** True while a run is going but its pill is not on screen, because the user
+   *  closed it. Drives the header's offer to raise it again. Reading the
+   *  toast's own visibility rather than tracking a dismissal flag here is exact
+   *  rather than a guess: whatever took the slot, the pill is gone (#398). */
+  readonly pillHidden = computed(() => this.running() && !this.toast.visible());
 ```
 
 In `resume()`, replace these four lines of its `next` handler:
@@ -700,17 +789,18 @@ git commit -m "feat(#398): give the run pill the whole life of a For-You run"
 
 ---
 
-### Task 4: Take the progress block out of the reader's list header
+### Task 4: Swap the header's progress block for a way back to the pill
 
 **Files:**
-- Modify: `frontend/src/app/reader/reader-shell.component.html:211-215`
+- Modify: `frontend/src/app/reader/reader-shell.component.html:194-215`
 - Modify: `frontend/src/app/reader/reader-shell.component.ts:58,72`
 - Modify: `frontend/src/app/reader/reader-shell.component.scss:167-187`
+- Modify: `frontend/public/i18n/en.json:553`, `frontend/public/i18n/de.json:553`
 - Test: `frontend/src/app/reader/reader-shell.component.spec.ts:1178,1264-1265`
 
 **Interfaces:**
-- Consumes: nothing. This task only removes a placement.
-- Produces: `.list-header` no longer renders `.for-you-progress` or `.track`. The Stop button (`.for-you-run`) is untouched, as issue #398 requires.
+- Consumes: `RecommendationsService.pillHidden` and `showRunPill()` from Task 3.
+- Produces: `.list-header` no longer renders `.for-you-progress` or `.track`, and renders `.for-you-show` while `pillHidden()`. The Stop button (`.for-you-run`) keeps its markup and its place at the end of the row, as issue #398 requires.
 
 - [ ] **Step 1: Rewrite the two header assertions in the shell spec**
 
@@ -737,6 +827,41 @@ In `it('shows the run button in the list header and starts a run only after the 
     expect(f.nativeElement.querySelector('.for-you-progress')).toBeNull();
 ```
 
+Add this new test after `it('replaces the run button with a stop button while a run is in flight', …)`. Note that `ToastService` is the real one in this spec — nothing mocks it — so the toast can be driven directly to put the pill up and take it down:
+
+```ts
+  it('offers a way back to the pill only once the pill has been closed', () => {
+    const f = bootForYou();
+    const recs = TestBed.inject(RecommendationsService);
+    const toast = TestBed.inject(ToastService);
+    recs.running.set(true);
+    recs.report.set(runningReport);
+    toast.show({ message: 'stand-in for the run pill' });
+    f.detectChanges();
+
+    // Nothing to restore while it is on screen.
+    expect(f.nativeElement.querySelector('.for-you-show')).toBeNull();
+
+    toast.dismiss();
+    f.detectChanges();
+
+    const restore = f.nativeElement.querySelector('.for-you-show button') as HTMLButtonElement;
+    expect(restore).not.toBeNull();
+
+    const raise = jest.spyOn(recs, 'showRunPill');
+    restore.click();
+    expect(raise).toHaveBeenCalledTimes(1);
+  });
+```
+
+Add the import at the top of the file, beside the other service imports:
+
+```ts
+import { ToastService } from '../shared/toast/toast.service';
+```
+
+If the assertion after `toast.dismiss()` proves flaky, the cause is the CDK `closed` emission not having been flushed — add `TestBed.inject(ApplicationRef).tick();` before the `f.detectChanges()` rather than reaching for a `setTimeout`.
+
 - [ ] **Step 2: Run the spec to verify it fails**
 
 ```bash
@@ -759,6 +884,42 @@ In `frontend/src/app/reader/reader-shell.component.html`, delete these five line
 
 The `</app-button>` above it and the `} @else {` below it stay exactly as they are.
 
+- [ ] **Step 3b: Add the way back to the pill**
+
+Still in `frontend/src/app/reader/reader-shell.component.html`, insert this immediately after the opening `@if (recs.running()) {` line — before the Stop button, so Stop keeps its place at the end of the row:
+
+```html
+        @if (recs.pillHidden()) {
+          <!-- The run's pill is app-wide, so the user can close it from
+               anywhere. This is the way back to it while the run is still
+               going, and it is offered only when the pill is actually gone —
+               the Stop button beside it is untouched (#398). -->
+          <app-button
+            variant="ghost"
+            size="sm"
+            class="for-you-show"
+            [ariaLabel]="'reader.forYouShowProgress' | transloco"
+            (click)="recs.showRunPill()"
+          >
+            <app-icon name="visibility" size="sm" />
+          </app-button>
+        }
+```
+
+Add the string to `frontend/public/i18n/en.json`, in the `reader` block beside `forYouStop` (line 553):
+
+```json
+    "forYouShowProgress": "Show progress",
+```
+
+And to `frontend/public/i18n/de.json`, in the same place:
+
+```json
+    "forYouShowProgress": "Fortschritt anzeigen",
+```
+
+Keep both files' key ordering consistent with each other — the surrounding keys are already in the same order in both.
+
 - [ ] **Step 4: Drop the now-unused component import**
 
 In `frontend/src/app/reader/reader-shell.component.ts`, delete line 58:
@@ -771,13 +932,20 @@ and delete the `ForYouProgressComponent,` entry from the `imports` array (line 7
 
 - [ ] **Step 5: Correct the two stale comments in the shell stylesheet**
 
-In `frontend/src/app/reader/reader-shell.component.scss`, replace the comment above `.for-you-action` (it describes a two-item stack that no longer exists):
+In `frontend/src/app/reader/reader-shell.component.scss`, replace both the comment above `.for-you-action` and the rule itself. It was a column only to stack the progress line under the button, and that line is gone; the restore button has to sit beside Stop, not under it:
 
 ```scss
-/* The header's For-You slot. It holds one control — the run button, or the Stop
-   button while a run is in flight — right-aligned with the header's other
-   tools. The run's count, ETA and bar are not here: they are in the app-wide
-   pill, so they survive the user leaving the reader (#398). */
+/* The header's For-You slot: one row of run controls, right-aligned with the
+   header's other tools. Idle it holds the run button; during a run it holds
+   Stop, preceded by the offer to raise the pill again if the user closed it.
+   The run's count, ETA and bar are not here — they are in the app-wide pill, so
+   they survive the user leaving the reader (#398). */
+.for-you-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
 ```
 
 And replace the comment above the `@media (width <= bp.$bp-sm)` block, whose second sentence points at a media query that `for-you-progress.component.scss` has never had:
@@ -788,7 +956,7 @@ And replace the comment above the `@media (width <= bp.$bp-sm)` block, whose sec
    keeping it named. */
 ```
 
-Leave both rule bodies unchanged.
+Leave the `@media` rule body unchanged — the Stop button still drops its label below the small breakpoint, and the restore button is icon-only at every width.
 
 - [ ] **Step 6: Run the shell spec to verify it passes**
 
@@ -801,8 +969,8 @@ Expected: PASS, the whole file.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add frontend/src/app/reader/reader-shell.component.html frontend/src/app/reader/reader-shell.component.ts frontend/src/app/reader/reader-shell.component.scss frontend/src/app/reader/reader-shell.component.spec.ts
-git commit -m "refactor(#398): take the For-You progress block out of the list header"
+git add frontend/src/app/reader/reader-shell.component.html frontend/src/app/reader/reader-shell.component.ts frontend/src/app/reader/reader-shell.component.scss frontend/src/app/reader/reader-shell.component.spec.ts frontend/public/i18n/en.json frontend/public/i18n/de.json
+git commit -m "feat(#398): swap the header's progress block for a way back to the pill"
 ```
 
 ---
@@ -854,6 +1022,10 @@ to be both at once.
 | `durationMs` | `number \| null` | `6000`; `null` never auto-dismisses |
 | `width` | `'fit' \| 'fixed'` | `'fit'` — the pane sizes to its content |
 
+`ToastService` also exposes `visible: Signal<boolean>` — whether a toast is on
+screen at all. It is there for the persistent mode: a feature that raises a
+long-lived toast needs to know the user closed it.
+
 `message` and `actionLabel` are already-translated strings — the component
 lives in `shared/` and must not know any feature's i18n keys. `content` is a
 component built through `NgComponentOutlet`, so it injects and reads its own
@@ -873,6 +1045,11 @@ to `22rem` across that handover — the pane is otherwise content-sized and
 centre-anchored, so the box would shrink from both edges at the moment of
 completion. Whoever raises a persistent toast owns taking it down: the run's
 `finish()` is the single exit from every end state and calls `dismiss()` there.
+
+A persistent toast must also be recoverable, because the ✕ is always available
+and a minutes-long surface will get closed. `ToastService.visible` is a signal
+for exactly that: the run derives `pillHidden` from `running() && !visible()`
+and the reader's list header offers the pill back beside the Stop button.
 
 **Accessibility.** The toast shell owns the `role="status" aria-live="polite"`
 region. A `content` component must not declare a second one inside it, and must
@@ -911,7 +1088,8 @@ Check by hand, because none of this is reachable from jsdom:
 3. Confirm the Stop button is still in the reader's list header and still stops the run.
 4. Let a run finish. The pill becomes "Recommendations ready" with a **View** action, in the same place and at the same width.
 5. Narrow the window to a phone width and start a run. The German progress line wraps rather than overflowing the pill — switch the language in settings to check it.
-6. Press ✕ during a run. The pill goes away, the run keeps going, and the ready message still arrives.
+6. Press ✕ during a run. The pill goes away and the run keeps going. A "Show progress" icon button appears in the list header beside Stop; press it and the pill comes back with the count where it should be. Let the run finish and confirm the ready message still arrives.
+7. Start a run, close the pill, and go to `/settings`. There is no way back to it from there — that is the accepted limitation in the spec, not a bug. Returning to the reader shows the restore button again.
 
 - [ ] **Step 4: Commit**
 
@@ -940,6 +1118,9 @@ Checked against the spec:
 - `markRunning()` covering resume → Task 3. **Spec correction:** the spec said `beginRun()` would be created; it already exists, and `resume()` bypasses it. `markRunning()` is the shared piece, extracted from both.
 - `finish()` dismissing, all four `show()` calls pinned → Task 3.
 - `stopWithHttpError()` comment reword → Task 3, Step 5.
+- `ToastService.visible`, guarded by ref identity → Task 1.
+- `showRunPill()` and `pillHidden` → Task 3.
+- Restore button, its two i18n strings, and `.for-you-action` becoming a row → Task 4.
 - Header removal and both stale comments → Task 4.
 - Design-language amendment → Task 5.
 - Out-of-scope `resume()` gap → Task 5, Step 5, as a follow-up issue.
