@@ -231,10 +231,12 @@ use App\Service\Search\SearchTerms;
 use App\Tests\DbTestCase;
 
 /**
- * The seam an Elasticsearch implementation would replace. The test resolves it
- * from the container by its INTERFACE on purpose: a missing alias in
- * services.yaml is exactly the failure this must catch, and autowiring a plain
- * application interface is not automatic.
+ * The seam an Elasticsearch implementation would replace. This test covers the
+ * BEHAVIOUR only, so it builds the implementation directly. Proving the DI
+ * alias belongs to Task 6: a container fetch here would need the alias made
+ * public in the test environment, and that override replaces the production
+ * entry — so the test would pass with the production alias deleted, which is
+ * the one failure it would appear to be guarding.
  */
 final class LikeEntrySearchTest extends DbTestCase
 {
@@ -256,8 +258,9 @@ final class LikeEntrySearchTest extends DbTestCase
         $this->em->persist($entry);
         $this->em->flush();
 
-        $search = self::getContainer()->get(EntrySearchInterface::class);
-        self::assertInstanceOf(EntrySearchInterface::class, $search);
+        $repository = $this->em->getRepository(Entry::class);
+        self::assertInstanceOf(EntryRepository::class, $repository);
+        $search = new LikeEntrySearch($repository);
 
         $rows = $search->search(new EntrySearchQuery(
             userId: $user->getId() ?? 0,
@@ -270,15 +273,7 @@ final class LikeEntrySearchTest extends DbTestCase
 }
 ```
 
-The container refuses `->get()` on a private service, so the test needs the alias made public in the test environment. Add this to `backend/config/services_test.yaml`, following the `App\Service\Ai\ModelCatalog` entry already in that file:
-
-```yaml
-    App\Service\Search\EntrySearchInterface:
-        alias: App\Service\Search\LikeEntrySearch
-        public: true
-```
-
-That file has **no** `_defaults`, so an entry naming a class replaces its definition rather than amending it. An `alias` entry like this one is safe; a plain class entry there would need its own `autowire: true`.
+Add **nothing** to `backend/config/services_test.yaml`. A test-environment alias would replace the production entry rather than amend it, so the whole suite would keep passing with the production alias deleted — the alias is proven in Task 6 instead, where the controller autowires the interface for real. Autowiring a constructor argument does not need a public service; only `->get()` does, and this task no longer calls it.
 
 - [ ] **Step 2: Run and watch it fail**
 
@@ -542,6 +537,8 @@ git commit -m "feat(#408): build a search query from the request and reject unkn
 - Produces: `GET /api/entries/search` named `api_entries_search`.
 
 Route order note: `EntryController` declares `/api/entries/{id}` with `requirements: ['id' => '\d+']`, so `search` cannot be captured by it. No route reordering is needed.
+
+**This task carries the DI guarantee for Task 3's seam.** The controller autowires `EntrySearchInterface`, and the only thing that resolves it is the alias in `config/services.yaml`. Deleting that line must make the functional tests below fail with a container error. Verify that once by hand: comment the alias out, run one test, see it fail, restore the line. Say so in the report.
 
 - [ ] **Step 1: Write the failing functional test**
 
