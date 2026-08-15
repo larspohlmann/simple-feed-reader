@@ -168,6 +168,10 @@
                   [label]="'settings.ai.info.actionsLabel' | transloco"
                 />
               }
+
+              @if (rowFailure(config.id); as message) {
+                <app-error-banner [message]="message" />
+              }
             </div>
           </app-disclosure>
         </li>
@@ -175,10 +179,8 @@
     </ul>
   }
 
-  @if (failureDetail(); as detail) {
-    <app-error-banner [message]="detail" />
-  } @else if (failureKey(); as key) {
-    <app-error-banner [message]="key | transloco" />
+  @if (listFailure(); as message) {
+    <app-error-banner [message]="message" />
   }
 </app-settings-card>
 
@@ -232,6 +234,10 @@
     >
       {{ 'settings.ai.configs.add' | transloco }}
     </app-button>
+
+    @if (addFailure(); as message) {
+      <app-error-banner [message]="message" />
+    }
   </div>
 </app-settings-card>
 
