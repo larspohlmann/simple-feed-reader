@@ -58,6 +58,13 @@ export class ReaderHeaderComponent {
   /** A search request is in flight; forwarded to the mobile bar's own
    *  `app-search-field`. */
   readonly searchLoading = input(false);
+  /** The term the route currently carries, forwarded to the mobile bar's own
+   *  `app-search-field` exactly as the sidebar forwards it to its copy. The
+   *  field is mounted in two places and each mount has to be wired the same
+   *  way; without this the narrow layout opened its bar empty while the
+   *  results for `?q=` were on screen — after a reload, or after Back
+   *  returned to an earlier search. */
+  readonly searchTerm = input('');
 
   readonly toggleSidebar = output<void>();
   /** The empty middle of the bar was tapped — scroll the list back to the top. */

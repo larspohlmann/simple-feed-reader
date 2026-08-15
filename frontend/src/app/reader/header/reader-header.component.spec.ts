@@ -228,6 +228,24 @@ describe('ReaderHeaderComponent', () => {
       expect(f.componentInstance.searchOpen()).toBe(false);
     });
 
+    // The field is mounted twice — here and in the sidebar — and each mount is
+    // wired by hand. The sidebar's carried `[term]`; this one did not, so a
+    // narrow layout showed the results for `?q=` above an empty box after a
+    // reload or a Back navigation.
+    it('opens the bar showing the term the route already carries', () => {
+      const f = create();
+      f.componentRef.setInput('searchTerm', 'daft punk');
+      f.detectChanges();
+      const el = f.nativeElement as HTMLElement;
+
+      (el.querySelector('[aria-label="Search"]') as HTMLButtonElement).click();
+      f.detectChanges();
+
+      expect((el.querySelector('app-search-field input') as HTMLInputElement).value).toBe(
+        'daft punk',
+      );
+    });
+
     it('covers the header with the field on click, hiding the brand and account', () => {
       const f = create();
       const el = f.nativeElement as HTMLElement;

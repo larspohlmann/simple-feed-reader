@@ -4,6 +4,7 @@
   [activeTagId]="activeTagId()"
   [allItemsActive]="allItemsActive()"
   [searchLoading]="searching()"
+  [searchTerm]="selection().term ?? ''"
   [class.hidden]="headerHidden()"
   (toggleSidebar)="setSidebarOpen(!sidebarOpen())"
   (scrollTop)="onScrollListTop()"
