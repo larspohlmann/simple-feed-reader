@@ -251,6 +251,9 @@
                 [entries]="grp(b).entries"
                 [previewCount]="grp(b).previewCount"
                 [tags]="tagsFor(grp(b).subscriptionId)"
+                (favorite)="favorite.emit($event)"
+                (keep)="keep.emit($event)"
+                (read)="read.emit($event)"
                 (open)="open.emit($event)"
               />
             }

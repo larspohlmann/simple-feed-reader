@@ -99,4 +99,31 @@ describe('SourceGroupComponent', () => {
     expect(el.querySelectorAll('app-entry-compact').length).toBe(4);
     expect(button.getAttribute('aria-expanded')).toBe('false');
   });
+
+  it('forwards an action from the row it was pressed on', () => {
+    const f = mount([e(1), e(2), e(3)], 3);
+    const favorite = jest.fn();
+    f.componentInstance.favorite.subscribe(favorite);
+
+    const rows = f.nativeElement.querySelectorAll('app-entry-compact');
+    const secondRowStar = rows[1].querySelectorAll('app-entry-actions button')[0] as HTMLElement;
+    secondRowStar.click();
+
+    expect(favorite).toHaveBeenCalledWith(expect.objectContaining({ id: 2 }));
+  });
+
+  it('forwards keep and read as well', () => {
+    const f = mount([e(1)], 1);
+    const keep = jest.fn();
+    const read = jest.fn();
+    f.componentInstance.keep.subscribe(keep);
+    f.componentInstance.read.subscribe(read);
+
+    const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
+    (buttons[1] as HTMLElement).click();
+    (buttons[2] as HTMLElement).click();
+
+    expect(keep).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+    expect(read).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+  });
 });

@@ -14,7 +14,14 @@
   <div class="items">
     @for (item of visibleEntries(); track item.id) {
       <div class="item">
-        <app-entry-compact [entry]="item" [showSource]="false" (open)="open.emit($event)" />
+        <app-entry-compact
+          [entry]="item"
+          [showSource]="false"
+          (favorite)="favorite.emit($event)"
+          (keep)="keep.emit($event)"
+          (read)="read.emit($event)"
+          (open)="open.emit($event)"
+        />
       </div>
     }
   </div>
