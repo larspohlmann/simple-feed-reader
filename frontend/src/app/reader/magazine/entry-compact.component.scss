@@ -41,7 +41,12 @@
   bottom: 0;
 }
 
+/* The body must expand to fill the card's width so that actions positioned
+   with `margin-inline-start: auto` flush to the card's right edge. Without
+   flex, the body shrinks to fit its content, stranding the actions at the
+   end of the text instead (#414). */
 .body {
+  flex: 1;
   min-width: 0;
 }
 
