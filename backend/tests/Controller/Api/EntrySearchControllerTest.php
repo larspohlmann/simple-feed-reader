@@ -8,22 +8,16 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class EntrySearchControllerTest extends WebTestCase
+final class EntrySearchControllerTest extends ApiTestCase
 {
     /** @return array{0: array<string,string>, 1: User} */
     private function auth(string $email): array
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($em, $hasher))->create($email);
+        $user = $this->factory()->create($email);
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
@@ -93,8 +87,7 @@ final class EntrySearchControllerTest extends WebTestCase
         $client->request('GET', '/api/entries/search?q=angular', server: $headers);
 
         self::assertResponseIsSuccessful();
-        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
+        $body = $this->payload($client);
         self::assertIsArray($body['entries']);
         self::assertCount(1, $body['entries']);
         $first = $body['entries'][0];
@@ -112,8 +105,7 @@ final class EntrySearchControllerTest extends WebTestCase
         $client->request('GET', '/api/entries/search?q=angular', server: $headers);
 
         self::assertResponseIsSuccessful();
-        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
+        $body = $this->payload($client);
         self::assertIsArray($body['entries']);
         self::assertCount(0, $body['entries']);
     }
@@ -126,8 +118,7 @@ final class EntrySearchControllerTest extends WebTestCase
         $client->request('GET', '/api/entries/search?q=ab', server: $headers);
 
         self::assertResponseStatusCodeSame(422);
-        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
+        $body = $this->payload($client);
         self::assertSame('validation_error', $body['type']);
     }
 
@@ -139,8 +130,7 @@ final class EntrySearchControllerTest extends WebTestCase
         $client->request('GET', '/api/entries/search?q=angular&tag=3', server: $headers);
 
         self::assertResponseStatusCodeSame(422);
-        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
+        $body = $this->payload($client);
         self::assertSame('validation_error', $body['type']);
     }
 
@@ -152,8 +142,7 @@ final class EntrySearchControllerTest extends WebTestCase
         $client->request('GET', '/api/entries/search?q=angular&cursor=not-a-cursor', server: $headers);
 
         self::assertResponseStatusCodeSame(422);
-        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
+        $body = $this->payload($client);
         self::assertSame('validation_error', $body['type']);
     }
 
@@ -174,8 +163,7 @@ final class EntrySearchControllerTest extends WebTestCase
 
         $client->request('GET', '/api/entries/search?q=angular&limit=2', server: $headers);
         self::assertResponseIsSuccessful();
-        $page1 = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($page1);
+        $page1 = $this->payload($client);
         self::assertIsArray($page1['entries']);
         self::assertCount(2, $page1['entries']);
         self::assertIsString($page1['nextCursor']);
@@ -192,8 +180,7 @@ final class EntrySearchControllerTest extends WebTestCase
             server: $headers,
         );
         self::assertResponseIsSuccessful();
-        $page2 = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($page2);
+        $page2 = $this->payload($client);
         self::assertIsArray($page2['entries']);
         self::assertCount(1, $page2['entries']);
         $firstOfPage2 = $page2['entries'][0];
