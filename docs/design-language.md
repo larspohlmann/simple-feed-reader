@@ -207,8 +207,11 @@ any one component's stylesheet.
 
 ## 2. Component catalog
 
-All live in `frontend/src/app/shared/`. All are standalone, `OnPush`, and use
-signal `input()`s.
+All live in `frontend/src/app/shared/` and are standalone, `OnPush`, and use
+signal `input()`s. `app-entry-meta` and `app-entry-actions` are the exceptions:
+they live in `frontend/src/app/reader/` instead, because they know `EntryDto`
+and the reader's i18n keys, and — like the rest of `reader/` — do not set
+`OnPush`.
 
 ### `<app-icon>`
 
@@ -828,6 +831,85 @@ behaves.
 
 ---
 
+### `<app-entry-meta>`
+
+The line a magazine card ends on: `app-source-tags` on the left,
+`app-entry-actions` right-aligned against them. Six of the seven magazine
+blocks use it — hero, wide, split, thumb, kicker, quote.
+
+| Input | Type | Default |
+|---|---|---|
+| `entry` | `EntryDto` (required) | — |
+| `tags` | `SubscriptionTagDto[]` | `[]` |
+
+| Output | Type | Fires |
+|---|---|---|
+| `favorite` | `output<EntryDto>` | the favorite button is pressed |
+| `keep` | `output<EntryDto>` | the keep button is pressed |
+| `read` | `output<EntryDto>` | the mark-read button is pressed |
+
+```html
+<app-entry-meta
+  [entry]="entry()"
+  [tags]="tags()"
+  (favorite)="favorite.emit($event)"
+  (keep)="keep.emit($event)"
+  (read)="read.emit($event)"
+/>
+```
+
+Two pieces of its geometry are load-bearing, and are why this is a component
+rather than a row assembled per block. `align-items: flex-end` keeps the icons
+level with the **last** line of a wrapping pill list, so the card's bottom
+edge stays the reference. `margin-top: auto` drops the whole row to the
+bottom of a card whose image is taller than its text — `split` and `thumb`,
+which stretch their body for exactly this — and is inert everywhere else.
+
+**Not for:** `entry-compact`, which projects `app-entry-actions` directly onto
+its kicker line instead of using this row — see the exception in
+[§6](#6-deliberate-exceptions).
+
+### `<app-entry-actions>`
+
+The three per-entry actions — favorite, keep, mark read — as one control
+cluster. `app-entry-meta` renders it inline; `entry-compact` uses it directly,
+projected into the kicker line (see the exception in
+[§6](#6-deliberate-exceptions)). It renders with no wrapper element — `:host`
+is `inline-flex` — because a wrapper would give the HTML parser a block-level
+child to choke on where the component lands inside a `<p>`.
+
+| Input | Type | Default |
+|---|---|---|
+| `entry` | `EntryDto` (required) | — |
+
+| Output | Type | Fires |
+|---|---|---|
+| `favorite` | `output<EntryDto>` | the favorite button is pressed |
+| `keep` | `output<EntryDto>` | the keep button is pressed |
+| `read` | `output<EntryDto>` | the mark-read button is pressed |
+
+```html
+<app-entry-actions
+  [entry]="entry()"
+  (favorite)="favorite.emit($event)"
+  (keep)="keep.emit($event)"
+  (read)="read.emit($event)"
+/>
+```
+
+Clicks stop propagating: the card around the buttons is itself clickable, and
+would otherwise open the entry instead of toggling the flag. Favorite and keep
+light up in the accent colour when on; the read button instead swaps its icon,
+because most cards are already read, and accenting that state would light up
+the whole page for no reason.
+
+On a coarse pointer the buttons grow to `--tap-target` height on negative
+margins alone, so a card never gets taller on a phone, and the gap between
+them widens to exactly twice a button's touch padding, so the enlarged hit
+boxes tile edge to edge — a tap on the star must never land on keep.
+
+---
+
 ## 3. Conventions
 
 ### Density
@@ -1085,6 +1167,15 @@ of the properties `declaration-property-unit-allowed-list` governs at all, but
 the reasoning is identical to the thumb box above and is recorded in a plain
 comment at the declaration so a future reader does not migrate it to a
 `--space-*` token anyway.
+
+**`entry-compact` hangs its actions on the kicker line, not on an
+`app-entry-meta` row.** A source group shows up to five compact rows; a meta
+row each would add a full line per item and inflate the group, while the
+right-hand end of the kicker line is already empty — it only holds the time.
+So compact projects `app-entry-actions` into the kicker line and leaves its
+tag row pills-only. The projected element must stay inline: the kicker is a
+`<p>`, and the HTML parser closes a paragraph at a block-level child, which
+drops the icons onto a second line without any error.
 
 ---
 
