@@ -724,7 +724,7 @@ describe('AiSectionComponent', () => {
     );
     expect(hints).toEqual([
       'The full API root, including any version path — for example https://api.openai.com/v1',
-      'The key is sent once and stored encrypted. Enter it again to replace it.',
+      'Leave it empty if the provider needs no key, such as a local model server. The key is sent once and stored encrypted. Enter it again to replace it.',
     ]);
   });
 

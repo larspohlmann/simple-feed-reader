@@ -6,8 +6,8 @@ const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
 
 const ENDPOINT = 'https://api.example.test/v1';
-const TOO_SHORT_KEY = 'short';
-const SERVER_MESSAGE = 'This value is too short. It should have 8 characters or more.';
+const OVER_LONG_KEY = 'a'.repeat(513);
+const SERVER_MESSAGE = 'This value is too long. It should have 512 characters or less.';
 
 /**
  * One saved configuration and a rejected add. Both are stubbed so the spec
@@ -88,7 +88,7 @@ test('a rejected configuration keeps the typed values and names the field', asyn
   await addCard.locator('summary').click();
 
   await addCard.locator('input[type=url]').fill(ENDPOINT);
-  await addCard.locator('input[type=password]').fill(TOO_SHORT_KEY);
+  await addCard.locator('input[type=password]').fill(OVER_LONG_KEY);
   await addCard.locator('.add-config button').click();
 
   // 1. the server's sentence, naming the field — not "Something went wrong".
@@ -101,5 +101,5 @@ test('a rejected configuration keeps the typed values and names the field', asyn
 
   // 3. the values survive the rejection.
   await expect(addCard.locator('input[type=url]')).toHaveValue(ENDPOINT);
-  await expect(addCard.locator('input[type=password]')).toHaveValue(TOO_SHORT_KEY);
+  await expect(addCard.locator('input[type=password]')).toHaveValue(OVER_LONG_KEY);
 });
