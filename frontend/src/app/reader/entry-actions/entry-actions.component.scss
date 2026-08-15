@@ -1,0 +1,54 @@
+/* The host IS the row of buttons — there is deliberately no wrapper element.
+   `entry-compact` projects this component into the kicker's <p>, and the HTML
+   parser closes a paragraph at a block-level child, which would silently drop
+   the buttons onto a line of their own. */
+:host {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: none;
+}
+
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-0);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+button:hover {
+  color: var(--text-primary);
+}
+
+/* Favorite and keep only. The read button reports its state by swapping its
+   icon: "read" is the normal state of most cards, so accenting it would light
+   up the whole page and leave the accent meaning nothing. */
+button.on {
+  color: var(--accent);
+}
+
+/* Touch density is a pointer decision, applied locally.
+   Vertical: full padding to reach --tap-target, fully cancelled by a negative
+   margin, so a card never gets taller on a phone.
+   Horizontal: --space-2 of padding against a --space-4 gap — exactly twice the
+   padding — so the hit boxes tile edge to edge. Deriving both from the scale is
+   what keeps that exact: a symmetric 44px box needs 14px of inline padding and
+   overlaps its neighbour by 16px, and since the later button paints on top, a
+   tap on the star's right half toggles keep instead. */
+@media (pointer: coarse) {
+  :host {
+    gap: var(--space-4);
+  }
+
+  button {
+    padding-block: calc((var(--tap-target) - var(--icon-sm)) / 2);
+    margin-block: calc((var(--tap-target) - var(--icon-sm)) / -2);
+    padding-inline: var(--space-2);
+    margin-inline: calc(var(--space-2) * -1);
+  }
+}
