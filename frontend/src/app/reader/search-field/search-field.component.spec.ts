@@ -37,6 +37,41 @@ describe('SearchFieldComponent', () => {
     expect(emitted).toEqual(['cats']);
   }));
 
+  it('re-emits a term typed again right after it was cleared', fakeAsync(() => {
+    const fixture = mount();
+    const emitted: string[] = [];
+    fixture.componentInstance.search.subscribe((term) => emitted.push(term));
+
+    typeInto(fixture, 'angular');
+    tick(300);
+    expect(emitted).toEqual(['angular']);
+
+    const clearButton: HTMLButtonElement = fixture.debugElement.query(
+      By.css('.clear'),
+    ).nativeElement;
+    clearButton.click();
+    expect(emitted).toEqual(['angular', '']);
+
+    typeInto(fixture, 'angular');
+    tick(300);
+
+    expect(emitted).toEqual(['angular', '', 'angular']);
+  }));
+
+  it('collapses a debounce burst that settles on a repeat into one emission', fakeAsync(() => {
+    const fixture = mount();
+    const emitted: string[] = [];
+    fixture.componentInstance.search.subscribe((term) => emitted.push(term));
+
+    typeInto(fixture, 'a');
+    typeInto(fixture, 'an');
+    typeInto(fixture, 'ang');
+    typeInto(fixture, 'angu');
+    tick(300);
+
+    expect(emitted).toEqual(['angu']);
+  }));
+
   it('emits nothing at all for a two-character term', fakeAsync(() => {
     const fixture = mount();
     const emitted: string[] = [];

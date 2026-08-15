@@ -11,7 +11,7 @@ import {
   untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, debounceTime } from 'rxjs';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { MIN_SEARCH_LENGTH } from '../query';
@@ -37,7 +37,7 @@ export class SearchFieldComponent {
   // eslint-disable-next-line @angular-eslint/no-output-native
   readonly search = output<string>();
 
-  readonly minLength = MIN_SEARCH_LENGTH;
+  private readonly minLength = MIN_SEARCH_LENGTH;
   /** What the field currently shows — updates on every keystroke, unlike the
    *  debounced `search` output, so the too-short hint reacts immediately. */
   readonly text = signal('');
@@ -49,6 +49,14 @@ export class SearchFieldComponent {
 
   private readonly typed = new Subject<string>();
   private readonly destroyRef = inject(DestroyRef);
+  /** The last value actually handed to `search.emit`, so a debounce burst that
+   *  settles on a repeat is swallowed while a value re-typed after a clear is
+   *  not. `null` (never a real term, since '' is one) means nothing has been
+   *  emitted yet, so the very first emission — including '' — always fires.
+   *  Kept as a field rather than an RxJS `distinctUntilChanged()` because that
+   *  operator only sees values reaching the debounced pipeline, and `clear()`
+   *  deliberately bypasses it; a memory `clear()` doesn't update is stale. */
+  private lastEmitted: string | null = null;
 
   constructor() {
     // Keep the field in step with a term the caller sets from outside (Back
@@ -60,7 +68,7 @@ export class SearchFieldComponent {
     });
 
     this.typed
-      .pipe(debounceTime(DEBOUNCE_MS), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .pipe(debounceTime(DEBOUNCE_MS), takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => this.emitSettled(value));
   }
 
@@ -72,7 +80,7 @@ export class SearchFieldComponent {
   /** Leaving a search should not lag, so clearing bypasses the debounce entirely. */
   clear(): void {
     this.text.set('');
-    this.search.emit('');
+    this.emit('');
   }
 
   onKeydown(event: KeyboardEvent): void {
@@ -82,6 +90,12 @@ export class SearchFieldComponent {
   private emitSettled(raw: string): void {
     const trimmed = raw.trim();
     if (trimmed.length > 0 && trimmed.length < this.minLength) return;
-    this.search.emit(trimmed);
+    this.emit(trimmed);
+  }
+
+  private emit(value: string): void {
+    if (value === this.lastEmitted) return;
+    this.lastEmitted = value;
+    this.search.emit(value);
   }
 }
