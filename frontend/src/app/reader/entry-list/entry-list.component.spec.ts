@@ -388,6 +388,31 @@ describe('EntryListComponent', () => {
       }).nativeElement as HTMLElement;
       expect(el.querySelector('.whole-word-badge')).toBeNull();
     });
+
+    // Round 2: aria-describedby only speaks on focus, so a screen-reader
+    // user navigating by headings never heard it. The mode is now part of
+    // the heading's own accessible name via a visually-hidden phrase.
+    it('announces the mode as part of the heading, not only via focus', () => {
+      const el = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
+      }).nativeElement as HTMLElement;
+      const heading = el.querySelector('.list-header h2')!;
+      expect(heading.querySelector('.sr-only')!.textContent).toContain('Whole words');
+    });
+
+    it('marks the visible badge aria-hidden so it is not announced a second time', () => {
+      const el = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
+      }).nativeElement as HTMLElement;
+      expect(el.querySelector('.whole-word-badge')!.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('puts no whole-word phrase in the heading for a substring search', () => {
+      const el = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+      }).nativeElement as HTMLElement;
+      expect(el.querySelector('.list-header h2 .sr-only')).toBeNull();
+    });
   });
 
   it('hides the whole-word-mode trailing space from the empty-state message (#408 follow-up)', () => {
