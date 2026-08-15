@@ -86,6 +86,7 @@
     <div class="search-bar" [appDismissOnOutside]="searchOpen()" (dismiss)="closeSearch()">
       <app-search-field
         #searchField
+        [loading]="searchLoading()"
         (search)="search.emit($event)"
         (escapedWhileEmpty)="closeSearch()"
       />

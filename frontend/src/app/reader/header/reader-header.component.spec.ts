@@ -271,6 +271,19 @@ describe('ReaderHeaderComponent', () => {
       expect(fired).toEqual(['angular']);
     });
 
+    it('forwards searchLoading to the mobile bar field', () => {
+      const f = create();
+      const el = f.nativeElement as HTMLElement;
+      f.componentRef.setInput('searchLoading', true);
+
+      (el.querySelector('[aria-label="Search"]') as HTMLButtonElement).click();
+      f.detectChanges();
+
+      const field = f.debugElement.query(By.directive(SearchFieldComponent))
+        .componentInstance as SearchFieldComponent;
+      expect(field.loading()).toBe(true);
+    });
+
     it('restores the brand and account when the close control is clicked', () => {
       const f = create();
       const el = f.nativeElement as HTMLElement;

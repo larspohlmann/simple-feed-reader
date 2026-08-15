@@ -190,6 +190,11 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     return e ? (this.feedTags().get(e.subscriptionId) ?? []) : [];
   });
   readonly hasMore = computed(() => this.entries.nextCursor() !== null);
+  /** A search request is actually in flight — not merely "some list is
+   *  loading": `entries.loading()` is true for every list load, so gating the
+   *  search field's spinner on that alone would show it while an unrelated
+   *  feed list loads. */
+  readonly searching = computed(() => this.selection().kind === 'search' && this.entries.loading());
   readonly canMarkAllRead = computed(() => markReadTarget(this.selection()) !== null);
   /** What the list header's "Last refreshed" hint shows: a feed's fetch time,
    *  or the for-you list's generation time. Null everywhere else. */

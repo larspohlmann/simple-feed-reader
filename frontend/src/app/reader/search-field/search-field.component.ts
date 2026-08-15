@@ -17,6 +17,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, debounceTime } from 'rxjs';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 import { MIN_SEARCH_LENGTH } from '../query';
 
 const DEBOUNCE_MS = 300;
@@ -36,13 +37,17 @@ function isTextEntryTarget(target: EventTarget | null): boolean {
  */
 @Component({
   selector: 'app-search-field',
-  imports: [TranslocoPipe, IconComponent],
+  imports: [TranslocoPipe, IconComponent, SpinnerComponent],
   templateUrl: './search-field.component.html',
   styleUrl: './search-field.component.scss',
 })
 export class SearchFieldComponent {
   /** The active search term, e.g. restored from the URL on Back navigation. */
   readonly term = input('');
+  /** A search request for this field's own term is in flight. Replaces the
+   *  leading search icon with a spinner; the caller is the only one who knows
+   *  (the field itself never fetches), so it is always driven from outside. */
+  readonly loading = input(false);
   /** The settled, trimmed term, or '' when the field is cleared. */
   // Semantic "settled search term" output, not a DOM element's search event.
   // eslint-disable-next-line @angular-eslint/no-output-native

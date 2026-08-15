@@ -73,6 +73,10 @@ export class SidebarComponent {
   readonly keptCount = input(0);
   readonly selection = input.required<Selection>();
   readonly loading = input(false);
+  /** A search request is in flight — distinct from `loading` above, which is
+   *  the subscriptions store's own loading flag; conflating the two would show
+   *  the search spinner while an unrelated subscriptions fetch runs. */
+  readonly searchLoading = input(false);
 
   readonly editTag = output<TagDto>();
   readonly deleteTag = output<TagDto>();

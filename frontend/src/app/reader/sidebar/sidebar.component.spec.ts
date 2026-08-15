@@ -64,6 +64,7 @@ function mount(
     narrow: boolean;
     organising: boolean;
     sheetChoice?: string;
+    searchLoading: boolean;
   }> = {},
 ) {
   TestBed.configureTestingModule({
@@ -92,6 +93,7 @@ function mount(
   f.componentRef.setInput('keptCount', over.keptCount ?? 0);
   f.componentRef.setInput('selection', over.selection ?? { kind: 'all', id: null, unread: true });
   f.componentRef.setInput('loading', false);
+  f.componentRef.setInput('searchLoading', over.searchLoading ?? false);
   f.componentRef.setInput('organising', over.organising ?? false);
   f.detectChanges();
   return f;
@@ -459,6 +461,16 @@ describe('SidebarComponent', () => {
       searchField.search.emit('cats');
 
       expect(search).toHaveBeenCalledWith('cats');
+    });
+
+    it('forwards searchLoading to the field, distinct from the subscriptions loading input', () => {
+      const f = mount({ narrow: false, searchLoading: true });
+
+      const searchField = f.debugElement.query(
+        (de) => de.name === 'app-search-field',
+      )?.componentInstance;
+
+      expect(searchField.loading()).toBe(true);
     });
   });
 

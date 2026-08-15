@@ -52,6 +52,9 @@ export class ReaderHeaderComponent {
    *  The bar cannot derive this: `activeTagId` is null for Favorites, Kept and a
    *  single feed as well, so only the shell knows. */
   readonly allItemsActive = input(false);
+  /** A search request is in flight; forwarded to the mobile bar's own
+   *  `app-search-field`. */
+  readonly searchLoading = input(false);
 
   readonly toggleSidebar = output<void>();
   /** The empty middle of the bar was tapped — scroll the list back to the top. */

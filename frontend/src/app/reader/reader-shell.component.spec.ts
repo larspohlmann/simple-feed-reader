@@ -787,6 +787,60 @@ describe('ReaderShellComponent', () => {
     expect(f.componentInstance.title()).toBe('For you');
   });
 
+  describe('searching (#408 follow-up)', () => {
+    // The spinner must appear ONLY for a search selection whose list is
+    // actually in flight — entries.loading() alone is true for every list
+    // load, so all four combinations are pinned to guard against a spinner
+    // that lights up for an unrelated feed load.
+    it('is false for a non-search selection while its list is not loading', () => {
+      const f = boot();
+      expect(f.componentInstance.searching()).toBe(false);
+    });
+
+    it('is false for a non-search selection while its list IS loading', () => {
+      const f = boot();
+      qp.next(convertToParamMap({ tag: '9' }));
+      f.detectChanges();
+
+      expect(f.componentInstance.selection().kind).toBe('tag');
+      expect(f.componentInstance.entries.loading()).toBe(true);
+      expect(f.componentInstance.searching()).toBe(false);
+
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({
+          entries: [],
+          nextCursor: null,
+        });
+    });
+
+    it('is false for a search selection once its list has finished loading', () => {
+      const f = boot();
+      qp.next(convertToParamMap({ q: 'angular' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+      f.detectChanges();
+
+      expect(f.componentInstance.searching()).toBe(false);
+    });
+
+    it('is true for a search selection while its list IS loading', () => {
+      const f = boot();
+      qp.next(convertToParamMap({ q: 'angular' }));
+      f.detectChanges();
+
+      expect(f.componentInstance.selection().kind).toBe('search');
+      expect(f.componentInstance.entries.loading()).toBe(true);
+      expect(f.componentInstance.searching()).toBe(true);
+
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+    });
+  });
+
   it('titles a search selection with the translated term', () => {
     const f = boot();
     qp.next(convertToParamMap({ q: 'angular' }));

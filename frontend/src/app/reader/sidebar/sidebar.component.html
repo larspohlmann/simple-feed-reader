@@ -1,7 +1,11 @@
 <nav class="sidebar" [attr.aria-label]="'reader.feeds' | transloco" cdkDropListGroup>
   @if (!organising()) {
     @if (!screen.isNarrow()) {
-      <app-search-field [term]="selection().term ?? ''" (search)="search.emit($event)" />
+      <app-search-field
+        [term]="selection().term ?? ''"
+        [loading]="searchLoading()"
+        (search)="search.emit($event)"
+      />
     }
     <div class="actions">
       <button

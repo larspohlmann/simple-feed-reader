@@ -196,6 +196,42 @@ describe('SearchFieldComponent', () => {
     expect(wrapper).toBeTruthy();
   });
 
+  describe('the loading spinner (#408 follow-up)', () => {
+    it('shows the plain search icon, not the spinner, while loading is false', () => {
+      const fixture = mount();
+      fixture.componentRef.setInput('loading', false);
+      fixture.detectChanges();
+
+      expect(fixture.debugElement.query(By.css('.icon app-icon, app-icon.icon'))).toBeTruthy();
+      expect(fixture.debugElement.query(By.css('app-spinner'))).toBeFalsy();
+    });
+
+    it('replaces the search icon with a decorative spinner while loading is true', () => {
+      const fixture = mount();
+      fixture.componentRef.setInput('loading', true);
+      fixture.detectChanges();
+
+      const spinner = fixture.debugElement.query(By.css('app-spinner'));
+      expect(spinner).toBeTruthy();
+      expect(fixture.debugElement.query(By.css('app-icon[name="search"]'))).toBeFalsy();
+      // decorative: this is a state indicator inside an already-labelled field,
+      // not a standalone status region — a second announced "Loading" would
+      // fight the entry list's own live region.
+      expect(spinner.componentInstance.decorative).toBe(true);
+    });
+
+    it('goes back to the search icon once loading turns false again', () => {
+      const fixture = mount();
+      fixture.componentRef.setInput('loading', true);
+      fixture.detectChanges();
+      fixture.componentRef.setInput('loading', false);
+      fixture.detectChanges();
+
+      expect(fixture.debugElement.query(By.css('app-spinner'))).toBeFalsy();
+      expect(fixture.debugElement.query(By.css('app-icon[name="search"]'))).toBeTruthy();
+    });
+  });
+
   describe('the clear button chrome (#408 follow-up)', () => {
     // jsdom applies a real UA default stylesheet to <button> (background-color:
     // buttonface, a 2px outset border) — proven by probing a bare <button> in

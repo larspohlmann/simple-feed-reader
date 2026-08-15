@@ -1,6 +1,10 @@
 <div class="search-field" role="search" [attr.aria-label]="'reader.search' | transloco">
   <div class="row">
-    <app-icon class="icon" name="search" size="sm" />
+    @if (loading()) {
+      <app-spinner class="icon" [size]="16" [decorative]="true" />
+    } @else {
+      <app-icon class="icon" name="search" size="sm" />
+    }
     <input
       #inputEl
       class="input"
