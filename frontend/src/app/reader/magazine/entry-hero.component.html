@@ -28,34 +28,12 @@
     @if (snippet()) {
       <p class="dek">{{ snippet() }}</p>
     }
-    <app-source-tags [tags]="tags()" />
-    <div class="actions">
-      <button
-        type="button"
-        [attr.aria-label]="'reader.favorite' | transloco"
-        [class.on]="entry().isFavorite"
-        [attr.aria-pressed]="entry().isFavorite"
-        (click)="$event.stopPropagation(); favorite.emit(entry())"
-      >
-        <app-icon name="star" size="md" />
-      </button>
-      <button
-        type="button"
-        [attr.aria-label]="'reader.keep' | transloco"
-        [class.on]="entry().isKept"
-        [attr.aria-pressed]="entry().isKept"
-        (click)="$event.stopPropagation(); keep.emit(entry())"
-      >
-        <app-icon name="bookmark" size="md" />
-      </button>
-      <button
-        type="button"
-        [attr.aria-label]="'reader.toggleRead' | transloco"
-        [attr.aria-pressed]="entry().isRead"
-        (click)="$event.stopPropagation(); read.emit(entry())"
-      >
-        <app-icon [name]="entry().isRead ? 'mark_email_unread' : 'check'" size="md" />
-      </button>
-    </div>
+    <app-entry-meta
+      [entry]="entry()"
+      [tags]="tags()"
+      (favorite)="favorite.emit($event)"
+      (keep)="keep.emit($event)"
+      (read)="read.emit($event)"
+    />
   </div>
 </article>

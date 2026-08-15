@@ -15,6 +15,13 @@ export abstract class EntryBlockBase {
   readonly tags = input<SubscriptionTagDto[]>([]);
   readonly open = output<EntryDto>();
 
+  /** Every block carries the three per-entry actions. They live here rather
+   *  than on each block so a new block cannot forget them, and so the host
+   *  binds the same four outputs for every kind. */
+  readonly favorite = output<EntryDto>();
+  readonly keep = output<EntryDto>();
+  readonly read = output<EntryDto>();
+
   private readonly language = inject(LanguageService);
   readonly when = computed(() =>
     relativeTime(this.entry().publishedAt ?? this.entry().createdAt, this.language.lang()),

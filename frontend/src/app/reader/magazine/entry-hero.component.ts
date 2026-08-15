@@ -1,24 +1,17 @@
 // src/app/reader/magazine/entry-hero.component.ts
-import { Component, computed, effect, output, signal } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
-import { IconComponent } from '../../shared/icon/icon.component';
+import { Component, computed, effect, signal } from '@angular/core';
 import { EntryKickerLineComponent } from './entry-kicker-line.component';
-import { SourceTagsComponent } from '../source-tags/source-tags.component';
-import { EntryDto } from '../models';
+import { EntryMetaComponent } from '../entry-meta/entry-meta.component';
 import { entryImage } from '../preview-image';
 import { EntryBlockBase } from './entry-block-base';
 
 @Component({
   selector: 'app-entry-hero',
-  imports: [IconComponent, EntryKickerLineComponent, SourceTagsComponent, TranslocoPipe],
+  imports: [EntryKickerLineComponent, EntryMetaComponent],
   templateUrl: './entry-hero.component.html',
   styleUrl: './entry-hero.component.scss',
 })
 export class EntryHeroComponent extends EntryBlockBase {
-  readonly favorite = output<EntryDto>();
-  readonly keep = output<EntryDto>();
-  readonly read = output<EntryDto>();
-
   readonly imgError = signal(false);
   readonly tooSmall = signal(false);
   readonly image = computed(() => entryImage(this.entry()));

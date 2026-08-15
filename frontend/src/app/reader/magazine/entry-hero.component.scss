@@ -53,20 +53,3 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
-.actions {
-  display: flex;
-  gap: var(--space-3);
-}
-
-.actions button {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: var(--space-0);
-}
-
-.actions button.on {
-  color: var(--accent);
-}
