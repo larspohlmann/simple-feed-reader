@@ -10,15 +10,17 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryRepository;
 use App\Repository\EntrySearchQuery;
-use App\Service\Search\EntrySearchInterface;
+use App\Service\Search\LikeEntrySearch;
 use App\Service\Search\SearchTerms;
 use App\Tests\DbTestCase;
 
 /**
- * The seam an Elasticsearch implementation would replace. The test resolves it
- * from the container by its INTERFACE on purpose: a missing alias in
- * services.yaml is exactly the failure this must catch, and autowiring a plain
- * application interface is not automatic.
+ * The seam an Elasticsearch implementation would replace. This test covers the
+ * BEHAVIOUR only, so it builds the implementation directly. Proving the DI
+ * alias is the endpoint test's job: a container fetch here would need the alias
+ * made public in the test environment, and that override replaces the
+ * production entry — so this test would pass with the production alias deleted,
+ * which is the one failure it would appear to be guarding.
  */
 final class LikeEntrySearchTest extends DbTestCase
 {
@@ -40,8 +42,9 @@ final class LikeEntrySearchTest extends DbTestCase
         $this->em->persist($entry);
         $this->em->flush();
 
-        $search = self::getContainer()->get(EntrySearchInterface::class);
-        self::assertInstanceOf(EntrySearchInterface::class, $search);
+        $repository = $this->em->getRepository(Entry::class);
+        self::assertInstanceOf(EntryRepository::class, $repository);
+        $search = new LikeEntrySearch($repository);
 
         $rows = $search->search(new EntrySearchQuery(
             userId: $user->getId() ?? 0,
