@@ -62,7 +62,11 @@ export class SearchFieldComponent {
    *  nothing the user typed had settled into it yet. Kept as a field rather
    *  than an RxJS `distinctUntilChanged()` because that operator only sees
    *  values reaching the debounced pipeline, and both `clear()` and the
-   *  external-term effect deliberately bypass it. */
+   *  external-term effect deliberately bypass it. A debounce already in
+   *  flight when an external change lands can still fire once more with the
+   *  older typed value, briefly flipping the route back; that resolves
+   *  itself through the same round trip once the effect re-syncs, so it is
+   *  left alone rather than guarded against. */
   private activeTerm = '';
 
   constructor() {
@@ -98,6 +102,10 @@ export class SearchFieldComponent {
     this.text.set('');
     this.activeTerm = '';
     this.search.emit('');
+    // Supersede a pending debounce, not to emit through it: without this, a
+    // debounce started just before the clear still fires ~300 ms later with
+    // the old typed value, and the cleared search reappears on its own.
+    this.typed.next('');
   }
 
   onKeydown(event: KeyboardEvent): void {

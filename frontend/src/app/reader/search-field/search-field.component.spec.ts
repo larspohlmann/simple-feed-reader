@@ -81,6 +81,24 @@ describe('SearchFieldComponent', () => {
     expect(emitted).toEqual(['angular', 'angular']);
   }));
 
+  it('does not let a cleared search reappear from a pending debounce', fakeAsync(() => {
+    const fixture = mount();
+    const emitted: string[] = [];
+    fixture.componentInstance.search.subscribe((term) => emitted.push(term));
+
+    typeInto(fixture, 'angular');
+    tick(100); // well inside the 300 ms window: the debounce is still pending
+
+    const clearButton: HTMLButtonElement = fixture.debugElement.query(
+      By.css('.clear'),
+    ).nativeElement;
+    clearButton.click();
+
+    tick(300); // drain the pending debounce — "angular" must not resurface
+
+    expect(emitted).toEqual(['']);
+  }));
+
   it('collapses a debounce burst that settles on a repeat into one emission', fakeAsync(() => {
     const fixture = mount();
     const emitted: string[] = [];
