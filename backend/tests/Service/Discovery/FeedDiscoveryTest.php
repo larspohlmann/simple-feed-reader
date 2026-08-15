@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Discovery;
 
 use App\Enum\ScrapeFallback;
+use App\Service\Discovery\BotChallengePage;
 use App\Service\Discovery\FeedDiscovery;
 use App\Service\Discovery\FeedLinkScanner;
 use App\Service\Discovery\WellKnownFeedProbe;
@@ -35,6 +36,7 @@ final class FeedDiscoveryTest extends KernelTestCase
             $extractor,
             new FeedLinkScanner(),
             new WellKnownFeedProbe($fetcher, $parser),
+            new BotChallengePage(),
         );
     }
 
@@ -184,6 +186,37 @@ final class FeedDiscoveryTest extends KernelTestCase
         $fetcher->willThrow('https://forbidden.example.com', new FeedUnreachableException('x: HTTP 403', 403));
 
         $result = $this->discovery($fetcher)->discover('https://forbidden.example.com', ScrapeFallback::Enabled);
+
+        self::assertNull($result->feed);
+        self::assertSame('blocked', $result->scrapeFailureReason);
+        self::assertSame([], $result->candidates);
+    }
+
+    /**
+     * A bot gate refuses with a success status: SiteGround answers 202 and a
+     * meta refresh to its captcha. Nothing in the status says "refused", so
+     * without recognising the body the user is told no feed exists at an address
+     * that serves one — which is what three subscriptions hit from the Strato
+     * box (#424). The scrape fallback is enabled here on purpose: a challenge
+     * page must not become a scraped candidate either.
+     */
+    public function testACaptchaChallengeReportsBlockedRatherThanNoFeed(): void
+    {
+        // @lang TEXT: the gate's own body, kept as served.
+        $challenge = /** @lang TEXT */ '<html><head><link rel="icon" href="data:;">'
+            . '<meta http-equiv="refresh" content="0;/.well-known/sgcaptcha/'
+            . '?r=%2Ffeed%2F&y=ipc:81.169.144.135:1786832352.672"></meta></head></html>';
+
+        $fetcher = $this->fetcherReturning(
+            'https://decodedmagazine.com/feed/',
+            'https://decodedmagazine.com/feed/',
+            $challenge,
+        );
+
+        $result = $this->discovery($fetcher)->discover(
+            'https://decodedmagazine.com/feed/',
+            ScrapeFallback::Enabled,
+        );
 
         self::assertNull($result->feed);
         self::assertSame('blocked', $result->scrapeFailureReason);
