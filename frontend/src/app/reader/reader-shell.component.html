@@ -79,6 +79,7 @@
       (reorderTagFeeds)="manage.reorderTagFeeds($event.tagId, $event.subscriptionIds)"
       (refresh)="onRefresh()"
       (addFeed)="onAddFeed()"
+      (search)="onSearch($event)"
     />
   </aside>
   <main class="main" [class.split]="paneMode()">

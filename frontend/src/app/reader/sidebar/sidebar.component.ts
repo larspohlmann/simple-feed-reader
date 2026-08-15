@@ -26,6 +26,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { ViewControlsComponent } from '../view-controls/view-controls.component';
+import { SearchFieldComponent } from '../search-field/search-field.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
@@ -50,6 +51,7 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
     TagGlyphComponent,
     FaviconComponent,
     ViewControlsComponent,
+    SearchFieldComponent,
     TranslocoPipe,
     CdkDropListGroup,
     CdkDropList,
@@ -78,6 +80,10 @@ export class SidebarComponent {
   readonly unsubscribe = output<SubscriptionDto>();
   readonly refresh = output<void>();
   readonly addFeed = output<void>();
+  /** The settled search term from the field, or '' when it is cleared. */
+  // Semantic "settled search term" output, not a DOM element's search event.
+  // eslint-disable-next-line @angular-eslint/no-output-native
+  readonly search = output<string>();
   /** A feed was dropped onto a tag (add) or onto Feeds (clear). */
   readonly retag = output<{ sub: SubscriptionDto; tagIds: number[] }>();
   /** Tags were reordered — the full tag id list in its new order. */

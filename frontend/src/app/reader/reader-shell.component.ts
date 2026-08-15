@@ -605,6 +605,16 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  /** A term navigates; an empty term returns to All items. Both go through the
+   *  URL, so Back leaves a search the same way it leaves any other list. */
+  onSearch(term: string): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { q: term || null, view: null, tag: null, subscription: null, entry: null },
+      queryParamsHandling: 'merge',
+    });
+  }
+
   onRefresh(): void {
     this.refreshSvc.run(() => {
       this.subs.load();

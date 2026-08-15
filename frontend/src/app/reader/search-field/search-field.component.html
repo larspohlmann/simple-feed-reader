@@ -1,0 +1,27 @@
+<div class="search-field" role="search" [attr.aria-label]="'reader.search' | transloco">
+  <div class="row">
+    <app-icon class="icon" name="search" size="sm" />
+    <input
+      class="input"
+      type="text"
+      autocomplete="off"
+      [placeholder]="'reader.searchPlaceholder' | transloco"
+      [value]="text()"
+      (input)="onInput($any($event.target).value)"
+      (keydown)="onKeydown($event)"
+    />
+    @if (text()) {
+      <button
+        type="button"
+        class="clear"
+        [attr.aria-label]="'reader.searchClear' | transloco"
+        (click)="clear()"
+      >
+        <app-icon name="close" size="sm" />
+      </button>
+    }
+  </div>
+  @if (tooShort()) {
+    <p class="hint">{{ 'reader.searchTooShort' | transloco }}</p>
+  }
+</div>
