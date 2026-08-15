@@ -54,7 +54,7 @@ final class EntrySearchRequestFactoryTest extends TestCase
             $this->factory->fromRequest($request, $this->buildUser());
             self::fail('Expected a ValidationException.');
         } catch (ValidationException $exception) {
-            self::assertStringContainsString('tag', $exception->errors['query'][0] ?? '');
+            self::assertSame(['Unknown parameter "tag".'], $exception->errors['query'] ?? null);
         }
     }
 
@@ -62,45 +62,60 @@ final class EntrySearchRequestFactoryTest extends TestCase
     {
         $request = Request::create('/api/entries/search?q[]=x');
 
-        $this->expectException(ValidationException::class);
-
-        $this->factory->fromRequest($request, $this->buildUser());
+        try {
+            $this->factory->fromRequest($request, $this->buildUser());
+            self::fail('Expected a ValidationException.');
+        } catch (ValidationException $exception) {
+            self::assertSame(['Send one value for "q", not a list.'], $exception->errors['q'] ?? null);
+        }
     }
 
     public function testRejectsCursorSentAsAList(): void
     {
         $request = Request::create('/api/entries/search?q=angular&cursor[]=x');
 
-        $this->expectException(ValidationException::class);
-
-        $this->factory->fromRequest($request, $this->buildUser());
+        try {
+            $this->factory->fromRequest($request, $this->buildUser());
+            self::fail('Expected a ValidationException.');
+        } catch (ValidationException $exception) {
+            self::assertSame(['Send one value for "cursor", not a list.'], $exception->errors['cursor'] ?? null);
+        }
     }
 
     public function testRejectsLimitSentAsAList(): void
     {
         $request = Request::create('/api/entries/search?q=angular&limit[]=x');
 
-        $this->expectException(ValidationException::class);
-
-        $this->factory->fromRequest($request, $this->buildUser());
+        try {
+            $this->factory->fromRequest($request, $this->buildUser());
+            self::fail('Expected a ValidationException.');
+        } catch (ValidationException $exception) {
+            self::assertSame(['Send one value for "limit", not a list.'], $exception->errors['limit'] ?? null);
+        }
     }
 
     public function testRejectsANonNumericLimit(): void
     {
         $request = Request::create('/api/entries/search?q=angular&limit=abc');
 
-        $this->expectException(ValidationException::class);
-
-        $this->factory->fromRequest($request, $this->buildUser());
+        try {
+            $this->factory->fromRequest($request, $this->buildUser());
+            self::fail('Expected a ValidationException.');
+        } catch (ValidationException $exception) {
+            self::assertSame(['The limit must be a whole number.'], $exception->errors['limit'] ?? null);
+        }
     }
 
     public function testRejectsAMalformedCursor(): void
     {
         $request = Request::create('/api/entries/search?q=angular&cursor=not-a-real-cursor');
 
-        $this->expectException(ValidationException::class);
-
-        $this->factory->fromRequest($request, $this->buildUser());
+        try {
+            $this->factory->fromRequest($request, $this->buildUser());
+            self::fail('Expected a ValidationException.');
+        } catch (ValidationException $exception) {
+            self::assertSame(['The cursor is malformed.'], $exception->errors['cursor'] ?? null);
+        }
     }
 
     public function testAcceptsAValidCursor(): void

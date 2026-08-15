@@ -33,9 +33,12 @@ final class SearchTermsTest extends TestCase
 
     public function testRejectsAnInputShorterThanThreeCharacters(): void
     {
-        $this->expectException(ValidationException::class);
-
-        SearchTerms::fromInput('  ng  ');
+        try {
+            SearchTerms::fromInput('  ng  ');
+            self::fail('Expected a ValidationException.');
+        } catch (ValidationException $exception) {
+            self::assertSame(['Search for at least 3 characters.'], $exception->errors['q'] ?? null);
+        }
     }
 
     public function testAcceptsAnInputOfExactlyThreeCharacters(): void
@@ -45,11 +48,35 @@ final class SearchTermsTest extends TestCase
         self::assertSame(['ng2'], $terms->terms);
     }
 
-    public function testRejectsAnInputLongerThanOneHundredCharacters(): void
+    public function testRejectsATwoCharacterMultibyteInputAsTooShort(): void
     {
+        // "üö" is 2 characters (below the 3-character minimum) but 4 bytes —
+        // long enough that a byte-counting strlen() would wrongly accept it.
+        // The rule is measured in characters, via mb_strlen.
         $this->expectException(ValidationException::class);
 
-        SearchTerms::fromInput(str_repeat('a', 101));
+        SearchTerms::fromInput('üö');
+    }
+
+    public function testRejectsAnInputLongerThanOneHundredCharacters(): void
+    {
+        try {
+            SearchTerms::fromInput(str_repeat('a', 101));
+            self::fail('Expected a ValidationException.');
+        } catch (ValidationException $exception) {
+            self::assertSame(['Search for at most 100 characters.'], $exception->errors['q'] ?? null);
+        }
+    }
+
+    public function testAcceptsExactlyOneHundredMultibyteCharacters(): void
+    {
+        // 100 "ü" characters is exactly at the character-count ceiling, but
+        // 200 bytes — well past it. A byte-counting strlen(), or a boundary
+        // widened from > to >=, would both wrongly reject this input; only
+        // mb_strlen() with a strict > gets it right.
+        $terms = SearchTerms::fromInput(str_repeat('ü', 100));
+
+        self::assertCount(1, $terms->terms);
     }
 
     public function testKeepsOnlyTheFirstSixTerms(): void

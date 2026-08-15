@@ -116,6 +116,19 @@ final class EntrySearchTest extends DbTestCase
         self::assertSame(['both'], $this->search('angular signals'));
     }
 
+    public function testEachTermIsBoundToItsOwnParameter(): void
+    {
+        // Neither entry carries both terms, so the correct AND-of-terms query
+        // matches nothing. If every term's LIKE reused the same bound
+        // parameter name, all placeholders would silently collapse onto the
+        // last term's value, and the entry that happens to match only that
+        // last term would wrongly come back.
+        $this->entry('first-term-only', 'Angular explained');
+        $this->entry('second-term-only', 'Signals explained');
+
+        self::assertSame([], $this->search('angular signals'));
+    }
+
     public function testMatchesTermsAcrossTitleAndSummary(): void
     {
         $this->entry('split', 'Angular 20 ships', 'The whole story about signals');
@@ -165,6 +178,17 @@ final class EntrySearchTest extends DbTestCase
         $this->entry('newer', 'Angular two', null, '2026-07-12T00:00:00Z');
 
         self::assertSame(['newer'], $this->search('angular', null, 1));
+    }
+
+    public function testClampsALimitOfZeroToOneRow(): void
+    {
+        // searchForUser floors the limit at 1 (max(1, ...)) rather than
+        // passing an untouched 0 straight to setMaxResults(), which would
+        // return no rows at all.
+        $this->entry('older', 'Angular one', null, '2026-07-10T00:00:00Z');
+        $this->entry('newer', 'Angular two', null, '2026-07-12T00:00:00Z');
+
+        self::assertSame(['newer'], $this->search('angular', null, 0));
     }
 
     public function testTreatsAPercentSignAsAPlainCharacter(): void

@@ -45,20 +45,56 @@ final class EntryPageTest extends TestCase
         self::assertNotSame($newer->entry->getId(), $cursor->id);
     }
 
+    public function testASingleRowAtLimitOneOffersACursor(): void
+    {
+        // The floor on the "full page" threshold is min(max(1, $limit), MAX):
+        // a $limit of 1 must still require at least 1 row before offering a
+        // cursor. A regression that raised the floor to 2 would make this one
+        // row look like a short page and drop the cursor.
+        $row = $this->rowForEntry(9, new \DateTimeImmutable('2026-07-12T00:00:00Z'));
+
+        $page = EntryPage::of([$row], 1);
+
+        self::assertNotNull($page['nextCursor']);
+        $cursor = EntryCursor::decode($page['nextCursor']);
+        self::assertNotNull($cursor);
+        self::assertSame(9, $cursor->id);
+    }
+
+    public function testAnEntryWithNoIdRaisesALogicException(): void
+    {
+        // getId() ?? throw is the only guard between a not-yet-persisted entry
+        // and a cursor built from a null id. rowForEntryWithoutId leaves the
+        // id unset, exactly as a freshly constructed, unflushed Entry would.
+        $row = $this->rowForEntryWithoutId(new \DateTimeImmutable('2026-07-12T00:00:00Z'));
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('An entry loaded from the database must have an id.');
+
+        EntryPage::of([$row], 1);
+    }
+
     private function rowForEntry(int $id, \DateTimeImmutable $effectiveDate): EntryListRow
+    {
+        $row = $this->rowForEntryWithoutId($effectiveDate);
+        // Entry has no id setter: the id only exists once Doctrine assigns it,
+        // and this test builds the row by hand without booting the kernel.
+        $reflection = new \ReflectionProperty(Entry::class, 'id');
+        $reflection->setValue($row->entry, $id);
+
+        return $row;
+    }
+
+    private function rowForEntryWithoutId(\DateTimeImmutable $effectiveDate): EntryListRow
     {
         $entry = new Entry(
             new Feed('https://example.com/feed.xml'),
-            'guid-' . $id,
-            'https://example.com/entry-' . $id,
+            'guid-no-id',
+            'https://example.com/entry-no-id',
             'Angular ships',
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             $effectiveDate,
         );
-        // Entry has no id setter: the id only exists once Doctrine assigns it,
-        // and this test builds the row by hand without booting the kernel.
-        $reflection = new \ReflectionProperty(Entry::class, 'id');
-        $reflection->setValue($entry, $id);
 
         return new EntryListRow(
             entry: $entry,
