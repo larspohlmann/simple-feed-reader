@@ -86,10 +86,9 @@ export class AiSectionComponent {
     this.ai.models().map((model) => ({ value: model, label: model })),
   );
 
-  readonly canAdd = computed(
-    () =>
-      this.newBaseUrl().trim().length > 0 && this.newApiKey().trim().length > 0 && !this.ai.busy(),
-  );
+  /** The key is optional — a local model server needs none — so only the
+   *  address gates the button. */
+  readonly canAdd = computed(() => this.newBaseUrl().trim().length > 0 && !this.ai.busy());
 
   private readonly activeConfig = computed(() => this.ai.configs().find((config) => config.active));
 

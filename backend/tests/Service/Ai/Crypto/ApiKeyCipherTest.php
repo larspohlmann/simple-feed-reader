@@ -32,6 +32,20 @@ final class ApiKeyCipherTest extends TestCase
         self::assertSame('sk-test-abcdef', $cipher->open(42, $sealed));
     }
 
+    /**
+     * A keyless local-server configuration seals an empty string, and
+     * duplicateConfiguration() re-opens whatever a source row holds — so this
+     * must round-trip exactly like a real key does, not merely be assumed to.
+     */
+    public function testAnEmptyKeyOpensAgainAsAnEmptyKey(): void
+    {
+        $cipher = $this->cipher();
+
+        $sealed = $cipher->seal(42, '');
+
+        self::assertSame('', $cipher->open(42, $sealed));
+    }
+
     public function testTheCiphertextDoesNotContainThePlainKey(): void
     {
         $sealed = $this->cipher()->seal(42, 'sk-test-abcdef');

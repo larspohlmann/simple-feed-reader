@@ -41,9 +41,13 @@
             </div>
 
             <div class="config-body">
-              <span class="hint">{{
-                'settings.ai.storedKey' | transloco: { hint: config.apiKeyHint }
-              }}</span>
+              @if (config.apiKeyHint) {
+                <span class="hint">{{
+                  'settings.ai.storedKey' | transloco: { hint: config.apiKeyHint }
+                }}</span>
+              } @else {
+                <span class="hint">{{ 'settings.ai.noStoredKey' | transloco }}</span>
+              }
 
               @if (renamingId() === config.id) {
                 <app-field [label]="'settings.ai.configs.namePlaceholder' | transloco">

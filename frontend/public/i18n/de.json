@@ -75,6 +75,7 @@
       "apiKey": "API-Schlüssel",
       "apiKeyHint": "Der Schlüssel wird einmal gesendet und verschlüsselt gespeichert. Gib ihn erneut ein, um ihn zu ersetzen.",
       "storedKey": "Ein Schlüssel mit der Endung {{hint}} ist gespeichert.",
+      "noStoredKey": "Es ist kein Schlüssel gespeichert — dieser Endpunkt wird ohne Schlüssel verwendet.",
       "model": "Modell",
       "modelPlaceholder": "Modell auswählen",
       "saveModel": "Modell speichern",

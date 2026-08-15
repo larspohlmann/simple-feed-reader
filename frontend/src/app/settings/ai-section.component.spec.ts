@@ -269,6 +269,34 @@ describe('AiSectionComponent', () => {
     );
   });
 
+  it('allows adding with an endpoint and no key, since a local server needs none', () => {
+    const fixture = mount();
+    (addDetails(fixture).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.canAdd()).toBe(false);
+
+    fixture.componentInstance.newBaseUrl.set('https://api.example.test/v1');
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.canAdd()).toBe(true);
+  });
+
+  it('renders the noStoredKey sentence for an empty hint, and the storedKey sentence otherwise', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, apiKeyHint: '' }), config({ id: 2, apiKeyHint: '1234' })]);
+    fixture.detectChanges();
+    expandRow(fixture, 0);
+    expandRow(fixture, 1);
+
+    expect(row(fixture, 0).querySelector('.hint')?.textContent).toContain(
+      'No key is stored — this endpoint is used without one.',
+    );
+    expect(row(fixture, 1).querySelector('.hint')?.textContent).toContain(
+      'A key ending in 1234 is stored.',
+    );
+  });
+
   it('changes a model: "change model" calls loadModels, then the picker saves via chooseModel', () => {
     const fixture = mount();
     ai.configs.set([config({ id: 1 })]);

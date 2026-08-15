@@ -161,6 +161,37 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     }
 
     /**
+     * A keyless credential (a local model server) must not send `Bearer ` with
+     * nothing after it — ProviderCredentials::authorizationHeaders() drops the
+     * header entirely, and every other header this call sets must survive
+     * that.
+     */
+    public function testAKeylessCredentialSendsNoAuthorizationHeader(): void
+    {
+        $seen = [];
+        $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$seen): MockResponse {
+            $seen = ['headers' => $options['headers'] ?? []];
+
+            return new MockResponse([
+                'data: {"choices":[{"delta":{"content":"{}"}}]}' . "\n\n",
+                'data: [DONE]' . "\n\n",
+            ]);
+        });
+
+        $credentials = ProviderCredentials::fromStoredConfiguration('https://api.example.test/v1', '');
+        $this->clientUsing($client)->complete($credentials, $this->request(), new NullCompletionStreamObserver());
+
+        /** @var array{headers: array<int, string>} $seen */
+        $authorizationHeaders = array_filter(
+            $seen['headers'],
+            static fn (string $header): bool => str_starts_with($header, 'Authorization:'),
+        );
+        self::assertSame([], $authorizationHeaders);
+        self::assertContains('Accept: text/event-stream, application/json', $seen['headers']);
+        self::assertContains('Accept-Encoding: identity', $seen['headers']);
+    }
+
+    /**
      * A provider that ignores `stream: true` answers with the blocking envelope;
      * the client must accept it exactly as it did before #312.
      *

@@ -159,6 +159,22 @@ final class AiSettingsControllerTest extends ApiTestCase
         self::assertSame(['gpt-4o', 'gpt-4o-mini'], $added['models']);
     }
 
+    /**
+     * A local model server (LM Studio, Ollama, llama.cpp) needs no credential
+     * at all, so an empty key must reach the provider rather than being
+     * rejected by validation before the call is even made.
+     */
+    public function testAddingAConfigurationWithNoApiKeyIsAccepted(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-no-key@example.test');
+
+        $added = $this->addConfiguration($client, apiKey: '');
+
+        self::assertResponseStatusCodeSame(201);
+        self::assertSame('', $added['apiKeyHint']);
+    }
+
     public function testChoosingAModelOnTheOnlyConfigurationMakesItActive(): void
     {
         $client = $this->clientAnswering(['gpt-4o', 'gpt-4o-mini']);

@@ -75,6 +75,7 @@
       "apiKey": "API key",
       "apiKeyHint": "The key is sent once and stored encrypted. Enter it again to replace it.",
       "storedKey": "A key ending in {{hint}} is stored.",
+      "noStoredKey": "No key is stored — this endpoint is used without one.",
       "model": "Model",
       "modelPlaceholder": "Select a model",
       "saveModel": "Save model",
