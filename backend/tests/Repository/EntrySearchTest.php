@@ -43,8 +43,12 @@ final class EntrySearchTest extends DbTestCase
         $this->em->flush();
     }
 
-    private function entry(string $guid, string $title, ?string $summary = null, string $effectiveDate = '2026-07-10T00:00:00Z'): Entry
-    {
+    private function entry(
+        string $guid,
+        string $title,
+        ?string $summary = null,
+        string $effectiveDate = '2026-07-10T00:00:00Z',
+    ): Entry {
         $entry = new Entry(
             $this->feed,
             $guid,

@@ -16,15 +16,18 @@ use App\Tests\DbTestCase;
 
 /**
  * The seam an Elasticsearch implementation would replace. This test covers the
- * BEHAVIOUR only, so it builds the implementation directly. Proving the DI
- * alias is the endpoint test's job: a container fetch here would need the alias
- * made public in the test environment, and that override replaces the
- * production entry — so this test would pass with the production alias deleted,
- * which is the one failure it would appear to be guarding.
+ * BEHAVIOUR only, so it builds the implementation directly.
+ *
+ * Nothing here guards the DI binding, and nothing can: Symfony autowires
+ * EntrySearchInterface because exactly one service implements it, so removing
+ * the explicit alias in services.yaml changes nothing until a second
+ * implementation exists. The alias is kept because it states the binding and
+ * makes that second implementation a one-line change rather than an ambiguity
+ * error.
  */
 final class LikeEntrySearchTest extends DbTestCase
 {
-    public function testFindsASubscribedEntryThroughTheInterface(): void
+    public function testFindsASubscribedEntryByTerm(): void
     {
         $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->em->persist($user);
