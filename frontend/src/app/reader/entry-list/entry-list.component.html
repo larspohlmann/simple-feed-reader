@@ -78,6 +78,14 @@
   </div>
 </header>
 
+@if (selection().kind === 'search') {
+  <!-- Announces the count, not the rows: a live region that spoke every row
+       would drown a screen-reader user in noise on every result set. -->
+  <p class="sr-only" aria-live="polite" role="status">
+    {{ 'reader.searchCount' | transloco: { count: entries().length } }}
+  </p>
+}
+
 @if (revealVisible()) {
   <div
     class="pull-indicator"

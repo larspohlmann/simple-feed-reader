@@ -195,4 +195,64 @@ describe('SearchFieldComponent', () => {
     const wrapper = fixture.debugElement.query(By.css('[role="search"]'));
     expect(wrapper).toBeTruthy();
   });
+
+  describe('the / shortcut (#408)', () => {
+    function pressSlash(target: EventTarget, modifiers: Partial<KeyboardEventInit> = {}) {
+      const event = new KeyboardEvent('keydown', {
+        key: '/',
+        bubbles: true,
+        cancelable: true,
+        ...modifiers,
+      });
+      Object.defineProperty(event, 'target', { value: target });
+      const prevented = jest.spyOn(event, 'preventDefault');
+      document.dispatchEvent(event);
+      return prevented;
+    }
+
+    it('focuses the input on a bare / while focus is on the document body', () => {
+      const fixture = mount();
+      const input: HTMLInputElement = fixture.debugElement.query(By.css('input')).nativeElement;
+
+      pressSlash(document.body);
+
+      expect(document.activeElement).toBe(input);
+    });
+
+    it('does not steal focus, or the key, when already typing in a text input', () => {
+      mount();
+      const otherInput = document.createElement('input');
+      document.body.appendChild(otherInput);
+      otherInput.focus();
+
+      const prevented = pressSlash(otherInput);
+
+      expect(document.activeElement).toBe(otherInput);
+      expect(prevented).not.toHaveBeenCalled();
+      document.body.removeChild(otherInput);
+    });
+
+    it('does not steal a / typed into its own input', () => {
+      const fixture = mount();
+      const input: HTMLInputElement = fixture.debugElement.query(By.css('input')).nativeElement;
+      input.focus();
+
+      const prevented = pressSlash(input);
+
+      expect(prevented).not.toHaveBeenCalled();
+    });
+
+    it.each(['ctrlKey', 'metaKey', 'altKey'] as const)(
+      'does nothing when %s is held',
+      (modifierKey) => {
+        const fixture = mount();
+        const input: HTMLInputElement = fixture.debugElement.query(By.css('input')).nativeElement;
+
+        const prevented = pressSlash(document.body, { [modifierKey]: true });
+
+        expect(document.activeElement).not.toBe(input);
+        expect(prevented).not.toHaveBeenCalled();
+      },
+    );
+  });
 });

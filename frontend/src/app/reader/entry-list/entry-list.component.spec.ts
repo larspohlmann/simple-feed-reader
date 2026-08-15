@@ -600,6 +600,25 @@ describe('EntryListComponent', () => {
     });
   });
 
+  describe('search result live region (#408)', () => {
+    it('announces the loaded count for a search selection', () => {
+      const el = mount({
+        entries: [entry(1), entry(2), entry(3)],
+        selection: { kind: 'search', id: null, unread: false, term: 'fox' },
+      }).nativeElement as HTMLElement;
+      const region = el.querySelector('[aria-live="polite"]');
+      expect(region).not.toBeNull();
+      expect(region!.textContent).toContain('3 results');
+    });
+
+    it('renders no live region for a non-search selection', () => {
+      const el = mount({
+        selection: { kind: 'all', id: null, unread: true },
+      }).nativeElement as HTMLElement;
+      expect(el.querySelector('[aria-live="polite"]')).toBeNull();
+    });
+  });
+
   it('does not collapse the list header by default', () => {
     const el = mount().nativeElement as HTMLElement;
     expect(el.querySelector('.list-header')!.classList).not.toContain('collapsed');

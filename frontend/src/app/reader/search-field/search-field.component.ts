@@ -2,6 +2,8 @@
 import {
   Component,
   DestroyRef,
+  ElementRef,
+  HostListener,
   computed,
   effect,
   inject,
@@ -9,6 +11,7 @@ import {
   output,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, debounceTime } from 'rxjs';
@@ -17,6 +20,14 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { MIN_SEARCH_LENGTH } from '../query';
 
 const DEBOUNCE_MS = 300;
+
+/** Elements a bare `/` must type into rather than be stolen from. Matches the
+ *  target itself, not `document.activeElement` by name, so a `/` typed inside
+ *  this very field's own input takes this branch and is left alone. */
+function isTextEntryTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+}
 
 /**
  * The entry-search input. It owns the debounce and the minimum-length floor,
@@ -51,6 +62,8 @@ export class SearchFieldComponent {
     const length = this.text().trim().length;
     return length > 0 && length < this.minLength;
   });
+
+  private readonly inputEl = viewChild<ElementRef<HTMLInputElement>>('inputEl');
 
   private readonly typed = new Subject<string>();
   private readonly destroyRef = inject(DestroyRef);
@@ -92,6 +105,19 @@ export class SearchFieldComponent {
     this.typed
       .pipe(debounceTime(DEBOUNCE_MS), takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => this.emitSettled(value));
+  }
+
+  /** Firefox opens quick-find on a bare `/`; this replaces that, so it only
+   *  claims the key when it actually takes it — never when a modifier turns
+   *  it into someone else's shortcut, and never when it would steal a slash
+   *  mid-sentence from a text field (including this one's own input). */
+  @HostListener('document:keydown', ['$event'])
+  onDocumentKeydown(event: KeyboardEvent): void {
+    if (event.key !== '/') return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (isTextEntryTarget(event.target)) return;
+    event.preventDefault();
+    this.inputEl()?.nativeElement.focus();
   }
 
   onInput(value: string): void {
