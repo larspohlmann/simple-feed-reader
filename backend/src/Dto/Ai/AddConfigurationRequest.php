@@ -14,8 +14,11 @@ final readonly class AddConfigurationRequest
         #[Assert\NotBlank]
         #[Assert\Length(max: 512)]
         public string $baseUrl,
-        #[Assert\NotBlank]
-        #[Assert\Length(min: 8, max: 512)]
+        /**
+         * Optional: a local model server (LM Studio, Ollama, llama.cpp) needs no
+         * credential. An empty key means no Authorization header is sent at all.
+         */
+        #[Assert\Length(max: 512)]
         public string $apiKey,
     ) {
     }

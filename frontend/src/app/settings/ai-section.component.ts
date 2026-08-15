@@ -2,6 +2,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  Signal,
   computed,
   inject,
   linkedSignal,
@@ -23,6 +24,7 @@ import {
   SelectOption,
 } from '../shared/searchable-select/searchable-select.component';
 import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
+import { AiFailure, SERVER_TEXT_KINDS } from './ai-failure';
 import { AiConfig, AiSettingsService } from './ai-settings.service';
 import { RecommendationDebugLogComponent } from './recommendation-debug-log.component';
 import { RecommendationSettingsCardComponent } from './recommendation-settings-card.component';
@@ -84,29 +86,69 @@ export class AiSectionComponent {
     this.ai.models().map((model) => ({ value: model, label: model })),
   );
 
-  readonly canAdd = computed(
-    () =>
-      this.newBaseUrl().trim().length > 0 && this.newApiKey().trim().length > 0 && !this.ai.busy(),
-  );
+  /** The key is optional — a local model server needs none — so only the
+   *  address gates the button. */
+  readonly canAdd = computed(() => this.newBaseUrl().trim().length > 0 && !this.ai.busy());
 
   private readonly activeConfig = computed(() => this.ai.configs().find((config) => config.active));
 
   readonly activeReady = computed(() => this.activeConfig()?.ready ?? false);
   readonly activeModel = computed(() => this.activeConfig()?.model ?? null);
 
-  /** The server's own sentence, shown for the ordinary provider refusals —
-   *  it already says whether the endpoint or the key was the problem. */
-  readonly failureDetail = computed(() => {
-    const failure = this.ai.failure();
-    return failure?.kind === 'provider' ? failure.detail : null;
-  });
+  /** The list card answers for the initial load; a row's own write answers
+   *  in the row, and the add form answers under itself. One shared banner
+   *  could only ever be right for one of the three (#415). */
+  readonly listFailure: Signal<string | null> = computed(() => this.messageFor('load'));
+  readonly addFailure: Signal<string | null> = computed(() => this.messageFor('add'));
 
-  /** Every other failure gets a translated message of its own, because the
-   *  account's next move differs from "correct the form and retry". */
-  readonly failureKey = computed(() => {
-    const failure = this.ai.failure();
-    return failure ? `settings.ai.errors.${failure.kind}` : null;
-  });
+  rowFailure(configId: number): string | null {
+    const scoped = this.ai.failure();
+    if (!scoped || scoped.scope.action !== 'row') return null;
+    if (scoped.scope.configId !== configId) return null;
+
+    return this.message(scoped.failure);
+  }
+
+  private messageFor(action: 'load' | 'add'): string | null {
+    const scoped = this.ai.failure();
+    if (!scoped || scoped.scope.action !== action) return null;
+
+    return this.message(scoped.failure);
+  }
+
+  /**
+   * The server's own sentence, for the kinds whose next move really is
+   * "correct the form and retry". The rest keep a translated message, because
+   * the backend's prose does not say "enter the key again" or "wait a few
+   * minutes" — and in German it would not say it in German.
+   *
+   * A production 500 and a dead connection carry no sentence at all, which is
+   * the one case the generic fallback is for.
+   */
+  private message(failure: AiFailure): string {
+    if (!SERVER_TEXT_KINDS.has(failure.kind)) return this.errorText(failure.kind);
+    if (failure.fieldErrors.length) return this.fieldText(failure);
+
+    return failure.detail ?? this.errorText(failure.kind);
+  }
+
+  /** `apiKey` becomes "API key"; a path this build does not know keeps its
+   *  raw name, which is still more use than dropping the message. */
+  private fieldText(failure: AiFailure): string {
+    return failure.fieldErrors
+      .map((fieldError) => {
+        const key = `settings.ai.fields.${fieldError.field}`;
+        const label = this.i18n.translate(key);
+        const name = label === key ? fieldError.field : label;
+
+        return `${name}: ${fieldError.messages.join(' ')}`;
+      })
+      .join(' ');
+  }
+
+  private errorText(kind: AiFailure['kind']): string {
+    return this.i18n.translate(`settings.ai.errors.${kind}`);
+  }
 
   constructor() {
     this.ai.load();
@@ -126,7 +168,19 @@ export class AiSectionComponent {
   }
 
   add(): void {
-    this.ai.add(this.newName().trim() || null, this.newBaseUrl().trim(), this.newApiKey().trim());
+    this.ai.add(
+      {
+        name: this.newName().trim() || null,
+        baseUrl: this.newBaseUrl().trim(),
+        apiKey: this.newApiKey().trim(),
+      },
+      () => this.clearDraft(),
+    );
+  }
+
+  /** Runs on success only. A rejected add leaves the endpoint and the key
+   *  exactly as the account typed them. */
+  private clearDraft(): void {
     this.newName.set('');
     this.newBaseUrl.set('');
     this.newApiKey.set('');

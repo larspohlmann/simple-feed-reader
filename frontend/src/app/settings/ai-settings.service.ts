@@ -4,7 +4,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 import { AiAvailabilityService } from '../core/ai-availability.service';
 import { API_BASE_URL } from '../core/api';
-import { AiFailure, aiFailure } from './ai-failure';
+import { AiFailureScope, ScopedAiFailure, aiFailure } from './ai-failure';
 
 /**
  * One saved provider connection, as the multi-config endpoints report it.
@@ -26,6 +26,17 @@ export interface AiConfig {
 export interface AiConfigList {
   readonly configs: AiConfig[];
   readonly activeId: number | null;
+}
+
+/**
+ * What the add form holds. A parameter object rather than three arguments,
+ * and deliberately not a field on this service: the plaintext key goes into
+ * one request body and is gone.
+ */
+export interface AiDraft {
+  readonly name: string | null;
+  readonly baseUrl: string;
+  readonly apiKey: string;
 }
 
 /**
@@ -59,7 +70,7 @@ export class AiSettingsService {
   readonly models = signal<readonly string[]>([]);
   readonly choosingModelFor = signal<number | null>(null);
   readonly busy = signal(false);
-  readonly failure = signal<AiFailure | null>(null);
+  readonly failure = signal<ScopedAiFailure | null>(null);
 
   /** Which row's parallel-requests dropdown most recently saved — drives a
    *  transient "Saved" confirmation on that one row. Scoped to this single
@@ -70,30 +81,38 @@ export class AiSettingsService {
   private savedConcurrencyTimer: ReturnType<typeof setTimeout> | null = null;
 
   load(): void {
-    this.run(this.http.get<AiConfigList>(`${this.base}/api/me/ai`), (list) => {
+    this.run({ action: 'load' }, this.http.get<AiConfigList>(`${this.base}/api/me/ai`), (list) => {
       this.configs.set(list.configs);
       this.applyAvailability();
     });
   }
 
-  add(name: string | null, baseUrl: string, apiKey: string): void {
+  /**
+   * `onAdded` runs on success only. The caller owns the draft — see AiDraft —
+   * so this is how it learns the values are safe to clear. A rejected add
+   * leaves the form exactly as the account typed it.
+   */
+  add(draft: AiDraft, onAdded: () => void): void {
     this.run(
+      { action: 'add' },
       this.http.post<AiConfig & { models: string[] }>(`${this.base}/api/me/ai/configs`, {
-        name,
-        baseUrl,
-        apiKey,
+        name: draft.name,
+        baseUrl: draft.baseUrl,
+        apiKey: draft.apiKey,
       }),
       (added) => {
         const { models, ...configuration } = added;
         this.upsert(configuration);
         this.models.set(models);
         this.choosingModelFor.set(configuration.id);
+        onAdded();
       },
     );
   }
 
   loadModels(id: number): void {
     this.run(
+      { action: 'row', configId: id },
       this.http.get<{ models: string[] }>(`${this.base}/api/me/ai/configs/${id}/models`),
       (answer) => {
         this.models.set(answer.models);
@@ -104,6 +123,7 @@ export class AiSettingsService {
 
   chooseModel(id: number, model: string): void {
     this.run(
+      { action: 'row', configId: id },
       this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/model`, { model }),
       (config) => this.upsert(config),
     );
@@ -111,6 +131,7 @@ export class AiSettingsService {
 
   rename(id: number, name: string | null): void {
     this.run(
+      { action: 'row', configId: id },
       this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/name`, { name }),
       (config) => this.upsert(config),
     );
@@ -118,6 +139,7 @@ export class AiSettingsService {
 
   setReasoning(id: number, suppressReasoning: boolean): void {
     this.run(
+      { action: 'row', configId: id },
       this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/reasoning`, {
         suppressReasoning,
       }),
@@ -130,6 +152,7 @@ export class AiSettingsService {
     this.savedConcurrencyId.set(null);
 
     this.run(
+      { action: 'row', configId: id },
       this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/batch-concurrency`, {
         batchConcurrency,
       }),
@@ -142,20 +165,27 @@ export class AiSettingsService {
   }
 
   activate(id: number): void {
-    this.run(this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/active`, {}), (config) =>
-      this.upsert(config),
+    this.run(
+      { action: 'row', configId: id },
+      this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/active`, {}),
+      (config) => this.upsert(config),
     );
   }
 
   duplicate(id: number): void {
     this.run(
+      { action: 'row', configId: id },
       this.http.post<AiConfig>(`${this.base}/api/me/ai/configs/${id}/duplicate`, {}),
       (config) => this.upsert(config),
     );
   }
 
   remove(id: number): void {
-    this.run(this.http.delete<void>(`${this.base}/api/me/ai/configs/${id}`), () => this.drop(id));
+    this.run(
+      { action: 'row', configId: id },
+      this.http.delete<void>(`${this.base}/api/me/ai/configs/${id}`),
+      () => this.drop(id),
+    );
   }
 
   /**
@@ -194,7 +224,11 @@ export class AiSettingsService {
     this.availability.apply({ ready: active?.ready ?? false, model: active?.model ?? null });
   }
 
-  private run<T>(request: Observable<T>, onSuccess: (value: T) => void): void {
+  private run<T>(
+    scope: AiFailureScope,
+    request: Observable<T>,
+    onSuccess: (value: T) => void,
+  ): void {
     this.busy.set(true);
     this.failure.set(null);
 
@@ -205,7 +239,7 @@ export class AiSettingsService {
       },
       error: (error: HttpErrorResponse) => {
         this.busy.set(false);
-        this.failure.set(aiFailure(error));
+        this.failure.set({ failure: aiFailure(error), scope });
       },
     });
   }

@@ -71,7 +71,6 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalog
     {
         return $this->httpClient->request('GET', $credentials->baseUrl . '/models', [
             'headers' => [
-                'Authorization' => 'Bearer ' . $credentials->apiKey,
                 'Accept' => 'application/json',
                 // Refuse transparent compression so the wire cap below also bounds
                 // the buffered body — gzip would otherwise let a small reply
@@ -79,6 +78,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalog
                 // reasoning as ConcurrentFeedFetcher::headers().
                 'Accept-Encoding' => 'identity',
                 'User-Agent' => $this->userAgent,
+                ...$credentials->authorizationHeaders(),
             ],
             'timeout' => self::TIMEOUT_SECONDS,
             'max_duration' => self::TIMEOUT_SECONDS,

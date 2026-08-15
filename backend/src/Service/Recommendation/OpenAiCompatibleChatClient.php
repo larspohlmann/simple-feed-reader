@@ -331,7 +331,6 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     {
         return $this->httpClient->request('POST', $credentials->baseUrl . '/chat/completions', [
             'headers' => [
-                'Authorization' => 'Bearer ' . $credentials->apiKey,
                 'Accept' => 'text/event-stream, application/json',
                 // Refuse transparent compression so the wire cap below also bounds
                 // the buffered body — gzip would otherwise let a small reply
@@ -339,6 +338,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
                 // reasoning as ConcurrentFeedFetcher::headers().
                 'Accept-Encoding' => 'identity',
                 'User-Agent' => $this->userAgent,
+                ...$credentials->authorizationHeaders(),
             ],
             'json' => $this->completionPayload($request),
             // Idle bound only: with a streamed answer, deltas tick this over

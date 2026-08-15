@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { aiFailure } from './ai-failure';
+import { SERVER_TEXT_KINDS, aiFailure } from './ai-failure';
 
 describe('aiFailure', () => {
   const response = (status: number, body: unknown): HttpErrorResponse =>
@@ -90,5 +90,60 @@ describe('aiFailure', () => {
 
     expect(failure.kind).toBe('unknown');
     expect(failure.detail).toBeNull();
+  });
+
+  it('reads a rejected body as a validation failure and keeps every field message', () => {
+    const failure = aiFailure(
+      response(422, {
+        type: 'validation_error',
+        title: 'Validation failed',
+        status: 422,
+        detail: 'One or more fields are invalid.',
+        errors: {
+          apiKey: ['This value is too short. It should have 8 characters or more.'],
+          baseUrl: ['This value should not be blank.'],
+        },
+      }),
+    );
+
+    expect(failure.kind).toBe('validation');
+    expect(failure.detail).toBe('One or more fields are invalid.');
+    expect(failure.fieldErrors).toEqual([
+      {
+        field: 'apiKey',
+        messages: ['This value is too short. It should have 8 characters or more.'],
+      },
+      { field: 'baseUrl', messages: ['This value should not be blank.'] },
+    ]);
+  });
+
+  it('keeps the server sentence on an unmapped problem type', () => {
+    const failure = aiFailure(
+      response(400, problem('request_error', 'The body is not valid JSON.', 400)),
+    );
+
+    expect(failure.kind).toBe('unknown');
+    expect(failure.detail).toBe('The body is not valid JSON.');
+  });
+
+  // A production 500 sends no detail on purpose, so there is nothing to show
+  // and the translated fallback has to carry the banner.
+  it('shows no server text when a 500 withholds its detail', () => {
+    const failure = aiFailure(
+      response(500, { type: 'internal_error', title: 'Internal server error', status: 500 }),
+    );
+
+    expect(failure.kind).toBe('unknown');
+    expect(failure.detail).toBeNull();
+  });
+
+  it('reports no field errors for the kinds that have none', () => {
+    const failure = aiFailure(response(422, problem('ai_provider_rejected', 'Nope.')));
+
+    expect(failure.fieldErrors).toEqual([]);
+  });
+
+  it('names the kinds whose banner shows the server sentence', () => {
+    expect([...SERVER_TEXT_KINDS].sort()).toEqual(['provider', 'unknown', 'validation']);
   });
 });

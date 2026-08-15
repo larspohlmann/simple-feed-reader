@@ -47,6 +47,22 @@ final readonly class ProviderCredentials
     }
 
     /**
+     * The auth headers this endpoint needs, which for a keyless local server is
+     * none at all. An empty key must not become `Bearer ` — an empty credential
+     * is malformed, and a gateway is entitled to refuse it.
+     *
+     * @return array<string, string>
+     */
+    public function authorizationHeaders(): array
+    {
+        if ('' === $this->apiKey) {
+            return [];
+        }
+
+        return ['Authorization' => 'Bearer ' . $this->apiKey];
+    }
+
+    /**
      * Trims the value and removes trailing slashes, so `…/v1` and `…/v1/`
      * produce one stored form and one request URL.
      */

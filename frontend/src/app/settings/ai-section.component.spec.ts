@@ -8,7 +8,7 @@ import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { API_BASE_URL } from '../core/api';
 import { ConfirmData } from '../shared/confirm-dialog/confirm-dialog.component';
-import { AiFailure } from './ai-failure';
+import { AiFailure, ScopedAiFailure } from './ai-failure';
 import { AiSectionComponent } from './ai-section.component';
 import { AiConfig, AiSettingsService } from './ai-settings.service';
 
@@ -18,7 +18,7 @@ interface AiSettingsStub {
   models: WritableSignal<readonly string[]>;
   choosingModelFor: WritableSignal<number | null>;
   busy: WritableSignal<boolean>;
-  failure: WritableSignal<AiFailure | null>;
+  failure: WritableSignal<ScopedAiFailure | null>;
   savedConcurrencyId: WritableSignal<number | null>;
   load: jest.Mock;
   add: jest.Mock;
@@ -68,7 +68,7 @@ function createStub(): AiSettingsStub {
     models: signal<readonly string[]>([]),
     choosingModelFor: signal<number | null>(null),
     busy: signal(false),
-    failure: signal<AiFailure | null>(null),
+    failure: signal<ScopedAiFailure | null>(null),
     savedConcurrencyId: signal<number | null>(null),
     load: jest.fn(),
     add: jest.fn(),
@@ -120,6 +120,31 @@ describe('AiSectionComponent', () => {
     (row(fixture, index).querySelector('summary') as HTMLElement).click();
     fixture.detectChanges();
   };
+
+  const banners = (host: HTMLElement): string[] =>
+    Array.from(host.querySelectorAll('app-error-banner')).map((banner) =>
+      (banner.textContent ?? '').trim(),
+    );
+
+  // Same idiom as the pre-existing card-layout test at line 519: find the card
+  // by the thing only that card contains.
+  const card = (fixture: ComponentFixture<AiSectionComponent>, marker: string): HTMLElement =>
+    (
+      Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('app-settings-card'),
+      ) as HTMLElement[]
+    ).find((each) => each.querySelector(marker)) as HTMLElement;
+
+  const addCard = (fixture: ComponentFixture<AiSectionComponent>): HTMLElement =>
+    card(fixture, '.add-config');
+
+  const listCard = (fixture: ComponentFixture<AiSectionComponent>): HTMLElement =>
+    card(fixture, '.configs');
+
+  const scoped = (failure: AiFailure, scope: ScopedAiFailure['scope']): ScopedAiFailure => ({
+    failure,
+    scope,
+  });
 
   const CONFIG = config({ id: 7 });
 
@@ -184,7 +209,7 @@ describe('AiSectionComponent', () => {
     expect(fixture.nativeElement.querySelector('app-searchable-select')).toBeNull();
   });
 
-  it('adds a configuration and clears the typed key', () => {
+  it('adds a configuration and clears the draft once the add lands', () => {
     const fixture = mount();
     (addDetails(fixture).querySelector('summary') as HTMLElement).click();
     fixture.detectChanges();
@@ -195,8 +220,37 @@ describe('AiSectionComponent', () => {
 
     fixture.componentInstance.add();
 
-    expect(ai.add).toHaveBeenCalledWith('My provider', 'https://api.example.test/v1', 'sk-secret');
+    expect(ai.add).toHaveBeenCalledWith(
+      { name: 'My provider', baseUrl: 'https://api.example.test/v1', apiKey: 'sk-secret' },
+      expect.any(Function),
+    );
+    expect(fixture.componentInstance.newApiKey()).toBe('sk-secret');
+
+    (ai.add.mock.calls[0][1] as () => void)();
+
+    expect(fixture.componentInstance.newName()).toBe('');
+    expect(fixture.componentInstance.newBaseUrl()).toBe('');
     expect(fixture.componentInstance.newApiKey()).toBe('');
+  });
+
+  it('keeps every typed value when the add is rejected', () => {
+    const fixture = mount();
+    (addDetails(fixture).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
+
+    fixture.componentInstance.newName.set('My provider');
+    fixture.componentInstance.newBaseUrl.set('https://api.example.test/v1');
+    fixture.componentInstance.newApiKey.set('sk-short');
+
+    fixture.componentInstance.add();
+    ai.failure.set(
+      scoped({ kind: 'validation', detail: 'Invalid.', fieldErrors: [] }, { action: 'add' }),
+    );
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.newName()).toBe('My provider');
+    expect(fixture.componentInstance.newBaseUrl()).toBe('https://api.example.test/v1');
+    expect(fixture.componentInstance.newApiKey()).toBe('sk-short');
   });
 
   it('sends no name when the optional field is left blank', () => {
@@ -209,7 +263,38 @@ describe('AiSectionComponent', () => {
 
     fixture.componentInstance.add();
 
-    expect(ai.add).toHaveBeenCalledWith(null, 'https://api.example.test/v1', 'sk-secret');
+    expect(ai.add).toHaveBeenCalledWith(
+      { name: null, baseUrl: 'https://api.example.test/v1', apiKey: 'sk-secret' },
+      expect.any(Function),
+    );
+  });
+
+  it('allows adding with an endpoint and no key, since a local server needs none', () => {
+    const fixture = mount();
+    (addDetails(fixture).querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.canAdd()).toBe(false);
+
+    fixture.componentInstance.newBaseUrl.set('https://api.example.test/v1');
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.canAdd()).toBe(true);
+  });
+
+  it('renders the noStoredKey sentence for an empty hint, and the storedKey sentence otherwise', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, apiKeyHint: '' }), config({ id: 2, apiKeyHint: '1234' })]);
+    fixture.detectChanges();
+    expandRow(fixture, 0);
+    expandRow(fixture, 1);
+
+    expect(row(fixture, 0).querySelector('.hint')?.textContent).toContain(
+      'No key is stored — this endpoint is used without one.',
+    );
+    expect(row(fixture, 1).querySelector('.hint')?.textContent).toContain(
+      'A key ending in 1234 is stored.',
+    );
   });
 
   it('changes a model: "change model" calls loadModels, then the picker saves via chooseModel', () => {
@@ -452,21 +537,83 @@ describe('AiSectionComponent', () => {
     expect(ai.remove).not.toHaveBeenCalled();
   });
 
-  it('shows the server sentence for a provider refusal, and a translated message otherwise', () => {
-    const fixture = mount();
-    ai.failure.set({ kind: 'provider', detail: 'That endpoint refused the key.' });
+  it('shows a failed add under the add form, not above the configs list', () => {
+    const fixture = mountWithConfigs([CONFIG]);
+
+    ai.failure.set(
+      scoped(
+        {
+          kind: 'validation',
+          detail: 'One or more fields are invalid.',
+          fieldErrors: [{ field: 'apiKey', messages: ['This value is too short.'] }],
+        },
+        { action: 'add' },
+      ),
+    );
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('app-error-banner')?.textContent).toContain(
-      'refused the key',
-    );
+    expect(banners(addCard(fixture))).toEqual(['API key: This value is too short.']);
+    expect(banners(listCard(fixture))).toEqual([]);
+  });
 
-    ai.failure.set({ kind: 'limit', detail: null });
+  it('shows a failed row write inside that row', () => {
+    const fixture = mountWithConfigs([config({ id: 7 }), config({ id: 8 })]);
+    expandRow(fixture, 1);
+
+    ai.failure.set(
+      scoped(
+        { kind: 'provider', detail: 'That address did not answer.', fieldErrors: [] },
+        { action: 'row', configId: 8 },
+      ),
+    );
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('app-error-banner')?.textContent).toContain(
-      'maximum number',
+    expect(banners(row(fixture, 1))).toEqual(['That address did not answer.']);
+    expect(banners(row(fixture, 0))).toEqual([]);
+    expect(banners(addCard(fixture))).toEqual([]);
+  });
+
+  it('shows a failed list load on the list card', () => {
+    const fixture = mountWithConfigs([CONFIG]);
+
+    ai.failure.set(scoped({ kind: 'unknown', detail: null, fieldErrors: [] }, { action: 'load' }));
+    fixture.detectChanges();
+
+    expect(banners(listCard(fixture))).toEqual(['Something went wrong. Try again.']);
+  });
+
+  it('keeps the translated message for the kinds whose next move is not "retry"', () => {
+    const fixture = mountWithConfigs([CONFIG]);
+
+    ai.failure.set(
+      scoped(
+        { kind: 'limit', detail: 'This account already holds the maximum.', fieldErrors: [] },
+        { action: 'add' },
+      ),
     );
+    fixture.detectChanges();
+
+    expect(banners(addCard(fixture))).toEqual([
+      'You have reached the maximum number of saved configurations.',
+    ]);
+  });
+
+  it('names an unrecognised field by its raw path rather than dropping it', () => {
+    const fixture = mountWithConfigs([CONFIG]);
+
+    ai.failure.set(
+      scoped(
+        {
+          kind: 'validation',
+          detail: null,
+          fieldErrors: [{ field: 'somethingNew', messages: ['Nope.'] }],
+        },
+        { action: 'add' },
+      ),
+    );
+    fixture.detectChanges();
+
+    expect(banners(addCard(fixture))).toEqual(['somethingNew: Nope.']);
   });
 
   it('collapses a row by default', () => {
@@ -577,7 +724,7 @@ describe('AiSectionComponent', () => {
     );
     expect(hints).toEqual([
       'The full API root, including any version path — for example https://api.openai.com/v1',
-      'The key is sent once and stored encrypted. Enter it again to replace it.',
+      'Leave it empty if the provider needs no key, such as a local model server. The key is sent once and stored encrypted. Enter it again to replace it.',
     ]);
   });
 

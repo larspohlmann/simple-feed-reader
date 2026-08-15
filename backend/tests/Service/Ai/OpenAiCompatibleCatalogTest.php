@@ -98,6 +98,31 @@ final class OpenAiCompatibleCatalogTest extends TestCase
         self::assertContains('Authorization: Bearer sk-test', $seen['headers']);
     }
 
+    /**
+     * A keyless credential (a local model server) must not send `Bearer ` with
+     * nothing after it — ProviderCredentials::authorizationHeaders() drops the
+     * header entirely rather than sending a malformed one.
+     */
+    public function testAKeylessCredentialSendsNoAuthorizationHeader(): void
+    {
+        $seen = [];
+        $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$seen): MockResponse {
+            $seen = ['headers' => $options['headers'] ?? []];
+
+            return new MockResponse('{"data":[{"id":"gpt-4o"}]}');
+        });
+
+        $credentials = ProviderCredentials::fromStoredConfiguration('https://api.example.test/v1', '');
+        (new OpenAiCompatibleCatalog($client, 'SimpleFeedReader/1.0'))->listModels($credentials);
+
+        /** @var array{headers: array<int, string>} $seen */
+        $authorizationHeaders = array_filter(
+            $seen['headers'],
+            static fn (string $header): bool => str_starts_with($header, 'Authorization:'),
+        );
+        self::assertSame([], $authorizationHeaders);
+    }
+
     public function testItRefusesTransparentCompression(): void
     {
         $seen = [];
