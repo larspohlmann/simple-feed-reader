@@ -196,6 +196,32 @@ describe('SearchFieldComponent', () => {
     expect(wrapper).toBeTruthy();
   });
 
+  describe('the clear button chrome (#408 follow-up)', () => {
+    // jsdom applies a real UA default stylesheet to <button> (background-color:
+    // buttonface, a 2px outset border) — proven by probing a bare <button> in
+    // this same environment. What jsdom's test runner does NOT do is compile or
+    // inject this component's `styleUrl` (jest-preset-angular does not run the
+    // Angular build pipeline that would turn search-field.component.scss into a
+    // loaded stylesheet), so `getComputedStyle` on the mounted button here
+    // still reports the UA default regardless of what the .scss says — that
+    // was checked directly and would make an assertion on computed style a
+    // false pass either way. What IS honestly provable in this environment is
+    // the wiring: the reset lives on the `.clear` class, and this is the class
+    // the template actually applies to the button that needs it.
+    it('renders the clear control as a button carrying the .clear class the chrome reset targets', () => {
+      const fixture = mount();
+      typeInto(fixture, 'cats');
+
+      const clearButton: HTMLButtonElement = fixture.debugElement.query(
+        By.css('.clear'),
+      ).nativeElement;
+
+      expect(clearButton.tagName).toBe('BUTTON');
+      expect(clearButton.getAttribute('type')).toBe('button');
+      expect(clearButton.classList).toContain('clear');
+    });
+  });
+
   describe('the / shortcut (#408)', () => {
     function pressSlash(target: EventTarget, modifiers: Partial<KeyboardEventInit> = {}) {
       const event = new KeyboardEvent('keydown', {

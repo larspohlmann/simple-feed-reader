@@ -37,7 +37,14 @@
 .clear {
   display: flex;
   align-items: center;
-  color: var(--text-muted);
+
+  // Reset the UA button chrome: without this the browser paints its own
+  // buttonface background and border, so the control renders as a grey box
+  // instead of sitting flush in the field.
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
   cursor: pointer;
 }
 
