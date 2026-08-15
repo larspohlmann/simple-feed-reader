@@ -232,6 +232,14 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  child rather than owned here, since the bar's open/closed state (trigger,
    *  close button, Escape, outside click) is entirely the header's business. */
   private readonly headerSearchOpen = computed(() => this.header()?.searchOpen() ?? false);
+  /** Either overlay hanging off the header — the drawer or the search bar —
+   *  force-shows it. A single derived signal, read from the single place that
+   *  applies the rule (see the constructor effect below and
+   *  `applyHeaderVisibility()`), so the two overlays can never disagree about
+   *  the header's state the way two independent writers once did. */
+  private readonly headerOverlayOpen = computed(
+    () => this.sidebarOpen() || this.headerSearchOpen(),
+  );
   private lastListScrollTop = 0;
   private resizeObs?: ResizeObserver;
   /** Mobile drawer state; the sidebar is a fixed overlay below 720px. */
@@ -404,14 +412,19 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       if (this.screen.isWide()) untracked(() => this.headerHidden.set(false));
     });
 
-    // Force-show the header while its own mobile search bar is open, and
-    // resolve back to the resting state on close — the same shape
-    // setSidebarOpen() applies for the drawer, beside which this belongs. The
-    // header owns when its bar opens and closes (trigger, close button,
-    // Escape, outside click), so this reacts to that state rather than being
-    // called from it.
+    // Force-show the header while either overlay that hangs off it — the
+    // mobile drawer or the search bar — is open, and resolve back to the
+    // scroll-implied resting state once BOTH are closed. One effect reacting
+    // to the single derived `headerOverlayOpen`, rather than one effect per
+    // overlay: two independent writers each resolving to their own "resting
+    // state" on close is exactly what let the drawer and the search bar
+    // fight over the header (one closing would retract it out from under the
+    // other, still open). setSidebarOpen() only ever toggles `sidebarOpen`
+    // now — it does not write `headerHidden` itself — so this is the one
+    // place that turns "an overlay opened or closed" into a header-visibility
+    // decision, for both overlays alike.
     effect(() => {
-      const open = this.headerSearchOpen();
+      const open = this.headerOverlayOpen();
       untracked(() => this.headerHidden.set(open ? false : this.restingHeaderHidden()));
     });
   }
@@ -478,15 +491,17 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    * The mobile drawer hangs below the header, so it must never open under a
    * retracted one — that would leave a strip of backdrop where the bar should
    * be. On close the header returns to what the *list's* scroll position
-   * implies — asked of the list itself, because the last scroller to fire may
-   * have been an article's, whose offset says nothing about the list (#128).
-   * Leaving the bar expanded over a scrolled-down list dead-zones touch-scroll
-   * in the strip it overlays (it covers the list but is not its scroller),
-   * which reads as the list refusing to scroll until the swipe starts below
-   * the bar.
+   * implies, UNLESS the search bar is still open — see the constructor's
+   * `headerOverlayOpen` effect, the single place that turns this (and the
+   * search bar's own open/close) into a header-visibility decision. On close
+   * the resting state is asked of the list itself, because the last scroller
+   * to fire may have been an article's, whose offset says nothing about the
+   * list (#128). Leaving the bar expanded over a scrolled-down list
+   * dead-zones touch-scroll in the strip it overlays (it covers the list but
+   * is not its scroller), which reads as the list refusing to scroll until
+   * the swipe starts below the bar.
    */
   setSidebarOpen(open: boolean): void {
-    this.headerHidden.set(open ? false : this.restingHeaderHidden());
     if (!open) this.sidebarOrganising.set(false);
     this.sidebarOpen.set(open);
   }
@@ -514,16 +529,14 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   onListScrolled(top: number): void {
     const previous = this.lastListScrollTop;
     this.lastListScrollTop = top;
-    // While the drawer is open the header must stay shown (it hangs below the
-    // bar). Inertial scrolling keeps firing scroll events after the open-swipe's
-    // touchend, so the gesture handler cannot be trusted as the last word — guard
-    // here. The offset still advances above, so the next real scroll sees no
-    // phantom jump once the drawer closes.
-    if (this.sidebarOpen()) return;
-    // Same reasoning for the mobile search bar: it holds the live term and the
-    // phone's keyboard, so a scroll sliding it away would hide the text the
-    // results depend on.
-    if (this.headerSearchOpen()) return;
+    // While either overlay — the drawer or the search bar — is open the header
+    // must stay shown (the drawer hangs below it; the search bar holds the
+    // live term and the phone's keyboard). Inertial scrolling keeps firing
+    // scroll events after the open-swipe's touchend, so the gesture handler
+    // cannot be trusted as the last word — guard here. The offset still
+    // advances above, so the next real scroll sees no phantom jump once
+    // both overlays are closed.
+    if (this.headerOverlayOpen()) return;
     this.headerHidden.set(
       nextHeaderHidden(this.headerHidden(), previous, top, this.screen.isWide()),
     );

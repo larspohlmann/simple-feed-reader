@@ -26,6 +26,7 @@ import { ListScrollMemory } from './list-scroll-memory';
 import { EntryDto } from './models';
 import { Selection } from './query';
 import { ReaderHeaderComponent } from './header/reader-header.component';
+import { headerHiddenAtRest } from './header-scroll';
 import { RefreshService } from './refresh.service';
 import { LayoutService } from './layout.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
@@ -324,6 +325,71 @@ describe('ReaderShellComponent', () => {
       header.searchOpen.set(false);
       f.detectChanges();
       expect(f.componentInstance.headerHidden()).toBe(true);
+    });
+
+    it('stays shown when the search bar closes while the drawer is still open', () => {
+      // Both overlays open, then only search closes: the drawer alone is
+      // still reason enough to keep the header shown. Two independent
+      // force-show/resolve writers (one per overlay) would have each other's
+      // state in the same "resting state" resolution, wrongly overwriting it.
+      const f = boot();
+      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+      const header = f.debugElement.query(By.directive(ReaderHeaderComponent))
+        .componentInstance as ReaderHeaderComponent;
+
+      const rows = listScroller(f);
+      rows.scrollTo(100);
+      rows.scrollTo(500);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(true);
+
+      f.componentInstance.setSidebarOpen(true);
+      header.searchOpen.set(true);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(false);
+
+      header.searchOpen.set(false);
+      f.detectChanges();
+      // The drawer is still open — the header must not retract under it.
+      expect(f.componentInstance.headerHidden()).toBe(false);
+    });
+
+    it('stays shown when the drawer closes while the search bar is still open', () => {
+      // The reverse order: search opens first, then the drawer opens and
+      // closes (e.g. the edge-swipe gesture). The search bar alone is still
+      // reason enough to keep the header shown.
+      const f = boot();
+      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+      const header = f.debugElement.query(By.directive(ReaderHeaderComponent))
+        .componentInstance as ReaderHeaderComponent;
+
+      const rows = listScroller(f);
+      rows.scrollTo(100);
+      rows.scrollTo(500);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(true);
+
+      header.searchOpen.set(true);
+      f.componentInstance.setSidebarOpen(true);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(false);
+
+      f.componentInstance.setSidebarOpen(false);
+      f.detectChanges();
+      // The search bar is still open — the header must not retract under it.
+      expect(f.componentInstance.headerHidden()).toBe(false);
+    });
+
+    it('matches headerHiddenAtRest for the offset once both overlays are closed', () => {
+      const f = boot();
+      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+
+      const rows = listScroller(f);
+      rows.scrollTo(100);
+      rows.scrollTo(500);
+      f.detectChanges();
+
+      expect(f.componentInstance.headerHidden()).toBe(headerHiddenAtRest(500, false));
     });
   });
 

@@ -264,6 +264,28 @@ describe('ReaderHeaderComponent', () => {
       expect(f.componentInstance.searchOpen()).toBe(false);
     });
 
+    it('clears without closing on a first Escape over a non-empty field', () => {
+      // The two-step contract end to end: the first Escape only clears the
+      // text (proven at the field level already), and here specifically it
+      // must NOT also close the bar at the header level.
+      const f = create();
+      const el = f.nativeElement as HTMLElement;
+
+      (el.querySelector('[aria-label="Search"]') as HTMLButtonElement).click();
+      f.detectChanges();
+
+      const input = el.querySelector('app-search-field input') as HTMLInputElement;
+      input.value = 'cats';
+      input.dispatchEvent(new Event('input'));
+      f.detectChanges();
+
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      f.detectChanges();
+
+      expect(input.value).toBe('');
+      expect(f.componentInstance.searchOpen()).toBe(true);
+    });
+
     it('closes when the field reports Escape on an already-empty field', () => {
       const f = create();
       const el = f.nativeElement as HTMLElement;
