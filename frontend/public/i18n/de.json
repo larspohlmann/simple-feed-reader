@@ -102,7 +102,13 @@
         "rateLimited": "Zu viele Anfragen an den Anbieter. Warte einige Minuten und versuche es erneut.",
         "notConfigured": "Speichere zuerst einen Endpunkt und einen API-Schlüssel.",
         "limit": "Du hast die maximale Anzahl gespeicherter Konfigurationen erreicht.",
+        "validation": "Prüfe die eingegebenen Werte.",
         "unknown": "Etwas ist schiefgelaufen. Versuche es erneut."
+      },
+      "fields": {
+        "name": "Optionaler Name",
+        "baseUrl": "Endpunkt",
+        "apiKey": "API-Schlüssel"
       },
       "info": {
         "actionsLabel": "Was diese Buttons tun",

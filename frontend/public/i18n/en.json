@@ -102,7 +102,13 @@
         "rateLimited": "Too many requests to the provider. Wait a few minutes and try again.",
         "notConfigured": "Save an endpoint and an API key first.",
         "limit": "You have reached the maximum number of saved configurations.",
+        "validation": "Check the values you entered.",
         "unknown": "Something went wrong. Try again."
+      },
+      "fields": {
+        "name": "Optional name",
+        "baseUrl": "Endpoint",
+        "apiKey": "API key"
       },
       "info": {
         "actionsLabel": "What these buttons do",
