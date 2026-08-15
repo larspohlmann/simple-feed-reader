@@ -29,6 +29,11 @@ export class EntryRowComponent {
   /** The current search's words, marked inside the title and the snippet.
    *  Empty outside a search, where nothing is marked. */
   readonly terms = input<string[]>([]);
+  /** Whether anything can be marked at all. Outside a search — every list but
+   *  one — the template renders plain interpolation instead of two
+   *  `<app-marked-text>` instances per row, so the ordinary list pays nothing
+   *  for a feature it never uses. */
+  readonly marking = computed(() => this.terms().length > 0);
   readonly favorite = output<EntryDto>();
   readonly keep = output<EntryDto>();
   readonly read = output<EntryDto>();
