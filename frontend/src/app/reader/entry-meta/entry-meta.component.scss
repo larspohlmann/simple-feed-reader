@@ -1,0 +1,28 @@
+/* The host IS the row.
+
+   `width: 100%` is load-bearing, not belt-and-braces: `kicker` and `quote` set
+   `align-items: flex-start` on their column, so without it this row takes its
+   content width and the actions stop being right-aligned.
+
+   `align-items: flex-end` keeps the actions level with the LAST line of a
+   wrapping pill list — the bottom edge of the card is the stable reference.
+
+   `margin-top: auto` is what drops the whole row to the bottom of a card whose
+   image is taller than its text (split, thumb). It is inert in a card with no
+   spare height, which is every other block. */
+:host {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  width: 100%;
+  min-width: 0;
+  margin-top: auto;
+}
+
+/* The pills are the row's only elastic item; the actions never shrink. The
+   min-width:0 chain into the pill list is what stops an unbreakable tag name
+   from widening the card. */
+app-source-tags {
+  flex: 1 1 auto;
+  min-width: 0;
+}

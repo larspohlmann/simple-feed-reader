@@ -1,0 +1,7 @@
+<app-source-tags [tags]="tags()" />
+<app-entry-actions
+  [entry]="entry()"
+  (favorite)="favorite.emit($event)"
+  (keep)="keep.emit($event)"
+  (read)="read.emit($event)"
+/>
