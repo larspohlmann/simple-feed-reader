@@ -250,21 +250,75 @@ class EntryRepository extends ServiceEntityRepository
     }
 
     /**
-     * A summary is nullable, and NULL LIKE … is never true, so the OR alone
-     * handles an entry that carries no summary.
+     * The mode is decided once for the whole query (SearchTerms::$isWholeWord),
+     * not per term — every term takes the same path.
      */
     private function applyTerms(QueryBuilder $qb, SearchTerms $terms): void
     {
         foreach ($terms->terms as $position => $term) {
             $parameter = 'term' . $position;
-            $qb->andWhere(\sprintf(
-                "(e.title LIKE :%s ESCAPE '%s' OR e.summary LIKE :%s ESCAPE '%s')",
-                $parameter,
-                LikePattern::ESCAPE_CHARACTER,
-                $parameter,
-                LikePattern::ESCAPE_CHARACTER,
-            ))->setParameter($parameter, LikePattern::containing($term));
+
+            if ($terms->isWholeWord) {
+                $this->applyWholeWordTerm($qb, $parameter, $term);
+                continue;
+            }
+
+            $this->applySubstringTerm($qb, $parameter, $term);
         }
+    }
+
+    /**
+     * A summary is nullable, and NULL LIKE … is never true, so the OR alone
+     * handles an entry that carries no summary.
+     */
+    private function applySubstringTerm(QueryBuilder $qb, string $parameter, string $term): void
+    {
+        $qb->andWhere(\sprintf(
+            "(e.title LIKE :%s ESCAPE '%s' OR e.summary LIKE :%s ESCAPE '%s')",
+            $parameter,
+            LikePattern::ESCAPE_CHARACTER,
+            $parameter,
+            LikePattern::ESCAPE_CHARACTER,
+        ))->setParameter($parameter, LikePattern::containing($term));
+    }
+
+    /**
+     * The plain "LIKE %term%" is ANDed in front of the normalized whole-word
+     * check on purpose: it rejects almost every row with a cheap scan before
+     * the expensive REPLACE chain runs, and costs nothing extra on the rows
+     * where it does match.
+     */
+    private function applyWholeWordTerm(QueryBuilder $qb, string $parameter, string $term): void
+    {
+        $cheap = $parameter . 'Cheap';
+        $word = $parameter . 'Word';
+
+        $qb->andWhere(\sprintf(
+            '(%s OR %s)',
+            $this->wholeWordColumnPredicate('title', $cheap, $word),
+            $this->wholeWordColumnPredicate('summary', $cheap, $word),
+        ))
+            ->setParameter($cheap, LikePattern::containing($term))
+            ->setParameter($word, LikePattern::wholeWord($term));
+    }
+
+    /**
+     * One column's half of applyWholeWordTerm: the cheap "%term%" scan first,
+     * the normalized boundary check only for the rows that survive it.
+     */
+    private function wholeWordColumnPredicate(string $column, string $cheap, string $word): string
+    {
+        $escape = LikePattern::ESCAPE_CHARACTER;
+
+        return \sprintf(
+            "(e.%s LIKE :%s ESCAPE '%s' AND CONCAT(' ', NORMALIZE_WORD_BOUNDARIES(e.%s), ' ') LIKE :%s ESCAPE '%s')",
+            $column,
+            $cheap,
+            $escape,
+            $column,
+            $word,
+            $escape,
+        );
     }
 
     private function applyCursor(QueryBuilder $qb, ?EntryCursor $cursor): void

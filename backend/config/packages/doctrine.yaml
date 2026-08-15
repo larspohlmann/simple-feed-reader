@@ -28,6 +28,11 @@ doctrine:
         identity_generation_preferences:
             Doctrine\DBAL\Platforms\PostgreSQLPlatform: identity
         auto_mapping: true
+        dql:
+            string_functions:
+                # Backs the whole-word entry search (SearchTerms::isWholeWord);
+                # see the function class for the punctuation list it normalizes.
+                NORMALIZE_WORD_BOUNDARIES: App\Doctrine\NormalizeWordBoundariesFunction
         mappings:
             App:
                 type: attribute

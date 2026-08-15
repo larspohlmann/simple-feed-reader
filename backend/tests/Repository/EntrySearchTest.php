@@ -206,4 +206,81 @@ final class EntrySearchTest extends DbTestCase
 
         self::assertSame(['literal'], $this->search('snake_case'));
     }
+
+    public function testATrailingSpaceMatchesTheWholeWordOnItsOwn(): void
+    {
+        $this->entry('plain', 'punk');
+
+        self::assertSame(['plain'], $this->search('punk '));
+    }
+
+    public function testATrailingSpaceMatchesTheWordAtTheStartOfTheTitle(): void
+    {
+        $this->entry('leading', 'Punk rock is back');
+
+        self::assertSame(['leading'], $this->search('punk '));
+    }
+
+    public function testATrailingSpaceMatchesTheWordFollowedByAComma(): void
+    {
+        $this->entry('comma', 'punk, and proud of it');
+
+        self::assertSame(['comma'], $this->search('punk '));
+    }
+
+    public function testATrailingSpaceMatchesTheWordInsideParentheses(): void
+    {
+        $this->entry('parens', 'A genre (punk) explained');
+
+        self::assertSame(['parens'], $this->search('punk '));
+    }
+
+    public function testATrailingSpaceDoesNotMatchAWordItOnlyStarts(): void
+    {
+        $this->entry('miss', 'Es hat gehörig gepunktet');
+
+        self::assertSame([], $this->search('punk '));
+    }
+
+    public function testATrailingSpaceDoesNotMatchAWordItOnlyEnds(): void
+    {
+        $this->entry('miss', 'The rise of cyberpunk');
+
+        self::assertSame([], $this->search('punk '));
+    }
+
+    public function testWithoutATrailingSpaceTheOldSubstringBehaviourStillMatches(): void
+    {
+        $this->entry('hit', 'Es hat gehörig gepunktet');
+
+        self::assertSame(['hit'], $this->search('punk'));
+    }
+
+    public function testAMultiTermWholeWordQueryRequiresEveryTermToMatchWhole(): void
+    {
+        $this->entry('both', 'Die neue Studie zeigt es');
+        $this->entry('partial', 'Die neuestudie zeigt es');
+
+        self::assertSame(['both'], $this->search('die neue studie '));
+    }
+
+    public function testAMultiTermWholeWordQueryChecksEachTermsOwnWordNotJustAnyTerms(): void
+    {
+        // "punk" is only a substring here ("cyberpunk"), not a whole word, even
+        // though "perfect" is. Each term's whole-word check is bound to its own
+        // parameter; if the terms shared one bound value (e.g. all falling back
+        // to the last term's pattern), this would wrongly match on "perfect"
+        // alone without ever verifying "punk" as its own whole word.
+        $this->entry('miss', 'cyberpunk is perfect');
+
+        self::assertSame([], $this->search('punk perfect '));
+    }
+
+    public function testWholeWordModeStillTreatsAPercentSignAsAPlainCharacter(): void
+    {
+        $this->entry('literal', 'Inflation hits 100% this year');
+        $this->entry('wildcard', 'Nothing to do with numbers');
+
+        self::assertSame(['literal'], $this->search('100% '));
+    }
 }

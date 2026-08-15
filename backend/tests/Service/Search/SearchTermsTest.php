@@ -85,4 +85,53 @@ final class SearchTermsTest extends TestCase
 
         self::assertSame(['one', 'two', 'three', 'four', 'five', 'six'], $terms->terms);
     }
+
+    public function testAnInputWithoutTrailingWhitespaceIsSubstringMode(): void
+    {
+        $terms = SearchTerms::fromInput('punk');
+
+        self::assertFalse($terms->isWholeWord);
+    }
+
+    public function testATrailingSpaceSwitchesToWholeWordMode(): void
+    {
+        $terms = SearchTerms::fromInput('punk ');
+
+        self::assertTrue($terms->isWholeWord);
+        self::assertSame(['punk'], $terms->terms);
+    }
+
+    public function testATrailingTabSwitchesToWholeWordMode(): void
+    {
+        $terms = SearchTerms::fromInput("punk\t");
+
+        self::assertTrue($terms->isWholeWord);
+    }
+
+    public function testATrailingNewlineSwitchesToWholeWordMode(): void
+    {
+        $terms = SearchTerms::fromInput("punk\n");
+
+        self::assertTrue($terms->isWholeWord);
+    }
+
+    public function testWholeWordModeAppliesToEveryTermInTheQuery(): void
+    {
+        $terms = SearchTerms::fromInput('die neue studie ');
+
+        self::assertTrue($terms->isWholeWord);
+        self::assertSame(['die', 'neue', 'studie'], $terms->terms);
+    }
+
+    public function testTheLengthFloorIsMeasuredOnTheTrimmedInput(): void
+    {
+        // "ab " is 3 raw characters but trims to 2, below the 3-character
+        // floor — the trailing space changes the mode, not the length rule.
+        try {
+            SearchTerms::fromInput('ab ');
+            self::fail('Expected a ValidationException.');
+        } catch (ValidationException $exception) {
+            self::assertSame(['Search for at least 3 characters.'], $exception->errors['q'] ?? null);
+        }
+    }
 }

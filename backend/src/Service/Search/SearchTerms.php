@@ -22,19 +22,26 @@ final readonly class SearchTerms
     public const int MAX_TERMS = 6;
 
     /** @param list<string> $terms */
-    private function __construct(public array $terms)
+    private function __construct(public array $terms, public bool $isWholeWord)
     {
     }
 
     public static function fromInput(string $input): self
     {
+        // The mode is a property of the raw input, decided before trimming:
+        // a trailing space is the signal, and trimming would erase it. It is
+        // one flag for the whole query, not a per-term one — a per-term rule
+        // would make every term but the last "whole word" merely by being
+        // followed by a space while typing, which is not what the user meant.
+        $isWholeWord = (bool) preg_match('/\s\z/', $input);
+
         $trimmed = trim($input);
         self::assertLengthIsUsable($trimmed);
 
         /** @var list<string> $terms */
         $terms = preg_split('/\s+/', $trimmed) ?: [];
 
-        return new self(\array_slice($terms, 0, self::MAX_TERMS));
+        return new self(\array_slice($terms, 0, self::MAX_TERMS), $isWholeWord);
     }
 
     private static function assertLengthIsUsable(string $trimmed): void

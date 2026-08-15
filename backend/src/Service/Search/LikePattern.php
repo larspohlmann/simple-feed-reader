@@ -21,7 +21,23 @@ final readonly class LikePattern
 
     public static function containing(string $term): string
     {
-        $escaped = str_replace(
+        return '%' . self::escape($term) . '%';
+    }
+
+    /**
+     * Matches a term padded with a literal space on each side, for use against
+     * a haystack that CONCAT(' ', …, ' ') has padded the same way. Pairs with
+     * NormalizeWordBoundariesFunction, which turns bordering punctuation into
+     * spaces so the padding lines up on a real word boundary.
+     */
+    public static function wholeWord(string $term): string
+    {
+        return '% ' . self::escape($term) . ' %';
+    }
+
+    private static function escape(string $term): string
+    {
+        return str_replace(
             [self::ESCAPE_CHARACTER, '%', '_'],
             [
                 self::ESCAPE_CHARACTER . self::ESCAPE_CHARACTER,
@@ -30,7 +46,5 @@ final readonly class LikePattern
             ],
             $term,
         );
-
-        return '%' . $escaped . '%';
     }
 }
