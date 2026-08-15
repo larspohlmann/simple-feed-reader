@@ -10,6 +10,7 @@ use App\Entity\User;
 use App\Exception\ValidationException;
 use App\Http\EntryCursor;
 use App\Http\EntryJson;
+use App\Http\EntryPage;
 use App\Http\EntryStateJson;
 use App\Http\ReaderJson;
 use App\Repository\EntryQuery;
@@ -95,22 +96,7 @@ final readonly class EntryController
             limit: $limit,
         ));
 
-        $last = $rows === [] ? null : $rows[array_key_last($rows)];
-        $nextCursor = null;
-        // A full page implies there may be more; hand back a cursor from the
-        // last row. (A short page cannot have a next page.)
-        if ($last !== null && \count($rows) >= min(max(1, $limit), EntryQuery::MAX_LIMIT)) {
-            $entry = $last->entry;
-            $entryId = $entry->getId() ?? throw new \LogicException(
-                'An entry loaded from the database must have an id.',
-            );
-            $nextCursor = EntryCursor::encode($entry->getEffectiveDate(), $entryId);
-        }
-
-        return new JsonResponse([
-            'entries' => array_map(static fn ($r) => EntryJson::one($r), $rows),
-            'nextCursor' => $nextCursor,
-        ]);
+        return new JsonResponse(EntryPage::of($rows, $limit));
     }
 
     #[Route('/{id}', name: 'api_entries_get', methods: ['GET'], requirements: ['id' => '\d+'])]
