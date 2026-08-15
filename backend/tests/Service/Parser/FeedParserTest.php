@@ -99,6 +99,83 @@ final class FeedParserTest extends TestCase
         $this->parser()->parse("  \n\t ");
     }
 
+    /**
+     * WordPress plugins routinely echo a blank line before the feed, and the XML
+     * declaration must start at byte 0 — so libxml refuses an otherwise perfect
+     * document over bytes that carry no meaning. trancentral.tv ships its feed
+     * this way and was unsubscribable because of it (#423).
+     */
+    public function testParsesFeedPrecededByBlankLines(): void
+    {
+        $feed = $this->parser()->parse("\n\n" . $this->fixture('rss2-basic.xml'));
+
+        self::assertSame('Example Tech Blog', $feed->title);
+        self::assertCount(2, $feed->entries);
+    }
+
+    public function testParsesFeedPrecededByUtf8Bom(): void
+    {
+        $feed = $this->parser()->parse("\u{FEFF}" . $this->fixture('atom-basic.xml'));
+
+        self::assertSame('Atom Example', $feed->title);
+        self::assertCount(2, $feed->entries);
+    }
+
+    public function testParsesFeedPrecededByBomAndBlankLines(): void
+    {
+        $feed = $this->parser()->parse("\u{FEFF}\r\n \n" . $this->fixture('rss2-basic.xml'));
+
+        self::assertSame('Example Tech Blog', $feed->title);
+    }
+
+    /**
+     * A body of nothing but a BOM survives trim(), so it reaches loadXML() as an
+     * empty string once the declaration prefix is stripped — and loadXML() answers
+     * that with a raw ValueError, which would escape as a 500 and stall the whole
+     * refresh run. It has to arrive as a per-feed parse failure like any other.
+     */
+    public function testRejectsBodyOfNothingButABom(): void
+    {
+        $this->expectException(FeedParseException::class);
+        $this->parser()->parse("\u{FEFF}");
+    }
+
+    public function testRejectsBodyOfNothingButABomAndBlankLines(): void
+    {
+        $this->expectException(FeedParseException::class);
+        $this->parser()->parse("\u{FEFF}\r\n  \n");
+    }
+
+    /**
+     * A feed must never make the parser open a connection of the feed's choosing.
+     * Three things hold that line: external DTD loading is off (no
+     * LIBXML_DTDLOAD), entity substitution is off (no LIBXML_NOENT), and
+     * LIBXML_NONET refuses network access outright. The doctype guard cannot
+     * stand in for any of them, because it runs after the load — by then a
+     * request would already have left. The listener watches for exactly that.
+     */
+    public function testDoesNotFetchAnExternalDtdOverTheNetwork(): void
+    {
+        $listener = stream_socket_server('tcp://127.0.0.1:0', $errorCode, $errorMessage);
+        self::assertIsResource($listener, sprintf('listener failed: %s', $errorMessage));
+        $address = (string) stream_socket_get_name($listener, false);
+
+        try {
+            $this->parser()->parse(
+                '<?xml version="1.0"?><!DOCTYPE rss SYSTEM "http://' . $address . '/feed.dtd">'
+                . '<rss version="2.0"><channel><title>x</title><link>y</link></channel></rss>',
+            );
+            self::fail('A document declaring a DTD must be rejected');
+        } catch (FeedParseException) {
+            // The doctype guard rejects it; what this test asserts is below.
+        }
+
+        $connection = @stream_socket_accept($listener, 0);
+        fclose($listener);
+
+        self::assertFalse($connection, 'The parser must not open a connection a feed asked for');
+    }
+
     public function testRejectsDocumentsDeclaringADtd(): void
     {
         $this->expectException(FeedParseException::class);

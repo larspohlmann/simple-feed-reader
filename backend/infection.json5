@@ -8,6 +8,25 @@
     },
     mutators: {
         '@default': true,
+        // Two equivalent mutants in FeedParser::parse(). Both rewrite the code
+        // without changing anything it can do, so no honest test kills them, and
+        // the only other way to pass the gate for that file would be a test that
+        // asserts a difference which does not exist. Each is ignored by name and
+        // by method, never wholesale — a real mutant in the same method still
+        // fails the build.
+        //
+        // UnwrapFinally: nothing inside the try can throw. loadXML() raises a
+        // ValueError for an empty string only, and the guard above it refuses an
+        // empty body first, so the finally never unwinds an exception. It stays
+        // as defence for the day that changes.
+        //
+        // BitwiseOr (LIBXML_NONET | LIBXML_COMPACT): the flag is defence in
+        // depth, not the active control. libxml never fetches an external DTD
+        // here because LIBXML_DTDLOAD is off — measured, not assumed: with the
+        // flag mutated to '&', testDoesNotFetchAnExternalDtdOverTheNetwork still
+        // sees no connection.
+        UnwrapFinally: { ignore: ['App\\Service\\Parser\\FeedParser::parse'] },
+        BitwiseOr: { ignore: ['App\\Service\\Parser\\FeedParser::parse'] },
     },
     phpUnit: {
         configDir: '.',

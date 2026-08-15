@@ -15,19 +15,23 @@ final readonly class FeedParser
 
     public function parse(string $xml): ParsedFeed
     {
+        $feedXml = $this->fromTheDeclaration($xml);
+
         // loadXML() throws a raw ValueError on an empty string rather than
         // returning false, so guard it here — mirroring HtmlItemExtractor's
         // empty-page check. An empty 200 body (misconfigured feed, edge CDN) is
         // a per-feed parse failure the refresh runner already handles, not an
         // uncaught error that 500s the whole run and stalls every feed after it.
-        if (trim($xml) === '') {
+        // The guard reads the stripped body: a document of nothing but a BOM
+        // survives trim() but is empty by the time loadXML() sees it.
+        if ($feedXml === '') {
             throw new FeedParseException('Document is not well-formed XML');
         }
 
         $document = new \DOMDocument();
         $previousErrorMode = libxml_use_internal_errors(true);
         try {
-            $loaded = $document->loadXML($xml, LIBXML_NONET | LIBXML_COMPACT);
+            $loaded = $document->loadXML($feedXml, LIBXML_NONET | LIBXML_COMPACT);
         } finally {
             libxml_clear_errors();
             libxml_use_internal_errors($previousErrorMode);
@@ -51,5 +55,16 @@ final readonly class FeedParser
         // namespace split — is each parser's own call now; the factory returns
         // the match or raises FeedParseException when none claims the root.
         return $this->parserFactory->parserFor($root)->parse($document);
+    }
+
+    /**
+     * An XML declaration is only a declaration when it starts at byte 0, so a
+     * blank line a plugin echoed ahead of the feed makes libxml refuse the whole
+     * document. Feeds arrive that way often enough to cost real subscriptions
+     * (#423), and nothing of value can precede the declaration — so drop it.
+     */
+    private function fromTheDeclaration(string $xml): string
+    {
+        return ltrim($xml, " \t\n\r\0\x0B\u{FEFF}");
     }
 }
