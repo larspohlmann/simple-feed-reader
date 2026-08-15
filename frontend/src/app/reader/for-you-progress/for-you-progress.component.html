@@ -1,8 +1,11 @@
 @if (recs.running()) {
-  <p class="for-you-progress" role="status" aria-live="polite">
+  <p class="for-you-progress">
     <span>{{ 'reader.forYouProgress' | transloco: count() }}</span>
     @if (eta(); as phrase) {
-      <span class="eta"> · {{ phrase.key | transloco: phrase.params }}</span>
+      <!-- Hidden from the toast's live region on purpose: below a minute the
+           estimate changes on every ticker bump, and announcing it each time
+           would bury the count that actually moves once per batch (#398). -->
+      <span class="eta" aria-hidden="true"> · {{ phrase.key | transloco: phrase.params }}</span>
     }
   </p>
   <div

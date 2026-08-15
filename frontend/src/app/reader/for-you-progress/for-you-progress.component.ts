@@ -11,10 +11,11 @@ interface Phrase {
 }
 
 /**
- * The For-You run's progress surface, shown in the sticky list header beside the
- * Stop button: the "Ranking your feeds — X of Y" count with the live ETA on the
- * same line, and a visible determinate bar beneath it. It reads the run service
- * directly and renders nothing unless a run is in flight.
+ * The For-You run's progress surface: the "Ranking your feeds — X of Y" count
+ * with the live ETA on the same line, and a determinate bar beneath it. It is
+ * the content of the app-wide toast pill (`RecommendationsService` raises it),
+ * so the run stays visible on every route rather than only in the reader. It
+ * reads the run service directly and renders nothing unless a run is in flight.
  */
 @Component({
   selector: 'app-for-you-progress',

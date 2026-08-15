@@ -81,4 +81,18 @@ describe('ForYouProgressComponent', () => {
     expect(el.querySelector('.for-you-progress')).toBeNull();
     expect(el.querySelector('.track')).toBeNull();
   });
+
+  it('hides the ETA from assistive technology, so a per-tick estimate is not announced', () => {
+    etaState.set('eta');
+    etaSeconds.set(30);
+    const el = build().nativeElement as HTMLElement;
+    expect(el.querySelector('.eta')!.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('declares no live region of its own — the toast shell it renders into owns that', () => {
+    const el = build().nativeElement as HTMLElement;
+    const line = el.querySelector('.for-you-progress')!;
+    expect(line.getAttribute('role')).toBeNull();
+    expect(line.getAttribute('aria-live')).toBeNull();
+  });
 });

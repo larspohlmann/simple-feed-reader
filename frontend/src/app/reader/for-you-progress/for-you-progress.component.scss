@@ -1,10 +1,12 @@
-/* The count+ETA line and its bar stack, right-aligned to sit under the Stop
-   button in the header's action stack. The line's nowrap width sets the host
-   width, and the bar fills it. */
+/* The count+ETA line and its bar stack full-width inside the app-wide pill,
+   which owns its own width (`.app-toast--fixed` in `styles.scss`). The line is
+   allowed to wrap: 22rem holds the longest translation on one line, but the
+   pane's viewport cap is narrower than that on a phone, and wrapping is the
+   only honest answer there. */
 :host {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: stretch;
   gap: var(--space-1);
 }
 
@@ -12,8 +14,6 @@
   margin: 0;
   color: var(--text-muted);
   font-size: var(--fs-xs);
-  text-align: right;
-  white-space: nowrap;
 }
 
 .track {
