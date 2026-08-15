@@ -187,6 +187,9 @@
               <app-entry-wide
                 [entry]="entryOf(b)"
                 [tags]="tagsFor(entryOf(b).subscriptionId)"
+                (favorite)="favorite.emit($event)"
+                (keep)="keep.emit($event)"
+                (read)="read.emit($event)"
                 (open)="open.emit($event)"
               />
             }
@@ -194,6 +197,9 @@
               <app-entry-quote
                 [entry]="entryOf(b)"
                 [tags]="tagsFor(entryOf(b).subscriptionId)"
+                (favorite)="favorite.emit($event)"
+                (keep)="keep.emit($event)"
+                (read)="read.emit($event)"
                 (open)="open.emit($event)"
               />
             }
@@ -202,6 +208,9 @@
                 [entry]="entryOf(b)"
                 [imageSide]="side(b)"
                 [tags]="tagsFor(entryOf(b).subscriptionId)"
+                (favorite)="favorite.emit($event)"
+                (keep)="keep.emit($event)"
+                (read)="read.emit($event)"
                 (open)="open.emit($event)"
               />
             }
@@ -209,6 +218,9 @@
               <app-entry-kicker
                 [entry]="entryOf(b)"
                 [tags]="tagsFor(entryOf(b).subscriptionId)"
+                (favorite)="favorite.emit($event)"
+                (keep)="keep.emit($event)"
+                (read)="read.emit($event)"
                 (open)="open.emit($event)"
               />
             }
@@ -216,6 +228,9 @@
               <app-entry-thumb
                 [entry]="entryOf(b)"
                 [tags]="tagsFor(entryOf(b).subscriptionId)"
+                (favorite)="favorite.emit($event)"
+                (keep)="keep.emit($event)"
+                (read)="read.emit($event)"
                 (open)="open.emit($event)"
               />
             }
@@ -223,6 +238,9 @@
               <app-entry-compact
                 [entry]="entryOf(b)"
                 [tags]="tagsFor(entryOf(b).subscriptionId)"
+                (favorite)="favorite.emit($event)"
+                (keep)="keep.emit($event)"
+                (read)="read.emit($event)"
                 (open)="open.emit($event)"
               />
             }
@@ -233,6 +251,9 @@
                 [entries]="grp(b).entries"
                 [previewCount]="grp(b).previewCount"
                 [tags]="tagsFor(grp(b).subscriptionId)"
+                (favorite)="favorite.emit($event)"
+                (keep)="keep.emit($event)"
+                (read)="read.emit($event)"
                 (open)="open.emit($event)"
               />
             }

@@ -26,6 +26,12 @@
     @if (snippet()) {
       <p class="dek">{{ snippet() }}</p>
     }
-    <app-source-tags [tags]="tags()" />
+    <app-entry-meta
+      [entry]="entry()"
+      [tags]="tags()"
+      (favorite)="favorite.emit($event)"
+      (keep)="keep.emit($event)"
+      (read)="read.emit($event)"
+    />
   </div>
 </article>

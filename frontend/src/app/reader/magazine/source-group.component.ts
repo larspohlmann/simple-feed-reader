@@ -33,6 +33,11 @@ export class SourceGroupComponent {
   readonly previewCount = input.required<number>();
   readonly tags = input<SubscriptionTagDto[]>([]);
   readonly open = output<EntryDto>();
+  /** Forwarded from the rows. The group is not an `EntryBlockBase`, so unlike
+   *  every block it has to declare these itself. */
+  readonly favorite = output<EntryDto>();
+  readonly keep = output<EntryDto>();
+  readonly read = output<EntryDto>();
 
   /** Ephemeral: the widget starts collapsed on every fresh render. Survives an
    *  article open/close (the list stays mounted), resets on reload/reselect. */

@@ -50,4 +50,17 @@ describe('EntryQuoteComponent', () => {
       .nativeElement as HTMLElement;
     expect(el.querySelector('.pull')!.textContent).toContain('One long clause with no terminator');
   });
+
+  it('carries the three actions on its meta row', () => {
+    const f = mount(entry());
+    expect(f.nativeElement.querySelectorAll('app-entry-meta app-entry-actions button').length).toBe(
+      3,
+    );
+
+    const read = jest.fn();
+    f.componentInstance.read.subscribe(read);
+    const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
+    (buttons[2] as HTMLElement).click();
+    expect(read).toHaveBeenCalled();
+  });
 });

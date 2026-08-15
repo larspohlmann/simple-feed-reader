@@ -5,7 +5,11 @@
 .split {
   display: flex;
   gap: var(--space-3);
-  align-items: flex-start;
+
+  /* Stretch, so the text column fills a taller image's height and the meta row
+     can drop to the bottom of the card. The image is pinned back to the top
+     below — stretching it would override its bound aspect-ratio. */
+  align-items: stretch;
   padding: var(--space-3);
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -39,10 +43,12 @@
   object-fit: cover;
   border-radius: var(--radius);
   display: block;
+  align-self: flex-start;
 
   /* Drop the image onto the top of the kicker's written text, not its line-box
-     top. `align-items: flex-start` pins it to the line box, which sits ~0.35em
-     above where the letters actually begin, leaving the image looking too high. */
+     top. `align-self: flex-start` above pins it to the line box, which sits
+     ~0.35em above where the letters actually begin, leaving the image looking
+     too high. */
   margin-top: 0.35em;
 }
 

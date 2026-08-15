@@ -83,4 +83,29 @@ describe('EntryHeroComponent', () => {
     expect(img.style.aspectRatio).toBe('16 / 9');
     expect(img.getAttribute('width')).toBeNull();
   });
+
+  it('carries the actions on the meta row, not on a row of its own', () => {
+    const el = mount(entry()).nativeElement as HTMLElement;
+    expect(el.querySelector('.actions')).toBeNull();
+    expect(el.querySelectorAll('app-entry-meta app-entry-actions button').length).toBe(3);
+  });
+
+  it('emits favorite, keep and read from the meta row', () => {
+    const f = mount(entry());
+    const favorite = jest.fn();
+    const keep = jest.fn();
+    const read = jest.fn();
+    f.componentInstance.favorite.subscribe(favorite);
+    f.componentInstance.keep.subscribe(keep);
+    f.componentInstance.read.subscribe(read);
+
+    const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
+    (buttons[0] as HTMLElement).click();
+    (buttons[1] as HTMLElement).click();
+    (buttons[2] as HTMLElement).click();
+
+    expect(favorite).toHaveBeenCalled();
+    expect(keep).toHaveBeenCalled();
+    expect(read).toHaveBeenCalled();
+  });
 });

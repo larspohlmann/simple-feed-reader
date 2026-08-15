@@ -2,11 +2,12 @@
 import { Component, input } from '@angular/core';
 import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
+import { EntryActionsComponent } from '../entry-actions/entry-actions.component';
 import { EntryBlockBase } from './entry-block-base';
 
 @Component({
   selector: 'app-entry-compact',
-  imports: [EntryKickerLineComponent, SourceTagsComponent],
+  imports: [EntryKickerLineComponent, SourceTagsComponent, EntryActionsComponent],
   templateUrl: './entry-compact.component.html',
   styleUrl: './entry-compact.component.scss',
 })
