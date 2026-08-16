@@ -128,6 +128,44 @@ final readonly class RecommendationRunFixtures
     }
 
     /**
+     * A run pinned at an exact instant, and flushed — unlike {@see createRun()},
+     * which fixes its own date because most of its callers do not care about
+     * timing. A test that asserts on month bucketing does care, and cannot use
+     * that date: it lives in a file shared with unrelated suites and would
+     * move the moment one of them needed it elsewhere.
+     */
+    public function persistRunAt(User $user, \DateTimeImmutable $createdAt): RecommendationRun
+    {
+        $run = new RecommendationRun($user, $createdAt);
+        $this->em->persist($run);
+        $this->em->flush();
+
+        return $run;
+    }
+
+    /**
+     * The provider price is banked through raw SQL arithmetic in production
+     * (RecordedCall::bankUsage(), never through the entity — see
+     * ProviderUsage's class doc), so a fixture that wants a priced run has to
+     * write the same column the same way rather than call a setter that does
+     * not exist.
+     *
+     * The identity map is cleared afterwards, because the managed entities no
+     * longer match the row: a caller that keeps using $run or its User as a
+     * Doctrine association has to re-fetch them first.
+     */
+    public function priceRun(RecommendationRun $run, int $costNanoCredits): void
+    {
+        $id = $run->getId() ?? throw new \LogicException('Cannot price a run that was never saved.');
+
+        $this->em->getConnection()->executeStatement(
+            'UPDATE recommendation_run SET cost_nano_credits = :cost WHERE id = :id',
+            ['cost' => $costNanoCredits, 'id' => $id],
+        );
+        $this->em->clear();
+    }
+
+    /**
      * Not flushed, for the same reason as {@see createRun()}. $createdAt
      * defaults to the run's own creation instant — most callers don't care
      * about call timing and only a handful of #321 tests need to pin it.

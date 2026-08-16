@@ -27,6 +27,14 @@ final readonly class HistoryMonthSummariser
         $totals = [];
 
         foreach ($spendTimeline as $row) {
+            // setTimezone() converts, it does not reinterpret, so this is
+            // only correct because the hydrated value already carries UTC:
+            // Doctrine builds a datetime_immutable in PHP's default zone and
+            // Kernel::boot() pins that to UTC (guarded by KernelTimezoneTest).
+            // Lose that pin and the rows would still be cut correctly — the
+            // window binds explicit-UTC boundaries — while these headers drift
+            // by the host's offset, which is the header-contradicts-its-rows
+            // failure ViewerTimeZone's docblock warns about, from the other side.
             $month = $row['createdAt']->setTimezone($viewer->zone)->format('Y-m');
             $totals[$month] = $this->foldRowInto($totals[$month] ?? null, $row['costNanoCredits']);
         }

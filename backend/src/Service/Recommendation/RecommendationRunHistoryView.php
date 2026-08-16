@@ -31,7 +31,16 @@ final readonly class RecommendationRunHistoryView
     ) {
     }
 
-    /** @return OverviewPayload */
+    /**
+     * The all-time total is summed by the database over the same rows
+     * spendTimeline() already returns, and that duplication is deliberate:
+     * the timeline is the read most likely to need a cap one day, and the
+     * SUM keeps the total honest for the whole account when it gets one.
+     * Deriving the total from the timeline instead would silently turn it
+     * into "the total of whatever the timeline still covers".
+     *
+     * @return OverviewPayload
+     */
     public function overview(User $user, ViewerTimeZone $viewer): array
     {
         $months = $this->summariser->summarise($this->runs->spendTimeline($user), $viewer);

@@ -70,41 +70,6 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         return new RecommendationRunFixtures($this->em(), $cipher);
     }
 
-    /**
-     * A run pinned at an exact instant, for the month-bucketing assertions:
-     * RecommendationRunFixtures::createRun() deliberately fixes its own
-     * date, since most callers of it don't care about timing, so a test that
-     * needs a run in a specific month has to construct the entity itself
-     * the same way RecommendationRunHistoryRepositoryTest does.
-     */
-    private function persistRunAt(User $user, \DateTimeImmutable $createdAt): RecommendationRun
-    {
-        $run = new RecommendationRun($user, $createdAt);
-        $this->em()->persist($run);
-        $this->em()->flush();
-
-        return $run;
-    }
-
-    /**
-     * The provider price is banked through raw SQL arithmetic in production
-     * (RecordedCall::bankUsage(), never through the entity — see
-     * ProviderUsage's class doc), so a fixture that wants a priced run has to
-     * write the same column the same way rather than call a setter that does
-     * not exist.
-     */
-    private function priceRun(RecommendationRun $run, int $costNanoCredits): void
-    {
-        $id = $run->getId();
-        self::assertNotNull($id);
-
-        $this->em()->getConnection()->executeStatement(
-            'UPDATE recommendation_run SET cost_nano_credits = :cost WHERE id = :id',
-            ['cost' => $costNanoCredits, 'id' => $id],
-        );
-        $this->em()->clear();
-    }
-
     public function testOverviewAnswersWithTheAccountsMonthLatestRunsAndTheAllTimeTotal(): void
     {
         $client = self::createClient();
@@ -117,7 +82,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $older->recordBatchWinners([]);
         $older->complete(new \DateTimeImmutable('2026-08-16 09:00:10'));
         $this->em()->flush();
-        $this->priceRun($older, 1_000);
+        $this->fixtures()->priceRun($older, 1_000);
 
         // priceRun() clears the identity map, so $older and $user must be
         // re-fetched before they are used as Doctrine associations again.
@@ -130,7 +95,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $newer->recordBatchWinners([]);
         $newer->complete(new \DateTimeImmutable('2026-08-16 09:05:10'));
         $this->em()->flush();
-        $this->priceRun($newer, 2_000);
+        $this->fixtures()->priceRun($newer, 2_000);
 
         $otherUser = $this->em()->getRepository(User::class)->find($otherUser->getId());
         self::assertInstanceOf(User::class, $otherUser);
@@ -140,7 +105,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $theirRun->recordBatchWinners([]);
         $theirRun->complete(new \DateTimeImmutable('2026-08-16 09:05:10'));
         $this->em()->flush();
-        $this->priceRun($theirRun, 9_999);
+        $this->fixtures()->priceRun($theirRun, 9_999);
 
         $client->request('GET', self::HISTORY_ROUTE, server: $headers);
 
@@ -171,10 +136,10 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
      * the all-time total above it is not -- an unasserted cap is an unkilled
      * mutant on both the constant's value and the view's truncation.
      *
-     * Seeds through this file's own persistRunAt() rather than
-     * RecommendationRunFixtures::createRun() -- that fixture's date lives in
-     * a file shared with unrelated suites, so a test that owns its own dates
-     * cannot be broken by a change made to satisfy one of them.
+     * Seeds through RecommendationRunFixtures::persistRunAt() rather than
+     * createRun() -- that method's date is shared with unrelated suites, so a
+     * test that owns its own dates cannot be broken by a change made to
+     * satisfy one of them.
      */
     public function testCapsTheNewestMonthAtTheLimitKeepingTheNewestRunsAndReportsANextCursor(): void
     {
@@ -183,9 +148,10 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
 
         $runCount = RecommendationRunHistoryRepository::HISTORY_LIMIT + 1;
         $seededRuns = [];
+        $fixtures = $this->fixtures();
         for ($minute = 0; $minute < $runCount; $minute++) {
             $createdAt = new \DateTimeImmutable(sprintf('2026-08-01 00:%02d:00', $minute));
-            $seededRuns[] = $this->persistRunAt($user, $createdAt);
+            $seededRuns[] = $fixtures->persistRunAt($user, $createdAt);
         }
         $seededIds = array_map(static fn (RecommendationRun $run): ?int => $run->getId(), $seededRuns);
 
@@ -284,15 +250,15 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('run-history-two-months@example.test');
 
-        $julyOne = $this->persistRunAt($user, new \DateTimeImmutable('2026-07-10 09:00:00'));
-        $julyTwo = $this->persistRunAt($user, new \DateTimeImmutable('2026-07-20 09:00:00'));
-        $this->priceRun($julyOne, 500);
-        $this->priceRun($julyTwo, 700);
+        $julyOne = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-07-10 09:00:00'));
+        $julyTwo = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-07-20 09:00:00'));
+        $this->fixtures()->priceRun($julyOne, 500);
+        $this->fixtures()->priceRun($julyTwo, 700);
 
         $user = $this->em()->getRepository(User::class)->find($user->getId());
         self::assertInstanceOf(User::class, $user);
-        $august = $this->persistRunAt($user, new \DateTimeImmutable('2026-08-05 09:00:00'));
-        $this->priceRun($august, 1_200);
+        $august = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-05 09:00:00'));
+        $this->fixtures()->priceRun($august, 1_200);
 
         $client->request('GET', self::HISTORY_ROUTE, server: $headers);
 
@@ -327,7 +293,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('run-history-past-month@example.test');
 
-        $only = $this->persistRunAt($user, new \DateTimeImmutable('2024-03-14 09:00:00'));
+        $only = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2024-03-14 09:00:00'));
 
         $client->request('GET', self::HISTORY_ROUTE, server: $headers);
 
@@ -350,10 +316,10 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('run-history-month-route@example.test');
 
-        $july = $this->persistRunAt($user, new \DateTimeImmutable('2026-07-12 09:00:00'));
+        $july = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-07-12 09:00:00'));
         $user = $this->em()->getRepository(User::class)->find($user->getId());
         self::assertInstanceOf(User::class, $user);
-        $this->persistRunAt($user, new \DateTimeImmutable('2026-08-12 09:00:00'));
+        $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-12 09:00:00'));
 
         $client->request('GET', self::HISTORY_ROUTE . '/2026-07', server: $headers);
 
@@ -386,7 +352,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('run-history-bad-tz@example.test');
 
-        $this->persistRunAt($user, new \DateTimeImmutable('2026-08-12 09:00:00'));
+        $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-12 09:00:00'));
 
         $client->request('GET', self::HISTORY_ROUTE . '?tz=Not/AZone', server: $headers);
 
@@ -407,13 +373,13 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('run-history-cursor@example.test');
 
-        $oldest = $this->persistRunAt($user, new \DateTimeImmutable('2026-08-01 09:00:00'));
+        $oldest = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-01 09:00:00'));
         $user = $this->em()->getRepository(User::class)->find($user->getId());
         self::assertInstanceOf(User::class, $user);
-        $middle = $this->persistRunAt($user, new \DateTimeImmutable('2026-08-02 09:00:00'));
+        $middle = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-02 09:00:00'));
         $user = $this->em()->getRepository(User::class)->find($user->getId());
         self::assertInstanceOf(User::class, $user);
-        $this->persistRunAt($user, new \DateTimeImmutable('2026-08-03 09:00:00'));
+        $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-03 09:00:00'));
 
         $client->request(
             'GET',

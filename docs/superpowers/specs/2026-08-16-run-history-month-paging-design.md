@@ -118,14 +118,16 @@ readily as a browser does.
 `RecommendationRunRepository` sits at exactly ten public methods, PHPMD's
 ceiling, and this adds three more queries.
 
-`RecommendationRunHistoryRepository` takes `historyForUser()`,
-`totalCostNanoCredits()` and `HISTORY_LIMIT` across and adds the month summary
-projection and the month page query. This is not the class the first pass's
-review rejected: that one existed to hold a verbatim copy of
-`findNewestForUser()`, and the count that justified it was inflated by that
-duplicate. This one holds five distinct queries and duplicates nothing, and the
-move returns `RecommendationRunRepository` to eight methods — headroom it no
-longer has.
+`RecommendationRunHistoryRepository` takes `totalCostNanoCredits()` and
+`HISTORY_LIMIT` across, and adds the month summary projection
+(`spendTimeline()`) and the month page query (`pageForMonth()`, which replaces
+the old `historyForUser()` — the flat newest-50 read has no caller once the
+card pages by month). This is not the class the first pass's review rejected:
+that one existed to hold a verbatim copy of `findNewestForUser()`, and the
+count that justified it was inflated by that duplicate. This one holds three
+distinct queries plus the private row projection behind them, duplicates
+nothing, and the move returns `RecommendationRunRepository` to eight methods —
+headroom it no longer has.
 
 An assembler service builds the two payloads; the controller's two actions read
 the request, delegate and return, holding no private method that carries
