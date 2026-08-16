@@ -115,10 +115,14 @@ host are live immediately; no rebuild, no sync step.
 > curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/main/scripts/install-dev.sh | bash
 > ```
 >
+> Add `-s -- --ref <branch-or-tag>` to install something other than the latest
+> release.
+>
 > The steps below are the same commands spelled out, for when you want to run
 > them yourself or understand what the installer does. See also
-> [`scripts/`](../scripts/): `update.sh` moves an install to the newest release,
-> and the two `frontend-*.sh` scripts start/stop the dev frontend.
+> [`scripts/`](../scripts/): `update.sh` moves an install to the newest release
+> (or to the `--ref` you name), and the two `frontend-*.sh` scripts start/stop
+> the dev frontend.
 
 From the repository root, in order:
 

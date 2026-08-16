@@ -18,6 +18,8 @@ _dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 # shellcheck source=scripts/lib.sh
 source "${_dir}/lib.sh"
 
+notes_start
+
 ensure_docker
 
 if [ ! -f "${ENV_PROD_FILE}" ]; then
@@ -32,6 +34,10 @@ configure_public_url
 configure_mail
 
 say 'Applying the configuration ...'
-"${REPO_ROOT}/scripts/prod-start.sh"
+# The mail check below still asks a question, so the closing block waits until
+# after it -- the operator reads it last, not in the middle of the run.
+SFR_DEFER_SUMMARY=1 "${REPO_ROOT}/scripts/prod-start.sh"
 
 offer_mail_check
+
+print_prod_summary

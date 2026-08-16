@@ -99,6 +99,11 @@ is [docs/docker-production.md](docs/docker-production.md).
 > **Read before you pipe to bash.** You can inspect exactly what runs at
 > [scripts/install.sh](scripts/install.sh). The installer never deletes data.
 
+Both installers take a target directory and `--ref <branch-or-tag>`, which
+installs something other than the latest release — how a change is tried on a
+test instance before it ships:
+`… | bash -s -- --ref feature/430-installer-output my-folder`.
+
 Once the stack is running, create the first administrator account — see
 [docs/first-run-setup.md](docs/first-run-setup.md).
 
@@ -109,6 +114,7 @@ Run these from inside the `simple-feed-reader` directory:
 | Task | Command |
 |---|---|
 | Update to the latest release (prod and/or dev) | `./scripts/update.sh` |
+| Update to a branch or tag instead | `./scripts/update.sh --ref <branch-or-tag>` |
 | Start / stop the production stack | `./scripts/prod-start.sh` / `./scripts/prod-stop.sh` |
 | Change the public origin / mail settings | `./scripts/prod-configure.sh` |
 | Start / stop the dev frontend (:4200) | `./scripts/frontend-start.sh` / `./scripts/frontend-stop.sh` |

@@ -10,22 +10,83 @@
 # and compose() always runs from there.
 
 # --- coloured output --------------------------------------------------------
-# Colour only when stdout is a terminal, so piped and CI output stay plain.
-if [ -t 1 ]; then
+# Colour only when stdout is a terminal, so piped and CI output stay plain, and
+# never when NO_COLOR carries a value (https://no-color.org/).
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
   _c_reset=$'\033[0m'
   _c_blue=$'\033[34m'
   _c_green=$'\033[32m'
   _c_yellow=$'\033[33m'
   _c_red=$'\033[31m'
+  _c_cyan=$'\033[36m'
   _c_bold=$'\033[1m'
+  _c_dim=$'\033[2m'
 else
-  _c_reset='' _c_blue='' _c_green='' _c_yellow='' _c_red='' _c_bold=''
+  _c_reset='' _c_blue='' _c_green='' _c_yellow='' _c_red='' _c_cyan='' _c_bold='' _c_dim=''
 fi
 
 say()  { printf '%s\n' "${_c_blue}==>${_c_reset} $*"; }
 ok()   { printf '%s\n' "${_c_green}OK${_c_reset}  $*"; }
-warn() { printf '%s\n' "${_c_yellow}warning:${_c_reset} $*" >&2; }
+warn() { printf '%s\n' "${_c_yellow}warning:${_c_reset} $*" >&2; record_note "$*"; }
 die()  { printf '%s\n' "${_c_red}error:${_c_reset} $*" >&2; exit 1; }
+
+# --- notes for the closing block --------------------------------------------
+# Every warning is also recorded, so the block printed at the very end can
+# repeat it. Minutes of container output separate a warning from the end of an
+# install, and "the catalog import failed" is the line that must not scroll
+# away (issue #430).
+#
+# A file, not an array: the questions run inside $( ), so a warning raised
+# there happens in a subshell that could never write back to a variable of this
+# shell. The exported path makes every subshell append to the same file.
+notes_start() {
+  [ -z "${SFR_NOTES_FILE:-}" ] || return 0
+  SFR_NOTES_FILE=$(mktemp "${TMPDIR:-/tmp}/sfr-notes.XXXXXX") || return 0
+  export SFR_NOTES_FILE
+  trap 'rm -f "${SFR_NOTES_FILE}"' EXIT
+}
+
+record_note() {
+  [ -n "${SFR_NOTES_FILE:-}" ] || return 0
+  printf '%s\n' "$*" >> "${SFR_NOTES_FILE}" 2>/dev/null || true
+}
+
+# Print what was recorded, then forget it. Forgetting matters where two
+# summaries follow each other (update.sh updates both stacks): the notes belong
+# under the first block, not under every block.
+print_notes() {
+  [ -n "${SFR_NOTES_FILE:-}" ] && [ -s "${SFR_NOTES_FILE}" ] || return 0
+  printf '  %sThings to check%s\n' "${_c_yellow}${_c_bold}" "${_c_reset}"
+  while IFS= read -r note; do
+    printf '    - %s\n' "${note}"
+  done < "${SFR_NOTES_FILE}"
+  printf '\n'
+  : > "${SFR_NOTES_FILE}"
+}
+
+# --- long phases ------------------------------------------------------------
+# A phase whose output is worth watching but must not look like the point of
+# the run: the header names it, its output is indented and dimmed underneath.
+# Only for commands that never want the terminal -- a prompt inside one would
+# be swallowed by the pipe.
+run_step() {
+  local label=$1 status=0
+  shift
+  printf '%s\n' "${_c_blue}==>${_c_reset} ${_c_bold}${label}${_c_reset}"
+  # pipefail inside the subshell only: the status has to be the command's and
+  # not the indenter's, while the caller's shell options stay as they were.
+  ( set -o pipefail; "$@" 2>&1 | indent_output ) || status=$?
+  return "${status}"
+}
+
+# The `|| [ -n "${line}" ]` keeps a last line that carries no newline.
+indent_output() {
+  local line
+  while IFS= read -r line || [ -n "${line}" ]; do
+    printf '    %s%s%s\n' "${_c_dim}" "${line}" "${_c_reset}"
+    line=''
+  done
+}
 
 # --- repository location ----------------------------------------------------
 # The repository root is the parent of the directory that holds this file. This
@@ -96,6 +157,66 @@ current_version() {
   git -C "${REPO_ROOT}" describe --tags --exact-match 2>/dev/null || echo '(unreleased)'
 }
 
+# --- the ref this install runs on -------------------------------------------
+# Both installers and update.sh take --ref <branch-or-tag>, so a production
+# install can be tried from a branch before it is released (issue #430). The
+# installers cannot use this parser -- lib.sh lives in the clone the arguments
+# decide -- so each carries its own copy of the loop and says so.
+#
+# Sets REF and TARGET_DIR. Any non-option argument is the target directory,
+# which update.sh never passes and simply ignores.
+parse_ref_args() {
+  REF="${SFR_REF:-}"
+  TARGET_DIR=''
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --ref)
+        [ "$#" -ge 2 ] || die 'Option --ref needs a branch or a tag name.'
+        REF=$2
+        shift 2
+        ;;
+      --ref=*) REF=${1#--ref=} ; shift ;;
+      -*) die "Unknown option: $1" ;;
+      *) TARGET_DIR=$1 ; shift ;;
+    esac
+  done
+  # Exported for the same reason DEV_HEALTH_URL is: every reader lives in a
+  # script that only sources this file, so lint sees the writes and no reads.
+  export REF TARGET_DIR
+}
+
+# Check out a ref that is not a release, and say so. Named separately from the
+# release path because the two differ in what they promise the operator.
+checkout_requested_ref() {
+  local ref=$1
+  git -C "${REPO_ROOT}" checkout --quiet "${ref}" \
+    || die "No branch or tag named '${ref}' in this repository."
+  # Deliberately not warn(): the closing block carries this in its own row, and
+  # "Things to check" is for what went wrong, not for what was asked for.
+  printf '%s\n' "${_c_yellow}note:${_c_reset} installing from '${ref}', which is not a release. Expect unreleased code."
+  SFR_INSTALLED_REF="${ref}"
+  SFR_INSTALLED_REF_IS_RELEASE=0
+  export SFR_INSTALLED_REF SFR_INSTALLED_REF_IS_RELEASE
+}
+
+# The counterpart for the normal path, so both record what the summary prints.
+record_installed_release() {
+  SFR_INSTALLED_REF="$1"
+  SFR_INSTALLED_REF_IS_RELEASE=1
+  export SFR_INSTALLED_REF SFR_INSTALLED_REF_IS_RELEASE
+}
+
+# The summary row naming what is installed. Falls back to the checked-out tag,
+# so prod-start.sh run on its own still answers the question.
+print_installed_ref_row() {
+  local ref="${SFR_INSTALLED_REF:-$(current_version)}"
+  if [ "${SFR_INSTALLED_REF_IS_RELEASE:-1}" -eq 1 ]; then
+    printf '  Version ...........  %s\n' "${ref}"
+    return 0
+  fi
+  printf '  Version ...........  %s%s -- not a release%s\n' "${_c_yellow}" "${ref}" "${_c_reset}"
+}
+
 # The git blob id of the frontend lockfile at HEAD — a cheap change detector
 # that needs no external hashing tool.
 lockfile_blob() {
@@ -118,14 +239,13 @@ generate_certificate() {
 # Start every service and bring the backend to a ready state: dependencies
 # installed and the database migrated. Safe to re-run.
 bring_up_stack() {
-  say "Starting the Docker stack ..."
-  compose up -d
-  say "Installing backend dependencies (the first run downloads them) ..."
-  compose exec -T php composer install --no-interaction
-  say "Applying database migrations ..."
-  compose exec -T php bin/console doctrine:migrations:migrate --no-interaction
+  run_step 'Starting the Docker stack' compose up -d
+  run_step 'Installing backend dependencies (the first run downloads them)' \
+    compose exec -T php composer install --no-interaction
+  run_step 'Applying database migrations' \
+    compose exec -T php bin/console doctrine:migrations:migrate --no-interaction
   # It may have started before the schema existed (first install).
-  compose restart worker
+  compose restart worker >/dev/null
 }
 
 # The dev stack's health probe; prod callers pass their own URL. Exported so
@@ -152,15 +272,48 @@ wait_for_health() {
 }
 
 # --- summary ----------------------------------------------------------------
+# The closing block is the only thing a first-time operator has to read, so it
+# comes last, after every long phase and every question, and it is set apart
+# from the output above it by a rule (issue #430). The rule is ASCII: a box
+# drawn in line characters breaks on a narrow terminal and in a non-UTF-8
+# locale, and would buy nothing this does not.
+print_rule() {
+  printf '%s%s%s\n' "${_c_dim}" '------------------------------------------------------------' "${_c_reset}"
+}
+
+# The closing block for the path that stopped before the stack ever started:
+# .env.prod still misses values only the operator knows. It gets the same frame
+# as a running instance, because this is the path where finding the
+# instructions matters most.
+print_unfinished_summary() {
+  local target_dir=$1
+  printf '\n'
+  print_rule
+  printf '%s\n\n' "${_c_bold}${_c_yellow}simple-feed-reader is installed, but not started${_c_reset}"
+  printf '  Finish the setup:\n'
+  printf '    1. Run:  %s   (asks again, then starts)\n' "${_c_cyan}cd ${target_dir} && ./scripts/prod-configure.sh${_c_reset}"
+  printf '       or edit %s/.env.prod by hand -- the comments explain every value.\n' "${target_dir}"
+  printf '    2. Hand-edited? Then run:  %s\n' "${_c_cyan}cd ${target_dir} && ./scripts/prod-start.sh${_c_reset}"
+  printf '    3. Fill the onboarding catalog in the admin area, under Catalog.\n'
+  printf '\n'
+  print_installed_ref_row
+  printf '\n'
+  print_notes
+  print_rule
+  printf '\n'
+}
+
 print_summary() {
-  printf '\n%s\n' "${_c_bold}simple-feed-reader is running${_c_reset}"
+  printf '\n'
+  print_rule
+  printf '%s\n\n' "${_c_bold}${_c_green}simple-feed-reader (development) is running${_c_reset}"
+  printf '  Frontend (dev) ....  %s\n' "${_c_cyan}http://localhost:4200${_c_reset}"
+  printf '  API ...............  %s\n' "${_c_cyan}https://localhost:8443/api/health${_c_reset}"
+  printf '  Mailpit inbox .....  %s\n' "${_c_cyan}http://localhost:8025${_c_reset}"
+  printf '  MySQL .............  127.0.0.1:33306  (user/pass: feedreader/feedreader)\n'
+  print_installed_ref_row
+  printf '\n'
   cat <<'SUMMARY'
-
-  Frontend (dev server) .....  http://localhost:4200
-  API .......................  https://localhost:8443/api/health
-  Mailpit inbox .............  http://localhost:8025
-  MySQL .....................  127.0.0.1:33306  (user/pass: feedreader/feedreader)
-
   Everyday commands (run from the simple-feed-reader directory):
     ./scripts/frontend-stop.sh         stop the dev frontend
     ./scripts/prod-start.sh            run the production stack (docs/docker-production.md)
@@ -169,6 +322,9 @@ print_summary() {
     docker compose down                stop everything (your data is kept)
 
 SUMMARY
+  print_notes
+  print_rule
+  printf '\n'
 }
 
 # --- production stack -------------------------------------------------------
@@ -533,18 +689,18 @@ wait_for_php_ready() {
 # both are recoverable from the admin area with one click -- so a failure here
 # warns and returns.
 seed_catalog() {
-  say 'Importing the bundled catalog ...'
   # --if-empty guards the case this script cannot see: an install pointed at a
   # database that already holds a catalog.
-  if ! prod_compose exec -T -u www-data php bin/console app:catalog:import --if-empty; then
+  if ! run_step 'Importing the bundled catalog' \
+    prod_compose exec -T -u www-data php bin/console app:catalog:import --if-empty; then
     warn 'The bundled catalog was not imported. Import it in the admin area under Catalog.'
     return 0
   fi
   # Minutes: one request per catalog feed, and the shipped document holds over
   # a hundred. The icons are cached in the database, so this is paid once and
   # survives every later update.
-  say 'Fetching the catalog favicons (this takes a few minutes) ...'
-  if ! prod_compose exec -T -u www-data php bin/console app:catalog:warm-favicons; then
+  if ! run_step 'Fetching the catalog favicons (this takes a few minutes)' \
+    prod_compose exec -T -u www-data php bin/console app:catalog:warm-favicons; then
     warn 'Some catalog favicons are missing. The admin area can fetch them again later.'
   fi
 }
@@ -559,33 +715,41 @@ prod_database_description() {
   printf 'SQLite, one file in the php-var volume'
 }
 
+# Show the setup secret ONLY while the instance still has no administrator
+# (the API is authoritative); printing it on every later run would put a
+# live-looking secret into scrollback for no benefit. If the status probe
+# fails the block is skipped -- the console command below always works.
+print_first_admin_block() {
+  local base_url=$1 public_url=$2 setup_status admin_setup_secret
+  admin_setup_secret=$(env_prod_get ADMIN_SETUP_SECRET)
+  [ -n "${admin_setup_secret}" ] || return 0
+  setup_status=$(curl -fsk --max-time 5 "${base_url}/api/setup/status" 2>/dev/null || true)
+  case "${setup_status}" in
+    *'"needsSetup":true'*) ;;
+    *) return 0 ;;
+  esac
+  printf '  %sNo administrator exists yet. Create the first one in the browser:%s\n' "${_c_bold}" "${_c_reset}"
+  printf '    1. Open %s -- the one-time setup screen appears instead of login.\n' "${_c_cyan}${public_url}${_c_reset}"
+  printf '    2. Enter your email, a password, and this setup secret:\n'
+  printf '         %s\n' "${_c_bold}${admin_setup_secret}${_c_reset}"
+  printf '    3. Afterwards, remove ADMIN_SETUP_SECRET from .env.prod.\n'
+  printf '\n'
+}
+
 print_prod_summary() {
-  local base_url public_url setup_status admin_setup_secret
+  local base_url public_url
   base_url=$(prod_base_url)
   public_url=$(env_prod_get PUBLIC_URL)
-  printf '\n%s\n\n' "${_c_bold}simple-feed-reader (production) is running${_c_reset}"
-  printf '  Public URL ........  %s\n' "${public_url}"
-  printf '  Local health ......  %s/api/health\n' "${base_url}"
-  printf '  Database ..........  %s\n' "$(prod_database_description)"
   printf '\n'
-  # Show the setup secret ONLY while the instance still has no administrator
-  # (the API is authoritative); printing it on every later run would put a
-  # live-looking secret into scrollback for no benefit. If the status probe
-  # fails the block is skipped -- the console command below always works.
-  setup_status=$(curl -fsk --max-time 5 "${base_url}/api/setup/status" 2>/dev/null || true)
-  admin_setup_secret=$(env_prod_get ADMIN_SETUP_SECRET)
-  if [ -n "${admin_setup_secret}" ]; then
-    case "${setup_status}" in
-      *'"needsSetup":true'*)
-        printf '  No administrator exists yet. Create the first one in the browser:\n'
-        printf '    1. Open %s -- the one-time setup screen appears instead of login.\n' "${public_url}"
-        printf '    2. Enter your email, a password, and this setup secret:\n'
-        printf '         %s\n' "${admin_setup_secret}"
-        printf '    3. Afterwards, remove ADMIN_SETUP_SECRET from .env.prod.\n'
-        printf '\n'
-        ;;
-    esac
-  fi
+  print_rule
+  printf '%s\n\n' "${_c_bold}${_c_green}simple-feed-reader (production) is running${_c_reset}"
+  printf '  Public URL ........  %s\n' "${_c_cyan}${public_url}${_c_reset}"
+  printf '  Local health ......  %s\n' "${_c_cyan}${base_url}/api/health${_c_reset}"
+  printf '  Database ..........  %s\n' "$(prod_database_description)"
+  print_installed_ref_row
+  printf '\n'
+  print_first_admin_block "${base_url}" "${public_url}"
+  print_notes
   printf '  Create the first admin over the shell instead (docs/first-run-setup.md):\n'
   printf '    docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod \\\n'
   printf '      exec -u www-data php bin/console app:admin:create you@example.com\n'
@@ -596,6 +760,8 @@ print_prod_summary() {
   printf '\n'
   printf '  Stop the stack (data is kept):  ./scripts/prod-stop.sh\n'
   printf '  Update to a new release:        see docs/docker-production.md\n'
+  printf '\n'
+  print_rule
   printf '\n'
 }
 
@@ -739,8 +905,17 @@ port_question() {
 }
 
 # The stored port is a sensible default only while the topology is unchanged:
-# a fresh .env.prod carries WEB_HTTP_PORT=80, and 80 is the wrong offer to make
-# to someone who just chose to put a proxy in front of it.
+# a fresh .env.prod carries the plain-HTTP default, which is the wrong offer to
+# make to someone who just chose to put a proxy in front of it.
+#
+# The offered default for plain HTTP and for a proxy is 3333 -- "FEED" on a
+# phone keypad. 80 and 8080 are the two ports a machine that already serves
+# something is most likely to have taken, and a busy port is the one failure
+# this script cannot fix for the operator (issue #430). TLS keeps 443: there
+# the answer IS the port users type, and WEB_HTTP_PORT stays on 80 because in
+# that topology it is the redirect listener browsers reach first.
+PROD_DEFAULT_HTTP_PORT='3333'
+
 default_port_for() {
   local topology=$1 stored=''
   if [ "${topology}" = "$(current_topology)" ]; then
@@ -755,8 +930,7 @@ default_port_for() {
   fi
   case "${topology}" in
     tls) printf '443' ;;
-    proxy) printf '8080' ;;
-    *) printf '80' ;;
+    *) printf '%s' "${PROD_DEFAULT_HTTP_PORT}" ;;
   esac
 }
 
