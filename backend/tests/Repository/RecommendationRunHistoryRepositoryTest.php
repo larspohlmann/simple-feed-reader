@@ -34,16 +34,24 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
     public function testABerlinViewersAugustExcludesTheRunThatPrintsAsSeptember(): void
     {
         $user = $this->persistUser('berlin-boundary@example.com');
-        $run = $this->persistRunAt($user, new \DateTimeImmutable('2026-08-31 23:30:00'));
+        // A control run safely inside the month, so the assertions below prove
+        // the window is correctly PLACED (this one is kept) and not merely
+        // correctly ordered (the boundary run alone would also pass an empty
+        // result if the window excluded the whole month by mistake).
+        $control = $this->persistRunAt($user, new \DateTimeImmutable('2026-08-15 12:00:00'));
+        $boundary = $this->persistRunAt($user, new \DateTimeImmutable('2026-08-31 23:30:00'));
 
         $repository = $this->historyRepository();
 
         $august = MonthWindow::of('2026-08', ViewerTimeZone::of('Europe/Berlin'));
-        self::assertSame([], $repository->pageForMonth($user, $august, null));
+        self::assertSame(
+            [$control->getId()],
+            array_column($repository->pageForMonth($user, $august, null), 'id'),
+        );
 
         $september = MonthWindow::of('2026-09', ViewerTimeZone::of('Europe/Berlin'));
         self::assertSame(
-            [$run->getId()],
+            [$boundary->getId()],
             array_column($repository->pageForMonth($user, $september, null), 'id'),
         );
     }

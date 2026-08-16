@@ -18,9 +18,11 @@ use Doctrine\Persistence\ManagerRegistry;
  * A previous review rejected a RecommendationRunHistoryRepository because it
  * existed only to hold a verbatim copy of findNewestForUser(), and the PHPMD
  * count that justified splitting it off was inflated by that duplicate. This
- * one holds five distinct queries, duplicates nothing, and moving them here
- * gives RecommendationRunRepository back the headroom PHPMD's ten-method
- * ceiling had run out of.
+ * one holds four distinct queries — pageForMonth(), spendTimeline(),
+ * totalCostNanoCredits() and historyForUser() — plus the private projection
+ * they share, duplicates nothing, and moving them here gives
+ * RecommendationRunRepository back the headroom PHPMD's ten-method ceiling
+ * had run out of.
  *
  * @extends ServiceEntityRepository<RecommendationRun>
  *
@@ -114,6 +116,33 @@ final class RecommendationRunHistoryRepository extends ServiceEntityRepository
             ->select('r.createdAt AS createdAt', 'r.providerUsage.costNanoCredits AS costNanoCredits')
             ->andWhere('r.user = :user')->setParameter('user', $user)
             ->orderBy('r.id', 'DESC')
+            ->getQuery()
+            ->getArrayResult();
+
+        return $rows;
+    }
+
+    /**
+     * The newest runs of one account as the history payload needs them:
+     * scalars, newest first, capped at HISTORY_LIMIT.
+     *
+     * Deliberately not entities. A RecommendationRun carries the frozen
+     * candidate pool, every batch winner with its free-text reason, the last
+     * rejected provider reply and the error text — fifty of those decoded and
+     * put under the EntityManager to format twelve numbers is work the
+     * settings page would pay on every load, on a host that has neither
+     * response compression nor memory to spare.
+     *
+     * Task 5 deletes this once the month-section routes replace it.
+     *
+     * @return list<HistoryRow>
+     */
+    public function historyForUser(User $user): array
+    {
+        /** @var list<HistoryRow> $rows */
+        $rows = $this->historyRowsFor($user)
+            ->orderBy('r.id', 'DESC')
+            ->setMaxResults(self::HISTORY_LIMIT)
             ->getQuery()
             ->getArrayResult();
 
