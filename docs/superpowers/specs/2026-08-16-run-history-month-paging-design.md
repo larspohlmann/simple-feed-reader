@@ -149,10 +149,15 @@ Month header labels render through `Intl.DateTimeFormat` on the active UI
 language, the same rule the row dates already follow — `DatePipe` renders
 `en-US` whatever the language is.
 
-On a completed run the overview refetches and replaces the newest month's rows.
-Already-expanded older months keep their loaded rows and stay open: a run that
-completes can only ever land in the current month, so their data cannot have
-changed.
+On a completed run the overview refetches, and the fresh first page of the newest
+month is merged over the pages the reader had already loaded rather than
+replacing them — a reader who paged twice keeps their rows and their cursor. The
+newest page is always a strict prefix by id, so the merge is ordered and cannot
+duplicate a row.
+
+Already-expanded older months keep their loaded rows and stay open for a
+different reason: a run that completes can only ever land in the current month,
+so their data cannot have changed at all.
 
 ### 6. Cost renders as a dollar figure
 
