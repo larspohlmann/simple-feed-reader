@@ -16,6 +16,21 @@ use Doctrine\ORM\Mapping as ORM;
  * The candidate pool is frozen at snapshot time so that a resumed run retries
  * the exact failed batch (#308); history is deliberately NOT frozen — it only
  * shades the prompt.
+ *
+ * The eleventh public method is stampProvider() (#409): the class was
+ * already at PHPMD's ten-method ceiling with ten legitimate, previously
+ * reviewed state transitions (snapshot, recordBatchWinners,
+ * recordInvalidReply, recordTransportFailure, complete, fail, cancel,
+ * resume, progress, plus the constructor), none of which is a duplicate a
+ * merge could remove. stampProvider is a binding part of #409's public
+ * interface — RecommendationRunAdvancer stamps the run before every call —
+ * so it cannot be renamed to match the rule's get/set ignore pattern, and
+ * moving it onto ProviderUsage would only relocate the same call, not
+ * remove it. The seven columns behind it are already off this class as a
+ * ProviderUsage embeddable, which is the fix the field-count half of this
+ * same finding was pointing at.
+ *
+ * @SuppressWarnings("PHPMD.TooManyPublicMethods")
  */
 #[ORM\Entity(repositoryClass: RecommendationRunRepository::class)]
 #[ORM\Table(name: 'recommendation_run')]
@@ -101,10 +116,14 @@ class RecommendationRun
     #[ORM\Column(options: ['default' => 0])]
     private int $streamedChars = 0;
 
+    #[ORM\Embedded(class: ProviderUsage::class, columnPrefix: false)]
+    private ProviderUsage $providerUsage;
+
     public function __construct(User $user, \DateTimeImmutable $createdAt)
     {
         $this->user = $user;
         $this->createdAt = $createdAt;
+        $this->providerUsage = new ProviderUsage();
     }
 
     public function getId(): ?int
@@ -241,6 +260,51 @@ class RecommendationRun
     public function getStreamedChars(): int
     {
         return $this->streamedChars;
+    }
+
+    /**
+     * Records which provider and model this run is about to use. Called at
+     * start and again at resume, so a run resumed after the account switched
+     * models is stamped with the model it will actually call.
+     */
+    public function stampProvider(?string $providerHost, ?string $model): void
+    {
+        $this->providerUsage->stamp($providerHost, $model);
+    }
+
+    public function getProviderHost(): ?string
+    {
+        return $this->providerUsage->getProviderHost();
+    }
+
+    public function getModel(): ?string
+    {
+        return $this->providerUsage->getModel();
+    }
+
+    public function getPromptTokens(): int
+    {
+        return $this->providerUsage->getPromptTokens();
+    }
+
+    public function getCompletionTokens(): int
+    {
+        return $this->providerUsage->getCompletionTokens();
+    }
+
+    public function getReasoningTokens(): int
+    {
+        return $this->providerUsage->getReasoningTokens();
+    }
+
+    public function getCachedTokens(): int
+    {
+        return $this->providerUsage->getCachedTokens();
+    }
+
+    public function getCostNanoCredits(): ?int
+    {
+        return $this->providerUsage->getCostNanoCredits();
     }
 
     public function complete(\DateTimeImmutable $when): void

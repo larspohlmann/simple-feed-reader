@@ -321,6 +321,40 @@ final class RecommendationRunTest extends TestCase
         $run->recordInvalidReply('garbage');
     }
 
+    public function testStartsWithNoProviderAndNoSpend(): void
+    {
+        $run = $this->makeRun();
+
+        self::assertNull($run->getProviderHost());
+        self::assertNull($run->getModel());
+        self::assertSame(0, $run->getPromptTokens());
+        self::assertSame(0, $run->getCompletionTokens());
+        self::assertSame(0, $run->getReasoningTokens());
+        self::assertSame(0, $run->getCachedTokens());
+        self::assertNull($run->getCostNanoCredits());
+    }
+
+    public function testStampsTheProviderItWillCall(): void
+    {
+        $run = $this->makeRun();
+
+        $run->stampProvider('openrouter.ai', 'x-ai/grok-4-fast');
+
+        self::assertSame('openrouter.ai', $run->getProviderHost());
+        self::assertSame('x-ai/grok-4-fast', $run->getModel());
+    }
+
+    public function testRestampsWhenTheConfigurationChangedBeforeAResume(): void
+    {
+        $run = $this->makeRun();
+
+        $run->stampProvider('openrouter.ai', 'x-ai/grok-4-fast');
+        $run->stampProvider('localhost', 'bonsai-27b');
+
+        self::assertSame('localhost', $run->getProviderHost());
+        self::assertSame('bonsai-27b', $run->getModel());
+    }
+
     private function makeRun(): RecommendationRun
     {
         $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
