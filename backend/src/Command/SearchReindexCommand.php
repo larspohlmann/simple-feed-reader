@@ -8,6 +8,7 @@ use App\Repository\EntryRepository;
 use App\Service\Search\EntryIndexer;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Index\SearchIndexWriter;
+use App\Service\Search\SearchEngineCapability;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -65,7 +66,7 @@ final class SearchReindexCommand extends Command
         private readonly SearchIndexWriter $writer,
         private readonly EntryRepository $entries,
         private readonly EntityManagerInterface $em,
-        private readonly string $engineUrl,
+        private readonly SearchEngineCapability $capability,
         private readonly int $batchSize = self::BATCH_SIZE,
     ) {
         parent::__construct();
@@ -75,7 +76,7 @@ final class SearchReindexCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        if ('' === $this->engineUrl) {
+        if (!$this->capability->isConfigured()) {
             $io->error('No search engine is configured (MEILISEARCH_URL is empty); there is nothing to rebuild.');
 
             return Command::FAILURE;

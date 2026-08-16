@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Search;
 
-use App\Service\Search\EntrySearchWithFallback;
-use App\Service\Search\Index\MeilisearchIndex;
+use App\Service\Search\SearchEngineCapability;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
@@ -22,6 +21,13 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  * service), and giving the same test a different verdict depending on which
  * of the two database legs ran it.
  *
+ * SearchEngineCapability (#432 "Simplify") is now the ONE place that reads
+ * MEILISEARCH_URL/MEILISEARCH_KEY — MeilisearchIndex, EntrySearchWithFallback
+ * and SearchReindexCommand all resolve "is an engine configured?" through it,
+ * so asserting its container-wired instance is enough to cover every
+ * consumer; there is no second copy of the env read left to check
+ * separately.
+ *
  * This asserts the actual wiring, not just the raw environment, so it fails
  * for the reason that matters: a real engine reachable from a test. A real
  * MEILISEARCH_URL/MEILISEARCH_KEY set by a compose file, a CI job or a
@@ -35,39 +41,17 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  */
 final class SearchEngineDisabledInTestEnvironmentTest extends KernelTestCase
 {
-    public function testTheFallbackDeciderSeesNoEngineConfigured(): void
+    public function testTheCapabilitySeesNoEngineConfigured(): void
     {
         self::bootKernel();
 
-        $fallback = self::getContainer()->get(EntrySearchWithFallback::class);
-        $engineUrl = (new \ReflectionProperty(EntrySearchWithFallback::class, 'engineUrl'))->getValue($fallback);
+        $capability = self::getContainer()->get(SearchEngineCapability::class);
 
-        self::assertSame(
-            '',
-            $engineUrl,
-            'EntrySearchWithFallback was wired with a real engine URL inside the test '
-            . 'environment — every search test would silently hit a live Meilisearch '
-            . 'instead of the database fallback the tests assume.',
-        );
-    }
-
-    public function testTheIndexAdapterSeesNoEngineConfigured(): void
-    {
-        self::bootKernel();
-
-        $index = self::getContainer()->get(MeilisearchIndex::class);
-        $baseUrl = (new \ReflectionProperty(MeilisearchIndex::class, 'baseUrl'))->getValue($index);
-        $apiKey = (new \ReflectionProperty(MeilisearchIndex::class, 'apiKey'))->getValue($index);
-
-        self::assertSame(
-            '',
-            $baseUrl,
-            'MeilisearchIndex was wired with a real base URL inside the test environment.',
-        );
-        self::assertSame(
-            '',
-            $apiKey,
-            'MeilisearchIndex was wired with a real API key inside the test environment.',
+        self::assertFalse(
+            $capability->isConfigured(),
+            'SearchEngineCapability resolved a configured engine inside the test environment — '
+            . 'every search test would silently hit a live Meilisearch instead of the database '
+            . 'fallback the tests assume.',
         );
     }
 }

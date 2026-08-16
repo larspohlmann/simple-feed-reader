@@ -10,6 +10,7 @@ use App\Entity\Feed;
 use App\Repository\EntryRepository;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Index\SearchIndexWriter;
+use App\Service\Search\SearchEngineCapability;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use Symfony\Component\Console\Command\Command;
@@ -67,7 +68,8 @@ final class SearchReindexCommandTest extends DbTestCase
         /** @var EntryRepository $entryRepository */
         $entryRepository = self::getContainer()->get(EntryRepository::class);
 
-        $command = new SearchReindexCommand($writer, $entryRepository, $this->em, $engineUrl, $batchSize);
+        $capability = new SearchEngineCapability($engineUrl, '');
+        $command = new SearchReindexCommand($writer, $entryRepository, $this->em, $capability, $batchSize);
 
         return new CommandTester($command);
     }

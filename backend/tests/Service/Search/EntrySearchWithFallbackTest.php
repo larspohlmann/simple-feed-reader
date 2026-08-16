@@ -16,6 +16,7 @@ use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Index\SearchIndexReader;
 use App\Service\Search\IndexedEntrySearch;
 use App\Service\Search\LikeEntrySearch;
+use App\Service\Search\SearchEngineCapability;
 use App\Service\Search\SearchTerms;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FakeSearchIndexReader;
@@ -70,7 +71,7 @@ final class EntrySearchWithFallbackTest extends DbTestCase
             new IndexedEntrySearch($reader, $feedRepository, $entryRepository),
             new LikeEntrySearch($entryRepository),
             $logger,
-            $engineUrl,
+            new SearchEngineCapability($engineUrl, ''),
         );
     }
 

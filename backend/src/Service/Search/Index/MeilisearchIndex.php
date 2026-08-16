@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Search\Index;
 
 use App\Service\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Search\SearchEngineCapability;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -96,8 +97,7 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
 
     public function __construct(
         private HttpClientInterface $httpClient,
-        private string $baseUrl,
-        private string $apiKey,
+        private SearchEngineCapability $capability,
     ) {
     }
 
@@ -307,10 +307,10 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
     private function requestBody(string $method, string $path, array $options = []): string
     {
         try {
-            $response = $this->httpClient->request($method, $this->baseUrl . $path, [
+            $response = $this->httpClient->request($method, $this->capability->url() . $path, [
                 'headers' => [
                     'Accept' => 'application/json',
-                    'Authorization' => 'Bearer ' . $this->apiKey,
+                    'Authorization' => 'Bearer ' . $this->capability->key(),
                 ],
                 'timeout' => self::TIMEOUT_SECONDS,
                 'max_duration' => self::TIMEOUT_SECONDS,

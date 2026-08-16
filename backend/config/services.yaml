@@ -151,32 +151,6 @@ services:
         arguments:
             $projectDir: '%kernel.project_dir%'
 
-    # Both empty by default (backend/.env) — that is the "no engine, database
-    # answers searches" install, not a misconfiguration. See MeilisearchIndex
-    # for why an empty URL still autowires cleanly: it only fails, with
-    # SearchEngineUnavailableException, once something actually calls it.
-    App\Service\Search\Index\MeilisearchIndex:
-        arguments:
-            $baseUrl: '%env(MEILISEARCH_URL)%'
-            $apiKey: '%env(MEILISEARCH_KEY)%'
-
-    # Same env var as MeilisearchIndex's $baseUrl above, read a second time
-    # here rather than shared through a parameter: this is a different
-    # question ("is an engine configured at all?", decided once per search)
-    # from MeilisearchIndex's own ("what address do I talk to?", decided once
-    # per request to it). Both answers happen to come from the same setting.
-    App\Service\Search\EntrySearchWithFallback:
-        arguments:
-            $engineUrl: '%env(MEILISEARCH_URL)%'
-
-    # Same read a third time, same reasoning as EntrySearchWithFallback's
-    # comment above: "is an engine configured at all?" is app:search:reindex's
-    # own question, decided once per run, not sourced from MeilisearchIndex's
-    # $baseUrl.
-    App\Command\SearchReindexCommand:
-        arguments:
-            $engineUrl: '%env(MEILISEARCH_URL)%'
-
     # A child of the framework's http_client so the rot-check command holds its
     # own injectable client id. The point of the separate id is the test: it can
     # `set('catalog.rot_check.http_client', $mockClient)` to swap in a

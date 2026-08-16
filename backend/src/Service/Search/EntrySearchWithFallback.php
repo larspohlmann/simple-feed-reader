@@ -24,11 +24,10 @@ use Psr\Log\LoggerInterface;
  * The two failure modes below look alike from the caller's side but are not
  * the same story for an operator, so they are handled differently on purpose:
  *
- * - No engine configured ($engineUrl empty, from MEILISEARCH_URL) is the
- *   Strato deployment — permanent and correct, see MeilisearchIndex's own
- *   comment in services.yaml. Nothing is broken, so nothing is logged: a
- *   line per search on a correctly configured install is exactly the noise
- *   that buries a real incident later.
+ * - No engine configured (SearchEngineCapability::isConfigured() false) is
+ *   the Strato deployment — permanent and correct. Nothing is broken, so
+ *   nothing is logged: a line per search on a correctly configured install
+ *   is exactly the noise that buries a real incident later.
  * - An engine that IS configured but does not answer
  *   (SearchEngineUnavailableException) is a degraded state worth an
  *   operator's attention: exactly one warning, carrying the exception for
@@ -44,13 +43,13 @@ final readonly class EntrySearchWithFallback implements EntrySearchInterface
         private IndexedEntrySearch $engine,
         private LikeEntrySearch $database,
         private LoggerInterface $logger,
-        private string $engineUrl,
+        private SearchEngineCapability $capability,
     ) {
     }
 
     public function search(EntrySearchQuery $query): EntrySearchResult
     {
-        if ('' === $this->engineUrl) {
+        if (!$this->capability->isConfigured()) {
             return $this->database->search($query);
         }
 

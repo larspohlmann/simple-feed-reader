@@ -9,6 +9,7 @@ use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Index\IndexedEntry;
 use App\Service\Search\Index\IndexSearch;
 use App\Service\Search\Index\MeilisearchIndex;
+use App\Service\Search\SearchEngineCapability;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -24,7 +25,7 @@ final class MeilisearchIndexTest extends TestCase
 
     private function index(MockHttpClient $client): MeilisearchIndex
     {
-        return new MeilisearchIndex($client, self::BASE_URL, self::API_KEY);
+        return new MeilisearchIndex($client, new SearchEngineCapability(self::BASE_URL, self::API_KEY));
     }
 
     private function search(): IndexSearch
