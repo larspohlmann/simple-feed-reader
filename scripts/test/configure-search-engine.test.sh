@@ -22,6 +22,22 @@ set -euo pipefail
 # decision on file to read back), prod-configure.sh always passes
 # current_search_engine_choice (whatever MEILISEARCH_URL already says).
 #
+# A fourth thing has to hold since the code-review fix for issue #432: a
+# TERMINAL-LESS run must not silently no-op onto "no". install.sh's own
+# header promises a default of yes, and the documented two-step flow (write
+# .env.prod, stop for the mail question, finish later in a real terminal) has
+# no terminal for this very question either -- so without a terminal the
+# function must actively apply the default it was given, the same default a
+# terminal would have offered. That keeps the re-ask guarantee too: applying
+# a default can never invent a decision, so a headless re-ask still cannot
+# turn on an engine the operator declined.
+#
+# A fifth and separate thing, unrelated to prompting: prod_uses_search_engine
+# must agree with the backend's SearchEngineCapability::isConfigured() about
+# what "configured" means, including its trim() -- a whitespace-only
+# MEILISEARCH_URL (only reachable by hand-editing .env.prod) must not read as
+# configured here while the backend refuses to talk to it.
+#
 # The real prompts read /dev/tty. They are replaced here with a canned answer
 # queue, where an empty answer means "press return".
 
@@ -136,13 +152,56 @@ configure_search_engine 'y' > /dev/null 2>&1
 assert_env MEILISEARCH_KEY 'existing-key'
 assert_env MEILISEARCH_URL 'http://meilisearch:7700'
 
-# --- 6. an unreadable terminal changes nothing -------------------------------
-# The piped, question-less install stops before starting anyway; it must not
-# invent a search-engine choice on the way.
+# --- 6. an unreadable terminal REAPPLIES the current decision, changing ----
+# nothing when the caller's default already matches it. Distinct from
+# configure_database: there, doing nothing and choosing the default are the
+# same outcome, so an early return is correct. Here they are not, so the
+# headless path must actively apply the default -- this case only proves that
+# applying an unchanged decision is itself a no-op.
 can_prompt() { return 1; }
 printf 'DATABASE_URL=\nMEILISEARCH_URL=http://meilisearch:7700\nMEILISEARCH_KEY=existing-key\n' > "${ENV_PROD_FILE}"
 configure_search_engine 'y' > /dev/null 2>&1
 assert_env MEILISEARCH_URL 'http://meilisearch:7700'
 assert_env MEILISEARCH_KEY 'existing-key'
+
+# --- 7. headless install.sh lands on the promised default -------------------
+# The documented two-step flow: a piped install writes .env.prod, then stops
+# because mail needs a human. Before this fix, configure_search_engine's early
+# return left MEILISEARCH_URL empty here too -- indistinguishable from a
+# decline -- so the LATER prod-configure.sh run (in a real terminal) offered
+# the question defaulted to no, contradicting install.sh's own "default yes"
+# header. install.sh always passes the literal 'y' for exactly this case (see
+# its own call site), so a fresh, empty .env.prod must come out configured.
+can_prompt() { return 1; }
+printf 'DATABASE_URL=\nMEILISEARCH_URL=\nMEILISEARCH_KEY=\n' > "${ENV_PROD_FILE}"
+configure_search_engine 'y' > /dev/null 2>&1
+assert_env MEILISEARCH_URL 'http://meilisearch:7700'
+[ -n "$(env_prod_get MEILISEARCH_KEY)" ] || fail 'a headless install must land on the promised default and generate a key'
+prod_uses_search_engine || fail 'a headless install must land on the promised default (enabled)'
+
+# --- 8. headless re-configure still cannot flip a stored "no" to "yes" ------
+# prod-configure.sh itself refuses to run without a terminal (it dies), so
+# this cannot happen through the real CLI -- but the property the fix must
+# keep is in configure_search_engine's own contract: applying a DEFAULT can
+# never re-decide anything, headless or not. Simulate the call the same way
+# prod-configure.sh makes it (default = current_search_engine_choice) against
+# an instance that already said no, with no terminal to ask on.
+can_prompt() { return 1; }
+printf 'DATABASE_URL=\nMEILISEARCH_URL=\nMEILISEARCH_KEY=\n' > "${ENV_PROD_FILE}"
+configure_search_engine "$(current_search_engine_choice)" > /dev/null 2>&1
+assert_env MEILISEARCH_URL ''
+if prod_uses_search_engine; then
+  fail 'a headless re-ask must not turn on an engine the operator declined'
+fi
+
+# --- 9. whitespace-only MEILISEARCH_URL does not count as configured --------
+# The backend trims before checking (SearchEngineCapability::isConfigured()),
+# so the shell has to agree -- otherwise a hand-edited .env.prod holding only
+# whitespace starts a container the app will never talk to.
+printf 'DATABASE_URL=\nMEILISEARCH_URL=   \nMEILISEARCH_KEY=\n' > "${ENV_PROD_FILE}"
+if prod_uses_search_engine; then
+  fail 'a whitespace-only MEILISEARCH_URL must not count as configured'
+fi
+assert_profiles 'mysql'
 
 printf 'ok: configure_search_engine\n'

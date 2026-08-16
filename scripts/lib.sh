@@ -362,14 +362,31 @@ prod_uses_bundled_mysql() {
   [ -z "$(env_prod_get DATABASE_URL)" ]
 }
 
+# Trim leading and trailing whitespace -- POSIX character-class parameter
+# expansion, no external process. Used below so the shell's idea of "empty"
+# matches PHP's trim(), the way SearchEngineCapability::isConfigured() defines
+# it (backend/src/Service/Search/SearchEngineCapability.php).
+trim_whitespace() {
+  local value=$1
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  printf '%s' "${value}"
+}
+
 # Whether the stack runs the bundled Meilisearch container. A non-empty
 # MEILISEARCH_URL means it does -- docker-compose.prod.yml puts the
 # meilisearch service behind that profile, the same way prod_uses_bundled_mysql
 # reads DATABASE_URL above. Empty is the default and is a fully working state,
 # not a degraded one: EntrySearchWithFallback answers every search from the
 # database when no engine is configured (see backend/config/services.yaml).
+#
+# Trimmed before the emptiness check, matching
+# SearchEngineCapability::isConfigured() on the PHP side: a whitespace-only
+# value (only reachable by hand-editing .env.prod) must not read as configured
+# here while the backend refuses to talk to it -- that mismatch would start a
+# container the app never uses.
 prod_uses_search_engine() {
-  [ -n "$(env_prod_get MEILISEARCH_URL)" ]
+  [ -n "$(trim_whitespace "$(env_prod_get MEILISEARCH_URL)")" ]
 }
 
 # The compose profiles the stack runs with: 'mysql' for the bundled database,
@@ -394,6 +411,35 @@ prod_compose() {
       && COMPOSE_PROFILES="$(prod_compose_profiles)" \
          docker compose -p "${PROD_PROJECT_NAME}" -f docker-compose.prod.yml \
            --env-file .env.prod "$@" ) < /dev/null
+}
+
+# `docker compose up -d` only STARTS services that are in the active
+# profiles -- it never stops one that has just fallen OUT of them, and
+# nothing else in this flow calls `down` or `rm`. Without this, declining the
+# search engine on a re-configure leaves its container running (consuming
+# memory and disk) while prod_search_engine_description tells the operator it
+# is off. prod-start.sh calls this on every run, after `up`, so the container
+# always matches the current MEILISEARCH_URL decision by the time the summary
+# is printed.
+#
+# Naming the service explicitly targets it even though 'meilisearch' is not
+# in COMPOSE_PROFILES for this call -- verified against a throwaway compose
+# project before relying on it, since compose's profile rules are easy to
+# get wrong. `rm -sf` stops it first, then removes the container; without
+# `-v` it never removes a volume, named or anonymous, so meili-data survives
+# whether or not the container existed. No container at all -- the common
+# case, an install that never enabled the engine -- is a no-op that still
+# exits 0, which `service_running`-style status checks would not be: it looks
+# for a RUNNING container, and a stopped-but-not-removed one would slip past.
+stop_disabled_search_engine_container() {
+  if prod_uses_search_engine; then
+    return 0
+  fi
+  if [ -z "$(prod_compose ps -aq meilisearch 2>/dev/null)" ]; then
+    return 0
+  fi
+  say 'The search engine is disabled -- removing its container (the meili-data volume is kept) ...'
+  prod_compose rm -sf meilisearch >/dev/null
 }
 
 # --- what an earlier production install leaves behind -----------------------
@@ -1197,6 +1243,17 @@ use_bundled_mysql_database() {
 configure_search_engine() {
   local default=$1 choice
   if ! can_prompt; then
+    # Unlike configure_database (whose default IS the empty/do-nothing state),
+    # a silent no-op here always lands on "no": an empty MEILISEARCH_URL is
+    # indistinguishable from a decline. install.sh's own header promises a
+    # default of yes, and the piped two-step install (write .env.prod, stop
+    # for the mail question, finish later in a real terminal) must land there
+    # too -- so apply the caller's default explicitly instead of doing
+    # nothing. It is still just the default being applied, so a re-ask
+    # (prod-configure.sh, default = current_search_engine_choice) still
+    # cannot flip a stored decision: it only ever re-applies what is already
+    # configured.
+    apply_search_engine_choice "${default}"
     return 0
   fi
   say 'Enable full-content search?'
@@ -1206,7 +1263,13 @@ configure_search_engine() {
   tell '  no extra container -- the right choice on shared hosting, or any'
   tell '  machine that cannot run one.'
   choice=$(prompt_with_default 'Enable search engine? (y/n)' "${default}")
-  case "${choice}" in
+  apply_search_engine_choice "${choice}"
+}
+
+# The y/n answer applied, shared by the interactive path above and the
+# headless default. Kept separate so headless never repeats the prompt logic.
+apply_search_engine_choice() {
+  case "$1" in
     [nN]*)
       use_database_search
       ;;

@@ -65,6 +65,12 @@ fi
 run_step 'Building and starting the production stack (the first build takes a few minutes)' \
   prod_compose up -d --build
 
+# `up` only starts what is in the active profiles; it never stops the search
+# engine's container when the operator has just declined it, so this runs on
+# every start to keep the container in step with MEILISEARCH_URL -- see
+# stop_disabled_search_engine_container in lib.sh.
+stop_disabled_search_engine_container
+
 # The web entrypoint picks HTTP or TLS mode by checking docker/certs-prod/
 # once, at container start. That directory is a bind mount, so dropping
 # certificates in (or removing them) changes the host files but not the
