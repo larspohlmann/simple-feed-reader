@@ -126,7 +126,7 @@ export class ReaderViewComponent {
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
   private readonly scroll = inject(ListScrollMemory);
-  private readonly screen = inject(LayoutService);
+  protected readonly screen = inject(LayoutService);
   private readonly destroyRef = inject(DestroyRef);
 
   // Article scroll restore: a browser resume-reload reopens the entry from the URL
