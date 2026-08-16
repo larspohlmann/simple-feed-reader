@@ -28,5 +28,23 @@
         </li>
       }
     </ul>
+
+    <!-- Explains the mobile row's icon-only status column (#409: "add a
+         legend"). Desktop already spells the status word out, so this would
+         explain nothing there -- hidden above the breakpoint in the
+         stylesheet. -->
+    <div class="run-history__legend">
+      <p class="run-history__legend-heading">
+        {{ 'settings.ai.recommendations.historyLegend' | transloco }}
+      </p>
+      <ul class="run-history__legend-list">
+        @for (status of legendStatuses; track status) {
+          <li class="run-history__legend-item run-history__legend-item--{{ status }}">
+            <app-icon [name]="statusIcon(status)" size="sm" />
+            <span>{{ status }}</span>
+          </li>
+        }
+      </ul>
+    </div>
   </app-settings-card>
 }

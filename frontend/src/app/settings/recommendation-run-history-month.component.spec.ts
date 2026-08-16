@@ -209,29 +209,104 @@ describe('RecommendationRunHistoryMonthComponent', () => {
     ).toContain('deepseek/deepseek-v4-pro');
   });
 
-  it('renders the six column headers, hidden from assistive tech behind the per-cell labels', () => {
+  it('renders the six row-1 column headers, hidden from assistive tech, and no provider header', () => {
     const el = mount({ runs: [PRICED_RUN] });
     const header = el.querySelector('.run-history-month__row--header') as HTMLElement;
 
     expect(header.getAttribute('aria-hidden')).toBe('true');
     expect(header.querySelector('.run-history-month__when')?.textContent?.trim()).toBe('When');
-    expect(header.querySelector('.run-history-month__provider')?.textContent?.trim()).toBe(
-      'Provider',
-    );
     expect(header.querySelector('.run-history-month__status')?.textContent?.trim()).toBe('Status');
     expect(header.querySelector('.run-history-month__duration')?.textContent?.trim()).toBe('Time');
-    expect(header.querySelector('.run-history-month__tokens')?.textContent?.trim()).toBe('Tokens');
+    expect(header.querySelector('.run-history-month__tokens-in')?.textContent?.trim()).toBe(
+      'Tokens in',
+    );
+    expect(header.querySelector('.run-history-month__tokens-out')?.textContent?.trim()).toBe(
+      'Tokens out',
+    );
     expect(header.querySelector('.run-history-month__cost')?.textContent?.trim()).toBe('Cost');
+    // The provider cell moved to its own full-width row 2 and has no column
+    // header of its own -- see the provider-cell test below.
+    expect(header.querySelector('.run-history-month__provider')).toBeNull();
   });
 
-  it('gives every row cell a label carrying that column’s name', () => {
+  it('gives every row cell a label carrying that column’s name, provider included', () => {
     const el = mount({ runs: [PRICED_RUN] });
     const row = el.querySelector('.run-history-month__row:not(.run-history-month__row--header)');
     const labels = Array.from(row?.querySelectorAll('.run-history-month__cell-label') ?? []).map(
       (label) => label.textContent?.trim(),
     );
 
-    expect(labels).toEqual(['When', 'Provider', 'Status', 'Time', 'Tokens', 'Cost']);
+    expect(labels).toEqual([
+      'When',
+      'Status',
+      'Time',
+      'Tokens in',
+      'Tokens out',
+      'Cost',
+      'Provider',
+    ]);
+  });
+
+  it('renders the provider cell last, on its own full-width row, carrying its own label', () => {
+    const el = mount({ runs: [PRICED_RUN] });
+    const row = el.querySelector('.run-history-month__list .run-history-month__row') as HTMLElement;
+    const cells = Array.from(row.children);
+
+    // Row 1's six named cells, then the provider cell -- grid auto-placement
+    // (default `grid-auto-flow: row`) puts the seventh item into an implicit
+    // row 2 once row 1's six explicit columns are full, and `&__provider`'s
+    // `grid-column: 1 / -1` widens what lands there to span it.
+    expect((cells.at(-1) as HTMLElement).classList.contains('run-history-month__provider')).toBe(
+      true,
+    );
+    const providerLabel = (cells.at(-1) as HTMLElement).querySelector(
+      '.run-history-month__cell-label',
+    );
+    expect(providerLabel?.textContent?.trim()).toBe('Provider');
+  });
+
+  it('renders tokens in and tokens out as separate cells holding bare numbers', () => {
+    const el = mount({ runs: [PRICED_RUN] });
+    const tokensInCell = el.querySelector(
+      '.run-history-month__list .run-history-month__tokens-in',
+    ) as HTMLElement;
+    const tokensOutCell = el.querySelector(
+      '.run-history-month__list .run-history-month__tokens-out',
+    ) as HTMLElement;
+    const tokensInLabel = tokensInCell.querySelector(
+      '.run-history-month__cell-label',
+    ) as HTMLElement;
+    const tokensOutLabel = tokensOutCell.querySelector(
+      '.run-history-month__cell-label',
+    ) as HTMLElement;
+
+    // PRICED_RUN.promptTokens = 118432, PRICED_RUN.completionTokens = 2216 --
+    // bare figures, no "in"/"out" wording left in the value now that the
+    // column header names which is which.
+    expect(
+      (tokensInCell.textContent ?? '').replace(tokensInLabel.textContent ?? '', '').trim(),
+    ).toBe('118432');
+    expect(
+      (tokensOutCell.textContent ?? '').replace(tokensOutLabel.textContent ?? '', '').trim(),
+    ).toBe('2216');
+  });
+
+  it('renders the icon matching the row status', () => {
+    const el = mount({ runs: [PRICED_RUN] }); // status: 'completed'
+
+    const icon = el.querySelector(
+      '.run-history-month__list .run-history-month__status-icon .material-symbols-outlined',
+    );
+
+    expect(icon?.textContent?.trim()).toBe('check_circle');
+  });
+
+  it('keeps the raw status word in the DOM for assistive technology, alongside the icon', () => {
+    const el = mount({ runs: [PRICED_RUN] });
+
+    const word = el.querySelector('.run-history-month__list .run-history-month__status-word');
+
+    expect(word?.textContent?.trim()).toBe('completed');
   });
 
   it('hides "show more" when the month has no further page', () => {

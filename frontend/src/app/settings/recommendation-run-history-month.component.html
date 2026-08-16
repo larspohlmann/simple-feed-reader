@@ -9,16 +9,16 @@
 
   @if (runs(); as rows) {
     <div class="run-history-month__wrap">
-      <!-- Shares the row grid by carrying the same `&__row` class the rows
-           below use, so the columns cannot drift out of alignment with it.
-           aria-hidden: the per-cell labels below carry the real semantics for
-           assistive tech, so this strip would only double-announce them. -->
+      <!-- Names row 1 of the grid below -- there is no header for the
+           provider cell, which sits on its own full-width row 2 and carries
+           its own `&__cell-label` instead (#409). Shares the row grid by
+           carrying the same `&__row` class the rows below use, so the columns
+           cannot drift out of alignment with it. aria-hidden: the per-cell
+           labels below carry the real semantics for assistive tech, so this
+           strip would only double-announce them. -->
       <div class="run-history-month__row run-history-month__row--header" aria-hidden="true">
         <span class="run-history-month__when">
           {{ 'settings.ai.recommendations.historyColWhen' | transloco }}
-        </span>
-        <span class="run-history-month__provider">
-          {{ 'settings.ai.recommendations.historyColProvider' | transloco }}
         </span>
         <span class="run-history-month__status">
           {{ 'settings.ai.recommendations.historyColStatus' | transloco }}
@@ -26,8 +26,11 @@
         <span class="run-history-month__duration">
           {{ 'settings.ai.recommendations.historyColDuration' | transloco }}
         </span>
-        <span class="run-history-month__tokens">
-          {{ 'settings.ai.recommendations.historyColTokens' | transloco }}
+        <span class="run-history-month__tokens-in">
+          {{ 'settings.ai.recommendations.historyColTokensIn' | transloco }}
+        </span>
+        <span class="run-history-month__tokens-out">
+          {{ 'settings.ai.recommendations.historyColTokensOut' | transloco }}
         </span>
         <span class="run-history-month__cost">
           {{ 'settings.ai.recommendations.historyColCost' | transloco }}
@@ -43,17 +46,15 @@
               </span>
               {{ day(run) }} {{ time(run) }}
             </span>
-            <span class="run-history-month__provider">
-              <span class="run-history-month__cell-label">
-                {{ 'settings.ai.recommendations.historyColProvider' | transloco }}
-              </span>
-              {{ provider(run) }}
-            </span>
             <span class="run-history-month__status run-history-month__status--{{ run.status }}">
               <span class="run-history-month__cell-label">
                 {{ 'settings.ai.recommendations.historyColStatus' | transloco }}
               </span>
-              {{ run.status }}
+              <!-- Decorative on both sides of the breakpoint (`<app-icon>`
+                   marks its own glyph aria-hidden) -- the word beside it, not
+                   the icon, is what a screen reader announces either way. -->
+              <app-icon class="run-history-month__status-icon" [name]="statusIcon(run)" size="sm" />
+              <span class="run-history-month__status-word">{{ run.status }}</span>
             </span>
             <span class="run-history-month__duration">
               <span class="run-history-month__cell-label">
@@ -63,20 +64,33 @@
                 {{ duration(run) }}
               }
             </span>
-            <span class="run-history-month__tokens">
+            <span class="run-history-month__tokens-in">
               <span class="run-history-month__cell-label">
-                {{ 'settings.ai.recommendations.historyColTokens' | transloco }}
+                {{ 'settings.ai.recommendations.historyColTokensIn' | transloco }}
               </span>
-              {{
-                'settings.ai.recommendations.historyTokens'
-                  | transloco: { prompt: run.promptTokens, completion: run.completionTokens }
-              }}
+              {{ run.promptTokens }}
+            </span>
+            <span class="run-history-month__tokens-out">
+              <span class="run-history-month__cell-label">
+                {{ 'settings.ai.recommendations.historyColTokensOut' | transloco }}
+              </span>
+              {{ run.completionTokens }}
             </span>
             <span class="run-history-month__cost">
               <span class="run-history-month__cell-label">
                 {{ 'settings.ai.recommendations.historyColCost' | transloco }}
               </span>
               {{ cost(run.costNanoCredits) }}
+            </span>
+            <!-- Row 2: the full grid width, not one of row 1's six tracks --
+                 see `&__provider` in the stylesheet. Its own label is the
+                 only thing naming this cell, above the breakpoint as well as
+                 below it, since there is no column header for it. -->
+            <span class="run-history-month__provider">
+              <span class="run-history-month__cell-label">
+                {{ 'settings.ai.recommendations.historyColProvider' | transloco }}
+              </span>
+              {{ provider(run) }}
             </span>
           </li>
         }

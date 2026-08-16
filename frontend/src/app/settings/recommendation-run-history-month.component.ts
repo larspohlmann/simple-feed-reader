@@ -5,6 +5,8 @@ import { formatCost, formatDayInMonth, formatDuration, formatTime } from '../rea
 import { RunHistoryRow } from '../reader/models';
 import { LanguageService } from '../core/language.service';
 import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
+import { IconComponent } from '../shared/icon/icon.component';
+import { runHistoryStatusIcon } from './run-history-status-icon';
 
 /** One month of the run-history card (#409): a header carrying that month's
  *  own run count and spend, and -- once the parent has fetched them -- its
@@ -21,7 +23,7 @@ import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
 @Component({
   selector: 'app-recommendation-run-history-month',
   standalone: true,
-  imports: [DisclosureComponent, TranslocoModule],
+  imports: [DisclosureComponent, IconComponent, TranslocoModule],
   templateUrl: './recommendation-run-history-month.component.html',
   styleUrl: './recommendation-run-history-month.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -97,6 +99,12 @@ export class RecommendationRunHistoryMonthComponent {
    *  template renders nothing rather than a zero that would read as instant. */
   duration(run: RunHistoryRow): string | null {
     return run.durationSeconds === null ? null : formatDuration(run.durationSeconds);
+  }
+
+  /** The Material Symbol standing in for the raw status word on mobile --
+   *  shared with the legend's own icon so the two cannot disagree (#409). */
+  statusIcon(run: RunHistoryRow): string {
+    return runHistoryStatusIcon(run.status);
   }
 
   showMoreLabel(): string {

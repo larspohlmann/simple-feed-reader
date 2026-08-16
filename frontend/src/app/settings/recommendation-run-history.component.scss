@@ -1,8 +1,10 @@
+@use '../theme/breakpoints' as bp;
+
 /* The spending record above the debug log: a total line, then one collapsible
    section per month (#409). The row grid each section renders moved with the
    markup to `recommendation-run-history-month.component.scss`; this file only
-   owns the total and the list of month sections. Its own `app-settings-card`,
-   a sibling of the recommendations card. */
+   owns the total, the list of month sections, and the mobile status legend.
+   Its own `app-settings-card`, a sibling of the recommendations card. */
 :host {
   display: block;
 }
@@ -53,6 +55,59 @@
 
     &:last-child {
       border-bottom: none;
+    }
+  }
+
+  /* Decodes the mobile row's icon-only status column (#409). Desktop already
+     spells the word out in every row, so a legend there would explain a
+     column that needs no explaining -- shown only at the width the row grid
+     itself switches to icons. */
+  &__legend {
+    display: none;
+
+    @media (width <= bp.$bp-sm) {
+      display: block;
+      margin-block-start: var(--space-3);
+    }
+  }
+
+  &__legend-heading {
+    margin: 0 0 var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  &__legend-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Same three colours as the row's own `&__status` modifiers, in
+     `recommendation-run-history-month.component.scss` -- kept as a second,
+     short copy rather than a shared mixin because view encapsulation puts the
+     two rules in different stylesheets, and three colour lines are not worth
+     a cross-component dependency between them. The icon-to-status mapping
+     itself has no second copy -- see `run-history-status-icon.ts`. */
+  &__legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--text-secondary);
+    font-size: var(--fs-xs);
+
+    &--completed {
+      color: var(--success);
+    }
+
+    &--failed,
+    &--cancelled {
+      color: var(--danger);
     }
   }
 }

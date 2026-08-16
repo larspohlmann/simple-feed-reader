@@ -422,6 +422,39 @@ describe('RecommendationRunHistoryComponent', () => {
   /** The effect re-fires on every completed run, so an endpoint that stays
    *  broken would throw once per run for as long as the settings page is open.
    *  The sections already on screen stay. */
+  it('renders the status legend once in the card, covering all five statuses', () => {
+    const el = mount(OVERVIEW);
+
+    expect(el.querySelectorAll('.run-history__legend')).toHaveLength(1);
+    const items = el.querySelectorAll('.run-history__legend-item');
+    expect(items).toHaveLength(5);
+    // Scoped to the item's own direct-child `<span>`, not the whole `<li>`
+    // (which also holds the icon's own glyph text, e.g. "check_circle") and
+    // not `<app-icon>`'s internal span, which `querySelector('span')` would
+    // find first since it comes before the word in document order.
+    const words = Array.from(items).map((item) =>
+      item.querySelector(':scope > span')?.textContent?.trim(),
+    );
+    expect(words).toEqual(['completed', 'failed', 'cancelled', 'running', 'pending']);
+  });
+
+  /** The row's status icon and the legend's icon for the same status must be
+   *  the exact same glyph -- both read `run-history-status-icon.ts`'s one
+   *  map, so a change there cannot leave the two disagreeing (#409). */
+  it('agrees with the row on the icon for a shared status', () => {
+    const el = mount(OVERVIEW); // OVERVIEW's newest month has one completed run
+
+    const rowIcon = el.querySelector(
+      '.run-history-month__list .run-history-month__status-icon .material-symbols-outlined',
+    );
+    const legendIcon = el.querySelector(
+      '.run-history__legend-item--completed .material-symbols-outlined',
+    );
+
+    expect(rowIcon?.textContent?.trim()).not.toBe('');
+    expect(rowIcon?.textContent?.trim()).toBe(legendIcon?.textContent?.trim());
+  });
+
   it('leaves the sections standing when a re-fetch fails, and does not throw', () => {
     jest.useFakeTimers();
     const el = mount(OVERVIEW);

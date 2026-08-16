@@ -1,15 +1,45 @@
 @use '../theme/breakpoints' as bp;
 
-/* One month of the spending record (#409). The row grid -- `when | provider ·
-   model | status | duration | tokens | cost` -- moved here wholesale from the
-   flat card this replaced; the header line and the "show more" control are
-   new. The header is projected into `app-disclosure`'s `[summary]` slot,
-   whose `summary.is-row` rule already carries `--row-pad-comfy-y/x` -- adding
-   the same padding here would double it, so `&__header` stays unpadded and
-   only the body content below it (`&__wrap`, `&__loading`, `&__more`) insets
-   itself to match. */
+/* One month of the spending record (#409). Each `&__row` is a 6-column,
+   2-row grid: row 1 carries `when | status | time | tokens in | tokens out |
+   cost`, row 2 is the provider cell alone, spanning the full width. Moved
+   there in a follow-up to this month's first render, where the provider
+   shared row 1 as a `1fr` column and was too narrow for a real model id --
+   `overflow-wrap: anywhere` was breaking `openrouter.ai ·
+   deepseek/deepseek-v4-pro` into four lines mid-word. The header strip above
+   the list only ever names row 1; there is no PROVIDER header any more, so
+   the provider cell relies entirely on its own `&__cell-label`. The header is
+   projected into `app-disclosure`'s `[summary]` slot, whose `summary.is-row`
+   rule already carries `--row-pad-comfy-y/x` -- adding the same padding here
+   would double it, so `&__header` stays unpadded and only the body content
+   below it (`&__wrap`, `&__loading`, `&__more`) insets itself to match. */
 :host {
   display: block;
+}
+
+/* Shared by `&__cell-label` (hidden above the breakpoint, once the header
+   strip above the list is naming the column) and `&__status-word` (hidden
+   below it, once the status icon takes its place instead) -- the same
+   clipped-box technique at opposite ends of the same media query, written
+   once rather than twice. See `.sr-only` in theme/_utilities.scss for why
+   this exact shape (a near-zero box, not `display: none`, which would drop
+   the node from the accessibility tree in some browsers) and why it stays
+   local to this file rather than reusing that shared class: the media query
+   below has to override it back to visible from inside this file, and
+   overriding a shared class from here would make that override easy to miss
+   from either end. `rem`, not `.sr-only`'s `px`: Stylelint bans ad-hoc `px`
+   spacing outside `theme/`, and at this near-zero size the unit makes no
+   visible difference either way. */
+%visually-hidden {
+  position: absolute;
+  width: 0.0625rem;
+  height: 0.0625rem;
+  padding: 0;
+  margin: -0.0625rem;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .run-history-month {
@@ -58,12 +88,14 @@
     gap: var(--space-2);
 
     /* Derived from `&__row`'s own grid, not eyeballed: the five fixed tracks
-       (5 + 6 + 3 + 8 + 5 = 27rem) plus five `column-gap`s (5 x --space-2 =
+       (6 + 3 + 4 + 4 + 5 = 22rem) plus five `column-gap`s (5 x --space-2 =
        2.5rem) plus the row's own left+right padding (2 x --space-3 = 1.5rem)
-       = 31rem. `1fr` (the provider column) contributes nothing fixed here --
-       it is the track that is meant to flex. Re-derive this the same way
-       after touching any track width, the row padding, or the column gap. */
-    min-width: 31rem;
+       = 26rem. `1fr` (the `when` column) contributes nothing fixed here -- it
+       is the one track meant to flex, which is also why it carries
+       `white-space: nowrap` below rather than being left to wrap into the
+       slack it absorbs. Re-derive this the same way after touching any track
+       width, the row padding, or the column gap. */
+    min-width: 26rem;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -71,7 +103,7 @@
 
   &__row {
     display: grid;
-    grid-template-columns: 5rem 1fr 6rem 3rem 8rem 5rem;
+    grid-template-columns: 1fr 6rem 3rem 4rem 4rem 5rem;
     align-items: center;
     column-gap: var(--space-2);
     padding: var(--space-2) var(--space-3);
@@ -82,11 +114,13 @@
 
   /* Shares `&__row`'s grid-template-columns by construction (both classes sit
      on the same element), so the header cannot drift out of alignment with
-     the rows the way two independently-maintained width lists could. Column
-     chrome that belongs to a value, not its label -- the status pill, the
-     provider's bold weight, the cost's bold weight -- is reset back to plain
-     text; text alignment is left alone so right-aligned figures still sit
-     under a right-aligned header. */
+     row 1 of the data rows the way two independently-maintained width lists
+     could. There is no seventh cell here to overflow into an implicit second
+     row -- the provider column has no header of its own (see the file
+     banner). Column chrome that belongs to a value, not its label -- the
+     status pill, the cost's bold weight -- is reset back to plain text; text
+     alignment is left alone so right-aligned figures still sit under a
+     right-aligned header. */
   &__row--header {
     padding: 0 var(--space-3) var(--space-1);
     border: none;
@@ -98,7 +132,6 @@
     text-transform: uppercase;
 
     .run-history-month__status,
-    .run-history-month__provider,
     .run-history-month__cost {
       padding: 0;
       border-radius: 0;
@@ -108,24 +141,26 @@
     }
   }
 
-  /* The technique is `.sr-only` in `theme/_utilities.scss` -- a near-zero box
-     (not `display: none`, which would drop it from the accessibility tree)
-     clipped out of view -- kept local rather than reused because the mobile
-     media query below overrides it back to visible, and overriding a shared
-     class from inside one component would make that override easy to miss
-     from either end. `rem`, not `.sr-only`'s `px`: Stylelint bans ad-hoc `px`
-     spacing outside `theme/`, and at the near-zero size this technique needs,
-     the unit makes no visible difference either way. */
   &__cell-label {
-    position: absolute;
-    width: 0.0625rem;
-    height: 0.0625rem;
-    padding: 0;
-    margin: -0.0625rem;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-    border: 0;
+    @extend %visually-hidden;
+  }
+
+  &__provider {
+    /* Row 2: the full grid width, not one of row 1's six tracks -- see the
+       file banner. Grid auto-placement (default `grid-auto-flow: row`)
+       already starts a new implicit row once row 1's six cells have filled
+       the explicit columns; this only widens what lands in it. */
+    grid-column: 1 / -1;
+
+    /* Not `text-overflow: ellipsis` -- the provider stamp exists so the
+       billed model is still readable years later, and hiding half of it
+       defeats that. A model id is one unbroken token past the "·", so a plain
+       word wrap would still run it off the track; `anywhere` lets a long
+       token itself break rather than overflow. Freed of the `1fr` track it
+       used to share with the rest of row 1, this is now cosmetic headroom
+       rather than the thing forcing a four-line wrap. */
+    overflow-wrap: anywhere;
+    font-weight: 600;
   }
 
   /* On a phone the six fixed columns are wider than the viewport, so the card
@@ -140,7 +175,7 @@
 
     /* The header strip's job -- naming a column -- is taken over by each
        cell's own label below; a second, redundant announcement of the same
-       six words has nothing left to do here. */
+       words has nothing left to do here. */
     &__row--header {
       display: none;
     }
@@ -153,11 +188,12 @@
     }
 
     &__when,
-    &__provider,
     &__status,
     &__duration,
-    &__tokens,
-    &__cost {
+    &__tokens-in,
+    &__tokens-out,
+    &__cost,
+    &__provider {
       flex: 1 1 100%;
     }
 
@@ -176,11 +212,24 @@
       color: var(--text-muted);
       font-weight: 600;
     }
+
+    /* The icon takes over as the visible form of the status here (#409: "use
+       icons on mobile"); the word gives way to it but must not leave the DOM
+       -- a phone reader still has to hear "Status completed", not just see a
+       green check. */
+    &__status-word {
+      @extend %visually-hidden;
+    }
+
+    &__status-icon {
+      display: inline-flex;
+    }
   }
 
   &__when,
   &__duration,
-  &__tokens,
+  &__tokens-in,
+  &__tokens-out,
   &__cost {
     font-variant-numeric: tabular-nums;
   }
@@ -188,16 +237,7 @@
   &__when {
     color: var(--text-muted);
     font-size: var(--fs-xs);
-  }
-
-  &__provider {
-    /* Not `text-overflow: ellipsis` -- the provider stamp exists so the
-       billed model is still readable years later, and hiding half of it
-       defeats that. A model id is one unbroken token past the "·", so a plain
-       word wrap would still run it off the track; `anywhere` lets a long
-       token itself break rather than overflow. */
-    overflow-wrap: anywhere;
-    font-weight: 600;
+    white-space: nowrap;
   }
 
   &__status {
@@ -227,8 +267,20 @@
     }
   }
 
+  /* Above the breakpoint the raw word renders (see `&__status`'s comment on
+     the #309 convention) and the icon has nothing to do, so it stays out of
+     the flow until the mobile media query above turns it on. Decorative
+     either way -- `<app-icon>` marks its own glyph `aria-hidden`, and the
+     word carries the real semantics on both sides of the breakpoint. Colour
+     is inherited from `&__status`'s own modifier classes, so it never needs
+     one of its own. */
+  &__status-icon {
+    display: none;
+  }
+
   &__duration,
-  &__tokens {
+  &__tokens-in,
+  &__tokens-out {
     color: var(--text-muted);
     font-size: var(--fs-xs);
     text-align: right;

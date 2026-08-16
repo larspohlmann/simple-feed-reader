@@ -21,7 +21,13 @@ import {
 import { RecommendationsService } from '../reader/recommendations.service';
 import { LanguageService } from '../core/language.service';
 import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
+import { IconComponent } from '../shared/icon/icon.component';
 import { RecommendationRunHistoryMonthComponent } from './recommendation-run-history-month.component';
+import {
+  RUN_HISTORY_STATUSES,
+  runHistoryStatusIcon,
+  RunHistoryStatus,
+} from './run-history-status-icon';
 
 /** One month section as the card renders it. `runs` stays null until the
  *  month is opened and its first page has arrived -- that null, not a
@@ -60,7 +66,12 @@ interface MonthSection {
 @Component({
   selector: 'app-recommendation-run-history',
   standalone: true,
-  imports: [SettingsCardComponent, RecommendationRunHistoryMonthComponent, TranslocoModule],
+  imports: [
+    SettingsCardComponent,
+    RecommendationRunHistoryMonthComponent,
+    IconComponent,
+    TranslocoModule,
+  ],
   templateUrl: './recommendation-run-history.component.html',
   styleUrl: './recommendation-run-history.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -77,6 +88,10 @@ export class RecommendationRunHistoryComponent {
   readonly sections = signal<MonthSection[]>([]);
   readonly totalCostNanoCredits = signal<number | null>(null);
 
+  /** The five statuses the mobile legend spells out, in a fixed order --
+   *  read once here rather than re-derived per render. */
+  readonly legendStatuses: readonly RunHistoryStatus[] = RUN_HISTORY_STATUSES;
+
   /** Fetched on creation and again whenever a run completes -- the only event
    *  that adds a row or moves the total. */
   private readonly refetchOnCompletion = effect(() => {
@@ -89,6 +104,12 @@ export class RecommendationRunHistoryComponent {
    *  same figure and a second copy of the rounding would drift. */
   cost(nanoCredits: number | null): string {
     return formatCost(nanoCredits, this.language.lang());
+  }
+
+  /** The legend's own icon for a status -- the same map each row reads, so
+   *  the legend cannot explain an icon no row actually uses (#409). */
+  statusIcon(status: RunHistoryStatus): string {
+    return runHistoryStatusIcon(status);
   }
 
   /** A month section was opened. Rows already loaded (the newest month from
