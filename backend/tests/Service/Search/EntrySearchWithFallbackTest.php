@@ -19,7 +19,10 @@ use App\Service\Search\LikeEntrySearch;
 use App\Service\Search\SearchEngineCapability;
 use App\Service\Search\SearchTerms;
 use App\Tests\DbTestCase;
-use App\Tests\Support\FakeSearchIndexReader;
+use Monolog\Handler\TestHandler;
+use Monolog\Logger;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 /**
  * EntrySearchWithFallback is what services.yaml actually hands out for
@@ -28,8 +31,8 @@ use App\Tests\Support\FakeSearchIndexReader;
  * LikeEntrySearchTest's job and IndexedEntrySearch's is
  * IndexedEntrySearchTest's, so this test only has to prove which of the two
  * answers a given search, and what (if anything) gets logged while deciding.
- * The engine side is driven through fakes (FakeSearchIndexReader /
- * ThrowingSearchIndexReader), never a running Meilisearch.
+ * The engine side is driven through FakeSearchIndexReader (built with a
+ * $failure to drive the broken-engine paths), never a running Meilisearch.
  */
 final class EntrySearchWithFallbackTest extends DbTestCase
 {
@@ -58,7 +61,7 @@ final class EntrySearchWithFallbackTest extends DbTestCase
 
     private function fallback(
         SearchIndexReader $reader,
-        RecordingLogger $logger,
+        LoggerInterface $logger,
         string $engineUrl,
     ): EntrySearchWithFallback {
         $entryRepository = $this->em->getRepository(Entry::class);
@@ -86,9 +89,8 @@ final class EntrySearchWithFallbackTest extends DbTestCase
     public function testAnUnconfiguredEngineIsNeverCalledAndTheDatabaseAnswers(): void
     {
         $reader = new FakeSearchIndexReader(matchedWords: ['would-only-appear-if-called']);
-        $logger = new RecordingLogger();
 
-        $result = $this->fallback($reader, $logger, '')->search($this->query());
+        $result = $this->fallback($reader, new NullLogger(), '')->search($this->query());
 
         self::assertNull($reader->received);
         // LikeEntrySearch::search always returns rowsOnly(), whose
@@ -100,47 +102,48 @@ final class EntrySearchWithFallbackTest extends DbTestCase
     public function testTheUnconfiguredPathLogsNothing(): void
     {
         $reader = new FakeSearchIndexReader();
-        $logger = new RecordingLogger();
+        $logSpy = new TestHandler();
 
-        $this->fallback($reader, $logger, '')->search($this->query());
+        $this->fallback($reader, new Logger('test', [$logSpy]), '')->search($this->query());
 
-        self::assertSame([], $logger->records);
+        self::assertSame([], $logSpy->getRecords());
     }
 
     public function testAConfiguredEngineAnswers(): void
     {
         $reader = new FakeSearchIndexReader(matchedWords: ['engine-word']);
-        $logger = new RecordingLogger();
+        $logSpy = new TestHandler();
 
-        $result = $this->fallback($reader, $logger, 'http://meilisearch.test')->search($this->query());
+        $result = $this->fallback($reader, new Logger('test', [$logSpy]), 'http://meilisearch.test')
+            ->search($this->query());
 
         self::assertNotNull($reader->received);
         self::assertSame(['engine-word'], $result->matchedWords);
-        self::assertSame([], $logger->records);
+        self::assertSame([], $logSpy->getRecords());
     }
 
     public function testAnUnavailableEngineFallsBackToTheDatabaseAndLogsExactlyOneWarning(): void
     {
-        $reader = new ThrowingSearchIndexReader(
-            new SearchEngineUnavailableException('The search engine did not answer.'),
+        $reader = new FakeSearchIndexReader(
+            failure: new SearchEngineUnavailableException('The search engine did not answer.'),
         );
-        $logger = new RecordingLogger();
+        $logSpy = new TestHandler();
 
-        $result = $this->fallback($reader, $logger, 'http://meilisearch.test')->search($this->query());
+        $result = $this->fallback($reader, new Logger('test', [$logSpy]), 'http://meilisearch.test')
+            ->search($this->query());
 
         self::assertSame([], $result->matchedWords);
-        self::assertCount(1, $logger->records);
-        self::assertSame('warning', $logger->records[0]['level']);
+        self::assertTrue($logSpy->hasWarningRecords());
+        self::assertCount(1, $logSpy->getRecords());
     }
 
     public function testAnUnexpectedExceptionIsNotSwallowed(): void
     {
-        $reader = new ThrowingSearchIndexReader(new \RuntimeException('boom'));
-        $logger = new RecordingLogger();
+        $reader = new FakeSearchIndexReader(failure: new \RuntimeException('boom'));
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('boom');
 
-        $this->fallback($reader, $logger, 'http://meilisearch.test')->search($this->query());
+        $this->fallback($reader, new NullLogger(), 'http://meilisearch.test')->search($this->query());
     }
 }

@@ -16,7 +16,6 @@ use App\Service\Search\EntrySearchResult;
 use App\Service\Search\IndexedEntrySearch;
 use App\Service\Search\SearchTerms;
 use App\Tests\DbTestCase;
-use App\Tests\Support\FakeSearchIndexReader;
 
 /**
  * IndexedEntrySearch: asks the index for entry ids, then hydrates them

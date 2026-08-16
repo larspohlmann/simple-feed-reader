@@ -9,6 +9,9 @@ use App\Entity\Feed;
 use App\Service\Search\EntryIndexer;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Tests\DbTestCase;
+use Monolog\Handler\TestHandler;
+use Monolog\Logger;
+use Psr\Log\NullLogger;
 
 /**
  * EntryIndexer turns persisted Entry rows into IndexedEntry documents and
@@ -50,7 +53,7 @@ final class EntryIndexerTest extends DbTestCase
     public function testIndexingConfiguresTheWriterBeforeUpserting(): void
     {
         $writer = new RecordingSearchIndexWriter();
-        $indexer = new EntryIndexer($writer, new RecordingLogger());
+        $indexer = new EntryIndexer($writer, new NullLogger());
 
         $indexer->index([$this->entry($this->feed())]);
 
@@ -65,7 +68,7 @@ final class EntryIndexerTest extends DbTestCase
     public function testConfigureIsSentOnlyOnceAcrossTwoIndexCalls(): void
     {
         $writer = new RecordingSearchIndexWriter();
-        $indexer = new EntryIndexer($writer, new RecordingLogger());
+        $indexer = new EntryIndexer($writer, new NullLogger());
         $feed = $this->feed();
 
         $indexer->index([$this->entry($feed, 'g1')]);
@@ -83,8 +86,8 @@ final class EntryIndexerTest extends DbTestCase
     public function testAFailedConfigureIsRetriedOnTheNextIndexCall(): void
     {
         $writer = new RecordingSearchIndexWriter(new SearchEngineUnavailableException('down'));
-        $logger = new RecordingLogger();
-        $indexer = new EntryIndexer($writer, $logger);
+        $logSpy = new TestHandler();
+        $indexer = new EntryIndexer($writer, new Logger('test', [$logSpy]));
         $feed = $this->feed();
 
         $indexer->index([$this->entry($feed, 'g1')]);
@@ -94,13 +97,13 @@ final class EntryIndexerTest extends DbTestCase
         // failure is logged separately — proof the second call actually
         // retried rather than treating the first failure as done.
         self::assertSame(['configure', 'configure'], $writer->calls);
-        self::assertCount(2, $logger->records);
+        self::assertCount(2, $logSpy->getRecords());
     }
 
     public function testTheMappedDocumentCarriesThePlainTextContentAndTheFeedTitle(): void
     {
         $writer = new RecordingSearchIndexWriter();
-        $indexer = new EntryIndexer($writer, new RecordingLogger());
+        $indexer = new EntryIndexer($writer, new NullLogger());
 
         $feed = $this->feed('The Daily Example');
         $entry = $this->entry($feed);
@@ -135,7 +138,7 @@ final class EntryIndexerTest extends DbTestCase
     public function testContentAtAParagraphBoundaryStaysTwoSeparateWords(): void
     {
         $writer = new RecordingSearchIndexWriter();
-        $indexer = new EntryIndexer($writer, new RecordingLogger());
+        $indexer = new EntryIndexer($writer, new NullLogger());
 
         $entry = $this->entry($this->feed());
         $entry->setContentHtml('<p>Deployed to the cloud</p><p>Computing costs fell</p>');
@@ -152,7 +155,7 @@ final class EntryIndexerTest extends DbTestCase
     public function testAnEntryWithNoBodyIndexesWithNullContent(): void
     {
         $writer = new RecordingSearchIndexWriter();
-        $indexer = new EntryIndexer($writer, new RecordingLogger());
+        $indexer = new EntryIndexer($writer, new NullLogger());
 
         $indexer->index([$this->entry($this->feed())]);
 
@@ -163,22 +166,23 @@ final class EntryIndexerTest extends DbTestCase
     {
         $failure = new SearchEngineUnavailableException('down');
         $writer = new RecordingSearchIndexWriter($failure);
-        $logger = new RecordingLogger();
-        $indexer = new EntryIndexer($writer, $logger);
+        $logSpy = new TestHandler();
+        $indexer = new EntryIndexer($writer, new Logger('test', [$logSpy]));
 
         // No SearchEngineUnavailableException reaches this test — that is the
         // whole point: indexing must never be able to fail whatever called it.
         $indexer->index([$this->entry($this->feed())]);
 
-        self::assertCount(1, $logger->records);
-        self::assertSame('error', $logger->records[0]['level']);
-        self::assertSame($failure, $logger->records[0]['context']['exception']);
+        self::assertTrue($logSpy->hasErrorRecords());
+        $records = $logSpy->getRecords();
+        self::assertCount(1, $records);
+        self::assertSame($failure, $records[0]->context['exception']);
     }
 
     public function testAnEmptyListDoesNothingAtAll(): void
     {
         $writer = new RecordingSearchIndexWriter();
-        $indexer = new EntryIndexer($writer, new RecordingLogger());
+        $indexer = new EntryIndexer($writer, new NullLogger());
 
         $indexer->index([]);
 
@@ -188,7 +192,7 @@ final class EntryIndexerTest extends DbTestCase
     public function testForgetPassesTheIdsThroughUnchanged(): void
     {
         $writer = new RecordingSearchIndexWriter();
-        $indexer = new EntryIndexer($writer, new RecordingLogger());
+        $indexer = new EntryIndexer($writer, new NullLogger());
 
         $indexer->forget([11, 12, 13]);
 
@@ -199,19 +203,19 @@ final class EntryIndexerTest extends DbTestCase
     {
         $failure = new SearchEngineUnavailableException('down');
         $writer = new RecordingSearchIndexWriter($failure);
-        $logger = new RecordingLogger();
-        $indexer = new EntryIndexer($writer, $logger);
+        $logSpy = new TestHandler();
+        $indexer = new EntryIndexer($writer, new Logger('test', [$logSpy]));
 
         $indexer->forget([11]);
 
-        self::assertCount(1, $logger->records);
-        self::assertSame('error', $logger->records[0]['level']);
+        self::assertTrue($logSpy->hasErrorRecords());
+        self::assertCount(1, $logSpy->getRecords());
     }
 
     public function testForgetWithAnEmptyListDoesNothingAtAll(): void
     {
         $writer = new RecordingSearchIndexWriter();
-        $indexer = new EntryIndexer($writer, new RecordingLogger());
+        $indexer = new EntryIndexer($writer, new NullLogger());
 
         $indexer->forget([]);
 
