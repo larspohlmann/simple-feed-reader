@@ -7,9 +7,10 @@ set -euo pipefail
 #
 # It clones the repository, checks out the latest release, writes .env.prod
 # with freshly generated secrets, asks for the few values only you know (the
-# public origin, which database, and how to send mail), and starts the
-# production stack: the production PHP image, nginx serving the built app, and
-# MySQL unless you answer SQLite.
+# public origin, which database, whether to run a search engine, and how to
+# send mail), and starts the production stack: the production PHP image,
+# nginx serving the built app, MySQL unless you answer SQLite, and Meilisearch
+# unless you decline it (search then runs against the database instead).
 #
 # It deletes data in exactly one case, and only after you say yes to it: an
 # earlier production install whose Docker volumes are still on this machine.
@@ -150,6 +151,11 @@ env_prod_set MYSQL_PASSWORD "$(generate_secret)"
 # --- 6. the values only the operator knows ----------------------------------
 configure_public_url
 configure_database
+# A fresh .env.prod has no engine decision on file yet -- an empty
+# MEILISEARCH_URL here means "nobody has been asked", not "declined" -- so
+# this is the one caller allowed to hardcode the default. See
+# configure_search_engine's own comment for the prod-configure.sh contrast.
+configure_search_engine 'y'
 configure_mail
 
 # --- 7. start, or explain how to --------------------------------------------

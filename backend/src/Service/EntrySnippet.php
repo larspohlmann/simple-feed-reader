@@ -12,9 +12,10 @@ namespace App\Service;
  * thumbnail in an anchor would otherwise leave the anchor's whitespace behind.
  *
  * Block-level boundaries (<p>, <br>, <li>, ...) are turned into whitespace
- * before tags are stripped, because strip_tags() otherwise concatenates text
- * across them with no separator — "<p>one</p><p>two</p>" would read as the
- * single word "onetwo".
+ * before tags are stripped — see PlainText::fromHtmlBlocks(), which this
+ * delegates to — because strip_tags() otherwise concatenates text across them
+ * with no separator: "<p>one</p><p>two</p>" would read as the single word
+ * "onetwo".
  *
  * A body that reduces to nothing — or to a single junk token, which is how DIE
  * ZEIT's CMS leaks a Python `None` into content:encoded — yields null rather
@@ -30,10 +31,6 @@ final class EntrySnippet
     /** Single-token bodies that carry no meaning. Matched only when they are the ENTIRE body. */
     private const array JUNK = ['none', 'null', 'nil', 'n/a', '-', '—'];
 
-    /** Elements whose boundaries must survive as whitespace once tags are stripped. */
-    private const string BLOCK_BOUNDARY_PATTERN = '/<\/?(?:p|div|br|li|ul|ol|h[1-6]|tr|td|th|table|thead|tbody'
-        . '|blockquote|section|article|header|footer|aside|nav|figure|figcaption|dd|dt|dl)\b[^>]*>/i';
-
     public static function from(?string $html): ?string
     {
         if ($html === null || $html === '') {
@@ -41,9 +38,7 @@ final class EntrySnippet
         }
 
         $withoutImages = preg_replace('/<img\b[^>]*>/i', ' ', $html) ?? $html;
-        $withBlockBoundariesAsSpace = preg_replace(self::BLOCK_BOUNDARY_PATTERN, ' ', $withoutImages)
-            ?? $withoutImages;
-        $text = PlainText::from($withBlockBoundariesAsSpace);
+        $text = PlainText::fromHtmlBlocks($withoutImages);
 
         if ($text === null || \in_array(mb_strtolower($text), self::JUNK, true)) {
             return null;

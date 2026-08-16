@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { API_BASE_URL } from '../core/api';
 import { EntriesStore } from './entries.store';
 import { EntryDto } from './models';
+import { markTerms } from './search-marks';
 
 const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   id,
@@ -231,6 +232,126 @@ describe('EntriesStore', () => {
       .expectOne('https://api.test/api/entries/1/state')
       .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
     expect(store.error()).not.toBeNull();
+  });
+
+  // #432: the client marks the words Meilisearch actually matched, not only
+  // the literal term typed. `matchedWords` is a page-level field, present
+  // only on a search response, and empty whenever the database LIKE
+  // fallback answered instead of the engine.
+  describe('matchedWords (#432)', () => {
+    it('exposes the words a search response carries', () => {
+      store.load({ view: 'all', q: 'recieve' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [entry(1)], nextCursor: null, matchedWords: ['receive'] });
+      expect(store.matchedWords()).toEqual(['receive']);
+    });
+
+    it('exposes none for a response carrying no matchedWords key', () => {
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [entry(1)], nextCursor: null });
+      expect(store.matchedWords()).toEqual([]);
+    });
+
+    // Fix round 1: the brief originally said "replace on every response",
+    // which also erased the words a still-on-screen page-1 row genuinely
+    // matched. `loadMore` must UNION into the existing words instead — the
+    // result set only grows, so the marks may only grow with it.
+    it('unions matched words on loadMore instead of replacing them', () => {
+      store.load({ view: 'all', q: 'recieve' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [entry(1)], nextCursor: 'C1', matchedWords: ['receive'] });
+      expect(store.matchedWords()).toEqual(['receive']);
+
+      store.loadMore();
+      ctrl
+        .expectOne((r) => r.params.get('cursor') === 'C1')
+        .flush({ entries: [entry(2)], nextCursor: null, matchedWords: ['received'] });
+      // Both words survive: page 1's row is still on screen and still
+      // matched "receive"; page 2's row matched "received".
+      expect(store.matchedWords()).toEqual(['receive', 'received']);
+    });
+
+    it('unions without duplicating a word both pages carried, keeping the casing first seen', () => {
+      store.load({ view: 'all', q: 'recieve' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [entry(1)], nextCursor: 'C1', matchedWords: ['receive', 'Received'] });
+
+      store.loadMore();
+      ctrl
+        .expectOne((r) => r.params.get('cursor') === 'C1')
+        // 'RECEIVE' duplicates 'receive' case-insensitively; 'recieve' is new.
+        .flush({ entries: [entry(2)], nextCursor: null, matchedWords: ['RECEIVE', 'recieve'] });
+
+      expect(store.matchedWords()).toEqual(['receive', 'Received', 'recieve']);
+    });
+
+    // The regression this fix round exists to prevent: a row that arrived on
+    // page 1 must keep marking the word IT matched even once page 2 lands
+    // carrying a different word. Proven through the real `markTerms` — the
+    // exact function `entry-row` renders through — rather than only
+    // inspecting the store's array, so this pins the rendered outcome, not
+    // an implementation detail.
+    it('keeps marking a first-page row’s own match after loadMore brings different words', () => {
+      store.load({ view: 'all', q: 'recieve received' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({
+          entries: [entry(1, { title: 'Please receive this parcel' })],
+          nextCursor: 'C1',
+          matchedWords: ['receive'],
+        });
+
+      store.loadMore();
+      ctrl
+        .expectOne((r) => r.params.get('cursor') === 'C1')
+        .flush({
+          entries: [entry(2, { title: 'We received it yesterday' })],
+          nextCursor: null,
+          matchedWords: ['received'],
+        });
+
+      const page1Segments = markTerms('Please receive this parcel', store.matchedWords());
+      expect(page1Segments.some((s) => s.marked && s.text.toLowerCase() === 'receive')).toBe(true);
+    });
+
+    // The test that actually catches leakage: words from one query must never
+    // survive into a later query that carries none of its own — a stale word
+    // would mark text in results that never matched it, which is worse than
+    // marking nothing (#432).
+    it('clears matched words once a later query carries none of its own', () => {
+      store.load({ view: 'all', q: 'recieve' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [entry(1)], nextCursor: null, matchedWords: ['receive'] });
+      expect(store.matchedWords()).toEqual(['receive']);
+
+      // Leaving search for the plain list — a response with no matchedWords key.
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [entry(2)], nextCursor: null });
+      expect(store.matchedWords()).toEqual([]);
+    });
+
+    it('clears matched words once a different search carries none of its own', () => {
+      store.load({ view: 'all', q: 'recieve' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [entry(1)], nextCursor: null, matchedWords: ['receive'] });
+
+      // A second search whose engine (or fallback) matched nothing beyond the
+      // literal term — an empty array is a valid, non-error answer.
+      store.load({ view: 'all', q: 'punk' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [entry(3)], nextCursor: null, matchedWords: [] });
+      expect(store.matchedWords()).toEqual([]);
+    });
   });
 
   it('invokes the onError callback on a failed state PATCH', () => {

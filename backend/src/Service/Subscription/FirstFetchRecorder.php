@@ -11,6 +11,7 @@ use App\Service\FeedIngestContext;
 use App\Service\FeedScheduler;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
+use App\Service\Search\EntryIndexer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
@@ -47,6 +48,7 @@ final readonly class FirstFetchRecorder
         private FeedScheduler $scheduler,
         private EntityManagerInterface $em,
         private ClockInterface $clock,
+        private EntryIndexer $indexer,
     ) {
     }
 
@@ -68,17 +70,20 @@ final readonly class FirstFetchRecorder
             return 0;
         }
 
-        $created = $this->ingestor->ingest(
+        $createdEntries = $this->ingestor->ingest(
             $feed,
             $this->newest($discovered->document),
             new FeedIngestContext($this->clock->now(), null),
         );
         $feed->setEtag($this->truncate($discovered->etag, self::ETAG_MAX));
         $feed->setLastModified($this->truncate($discovered->lastModified, self::LAST_MODIFIED_MAX));
-        $this->scheduler->recordSuccess($feed, $created);
+        $this->scheduler->recordSuccess($feed, \count($createdEntries));
         $this->em->flush();
+        // See RefreshRunner's identical ordering: an id only exists after this
+        // flush, so indexing has to happen after it, not before.
+        $this->indexer->index($createdEntries);
 
-        return $created;
+        return \count($createdEntries);
     }
 
     private function truncate(?string $value, int $max): ?string

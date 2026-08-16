@@ -25,8 +25,10 @@ use App\Service\Recommendation\RecommendationDrainSpawner;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\RefreshRunner;
+use App\Service\Search\EntryIndexer;
 use App\Service\Worker\WorkerPresence;
 use App\Tests\DbTestCase;
+use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\RecordingProcessLauncher;
 use App\Tests\Support\StubFeedFetcher;
@@ -119,6 +121,7 @@ final class MaintenanceTickTest extends DbTestCase
         $bodyParser = self::getContainer()->get(FeedBodyParser::class);
         self::assertInstanceOf(FeedBodyParser::class, $bodyParser);
 
+        $indexer = new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger());
         $refreshRunner = new RefreshRunner(
             $feedRepository,
             $failingEm,
@@ -127,8 +130,9 @@ final class MaintenanceTickTest extends DbTestCase
             new EntryIngestor($this->em, $entryRepository, new EntrySanitizer()),
             new FaviconResolver($fetcher, new NullLogger()),
             new FeedScheduler($clock),
-            new EntryPruner($this->em, $clock),
+            new EntryPruner($this->em, $clock, $indexer),
             new OrphanedFeedReclaimer($this->em),
+            $indexer,
             new LockFactory(new InMemoryStore()),
             $clock,
             new NullLogger(),

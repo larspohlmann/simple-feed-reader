@@ -33,8 +33,10 @@ use App\Service\Refresh\RefreshRunner;
 use App\Service\Refresh\ScrapedBodyParser;
 use App\Service\Refresh\XmlBodyParser;
 use App\Service\Scraper\HtmlItemExtractor;
+use App\Service\Search\EntryIndexer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Scraper\ScrapedFixtures;
+use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\StubFeedFetcher;
 use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
 use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
@@ -55,6 +57,7 @@ final class RefreshRunnerTest extends DbTestCase
     private StubFeedFetcher $faviconFetcher;
     private LockFactory $lockFactory;
     private User $subscriber;
+    private RecordingSearchIndexWriter $indexWriter;
 
     protected function setUp(): void
     {
@@ -65,6 +68,7 @@ final class RefreshRunnerTest extends DbTestCase
         // pollute assertions on which FEEDS the runner fetched.
         $this->faviconFetcher = new StubFeedFetcher();
         $this->lockFactory = new LockFactory(new InMemoryStore());
+        $this->indexWriter = new RecordingSearchIndexWriter();
         // dueFeed() subscribes every fixture feed to this user so the #246
         // orphan sweep (wired into every allDue() request) never deletes a
         // feed a test is trying to fetch. Orphan behaviour itself is covered
@@ -72,6 +76,11 @@ final class RefreshRunnerTest extends DbTestCase
         // subscriber on purpose.
         $this->subscriber = new User('fixture-subscriber@example.com', $this->clock->now());
         $this->em->persist($this->subscriber);
+    }
+
+    private function indexer(): EntryIndexer
+    {
+        return new EntryIndexer($this->indexWriter, new NullLogger());
     }
 
     private function runner(?EntityManagerInterface $runnerEm = null): RefreshRunner
@@ -89,8 +98,9 @@ final class RefreshRunnerTest extends DbTestCase
             new EntryIngestor($this->em, $entryRepository, new EntrySanitizer()),
             new FaviconResolver($this->faviconFetcher, new NullLogger()),
             new FeedScheduler($this->clock),
-            new EntryPruner($this->em, $this->clock),
+            new EntryPruner($this->em, $this->clock, $this->indexer()),
             new OrphanedFeedReclaimer($this->em),
+            $this->indexer(),
             $this->lockFactory,
             $this->clock,
             new NullLogger(),
@@ -198,6 +208,38 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertNotNull($feedA->getNextFetchAt());
         self::assertGreaterThan($this->clock->now(), $feedA->getNextFetchAt());
         self::assertCount(1, $this->em->getRepository(Entry::class)->findAll());
+    }
+
+    /**
+     * The #432 ordering trap: EntryIngestor persists but never flushes, so an
+     * entry has no id until the runner's own flush assigns one. Indexing
+     * before that flush would send Meilisearch a document with id 0 — this
+     * proves the id the index actually received matches the id the database
+     * actually assigned, which "index called after ingest()" alone would not
+     * catch (a call placed before the flush still compiles and still runs).
+     */
+    public function testIndexesFetchedEntriesWithTheirRealIdsAfterFlush(): void
+    {
+        $feed = $this->dueFeed('https://a.example.com/feed');
+        $this->em->flush();
+
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($feed->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
+        );
+
+        $this->runner()->run(RefreshRequest::allDue(300));
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'a-1']);
+        self::assertNotNull($entry);
+        self::assertNotNull($entry->getId());
+
+        self::assertSame(['configure', 'upsert'], $this->indexWriter->calls);
+        self::assertCount(1, $this->indexWriter->upserts);
+        $indexed = $this->indexWriter->upserts[0][0];
+        self::assertSame($entry->getId(), $indexed->id);
+        self::assertSame('Post', $indexed->title);
+        self::assertSame('A', $indexed->feedTitle);
     }
 
     public function testAllEntriesInOneRefreshRunShareTheRunStartAsCreatedAt(): void

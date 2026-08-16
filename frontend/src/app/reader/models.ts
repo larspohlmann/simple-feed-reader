@@ -91,6 +91,14 @@ export interface EntryDto {
 export interface EntriesPage {
   entries: EntryDto[];
   nextCursor: string | null;
+  /** The words the search engine actually matched — present only on a search
+   *  response, and even there empty whenever the database LIKE fallback
+   *  answered (no engine installed, or the engine was momentarily
+   *  unreachable). The typo-tolerant engine can match a row where the
+   *  literal typed term appears nowhere in it, so highlighting must prefer
+   *  this over splitting the typed term. Absent entirely on the plain entry
+   *  list, which carries no search at all. */
+  matchedWords?: string[];
 }
 
 export interface EntryStateDto {

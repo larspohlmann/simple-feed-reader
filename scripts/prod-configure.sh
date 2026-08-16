@@ -3,10 +3,17 @@ set -euo pipefail
 
 # Reconfigure an existing production install: re-ask the questions
 # scripts/install.sh asked -- how users reach the instance, under which
-# hostname, on which port, how mail is sent, the From: address -- each
-# defaulting to the current .env.prod value, then apply by re-running
-# prod-start.sh and offer the same mail-delivery check. Answering every
-# question with return is a no-op.
+# hostname, on which port, whether to run the search engine, how mail is
+# sent, the From: address -- each defaulting to the current .env.prod value,
+# then apply by re-running prod-start.sh and offer the same mail-delivery
+# check. Answering every question with return is a no-op.
+#
+# The database question is the one exception -- see configure_database's own
+# comment in lib.sh for why switching engines needs a manual data move and is
+# deliberately never re-asked here. The search engine question has no such
+# problem: turning Meilisearch on later needs nothing destructive, just a URL,
+# a key and `app:search:reindex`, so it is asked again like every other
+# question on this list.
 #
 # Secrets and passwords are deliberately NOT touched. Regenerating
 # JWT_PASSPHRASE would lock the existing signing key, and the MySQL
@@ -31,6 +38,9 @@ if [ ! -r /dev/tty ]; then
 fi
 
 configure_public_url
+# Unlike install.sh, this instance already has a decision on file -- read it
+# back so pressing return through this question never reverses it.
+configure_search_engine "$(current_search_engine_choice)"
 configure_mail
 
 say 'Applying the configuration ...'

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Search;
 
-use App\Repository\EntryListRow;
 use App\Repository\EntryRepository;
 use App\Repository\EntrySearchQuery;
 
@@ -19,9 +18,8 @@ final readonly class LikeEntrySearch implements EntrySearchInterface
     {
     }
 
-    /** @return list<EntryListRow> */
-    public function search(EntrySearchQuery $query): array
+    public function search(EntrySearchQuery $query): EntrySearchResult
     {
-        return $this->entries->searchForUser($query);
+        return EntrySearchResult::rowsOnly($this->entries->searchForUser($query));
     }
 }

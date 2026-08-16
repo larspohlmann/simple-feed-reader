@@ -362,13 +362,46 @@ prod_uses_bundled_mysql() {
   [ -z "$(env_prod_get DATABASE_URL)" ]
 }
 
+# Trim leading and trailing whitespace -- POSIX character-class parameter
+# expansion, no external process. Used below so the shell's idea of "empty"
+# matches PHP's trim(), the way SearchEngineCapability::isConfigured() defines
+# it (backend/src/Service/Search/SearchEngineCapability.php).
+trim_whitespace() {
+  local value=$1
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  printf '%s' "${value}"
+}
+
+# Whether the stack runs the bundled Meilisearch container. A non-empty
+# MEILISEARCH_URL means it does -- docker-compose.prod.yml puts the
+# meilisearch service behind that profile, the same way prod_uses_bundled_mysql
+# reads DATABASE_URL above. Empty is the default and is a fully working state,
+# not a degraded one: EntrySearchWithFallback answers every search from the
+# database when no engine is configured (see backend/config/services.yaml).
+#
+# Trimmed before the emptiness check, matching
+# SearchEngineCapability::isConfigured() on the PHP side: a whitespace-only
+# value (only reachable by hand-editing .env.prod) must not read as configured
+# here while the backend refuses to talk to it -- that mismatch would start a
+# container the app never uses.
+prod_uses_search_engine() {
+  [ -n "$(trim_whitespace "$(env_prod_get MEILISEARCH_URL)")" ]
+}
+
 # The compose profiles the stack runs with: 'mysql' for the bundled database,
-# nothing at all otherwise. docker-compose.prod.yml puts the mysql service
-# behind that profile.
+# 'meilisearch' for the bundled search engine, both comma-separated when both
+# are on, nothing at all when neither is. docker-compose.prod.yml puts each
+# service behind its own profile.
 prod_compose_profiles() {
+  local profiles=''
   if prod_uses_bundled_mysql; then
-    printf 'mysql'
+    profiles='mysql'
   fi
+  if prod_uses_search_engine; then
+    profiles="${profiles:+${profiles},}meilisearch"
+  fi
+  printf '%s' "${profiles}"
 }
 
 # stdin is /dev/null here for the same reason as in compose() above -- see the
@@ -378,6 +411,35 @@ prod_compose() {
       && COMPOSE_PROFILES="$(prod_compose_profiles)" \
          docker compose -p "${PROD_PROJECT_NAME}" -f docker-compose.prod.yml \
            --env-file .env.prod "$@" ) < /dev/null
+}
+
+# `docker compose up -d` only STARTS services that are in the active
+# profiles -- it never stops one that has just fallen OUT of them, and
+# nothing else in this flow calls `down` or `rm`. Without this, declining the
+# search engine on a re-configure leaves its container running (consuming
+# memory and disk) while prod_search_engine_description tells the operator it
+# is off. prod-start.sh calls this on every run, after `up`, so the container
+# always matches the current MEILISEARCH_URL decision by the time the summary
+# is printed.
+#
+# Naming the service explicitly targets it even though 'meilisearch' is not
+# in COMPOSE_PROFILES for this call -- verified against a throwaway compose
+# project before relying on it, since compose's profile rules are easy to
+# get wrong. `rm -sf` stops it first, then removes the container; without
+# `-v` it never removes a volume, named or anonymous, so meili-data survives
+# whether or not the container existed. No container at all -- the common
+# case, an install that never enabled the engine -- is a no-op that still
+# exits 0, which `service_running`-style status checks would not be: it looks
+# for a RUNNING container, and a stopped-but-not-removed one would slip past.
+stop_disabled_search_engine_container() {
+  if prod_uses_search_engine; then
+    return 0
+  fi
+  if [ -z "$(prod_compose ps -aq meilisearch 2>/dev/null)" ]; then
+    return 0
+  fi
+  say 'The search engine is disabled -- removing its container (the meili-data volume is kept) ...'
+  prod_compose rm -sf meilisearch >/dev/null
 }
 
 # --- what an earlier production install leaves behind -----------------------
@@ -560,6 +622,21 @@ ensure_ai_key_secret() {
   fi
 }
 
+# Generate MEILISEARCH_KEY when it is still empty, never regenerate one that
+# exists -- the same rule as ensure_ai_key_secret above, for the same reason
+# (rotating it would make Meilisearch reject the app's own requests). Unlike
+# AI_KEY_SECRET this is not called unconditionally from prod-start.sh: an
+# empty MEILISEARCH_URL/KEY is the "no engine, database answers searches"
+# state by design (see MeilisearchIndex and its services.yaml wiring), so an
+# instance upgrading from before #432 needs nothing generated for it. This is
+# called only from configure_search_engine's "yes" branch, where a key is
+# actually about to be used.
+ensure_meilisearch_key() {
+  if [ -z "$(env_prod_get MEILISEARCH_KEY)" ]; then
+    env_prod_set MEILISEARCH_KEY "$(generate_secret)"
+  fi
+}
+
 # Percent-encode for safe embedding in a DSN: RFC 3986 unreserved characters
 # pass through, everything else becomes %XX. A raw '#' or '@' in a hand-typed
 # DSN truncates it silently, which is why the installer never asks for one.
@@ -723,6 +800,17 @@ prod_database_description() {
   printf 'SQLite, one file in the php-var volume'
 }
 
+# What the summary says search runs on. A backup needs to know the meili-data
+# volume matters here; an operator who declined the engine needs the summary
+# to say so plainly, since the database fallback is silent otherwise.
+prod_search_engine_description() {
+  if prod_uses_search_engine; then
+    printf 'Meilisearch, in the meili-data volume'
+    return 0
+  fi
+  printf 'the database (no engine configured)'
+}
+
 # Show the setup secret ONLY while the instance still has no administrator
 # (the API is authoritative); printing it on every later run would put a
 # live-looking secret into scrollback for no benefit. If the status probe
@@ -754,6 +842,7 @@ print_prod_summary() {
   printf '  Public URL ........  %s\n' "${_c_cyan}${public_url}${_c_reset}"
   printf '  Local health ......  %s\n' "${_c_cyan}${base_url}/api/health${_c_reset}"
   printf '  Database ..........  %s\n' "$(prod_database_description)"
+  printf '  Search ............  %s\n' "$(prod_search_engine_description)"
   print_installed_ref_row
   printf '\n'
   print_first_admin_block "${base_url}" "${public_url}"
@@ -1121,6 +1210,100 @@ use_sqlite_database() {
 use_bundled_mysql_database() {
   env_prod_set DATABASE_URL ''
   say 'Using MySQL in a container beside the app.'
+}
+
+# --- whether the instance runs the bundled search engine ---------------------
+# Asked by the installer, defaulting to YES: full-content search over article
+# bodies is materially better than the database's title/summary LIKE fallback,
+# and it is the answer that keeps every existing install's behaviour (a
+# freshly written .env.prod, not an upgrade) working the same way the
+# out-of-the-box dev stack does.
+#
+# Unlike configure_database, this is safe to re-ask. Turning the engine on (or
+# off) later moves no data by hand: enabling it needs a URL, a key, and
+# `app:search:reindex` to catch the index up from the database, which is
+# already this instance's source of truth (EntrySearchWithFallback never
+# stops reading it). So prod-configure.sh asks this question again on every
+# run, the same as configure_mail -- see the call site there.
+#
+# prompt_confirm cannot be used here: its default is no, and a FRESH install
+# has to default to yes.
+#
+# But a re-ask is a different question with a different right default, so the
+# default is a parameter rather than a hardcoded 'y'. install.sh always passes
+# 'y': a brand-new .env.prod has an empty MEILISEARCH_URL no matter what the
+# operator is about to choose, so that emptiness cannot be read back as "the
+# operator already said no" the way it safely can be for an existing install.
+# prod-configure.sh passes back current_search_engine_choice, which reads the
+# stored value -- so pressing return through an unrelated question (a new
+# public URL, a new mail transport) can never flip a decision the operator
+# already made. "No" has to be as durable an answer as "yes": unlike mail,
+# which must be configured somehow, running no engine is a complete, final
+# answer for an install that cannot or does not want another container.
+configure_search_engine() {
+  local default=$1 choice
+  if ! can_prompt; then
+    # Unlike configure_database (whose default IS the empty/do-nothing state),
+    # a silent no-op here always lands on "no": an empty MEILISEARCH_URL is
+    # indistinguishable from a decline. install.sh's own header promises a
+    # default of yes, and the piped two-step install (write .env.prod, stop
+    # for the mail question, finish later in a real terminal) must land there
+    # too -- so apply the caller's default explicitly instead of doing
+    # nothing. It is still just the default being applied, so a re-ask
+    # (prod-configure.sh, default = current_search_engine_choice) still
+    # cannot flip a stored decision: it only ever re-applies what is already
+    # configured.
+    apply_search_engine_choice "${default}"
+    return 0
+  fi
+  say 'Enable full-content search?'
+  tell '  A search engine container (Meilisearch) indexes the full text of'
+  tell '  every article, not just its title and summary. Declining leaves'
+  tell '  search running against the database, which always works and needs'
+  tell '  no extra container -- the right choice on shared hosting, or any'
+  tell '  machine that cannot run one.'
+  choice=$(prompt_with_default 'Enable search engine? (y/n)' "${default}")
+  apply_search_engine_choice "${choice}"
+}
+
+# The y/n answer applied, shared by the interactive path above and the
+# headless default. Kept separate so headless never repeats the prompt logic.
+apply_search_engine_choice() {
+  case "$1" in
+    [nN]*)
+      use_database_search
+      ;;
+    *)
+      use_bundled_search_engine
+      ;;
+  esac
+}
+
+# The default configure_search_engine offers on a re-ask: whatever this
+# instance is already configured to run. Only prod-configure.sh calls this --
+# a fresh install has no decision on file yet to read back, which is exactly
+# why install.sh passes the literal 'y' instead.
+current_search_engine_choice() {
+  if prod_uses_search_engine; then
+    printf 'y'
+    return 0
+  fi
+  printf 'n'
+}
+
+use_database_search() {
+  env_prod_set MEILISEARCH_URL ''
+  say 'No search engine. Search runs against the database.'
+}
+
+# Writes the value rather than leaving the file alone, for the same reason as
+# use_bundled_mysql_database above: choosing yes has to be an answer even on a
+# re-run where MEILISEARCH_URL already says something else.
+use_bundled_search_engine() {
+  env_prod_set MEILISEARCH_URL 'http://meilisearch:7700'
+  ensure_meilisearch_key
+  say 'Using the bundled Meilisearch container. Run app:search:reindex once it'
+  say 'is up to index what is already stored.'
 }
 
 # The host part of PUBLIC_URL -- the default mail domain both the transport

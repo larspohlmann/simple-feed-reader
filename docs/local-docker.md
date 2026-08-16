@@ -21,7 +21,7 @@ natively. It is strictly additive: the native SQLite workflow (plain
 
 ## 1. What you get
 
-Six services, started with one command from the repository root:
+Seven services, started with one command from the repository root:
 
 | Service | Where |
 |---|---|
@@ -29,7 +29,14 @@ Six services, started with one command from the repository root:
 | API (nginx → PHP-FPM 8.3) | https://localhost:8443 (http://localhost:8080 redirects there) |
 | Mailpit web inbox | http://localhost:8025 |
 | MySQL 8.4 | 127.0.0.1:33306 (user/password `feedreader`/`feedreader`, root `root`) |
+| Meilisearch — full-content entry search, dashboard and API | http://127.0.0.1:7700 (key `dev-master-key-not-a-secret`) |
 | Worker — recommendation runs in the background, 5-minute feed refresh sweep | `docker compose logs -f worker` |
+
+The app answers searches from the database whenever Meilisearch is absent or
+unreachable, so stopping this container degrades search rather than breaking
+it. After pointing an existing install at a search engine for the first
+time, the index is empty until you run it once:
+`docker compose exec php bin/console app:search:reindex`.
 
 > ### ⚠️ The worker touches your development data
 >
@@ -152,6 +159,7 @@ it).
 | Coding standard | `docker compose exec php composer cs` |
 | Static analysis | `docker compose exec php composer stan` |
 | Any console command | `docker compose exec php bin/console …` |
+| Rebuild the search index from the database | `docker compose exec php bin/console app:search:reindex` |
 | Follow logs | `docker compose logs -f php nginx worker` |
 | Pause the background worker (before an e2e run) | `docker compose stop worker` |
 | Stop the stack | `docker compose down` |
@@ -223,6 +231,15 @@ work in one browser and silently fail in another, which is exactly the kind of
 - **The certificate expires.** mkcert leaf certificates are valid for roughly
   two years. When the browser starts complaining, re-run the `mkcert` command
   from section 3 (it overwrites in place) and force-recreate nginx.
+- **The test suite always runs with no search engine, even in here.** `php`
+  and `worker` carry a real `MEILISEARCH_URL` (§1) for every `APP_ENV`, but
+  `backend/phpunit.dist.xml` forces it back to empty for `APP_ENV=test`
+  specifically, so `docker compose exec php vendor/bin/phpunit` exercises the
+  same database-fallback path the native SQLite run does. Without that
+  override, the suite would silently talk to — and write into — this
+  container's live index instead. If you ever need a test that genuinely
+  exercises the engine, use `composer e2e` (against the real running stack),
+  not `vendor/bin/phpunit`.
 - **Root-owned `vendor/` on Linux hosts.** `docker compose exec php composer
   install` runs as root inside the container; on Linux the bind mount exposes
   that ownership on the host. Either run composer natively or use

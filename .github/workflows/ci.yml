@@ -260,6 +260,14 @@ jobs:
       - name: configure_database
         run: scripts/test/configure-database.test.sh
 
+      # The search engine question (#432). Its answer decides which compose
+      # profile the stack runs with, alongside the database's own, so the
+      # combined profile list has to come out right in every combination -- a
+      # wrong one either starts an engine container nobody talks to or leaves
+      # a configured install without it.
+      - name: configure_search_engine
+        run: scripts/test/configure-search-engine.test.sh
+
       # The mail question, whose default decides whether a new instance can
       # send account mail at all. A wrong answer here is invisible until the
       # first registration nobody receives.

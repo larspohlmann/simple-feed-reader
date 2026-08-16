@@ -4,7 +4,9 @@ The production stack is the production PHP image, nginx serving the compiled
 app with `/api` handled same-origin, the `worker` container that drives
 background recommendation runs and the scheduled feed refresh (#311), and —
 unless you choose SQLite (§1) — a MySQL container beside them, defined
-in [`docker-compose.prod.yml`](../docker-compose.prod.yml). It is completely
+in [`docker-compose.prod.yml`](../docker-compose.prod.yml). An optional
+Meilisearch container joins them when you enable full-content search (§1);
+the app answers searches from the database whenever it is absent. It is completely
 separate from the [development stack](local-docker.md): its own compose file,
 its own project name (`simple-feed-reader-prod`), its own volumes. Both can
 run on the same machine.
@@ -81,6 +83,17 @@ values only you know:
   job, so `./scripts/prod-configure.sh` deliberately never re-asks this
   question. In `.env.prod` the answer is `DATABASE_URL`: empty means the
   bundled MySQL.
+- **Whether to run a search engine** — **Meilisearch by default**, in a
+  container beside the app, indexing the full text of every entry. Answer no
+  and search runs against the database instead, which always works. Unlike
+  the database question, this one is safe to change later with
+  `./scripts/prod-configure.sh` (§7) — but enabling the engine on an install
+  that already has entries leaves the index empty until you run it once:
+
+  ```bash
+  docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod \
+    exec -u www-data php bin/console app:search:reindex
+  ```
 - **How to send mail** — an SMTP relay (your mail provider's host, port,
   username, password), or the machine's own MTA if it runs one. **The default
   is "no mail"** (§5): it is the answer that always works, and a private
@@ -291,7 +304,10 @@ explain each one), applied with `./scripts/prod-start.sh`.
 
 Everything worth keeping lives in three named volumes: the database
 (`mysql-data`), logs and cache pools (`php-var`), and the JWT signing keys
-(`jwt-keys`). A database dump before major updates:
+(`jwt-keys`). Running the bundled search engine adds a fourth, `meili-data`.
+Losing it is not fatal — `app:search:reindex` rebuilds the whole index from
+the database — but back it up anyway if you would rather not run that command
+by hand after a restore. A database dump before major updates:
 
 ```bash
 docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod \

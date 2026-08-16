@@ -92,8 +92,11 @@ curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/mai
 The installer clones the project into `./simple-feed-reader`, checks out the
 latest release, generates the secrets it can, asks for the things only you
 know (how users reach the instance — plain HTTP, your own certificate, or a
-reverse proxy — under which hostname and port, and how to send mail), and
-starts the production stack. The full guide — TLS, reverse proxies, mail verification, backups —
+reverse proxy — under which hostname and port, how to send mail, and whether
+to run a full-text search engine alongside the app), and starts the
+production stack. The search engine defaults to yes; answer no, or run
+outside Docker, and search runs against the database instead. The full guide
+— TLS, reverse proxies, mail verification, backups —
 is [docs/docker-production.md](docs/docker-production.md).
 
 > **Read before you pipe to bash.** You can inspect exactly what runs at

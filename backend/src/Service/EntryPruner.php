@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
+use App\Service\Search\EntryIndexer;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
@@ -59,6 +60,7 @@ final class EntryPruner
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly ClockInterface $clock,
+        private readonly EntryIndexer $indexer,
         private readonly int $maxEntriesPerFeed = self::DEFAULT_MAX_ENTRIES_PER_FEED,
     ) {
     }
@@ -293,10 +295,16 @@ final class EntryPruner
             return 0;
         }
 
+        // This DQL DELETE bypasses the ORM's lifecycle events entirely, which
+        // is exactly why the index is told explicitly rather than through a
+        // listener that a bulk delete would never fire. Each chunk's ids are
+        // captured here, before its DELETE runs — there is no entity left
+        // afterwards to read an id from.
         foreach (array_chunk($ids, self::DELETE_CHUNK_SIZE) as $chunk) {
             $this->em->createQuery(sprintf('DELETE FROM %s e WHERE e.id IN (:ids)', Entry::class))
                 ->setParameter('ids', $chunk)
                 ->execute();
+            $this->indexer->forget($chunk);
         }
 
         return \count($ids);

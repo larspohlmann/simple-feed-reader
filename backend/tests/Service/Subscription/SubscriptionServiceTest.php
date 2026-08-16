@@ -26,11 +26,14 @@ use App\Service\EntrySanitizer;
 use App\Service\FeedScheduler;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
+use App\Service\Search\EntryIndexer;
 use App\Service\Subscription\FirstFetchRecorder;
 use App\Service\Subscription\SubscriptionCreator;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
+use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\UserFactory;
+use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -103,6 +106,7 @@ final class SubscriptionServiceTest extends DbTestCase
                 new FeedScheduler($clock),
                 $this->em,
                 $clock,
+                new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
             ),
             new OrphanedFeedReclaimer($this->em),
             $this->em,

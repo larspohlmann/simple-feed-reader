@@ -76,6 +76,31 @@ class EntryRepository extends ServiceEntityRepository
     }
 
     /**
+     * The whole table, walked in ascending-id slices for app:search:reindex.
+     * Id keyset (`id > :lastId`), never OFFSET: OFFSET re-scans and discards
+     * every prior row on each call, which turns a full-table walk quadratic
+     * once the table holds tens of thousands of rows. Feed is fetched eagerly
+     * so EntryIndexer::toIndexedEntries() costs no extra query per row.
+     *
+     * @return list<Entry>
+     */
+    public function entriesAfterId(int $lastId, int $limit): array
+    {
+        /** @var list<Entry> $entries */
+        $entries = $this->createQueryBuilder('e')
+            ->addSelect('f')
+            ->join('e.feed', 'f')
+            ->andWhere('e.id > :lastId')
+            ->setParameter('lastId', $lastId)
+            ->orderBy('e.id', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return $entries;
+    }
+
+    /**
      * The feed's existing entries for the given guid hashes, indexed by hash —
      * lets a re-parse match items back to their persisted rows.
      *
@@ -118,9 +143,7 @@ class EntryRepository extends ServiceEntityRepository
      */
     public function listForUser(EntryQuery $query): array
     {
-        $qb = $this->rowQueryBuilder($query->userId)
-            ->orderBy('e.effectiveDate', 'DESC')
-            ->addOrderBy('e.id', 'DESC')
+        $qb = $this->newestFirst($this->rowQueryBuilder($query->userId))
             ->setMaxResults($query->limit);
 
         if ($query->subscriptionId !== null) {
@@ -154,9 +177,7 @@ class EntryRepository extends ServiceEntityRepository
      */
     public function searchForUser(EntrySearchQuery $query): array
     {
-        $qb = $this->rowQueryBuilder($query->userId)
-            ->orderBy('e.effectiveDate', 'DESC')
-            ->addOrderBy('e.id', 'DESC')
+        $qb = $this->newestFirst($this->rowQueryBuilder($query->userId))
             ->setMaxResults($query->limit);
 
         $this->applyTerms($qb, $query->terms);
@@ -166,6 +187,52 @@ class EntryRepository extends ServiceEntityRepository
         $rows = $qb->getQuery()->getResult();
 
         return array_map(fn (array $row): EntryListRow => $this->hydrateRow($row), $rows);
+    }
+
+    /**
+     * The given entry ids hydrated through the same list-row projection every
+     * other list uses — same per-user read state, same subscription join.
+     * Ordered exactly like the entry list, never in the id order asked for,
+     * because a search engine's own ordering owes nothing to it.
+     *
+     * The subscription join is the actual access gate: an id for a feed the
+     * caller does not subscribe to is dropped here even if it came from a
+     * search index whose own filter was wrong or whose data was stale.
+     *
+     * @param list<int> $entryIds
+     *
+     * @return list<EntryListRow>
+     */
+    public function rowsByIdsForUser(array $entryIds, int $userId): array
+    {
+        if ($entryIds === []) {
+            return [];
+        }
+
+        /** @var list<array<array-key, mixed>> $rows */
+        $rows = $this->newestFirst(
+            $this->rowQueryBuilder($userId)
+                ->andWhere('e.id IN (:ids)')
+                ->setParameter('ids', $entryIds),
+        )
+            ->getQuery()
+            ->getResult();
+
+        return array_map(fn (array $row): EntryListRow => $this->hydrateRow($row), $rows);
+    }
+
+    /**
+     * The newest-first order every entry list shares: effectiveDate DESC,
+     * then id DESC as the tiebreaker a whole refresh run's worth of tied
+     * dates needs. This is the tiebreak the keyset cursor in applyCursor()
+     * depends on — changing it here would silently desync every caller's
+     * pagination from its own cursor predicate.
+     */
+    private function newestFirst(QueryBuilder $qb): QueryBuilder
+    {
+        return $qb
+            ->orderBy('e.effectiveDate', 'DESC')
+            ->addOrderBy('e.id', 'DESC');
     }
 
     /**

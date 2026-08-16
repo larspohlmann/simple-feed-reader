@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Search;
 
-use App\Repository\EntryListRow;
 use App\Repository\EntrySearchQuery;
 
 /**
@@ -14,6 +13,6 @@ use App\Repository\EntrySearchQuery;
  */
 interface EntrySearchInterface
 {
-    /** @return list<EntryListRow> newest first, at most $query->limit rows */
-    public function search(EntrySearchQuery $query): array;
+    /** @return EntrySearchResult whose rows are newest first, at most $query->limit of them */
+    public function search(EntrySearchQuery $query): EntrySearchResult;
 }

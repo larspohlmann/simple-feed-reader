@@ -43,6 +43,8 @@ services:
       # so this one URL also points phpunit at feedreader_test.
       DATABASE_URL: "mysql://feedreader:feedreader@mysql:3306/feedreader?serverVersion=8.4&charset=utf8mb4"
       MAILER_DSN: "smtp://mailpit:1025"
+      MEILISEARCH_URL: "http://meilisearch:7700"
+      MEILISEARCH_KEY: "dev-master-key-not-a-secret"
     extra_hosts:
       # Makes host.docker.internal work on Docker Engine variants where it is
       # not built in; harmless on Docker Desktop.
@@ -112,6 +114,8 @@ services:
     environment:
       DATABASE_URL: "mysql://feedreader:feedreader@mysql:3306/feedreader?serverVersion=8.4&charset=utf8mb4"
       MAILER_DSN: "smtp://mailpit:1025"
+      MEILISEARCH_URL: "http://meilisearch:7700"
+      MEILISEARCH_KEY: "dev-master-key-not-a-secret"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -134,6 +138,21 @@ services:
     image: axllent/mailpit:latest
     ports:
       - "127.0.0.1:8025:8025"   # web inbox; SMTP (1025) stays internal to the compose network
+
+  # The search engine, always on in dev so development runs against the same
+  # path production does. No depends_on anywhere: the app answers searches from
+  # the database whenever this container is absent or down, and an ordering
+  # constraint would claim otherwise.
+  meilisearch:
+    image: getmeili/meilisearch:v1.13
+    environment:
+      MEILI_MASTER_KEY: "dev-master-key-not-a-secret"
+      MEILI_ENV: "development"
+    volumes:
+      - meili-data:/meili_data
+    ports:
+      # Dashboard and API; internal traffic uses the compose network.
+      - "127.0.0.1:7700:7700"
 
   # Default dev frontend: the Angular CLI dev server with live reload. The
   # browser (on the host) fetches the bundle from here on :4200 and calls the
@@ -163,3 +182,4 @@ services:
 volumes:
   mysql-data:
   frontend-node-modules:
+  meili-data:
