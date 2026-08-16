@@ -50,10 +50,10 @@ final class RecommendationRunRepository extends ServiceEntityRepository
     /**
      * The run's status as the database holds it right now, deliberately read
      * as a scalar so the identity map cannot answer with the copy the caller
-     * is itself mutating. RecommendationRunAdvancer's cancellation checkpoint
-     * needs exactly that: after a provider call it must learn whether someone
-     * else stopped the run meanwhile, and a managed entity would simply hand
-     * back the stale in-memory status.
+     * is itself mutating. RecommendationTickCheckpoint needs exactly that:
+     * after a provider call it must learn whether someone else stopped the
+     * run meanwhile, and a managed entity would simply hand back the stale
+     * in-memory status.
      */
     public function statusOf(int $runId): ?string
     {

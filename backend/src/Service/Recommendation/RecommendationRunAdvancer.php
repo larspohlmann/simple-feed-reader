@@ -73,11 +73,27 @@ final class RecommendationRunAdvancer
      * loading and prompt assembly before the first request, and the ranking,
      * banking and recording between calls and waves.
      *
-     * It also has to clear Strato's 240 s cap on a web request. A poll tick
-     * killed at that cap may have died before its first chunk, so it never
-     * beat at all and this margin is the whole of its floor.
+     * The stretch to watch when re-tuning this is the snapshot tick, which
+     * makes no provider call at all -- it loads candidates and history, packs
+     * the batches and flushes -- so it never beats once and the TTL is its
+     * whole budget. That budget fell from 2100 s to 480 s with #444. It holds
+     * because the work is database- and CPU-bound over a pool the reader's
+     * own candidatePoolSize caps, and because the poll driver that runs it on
+     * Strato is killed at 240 s long before the lock expires. A future
+     * snapshot phase that grows unbounded would break the assumption, not the
+     * arithmetic.
+     *
+     * The margin also has to clear Strato's 240 s cap on a web request, and
+     * on the standard profile it is the only reason the TTL does: 180 s of
+     * first-byte wait alone would fall short. A poll tick killed at that cap
+     * may have died before its first chunk, so it never beat at all and the
+     * TTL is the whole of its floor.
+     *
+     * Public so RecommendationRunAdvancerTest can pin the exact TTL against
+     * the two inputs it is made of, rather than against a re-derivation of
+     * the formula's shape.
      */
-    private const float LOCK_TTL_MARGIN_SECONDS = 300.0;
+    public const float LOCK_TTL_MARGIN_SECONDS = 300.0;
 
     /**
      * The most concurrent batch calls a poll tick may fan out. A poll tick is
@@ -103,7 +119,7 @@ final class RecommendationRunAdvancer
         private readonly RecommendationWinnerRanker $ranker,
         private readonly RecommendationDuplicateParser $duplicateParser,
         private readonly RecommendationCallRecorder $callRecorder,
-        private readonly RecommendationCancellationCheckpoint $cancellation,
+        private readonly RecommendationTickCheckpoint $checkpoint,
         private readonly RecommendationBatchWave $batchWave,
         private readonly RecommendationCompletionRequestFactory $requestFactory,
         private readonly TickLockKeepalive $keepalive,
@@ -163,13 +179,16 @@ final class RecommendationRunAdvancer
      * RecommendationRun carries no optimistic-version guard, so the two could
      * double-bank winners and double-bill provider spend.
      *
-     * Invariant since #444: a live holder refreshes the lock at least every
-     * TickLockKeepalive::MINIMUM_INTERVAL_SECONDS, so the TTL only has to
-     * clear the longest gap between two refreshes -- not the longest tick.
-     * That gap is one first-byte wait: a beat rides on a streamed chunk, and
-     * a provider that has not started answering yields none until the stream
-     * idle timeout fires. Sizing it from the throttle instead would let a
-     * live holder's lock lapse mid-call.
+     * Invariant since #444: a live holder refreshes the lock no more often
+     * than every TickLockKeepalive::MINIMUM_INTERVAL_SECONDS -- that number
+     * is a throttle ceiling, never a promise of a refresh -- and it goes
+     * without one only while its stream is silent. So the TTL has to clear
+     * the longest such silence, not the longest tick. That silence is one
+     * first-byte wait: a beat rides on a streamed chunk, and a provider that
+     * has not started answering yields none until the stream idle timeout
+     * fires. Sizing the TTL from the throttle would be reading the ceiling as
+     * a floor, and would let a live holder's lock lapse while it waits for a
+     * first token it was told to expect.
      *
      * Read from the connection rather than from a constant since #433: a
      * connection the account marked slow waits a quarter of an hour for a
@@ -445,7 +464,7 @@ final class RecommendationRunAdvancer
 
         $result = $this->duplicateParser->parse($content, array_column($pool, 'id'));
         $recordedCall->settle($content, $result->usable);
-        $this->cancellation->guard($run);
+        $this->checkpoint->guard($run);
 
         if (!$result->usable) {
             return $this->recordUnusableDedupReply($run, $content, $pool);

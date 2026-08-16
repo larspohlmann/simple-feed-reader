@@ -29,7 +29,7 @@ use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
  * sides genuinely sit in different processes — a worker tick against a web
  * request. Only the database knows what happened in between.
  */
-final readonly class RecommendationCancellationCheckpoint
+final readonly class RecommendationTickCheckpoint
 {
     public function __construct(
         private RecommendationRunRepository $runs,

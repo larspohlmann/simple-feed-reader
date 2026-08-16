@@ -14,21 +14,22 @@ use Symfony\Component\Lock\LockInterface;
  * Keeps the lock of a tick that is streaming from expiring under it (#439,
  * #444).
  *
- * RecommendationRunAdvancer's per-user lock has always been sized for the
- * longest legal call a holder could make -- three hours five minutes on the
- * slow timeout profile -- because nothing renewed it in between and a second
+ * RecommendationRunAdvancer's per-user lock used to be sized for the longest
+ * legal call a holder could make -- three hours five minutes on the slow
+ * timeout profile -- because nothing renewed it in between and a second
  * process taking the same lock mid-tick could double-bank winners and
- * double-bill provider spend. Twice now a worker has died mid-tick instead,
- * and the same TTL that guarded against a stolen lock stranded the run for
- * hours against a holder that no longer existed.
+ * double-bill provider spend. Twice a worker died mid-tick instead, and the
+ * same TTL that guarded against a stolen lock stranded the run for hours
+ * against a holder that no longer existed.
  *
  * A lock a live holder refreshes can be sized against the longest *silence*
  * it can produce instead, and a dead holder stops refreshing within one beat.
- * Task 9 arms this and resizes the TTL against that silence; this class only
- * does the refreshing, but the number the resize must respect is NOT
- * MINIMUM_INTERVAL_SECONDS -- a beat only fires from inside
- * OpenAiCompatibleChatClient::completeMany(), once per chunk the stream
- * yields, so the real ceiling is set by everything that produces no chunk:
+ * The advancer arms this around its tick and sizes the TTL against that
+ * silence; this class only does the refreshing, but the number that sizing
+ * must respect is NOT MINIMUM_INTERVAL_SECONDS -- a beat only fires from
+ * inside OpenAiCompatibleChatClient::completeMany(), once per chunk the
+ * stream yields, so the real ceiling is set by everything that produces no
+ * chunk:
  *
  * - A silent provider yields nothing until HttpClient's idle timeout, i.e.
  *   ProviderTimeouts::$firstByteSeconds -- 900 s on the slow profile.
@@ -46,16 +47,27 @@ use Symfony\Component\Lock\LockInterface;
  * point, it is underway. beat() never throws it on, deliberately: throwing
  * into the streaming loop is the failure this class exists to avoid, and the
  * tick is mid-HTTP-call with nowhere safe to unwind to. It records the loss
- * instead, and RecommendationCancellationCheckpoint reads it: the tick stops
- * at its next checkpoint rather than keep banking against a lock it has
- * already lost. Deciding what to do about it stays there; all this class
- * knows is that the store said the lock is somebody else's.
+ * instead, and RecommendationTickCheckpoint reads it: the tick stops at its
+ * next checkpoint rather than keep banking against a lock it has already
+ * lost. Deciding what to do about it stays there; all this class knows is
+ * that the store said the lock is somebody else's.
  *
  * Not readonly: the held lock is the point.
  */
 final class TickLockKeepalive implements CompletionStreamHeartbeat
 {
     public const int MINIMUM_INTERVAL_SECONDS = 30;
+
+    /**
+     * The two refreshes fail for materially different reasons and #439 was
+     * diagnosed from the log, so they do not share a line. A store that could
+     * not answer is a blip; a lock another process now holds is a run being
+     * advanced twice, and it must read that way to someone scanning the log
+     * rather than reading the exception class in the context array.
+     */
+    public const string LOCK_TAKEN_MESSAGE = 'Another process took the recommendation tick lock';
+
+    public const string REFRESH_FAILED_MESSAGE = 'Could not refresh the recommendation tick lock';
 
     private ?LockInterface $held = null;
 
@@ -106,10 +118,10 @@ final class TickLockKeepalive implements CompletionStreamHeartbeat
     /**
      * Whether the store has told this tick that its lock is somebody else's.
      *
-     * RecommendationCancellationCheckpoint asks, and stops the tick there.
-     * The fact travels as a field rather than as an exception because beat()
-     * fires from inside the streaming loop, where the tick has nowhere safe
-     * to unwind to.
+     * RecommendationTickCheckpoint asks, and stops the tick there. The fact
+     * travels as a field rather than as an exception because beat() fires
+     * from inside the streaming loop, where the tick has nowhere safe to
+     * unwind to.
      *
      * Cleared in exactly one place, hold(), because the loss belongs to the
      * tick that suffered it and hold() is where the next tick begins.
@@ -141,18 +153,18 @@ final class TickLockKeepalive implements CompletionStreamHeartbeat
             // lock is another process's now. The tick must stop, but not
             // here: see the class docblock.
             $this->lockLost = true;
-            $this->report($conflict);
+            $this->report(self::LOCK_TAKEN_MESSAGE, $conflict);
         } catch (LockExceptionInterface $failure) {
             // A store that could not answer says nothing about who owns the
             // lock, and the tick is still working, so it keeps going.
-            $this->report($failure);
+            $this->report(self::REFRESH_FAILED_MESSAGE, $failure);
         }
     }
 
-    private function report(LockExceptionInterface $failure): void
+    private function report(string $message, LockExceptionInterface $failure): void
     {
         $this->logger->warning(
-            'Could not refresh the recommendation tick lock',
+            $message,
             ['resource' => $this->resource, 'exception' => $failure],
         );
     }

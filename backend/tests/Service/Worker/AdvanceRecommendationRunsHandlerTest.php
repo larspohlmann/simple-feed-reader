@@ -21,7 +21,7 @@ use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\ChatCompletionClient;
 use App\Service\Recommendation\RecommendationBatchWave;
 use App\Service\Recommendation\RecommendationCallRecorder;
-use App\Service\Recommendation\RecommendationCancellationCheckpoint;
+use App\Service\Recommendation\RecommendationTickCheckpoint;
 use App\Service\Recommendation\RecommendationCandidateLoader;
 use App\Service\Recommendation\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\RecommendationDuplicateParser;
@@ -514,7 +514,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             self::getContainer()->get(RecommendationWinnerRanker::class),
             self::getContainer()->get(RecommendationDuplicateParser::class),
             self::getContainer()->get(RecommendationCallRecorder::class),
-            self::getContainer()->get(RecommendationCancellationCheckpoint::class),
+            self::getContainer()->get(RecommendationTickCheckpoint::class),
             self::getContainer()->get(RecommendationBatchWave::class),
             self::getContainer()->get(RecommendationCompletionRequestFactory::class),
             self::getContainer()->get(TickLockKeepalive::class),

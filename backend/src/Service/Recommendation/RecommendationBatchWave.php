@@ -38,7 +38,7 @@ final readonly class RecommendationBatchWave
         private RecommendationPromptBuilder $promptBuilder,
         private RecommendationPickParser $parser,
         private RecommendationCompletionRequestFactory $requestFactory,
-        private RecommendationCancellationCheckpoint $cancellation,
+        private RecommendationTickCheckpoint $checkpoint,
     ) {
     }
 
@@ -90,7 +90,7 @@ final readonly class RecommendationBatchWave
                 $pending[] = $position;
             }
 
-            $this->cancellation->guard($run);
+            $this->checkpoint->guard($run);
             if ([] === $pending || $round >= RecommendationRun::MAX_ATTEMPTS) {
                 break;
             }

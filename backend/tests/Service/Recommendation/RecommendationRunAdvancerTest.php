@@ -35,6 +35,7 @@ use App\Service\Recommendation\TickDriver;
 use App\Tests\DbTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use App\Tests\Support\AiSettingsRowMover;
+use App\Tests\Support\BeatDuringReleaseLockFactory;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\TtlRecordingLockFactory;
@@ -317,24 +318,28 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
     /**
      * Pins the invariant lockTtlFor()'s doc comment declares since #444: a
-     * live holder refreshes its lock at least every
-     * TickLockKeepalive::MINIMUM_INTERVAL_SECONDS, so the TTL only has to
-     * outlive the longest *silence* such a holder can produce. That silence
-     * is one first-byte wait: a beat fires per streamed chunk, and a provider
-     * that has not answered yet yields no chunk until the stream's idle
-     * timeout. A TTL below it would expire under a holder that is alive and
-     * waiting for its first token, and a second process could take the lock
-     * mid-call -- the double-bank the keepalive exists to prevent.
+     * live holder refreshes its lock no more often than every
+     * TickLockKeepalive::MINIMUM_INTERVAL_SECONDS, and goes without a refresh
+     * only while its stream is silent, so the TTL has to clear the longest
+     * such silence rather than the longest tick. That silence is one
+     * first-byte wait: a beat fires per streamed chunk, and a provider that
+     * has not answered yet yields no chunk until the stream's idle timeout.
+     * A TTL below it would expire under a holder that is alive and waiting
+     * for its first token, and a second process could take the lock mid-call
+     * -- the double-bank the keepalive exists to prevent.
      *
-     * The TTL must also clear Strato's 240 s cap on a web request. A poll
-     * tick killed at that cap can die before any chunk arrives, so it may
-     * never have beaten at all and the TTL is the only thing bounding that
-     * stall.
+     * Asserted as the exact sum rather than as bounds around it. Bounds are
+     * too easy to satisfy by accident: the two the invariant really asks for
+     * are both cleared by the wall-clock formula this replaced, and a
+     * regression to `wallClockSeconds + MARGIN` would clear them too while
+     * putting a fifteen-minute stall back on the standard profile.
      *
-     * And it must stay below the wall-clock-sized number it replaced: that
-     * formula is what stranded a run for three hours five minutes behind a
-     * worker that no longer existed (#439), and a change that restores it
-     * brings the stall straight back.
+     * The Strato cap is asserted separately because the sum does not imply
+     * it: a later cut to LOCK_TTL_MARGIN_SECONDS would keep the sum true and
+     * silently drop the TTL under the 240 s at which a web request is killed,
+     * where the killed tick's own lock is all that bounds the stall. On the
+     * standard profile the margin is the only reason the TTL clears it at
+     * all, since a first-byte wait there is 180 s.
      *
      * Driven through advance() rather than read off a constant, because since
      * #433 the TTL is decided per tick from the connection it is about to
@@ -362,12 +367,16 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         );
 
         $ttl = $lockFactory->lastTtlFor('ai-recommendations-' . $this->user->getId());
-        self::assertGreaterThanOrEqual($firstByteSeconds, $ttl);
-        self::assertGreaterThanOrEqual(self::STRATO_REQUEST_CAP_SECONDS, $ttl);
-        self::assertLessThan(
-            RecommendationRun::MAX_ATTEMPTS * $profile->wallClockSeconds,
+        self::assertSame(
+            $firstByteSeconds + RecommendationRunAdvancer::LOCK_TTL_MARGIN_SECONDS,
             $ttl,
-            'A TTL still sized for the longest legal call keeps the multi-hour stall of #439.',
+            'The TTL is one first-byte silence plus the margin, and nothing else.',
+        );
+        self::assertGreaterThanOrEqual(
+            self::STRATO_REQUEST_CAP_SECONDS,
+            $ttl,
+            'A TTL under the cap Strato kills a web request at lets the next tick in '
+                . 'while the killed one may still be running.',
         );
     }
 
@@ -442,11 +451,48 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
+     * The narrower half of the same rule: advance() disarms the keepalive
+     * *before* it releases the lock, and the window that ordering defends is
+     * the single instant between the two statements. A beat landing there
+     * would refresh a lock already on its way out -- and once the name is
+     * free, another process may hold it, so the refresh would prop up a
+     * stranger's lock.
+     *
+     * The beat is delivered by the release itself (see BeatDuringReleaseLock),
+     * which is the only way a cooperative test can stand inside that window.
+     * With the disarm first the beat finds nothing held; reversed, it finds
+     * this very lock and the lifetime jumps back to a full TTL.
+     */
+    public function testABeatArrivingAsTheLockIsReleasedRefreshesNothing(): void
+    {
+        $lockFactory = new BeatDuringReleaseLockFactory(
+            new DoctrineDbalStore($this->em->getConnection()),
+            $this->streamHeartbeat(),
+        );
+        self::getContainer()->set(LockFactory::class, $lockFactory);
+        $this->seedMultiBatchFixture();
+        $this->startAndSnapshot();
+
+        $lock = $lockFactory->lastLockFor('ai-recommendations-' . $this->user->getId());
+        self::assertNotNull($lock, 'The tick must have created its per-user lock.');
+        self::assertNotNull(
+            $lock->lifetimeBeforeTheBeat(),
+            'The lock must have been released while it still had a lifetime to observe.',
+        );
+
+        self::assertLessThanOrEqual(
+            $lock->lifetimeBeforeTheBeat(),
+            $lock->lifetimeAfterTheBeat(),
+            'A beat landing as the lock is released must not refresh it: the keepalive is disarmed first.',
+        );
+    }
+
+    /**
      * The other half of #444: a refresh the store rejects because another
      * process now holds the name means the double-bank has already begun. The
      * keepalive cannot throw -- it beats from inside the streaming loop, with
      * nowhere safe to unwind to -- so the tick has to stop at its next
-     * cancellation checkpoint instead, before it banks a single winner
+     * RecommendationTickCheckpoint instead, before it banks a single winner
      * against a lock it no longer owns.
      *
      * The theft happens during the provider call because that is the one
@@ -480,6 +526,62 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             self::assertNotNull($persisted);
             self::assertSame(0, $persisted->progress()->batchesDone);
             self::assertSame([], $persisted->getWinners());
+        } finally {
+            $thief?->release();
+        }
+    }
+
+    /**
+     * The same stop at the other checkpoint. The batch phase guards inside
+     * RecommendationBatchWave; the dedup phase guards in the advancer itself,
+     * and what it protects is bigger — the next statement after it finalizes
+     * the run, writes its RecommendationItems and marks it completed. A tick
+     * that finalized against a lock it had lost would race the process that
+     * owns the run into the same ending.
+     *
+     * Guarded here rather than trusted from the batch-phase test because
+     * removing this one call leaves the whole suite green otherwise: the two
+     * checkpoints are separate statements and only their own tests hold them
+     * in place.
+     */
+    public function testATickThatLostItsLockDuringTheDedupCallDoesNotFinalize(): void
+    {
+        $this->recordLocksOverTheRealStore();
+        $this->seedMultiBatchFixture();
+        $run = $this->startAndSnapshot();
+        $firstBatch = $run->getCandidateBatches()[0];
+        $secondBatch = $run->getCandidateBatches()[1];
+        $runId = $run->getId() ?? 0;
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 80, 'reason' => 'from batch one']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $secondBatch[0], 'score' => 95, 'reason' => 'from batch two']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+        self::assertTrue($this->activeRun()->progress()->isDedupPhase);
+
+        $thief = null;
+        $this->stubChatClient()->duringNextCall(function () use (&$thief): void {
+            $thief = $this->stealTheTickLock();
+            $this->streamHeartbeat()->beat();
+        });
+        $this->stubChatClient()->queueContent(json_encode([
+            'duplicates' => [$firstBatch[0]],
+        ], \JSON_THROW_ON_ERROR));
+
+        try {
+            $report = $this->advancer()->advance($this->user);
+
+            self::assertSame('running', $report->status);
+
+            $this->em->clear();
+            $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
+            self::assertNotNull($persisted);
+            self::assertSame(RecommendationRun::STATUS_RUNNING, $persisted->getStatus());
+            self::assertSame([], $this->recommendationItems($persisted));
         } finally {
             $thief?->release();
         }

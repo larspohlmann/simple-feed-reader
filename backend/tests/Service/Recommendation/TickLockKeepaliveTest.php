@@ -147,8 +147,8 @@ final class TickLockKeepaliveTest extends TestCase
      * A refresh the store rejects because someone else holds the lock is the
      * one failure that is not a store problem: the double-bank is underway.
      * beat() still may not throw -- it runs inside the streaming loop -- so
-     * the loss is recorded here for the tick's cancellation checkpoint to
-     * find at the next safe place to stop.
+     * the loss is recorded here for the tick checkpoint to find at the next
+     * safe place to stop.
      */
     public function testARefreshRejectedByAnotherOwnerRecordsTheLockAsLost(): void
     {
@@ -162,11 +162,19 @@ final class TickLockKeepaliveTest extends TestCase
         $keepalive->beat();
 
         self::assertTrue($keepalive->hasLostTheLock());
+
+        $records = $logSpy->getRecords();
         self::assertCount(
             1,
-            $logSpy->getRecords(),
+            $records,
             'A stolen lock must be logged too: it is how a reader finds out afterwards.',
         );
+        self::assertSame(
+            TickLockKeepalive::LOCK_TAKEN_MESSAGE,
+            $records[0]->message,
+            'A stolen lock must not read like a store blip -- #439 was diagnosed from this line.',
+        );
+        self::assertSame(self::LOCK_RESOURCE, $records[0]->context['resource']);
     }
 
     /**
@@ -230,6 +238,11 @@ final class TickLockKeepaliveTest extends TestCase
 
         $records = $logSpy->getRecords();
         self::assertCount(1, $records, 'A lost refresh must be logged, not merely swallowed.');
+        self::assertSame(
+            TickLockKeepalive::REFRESH_FAILED_MESSAGE,
+            $records[0]->message,
+            'A store that could not answer must not be reported as a stolen lock.',
+        );
         self::assertSame(self::LOCK_RESOURCE, $records[0]->context['resource']);
         self::assertArrayHasKey('exception', $records[0]->context);
     }
