@@ -19,6 +19,7 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
+use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\OpenAiCompatibleChatClient;
@@ -397,13 +398,18 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // The output bound travels with the prompt it belongs to: the cap sent
         // is the reserve for exactly the candidates this batch asked about, so
         // a bigger batch gets proportionally more room instead of being
-        // truncated by a fixed ceiling. It is the output reserve, not the
-        // answer reserve — `max_tokens` bounds reasoning-plus-answer, and a
-        // reasoning model starves without the headroom (#327). Derived from the
-        // batch here rather than hardcoded, so the assertion still holds if the
-        // batch size changes for unrelated reasons.
+        // truncated by a fixed ceiling. Derived from the batch here rather than
+        // hardcoded, so the assertion still holds if the batch size changes for
+        // unrelated reasons.
+        //
+        // This fixture suppresses reasoning, so the bound is the answer reserve
+        // alone: there is no thinking phase to leave room for, and paying for
+        // one anyway is what let a looping model generate for an hour (#437).
+        // A configuration that may reason still gets the reasoning headroom
+        // (#327) — RecommendationCompletionRequestFactoryTest holds both halves.
+        self::assertTrue($calls[0]['suppressReasoning']);
         self::assertSame(
-            $this->promptBuilder()->outputTokenReserve(\count($firstBatch)),
+            $this->promptBuilder()->answerTokenReserve(\count($firstBatch)),
             $calls[0]['maxAnswerTokens'],
         );
 
@@ -758,6 +764,60 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame('not json', $secondCallMessages[2]['content']);
         self::assertSame('user', $secondCallMessages[3]['role']);
         self::assertStringContainsString('Your previous reply was not usable.', $secondCallMessages[3]['content']);
+    }
+
+    /**
+     * A runaway is the model's failure, not the endpoint's, so it costs the
+     * one batch a retry rather than costing the whole wave a transport-failure
+     * ceiling increment. Treating it as transport re-ran the identical prompt
+     * against the identical model up to the ceiling, which in #437 was three
+     * hours to learn nothing.
+     */
+    public function testARunawayRetriesItsOwnBatchInsteadOfFailingTheWave(): void
+    {
+        $this->seedMultiBatchFixture();
+        $firstBatch = $this->startAndSnapshot()->getCandidateBatches()[0];
+
+        $this->stubChatClient()->queueFailure(new ProviderRunawayException('would not stop', '{"recomm'));
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'r1']],
+        ], \JSON_THROW_ON_ERROR));
+
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame('running', $report->status);
+        self::assertSame(1, $report->batchesDone);
+        self::assertCount(2, $this->stubChatClient()->calls());
+
+        $this->em->clear();
+        self::assertSame(0, $this->activeRun()->getTransportFailures());
+    }
+
+    /**
+     * The retry has to differ from the attempt that ran away, and what it
+     * shows the model is the start of its own loop. Echoing the whole runaway
+     * back would re-prime the repetition it is meant to break, so the
+     * corrective tail carries a clipped head of it.
+     */
+    public function testTheRetryAfterARunawayShowsTheModelWhereItWentWrong(): void
+    {
+        $this->seedMultiBatchFixture();
+        $firstBatch = $this->startAndSnapshot()->getCandidateBatches()[0];
+
+        $this->stubChatClient()->queueFailure(
+            new ProviderRunawayException('would not stop', str_repeat('{"id": 349500}, ', 4000)),
+        );
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'r1']],
+        ], \JSON_THROW_ON_ERROR));
+
+        $this->advancer()->advance($this->user);
+
+        $retryMessages = $this->stubChatClient()->calls()[1]['messages'];
+        self::assertCount(4, $retryMessages);
+        self::assertSame('assistant', $retryMessages[2]['role']);
+        self::assertStringContainsString('{"id": 349500}', $retryMessages[2]['content']);
+        self::assertLessThan(4096, \strlen($retryMessages[2]['content']));
     }
 
     /**
@@ -1441,6 +1501,45 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ));
     }
 
+    /**
+     * The dedup phase reads a single call rather than a wave, so it has its
+     * own runaway path. It ends the same way the batch phase's does: the model
+     * failed, not the endpoint, so the reply is unusable and the run degrades
+     * to an undeduped list instead of the exception escaping the tick (#437).
+     */
+    public function testARunawayDedupReplyDegradesInsteadOfEscapingTheTick(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startAndSnapshot();
+        $firstBatch = $run->getCandidateBatches()[0];
+        $secondBatch = $run->getCandidateBatches()[1];
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 70, 'reason' => 'r1']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $secondBatch[0], 'score' => 90, 'reason' => 'r2']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            $this->stubChatClient()->queueFailure(new ProviderRunawayException('would not stop', '{"dup'));
+        }
+
+        $this->advancer()->advance($this->user);
+        $this->advancer()->advance($this->user);
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame('completed', $report->status);
+
+        // A runaway is the model's failure, so it never touches the transport
+        // ceiling — the endpoint answered, and at length.
+        $this->em->clear();
+        self::assertSame(0, $this->persistedTransportFailures($run));
+    }
+
     public function testThreeUnusableDedupRepliesCompleteTheRunUndeduped(): void
     {
         $this->seedMultiBatchFixture();
@@ -1735,6 +1834,17 @@ final class RecommendationRunAdvancerTest extends DbTestCase
      * the entity manager would risk serving the very in-memory value this
      * assertion exists to bypass.
      */
+    private function persistedTransportFailures(RecommendationRun $run): int
+    {
+        $failures = $this->em->getConnection()->fetchOne(
+            'SELECT transport_failures FROM recommendation_run WHERE id = ?',
+            [$run->getId()],
+        );
+        self::assertIsNumeric($failures);
+
+        return (int) $failures;
+    }
+
     private function persistedAttempts(RecommendationRun $run): int
     {
         $attempts = $this->em->getConnection()->fetchOne(

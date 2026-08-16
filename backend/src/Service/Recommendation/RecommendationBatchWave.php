@@ -7,6 +7,7 @@ namespace App\Service\Recommendation;
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
+use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\ProviderConnectionFactory;
 
 /**
@@ -304,12 +305,17 @@ final readonly class RecommendationBatchWave
     }
 
     /**
+     * The first failure that says something about the endpoint rather than
+     * about the model. A runaway is deliberately not one: the address answered
+     * and kept answering, so it costs its own batch a retry through the
+     * unusable-reply path and leaves the wave and its siblings alone (#437).
+     *
      * @param list<CompletionOutcome> $outcomes
      */
     private function firstFailureIn(array $outcomes): ?\Throwable
     {
         foreach ($outcomes as $outcome) {
-            if ($outcome->isFailure()) {
+            if ($outcome->isFailure() && !$outcome->cause() instanceof ProviderRunawayException) {
                 return $outcome->cause();
             }
         }
@@ -331,10 +337,31 @@ final readonly class RecommendationBatchWave
     {
         $replies = [];
         foreach ($pending as $callIndex => $position) {
-            $replies[$position] = ['content' => $outcomes[$callIndex]->content(), 'call' => $recordedCalls[$callIndex]];
+            $replies[$position] = [
+                'content' => self::contentOf($outcomes[$callIndex]),
+                'call' => $recordedCalls[$callIndex],
+            ];
         }
 
         return $replies;
+    }
+
+    /**
+     * A runaway's own partial answer is what the round hands on, because that
+     * is what the parser and the corrective tail need: the reply is unusable
+     * (it was cut mid-JSON), so the batch goes round again with the start of
+     * its own loop shown back to it. Every other outcome here is a success —
+     * guardWaveTransport has already thrown for anything else (#437).
+     */
+    private static function contentOf(CompletionOutcome $outcome): string
+    {
+        if (!$outcome->isFailure()) {
+            return $outcome->content();
+        }
+
+        $cause = $outcome->cause();
+
+        return $cause instanceof ProviderRunawayException ? $cause->partialAnswer() : '';
     }
 
     /**

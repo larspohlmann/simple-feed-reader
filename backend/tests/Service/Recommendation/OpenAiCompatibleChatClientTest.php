@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation;
 
 use App\Service\Ai\Exception\CredentialsRejectedException;
+use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ProviderConnection;
 use App\Service\Ai\ProviderCredentials;
@@ -495,12 +496,12 @@ final class OpenAiCompatibleChatClientTest extends TestCase
      * Chunking matches how a real response actually streams and is what makes
      * this test able to catch a cap that stopped firing.
      */
-    public function testAnOversizedAnswerIsUnreachable(): void
+    public function testAnOversizedAnswerIsRefusedAsARunaway(): void
     {
         $body = '{"choices":[{"message":{"content":"' . str_repeat('a', 2_100_000) . '"}}]}';
         $client = $this->clientAnswering(new MockResponse(str_split($body, 50_000)));
 
-        $this->expectException(ProviderUnreachableException::class);
+        $this->expectException(ProviderRunawayException::class);
         $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
     }
 
@@ -604,8 +605,11 @@ final class OpenAiCompatibleChatClientTest extends TestCase
      * The answer cap still protects memory on the streaming path -- it is
      * only reasoning that stopped being charged to it. Without this, #320's
      * fix would have removed the bound rather than moved it.
+     *
+     * The bound is now the request's own answer budget rather than a flat 2 MB
+     * (#437): 2048 requested tokens buy 16384 retained bytes.
      */
-    public function testAnOversizedStreamedAnswerIsStillUnreachable(): void
+    public function testAnOversizedStreamedAnswerIsStillRefused(): void
     {
         $event = 'data: ' . json_encode(
             ['choices' => [['delta' => ['content' => str_repeat('a', 200)]]]],
@@ -613,8 +617,169 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         ) . "\n\n";
         $client = $this->clientAnswering(new MockResponse(str_split(str_repeat($event, 12_000), 50_000)));
 
+        $this->expectException(ProviderRunawayException::class);
+        $this->expectExceptionMessage('That provider answered with more than 16384 bytes.');
+        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+    }
+
+    /**
+     * A flat 2 MB cap could never fire before `max_tokens` did: the largest
+     * answer a request may ask for is a few tens of kilobytes, so the guard
+     * was dead on the one path it was meant to cover -- a provider that
+     * ignores `max_tokens` and generates until something stops it (#437). The
+     * bound has to follow what was asked for.
+     */
+    public function testTheAnswerBoundFollowsWhatTheRequestAskedFor(): void
+    {
+        $event = 'data: ' . json_encode(
+            ['choices' => [['delta' => ['content' => str_repeat('a', 200)]]]],
+            \JSON_THROW_ON_ERROR,
+        ) . "\n\n";
+        $client = $this->clientAnswering(new MockResponse(str_split(str_repeat($event, 12_000), 50_000)));
+        $request = new CompletionRequest('m', $this->messages(), 512, $this->schema(), true);
+
+        $this->expectException(ProviderRunawayException::class);
+        $this->expectExceptionMessage('That provider answered with more than 4096 bytes.');
+        $client->complete($this->connection(), $request, new NullCompletionStreamObserver());
+    }
+
+    /**
+     * The bound is inclusive: an answer that lands exactly on it was still
+     * within what the request asked for, and refusing it would refuse a reply
+     * the prompt legitimately made room for.
+     */
+    public function testAnAnswerExactlyOnTheBoundIsAccepted(): void
+    {
+        $answer = str_repeat('a', 16_384);
+        $event = 'data: ' . json_encode(
+            ['choices' => [['delta' => ['content' => $answer]]]],
+            \JSON_THROW_ON_ERROR,
+        ) . "\n\n";
+        $client = $this->clientAnswering(new MockResponse(str_split($event, 4096)));
+
+        self::assertSame(
+            $answer,
+            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver()),
+        );
+    }
+
+    /**
+     * The runaway carries what arrived before it was cut, because that is what
+     * the retry shows the model to break the loop. An empty partial answer
+     * would send it back the same question unchanged (#437).
+     */
+    public function testARunawayCarriesThePartialAnswerItWasCutFrom(): void
+    {
+        $event = 'data: ' . json_encode(
+            ['choices' => [['delta' => ['content' => str_repeat('a', 200)]]]],
+            \JSON_THROW_ON_ERROR,
+        ) . "\n\n";
+        $client = $this->clientAnswering(new MockResponse(str_split(str_repeat($event, 12_000), 50_000)));
+
+        try {
+            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+            self::fail('The runaway answer was accepted.');
+        } catch (ProviderRunawayException $e) {
+            self::assertStringStartsWith('aaaa', $e->partialAnswer());
+        }
+    }
+
+    /**
+     * A runaway is a per-call outcome like every other failure completeMany
+     * folds, not an exception that aborts the read for the whole wave: the
+     * sibling still delivers its answer (#344, #437).
+     */
+    public function testARunawayBecomesThatCallsOutcomeWithoutAbortingSiblings(): void
+    {
+        $event = 'data: ' . json_encode(
+            ['choices' => [['delta' => ['content' => str_repeat('a', 200)]]]],
+            \JSON_THROW_ON_ERROR,
+        ) . "\n\n";
+        $client = $this->clientReturning([
+            new MockResponse(str_split(str_repeat($event, 12_000), 50_000)),
+            $this->sseStream('{"picks":[]}'),
+        ]);
+
+        $outcomes = $client->completeMany($this->connection(), [
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+        ]);
+
+        self::assertTrue($outcomes[0]->isFailure());
+        self::assertInstanceOf(ProviderRunawayException::class, $outcomes[0]->cause());
+        self::assertFalse($outcomes[1]->isFailure());
+        self::assertSame('{"picks":[]}', $outcomes[1]->content());
+    }
+
+    /**
+     * A runaway is not an unreachable provider. Reporting it as one sends the
+     * reader to look at the network, when the model in fact answered at
+     * length -- 8.2 MB of it, in the run that prompted #437 -- and simply
+     * would not stop.
+     */
+    public function testARunawayIsNotReportedAsAnUnreachableProvider(): void
+    {
+        $event = 'data: ' . json_encode(
+            ['choices' => [['delta' => ['content' => str_repeat('a', 200)]]]],
+            \JSON_THROW_ON_ERROR,
+        ) . "\n\n";
+        $client = $this->clientAnswering(new MockResponse(str_split(str_repeat($event, 12_000), 50_000)));
+
+        try {
+            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+            self::fail('The runaway answer was accepted.');
+        } catch (ProviderRunawayException $e) {
+            self::assertStringNotContainsString('did not answer', $e->getMessage());
+        }
+    }
+
+    /**
+     * The wall clock cutting a call that already reported `length` is a
+     * runaway, and the generic transport message ("That address did not
+     * answer.") is exactly wrong for it: the model had spent its whole ceiling
+     * and 8.2 MB by then (#437).
+     */
+    public function testAWallClockCutAfterTheTokenCeilingIsReportedAsARunaway(): void
+    {
+        $event = 'data: ' . json_encode(
+            ['choices' => [['delta' => ['content' => 'partial'], 'finish_reason' => 'length']]],
+            \JSON_THROW_ON_ERROR,
+        ) . "\n\n";
+        $client = $this->clientAnswering(new MockResponse(
+            (static function () use ($event): \Generator {
+                yield $event;
+                yield new TransportException('Maximum duration was reached.');
+            })(),
+        ));
+
+        try {
+            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+            self::fail('The cut-off answer was accepted.');
+        } catch (ProviderRunawayException $e) {
+            self::assertStringNotContainsString('did not answer', $e->getMessage());
+        }
+    }
+
+    /**
+     * The other side of that decision: a connection that dies mid-answer is a
+     * dead connection, however many bytes preceded it. Only the provider's own
+     * `length` makes it a runaway.
+     */
+    public function testAConnectionResetMidAnswerStaysAnUnreachableProvider(): void
+    {
+        $event = 'data: ' . json_encode(
+            ['choices' => [['delta' => ['content' => 'partial']]]],
+            \JSON_THROW_ON_ERROR,
+        ) . "\n\n";
+        $client = $this->clientAnswering(new MockResponse(
+            (static function () use ($event): \Generator {
+                yield $event;
+                yield new TransportException('Connection reset');
+            })(),
+        ));
+
         $this->expectException(ProviderUnreachableException::class);
-        $this->expectExceptionMessage('That provider answered with more than 2097152 bytes.');
+        $this->expectExceptionMessage('That address did not answer.');
         $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
     }
 

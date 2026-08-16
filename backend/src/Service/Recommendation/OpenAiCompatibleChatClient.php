@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 use App\Service\Ai\Exception\CredentialsRejectedException;
+use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ProviderConnection;
 use Symfony\Contracts\HttpClient\ChunkInterface;
@@ -27,10 +28,20 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     // endpoint and a slow local one at once — see that class for the numbers
     // and the history behind them (#433).
 
-    // What the reader holds in memory: the answer, plus the envelope for a
-    // provider that ignores `stream: true`. Generous against real answers,
-    // which run to a few kilobytes.
-    private const int MAXIMUM_ANSWER_BYTES = 2_097_152;
+    /**
+     * How many bytes of retained answer one requested token buys.
+     *
+     * The bound this sizes is what stops a provider that ignores `max_tokens`
+     * and generates until something else stops it. It used to be a flat 2 MB,
+     * which could never fire: the largest answer a request may ask for is a
+     * few tens of kilobytes, so `max_tokens` always came first and the guard
+     * was dead on the one path it existed for (#437).
+     *
+     * Eight bytes a token is twice the prompt builder's own estimate, so a
+     * reply the request legitimately asked for cannot trip it — the largest
+     * full batch on record retained 12 KB against a 36 KB bound.
+     */
+    private const int RETAINED_BYTES_PER_REQUESTED_TOKEN = 8;
 
     // What the provider is allowed to send. This is a runaway guard, not a
     // memory bound — the reader discards each event once decoded, so wire
@@ -139,6 +150,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
                 new CompletionStreamReader($this->decoder),
                 $call->observer,
                 $connection->timeouts,
+                $call->request->maxAnswerTokens * self::RETAINED_BYTES_PER_REQUESTED_TOKEN,
             );
         }
 
@@ -172,17 +184,44 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
             }
 
             return CompletionOutcome::answer($this->contentOf($slot->reader));
-        } catch (CredentialsRejectedException | ProviderUnreachableException $failure) {
+        } catch (CredentialsRejectedException | ProviderUnreachableException | ProviderRunawayException $failure) {
             $response->cancel();
 
             return CompletionOutcome::failure($failure);
         } catch (ExceptionInterface $transportFailure) {
             $response->cancel();
 
-            return CompletionOutcome::failure(
-                new ProviderUnreachableException('That address did not answer.', 0, $transportFailure),
-            );
+            return CompletionOutcome::failure($this->transportFailureOf($slot, $transportFailure));
         }
+    }
+
+    /**
+     * A call that reached `max_tokens` and was then cut by the wall clock is a
+     * runaway, not an unreachable address. `length` is the provider's own word
+     * for "I stopped because the ceiling stopped me", and a model that spends
+     * the whole ceiling repeating itself takes the wall clock with it — the
+     * call that prompted #437 reported `length`, streamed 8.2 MB, and was
+     * still reported as "That address did not answer".
+     *
+     * Everything else stays unreachable. A connection reset mid-answer is a
+     * dead connection however many bytes preceded it, and guessing otherwise
+     * from a byte count would relabel the ordinary failure this message is
+     * for.
+     */
+    private function transportFailureOf(CompletionCallSlot $slot, ExceptionInterface $failure): \RuntimeException
+    {
+        if ('length' !== $slot->reader->finishReason()) {
+            return new ProviderUnreachableException('That address did not answer.', 0, $failure);
+        }
+
+        return new ProviderRunawayException(
+            sprintf(
+                'That provider spent its whole %d-token ceiling and did not stop, %d bytes in.',
+                intdiv($slot->maximumAnswerBytes, self::RETAINED_BYTES_PER_REQUESTED_TOKEN),
+                $slot->reader->wireBytes(),
+            ),
+            $slot->reader->assistantContent() ?? '',
+        );
     }
 
     /**
@@ -249,7 +288,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
         $content = $chunk->getContent();
         if ('' !== $content) {
             $reader->consume($content);
-            $this->guardRetainedSize($reader);
+            $this->guardRetainedSize($slot);
             $slot->observer->streamProgressed(new CompletionStreamProgress(
                 $reader->assistantContent() ?? '',
                 $reader->wireBytes(),
@@ -290,16 +329,16 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
         return $content;
     }
 
-    private function guardRetainedSize(CompletionStreamReader $reader): void
+    private function guardRetainedSize(CompletionCallSlot $slot): void
     {
-        if ($reader->retainedBytes() <= self::MAXIMUM_ANSWER_BYTES) {
+        if ($slot->reader->retainedBytes() <= $slot->maximumAnswerBytes) {
             return;
         }
 
-        throw new ProviderUnreachableException(sprintf(
-            'That provider answered with more than %d bytes.',
-            self::MAXIMUM_ANSWER_BYTES,
-        ));
+        throw new ProviderRunawayException(
+            sprintf('That provider answered with more than %d bytes.', $slot->maximumAnswerBytes),
+            $slot->reader->assistantContent() ?? '',
+        );
     }
 
     private function request(ProviderConnection $connection, CompletionRequest $request): ResponseInterface

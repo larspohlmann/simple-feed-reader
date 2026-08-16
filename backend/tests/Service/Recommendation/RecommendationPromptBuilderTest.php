@@ -38,13 +38,103 @@ final class RecommendationPromptBuilderTest extends TestCase
      */
     public function testTheAnswerReserveScalesWithTheItemsBeingAnswered(): void
     {
-        self::assertSame(1800, $this->builder->answerTokenReserve(45));
-        self::assertSame(20000, $this->builder->answerTokenReserve(500));
+        self::assertSame(4500, $this->builder->answerTokenReserve(45));
+        self::assertSame(50000, $this->builder->answerTokenReserve(500));
     }
 
     /**
-     * Below the floor the per-item estimate under-counts: 40 tokens does not
-     * cover a single item plus the JSON envelope around it.
+     * The batch ceiling is no longer one constant for every endpoint (#437).
+     * A small local model asked to hold 45 entries in order is at the edge of
+     * what it can do, and the failure mode is a repetition loop rather than a
+     * wrong ranking, so the connection's own ceiling decides the split.
+     */
+    public function testThePackerHonoursTheCeilingItsSettingsCarry(): void
+    {
+        $candidates = array_map(
+            static fn (int $index): PromptLine => new PromptLine($index, 't', 'f', 'd', null),
+            range(1, 100),
+        );
+
+        $batches = $this->builder->packBatches(
+            $candidates,
+            $this->emptyHistory(),
+            $this->settings(1_000_000, 50, maximumBatchSize: 30),
+        );
+
+        self::assertSame([30, 30, 30, 10], array_map('count', $batches));
+    }
+
+    /**
+     * The tail quotes the model's own reply back so it can see what was wrong
+     * with it. A reply that ran away is the case that breaks: echoing tens of
+     * kilobytes of a repetition loop spends the context on it and re-primes
+     * the very loop the retry exists to break (#437). The head carries the
+     * whole signal.
+     */
+    public function testTheCorrectiveTailClipsAReplyTooLongToQuoteBack(): void
+    {
+        $tail = $this->builder->correctiveTail(str_repeat('{"id": 349500}, ', 4000), 'Try again.');
+
+        self::assertLessThan(4096, \strlen($tail[0]['content']));
+        self::assertStringContainsString('{"id": 349500}', $tail[0]['content']);
+    }
+
+    /**
+     * The ordinary unusable reply is short, and it is quoted whole: clipping
+     * is for the runaway, not a general shortening of the correction.
+     */
+    public function testTheCorrectiveTailQuotesAShortReplyWhole(): void
+    {
+        $tail = $this->builder->correctiveTail('not json', 'Try again.');
+
+        self::assertSame('not json', $tail[0]['content']);
+    }
+
+    /**
+     * The limit itself is quoted whole. A reply exactly at the bound is not a
+     * runaway, and clipping it would cost the correction its last characters
+     * for nothing.
+     */
+    public function testTheCorrectiveTailQuotesAReplyAtTheLimitWhole(): void
+    {
+        $atTheLimit = str_repeat('a', 2000);
+
+        $tail = $this->builder->correctiveTail($atTheLimit, 'Try again.');
+
+        self::assertSame($atTheLimit, $tail[0]['content']);
+    }
+
+    /**
+     * One character past it is clipped to the limit, and the marker says so —
+     * without it the model reads a reply that appears to end mid-token as its
+     * own complete previous answer.
+     */
+    public function testAClippedReplyIsCutToTheLimitAndSaysSo(): void
+    {
+        $tail = $this->builder->correctiveTail(str_repeat('a', 2001), 'Try again.');
+
+        self::assertStringStartsWith(str_repeat('a', 2000), $tail[0]['content']);
+        self::assertStringContainsString('reply cut here', $tail[0]['content']);
+        self::assertStringNotContainsString(str_repeat('a', 2001), $tail[0]['content']);
+    }
+
+    /**
+     * The reserve is now the whole bound on a connection that suppresses
+     * reasoning (#437), so it has to cover a real reply rather than a
+     * conservative guess at one. The largest reply this feature has produced
+     * for a full batch ran to 12068 characters — roughly 3017 tokens, or 70
+     * per item, because each pick carries a prose `reason`. At 40 tokens a
+     * pick the reserve was under half of that, which the reasoning headroom
+     * used to hide.
+     */
+    public function testTheAnswerReserveCoversTheLargestReplyAFullBatchHasProduced(): void
+    {
+        self::assertGreaterThanOrEqual(3017, $this->builder->answerTokenReserve(45));
+    }
+
+    /**
+     * Below the floor the per-item estimate under-counts: one pick's worth of
+     * tokens does not cover a single item plus the JSON envelope around it.
      */
     public function testTheAnswerReserveNeverFallsBelowItsFloor(): void
     {
@@ -629,6 +719,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         int $picksLimit,
         ?string $guidancePrompt = null,
         ?int $batchCount = null,
+        int $maximumBatchSize = RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
     ): EffectiveRecommendationSettings {
         return new EffectiveRecommendationSettings(
             guidancePrompt: $guidancePrompt,
@@ -642,6 +733,7 @@ final class RecommendationPromptBuilderTest extends TestCase
                 contextWindow: $contextWindow,
                 contextWindowSource: 'default',
                 batchCount: $batchCount,
+                maximumBatchSize: $maximumBatchSize,
             ),
             debugEnabled: false,
         );

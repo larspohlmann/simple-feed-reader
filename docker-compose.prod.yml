@@ -125,7 +125,9 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
       target: prod
-    command: ["php", "bin/console", "messenger:consume", "scheduler_worker", "--time-limit=3600", "--memory-limit=128M"]
+    # --memory-limit raised from 128M in #437: one recommendation wave reads
+    # several answer streams at once, and 128M cut a live run short at 201 MB.
+    command: ["php", "bin/console", "messenger:consume", "scheduler_worker", "--time-limit=3600", "--memory-limit=512M"]
     # messenger:consume exits by design at --time-limit, so something must
     # bring it back. It used to be the ONLY service with a restart policy,
     # which made a host or daemon reboot bring the worker back alone: the

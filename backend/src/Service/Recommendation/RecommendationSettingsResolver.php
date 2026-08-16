@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation;
 
+use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Repository\RecommendationSettingsRepository;
 
@@ -23,7 +24,8 @@ final readonly class RecommendationSettingsResolver
     public function forUser(User $user): EffectiveRecommendationSettings
     {
         $row = $this->settings->findForUser($user);
-        $providerWindow = $user->getActiveAiProviderSettings()?->getModelContextWindow();
+        $provider = $user->getActiveAiProviderSettings();
+        $providerWindow = $provider?->getModelContextWindow();
 
         [$window, $source] = match (true) {
             null !== $row?->values()->contextWindow => [$row->values()->contextWindow, 'user'],
@@ -45,9 +47,27 @@ final readonly class RecommendationSettingsResolver
                 contextWindow: $window,
                 contextWindowSource: $source,
                 batchCount: $row?->values()->batchCount,
+                maximumBatchSize: self::batchCeilingFor($provider),
             ),
             debugEnabled: $row?->values()->debugEnabled ?? false,
             autoGenerateIntervalHours: $row?->values()->autoGenerateIntervalHours,
         );
+    }
+
+    /**
+     * How many candidates one batch may carry. A property of the endpoint, not
+     * of the account's taste, so it is read off the connection rather than
+     * offered as a setting: a small local model holds a shorter list in order
+     * than a hosted one, and the account already says which it has by marking
+     * the connection slow (#437). No configuration means no claim either way,
+     * and the default stands.
+     */
+    private static function batchCeilingFor(?AiProviderSettings $provider): int
+    {
+        if (true === $provider?->isSlowModel()) {
+            return RecommendationPackingSettings::SLOW_MODEL_MAXIMUM_BATCH_SIZE;
+        }
+
+        return RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE;
     }
 }

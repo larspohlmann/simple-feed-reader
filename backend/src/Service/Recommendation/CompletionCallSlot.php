@@ -24,6 +24,14 @@ final readonly class CompletionCallSlot
         public CompletionStreamReader $reader,
         public CompletionStreamObserver $observer,
         public ProviderTimeouts $timeouts,
+        /**
+         * How much answer this call may retain before it is a runaway, derived
+         * from the `max_tokens` its own request carried (#437). Per call rather
+         * than per client: a wave's calls can ask for different amounts, and
+         * one flat number for all of them is the shape that made the old cap
+         * unable to fire.
+         */
+        public int $maximumAnswerBytes,
     ) {
     }
 }

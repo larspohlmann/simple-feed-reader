@@ -16,6 +16,7 @@ use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
+use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ProviderConnectionFactory;
 use App\Service\Ai\ProviderTimeouts;
@@ -534,6 +535,14 @@ final class RecommendationRunAdvancer
                 $request,
                 $recordedCall,
             );
+        } catch (ProviderRunawayException $runaway) {
+            // The endpoint answered and would not stop, which is a reply the
+            // parser can judge -- an unusable one -- rather than a failure of
+            // the call. Handing its partial answer back puts a runaway on the
+            // same corrective-retry-then-degrade path an unusable reply
+            // already takes, and keeps it off the transport ceiling, which
+            // exists for a provider that produced nothing (#437).
+            return $runaway->partialAnswer();
         } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
             $recordedCall->abortAfterTransportFailure($e->getMessage());
             $this->recordTransportFailure($run, $settings, $e->getMessage());
