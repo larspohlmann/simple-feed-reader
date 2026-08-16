@@ -7,7 +7,9 @@
   "settings": {
     "title": "Einstellungen",
     "backReader": "Reader",
-    "nav": { "admin": "Administration" },
+    "nav": {
+      "admin": "Administration"
+    },
     "preferences": "Voreinstellungen",
     "languageSaveFailed": "Die Sprache wurde auf diesem Gerät geändert, konnte aber nicht in deinem Konto gespeichert werden.",
     "experimental": "Experimentell",
@@ -289,6 +291,9 @@
     "editFeed": {
       "title": "Feed bearbeiten",
       "customTitle": "Eigener Titel",
+      "resetTitle": "Feed-Titel verwenden",
+      "feedUrl": "Feed-URL",
+      "siteUrl": "Website",
       "tags": "Tags",
       "noTags": "Noch keine Tags – erstelle einen unter Einstellungen › Tags.",
       "saving": "Wird gespeichert…",
