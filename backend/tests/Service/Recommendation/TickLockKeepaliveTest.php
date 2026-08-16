@@ -20,11 +20,22 @@ use Symfony\Component\Clock\MockClock;
 #[CoversClass(TickLockKeepalive::class)]
 final class TickLockKeepaliveTest extends TestCase
 {
-    public function testABeatBeforeHoldRefreshesNothing(): void
+    private const string LOCK_RESOURCE = 'recommendation-run-1';
+
+    /**
+     * The null-lock guard covers two states that both mean "nothing to
+     * refresh": before the first hold() and after release(). Exercising it
+     * through hold() then release() gives the assertion a lock that really
+     * would have been touched had the guard broken, rather than one that was
+     * never wired in at all.
+     */
+    public function testABeatWithNothingHeldRefreshesNothing(): void
     {
         $clock = new MockClock('2026-08-16 12:00:00');
         $keepalive = new TickLockKeepalive($clock, new Logger('test'));
         $lock = new RefreshCountingLock();
+        $keepalive->hold($lock, self::LOCK_RESOURCE);
+        $keepalive->release();
 
         $keepalive->beat();
 
@@ -37,7 +48,7 @@ final class TickLockKeepaliveTest extends TestCase
         $keepalive = new TickLockKeepalive($clock, new Logger('test'));
         $lock = new RefreshCountingLock();
 
-        $keepalive->hold($lock);
+        $keepalive->hold($lock, self::LOCK_RESOURCE);
         $keepalive->beat();
 
         self::assertSame(1, $lock->refreshCount());
@@ -54,7 +65,7 @@ final class TickLockKeepaliveTest extends TestCase
         $clock = new MockClock('2026-08-16 12:00:00');
         $keepalive = new TickLockKeepalive($clock, new Logger('test'));
         $lock = new RefreshCountingLock();
-        $keepalive->hold($lock);
+        $keepalive->hold($lock, self::LOCK_RESOURCE);
 
         $keepalive->beat();
         $clock->sleep(5);
@@ -78,7 +89,7 @@ final class TickLockKeepaliveTest extends TestCase
         $clock = new MockClock('2026-08-16 12:00:00');
         $keepalive = new TickLockKeepalive($clock, new Logger('test'));
         $lock = new RefreshCountingLock();
-        $keepalive->hold($lock);
+        $keepalive->hold($lock, self::LOCK_RESOURCE);
 
         $keepalive->beat();
         $clock->sleep(TickLockKeepalive::MINIMUM_INTERVAL_SECONDS);
@@ -97,7 +108,7 @@ final class TickLockKeepaliveTest extends TestCase
         $clock = new MockClock('2026-08-16 12:00:00');
         $keepalive = new TickLockKeepalive($clock, new Logger('test'));
         $lock = new RefreshCountingLock();
-        $keepalive->hold($lock);
+        $keepalive->hold($lock, self::LOCK_RESOURCE);
         $keepalive->beat();
 
         $keepalive->release();
@@ -118,11 +129,11 @@ final class TickLockKeepaliveTest extends TestCase
         $clock = new MockClock('2026-08-16 12:00:00');
         $keepalive = new TickLockKeepalive($clock, new Logger('test'));
         $firstLock = new RefreshCountingLock();
-        $keepalive->hold($firstLock);
+        $keepalive->hold($firstLock, self::LOCK_RESOURCE);
         $keepalive->beat();
 
         $secondLock = new RefreshCountingLock();
-        $keepalive->hold($secondLock);
+        $keepalive->hold($secondLock, 'recommendation-run-2');
         $keepalive->beat();
 
         self::assertSame(
@@ -132,18 +143,22 @@ final class TickLockKeepaliveTest extends TestCase
         );
     }
 
-    public function testALockExceptionFromRefreshDoesNotEscapeBeatAndIsLogged(): void
+    public function testALockExceptionFromRefreshDoesNotEscapeBeatAndIsLoggedWithTheResource(): void
     {
         $clock = new MockClock('2026-08-16 12:00:00');
         $logSpy = new TestHandler();
         $keepalive = new TickLockKeepalive($clock, new Logger('test', [$logSpy]));
         $lock = new RefreshCountingLock();
         $lock->throwOnNextRefresh();
-        $keepalive->hold($lock);
+        $keepalive->hold($lock, self::LOCK_RESOURCE);
 
         $keepalive->beat();
 
         self::assertSame(1, $lock->refreshCount());
-        self::assertTrue($logSpy->hasWarningRecords(), 'A lost refresh must be logged, not merely swallowed.');
+
+        $records = $logSpy->getRecords();
+        self::assertCount(1, $records, 'A lost refresh must be logged, not merely swallowed.');
+        self::assertSame(self::LOCK_RESOURCE, $records[0]->context['resource']);
+        self::assertArrayHasKey('exception', $records[0]->context);
     }
 }

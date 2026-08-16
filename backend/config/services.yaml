@@ -91,18 +91,23 @@ services:
     # The transport pings one heartbeat per chunk and must not learn how many
     # things care (#433, #444), so the interface resolves to a composite whose
     # two members are wired explicitly here -- the one place the indirection
-    # applies. SweepStreamHeartbeat marks a sweeping worker's liveness; nothing
-    # arms it in a web request and every ping is then a no-op. TickLockKeepalive
-    # refreshes a streaming tick's per-user lock; nothing arms it outside a
-    # tick. Both stay injectable by their own class name too, because their
-    # arming methods (sweepStarted()/sweepEnded(), hold()/release()) are called
-    # by name from the sweep and from the advancer, not through the interface.
+    # applies. TickLockKeepalive refreshes a streaming tick's per-user lock;
+    # nothing arms it outside a tick. SweepStreamHeartbeat marks a sweeping
+    # worker's liveness; nothing arms it in a web request and every ping is
+    # then a no-op. Both stay injectable by their own class name too, because
+    # their arming methods (hold()/release(), sweepStarted()/sweepEnded()) are
+    # called by name from the advancer and from the sweep, not through the
+    # interface. Order matters: the composite is not transactional, so a
+    # member that throws skips the rest for that one chunk. TickLockKeepalive
+    # goes first because it guards the stronger invariant -- a missed lock
+    # refresh risks a stolen lock and a double-banked run, a missed liveness
+    # mark only delays a UI hint by one beat.
     App\Service\Recommendation\CompletionStreamHeartbeat: '@App\Service\Recommendation\CompositeCompletionStreamHeartbeat'
     App\Service\Recommendation\CompositeCompletionStreamHeartbeat:
         arguments:
             $heartbeats:
-                - '@App\Service\Worker\SweepStreamHeartbeat'
                 - '@App\Service\Recommendation\TickLockKeepalive'
+                - '@App\Service\Worker\SweepStreamHeartbeat'
     App\Service\Process\ShellCommandRunnerInterface: '@App\Service\Process\ExecShellCommandRunner'
     App\Service\Process\DetachedProcessLauncherInterface: '@App\Service\Process\DetachedProcessLauncher'
 
