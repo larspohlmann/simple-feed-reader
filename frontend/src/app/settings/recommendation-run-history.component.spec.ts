@@ -78,6 +78,21 @@ describe('RecommendationRunHistoryComponent', () => {
     expect(el.querySelector('.run-history__cost')?.textContent?.trim()).toBe('$ 0.04123');
   });
 
+  it('renders the run duration as minutes and seconds', () => {
+    const el = mount({ runs: [PRICED_RUN], totalCostNanoCredits: null });
+
+    expect(el.querySelector('.run-history__duration')?.textContent?.trim()).toBe('0:47');
+  });
+
+  it('renders an empty duration cell for a run that has not finished', () => {
+    const el = mount({
+      runs: [{ ...PRICED_RUN, durationSeconds: null }],
+      totalCostNanoCredits: null,
+    });
+
+    expect(el.querySelector('.run-history__duration')?.textContent?.trim()).toBe('');
+  });
+
   /** The card already formats its dates through the active language; a
    *  `toFixed` beside them would put an en-US decimal point under a German
    *  date. */

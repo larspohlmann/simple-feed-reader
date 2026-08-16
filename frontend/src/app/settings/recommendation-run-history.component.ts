@@ -10,7 +10,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { ReaderApi } from '../reader/reader-api';
-import { formatCost, formatDateOr, formatTime } from '../reader/format';
+import { formatCost, formatDateOr, formatDuration, formatTime } from '../reader/format';
 import { RunHistoryRow } from '../reader/models';
 import { RecommendationsService } from '../reader/recommendations.service';
 import { LanguageService } from '../core/language.service';
@@ -78,6 +78,12 @@ export class RecommendationRunHistoryComponent {
 
   time(run: RunHistoryRow): string {
     return formatTime(run.createdAt);
+  }
+
+  /** How long the run took, as `m:ss`. Null while it has not finished -- the
+   *  template renders nothing rather than a zero that would read as instant. */
+  duration(run: RunHistoryRow): string | null {
+    return run.durationSeconds === null ? null : formatDuration(run.durationSeconds);
   }
 
   private fetch(): void {

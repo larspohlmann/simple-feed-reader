@@ -118,3 +118,25 @@ export function formatCost(nanoCredits: number | null, locale: string): string {
   }).format(nanoCredits / NANO_PER_CREDIT);
   return `$ ${credits}`;
 }
+
+/**
+ * A duration as `m:ss` -- `0:47`, `2:07`, `62:03`.
+ *
+ * Deliberately not translated. The seconds-only rendering this replaces
+ * needed a dictionary key in every language just to carry the letter `s`,
+ * where a padded `m:ss` reads as a duration on its own -- and it keeps the
+ * column aligned, which a value that switches between `47 s` and `2 min 7 s`
+ * cannot.
+ *
+ * Minutes do not roll into hours. A recommendation run is bounded by a 600 s
+ * per-call timeout over a handful of calls, so an hours field would be a
+ * column that is always zero.
+ *
+ * Clamped at zero: the server already refuses to report a negative duration,
+ * and this must not be the place that starts.
+ */
+export function formatDuration(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(total / 60);
+  return `${minutes}:${String(total % 60).padStart(2, '0')}`;
+}

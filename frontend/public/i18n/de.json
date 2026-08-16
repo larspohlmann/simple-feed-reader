@@ -186,7 +186,6 @@
         "historyTitle": "Verlauf der Läufe",
         "historyHint": "Was jeder Empfehlungslauf verbraucht hat und was er gekostet hat.",
         "historyTotal": "Gesamtkosten",
-        "historyDuration": "{{ s }} s",
         "historyTokens": "{{ prompt }} rein / {{ completion }} raus",
         "historyUnknown": "unbekannter Anbieter",
         "debugPanelTitle": "Debug-Protokoll",

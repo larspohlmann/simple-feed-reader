@@ -186,7 +186,6 @@
         "historyTitle": "Run history",
         "historyHint": "What each recommendation run consumed, and what it cost.",
         "historyTotal": "Total spent",
-        "historyDuration": "{{ s }} s",
         "historyTokens": "{{ prompt }} in / {{ completion }} out",
         "historyUnknown": "unknown provider",
         "debugPanelTitle": "Debug log",

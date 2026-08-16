@@ -3,6 +3,7 @@ import {
   bytesToKb,
   formatCost,
   formatDateOr,
+  formatDuration,
   formatLongDate,
   formatTime,
   relativeTime,
@@ -128,6 +129,32 @@ describe('formatCost', () => {
 
   it('renders a large total without losing the fixed precision', () => {
     expect(formatCost(918_200_000, 'en')).toBe('$ 0.91820');
+  });
+});
+
+describe('formatDuration', () => {
+  it('pads the seconds so the column reads as a duration', () => {
+    expect(formatDuration(47)).toBe('0:47');
+  });
+
+  it('rolls a full minute over', () => {
+    expect(formatDuration(60)).toBe('1:00');
+  });
+
+  it('pads a single-digit seconds remainder', () => {
+    expect(formatDuration(127)).toBe('2:07');
+  });
+
+  it('renders a run that took no measurable time as zero', () => {
+    expect(formatDuration(0)).toBe('0:00');
+  });
+
+  it('keeps counting in minutes rather than rolling into hours', () => {
+    expect(formatDuration(3_723)).toBe('62:03');
+  });
+
+  it('never renders a negative duration', () => {
+    expect(formatDuration(-5)).toBe('0:00');
   });
 });
 
