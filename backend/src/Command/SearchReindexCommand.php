@@ -38,8 +38,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  *
  * Every write Meilisearch accepts is asynchronous — it answers 202 and
  * indexes afterwards (measured against the running engine, see
- * `.superpowers/sdd/2026-08-16-432-meilisearch-search/task-2-report.md` and
- * its `wire-format-addendum.md`) — and SearchIndexWriter's methods return
+ * `docs/meilisearch-wire-format.md`) — and SearchIndexWriter's methods return
  * void precisely because MeilisearchIndex does not poll the task queue on
  * anyone's behalf; growing that adapter a reindex-only polling path would
  * duplicate the one class that already knows Meilisearch's wire format

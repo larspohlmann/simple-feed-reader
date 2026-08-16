@@ -20,8 +20,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  *
  * Every write Meilisearch accepts answers 202 with an enqueued task and does
  * the actual indexing afterwards (confirmed by probe, see
- * `.superpowers/sdd/2026-08-16-432-meilisearch-search/task-2-report.md` and
- * its `wire-format-addendum.md`) — this class deliberately does NOT poll
+ * `docs/meilisearch-wire-format.md`) — this class deliberately does NOT poll
  * `GET /tasks/{taskUid}` for any of them.
  * SearchIndexWriter's methods return void precisely because nothing here
  * reports back whether the write has actually landed: an ingest-time call
@@ -64,8 +63,7 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
 
     /**
      * The wire shape measured against the running engine — see
-     * `.superpowers/sdd/2026-08-16-432-meilisearch-search/task-2-report.md`
-     * and its `wire-format-addendum.md` for the probed requests and
+     * `docs/meilisearch-wire-format.md` for the probed requests and
      * responses this is built from.
      *
      * `searchableAttributes` covers every field #432 asks to be searchable —
