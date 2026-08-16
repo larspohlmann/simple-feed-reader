@@ -37,6 +37,19 @@ export function formatDateOr(iso: string | null, locale: string, fallback: strin
 }
 
 /**
+ * A short localised day-in-month (e.g. "Aug 16" / "16. Aug"). For a row that
+ * already sits inside a month-headed section, the year and full month name
+ * `formatLongDate` renders are noise -- but the month stays, short rather
+ * than dropped, so a row screenshotted out of its section still reads as a
+ * date on its own.
+ */
+export function formatDayInMonth(iso: string, locale = 'en'): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(d);
+}
+
+/**
  * A zero-padded 24-hour `HH:MM` clock time in the browser's own timezone.
  * `hourCycle: 'h23'` is forced regardless of locale -- the debug log's run
  * summary and row times read as a timeline (`start → end`), and a 12-hour

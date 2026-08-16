@@ -125,13 +125,16 @@ describe('RecommendationRunHistoryMonthComponent', () => {
   it('renders no rows while the month has not been opened', () => {
     const el = mount({ runs: null });
 
-    expect(el.querySelectorAll('.run-history-month__row')).toHaveLength(0);
+    expect(el.querySelectorAll('.run-history-month__list .run-history-month__row')).toHaveLength(0);
   });
 
   it('renders one row per run once the month has rows', () => {
     const el = mount({ runs: [PRICED_RUN, UNPRICED_RUN] });
 
-    expect(el.querySelectorAll('.run-history-month__row')).toHaveLength(2);
+    // Scoped to `&__list`: the header strip above it carries the same
+    // `&__row` class (so its grid can never drift from the rows'), and an
+    // unscoped query would count it as a seventh "row".
+    expect(el.querySelectorAll('.run-history-month__list .run-history-month__row')).toHaveLength(2);
   });
 
   it('starts open when it already has rows', () => {
@@ -163,15 +166,72 @@ describe('RecommendationRunHistoryMonthComponent', () => {
   it('falls back to the translated "unknown provider" for a run that was never stamped', () => {
     const el = mount({ runs: [{ ...PRICED_RUN, providerHost: null }] });
 
-    expect(el.querySelector('.run-history-month__provider')?.textContent).toContain(
-      'unknown provider',
-    );
+    // Scoped to `&__list`: the header strip above it shares the `&__provider`
+    // class too (see the header-columns test), so an unscoped query would
+    // hit the "Provider" column label instead of this run's cell.
+    expect(
+      el.querySelector('.run-history-month__list .run-history-month__provider')?.textContent,
+    ).toContain('unknown provider');
   });
 
-  it('renders an empty duration cell for a run that has not finished', () => {
+  it('renders no duration value for a run that has not finished, only its label', () => {
     const el = mount({ runs: [{ ...PRICED_RUN, durationSeconds: null }] });
+    const cell = el.querySelector(
+      '.run-history-month__list .run-history-month__duration',
+    ) as HTMLElement;
+    const label = cell.querySelector('.run-history-month__cell-label') as HTMLElement;
 
-    expect(el.querySelector('.run-history-month__duration')?.textContent?.trim()).toBe('');
+    // The label stays (every cell carries one, finished or not); it is the
+    // duration value itself -- everything but the label -- that must be
+    // absent, or an unfinished run would misreport a duration of "0:00".
+    expect((cell.textContent ?? '').replace(label.textContent ?? '', '').trim()).toBe('');
+  });
+
+  it('renders the day without the month’s year, since the section is already headed with it', () => {
+    const el = mount({ runs: [PRICED_RUN] });
+    const when =
+      el.querySelector('.run-history-month__list .run-history-month__when')?.textContent ?? '';
+
+    expect(when).not.toContain('2026');
+    expect(when).toContain('16');
+  });
+
+  it('renders a long model string in full rather than truncating it', () => {
+    const longModelRun: RunHistoryRow = {
+      ...PRICED_RUN,
+      providerHost: 'openrouter.ai',
+      model: 'deepseek/deepseek-v4-pro',
+    };
+    const el = mount({ runs: [longModelRun] });
+
+    expect(
+      el.querySelector('.run-history-month__list .run-history-month__provider')?.textContent,
+    ).toContain('deepseek/deepseek-v4-pro');
+  });
+
+  it('renders the six column headers, hidden from assistive tech behind the per-cell labels', () => {
+    const el = mount({ runs: [PRICED_RUN] });
+    const header = el.querySelector('.run-history-month__row--header') as HTMLElement;
+
+    expect(header.getAttribute('aria-hidden')).toBe('true');
+    expect(header.querySelector('.run-history-month__when')?.textContent?.trim()).toBe('When');
+    expect(header.querySelector('.run-history-month__provider')?.textContent?.trim()).toBe(
+      'Provider',
+    );
+    expect(header.querySelector('.run-history-month__status')?.textContent?.trim()).toBe('Status');
+    expect(header.querySelector('.run-history-month__duration')?.textContent?.trim()).toBe('Time');
+    expect(header.querySelector('.run-history-month__tokens')?.textContent?.trim()).toBe('Tokens');
+    expect(header.querySelector('.run-history-month__cost')?.textContent?.trim()).toBe('Cost');
+  });
+
+  it('gives every row cell a label carrying that column’s name', () => {
+    const el = mount({ runs: [PRICED_RUN] });
+    const row = el.querySelector('.run-history-month__row:not(.run-history-month__row--header)');
+    const labels = Array.from(row?.querySelectorAll('.run-history-month__cell-label') ?? []).map(
+      (label) => label.textContent?.trim(),
+    );
+
+    expect(labels).toEqual(['When', 'Provider', 'Status', 'Time', 'Tokens', 'Cost']);
   });
 
   it('hides "show more" when the month has no further page', () => {

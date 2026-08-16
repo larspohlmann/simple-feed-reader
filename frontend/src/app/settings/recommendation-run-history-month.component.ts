@@ -1,7 +1,7 @@
 // src/app/settings/recommendation-run-history-month.component.ts
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
-import { formatCost, formatDateOr, formatDuration, formatTime } from '../reader/format';
+import { formatCost, formatDayInMonth, formatDuration, formatTime } from '../reader/format';
 import { RunHistoryRow } from '../reader/models';
 import { LanguageService } from '../core/language.service';
 import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
@@ -83,8 +83,10 @@ export class RecommendationRunHistoryMonthComponent {
     return run.model === null ? host : `${host} · ${run.model}`;
   }
 
+  /** "Aug 16" -- the section this row lives in is already headed with the
+   *  month and year, so repeating either on every row would be noise. */
   day(run: RunHistoryRow): string {
-    return formatDateOr(run.createdAt, this.language.lang(), '');
+    return formatDayInMonth(run.createdAt, this.language.lang());
   }
 
   time(run: RunHistoryRow): string {

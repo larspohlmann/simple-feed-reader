@@ -56,7 +56,14 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    min-width: 34rem;
+
+    /* Derived from `&__row`'s own grid, not eyeballed: the five fixed tracks
+       (5 + 6 + 3 + 8 + 5 = 27rem) plus five `column-gap`s (5 x --space-2 =
+       2.5rem) plus the row's own left+right padding (2 x --space-3 = 1.5rem)
+       = 31rem. `1fr` (the provider column) contributes nothing fixed here --
+       it is the track that is meant to flex. Re-derive this the same way
+       after touching any track width, the row padding, or the column gap. */
+    min-width: 31rem;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -64,7 +71,7 @@
 
   &__row {
     display: grid;
-    grid-template-columns: 8rem 1fr 5rem 4rem 8rem 5rem;
+    grid-template-columns: 5rem 1fr 6rem 3rem 8rem 5rem;
     align-items: center;
     column-gap: var(--space-2);
     padding: var(--space-2) var(--space-3);
@@ -73,12 +80,69 @@
     background: var(--surface-0);
   }
 
+  /* Shares `&__row`'s grid-template-columns by construction (both classes sit
+     on the same element), so the header cannot drift out of alignment with
+     the rows the way two independently-maintained width lists could. Column
+     chrome that belongs to a value, not its label -- the status pill, the
+     provider's bold weight, the cost's bold weight -- is reset back to plain
+     text; text alignment is left alone so right-aligned figures still sit
+     under a right-aligned header. */
+  &__row--header {
+    padding: 0 var(--space-3) var(--space-1);
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+
+    .run-history-month__status,
+    .run-history-month__provider,
+    .run-history-month__cost {
+      padding: 0;
+      border-radius: 0;
+      background: none;
+      color: inherit;
+      font-weight: inherit;
+    }
+  }
+
+  /* The technique is `.sr-only` in `theme/_utilities.scss` -- a near-zero box
+     (not `display: none`, which would drop it from the accessibility tree)
+     clipped out of view -- kept local rather than reused because the mobile
+     media query below overrides it back to visible, and overriding a shared
+     class from inside one component would make that override easy to miss
+     from either end. `rem`, not `.sr-only`'s `px`: Stylelint bans ad-hoc `px`
+     spacing outside `theme/`, and at the near-zero size this technique needs,
+     the unit makes no visible difference either way. */
+  &__cell-label {
+    position: absolute;
+    width: 0.0625rem;
+    height: 0.0625rem;
+    padding: 0;
+    margin: -0.0625rem;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
   /* On a phone the six fixed columns are wider than the viewport, so the card
      would overflow the page the way the debug panel's grid once did. Release
-     the floor and let the row reflow to a wrapping line. */
+     the floor and let the row reflow to a wrapping line -- one column per
+     line, each carrying its own now-visible label, since a bare number with
+     no header row above it to name it would be unreadable here. */
   @media (width <= bp.$bp-sm) {
     &__list {
       min-width: 0;
+    }
+
+    /* The header strip's job -- naming a column -- is taken over by each
+       cell's own label below; a second, redundant announcement of the same
+       six words has nothing left to do here. */
+    &__row--header {
+      display: none;
     }
 
     &__row {
@@ -88,9 +152,29 @@
       row-gap: var(--space-1);
     }
 
+    &__when,
+    &__provider,
+    &__status,
+    &__duration,
+    &__tokens,
+    &__cost {
+      flex: 1 1 100%;
+    }
+
     &__provider {
-      flex: 1 1 auto;
       min-width: 0;
+    }
+
+    &__cell-label {
+      position: static;
+      width: auto;
+      height: auto;
+      margin: 0 var(--space-1) 0 0;
+      overflow: visible;
+      clip-path: none;
+      white-space: nowrap;
+      color: var(--text-muted);
+      font-weight: 600;
     }
   }
 
@@ -107,10 +191,13 @@
   }
 
   &__provider {
-    overflow: hidden;
+    /* Not `text-overflow: ellipsis` -- the provider stamp exists so the
+       billed model is still readable years later, and hiding half of it
+       defeats that. A model id is one unbroken token past the "·", so a plain
+       word wrap would still run it off the track; `anywhere` lets a long
+       token itself break rather than overflow. */
+    overflow-wrap: anywhere;
     font-weight: 600;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   &__status {
@@ -122,6 +209,11 @@
     font-weight: 600;
     text-align: center;
     text-transform: uppercase;
+
+    /* However tight the track, a status word must never break -- the fixed
+       width alone got `COMPLETED` down to a hairline wrap onto "D" before the
+       track widened; this is the guarantee, the width is only the headroom. */
+    white-space: nowrap;
 
     &--completed {
       background: var(--bg-success);

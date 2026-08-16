@@ -3,6 +3,7 @@ import {
   bytesToKb,
   formatCost,
   formatDateOr,
+  formatDayInMonth,
   formatDuration,
   formatLongDate,
   formatTime,
@@ -60,6 +61,25 @@ describe('formatDateOr', () => {
 
   it('renders the given fallback, not the date formatter’s own empty string, when there is none', () => {
     expect(formatDateOr(null, 'en', 'never')).toBe('never');
+  });
+});
+
+describe('formatDayInMonth', () => {
+  it('renders the day and a short month, without a year', () => {
+    const rendered = formatDayInMonth('2026-08-16T09:12:00Z', 'en');
+    expect(rendered).toContain('16');
+    expect(rendered).toContain('Aug');
+    expect(rendered).not.toContain('2026');
+  });
+
+  it('renders in German, day-first and unlike the English rendering', () => {
+    const rendered = formatDayInMonth('2026-08-16T09:12:00Z', 'de');
+    expect(rendered).toBe('16. Aug.');
+    expect(rendered).not.toBe(formatDayInMonth('2026-08-16T09:12:00Z', 'en'));
+  });
+
+  it('empties on bad input', () => {
+    expect(formatDayInMonth('nope', 'en')).toBe('');
   });
 });
 

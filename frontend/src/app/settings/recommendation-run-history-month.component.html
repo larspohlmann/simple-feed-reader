@@ -9,26 +9,75 @@
 
   @if (runs(); as rows) {
     <div class="run-history-month__wrap">
+      <!-- Shares the row grid by carrying the same `&__row` class the rows
+           below use, so the columns cannot drift out of alignment with it.
+           aria-hidden: the per-cell labels below carry the real semantics for
+           assistive tech, so this strip would only double-announce them. -->
+      <div class="run-history-month__row run-history-month__row--header" aria-hidden="true">
+        <span class="run-history-month__when">
+          {{ 'settings.ai.recommendations.historyColWhen' | transloco }}
+        </span>
+        <span class="run-history-month__provider">
+          {{ 'settings.ai.recommendations.historyColProvider' | transloco }}
+        </span>
+        <span class="run-history-month__status">
+          {{ 'settings.ai.recommendations.historyColStatus' | transloco }}
+        </span>
+        <span class="run-history-month__duration">
+          {{ 'settings.ai.recommendations.historyColDuration' | transloco }}
+        </span>
+        <span class="run-history-month__tokens">
+          {{ 'settings.ai.recommendations.historyColTokens' | transloco }}
+        </span>
+        <span class="run-history-month__cost">
+          {{ 'settings.ai.recommendations.historyColCost' | transloco }}
+        </span>
+      </div>
+
       <ul class="run-history-month__list">
         @for (run of rows; track run.id) {
           <li class="run-history-month__row">
-            <span class="run-history-month__when">{{ day(run) }} {{ time(run) }}</span>
-            <span class="run-history-month__provider">{{ provider(run) }}</span>
+            <span class="run-history-month__when">
+              <span class="run-history-month__cell-label">
+                {{ 'settings.ai.recommendations.historyColWhen' | transloco }}
+              </span>
+              {{ day(run) }} {{ time(run) }}
+            </span>
+            <span class="run-history-month__provider">
+              <span class="run-history-month__cell-label">
+                {{ 'settings.ai.recommendations.historyColProvider' | transloco }}
+              </span>
+              {{ provider(run) }}
+            </span>
             <span class="run-history-month__status run-history-month__status--{{ run.status }}">
+              <span class="run-history-month__cell-label">
+                {{ 'settings.ai.recommendations.historyColStatus' | transloco }}
+              </span>
               {{ run.status }}
             </span>
             <span class="run-history-month__duration">
+              <span class="run-history-month__cell-label">
+                {{ 'settings.ai.recommendations.historyColDuration' | transloco }}
+              </span>
               @if (run.durationSeconds !== null) {
                 {{ duration(run) }}
               }
             </span>
             <span class="run-history-month__tokens">
+              <span class="run-history-month__cell-label">
+                {{ 'settings.ai.recommendations.historyColTokens' | transloco }}
+              </span>
               {{
                 'settings.ai.recommendations.historyTokens'
                   | transloco: { prompt: run.promptTokens, completion: run.completionTokens }
               }}
             </span>
-            <span class="run-history-month__cost">{{ cost(run.costNanoCredits) }}</span>
+            <span class="run-history-month__cost">
+              <span class="run-history-month__cell-label">
+                {{ 'settings.ai.recommendations.historyColCost' | transloco }}
+              </span>
+              {{ cost(run.costNanoCredits) }}
+            </span>
           </li>
         }
       </ul>
