@@ -331,6 +331,15 @@ export class EntryListComponent implements OnDestroy {
   readonly showToTop = signal(false);
 
   /**
+   * Whether this list carries the wait cue for its own reload — the dim over
+   * the retained rows and, past the delay, the veil. A search is the one view
+   * that does not: it reloads on every settled keystroke, and the search field
+   * spins its own icon for that same request, so dimming and freezing the
+   * results made typing read as a flicker rather than as progress.
+   */
+  readonly reloadCue = computed(() => this.loading() && this.selection().kind !== 'search');
+
+  /**
    * Whether the reload overlay is up. A reload keeps the outgoing rows on
    * screen (#254), and the dim over them is a quiet cue for a wait that can run
    * into seconds — so past the delay, say plainly that new content is coming.
@@ -338,7 +347,7 @@ export class EntryListComponent implements OnDestroy {
    */
   readonly reloadSpinner = signal(false);
   private readonly _armReloadSpinner = effect((onCleanup) => {
-    if (!this.loading() || this.entries().length === 0) {
+    if (!this.reloadCue() || this.entries().length === 0) {
       this.reloadSpinner.set(false);
       return;
     }
