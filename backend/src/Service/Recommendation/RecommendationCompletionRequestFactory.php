@@ -32,7 +32,7 @@ final readonly class RecommendationCompletionRequestFactory
         return new CompletionRequest(
             $settings->getModel() ?? '',
             $messages,
-            $this->outputBound($settings, $replyItemCount),
+            $this->outputBound($settings, $replyItemCount, $responseSchema),
             $responseSchema->toJsonSchema(),
             $settings->suppressesReasoning(),
         );
@@ -48,12 +48,15 @@ final readonly class RecommendationCompletionRequestFactory
      * 4B model looping on invented ids spent an hour reaching that ceiling
      * before the wall clock cut it (#437).
      */
-    private function outputBound(AiProviderSettings $settings, int $replyItemCount): int
-    {
+    private function outputBound(
+        AiProviderSettings $settings,
+        int $replyItemCount,
+        RecommendationResponseSchema $responseSchema,
+    ): int {
         if ($settings->suppressesReasoning()) {
-            return $this->promptBuilder->answerTokenReserve($replyItemCount);
+            return $this->promptBuilder->answerBoundTokens($replyItemCount, $responseSchema);
         }
 
-        return $this->promptBuilder->outputTokenReserve($replyItemCount);
+        return $this->promptBuilder->outputTokenReserve($replyItemCount, $responseSchema);
     }
 }

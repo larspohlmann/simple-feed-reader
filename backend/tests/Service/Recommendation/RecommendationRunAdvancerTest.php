@@ -24,6 +24,7 @@ use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\OpenAiCompatibleChatClient;
 use App\Service\Recommendation\RecommendationPromptBuilder;
+use App\Service\Recommendation\RecommendationResponseSchema;
 use App\Service\Recommendation\RecommendationPromptText;
 use App\Service\Ai\ProviderTimeouts;
 use App\Service\Recommendation\RecommendationRunAdvancer;
@@ -409,7 +410,10 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // (#327) — RecommendationCompletionRequestFactoryTest holds both halves.
         self::assertTrue($calls[0]['suppressReasoning']);
         self::assertSame(
-            $this->promptBuilder()->answerTokenReserve(\count($firstBatch)),
+            $this->promptBuilder()->answerBoundTokens(
+                \count($firstBatch),
+                RecommendationResponseSchema::Ranking,
+            ),
             $calls[0]['maxAnswerTokens'],
         );
 

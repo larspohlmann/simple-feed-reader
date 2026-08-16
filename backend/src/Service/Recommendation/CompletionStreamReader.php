@@ -56,7 +56,7 @@ final class CompletionStreamReader
     /**
      * The last blocking-envelope decode and the generation it was taken at.
      *
-     * @var array{content: ?string, reasoning: ?string, usage: ?CompletionUsage}|null
+     * @var array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsage}|null
      */
     private ?array $envelopeFields = null;
     private int $envelopeFieldsGeneration = -1;
@@ -92,7 +92,29 @@ final class CompletionStreamReader
      */
     public function finishReason(): ?string
     {
+        if (!$this->sawStreamEvent) {
+            return $this->envelopeFields()['finishReason'];
+        }
+
         return $this->finishReason;
+    }
+
+    /**
+     * Whether the provider stopped because `max_tokens` stopped it.
+     *
+     * The judgement lives here rather than in the client because this class
+     * and CompletionBodyDecoder are where every other piece of provider
+     * dialect lives — the `reasoning_content` recovery of #323, the sticky
+     * usage message of #409, and the stickiness of `$finishReason` that this
+     * answer quietly depends on. #437 compared the raw `'length'` in the HTTP
+     * client, which is the layer furthest from the wire and the one place in
+     * the tree that gave the string a meaning. An endpoint that spells the
+     * ceiling differently is then a one-line change here, next to the other
+     * dialects, instead of a hunt through a private method of the transport.
+     */
+    public function hitTokenCeiling(): bool
+    {
+        return 'length' === $this->finishReason();
     }
 
     /**
@@ -119,12 +141,35 @@ final class CompletionStreamReader
     }
 
     /**
-     * What this reader is actually holding on to. The client caps this rather
-     * than the wire: it is the only part that grows without bound in memory.
+     * What this reader is actually holding on to, whatever it turns out to be.
+     * This is the memory bound, and a flat one: on the blocking shape it counts
+     * the buffered body, reasoning and framing included, because that is what
+     * is really in memory.
      */
     public function retainedBytes(): int
     {
         return \strlen($this->answer) + \strlen($this->envelope) + \strlen($this->pendingLine);
+    }
+
+    /**
+     * How much *answer* is held — what a bound derived from `max_tokens` is
+     * entitled to measure.
+     *
+     * Zero on the blocking shape, and deliberately so. Nothing there is an
+     * answer until the whole body parses: the buffer holds the provider's
+     * framing and, for a reasoning model, its entire thinking phase. Charging
+     * that to the answer bound flagged a legitimate 540 KB reasoning reply as a
+     * runaway, well under the 1.9 MB #320 records as normal (#437 review). The
+     * blocking shape is bounded by retainedBytes() instead, which is the flat
+     * memory cap that shape always had.
+     */
+    public function answerBytes(): int
+    {
+        if (!$this->sawStreamEvent) {
+            return 0;
+        }
+
+        return \strlen($this->answer) + \strlen($this->pendingLine);
     }
 
     public function assistantContent(): ?string
@@ -163,7 +208,7 @@ final class CompletionStreamReader
      * the parse cost #327 removed from the streaming shape and #409 must not
      * quietly reintroduce here.
      *
-     * @return array{content: ?string, reasoning: ?string, usage: ?CompletionUsage}
+     * @return array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsage}
      */
     private function envelopeFields(): array
     {

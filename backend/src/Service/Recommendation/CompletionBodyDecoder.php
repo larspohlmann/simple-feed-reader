@@ -21,10 +21,10 @@ final readonly class CompletionBodyDecoder
      *
      * The mirror of streamEvent() below, and for the same reason. A provider
      * that ignores `stream: true` has its whole buffer re-read on every chunk
-     * that arrives, so reading three fields off it has to cost one decode, not
-     * three.
+     * that arrives, so reading every field off it has to cost one decode, not
+     * one apiece.
      *
-     * @return array{content: ?string, reasoning: ?string, usage: ?CompletionUsage}
+     * @return array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsage}
      */
     public function envelope(string $body): array
     {
@@ -34,6 +34,12 @@ final readonly class CompletionBodyDecoder
         return [
             'content' => $this->contentOf($choice, 'message'),
             'reasoning' => $this->reasoningOf($choice, 'message'),
+            // Both shapes stamp it on the choice, and finishReason()'s docblock
+            // above has always claimed one reader covers both — but this shape
+            // never actually decoded it, so hitTokenCeiling() was permanently
+            // false for a provider that ignores `stream: true` and the runaway
+            // classifier could not fire on it at all (#437 review).
+            'finishReason' => $this->finishReasonOf($choice),
             'usage' => $this->usageIn($root),
         ];
     }

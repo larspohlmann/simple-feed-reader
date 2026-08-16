@@ -25,13 +25,21 @@ final readonly class CompletionCallSlot
         public CompletionStreamObserver $observer,
         public ProviderTimeouts $timeouts,
         /**
-         * How much answer this call may retain before it is a runaway, derived
-         * from the `max_tokens` its own request carried (#437). Per call rather
-         * than per client: a wave's calls can ask for different amounts, and
-         * one flat number for all of them is the shape that made the old cap
-         * unable to fire.
+         * The `max_tokens` this call's own request carried (#437).
+         *
+         * The token count, not the byte bound derived from it: the client
+         * needs both — bytes to guard the reader, tokens to say what ceiling
+         * a runaway spent — and storing the product meant recovering the
+         * tokens by dividing it back out. That inverse is only correct while
+         * the derivation stays a bare multiplication, and it would go wrong
+         * silently, inside the message someone diagnoses the next runaway
+         * from.
+         *
+         * Per call rather than per client: a wave's calls can ask for
+         * different amounts, and one flat number for all of them is the shape
+         * that made the old cap unable to fire at all.
          */
-        public int $maximumAnswerBytes,
+        public int $maximumAnswerTokens,
     ) {
     }
 }

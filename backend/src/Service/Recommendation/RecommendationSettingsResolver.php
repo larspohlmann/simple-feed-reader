@@ -64,7 +64,7 @@ final readonly class RecommendationSettingsResolver
      */
     private static function batchCeilingFor(?AiProviderSettings $provider): int
     {
-        if (true === $provider?->isSlowModel()) {
+        if ($provider?->isSlowModel() ?? false) {
             return RecommendationPackingSettings::SLOW_MODEL_MAXIMUM_BATCH_SIZE;
         }
 

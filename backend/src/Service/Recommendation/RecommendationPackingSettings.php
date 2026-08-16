@@ -47,7 +47,7 @@ final readonly class RecommendationPackingSettings
         public int $contextWindow,
         public string $contextWindowSource,
         public ?int $batchCount,
-        public int $maximumBatchSize = self::DEFAULT_MAXIMUM_BATCH_SIZE,
+        public int $maximumBatchSize,
     ) {
     }
 }

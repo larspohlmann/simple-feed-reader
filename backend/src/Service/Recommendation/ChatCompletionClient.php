@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 use App\Service\Ai\Exception\CredentialsRejectedException;
-use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ProviderConnection;
 
@@ -15,10 +14,13 @@ interface ChatCompletionClient
      * One JSON-mode chat completion; returns the assistant message content.
      * Reports the accumulating streamed body to $observer chunk by chunk.
      *
+     * A reply the endpoint delivered and the model spoiled — a runaway, say —
+     * is returned, not thrown: it is content the caller's parser judges and
+     * retries against, and only a failure of the endpoint itself is an
+     * exception here (#437).
+     *
      * @throws CredentialsRejectedException
      * @throws ProviderUnreachableException
-     * @throws ProviderRunawayException    the model answered past what the request asked for, and the partial
-     *                                     answer rides on the exception (#437)
      */
     public function complete(
         ProviderConnection $connection,
