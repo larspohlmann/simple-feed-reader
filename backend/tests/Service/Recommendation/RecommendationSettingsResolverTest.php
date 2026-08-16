@@ -94,11 +94,10 @@ final class RecommendationSettingsResolverTest extends DbTestCase
     }
 
     /**
-     * The batch ceiling follows the connection, because it is a property of
-     * what the endpoint can do rather than of the account's taste (#437). A
-     * default connection keeps the ceiling every endpoint used to share.
+     * A connection with no cap set makes no claim about batch size, so the
+     * shared default stands.
      */
-    public function testADefaultConnectionKeepsTheDefaultBatchCeiling(): void
+    public function testAConnectionWithNoCapKeepsTheDefaultBatchCeiling(): void
     {
         $this->seedAiSettingsWithModel($this->user, contextWindow: 200000);
 
@@ -109,16 +108,16 @@ final class RecommendationSettingsResolverTest extends DbTestCase
     }
 
     /**
-     * A connection the account marked slow packs shorter batches: a small
-     * local model asked to rank 45 entries fell into a repetition loop on the
-     * ninth batch of a run whose first eight were fine (#437).
+     * The batch ceiling follows the connection's own cap, because how long a
+     * list a model holds in order is a property of the endpoint, not of the
+     * account's taste (#437).
      */
-    public function testAConnectionMarkedSlowPacksShorterBatches(): void
+    public function testAConnectionWithACapPacksToThatCap(): void
     {
-        $this->seedAiSettingsWithModel($this->user, contextWindow: 200000, slowModel: true);
+        $this->seedAiSettingsWithModel($this->user, contextWindow: 200000, maxBatchSize: 30);
 
         self::assertSame(
-            RecommendationPackingSettings::SLOW_MODEL_MAXIMUM_BATCH_SIZE,
+            30,
             $this->resolver()->forUser($this->user)->packing->maximumBatchSize,
         );
     }
@@ -135,7 +134,26 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         );
     }
 
-    private function seedAiSettingsWithModel(User $user, int $contextWindow, bool $slowModel = false): void
+    /**
+     * The regression test for #445: `slow_model` used to double as the batch
+     * ceiling's switch. Now it governs timeouts alone, so a connection marked
+     * slow with no cap of its own still gets the default ceiling.
+     */
+    public function testAConnectionMarkedSlowWithNoCapKeepsTheDefaultBatchCeiling(): void
+    {
+        $this->seedAiSettingsWithModel($this->user, contextWindow: 200000);
+        $provider = $this->user->getActiveAiProviderSettings();
+        self::assertNotNull($provider);
+        $provider->setSlowModel(true);
+        $this->em->flush();
+
+        self::assertSame(
+            RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
+            $this->resolver()->forUser($this->user)->packing->maximumBatchSize,
+        );
+    }
+
+    private function seedAiSettingsWithModel(User $user, int $contextWindow, ?int $maxBatchSize = null): void
     {
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
@@ -147,7 +165,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         $settings = new AiProviderSettings($user, null, 'https://api.example.test/v1', $sealed, '1234', $now);
         $this->em->persist($settings);
         $settings->chooseModel('m', $now, $contextWindow);
-        $settings->setSlowModel($slowModel);
+        $settings->setMaxBatchSize($maxBatchSize);
         $user->setActiveAiProviderSettings($settings);
         $this->em->flush();
     }
