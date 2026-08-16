@@ -319,6 +319,64 @@ final class AiSettingsControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(422);
     }
 
+    public function testMaxBatchSizeDefaultsToNull(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-max-batch-size-default@example.test');
+
+        $added = $this->addConfiguration($client);
+
+        self::assertNull($added['maxBatchSize']);
+    }
+
+    public function testSettingMaxBatchSizeChangesTheConfiguration(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-max-batch-size@example.test');
+        $id = $this->addConfiguration($client)['id'];
+        self::assertIsInt($id);
+
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/max-batch-size', $id), '{"maxBatchSize":30}');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(30, $this->payload($client)['maxBatchSize']);
+
+        $client->request('GET', '/api/me/ai');
+        $payload = $this->payload($client);
+        self::assertIsArray($payload['configs']);
+        self::assertIsArray($payload['configs'][0]);
+        self::assertSame(30, $payload['configs'][0]['maxBatchSize']);
+    }
+
+    public function testClearingMaxBatchSizeSetsItBackToNull(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-max-batch-size-clear@example.test');
+        $id = $this->addConfiguration($client)['id'];
+        self::assertIsInt($id);
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/max-batch-size', $id), '{"maxBatchSize":30}');
+        self::assertResponseIsSuccessful();
+
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/max-batch-size', $id), '{"maxBatchSize":null}');
+
+        self::assertResponseIsSuccessful();
+        self::assertNull($this->payload($client)['maxBatchSize']);
+    }
+
+    public function testSettingMaxBatchSizeRejectsOutOfRange(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-max-batch-size-range@example.test');
+        $id = $this->addConfiguration($client)['id'];
+        self::assertIsInt($id);
+
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/max-batch-size', $id), '{"maxBatchSize":4}');
+        self::assertResponseStatusCodeSame(422);
+
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/max-batch-size', $id), '{"maxBatchSize":201}');
+        self::assertResponseStatusCodeSame(422);
+    }
+
     public function testDeletingANonActiveConfigurationDropsItFromTheList(): void
     {
         $client = $this->clientAnswering(['gpt-4o', 'gpt-4o-mini']);
@@ -367,6 +425,7 @@ final class AiSettingsControllerTest extends ApiTestCase
         yield 'setting reasoning' => ['PUT', '/reasoning', '{"suppressReasoning":false}'];
         yield 'setting batch concurrency' => ['PUT', '/batch-concurrency', '{"batchConcurrency":2}'];
         yield 'setting slow model' => ['PUT', '/slow-model', '{"slowModel":true}'];
+        yield 'setting the batch cap' => ['PUT', '/max-batch-size', '{"maxBatchSize":30}'];
         yield 'deleting' => ['DELETE', '', '{}'];
         yield 'duplicating' => ['POST', '/duplicate', '{}'];
     }

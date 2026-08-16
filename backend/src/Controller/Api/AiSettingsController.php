@@ -8,6 +8,7 @@ use App\Dto\Ai\AddConfigurationRequest;
 use App\Dto\Ai\RenameConfigurationRequest;
 use App\Dto\Ai\SaveModelRequest;
 use App\Dto\Ai\SetBatchConcurrencyRequest;
+use App\Dto\Ai\SetMaxBatchSizeRequest;
 use App\Dto\Ai\SetReasoningRequest;
 use App\Dto\Ai\SetSlowModelRequest;
 use App\Entity\User;
@@ -230,6 +231,30 @@ final readonly class AiSettingsController
         }
 
         $this->editor->setBatchConcurrency($configuration, $request->batchConcurrency);
+
+        return new JsonResponse(
+            AiSettingsJson::configuration($configuration, $this->configurator->settingsFor($user)?->getId()),
+        );
+    }
+
+    #[Route(
+        '/configs/{id}/max-batch-size',
+        name: 'api_me_ai_set_max_batch_size',
+        requirements: ['id' => '\d+'],
+        methods: ['PUT'],
+    )]
+    public function setMaxBatchSize(
+        #[CurrentUser] User $user,
+        int $id,
+        #[MapRequestPayload] SetMaxBatchSizeRequest $request,
+    ): JsonResponse {
+        try {
+            $configuration = $this->configuration->require($user, $id);
+        } catch (ConfigurationNotFoundException $e) {
+            throw new AiConfigurationNotFoundApiException($e);
+        }
+
+        $this->editor->setMaxBatchSize($configuration, $request->maxBatchSize);
 
         return new JsonResponse(
             AiSettingsJson::configuration($configuration, $this->configurator->settingsFor($user)?->getId()),
