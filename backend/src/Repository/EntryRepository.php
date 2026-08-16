@@ -76,6 +76,31 @@ class EntryRepository extends ServiceEntityRepository
     }
 
     /**
+     * The whole table, walked in ascending-id slices for app:search:reindex.
+     * Id keyset (`id > :lastId`), never OFFSET: OFFSET re-scans and discards
+     * every prior row on each call, which turns a full-table walk quadratic
+     * once the table holds tens of thousands of rows. Feed is fetched eagerly
+     * so EntryIndexer::toIndexedEntries() costs no extra query per row.
+     *
+     * @return list<Entry>
+     */
+    public function entriesAfterId(int $lastId, int $limit): array
+    {
+        /** @var list<Entry> $entries */
+        $entries = $this->createQueryBuilder('e')
+            ->addSelect('f')
+            ->join('e.feed', 'f')
+            ->andWhere('e.id > :lastId')
+            ->setParameter('lastId', $lastId)
+            ->orderBy('e.id', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return $entries;
+    }
+
+    /**
      * The feed's existing entries for the given guid hashes, indexed by hash —
      * lets a re-parse match items back to their persisted rows.
      *

@@ -48,10 +48,28 @@ final readonly class EntryIndexer
             // settings), and it is what makes a freshly enabled container
             // usable without a separate provisioning step or command.
             $this->index->configure();
-            $this->index->upsert(array_map(self::toIndexedEntry(...), $entries));
+            $this->index->upsert(self::toIndexedEntries($entries));
         } catch (SearchEngineUnavailableException $e) {
             $this->logger->error('Failed to index entries', ['exception' => $e]);
         }
+    }
+
+    /**
+     * The Entry-to-IndexedEntry mapping alone: no engine call, nothing
+     * swallowed. `app:search:reindex` needs the exact same mapping this class
+     * uses at ingest time — a second mapping that drifts from this one is the
+     * bug DRY exists to prevent — but it must let SearchEngineUnavailableException
+     * reach its caller instead of disappearing into a log line, which rules out
+     * reusing index() itself. This static entry point is the shared piece: pure,
+     * so it carries no opinion about what happens to a failed write.
+     *
+     * @param list<Entry> $entries
+     *
+     * @return list<IndexedEntry>
+     */
+    public static function toIndexedEntries(array $entries): array
+    {
+        return array_map(self::toIndexedEntry(...), $entries);
     }
 
     /**
