@@ -88,11 +88,21 @@ services:
     App\Service\Version\ReleaseVersionReader: '@App\Service\Version\FileReleaseVersionReader'
     App\Service\Ai\ModelCatalog: '@App\Service\Ai\OpenAiCompatibleCatalog'
     App\Service\Recommendation\ChatCompletionClient: '@App\Service\Recommendation\OpenAiCompatibleChatClient'
-    # The one implementation lives in Service/Worker because only a worker has
-    # liveness to keep fresh; the transport that pings it must not depend on
-    # that layer, so the interface stays in Service/Recommendation (#433). In a
-    # web request nothing arms it and every ping is a no-op.
-    App\Service\Recommendation\CompletionStreamHeartbeat: '@App\Service\Worker\SweepStreamHeartbeat'
+    # The transport pings one heartbeat per chunk and must not learn how many
+    # things care (#433, #444), so the interface resolves to a composite whose
+    # two members are wired explicitly here -- the one place the indirection
+    # applies. SweepStreamHeartbeat marks a sweeping worker's liveness; nothing
+    # arms it in a web request and every ping is then a no-op. TickLockKeepalive
+    # refreshes a streaming tick's per-user lock; nothing arms it outside a
+    # tick. Both stay injectable by their own class name too, because their
+    # arming methods (sweepStarted()/sweepEnded(), hold()/release()) are called
+    # by name from the sweep and from the advancer, not through the interface.
+    App\Service\Recommendation\CompletionStreamHeartbeat: '@App\Service\Recommendation\CompositeCompletionStreamHeartbeat'
+    App\Service\Recommendation\CompositeCompletionStreamHeartbeat:
+        arguments:
+            $heartbeats:
+                - '@App\Service\Worker\SweepStreamHeartbeat'
+                - '@App\Service\Recommendation\TickLockKeepalive'
     App\Service\Process\ShellCommandRunnerInterface: '@App\Service\Process\ExecShellCommandRunner'
     App\Service\Process\DetachedProcessLauncherInterface: '@App\Service\Process\DetachedProcessLauncher'
 
