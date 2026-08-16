@@ -19,6 +19,15 @@ namespace App\Service;
  */
 final class PlainText
 {
+    /**
+     * Elements whose boundaries must survive as whitespace once tags are
+     * stripped — used by fromHtmlBlocks(), never by from() itself, because
+     * from() also runs over already-plain-text-ish sources (feed titles) where
+     * inventing word breaks would be wrong.
+     */
+    private const string BLOCK_BOUNDARY_PATTERN = '/<\/?(?:p|div|br|li|ul|ol|h[1-6]|tr|td|th|table|thead|tbody'
+        . '|blockquote|section|article|header|footer|aside|nav|figure|figcaption|dd|dt|dl)\b[^>]*>/i';
+
     public static function from(?string $value): ?string
     {
         if ($value === null) {
@@ -29,5 +38,24 @@ final class PlainText
         $collapsed = trim((string) preg_replace('/\s+/u', ' ', $decoded));
 
         return $collapsed === '' ? null : $collapsed;
+    }
+
+    /**
+     * Same reduction as from(), but for HTML known to carry block-level
+     * structure (an entry body, never a feed <title>): strip_tags() alone
+     * concatenates text across element boundaries with no separator, so
+     * "<p>one</p><p>two</p>" would otherwise read as the single word "onetwo".
+     * Block-level tags are turned into whitespace first so the words on either
+     * side of a paragraph, list item or table cell stay separate.
+     */
+    public static function fromHtmlBlocks(?string $html): ?string
+    {
+        if ($html === null) {
+            return null;
+        }
+
+        $withBoundaries = preg_replace(self::BLOCK_BOUNDARY_PATTERN, ' ', $html) ?? $html;
+
+        return self::from($withBoundaries);
     }
 }

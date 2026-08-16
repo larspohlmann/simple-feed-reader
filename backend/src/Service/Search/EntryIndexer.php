@@ -133,7 +133,7 @@ final class EntryIndexer
             feedId: (int) $entry->getFeed()->getId(),
             title: $entry->getTitle(),
             summary: $entry->getSummary(),
-            content: PlainText::from($entry->getContentHtml()),
+            content: PlainText::fromHtmlBlocks($entry->getContentHtml()),
             feedTitle: $entry->getFeed()->getTitle(),
             effectiveDate: $entry->getEffectiveDate(),
         );

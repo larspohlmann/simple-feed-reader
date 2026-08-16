@@ -116,11 +116,37 @@ final class EntryIndexerTest extends DbTestCase
         self::assertSame((int) $feed->getId(), $document->feedId);
         self::assertSame('A Title', $document->title);
         self::assertSame('A plain summary', $document->summary);
-        // Reduced to plain text, exactly as PlainText::from() would: tags
-        // stripped, entities decoded — never the raw HTML.
+        // Reduced to plain text, exactly as PlainText::fromHtmlBlocks() would:
+        // tags stripped, entities decoded — never the raw HTML.
         self::assertSame('Body text & more.', $document->content);
         self::assertSame('The Daily Example', $document->feedTitle);
         self::assertSame($entry->getEffectiveDate(), $document->effectiveDate);
+    }
+
+    /**
+     * PlainText::from() alone has no concept of block-level boundaries, so
+     * "<p>Deployed to the cloud</p><p>Computing costs fell</p>" would index as
+     * the single unsearchable token "cloudComputing" — silently breaking
+     * search for the word that opens the second paragraph of nearly every
+     * multi-paragraph entry. EntryIndexer must go through
+     * PlainText::fromHtmlBlocks() instead, so the words on either side of the
+     * boundary stay separate and findable.
+     */
+    public function testContentAtAParagraphBoundaryStaysTwoSeparateWords(): void
+    {
+        $writer = new RecordingSearchIndexWriter();
+        $indexer = new EntryIndexer($writer, new RecordingLogger());
+
+        $entry = $this->entry($this->feed());
+        $entry->setContentHtml('<p>Deployed to the cloud</p><p>Computing costs fell</p>');
+        $this->em->flush();
+
+        $indexer->index([$entry]);
+
+        self::assertSame(
+            'Deployed to the cloud Computing costs fell',
+            $writer->upserts[0][0]->content,
+        );
     }
 
     public function testAnEntryWithNoBodyIndexesWithNullContent(): void
