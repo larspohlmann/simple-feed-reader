@@ -1,9 +1,21 @@
-# Local Docker Environment
+# Local Docker environment
 
 A full local stack — MySQL, PHP-FPM, nginx with real TLS, and a mail catcher —
 for anyone who wants to run the backend without installing PHP or MySQL
 natively. It is strictly additive: the native SQLite workflow (plain
 `vendor/bin/phpunit` in `backend/`) keeps working unchanged.
+
+**Contents:**
+[1 What you get](#1-what-you-get) ·
+[2 Prerequisites](#2-prerequisites) ·
+[3 First run](#3-first-run) ·
+[4 Everyday commands](#4-everyday-commands) ·
+[5 Step debugging](#5-step-debugging-xdebug) ·
+[6 Why HTTPS locally](#6-why-https-locally) ·
+[7 Gotchas](#7-gotchas) ·
+[8 Extension points](#8-extension-points) ·
+[9 Frontend in Docker](#9-frontend-in-docker) ·
+[10 The weekly rot check](#10-the-weekly-rot-check)
 
 ---
 
@@ -40,7 +52,9 @@ Six services, started with one command from the repository root:
 > ```
 >
 > The recommendation feature degrades to #308's poll-driven behaviour while the
-> worker is stopped, so the app stays fully usable without it. That graceful
+> worker is stopped (what that looks like for the user:
+> [recommendations-runs.md](recommendations-runs.md)), so the app stays fully
+> usable without it. That graceful
 > degradation is also why a stopped worker is easy to miss: the app keeps
 > working, it just tells you "Keep the app open while this runs" instead of
 > running the work in the background.
@@ -273,7 +287,9 @@ no Mailpit, no xdebug.
 
 Design and rationale: [docs/superpowers/specs/2026-07-22-frontend-docker-services-design.md](superpowers/specs/2026-07-22-frontend-docker-services-design.md).
 
-## The weekly rot check
+---
+
+## 10. The weekly rot check
 
 Both e2e suites also run in GitHub Actions every Wednesday
 ([.github/workflows/e2e-rot-check.yml](../.github/workflows/e2e-rot-check.yml)),
