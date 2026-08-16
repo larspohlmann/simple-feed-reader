@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\User;
-use App\Http\EntryPage;
+use App\Http\SearchPage;
 use App\Service\Search\EntrySearchInterface;
 use App\Service\Search\EntrySearchRequestFactory;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -27,6 +27,6 @@ final readonly class EntrySearchController
     {
         $query = $this->requests->fromRequest($request, $user);
 
-        return new JsonResponse(EntryPage::of($this->search->search($query), $query->limit));
+        return new JsonResponse(SearchPage::of($this->search->search($query), $query->limit));
     }
 }

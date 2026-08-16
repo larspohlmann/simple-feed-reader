@@ -49,12 +49,13 @@ final class LikeEntrySearchTest extends DbTestCase
         self::assertInstanceOf(EntryRepository::class, $repository);
         $search = new LikeEntrySearch($repository);
 
-        $rows = $search->search(new EntrySearchQuery(
+        $result = $search->search(new EntrySearchQuery(
             userId: $user->getId() ?? 0,
             terms: SearchTerms::fromInput('angular'),
         ));
 
-        self::assertCount(1, $rows);
-        self::assertSame('Angular 20 ships', $rows[0]->entry->getTitle());
+        self::assertCount(1, $result->rows);
+        self::assertSame('Angular 20 ships', $result->rows[0]->entry->getTitle());
+        self::assertSame([], $result->matchedWords);
     }
 }

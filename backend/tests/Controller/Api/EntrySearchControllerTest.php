@@ -93,6 +93,7 @@ final class EntrySearchControllerTest extends ApiTestCase
         $first = $body['entries'][0];
         self::assertIsArray($first);
         self::assertSame('Angular Post 1', $first['title']);
+        self::assertSame([], $body['matchedWords']);
     }
 
     public function testEntryInAFeedTheCallerDoesNotSubscribeToIsAbsent(): void
