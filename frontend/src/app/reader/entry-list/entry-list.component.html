@@ -338,8 +338,10 @@
        Decorative: the rows already carry aria-busy, and a second announcement
        of the same wait is noise. -->
   <div class="reload-veil" [class.shown]="reloadSpinner()" aria-hidden="true">
-    <span class="label">{{ 'common.loading' | transloco }}</span>
-    <app-spinner [size]="48" [decorative]="true" />
+    <div class="card">
+      <span class="label">{{ 'common.loading' | transloco }}</span>
+      <app-spinner [size]="96" [decorative]="true" />
+    </div>
   </div>
 }
 

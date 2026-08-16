@@ -417,9 +417,25 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
     visibility 0s;
 }
 
+/* The spinner and its word sit on a card of their own. Over bare rows the
+   label competed with the headlines behind it, and dimming those further would
+   have hidden the list this is meant to keep on screen (#254). Nearly opaque
+   for the same reason the pull-to-refresh pill is: it has to be read. */
+.reload-veil .card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-7);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--surface-1) 96%, transparent);
+  box-shadow: var(--shadow-1, 0 1px 4px rgb(0 0 0 / 15%));
+}
+
 .reload-veil .label {
   color: var(--text-secondary);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-lg);
 }
 
 .foot {
