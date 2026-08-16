@@ -454,7 +454,9 @@ git commit -m "feat(#432): offer the search engine at install time and run it be
 
 - [ ] **Step 1: Write the failing tests**
 
-Store spec: a search response carrying `matchedWords` exposes them; a response without the key exposes none; loading a further page replaces them rather than accumulating stale words from an earlier query.
+Store spec: a search response carrying `matchedWords` exposes them; a response without the key exposes none; a NEW query replaces them, and loading a further page of the SAME query unions them.
+
+The two paths differ deliberately, and the first draft of this plan got it wrong by saying "replace" for both. The engine computes matched words per page, from that page's hits alone, while the list appends rows and marks them all from one shared array. Replacing on `loadMore` therefore strips the marks off rows the user already scrolled past — a page-1 row that matched "receive" loses its mark when page 2 arrives carrying only "received". Every word in the union describes a row currently on screen, which is the invariant that makes marking safe; a new query replaces because the whole displayed set is being swapped out.
 
 List spec: with matched words present the rows receive those; with none present the rows receive the terms split from the selection, exactly as today.
 
