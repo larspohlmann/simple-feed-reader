@@ -17,6 +17,33 @@
         <ini name="memory_limit" value="512M" />
         <server name="APP_ENV" value="test" force="true" />
         <server name="SHELL_VERBOSITY" value="-1" />
+
+        <!--
+            The dev Docker stack sets a REAL MEILISEARCH_URL/MEILISEARCH_KEY on
+            the php/worker containers' environment (docker-compose.yml), and it
+            does so unconditionally — not scoped to APP_ENV=dev — so a process
+            running inside that container under APP_ENV=test sees it too. A real
+            environment variable beats an empty value from .env/.env.test in
+            Symfony's precedence (the same rule local-docker.md documents for
+            DATABASE_URL), so without this override `docker compose exec php
+            vendor/bin/phpunit` would silently talk to, and WRITE INTO, the
+            developer's live Meilisearch index instead of taking the intended
+            database-fallback path — corrupting shared state outside the
+            database that no TEST_TOKEN isolation covers (#432 Fix round 1).
+
+            Symfony's Container::getEnv() checks $_ENV, then $_SERVER, then
+            getenv(), in that order. A real process env var can land in either
+            $_ENV or $_SERVER depending on the runtime's `variables_order`
+            (which differs between the host CLI and this container's php.ini),
+            so all three lookups are forced here rather than relying on just
+            one: <env force="true"> sets $_ENV unconditionally and calls
+            putenv() (covering getenv()); <server> always overwrites $_SERVER.
+            Together they win regardless of which one Docker populated.
+        -->
+        <env name="MEILISEARCH_URL" value="" force="true" />
+        <env name="MEILISEARCH_KEY" value="" force="true" />
+        <server name="MEILISEARCH_URL" value="" />
+        <server name="MEILISEARCH_KEY" value="" />
     </php>
 
     <testsuites>

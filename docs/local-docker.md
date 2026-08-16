@@ -231,6 +231,15 @@ work in one browser and silently fail in another, which is exactly the kind of
 - **The certificate expires.** mkcert leaf certificates are valid for roughly
   two years. When the browser starts complaining, re-run the `mkcert` command
   from section 3 (it overwrites in place) and force-recreate nginx.
+- **The test suite always runs with no search engine, even in here.** `php`
+  and `worker` carry a real `MEILISEARCH_URL` (§1) for every `APP_ENV`, but
+  `backend/phpunit.dist.xml` forces it back to empty for `APP_ENV=test`
+  specifically, so `docker compose exec php vendor/bin/phpunit` exercises the
+  same database-fallback path the native SQLite run does. Without that
+  override, the suite would silently talk to — and write into — this
+  container's live index instead. If you ever need a test that genuinely
+  exercises the engine, use `composer e2e` (against the real running stack),
+  not `vendor/bin/phpunit`.
 - **Root-owned `vendor/` on Linux hosts.** `docker compose exec php composer
   install` runs as root inside the container; on Linux the bind mount exposes
   that ownership on the host. Either run composer natively or use
