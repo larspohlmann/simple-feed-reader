@@ -330,6 +330,51 @@ describe('EntryListComponent', () => {
     expect(rows.hasAttribute('inert')).toBe(false);
   });
 
+  describe('a reload that a search is typing its way through', () => {
+    const typing = {
+      loading: true,
+      entries: [entry(1), entry(2)],
+      layout: 'list',
+      selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+    };
+
+    it('leaves the retained rows undimmed and clickable', () => {
+      const el = mount(typing).nativeElement as HTMLElement;
+      const rows = el.querySelector('.rows')!;
+      expect(rows.classList).not.toContain('reloading');
+      expect(rows.hasAttribute('inert')).toBe(false);
+    });
+
+    it('still reports the rows as busy to assistive technology', () => {
+      const el = mount(typing).nativeElement as HTMLElement;
+      expect(el.querySelector('.rows')!.getAttribute('aria-busy')).toBe('true');
+    });
+
+    it('never raises the reload veil, however long the search runs', () => {
+      jest.useFakeTimers();
+      try {
+        const f = mount(typing);
+        jest.advanceTimersByTime(5000);
+        f.detectChanges();
+        expect((f.nativeElement as HTMLElement).querySelector('.reload-veil.shown')).toBeNull();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('still raises the veil for a reload outside a search', () => {
+      jest.useFakeTimers();
+      try {
+        const f = mount({ loading: true, entries: [entry(1), entry(2)], layout: 'list' });
+        jest.advanceTimersByTime(5000);
+        f.detectChanges();
+        expect((f.nativeElement as HTMLElement).querySelector('.reload-veil.shown')).not.toBeNull();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+  });
+
   it('shows skeletons while loading and an empty state when empty', () => {
     expect(
       (mount({ loading: true, entries: [] }).nativeElement as HTMLElement).querySelector(
