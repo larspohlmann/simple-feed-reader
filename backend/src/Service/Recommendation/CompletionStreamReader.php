@@ -44,6 +44,23 @@ final class CompletionStreamReader
      */
     private ?CompletionUsage $usage = null;
 
+    /**
+     * How many times the buffers have changed. The blocking-envelope readers
+     * below share one decode per generation, and a counter is the exact key
+     * for that: the buffers only ever change inside consume(), and their
+     * combined length is not a reliable stand-in — a CRLF line break leaves
+     * exactly as many bytes behind as it takes away.
+     */
+    private int $bufferGeneration = 0;
+
+    /**
+     * The last blocking-envelope decode and the generation it was taken at.
+     *
+     * @var array{content: ?string, reasoning: ?string, usage: ?CompletionUsage}|null
+     */
+    private ?array $envelopeFields = null;
+    private int $envelopeFieldsGeneration = -1;
+
     public function __construct(private readonly CompletionBodyDecoder $decoder)
     {
     }
@@ -52,6 +69,7 @@ final class CompletionStreamReader
     {
         $this->wireBytes += \strlen($chunk);
         $this->pendingLine .= $chunk;
+        $this->bufferGeneration++;
 
         while (false !== ($lineBreak = strpos($this->pendingLine, "\n"))) {
             $line = substr($this->pendingLine, 0, $lineBreak);
@@ -86,11 +104,15 @@ final class CompletionStreamReader
      * JSON decode per chunk on a half-buffered event, which is the parse cost
      * #327 removed. Real SSE terminates its frames, and the usage message is
      * followed by `data: [DONE]`, so it is never the unterminated one.
+     *
+     * The blocking shape does re-read its whole buffer, as it always has for
+     * the answer — but it shares that one decode with assistantContent(),
+     * which the client asks for on the very same chunk.
      */
     public function usage(): ?CompletionUsage
     {
         if (!$this->sawStreamEvent) {
-            return $this->decoder->usage($this->envelope . $this->pendingLine);
+            return $this->envelopeFields()['usage'];
         }
 
         return $this->usage;
@@ -108,7 +130,7 @@ final class CompletionStreamReader
     public function assistantContent(): ?string
     {
         if (!$this->sawStreamEvent) {
-            return $this->decoder->envelopeContent($this->envelope . $this->pendingLine);
+            return $this->envelopeFields()['content'];
         }
 
         $answer = $this->answer . $this->trailingEventContent();
@@ -125,10 +147,32 @@ final class CompletionStreamReader
     public function reasoningContent(): ?string
     {
         if (!$this->sawStreamEvent) {
-            return $this->decoder->envelopeReasoning($this->envelope . $this->pendingLine);
+            return $this->envelopeFields()['reasoning'];
         }
 
         return '' === $this->reasoning ? null : $this->reasoning;
+    }
+
+    /**
+     * The blocking envelope's fields, decoded at most once per generation of
+     * the buffers and shared by the three readers above.
+     *
+     * The client asks for the answer and the usage on every chunk it feeds in,
+     * and on this shape both come out of the same whole-body decode. Without
+     * the memo that shape would pay one decode per field per chunk, which is
+     * the parse cost #327 removed from the streaming shape and #409 must not
+     * quietly reintroduce here.
+     *
+     * @return array{content: ?string, reasoning: ?string, usage: ?CompletionUsage}
+     */
+    private function envelopeFields(): array
+    {
+        if (null === $this->envelopeFields || $this->envelopeFieldsGeneration !== $this->bufferGeneration) {
+            $this->envelopeFieldsGeneration = $this->bufferGeneration;
+            $this->envelopeFields = $this->decoder->envelope($this->envelope . $this->pendingLine);
+        }
+
+        return $this->envelopeFields;
     }
 
     private function readLine(string $line): void
