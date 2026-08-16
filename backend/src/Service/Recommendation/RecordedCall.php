@@ -54,7 +54,10 @@ final class RecordedCall implements CompletionStreamObserver
      * runs through bankUsage(), and without this flag a call reachable by two
      * of them would double its own spend. Per-instance on purpose: a retry and
      * the discarded sibling of an aborted wave are separate RecordedCalls, and
-     * the provider billed each of them (#344).
+     * the provider billed each of them (#344). Only set once bankUsage()
+     * actually writes: a settle that finds no usage yet (a transport failure
+     * before the provider's usage message arrived) leaves this false, so a
+     * later settle path on the same instance still gets to bank it.
      */
     private bool $usageBanked = false;
 

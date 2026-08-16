@@ -221,6 +221,72 @@ final class RecordedCallTest extends DbTestCase
         self::assertNull($this->runTotals()['costNanoCredits']);
     }
 
+    /**
+     * Both totals start at 0 / NULL for a single call, so nothing in the
+     * tests above tells `SET x = x + :n` apart from `SET x = :n` -- an
+     * overwrite would pass them just as well. A second call against the same
+     * run is what only accumulation survives: the token sum proves the SQL
+     * arithmetic, and the cost sum proves COALESCE both initialises the
+     * column on the first priced call and adds on top of it for the second,
+     * rather than a plain assignment either time.
+     */
+    public function testBanksTwoCallsUsageAsASumNotAnOverwrite(): void
+    {
+        $first = $this->recordedCall(logId: 7);
+        $first->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
+            promptTokens: 1000,
+            completionTokens: 200,
+            reasoningTokens: 50,
+            cachedTokens: 300,
+            costNanoCredits: 10_000,
+        )));
+        $first->settle('{}', true);
+
+        $second = $this->recordedCall(logId: 8);
+        $second->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
+            promptTokens: 400,
+            completionTokens: 90,
+            reasoningTokens: 10,
+            cachedTokens: 20,
+            costNanoCredits: 3_000,
+        )));
+        $second->settle('{}', true);
+
+        self::assertSame([
+            'promptTokens' => 1400,
+            'completionTokens' => 290,
+            'reasoningTokens' => 60,
+            'cachedTokens' => 320,
+            'costNanoCredits' => 13_000,
+        ], $this->runTotals());
+    }
+
+    /**
+     * $this->usage is only ever assigned `$progress->usage ?? $this->usage`
+     * (streamProgressed()), never a bare `$progress->usage` -- a later report
+     * that carries no usage of its own must not erase the one already seen.
+     * A plain assignment passes every other test in this file (none of them
+     * report progress twice with the second report bare), so this is the one
+     * that actually exercises the `??`.
+     */
+    public function testKeepsTheUsageSeenBeforeALaterReportArrivesWithoutIt(): void
+    {
+        $call = $this->recordedCall(logId: 7);
+
+        $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
+            promptTokens: 500,
+            completionTokens: 60,
+            reasoningTokens: 5,
+            cachedTokens: 0,
+            costNanoCredits: 7_000,
+        )));
+        $call->streamProgressed(new CompletionStreamProgress('{}', 200));
+        $call->settle('{}', true);
+
+        self::assertSame(500, $this->runTotals()['promptTokens']);
+        self::assertSame(7000, $this->runTotals()['costNanoCredits']);
+    }
+
     private function call(): RecordedCall
     {
         $runId = $this->run->getId();
@@ -273,12 +339,15 @@ final class RecordedCallTest extends DbTestCase
      * fetchAssociative() hands back a row typed as array<string, mixed>, and a
      * bare (int) cast on mixed is exactly what PHPStan max forbids -- this is
      * the narrowing step that makes the cast legal, not a workaround for it.
+     * A PHPUnit assertion narrows exactly as well as a thrown exception would
+     * and fails as a readable test rather than an uncaught RuntimeException.
      */
     private static function columnAsInt(mixed $value): int
     {
-        if (!is_int($value) && !is_string($value) && !is_float($value)) {
-            throw new \RuntimeException('Expected a numeric recommendation_run column value.');
-        }
+        self::assertTrue(
+            is_int($value) || is_string($value) || is_float($value),
+            'Expected a numeric recommendation_run column value.',
+        );
 
         return (int) $value;
     }
