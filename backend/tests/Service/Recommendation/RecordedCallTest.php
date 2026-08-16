@@ -8,6 +8,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Service\Recommendation\CompletionStreamProgress;
+use App\Service\Recommendation\CompletionUsage;
 use App\Service\Recommendation\RecordedCall;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -119,6 +120,107 @@ final class RecordedCallTest extends DbTestCase
         self::assertNull($this->freshLog()->getFinishReason());
     }
 
+    public function testBanksTheProvidersUsageOntoTheRunWhenTheCallSettles(): void
+    {
+        $call = $this->recordedCall(logId: 7);
+
+        $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
+            promptTokens: 1200,
+            completionTokens: 340,
+            reasoningTokens: 90,
+            cachedTokens: 1100,
+            costNanoCredits: 41_230_000,
+        )));
+        $call->settle('{}', true);
+
+        self::assertSame([
+            'promptTokens' => 1200,
+            'completionTokens' => 340,
+            'reasoningTokens' => 90,
+            'cachedTokens' => 1100,
+            'costNanoCredits' => 41_230_000,
+        ], $this->runTotals());
+    }
+
+    public function testBanksTheUsageWithTheDebugSwitchOff(): void
+    {
+        $call = $this->recordedCall(logId: null);
+
+        $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
+            promptTokens: 10,
+            completionTokens: 2,
+            reasoningTokens: 0,
+            cachedTokens: 0,
+            costNanoCredits: 5000,
+        )));
+        $call->settle('{}', true);
+
+        self::assertSame(10, $this->runTotals()['promptTokens']);
+        self::assertSame(5000, $this->runTotals()['costNanoCredits']);
+    }
+
+    public function testBanksTheUsageOfACallThatFailedInTransport(): void
+    {
+        $call = $this->recordedCall(logId: 7);
+
+        $call->streamProgressed(new CompletionStreamProgress('', 100, null, new CompletionUsage(
+            promptTokens: 900,
+            completionTokens: 0,
+            reasoningTokens: 0,
+            cachedTokens: 0,
+            costNanoCredits: 2000,
+        )));
+        $call->abortAfterTransportFailure('That address did not answer.');
+
+        self::assertSame(900, $this->runTotals()['promptTokens']);
+    }
+
+    public function testLeavesTheCostNullWhenTheProviderReportedNone(): void
+    {
+        $call = $this->recordedCall(logId: null);
+
+        $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
+            promptTokens: 40,
+            completionTokens: 9,
+            reasoningTokens: 0,
+            cachedTokens: 0,
+            costNanoCredits: null,
+        )));
+        $call->settle('{}', true);
+
+        self::assertSame(40, $this->runTotals()['promptTokens']);
+        self::assertNull($this->runTotals()['costNanoCredits']);
+    }
+
+    public function testBanksOneCallOnceHoweverManySettlePathsReachIt(): void
+    {
+        $call = $this->recordedCall(logId: 7);
+
+        $call->streamProgressed(new CompletionStreamProgress('', 100, null, new CompletionUsage(
+            promptTokens: 900,
+            completionTokens: 0,
+            reasoningTokens: 0,
+            cachedTokens: 0,
+            costNanoCredits: 2000,
+        )));
+        $call->abortAfterTransportFailure('That address did not answer.');
+        $call->abortAfterTransportFailure('That address did not answer.');
+
+        self::assertSame(900, $this->runTotals()['promptTokens']);
+        self::assertSame(2000, $this->runTotals()['costNanoCredits']);
+    }
+
+    public function testBanksNothingWhenTheProviderSentNoUsageAtAll(): void
+    {
+        $call = $this->recordedCall(logId: 7);
+
+        $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop'));
+        $call->settle('{}', true);
+
+        self::assertSame(0, $this->runTotals()['promptTokens']);
+        self::assertNull($this->runTotals()['costNanoCredits']);
+    }
+
     private function call(): RecordedCall
     {
         $runId = $this->run->getId();
@@ -127,6 +229,58 @@ final class RecordedCallTest extends DbTestCase
         self::assertNotNull($logId);
 
         return new RecordedCall($this->em->getConnection(), $this->clock, $runId, $logId);
+    }
+
+    /**
+     * Unlike call(), $logId is not the real log row's id: these tests exist
+     * to prove bankUsage() runs before the $logId guard, so an arbitrary
+     * value that is null exactly when the caller wants "debug off" serves
+     * that better than the fixture's own log, whose id is real either way.
+     */
+    private function recordedCall(?int $logId): RecordedCall
+    {
+        $runId = $this->run->getId();
+        self::assertNotNull($runId);
+
+        return new RecordedCall($this->em->getConnection(), $this->clock, $runId, $logId);
+    }
+
+    /** @return array{promptTokens: int, completionTokens: int, reasoningTokens: int, cachedTokens: int, costNanoCredits: ?int} */
+    private function runTotals(): array
+    {
+        $runId = $this->run->getId();
+        self::assertNotNull($runId);
+
+        $row = $this->em->getConnection()->fetchAssociative(
+            'SELECT prompt_tokens, completion_tokens, reasoning_tokens, cached_tokens, cost_nano_credits'
+            . ' FROM recommendation_run WHERE id = :runId',
+            ['runId' => $runId],
+        );
+        self::assertNotFalse($row);
+
+        return [
+            'promptTokens' => self::columnAsInt($row['prompt_tokens']),
+            'completionTokens' => self::columnAsInt($row['completion_tokens']),
+            'reasoningTokens' => self::columnAsInt($row['reasoning_tokens']),
+            'cachedTokens' => self::columnAsInt($row['cached_tokens']),
+            'costNanoCredits' => null === $row['cost_nano_credits']
+                ? null
+                : self::columnAsInt($row['cost_nano_credits']),
+        ];
+    }
+
+    /**
+     * fetchAssociative() hands back a row typed as array<string, mixed>, and a
+     * bare (int) cast on mixed is exactly what PHPStan max forbids -- this is
+     * the narrowing step that makes the cast legal, not a workaround for it.
+     */
+    private static function columnAsInt(mixed $value): int
+    {
+        if (!is_int($value) && !is_string($value) && !is_float($value)) {
+            throw new \RuntimeException('Expected a numeric recommendation_run column value.');
+        }
+
+        return (int) $value;
     }
 
     private function freshLog(): RecommendationRunLog
