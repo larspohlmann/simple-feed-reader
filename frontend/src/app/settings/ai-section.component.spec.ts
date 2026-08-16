@@ -28,6 +28,7 @@ interface AiSettingsStub {
   rename: jest.Mock;
   setReasoning: jest.Mock;
   setSlowModel: jest.Mock;
+  setMaxBatchSize: jest.Mock;
   setBatchConcurrency: jest.Mock;
   activate: jest.Mock;
   remove: jest.Mock;
@@ -44,6 +45,7 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   suppressReasoning: true,
   batchConcurrency: 1,
   slowModel: false,
+  maxBatchSize: null,
   ...over,
 });
 
@@ -80,6 +82,7 @@ function createStub(): AiSettingsStub {
     rename: jest.fn(),
     setReasoning: jest.fn(),
     setSlowModel: jest.fn(),
+    setMaxBatchSize: jest.fn(),
     setBatchConcurrency: jest.fn(),
     activate: jest.fn(),
     remove: jest.fn(),
@@ -396,6 +399,60 @@ describe('AiSectionComponent', () => {
     checkbox.dispatchEvent(new Event('change'));
 
     expect(setSlowModel).toHaveBeenCalledWith(7, true);
+  });
+
+  it('renders the stored batch cap in the number input', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 7, maxBatchSize: 30 })]);
+    fixture.detectChanges();
+
+    expandRow(fixture, 0);
+
+    const input = row(fixture, 0).querySelector('input[type="number"]') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('30');
+  });
+
+  it('shows the default as the placeholder when the batch cap is null', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 7, maxBatchSize: null })]);
+    fixture.detectChanges();
+
+    expandRow(fixture, 0);
+
+    const input = row(fixture, 0).querySelector('input[type="number"]') as HTMLInputElement;
+    expect(input.value).toBe('');
+    expect(input.placeholder).toBe('45');
+  });
+
+  it('sends the entered batch cap on change', () => {
+    const fixture = mount();
+    const setMaxBatchSize = jest.spyOn(ai, 'setMaxBatchSize').mockImplementation(() => undefined);
+    ai.configs.set([config({ id: 7, maxBatchSize: null })]);
+    fixture.detectChanges();
+
+    expandRow(fixture, 0);
+
+    const input = row(fixture, 0).querySelector('input[type="number"]') as HTMLInputElement;
+    input.value = '30';
+    input.dispatchEvent(new Event('change'));
+
+    expect(setMaxBatchSize).toHaveBeenCalledWith(7, 30);
+  });
+
+  it('sends null, not NaN, when the batch cap field is cleared', () => {
+    const fixture = mount();
+    const setMaxBatchSize = jest.spyOn(ai, 'setMaxBatchSize').mockImplementation(() => undefined);
+    ai.configs.set([config({ id: 7, maxBatchSize: 30 })]);
+    fixture.detectChanges();
+
+    expandRow(fixture, 0);
+
+    const input = row(fixture, 0).querySelector('input[type="number"]') as HTMLInputElement;
+    input.value = '';
+    input.dispatchEvent(new Event('change'));
+
+    expect(setMaxBatchSize).toHaveBeenCalledWith(7, null);
   });
 
   /**
@@ -812,6 +869,7 @@ describe('AiSectionComponent', () => {
     expect(toggleTriggers.map((trigger) => trigger.getAttribute('aria-label'))).toEqual([
       'Ask the model not to reason',
       'Slow or local model',
+      'Maximum batch size',
     ]);
     expect(body.querySelector('.reasoning-toggle .hint')).toBeNull();
   });

@@ -22,6 +22,7 @@ export interface AiConfig {
   readonly suppressReasoning: boolean;
   readonly batchConcurrency: number;
   readonly slowModel: boolean;
+  readonly maxBatchSize: number | null;
 }
 
 export interface AiConfigList {
@@ -153,6 +154,16 @@ export class AiSettingsService {
       { action: 'row', configId: id },
       this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/slow-model`, {
         slowModel,
+      }),
+      (config) => this.upsert(config),
+    );
+  }
+
+  setMaxBatchSize(id: number, maxBatchSize: number | null): void {
+    this.run(
+      { action: 'row', configId: id },
+      this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/max-batch-size`, {
+        maxBatchSize,
       }),
       (config) => this.upsert(config),
     );

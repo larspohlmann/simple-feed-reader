@@ -23,6 +23,7 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   suppressReasoning: true,
   batchConcurrency: 1,
   slowModel: false,
+  maxBatchSize: null,
   ...over,
 });
 
@@ -175,6 +176,34 @@ describe('AiSettingsService', () => {
     request.flush(config({ id: 5, slowModel: true }));
 
     expect(svc.configs()[0].slowModel).toBe(true);
+  });
+
+  it('sets the batch cap in place', () => {
+    svc.load();
+    ctrl.expectOne(`${base}/api/me/ai`).flush({ configs: [config({ id: 5 })], activeId: null });
+
+    svc.setMaxBatchSize(5, 30);
+    const request = ctrl.expectOne(`${base}/api/me/ai/configs/5/max-batch-size`);
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ maxBatchSize: 30 });
+    request.flush(config({ id: 5, maxBatchSize: 30 }));
+
+    expect(svc.configs()[0].maxBatchSize).toBe(30);
+  });
+
+  it('clears the batch cap by sending null', () => {
+    svc.load();
+    ctrl.expectOne(`${base}/api/me/ai`).flush({
+      configs: [config({ id: 5, maxBatchSize: 30 })],
+      activeId: null,
+    });
+
+    svc.setMaxBatchSize(5, null);
+    const request = ctrl.expectOne(`${base}/api/me/ai/configs/5/max-batch-size`);
+    expect(request.request.body).toEqual({ maxBatchSize: null });
+    request.flush(config({ id: 5, maxBatchSize: null }));
+
+    expect(svc.configs()[0].maxBatchSize).toBeNull();
   });
 
   it('posts batch concurrency and upserts the returned config', () => {
