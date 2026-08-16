@@ -9,7 +9,11 @@
     <div class="title-row">
       <h2 #listTitle tabindex="-1">
         @if (titleTag(); as tag) {
-          <app-tag-glyph [name]="tag.icon" [color]="tag.color" size="text" />
+          <!-- A named step rather than `text`, so the glyph carries the weight of
+               the title beside it instead of trailing it. Stepping down when the
+               bar collapses keeps that balance: a fixed px would tower over the
+               13px the heading drops to. -->
+          <app-tag-glyph [name]="tag.icon" [color]="tag.color" [size]="collapsed() ? 'xs' : 'md'" />
         }
         <span>{{ title() }}</span>
         @if (showWholeWordBadge()) {
