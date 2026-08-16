@@ -317,3 +317,37 @@ export interface DebugLogDetail {
    *  the answer, `stop` on a natural end. Null until the provider stamps it. */
   finishReason: string | null;
 }
+
+/** One finished (or in-flight) for-you run, as the history card shows it. The
+ *  provider and model are the ones the run actually called, copied onto the run
+ *  when it started -- not the account's current configuration, which is
+ *  editable and would otherwise rename last month's runs. */
+export interface RunHistoryRow {
+  id: number;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  /** Null on runs that predate the column, and on one that failed before it
+   *  was ever stamped. */
+  providerHost: string | null;
+  model: string | null;
+  createdAt: string;
+  completedAt: string | null;
+  /** Computed server-side -- the client never subtracts timestamps across
+   *  machines. Null while the run has not finished. */
+  durationSeconds: number | null;
+  promptTokens: number;
+  completionTokens: number;
+  reasoningTokens: number;
+  cachedTokens: number;
+  /** What the run cost, in nano-credits (1 credit = 1e9). Null means no call
+   *  of the run reported a price -- a local model, say -- which is a different
+   *  statement from a cost of zero. */
+  costNanoCredits: number | null;
+}
+
+/** What the history route answers with: the newest runs and the account's
+ *  all-time total. The total is a database sum over every run, not over the
+ *  rows above it. */
+export interface RunHistoryPayload {
+  runs: RunHistoryRow[];
+  totalCostNanoCredits: number | null;
+}

@@ -1,0 +1,46 @@
+<!-- `status` renders the raw API wire vocabulary untranslated, the convention
+     the #309 debug log records: it is the server's own word for the state, and
+     a translated copy would drift from it. -->
+@if (runs().length > 0) {
+  <app-settings-card
+    class="run-history"
+    [heading]="'settings.ai.recommendations.historyTitle' | transloco"
+    [description]="'settings.ai.recommendations.historyHint' | transloco"
+  >
+    <p class="run-history__total">
+      <span class="run-history__total-label">
+        {{ 'settings.ai.recommendations.historyTotal' | transloco }}
+      </span>
+      <span class="run-history__total-value">{{ cost(totalCostNanoCredits()) }}</span>
+    </p>
+
+    <div class="run-history__wrap">
+      <ul class="run-history__list">
+        @for (run of runs(); track run.id) {
+          <li class="run-history__row">
+            <span class="run-history__when">{{ day(run) }} {{ time(run) }}</span>
+            <span class="run-history__provider">{{ provider(run) }}</span>
+            <span class="run-history__status run-history__status--{{ run.status }}">
+              {{ run.status }}
+            </span>
+            <span class="run-history__duration">
+              @if (run.durationSeconds !== null) {
+                {{
+                  'settings.ai.recommendations.historyDuration'
+                    | transloco: { s: run.durationSeconds }
+                }}
+              }
+            </span>
+            <span class="run-history__tokens">
+              {{
+                'settings.ai.recommendations.historyTokens'
+                  | transloco: { prompt: run.promptTokens, completion: run.completionTokens }
+              }}
+            </span>
+            <span class="run-history__cost">{{ cost(run.costNanoCredits) }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+  </app-settings-card>
+}

@@ -18,6 +18,7 @@ import {
   ReaderContent,
   RecommendationRunReport,
   RefreshReport,
+  RunHistoryPayload,
   SubscribeResult,
   SubscriptionDto,
   SubscriptionsResponse,
@@ -204,6 +205,13 @@ export class ReaderApi {
   /** The full request/response body for one logged provider call. */
   debugLogEntry(id: number): Observable<DebugLogDetail> {
     return this.http.get<DebugLogDetail>(`${this.base}/api/recommendations/runs/debug-log/${id}`);
+  }
+
+  /** Every for-you run this account has made, newest first, with what each one
+   *  cost -- plus the all-time total. Independent of the debug switch: the run
+   *  totals are banked whether or not the call log is being kept. */
+  runHistory(): Observable<RunHistoryPayload> {
+    return this.http.get<RunHistoryPayload>(`${this.base}/api/recommendations/runs/history`);
   }
 
   /** Deletes every persisted for-you recommendation. Refuses with a 409

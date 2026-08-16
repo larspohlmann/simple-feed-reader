@@ -429,6 +429,9 @@ describe('AiSectionComponent', () => {
     // below.
     http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
     http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
+    http
+      .expectOne('/api/recommendations/runs/history')
+      .flush({ runs: [], totalCostNanoCredits: null });
 
     (row(fixture, 0).querySelector('summary') as HTMLElement).click();
     (row(fixture, 1).querySelector('summary') as HTMLElement).click();
@@ -701,6 +704,9 @@ describe('AiSectionComponent', () => {
 
     http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
     http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
+    http
+      .expectOne('/api/recommendations/runs/history')
+      .flush({ runs: [], totalCostNanoCredits: null });
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('app-recommendation-settings-card')).not.toBeNull();

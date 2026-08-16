@@ -1,0 +1,137 @@
+@use '../theme/breakpoints' as bp;
+
+/* The spending record above the debug log: a total line, then one row per run
+   as an aligned grid -- `when | provider · model | status | duration | tokens |
+   cost`. Its own `app-settings-card`, a sibling of the recommendations card. */
+:host {
+  display: block;
+}
+
+.run-history {
+  margin-block-start: var(--space-5);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+
+  &__total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin: var(--space-2) 0 var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-0);
+  }
+
+  &__total-label {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+  }
+
+  &__total-value {
+    color: var(--text-primary);
+    font-size: var(--fs-base);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__wrap {
+    overflow-x: auto;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 34rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: 8rem 1fr 5rem 4rem 8rem 5rem;
+    align-items: center;
+    column-gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-0);
+  }
+
+  /* On a phone the six fixed columns are wider than the viewport, so the card
+     would overflow the page the way the debug panel's grid once did. Release
+     the floor and let the row reflow to a wrapping line. */
+  @media (width <= bp.$bp-sm) {
+    &__list {
+      min-width: 0;
+    }
+
+    &__row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      row-gap: var(--space-1);
+    }
+
+    &__provider {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+  }
+
+  &__when,
+  &__duration,
+  &__tokens,
+  &__cost {
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__when {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+  }
+
+  &__provider {
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__status {
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--surface-1);
+    color: var(--text-secondary);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    text-align: center;
+    text-transform: uppercase;
+
+    &--completed {
+      background: var(--bg-success);
+      color: var(--success);
+    }
+
+    &--failed,
+    &--cancelled {
+      background: var(--bg-danger);
+      color: var(--danger);
+    }
+  }
+
+  &__duration,
+  &__tokens {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    text-align: right;
+  }
+
+  &__cost {
+    font-weight: 600;
+    text-align: right;
+  }
+}
