@@ -121,10 +121,21 @@ record_installed_release v9.9.9
 assert_contains 'v9.9.9' "$(print_installed_ref_row)" 'a release is named'
 assert_missing 'not a release' "$(print_installed_ref_row)" 'a release is not flagged'
 
-unreleased_row=$(SFR_INSTALLED_REF='feature/430-installer-output' \
-  SFR_INSTALLED_REF_IS_RELEASE=0 print_installed_ref_row)
+# Not $( ): the function records what it announces, and a subshell would keep
+# that recording to itself -- exactly the trap print_installed_ref_row exists
+# to survive.
+note_unreleased_ref 'feature/430-installer-output' > "${work}/announcement"
+announcement=$(cat "${work}/announcement")
+assert_contains 'feature/430-installer-output' "${announcement}" 'the unreleased ref is announced'
+assert_contains 'not a release' "${announcement}" 'the announcement says it is not a release'
+
+unreleased_row=$(print_installed_ref_row)
 assert_contains 'feature/430-installer-output' "${unreleased_row}" 'an unreleased ref is named'
-assert_contains 'not a release' "${unreleased_row}" 'an unreleased ref is flagged'
+assert_contains 'not a release' "${unreleased_row}" 'an unreleased ref is flagged in the block'
+
+# The announcement is not a warning: it belongs in the ref row, not under
+# "Things to check", which is for what went wrong.
+assert_equals '' "$(print_notes)" 'an unreleased ref is not a note'
 
 # --- run_step ---------------------------------------------------------------
 # The output of a long phase is indented under its header, and the phase's own

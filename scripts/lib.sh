@@ -185,18 +185,26 @@ parse_ref_args() {
   export REF TARGET_DIR
 }
 
-# Check out a ref that is not a release, and say so. Named separately from the
-# release path because the two differ in what they promise the operator.
+# Record an install that runs something other than a release, and say so once,
+# where it happens. The installers call this AFTER their checkout, because the
+# checkout is what puts this very function on disk.
+note_unreleased_ref() {
+  # Deliberately not warn(): the closing block carries this in a row of its
+  # own, and "Things to check" is for what went wrong, not for what was asked
+  # for.
+  printf '%s\n' "${_c_yellow}note:${_c_reset} installing from '$1', which is not a release. Expect unreleased code."
+  SFR_INSTALLED_REF="$1"
+  SFR_INSTALLED_REF_IS_RELEASE=0
+  export SFR_INSTALLED_REF SFR_INSTALLED_REF_IS_RELEASE
+}
+
+# The same for update.sh, which -- unlike an installer -- already runs the
+# version of this file it will keep running, so it can check out from here.
 checkout_requested_ref() {
   local ref=$1
   git -C "${REPO_ROOT}" checkout --quiet "${ref}" \
     || die "No branch or tag named '${ref}' in this repository."
-  # Deliberately not warn(): the closing block carries this in its own row, and
-  # "Things to check" is for what went wrong, not for what was asked for.
-  printf '%s\n' "${_c_yellow}note:${_c_reset} installing from '${ref}', which is not a release. Expect unreleased code."
-  SFR_INSTALLED_REF="${ref}"
-  SFR_INSTALLED_REF_IS_RELEASE=0
-  export SFR_INSTALLED_REF SFR_INSTALLED_REF_IS_RELEASE
+  note_unreleased_ref "${ref}"
 }
 
 # The counterpart for the normal path, so both record what the summary prints.

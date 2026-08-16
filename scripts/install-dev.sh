@@ -95,17 +95,20 @@ say "Cloning simple-feed-reader into ./${TARGET_DIR} ..."
 git clone --quiet "${REPO_URL}" "${TARGET_DIR}"
 cd "${TARGET_DIR}"
 
-# From here on the repository is present, so use its shared helpers.
+# From here on the repository is present, so use its shared helpers -- for now
+# the ones the clone's default branch carries, because the checkout in step 3
+# is what decides which version of everything this install really runs.
 # shellcheck source=scripts/lib.sh
 source scripts/lib.sh
 
-# Collect every warning raised from here on, so the closing block repeats it.
-notes_start
-
 # --- 3. check out what to install -------------------------------------------
+# Plain git, not a lib.sh helper: the ref being installed may well be the
+# commit that ADDS the helper, and the file on disk right now is the one the
+# clone's default branch carries.
 if [ -n "${REF}" ]; then
   say "Checking out ${REF} ..."
-  checkout_requested_ref "${REF}"
+  git -C "${REPO_ROOT}" checkout --quiet "${REF}" \
+    || die "No branch or tag named '${REF}' in this repository."
 else
   release_tag=$(latest_release_tag)
   [ -n "${release_tag}" ] \
@@ -113,8 +116,22 @@ else
 
   say "Checking out the latest release: ${release_tag}"
   git -C "${REPO_ROOT}" checkout --quiet "${release_tag}"
+fi
+
+# Source again, now that the checkout decided which helpers this install runs:
+# installing a ref means running ITS lib.sh, not whichever version the clone's
+# default branch happened to carry.
+# shellcheck source=scripts/lib.sh
+source "${REPO_ROOT}/scripts/lib.sh"
+
+if [ -n "${REF}" ]; then
+  note_unreleased_ref "${REF}"
+else
   record_installed_release "${release_tag}"
 fi
+
+# Collect every warning raised from here on, so the closing block repeats it.
+notes_start
 
 # --- 4. local certificate authority -----------------------------------------
 # Generating the certificate never touches the system trust store. Installing
