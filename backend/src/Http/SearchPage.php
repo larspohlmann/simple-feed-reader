@@ -20,6 +20,13 @@ final readonly class SearchPage
     /** @return array{entries: list<array<string, mixed>>, nextCursor: string|null, matchedWords: list<string>} */
     public static function of(EntrySearchResult $result, int $limit): array
     {
-        return [...EntryPage::of($result->rows, $limit), 'matchedWords' => $result->matchedWords];
+        // withMatchCount(), not of(): $result->matchCount is the read's own
+        // match count, which for the indexed search can be higher than
+        // count($result->rows) once hydration has dropped an id the caller
+        // may not see. Deciding "is there a next page" from the row count
+        // would then read a full page of matches as a short one.
+        $page = EntryPage::withMatchCount($result->rows, $limit, $result->matchCount);
+
+        return [...$page, 'matchedWords' => $result->matchedWords];
     }
 }

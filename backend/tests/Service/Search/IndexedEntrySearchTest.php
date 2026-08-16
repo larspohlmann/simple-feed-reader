@@ -136,6 +136,36 @@ final class IndexedEntrySearchTest extends DbTestCase
         self::assertSame(['angular'], $result->matchedWords);
     }
 
+    /**
+     * The bug this branch fixes. A ghost id — one the engine still returns
+     * but that no longer hydrates, exactly what a failed async
+     * EntryIndexer::forget() leaves behind — must not shrink matchCount. The
+     * caller (SearchPage, via EntryPage::withMatchCount) needs the engine's
+     * own count to keep offering a cursor, even though only one row survived.
+     */
+    public function testAGhostIdIsDroppedFromRowsButNotFromTheMatchCount(): void
+    {
+        $entry = $this->entry('hit');
+        $entryId = $entry->getId();
+        self::assertNotNull($entryId);
+        $ghostId = $entryId + 1_000_000;
+
+        $reader = new FakeSearchIndexReader(entryIds: [$entryId, $ghostId]);
+
+        $result = $this->search($reader, new EntrySearchQuery(
+            userId: $this->user->getId() ?? 0,
+            terms: SearchTerms::fromInput('angular'),
+            limit: 2,
+        ));
+
+        self::assertCount(1, $result->rows, 'The ghost id must not hydrate into a row.');
+        self::assertSame(
+            2,
+            $result->matchCount,
+            'matchCount must stay at the engine count, not fall to the surviving row count.',
+        );
+    }
+
     public function testAUserWithNoSubscriptionsReturnsEmptyWithoutAskingTheEngine(): void
     {
         $lonelyUser = new User('lonely@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));

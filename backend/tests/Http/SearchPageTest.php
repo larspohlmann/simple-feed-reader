@@ -49,6 +49,53 @@ final class SearchPageTest extends TestCase
         self::assertSame([], $page['matchedWords']);
     }
 
+    /**
+     * The bug this branch fixes: IndexedEntrySearch can report a matchCount
+     * higher than count($rows) when hydration drops an id (a ghost left by a
+     * failed async index delete, for one). SearchPage must still offer a
+     * cursor in that case, or the client believes it has reached the end of
+     * the results.
+     */
+    public function testAFullEngineMatchStillOffersACursorWhenARowWasDropped(): void
+    {
+        $result = new EntrySearchResult([$this->row(7)], ['angular'], matchCount: 2);
+
+        $page = SearchPage::of($result, 2);
+
+        self::assertNotNull(
+            $page['nextCursor'],
+            'A row the caller cannot see must not truncate a full page of engine matches.',
+        );
+    }
+
+    /**
+     * A genuinely final page — the engine itself matched fewer ids than the
+     * limit — must still end pagination once the truncation bug is fixed.
+     */
+    public function testAShortEngineMatchOffersNoNextCursor(): void
+    {
+        $result = new EntrySearchResult([$this->row(7)], ['angular'], matchCount: 1);
+
+        $page = SearchPage::of($result, 2);
+
+        self::assertNull($page['nextCursor']);
+    }
+
+    /**
+     * The database path: LikeEntrySearch's row count IS its match count
+     * (nothing removes rows after the query runs), so rowsOnly() must default
+     * matchCount to count($rows) and the resulting page must be unchanged
+     * from before this fix.
+     */
+    public function testTheDatabasePathOffersACursorFromRowCountAlone(): void
+    {
+        $result = EntrySearchResult::rowsOnly([$this->row(7)]);
+
+        $page = SearchPage::of($result, 1);
+
+        self::assertNotNull($page['nextCursor']);
+    }
+
     private function row(int $id): EntryListRow
     {
         $entry = new Entry(

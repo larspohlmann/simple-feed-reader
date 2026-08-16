@@ -99,6 +99,72 @@ final class EntryPageTest extends TestCase
         EntryPage::of([$row], 1);
     }
 
+    /**
+     * The regression this branch shipped: IndexedEntrySearch can hand back
+     * fewer rows than the engine actually matched, because hydration drops
+     * any id the caller's subscription join rejects. withMatchCount() must
+     * decide "is there a next page" from that engine count, not count($rows),
+     * or a full page of matches with one dropped id silently looks short.
+     */
+    public function testAFullMatchCountStillOffersACursorWhenARowWasDropped(): void
+    {
+        $row = $this->rowForEntry(9, new \DateTimeImmutable('2026-07-12T00:00:00Z'));
+
+        // The engine matched 2 ids (matchCount: 2) but only 1 hydrated.
+        $page = EntryPage::withMatchCount([$row], 2, 2);
+
+        self::assertNotNull(
+            $page['nextCursor'],
+            'A row dropped after a full engine match must not end pagination.',
+        );
+        $cursor = EntryCursor::decode($page['nextCursor']);
+        self::assertNotNull($cursor);
+        self::assertSame(9, $cursor->id);
+    }
+
+    /**
+     * A genuinely final page — the engine itself returned fewer ids than the
+     * limit — must still end pagination. Fixing the truncation bug must not
+     * turn into a cursor that never runs out.
+     */
+    public function testAShortMatchCountOffersNoNextCursorEvenWithRows(): void
+    {
+        $row = $this->rowForEntry(9, new \DateTimeImmutable('2026-07-12T00:00:00Z'));
+
+        $page = EntryPage::withMatchCount([$row], 2, 1);
+
+        self::assertNull($page['nextCursor']);
+    }
+
+    /**
+     * The residual case named in the fix: a full page of matches where EVERY
+     * id was dropped by hydration leaves no surviving row to build a cursor
+     * from. Pagination ends here rather than crashing or fabricating a
+     * cursor; a later app:search:reindex clears the ghost ids that caused it.
+     */
+    public function testAFullMatchCountWithNoSurvivingRowsOffersNoNextCursor(): void
+    {
+        $page = EntryPage::withMatchCount([], 2, 2);
+
+        self::assertSame([], $page['entries']);
+        self::assertNull($page['nextCursor']);
+    }
+
+    /**
+     * withMatchCount() is what of() delegates to; passing count($rows) as the
+     * match count must reproduce of()'s own behaviour exactly, so the two
+     * never drift apart for the plain entry list.
+     */
+    public function testWithMatchCountEqualToRowCountMatchesOf(): void
+    {
+        $row = $this->rowForEntry(9, new \DateTimeImmutable('2026-07-12T00:00:00Z'));
+
+        self::assertSame(
+            EntryPage::of([$row], 1),
+            EntryPage::withMatchCount([$row], 1, 1),
+        );
+    }
+
     private function rowForEntry(int $id, \DateTimeImmutable $effectiveDate): EntryListRow
     {
         $row = $this->rowForEntryWithoutId($effectiveDate);

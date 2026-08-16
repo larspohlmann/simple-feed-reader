@@ -15,13 +15,25 @@ use App\Repository\EntryListRow;
 final readonly class EntrySearchResult
 {
     /**
+     * How many ids the underlying read matched, before IndexedEntrySearch's
+     * hydration step may have dropped some of them again — see
+     * EntryPage::withMatchCount(). Set from $rows by default, which is
+     * correct for every search path except the indexed one, which passes its
+     * own count explicitly because its row count and match count can differ.
+     */
+    public int $matchCount;
+
+    /**
      * @param list<EntryListRow> $rows
      * @param list<string>       $matchedWords
+     * @param int|null           $matchCount defaults to count($rows)
      */
     public function __construct(
         public array $rows,
         public array $matchedWords,
+        ?int $matchCount = null,
     ) {
+        $this->matchCount = $matchCount ?? \count($rows);
     }
 
     /** @param list<EntryListRow> $rows */
