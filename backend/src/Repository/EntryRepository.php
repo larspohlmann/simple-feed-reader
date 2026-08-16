@@ -143,9 +143,7 @@ class EntryRepository extends ServiceEntityRepository
      */
     public function listForUser(EntryQuery $query): array
     {
-        $qb = $this->rowQueryBuilder($query->userId)
-            ->orderBy('e.effectiveDate', 'DESC')
-            ->addOrderBy('e.id', 'DESC')
+        $qb = $this->newestFirst($this->rowQueryBuilder($query->userId))
             ->setMaxResults($query->limit);
 
         if ($query->subscriptionId !== null) {
@@ -179,9 +177,7 @@ class EntryRepository extends ServiceEntityRepository
      */
     public function searchForUser(EntrySearchQuery $query): array
     {
-        $qb = $this->rowQueryBuilder($query->userId)
-            ->orderBy('e.effectiveDate', 'DESC')
-            ->addOrderBy('e.id', 'DESC')
+        $qb = $this->newestFirst($this->rowQueryBuilder($query->userId))
             ->setMaxResults($query->limit);
 
         $this->applyTerms($qb, $query->terms);
@@ -214,15 +210,29 @@ class EntryRepository extends ServiceEntityRepository
         }
 
         /** @var list<array<array-key, mixed>> $rows */
-        $rows = $this->rowQueryBuilder($userId)
-            ->andWhere('e.id IN (:ids)')
-            ->setParameter('ids', $entryIds)
-            ->orderBy('e.effectiveDate', 'DESC')
-            ->addOrderBy('e.id', 'DESC')
+        $rows = $this->newestFirst(
+            $this->rowQueryBuilder($userId)
+                ->andWhere('e.id IN (:ids)')
+                ->setParameter('ids', $entryIds),
+        )
             ->getQuery()
             ->getResult();
 
         return array_map(fn (array $row): EntryListRow => $this->hydrateRow($row), $rows);
+    }
+
+    /**
+     * The newest-first order every entry list shares: effectiveDate DESC,
+     * then id DESC as the tiebreaker a whole refresh run's worth of tied
+     * dates needs. This is the tiebreak the keyset cursor in applyCursor()
+     * depends on — changing it here would silently desync every caller's
+     * pagination from its own cursor predicate.
+     */
+    private function newestFirst(QueryBuilder $qb): QueryBuilder
+    {
+        return $qb
+            ->orderBy('e.effectiveDate', 'DESC')
+            ->addOrderBy('e.id', 'DESC');
     }
 
     /**

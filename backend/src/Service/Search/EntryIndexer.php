@@ -23,12 +23,23 @@ use Psr\Log\LoggerInterface;
  * rather than letting it propagate. `app:search:reindex` is the repair path
  * for whatever a swallowed failure left out of date; do not "fix" this class
  * by making the exception escape again.
+ *
+ * NOT `final readonly class`: $configured is a memoised flag, mutated after
+ * construction by design (see index()). RefreshRunner calls index() once per
+ * feed and a sweep processes up to 50 feeds, so without memoising this
+ * service (shared/singleton for the life of the process, same as every other
+ * autowired service) would PATCH identical, idempotent settings to the engine
+ * up to 50 times per sweep for no behavioural gain. Every other collaborator
+ * stays a constructor-promoted `readonly` property; only $configured needs to
+ * change after the object is built.
  */
-final readonly class EntryIndexer
+final class EntryIndexer
 {
+    private bool $configured = false;
+
     public function __construct(
-        private SearchIndexWriter $index,
-        private LoggerInterface $logger,
+        private readonly SearchIndexWriter $index,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -44,14 +55,31 @@ final readonly class EntryIndexer
         }
 
         try {
-            // Idempotent and cheap on Meilisearch's side (a PATCH of the same
-            // settings), and it is what makes a freshly enabled container
-            // usable without a separate provisioning step or command.
-            $this->index->configure();
+            $this->configureOnce();
             $this->index->upsert(self::toIndexedEntries($entries));
         } catch (SearchEngineUnavailableException $e) {
             $this->logger->error('Failed to index entries', ['exception' => $e]);
         }
+    }
+
+    /**
+     * Idempotent and cheap on Meilisearch's side (a PATCH of the same
+     * settings), and it is what makes a freshly enabled container usable
+     * without a separate provisioning step or command — so this must still
+     * run at least once. Memoised to at most once per process: a failed
+     * attempt leaves $configured false, so the next index() call retries
+     * rather than assuming a still-unconfigured engine is done for good.
+     *
+     * @throws SearchEngineUnavailableException
+     */
+    private function configureOnce(): void
+    {
+        if ($this->configured) {
+            return;
+        }
+
+        $this->index->configure();
+        $this->configured = true;
     }
 
     /**

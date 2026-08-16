@@ -57,6 +57,46 @@ final class EntryIndexerTest extends DbTestCase
         self::assertSame(['configure', 'upsert'], $writer->calls);
     }
 
+    /**
+     * RefreshRunner calls index() once per feed and a sweep processes up to
+     * 50 feeds — without this, an idempotent but pointless settings PATCH
+     * would go out on every one of them.
+     */
+    public function testConfigureIsSentOnlyOnceAcrossTwoIndexCalls(): void
+    {
+        $writer = new RecordingSearchIndexWriter();
+        $indexer = new EntryIndexer($writer, new RecordingLogger());
+        $feed = $this->feed();
+
+        $indexer->index([$this->entry($feed, 'g1')]);
+        $indexer->index([$this->entry($feed, 'g2')]);
+
+        self::assertSame(['configure', 'upsert', 'upsert'], $writer->calls);
+    }
+
+    /**
+     * A configure() failure must not be remembered as success: the next
+     * index() call has to retry, which is what lets a search engine that was
+     * down at ingest time become usable once it comes back without anyone
+     * running a provisioning command.
+     */
+    public function testAFailedConfigureIsRetriedOnTheNextIndexCall(): void
+    {
+        $writer = new RecordingSearchIndexWriter(new SearchEngineUnavailableException('down'));
+        $logger = new RecordingLogger();
+        $indexer = new EntryIndexer($writer, $logger);
+        $feed = $this->feed();
+
+        $indexer->index([$this->entry($feed, 'g1')]);
+        $indexer->index([$this->entry($feed, 'g2')]);
+
+        // Each call's configure() throws before upsert() ever runs, and each
+        // failure is logged separately — proof the second call actually
+        // retried rather than treating the first failure as done.
+        self::assertSame(['configure', 'configure'], $writer->calls);
+        self::assertCount(2, $logger->records);
+    }
+
     public function testTheMappedDocumentCarriesThePlainTextContentAndTheFeedTitle(): void
     {
         $writer = new RecordingSearchIndexWriter();
