@@ -78,7 +78,7 @@ final class RecommendationRunStarterTest extends DbTestCase
     public function testStartAlwaysBeginsAFreshRunEvenWithAFailedRunPresent(): void
     {
         $this->seedReadyAiSettings($this->user);
-        $failed = $this->persistFailedRunWithOneWinner();
+        $failed = $this->failedRunFor($this->user);
 
         // start() no longer resumes: whether to pick up a failed run is the
         // user's choice, made in the client, so start() always begins fresh
@@ -96,7 +96,7 @@ final class RecommendationRunStarterTest extends DbTestCase
     public function testResumeContinuesTheLatestFailedRunInPlace(): void
     {
         $this->seedReadyAiSettings($this->user);
-        $failed = $this->persistFailedRunWithOneWinner();
+        $failed = $this->failedRunFor($this->user);
 
         $report = $this->starter()->resume($this->user);
 
@@ -114,6 +114,41 @@ final class RecommendationRunStarterTest extends DbTestCase
         $this->expectException(NoResumableRecommendationRunException::class);
 
         $this->starter()->resume($this->user);
+    }
+
+    public function testStampsTheProviderAndModelOnANewRun(): void
+    {
+        $user = $this->userWithProvider('https://openrouter.ai/api/v1', 'x-ai/grok-4-fast');
+
+        $report = $this->starter()->start($user);
+
+        $run = $this->runs()->findActiveForUser($user);
+        self::assertNotNull($run);
+        self::assertSame('openrouter.ai', $run->getProviderHost());
+        self::assertSame('x-ai/grok-4-fast', $run->getModel());
+        self::assertSame(RecommendationRun::STATUS_PENDING, $report->status);
+    }
+
+    public function testRestampsAResumedRunWithTheProviderItWillNowCall(): void
+    {
+        $user = $this->userWithProvider('https://openrouter.ai/api/v1', 'x-ai/grok-4-fast');
+        $failed = $this->failedRunFor($user);
+        $failed->stampProvider('openrouter.ai', 'x-ai/grok-4-fast');
+        $this->switchProvider($user, 'http://localhost:1234/v1', 'bonsai-27b');
+
+        $this->starter()->resume($user);
+
+        self::assertSame('localhost', $failed->getProviderHost());
+        self::assertSame('bonsai-27b', $failed->getModel());
+    }
+
+    public function testStampsNoHostWhenTheBaseUrlHasNone(): void
+    {
+        $user = $this->userWithProvider('not a url', 'some-model');
+
+        $this->starter()->start($user);
+
+        self::assertNull($this->runs()->findActiveForUser($user)?->getProviderHost());
     }
 
     /**
@@ -264,7 +299,7 @@ final class RecommendationRunStarterTest extends DbTestCase
     public function testResumeSpawnsTheDrainer(): void
     {
         $this->seedReadyAiSettings($this->user);
-        $this->persistFailedRunWithOneWinner();
+        $this->failedRunFor($this->user);
         $launcher = new RecordingProcessLauncher();
 
         $this->starterWith($launcher)->resume($this->user);
@@ -345,8 +380,11 @@ final class RecommendationRunStarterTest extends DbTestCase
         return $repository;
     }
 
-    private function seedReadyAiSettings(User $user): void
-    {
+    private function seedReadyAiSettings(
+        User $user,
+        string $baseUrl = 'https://api.example.test/v1',
+        string $model = 'm',
+    ): AiProviderSettings {
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         $userId = $user->getId();
@@ -354,18 +392,37 @@ final class RecommendationRunStarterTest extends DbTestCase
         $sealed = $cipher->seal($userId, 'sk-throwaway1234');
         $now = new \DateTimeImmutable('2026-08-07 09:00:00');
 
-        $settings = new AiProviderSettings($user, null, 'https://api.example.test/v1', $sealed, '1234', $now);
+        $settings = new AiProviderSettings($user, null, $baseUrl, $sealed, '1234', $now);
         $this->em->persist($settings);
-        $settings->chooseModel('m', $now, 32768);
+        $settings->chooseModel($model, $now, 32768);
         $user->setActiveAiProviderSettings($settings);
         $this->em->flush();
+
+        return $settings;
+    }
+
+    /** Gives $this->user a ready configuration at the given endpoint, so the
+     *  provider-stamping tests (#409) don't have to build the settings row
+     *  themselves. */
+    private function userWithProvider(string $baseUrl, string $model): User
+    {
+        $this->seedReadyAiSettings($this->user, $baseUrl, $model);
+
+        return $this->user;
+    }
+
+    /** Replaces $user's active configuration with a fresh one at a different
+     *  endpoint — the account "changed providers" between two starter calls. */
+    private function switchProvider(User $user, string $baseUrl, string $model): void
+    {
+        $this->seedReadyAiSettings($user, $baseUrl, $model);
     }
 
     /** A failed run with one batch already ranked, so resume() has a partial
      *  result to continue from and start() has a run to leave as history. */
-    private function persistFailedRunWithOneWinner(): RecommendationRun
+    private function failedRunFor(User $user): RecommendationRun
     {
-        $failed = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07 09:00:00'));
+        $failed = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07 09:00:00'));
         $failed->snapshot([[1, 2], [3]]);
         $failed->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
         $failed->fail('provider unreachable', new \DateTimeImmutable('2026-08-07 09:05:00'));
