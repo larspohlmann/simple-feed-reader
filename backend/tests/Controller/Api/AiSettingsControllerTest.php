@@ -326,7 +326,15 @@ final class AiSettingsControllerTest extends ApiTestCase
 
         $added = $this->addConfiguration($client);
 
+        self::assertArrayHasKey('maxBatchSize', $added);
         self::assertNull($added['maxBatchSize']);
+
+        $client->request('GET', '/api/me/ai');
+        $payload = $this->payload($client);
+        self::assertIsArray($payload['configs']);
+        self::assertIsArray($payload['configs'][0]);
+        self::assertArrayHasKey('maxBatchSize', $payload['configs'][0]);
+        self::assertNull($payload['configs'][0]['maxBatchSize']);
     }
 
     public function testSettingMaxBatchSizeChangesTheConfiguration(): void
