@@ -1012,6 +1012,10 @@ apply_direct_origin() {
   env_prod_set PUBLIC_URL "$(public_url_for "${scheme}" "${hostname}" "${port}")"
   if [ "${scheme}" = 'https' ]; then
     env_prod_set WEB_TLS_PORT "${port}"
+    # The other port becomes the redirect listener, and a redirect only helps
+    # where browsers look: someone typing http://host reaches port 80 or
+    # nothing. This is why 3333 is the default for plain HTTP but never here.
+    env_prod_set WEB_HTTP_PORT '80'
   else
     env_prod_set WEB_HTTP_PORT "${port}"
   fi

@@ -48,6 +48,20 @@ assert_equals 3333 "$(default_port_for proxy)" 'reverse-proxy default'
 # TLS keeps 443: there the answer IS the port users type.
 assert_equals 443 "$(default_port_for tls)" 'TLS default'
 
+# The case a live install caught and an empty file hides: the installer copies
+# .env.prod.example and asks straight afterwards, so the SHIPPED file is the
+# "stored" value the question reads back. While it said 80, the question
+# offered 80 and 3333 never reached anybody.
+cp "${_dir}/../../.env.prod.example" "${ENV_PROD_FILE}"
+assert_equals 3333 "$(default_port_for http)" 'a fresh .env.prod offers 3333'
+assert_equals 3333 "$(default_port_for proxy)" 'a fresh .env.prod offers 3333 behind a proxy'
+assert_equals 443 "$(default_port_for tls)" 'a fresh .env.prod offers 443 for TLS'
+
+# Choosing TLS moves the plain port back to 80: there it is the redirect
+# listener, and a redirect on 3333 catches nobody typing http://host.
+apply_direct_origin https reader.example.org 443 >/dev/null
+assert_equals 80 "$(env_prod_get WEB_HTTP_PORT)" 'TLS keeps the redirect listener on 80'
+
 # An install that already answered keeps its own port, so re-running
 # prod-configure.sh and pressing return changes nothing.
 printf 'PUBLIC_URL=http://reader.example.org:8080\nWEB_HTTP_PORT=8080\nWEB_TLS_PORT=8443\nWEB_BIND_ADDRESS=0.0.0.0\n' > "${ENV_PROD_FILE}"
