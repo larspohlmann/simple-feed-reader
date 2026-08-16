@@ -169,6 +169,38 @@ class EntryRepository extends ServiceEntityRepository
     }
 
     /**
+     * The given entry ids hydrated through the same list-row projection every
+     * other list uses — same per-user read state, same subscription join.
+     * Ordered exactly like the entry list, never in the id order asked for,
+     * because a search engine's own ordering owes nothing to it.
+     *
+     * The subscription join is the actual access gate: an id for a feed the
+     * caller does not subscribe to is dropped here even if it came from a
+     * search index whose own filter was wrong or whose data was stale.
+     *
+     * @param list<int> $entryIds
+     *
+     * @return list<EntryListRow>
+     */
+    public function rowsByIdsForUser(array $entryIds, int $userId): array
+    {
+        if ($entryIds === []) {
+            return [];
+        }
+
+        /** @var list<array<array-key, mixed>> $rows */
+        $rows = $this->rowQueryBuilder($userId)
+            ->andWhere('e.id IN (:ids)')
+            ->setParameter('ids', $entryIds)
+            ->orderBy('e.effectiveDate', 'DESC')
+            ->addOrderBy('e.id', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        return array_map(fn (array $row): EntryListRow => $this->hydrateRow($row), $rows);
+    }
+
+    /**
      * The shared "entry list row" projection: the entry plus the caller's
      * subscription, feed, and optional per-entry state. listForUser adds
      * ordering/paging/filters; oneRowForUser adds an id filter.
