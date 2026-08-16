@@ -395,6 +395,17 @@
       text-transform: none;
     }
 
+    /* The reset above is for the value pill, which is not wanted around an
+       icon -- but it also reaches the header cell, which never was a pill,
+       leaving the column reading "Status" among WHEN / TIME / IN / OUT /
+       COST. Put the header's own casing back here rather than narrowing the
+       reset, so the value keeps exactly the chrome the icon needs. This must
+       live in *this* block, not the `bp-sm` one below: the icon band runs to
+       `bp-md`, so at 620px only this block applies. */
+    &__row--header .run-history-month__status {
+      text-transform: uppercase;
+    }
+
     /* The icon takes over as the visible form of the status here (#409: "use
        icons on mobile"); the word gives way to it but must not leave the DOM
        -- a phone reader still has to hear "Status completed", not just see a
