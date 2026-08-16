@@ -38,6 +38,15 @@
     font-size: var(--fs-xs);
   }
 
+  /* Same inset as the loading line it replaces, in the danger colour: this is
+     the only body an open month has when its first page could not be fetched,
+     so it has to read as a fault rather than as an empty month. */
+  &__failed {
+    margin: 0 var(--row-pad-comfy-x) var(--row-pad-comfy-y);
+    color: var(--danger);
+    font-size: var(--fs-xs);
+  }
+
   &__wrap {
     padding: 0 var(--row-pad-comfy-x) var(--row-pad-comfy-y);
     overflow-x: auto;

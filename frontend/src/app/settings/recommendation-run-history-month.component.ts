@@ -37,6 +37,10 @@ export class RecommendationRunHistoryMonthComponent {
   readonly runs = input<RunHistoryRow[] | null>(null);
   readonly nextCursor = input<number | null>(null);
   readonly loading = input(false);
+  /** Set when this month's first page could not be fetched. Needed on top of
+   *  `runs === null`, which a month nobody has opened yet also has: without
+   *  it an open, empty section is all the reader gets. */
+  readonly failed = input(false);
 
   /** Fired when a closed month is opened -- the parent's cue to fetch its
    *  first page. */

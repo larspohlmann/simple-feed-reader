@@ -1,10 +1,15 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { RecommendationRunHistoryComponent } from './recommendation-run-history.component';
 import { ReaderApi } from '../reader/reader-api';
 import { RecommendationsService } from '../reader/recommendations.service';
-import { RunHistoryMonth, RunHistoryOverview, RunHistoryRow } from '../reader/models';
+import {
+  RunHistoryMonth,
+  RunHistoryMonthPage,
+  RunHistoryOverview,
+  RunHistoryRow,
+} from '../reader/models';
 import { LanguageService } from '../core/language.service';
 import { Lang } from '../core/language';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
@@ -35,6 +40,12 @@ const UNPRICED_RUN: RunHistoryRow = {
   model: 'bonsai-27b',
   costNanoCredits: null,
 };
+
+/** One August row at a given id. Ids ascend with creation time, so an id is
+ *  the whole ordering the card's paging depends on. */
+function runWithId(id: number): RunHistoryRow {
+  return { ...PRICED_RUN, id };
+}
 
 const AUGUST: RunHistoryMonth = { month: '2026-08', runCount: 2, costNanoCredits: 41_230_000 };
 const JULY: RunHistoryMonth = { month: '2026-07', runCount: 1, costNanoCredits: null };
@@ -81,6 +92,20 @@ describe('RecommendationRunHistoryComponent', () => {
     const details = section.querySelector('details') as HTMLDetailsElement;
     details.open = true;
     details.dispatchEvent(new Event('toggle'));
+    fixture.detectChanges();
+  }
+
+  /** Closing is silent by design (`DisclosureComponent.opened` fires on the
+   *  way open only), so this exists purely to set up the re-open that is not. */
+  function closeMonth(section: Element): void {
+    const details = section.querySelector('details') as HTMLDetailsElement;
+    details.open = false;
+    details.dispatchEvent(new Event('toggle'));
+    fixture.detectChanges();
+  }
+
+  function showMore(section: Element): void {
+    (section.querySelector('.run-history-month__more') as HTMLButtonElement).click();
     fixture.detectChanges();
   }
 
@@ -203,7 +228,7 @@ describe('RecommendationRunHistoryComponent', () => {
     expect(runHistory).toHaveBeenCalledTimes(2);
   });
 
-  it('on completion, replaces the newest month wholesale and leaves an opened older month standing', () => {
+  it('on completion, refreshes the newest month and leaves an opened older month standing', () => {
     runHistoryMonth.mockReturnValue(
       of({ month: '2026-07', runs: [UNPRICED_RUN], nextCursor: null }),
     );
@@ -216,7 +241,9 @@ describe('RecommendationRunHistoryComponent', () => {
       of({
         totalCostNanoCredits: 1_000_000_000,
         months: [{ ...AUGUST, runCount: 3 }, JULY],
-        latest: { month: '2026-08', runs: [PRICED_RUN, OTHER_PRICED_RUN], nextCursor: null },
+        // Newest first, as the wire orders it -- the new run's id is above
+        // the one already on screen, so the page carries nothing extra.
+        latest: { month: '2026-08', runs: [OTHER_PRICED_RUN, PRICED_RUN], nextCursor: null },
       }),
     );
     completedStamp.set(1);
@@ -229,6 +256,135 @@ describe('RecommendationRunHistoryComponent', () => {
     // new to tell this section.
     expect(sections[1].querySelectorAll('.run-history-month__row')).toHaveLength(1);
     expect(detailsOf(sections[1]).open).toBe(true);
+  });
+
+  /** The refetch on completion is exactly the moment a reader is most likely
+   *  to be sitting on this card, and it must not throw away the pages they
+   *  paged into. The fresh `latest` is always the month's FIRST page, so
+   *  everything below it can only come from what was already on screen. */
+  it('on completion, the newest month keeps the pages the reader had loaded, and its cursor', () => {
+    const overviewWithMore: RunHistoryOverview = {
+      ...OVERVIEW,
+      latest: { month: '2026-08', runs: [runWithId(43)], nextCursor: 42 },
+    };
+    runHistoryMonth
+      .mockReturnValueOnce(of({ month: '2026-08', runs: [runWithId(42)], nextCursor: 41 }))
+      .mockReturnValueOnce(of({ month: '2026-08', runs: [runWithId(41)], nextCursor: 40 }));
+    const el = mount(overviewWithMore);
+
+    showMore(months(el)[0]);
+    showMore(months(el)[0]);
+    expect(months(el)[0].querySelectorAll('.run-history-month__row')).toHaveLength(3);
+
+    runHistory.mockReturnValue(
+      of({
+        ...OVERVIEW,
+        latest: { month: '2026-08', runs: [runWithId(44), runWithId(43)], nextCursor: 42 },
+      }),
+    );
+    completedStamp.set(1);
+    fixture.detectChanges();
+
+    // The new run on top, then the three rows the reader had paged into --
+    // ordered and without the duplicate 43 the fresh page also carries.
+    const newest = months(el)[0];
+    expect(newest.querySelectorAll('.run-history-month__row')).toHaveLength(4);
+    // And the cursor still points past the oldest row on screen, not back at
+    // the end of the first page.
+    runHistoryMonth.mockReturnValue(of({ month: '2026-08', runs: [], nextCursor: null }));
+    showMore(newest);
+    expect(runHistoryMonth).toHaveBeenLastCalledWith('2026-08', BROWSER_TZ, 40);
+  });
+
+  it('on completion, a newest month the reader had paged to the end of offers no more pages', () => {
+    const overviewWithMore: RunHistoryOverview = {
+      ...OVERVIEW,
+      latest: { month: '2026-08', runs: [runWithId(43)], nextCursor: 42 },
+    };
+    runHistoryMonth.mockReturnValue(
+      of({ month: '2026-08', runs: [runWithId(42)], nextCursor: null }),
+    );
+    const el = mount(overviewWithMore);
+
+    showMore(months(el)[0]);
+    expect(months(el)[0].querySelector('.run-history-month__more')).toBeNull();
+
+    runHistory.mockReturnValue(
+      of({
+        ...OVERVIEW,
+        latest: { month: '2026-08', runs: [runWithId(44), runWithId(43)], nextCursor: 42 },
+      }),
+    );
+    completedStamp.set(1);
+    fixture.detectChanges();
+
+    // The fresh page's own cursor would re-offer rows already on screen.
+    expect(months(el)[0].querySelector('.run-history-month__more')).toBeNull();
+    expect(months(el)[0].querySelectorAll('.run-history-month__row')).toHaveLength(3);
+  });
+
+  /** An overview refetch lands on every completed run, and an older month's
+   *  first page can still be in flight when it does. Clearing that month's
+   *  `loading` there disarms the second half of `onOpened`'s guard, and a
+   *  close/re-open then fires a second identical GET. */
+  it('an overview refetch leaves an older month that is still loading alone', () => {
+    const inFlight = new Subject<RunHistoryMonthPage>();
+    runHistoryMonth.mockReturnValue(inFlight);
+    const el = mount(OVERVIEW);
+
+    openMonth(months(el)[1]);
+    expect(months(el)[1].querySelector('.run-history-month__loading')).not.toBeNull();
+
+    completedStamp.set(1);
+    fixture.detectChanges();
+
+    expect(months(el)[1].querySelector('.run-history-month__loading')).not.toBeNull();
+
+    closeMonth(months(el)[1]);
+    openMonth(months(el)[1]);
+
+    expect(runHistoryMonth).toHaveBeenCalledTimes(1);
+  });
+
+  /** Without a message an open month whose fetch failed is indistinguishable
+   *  from a month with no runs -- and the recovery, closing and re-opening it,
+   *  is undiscoverable. */
+  it('a failed first page renders a failure line rather than an empty open section', () => {
+    jest.useFakeTimers();
+    runHistoryMonth.mockReturnValue(throwError(() => new Error('the endpoint is down')));
+    const el = mount(OVERVIEW);
+
+    openMonth(months(el)[1]);
+    expect(() => jest.runOnlyPendingTimers()).not.toThrow();
+    fixture.detectChanges();
+
+    const older = months(el)[1];
+    expect(older.querySelector('.run-history-month__failed')).not.toBeNull();
+    expect(older.querySelector('.run-history-month__loading')).toBeNull();
+    expect(detailsOf(older).open).toBe(true);
+    jest.useRealTimers();
+  });
+
+  it('re-opening a failed month retries and clears the failure line', () => {
+    jest.useFakeTimers();
+    runHistoryMonth.mockReturnValueOnce(throwError(() => new Error('the endpoint is down')));
+    const el = mount(OVERVIEW);
+
+    openMonth(months(el)[1]);
+    expect(() => jest.runOnlyPendingTimers()).not.toThrow();
+    fixture.detectChanges();
+    expect(months(el)[1].querySelector('.run-history-month__failed')).not.toBeNull();
+
+    runHistoryMonth.mockReturnValue(
+      of({ month: '2026-07', runs: [UNPRICED_RUN], nextCursor: null }),
+    );
+    closeMonth(months(el)[1]);
+    openMonth(months(el)[1]);
+
+    expect(runHistoryMonth).toHaveBeenCalledTimes(2);
+    expect(months(el)[1].querySelector('.run-history-month__failed')).toBeNull();
+    expect(months(el)[1].querySelectorAll('.run-history-month__row')).toHaveLength(1);
+    jest.useRealTimers();
   });
 
   it('a failed "show more" clears loading and leaves the rows already loaded standing', () => {

@@ -27,7 +27,11 @@ import { RecommendationRunHistoryMonthComponent } from './recommendation-run-his
  *  month is opened and its first page has arrived -- that null, not a
  *  separate flag, is what `RecommendationRunHistoryMonthComponent` binds its
  *  `startOpen` to, so a month with rows already loaded starts (and, once a
- *  reader closes it, stays) open. */
+ *  reader closes it, stays) open.
+ *
+ *  `failed` does need its own flag: a month that has never been opened and a
+ *  month whose first page fetch failed are both `runs === null` with nothing
+ *  loading, and only the second of the two has something to tell the reader. */
 interface MonthSection {
   month: string;
   runCount: number;
@@ -35,6 +39,7 @@ interface MonthSection {
   runs: RunHistoryRow[] | null;
   nextCursor: number | null;
   loading: boolean;
+  failed: boolean;
 }
 
 /** What every for-you run has cost (#409): one collapsible section per month,
@@ -97,13 +102,17 @@ export class RecommendationRunHistoryComponent {
     const section = this.findSection(month);
     if (!section || section.runs !== null || section.loading) return;
 
-    this.setLoading(month, true);
+    this.startFetch(month);
     this.api
       .runHistoryMonth(month, this.timeZone)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (page) => this.replaceRows(month, page.runs, page.nextCursor),
-        error: () => this.setLoading(month, false),
+        // Nothing is standing here to leave standing: the section is open and
+        // its body is empty, so without a message it reads as a month with no
+        // runs. Closing and re-opening retries, which is only discoverable if
+        // the reader is told there is something to retry.
+        error: () => this.markFailed(month),
       });
   }
 
@@ -113,13 +122,15 @@ export class RecommendationRunHistoryComponent {
     const section = this.findSection(month);
     if (!section || section.nextCursor === null || section.loading) return;
 
-    this.setLoading(month, true);
+    this.startFetch(month);
     this.api
       .runHistoryMonth(month, this.timeZone, section.nextCursor)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (page) => this.appendRows(month, page.runs, page.nextCursor),
-        error: () => this.setLoading(month, false),
+        // Unlike a first page, this one has rows on screen already: they stay,
+        // and the button comes back enabled so the reader can try again.
+        error: () => this.stopFetch(month),
       });
   }
 
@@ -132,8 +143,18 @@ export class RecommendationRunHistoryComponent {
     return this.sections().find((section) => section.month === month);
   }
 
-  private setLoading(month: string, loading: boolean): void {
-    this.updateSection(month, (section) => ({ ...section, loading }));
+  /** A retry clears the last failure as it starts, so a second attempt is not
+   *  read against the first one's message. */
+  private startFetch(month: string): void {
+    this.updateSection(month, (section) => ({ ...section, loading: true, failed: false }));
+  }
+
+  private stopFetch(month: string): void {
+    this.updateSection(month, (section) => ({ ...section, loading: false }));
+  }
+
+  private markFailed(month: string): void {
+    this.updateSection(month, (section) => ({ ...section, loading: false, failed: true }));
   }
 
   private replaceRows(month: string, runs: RunHistoryRow[], nextCursor: number | null): void {
@@ -190,22 +211,50 @@ export class RecommendationRunHistoryComponent {
     this.sections.set(
       overview.months.map((month) =>
         month.month === latestMonth
-          ? this.latestSection(month, overview.latest!)
+          ? this.latestSection(month, overview.latest!, priorByMonth.get(month.month))
           : this.staleSection(month, priorByMonth.get(month.month)),
       ),
     );
     this.totalCostNanoCredits.set(overview.totalCostNanoCredits);
   }
 
-  private latestSection(month: RunHistoryMonth, latest: RunHistoryMonthPage): MonthSection {
+  /** The newest month's rows are refreshed from `latest`, but a reader who
+   *  pressed "show more" keeps what they paged into: the overview always
+   *  answers with the month's first page, so everything below it is still on
+   *  screen and would otherwise vanish at the one moment the reader is most
+   *  likely to be watching -- a run finishing. */
+  private latestSection(
+    month: RunHistoryMonth,
+    latest: RunHistoryMonthPage,
+    prior: MonthSection | undefined,
+  ): MonthSection {
+    const carried = this.carriedTail(latest.runs, prior?.runs ?? null);
+
     return {
       month: month.month,
       runCount: month.runCount,
       costNanoCredits: month.costNanoCredits,
-      runs: latest.runs,
-      nextCursor: latest.nextCursor,
+      runs: [...latest.runs, ...carried],
+      // With rows carried over, the list still ends where the prior one did,
+      // so the prior cursor is still the right `before` -- including when it
+      // is null, which means the reader had already paged to the month's end.
+      nextCursor: carried.length === 0 ? latest.nextCursor : (prior?.nextCursor ?? null),
       loading: false,
+      failed: false,
     };
+  }
+
+  /** The prior rows the fresh first page does not already carry. Ids ascend
+   *  with creation time and the page is newest-first, so "older than the
+   *  page's last row" is exactly the tail -- which makes the concatenation
+   *  above ordered and duplicate-free without comparing whole rows. */
+  private carriedTail(fresh: RunHistoryRow[], prior: RunHistoryRow[] | null): RunHistoryRow[] {
+    if (prior === null) return [];
+
+    const oldestFresh = fresh.at(-1);
+    if (oldestFresh === undefined) return prior;
+
+    return prior.filter((run) => run.id < oldestFresh.id);
   }
 
   private staleSection(month: RunHistoryMonth, prior: MonthSection | undefined): MonthSection {
@@ -215,7 +264,12 @@ export class RecommendationRunHistoryComponent {
       costNanoCredits: month.costNanoCredits,
       runs: prior?.runs ?? null,
       nextCursor: prior?.nextCursor ?? null,
-      loading: false,
+      // An overview refetch can land while this month's own first page is
+      // still in flight. Clearing the flag there would drop the "Loading…"
+      // line and disarm the `loading` half of `onOpened`'s re-entrancy guard,
+      // letting a close/re-open fire a second identical GET.
+      loading: prior?.loading ?? false,
+      failed: prior?.failed ?? false,
     };
   }
 }

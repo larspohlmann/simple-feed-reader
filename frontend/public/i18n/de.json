@@ -192,6 +192,7 @@
         "historyMonthSummaryOther": "{{ runs }} Läufe · {{ cost }}",
         "historyShowMore": "Mehr aus {{ month }} anzeigen",
         "historyLoading": "Wird geladen…",
+        "historyMonthFailed": "Dieser Monat konnte nicht geladen werden. Zum erneuten Versuch zuklappen und wieder aufklappen.",
         "debugPanelTitle": "Debug-Protokoll",
         "debugBatch": "Batch {{ n }}",
         "debugDedup": "Dedup",

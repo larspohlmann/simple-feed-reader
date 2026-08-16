@@ -48,5 +48,9 @@
     <p class="run-history-month__loading">
       {{ 'settings.ai.recommendations.historyLoading' | transloco }}
     </p>
+  } @else if (failed()) {
+    <p class="run-history-month__failed">
+      {{ 'settings.ai.recommendations.historyMonthFailed' | transloco }}
+    </p>
   }
 </app-disclosure>

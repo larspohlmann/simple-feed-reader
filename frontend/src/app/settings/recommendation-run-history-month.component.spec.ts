@@ -36,6 +36,7 @@ interface MountProps {
   runs: RunHistoryRow[] | null;
   nextCursor: number | null;
   loading: boolean;
+  failed: boolean;
 }
 
 const DEFAULT_PROPS: MountProps = {
@@ -45,6 +46,7 @@ const DEFAULT_PROPS: MountProps = {
   runs: null,
   nextCursor: null,
   loading: false,
+  failed: false,
 };
 
 describe('RecommendationRunHistoryMonthComponent', () => {
@@ -60,6 +62,7 @@ describe('RecommendationRunHistoryMonthComponent', () => {
     fixture.componentRef.setInput('runs', props.runs);
     fixture.componentRef.setInput('nextCursor', props.nextCursor);
     fixture.componentRef.setInput('loading', props.loading);
+    fixture.componentRef.setInput('failed', props.failed);
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
@@ -207,6 +210,23 @@ describe('RecommendationRunHistoryMonthComponent', () => {
     details.dispatchEvent(new Event('toggle'));
 
     expect(emitted).toBe(1);
+  });
+
+  /** A month whose first page could not be fetched looks exactly like one
+   *  nobody has opened yet -- no rows and nothing loading -- so the failure
+   *  needs a flag of its own, and a line, or the open section is just blank. */
+  it('renders a failure line when the first page could not be fetched', () => {
+    const el = mount({ runs: null, loading: false, failed: true });
+
+    expect(el.querySelector('.run-history-month__failed')?.textContent?.trim()).toBe(
+      'This month could not be loaded. Close and open it to try again.',
+    );
+  });
+
+  it('renders no failure line for a month that has simply never been opened', () => {
+    const el = mount({ runs: null, loading: false, failed: false });
+
+    expect(el.querySelector('.run-history-month__failed')).toBeNull();
   });
 
   it('renders the loading label while a closed month is being fetched', () => {
