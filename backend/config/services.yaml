@@ -80,7 +80,7 @@ services:
     App\Service\Fetch\BatchFeedFetcherInterface: '@App\Service\Fetch\ConcurrentFeedFetcher'
     App\Service\Discovery\FeedDiscoveryInterface: '@App\Service\Discovery\FeedDiscovery'
     App\Service\Reader\ArticleExtractorInterface: '@App\Service\Reader\ArticleExtractor'
-    App\Service\Search\EntrySearchInterface: '@App\Service\Search\LikeEntrySearch'
+    App\Service\Search\EntrySearchInterface: '@App\Service\Search\EntrySearchWithFallback'
     # Both interfaces resolve to the one adapter that knows Meilisearch's wire
     # format (#432, see MeilisearchIndex).
     App\Service\Search\Index\SearchIndexReader: '@App\Service\Search\Index\MeilisearchIndex'
@@ -159,6 +159,15 @@ services:
         arguments:
             $baseUrl: '%env(MEILISEARCH_URL)%'
             $apiKey: '%env(MEILISEARCH_KEY)%'
+
+    # Same env var as MeilisearchIndex's $baseUrl above, read a second time
+    # here rather than shared through a parameter: this is a different
+    # question ("is an engine configured at all?", decided once per search)
+    # from MeilisearchIndex's own ("what address do I talk to?", decided once
+    # per request to it). Both answers happen to come from the same setting.
+    App\Service\Search\EntrySearchWithFallback:
+        arguments:
+            $engineUrl: '%env(MEILISEARCH_URL)%'
 
     # A child of the framework's http_client so the rot-check command holds its
     # own injectable client id. The point of the separate id is the test: it can
