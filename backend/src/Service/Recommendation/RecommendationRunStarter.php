@@ -131,15 +131,17 @@ final readonly class RecommendationRunStarter
      *
      * The host only. A base URL the account saved but that has no host at all
      * stamps null rather than a fragment of one — a history row is worth less
-     * with a wrong provider in it than with an empty one.
+     * with a wrong provider in it than with an empty one. `parse_url()`
+     * returns `false` on a malformed URL and `null` when there is no host
+     * component; both collapse to null. A genuine host of `'0'` must not:
+     * it is a valid (if unusual) hostname, and PHP's `?:` treats the string
+     * `'0'` as falsy, so a plain truthiness check would swallow it too.
      */
     private function stampProvider(RecommendationRun $run, User $user): void
     {
         $settings = $this->configurator->settingsFor($user);
+        $host = parse_url($settings?->getBaseUrl() ?? '', \PHP_URL_HOST);
 
-        $run->stampProvider(
-            parse_url($settings?->getBaseUrl() ?? '', \PHP_URL_HOST) ?: null,
-            $settings?->getModel(),
-        );
+        $run->stampProvider(\is_string($host) ? $host : null, $settings?->getModel());
     }
 }

@@ -152,6 +152,35 @@ final class RecommendationRunStarterTest extends DbTestCase
     }
 
     /**
+     * parse_url() returns false, not null, for a URL this malformed — a
+     * different falsy value than the "no host component" case above, and one
+     * that a naive `?:` collapse handles identically but for the wrong reason
+     * (#409 review).
+     */
+    public function testStampsNoHostWhenTheBaseUrlIsMalformed(): void
+    {
+        $user = $this->userWithProvider('http:///v1', 'some-model');
+
+        $this->starter()->start($user);
+
+        self::assertNull($this->runs()->findActiveForUser($user)?->getProviderHost());
+    }
+
+    /**
+     * '0' is a valid hostname and a real, if unusual, base URL host. PHP
+     * treats the string '0' as falsy, so a `parse_url(...) ?: null` collapse
+     * silently turned this genuine host into null (#409 review).
+     */
+    public function testStampsTheHostZeroRatherThanTreatingItAsNoHost(): void
+    {
+        $user = $this->userWithProvider('http://0/v1', 'some-model');
+
+        $this->starter()->start($user);
+
+        self::assertSame('0', $this->runs()->findActiveForUser($user)?->getProviderHost());
+    }
+
+    /**
      * The window used to be one run wide, so this asserted the opposite: a new
      * run wiped what the last one recorded. Prompt regressions are only
      * visible as a difference between runs, so the previous run's log is
