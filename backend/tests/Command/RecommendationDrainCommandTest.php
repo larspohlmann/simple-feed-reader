@@ -11,12 +11,14 @@ use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
-use App\Service\Recommendation\OpenAiCompatibleChatClient;
+use App\Service\Ai\ProviderTimeouts;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Worker\WorkerPresence;
 use App\Service\Worker\WorkerRunSweep;
+use App\Service\Worker\SweepStreamHeartbeat;
+use Symfony\Component\Clock\MockClock;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LockKeyExpiringBeforeEveryRefreshStore;
 use App\Tests\Support\LockLostAfterFirstRefreshStore;
@@ -221,21 +223,26 @@ final class RecommendationDrainCommandTest extends DbTestCase
 
     /**
      * The lock TTL is pinned as a RELATIONSHIP, because that is what the
-     * choice actually is (#371 follow-up). Above one provider call, so the
-     * usual sweep -- one run, one call -- never lapses at all. Below one
-     * worst-case sweep, deliberately: the TTL is what a SIGKILLed drainer
-     * costs a replacement, and sizing it for the worst sweep bought a
+     * choice actually is (#371 follow-up). Above one call on the standard
+     * profile, so the usual sweep -- one run, one call -- never lapses at all.
+     * Below one worst-case sweep, deliberately: the TTL is what a SIGKILLed
+     * drainer costs a replacement, and sizing it for the worst sweep bought a
      * five-hour respawn blackout to prevent a lapse that
      * testKeepsDrainingWhenTheLockKeyMerelyExpired proves is survivable.
+     *
+     * The standard profile is the right yardstick here even though a slow
+     * connection can outlast the TTL in one call (#433): that is the same
+     * survivable lapse, and holding the drain lock for a multiple of an hour
+     * to avoid it would make a SIGKILL cost hours of respawn blackout.
      */
     public function testTheLockOutlivesOneProviderCallButNotAWorstCaseSweep(): void
     {
         self::assertGreaterThan(
-            OpenAiCompatibleChatClient::TIMEOUT_SECONDS,
+            ProviderTimeouts::standard()->wallClockSeconds,
             RecommendationDrainCommand::LOCK_TTL_SECONDS,
         );
         self::assertLessThan(
-            RecommendationRun::MAX_ATTEMPTS * OpenAiCompatibleChatClient::TIMEOUT_SECONDS,
+            RecommendationRun::MAX_ATTEMPTS * ProviderTimeouts::standard()->wallClockSeconds,
             RecommendationDrainCommand::LOCK_TTL_SECONDS,
         );
     }
@@ -317,6 +324,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
             $this->runs(),
             $this->advancer(),
             $this->presence(),
+            $this->streamHeartbeat($this->presence()),
             $this->em,
             new NullLogger(),
         );
@@ -425,5 +433,15 @@ final class RecommendationDrainCommandTest extends DbTestCase
         $advancer = self::getContainer()->get(RecommendationRunAdvancer::class);
 
         return $advancer;
+    }
+    /**
+     * A heartbeat over the same presence the sweep marks with. It only ever
+     * writes while a completion is streaming, and nothing in these tests
+     * streams — StubChatClient answers in one piece — so it is inert here and
+     * does not disturb the mark counts the presence clocks pin.
+     */
+    private function streamHeartbeat(WorkerPresence $presence): SweepStreamHeartbeat
+    {
+        return new SweepStreamHeartbeat($presence, new MockClock());
     }
 }

@@ -29,8 +29,11 @@ app-disclosure {
   gap: var(--space-1);
 }
 
+/* Wraps so the info tip's panel takes a line under the label rather than a
+   share of its width (#433). */
 .debug-title {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1);
 }
@@ -101,8 +104,11 @@ select {
   white-space: pre-wrap;
 }
 
+/* The tip contributes no box of its own (#433), so the row around it carries
+   the spacing and gives the panel its line. */
 .fixed-info {
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
   margin-bottom: var(--space-3);
 }
 

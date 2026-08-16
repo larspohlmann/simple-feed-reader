@@ -1,4 +1,4 @@
-import { booleanAttribute, ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
 import { DismissOnOutsideDirective } from '../dismiss-on-outside.directive';
 import { IconComponent } from '../icon/icon.component';
 
@@ -11,38 +11,31 @@ let nextId = 0;
  * handling on phones, while an in-flow panel cannot clip or overflow by
  * construction. Click-to-toggle, never hover: hover does not exist on touch.
  *
+ * The component contributes no box of its own (#433). Host and wrapper are
+ * `display: contents`, so the consumer's row lays out the trigger and the
+ * panel as its own children and the panel can take a full-width line beneath
+ * that row. The earlier arrangement — a boxed wrapper holding both, plus a
+ * `corner` mode that absolutely positioned the trigger away from its panel —
+ * made the panel one flex item beside the label in a row, and in `app-field`
+ * opened it under the control rather than under the ⓘ that was clicked.
+ * Neither matched the in-flow contract this component documents.
+ *
  * `text` and `label` take already-translated strings, not i18n keys — this
  * component lives in `shared/` and must not hardcode a feature's translation
  * keys. `label` names the trigger for assistive tech; callers pass the label
  * of the control the tip explains, and `aria-expanded` tells it apart from
  * the control itself.
- *
- * `corner` places the trigger at the top-right of the nearest *positioned*
- * ancestor — `<app-field>` sets `position: relative` on its host and uses
- * this to put the ⓘ in its label row while the panel stays in the field's
- * flow. The host itself must stay unpositioned in corner mode for that
- * anchoring to work, which is why the styles never give it `position`.
- * A consumer that turns this on owes the label row the height of a full tap
- * target, or the coarse-pointer trigger reaches down over the control — see
- * `app-field`'s `.has-info` rule.
- *
- * The styles key on the host *class*, which this component binds from the
- * input, not on the `corner` attribute: an attribute is only present for the
- * static `corner` form, so `[corner]="true"` would have set the input and
- * anchored nothing.
  */
 @Component({
   selector: 'app-info-tip',
   imports: [DismissOnOutsideDirective, IconComponent],
   templateUrl: './info-tip.component.html',
   styleUrl: './info-tip.component.scss',
-  host: { '[class.corner]': 'corner()' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InfoTipComponent {
   readonly text = input.required<string>();
   readonly label = input.required<string>();
-  readonly corner = input(false, { transform: booleanAttribute });
 
   readonly open = signal(false);
 
@@ -56,9 +49,18 @@ export class InfoTipComponent {
    * is explaining.
    */
   toggle(event: Event): void {
+    this.swallow(event);
+    this.open.update((value) => !value);
+  }
+
+  /**
+   * The panel needs the trigger's guard too, now that it sits inside the row
+   * it explains: `app-field` renders one inside the `<label>` that wraps the
+   * control, where a click reaching the label would toggle that control.
+   */
+  swallow(event: Event): void {
     event.preventDefault();
     event.stopPropagation();
-    this.open.update((value) => !value);
   }
 
   close(): void {

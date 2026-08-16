@@ -7,7 +7,7 @@ namespace App\Service\Recommendation;
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
-use App\Service\Ai\AiProviderConfigurator;
+use App\Service\Ai\ProviderConnectionFactory;
 
 /**
  * The batch phase's concurrent fan-out (#344): one tick resolves a wave of
@@ -31,7 +31,7 @@ final readonly class RecommendationBatchWave
 {
     public function __construct(
         private ChatCompletionClient $chat,
-        private AiProviderConfigurator $configurator,
+        private ProviderConnectionFactory $connections,
         private RecommendationCallRecorder $callRecorder,
         private RecommendationHistoryLoader $historyLoader,
         private RecommendationCandidateLoader $candidateLoader,
@@ -264,7 +264,7 @@ final readonly class RecommendationBatchWave
     private function completeRound(AiProviderSettings $settings, array $calls, array $recordedCalls): array
     {
         try {
-            return $this->chat->completeMany($this->configurator->credentials($settings), $calls);
+            return $this->chat->completeMany($this->connections->forSettings($settings), $calls);
         } catch (\Throwable $e) {
             foreach ($recordedCalls as $recordedCall) {
                 $recordedCall->abortAfterTransportFailure($e->getMessage());

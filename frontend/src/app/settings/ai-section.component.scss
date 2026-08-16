@@ -91,15 +91,26 @@ app-searchable-select {
   gap: var(--space-2);
 }
 
+/* The tip contributes no box of its own (#433), so this row holds the trigger
+   and gives its panel a line directly underneath. Without it the two would
+   become separate items of the column around them, split by its gap. */
+.acts-info {
+  display: flex;
+  flex-wrap: wrap;
+}
+
 .reasoning-toggle {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: var(--space-1);
 }
 
+/* Wraps because the info tip's panel claims a whole line: the explanation
+   opens under the checkbox instead of squeezing it sideways (#433). The row
+   is left to stretch for the same reason — the panel is as wide as the row. */
 .reasoning-toggle-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
 }

@@ -6,16 +6,22 @@ namespace App\Tests\Service\Recommendation;
 
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Ai\ProviderConnection;
 use App\Service\Ai\ProviderCredentials;
+use App\Service\Ai\ProviderTimeouts;
 use App\Service\Recommendation\CompletionBodyDecoder;
 use App\Service\Recommendation\CompletionRequest;
+use App\Service\Recommendation\CompletionStreamHeartbeat;
 use App\Service\Recommendation\CompletionStreamProgress;
 use App\Service\Recommendation\CompletionStreamObserver;
 use App\Service\Recommendation\ConcurrentCompletion;
 use App\Service\Recommendation\JsonSchema;
 use App\Service\Recommendation\NullCompletionStreamObserver;
 use App\Service\Recommendation\OpenAiCompatibleChatClient;
+use App\Tests\Support\CountingCompletionStreamHeartbeat;
+use App\Tests\Support\NullCompletionStreamHeartbeat;
 use App\Tests\Support\ResponseCapturingHttpClient;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -27,6 +33,11 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     private function credentials(): ProviderCredentials
     {
         return ProviderCredentials::fromStoredConfiguration('https://api.example.test/v1', 'sk-test');
+    }
+
+    private function connection(): ProviderConnection
+    {
+        return new ProviderConnection($this->credentials(), ProviderTimeouts::standard());
     }
 
     /** @return list<array{role: string, content: string}> */
@@ -52,7 +63,19 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
     private function clientUsing(HttpClientInterface $httpClient): OpenAiCompatibleChatClient
     {
-        return new OpenAiCompatibleChatClient($httpClient, new CompletionBodyDecoder(), 'SimpleFeedReader/1.0');
+        return $this->clientReportingTo($httpClient, new NullCompletionStreamHeartbeat());
+    }
+
+    private function clientReportingTo(
+        HttpClientInterface $httpClient,
+        CompletionStreamHeartbeat $heartbeat,
+    ): OpenAiCompatibleChatClient {
+        return new OpenAiCompatibleChatClient(
+            $httpClient,
+            new CompletionBodyDecoder(),
+            $heartbeat,
+            'SimpleFeedReader/1.0',
+        );
     }
 
     private function clientAnswering(MockResponse $response): OpenAiCompatibleChatClient
@@ -104,7 +127,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         });
 
         $content = $this->clientUsing($client)
-            ->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
+            ->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
 
         self::assertSame('{"recommendations":[]}', $content);
 
@@ -165,6 +188,101 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     }
 
     /**
+     * The transport is the only place that knows a chunk arrived, so it is
+     * what tells a worker's liveness that the process reading the stream is
+     * still running (#433). Without this ping, a worker inside a long call
+     * would age out of WorkerPresence's freshness window and the poll driver
+     * would stop deferring to it while it was working.
+     */
+    public function testItPingsTheHeartbeatAsTheAnswerStreams(): void
+    {
+        $heartbeat = new CountingCompletionStreamHeartbeat();
+
+        $this->clientReportingTo(
+            new MockHttpClient(new MockResponse([
+                'data: {"choices":[{"delta":{"content":"{}"}}]}' . "\n\n",
+                'data: [DONE]' . "\n\n",
+            ])),
+            $heartbeat,
+        )->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+
+        self::assertGreaterThan(0, $heartbeat->beats());
+    }
+
+    /**
+     * The bounds the request is sent under come from the connection, not from
+     * this class (#433). Pinned for both profiles, because a wiring that read
+     * one fixed profile would pass a standard-connection test and silently
+     * keep failing the slow local model this setting exists for.
+     *
+     * `timeout` is the idle bound and `max_duration` the wall clock, the two
+     * option names Symfony's transport gives them.
+     *
+     * @param array<string, mixed> $expected
+     */
+    #[DataProvider('profileOptions')]
+    public function testTheRequestCarriesTheConnectionsOwnBounds(
+        ProviderTimeouts $timeouts,
+        array $expected,
+    ): void {
+        $seen = [];
+        $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$seen): MockResponse {
+            $seen = $options;
+
+            return new MockResponse([
+                'data: {"choices":[{"delta":{"content":"{}"}}]}' . "\n\n",
+                'data: [DONE]' . "\n\n",
+            ]);
+        });
+
+        $this->clientUsing($client)->complete(
+            new ProviderConnection($this->credentials(), $timeouts),
+            $this->request(),
+            new NullCompletionStreamObserver(),
+        );
+
+        self::assertSame($expected['timeout'], $seen['timeout']);
+        self::assertSame($expected['max_duration'], $seen['max_duration']);
+    }
+
+    /**
+     * @return iterable<string, array{ProviderTimeouts, array<string, mixed>}>
+     */
+    public static function profileOptions(): iterable
+    {
+        yield 'standard' => [
+            ProviderTimeouts::standard(),
+            ['timeout' => 180.0, 'max_duration' => 600.0],
+        ];
+        yield 'slow model' => [
+            ProviderTimeouts::forSlowModel(),
+            ['timeout' => 900.0, 'max_duration' => 3600.0],
+        ];
+    }
+
+    /**
+     * And the silence the reader refuses is the connection's own too: the
+     * message a run's debug log records must name the bound that actually
+     * fired, or a slow connection's failure reads as a standard one's.
+     */
+    public function testASilentProviderIsRefusedAgainstTheConnectionsOwnFirstByteBound(): void
+    {
+        $body = static function (): \Generator {
+            yield 'data: {"choices":[{"delta":{"content":"par"}}]}' . "\n\n";
+            yield '';
+        };
+
+        $this->expectException(ProviderUnreachableException::class);
+        $this->expectExceptionMessage('That provider sent nothing for more than 900 seconds.');
+
+        $this->clientUsing(new ResponseCapturingHttpClient(new MockResponse($body())))->complete(
+            new ProviderConnection($this->credentials(), ProviderTimeouts::forSlowModel()),
+            $this->request(),
+            new NullCompletionStreamObserver(),
+        );
+    }
+
+    /**
      * A keyless credential (a local model server) must not send `Bearer ` with
      * nothing after it — ProviderCredentials::authorizationHeaders() drops the
      * header entirely, and every other header this call sets must survive
@@ -183,7 +301,11 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         });
 
         $credentials = ProviderCredentials::fromStoredConfiguration('https://api.example.test/v1', '');
-        $this->clientUsing($client)->complete($credentials, $this->request(), new NullCompletionStreamObserver());
+        $this->clientUsing($client)->complete(
+            new ProviderConnection($credentials, ProviderTimeouts::standard()),
+            $this->request(),
+            new NullCompletionStreamObserver()
+        );
 
         /** @var array{headers: array<int, string>} $seen */
         $authorizationHeaders = array_filter(
@@ -201,9 +323,9 @@ final class OpenAiCompatibleChatClientTest extends TestCase
      *
      * Shape only, not timing: the MockResponse answers instantly, so this says
      * nothing about whether such a provider can still finish in time. It
-     * cannot, past INACTIVITY_TIMEOUT_SECONDS — that bound covers the wait for
-     * the response headers too, and the constant's own comment records why the
-     * branch accepts that.
+     * cannot, past the profile's first-byte bound — that bound covers the wait
+     * for the response headers too, and ProviderTimeouts records why the branch
+     * accepts that.
      */
     public function testABlockingEnvelopeAnswerStillWorks(): void
     {
@@ -213,7 +335,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         self::assertSame(
             '{"recommendations":[]}',
-            $client->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver()),
+            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver()),
         );
     }
 
@@ -237,7 +359,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         // because the cancel assertion below has to run after the throw.
         try {
             $this->clientUsing($client)
-                ->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
+                ->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
             self::fail(ProviderUnreachableException::class . ' was not thrown.');
         } catch (ProviderUnreachableException $e) {
             self::assertSame('That provider sent nothing for more than 180 seconds.', $e->getMessage());
@@ -255,7 +377,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         $this->expectException(CredentialsRejectedException::class);
         $this->expectExceptionMessage('That provider refused the API key.');
-        $client->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
+        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
     }
 
     public function testNonJsonEnvelopeIsUnreachable(): void
@@ -263,7 +385,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client = $this->clientAnswering(new MockResponse('not json'));
 
         $this->expectException(ProviderUnreachableException::class);
-        $client->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
+        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
     }
 
     public function testEnvelopeWithoutContentIsUnreachable(): void
@@ -271,7 +393,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client = $this->clientAnswering(new MockResponse('{"choices":[]}'));
 
         $this->expectException(ProviderUnreachableException::class);
-        $client->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
+        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
     }
 
     /**
@@ -297,7 +419,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         $this->expectException(ProviderUnreachableException::class);
         $this->expectExceptionMessage('That provider answered with status 300.');
-        $client->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
+        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
     }
 
     /**
@@ -320,7 +442,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         $this->expectException(ProviderUnreachableException::class);
         $this->expectExceptionMessage('That provider answered with status 500.');
-        $client->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
+        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
     }
 
     /**
@@ -350,7 +472,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         $this->expectException(ProviderUnreachableException::class);
         $this->clientUsing($client)
-            ->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
+            ->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
     }
 
     public function testAForbiddenAnswerIsAlsoARejectedKey(): void
@@ -359,7 +481,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         $this->expectException(CredentialsRejectedException::class);
         $this->expectExceptionMessage('That provider refused the API key.');
-        $client->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
+        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
     }
 
     /**
@@ -379,7 +501,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client = $this->clientAnswering(new MockResponse(str_split($body, 50_000)));
 
         $this->expectException(ProviderUnreachableException::class);
-        $client->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
+        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
     }
 
     /**
@@ -404,7 +526,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         // proves this specific catch block actually ran.
         try {
             $this->clientUsing($client)
-                ->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
+                ->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
             self::fail(ProviderUnreachableException::class . ' was not thrown.');
         } catch (ProviderUnreachableException $e) {
             self::assertSame('That address did not answer.', $e->getMessage());
@@ -418,7 +540,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client = $this->clientAnswering(new MockResponse([$first, $second]));
         $seen = $this->recordingObserver();
 
-        $client->complete($this->credentials(), $this->request(), $seen);
+        $client->complete($this->connection(), $this->request(), $seen);
 
         self::assertCount(2, $seen->reports);
         // The answer accumulates; each report carries everything decoded so
@@ -442,7 +564,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client = $this->clientAnswering(new MockResponse([$answer, $finish]));
         $seen = $this->recordingObserver();
 
-        $client->complete($this->credentials(), $this->request(), $seen);
+        $client->complete($this->connection(), $this->request(), $seen);
 
         self::assertNull($seen->reports[0]->finishReason);
         self::assertSame('length', $seen->reports[\count($seen->reports) - 1]->finishReason);
@@ -473,7 +595,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client = $this->clientAnswering(new MockResponse(str_split($reasoning . $answer, 50_000)));
         $seen = $this->recordingObserver();
 
-        self::assertSame('done', $client->complete($this->credentials(), $this->request(), $seen));
+        self::assertSame('done', $client->complete($this->connection(), $this->request(), $seen));
         self::assertSame('', $seen->reports[0]->answerSoFar);
         self::assertGreaterThan(2_097_152, $seen->reports[\count($seen->reports) - 1]->wireBytes);
     }
@@ -493,7 +615,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         $this->expectException(ProviderUnreachableException::class);
         $this->expectExceptionMessage('That provider answered with more than 2097152 bytes.');
-        $client->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
+        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
     }
 
     /**
@@ -515,7 +637,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         self::assertSame(
             '{"recommendations":[]}',
-            $client->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver()),
+            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver()),
         );
     }
 
@@ -537,7 +659,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         self::assertSame(
             '{"recommendations":[]}',
-            $client->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver()),
+            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver()),
         );
     }
 
@@ -555,7 +677,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         $this->expectException(ProviderUnreachableException::class);
         $this->expectExceptionMessage('That provider answered without a completion.');
-        $client->complete($this->credentials(), $this->request(), new NullCompletionStreamObserver());
+        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
     }
 
     public function testAsksTheProviderNotToReasonWhenSuppressed(): void
@@ -588,7 +710,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         ]));
         $seen = $this->recordingObserver();
 
-        $client->complete($this->credentials(), $this->request(), $seen);
+        $client->complete($this->connection(), $this->request(), $seen);
 
         $lastReport = $seen->reports[\count($seen->reports) - 1];
         self::assertSame(11, $lastReport->usage?->promptTokens);
@@ -602,7 +724,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             $this->sseStream('{"picks":[{"id":1,"score":9,"reason":"x"}]}'),
         ]);
 
-        $outcomes = $client->completeMany($this->credentials(), [
+        $outcomes = $client->completeMany($this->connection(), [
             $this->concurrentCall(new NullCompletionStreamObserver()),
             $this->concurrentCall(new NullCompletionStreamObserver()),
         ]);
@@ -621,7 +743,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             new MockResponse('', ['http_code' => 500]),
         ]);
 
-        $outcomes = $client->completeMany($this->credentials(), [
+        $outcomes = $client->completeMany($this->connection(), [
             $this->concurrentCall(new NullCompletionStreamObserver()),
             $this->concurrentCall(new NullCompletionStreamObserver()),
         ]);
@@ -640,7 +762,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             new MockResponse('', ['http_code' => 401]),
         ]);
 
-        $outcomes = $client->completeMany($this->credentials(), [
+        $outcomes = $client->completeMany($this->connection(), [
             $this->concurrentCall(new NullCompletionStreamObserver()),
         ]);
 
@@ -668,7 +790,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             $this->sseStream('{"picks":[]}'),
         ]);
 
-        $outcomes = $client->completeMany($this->credentials(), [
+        $outcomes = $client->completeMany($this->connection(), [
             $this->concurrentCall(new NullCompletionStreamObserver()),
             $this->concurrentCall(new NullCompletionStreamObserver()),
         ]);
@@ -699,7 +821,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             throw new TransportException('Connection refused');
         });
 
-        $outcomes = $this->clientUsing($client)->completeMany($this->credentials(), [
+        $outcomes = $this->clientUsing($client)->completeMany($this->connection(), [
             $this->concurrentCall(new NullCompletionStreamObserver()),
         ]);
 
@@ -717,7 +839,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     {
         $client = new ResponseCapturingHttpClient(new MockResponse('', ['http_code' => 500]));
 
-        $outcomes = $this->clientUsing($client)->completeMany($this->credentials(), [
+        $outcomes = $this->clientUsing($client)->completeMany($this->connection(), [
             $this->concurrentCall(new NullCompletionStreamObserver()),
         ]);
 
@@ -740,7 +862,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $first = $this->recordingObserver();
         $second = $this->recordingObserver();
 
-        $outcomes = $client->completeMany($this->credentials(), [
+        $outcomes = $client->completeMany($this->connection(), [
             $this->concurrentCall($first),
             $this->concurrentCall($second),
         ]);
@@ -768,7 +890,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             ]),
         ]);
 
-        $outcomes = $client->completeMany($this->credentials(), [
+        $outcomes = $client->completeMany($this->connection(), [
             $this->concurrentCall(new NullCompletionStreamObserver()),
             $this->concurrentCall(new NullCompletionStreamObserver()),
         ]);
@@ -788,7 +910,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             return new MockResponse('{"choices":[{"message":{"content":"{\"recommendations\":[]}"}}]}');
         });
 
-        $this->clientUsing($client)->complete($this->credentials(), $request, new NullCompletionStreamObserver());
+        $this->clientUsing($client)->complete($this->connection(), $request, new NullCompletionStreamObserver());
         self::assertIsString($seen);
 
         $decoded = json_decode($seen, true);

@@ -17,6 +17,8 @@ use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Ai\ProviderConnectionFactory;
+use App\Service\Ai\ProviderTimeouts;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
@@ -65,27 +67,10 @@ final class RecommendationRunAdvancer
     private const string LOCK_NAME_PREFIX = 'ai-recommendations-';
 
     /**
-     * A tick can now span up to RecommendationRun::MAX_ATTEMPTS sequential
-     * in-tick retry rounds (#344), each bounded by one provider call's wall
-     * clock, OpenAiCompatibleChatClient::TIMEOUT_SECONDS. The lock must
-     * outlive the longest possible tick, or it becomes stealable mid-tick: a
-     * second process (the worker sweep or another poll) could then start a
-     * concurrent tick for the same run. RecommendationRun carries no
-     * optimistic-version guard, so two concurrent ticks could double-bank
-     * winners or double-bill provider spend.
-     *
-     * Invariant: LOCK_TTL_SECONDS >= MAX_ATTEMPTS * TIMEOUT_SECONDS. Derived
-     * from both published constants, plus a margin, rather than a bare
-     * number, so a future change to either constant cannot silently reopen
-     * the race -- RecommendationRunAdvancerTest pins the inequality too.
-     *
-     * Accepted tradeoff: a process that crashes mid-tick holds the lock for
-     * the full TTL before another process can resume the run. That is a long
-     * wait, but this is a personal-scale app and a crash mid-tick is rare;
-     * correctness under concurrent ticks matters more than a fast failover.
+     * Headroom over the longest possible tick, for the bookkeeping around the
+     * provider calls themselves.
      */
-    private const float LOCK_TTL_SECONDS = RecommendationRun::MAX_ATTEMPTS * OpenAiCompatibleChatClient::TIMEOUT_SECONDS
-        + 300.0;
+    private const float LOCK_TTL_MARGIN_SECONDS = 300.0;
 
     /**
      * The most concurrent batch calls a poll tick may fan out. A poll tick is
@@ -100,6 +85,7 @@ final class RecommendationRunAdvancer
         private readonly EntryRepository $entries,
         private readonly LockFactory $lockFactory,
         private readonly AiProviderConfigurator $configurator,
+        private readonly ProviderConnectionFactory $connections,
         private readonly ClockInterface $clock,
         private readonly RecommendationSettingsResolver $settingsResolver,
         private readonly RecommendationCandidateLoader $candidateLoader,
@@ -120,7 +106,7 @@ final class RecommendationRunAdvancer
     {
         $lock = $this->lockFactory->createLock(
             self::LOCK_NAME_PREFIX . ($user->getId() ?? 0),
-            self::LOCK_TTL_SECONDS,
+            $this->lockTtlFor($user),
         );
 
         if (!$lock->acquire()) {
@@ -129,8 +115,9 @@ final class RecommendationRunAdvancer
 
         // A hard request-time kill -- Strato caps a web request at 240s, far
         // below the lock TTL -- never reaches the finally below, so without
-        // this the lock would sit held for its full TTL (35 min) and freeze
-        // the run until it expired. A shutdown hook releases it on that path.
+        // this the lock would sit held for its full TTL (35 min on the
+        // standard profile, over three hours on the slow one) and freeze the
+        // run until it expired. A shutdown hook releases it on that path.
         // The store's delete is token-scoped, so on the normal path (the
         // finally has already released) or once another process has re-acquired
         // the same name, the hook is a harmless no-op -- it can never free a
@@ -150,6 +137,49 @@ final class RecommendationRunAdvancer
         } finally {
             $lock->release();
         }
+    }
+
+    /**
+     * How long this account's tick may hold its lock.
+     *
+     * A tick can span up to RecommendationRun::MAX_ATTEMPTS sequential in-tick
+     * retry rounds (#344), each bounded by one provider call's wall clock. The
+     * lock must outlive the longest possible tick, or it becomes stealable
+     * mid-tick: a second process (the worker sweep or another poll) could then
+     * start a concurrent tick for the same run. RecommendationRun carries no
+     * optimistic-version guard, so two concurrent ticks could double-bank
+     * winners or double-bill provider spend.
+     *
+     * Invariant: the TTL is at least MAX_ATTEMPTS x the wall clock of the
+     * connection this tick will actually call. Derived rather than a bare
+     * number, so a change to either input cannot silently reopen the race --
+     * RecommendationRunAdvancerTest drives advance() and pins it.
+     *
+     * Read from the connection rather than from a constant since #433: a
+     * connection the account marked slow answers under an hour-long wall
+     * clock, and a TTL sized for the standard profile would expire in the
+     * middle of one of its calls. Only that connection pays the long TTL --
+     * pinning every account to the slow ceiling would triple the stall after
+     * a crash for everyone, and a leaked lock already costs a full TTL.
+     *
+     * The read happens just outside the lock, so an account that flips the
+     * setting in the same instant a tick starts gets one tick sized to the
+     * previous profile. The window is a single statement wide and the next
+     * tick corrects it; both racers read the same row, so they agree.
+     *
+     * Accepted tradeoff: a process that crashes mid-tick holds the lock for
+     * the full TTL before another process can resume the run. That is a long
+     * wait, but this is a personal-scale app and a crash mid-tick is rare;
+     * correctness under concurrent ticks matters more than a fast failover.
+     */
+    private function lockTtlFor(User $user): float
+    {
+        $settings = $this->configurator->settingsFor($user);
+        $timeouts = null === $settings
+            ? ProviderTimeouts::standard()
+            : $this->connections->timeoutsFor($settings);
+
+        return RecommendationRun::MAX_ATTEMPTS * $timeouts->wallClockSeconds + self::LOCK_TTL_MARGIN_SECONDS;
     }
 
     private function tick(User $user, TickDriver $driver): RecommendationRunReport
@@ -500,7 +530,7 @@ final class RecommendationRunAdvancer
     ): string {
         try {
             return $this->chat->complete(
-                $this->configurator->credentials($settings),
+                $this->connections->forSettings($settings),
                 $request,
                 $recordedCall,
             );

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Ai\ProviderCredentials;
+use App\Service\Ai\ProviderConnection;
 use App\Service\Recommendation\ChatCompletionClient;
 use App\Service\Recommendation\CompletionOutcome;
 use App\Service\Recommendation\CompletionRequest;
@@ -78,7 +78,7 @@ final class StubChatClient implements ChatCompletionClient
     }
 
     public function complete(
-        ProviderCredentials $credentials,
+        ProviderConnection $connection,
         CompletionRequest $request,
         CompletionStreamObserver $observer,
     ): string {
@@ -96,7 +96,7 @@ final class StubChatClient implements ChatCompletionClient
      * concurrent contract, where one failed call never aborts its siblings
      * (#344). Outcomes stay aligned to $calls by index.
      */
-    public function completeMany(ProviderCredentials $credentials, array $calls): array
+    public function completeMany(ProviderConnection $connection, array $calls): array
     {
         $outcomes = [];
 

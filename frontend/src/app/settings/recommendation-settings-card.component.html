@@ -149,11 +149,12 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
 
 {{ state.fixedPrompt.outputContract }}</pre>
     </app-disclosure>
-    <app-info-tip
-      class="fixed-info"
-      [text]="'settings.ai.info.fixedPrompt' | transloco"
-      [label]="'settings.ai.recommendations.fixedShow' | transloco"
-    />
+    <div class="fixed-info">
+      <app-info-tip
+        [text]="'settings.ai.info.fixedPrompt' | transloco"
+        [label]="'settings.ai.recommendations.fixedShow' | transloco"
+      />
+    </div>
 
     <div class="debug-row">
       <span class="debug-text">

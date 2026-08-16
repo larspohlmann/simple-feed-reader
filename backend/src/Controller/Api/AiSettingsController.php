@@ -9,6 +9,7 @@ use App\Dto\Ai\RenameConfigurationRequest;
 use App\Dto\Ai\SaveModelRequest;
 use App\Dto\Ai\SetBatchConcurrencyRequest;
 use App\Dto\Ai\SetReasoningRequest;
+use App\Dto\Ai\SetSlowModelRequest;
 use App\Entity\User;
 use App\Exception\AiConfigurationNotFoundApiException;
 use App\Exception\AiKeyUnreadableApiException;
@@ -181,6 +182,30 @@ final readonly class AiSettingsController
         }
 
         $this->editor->setSuppressReasoning($configuration, $request->suppressReasoning);
+
+        return new JsonResponse(
+            AiSettingsJson::configuration($configuration, $this->configurator->settingsFor($user)?->getId()),
+        );
+    }
+
+    #[Route(
+        '/configs/{id}/slow-model',
+        name: 'api_me_ai_set_slow_model',
+        requirements: ['id' => '\d+'],
+        methods: ['PUT'],
+    )]
+    public function setSlowModel(
+        #[CurrentUser] User $user,
+        int $id,
+        #[MapRequestPayload] SetSlowModelRequest $request,
+    ): JsonResponse {
+        try {
+            $configuration = $this->configuration->require($user, $id);
+        } catch (ConfigurationNotFoundException $e) {
+            throw new AiConfigurationNotFoundApiException($e);
+        }
+
+        $this->editor->setSlowModel($configuration, $request->slowModel);
 
         return new JsonResponse(
             AiSettingsJson::configuration($configuration, $this->configurator->settingsFor($user)?->getId()),

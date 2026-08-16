@@ -682,32 +682,48 @@ phone. Click/tap to toggle; Escape or a press outside dismisses (via
 `aria-expanded`/`aria-controls`; the panel is `role="note"`. Under
 `pointer: coarse` the trigger grows to `--tap-target`.
 
+**The component contributes no box of its own.** Host and wrapper are
+`display: contents`, so the trigger and the panel are laid out by the
+consumer's row directly (#433).
+
 | Input | Type | Default |
 |---|---|---|
 | `text` | `string` (required) | — |
 | `label` | `string` (required) | — |
-| `corner` | `boolean` (accepts the bare `corner` attribute) | `false` |
 
 ```html
-<app-info-tip
-  [text]="'settings.ai.info.rowActions' | transloco"
-  [label]="'settings.ai.info.actionsLabel' | transloco"
-/>
+<div class="row">
+  <label …>…</label>
+  <app-info-tip
+    [text]="'settings.ai.info.rowActions' | transloco"
+    [label]="'settings.ai.info.actionsLabel' | transloco"
+  />
+</div>
+```
+```scss
+.row {
+  display: flex;
+  flex-wrap: wrap; /* the panel's own line */
+}
 ```
 
 `text` and `label` take **already-translated strings** (shared component, no
 feature keys). `label` is the accessible name of the trigger — pass the label
-of the control being explained. `corner` anchors the trigger at the top-right
-of the nearest **positioned** ancestor; `<app-field>` uses it to put the ⓘ in
-its label row (see the `info` input there). It is a `booleanAttribute` input
-reflected as the host class `.corner`, which the styles key on — so `corner`
-and `[corner]="true"` behave the same. A consumer that turns it on owes the
-row the trigger's height: under `pointer: coarse` the trigger is a full
-`--tap-target`, and a shorter row lets its hit box hang over the control
-below (`app-field` reserves that height with `:host(.has-info) .lbl`).
-Never place a tip inside a
-`<summary>` or inside a wrapping `<label>`: a click on non-interactive panel
-content would toggle the `<details>` or the control.
+of the control being explained.
+
+**A flex row owes the tip `flex-wrap: wrap`.** The panel carries
+`flex-basis: 100%`, so in a wrapping row it drops to a full-width line under
+the row that holds the ⓘ. In a row that does not wrap it stays on the line
+instead and takes width from the label — the #433 bug. In block flow nothing is
+owed: `display: block` already puts the panel underneath. Give a tip that has
+no row of its own a wrapping `<div>` rather than leaving it a bare child of a
+column: the column's `gap` would otherwise split the trigger from its panel.
+
+A tip inside a `<summary>` or a wrapping `<label>` is fine — both the trigger
+and the panel call `preventDefault` and `stopPropagation`, so no click of
+theirs reaches the container to collapse the `<details>` or toggle the control.
+`<app-field>` relies on this: its tip sits in the label row inside the
+`<label>` that names the control.
 
 **Not for:** validation or state messages (that is `app-field`'s `error`/
 `hint`), or anything that must be visible without interaction — a danger

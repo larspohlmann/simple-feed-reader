@@ -27,6 +27,7 @@ interface AiSettingsStub {
   duplicate: jest.Mock;
   rename: jest.Mock;
   setReasoning: jest.Mock;
+  setSlowModel: jest.Mock;
   setBatchConcurrency: jest.Mock;
   activate: jest.Mock;
   remove: jest.Mock;
@@ -42,6 +43,7 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   active: false,
   suppressReasoning: true,
   batchConcurrency: 1,
+  slowModel: false,
   ...over,
 });
 
@@ -77,6 +79,7 @@ function createStub(): AiSettingsStub {
     duplicate: jest.fn(),
     rename: jest.fn(),
     setReasoning: jest.fn(),
+    setSlowModel: jest.fn(),
     setBatchConcurrency: jest.fn(),
     activate: jest.fn(),
     remove: jest.fn(),
@@ -373,6 +376,44 @@ describe('AiSectionComponent', () => {
     checkbox.dispatchEvent(new Event('change'));
 
     expect(setReasoning).toHaveBeenCalledWith(7, false);
+  });
+
+  it('toggles the slow-model preference for a row', () => {
+    const fixture = mount();
+    const setSlowModel = jest.spyOn(ai, 'setSlowModel').mockImplementation(() => undefined);
+    ai.configs.set([config({ id: 7, slowModel: false })]);
+    fixture.detectChanges();
+
+    expandRow(fixture, 0);
+
+    const checkbox = row(fixture, 0).querySelectorAll(
+      '.reasoning-toggle input[type=checkbox]',
+    )[1] as HTMLInputElement;
+    expect(checkbox).not.toBeUndefined();
+    expect(checkbox.checked).toBe(false);
+
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event('change'));
+
+    expect(setSlowModel).toHaveBeenCalledWith(7, true);
+  });
+
+  /**
+   * The two per-connection checkboxes are the same shape, so a handler wired
+   * to the wrong one would still look right. This pins that each checkbox
+   * reports its own state.
+   */
+  it('keeps the two per-connection checkboxes independent', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 7, suppressReasoning: false, slowModel: true })]);
+    fixture.detectChanges();
+
+    expandRow(fixture, 0);
+
+    const boxes = Array.from(
+      row(fixture, 0).querySelectorAll('.reasoning-toggle input[type=checkbox]'),
+    ) as HTMLInputElement[];
+    expect(boxes.map((box) => box.checked)).toEqual([false, true]);
   });
 
   it('changes the batch concurrency for a row via a 1-4 dropdown', () => {
@@ -751,7 +792,7 @@ describe('AiSectionComponent', () => {
     expect(steps.length).toBe(9);
   });
 
-  it('explains the row actions with one tip and the reasoning toggle with its own', () => {
+  it('explains the row actions with one tip and each connection checkbox with its own', () => {
     const fixture = mountWithConfigs([CONFIG]);
 
     const body = fixture.nativeElement.querySelector('.config-body') as HTMLElement;
@@ -765,10 +806,13 @@ describe('AiSectionComponent', () => {
     expect(actionsPanel).toContain('copies the configuration together with its stored key');
     expect(actionsPanel).toContain('removes the endpoint, the stored key and the model');
 
-    const reasoningTrigger = body.querySelector(
-      '.reasoning-toggle app-info-tip button.trigger',
-    ) as HTMLButtonElement;
-    expect(reasoningTrigger).not.toBeNull();
+    const toggleTriggers = Array.from(
+      body.querySelectorAll('.reasoning-toggle app-info-tip button.trigger'),
+    ) as HTMLButtonElement[];
+    expect(toggleTriggers.map((trigger) => trigger.getAttribute('aria-label'))).toEqual([
+      'Ask the model not to reason',
+      'Slow or local model',
+    ]);
     expect(body.querySelector('.reasoning-toggle .hint')).toBeNull();
   });
 });

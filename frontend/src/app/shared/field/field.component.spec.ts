@@ -99,21 +99,42 @@ describe('FieldComponent', () => {
   });
 
   /**
-   * The tip's trigger is anchored to the field's corner and grows to
-   * `--tap-target` on coarse pointers, so the label row has to reserve that
-   * height or the hit box reaches down over the control (#372). jsdom has no
-   * layout, so this pins the hook the reservation keys on — the host class and
-   * the tip's corner mode — not the resulting geometry.
+   * The tip belongs to the label row, and its panel opens on the row's next
+   * line — between the label and the control, under the ⓘ that was clicked.
+   * The tip used to sit after the projected control with only its trigger
+   * lifted into the label row, which opened the explanation below the input
+   * instead (#433). jsdom has no layout, so this pins the document order the
+   * arrangement rests on, not the resulting geometry.
    */
-  it('flags the host while a tip is rendered so the label row can reserve the tap target', async () => {
-    const fixture = await mountField({ label: 'Endpoint', info: null });
-    const field: HTMLElement = fixture.nativeElement.querySelector('app-field');
-    expect(field.classList).not.toContain('has-info');
+  it('keeps the tip and its panel in the label row, ahead of the control', async () => {
+    const fixture = await mountField({ label: 'Endpoint', info: 'What this endpoint is for.' });
+    const row: HTMLElement = fixture.nativeElement.querySelector('.lbl-row');
 
-    fixture.componentInstance.info.set('What this endpoint is for.');
+    (row.querySelector('button.trigger') as HTMLButtonElement).click();
     fixture.detectChanges();
 
-    expect(field.classList).toContain('has-info');
-    expect(field.querySelector('app-info-tip')?.classList).toContain('corner');
+    expect(row.querySelector('.panel')).not.toBeNull();
+
+    const control: HTMLElement = fixture.nativeElement.querySelector('input#probe');
+    expect(row.compareDocumentPosition(control) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  /**
+   * The tip lives inside the `<label>` that names the control, so a click that
+   * reached the label would toggle that control. Both of the tip's own
+   * surfaces swallow their clicks; this pins that the field keeps benefiting
+   * from it.
+   */
+  it('lets neither the trigger nor the panel activate the label', async () => {
+    const fixture = await mountField({ label: 'Endpoint', info: 'What this endpoint is for.' });
+    const label: HTMLLabelElement = fixture.nativeElement.querySelector('label');
+    const reached = jest.fn();
+    label.addEventListener('click', reached);
+
+    (label.querySelector('button.trigger') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (label.querySelector('.panel') as HTMLElement).click();
+
+    expect(reached).not.toHaveBeenCalled();
   });
 });

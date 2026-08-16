@@ -14,6 +14,7 @@ use App\Repository\EntryRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Repository\WorkerHeartbeatRepository;
 use App\Service\Ai\AiProviderConfigurator;
+use App\Service\Ai\ProviderConnectionFactory;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
@@ -37,6 +38,8 @@ use App\Service\Worker\Message\AdvanceRecommendationRuns;
 use App\Service\Worker\RecommendationDriverKind;
 use App\Service\Worker\WorkerPresence;
 use App\Service\Worker\WorkerRunSweep;
+use App\Service\Worker\SweepStreamHeartbeat;
+use Symfony\Component\Clock\MockClock;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiSettingsRowMover;
 use App\Tests\Support\ClearTrackingEntityManager;
@@ -286,6 +289,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
                 $this->runs(),
                 $this->advancer(),
                 $this->presence(),
+                $this->streamHeartbeat($this->presence()),
                 $clearTracker,
                 new NullLogger(),
             ),
@@ -478,6 +482,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
                 $this->runs(),
                 $this->advancerWithFlushFailingEntityManager(),
                 $this->presence(),
+                $this->streamHeartbeat($this->presence()),
                 $this->em,
                 $logger,
             ),
@@ -497,6 +502,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             self::getContainer()->get(EntryRepository::class),
             self::getContainer()->get(LockFactory::class),
             self::getContainer()->get(AiProviderConfigurator::class),
+            $this->connectionFactory(),
             self::getContainer()->get(ClockInterface::class),
             self::getContainer()->get(RecommendationSettingsResolver::class),
             self::getContainer()->get(RecommendationCandidateLoader::class),
@@ -521,7 +527,14 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     private function handlerWithLogger(LoggerInterface $logger): AdvanceRecommendationRunsHandler
     {
         return new AdvanceRecommendationRunsHandler(
-            new WorkerRunSweep($this->runs(), $this->advancer(), $this->presence(), $this->em, $logger),
+            new WorkerRunSweep(
+                $this->runs(),
+                $this->advancer(),
+                $this->presence(),
+                $this->streamHeartbeat($this->presence()),
+                $this->em,
+                $logger,
+            ),
         );
     }
 
@@ -532,6 +545,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
                 $this->runs(),
                 $this->advancer(),
                 new WorkerPresence($this->heartbeats(), $presenceClock),
+                $this->streamHeartbeat(new WorkerPresence($this->heartbeats(), $presenceClock)),
                 $this->em,
                 new NullLogger(),
             ),
@@ -714,5 +728,22 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $handler = self::getContainer()->get(AdvanceRecommendationRunsHandler::class);
 
         return $handler;
+    }
+    /**
+     * A heartbeat over the same presence the sweep marks with. It only ever
+     * writes while a completion is streaming, and nothing in these tests
+     * streams — StubChatClient answers in one piece — so it is inert here and
+     * does not disturb the mark counts the presence clocks pin.
+     */
+    private function streamHeartbeat(WorkerPresence $presence): SweepStreamHeartbeat
+    {
+        return new SweepStreamHeartbeat($presence, new MockClock());
+    }
+    private function connectionFactory(): ProviderConnectionFactory
+    {
+        /** @var ProviderConnectionFactory $connections */
+        $connections = self::getContainer()->get(ProviderConnectionFactory::class);
+
+        return $connections;
     }
 }

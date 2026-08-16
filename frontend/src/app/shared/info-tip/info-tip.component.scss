@@ -1,12 +1,12 @@
-/* The host and .wrap are deliberately never `position`ed: in corner mode the
-   trigger's `absolute` must resolve against the consumer's own positioned
-   ancestor (app-field's host), which is what puts the ⓘ in the label row. */
-:host {
-  display: inline-block;
-}
-
-:host(.corner) {
-  display: block;
+/* The tip owns no box of its own: the host and .wrap are `display: contents`,
+   so the trigger and the panel are laid out by the consumer's row directly.
+   That is what lets the panel take a line of its own below the row instead of
+   becoming one squeezed item inside it (#433). .wrap still exists in the DOM —
+   DismissOnOutsideDirective asks it whether a press landed inside — and DOM
+   containment survives `display: contents`. */
+:host,
+.wrap {
+  display: contents;
 }
 
 .trigger {
@@ -27,14 +27,19 @@
   color: var(--text-primary);
 }
 
-:host(.corner) .trigger {
-  position: absolute;
-  top: 0;
-  right: 0;
-}
-
 .panel {
   display: block;
+
+  /* Claims a whole line, so in a flex row the panel drops below the row that
+     holds the trigger rather than competing with it for width. The consumer's
+     row owes it `flex-wrap: wrap` — see design-language.md. `min-width` is
+     what makes the break deterministic: flex sizes a line from each item's
+     hypothetical size, and a `flex-basis` clamped by a `max-width` can still
+     fit beside a short label, which is how the panel used to share the label's
+     line. A minimum is not clamped that way. In block flow both are inert and
+     `display: block` already puts the panel underneath. */
+  flex-basis: 100%;
+  min-width: 100%;
   margin-top: var(--space-1);
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border);
@@ -42,7 +47,6 @@
   background: var(--surface-2);
   color: var(--text-primary);
   font-size: var(--fs-sm);
-  max-width: 60ch;
 }
 
 /* Touch density: the trigger grows to a full tap target for coarse pointers
