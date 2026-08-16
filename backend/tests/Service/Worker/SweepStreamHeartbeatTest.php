@@ -73,6 +73,28 @@ final class SweepStreamHeartbeatTest extends DbTestCase
     }
 
     /**
+     * The interval is a minimum, not a strict gap: a beat exactly on the
+     * boundary writes. Pinned because the difference between `>=` and `>` here
+     * is one whole interval of extra silence in the worst case, and nothing
+     * else would notice.
+     */
+    public function testABeatExactlyOnTheIntervalWrites(): void
+    {
+        $clock = new MockClock('2026-08-16 12:00:00');
+        $heartbeat = new SweepStreamHeartbeat($this->presence($clock), $clock);
+        $heartbeat->sweepStarted(RecommendationDriverKind::PersistentWorker);
+
+        $heartbeat->beat();
+        $clock->sleep(30);
+        $heartbeat->beat();
+
+        self::assertEquals(
+            new \DateTimeImmutable('2026-08-16 12:00:30'),
+            $this->touchedAt(RecommendationDriverKind::PersistentWorker),
+        );
+    }
+
+    /**
      * A sweep that has ended is no longer evidence of anything. The drain
      * command surrenders its liveness key when it exits, and a heartbeat left
      * armed would write that key straight back.

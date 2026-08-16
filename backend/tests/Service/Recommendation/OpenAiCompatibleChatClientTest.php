@@ -11,12 +11,14 @@ use App\Service\Ai\ProviderCredentials;
 use App\Service\Ai\ProviderTimeouts;
 use App\Service\Recommendation\CompletionBodyDecoder;
 use App\Service\Recommendation\CompletionRequest;
+use App\Service\Recommendation\CompletionStreamHeartbeat;
 use App\Service\Recommendation\CompletionStreamProgress;
 use App\Service\Recommendation\CompletionStreamObserver;
 use App\Service\Recommendation\ConcurrentCompletion;
 use App\Service\Recommendation\JsonSchema;
 use App\Service\Recommendation\NullCompletionStreamObserver;
 use App\Service\Recommendation\OpenAiCompatibleChatClient;
+use App\Tests\Support\CountingCompletionStreamHeartbeat;
 use App\Tests\Support\NullCompletionStreamHeartbeat;
 use App\Tests\Support\ResponseCapturingHttpClient;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -61,10 +63,17 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
     private function clientUsing(HttpClientInterface $httpClient): OpenAiCompatibleChatClient
     {
+        return $this->clientReportingTo($httpClient, new NullCompletionStreamHeartbeat());
+    }
+
+    private function clientReportingTo(
+        HttpClientInterface $httpClient,
+        CompletionStreamHeartbeat $heartbeat,
+    ): OpenAiCompatibleChatClient {
         return new OpenAiCompatibleChatClient(
             $httpClient,
             new CompletionBodyDecoder(),
-            new NullCompletionStreamHeartbeat(),
+            $heartbeat,
             'SimpleFeedReader/1.0',
         );
     }
@@ -176,6 +185,28 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             'stream_options' => ['include_usage' => true],
             'max_tokens' => 2048,
         ], $decodedBody);
+    }
+
+    /**
+     * The transport is the only place that knows a chunk arrived, so it is
+     * what tells a worker's liveness that the process reading the stream is
+     * still running (#433). Without this ping, a worker inside a long call
+     * would age out of WorkerPresence's freshness window and the poll driver
+     * would stop deferring to it while it was working.
+     */
+    public function testItPingsTheHeartbeatAsTheAnswerStreams(): void
+    {
+        $heartbeat = new CountingCompletionStreamHeartbeat();
+
+        $this->clientReportingTo(
+            new MockHttpClient(new MockResponse([
+                'data: {"choices":[{"delta":{"content":"{}"}}]}' . "\n\n",
+                'data: [DONE]' . "\n\n",
+            ])),
+            $heartbeat,
+        )->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+
+        self::assertGreaterThan(0, $heartbeat->beats());
     }
 
     /**

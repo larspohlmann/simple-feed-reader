@@ -21,6 +21,8 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\ClearTrackingEntityManager;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\ThrowingClock;
+use App\Tests\Support\StubChatClient;
+use App\Tests\Support\TickingClock;
 use App\Tests\Support\UserFactory;
 use Psr\Log\NullLogger;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -126,6 +128,81 @@ final class WorkerRunSweepTest extends DbTestCase
         }
 
         self::assertTrue($clearTracker->wasCleared());
+    }
+
+    /**
+     * The sweep arms the mid-call heartbeat and disarms it again (#433). Both
+     * halves are observable through a beat: one fired from inside the provider
+     * call must reach the presence row, and one fired after the sweep must
+     * not.
+     *
+     * The clock ticks, so the beat's write lands strictly later than the mark
+     * the sweep makes before the run. A sweep that never armed the heartbeat
+     * would leave the row at that mark.
+     */
+    public function testItArmsTheStreamHeartbeatForTheSweepAndDisarmsItAfterwards(): void
+    {
+        $user = $this->user('sweep-stream-heartbeat@example.test');
+        $this->fixtures->seedSingleBatchFixture($user);
+        $this->starter()->start($user);
+
+        // The first tick only snapshots the candidate pool -- no provider
+        // call is made, so there is no stream to beat from. The second one
+        // sends the batch.
+        $this->sweep()->sweep(RecommendationDriverKind::PersistentWorker);
+        // An empty but well-formed reply: this test is about the call
+        // happening at all, not about what it ranks.
+        $this->chatClient()->queueContent('{"recommendations":[]}');
+
+        $clock = new TickingClock(new \DateTimeImmutable('2026-08-16 12:00:00'), 10);
+        $presence = new WorkerPresence($this->heartbeats(), $clock);
+        $heartbeat = new SweepStreamHeartbeat($presence, $clock);
+        $this->chatClient()->duringNextCall(static function () use ($heartbeat): void {
+            $heartbeat->beat();
+        });
+
+        $sweep = new WorkerRunSweep(
+            $this->runs(),
+            $this->advancer(),
+            $presence,
+            $heartbeat,
+            $this->em,
+            new NullLogger(),
+        );
+        $sweep->sweep(RecommendationDriverKind::PersistentWorker);
+
+        $touchedDuringTheCall = $this->touchedAt();
+        self::assertNotNull($touchedDuringTheCall);
+        self::assertGreaterThan(
+            new \DateTimeImmutable('2026-08-16 12:00:00'),
+            $touchedDuringTheCall,
+            'A beat inside the provider call must have marked liveness after the pre-run mark.',
+        );
+
+        $heartbeat->beat();
+
+        self::assertEquals(
+            $touchedDuringTheCall,
+            $this->touchedAt(),
+            'Once the sweep has ended, a beat must write nothing.',
+        );
+    }
+
+    private function touchedAt(): ?\DateTimeImmutable
+    {
+        $this->em->clear();
+
+        return $this->em->getRepository(WorkerHeartbeat::class)
+            ->find(RecommendationDriverKind::PersistentWorker->heartbeatName())
+            ?->getTouchedAt();
+    }
+
+    private function chatClient(): StubChatClient
+    {
+        /** @var StubChatClient $client */
+        $client = self::getContainer()->get(StubChatClient::class);
+
+        return $client;
     }
 
     private function user(string $email): User
