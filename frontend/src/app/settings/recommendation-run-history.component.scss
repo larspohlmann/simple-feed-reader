@@ -39,13 +39,6 @@
     font-variant-numeric: tabular-nums;
   }
 
-  &__unit {
-    margin: 0 0 var(--space-1);
-    color: var(--text-muted);
-    font-size: var(--fs-xs);
-    text-align: right;
-  }
-
   &__wrap {
     overflow-x: auto;
   }

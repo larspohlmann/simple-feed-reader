@@ -10,20 +10,11 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { ReaderApi } from '../reader/reader-api';
-import { formatDateOr, formatTime } from '../reader/format';
+import { formatCost, formatDateOr, formatTime } from '../reader/format';
 import { RunHistoryRow } from '../reader/models';
 import { RecommendationsService } from '../reader/recommendations.service';
 import { LanguageService } from '../core/language.service';
 import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
-
-/** Nano-credits per credit. The API stores money as an integer -- floats do
- *  not hold money -- and this is the one place it becomes a human figure. */
-const NANO_PER_CREDIT = 1_000_000_000;
-
-/** What no reported price renders as. The provider said nothing about cost
- *  (a local model, or a run older than the column), which is a different
- *  statement from a cost of zero -- so it must not render as one. */
-const NO_PRICE = '—';
 
 /** What every for-you run has cost (#409): one row per run with the provider
  *  and model it actually called, how long it took, the tokens it consumed and
@@ -63,20 +54,11 @@ export class RecommendationRunHistoryComponent {
     this.fetch();
   });
 
-  /** Credits with four decimals, or an em dash when the provider reported no
-   *  price at all. Four decimals is the granularity a single run is worth
-   *  reading at; a run cheaper than that reads as 0.0000, which is honest.
-   *
-   *  Through `Intl` on the active UI language for the same reason the dates
-   *  below are: `toFixed` always writes a `.`, and a German card showing
-   *  `22. Juli 2026` beside `0.0412` is two locales in one line. The unit
-   *  belongs to the labels, not to every value. */
+  /** The account's spend, and each run's, as the provider writes it. The
+   *  formatting itself lives in `format.ts` -- the month sections render the
+   *  same figure and a second copy of the rounding would drift. */
   cost(nanoCredits: number | null): string {
-    if (nanoCredits === null) return NO_PRICE;
-    return new Intl.NumberFormat(this.language.lang(), {
-      minimumFractionDigits: 4,
-      maximumFractionDigits: 4,
-    }).format(nanoCredits / NANO_PER_CREDIT);
+    return formatCost(nanoCredits, this.language.lang());
   }
 
   /** The provider and model the run called, as one line. Falls back to the

@@ -1,6 +1,7 @@
 // format.spec.ts
 import {
   bytesToKb,
+  formatCost,
   formatDateOr,
   formatLongDate,
   formatTime,
@@ -100,6 +101,33 @@ describe('trialDaysRemaining', () => {
   it('reads exactly one day left as 1, not 0', () => {
     const endsAt = new Date(now + 86_400_000).toISOString();
     expect(trialDaysRemaining(endsAt, now)).toBe(1);
+  });
+});
+
+describe('formatCost', () => {
+  it('renders a price the way the provider writes it in its own logs', () => {
+    expect(formatCost(1_370_000, 'en')).toBe('$ 0.00137');
+  });
+
+  it('renders an em dash when the provider reported no price at all', () => {
+    expect(formatCost(null, 'en')).toBe('—');
+  });
+
+  it('renders a cost of zero as zero rather than as unpriced', () => {
+    expect(formatCost(0, 'en')).toBe('$ 0.00000');
+  });
+
+  it('keeps the symbol leading but the separator local', () => {
+    expect(formatCost(1_370_000, 'de')).toBe('$ 0,00137');
+  });
+
+  it('rounds a sub-cent remainder to the nearest five-decimal figure', () => {
+    expect(formatCost(1_374_700, 'en')).toBe('$ 0.00137');
+    expect(formatCost(1_375_100, 'en')).toBe('$ 0.00138');
+  });
+
+  it('renders a large total without losing the fixed precision', () => {
+    expect(formatCost(918_200_000, 'en')).toBe('$ 0.91820');
   });
 });
 

@@ -82,3 +82,39 @@ export function trialDaysRemaining(iso: string | null, now: number = Date.now())
 export function bytesToKb(bytes: number): number {
   return Math.max(1, Math.round(bytes / 1024));
 }
+
+/** Nano-credits per credit. The API stores money as an integer -- floats do
+ *  not hold money -- and this is the one place it becomes a human figure. */
+const NANO_PER_CREDIT = 1_000_000_000;
+
+/** How many decimals a price is worth reading at. Five is what the provider's
+ *  own logs show, and it is fine enough that a single cheap run does not
+ *  collapse to zero. */
+const COST_FRACTION_DIGITS = 5;
+
+/** What no reported price renders as. The provider said nothing about cost (a
+ *  local model, or a run older than the column), which is a different
+ *  statement from a cost of zero -- so it must not render as one, and it must
+ *  not carry a currency symbol either. */
+const NO_PRICE = '—';
+
+/**
+ * A price in nano-credits as the provider's own logs write it: `$ 0.00137`.
+ *
+ * The symbol always leads, the way the provider renders it. The number does
+ * not: it goes through `Intl` on the active UI language, because `toFixed`
+ * always writes a `.` and a German card showing `22. Juli 2026` beside
+ * `0.00137` is two locales in one line. So German reads `$ 0,00137`.
+ *
+ * Shared rather than owned by the history card: the card renders the account
+ * total and each month section renders its own, and a second copy of the
+ * rounding would drift.
+ */
+export function formatCost(nanoCredits: number | null, locale: string): string {
+  if (nanoCredits === null) return NO_PRICE;
+  const credits = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: COST_FRACTION_DIGITS,
+    maximumFractionDigits: COST_FRACTION_DIGITS,
+  }).format(nanoCredits / NANO_PER_CREDIT);
+  return `$ ${credits}`;
+}

@@ -72,10 +72,10 @@ describe('RecommendationRunHistoryComponent', () => {
     expect(el.querySelectorAll('.run-history__row')).toHaveLength(2);
   });
 
-  it('renders a priced run as credits with four decimals', () => {
+  it('renders a priced run as a dollar figure the way the provider logs it', () => {
     const el = mount({ runs: [PRICED_RUN], totalCostNanoCredits: 41_230_000 });
 
-    expect(el.querySelector('.run-history__cost')?.textContent?.trim()).toBe('0.0412');
+    expect(el.querySelector('.run-history__cost')?.textContent?.trim()).toBe('$ 0.04123');
   });
 
   /** The card already formats its dates through the active language; a
@@ -86,17 +86,8 @@ describe('RecommendationRunHistoryComponent', () => {
 
     const el = mount({ runs: [PRICED_RUN], totalCostNanoCredits: 918_200_000 });
 
-    expect(el.querySelector('.run-history__cost')?.textContent?.trim()).toBe('0,0412');
-    expect(el.querySelector('.run-history__total-value')?.textContent?.trim()).toBe('0,9182');
-  });
-
-  /** The figures are bare numbers, so the unit has to be stated somewhere —
-   *  once, over the column, rather than on every row. */
-  it('names the unit on the total and over the cost column', () => {
-    const el = mount({ runs: [PRICED_RUN], totalCostNanoCredits: 918_200_000 });
-
-    expect(el.querySelector('.run-history__total-label')?.textContent).toContain('credits');
-    expect(el.querySelector('.run-history__unit')?.textContent).toContain('credits');
+    expect(el.querySelector('.run-history__cost')?.textContent?.trim()).toBe('$ 0,04123');
+    expect(el.querySelector('.run-history__total-value')?.textContent?.trim()).toBe('$ 0,91820');
   });
 
   it('renders an em dash when the provider reported no price', () => {
@@ -108,7 +99,7 @@ describe('RecommendationRunHistoryComponent', () => {
   it('shows the all-time total, not the sum of the rows on screen', () => {
     const el = mount({ runs: [PRICED_RUN], totalCostNanoCredits: 918_200_000 });
 
-    expect(el.querySelector('.run-history__total-value')?.textContent).toContain('0.9182');
+    expect(el.querySelector('.run-history__total-value')?.textContent).toContain('$ 0.91820');
   });
 
   it('shows an em dash for a total no run ever priced', () => {
@@ -147,7 +138,7 @@ describe('RecommendationRunHistoryComponent', () => {
 
     expect(() => jest.runOnlyPendingTimers()).not.toThrow();
     expect(el.querySelectorAll('.run-history__row')).toHaveLength(1);
-    expect(el.querySelector('.run-history__total-value')?.textContent?.trim()).toBe('0.9182');
+    expect(el.querySelector('.run-history__total-value')?.textContent?.trim()).toBe('$ 0.91820');
     jest.useRealTimers();
   });
 });
