@@ -68,6 +68,22 @@ final class RecommendationRunRepository extends ServiceEntityRepository
     }
 
     /**
+     * Whether any run anywhere still needs driving. A count, not a fetch: the
+     * terminate listener asks this on every request and must not pay for
+     * hydration to learn the answer is no.
+     */
+    public function hasActiveRun(): bool
+    {
+        $activeRunCount = $this->createQueryBuilder('r')
+            ->select('COUNT(r.id)')
+            ->andWhere('r.status IN (:active)')->setParameter('active', self::ACTIVE_STATUSES)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return (int) $activeRunCount > 0;
+    }
+
+    /**
      * The account's newest run, optionally of one status only.
      *
      * The two readings are one query because they differ in nothing but that
