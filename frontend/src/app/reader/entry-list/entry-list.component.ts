@@ -151,6 +151,11 @@ export class EntryListComponent implements OnDestroy {
    *  ones. Same arrangement as `headerActions`, at the other end of the row:
    *  what belongs there is the shell's business, where it sits is this list's. */
   readonly leadingActions = input<TemplateRef<unknown> | null>(null);
+  /** The words the search engine actually matched on the current page, from
+   *  `EntriesStore.matchedWords`. Empty outside a search, and also empty
+   *  whenever the database LIKE fallback answered instead of the engine —
+   *  that is the normal, permanent state on any install with no engine. */
+  readonly matchedWords = input<string[]>([]);
 
   readonly loadMore = output<void>();
   readonly markAllRead = output<void>();
@@ -168,9 +173,18 @@ export class EntryListComponent implements OnDestroy {
   /** The refresh button + pull gesture are hidden in the cross-feed saved views. */
   readonly canRefresh = computed(() => canScopedRefresh(this.selection()));
 
-  /** The current search's words, passed down to every row for marking. Empty
-   *  outside a search. */
-  readonly searchTerms = computed(() => searchWords(this.selection().term ?? ''));
+  /** The current search's words, passed down to every row for marking. Prefers
+   *  what the engine actually matched: it tolerates typos, so the literal term
+   *  the user typed may appear nowhere in a row that legitimately matched
+   *  (searching "recieve" correctly finds "receive"). Falls back to the words
+   *  split from the typed term when the page carries none — the database LIKE
+   *  fallback's normal, permanent answer on any install with no search engine
+   *  — which reproduces exactly today's literal-term marking. Empty outside a
+   *  search either way. */
+  readonly searchTerms = computed(() => {
+    const matched = this.matchedWords();
+    return matched.length > 0 ? matched : searchWords(this.selection().term ?? '');
+  });
 
   /** The search term for the empty-state message — the trailing space is the
    *  server's whole-word-match signal, not part of what the user typed, so it

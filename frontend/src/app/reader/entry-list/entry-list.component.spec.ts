@@ -365,6 +365,38 @@ describe('EntryListComponent', () => {
     },
   );
 
+  // #432: Meilisearch tolerates typos, so the literal typed term may appear
+  // nowhere in a row that legitimately matched — rows must mark what the
+  // engine matched, not only what was typed.
+  describe('searchTerms prefers matchedWords (#432)', () => {
+    it('marks the words the engine matched when the page carries them', () => {
+      const f = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'recieve' },
+        matchedWords: ['receive'],
+      });
+      expect(f.componentInstance.searchTerms()).toEqual(['receive']);
+    });
+
+    it(
+      'falls back to the terms split from the selection when the page carries none — ' +
+        "exactly as before this feature, which is the database LIKE fallback's normal answer",
+      () => {
+        const f = mount({
+          selection: { kind: 'search', id: null, unread: false, term: 'punk rock' },
+          matchedWords: [],
+        });
+        expect(f.componentInstance.searchTerms()).toEqual(['punk', 'rock']);
+      },
+    );
+
+    it('defaults to the selection terms when matchedWords is not bound at all', () => {
+      const f = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+      });
+      expect(f.componentInstance.searchTerms()).toEqual(['punk']);
+    });
+  });
+
   describe('whole-word search badge (#408 follow-up)', () => {
     it('renders the badge for a whole-word (trailing-space) search selection', () => {
       const el = mount({

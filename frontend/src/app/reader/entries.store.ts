@@ -15,6 +15,13 @@ export class EntriesStore {
   readonly loadingMore = signal(false);
   readonly error = signal<Problem | null>(null);
   readonly loadedAt = signal<string>('');
+  /** The words the current search page's engine actually matched, or empty
+   *  outside a search (or when the LIKE fallback answered it). Always SET,
+   *  never merged, from every page's own response — a further page of the
+   *  same search, a different query, or leaving search entirely must each
+   *  replace this rather than let an earlier query's words leak into rows
+   *  that never matched them. */
+  readonly matchedWords = signal<string[]>([]);
 
   private query: EntryQuery | null = null;
   /** Monotonic token stamped on every load/loadMore request. A response is
@@ -43,6 +50,7 @@ export class EntriesStore {
         if (seq !== this.loadSeq) return;
         this.entries.set(page.entries);
         this.nextCursor.set(page.nextCursor);
+        this.matchedWords.set(page.matchedWords ?? []);
         this.loading.set(false);
       },
       error: (e: HttpErrorResponse) => {
@@ -50,6 +58,7 @@ export class EntriesStore {
         // Drop the retained rows: loading ends here, so they would un-dim and
         // turn interactive again while belonging to a view the user has left.
         this.entries.set([]);
+        this.matchedWords.set([]);
         this.error.set(parseProblem(e));
         this.loading.set(false);
       },
@@ -66,6 +75,10 @@ export class EntriesStore {
         if (seq !== this.loadSeq) return; // a load() has since replaced the list
         this.entries.update((cur) => [...cur, ...page.entries]);
         this.nextCursor.set(page.nextCursor);
+        // Replaced, not merged with the previous page's words — the earlier
+        // page's rows already rendered under them, and this page's own
+        // response is the one true answer for what it contains.
+        this.matchedWords.set(page.matchedWords ?? []);
         this.loadingMore.set(false);
       },
       error: (e: HttpErrorResponse) => {

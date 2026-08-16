@@ -233,6 +233,76 @@ describe('EntriesStore', () => {
     expect(store.error()).not.toBeNull();
   });
 
+  // #432: the client marks the words Meilisearch actually matched, not only
+  // the literal term typed. `matchedWords` is a page-level field, present
+  // only on a search response, and empty whenever the database LIKE
+  // fallback answered instead of the engine.
+  describe('matchedWords (#432)', () => {
+    it('exposes the words a search response carries', () => {
+      store.load({ view: 'all', q: 'recieve' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [entry(1)], nextCursor: null, matchedWords: ['receive'] });
+      expect(store.matchedWords()).toEqual(['receive']);
+    });
+
+    it('exposes none for a response carrying no matchedWords key', () => {
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [entry(1)], nextCursor: null });
+      expect(store.matchedWords()).toEqual([]);
+    });
+
+    it('replaces, rather than accumulates, matched words on a further page of the same search', () => {
+      store.load({ view: 'all', q: 'recieve' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [entry(1)], nextCursor: 'C1', matchedWords: ['receive'] });
+      expect(store.matchedWords()).toEqual(['receive']);
+
+      store.loadMore();
+      ctrl
+        .expectOne((r) => r.params.get('cursor') === 'C1')
+        .flush({ entries: [entry(2)], nextCursor: null, matchedWords: ['received'] });
+      expect(store.matchedWords()).toEqual(['received']);
+    });
+
+    // The test that actually catches leakage: words from one query must never
+    // survive into a later query that carries none of its own — a stale word
+    // would mark text in results that never matched it, which is worse than
+    // marking nothing (#432).
+    it('clears matched words once a later query carries none of its own', () => {
+      store.load({ view: 'all', q: 'recieve' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [entry(1)], nextCursor: null, matchedWords: ['receive'] });
+      expect(store.matchedWords()).toEqual(['receive']);
+
+      // Leaving search for the plain list — a response with no matchedWords key.
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [entry(2)], nextCursor: null });
+      expect(store.matchedWords()).toEqual([]);
+    });
+
+    it('clears matched words once a different search carries none of its own', () => {
+      store.load({ view: 'all', q: 'recieve' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [entry(1)], nextCursor: null, matchedWords: ['receive'] });
+
+      // A second search whose engine (or fallback) matched nothing beyond the
+      // literal term — an empty array is a valid, non-error answer.
+      store.load({ view: 'all', q: 'punk' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [entry(3)], nextCursor: null, matchedWords: [] });
+      expect(store.matchedWords()).toEqual([]);
+    });
+  });
+
   it('invokes the onError callback on a failed state PATCH', () => {
     store.load({ view: 'all' });
     ctrl
