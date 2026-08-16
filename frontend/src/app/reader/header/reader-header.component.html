@@ -23,6 +23,14 @@
         <span class="name">simple feed reader</span>
       </a>
     </div>
+    <!-- A live run's progress, in the room this bar has and the phone bar does
+         not. It carries no ✕: with the pill suppressed at this width, this is
+         the run's only surface, and a readout that can be dismissed with no way
+         back is worse than one that simply ends with the run. The component
+         renders nothing unless a run is live. -->
+    @if (!screen.isNarrow()) {
+      <app-for-you-progress class="run-progress" />
+    }
     <!-- Pointer-only duplicate of the corner back-to-top button (iOS status-bar-tap
          convention). Kept out of both the accessibility tree and the tab order:
          keyboard and screen-reader users already have the corner button, which is

@@ -36,6 +36,11 @@ import { AiAvailabilityService } from '../core/ai-availability.service';
 import { ToastService } from '../shared/toast/toast.service';
 
 describe('ReaderShellComponent', () => {
+  let screen: {
+    isNarrow: WritableSignal<boolean>;
+    isWide: WritableSignal<boolean>;
+    isCoarse: WritableSignal<boolean>;
+  };
   let ctrl: HttpTestingController;
   const qp = new BehaviorSubject(convertToParamMap({}));
   const auth = {
@@ -88,6 +93,11 @@ describe('ReaderShellComponent', () => {
     sessionStorage.clear(); // OnboardingSkip persists here; don't leak across tests
     auth.isAdmin.mockReturnValue(false); // default non-admin; a test opting in overrides it
     qp.next(convertToParamMap({}));
+    // Provided rather than left to the real service: jsdom's matchMedia answers
+    // "no" to every query, so the real one is stuck on the wide layout and a
+    // test about a phone-only surface has no way to say so. The defaults below
+    // reproduce exactly what jsdom used to give.
+    screen = { isNarrow: signal(false), isWide: signal(false), isCoarse: signal(false) };
     TestBed.configureTestingModule({
       imports: [ReaderShellComponent, provideTranslocoTesting()],
       providers: [
@@ -97,6 +107,7 @@ describe('ReaderShellComponent', () => {
         { provide: API_BASE_URL, useValue: 'https://api.test' },
         { provide: ActivatedRoute, useValue: { queryParamMap: qp.asObservable() } },
         { provide: AuthService, useValue: auth },
+        { provide: LayoutService, useValue: screen },
       ],
     });
     ctrl = TestBed.inject(HttpTestingController);
@@ -1263,13 +1274,18 @@ describe('ReaderShellComponent', () => {
     const buttons = [...f.nativeElement.querySelectorAll('.for-you-run')];
     expect(buttons.length).toBe(1);
     expect(buttons[0].querySelector('.label')!.textContent!.trim()).toBe('Stop');
-    // The count, the ETA and the bar live in the app-wide pill now, so a live
-    // run leaves nothing but the Stop button behind in the header (#398).
-    expect(f.nativeElement.querySelector('.for-you-progress')).toBeNull();
+    // The count, the ETA and the bar left the LIST header in #398 and never
+    // came back; a live run leaves nothing but the Stop button there. On this
+    // (wide) layout they read out from the app bar instead of the pill (#435).
+    expect(f.nativeElement.querySelector('.list-header .for-you-progress')).toBeNull();
+    expect(f.nativeElement.querySelector('app-reader-header .for-you-progress')).not.toBeNull();
     expect(f.nativeElement.querySelector('.list-header [role="alert"]')).toBeNull();
   });
 
   it('offers a way back to the pill only once the pill has been closed', () => {
+    // A phone-layout concern: above the drawer breakpoint the app bar carries
+    // the run and there is no ✕, so there is nothing to offer back (#435).
+    screen.isNarrow.set(true);
     const f = bootForYou();
     const recs = TestBed.inject(RecommendationsService);
     const toast = TestBed.inject(ToastService);

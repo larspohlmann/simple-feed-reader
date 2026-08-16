@@ -10,6 +10,7 @@ import { ToastService } from '../shared/toast/toast.service';
 import { MONOTONIC_NOW, RecommendationsService } from './recommendations.service';
 import { RecommendationRunReport } from './models';
 import { ForYouProgressComponent } from './for-you-progress/for-you-progress.component';
+import { LayoutService } from './layout.service';
 
 const report = (over: Partial<RecommendationRunReport>): RecommendationRunReport => ({
   status: 'pending',
@@ -27,6 +28,11 @@ describe('RecommendationsService', () => {
   let svc: RecommendationsService;
   let ctrl: HttpTestingController;
   let toast: { show: jest.Mock; dismiss: jest.Mock; visible: WritableSignal<boolean> };
+  // The pill is the narrow layout's surface; above the drawer breakpoint the
+  // reader header carries the run instead. Default to narrow so every test
+  // below reads as it always did, and cross it explicitly where that is the
+  // point.
+  let isNarrow: WritableSignal<boolean>;
   let navigate: jest.Mock;
   let nowMs = 0;
 
@@ -38,6 +44,7 @@ describe('RecommendationsService', () => {
       visible,
     };
     navigate = jest.fn();
+    isNarrow = signal(true);
     nowMs = 0;
     TestBed.configureTestingModule({
       providers: [
@@ -48,6 +55,7 @@ describe('RecommendationsService', () => {
         { provide: TranslocoService, useValue: { translate: (k: string) => k } },
         { provide: Router, useValue: { navigate } },
         { provide: MONOTONIC_NOW, useValue: () => nowMs },
+        { provide: LayoutService, useValue: { isNarrow } },
       ],
     });
     svc = TestBed.inject(RecommendationsService);
@@ -848,5 +856,67 @@ describe('RecommendationsService', () => {
     expect(svc.running()).toBe(false);
     expect(toast.dismiss).toHaveBeenCalled();
     expect(toast.show).toHaveBeenCalledTimes(1); // the pill, and nothing after it
+  });
+
+  describe('the run readout follows the layout', () => {
+    /** Opens a live run and leaves its first tick outstanding, so the tests
+     *  below can cross the breakpoint while the run is still going. */
+    const openLiveRun = (): void => {
+      svc.start();
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs')
+        .flush(report({ status: 'running', batchesTotal: 4, batchesDone: 1 }));
+      expect(svc.running()).toBe(true);
+    };
+
+    it('raises no pill on a wide layout, where the header carries the run', () => {
+      isNarrow.set(false);
+      openLiveRun();
+
+      expect(toast.show).not.toHaveBeenCalled();
+
+      drainTrailingTick();
+    });
+
+    it('never offers the pill back on a wide layout, where nothing can hide it', () => {
+      isNarrow.set(false);
+      openLiveRun();
+
+      // The eye button hangs off this; on a surface with no ✕ it must stay away.
+      expect(svc.pillHidden()).toBe(false);
+
+      drainTrailingTick();
+    });
+
+    it('takes the pill down when the viewport widens mid-run, and brings it back', () => {
+      openLiveRun();
+      expect(toast.show).toHaveBeenCalledWith(expect.objectContaining(PILL));
+      toast.show.mockClear();
+
+      isNarrow.set(false);
+      TestBed.tick();
+      expect(toast.dismiss).toHaveBeenCalled();
+      expect(toast.show).not.toHaveBeenCalled();
+
+      isNarrow.set(true);
+      TestBed.tick();
+      expect(toast.show).toHaveBeenCalledWith(expect.objectContaining(PILL));
+
+      drainTrailingTick();
+    });
+
+    it('leaves a ✕ pressed: widening and narrowing again is not a way to undo it', () => {
+      openLiveRun();
+      toast.dismiss(); // the user pressed ✕
+      expect(svc.pillHidden()).toBe(true);
+      toast.show.mockClear();
+
+      // Nothing crossed, so the effect has no business running at all.
+      TestBed.tick();
+      expect(toast.show).not.toHaveBeenCalled();
+      expect(svc.pillHidden()).toBe(true);
+
+      drainTrailingTick();
+    });
   });
 });
