@@ -25,9 +25,12 @@ button:hover {
   color: var(--text-primary);
 }
 
-/* Favorite and keep only. The read button reports its state by swapping its
-   icon: "read" is the normal state of most cards, so accenting it would light
-   up the whole page and leave the accent meaning nothing. */
+/* All three toggles, one language: a fixed glyph, muted while off and in the
+   accent while on. The read button used to swap glyph instead, on the argument
+   that accenting the majority state would leave the accent meaning nothing --
+   but the reader's default view is unread, where read is the exception, and a
+   third grammar for a control sitting beside the other two cost more than the
+   accent it saved (#435). */
 button.on {
   color: var(--accent);
 }

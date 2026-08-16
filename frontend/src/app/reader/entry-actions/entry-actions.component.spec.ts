@@ -107,15 +107,26 @@ describe('EntryActionsComponent', () => {
     expect(pressed).toEqual(['true', 'false', 'true']);
   });
 
-  it('marks an active favorite and keep, but never the read button', () => {
+  it('marks every active toggle the same way, the read one included', () => {
     const f = mount(entry({ isFavorite: true, isKept: true, isRead: true }));
     const on = buttons(f).map((b) => b.classList.contains('on'));
-    expect(on).toEqual([true, true, false]);
+    expect(on).toEqual([true, true, true]);
   });
 
-  it('offers to mark read while unread, and to unread once read', () => {
-    expect(mount(entry({ isRead: false })).nativeElement.textContent).toContain('check');
-    expect(mount(entry({ isRead: true })).nativeElement.textContent).toContain('mark_email_unread');
+  it('leaves an inactive toggle unmarked', () => {
+    const f = mount(entry({ isFavorite: false, isKept: false, isRead: false }));
+    const on = buttons(f).map((b) => b.classList.contains('on'));
+    expect(on).toEqual([false, false, false]);
+  });
+
+  it('keeps one glyph per toggle, so only the colour moves', () => {
+    // The read button swapped to an envelope once read; the state is carried by
+    // the accent now, exactly as favorite and keep carry theirs (#435).
+    for (const isRead of [false, true]) {
+      const text = mount(entry({ isRead })).nativeElement.textContent;
+      expect(text).toContain('check');
+      expect(text).not.toContain('mark_email_unread');
+    }
   });
 
   it('emits the entry and does not open the card', () => {

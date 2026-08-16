@@ -54,6 +54,7 @@
             type="button"
             [attr.aria-label]="'reader.favorite' | transloco"
             [class.on]="e.isFavorite"
+            [attr.aria-pressed]="e.isFavorite"
             (click)="favorite.emit()"
           >
             <app-icon name="star" size="md" />
@@ -62,6 +63,7 @@
             type="button"
             [attr.aria-label]="'reader.keep' | transloco"
             [class.on]="e.isKept"
+            [attr.aria-pressed]="e.isKept"
             (click)="keep.emit()"
           >
             <app-icon name="bookmark" size="md" />
@@ -110,11 +112,16 @@
         }
       </p>
       <app-source-tags class="tags" [tags]="tags()" />
+      <!-- One language for all three: a fixed glyph, muted while off and in the
+           accent while on. The labels are static, so `aria-pressed` is what
+           carries the state to a screen reader -- and it is the only thing that
+           does now that the read button no longer swaps its glyph. -->
       <div class="actions">
         <button
           type="button"
           [attr.aria-label]="'reader.favorite' | transloco"
           [class.on]="e.isFavorite"
+          [attr.aria-pressed]="e.isFavorite"
           (click)="favorite.emit()"
         >
           <app-icon name="star" size="md" />
@@ -123,6 +130,7 @@
           type="button"
           [attr.aria-label]="'reader.keep' | transloco"
           [class.on]="e.isKept"
+          [attr.aria-pressed]="e.isKept"
           (click)="keep.emit()"
         >
           <app-icon name="bookmark" size="md" />
@@ -130,9 +138,11 @@
         <button
           type="button"
           [attr.aria-label]="'reader.toggleRead' | transloco"
+          [class.on]="e.isRead"
+          [attr.aria-pressed]="e.isRead"
           (click)="read.emit()"
         >
-          <app-icon [name]="e.isRead ? 'mark_email_unread' : 'check'" size="md" />
+          <app-icon name="check" size="md" />
         </button>
       </div>
       @if (showToc()) {
