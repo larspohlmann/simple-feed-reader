@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { API_BASE_URL } from '../core/api';
 import { EntriesStore } from './entries.store';
 import { EntryDto } from './models';
+import { markTerms } from './search-marks';
 
 const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   id,
@@ -254,7 +255,11 @@ describe('EntriesStore', () => {
       expect(store.matchedWords()).toEqual([]);
     });
 
-    it('replaces, rather than accumulates, matched words on a further page of the same search', () => {
+    // Fix round 1: the brief originally said "replace on every response",
+    // which also erased the words a still-on-screen page-1 row genuinely
+    // matched. `loadMore` must UNION into the existing words instead — the
+    // result set only grows, so the marks may only grow with it.
+    it('unions matched words on loadMore instead of replacing them', () => {
       store.load({ view: 'all', q: 'recieve' });
       ctrl
         .expectOne((r) => r.url === 'https://api.test/api/entries/search')
@@ -265,7 +270,53 @@ describe('EntriesStore', () => {
       ctrl
         .expectOne((r) => r.params.get('cursor') === 'C1')
         .flush({ entries: [entry(2)], nextCursor: null, matchedWords: ['received'] });
-      expect(store.matchedWords()).toEqual(['received']);
+      // Both words survive: page 1's row is still on screen and still
+      // matched "receive"; page 2's row matched "received".
+      expect(store.matchedWords()).toEqual(['receive', 'received']);
+    });
+
+    it('unions without duplicating a word both pages carried, keeping the casing first seen', () => {
+      store.load({ view: 'all', q: 'recieve' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [entry(1)], nextCursor: 'C1', matchedWords: ['receive', 'Received'] });
+
+      store.loadMore();
+      ctrl
+        .expectOne((r) => r.params.get('cursor') === 'C1')
+        // 'RECEIVE' duplicates 'receive' case-insensitively; 'recieve' is new.
+        .flush({ entries: [entry(2)], nextCursor: null, matchedWords: ['RECEIVE', 'recieve'] });
+
+      expect(store.matchedWords()).toEqual(['receive', 'Received', 'recieve']);
+    });
+
+    // The regression this fix round exists to prevent: a row that arrived on
+    // page 1 must keep marking the word IT matched even once page 2 lands
+    // carrying a different word. Proven through the real `markTerms` — the
+    // exact function `entry-row` renders through — rather than only
+    // inspecting the store's array, so this pins the rendered outcome, not
+    // an implementation detail.
+    it('keeps marking a first-page row’s own match after loadMore brings different words', () => {
+      store.load({ view: 'all', q: 'recieve received' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({
+          entries: [entry(1, { title: 'Please receive this parcel' })],
+          nextCursor: 'C1',
+          matchedWords: ['receive'],
+        });
+
+      store.loadMore();
+      ctrl
+        .expectOne((r) => r.params.get('cursor') === 'C1')
+        .flush({
+          entries: [entry(2, { title: 'We received it yesterday' })],
+          nextCursor: null,
+          matchedWords: ['received'],
+        });
+
+      const page1Segments = markTerms('Please receive this parcel', store.matchedWords());
+      expect(page1Segments.some((s) => s.marked && s.text.toLowerCase() === 'receive')).toBe(true);
     });
 
     // The test that actually catches leakage: words from one query must never

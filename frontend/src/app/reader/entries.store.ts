@@ -5,6 +5,23 @@ import { Problem, parseProblem } from '../core/problem';
 import { ReaderApi } from './reader-api';
 import { EntryDto, EntryQuery, EntryStatePatch } from './models';
 
+/** Adds `incoming` to `existing`, deduplicated case-insensitively but keeping
+ *  the casing first seen — mirrors how the backend already dedupes matched
+ *  words within one page (`MeilisearchIndex::matchedWordsOf`). The marker
+ *  (`search-marks.ts`) matches case-insensitively too, so a duplicate
+ *  differing only in case would just lengthen its pattern for no benefit. */
+function unionMatchedWords(existing: string[], incoming: string[]): string[] {
+  const seen = new Set(existing.map((word) => word.toLowerCase()));
+  const union = [...existing];
+  for (const word of incoming) {
+    const key = word.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    union.push(word);
+  }
+  return union;
+}
+
 @Injectable({ providedIn: 'root' })
 export class EntriesStore {
   private readonly api = inject(ReaderApi);
@@ -15,12 +32,15 @@ export class EntriesStore {
   readonly loadingMore = signal(false);
   readonly error = signal<Problem | null>(null);
   readonly loadedAt = signal<string>('');
-  /** The words the current search page's engine actually matched, or empty
-   *  outside a search (or when the LIKE fallback answered it). Always SET,
-   *  never merged, from every page's own response — a further page of the
-   *  same search, a different query, or leaving search entirely must each
-   *  replace this rather than let an earlier query's words leak into rows
-   *  that never matched them. */
+  /** The words the current search's engine has actually matched, or empty
+   *  outside a search (or when the LIKE fallback answered it). `load()`
+   *  REPLACES this — a new query (or a reload of the same one) shows a
+   *  wholly different result set, so an earlier query's words must not leak
+   *  into rows that never matched them. `loadMore()` UNIONS into it instead:
+   *  the result set only grows, the earlier page's rows are still on screen,
+   *  and they DID match the words a replace would discard — a page-1 row
+   *  that matched "receive" must keep that mark even once page 2 arrives
+   *  carrying only "received". */
   readonly matchedWords = signal<string[]>([]);
 
   private query: EntryQuery | null = null;
@@ -75,10 +95,12 @@ export class EntriesStore {
         if (seq !== this.loadSeq) return; // a load() has since replaced the list
         this.entries.update((cur) => [...cur, ...page.entries]);
         this.nextCursor.set(page.nextCursor);
-        // Replaced, not merged with the previous page's words — the earlier
-        // page's rows already rendered under them, and this page's own
-        // response is the one true answer for what it contains.
-        this.matchedWords.set(page.matchedWords ?? []);
+        // Unioned, not replaced: the previous page's rows are still on
+        // screen and are still marked by the words they matched — see the
+        // field comment above.
+        this.matchedWords.update((existing) =>
+          unionMatchedWords(existing, page.matchedWords ?? []),
+        );
         this.loadingMore.set(false);
       },
       error: (e: HttpErrorResponse) => {
