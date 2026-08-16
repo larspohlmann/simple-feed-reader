@@ -9,12 +9,12 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * Three per-connection knobs a recommendation run consults — not read
  * together, and not by one collaborator: `slowModel` picks the timeout
- * profile (ProviderConnectionFactory::timeoutsFor()) and, today, is also
- * what RecommendationSettingsResolver::batchCeilingFor() checks to choose
- * its static batch ceiling; `batchConcurrency` sizes one tick's wave
- * (RecommendationRunAdvancer::effectiveCap()); `maxBatchSize` has no reader
- * yet — it exists so batchCeilingFor() can read a per-connection cap
- * instead of slowModel's on/off static one, once a later task wires it in
+ * profile (ProviderConnectionFactory::timeoutsFor()), and through it the
+ * lock TTL a tick reserves, and nothing else since #445 split the batch
+ * ceiling off it; `batchConcurrency` sizes one tick's wave
+ * (RecommendationRunAdvancer::effectiveCap()); `maxBatchSize` is what
+ * RecommendationSettingsResolver::batchCeilingFor() reads for its
+ * per-connection cap, null meaning no claim and the shared default stands
  * (#445). What groups them is not a shared caller but a shared question:
  * how a run should drive this connection, decided once per connection
  * rather than per call.
