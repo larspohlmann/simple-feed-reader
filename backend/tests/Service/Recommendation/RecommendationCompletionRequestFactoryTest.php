@@ -38,7 +38,10 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
             RecommendationResponseSchema::Ranking,
         );
 
-        self::assertSame($this->promptBuilder->answerTokenReserve(45), $request->maxAnswerTokens);
+        self::assertSame(
+            $this->promptBuilder->answerBoundTokens(45, RecommendationResponseSchema::Ranking),
+            $request->maxAnswerTokens,
+        );
     }
 
     /**
@@ -55,7 +58,10 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
             RecommendationResponseSchema::Ranking,
         );
 
-        self::assertSame($this->promptBuilder->outputTokenReserve(45), $request->maxAnswerTokens);
+        self::assertSame(
+            $this->promptBuilder->outputTokenReserve(45, RecommendationResponseSchema::Ranking),
+            $request->maxAnswerTokens,
+        );
     }
 
     private function settings(bool $suppressReasoning): AiProviderSettings

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Service\Ai\Exception\ProviderReplyFailure;
 use App\Service\Ai\ProviderConnection;
 use App\Service\Recommendation\ChatCompletionClient;
 use App\Service\Recommendation\CompletionOutcome;
@@ -83,6 +84,13 @@ final class StubChatClient implements ChatCompletionClient
         CompletionStreamObserver $observer,
     ): string {
         $next = $this->answer($request);
+
+        // A spoiled reply is content, not an exception — the real client
+        // returns it so the caller's parser can judge it (#437).
+        if ($next instanceof ProviderReplyFailure) {
+            return $next->partialAnswer();
+        }
+
         if ($next instanceof \RuntimeException) {
             throw $next;
         }
@@ -102,9 +110,11 @@ final class StubChatClient implements ChatCompletionClient
 
         foreach ($calls as $call) {
             $next = $this->answer($call->request);
-            $outcomes[] = $next instanceof \RuntimeException
-                ? CompletionOutcome::failure($next)
-                : CompletionOutcome::answer($next);
+            $outcomes[] = match (true) {
+                $next instanceof ProviderReplyFailure => CompletionOutcome::unusableReply($next),
+                $next instanceof \RuntimeException => CompletionOutcome::failure($next),
+                default => CompletionOutcome::answer($next),
+            };
         }
 
         return $outcomes;

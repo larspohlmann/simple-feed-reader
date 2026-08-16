@@ -16,16 +16,42 @@ final class RecommendationPromptBuilder
     private const int FIXED_OVERHEAD_TOKENS = 1500;
     /**
      * What one scored pick costs in the reply: its id, its score, and the
-     * prose `reason` that dominates the three. Measured rather than guessed —
-     * the largest full-batch reply on record ran to 12068 characters for 43
-     * items, about 70 tokens each.
+     * prose `reason` that dominates the three. Measured, not guessed — the
+     * largest full-batch reply on record ran to 12068 characters for 43 items,
+     * about 70 tokens each.
      *
-     * It was 40 while the reasoning headroom sat on top of it and hid the
-     * shortfall. Once a non-reasoning connection stopped paying that headroom
-     * (#437) this number became the whole answer bound, so it has to cover a
-     * real reply with room to spare instead of half of one.
+     * This is an estimate of a real reply and nothing else. packBatches()
+     * subtracts it from the context window, so a number above the truth costs
+     * prompt budget and splits the pool into more batches than it needs; a
+     * number below the truth lets a prompt crowd out the answer it asked for.
+     * It was 40 — under half of the measured cost — until #437.
+     *
+     * The slack a runaway is stopped by is NOT in here. #437 first raised this
+     * to 100 to serve as both, and the packer read the inflation as a real
+     * cost: at a 13000-token window the same pool went from 12 batches of 45
+     * to 50 of 10, quadrupling the calls and the history re-sent with them.
+     * The two numbers are separate because the two jobs are.
      */
-    private const int TOKENS_PER_PICK = 100;
+    private const int TOKENS_PER_PICK = 70;
+
+    /**
+     * What one id costs in a dedup reply. That reply is `{"duplicates":[…]}`
+     * — bare integers, no score and no prose — so it is nothing like a pick,
+     * and charging it the pick rate put a 10000-token ceiling on a reply that
+     * cannot legitimately exceed a few hundred (#437 follow-up).
+     */
+    private const int TOKENS_PER_DUPLICATE_ID = 8;
+
+    /**
+     * How much room over the estimate the provider is actually given.
+     *
+     * The estimate is a mean; a reply that runs long is not a runaway and must
+     * not be truncated into one that cannot parse. Half again covers the
+     * spread and still leaves the ceiling an order of magnitude below the
+     * 33800 tokens that let a looping model generate for an hour.
+     */
+    private const int ANSWER_BOUND_PERCENT = 150;
+
     private const int MINIMUM_ANSWER_TOKENS = 1024;
     private const int MINIMUM_BATCH_SIZE = 10;
 
@@ -57,7 +83,14 @@ final class RecommendationPromptBuilder
      */
     private const int QUOTED_REPLY_LIMIT_CHARS = 2000;
 
-    private const string QUOTED_REPLY_ELLIPSIS = "\n… (reply cut here: it did not stop)";
+    /**
+     * Neutral on purpose. The clip is a general property of quoting a reply
+     * back, and it cannot know why the reply was long: a merely verbose one,
+     * well inside its ceiling, would otherwise be told it "did not stop". That
+     * is false, and it is false inside a prompt, where a wrong statement
+     * changes what the model does next rather than merely reading badly.
+     */
+    private const string QUOTED_REPLY_ELLIPSIS = "\n… (this quote is truncated)";
 
     private const int DESCRIPTION_MIN_CHARS = 120;
     private const int DESCRIPTION_MAX_CHARS = 480;
@@ -258,11 +291,25 @@ final class RecommendationPromptBuilder
      */
     private function quotableReply(string $invalidReply): string
     {
-        if (\strlen($invalidReply) <= self::QUOTED_REPLY_LIMIT_CHARS) {
-            return $invalidReply;
+        return self::clipped($invalidReply, self::QUOTED_REPLY_LIMIT_CHARS, self::QUOTED_REPLY_ELLIPSIS);
+    }
+
+    /**
+     * One clip, in characters rather than bytes.
+     *
+     * `substr` would cut a multi-byte sequence in half, and this text goes
+     * straight into a JSON request body: a German reply clipped mid-umlaut
+     * makes `json_encode` fail and costs the retry the clip exists to enable.
+     * Every other clip in this class was already `mb_`-safe; #437 added a
+     * byte-based fourth, which is what this consolidates.
+     */
+    private static function clipped(string $value, int $lengthInCharacters, string $marker): string
+    {
+        if (mb_strlen($value) <= $lengthInCharacters) {
+            return $value;
         }
 
-        return substr($invalidReply, 0, self::QUOTED_REPLY_LIMIT_CHARS) . self::QUOTED_REPLY_ELLIPSIS;
+        return mb_substr($value, 0, $lengthInCharacters) . $marker;
     }
 
     /**
@@ -286,7 +333,12 @@ final class RecommendationPromptBuilder
         ?string $lastInvalidReply,
         string $correction,
     ): array {
-        if (null === $lastInvalidReply) {
+        // Empty counts as absent. A blocking-shape runaway is cut before its
+        // body ever parses, so its partial answer is '' — and quoting that back
+        // put an empty assistant turn in the retry beside a correction naming a
+        // reply the model cannot see (#437 review). There is nothing to correct
+        // against; the retry goes out as the plain question.
+        if (null === $lastInvalidReply || '' === trim($lastInvalidReply)) {
             return $messages;
         }
 
@@ -294,18 +346,46 @@ final class RecommendationPromptBuilder
     }
 
     /**
-     * How many tokens the *answer alone* over `$replyItemCount` items may need.
-     * packBatches() subtracts this from the context window so the prompt leaves
-     * the model room to answer — and the answer is all that competes with the
-     * prompt for the input context, so reasoning has no place in this number.
+     * How many tokens a ranking answer over `$replyItemCount` items is
+     * expected to need. packBatches() subtracts this from the context window
+     * so the prompt leaves the model room to answer — and the answer is all
+     * that competes with the prompt for the input context, so reasoning has no
+     * place in this number.
+     *
+     * An expectation, not a ceiling: what the provider is allowed to spend is
+     * answerBoundTokens(), which adds the slack this must not carry. Ranking
+     * rather than schema-aware because packing only ever splits ranking
+     * batches; the dedup phase sends one call over a pool it does not pack.
      *
      * The floor covers the JSON envelope and the short replies where a
-     * per-item estimate under-counts: at one item, 40 tokens would not fit
-     * the punctuation around it, let alone the item.
+     * per-item estimate under-counts: at one item, a per-pick rate would not
+     * fit the punctuation around it, let alone the item.
      */
     public function answerTokenReserve(int $replyItemCount): int
     {
         return max(self::MINIMUM_ANSWER_TOKENS, $replyItemCount * self::TOKENS_PER_PICK);
+    }
+
+    /**
+     * What the provider may spend answering — the expected size plus slack,
+     * for the phase whose reply shape `$schema` describes.
+     *
+     * Schema-aware because the two phases answer in different currencies. A
+     * ranking pick carries prose; a dedup entry is a bare integer, and pricing
+     * it as a pick handed a reply that cannot legitimately pass a few hundred
+     * tokens a ceiling of ten thousand — reintroducing, on the dedup call, the
+     * unbounded generation #437 removed from the batch call.
+     */
+    public function answerBoundTokens(int $replyItemCount, RecommendationResponseSchema $schema): int
+    {
+        $perItem = match ($schema) {
+            RecommendationResponseSchema::Ranking => self::TOKENS_PER_PICK,
+            RecommendationResponseSchema::Duplicates => self::TOKENS_PER_DUPLICATE_ID,
+        };
+
+        $expected = max(self::MINIMUM_ANSWER_TOKENS, $replyItemCount * $perItem);
+
+        return intdiv($expected * self::ANSWER_BOUND_PERCENT, 100);
     }
 
     /**
@@ -316,9 +396,9 @@ final class RecommendationPromptBuilder
      * reserve here directly and starved reasoning models (#327); this is the
      * one place the two budgets legitimately diverge.
      */
-    public function outputTokenReserve(int $replyItemCount): int
+    public function outputTokenReserve(int $replyItemCount, RecommendationResponseSchema $schema): int
     {
-        return $this->answerTokenReserve($replyItemCount) + self::REASONING_HEADROOM_TOKENS;
+        return $this->answerBoundTokens($replyItemCount, $schema) + self::REASONING_HEADROOM_TOKENS;
     }
 
     /** The explicit batch-count override wins over the #308 size ceiling: it is
@@ -411,11 +491,7 @@ final class RecommendationPromptBuilder
             return null;
         }
 
-        if (mb_strlen($description) <= $length) {
-            return $description;
-        }
-
-        return mb_substr($description, 0, $length) . '…';
+        return self::clipped($description, $length, '…');
     }
 
     /**

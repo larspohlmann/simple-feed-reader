@@ -20,9 +20,17 @@ namespace App\Service\Ai\Exception;
  * the model the start of its own loop instead of asking the same question
  * again unchanged.
  */
-final class ProviderRunawayException extends \RuntimeException
+final class ProviderRunawayException extends \RuntimeException implements ProviderReplyFailure
 {
-    public function __construct(string $message, private readonly string $partialAnswer = '')
+    /**
+     * The partial answer arrives already clipped to what a retry can quote
+     * back. Clipping at the boundary rather than at the prompt keeps the
+     * unclipped runaway — up to the retained-answer bound — from being parsed,
+     * held across retry rounds, and written whole into
+     * `recommendation_run.last_invalid_reply`, which is re-read on every
+     * following tick.
+     */
+    public function __construct(string $message, private readonly string $partialAnswer)
     {
         parent::__construct($message);
     }

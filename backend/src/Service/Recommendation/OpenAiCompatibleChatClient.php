@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 use App\Service\Ai\Exception\CredentialsRejectedException;
+use App\Service\Ai\Exception\ProviderReplyFailure;
 use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ProviderConnection;
@@ -42,6 +43,24 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
      * full batch on record retained 12 KB against a 36 KB bound.
      */
     private const int RETAINED_BYTES_PER_REQUESTED_TOKEN = 8;
+
+    /**
+     * How much of a spoiled reply travels on with the failure. Comfortably
+     * above what a retry quotes back, so the clip here never decides what the
+     * prompt shows, and far below what a runaway retains.
+     */
+    private const int QUOTABLE_ANSWER_CHARS = 4000;
+
+    /**
+     * The flat memory bound on everything the reader holds.
+     *
+     * The per-request bound above measures the answer, which the blocking
+     * shape does not have until its whole body parses — its buffer holds the
+     * provider's framing and a reasoning model's entire thinking phase. This
+     * is what bounds that shape, and it has to clear reasoning: a single #320
+     * call legitimately buffered 1.9 MB before answering.
+     */
+    private const int MAXIMUM_RETAINED_BYTES = 2_097_152;
 
     // What the provider is allowed to send. This is a runaway guard, not a
     // memory bound — the reader discards each event once decoded, so wire
@@ -150,7 +169,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
                 new CompletionStreamReader($this->decoder),
                 $call->observer,
                 $connection->timeouts,
-                $call->request->maxAnswerTokens * self::RETAINED_BYTES_PER_REQUESTED_TOKEN,
+                $call->request->maxAnswerTokens,
             );
         }
 
@@ -184,7 +203,11 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
             }
 
             return CompletionOutcome::answer($this->contentOf($slot->reader));
-        } catch (CredentialsRejectedException | ProviderUnreachableException | ProviderRunawayException $failure) {
+        } catch (ProviderReplyFailure $spoiledReply) {
+            $response->cancel();
+
+            return CompletionOutcome::unusableReply($spoiledReply);
+        } catch (CredentialsRejectedException | ProviderUnreachableException $failure) {
             $response->cancel();
 
             return CompletionOutcome::failure($failure);
@@ -210,17 +233,17 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
      */
     private function transportFailureOf(CompletionCallSlot $slot, ExceptionInterface $failure): \RuntimeException
     {
-        if ('length' !== $slot->reader->finishReason()) {
+        if (!$slot->reader->hitTokenCeiling()) {
             return new ProviderUnreachableException('That address did not answer.', 0, $failure);
         }
 
         return new ProviderRunawayException(
             sprintf(
                 'That provider spent its whole %d-token ceiling and did not stop, %d bytes in.',
-                intdiv($slot->maximumAnswerBytes, self::RETAINED_BYTES_PER_REQUESTED_TOKEN),
+                $slot->maximumAnswerTokens,
                 $slot->reader->wireBytes(),
             ),
-            $slot->reader->assistantContent() ?? '',
+            $this->quotableAnswerOf($slot),
         );
     }
 
@@ -329,16 +352,47 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
         return $content;
     }
 
+    /**
+     * Two bounds, because there are two things worth bounding and one number
+     * cannot serve both. The answer bound follows what this call asked for and
+     * catches a model that will not stop; the retained bound is flat and
+     * catches a body that will not fit in memory. Charging a blocking shape's
+     * buffered reasoning to the first of them reported a working reasoning
+     * model as a runaway (#437 review).
+     */
     private function guardRetainedSize(CompletionCallSlot $slot): void
     {
-        if ($slot->reader->retainedBytes() <= $slot->maximumAnswerBytes) {
-            return;
+        $maximumAnswerBytes = $slot->maximumAnswerTokens * self::RETAINED_BYTES_PER_REQUESTED_TOKEN;
+
+        if ($slot->reader->answerBytes() > $maximumAnswerBytes) {
+            throw new ProviderRunawayException(
+                sprintf('That provider answered with more than %d bytes.', $maximumAnswerBytes),
+                $this->quotableAnswerOf($slot),
+            );
         }
 
-        throw new ProviderRunawayException(
-            sprintf('That provider answered with more than %d bytes.', $slot->maximumAnswerBytes),
-            $slot->reader->assistantContent() ?? '',
-        );
+        if ($slot->reader->retainedBytes() > self::MAXIMUM_RETAINED_BYTES) {
+            throw new ProviderRunawayException(
+                sprintf('That provider sent more than %d bytes without completing.', self::MAXIMUM_RETAINED_BYTES),
+                $this->quotableAnswerOf($slot),
+            );
+        }
+    }
+
+    /**
+     * As much of a spoiled reply as anything downstream has any use for.
+     *
+     * Clipped here, at the boundary, rather than where it is quoted back. The
+     * whole retained answer is otherwise parsed in full, held across every
+     * retry round of the wave, and — on the dedup path — written into
+     * `recommendation_run.last_invalid_reply` and re-read on each following
+     * tick, all so that the prompt builder can cut it to a couple of kilobytes
+     * at the end. Downstream never wants more than this; `wireBytes()` is what
+     * the debug row keeps for diagnosis.
+     */
+    private function quotableAnswerOf(CompletionCallSlot $slot): string
+    {
+        return mb_substr($slot->reader->assistantContent() ?? '', 0, self::QUOTABLE_ANSWER_CHARS);
     }
 
     private function request(ProviderConnection $connection, CompletionRequest $request): ResponseInterface

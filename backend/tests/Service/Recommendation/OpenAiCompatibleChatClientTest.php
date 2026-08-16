@@ -11,6 +11,7 @@ use App\Service\Ai\ProviderConnection;
 use App\Service\Ai\ProviderCredentials;
 use App\Service\Ai\ProviderTimeouts;
 use App\Service\Recommendation\CompletionBodyDecoder;
+use App\Service\Recommendation\CompletionOutcome;
 use App\Service\Recommendation\CompletionRequest;
 use App\Service\Recommendation\CompletionStreamHeartbeat;
 use App\Service\Recommendation\CompletionStreamProgress;
@@ -88,6 +89,18 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     private function clientReturning(array $responses): OpenAiCompatibleChatClient
     {
         return $this->clientUsing(new MockHttpClient($responses));
+    }
+
+    /**
+     * The one outcome of a single-call wave. A spoiled reply is no longer an
+     * exception out of complete() -- it is content with a cause attached
+     * (#437) -- so the cause is read off the outcome.
+     */
+    private function soleOutcomeOf(OpenAiCompatibleChatClient $client, CompletionRequest $request): CompletionOutcome
+    {
+        return $client->completeMany($this->connection(), [
+            new ConcurrentCompletion($request, new NullCompletionStreamObserver()),
+        ])[0];
     }
 
     /** A minimal SSE stream whose single delta carries $answer as the assistant content. */
@@ -501,8 +514,10 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $body = '{"choices":[{"message":{"content":"' . str_repeat('a', 2_100_000) . '"}}]}';
         $client = $this->clientAnswering(new MockResponse(str_split($body, 50_000)));
 
-        $this->expectException(ProviderRunawayException::class);
-        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+        self::assertInstanceOf(
+            ProviderRunawayException::class,
+            $this->soleOutcomeOf($client, $this->request())->cause(),
+        );
     }
 
     /**
@@ -617,9 +632,9 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         ) . "\n\n";
         $client = $this->clientAnswering(new MockResponse(str_split(str_repeat($event, 12_000), 50_000)));
 
-        $this->expectException(ProviderRunawayException::class);
-        $this->expectExceptionMessage('That provider answered with more than 16384 bytes.');
-        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+        $cause = $this->soleOutcomeOf($client, $this->request())->cause();
+        self::assertInstanceOf(ProviderRunawayException::class, $cause);
+        self::assertSame('That provider answered with more than 16384 bytes.', $cause->getMessage());
     }
 
     /**
@@ -638,9 +653,10 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client = $this->clientAnswering(new MockResponse(str_split(str_repeat($event, 12_000), 50_000)));
         $request = new CompletionRequest('m', $this->messages(), 512, $this->schema(), true);
 
-        $this->expectException(ProviderRunawayException::class);
-        $this->expectExceptionMessage('That provider answered with more than 4096 bytes.');
-        $client->complete($this->connection(), $request, new NullCompletionStreamObserver());
+        self::assertSame(
+            'That provider answered with more than 4096 bytes.',
+            $this->soleOutcomeOf($client, $request)->cause()->getMessage(),
+        );
     }
 
     /**
@@ -676,18 +692,19 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         ) . "\n\n";
         $client = $this->clientAnswering(new MockResponse(str_split(str_repeat($event, 12_000), 50_000)));
 
-        try {
-            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
-            self::fail('The runaway answer was accepted.');
-        } catch (ProviderRunawayException $e) {
-            self::assertStringStartsWith('aaaa', $e->partialAnswer());
-        }
+        $cause = $this->soleOutcomeOf($client, $this->request())->cause();
+        self::assertInstanceOf(ProviderRunawayException::class, $cause);
+        self::assertStringStartsWith('aaaa', $cause->partialAnswer());
     }
 
     /**
      * A runaway is a per-call outcome like every other failure completeMany
      * folds, not an exception that aborts the read for the whole wave: the
      * sibling still delivers its answer (#344, #437).
+     *
+     * isFailure() is deliberately false for it. That question means "did the
+     * endpoint fail", and this endpoint answered -- at length. The caller
+     * reads content() and lets its parser reject the reply.
      */
     public function testARunawayBecomesThatCallsOutcomeWithoutAbortingSiblings(): void
     {
@@ -705,8 +722,9 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             $this->concurrentCall(new NullCompletionStreamObserver()),
         ]);
 
-        self::assertTrue($outcomes[0]->isFailure());
+        self::assertFalse($outcomes[0]->isFailure());
         self::assertInstanceOf(ProviderRunawayException::class, $outcomes[0]->cause());
+        self::assertStringStartsWith('aaaa', $outcomes[0]->content());
         self::assertFalse($outcomes[1]->isFailure());
         self::assertSame('{"picks":[]}', $outcomes[1]->content());
     }
@@ -725,12 +743,10 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         ) . "\n\n";
         $client = $this->clientAnswering(new MockResponse(str_split(str_repeat($event, 12_000), 50_000)));
 
-        try {
-            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
-            self::fail('The runaway answer was accepted.');
-        } catch (ProviderRunawayException $e) {
-            self::assertStringNotContainsString('did not answer', $e->getMessage());
-        }
+        self::assertStringNotContainsString(
+            'did not answer',
+            $this->soleOutcomeOf($client, $this->request())->cause()->getMessage(),
+        );
     }
 
     /**
@@ -752,12 +768,9 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             })(),
         ));
 
-        try {
-            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
-            self::fail('The cut-off answer was accepted.');
-        } catch (ProviderRunawayException $e) {
-            self::assertStringNotContainsString('did not answer', $e->getMessage());
-        }
+        $cause = $this->soleOutcomeOf($client, $this->request())->cause();
+        self::assertInstanceOf(ProviderRunawayException::class, $cause);
+        self::assertStringNotContainsString('did not answer', $cause->getMessage());
     }
 
     /**

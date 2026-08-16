@@ -216,6 +216,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
                 contextWindow: 32768,
                 contextWindowSource: 'fallback',
                 batchCount: null,
+                maximumBatchSize: RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
             ),
             debugEnabled: false,
         );

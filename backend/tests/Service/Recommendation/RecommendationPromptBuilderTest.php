@@ -11,6 +11,7 @@ use App\Service\Recommendation\RecommendationHistory;
 use App\Service\Recommendation\RecommendationPackingSettings;
 use App\Service\Recommendation\RecommendationPromptBuilder;
 use App\Service\Recommendation\RecommendationPromptText;
+use App\Service\Recommendation\RecommendationResponseSchema;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationPromptBuilderTest extends TestCase
@@ -38,8 +39,57 @@ final class RecommendationPromptBuilderTest extends TestCase
      */
     public function testTheAnswerReserveScalesWithTheItemsBeingAnswered(): void
     {
-        self::assertSame(4500, $this->builder->answerTokenReserve(45));
-        self::assertSame(50000, $this->builder->answerTokenReserve(500));
+        self::assertSame(3150, $this->builder->answerTokenReserve(45));
+        self::assertSame(35000, $this->builder->answerTokenReserve(500));
+    }
+
+    /**
+     * The packing estimate and the provider ceiling are different numbers.
+     *
+     * They were briefly the same one, and the packer read the ceiling's slack
+     * as a real cost: at a 13000-token window the same pool went from 12
+     * batches of 45 to 50 of 10, quadrupling the calls and the history re-sent
+     * with each of them. The reserve must stay the honest estimate.
+     */
+    public function testTheProviderCeilingIsLooserThanThePackingEstimate(): void
+    {
+        $estimate = $this->builder->answerTokenReserve(45);
+        $ceiling = $this->builder->answerBoundTokens(45, RecommendationResponseSchema::Ranking);
+
+        self::assertGreaterThan($estimate, $ceiling);
+        self::assertGreaterThanOrEqual(3017, $estimate, 'the estimate still covers the largest reply on record');
+    }
+
+    /**
+     * A dedup reply is `{"duplicates":[…]}` — bare integers, no score and no
+     * prose. Charging it the pick rate gave a reply that cannot legitimately
+     * pass a few hundred tokens a ceiling of ten thousand, which is the
+     * unbounded generation of #437 reintroduced on the dedup call.
+     */
+    public function testADedupReplyIsBoundedFarBelowARankingReply(): void
+    {
+        $dedup = $this->builder->answerBoundTokens(100, RecommendationResponseSchema::Duplicates);
+        $ranking = $this->builder->answerBoundTokens(100, RecommendationResponseSchema::Ranking);
+
+        self::assertLessThan(intdiv($ranking, 4), $dedup);
+    }
+
+    /**
+     * The quote goes into a JSON request body. `substr` would cut a multi-byte
+     * sequence in half and make `json_encode` fail, costing the retry the clip
+     * exists to enable — and this reader's feeds are German.
+     */
+    public function testAClippedReplyIsStillValidUtf8(): void
+    {
+        $tail = $this->builder->correctiveTail(str_repeat('ü', 3000), 'Try again.');
+
+        self::assertTrue(mb_check_encoding($tail[0]['content'], 'UTF-8'));
+        // The round trip is the real proof: json_encode refuses malformed
+        // UTF-8, which is how a byte-clipped umlaut would break the retry.
+        self::assertSame(
+            $tail[0]['content'],
+            json_decode(json_encode($tail[0]['content'], \JSON_THROW_ON_ERROR), true, 512, \JSON_THROW_ON_ERROR),
+        );
     }
 
     /**
@@ -62,6 +112,21 @@ final class RecommendationPromptBuilderTest extends TestCase
         );
 
         self::assertSame([30, 30, 30, 10], array_map('count', $batches));
+    }
+
+    /**
+     * There is nothing to correct against when the reply is empty, and a
+     * blocking-shape runaway produces exactly that: the body never parsed, so
+     * the partial answer is ''. Appending it anyway put an empty assistant turn
+     * in the retry beside a correction referring to a reply the model cannot
+     * see — a retry no different from the attempt that failed (#437 review).
+     */
+    public function testAnEmptyReplyAddsNoCorrectiveTail(): void
+    {
+        $messages = [['role' => 'user', 'content' => 'rank these']];
+
+        self::assertSame($messages, $this->builder->messagesWithCorrectiveTail($messages, '', 'Try again.'));
+        self::assertSame($messages, $this->builder->messagesWithCorrectiveTail($messages, "  \n ", 'Try again.'));
     }
 
     /**
@@ -114,7 +179,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         $tail = $this->builder->correctiveTail(str_repeat('a', 2001), 'Try again.');
 
         self::assertStringStartsWith(str_repeat('a', 2000), $tail[0]['content']);
-        self::assertStringContainsString('reply cut here', $tail[0]['content']);
+        self::assertStringContainsString('truncated', $tail[0]['content']);
         self::assertStringNotContainsString(str_repeat('a', 2001), $tail[0]['content']);
     }
 
@@ -151,12 +216,12 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testTheProviderOutputReserveAddsReasoningHeadroomOnTopOfTheAnswer(): void
     {
         self::assertSame(
-            $this->builder->answerTokenReserve(45) + 32000,
-            $this->builder->outputTokenReserve(45),
+            $this->builder->answerBoundTokens(45, RecommendationResponseSchema::Ranking) + 32000,
+            $this->builder->outputTokenReserve(45, RecommendationResponseSchema::Ranking),
         );
         self::assertSame(
-            $this->builder->answerTokenReserve(1) + 32000,
-            $this->builder->outputTokenReserve(1),
+            $this->builder->answerBoundTokens(1, RecommendationResponseSchema::Ranking) + 32000,
+            $this->builder->outputTokenReserve(1, RecommendationResponseSchema::Ranking),
         );
     }
 

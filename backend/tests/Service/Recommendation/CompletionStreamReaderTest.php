@@ -450,4 +450,71 @@ final class CompletionStreamReaderTest extends TestCase
 
         self::assertNull($reader->usage());
     }
+
+    /**
+     * A blocking provider stamps `finish_reason` on the choice exactly as a
+     * stream event does, and the runaway classifier reads it through
+     * hitTokenCeiling(). Decoding it only on the streaming path left that
+     * classifier permanently blind on the one shape ProviderTimeouts documents
+     * as answering all at once (#437 review).
+     */
+    public function testABlockingEnvelopeReportsItsTokenCeiling(): void
+    {
+        $reader = new CompletionStreamReader(new CompletionBodyDecoder());
+        $reader->consume(json_encode([
+            'choices' => [['message' => ['content' => '{"recommendations":[]}'], 'finish_reason' => 'length']],
+        ], \JSON_THROW_ON_ERROR));
+
+        self::assertSame('length', $reader->finishReason());
+        self::assertTrue($reader->hitTokenCeiling());
+    }
+
+    /**
+     * A blocking envelope that ended naturally is not a runaway.
+     */
+    public function testABlockingEnvelopeThatStoppedNaturallyIsNoCeilingHit(): void
+    {
+        $reader = new CompletionStreamReader(new CompletionBodyDecoder());
+        $reader->consume(json_encode([
+            'choices' => [['message' => ['content' => 'done'], 'finish_reason' => 'stop']],
+        ], \JSON_THROW_ON_ERROR));
+
+        self::assertFalse($reader->hitTokenCeiling());
+    }
+
+    /**
+     * The answer bound measures the answer. On a blocking shape nothing is an
+     * answer until the whole body parses, so the buffered body must not be
+     * charged to it — a reasoning model's 540 KB of `reasoning_content` sits in
+     * that buffer and tripped the bound as if the model had run away (#437
+     * review).
+     */
+    public function testABufferedBlockingBodyIsNotChargedToTheAnswerBound(): void
+    {
+        $reader = new CompletionStreamReader(new CompletionBodyDecoder());
+        $reader->consume(json_encode([
+            'choices' => [['message' => [
+                'reasoning_content' => str_repeat('thinking ', 60000),
+                'content' => '{"recommendations":[]}',
+            ]]],
+        ], \JSON_THROW_ON_ERROR));
+
+        self::assertGreaterThan(500_000, $reader->retainedBytes());
+        self::assertSame(0, $reader->answerBytes());
+    }
+
+    /**
+     * The streaming shape is where the answer is known incrementally, and
+     * there the bound still measures it.
+     */
+    public function testAStreamedAnswerIsChargedToTheAnswerBound(): void
+    {
+        $reader = new CompletionStreamReader(new CompletionBodyDecoder());
+        $reader->consume('data: ' . json_encode(
+            ['choices' => [['delta' => ['content' => str_repeat('a', 500)]]]],
+            \JSON_THROW_ON_ERROR,
+        ) . "\n\n");
+
+        self::assertSame(500, $reader->answerBytes());
+    }
 }

@@ -7,7 +7,6 @@ namespace App\Service\Recommendation;
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
-use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\ProviderConnectionFactory;
 
 /**
@@ -297,25 +296,34 @@ final readonly class RecommendationBatchWave
         }
 
         foreach ($outcomes as $position => $outcome) {
-            $detail = $outcome->isFailure() ? $outcome->cause()->getMessage() : $firstFailure->getMessage();
-            $recordedCalls[$position]->abortAfterTransportFailure($detail);
+            $recordedCalls[$position]->abortAfterTransportFailure(self::abortDetailFor($outcome, $firstFailure));
         }
 
         throw $firstFailure;
     }
 
     /**
-     * The first failure that says something about the endpoint rather than
-     * about the model. A runaway is deliberately not one: the address answered
-     * and kept answering, so it costs its own batch a retry through the
-     * unusable-reply path and leaves the wave and its siblings alone (#437).
+     * Why this particular call's row says it was aborted.
      *
+     * Its own cause whenever it has one — including a spoiled reply, which is
+     * not an endpoint failure but did happen to this call. Only a call that
+     * simply lost its round to a sibling borrows the wave's failure. Reading
+     * `isFailure()` here instead stamped a runaway with a sibling's "That
+     * address did not answer", pointing diagnosis at the network for a model
+     * failure — the very misreport #437 set out to remove.
+     */
+    private static function abortDetailFor(CompletionOutcome $outcome, \Throwable $waveFailure): string
+    {
+        return $outcome->hasCause() ? $outcome->cause()->getMessage() : $waveFailure->getMessage();
+    }
+
+    /**
      * @param list<CompletionOutcome> $outcomes
      */
     private function firstFailureIn(array $outcomes): ?\Throwable
     {
         foreach ($outcomes as $outcome) {
-            if ($outcome->isFailure() && !$outcome->cause() instanceof ProviderRunawayException) {
+            if ($outcome->isFailure()) {
                 return $outcome->cause();
             }
         }
@@ -337,31 +345,17 @@ final readonly class RecommendationBatchWave
     {
         $replies = [];
         foreach ($pending as $callIndex => $position) {
+            // content() covers a spoiled reply too: it carries the partial
+            // answer, which is exactly what the parser judges and the
+            // corrective tail quotes back. guardWaveTransport has already
+            // thrown for anything the endpoint failed to deliver at all.
             $replies[$position] = [
-                'content' => self::contentOf($outcomes[$callIndex]),
+                'content' => $outcomes[$callIndex]->content(),
                 'call' => $recordedCalls[$callIndex],
             ];
         }
 
         return $replies;
-    }
-
-    /**
-     * A runaway's own partial answer is what the round hands on, because that
-     * is what the parser and the corrective tail need: the reply is unusable
-     * (it was cut mid-JSON), so the batch goes round again with the start of
-     * its own loop shown back to it. Every other outcome here is a success —
-     * guardWaveTransport has already thrown for anything else (#437).
-     */
-    private static function contentOf(CompletionOutcome $outcome): string
-    {
-        if (!$outcome->isFailure()) {
-            return $outcome->content();
-        }
-
-        $cause = $outcome->cause();
-
-        return $cause instanceof ProviderRunawayException ? $cause->partialAnswer() : '';
     }
 
     /**
