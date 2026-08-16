@@ -30,18 +30,31 @@ final readonly class WorkerPresence
 {
     /**
      * Sized against the longest gap between two touches, NOT against the
-     * sweep cadence. The sweep touches the heartbeat once per run it
-     * advances, and advancing one run makes one provider call whose ceiling
-     * is OpenAiCompatibleChatClient::TIMEOUT_SECONDS (600 s); add the ten
-     * seconds until the next firing and the worst honest silence of a
-     * perfectly healthy worker is ~610 s. 660 s carries that with room for
-     * the surrounding bookkeeping.
+     * sweep cadence.
      *
-     * This constant follows that ceiling and must be raised with it: when
-     * #320 took the call bound from 120 s to 300 s to fit a reasoning
-     * model's thinking phase, leaving this at 180 s would have declared a
-     * working worker dead in the middle of every long call. The same applied
-     * when a slow local model pushed the ceiling from 300 s to 600 s.
+     * Until #433 that gap was a whole provider call: the sweep touches the
+     * heartbeat once per run it advances, so a call that streamed for its full
+     * wall clock produced no touch until it finished. This constant therefore
+     * had to follow the call ceiling and was raised with it every time — 180 s
+     * when #320 took the ceiling to 300 s, 660 s when a slow local model took
+     * it to 600 s. A per-connection profile ends that: an hour-long ceiling
+     * would have meant an hour-long freshness window, and a worker that died
+     * would have been believed for that whole hour.
+     *
+     * SweepStreamHeartbeat breaks the coupling. The transport pings it as each
+     * chunk arrives, so a streaming call now refreshes liveness roughly every
+     * half minute however long it runs, and the wall clock no longer bounds
+     * anything here.
+     *
+     * What is left is the silence before the first chunk. No chunk arrives
+     * while the provider evaluates the prompt, so nothing pings, and the
+     * longest that may honestly last is the most patient first-byte bound any
+     * connection can be on: ProviderTimeouts' slow profile, 900 s. Add the ten
+     * seconds until the next sweep firing and the surrounding bookkeeping, and
+     * 960 s carries it.
+     *
+     * This constant follows THAT bound now, and must be raised with it — not
+     * with the wall clock.
      *
      * The earlier 30 s -- justified as "three missed ten-second sweeps" --
      * was shorter than a single unit of work, so the arbitration flipped to
@@ -50,10 +63,10 @@ final readonly class WorkerPresence
      * healthy background run (#311 final review, Critical 2).
      *
      * The cost of the wider window is that a worker that dies mid-call is
-     * recognised as dead up to 660 s later. That is the right trade: a late
+     * recognised as dead up to 960 s later. That is the right trade: a late
      * fallback resumes a run, while a premature one aborts it.
      */
-    public const int FRESH_SECONDS = 660;
+    public const int FRESH_SECONDS = 960;
 
     public function __construct(
         private WorkerHeartbeatRepository $heartbeats,

@@ -6,7 +6,7 @@ namespace App\Tests\Service\Worker;
 
 use App\Entity\WorkerHeartbeat;
 use App\Repository\WorkerHeartbeatRepository;
-use App\Service\Recommendation\OpenAiCompatibleChatClient;
+use App\Service\Ai\ProviderTimeouts;
 use App\Service\Worker\RecommendationDriverKind;
 use App\Service\Worker\WorkerPresence;
 use App\Tests\DbTestCase;
@@ -61,20 +61,25 @@ final class WorkerPresenceTest extends DbTestCase
 
     /**
      * The invariant the whole arbitration rests on, pinned as a RELATIONSHIP
-     * rather than as a number: the sweep touches the heartbeat once per run
-     * it advances, and advancing one run costs at most one provider call, so
-     * a window no wider than that call declares a working worker dead. It did
-     * — 30 s against a 120 s ceiling — and the client then read the per-user
-     * lock as a user-facing failure and stopped polling a healthy run (#311
-     * final review, Critical 2). Asserting a literal 30 would have proved
-     * nothing; this fails the moment either constant moves the wrong way.
+     * rather than as a number: a window narrower than the longest silence a
+     * healthy worker can produce declares that worker dead. It did — 30 s
+     * against a 120 s ceiling — and the client then read the per-user lock as
+     * a user-facing failure and stopped polling a healthy run (#311 final
+     * review, Critical 2). Asserting a literal would have proved nothing;
+     * this fails the moment either bound moves the wrong way.
+     *
+     * The longest silence used to be a whole provider call, because the sweep
+     * touched the heartbeat only between runs. SweepStreamHeartbeat now pings
+     * it from the transport as chunks arrive (#433), so what is left is the
+     * wait before the first chunk — and the widest that can be is the most
+     * patient first-byte bound any connection may be configured with.
      */
-    public function testTheFreshnessWindowOutlastsOneProviderCall(): void
+    public function testTheFreshnessWindowOutlastsTheLongestSilenceBeforeAnAnswer(): void
     {
         self::assertGreaterThan(
-            OpenAiCompatibleChatClient::TIMEOUT_SECONDS,
+            ProviderTimeouts::forSlowModel()->firstByteSeconds,
             WorkerPresence::FRESH_SECONDS,
-            'A worker mid-provider-call must still count as alive.',
+            'A worker waiting for a slow model\'s first token must still count as alive.',
         );
     }
 
@@ -88,7 +93,23 @@ final class WorkerPresenceTest extends DbTestCase
         $sweepIntervalSeconds = 10;
 
         self::assertGreaterThan(
-            OpenAiCompatibleChatClient::TIMEOUT_SECONDS + $sweepIntervalSeconds,
+            ProviderTimeouts::forSlowModel()->firstByteSeconds + $sweepIntervalSeconds,
+            WorkerPresence::FRESH_SECONDS,
+        );
+    }
+
+    /**
+     * The window is deliberately NOT sized against the wall clock any more. A
+     * slow connection may hold one call for an hour, and a freshness window
+     * that covered it would believe a dead worker for that hour. This pins
+     * that the streaming heartbeat is what carries the difference — if the
+     * window were ever re-derived from the wall clock, it would have to grow
+     * past this bound.
+     */
+    public function testTheFreshnessWindowIsNotSizedAgainstAWholeCall(): void
+    {
+        self::assertLessThan(
+            ProviderTimeouts::forSlowModel()->wallClockSeconds,
             WorkerPresence::FRESH_SECONDS,
         );
     }

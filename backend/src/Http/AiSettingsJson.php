@@ -36,6 +36,7 @@ final class AiSettingsJson
             'model' => $settings->getModel(),
             'suppressReasoning' => $settings->suppressesReasoning(),
             'batchConcurrency' => $settings->batchConcurrency(),
+            'slowModel' => $settings->isSlowModel(),
             'ready' => self::isReady($settings),
             'active' => $settings->getId() === $activeId,
         ];

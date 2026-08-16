@@ -47,11 +47,14 @@ final class RecommendationDrainCommand extends Command
      * minutes.
      *
      * It deliberately does NOT bound one sweep's worst case (ten runs x
-     * MAX_ATTEMPTS x the provider timeout, i.e. five hours), even though the
-     * key is only refreshed between sweeps. A lapse mid-sweep no longer ends
-     * the drain: keepsHoldingTheLock() bids for the key again and carries on
-     * when the bid wins, so the long TTL that would prevent the lapse buys
-     * nothing while multiplying the post-SIGKILL blackout by twenty.
+     * MAX_ATTEMPTS x the provider timeout, i.e. five hours on the standard
+     * profile and far more on the slow one), even though the key is only
+     * refreshed between sweeps. Since #433 a single call on a slow connection
+     * can outlast this TTL by itself. That is the same lapse, not a new
+     * failure mode: a lapse mid-sweep does not end the drain, because
+     * keepsHoldingTheLock() bids for the key again and carries on when the bid
+     * wins, so the long TTL that would prevent it buys nothing while
+     * multiplying the post-SIGKILL blackout many times over.
      *
      * A lapse can let a second drainer in for the rest of the sweep in
      * flight, after which the incumbent's re-bid loses and it hands over

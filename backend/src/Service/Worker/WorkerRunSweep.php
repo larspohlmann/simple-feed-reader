@@ -35,6 +35,7 @@ final readonly class WorkerRunSweep
         private RecommendationRunRepository $runs,
         private RecommendationRunAdvancer $advancer,
         private WorkerPresence $presence,
+        private SweepStreamHeartbeat $heartbeat,
         private EntityManagerInterface $entityManager,
         private LoggerInterface $logger,
     ) {
@@ -50,6 +51,9 @@ final readonly class WorkerRunSweep
     public function sweep(RecommendationDriverKind $kind): int
     {
         $attemptedRuns = 0;
+        // Arms the mid-call heartbeat: marking between runs is not enough once
+        // a single call can outlast the freshness window (#433).
+        $this->heartbeat->sweepStarted($kind);
 
         try {
             $activeRuns = $this->runs->findAllActive();
@@ -82,6 +86,7 @@ final readonly class WorkerRunSweep
             // left dirty for the *next* sweep just because this one had a
             // run go wrong.
             $this->entityManager->clear();
+            $this->heartbeat->sweepEnded();
         }
 
         return $attemptedRuns;

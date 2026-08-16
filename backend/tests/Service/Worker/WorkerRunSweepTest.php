@@ -15,6 +15,8 @@ use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Worker\RecommendationDriverKind;
 use App\Service\Worker\WorkerPresence;
 use App\Service\Worker\WorkerRunSweep;
+use App\Service\Worker\SweepStreamHeartbeat;
+use Symfony\Component\Clock\MockClock;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ClearTrackingEntityManager;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -106,10 +108,12 @@ final class WorkerRunSweepTest extends DbTestCase
         $this->starter()->start($second);
 
         $clearTracker = new ClearTrackingEntityManager($this->em);
+        $presence = new WorkerPresence($this->heartbeats(), new ThrowingClock(1));
         $sweep = new WorkerRunSweep(
             $this->runs(),
             $this->advancer(),
-            new WorkerPresence($this->heartbeats(), new ThrowingClock(1)),
+            $presence,
+            $this->streamHeartbeat($presence),
             $clearTracker,
             new NullLogger(),
         );
@@ -169,6 +173,7 @@ final class WorkerRunSweepTest extends DbTestCase
             $this->runs(),
             $this->advancer(),
             $this->presence(),
+            $this->streamHeartbeat($this->presence()),
             $this->em,
             new NullLogger(),
         );
@@ -193,5 +198,15 @@ final class WorkerRunSweepTest extends DbTestCase
         $repository = $this->em->getRepository(WorkerHeartbeat::class);
 
         return $repository;
+    }
+    /**
+     * A heartbeat over the same presence the sweep marks with. It only ever
+     * writes while a completion is streaming, and nothing in these tests
+     * streams — StubChatClient answers in one piece — so it is inert here and
+     * does not disturb the mark counts the presence clocks pin.
+     */
+    private function streamHeartbeat(WorkerPresence $presence): SweepStreamHeartbeat
+    {
+        return new SweepStreamHeartbeat($presence, new MockClock());
     }
 }

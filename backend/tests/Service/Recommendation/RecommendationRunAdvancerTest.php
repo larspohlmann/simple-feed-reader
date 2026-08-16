@@ -24,16 +24,20 @@ use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\OpenAiCompatibleChatClient;
 use App\Service\Recommendation\RecommendationPromptBuilder;
 use App\Service\Recommendation\RecommendationPromptText;
+use App\Service\Ai\ProviderTimeouts;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Recommendation\TickDriver;
 use App\Tests\DbTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use App\Tests\Support\AiSettingsRowMover;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
+use App\Tests\Support\TtlRecordingLockFactory;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\InMemoryStore;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
@@ -299,25 +303,68 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * Pins the invariant RecommendationRunAdvancer::LOCK_TTL_SECONDS's own
-     * doc comment declares: the lock must outlive the longest possible tick,
-     * which is RecommendationRun::MAX_ATTEMPTS sequential in-tick retry
-     * rounds (#344), each bounded by OpenAiCompatibleChatClient::TIMEOUT_SECONDS.
-     * A future change to any of the three constants that lets the TTL fall
-     * back below that bound reopens the mid-tick lock-steal race the
-     * comment describes -- this test fails loudly instead of that race
-     * resurfacing silently in production.
+     * Pins the invariant lockTtlFor()'s doc comment declares: the lock must
+     * outlive the longest possible tick, which is RecommendationRun::MAX_ATTEMPTS
+     * sequential in-tick retry rounds (#344), each bounded by one provider
+     * call's wall clock. A change that lets the TTL fall below that bound
+     * reopens the mid-tick lock-steal race the comment describes -- this test
+     * fails loudly instead of that race resurfacing silently in production.
+     *
+     * Driven through advance() rather than read off a constant, because since
+     * #433 the TTL is decided per tick from the connection it is about to
+     * call. Both profiles are asserted: the standard one must not be sized for
+     * the slow ceiling (that would triple every account's post-crash stall),
+     * and the slow one must not keep the standard TTL (that would expire the
+     * lock in the middle of a call it was told to expect).
      */
-    public function testLockTtlOutlivesTheWorstCaseMultiRoundTick(): void
+    #[DataProvider('timeoutProfiles')]
+    public function testLockTtlOutlivesTheWorstCaseMultiRoundTick(bool $slowModel, float $wallClockSeconds): void
     {
-        $lockTtlSeconds = (new \ReflectionClassConstant(
-            RecommendationRunAdvancer::class,
-            'LOCK_TTL_SECONDS',
-        ))->getValue();
+        $this->fixtures->seedReadyAiSettings($this->user);
+        $this->markConnectionSlow($slowModel);
+        $lockFactory = $this->recordLockTtls();
 
-        $worstCaseTickSeconds = RecommendationRun::MAX_ATTEMPTS * OpenAiCompatibleChatClient::TIMEOUT_SECONDS;
+        $this->advancer()->advance($this->user);
 
-        self::assertGreaterThanOrEqual($worstCaseTickSeconds, $lockTtlSeconds);
+        $profile = $slowModel ? ProviderTimeouts::forSlowModel() : ProviderTimeouts::standard();
+        self::assertSame(
+            $wallClockSeconds,
+            $profile->wallClockSeconds,
+            'The profile under test must be the one the connection resolves to.',
+        );
+        self::assertGreaterThanOrEqual(
+            RecommendationRun::MAX_ATTEMPTS * $wallClockSeconds,
+            $lockFactory->lastTtlFor('ai-recommendations-' . $this->user->getId()),
+        );
+    }
+
+    /**
+     * @return iterable<string, array{bool, float}>
+     */
+    public static function timeoutProfiles(): iterable
+    {
+        yield 'standard' => [false, 600.0];
+        yield 'slow model' => [true, 3600.0];
+    }
+
+    /**
+     * Swaps in a recording lock factory before the advancer is built, so the
+     * advancer the container wires receives it.
+     */
+    private function recordLockTtls(): TtlRecordingLockFactory
+    {
+        $factory = new TtlRecordingLockFactory(new InMemoryStore());
+        self::getContainer()->set(LockFactory::class, $factory);
+
+        return $factory;
+    }
+
+    private function markConnectionSlow(bool $slowModel): void
+    {
+        $settings = $this->user->getActiveAiProviderSettings();
+        self::assertNotNull($settings);
+        $settings->setSlowModel($slowModel);
+        $this->em->flush();
     }
 
     public function testBatchTickRecordsWinnersAndAdvances(): void

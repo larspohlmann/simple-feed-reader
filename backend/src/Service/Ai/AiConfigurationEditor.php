@@ -8,7 +8,7 @@ use App\Entity\AiProviderSettings;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * The account's local edits to a saved configuration: its name and the two
+ * The account's local edits to a saved configuration: its name and the
  * per-connection preferences. None of these talk to the provider, which is
  * exactly what separates them from AiProviderConfigurator — whose every write
  * verifies against the endpoint first. Keeping them here lets that class hold
@@ -35,6 +35,12 @@ final readonly class AiConfigurationEditor
     public function setBatchConcurrency(AiProviderSettings $settings, int $batchConcurrency): void
     {
         $settings->setBatchConcurrency($batchConcurrency);
+        $this->entityManager->flush();
+    }
+
+    public function setSlowModel(AiProviderSettings $settings, bool $slowModel): void
+    {
+        $settings->setSlowModel($slowModel);
         $this->entityManager->flush();
     }
 }

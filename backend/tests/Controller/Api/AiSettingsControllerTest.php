@@ -286,6 +286,27 @@ final class AiSettingsControllerTest extends ApiTestCase
         self::assertSame(3, $payload['configs'][0]['batchConcurrency']);
     }
 
+    public function testSettingSlowModelChangesTheConfiguration(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-slow-model@example.test');
+        $added = $this->addConfiguration($client);
+        $id = $added['id'];
+        self::assertIsInt($id);
+        self::assertFalse($added['slowModel']); // default off
+
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/slow-model', $id), '{"slowModel":true}');
+
+        self::assertResponseIsSuccessful();
+        self::assertTrue($this->payload($client)['slowModel']);
+
+        $client->request('GET', '/api/me/ai');
+        $payload = $this->payload($client);
+        self::assertIsArray($payload['configs']);
+        self::assertIsArray($payload['configs'][0]);
+        self::assertTrue($payload['configs'][0]['slowModel']);
+    }
+
     public function testSettingBatchConcurrencyRejectsOutOfRange(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
@@ -345,6 +366,7 @@ final class AiSettingsControllerTest extends ApiTestCase
         yield 'activating' => ['PUT', '/active', '{}'];
         yield 'setting reasoning' => ['PUT', '/reasoning', '{"suppressReasoning":false}'];
         yield 'setting batch concurrency' => ['PUT', '/batch-concurrency', '{"batchConcurrency":2}'];
+        yield 'setting slow model' => ['PUT', '/slow-model', '{"slowModel":true}'];
         yield 'deleting' => ['DELETE', '', '{}'];
         yield 'duplicating' => ['POST', '/duplicate', '{}'];
     }

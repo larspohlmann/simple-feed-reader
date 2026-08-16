@@ -17,6 +17,8 @@ use App\Service\Ai\Exception\TooManyConfigurationsException;
 use App\Service\Ai\ModelCatalog;
 use App\Service\Ai\ModelDescriptor;
 use App\Service\Ai\ProviderCredentials;
+use App\Service\Ai\ProviderConnectionFactory;
+use App\Service\Ai\ProviderTimeouts;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiSettingsRowMover;
 use App\Tests\Support\StubModelCatalog;
@@ -340,6 +342,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
         $configurator->chooseModel($added->configuration, 'gpt-4o');
         $added->configuration->setBatchConcurrency(3);
         $added->configuration->setSuppressReasoning(false);
+        $added->configuration->setSlowModel(true);
 
         $copy = $configurator->duplicateConfiguration($added->configuration);
 
@@ -350,9 +353,37 @@ final class AiProviderConfiguratorTest extends DbTestCase
         self::assertNull($copy->getModel());
         self::assertSame(3, $copy->batchConcurrency());
         self::assertFalse($copy->suppressesReasoning());
+        // A copy of a local endpoint is still that local endpoint: it answers
+        // just as slowly, so the profile travels with it (#433).
+        self::assertTrue($copy->isSlowModel());
         self::assertNotSame($copy, $user->getActiveAiProviderSettings());
         // The re-sealed key opens back to the same plaintext under the copy's own row.
         self::assertSame('sk-abcdef1234', $configurator->credentials($copy)->apiKey);
+    }
+
+    /**
+     * The connection decides which profile a call runs under, so this is the
+     * one place that turns the stored flag into bounds. A configuration that
+     * was never marked must not inherit a slow connection's patience.
+     */
+    public function testTheConnectionCarriesTheProfileTheConfigurationAsksFor(): void
+    {
+        $configurator = $this->configurator(['gpt-4o']);
+        $connections = new ProviderConnectionFactory($configurator);
+        $user = $this->user('cfg-timeouts@example.test');
+        $added = $configurator->addConfiguration($user, 'Local', 'https://api.example.test/v1', 'sk-abcdef1234');
+
+        self::assertEquals(
+            ProviderTimeouts::standard(),
+            $connections->forSettings($added->configuration)->timeouts,
+        );
+
+        $added->configuration->setSlowModel(true);
+
+        self::assertEquals(
+            ProviderTimeouts::forSlowModel(),
+            $connections->forSettings($added->configuration)->timeouts,
+        );
     }
 
     public function testDuplicateOfAnUnnamedConfigurationIsNamedCopy(): void

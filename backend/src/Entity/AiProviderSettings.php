@@ -85,6 +85,16 @@ class AiProviderSettings
     #[ORM\Column(options: ['default' => 1])]
     private int $batchConcurrency = 1;
 
+    /**
+     * Whether this endpoint answers slowly enough to need the long timeout
+     * profile (#433). Default false: the standard bounds are right for every
+     * hosted provider, and a connection only earns the long ones by being
+     * marked. What the two profiles are is ProviderTimeouts' business — the
+     * row records the account's judgement about the endpoint, not a duration.
+     */
+    #[ORM\Column(options: ['default' => 0])]
+    private bool $slowModel = false;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $verifiedAt = null;
 
@@ -184,6 +194,16 @@ class AiProviderSettings
     public function setBatchConcurrency(int $batchConcurrency): void
     {
         $this->batchConcurrency = $batchConcurrency;
+    }
+
+    public function isSlowModel(): bool
+    {
+        return $this->slowModel;
+    }
+
+    public function setSlowModel(bool $slowModel): void
+    {
+        $this->slowModel = $slowModel;
     }
 
     public function getVerifiedAt(): ?\DateTimeImmutable

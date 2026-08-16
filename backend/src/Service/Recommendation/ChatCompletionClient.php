@@ -6,7 +6,7 @@ namespace App\Service\Recommendation;
 
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\ProviderCredentials;
+use App\Service\Ai\ProviderConnection;
 
 interface ChatCompletionClient
 {
@@ -18,7 +18,7 @@ interface ChatCompletionClient
      * @throws ProviderUnreachableException
      */
     public function complete(
-        ProviderCredentials $credentials,
+        ProviderConnection $connection,
         CompletionRequest $request,
         CompletionStreamObserver $observer,
     ): string;
@@ -33,5 +33,5 @@ interface ChatCompletionClient
      *
      * @return list<CompletionOutcome>
      */
-    public function completeMany(ProviderCredentials $credentials, array $calls): array;
+    public function completeMany(ProviderConnection $connection, array $calls): array;
 }
