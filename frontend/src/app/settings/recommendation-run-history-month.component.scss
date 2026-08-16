@@ -3,8 +3,11 @@
 /* One month of the spending record (#409). The row grid -- `when | provider ·
    model | status | duration | tokens | cost` -- moved here wholesale from the
    flat card this replaced; the header line and the "show more" control are
-   new. A closed month (no `app-disclosure` summary padding to match) gets the
-   same row padding by hand, so the expanded and collapsed headers line up. */
+   new. The header is projected into `app-disclosure`'s `[summary]` slot,
+   whose `summary.is-row` rule already carries `--row-pad-comfy-y/x` -- adding
+   the same padding here would double it, so `&__header` stays unpadded and
+   only the body content below it (`&__wrap`, `&__loading`, `&__more`) insets
+   itself to match. */
 :host {
   display: block;
 }
@@ -16,7 +19,6 @@
     justify-content: space-between;
     gap: var(--space-2);
     width: 100%;
-    padding: var(--row-pad-comfy-y) var(--row-pad-comfy-x);
   }
 
   &__label {

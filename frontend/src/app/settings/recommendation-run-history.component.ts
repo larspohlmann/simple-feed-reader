@@ -25,8 +25,9 @@ import { RecommendationRunHistoryMonthComponent } from './recommendation-run-his
 
 /** One month section as the card renders it. `runs` stays null until the
  *  month is opened and its first page has arrived -- that null, not a
- *  separate flag, is what tells `RecommendationRunHistoryMonthComponent`
- *  whether to render a closed disclosure or the month's rows. */
+ *  separate flag, is what `RecommendationRunHistoryMonthComponent` binds its
+ *  `startOpen` to, so a month with rows already loaded starts (and, once a
+ *  reader closes it, stays) open. */
 interface MonthSection {
   month: string;
   runCount: number;
@@ -87,8 +88,11 @@ export class RecommendationRunHistoryComponent {
 
   /** A month section was opened. Rows already loaded (the newest month from
    *  the overview, or an older month opened earlier) means there is nothing
-   *  to fetch -- the disclosure it came from has already stopped rendering by
-   *  then anyway, but a fast double-open still hits this guard. */
+   *  to fetch: `DisclosureComponent.opened` only fires on a closed-to-open
+   *  transition, so re-opening a month that was never closed cannot reach
+   *  here twice -- but a reader closing and re-opening a month still could,
+   *  and a fast double-open before the first response lands needs the
+   *  `loading` half of the guard too. */
   onOpened(month: string): void {
     const section = this.findSection(month);
     if (!section || section.runs !== null || section.loading) return;
@@ -119,6 +123,11 @@ export class RecommendationRunHistoryComponent {
       });
   }
 
+  /** A *tracked* read of `sections()` -- safe here only because `onOpened`
+   *  and `onShowMore` are reached from template event bindings, never from
+   *  inside `refetchOnCompletion`. Calling this from `applyOverview` (or any
+   *  other code path the completion `effect` runs) would reintroduce the
+   *  self-triggering infinite loop `untracked()` exists to prevent there. */
   private findSection(month: string): MonthSection | undefined {
     return this.sections().find((section) => section.month === month);
   }

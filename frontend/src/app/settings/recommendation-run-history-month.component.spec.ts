@@ -107,6 +107,18 @@ describe('RecommendationRunHistoryMonthComponent', () => {
     expect(el.querySelector('.run-history-month__meta')?.textContent).toContain('—');
   });
 
+  it('uses the singular phrasing for a month with exactly one run', () => {
+    const el = mount({ runCount: 1 });
+
+    expect(el.querySelector('.run-history-month__meta')?.textContent).toContain('1 run ·');
+  });
+
+  it('uses the plural phrasing for a month with more than one run', () => {
+    const el = mount({ runCount: 2 });
+
+    expect(el.querySelector('.run-history-month__meta')?.textContent).toContain('2 runs ·');
+  });
+
   it('renders no rows while the month has not been opened', () => {
     const el = mount({ runs: null });
 
@@ -117,6 +129,46 @@ describe('RecommendationRunHistoryMonthComponent', () => {
     const el = mount({ runs: [PRICED_RUN, UNPRICED_RUN] });
 
     expect(el.querySelectorAll('.run-history-month__row')).toHaveLength(2);
+  });
+
+  it('starts open when it already has rows', () => {
+    const el = mount({ runs: [PRICED_RUN] });
+
+    expect((el.querySelector('details') as HTMLDetailsElement).open).toBe(true);
+  });
+
+  it('starts closed while it has not been opened', () => {
+    const el = mount({ runs: null });
+
+    expect((el.querySelector('details') as HTMLDetailsElement).open).toBe(false);
+  });
+
+  it('can be collapsed again once it has rows, and stays collapsed across a re-render', () => {
+    const el = mount({ runs: [PRICED_RUN] });
+    const details = el.querySelector('details') as HTMLDetailsElement;
+    expect(details.open).toBe(true);
+
+    details.open = false;
+    details.dispatchEvent(new Event('toggle'));
+    // Same `runs` reference in, so `startOpen` (bound to `runs() !== null`)
+    // does not change value -- a later change detection must not re-open it.
+    fixture.detectChanges();
+
+    expect(details.open).toBe(false);
+  });
+
+  it('falls back to the translated "unknown provider" for a run that was never stamped', () => {
+    const el = mount({ runs: [{ ...PRICED_RUN, providerHost: null }] });
+
+    expect(el.querySelector('.run-history-month__provider')?.textContent).toContain(
+      'unknown provider',
+    );
+  });
+
+  it('renders an empty duration cell for a run that has not finished', () => {
+    const el = mount({ runs: [{ ...PRICED_RUN, durationSeconds: null }] });
+
+    expect(el.querySelector('.run-history-month__duration')?.textContent?.trim()).toBe('');
   });
 
   it('hides "show more" when the month has no further page', () => {

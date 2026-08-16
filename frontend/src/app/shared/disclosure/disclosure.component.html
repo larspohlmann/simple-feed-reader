@@ -1,5 +1,5 @@
 <!-- src/app/shared/disclosure/disclosure.component.html -->
-<details #details (toggle)="onToggle(details)">
+<details #details [open]="startOpen()" (toggle)="onToggle(details)">
   <summary
     [class.is-row]="appearance() === 'row'"
     [class.is-card-header]="appearance() === 'card-header'"

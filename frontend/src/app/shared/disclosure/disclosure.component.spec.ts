@@ -45,6 +45,18 @@ class OpenedListenerHostComponent {
   openedCount = 0;
 }
 
+@Component({
+  imports: [DisclosureComponent],
+  template: `
+    <app-disclosure [label]="'Show fixed prompt'" [startOpen]="startOpen">
+      <p class="projected">body</p>
+    </app-disclosure>
+  `,
+})
+class StartOpenHostComponent {
+  startOpen = true;
+}
+
 describe('DisclosureComponent', () => {
   async function render() {
     await TestBed.configureTestingModule({ imports: [HostComponent] }).compileComponents();
@@ -76,6 +88,15 @@ describe('DisclosureComponent', () => {
       imports: [OpenedListenerHostComponent],
     }).compileComponents();
     const fixture = TestBed.createComponent(OpenedListenerHostComponent);
+    fixture.detectChanges();
+    return { el: fixture.nativeElement as HTMLElement, fixture, host: fixture.componentInstance };
+  }
+
+  async function renderStartOpen() {
+    await TestBed.configureTestingModule({
+      imports: [StartOpenHostComponent],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(StartOpenHostComponent);
     fixture.detectChanges();
     return { el: fixture.nativeElement as HTMLElement, fixture, host: fixture.componentInstance };
   }
@@ -151,5 +172,26 @@ describe('DisclosureComponent', () => {
     details.dispatchEvent(new Event('toggle'));
 
     expect(host.openedCount).toBe(1);
+  });
+
+  it('starts open when startOpen is true', async () => {
+    const { el } = await renderStartOpen();
+    const details = el.querySelector('details') as HTMLDetailsElement;
+
+    expect(details.open).toBe(true);
+  });
+
+  it('does not force a reader-closed details back open on a later change detection', async () => {
+    const { el, fixture } = await renderStartOpen();
+    const details = el.querySelector('details') as HTMLDetailsElement;
+
+    details.open = false;
+    details.dispatchEvent(new Event('toggle'));
+    // `startOpen` itself never changes value, so Angular's property binding
+    // has nothing new to write -- a later change detection pass must not
+    // re-assert `open` and fight the reader's own close.
+    fixture.detectChanges();
+
+    expect(details.open).toBe(false);
   });
 });

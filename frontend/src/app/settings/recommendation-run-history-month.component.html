@@ -1,13 +1,13 @@
 <!-- `status` renders the raw API wire vocabulary untranslated, the convention
      the #309 debug log records: it is the server's own word for the state, and
      a translated copy would drift from it. -->
-@if (runs(); as rows) {
-  <div class="run-history-month">
-    <div class="run-history-month__header">
-      <span class="run-history-month__label">{{ monthLabel() }}</span>
-      <span class="run-history-month__meta">{{ summary() }}</span>
-    </div>
+<app-disclosure appearance="row" [startOpen]="runs() !== null" (opened)="opened.emit()">
+  <span summary class="run-history-month__header">
+    <span class="run-history-month__label">{{ monthLabel() }}</span>
+    <span class="run-history-month__meta">{{ summary() }}</span>
+  </span>
 
+  @if (runs(); as rows) {
     <div class="run-history-month__wrap">
       <ul class="run-history-month__list">
         @for (run of rows; track run.id) {
@@ -44,18 +44,9 @@
         {{ showMoreLabel() }}
       </button>
     }
-  </div>
-} @else {
-  <app-disclosure appearance="row" (opened)="opened.emit()">
-    <span summary class="run-history-month__header">
-      <span class="run-history-month__label">{{ monthLabel() }}</span>
-      <span class="run-history-month__meta">{{ summary() }}</span>
-    </span>
-
-    @if (loading()) {
-      <p class="run-history-month__loading">
-        {{ 'settings.ai.recommendations.historyLoading' | transloco }}
-      </p>
-    }
-  </app-disclosure>
-}
+  } @else if (loading()) {
+    <p class="run-history-month__loading">
+      {{ 'settings.ai.recommendations.historyLoading' | transloco }}
+    </p>
+  }
+</app-disclosure>

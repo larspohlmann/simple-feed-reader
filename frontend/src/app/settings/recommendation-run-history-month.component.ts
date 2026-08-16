@@ -8,15 +8,16 @@ import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
 
 /** One month of the run-history card (#409): a header carrying that month's
  *  own run count and spend, and -- once the parent has fetched them -- its
- *  rows. Purely presentational: it renders whatever it is given and asks the
- *  parent for more through its two outputs, never fetching anything itself.
+ *  rows, behind a collapsible `app-disclosure appearance="row"`. Purely
+ *  presentational: it renders whatever it is given and asks the parent for
+ *  more through its two outputs, never fetching anything itself.
  *
- *  `runs === null` (not yet opened) renders as a closed `app-disclosure`,
- *  since `DisclosureComponent` has no input to start `<details>` open. Once
- *  `runs` arrives the header becomes a plain, always-expanded heading instead
- *  -- there is nothing left to toggle, and nothing to close back down: this
- *  is a spending record, not a control, the same reasoning the parent's own
- *  error handling rests on. */
+ *  `startOpen` is bound to `runs() !== null`: the newest month arrives with
+ *  its rows already loaded and starts open; an older month starts closed and
+ *  opening it is the parent's cue to fetch. Angular only writes `[open]`
+ *  when that expression's value changes, so a reader who closes a loaded
+ *  month is not forced back open by an unrelated re-render (a refetch on
+ *  `completedStamp`, say) -- `runs()` stays non-null throughout. */
 @Component({
   selector: 'app-recommendation-run-history-month',
   standalone: true,
@@ -48,13 +49,21 @@ export class RecommendationRunHistoryMonthComponent {
    *  switches language at runtime and a static `LOCALE_ID` cannot follow it). */
   readonly monthLabel = computed(() => this.formatMonthLabel(this.month(), this.language.lang()));
 
-  /** The month's own run count and spend, as the header's one line. */
-  readonly summary = computed(() =>
-    this.i18n.translate('settings.ai.recommendations.historyMonthSummary', {
+  /** The month's own run count and spend, as the header's one line. No
+   *  Transloco pluralization plugin is installed in this app, so this follows
+   *  the existing `xxxOne`/`xxxOther` key-pair convention (see
+   *  `tags-section.component.html`'s `feedCountOne`/`feedCountOther`) rather
+   *  than inventing a second mechanism. */
+  readonly summary = computed(() => {
+    const key =
+      this.runCount() === 1
+        ? 'settings.ai.recommendations.historyMonthSummaryOne'
+        : 'settings.ai.recommendations.historyMonthSummaryOther';
+    return this.i18n.translate(key, {
       runs: this.runCount(),
       cost: formatCost(this.costNanoCredits(), this.language.lang()),
-    }),
-  );
+    });
+  });
 
   /** What each row's price renders as. Shared with the total and the month
    *  header rather than re-rounded per row -- a second copy would drift. */
@@ -90,9 +99,9 @@ export class RecommendationRunHistoryMonthComponent {
     });
   }
 
-  /** `month` is a `YYYY-MM` wire value. Noon UTC keeps the `Intl` call clear
-   *  of any DST edge at midnight -- the day-of-month is discarded below
-   *  anyway, only the year and the month matter. */
+  /** `month` is a `YYYY-MM` wire value, formatted as the first of the month
+   *  at noon UTC -- an arbitrary day-of-month, since only the year and month
+   *  are ever rendered. */
   private formatMonthLabel(month: string, locale: string): string {
     const [year, monthNumber] = month.split('-').map(Number);
     const firstOfMonth = new Date(Date.UTC(year, monthNumber - 1, 1, 12));

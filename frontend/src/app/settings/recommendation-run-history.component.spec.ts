@@ -69,6 +69,10 @@ describe('RecommendationRunHistoryComponent', () => {
     return el.querySelectorAll('.run-history__month');
   }
 
+  function detailsOf(section: Element): HTMLDetailsElement {
+    return section.querySelector('details') as HTMLDetailsElement;
+  }
+
   /** jsdom's native <details> toggles `.open` on a summary click but does not
    *  dispatch the `toggle` event (a known jsdom gap), so this drives the
    *  event directly -- the same workaround the shared disclosure's own spec
@@ -127,10 +131,24 @@ describe('RecommendationRunHistoryComponent', () => {
 
     const sections = months(el);
     expect(sections).toHaveLength(2);
+    // Every month keeps its collapse control -- only the initial open state
+    // and row presence differ between the newest and older months.
+    expect(detailsOf(sections[0]).open).toBe(true);
     expect(sections[0].querySelectorAll('.run-history-month__row')).toHaveLength(1);
-    expect(sections[0].querySelector('summary')).toBeNull();
+    expect(detailsOf(sections[1]).open).toBe(false);
     expect(sections[1].querySelectorAll('.run-history-month__row')).toHaveLength(0);
-    expect(sections[1].querySelector('summary')).not.toBeNull();
+  });
+
+  it('lets the reader collapse the newest month, and a later re-render does not force it back open', () => {
+    const el = mount(OVERVIEW);
+    const newest = detailsOf(months(el)[0]);
+    expect(newest.open).toBe(true);
+
+    newest.open = false;
+    newest.dispatchEvent(new Event('toggle'));
+    fixture.detectChanges();
+
+    expect(newest.open).toBe(false);
   });
 
   it('opening an older month fetches its first page with the browser timezone and renders the rows', () => {
@@ -210,7 +228,7 @@ describe('RecommendationRunHistoryComponent', () => {
     // a completed run can only land in the current month, so it has nothing
     // new to tell this section.
     expect(sections[1].querySelectorAll('.run-history-month__row')).toHaveLength(1);
-    expect(sections[1].querySelector('summary')).toBeNull();
+    expect(detailsOf(sections[1]).open).toBe(true);
   });
 
   it('a failed "show more" clears loading and leaves the rows already loaded standing', () => {
@@ -226,7 +244,14 @@ describe('RecommendationRunHistoryComponent', () => {
     fixture.detectChanges();
 
     expect(() => jest.runOnlyPendingTimers()).not.toThrow();
-    expect(months(el)[0].querySelectorAll('.run-history-month__row')).toHaveLength(1);
+    fixture.detectChanges();
+    const newest = months(el)[0];
+    expect(newest.querySelectorAll('.run-history-month__row')).toHaveLength(1);
+    // `loading` must come back down on the error path too, or "show more"
+    // stays disabled forever after one failed page fetch.
+    expect((newest.querySelector('.run-history-month__more') as HTMLButtonElement).disabled).toBe(
+      false,
+    );
     jest.useRealTimers();
   });
 

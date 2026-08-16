@@ -34,6 +34,16 @@ export class DisclosureComponent {
   readonly appearance = input<'pill' | 'row' | 'card-header'>('pill');
 
   /**
+   * One-way: the caller's own state decides whether `<details>` starts open,
+   * this component never reports its open state back. Bound as `[open]` on
+   * the native element, so Angular only ever *writes* it when the bound
+   * expression's value changes -- a reader who closes (or opens) the
+   * `<details>` by hand is not fought back on the next unrelated change
+   * detection pass, only when the caller's own value actually flips.
+   */
+  readonly startOpen = input(false);
+
+  /**
    * Announced when the body is revealed, and only then. A caller that loads
    * its content lazily needs this because `<details>`'s own `toggle` event
    * does not bubble, so it cannot be listened for on this component's host.
