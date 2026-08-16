@@ -362,13 +362,29 @@ prod_uses_bundled_mysql() {
   [ -z "$(env_prod_get DATABASE_URL)" ]
 }
 
+# Whether the stack runs the bundled Meilisearch container. A non-empty
+# MEILISEARCH_URL means it does -- docker-compose.prod.yml puts the
+# meilisearch service behind that profile, the same way prod_uses_bundled_mysql
+# reads DATABASE_URL above. Empty is the default and is a fully working state,
+# not a degraded one: EntrySearchWithFallback answers every search from the
+# database when no engine is configured (see backend/config/services.yaml).
+prod_uses_search_engine() {
+  [ -n "$(env_prod_get MEILISEARCH_URL)" ]
+}
+
 # The compose profiles the stack runs with: 'mysql' for the bundled database,
-# nothing at all otherwise. docker-compose.prod.yml puts the mysql service
-# behind that profile.
+# 'meilisearch' for the bundled search engine, both comma-separated when both
+# are on, nothing at all when neither is. docker-compose.prod.yml puts each
+# service behind its own profile.
 prod_compose_profiles() {
+  local profiles=''
   if prod_uses_bundled_mysql; then
-    printf 'mysql'
+    profiles='mysql'
   fi
+  if prod_uses_search_engine; then
+    profiles="${profiles:+${profiles},}meilisearch"
+  fi
+  printf '%s' "${profiles}"
 }
 
 # stdin is /dev/null here for the same reason as in compose() above -- see the
@@ -560,6 +576,21 @@ ensure_ai_key_secret() {
   fi
 }
 
+# Generate MEILISEARCH_KEY when it is still empty, never regenerate one that
+# exists -- the same rule as ensure_ai_key_secret above, for the same reason
+# (rotating it would make Meilisearch reject the app's own requests). Unlike
+# AI_KEY_SECRET this is not called unconditionally from prod-start.sh: an
+# empty MEILISEARCH_URL/KEY is the "no engine, database answers searches"
+# state by design (see MeilisearchIndex and its services.yaml wiring), so an
+# instance upgrading from before #432 needs nothing generated for it. This is
+# called only from configure_search_engine's "yes" branch, where a key is
+# actually about to be used.
+ensure_meilisearch_key() {
+  if [ -z "$(env_prod_get MEILISEARCH_KEY)" ]; then
+    env_prod_set MEILISEARCH_KEY "$(generate_secret)"
+  fi
+}
+
 # Percent-encode for safe embedding in a DSN: RFC 3986 unreserved characters
 # pass through, everything else becomes %XX. A raw '#' or '@' in a hand-typed
 # DSN truncates it silently, which is why the installer never asks for one.
@@ -723,6 +754,17 @@ prod_database_description() {
   printf 'SQLite, one file in the php-var volume'
 }
 
+# What the summary says search runs on. A backup needs to know the meili-data
+# volume matters here; an operator who declined the engine needs the summary
+# to say so plainly, since the database fallback is silent otherwise.
+prod_search_engine_description() {
+  if prod_uses_search_engine; then
+    printf 'Meilisearch, in the meili-data volume'
+    return 0
+  fi
+  printf 'the database (no engine configured)'
+}
+
 # Show the setup secret ONLY while the instance still has no administrator
 # (the API is authoritative); printing it on every later run would put a
 # live-looking secret into scrollback for no benefit. If the status probe
@@ -754,6 +796,7 @@ print_prod_summary() {
   printf '  Public URL ........  %s\n' "${_c_cyan}${public_url}${_c_reset}"
   printf '  Local health ......  %s\n' "${_c_cyan}${base_url}/api/health${_c_reset}"
   printf '  Database ..........  %s\n' "$(prod_database_description)"
+  printf '  Search ............  %s\n' "$(prod_search_engine_description)"
   print_installed_ref_row
   printf '\n'
   print_first_admin_block "${base_url}" "${public_url}"
@@ -1121,6 +1164,59 @@ use_sqlite_database() {
 use_bundled_mysql_database() {
   env_prod_set DATABASE_URL ''
   say 'Using MySQL in a container beside the app.'
+}
+
+# --- whether the instance runs the bundled search engine ---------------------
+# Asked by the installer, defaulting to YES: full-content search over article
+# bodies is materially better than the database's title/summary LIKE fallback,
+# and it is the answer that keeps every existing install's behaviour (a
+# freshly written .env.prod, not an upgrade) working the same way the
+# out-of-the-box dev stack does.
+#
+# Unlike configure_database, this is safe to re-ask. Turning the engine on (or
+# off) later moves no data by hand: enabling it needs a URL, a key, and
+# `app:search:reindex` to catch the index up from the database, which is
+# already this instance's source of truth (EntrySearchWithFallback never
+# stops reading it). So prod-configure.sh asks this question again on every
+# run, the same as configure_mail -- see the call site there.
+#
+# prompt_confirm cannot be used here: its default is no, and pressing return
+# has to mean yes.
+configure_search_engine() {
+  local choice
+  if ! can_prompt; then
+    return 0
+  fi
+  say 'Enable full-content search?'
+  tell '  A search engine container (Meilisearch) indexes the full text of'
+  tell '  every article, not just its title and summary. Declining leaves'
+  tell '  search running against the database, which always works and needs'
+  tell '  no extra container -- the right choice on shared hosting, or any'
+  tell '  machine that cannot run one.'
+  choice=$(prompt_with_default 'Enable search engine? (y/n)' 'y')
+  case "${choice}" in
+    [nN]*)
+      use_database_search
+      ;;
+    *)
+      use_bundled_search_engine
+      ;;
+  esac
+}
+
+use_database_search() {
+  env_prod_set MEILISEARCH_URL ''
+  say 'No search engine. Search runs against the database.'
+}
+
+# Writes the value rather than leaving the file alone, for the same reason as
+# use_bundled_mysql_database above: choosing yes has to be an answer even on a
+# re-run where MEILISEARCH_URL already says something else.
+use_bundled_search_engine() {
+  env_prod_set MEILISEARCH_URL 'http://meilisearch:7700'
+  ensure_meilisearch_key
+  say 'Using the bundled Meilisearch container. Run app:search:reindex once it'
+  say 'is up to index what is already stored.'
 }
 
 # The host part of PUBLIC_URL -- the default mail domain both the transport
