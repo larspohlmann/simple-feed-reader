@@ -147,6 +147,10 @@ export class EntryListComponent implements OnDestroy {
    *  without this generic list knowing what the action is or which selection
    *  it belongs to — the same outlet arrangement as `topBlock`. */
   readonly headerActions = input<TemplateRef<unknown> | null>(null);
+  /** Rendered at the head of the list header's tools, before the built-in
+   *  ones. Same arrangement as `headerActions`, at the other end of the row:
+   *  what belongs there is the shell's business, where it sits is this list's. */
+  readonly leadingActions = input<TemplateRef<unknown> | null>(null);
 
   readonly loadMore = output<void>();
   readonly markAllRead = output<void>();

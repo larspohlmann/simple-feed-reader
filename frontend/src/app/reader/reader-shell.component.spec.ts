@@ -30,6 +30,8 @@ import { ReaderHeaderComponent } from './header/reader-header.component';
 import { headerHiddenAtRest } from './header-scroll';
 import { RefreshService } from './refresh.service';
 import { LayoutService } from './layout.service';
+import { ManageActions } from './manage/manage-actions.service';
+import { TagsStore } from './tags.store';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { RecommendationsService } from './recommendations.service';
 import { AiAvailabilityService } from '../core/ai-availability.service';
@@ -764,6 +766,56 @@ describe('ReaderShellComponent', () => {
     // The subscription's real feed id (55), not the subscription id (5).
     expect(req.request.params.get('feedId')).toBe('55');
     req.flush(refreshDone);
+  });
+
+  it('offers an edit action in the list header for the selected feed', () => {
+    const f = boot();
+    const edit = jest.spyOn(TestBed.inject(ManageActions), 'editSubscription');
+    qp.next(convertToParamMap({ subscription: '5' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    const button = f.nativeElement.querySelector('.list-header .list-edit') as HTMLButtonElement;
+    expect(button).not.toBeNull();
+    button.click();
+
+    // The whole subscription, not just its id: the dialog edits the feed the
+    // sidebar's own menu edits, through the same service.
+    expect(edit).toHaveBeenCalledWith(expect.objectContaining({ id: 5 }));
+  });
+
+  it('offers the same edit action for the selected tag', () => {
+    const f = boot();
+    const edit = jest.spyOn(TestBed.inject(ManageActions), 'editTag');
+    // The header's glyph and its edit action both read the tag out of the
+    // tree, so the tag has to exist there for either to appear.
+    TestBed.inject(TagsStore).tags.set([
+      { id: 3, name: 'Tech', color: null, icon: null, position: 0 },
+    ]);
+    qp.next(convertToParamMap({ tag: '3' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    (f.nativeElement.querySelector('.list-header .list-edit') as HTMLButtonElement).click();
+    expect(edit).toHaveBeenCalledWith(expect.objectContaining({ id: 3 }));
+  });
+
+  it('leaves the slot empty for a selection that edits nothing', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ view: 'favorites' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    expect(f.nativeElement.querySelector('.list-header .list-edit')).toBeNull();
   });
 
   it('does not refresh from the cross-feed saved views', () => {

@@ -280,3 +280,17 @@ app-reader-header.hidden {
   z-index: 15;
   background: rgb(0 0 0 / 40%);
 }
+
+/* The list header's leading edit action. A bare icon button matching the
+   header's own tools rather than an <app-button>: it belongs to that row of
+   affordances, and the design language keeps icon-only controls out of the
+   button component on purpose. */
+.list-edit {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+}

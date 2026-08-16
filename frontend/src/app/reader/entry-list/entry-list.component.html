@@ -43,6 +43,9 @@
     }
   </div>
   <div class="tools">
+    @if (leadingActions(); as actions) {
+      <ng-container [ngTemplateOutlet]="actions" />
+    }
     @if (
       selection().kind === 'all' ||
       selection().kind === 'tag' ||
