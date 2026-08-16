@@ -23,10 +23,15 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  * of the two database legs ran it.
  *
  * This asserts the actual wiring, not just the raw environment, so it fails
- * for the reason that matters: a real engine reachable from a test. If it
- * ever fails, something — a compose file, a CI job, a developer's shell —
- * reintroduced a real MEILISEARCH_URL/MEILISEARCH_KEY into the test process.
- * Fix that source. Do not delete or weaken this test to make it pass.
+ * for the reason that matters: a real engine reachable from a test. A real
+ * MEILISEARCH_URL/MEILISEARCH_KEY set by a compose file, a CI job or a
+ * developer's shell CANNOT make this test fail — phpunit.dist.xml's
+ * force="true" overrides overwrite $_ENV, $_SERVER and getenv() before the
+ * kernel boots, which is exactly what defeats a value from any of those
+ * sources. If this test ever fails, the override in phpunit.dist.xml has
+ * been removed or weakened (the <env>/<server> lines deleted, force flipped
+ * to false), or something is running the suite without phpunit.dist.xml at
+ * all. Check there first. Do not delete or weaken this test to make it pass.
  */
 final class SearchEngineDisabledInTestEnvironmentTest extends KernelTestCase
 {
