@@ -74,7 +74,23 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
    whitespace, so this margin is the whole gap, at every formatting of the
    template. */
 .list-header h2 app-tag-glyph {
-  margin-right: var(--space-1);
+  /* A step wider than it was: the glyph used to be a small marker in front of
+     the name, and at the title's own size it needs room to read as a companion
+     to the word rather than as something stuck to it. */
+  margin-right: var(--space-2);
+
+  /* `vertical-align: middle` — the glyph component's own default — aligns a box
+     to the baseline plus half the font's X-HEIGHT, which sits well below the
+     visual middle of a line of text. At 0.85em that error was invisible; at the
+     full size this heading now uses it leaves the glyph sitting low against its
+     own title. Measured at 1.73px against this 18px heading, so a tenth of an
+     em corrects it and keeps correcting it when the collapsed bar drops the
+     type to 13px.
+
+     A transform rather than a margin: vertical margins on an atomic inline box
+     count toward the line box, so a margin would move the bar's height — the
+     number the scroller reserves (#87, #419). This moves the paint only. */
+  transform: translateY(-0.1em);
 }
 
 .list-header h2 {
