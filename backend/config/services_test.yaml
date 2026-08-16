@@ -429,3 +429,14 @@ services:
     App\Service\Worker\Handler\PurgeFailedMessagesHandler:
         autowire: true
         public: true
+
+    # RecommendationDrainOnTerminateListenerTest swaps the real launcher for a
+    # RecordingProcessLauncher via `self::getContainer()->set(...)`, which the
+    # container only allows on public services. The listener is wired
+    # entirely through #[AsEventListener] with no injection point a test can
+    # reach directly, so this is the only seam that lets a kernel-level test
+    # observe whether the terminate hook actually spawned. Test environment
+    # only — production keeps this alias private.
+    App\Service\Process\DetachedProcessLauncherInterface:
+        alias: App\Service\Process\DetachedProcessLauncher
+        public: true
