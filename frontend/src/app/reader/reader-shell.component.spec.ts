@@ -17,7 +17,7 @@ import {
 } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { BehaviorSubject, Subject, of } from 'rxjs';
-import { signal } from '@angular/core';
+import { WritableSignal, signal } from '@angular/core';
 import { API_BASE_URL } from '../core/api';
 import { AuthService } from '../core/auth.service';
 import { OnboardingSkip } from '../discover/onboarding-skip';
