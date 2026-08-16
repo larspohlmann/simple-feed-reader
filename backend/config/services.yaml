@@ -81,6 +81,10 @@ services:
     App\Service\Discovery\FeedDiscoveryInterface: '@App\Service\Discovery\FeedDiscovery'
     App\Service\Reader\ArticleExtractorInterface: '@App\Service\Reader\ArticleExtractor'
     App\Service\Search\EntrySearchInterface: '@App\Service\Search\LikeEntrySearch'
+    # Both interfaces resolve to the one adapter that knows Meilisearch's wire
+    # format (#432, see MeilisearchIndex).
+    App\Service\Search\Index\SearchIndexReader: '@App\Service\Search\Index\MeilisearchIndex'
+    App\Service\Search\Index\SearchIndexWriter: '@App\Service\Search\Index\MeilisearchIndex'
     App\Service\Version\ReleaseVersionReader: '@App\Service\Version\FileReleaseVersionReader'
     App\Service\Ai\ModelCatalog: '@App\Service\Ai\OpenAiCompatibleCatalog'
     App\Service\Recommendation\ChatCompletionClient: '@App\Service\Recommendation\OpenAiCompatibleChatClient'
@@ -146,6 +150,15 @@ services:
     App\Service\Catalog\BundledCatalog:
         arguments:
             $projectDir: '%kernel.project_dir%'
+
+    # Both empty by default (backend/.env) — that is the "no engine, database
+    # answers searches" install, not a misconfiguration. See MeilisearchIndex
+    # for why an empty URL still autowires cleanly: it only fails, with
+    # SearchEngineUnavailableException, once something actually calls it.
+    App\Service\Search\Index\MeilisearchIndex:
+        arguments:
+            $baseUrl: '%env(MEILISEARCH_URL)%'
+            $apiKey: '%env(MEILISEARCH_KEY)%'
 
     # A child of the framework's http_client so the rot-check command holds its
     # own injectable client id. The point of the separate id is the test: it can
