@@ -84,6 +84,43 @@
   background: var(--accent);
 }
 
+/* The same cue below the split-pane layout, stood up on the right edge and run
+   the full height of the screen — 2px along the bottom of a phone is easy to
+   miss, and there is no scrollbar there to fall back on.
+
+   Sticky for exactly the reason the hairline is: `.reader` carries a transform
+   through the return gestures, which would re-anchor a fixed child to this pane
+   (#100). Pinned to the top of the scrollport, and placed at the HEAD of the
+   article's flow, because a sticky box travels only from where it sits — last
+   in the flow it would stay parked at the bottom until the reader got there.
+   The negative margin cancels the viewport of height it would otherwise add. */
+.progress-rail {
+  position: sticky;
+  top: 0;
+
+  /* Same reason as the hairline's: a reading-focus block with opacity < 1
+     paints as if it were at z-index 0 and would cover this. */
+  z-index: 2;
+  width: var(--space-1);
+  margin-left: auto; /* to the right edge, whatever the pane's width */
+  background: var(--border);
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     one screenful, not a spacing value: the rail spans the viewport. */
+  height: 100dvh;
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     cancels the height above, so the rail adds nothing to the flow it leads. */
+  margin-bottom: -100dvh;
+}
+
+/* Fills downward, and untransitioned for the same reason the hairline is. */
+.progress-rail i {
+  display: block;
+  width: 100%;
+  background: var(--accent);
+}
+
 /* Split pane: the shell's bar floats over this panel, so the panel reserves
    its height and the toolbar hangs flush beneath it — the same arrangement the
    list header uses — carrying the gap under itself. */

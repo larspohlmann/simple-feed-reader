@@ -5,14 +5,27 @@
   <app-overlay-panel [heading]="'dialog.editFeed.title' | transloco">
     <div class="fields">
       <app-field [label]="'dialog.editFeed.customTitle' | transloco">
-        <input
-          id="sub-title"
-          formControlName="customTitle"
-          maxlength="512"
-          [placeholder]="data.title"
-          cdkFocusInitial
-        />
+        <input id="sub-title" formControlName="customTitle" maxlength="512" cdkFocusInitial />
       </app-field>
+      <div class="reset-row">
+        <app-button variant="ghost" size="sm" (click)="resetTitle()">
+          {{ 'dialog.editFeed.resetTitle' | transloco }}
+        </app-button>
+      </div>
+
+      <p class="lbl">{{ 'dialog.editFeed.feedUrl' | transloco }}</p>
+      <!-- No copy button: `user-select: all` hands the whole URL over on one
+           click or long-press, which is the gesture people already reach for. -->
+      <p class="url">{{ data.feedUrl }}</p>
+
+      @if (data.siteUrl; as site) {
+        <p class="lbl">{{ 'dialog.editFeed.siteUrl' | transloco }}</p>
+        <p class="site">
+          <a [href]="site" target="_blank" rel="noopener noreferrer"
+            >{{ site }} <app-icon name="open_in_new" size="text"
+          /></a>
+        </p>
+      }
 
       <p class="lbl">{{ 'dialog.editFeed.tags' | transloco }}</p>
       @if (tagsStore.tags().length === 0) {

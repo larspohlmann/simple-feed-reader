@@ -7,6 +7,19 @@
     [style.transform]="readerTransform()"
     [style.transition]="readerTransition()"
   >
+    @if (showProgress() && !screen.isWide()) {
+      <!-- The same cue as the hairline at the foot of the split pane, stood up
+           on the right edge and run the full height of the screen: 2px along
+           the bottom of a phone is easy to miss, and there is no scrollbar
+           there to fall back on (#238). Decorative for the same reason the
+           hairline is. It leads the article rather than trailing it because a
+           sticky box may only travel inside its containing block from where it
+           sits in the flow; the negative margin below cancels the height it
+           would otherwise contribute there. -->
+      <div class="progress-rail" aria-hidden="true">
+        <i [style.height.%]="progressPercent()"></i>
+      </div>
+    }
     @if (fullscreen()) {
       <!-- The toolbar below retracts on scroll, so full-screen the nameplate
            needs a strip of its own. aria-hidden: the h1 carries the same title
@@ -41,6 +54,7 @@
             type="button"
             [attr.aria-label]="'reader.favorite' | transloco"
             [class.on]="e.isFavorite"
+            [attr.aria-pressed]="e.isFavorite"
             (click)="favorite.emit()"
           >
             <app-icon name="star" size="md" />
@@ -49,6 +63,7 @@
             type="button"
             [attr.aria-label]="'reader.keep' | transloco"
             [class.on]="e.isKept"
+            [attr.aria-pressed]="e.isKept"
             (click)="keep.emit()"
           >
             <app-icon name="bookmark" size="md" />
@@ -97,11 +112,16 @@
         }
       </p>
       <app-source-tags class="tags" [tags]="tags()" />
+      <!-- One language for all three: a fixed glyph, muted while off and in the
+           accent while on. The labels are static, so `aria-pressed` is what
+           carries the state to a screen reader -- and it is the only thing that
+           does now that the read button no longer swaps its glyph. -->
       <div class="actions">
         <button
           type="button"
           [attr.aria-label]="'reader.favorite' | transloco"
           [class.on]="e.isFavorite"
+          [attr.aria-pressed]="e.isFavorite"
           (click)="favorite.emit()"
         >
           <app-icon name="star" size="md" />
@@ -110,6 +130,7 @@
           type="button"
           [attr.aria-label]="'reader.keep' | transloco"
           [class.on]="e.isKept"
+          [attr.aria-pressed]="e.isKept"
           (click)="keep.emit()"
         >
           <app-icon name="bookmark" size="md" />
@@ -117,9 +138,11 @@
         <button
           type="button"
           [attr.aria-label]="'reader.toggleRead' | transloco"
+          [class.on]="e.isRead"
+          [attr.aria-pressed]="e.isRead"
           (click)="read.emit()"
         >
-          <app-icon [name]="e.isRead ? 'mark_email_unread' : 'check'" size="md" />
+          <app-icon name="check" size="md" />
         </button>
       </div>
       @if (showToc()) {
@@ -152,6 +175,21 @@
         }
         @if (leadImage(); as img) {
           <img class="lead-image" [src]="img" alt="" />
+        } @else if (visibleFeedHero(); as hero) {
+          <!-- Width and height carry the aspect ratio, so the article does not
+               jump when a slow hero lands. `height: auto` in the stylesheet
+               keeps the declared size from overriding the fluid layout. -->
+          <img
+            class="lead-image"
+            [src]="hero.url"
+            [attr.width]="hero.width"
+            [attr.height]="hero.height"
+            (error)="heroError.set(true)"
+            alt=""
+            loading="lazy"
+            decoding="async"
+            referrerpolicy="no-referrer"
+          />
         }
         <div #content class="content" [innerHTML]="displayHtml()"></div>
       }
@@ -161,7 +199,7 @@
         <app-spinner [size]="22" />
       </div>
     }
-    @if (showProgress()) {
+    @if (showProgress() && screen.isWide()) {
       <!-- Decorative: a visual stand-in for the scrollbar a phone withholds, so
            it carries no progressbar role — a screen reader already reports the
            reading position, and announcing every scroll frame would be noise. -->

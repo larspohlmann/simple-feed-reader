@@ -33,6 +33,41 @@ form {
   color: var(--text-muted);
 }
 
+/* Trails the title field rather than sitting beside its label: clearing the
+   override is a rare correction, not a peer of the field itself. */
+.reset-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* The feed's identity, shown so it can be read and copied -- never edited.
+   Monospace because a URL is a string to compare character by character. */
+.url {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  background: var(--surface-0);
+  color: var(--text-secondary);
+  font-family: ui-monospace, monospace;
+  font-size: var(--fs-sm);
+
+  /* One click or long-press takes the whole string. It wraps rather than
+     truncates: an ellipsis would still copy in full, but the reader could not
+     see what they were about to take. */
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+
+.site {
+  margin: 0;
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+
+.site a {
+  color: var(--accent);
+}
+
 .tags {
   margin: 0;
   padding: 0;

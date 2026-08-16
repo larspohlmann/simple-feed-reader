@@ -18,6 +18,7 @@ import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 import { UserAvatarComponent } from '../../shared/user-avatar/user-avatar.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { SearchFieldComponent } from '../search-field/search-field.component';
+import { ForYouProgressComponent } from '../for-you-progress/for-you-progress.component';
 import { AuthService } from '../../core/auth.service';
 import { RefreshService } from '../refresh.service';
 import { LayoutService } from '../layout.service';
@@ -40,6 +41,7 @@ import { selectionQueryParams } from '../query';
     SpinnerComponent,
     DismissOnOutsideDirective,
     SearchFieldComponent,
+    ForYouProgressComponent,
   ],
   templateUrl: './reader-header.component.html',
   styleUrl: './reader-header.component.scss',

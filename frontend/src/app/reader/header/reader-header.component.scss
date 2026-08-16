@@ -262,3 +262,15 @@ header {
 .menu a:hover {
   background: var(--surface-0);
 }
+
+/* Takes the bar's empty middle -- brand left, account right, nothing between
+   them at this width. Capped and centred so it stays a readout rather than a
+   band stretching the whole bar, and so a long status line does not push the
+   account button around. Contributes nothing to the layout while no run is
+   live: the component renders no element at all then. */
+.run-progress {
+  flex: 1;
+  min-width: 0;
+  max-width: 22rem;
+  margin: 0 auto;
+}

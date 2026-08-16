@@ -56,6 +56,25 @@ describe('EditSubscriptionDialogComponent', () => {
   beforeEach(() => close.mockReset());
   afterEach(() => ctrl.verify());
 
+  it('prefills the name with the title as it reads now', () => {
+    expect(mount().componentInstance.form.getRawValue().customTitle).toBe('Heise');
+  });
+
+  it('clears the field on reset, which is what drops the override', () => {
+    const c = mount().componentInstance;
+    c.resetTitle();
+    expect(c.form.getRawValue().customTitle).toBe('');
+  });
+
+  it('shows the feed URL, and the site as an external link', () => {
+    const el: HTMLElement = mount().nativeElement;
+    expect(el.querySelector('.url')!.textContent).toContain('https://heise.de/rss');
+    const link = el.querySelector<HTMLAnchorElement>('.site a')!;
+    expect(link.getAttribute('href')).toBe('https://heise.de');
+    expect(link.target).toBe('_blank');
+    expect(link.rel).toBe('noopener noreferrer');
+  });
+
   it('prefills the current tags as checked', () => {
     const c = mount().componentInstance;
     expect(c.checked().has(1)).toBe(true);

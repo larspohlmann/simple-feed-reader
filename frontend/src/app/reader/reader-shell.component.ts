@@ -271,6 +271,15 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.subs.tagTree().find((n) => n.tag.id === s.id)?.tag ?? null;
   });
 
+  /** The feed the list is scoped to, or null for every other selection. The
+   *  header's edit action needs the whole subscription, not the name alone
+   *  that `title` below takes from it. */
+  readonly selectedSubscription = computed(() => {
+    const s = this.selection();
+    if (s.kind !== 'subscription') return null;
+    return this.subs.subscriptions().find((x) => x.id === s.id) ?? null;
+  });
+
   readonly title = computed(() => {
     const s = this.selection();
     if (s.kind === 'favorites') return 'Favorites';

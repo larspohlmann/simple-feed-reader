@@ -17,7 +17,7 @@ import {
 } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { BehaviorSubject, Subject, of } from 'rxjs';
-import { signal } from '@angular/core';
+import { WritableSignal, signal } from '@angular/core';
 import { API_BASE_URL } from '../core/api';
 import { AuthService } from '../core/auth.service';
 import { OnboardingSkip } from '../discover/onboarding-skip';
@@ -30,12 +30,19 @@ import { ReaderHeaderComponent } from './header/reader-header.component';
 import { headerHiddenAtRest } from './header-scroll';
 import { RefreshService } from './refresh.service';
 import { LayoutService } from './layout.service';
+import { ManageActions } from './manage/manage-actions.service';
+import { TagsStore } from './tags.store';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { RecommendationsService } from './recommendations.service';
 import { AiAvailabilityService } from '../core/ai-availability.service';
 import { ToastService } from '../shared/toast/toast.service';
 
 describe('ReaderShellComponent', () => {
+  let screen: {
+    isNarrow: WritableSignal<boolean>;
+    isWide: WritableSignal<boolean>;
+    isCoarse: WritableSignal<boolean>;
+  };
   let ctrl: HttpTestingController;
   const qp = new BehaviorSubject(convertToParamMap({}));
   const auth = {
@@ -88,6 +95,11 @@ describe('ReaderShellComponent', () => {
     sessionStorage.clear(); // OnboardingSkip persists here; don't leak across tests
     auth.isAdmin.mockReturnValue(false); // default non-admin; a test opting in overrides it
     qp.next(convertToParamMap({}));
+    // Provided rather than left to the real service: jsdom's matchMedia answers
+    // "no" to every query, so the real one is stuck on the wide layout and a
+    // test about a phone-only surface has no way to say so. The defaults below
+    // reproduce exactly what jsdom used to give.
+    screen = { isNarrow: signal(false), isWide: signal(false), isCoarse: signal(false) };
     TestBed.configureTestingModule({
       imports: [ReaderShellComponent, provideTranslocoTesting()],
       providers: [
@@ -97,6 +109,7 @@ describe('ReaderShellComponent', () => {
         { provide: API_BASE_URL, useValue: 'https://api.test' },
         { provide: ActivatedRoute, useValue: { queryParamMap: qp.asObservable() } },
         { provide: AuthService, useValue: auth },
+        { provide: LayoutService, useValue: screen },
       ],
     });
     ctrl = TestBed.inject(HttpTestingController);
@@ -755,6 +768,56 @@ describe('ReaderShellComponent', () => {
     req.flush(refreshDone);
   });
 
+  it('offers an edit action in the list header for the selected feed', () => {
+    const f = boot();
+    const edit = jest.spyOn(TestBed.inject(ManageActions), 'editSubscription');
+    qp.next(convertToParamMap({ subscription: '5' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    const button = f.nativeElement.querySelector('.list-header .list-edit') as HTMLButtonElement;
+    expect(button).not.toBeNull();
+    button.click();
+
+    // The whole subscription, not just its id: the dialog edits the feed the
+    // sidebar's own menu edits, through the same service.
+    expect(edit).toHaveBeenCalledWith(expect.objectContaining({ id: 5 }));
+  });
+
+  it('offers the same edit action for the selected tag', () => {
+    const f = boot();
+    const edit = jest.spyOn(TestBed.inject(ManageActions), 'editTag');
+    // The header's glyph and its edit action both read the tag out of the
+    // tree, so the tag has to exist there for either to appear.
+    TestBed.inject(TagsStore).tags.set([
+      { id: 3, name: 'Tech', color: null, icon: null, position: 0 },
+    ]);
+    qp.next(convertToParamMap({ tag: '3' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    (f.nativeElement.querySelector('.list-header .list-edit') as HTMLButtonElement).click();
+    expect(edit).toHaveBeenCalledWith(expect.objectContaining({ id: 3 }));
+  });
+
+  it('leaves the slot empty for a selection that edits nothing', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ view: 'favorites' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    expect(f.nativeElement.querySelector('.list-header .list-edit')).toBeNull();
+  });
+
   it('does not refresh from the cross-feed saved views', () => {
     const f = boot();
     qp.next(convertToParamMap({ view: 'favorites' }));
@@ -1263,13 +1326,18 @@ describe('ReaderShellComponent', () => {
     const buttons = [...f.nativeElement.querySelectorAll('.for-you-run')];
     expect(buttons.length).toBe(1);
     expect(buttons[0].querySelector('.label')!.textContent!.trim()).toBe('Stop');
-    // The count, the ETA and the bar live in the app-wide pill now, so a live
-    // run leaves nothing but the Stop button behind in the header (#398).
-    expect(f.nativeElement.querySelector('.for-you-progress')).toBeNull();
+    // The count, the ETA and the bar left the LIST header in #398 and never
+    // came back; a live run leaves nothing but the Stop button there. On this
+    // (wide) layout they read out from the app bar instead of the pill (#435).
+    expect(f.nativeElement.querySelector('.list-header .for-you-progress')).toBeNull();
+    expect(f.nativeElement.querySelector('app-reader-header .for-you-progress')).not.toBeNull();
     expect(f.nativeElement.querySelector('.list-header [role="alert"]')).toBeNull();
   });
 
   it('offers a way back to the pill only once the pill has been closed', () => {
+    // A phone-layout concern: above the drawer breakpoint the app bar carries
+    // the run and there is no ✕, so there is nothing to offer back (#435).
+    screen.isNarrow.set(true);
     const f = bootForYou();
     const recs = TestBed.inject(RecommendationsService);
     const toast = TestBed.inject(ToastService);

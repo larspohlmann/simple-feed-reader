@@ -74,7 +74,23 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
    whitespace, so this margin is the whole gap, at every formatting of the
    template. */
 .list-header h2 app-tag-glyph {
-  margin-right: var(--space-1);
+  /* A step wider than it was: the glyph used to be a small marker in front of
+     the name, and at the title's own size it needs room to read as a companion
+     to the word rather than as something stuck to it. */
+  margin-right: var(--space-2);
+
+  /* `vertical-align: middle` — the glyph component's own default — aligns a box
+     to the baseline plus half the font's X-HEIGHT, which sits well below the
+     visual middle of a line of text. At 0.85em that error was invisible; at the
+     full size this heading now uses it leaves the glyph sitting low against its
+     own title. Measured at 1.73px against this 18px heading, so a tenth of an
+     em corrects it and keeps correcting it when the collapsed bar drops the
+     type to 13px.
+
+     A transform rather than a margin: vertical margins on an atomic inline box
+     count toward the line box, so a margin would move the bar's height — the
+     number the scroller reserves (#87, #419). This moves the paint only. */
+  transform: translateY(-0.1em);
 }
 
 .list-header h2 {
@@ -383,6 +399,61 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   background: var(--surface-0);
 }
 
+/* Sits over the dimmed outgoing rows, below the list header so the bar stays
+   readable while it is up. Starts under the header rather than at the top of
+   the host, so "centred" means centred in the rows the reader is looking at. */
+.reload-veil {
+  position: absolute;
+  inset: $header-clear 0 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+
+  /* The rows underneath are already inert; this must not intercept anything
+     either, least of all during its fade-out. */
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+
+  /* Visibility flips only after the fade has finished, so the veil is never
+     hit-tested while it is still on screen. */
+  transition:
+    opacity 0.2s ease,
+    visibility 0s linear 0.2s;
+}
+
+.reload-veil.shown {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.2s ease,
+    visibility 0s;
+}
+
+/* The spinner and its word sit on a card of their own. Over bare rows the
+   label competed with the headlines behind it, and dimming those further would
+   have hidden the list this is meant to keep on screen (#254). Nearly opaque
+   for the same reason the pull-to-refresh pill is: it has to be read. */
+.reload-veil .card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-7);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--surface-1) 96%, transparent);
+  box-shadow: var(--shadow-1, 0 1px 4px rgb(0 0 0 / 15%));
+}
+
+.reload-veil .label {
+  color: var(--text-secondary);
+  font-size: var(--fs-lg);
+}
+
 .foot {
   display: flex;
   justify-content: center;
@@ -405,6 +476,11 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 
   .skeleton {
     animation: none;
+  }
+
+  .reload-veil,
+  .reload-veil.shown {
+    transition: none;
   }
 
   .refresh.spinning app-icon {

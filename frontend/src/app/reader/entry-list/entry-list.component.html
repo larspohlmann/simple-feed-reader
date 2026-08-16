@@ -9,7 +9,11 @@
     <div class="title-row">
       <h2 #listTitle tabindex="-1">
         @if (titleTag(); as tag) {
-          <app-tag-glyph [name]="tag.icon" [color]="tag.color" size="text" />
+          <!-- A named step rather than `text`, so the glyph carries the weight of
+               the title beside it instead of trailing it. Stepping down when the
+               bar collapses keeps that balance: a fixed px would tower over the
+               13px the heading drops to. -->
+          <app-tag-glyph [name]="tag.icon" [color]="tag.color" [size]="collapsed() ? 'xs' : 'md'" />
         }
         <span>{{ title() }}</span>
         @if (showWholeWordBadge()) {
@@ -39,6 +43,9 @@
     }
   </div>
   <div class="tools">
+    @if (leadingActions(); as actions) {
+      <ng-container [ngTemplateOutlet]="actions" />
+    }
     @if (
       selection().kind === 'all' ||
       selection().kind === 'tag' ||
@@ -325,6 +332,19 @@
         </button>
       </div>
     }
+  </div>
+}
+
+@if (entries().length > 0) {
+  <!-- Held in the DOM rather than switched in, so the fade plays on the way out
+       too — a structural @if would cut it off the frame the rows arrive.
+       Decorative: the rows already carry aria-busy, and a second announcement
+       of the same wait is noise. -->
+  <div class="reload-veil" [class.shown]="reloadSpinner()" aria-hidden="true">
+    <div class="card">
+      <span class="label">{{ 'common.loading' | transloco }}</span>
+      <app-spinner [size]="96" [decorative]="true" />
+    </div>
   </div>
 }
 

@@ -71,6 +71,9 @@ const MAX_PULL = 100;
 // Matches --space-7; published as --refresh-reveal so the stylesheet sizes the tray
 // and its park offset from the same number.
 export const REFRESH_REVEAL = 48;
+// How long a reload may run before it earns a spinner. A switch that lands
+// sooner would only flash one, which reads as a glitch rather than as progress.
+const RELOAD_SPINNER_DELAY_MS = 150;
 
 /** A for-you run-boundary divider — a rendering-only block the entry list
  *  interleaves between per-run magazine block groups (#348). Kept out of
@@ -144,6 +147,10 @@ export class EntryListComponent implements OnDestroy {
    *  without this generic list knowing what the action is or which selection
    *  it belongs to — the same outlet arrangement as `topBlock`. */
   readonly headerActions = input<TemplateRef<unknown> | null>(null);
+  /** Rendered at the head of the list header's tools, before the built-in
+   *  ones. Same arrangement as `headerActions`, at the other end of the row:
+   *  what belongs there is the shell's business, where it sits is this list's. */
+  readonly leadingActions = input<TemplateRef<unknown> | null>(null);
 
   readonly loadMore = output<void>();
   readonly markAllRead = output<void>();
@@ -308,6 +315,22 @@ export class EntryListComponent implements OnDestroy {
   private focusRaf = 0;
   /** Drives the corner back-to-top button; set from the scroll handler. */
   readonly showToTop = signal(false);
+
+  /**
+   * Whether the reload overlay is up. A reload keeps the outgoing rows on
+   * screen (#254), and the dim over them is a quiet cue for a wait that can run
+   * into seconds — so past the delay, say plainly that new content is coming.
+   * Only for a reload: the first load has skeletons and paging has its footer.
+   */
+  readonly reloadSpinner = signal(false);
+  private readonly _armReloadSpinner = effect((onCleanup) => {
+    if (!this.loading() || this.entries().length === 0) {
+      this.reloadSpinner.set(false);
+      return;
+    }
+    const timer = setTimeout(() => this.reloadSpinner.set(true), RELOAD_SPINNER_DELAY_MS);
+    onCleanup(() => clearTimeout(timer));
+  });
 
   /**
    * The header's EXPANDED height, which is the space the scroller reserves for

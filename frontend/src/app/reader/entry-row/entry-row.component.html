@@ -50,10 +50,11 @@
       <button
         type="button"
         [attr.aria-label]="'reader.toggleRead' | transloco"
+        [class.on]="entry().isRead"
         [attr.aria-pressed]="entry().isRead"
         (click)="$event.stopPropagation(); read.emit(entry())"
       >
-        <app-icon [name]="entry().isRead ? 'mark_email_unread' : 'check'" size="md" />
+        <app-icon name="check" size="md" />
       </button>
     </div>
   </div>

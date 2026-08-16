@@ -1,6 +1,14 @@
 // src/app/reader/recommendations.service.ts
 import { HttpErrorResponse } from '@angular/common/http';
-import { DestroyRef, InjectionToken, Injectable, computed, inject, signal } from '@angular/core';
+import {
+  DestroyRef,
+  InjectionToken,
+  Injectable,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { Observable } from 'rxjs';
@@ -8,6 +16,7 @@ import { Problem, parseProblem } from '../core/problem';
 import { ToastService } from '../shared/toast/toast.service';
 import { ReaderApi } from './reader-api';
 import { ForYouProgressComponent } from './for-you-progress/for-you-progress.component';
+import { LayoutService } from './layout.service';
 import { RecommendationRunReport } from './models';
 import { selectionQueryParams } from './query';
 
@@ -81,6 +90,7 @@ export type RecommendationFailure =
 export class RecommendationsService {
   private readonly api = inject(ReaderApi);
   private readonly toast = inject(ToastService);
+  private readonly screen = inject(LayoutService);
   private readonly i18n = inject(TranslocoService);
   private readonly router = inject(Router);
   private readonly now = inject(MONOTONIC_NOW);
@@ -170,13 +180,48 @@ export class RecommendationsService {
    *  directly. */
   readonly workerOwnsRun = computed(() => this.report()?.background ?? false);
 
-  /** True while a run is going but its pill is not on screen, because the user
-   *  closed it. Drives the header's offer to raise it again. Reads the toast's
-   *  own visibility rather than tracking a dismissal flag here, which is exact
-   *  for this service's own toasts -- and safe to treat as exact today because
-   *  this service is the only caller of `ToastService.show()` in the app, so
-   *  nothing else can occupy the slot and read as "still up". */
-  readonly pillHidden = computed(() => this.running() && !this.toast.visible());
+  /** True while a run is going but its progress is nowhere to be seen, because
+   *  the user closed the pill. Drives the header's offer to raise it again.
+   *
+   *  Only ever true on a narrow layout: above it the reader header carries the
+   *  run's progress itself and offers no way to dismiss it, so there is no
+   *  hidden state to recover from and no button to offer.
+   *
+   *  Reads the toast's own visibility rather than tracking a dismissal flag
+   *  here, which is exact for this service's own toasts -- and safe to treat
+   *  as exact today because this service is the only caller of
+   *  `ToastService.show()` in the app, so nothing else can occupy the slot and
+   *  read as "still up". */
+  readonly pillHidden = computed(
+    () => this.running() && this.screen.isNarrow() && !this.toast.visible(),
+  );
+
+  /** The layout the pill was last placed for. Seeded here rather than on the
+   *  effect's first pass, so the effect has no start-up case to special-case
+   *  and a crossing is a crossing whenever it happens. */
+  private lastNarrowLayout = this.screen.isNarrow();
+
+  /**
+   * Moves a live run's progress between its two surfaces when the viewport
+   * crosses the drawer breakpoint: the pill below it, the reader header above.
+   * Without this a rotated phone or a resized window would strand the run with
+   * no readout at all for the rest of its life.
+   *
+   * Deliberately acts on the crossing alone, never on the run starting -- that
+   * is `markRunning()`'s job, and raising it here as well would flash the pill
+   * twice. Not reading the toast's visibility is what keeps a ✕ pressed.
+   */
+  private readonly _pillFollowsLayout = effect(() => {
+    const narrow = this.screen.isNarrow();
+    const crossed = this.lastNarrowLayout !== narrow;
+    this.lastNarrowLayout = narrow;
+    if (!crossed || !this.running()) return;
+    if (narrow) {
+      this.showRunPill();
+      return;
+    }
+    this.toast.dismiss();
+  });
 
   /** The surviving for-you list's item count, for the sidebar badge. */
   readonly forYouCount = computed(() => this.report()?.forYou.itemCount ?? 0);
@@ -238,10 +283,17 @@ export class RecommendationsService {
    *  null` toast that nothing would ever dismiss, since only `finish()` does. */
   showRunPill(): void {
     if (!this.running()) return;
+    // Above the drawer breakpoint the reader header carries the run's progress
+    // in the room the bar already has, so a pill over the list would say the
+    // same thing twice.
+    if (!this.screen.isNarrow()) return;
     this.toast.show({
       content: ForYouProgressComponent,
       durationMs: null,
       width: 'fixed',
+      // It reports on a run the reader is not waiting for; letting the list
+      // show through says so, where an opaque card would read as an interrupt.
+      tone: 'translucent',
     });
   }
 

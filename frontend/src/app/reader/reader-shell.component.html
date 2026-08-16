@@ -106,6 +106,7 @@
           [lastRefreshed]="listLastRefreshed()"
           [newestRunId]="listNewestRunId()"
           [headerActions]="forYouActions"
+          [leadingActions]="listEditAction"
           (loadMore)="entries.loadMore()"
           (markAllRead)="onMarkAllRead()"
           (refresh)="onScopedRefresh()"
@@ -149,6 +150,7 @@
           [lastRefreshed]="listLastRefreshed()"
           [newestRunId]="listNewestRunId()"
           [headerActions]="forYouActions"
+          [leadingActions]="listEditAction"
           (scrolled)="onListScrolled($event)"
           (loadMore)="entries.loadMore()"
           (markAllRead)="onMarkAllRead()"
@@ -191,6 +193,36 @@
      in-list signal at all any more — it lives entirely in that pill; the only
      hairline in `.list` above belongs to the refresh service, not this one.
      Every other detail lives in Settings → AI (#325). -->
+<!-- The list header's leading slot: an edit affordance for whatever the list is
+     scoped to. Reaching it meant finding the feed's own row in the sidebar and
+     opening its overflow menu, which on a phone is behind the drawer — a long
+     way round from the list that row leads to. Both cases go through the same
+     `ManageActions` the sidebar calls, so the two routes cannot open different
+     dialogs. Every other selection leaves the slot empty. -->
+<ng-template #listEditAction>
+  @if (selectedSubscription(); as sub) {
+    <button
+      class="list-edit"
+      type="button"
+      [attr.aria-label]="'reader.editFeed' | transloco"
+      [attr.title]="'reader.editFeed' | transloco"
+      (click)="manage.editSubscription(sub)"
+    >
+      <app-icon name="edit" size="sm" />
+    </button>
+  } @else if (selectedTag(); as tag) {
+    <button
+      class="list-edit"
+      type="button"
+      [attr.aria-label]="'reader.editTag' | transloco"
+      [attr.title]="'reader.editTag' | transloco"
+      (click)="manage.editTag(tag)"
+    >
+      <app-icon name="edit" size="sm" />
+    </button>
+  }
+</ng-template>
+
 <ng-template #forYouActions>
   @if (selection().kind === 'for-you' && ai.ready()) {
     <div class="for-you-action">

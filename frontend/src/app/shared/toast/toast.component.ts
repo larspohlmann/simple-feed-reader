@@ -16,6 +16,11 @@ interface ToastBase {
   /** `fixed` holds one box width across successive toasts, so a surface whose
    *  content changes mid-life does not resize under the user. */
   width?: 'fit' | 'fixed';
+  /** `translucent` lets a little of the surface underneath show through, for a
+   *  readout that merely reports on work while the reader carries on with what
+   *  is behind it. An interrupt stays `solid`: an error or a confirmation has
+   *  to be read, not looked past. */
+  tone?: 'solid' | 'translucent';
 }
 
 /** A toast showing one translated line. The `content?: never` is what makes
