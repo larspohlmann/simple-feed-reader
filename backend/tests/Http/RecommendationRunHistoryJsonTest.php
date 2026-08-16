@@ -6,12 +6,12 @@ namespace App\Tests\Http;
 
 use App\Entity\RecommendationRun;
 use App\Http\RecommendationRunHistoryJson;
-use App\Repository\RecommendationRunRepository;
+use App\Repository\RecommendationRunHistoryRepository;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @phpstan-import-type HistoryRow from RecommendationRunRepository
+ * @phpstan-import-type HistoryRow from RecommendationRunHistoryRepository
  */
 #[CoversClass(RecommendationRunHistoryJson::class)]
 final class RecommendationRunHistoryJsonTest extends TestCase

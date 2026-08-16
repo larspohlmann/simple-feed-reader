@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\RecommendationRun;
-use App\Repository\RecommendationRunRepository;
+use App\Repository\RecommendationRunHistoryRepository;
 
 /**
  * The wire shape of the run history (#409): one row per run and the account's
@@ -23,7 +23,7 @@ use App\Repository\RecommendationRunRepository;
  * `status` goes out as the raw wire vocabulary, untranslated, the same
  * convention the #309 debug log records.
  *
- * @phpstan-import-type HistoryRow from RecommendationRunRepository
+ * @phpstan-import-type HistoryRow from RecommendationRunHistoryRepository
  */
 final class RecommendationRunHistoryJson
 {

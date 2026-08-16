@@ -6,7 +6,7 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\RecommendationRun;
 use App\Entity\User;
-use App\Repository\RecommendationRunRepository;
+use App\Repository\RecommendationRunHistoryRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
@@ -138,7 +138,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
     }
 
     /**
-     * The list is capped at RecommendationRunRepository::HISTORY_LIMIT
+     * The list is capped at RecommendationRunHistoryRepository::HISTORY_LIMIT
      * (#409) even though the all-time total above it is not -- an
      * unasserted cap is an unkilled mutant on both the constant's value and
      * the controller's call site.
@@ -148,7 +148,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('run-history-cap@example.test');
 
-        $runCount = RecommendationRunRepository::HISTORY_LIMIT + 1;
+        $runCount = RecommendationRunHistoryRepository::HISTORY_LIMIT + 1;
         $seededRuns = [];
         for ($i = 0; $i < $runCount; $i++) {
             $seededRuns[] = $this->fixtures()->createRun($user);
@@ -162,7 +162,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $payload = $this->payload($client->getResponse());
         /** @var list<array<string, mixed>> $returnedRuns */
         $returnedRuns = $payload['runs'];
-        self::assertCount(RecommendationRunRepository::HISTORY_LIMIT, $returnedRuns);
+        self::assertCount(RecommendationRunHistoryRepository::HISTORY_LIMIT, $returnedRuns);
         // Newest first, with the single oldest seeded run dropped by the cap.
         self::assertSame(array_reverse(\array_slice($seededIds, 1)), array_column($returnedRuns, 'id'));
     }

@@ -12,20 +12,6 @@ use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * @extends ServiceEntityRepository<RecommendationRun>
- *
- * @phpstan-type HistoryRow array{
- *     id: int,
- *     status: string,
- *     providerHost: ?string,
- *     model: ?string,
- *     createdAt: \DateTimeImmutable,
- *     completedAt: ?\DateTimeImmutable,
- *     promptTokens: int,
- *     completionTokens: int,
- *     reasoningTokens: int,
- *     cachedTokens: int,
- *     costNanoCredits: int|string|null,
- * }
  */
 final class RecommendationRunRepository extends ServiceEntityRepository
 {
@@ -189,77 +175,5 @@ final class RecommendationRunRepository extends ServiceEntityRepository
         $this->getEntityManager()->createQuery(
             'DELETE FROM App\Entity\RecommendationRun r WHERE r.user = :user',
         )->setParameter('user', $user)->execute();
-    }
-
-    /**
-     * How many runs the history endpoint answers with (#409). The list is a
-     * spending record a human reads, not a dataset — fifty rows is more than
-     * anyone scrolls, and totalCostNanoCredits() below is computed over every
-     * run anyway, so this cap never makes the number on screen wrong.
-     */
-    public const int HISTORY_LIMIT = 50;
-
-    /**
-     * The newest runs of one account as the history payload needs them:
-     * scalars, newest first, capped at HISTORY_LIMIT.
-     *
-     * Deliberately not entities. A RecommendationRun carries the frozen
-     * candidate pool, every batch winner with its free-text reason, the last
-     * rejected provider reply and the error text — fifty of those decoded and
-     * put under the EntityManager to format twelve numbers is work the
-     * settings page would pay on every load, on a host that has neither
-     * response compression nor memory to spare.
-     *
-     * @return list<HistoryRow>
-     */
-    public function historyForUser(User $user): array
-    {
-        /** @var list<HistoryRow> $rows */
-        $rows = $this->createQueryBuilder('r')
-            ->select(
-                'r.id AS id',
-                'r.status AS status',
-                'r.createdAt AS createdAt',
-                'r.completedAt AS completedAt',
-                // The embeddable's DQL field path, not the column name — see
-                // totalCostNanoCredits() below for why the two differ.
-                'r.providerUsage.providerHost AS providerHost',
-                'r.providerUsage.model AS model',
-                'r.providerUsage.promptTokens AS promptTokens',
-                'r.providerUsage.completionTokens AS completionTokens',
-                'r.providerUsage.reasoningTokens AS reasoningTokens',
-                'r.providerUsage.cachedTokens AS cachedTokens',
-                'r.providerUsage.costNanoCredits AS costNanoCredits',
-            )
-            ->andWhere('r.user = :user')->setParameter('user', $user)
-            ->orderBy('r.id', 'DESC')
-            ->setMaxResults(self::HISTORY_LIMIT)
-            ->getQuery()
-            ->getArrayResult();
-
-        return $rows;
-    }
-
-    /**
-     * The account's whole spend, summed in the database over every run it
-     * ever made — deliberately not over the page findNewestForUser() returns.
-     * An account whose runs all went unpriced sums to null, which is the
-     * honest answer: nothing reported a price, as opposed to everything
-     * reporting zero.
-     */
-    public function totalCostNanoCredits(User $user): ?int
-    {
-        $total = $this->createQueryBuilder('r')
-            // Task 4 extracted the seven columns into a `ProviderUsage`
-            // embeddable (PHPMD TooManyFields). The *column* names are
-            // unprefixed and unchanged, but the DQL field path is not:
-            // `r.costNanoCredits` throws "has no field or association named".
-            ->select('SUM(r.providerUsage.costNanoCredits)')
-            ->andWhere('r.user = :user')
-            ->setParameter('user', $user)
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        return null === $total ? null : (int) $total;
     }
 }
