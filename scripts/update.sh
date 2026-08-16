@@ -58,7 +58,6 @@ else
 fi
 lockfile_after=$(lockfile_blob)
 
-updated_any=0
 updated_prod=0
 updated_dev=0
 
@@ -71,7 +70,6 @@ if [ -f "${ENV_PROD_FILE}" ]; then
   say 'Updating the production stack ...'
   SFR_DEFER_SUMMARY=1 "${REPO_ROOT}/scripts/prod-start.sh"
   updated_prod=1
-  updated_any=1
 fi
 
 # --- development stack ------------------------------------------------------
@@ -99,10 +97,9 @@ if [ -n "$(compose ps -aq php 2>/dev/null)" ]; then
     warn 'The API did not report healthy in time. Check:  docker compose logs -f php nginx worker'
   fi
   updated_dev=1
-  updated_any=1
 fi
 
-if [ "${updated_any}" -eq 0 ]; then
+if [ "${updated_prod}" -eq 0 ] && [ "${updated_dev}" -eq 0 ]; then
   warn 'No installed stack found (no .env.prod, no dev containers).'
   say "The checkout is now on ${target}."
   say 'Start a stack with ./scripts/prod-start.sh (production) or ./scripts/install-dev.sh (development).'
@@ -112,7 +109,10 @@ fi
 ok "Updated ${current} -> ${target}."
 
 # The closing blocks, last: one per stack that was updated. print_notes empties
-# the collection, so warnings appear under the first block only.
-[ "${updated_prod}" -eq 1 ] && print_prod_summary
-[ "${updated_dev}" -eq 1 ] && print_summary
-exit 0
+# the collection, so the warnings appear under the first block only.
+if [ "${updated_prod}" -eq 1 ]; then
+  print_prod_summary
+fi
+if [ "${updated_dev}" -eq 1 ]; then
+  print_summary
+fi
