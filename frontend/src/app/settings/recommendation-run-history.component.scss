@@ -58,14 +58,17 @@
     }
   }
 
-  /* Decodes the mobile row's icon-only status column (#409). Desktop already
-     spells the word out in every row, so a legend there would explain a
-     column that needs no explaining -- shown only at the width the row grid
-     itself switches to icons. */
+  /* Decodes the row's icon-only status column (#409) -- shown at exactly the
+     widths the row itself renders an icon there, `bp.$bp-md` (720px), not
+     `bp.$bp-sm` (560px): the icon/word switch and the column-compression
+     switch are two different boundaries on purpose (see the month
+     component's own stylesheet for why), and this has to track the former.
+     Above `bp.$bp-md` every row spells the word out already, so a legend
+     there would explain a column that needs no explaining. */
   &__legend {
     display: none;
 
-    @media (width <= bp.$bp-sm) {
+    @media (width <= bp.$bp-md) {
       display: block;
       margin-block-start: var(--space-3);
     }

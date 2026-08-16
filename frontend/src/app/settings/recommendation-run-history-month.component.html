@@ -26,11 +26,27 @@
         <span class="run-history-month__duration">
           {{ 'settings.ai.recommendations.historyColDuration' | transloco }}
         </span>
+        <!-- `&__col-full`/`&__col-short`: "TOKENS IN"/"TOKENS OUT" is what
+             the desktop track fits; a mobile track sized for the number
+             beneath it fits only "IN"/"OUT" (#409). Both live in the DOM at
+             every width -- this whole strip is `aria-hidden`, so there is no
+             assistive-tech duplication to worry about -- and the stylesheet
+             picks which one is visible. -->
         <span class="run-history-month__tokens-in">
-          {{ 'settings.ai.recommendations.historyColTokensIn' | transloco }}
+          <span class="run-history-month__col-full">
+            {{ 'settings.ai.recommendations.historyColTokensIn' | transloco }}
+          </span>
+          <span class="run-history-month__col-short">
+            {{ 'settings.ai.recommendations.historyColTokensInShort' | transloco }}
+          </span>
         </span>
         <span class="run-history-month__tokens-out">
-          {{ 'settings.ai.recommendations.historyColTokensOut' | transloco }}
+          <span class="run-history-month__col-full">
+            {{ 'settings.ai.recommendations.historyColTokensOut' | transloco }}
+          </span>
+          <span class="run-history-month__col-short">
+            {{ 'settings.ai.recommendations.historyColTokensOutShort' | transloco }}
+          </span>
         </span>
         <span class="run-history-month__cost">
           {{ 'settings.ai.recommendations.historyColCost' | transloco }}

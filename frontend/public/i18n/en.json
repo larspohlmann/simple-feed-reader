@@ -192,6 +192,8 @@
         "historyColDuration": "Time",
         "historyColTokensIn": "Tokens in",
         "historyColTokensOut": "Tokens out",
+        "historyColTokensInShort": "In",
+        "historyColTokensOutShort": "Out",
         "historyColCost": "Cost",
         "historyUnknown": "unknown provider",
         "historyMonthSummaryOne": "{{ runs }} run · {{ cost }}",

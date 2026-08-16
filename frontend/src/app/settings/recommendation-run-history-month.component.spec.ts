@@ -217,16 +217,39 @@ describe('RecommendationRunHistoryMonthComponent', () => {
     expect(header.querySelector('.run-history-month__when')?.textContent?.trim()).toBe('When');
     expect(header.querySelector('.run-history-month__status')?.textContent?.trim()).toBe('Status');
     expect(header.querySelector('.run-history-month__duration')?.textContent?.trim()).toBe('Time');
-    expect(header.querySelector('.run-history-month__tokens-in')?.textContent?.trim()).toBe(
-      'Tokens in',
-    );
-    expect(header.querySelector('.run-history-month__tokens-out')?.textContent?.trim()).toBe(
-      'Tokens out',
-    );
+    // Scoped to `&__col-full`: the cell also carries `&__col-short` ("In"),
+    // shown only below the mobile breakpoint -- an unscoped query would run
+    // the two together.
+    expect(
+      header
+        .querySelector('.run-history-month__tokens-in .run-history-month__col-full')
+        ?.textContent?.trim(),
+    ).toBe('Tokens in');
+    expect(
+      header
+        .querySelector('.run-history-month__tokens-out .run-history-month__col-full')
+        ?.textContent?.trim(),
+    ).toBe('Tokens out');
     expect(header.querySelector('.run-history-month__cost')?.textContent?.trim()).toBe('Cost');
     // The provider cell moved to its own full-width row 2 and has no column
     // header of its own -- see the provider-cell test below.
     expect(header.querySelector('.run-history-month__provider')).toBeNull();
+  });
+
+  it('carries the short "In"/"Out" header text for the mobile track, in the DOM at every width', () => {
+    const el = mount({ runs: [PRICED_RUN] });
+    const header = el.querySelector('.run-history-month__row--header') as HTMLElement;
+
+    expect(
+      header
+        .querySelector('.run-history-month__tokens-in .run-history-month__col-short')
+        ?.textContent?.trim(),
+    ).toBe('In');
+    expect(
+      header
+        .querySelector('.run-history-month__tokens-out .run-history-month__col-short')
+        ?.textContent?.trim(),
+    ).toBe('Out');
   });
 
   it('gives every row cell a label carrying that column’s name, provider included', () => {
