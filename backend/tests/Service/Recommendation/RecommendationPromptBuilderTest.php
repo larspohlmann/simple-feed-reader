@@ -421,6 +421,28 @@ final class RecommendationPromptBuilderTest extends TestCase
     }
 
     /**
+     * A single viewed post became "a fascination for sports events" and scored
+     * 920, and 13 of that run's 50 picks came out as sports. The prompt held
+     * VIEWED down with an ordering and no number behind it, which a small model
+     * drops as soon as the topical match is good. The ceiling is a number now,
+     * inside the band the rubric already reserves for a weak link (#440).
+     */
+    public function testAViewedOnlyMatchIsGivenANumericCeiling(): void
+    {
+        $system = $this->builder->batchMessages(
+            $this->emptyHistory(),
+            [self::line(7, 'Candidate seven', 10)],
+            $this->settings(32768, 100),
+        )[0]['content'];
+
+        self::assertStringContainsString(
+            "A candidate whose only support in the reader's history is a VIEWED post scores below 400",
+            $system,
+        );
+        self::assertStringContainsString('opening a post is not liking it', $system);
+    }
+
+    /**
      * The batch prompt asked for every candidate and, in the same breath, told
      * the model to omit the duplicates of a story it had already scored. It
      * resolved the conflict by omitting: 3.2% of production candidates were

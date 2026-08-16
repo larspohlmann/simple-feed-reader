@@ -22,7 +22,9 @@ final class RecommendationPromptText
         . 'unmistakable, specific match to a strong, repeated favorite interest; 700-899 for a '
         . 'clear, direct match to a demonstrated interest; 400-699 for a real but partial or '
         . 'merely thematic match; 100-399 for a weak or tangential link; 0-99 for no visible '
-        . 'connection. A post that only shares a broad topic the reader occasionally reads '
+        . "connection. A candidate whose only support in the reader's history is a VIEWED post "
+        . 'scores below 400, however closely it matches: opening a post is not liking it. '
+        . 'A post that only shares a broad topic the reader occasionally reads '
         . 'is a partial match, not a strong one. If you are giving many candidates scores '
         . 'above 800, you are being too generous — lower them. When uncertain, score lower. '
         . 'Prefer recent posts. Use the whole range and give each candidate its own exact '
