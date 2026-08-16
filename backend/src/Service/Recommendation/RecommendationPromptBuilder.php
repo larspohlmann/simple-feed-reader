@@ -14,7 +14,18 @@ final class RecommendationPromptBuilder
 {
     private const int CHARS_PER_TOKEN = 4;
     private const int FIXED_OVERHEAD_TOKENS = 1500;
-    private const int TOKENS_PER_PICK = 40;
+    /**
+     * What one scored pick costs in the reply: its id, its score, and the
+     * prose `reason` that dominates the three. Measured rather than guessed —
+     * the largest full-batch reply on record ran to 12068 characters for 43
+     * items, about 70 tokens each.
+     *
+     * It was 40 while the reasoning headroom sat on top of it and hid the
+     * shortfall. Once a non-reasoning connection stopped paying that headroom
+     * (#437) this number became the whole answer bound, so it has to cover a
+     * real reply with room to spare instead of half of one.
+     */
+    private const int TOKENS_PER_PICK = 100;
     private const int MINIMUM_ANSWER_TOKENS = 1024;
     private const int MINIMUM_BATCH_SIZE = 10;
 
@@ -31,23 +42,6 @@ final class RecommendationPromptBuilder
     private const int REASONING_HEADROOM_TOKENS = 32000;
 
     /**
-     * Hard ceiling on candidates per batch, independent of the token budget.
-     *
-     * The token budget alone let a large-context model receive 339
-     * candidates in a single batch; ranking that many took over 100 seconds
-     * and exceeded the provider request timeout. Ranking time scales with
-     * the number of items the model must order, not just with prompt size,
-     * so the token budget cannot be the only guard. 40 keeps a single batch
-     * call comfortably inside the timeout on every model this feature
-     * targets. See #308.
-     *
-     * Raised 40 → 45 in #321 so the default 500-candidate pool packs into 12
-     * batch calls (13 with dedup) instead of 26. Still a fraction of the 339
-     * that broke the timeout.
-     */
-    private const int MAXIMUM_BATCH_SIZE = 45;
-
-    /**
      * The description length a dedup line carries. Fixed rather than scaled
      * to the context window like the candidate lines: whether two entries
      * report the same event is visible in the opening sentences, and the
@@ -55,6 +49,15 @@ final class RecommendationPromptBuilder
      * multiplies straight into one prompt (#406).
      */
     private const int DEDUP_DESCRIPTION_CHARS = 250;
+
+    /**
+     * How much of an unusable reply the corrective tail quotes back. Wide
+     * enough that an ordinary rejected reply is shown whole, and far short of
+     * a runaway's tens of kilobytes of repetition (#437).
+     */
+    private const int QUOTED_REPLY_LIMIT_CHARS = 2000;
+
+    private const string QUOTED_REPLY_ELLIPSIS = "\n… (reply cut here: it did not stop)";
 
     private const int DESCRIPTION_MIN_CHARS = 120;
     private const int DESCRIPTION_MAX_CHARS = 480;
@@ -238,9 +241,28 @@ final class RecommendationPromptBuilder
     public function correctiveTail(string $invalidReply, string $correction): array
     {
         return [
-            ['role' => 'assistant', 'content' => $invalidReply],
+            ['role' => 'assistant', 'content' => $this->quotableReply($invalidReply)],
             ['role' => 'user', 'content' => $correction],
         ];
+    }
+
+    /**
+     * As much of the model's own reply as is worth quoting back to it.
+     *
+     * A reply is normally short enough to quote whole, and the whole of it is
+     * the clearest thing to correct against. A reply that ran away is not: it
+     * repeats one line for tens of kilobytes, and echoing all of that spends
+     * the retry's context on the loop and primes the model to continue it
+     * (#437). The head shows the same mistake at a fraction of the cost, and
+     * the marker tells the model it is seeing a fragment.
+     */
+    private function quotableReply(string $invalidReply): string
+    {
+        if (\strlen($invalidReply) <= self::QUOTED_REPLY_LIMIT_CHARS) {
+            return $invalidReply;
+        }
+
+        return substr($invalidReply, 0, self::QUOTED_REPLY_LIMIT_CHARS) . self::QUOTED_REPLY_ELLIPSIS;
     }
 
     /**
@@ -301,11 +323,12 @@ final class RecommendationPromptBuilder
 
     /** The explicit batch-count override wins over the #308 size ceiling: it is
      *  an expert setting, and the token budget below still protects the context
-     *  window. Null means automatic packing under MAXIMUM_BATCH_SIZE. */
+     *  window. Null means automatic packing under the connection's own ceiling,
+     *  which is lower for an endpoint the account marked slow (#437). */
     private function batchCap(int $candidateCount, EffectiveRecommendationSettings $settings): int
     {
         if (null === $settings->packing->batchCount) {
-            return self::MAXIMUM_BATCH_SIZE;
+            return $settings->packing->maximumBatchSize;
         }
 
         return max(1, (int) ceil($candidateCount / $settings->packing->batchCount));

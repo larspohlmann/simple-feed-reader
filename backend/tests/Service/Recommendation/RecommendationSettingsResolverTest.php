@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Entity\RecommendationSettings;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
+use App\Service\Recommendation\RecommendationPackingSettings;
 use App\Service\Recommendation\RecommendationSettingsResolver;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Tests\DbTestCase;
@@ -92,7 +93,49 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         self::assertTrue($effective->debugEnabled);
     }
 
-    private function seedAiSettingsWithModel(User $user, int $contextWindow): void
+    /**
+     * The batch ceiling follows the connection, because it is a property of
+     * what the endpoint can do rather than of the account's taste (#437). A
+     * default connection keeps the ceiling every endpoint used to share.
+     */
+    public function testADefaultConnectionKeepsTheDefaultBatchCeiling(): void
+    {
+        $this->seedAiSettingsWithModel($this->user, contextWindow: 200000);
+
+        self::assertSame(
+            RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
+            $this->resolver()->forUser($this->user)->packing->maximumBatchSize,
+        );
+    }
+
+    /**
+     * A connection the account marked slow packs shorter batches: a small
+     * local model asked to rank 45 entries fell into a repetition loop on the
+     * ninth batch of a run whose first eight were fine (#437).
+     */
+    public function testAConnectionMarkedSlowPacksShorterBatches(): void
+    {
+        $this->seedAiSettingsWithModel($this->user, contextWindow: 200000, slowModel: true);
+
+        self::assertSame(
+            RecommendationPackingSettings::SLOW_MODEL_MAXIMUM_BATCH_SIZE,
+            $this->resolver()->forUser($this->user)->packing->maximumBatchSize,
+        );
+    }
+
+    /**
+     * With no configuration at all there is no connection to read a ceiling
+     * from, and the default is what the packer gets.
+     */
+    public function testTheBatchCeilingFallsBackWithNoConfiguration(): void
+    {
+        self::assertSame(
+            RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
+            $this->resolver()->forUser($this->user)->packing->maximumBatchSize,
+        );
+    }
+
+    private function seedAiSettingsWithModel(User $user, int $contextWindow, bool $slowModel = false): void
     {
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
@@ -104,6 +147,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         $settings = new AiProviderSettings($user, null, 'https://api.example.test/v1', $sealed, '1234', $now);
         $this->em->persist($settings);
         $settings->chooseModel('m', $now, $contextWindow);
+        $settings->setSlowModel($slowModel);
         $user->setActiveAiProviderSettings($settings);
         $this->em->flush();
     }

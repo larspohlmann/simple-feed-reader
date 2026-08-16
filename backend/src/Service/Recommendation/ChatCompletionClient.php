@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 use App\Service\Ai\Exception\CredentialsRejectedException;
+use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ProviderConnection;
 
@@ -16,6 +17,8 @@ interface ChatCompletionClient
      *
      * @throws CredentialsRejectedException
      * @throws ProviderUnreachableException
+     * @throws ProviderRunawayException    the model answered past what the request asked for, and the partial
+     *                                     answer rides on the exception (#437)
      */
     public function complete(
         ProviderConnection $connection,

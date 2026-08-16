@@ -69,6 +69,14 @@ services:
     # --memory-limit matches the prod service: the same consumer, the same
     # long-lived process, and a leak must be caught on a developer machine
     # before it reaches a server.
+    #
+    # 128M was below what one recommendation wave legitimately needs. A wave
+    # reads several answer streams at once and decodes each, and a run against
+    # a local model exceeded it at 201 MB and restarted the consumer mid-wave,
+    # throwing that wave's provider spend away (#437). The bounds that stop a
+    # runaway now live where the runaway is — the request's own token ceiling
+    # and the reader's answer cap — so this number no longer has to double as
+    # one.
     command:
       - php
       - bin/console
@@ -76,7 +84,7 @@ services:
       - scheduler_worker
       - -vv
       - --time-limit=3600
-      - --memory-limit=128M
+      - --memory-limit=512M
     # `always`, not `unless-stopped`: the two behave identically for a crash or
     # a clean --time-limit exit, but they differ after someone stops the worker
     # by hand — as the warning above tells you to before an e2e run.
