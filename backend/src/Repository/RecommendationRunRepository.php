@@ -184,4 +184,35 @@ final class RecommendationRunRepository extends ServiceEntityRepository
             'DELETE FROM App\Entity\RecommendationRun r WHERE r.user = :user',
         )->setParameter('user', $user)->execute();
     }
+
+    /**
+     * How many runs the history endpoint answers with (#409). The list is a
+     * spending record a human reads, not a dataset — fifty rows is more than
+     * anyone scrolls, and totalCostNanoCredits() below is computed over every
+     * run anyway, so this cap never makes the number on screen wrong.
+     */
+    public const int HISTORY_LIMIT = 50;
+
+    /**
+     * The account's whole spend, summed in the database over every run it
+     * ever made — deliberately not over the page findNewestForUser() returns.
+     * An account whose runs all went unpriced sums to null, which is the
+     * honest answer: nothing reported a price, as opposed to everything
+     * reporting zero.
+     */
+    public function totalCostNanoCredits(User $user): ?int
+    {
+        $total = $this->createQueryBuilder('r')
+            // Task 4 extracted the seven columns into a `ProviderUsage`
+            // embeddable (PHPMD TooManyFields). The *column* names are
+            // unprefixed and unchanged, but the DQL field path is not:
+            // `r.costNanoCredits` throws "has no field or association named".
+            ->select('SUM(r.providerUsage.costNanoCredits)')
+            ->andWhere('r.user = :user')
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return null === $total ? null : (int) $total;
+    }
 }

@@ -6,7 +6,7 @@ namespace App\Controller\Api;
 
 use App\Entity\User;
 use App\Http\RecommendationRunHistoryJson;
-use App\Repository\RecommendationRunHistoryRepository;
+use App\Repository\RecommendationRunRepository;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -26,7 +26,7 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 #[Route('/api/recommendations/runs/history')]
 final readonly class RecommendationRunHistoryController
 {
-    public function __construct(private RecommendationRunHistoryRepository $runs)
+    public function __construct(private RecommendationRunRepository $runs)
     {
     }
 
@@ -34,7 +34,7 @@ final readonly class RecommendationRunHistoryController
     public function list(#[CurrentUser] User $user): JsonResponse
     {
         return new JsonResponse(RecommendationRunHistoryJson::payload(
-            $this->runs->historyForUser($user),
+            $this->runs->findNewestForUser($user, RecommendationRunRepository::HISTORY_LIMIT),
             $this->runs->totalCostNanoCredits($user),
         ));
     }

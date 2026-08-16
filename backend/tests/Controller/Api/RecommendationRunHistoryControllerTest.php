@@ -6,6 +6,7 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
@@ -129,9 +130,41 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         /** @var list<array<string, mixed>> $runs */
         $runs = $payload['runs'];
         self::assertCount(2, $runs);
+        self::assertSame($newer->getId(), $runs[0]['id']);
+        self::assertSame($older->getId(), $runs[1]['id']);
         self::assertSame('openrouter.ai', $runs[0]['providerHost']);
         self::assertSame(2_000, $runs[0]['costNanoCredits']);
         self::assertSame(1_000, $runs[1]['costNanoCredits']);
+    }
+
+    /**
+     * The list is capped at RecommendationRunRepository::HISTORY_LIMIT
+     * (#409) even though the all-time total above it is not -- an
+     * unasserted cap is an unkilled mutant on both the constant's value and
+     * the controller's call site.
+     */
+    public function testCapsTheHistoryAtTheLimitKeepingTheNewestRuns(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('run-history-cap@example.test');
+
+        $runCount = RecommendationRunRepository::HISTORY_LIMIT + 1;
+        $seededRuns = [];
+        for ($i = 0; $i < $runCount; $i++) {
+            $seededRuns[] = $this->fixtures()->createRun($user);
+        }
+        $this->em()->flush();
+        $seededIds = array_map(static fn (RecommendationRun $run): ?int => $run->getId(), $seededRuns);
+
+        $client->request('GET', '/api/recommendations/runs/history', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client->getResponse());
+        /** @var list<array<string, mixed>> $returnedRuns */
+        $returnedRuns = $payload['runs'];
+        self::assertCount(RecommendationRunRepository::HISTORY_LIMIT, $returnedRuns);
+        // Newest first, with the single oldest seeded run dropped by the cap.
+        self::assertSame(array_reverse(\array_slice($seededIds, 1)), array_column($returnedRuns, 'id'));
     }
 
     public function testAnAccountThatNeverRanGetsAnEmptyHistoryAndNoTotal(): void

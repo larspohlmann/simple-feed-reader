@@ -21,6 +21,11 @@ final class RecommendationRunHistoryJsonTest extends TestCase
 
         self::assertSame(918_200_000, $payload['totalCostNanoCredits']);
         self::assertCount(1, $payload['runs']);
+        // Unpersisted here, so both sides are null -- the id column's real
+        // value is proven by the functional test's persisted runs; this
+        // pins that the mapper reads getId() at all rather than a mutant
+        // dropping the key.
+        self::assertSame($run->getId(), $payload['runs'][0]['id']);
         self::assertSame('completed', $payload['runs'][0]['status']);
         self::assertSame('openrouter.ai', $payload['runs'][0]['providerHost']);
         self::assertSame('x-ai/grok-4-fast', $payload['runs'][0]['model']);
