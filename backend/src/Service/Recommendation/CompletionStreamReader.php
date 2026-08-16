@@ -37,6 +37,13 @@ final class CompletionStreamReader
     private int $wireBytes = 0;
     private ?string $finishReason = null;
 
+    /**
+     * The provider's own accounting for this call, sticky exactly as
+     * $finishReason is: it arrives in one late message and every event after
+     * it carries none, so a later null must never erase it (#409).
+     */
+    private ?CompletionUsage $usage = null;
+
     public function __construct(private readonly CompletionBodyDecoder $decoder)
     {
     }
@@ -68,6 +75,25 @@ final class CompletionStreamReader
     public function finishReason(): ?string
     {
         return $this->finishReason;
+    }
+
+    /**
+     * What the provider says this call consumed, once it says so. Null until
+     * a message carries it — and for a provider that reports none at all.
+     *
+     * Deliberately no salvage of an unterminated event left in $pendingLine,
+     * the way trailingEventContent() salvages a last delta: that would mean a
+     * JSON decode per chunk on a half-buffered event, which is the parse cost
+     * #327 removed. Real SSE terminates its frames, and the usage message is
+     * followed by `data: [DONE]`, so it is never the unterminated one.
+     */
+    public function usage(): ?CompletionUsage
+    {
+        if (!$this->sawStreamEvent) {
+            return $this->decoder->usage($this->envelope . $this->pendingLine);
+        }
+
+        return $this->usage;
     }
 
     /**
@@ -147,6 +173,7 @@ final class CompletionStreamReader
         $this->answer .= $event['content'] ?? '';
         $this->appendReasoning($event['reasoning'] ?? '');
         $this->finishReason = $event['finishReason'] ?? $this->finishReason;
+        $this->usage = $event['usage'] ?? $this->usage;
     }
 
     /**

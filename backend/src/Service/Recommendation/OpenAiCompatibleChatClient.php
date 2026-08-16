@@ -280,6 +280,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
                 $reader->assistantContent() ?? '',
                 $reader->wireBytes(),
                 $reader->finishReason(),
+                $reader->usage(),
             ));
         }
 
@@ -386,6 +387,12 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
                 ],
             ],
             'stream' => true,
+            // Ask for the usage message the stream would otherwise not carry
+            // (#409). Unconditional because this is OpenAI spec, not a vendor
+            // extension — unlike `reasoning` below, which is per-connection
+            // for exactly that reason. OpenRouter documents it as inert; a
+            // plain OpenAI-compatible endpoint sends no usage without it.
+            'stream_options' => ['include_usage' => true],
             // The only guard here that prevents spend rather than
             // discarding what was already billed: the byte caps and the
             // timeouts all fire after the provider has generated the
