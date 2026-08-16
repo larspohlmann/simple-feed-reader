@@ -1834,7 +1834,11 @@ In `backend/src/Repository/RecommendationRunRepository.php`:
     public function totalCostNanoCredits(User $user): ?int
     {
         $total = $this->createQueryBuilder('r')
-            ->select('SUM(r.costNanoCredits)')
+            // Task 4 extracted the seven columns into a `ProviderUsage`
+            // embeddable (PHPMD TooManyFields). The *column* names are
+            // unprefixed and unchanged, but the DQL field path is not:
+            // `r.costNanoCredits` throws "has no field or association named".
+            ->select('SUM(r.providerUsage.costNanoCredits)')
             ->andWhere('r.user = :user')
             ->setParameter('user', $user)
             ->getQuery()
