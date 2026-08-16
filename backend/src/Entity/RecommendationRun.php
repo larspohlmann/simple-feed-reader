@@ -17,18 +17,17 @@ use Doctrine\ORM\Mapping as ORM;
  * the exact failed batch (#308); history is deliberately NOT frozen — it only
  * shades the prompt.
  *
- * The eleventh public method is stampProvider() (#409): the class was
- * already at PHPMD's ten-method ceiling with ten legitimate, previously
- * reviewed state transitions (snapshot, recordBatchWinners,
- * recordInvalidReply, recordTransportFailure, complete, fail, cancel,
- * resume, progress, plus the constructor), none of which is a duplicate a
- * merge could remove. stampProvider is a binding part of #409's public
- * interface — RecommendationRunAdvancer stamps the run before every call —
- * so it cannot be renamed to match the rule's get/set ignore pattern, and
- * moving it onto ProviderUsage would only relocate the same call, not
- * remove it. The seven columns behind it are already off this class as a
- * ProviderUsage embeddable, which is the fix the field-count half of this
- * same finding was pointing at.
+ * The public surface sits over PHPMD's ten-method ceiling, which the
+ * suppression below accepts: every state transition of the run is its own
+ * named method (snapshot, recordBatchWinners, recordInvalidReply,
+ * recordTransportFailure, complete, fail, cancel, resume), and beside them
+ * stand the queries that read the checkpoint back and stampProvider(), which
+ * RecommendationRunStarter calls at start and again at resume (#409). None of
+ * them is a duplicate a merge could remove, and none can be renamed to match
+ * the rule's get/set ignore pattern without lying about what it does. The
+ * seven usage columns are already off this class as a ProviderUsage
+ * embeddable, which is the fix the field-count half of this same finding was
+ * pointing at.
  *
  * @SuppressWarnings("PHPMD.TooManyPublicMethods")
  */
@@ -44,6 +43,20 @@ class RecommendationRun
 
     /** Terminal, and reached only by the user stopping the run themselves. */
     public const string STATUS_CANCELLED = 'cancelled';
+
+    /**
+     * The statuses that mean the run is over. resume() deliberately leaves
+     * completedAt standing, so "carries a completion time" and "has finished"
+     * are two different questions: anything that reports a run as finished has
+     * to ask this one (#409).
+     *
+     * @var list<string>
+     */
+    public const array TERMINAL_STATUSES = [
+        self::STATUS_COMPLETED,
+        self::STATUS_FAILED,
+        self::STATUS_CANCELLED,
+    ];
 
     /** First call plus the spec's two retries. */
     public const int MAX_ATTEMPTS = 3;

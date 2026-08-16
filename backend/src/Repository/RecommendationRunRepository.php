@@ -12,6 +12,20 @@ use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * @extends ServiceEntityRepository<RecommendationRun>
+ *
+ * @phpstan-type HistoryRow array{
+ *     id: int,
+ *     status: string,
+ *     providerHost: ?string,
+ *     model: ?string,
+ *     createdAt: \DateTimeImmutable,
+ *     completedAt: ?\DateTimeImmutable,
+ *     promptTokens: int,
+ *     completionTokens: int,
+ *     reasoningTokens: int,
+ *     cachedTokens: int,
+ *     costNanoCredits: int|string|null,
+ * }
  */
 final class RecommendationRunRepository extends ServiceEntityRepository
 {
@@ -67,37 +81,29 @@ final class RecommendationRunRepository extends ServiceEntityRepository
         return $status;
     }
 
-    public function findLatestForUser(User $user): ?RecommendationRun
+    /**
+     * The account's newest run, optionally of one status only.
+     *
+     * The two readings are one query because they differ in nothing but that
+     * filter: callers driving a run want whatever ran last, whatever became of
+     * it, while the for-you summary wants the newest *completed* run — the one
+     * that produced the surviving list, which a later failed run never touched.
+     * Its id and completedAt drive the header's "Last refreshed" hint and the
+     * for-you divider suppression.
+     */
+    public function findLatestForUser(User $user, ?string $status = null): ?RecommendationRun
     {
-        /** @var RecommendationRun|null $run */
-        $run = $this->createQueryBuilder('r')
+        $query = $this->createQueryBuilder('r')
             ->andWhere('r.user = :user')->setParameter('user', $user)
             ->orderBy('r.id', 'DESC')
-            ->setMaxResults(1)
-            ->getQuery()
-            ->getOneOrNullResult();
+            ->setMaxResults(1);
 
-        return $run;
-    }
+        if (null !== $status) {
+            $query->andWhere('r.status = :status')->setParameter('status', $status);
+        }
 
-    /**
-     * The run that produced the surviving for-you list: the newest *completed*
-     * run, distinct from findLatestForUser() which may return a failed run that
-     * never touched the list. Its id and completedAt drive the header's "Last
-     * refreshed" hint and the for-you divider suppression.
-     */
-    public function newestCompletedRun(User $user): ?RecommendationRun
-    {
         /** @var RecommendationRun|null $run */
-        $run = $this->createQueryBuilder('r')
-            ->where('r.user = :user')
-            ->andWhere('r.status = :completed')
-            ->setParameter('user', $user)
-            ->setParameter('completed', RecommendationRun::STATUS_COMPLETED)
-            ->orderBy('r.id', 'DESC')
-            ->setMaxResults(1)
-            ->getQuery()
-            ->getOneOrNullResult();
+        $run = $query->getQuery()->getOneOrNullResult();
 
         return $run;
     }
@@ -192,6 +198,47 @@ final class RecommendationRunRepository extends ServiceEntityRepository
      * run anyway, so this cap never makes the number on screen wrong.
      */
     public const int HISTORY_LIMIT = 50;
+
+    /**
+     * The newest runs of one account as the history payload needs them:
+     * scalars, newest first, capped at HISTORY_LIMIT.
+     *
+     * Deliberately not entities. A RecommendationRun carries the frozen
+     * candidate pool, every batch winner with its free-text reason, the last
+     * rejected provider reply and the error text — fifty of those decoded and
+     * put under the EntityManager to format twelve numbers is work the
+     * settings page would pay on every load, on a host that has neither
+     * response compression nor memory to spare.
+     *
+     * @return list<HistoryRow>
+     */
+    public function historyForUser(User $user): array
+    {
+        /** @var list<HistoryRow> $rows */
+        $rows = $this->createQueryBuilder('r')
+            ->select(
+                'r.id AS id',
+                'r.status AS status',
+                'r.createdAt AS createdAt',
+                'r.completedAt AS completedAt',
+                // The embeddable's DQL field path, not the column name — see
+                // totalCostNanoCredits() below for why the two differ.
+                'r.providerUsage.providerHost AS providerHost',
+                'r.providerUsage.model AS model',
+                'r.providerUsage.promptTokens AS promptTokens',
+                'r.providerUsage.completionTokens AS completionTokens',
+                'r.providerUsage.reasoningTokens AS reasoningTokens',
+                'r.providerUsage.cachedTokens AS cachedTokens',
+                'r.providerUsage.costNanoCredits AS costNanoCredits',
+            )
+            ->andWhere('r.user = :user')->setParameter('user', $user)
+            ->orderBy('r.id', 'DESC')
+            ->setMaxResults(self::HISTORY_LIMIT)
+            ->getQuery()
+            ->getArrayResult();
+
+        return $rows;
+    }
 
     /**
      * The account's whole spend, summed in the database over every run it

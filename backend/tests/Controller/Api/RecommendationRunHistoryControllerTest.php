@@ -167,6 +167,39 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         self::assertSame(array_reverse(\array_slice($seededIds, 1)), array_column($returnedRuns, 'id'));
     }
 
+    /**
+     * resume() deliberately does not clear completedAt, so the row really does
+     * reach the payload with a RUNNING status beside the timestamp of the
+     * attempt that failed. The endpoint must report neither that time nor the
+     * duration derived from it — a "47 s" beside a RUNNING badge measures a
+     * dead attempt (#409).
+     */
+    public function testAResumedRunReportsNeitherACompletionTimeNorADuration(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('run-history-resumed@example.test');
+
+        $run = $this->fixtures()->createRun($user);
+        $run->snapshot([[1]]);
+        $run->fail('that provider did not answer', new \DateTimeImmutable('2026-08-08 10:00:47'));
+        $run->resume();
+        $this->em()->flush();
+        // The column keeps the failed attempt's stamp; only the payload hides
+        // it. Asserted here so a future "fix" in the entity is caught as the
+        // behaviour change it would be.
+        self::assertNotNull($run->getCompletedAt());
+
+        $client->request('GET', '/api/recommendations/runs/history', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client->getResponse());
+        /** @var list<array<string, mixed>> $runs */
+        $runs = $payload['runs'];
+        self::assertSame('running', $runs[0]['status']);
+        self::assertNull($runs[0]['completedAt']);
+        self::assertNull($runs[0]['durationSeconds']);
+    }
+
     public function testAnAccountThatNeverRanGetsAnEmptyHistoryAndNoTotal(): void
     {
         $client = self::createClient();

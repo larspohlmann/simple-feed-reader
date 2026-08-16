@@ -34,7 +34,7 @@ final readonly class RecommendationRunHistoryController
     public function list(#[CurrentUser] User $user): JsonResponse
     {
         return new JsonResponse(RecommendationRunHistoryJson::payload(
-            $this->runs->findNewestForUser($user, RecommendationRunRepository::HISTORY_LIMIT),
+            $this->runs->historyForUser($user),
             $this->runs->totalCostNanoCredits($user),
         ));
     }

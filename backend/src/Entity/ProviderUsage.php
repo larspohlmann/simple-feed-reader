@@ -14,7 +14,7 @@ use Doctrine\ORM\Mapping as ORM;
  * Embedded into RecommendationRun rather than left as seven of its own scalar
  * columns — PHPMD's field-count ceiling on RecommendationRun is a proxy for a
  * real seam: these seven values are stamped and banked together, by
- * RecommendationRunAdvancer and RecordedCall, and belong to the same concern
+ * RecommendationRunStarter and RecordedCall, and belong to the same concern
  * (#409). An embeddable keeps them there without the join or lifecycle a
  * separate entity would add; the column names are unprefixed so the table
  * itself is unchanged (see FetchSchedule for the same move on Feed).
