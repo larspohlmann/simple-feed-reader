@@ -7,6 +7,7 @@ namespace App\Tests\Http;
 use App\Entity\RecommendationRun;
 use App\Http\RecommendationRunHistoryJson;
 use App\Repository\RecommendationRunHistoryRepository;
+use App\Service\Recommendation\HistoryMonth;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
@@ -18,9 +19,9 @@ final class RecommendationRunHistoryJsonTest extends TestCase
 {
     public function testRendersOneRowPerRunWithItsDuration(): void
     {
-        $payload = RecommendationRunHistoryJson::payload([$this->completedRow()], 918_200_000);
+        $payload = RecommendationRunHistoryJson::monthPage('2026-08', [$this->completedRow()], null);
 
-        self::assertSame(918_200_000, $payload['totalCostNanoCredits']);
+        self::assertSame('2026-08', $payload['month']);
         self::assertCount(1, $payload['runs']);
         self::assertSame(42, $payload['runs'][0]['id']);
         self::assertSame('completed', $payload['runs'][0]['status']);
@@ -35,11 +36,10 @@ final class RecommendationRunHistoryJsonTest extends TestCase
     {
         $row = $this->row(['status' => RecommendationRun::STATUS_RUNNING, 'completedAt' => null]);
 
-        $payload = RecommendationRunHistoryJson::payload([$row], null);
+        $payload = RecommendationRunHistoryJson::monthPage('2026-08', [$row], null);
 
         self::assertNull($payload['runs'][0]['durationSeconds']);
         self::assertNull($payload['runs'][0]['completedAt']);
-        self::assertNull($payload['totalCostNanoCredits']);
     }
 
     /**
@@ -55,7 +55,7 @@ final class RecommendationRunHistoryJsonTest extends TestCase
             'completedAt' => new \DateTimeImmutable('2026-08-16 09:12:47'),
         ]);
 
-        $payload = RecommendationRunHistoryJson::payload([$row], null);
+        $payload = RecommendationRunHistoryJson::monthPage('2026-08', [$row], null);
 
         self::assertNull($payload['runs'][0]['completedAt']);
         self::assertNull($payload['runs'][0]['durationSeconds']);
@@ -68,7 +68,7 @@ final class RecommendationRunHistoryJsonTest extends TestCase
             'completedAt' => new \DateTimeImmutable('2026-08-16 09:12:47'),
         ]);
 
-        $payload = RecommendationRunHistoryJson::payload([$row], null);
+        $payload = RecommendationRunHistoryJson::monthPage('2026-08', [$row], null);
 
         self::assertNull($payload['runs'][0]['completedAt']);
         self::assertNull($payload['runs'][0]['durationSeconds']);
@@ -82,7 +82,7 @@ final class RecommendationRunHistoryJsonTest extends TestCase
     public function testEveryTerminalStatusReportsWhenItEnded(): void
     {
         foreach ([RecommendationRun::STATUS_FAILED, RecommendationRun::STATUS_CANCELLED] as $status) {
-            $payload = RecommendationRunHistoryJson::payload([$this->row(['status' => $status])], null);
+            $payload = RecommendationRunHistoryJson::monthPage('2026-08', [$this->row(['status' => $status])], null);
 
             self::assertSame('2026-08-16T09:12:47+00:00', $payload['runs'][0]['completedAt'], $status);
             self::assertSame(47, $payload['runs'][0]['durationSeconds'], $status);
@@ -91,7 +91,7 @@ final class RecommendationRunHistoryJsonTest extends TestCase
 
     public function testCarriesEveryTokenCounter(): void
     {
-        $payload = RecommendationRunHistoryJson::payload([$this->completedRow()], null);
+        $payload = RecommendationRunHistoryJson::monthPage('2026-08', [$this->completedRow()], null);
 
         self::assertSame(118_432, $payload['runs'][0]['promptTokens']);
         self::assertSame(2_216, $payload['runs'][0]['completionTokens']);
@@ -106,16 +106,72 @@ final class RecommendationRunHistoryJsonTest extends TestCase
      */
     public function testACostHandedBackAsAStringGoesOutAsAnInteger(): void
     {
-        $payload = RecommendationRunHistoryJson::payload([$this->row(['costNanoCredits' => '41230000'])], null);
+        $payload = RecommendationRunHistoryJson::monthPage(
+            '2026-08',
+            [$this->row(['costNanoCredits' => '41230000'])],
+            null,
+        );
 
         self::assertSame(41_230_000, $payload['runs'][0]['costNanoCredits']);
     }
 
     public function testAnUnpricedRunKeepsANullCostRatherThanAZeroOne(): void
     {
-        $payload = RecommendationRunHistoryJson::payload([$this->row(['costNanoCredits' => null])], null);
+        $payload = RecommendationRunHistoryJson::monthPage('2026-08', [$this->row(['costNanoCredits' => null])], null);
 
         self::assertNull($payload['runs'][0]['costNanoCredits']);
+    }
+
+    public function testAMonthPageRendersMonthRunsAndNextCursorAndNothingElse(): void
+    {
+        $payload = RecommendationRunHistoryJson::monthPage('2026-07', [$this->completedRow()], 361);
+
+        self::assertSame(['month', 'runs', 'nextCursor'], array_keys($payload));
+        self::assertSame('2026-07', $payload['month']);
+        self::assertCount(1, $payload['runs']);
+        self::assertSame(361, $payload['nextCursor']);
+    }
+
+    public function testAMonthPageWithNoFurtherRowsKeepsTheCursorKeyPresentAndNull(): void
+    {
+        $payload = RecommendationRunHistoryJson::monthPage('2026-07', [], null);
+
+        self::assertArrayHasKey('nextCursor', $payload);
+        self::assertNull($payload['nextCursor']);
+    }
+
+    public function testAnOverviewWithTwoMonthsAndALatestRendersAllThreeKeysInOrder(): void
+    {
+        $latest = RecommendationRunHistoryJson::monthPage('2026-08', [$this->completedRow()], 361);
+
+        $payload = RecommendationRunHistoryJson::overview(
+            918_200_000,
+            [
+                new HistoryMonth('2026-08', 47, 2_431_200_000),
+                new HistoryMonth('2026-07', 3, 100_000),
+            ],
+            $latest,
+        );
+
+        self::assertSame(['totalCostNanoCredits', 'months', 'latest'], array_keys($payload));
+        self::assertSame(918_200_000, $payload['totalCostNanoCredits']);
+        self::assertSame(
+            [
+                ['month' => '2026-08', 'runCount' => 47, 'costNanoCredits' => 2_431_200_000],
+                ['month' => '2026-07', 'runCount' => 3, 'costNanoCredits' => 100_000],
+            ],
+            $payload['months'],
+        );
+        self::assertSame($latest, $payload['latest']);
+    }
+
+    public function testAnOverviewForAnAccountThatNeverRanIsEmpty(): void
+    {
+        $payload = RecommendationRunHistoryJson::overview(null, [], null);
+
+        self::assertSame([], $payload['months']);
+        self::assertNull($payload['latest']);
+        self::assertNull($payload['totalCostNanoCredits']);
     }
 
     /** @return HistoryRow */

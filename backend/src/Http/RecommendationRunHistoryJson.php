@@ -6,10 +6,12 @@ namespace App\Http;
 
 use App\Entity\RecommendationRun;
 use App\Repository\RecommendationRunHistoryRepository;
+use App\Service\Recommendation\HistoryMonth;
 
 /**
- * The wire shape of the run history (#409): one row per run and the account's
- * all-time cost total.
+ * The wire shape of the run history (#409): the overview card opens on — the
+ * account's all-time cost total, one summary per calendar month, and the
+ * newest month's first page — and the further month pages it expands into.
  *
  * Fed with the repository's scalar projection rather than with runs: the
  * entity carries the frozen candidate pool, every pick's reason and the last
@@ -28,18 +30,46 @@ use App\Repository\RecommendationRunHistoryRepository;
 final class RecommendationRunHistoryJson
 {
     /**
-     * @param list<HistoryRow> $runs
+     * @param list<HistoryMonth> $months newest first
+     * @param ?array<string, mixed> $latest the newest month's own monthPage(),
+     *                                       or null for an account that has
+     *                                       never run
      *
-     * @return array{runs: list<array<string, mixed>>, totalCostNanoCredits: ?int}
+     * @return array{totalCostNanoCredits: ?int, months: list<array<string, mixed>>, latest: ?array<string, mixed>}
      */
-    public static function payload(array $runs, ?int $totalCostNanoCredits): array
+    public static function overview(?int $totalCostNanoCredits, array $months, ?array $latest): array
     {
         return [
-            'runs' => array_map(self::row(...), $runs),
             // The account's whole spend, not the sum of the page above it. A
             // total that silently means "of the last fifty" is a wrong number,
             // not a cheaper one.
             'totalCostNanoCredits' => $totalCostNanoCredits,
+            'months' => array_map(self::monthSummary(...), $months),
+            'latest' => $latest,
+        ];
+    }
+
+    /**
+     * @param list<HistoryRow> $rows already truncated to the page size
+     *
+     * @return array{month: string, runs: list<array<string, mixed>>, nextCursor: ?int}
+     */
+    public static function monthPage(string $month, array $rows, ?int $nextCursor): array
+    {
+        return [
+            'month' => $month,
+            'runs' => array_map(self::row(...), $rows),
+            'nextCursor' => $nextCursor,
+        ];
+    }
+
+    /** @return array{month: string, runCount: int, costNanoCredits: ?int} */
+    private static function monthSummary(HistoryMonth $month): array
+    {
+        return [
+            'month' => $month->month,
+            'runCount' => $month->runCount,
+            'costNanoCredits' => $month->costNanoCredits,
         ];
     }
 

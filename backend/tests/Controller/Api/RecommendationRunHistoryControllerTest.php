@@ -17,14 +17,18 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * The read side of the run cost history (#409): the account's newest runs
- * with what each one cost, and the all-time total banked over every run it
- * ever made. Read-only, so ownership is proven the same way the #309 debug
- * log test proves it — a second account's run must not leak in, either into
- * the list or into the total.
+ * The read side of the run cost history (#409): the overview the card opens
+ * on -- one summary per calendar month, the newest month's own runs, and the
+ * all-time total banked over every run the account ever made -- and the
+ * month route a reader pages further into. Read-only, so ownership is proven
+ * the same way the #309 debug log test proves it -- a second account's run
+ * must not leak in, into the month summaries, the newest month's runs or the
+ * total.
  */
 final class RecommendationRunHistoryControllerTest extends WebTestCase
 {
+    private const string HISTORY_ROUTE = '/api/recommendations/runs/history';
+
     /** @return array{0: array<string,string>, 1: User} */
     private function auth(string $email): array
     {
@@ -67,6 +71,22 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
     }
 
     /**
+     * A run pinned at an exact instant, for the month-bucketing assertions:
+     * RecommendationRunFixtures::createRun() deliberately fixes its own
+     * date, since most callers of it don't care about timing, so a test that
+     * needs a run in a specific month has to construct the entity itself
+     * the same way RecommendationRunHistoryRepositoryTest does.
+     */
+    private function persistRunAt(User $user, \DateTimeImmutable $createdAt): RecommendationRun
+    {
+        $run = new RecommendationRun($user, $createdAt);
+        $this->em()->persist($run);
+        $this->em()->flush();
+
+        return $run;
+    }
+
+    /**
      * The provider price is banked through raw SQL arithmetic in production
      * (RecordedCall::bankUsage(), never through the entity — see
      * ProviderUsage's class doc), so a fixture that wants a priced run has to
@@ -85,7 +105,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $this->em()->clear();
     }
 
-    public function testAnswersWithTheAccountsRunsNewestFirstAndTheAllTimeTotal(): void
+    public function testOverviewAnswersWithTheAccountsMonthLatestRunsAndTheAllTimeTotal(): void
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('run-history-mine@example.test');
@@ -122,13 +142,21 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $this->em()->flush();
         $this->priceRun($theirRun, 9_999);
 
-        $client->request('GET', '/api/recommendations/runs/history', server: $headers);
+        $client->request('GET', self::HISTORY_ROUTE, server: $headers);
 
         self::assertResponseIsSuccessful();
         $payload = $this->payload($client->getResponse());
         self::assertSame(3_000, $payload['totalCostNanoCredits']);
+        self::assertSame(
+            [['month' => '2026-08', 'runCount' => 2, 'costNanoCredits' => 3_000]],
+            $payload['months'],
+        );
+        /** @var array<string, mixed> $latest */
+        $latest = $payload['latest'];
+        self::assertSame('2026-08', $latest['month']);
+        self::assertNull($latest['nextCursor']);
         /** @var list<array<string, mixed>> $runs */
-        $runs = $payload['runs'];
+        $runs = $latest['runs'];
         self::assertCount(2, $runs);
         self::assertSame($newer->getId(), $runs[0]['id']);
         self::assertSame($older->getId(), $runs[1]['id']);
@@ -138,12 +166,12 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
     }
 
     /**
-     * The list is capped at RecommendationRunHistoryRepository::HISTORY_LIMIT
-     * (#409) even though the all-time total above it is not -- an
-     * unasserted cap is an unkilled mutant on both the constant's value and
-     * the controller's call site.
+     * The newest month's page is capped at
+     * RecommendationRunHistoryRepository::HISTORY_LIMIT (#409) even though
+     * the all-time total above it is not -- an unasserted cap is an unkilled
+     * mutant on both the constant's value and the view's truncation.
      */
-    public function testCapsTheHistoryAtTheLimitKeepingTheNewestRuns(): void
+    public function testCapsTheNewestMonthAtTheLimitKeepingTheNewestRunsAndReportsANextCursor(): void
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('run-history-cap@example.test');
@@ -156,15 +184,27 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $this->em()->flush();
         $seededIds = array_map(static fn (RecommendationRun $run): ?int => $run->getId(), $seededRuns);
 
-        $client->request('GET', '/api/recommendations/runs/history', server: $headers);
+        $client->request('GET', self::HISTORY_ROUTE, server: $headers);
 
         self::assertResponseIsSuccessful();
         $payload = $this->payload($client->getResponse());
+        /** @var array<string, mixed> $latest */
+        $latest = $payload['latest'];
         /** @var list<array<string, mixed>> $returnedRuns */
-        $returnedRuns = $payload['runs'];
+        $returnedRuns = $latest['runs'];
         self::assertCount(RecommendationRunHistoryRepository::HISTORY_LIMIT, $returnedRuns);
         // Newest first, with the single oldest seeded run dropped by the cap.
         self::assertSame(array_reverse(\array_slice($seededIds, 1)), array_column($returnedRuns, 'id'));
+        self::assertSame($seededIds[1], $latest['nextCursor']);
+
+        $client->request('GET', self::HISTORY_ROUTE . '/2026-08?before=' . $seededIds[1], server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $nextPage = $this->payload($client->getResponse());
+        /** @var list<array<string, mixed>> $nextPageRuns */
+        $nextPageRuns = $nextPage['runs'];
+        self::assertSame([$seededIds[0]], array_column($nextPageRuns, 'id'));
+        self::assertNull($nextPage['nextCursor']);
     }
 
     /**
@@ -189,27 +229,30 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         // behaviour change it would be.
         self::assertNotNull($run->getCompletedAt());
 
-        $client->request('GET', '/api/recommendations/runs/history', server: $headers);
+        $client->request('GET', self::HISTORY_ROUTE, server: $headers);
 
         self::assertResponseIsSuccessful();
         $payload = $this->payload($client->getResponse());
+        /** @var array<string, mixed> $latest */
+        $latest = $payload['latest'];
         /** @var list<array<string, mixed>> $runs */
-        $runs = $payload['runs'];
+        $runs = $latest['runs'];
         self::assertSame('running', $runs[0]['status']);
         self::assertNull($runs[0]['completedAt']);
         self::assertNull($runs[0]['durationSeconds']);
     }
 
-    public function testAnAccountThatNeverRanGetsAnEmptyHistoryAndNoTotal(): void
+    public function testAnAccountThatNeverRanGetsAnEmptyOverviewAndNoTotal(): void
     {
         $client = self::createClient();
         [$headers] = $this->auth('run-history-empty@example.test');
 
-        $client->request('GET', '/api/recommendations/runs/history', server: $headers);
+        $client->request('GET', self::HISTORY_ROUTE, server: $headers);
 
         self::assertResponseIsSuccessful();
         $payload = $this->payload($client->getResponse());
-        self::assertSame([], $payload['runs']);
+        self::assertSame([], $payload['months']);
+        self::assertNull($payload['latest']);
         self::assertNull($payload['totalCostNanoCredits']);
     }
 
@@ -217,8 +260,131 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
     {
         $client = self::createClient();
 
-        $client->request('GET', '/api/recommendations/runs/history');
+        $client->request('GET', self::HISTORY_ROUTE);
 
         self::assertResponseStatusCodeSame(401);
+    }
+
+    /**
+     * Runs in two different months produce two `months` entries with their
+     * own counts and totals, and `latest` opens on the newer one -- not the
+     * one earlier in the array, and not the wall-clock's current month.
+     */
+    public function testRunsInTwoDifferentMonthsProduceTwoMonthEntriesWithLatestTheNewerOne(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('run-history-two-months@example.test');
+
+        $julyOne = $this->persistRunAt($user, new \DateTimeImmutable('2026-07-10 09:00:00'));
+        $julyTwo = $this->persistRunAt($user, new \DateTimeImmutable('2026-07-20 09:00:00'));
+        $this->priceRun($julyOne, 500);
+        $this->priceRun($julyTwo, 700);
+
+        $user = $this->em()->getRepository(User::class)->find($user->getId());
+        self::assertInstanceOf(User::class, $user);
+        $august = $this->persistRunAt($user, new \DateTimeImmutable('2026-08-05 09:00:00'));
+        $this->priceRun($august, 1_200);
+
+        $client->request('GET', self::HISTORY_ROUTE, server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client->getResponse());
+        self::assertSame(
+            [
+                ['month' => '2026-08', 'runCount' => 1, 'costNanoCredits' => 1_200],
+                ['month' => '2026-07', 'runCount' => 2, 'costNanoCredits' => 1_200],
+            ],
+            $payload['months'],
+        );
+        /** @var array<string, mixed> $latest */
+        $latest = $payload['latest'];
+        self::assertSame('2026-08', $latest['month']);
+        /** @var list<array<string, mixed>> $latestRuns */
+        $latestRuns = $latest['runs'];
+        self::assertSame([$august->getId()], array_column($latestRuns, 'id'));
+    }
+
+    public function testTheMonthRouteReturnsOnlyThatMonthsRuns(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('run-history-month-route@example.test');
+
+        $july = $this->persistRunAt($user, new \DateTimeImmutable('2026-07-12 09:00:00'));
+        $user = $this->em()->getRepository(User::class)->find($user->getId());
+        self::assertInstanceOf(User::class, $user);
+        $this->persistRunAt($user, new \DateTimeImmutable('2026-08-12 09:00:00'));
+
+        $client->request('GET', self::HISTORY_ROUTE . '/2026-07', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client->getResponse());
+        self::assertSame('2026-07', $payload['month']);
+        /** @var list<array<string, mixed>> $runs */
+        $runs = $payload['runs'];
+        self::assertSame([$july->getId()], array_column($runs, 'id'));
+        self::assertNull($payload['nextCursor']);
+    }
+
+    public function testAMonthOutsideTheRouteRequirementIs404(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('run-history-bad-month@example.test');
+
+        $client->request('GET', self::HISTORY_ROUTE . '/2026-13', server: $headers);
+
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    /**
+     * ViewerTimeZone fails soft on an identifier the server's tzdata does not
+     * know -- this is a display preference, not a security boundary -- so the
+     * request still answers 200, bucketed as if in UTC.
+     */
+    public function testAnUnrecognisedTimezoneStillAnswersOkBucketedInUtc(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('run-history-bad-tz@example.test');
+
+        $this->persistRunAt($user, new \DateTimeImmutable('2026-08-12 09:00:00'));
+
+        $client->request('GET', self::HISTORY_ROUTE . '?tz=Not/AZone', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client->getResponse());
+        /** @var array<string, mixed> $latest */
+        $latest = $payload['latest'];
+        self::assertSame('2026-08', $latest['month']);
+    }
+
+    /**
+     * `?before=` pages backwards within a month, the same keyset the
+     * repository proves in isolation -- pinned again here through the route,
+     * where the query parameter is parsed.
+     */
+    public function testBeforeCursorPagesWithinAMonth(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('run-history-cursor@example.test');
+
+        $oldest = $this->persistRunAt($user, new \DateTimeImmutable('2026-08-01 09:00:00'));
+        $user = $this->em()->getRepository(User::class)->find($user->getId());
+        self::assertInstanceOf(User::class, $user);
+        $middle = $this->persistRunAt($user, new \DateTimeImmutable('2026-08-02 09:00:00'));
+        $user = $this->em()->getRepository(User::class)->find($user->getId());
+        self::assertInstanceOf(User::class, $user);
+        $this->persistRunAt($user, new \DateTimeImmutable('2026-08-03 09:00:00'));
+
+        $client->request(
+            'GET',
+            self::HISTORY_ROUTE . '/2026-08?before=' . $middle->getId(),
+            server: $headers,
+        );
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client->getResponse());
+        /** @var list<array<string, mixed>> $runs */
+        $runs = $payload['runs'];
+        self::assertSame([$oldest->getId()], array_column($runs, 'id'));
+        self::assertNull($payload['nextCursor']);
     }
 }
