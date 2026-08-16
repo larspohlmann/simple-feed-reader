@@ -39,6 +39,16 @@ and [git](https://git-scm.com/downloads):
 curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/main/scripts/install.sh | bash
 ```
 
+To install a branch or a tag that is not released yet — how a change is tried
+on a test instance before it ships — pass `--ref`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/main/scripts/install.sh | bash -s -- --ref feature/430-installer-output
+```
+
+The install then says so, both when it starts and in the closing block, so an
+instance running unreleased code always admits it.
+
 The installer clones the project, checks out the latest release, generates
 every secret it can (database passwords, signing keys), and asks for the few
 values only you know:
@@ -50,9 +60,12 @@ values only you know:
      third on a machine that already publishes port 80 — see §2.
   2. The **hostname**, `localhost` by default. Paste a whole URL and the
      installer reduces it to the host.
-  3. The **port**, which defaults to the one the first answer implies: 80,
-     443, or 8080 behind a proxy. The installer checks whether it is free and
-     asks again when it is not.
+  3. The **port**, which defaults to the one the first answer implies:
+     **3333** for plain HTTP and behind a proxy, 443 for HTTPS this stack
+     serves. 3333 is "FEED" on a phone keypad; it is offered instead of 80
+     and 8080 because those are the two ports a machine that already serves
+     something has taken. Answer 80 to publish there anyway. The installer
+     checks whether the port is free and asks again when it is not.
 
   Together these become `PUBLIC_URL` and the published container ports. For
   OAuth sign-in, and for Safari, use a real HTTPS origin.
@@ -123,7 +136,8 @@ follows is what it writes, and how to do it by hand.
 - **Or put a reverse proxy in front** (Caddy, Traefik, nginx) — the answer to
   pick when this machine already publishes port 80, because one host address
   publishes a port once. Leave `docker/certs-prod/` empty; the stack serves
-  plain HTTP. The installer then writes `WEB_HTTP_PORT=8080`,
+  plain HTTP. The installer then writes `WEB_HTTP_PORT=3333` (the port you
+  answered),
   `WEB_BIND_ADDRESS=127.0.0.1` so only the proxy on this machine can reach
   it, and moves `WEB_TLS_PORT` to 8443 — the stack publishes that port even
   in this mode (both ports are always published — see the comment in
@@ -134,7 +148,7 @@ follows is what it writes, and how to do it by hand.
 
   ```
   reader.example.org {
-      reverse_proxy 127.0.0.1:8080
+      reverse_proxy 127.0.0.1:3333
   }
   ```
 
@@ -249,6 +263,9 @@ cd simple-feed-reader && ./scripts/update.sh
 This checks out the newest release and re-runs the production bring-up
 (rebuild, migrate, health check). Data is kept. `prod-start.sh` is
 idempotent — running it again is always safe.
+
+`./scripts/update.sh --ref <branch-or-tag>` moves the install to that ref
+instead, for a test instance that has to run a change before it is released.
 
 ## 7. Reconfigure
 

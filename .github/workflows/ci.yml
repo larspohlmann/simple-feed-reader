@@ -273,6 +273,15 @@ jobs:
       - name: previous-prod-install
         run: scripts/test/previous-prod-install.test.sh
 
+      # What the installers put on the screen, and the options they accept
+      # (#430). The default port each topology offers becomes a published
+      # container port and the port in every account-mail link; --ref is parsed
+      # on an entry point that runs through `curl | bash`, where a silent break
+      # is invisible until an install goes wrong; and the closing block has to
+      # repeat warnings raised minutes of container output earlier.
+      - name: installer-output
+        run: scripts/test/installer-output.test.sh
+
       # The all-skip guard for the weekly e2e rot check (#96). It decides
       # whether a Playwright run that reported success actually verified
       # anything, so it is exactly the kind of logic that must not rot itself.

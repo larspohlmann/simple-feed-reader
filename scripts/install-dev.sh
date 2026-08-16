@@ -12,20 +12,43 @@ set -euo pipefail
 #
 # It clones the repository, checks out the latest release, and brings the
 # stack up. Nothing here deletes data.
+#
 # Optional: pass a target directory. Default is ./simple-feed-reader.
+# Optional: --ref <branch-or-tag> (or SFR_REF) installs that ref instead of the
+# latest release. SFR_REPO_URL clones from somewhere else -- a local path is
+# how a change to this script is tried before it is pushed.
 
-REPO_URL='https://github.com/larspohlmann/simple-feed-reader.git'
-TARGET_DIR="${1:-simple-feed-reader}"
+REPO_URL="${SFR_REPO_URL:-https://github.com/larspohlmann/simple-feed-reader.git}"
 
 # Minimal output helpers for the bootstrap phase, before lib.sh is available.
 # Once the repository is cloned we source lib.sh, which defines the full set.
-if [ -t 1 ]; then
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
   _b_blue=$'\033[34m' _b_red=$'\033[31m' _b_reset=$'\033[0m'
 else
   _b_blue='' _b_red='' _b_reset=''
 fi
 say() { printf '%s\n' "${_b_blue}==>${_b_reset} $*"; }
 die() { printf '%s\n' "${_b_red}error:${_b_reset} $*" >&2; exit 1; }
+
+# --- arguments --------------------------------------------------------------
+# lib.sh holds the canonical parser (parse_ref_args), but it lives inside the
+# clone these very arguments decide, so the loop is repeated here -- the same
+# reason say() and die() above are repeated. Keep the two in step.
+REF="${SFR_REF:-}"
+TARGET_DIR=''
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --ref)
+      [ "$#" -ge 2 ] || die 'Option --ref needs a branch or a tag name.'
+      REF=$2
+      shift 2
+      ;;
+    --ref=*) REF=${1#--ref=} ; shift ;;
+    -*) die "Unknown option: $1  (usage: install-dev.sh [--ref <branch-or-tag>] [target-directory])" ;;
+    *) TARGET_DIR=$1 ; shift ;;
+  esac
+done
+TARGET_DIR=${TARGET_DIR:-simple-feed-reader}
 
 # Ask a yes/no question. Reads from the terminal, not stdin, because stdin is the
 # script itself when this runs through `curl | bash`.
@@ -72,17 +95,43 @@ say "Cloning simple-feed-reader into ./${TARGET_DIR} ..."
 git clone --quiet "${REPO_URL}" "${TARGET_DIR}"
 cd "${TARGET_DIR}"
 
-# From here on the repository is present, so use its shared helpers.
+# From here on the repository is present, so use its shared helpers -- for now
+# the ones the clone's default branch carries, because the checkout in step 3
+# is what decides which version of everything this install really runs.
 # shellcheck source=scripts/lib.sh
 source scripts/lib.sh
 
-# --- 3. check out the latest release ----------------------------------------
-release_tag=$(latest_release_tag)
-[ -n "${release_tag}" ] \
-  || die 'No release tag (vX.Y.Z) exists on main yet. See docs/releasing.md, then re-run.'
+# --- 3. check out what to install -------------------------------------------
+# Plain git, not a lib.sh helper: the ref being installed may well be the
+# commit that ADDS the helper, and the file on disk right now is the one the
+# clone's default branch carries.
+if [ -n "${REF}" ]; then
+  say "Checking out ${REF} ..."
+  git -C "${REPO_ROOT}" checkout --quiet "${REF}" \
+    || die "No branch or tag named '${REF}' in this repository."
+else
+  release_tag=$(latest_release_tag)
+  [ -n "${release_tag}" ] \
+    || die 'No release tag (vX.Y.Z) exists on main yet. See docs/releasing.md, then re-run.'
 
-say "Checking out the latest release: ${release_tag}"
-git -C "${REPO_ROOT}" checkout --quiet "${release_tag}"
+  say "Checking out the latest release: ${release_tag}"
+  git -C "${REPO_ROOT}" checkout --quiet "${release_tag}"
+fi
+
+# Source again, now that the checkout decided which helpers this install runs:
+# installing a ref means running ITS lib.sh, not whichever version the clone's
+# default branch happened to carry.
+# shellcheck source=scripts/lib.sh
+source "${REPO_ROOT}/scripts/lib.sh"
+
+if [ -n "${REF}" ]; then
+  note_unreleased_ref "${REF}"
+else
+  record_installed_release "${release_tag}"
+fi
+
+# Collect every warning raised from here on, so the closing block repeats it.
+notes_start
 
 # --- 4. local certificate authority -----------------------------------------
 # Generating the certificate never touches the system trust store. Installing
@@ -111,7 +160,7 @@ bring_up_stack
 
 # --- 6. verify and report ---------------------------------------------------
 if wait_for_health "${DEV_HEALTH_URL}"; then
-  ok "Installed ${release_tag}."
+  ok "Installed ${SFR_INSTALLED_REF}."
 else
   warn 'The API did not report healthy in time. It may still be starting.'
   warn 'Check the logs with:  docker compose logs -f php nginx'

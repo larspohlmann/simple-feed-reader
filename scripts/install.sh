@@ -25,19 +25,42 @@ set -euo pipefail
 #
 # Optional: pass a target directory. Default is ./simple-feed-reader.
 #   curl -fsSL <url> | bash -s -- my-folder
+#
+# Optional: --ref <branch-or-tag> (or SFR_REF) installs that ref instead of the
+# latest release -- how a production install is tried before it is released.
+#   curl -fsSL <url> | bash -s -- --ref feature/430-installer-output my-folder
 
 REPO_URL="${SFR_REPO_URL:-https://github.com/larspohlmann/simple-feed-reader.git}"
-TARGET_DIR="${1:-simple-feed-reader}"
 
 # Minimal output helpers for the bootstrap phase, before lib.sh is available.
 # Once the repository is cloned we source lib.sh, which defines the full set.
-if [ -t 1 ]; then
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
   _b_blue=$'\033[34m' _b_red=$'\033[31m' _b_reset=$'\033[0m'
 else
   _b_blue='' _b_red='' _b_reset=''
 fi
 say() { printf '%s\n' "${_b_blue}==>${_b_reset} $*"; }
 die() { printf '%s\n' "${_b_red}error:${_b_reset} $*" >&2; exit 1; }
+
+# --- arguments --------------------------------------------------------------
+# lib.sh holds the canonical parser (parse_ref_args), but it lives inside the
+# clone these very arguments decide, so the loop is repeated here -- the same
+# reason say() and die() above are repeated. Keep the two in step.
+REF="${SFR_REF:-}"
+TARGET_DIR=''
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --ref)
+      [ "$#" -ge 2 ] || die 'Option --ref needs a branch or a tag name.'
+      REF=$2
+      shift 2
+      ;;
+    --ref=*) REF=${1#--ref=} ; shift ;;
+    -*) die "Unknown option: $1  (usage: install.sh [--ref <branch-or-tag>] [target-directory])" ;;
+    *) TARGET_DIR=$1 ; shift ;;
+  esac
+done
+TARGET_DIR=${TARGET_DIR:-simple-feed-reader}
 
 # --- 1. prerequisites -------------------------------------------------------
 say 'Checking prerequisites ...'
@@ -61,20 +84,49 @@ say "Cloning simple-feed-reader into ./${TARGET_DIR} ..."
 git clone --quiet "${REPO_URL}" "${TARGET_DIR}"
 cd "${TARGET_DIR}"
 
-# From here on the repository is present, so use its shared helpers.
+# From here on the repository is present, so use its shared helpers -- for now
+# the ones the clone's default branch carries, because the checkout in step 3
+# is what decides which version of everything this install really runs.
 # shellcheck source=scripts/lib.sh
 source scripts/lib.sh
 
-# --- 3. check out the latest release ----------------------------------------
-release_tag=$(latest_release_tag)
-[ -n "${release_tag}" ] \
-  || die 'No release tag (vX.Y.Z) exists on main yet. See docs/releasing.md, then re-run.'
+# --- 3. check out what to install -------------------------------------------
+# An explicit --ref is checked out verbatim and skips the release lookup
+# entirely: installing a branch that has no release yet is the whole point of
+# the option. Plain git, not a lib.sh helper: the ref being installed may well
+# be the commit that ADDS the helper, and the file on disk right now is the
+# one the clone's default branch carries.
+if [ -n "${REF}" ]; then
+  say "Checking out ${REF} ..."
+  git -C "${REPO_ROOT}" checkout --quiet "${REF}" \
+    || die "No branch or tag named '${REF}' in this repository."
+else
+  release_tag=$(latest_release_tag)
+  [ -n "${release_tag}" ] \
+    || die 'No release tag (vX.Y.Z) exists on main yet. See docs/releasing.md, then re-run.'
 
-say "Checking out the latest release: ${release_tag}"
-git -C "${REPO_ROOT}" checkout --quiet "${release_tag}"
+  say "Checking out the latest release: ${release_tag}"
+  git -C "${REPO_ROOT}" checkout --quiet "${release_tag}"
+fi
 
 [ -f "${REPO_ROOT}/.env.prod.example" ] \
-  || die "Release ${release_tag} predates the Docker production path -- update the release, or use scripts/install-dev.sh."
+  || die 'That version predates the Docker production path -- use a newer ref, or scripts/install-dev.sh.'
+
+# Source again, now that the checkout decided which helpers this install runs:
+# installing a ref means running ITS lib.sh, not whichever version the clone's
+# default branch happened to carry. Without this, the install is a mixture of
+# two revisions.
+# shellcheck source=scripts/lib.sh
+source "${REPO_ROOT}/scripts/lib.sh"
+
+if [ -n "${REF}" ]; then
+  note_unreleased_ref "${REF}"
+else
+  record_installed_release "${release_tag}"
+fi
+
+# Collect every warning raised from here on, so the closing block repeats it.
+notes_start
 
 # --- 4. an earlier install on this machine ----------------------------------
 # Before any secret is generated: the volumes of an earlier install outlive
@@ -103,21 +155,19 @@ configure_mail
 # --- 7. start, or explain how to --------------------------------------------
 missing=$(env_prod_missing)
 if [ -n "${missing}" ]; then
-  warn 'These required values in .env.prod are still empty:'
   while IFS= read -r name; do
-    printf '    %s\n' "${name}" >&2
+    warn "${name} in .env.prod is still empty."
   done <<< "${missing}"
-  say "Finish the setup in two steps:"
-  say "  1. Run:  cd ${TARGET_DIR} && ./scripts/prod-configure.sh   (asks again, then starts)"
-  say "     or edit ${TARGET_DIR}/.env.prod by hand (the comments explain every value)."
-  say "  2. Hand-edited? Then run:  cd ${TARGET_DIR} && ./scripts/prod-start.sh"
-  # Step 8 below is what fills the onboarding catalog, and this path never
-  # reaches it. The admin area does the same thing with one click.
-  say '  3. Fill the onboarding catalog in the admin area, under Catalog.'
+  # This path never reaches step 8, so its closing block says who fills the
+  # onboarding catalog instead: the admin area does it with one click.
+  print_unfinished_summary "${TARGET_DIR}"
   exit 0
 fi
 
-"${REPO_ROOT}/scripts/prod-start.sh"
+# The stack prints no closing block of its own here: the install still has the
+# catalog and the mail check to do, and the block a first-time operator reads
+# must be the LAST thing on the screen (issue #430).
+SFR_DEFER_SUMMARY=1 "${REPO_ROOT}/scripts/prod-start.sh"
 
 # --- 8. fill the onboarding catalog -----------------------------------------
 # A new instance has an empty catalog, and an empty catalog makes the picker
@@ -129,3 +179,6 @@ seed_catalog
 
 # --- 9. verify mail delivery ------------------------------------------------
 offer_mail_check
+
+# --- 10. what the operator needs ---------------------------------------------
+print_prod_summary

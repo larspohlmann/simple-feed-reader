@@ -15,6 +15,10 @@ _dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 # shellcheck source=scripts/lib.sh
 source "${_dir}/lib.sh"
 
+# Collect warnings for the closing block. A no-op when a caller (the installer,
+# prod-configure.sh) already opened the collection -- the file is inherited.
+notes_start
+
 ensure_docker
 
 if [ ! -f "${ENV_PROD_FILE}" ]; then
@@ -58,8 +62,8 @@ if ! check_ports_free "${http_port}" "${tls_port}"; then
   warn 'Both ports are published regardless of mode, so docker will fail to publish them while busy.'
 fi
 
-say 'Building and starting the production stack (the first build takes a few minutes) ...'
-prod_compose up -d --build
+run_step 'Building and starting the production stack (the first build takes a few minutes)' \
+  prod_compose up -d --build
 
 # The web entrypoint picks HTTP or TLS mode by checking docker/certs-prod/
 # once, at container start. That directory is a bind mount, so dropping
@@ -71,21 +75,27 @@ prod_compose up -d --build
 # the container object on every routine run -- the lighter primitive so this
 # script is really "the way to switch to TLS" the comment at the top of this
 # file promises.
-prod_compose restart web
+prod_compose restart web >/dev/null
 
 wait_for_php_ready
 
-say 'Ensuring JWT signing keys exist ...'
-prod_compose exec -T -u www-data php bin/console lexik:jwt:generate-keypair --skip-if-exists
+run_step 'Ensuring JWT signing keys exist' \
+  prod_compose exec -T -u www-data php bin/console lexik:jwt:generate-keypair --skip-if-exists
 
-say 'Applying database migrations ...'
-prod_compose exec -T -u www-data php bin/console doctrine:migrations:migrate --no-interaction
+run_step 'Applying database migrations' \
+  prod_compose exec -T -u www-data php bin/console doctrine:migrations:migrate --no-interaction
 # It may have started before the schema existed (first install).
-prod_compose restart worker
+prod_compose restart worker >/dev/null
 
-if wait_for_health "$(prod_base_url)/api/health"; then
-  print_prod_summary
-else
+if ! wait_for_health "$(prod_base_url)/api/health"; then
   warn 'The API did not report healthy in time. It may still be starting.'
   warn 'Check the logs with:  docker compose -p simple-feed-reader-prod logs -f php web worker'
+fi
+
+# A caller that still has work to do (the installer seeds the catalog and
+# offers the mail check, prod-configure.sh asks its questions) sets
+# SFR_DEFER_SUMMARY and prints the block itself, at the very end. Run on its
+# own, this script is the end of the run and prints it here.
+if [ -z "${SFR_DEFER_SUMMARY:-}" ]; then
+  print_prod_summary
 fi
