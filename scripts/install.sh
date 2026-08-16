@@ -151,7 +151,11 @@ env_prod_set MYSQL_PASSWORD "$(generate_secret)"
 # --- 6. the values only the operator knows ----------------------------------
 configure_public_url
 configure_database
-configure_search_engine
+# A fresh .env.prod has no engine decision on file yet -- an empty
+# MEILISEARCH_URL here means "nobody has been asked", not "declined" -- so
+# this is the one caller allowed to hardcode the default. See
+# configure_search_engine's own comment for the prod-configure.sh contrast.
+configure_search_engine 'y'
 configure_mail
 
 # --- 7. start, or explain how to --------------------------------------------

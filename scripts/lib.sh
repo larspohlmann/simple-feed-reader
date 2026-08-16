@@ -1180,10 +1180,22 @@ use_bundled_mysql_database() {
 # stops reading it). So prod-configure.sh asks this question again on every
 # run, the same as configure_mail -- see the call site there.
 #
-# prompt_confirm cannot be used here: its default is no, and pressing return
-# has to mean yes.
+# prompt_confirm cannot be used here: its default is no, and a FRESH install
+# has to default to yes.
+#
+# But a re-ask is a different question with a different right default, so the
+# default is a parameter rather than a hardcoded 'y'. install.sh always passes
+# 'y': a brand-new .env.prod has an empty MEILISEARCH_URL no matter what the
+# operator is about to choose, so that emptiness cannot be read back as "the
+# operator already said no" the way it safely can be for an existing install.
+# prod-configure.sh passes back current_search_engine_choice, which reads the
+# stored value -- so pressing return through an unrelated question (a new
+# public URL, a new mail transport) can never flip a decision the operator
+# already made. "No" has to be as durable an answer as "yes": unlike mail,
+# which must be configured somehow, running no engine is a complete, final
+# answer for an install that cannot or does not want another container.
 configure_search_engine() {
-  local choice
+  local default=$1 choice
   if ! can_prompt; then
     return 0
   fi
@@ -1193,7 +1205,7 @@ configure_search_engine() {
   tell '  search running against the database, which always works and needs'
   tell '  no extra container -- the right choice on shared hosting, or any'
   tell '  machine that cannot run one.'
-  choice=$(prompt_with_default 'Enable search engine? (y/n)' 'y')
+  choice=$(prompt_with_default 'Enable search engine? (y/n)' "${default}")
   case "${choice}" in
     [nN]*)
       use_database_search
@@ -1202,6 +1214,18 @@ configure_search_engine() {
       use_bundled_search_engine
       ;;
   esac
+}
+
+# The default configure_search_engine offers on a re-ask: whatever this
+# instance is already configured to run. Only prod-configure.sh calls this --
+# a fresh install has no decision on file yet to read back, which is exactly
+# why install.sh passes the literal 'y' instead.
+current_search_engine_choice() {
+  if prod_uses_search_engine; then
+    printf 'y'
+    return 0
+  fi
+  printf 'n'
 }
 
 use_database_search() {

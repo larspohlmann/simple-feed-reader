@@ -38,7 +38,9 @@ if [ ! -r /dev/tty ]; then
 fi
 
 configure_public_url
-configure_search_engine
+# Unlike install.sh, this instance already has a decision on file -- read it
+# back so pressing return through this question never reverses it.
+configure_search_engine "$(current_search_engine_choice)"
 configure_mail
 
 say 'Applying the configuration ...'
