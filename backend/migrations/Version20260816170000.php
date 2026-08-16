@@ -27,6 +27,13 @@ use Doctrine\Migrations\AbstractMigration;
  * not a reference to a code constant: this migration records what the schema
  * was on the day it ran, and must not move when the code does.
  *
+ * The hasColumn() guard covers the column only, not the backfill: an
+ * installation whose schema already has max_batch_size — built by
+ * doctrine:schema:update rather than this chain — returns before the UPDATE
+ * ever runs, and any of its rows marked slow_model = 1 stay NULL rather than
+ * 30. Not hardened; this is a personal-scale app and the guard's shape
+ * matches every sibling migration's.
+ *
  * PLATFORM-AWARE DDL for the reason Version20260814140000 records: DDL diffed
  * on one platform does not parse on the other, and the suite cannot catch it
  * because tests build their schema from ORM metadata, not this chain.

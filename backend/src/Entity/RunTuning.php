@@ -7,18 +7,32 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * How a connection should be driven while a recommendation run calls it: how
- * many batch calls may be in flight at once, whether the endpoint needs the
- * long timeout profile, and how many candidates one batch may carry.
+ * Three per-connection knobs a recommendation run consults — not read
+ * together, and not by one collaborator: `slowModel` picks the timeout
+ * profile (ProviderConnectionFactory::timeoutsFor()) and, today, is also
+ * what RecommendationSettingsResolver::batchCeilingFor() checks to choose
+ * its static batch ceiling; `batchConcurrency` sizes one tick's wave
+ * (RecommendationRunAdvancer::effectiveCap()); `maxBatchSize` has no reader
+ * yet — it exists so batchCeilingFor() can read a per-connection cap
+ * instead of slowModel's on/off static one, once a later task wires it in
+ * (#445). What groups them is not a shared caller but a shared question:
+ * how a run should drive this connection, decided once per connection
+ * rather than per call.
+ *
+ * `suppressReasoning` answers a related but different question — what one
+ * call asks the provider to do (RecommendationCompletionRequestFactory) —
+ * and stays on AiProviderSettings rather than joining this group: it shapes
+ * a request's payload, not the run's pacing or ceilings, and folding it in
+ * here would blur that line for a field count this class does not need it
+ * to clear.
  *
  * Embedded into AiProviderSettings rather than left as three of its own
  * scalar columns — PHPMD's field-count ceiling on AiProviderSettings is a
- * proxy for a real seam: these three values are read together by
- * RecommendationSettingsResolver to size one run against one connection, and
- * they arrived as three separate features (#344, #433, #445) that share the
- * same concern. An embeddable keeps them there without the join or lifecycle
- * a separate entity would add; the column names are unprefixed so the table
- * itself is unchanged (see FetchSchedule for the same move on Feed).
+ * proxy for a real seam: these three arrived as separate features
+ * (#344, #433, #445) but answer the one question above. An embeddable keeps
+ * them there without the join or lifecycle a separate entity would add; the
+ * column names are unprefixed so the table itself is unchanged (see
+ * FetchSchedule for the same move on Feed).
  */
 #[ORM\Embeddable]
 class RunTuning
@@ -89,5 +103,20 @@ class RunTuning
     public function setMaxBatchSize(?int $maxBatchSize): void
     {
         $this->maxBatchSize = $maxBatchSize;
+    }
+
+    /**
+     * A duplicated connection reuses another's run-tuning rather than
+     * starting over at the defaults (AiProviderConfigurator::
+     * duplicateConfiguration()). Enumerated here, once, so the three fields
+     * cannot drift out of sync with this class the way a field-by-field copy
+     * at the call site did: it copied batchConcurrency and slowModel but was
+     * never touched when maxBatchSize was added (#445).
+     */
+    public function copyFrom(self $source): void
+    {
+        $this->batchConcurrency = $source->batchConcurrency;
+        $this->slowModel = $source->slowModel;
+        $this->maxBatchSize = $source->maxBatchSize;
     }
 }

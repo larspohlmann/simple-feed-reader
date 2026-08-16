@@ -23,6 +23,20 @@ class AiProviderSettings
 {
     public const int MAX_BATCH_CONCURRENCY = 4;
 
+    /**
+     * Does not collide with RecommendationPromptBuilder::MINIMUM_BATCH_SIZE
+     * (10), even though a configured value can sit below it. That constant
+     * only floors packBatches()'s token-budget-driven early split — it
+     * requires at least 10 candidates in the current batch before an
+     * over-budget line is allowed to start a new one. This value becomes the
+     * hard per-batch ceiling instead (`atCapacity` in packBatches()), which
+     * closes a batch the moment it holds `maximumBatchSize` candidates
+     * regardless of token budget. A configured cap below 10 always hits that
+     * ceiling first, so the token-budget floor never gets a chance to apply —
+     * confirmed by calling packBatches() directly with caps of 5, 7 and 9
+     * against 40 candidates: batches came back sized exactly to the cap
+     * every time (5,5,5,5,5,5,5,5 / 7×5+5 / 9×4+4).
+     */
     public const int MINIMUM_BATCH_SIZE = 5;
 
     /**
@@ -204,6 +218,16 @@ class AiProviderSettings
     public function setMaxBatchSize(?int $maxBatchSize): void
     {
         $this->runTuning->setMaxBatchSize($maxBatchSize);
+    }
+
+    /**
+     * For AiProviderConfigurator::duplicateConfiguration(): the copy should
+     * start out driven the same way as the connection it was copied from,
+     * not reset to the defaults.
+     */
+    public function copyRunTuningFrom(self $source): void
+    {
+        $this->runTuning->copyFrom($source->runTuning);
     }
 
     public function getVerifiedAt(): ?\DateTimeImmutable

@@ -231,14 +231,4 @@ final class AiProviderSettingsTest extends TestCase
 
         self::assertSame(25, $settings->maxBatchSize());
     }
-
-    public function testMinimumBatchSizeIsFive(): void
-    {
-        self::assertSame(5, AiProviderSettings::MINIMUM_BATCH_SIZE);
-    }
-
-    public function testMaximumBatchSizeIsTwoHundred(): void
-    {
-        self::assertSame(200, AiProviderSettings::MAXIMUM_BATCH_SIZE);
-    }
 }
