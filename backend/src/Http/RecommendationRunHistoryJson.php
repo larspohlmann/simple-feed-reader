@@ -25,17 +25,33 @@ use App\Service\Recommendation\HistoryMonth;
  * `status` goes out as the raw wire vocabulary, untranslated, the same
  * convention the #309 debug log records.
  *
+ * The two named shapes below are exported so RecommendationRunHistoryView can
+ * declare its own return types against them instead of a bare `array`: a key
+ * renamed here without a matching update there is then a level-max PHPStan
+ * error at the view's call site, not a silent wire break the client
+ * discovers.
+ *
  * @phpstan-import-type HistoryRow from RecommendationRunHistoryRepository
+ * @phpstan-type MonthPagePayload array{
+ *     month: string,
+ *     runs: list<array<string, mixed>>,
+ *     nextCursor: ?int,
+ * }
+ * @phpstan-type OverviewPayload array{
+ *     totalCostNanoCredits: ?int,
+ *     months: list<array<string, mixed>>,
+ *     latest: ?MonthPagePayload,
+ * }
  */
 final class RecommendationRunHistoryJson
 {
     /**
      * @param list<HistoryMonth> $months newest first
-     * @param ?array<string, mixed> $latest the newest month's own monthPage(),
-     *                                       or null for an account that has
-     *                                       never run
+     * @param ?MonthPagePayload $latest the newest month's own monthPage(),
+     *                                   or null for an account that has
+     *                                   never run
      *
-     * @return array{totalCostNanoCredits: ?int, months: list<array<string, mixed>>, latest: ?array<string, mixed>}
+     * @return OverviewPayload
      */
     public static function overview(?int $totalCostNanoCredits, array $months, ?array $latest): array
     {
@@ -52,7 +68,7 @@ final class RecommendationRunHistoryJson
     /**
      * @param list<HistoryRow> $rows already truncated to the page size
      *
-     * @return array{month: string, runs: list<array<string, mixed>>, nextCursor: ?int}
+     * @return MonthPagePayload
      */
     public static function monthPage(string $month, array $rows, ?int $nextCursor): array
     {

@@ -170,6 +170,11 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
      * RecommendationRunHistoryRepository::HISTORY_LIMIT (#409) even though
      * the all-time total above it is not -- an unasserted cap is an unkilled
      * mutant on both the constant's value and the view's truncation.
+     *
+     * Seeds through this file's own persistRunAt() rather than
+     * RecommendationRunFixtures::createRun() -- that fixture's date lives in
+     * a file shared with unrelated suites, so a test that owns its own dates
+     * cannot be broken by a change made to satisfy one of them.
      */
     public function testCapsTheNewestMonthAtTheLimitKeepingTheNewestRunsAndReportsANextCursor(): void
     {
@@ -178,10 +183,10 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
 
         $runCount = RecommendationRunHistoryRepository::HISTORY_LIMIT + 1;
         $seededRuns = [];
-        for ($i = 0; $i < $runCount; $i++) {
-            $seededRuns[] = $this->fixtures()->createRun($user);
+        for ($minute = 0; $minute < $runCount; $minute++) {
+            $createdAt = new \DateTimeImmutable(sprintf('2026-08-01 00:%02d:00', $minute));
+            $seededRuns[] = $this->persistRunAt($user, $createdAt);
         }
-        $this->em()->flush();
         $seededIds = array_map(static fn (RecommendationRun $run): ?int => $run->getId(), $seededRuns);
 
         $client->request('GET', self::HISTORY_ROUTE, server: $headers);
@@ -267,8 +272,12 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
 
     /**
      * Runs in two different months produce two `months` entries with their
-     * own counts and totals, and `latest` opens on the newer one -- not the
-     * one earlier in the array, and not the wall-clock's current month.
+     * own counts and totals, and `latest` opens on the newer of the two --
+     * not on whichever happens to sort first in the array. This does not by
+     * itself rule out a wall-clock implementation, since both months here
+     * are 2026 and the newer one happens to be the current calendar month
+     * too; {@see testLatestOpensOnTheNewestMonthWithRunsEvenYearsInThePast}
+     * is the test that rules that out.
      */
     public function testRunsInTwoDifferentMonthsProduceTwoMonthEntriesWithLatestTheNewerOne(): void
     {
@@ -302,6 +311,38 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         /** @var list<array<string, mixed>> $latestRuns */
         $latestRuns = $latest['runs'];
         self::assertSame([$august->getId()], array_column($latestRuns, 'id'));
+    }
+
+    /**
+     * `latest` is the newest month that HAS runs, not the calendar month the
+     * server's clock currently reads (#409) -- an account whose only runs
+     * are years in the past still opens on that month. 2024-03 can never be
+     * "now" for this test, so unlike the two-months test above, a wall-clock
+     * implementation (`new \DateTimeImmutable('now', $viewer->zone)`) fails
+     * this one: it would answer with the current month instead of 2024-03,
+     * and `latest['runs']` would then be empty because no run exists in it.
+     */
+    public function testLatestOpensOnTheNewestMonthWithRunsEvenYearsInThePast(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('run-history-past-month@example.test');
+
+        $only = $this->persistRunAt($user, new \DateTimeImmutable('2024-03-14 09:00:00'));
+
+        $client->request('GET', self::HISTORY_ROUTE, server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client->getResponse());
+        self::assertSame(
+            [['month' => '2024-03', 'runCount' => 1, 'costNanoCredits' => null]],
+            $payload['months'],
+        );
+        /** @var array<string, mixed> $latest */
+        $latest = $payload['latest'];
+        self::assertSame('2024-03', $latest['month']);
+        /** @var list<array<string, mixed>> $latestRuns */
+        $latestRuns = $latest['runs'];
+        self::assertSame([$only->getId()], array_column($latestRuns, 'id'));
     }
 
     public function testTheMonthRouteReturnsOnlyThatMonthsRuns(): void

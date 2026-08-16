@@ -20,6 +20,8 @@ use App\Repository\RecommendationRunHistoryRepository;
  * in the controller and was rejected for it.
  *
  * @phpstan-import-type HistoryRow from RecommendationRunHistoryRepository
+ * @phpstan-import-type MonthPagePayload from RecommendationRunHistoryJson
+ * @phpstan-import-type OverviewPayload from RecommendationRunHistoryJson
  */
 final readonly class RecommendationRunHistoryView
 {
@@ -29,7 +31,7 @@ final readonly class RecommendationRunHistoryView
     ) {
     }
 
-    /** @return array<string, mixed> */
+    /** @return OverviewPayload */
     public function overview(User $user, ViewerTimeZone $viewer): array
     {
         $months = $this->summariser->summarise($this->runs->spendTimeline($user), $viewer);
@@ -41,7 +43,7 @@ final readonly class RecommendationRunHistoryView
         );
     }
 
-    /** @return array<string, mixed> */
+    /** @return MonthPagePayload */
     public function month(User $user, MonthWindow $window, ?int $beforeRunId): array
     {
         [$rows, $nextCursor] = $this->truncate($this->runs->pageForMonth($user, $window, $beforeRunId));
@@ -56,7 +58,7 @@ final readonly class RecommendationRunHistoryView
      * Null for an account that has never run, since there is then no month to
      * open.
      *
-     * @return ?array<string, mixed>
+     * @return ?MonthPagePayload
      */
     private function latestMonthPage(User $user, ViewerTimeZone $viewer, ?HistoryMonth $newestMonth): ?array
     {
