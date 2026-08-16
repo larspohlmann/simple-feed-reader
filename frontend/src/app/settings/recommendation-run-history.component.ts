@@ -65,10 +65,18 @@ export class RecommendationRunHistoryComponent {
 
   /** Credits with four decimals, or an em dash when the provider reported no
    *  price at all. Four decimals is the granularity a single run is worth
-   *  reading at; a run cheaper than that reads as 0.0000, which is honest. */
+   *  reading at; a run cheaper than that reads as 0.0000, which is honest.
+   *
+   *  Through `Intl` on the active UI language for the same reason the dates
+   *  below are: `toFixed` always writes a `.`, and a German card showing
+   *  `22. Juli 2026` beside `0.0412` is two locales in one line. The unit
+   *  belongs to the labels, not to every value. */
   cost(nanoCredits: number | null): string {
     if (nanoCredits === null) return NO_PRICE;
-    return (nanoCredits / NANO_PER_CREDIT).toFixed(4);
+    return new Intl.NumberFormat(this.language.lang(), {
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 4,
+    }).format(nanoCredits / NANO_PER_CREDIT);
   }
 
   /** The provider and model the run called, as one line. Falls back to the
@@ -94,9 +102,18 @@ export class RecommendationRunHistoryComponent {
     this.api
       .runHistory()
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((payload) => {
-        this.runs.set(payload.runs);
-        this.totalCostNanoCredits.set(payload.totalCostNanoCredits);
+      .subscribe({
+        next: (payload) => {
+          this.runs.set(payload.runs);
+          this.totalCostNanoCredits.set(payload.totalCostNanoCredits);
+        },
+        error: () => {
+          // The card is a spending record, not a control: a failed fetch
+          // leaves the rows it already has standing rather than blanking them
+          // or claiming an error. Handled at all because the effect re-fires
+          // on every completed run, so an endpoint that stays broken would
+          // otherwise throw once per run for as long as the page is open.
+        },
       });
   }
 }

@@ -14,6 +14,10 @@
       <span class="run-history__total-value">{{ cost(totalCostNanoCredits()) }}</span>
     </p>
 
+    <!-- The unit is named once, over the column it applies to, rather than
+         appended to every row's figure. -->
+    <p class="run-history__unit">{{ 'settings.ai.recommendations.historyCostUnit' | transloco }}</p>
+
     <div class="run-history__wrap">
       <ul class="run-history__list">
         @for (run of runs(); track run.id) {

@@ -1,10 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { RecommendationRunHistoryComponent } from './recommendation-run-history.component';
 import { ReaderApi } from '../reader/reader-api';
 import { RecommendationsService } from '../reader/recommendations.service';
 import { RunHistoryPayload, RunHistoryRow } from '../reader/models';
+import { LanguageService } from '../core/language.service';
+import { Lang } from '../core/language';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 
 const PRICED_RUN: RunHistoryRow = {
@@ -33,6 +35,7 @@ const UNPRICED_RUN: RunHistoryRow = {
 describe('RecommendationRunHistoryComponent', () => {
   let runHistory: jest.Mock;
   let completedStamp: ReturnType<typeof signal<number>>;
+  let lang: ReturnType<typeof signal<Lang>>;
   let fixture: ReturnType<typeof TestBed.createComponent<RecommendationRunHistoryComponent>>;
 
   function mount(payload: RunHistoryPayload) {
@@ -45,12 +48,14 @@ describe('RecommendationRunHistoryComponent', () => {
   beforeEach(() => {
     runHistory = jest.fn().mockReturnValue(of({ runs: [], totalCostNanoCredits: null }));
     completedStamp = signal(0);
+    lang = signal<Lang>('en');
 
     TestBed.configureTestingModule({
       imports: [RecommendationRunHistoryComponent, provideTranslocoTesting()],
       providers: [
         { provide: ReaderApi, useValue: { runHistory } },
         { provide: RecommendationsService, useValue: { completedStamp } },
+        { provide: LanguageService, useValue: { lang } },
       ],
     });
   });
@@ -71,6 +76,27 @@ describe('RecommendationRunHistoryComponent', () => {
     const el = mount({ runs: [PRICED_RUN], totalCostNanoCredits: 41_230_000 });
 
     expect(el.querySelector('.run-history__cost')?.textContent?.trim()).toBe('0.0412');
+  });
+
+  /** The card already formats its dates through the active language; a
+   *  `toFixed` beside them would put an en-US decimal point under a German
+   *  date. */
+  it('writes the decimal separator of the active language', () => {
+    lang.set('de');
+
+    const el = mount({ runs: [PRICED_RUN], totalCostNanoCredits: 918_200_000 });
+
+    expect(el.querySelector('.run-history__cost')?.textContent?.trim()).toBe('0,0412');
+    expect(el.querySelector('.run-history__total-value')?.textContent?.trim()).toBe('0,9182');
+  });
+
+  /** The figures are bare numbers, so the unit has to be stated somewhere —
+   *  once, over the column, rather than on every row. */
+  it('names the unit on the total and over the cost column', () => {
+    const el = mount({ runs: [PRICED_RUN], totalCostNanoCredits: 918_200_000 });
+
+    expect(el.querySelector('.run-history__total-label')?.textContent).toContain('credits');
+    expect(el.querySelector('.run-history__unit')?.textContent).toContain('credits');
   });
 
   it('renders an em dash when the provider reported no price', () => {
@@ -106,5 +132,22 @@ describe('RecommendationRunHistoryComponent', () => {
     fixture.detectChanges();
 
     expect(runHistory).toHaveBeenCalledTimes(2);
+  });
+
+  /** The effect re-fires on every completed run, so an endpoint that stays
+   *  broken would throw once per run for as long as the settings page is open.
+   *  The rows already on screen stay. */
+  it('leaves the rows standing when a re-fetch fails, and does not throw', () => {
+    jest.useFakeTimers();
+    const el = mount({ runs: [PRICED_RUN], totalCostNanoCredits: 918_200_000 });
+
+    runHistory.mockReturnValue(throwError(() => new Error('the endpoint is down')));
+    completedStamp.set(1);
+    fixture.detectChanges();
+
+    expect(() => jest.runOnlyPendingTimers()).not.toThrow();
+    expect(el.querySelectorAll('.run-history__row')).toHaveLength(1);
+    expect(el.querySelector('.run-history__total-value')?.textContent?.trim()).toBe('0.9182');
+    jest.useRealTimers();
   });
 });

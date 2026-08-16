@@ -8,6 +8,9 @@
 }
 
 .run-history {
+  /* The base's `app-settings-card + app-settings-card` gap cannot reach across
+     this component's host wrapper, so the card carries the same separation
+     from the card above it here. */
   margin-block-start: var(--space-5);
   font-size: var(--fs-sm);
   color: var(--text-secondary);
@@ -34,6 +37,13 @@
     font-size: var(--fs-base);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
+  }
+
+  &__unit {
+    margin: 0 0 var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    text-align: right;
   }
 
   &__wrap {
