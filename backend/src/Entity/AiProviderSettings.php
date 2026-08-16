@@ -23,6 +23,14 @@ class AiProviderSettings
 {
     public const int MAX_BATCH_CONCURRENCY = 4;
 
+    public const int MINIMUM_BATCH_SIZE = 5;
+
+    /**
+     * A sanity bound against a typo, not a quality bound: the token budget is
+     * the real guard on how large a batch may be.
+     */
+    public const int MAXIMUM_BATCH_SIZE = 200;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -73,27 +81,8 @@ class AiProviderSettings
     #[ORM\Column(options: ['default' => 1])]
     private bool $suppressReasoning = true;
 
-    /**
-     * How many batch calls a run may send at once for this connection (#344).
-     * Default 1: sequential, identical to the pre-#344 behaviour, so
-     * parallelism is strictly opt-in per connection. A single-GPU local model
-     * gains nothing from a higher value and the low ceiling keeps a wave from
-     * a memory stampede; a hosted provider gets a real wall-clock cut. The
-     * range is enforced at the API (SetBatchConcurrencyRequest); this column
-     * is a plain int so a value written straight to the row is still read back.
-     */
-    #[ORM\Column(options: ['default' => 1])]
-    private int $batchConcurrency = 1;
-
-    /**
-     * Whether this endpoint answers slowly enough to need the long timeout
-     * profile (#433). Default false: the standard bounds are right for every
-     * hosted provider, and a connection only earns the long ones by being
-     * marked. What the two profiles are is ProviderTimeouts' business — the
-     * row records the account's judgement about the endpoint, not a duration.
-     */
-    #[ORM\Column(options: ['default' => 0])]
-    private bool $slowModel = false;
+    #[ORM\Embedded(class: RunTuning::class, columnPrefix: false)]
+    private RunTuning $runTuning;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $verifiedAt = null;
@@ -118,6 +107,7 @@ class AiProviderSettings
     ) {
         $this->user = $user;
         $this->name = $name;
+        $this->runTuning = new RunTuning();
         $this->replaceConnection($baseUrl, $sealed, $apiKeyHint, $verifiedAt);
     }
 
@@ -188,22 +178,32 @@ class AiProviderSettings
 
     public function batchConcurrency(): int
     {
-        return $this->batchConcurrency;
+        return $this->runTuning->batchConcurrency();
     }
 
     public function setBatchConcurrency(int $batchConcurrency): void
     {
-        $this->batchConcurrency = $batchConcurrency;
+        $this->runTuning->setBatchConcurrency($batchConcurrency);
     }
 
     public function isSlowModel(): bool
     {
-        return $this->slowModel;
+        return $this->runTuning->isSlowModel();
     }
 
     public function setSlowModel(bool $slowModel): void
     {
-        $this->slowModel = $slowModel;
+        $this->runTuning->setSlowModel($slowModel);
+    }
+
+    public function maxBatchSize(): ?int
+    {
+        return $this->runTuning->maxBatchSize();
+    }
+
+    public function setMaxBatchSize(?int $maxBatchSize): void
+    {
+        $this->runTuning->setMaxBatchSize($maxBatchSize);
     }
 
     public function getVerifiedAt(): ?\DateTimeImmutable

@@ -182,4 +182,63 @@ final class AiProviderSettingsTest extends TestCase
 
         self::assertSame(3, $settings->batchConcurrency());
     }
+
+    public function testANewRowIsNotSlowByDefault(): void
+    {
+        self::assertFalse($this->settings()->isSlowModel());
+    }
+
+    public function testSetSlowModelIsReadBack(): void
+    {
+        $settings = $this->settings();
+        $settings->setSlowModel(true);
+        self::assertTrue($settings->isSlowModel());
+    }
+
+    public function testANewRowTakesTheDefaultMaxBatchSize(): void
+    {
+        self::assertNull($this->settings()->maxBatchSize());
+    }
+
+    public function testSetMaxBatchSizeIsReadBack(): void
+    {
+        $settings = $this->settings();
+        $settings->setMaxBatchSize(25);
+        self::assertSame(25, $settings->maxBatchSize());
+    }
+
+    public function testSetMaxBatchSizeBackToNullRestoresTheDefault(): void
+    {
+        $settings = $this->settings();
+        $settings->setMaxBatchSize(25);
+
+        $settings->setMaxBatchSize(null);
+
+        self::assertNull($settings->maxBatchSize());
+    }
+
+    public function testReplacingTheConnectionKeepsTheMaxBatchSize(): void
+    {
+        $settings = $this->settings();
+        $settings->setMaxBatchSize(25);
+
+        $settings->replaceConnection(
+            'https://other.example.test/v1',
+            $this->sealed('b3RoZXI='),
+            'wxyz',
+            new \DateTimeImmutable('2026-08-06 11:00:00'),
+        );
+
+        self::assertSame(25, $settings->maxBatchSize());
+    }
+
+    public function testMinimumBatchSizeIsFive(): void
+    {
+        self::assertSame(5, AiProviderSettings::MINIMUM_BATCH_SIZE);
+    }
+
+    public function testMaximumBatchSizeIsTwoHundred(): void
+    {
+        self::assertSame(200, AiProviderSettings::MAXIMUM_BATCH_SIZE);
+    }
 }
