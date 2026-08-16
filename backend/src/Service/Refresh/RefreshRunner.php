@@ -20,6 +20,7 @@ use App\Service\Fetch\FetchOutcome;
 use App\Service\Fetch\FetchResponse;
 use App\Service\OrphanedFeedReclaimer;
 use App\Service\Parser\Exception\FeedParseException;
+use App\Service\Search\EntryIndexer;
 use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
@@ -39,7 +40,7 @@ use Symfony\Component\Lock\LockFactory;
  * ingest, flush — happens serially as each outcome arrives, so persistence
  * semantics are unchanged from the one-feed-at-a-time original.
  *
- * The twelve constructor collaborators are deliberate: the runner is the
+ * The thirteen constructor collaborators are deliberate: the runner is the
  * refresh pipeline's composition root, and each one is a seam the tests swap
  * independently (fetcher, body parser, ingestor, scheduler, …). Bagging them
  * into a parameter object would hide that coupling, not reduce it.
@@ -66,6 +67,7 @@ final class RefreshRunner
         private readonly FeedScheduler $scheduler,
         private readonly EntryPruner $pruner,
         private readonly OrphanedFeedReclaimer $orphanedFeeds,
+        private readonly EntryIndexer $indexer,
         private readonly LockFactory $lockFactory,
         private readonly ClockInterface $clock,
         private readonly LoggerInterface $logger,
@@ -331,7 +333,7 @@ final class RefreshRunner
             }
 
             $parsed = $this->bodyParser->parse($feed, $body);
-            $created = $this->ingestor->ingest($feed, $parsed, $context);
+            $createdEntries = $this->ingestor->ingest($feed, $parsed, $context);
             // Opportunistically fill images onto entries stored before the image
             // column existed (#148). The count is discarded on purpose: the
             // refresh's success signal is NEW content, and a backfilled image is
@@ -341,8 +343,12 @@ final class RefreshRunner
             $feed->setEtag($this->truncate($response->etag, self::ETAG_MAX));
             $feed->setLastModified($this->truncate($response->lastModified, self::LAST_MODIFIED_MAX));
             $this->applyPermanentRedirect($feed, $response);
-            $this->scheduler->recordSuccess($feed, $created);
+            $this->scheduler->recordSuccess($feed, \count($createdEntries));
             $this->em->flush();
+            // Indexing needs the ids the flush just assigned, so it can only
+            // happen after it — see EntryIndexer's class docblock for why a
+            // slow or unreachable engine here never turns into a failed refresh.
+            $this->indexer->index($createdEntries);
 
             return FeedOutcome::Fetched;
         } catch (FeedThrottledException $e) {

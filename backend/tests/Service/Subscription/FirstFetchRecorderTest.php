@@ -12,19 +12,24 @@ use App\Service\EntrySanitizer;
 use App\Service\FeedScheduler;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
+use App\Service\Search\EntryIndexer;
 use App\Service\Subscription\FirstFetchRecorder;
 use App\Tests\DbTestCase;
+use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 
 final class FirstFetchRecorderTest extends DbTestCase
 {
     private FirstFetchRecorder $recorder;
+    private RecordingSearchIndexWriter $indexWriter;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $clock = new MockClock('2026-06-01T00:00:00Z');
+        $this->indexWriter = new RecordingSearchIndexWriter();
         $this->recorder = new FirstFetchRecorder(
             new EntryIngestor(
                 $this->em,
@@ -34,6 +39,7 @@ final class FirstFetchRecorderTest extends DbTestCase
             new FeedScheduler($clock),
             $this->em,
             $clock,
+            new EntryIndexer($this->indexWriter, new NullLogger()),
         );
     }
 
@@ -47,6 +53,30 @@ final class FirstFetchRecorderTest extends DbTestCase
         $this->recorder->record($feed, $discovered);
 
         self::assertSame('2020-03-01 00:00:00', $this->effectiveDateOf($feed, 'a'));
+    }
+
+    /**
+     * The #432 ordering trap: EntryIngestor persists but never flushes, so an
+     * entry has no id until record()'s own flush assigns one. This proves the
+     * id the index received is the SAME id the database assigned, which
+     * merely calling index() somewhere inside record() would not catch.
+     */
+    public function testIndexesTheFirstFetchEntriesWithTheirRealIdsAfterFlush(): void
+    {
+        $feed = $this->feed();
+        $discovered = $this->discovered($feed, [
+            $this->parsedEntry('a', new \DateTimeImmutable('2020-03-01 00:00:00')),
+        ]);
+
+        $this->recorder->record($feed, $discovered);
+
+        $entry = $this->findByGuid($feed, 'a');
+        self::assertNotNull($entry);
+        self::assertNotNull($entry->getId());
+
+        self::assertSame(['configure', 'upsert'], $this->indexWriter->calls);
+        self::assertCount(1, $this->indexWriter->upserts);
+        self::assertSame($entry->getId(), $this->indexWriter->upserts[0][0]->id);
     }
 
     public function testAFirstFetchStoresAtMostTwoHundredEntries(): void

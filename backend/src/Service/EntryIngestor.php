@@ -35,19 +35,22 @@ final class EntryIngestor
      * @param FeedIngestContext $context the run instant shared by every entry
      *        this call ingests, and the feed's previous fetch — together they
      *        decide where each entry lands in the list (see EntryEffectiveDate)
+     *
+     * @return list<Entry> the entries created, in the order the caller can
+     *         later index them — each one has no id until the caller flushes
      */
-    public function ingest(Feed $feed, ParsedFeed $parsed, FeedIngestContext $context): int
+    public function ingest(Feed $feed, ParsedFeed $parsed, FeedIngestContext $context): array
     {
         $this->updateFeedMetadata($feed, $parsed);
 
         if ($parsed->entries === []) {
-            return 0;
+            return [];
         }
 
         $hashes = $this->guidHashesOf($parsed->entries);
         $seen = array_fill_keys($this->entryRepository->findExistingGuidHashes($feed, $hashes), true);
 
-        $created = 0;
+        $created = [];
         foreach ($parsed->entries as $parsedEntry) {
             $hash = self::guidHash($parsedEntry->guid);
             if (isset($seen[$hash])) {
@@ -72,7 +75,7 @@ final class EntryIngestor
             $this->applyImage($entry, $parsedEntry->image);
 
             $this->em->persist($entry);
-            $created++;
+            $created[] = $entry;
         }
 
         return $created;

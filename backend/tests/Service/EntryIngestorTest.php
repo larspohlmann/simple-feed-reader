@@ -128,7 +128,7 @@ final class EntryIngestorTest extends DbTestCase
         $created = $this->ingestor->ingest($feed, $parsed, self::context());
         $this->em->flush();
 
-        self::assertSame(2, $created);
+        self::assertCount(2, $created);
         $entries = $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]);
         self::assertCount(2, $entries);
 
@@ -156,7 +156,7 @@ final class EntryIngestorTest extends DbTestCase
         ]), self::context());
         $this->em->flush();
 
-        self::assertSame(1, $created);
+        self::assertCount(1, $created);
         self::assertCount(2, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
     }
 
@@ -169,8 +169,8 @@ final class EntryIngestorTest extends DbTestCase
         $this->em->flush();
 
         $parsed = new ParsedFeed(null, null, null, [$this->parsedEntry('shared-guid', 'Shared')]);
-        self::assertSame(1, $this->ingestor->ingest($feedA, $parsed, self::context()));
-        self::assertSame(1, $this->ingestor->ingest($feedB, $parsed, self::context()));
+        self::assertCount(1, $this->ingestor->ingest($feedA, $parsed, self::context()));
+        self::assertCount(1, $this->ingestor->ingest($feedB, $parsed, self::context()));
         $this->em->flush();
 
         self::assertCount(1, $this->em->getRepository(Entry::class)->findBy(['feed' => $feedA]));
@@ -385,7 +385,7 @@ final class EntryIngestorTest extends DbTestCase
 
         $created = $this->ingestor->ingest($feed, new ParsedFeed('New Title', null, null, []), self::context());
 
-        self::assertSame(0, $created);
+        self::assertCount(0, $created);
         self::assertSame('New Title', $feed->getTitle());
     }
 

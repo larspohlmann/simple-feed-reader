@@ -26,7 +26,9 @@ use App\Service\Refresh\RefreshRunner;
 use App\Service\Refresh\ScrapedBodyParser;
 use App\Service\Refresh\XmlBodyParser;
 use App\Service\Scraper\HtmlItemExtractor;
+use App\Service\Search\EntryIndexer;
 use App\Tests\DbTestCase;
+use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\StubFeedFetcher;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
@@ -53,6 +55,11 @@ final class RefreshRunnerOrphanSweepTest extends DbTestCase
         $this->fetcher = new StubFeedFetcher($this->clock);
         $this->faviconFetcher = new StubFeedFetcher();
         $this->lockFactory = new LockFactory(new InMemoryStore());
+    }
+
+    private function indexer(): EntryIndexer
+    {
+        return new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger());
     }
 
     private function runner(): RefreshRunner
@@ -82,8 +89,9 @@ final class RefreshRunnerOrphanSweepTest extends DbTestCase
             new EntryIngestor($this->em, $entryRepository, new EntrySanitizer()),
             new FaviconResolver($this->faviconFetcher, new NullLogger()),
             new FeedScheduler($this->clock),
-            new EntryPruner($this->em, $this->clock),
+            new EntryPruner($this->em, $this->clock, $this->indexer()),
             new OrphanedFeedReclaimer($this->em),
+            $this->indexer(),
             $this->lockFactory,
             $this->clock,
             new NullLogger(),
