@@ -103,6 +103,9 @@ export class ToastService {
   }
 
   private panelClasses(toast: ToastData): string[] {
-    return toast.width === 'fixed' ? ['app-toast', 'app-toast--fixed'] : ['app-toast'];
+    const classes = ['app-toast'];
+    if (toast.width === 'fixed') classes.push('app-toast--fixed');
+    if (toast.tone === 'translucent') classes.push('app-toast--translucent');
+    return classes;
   }
 }

@@ -790,6 +790,7 @@ describe('RecommendationsService', () => {
     content: ForYouProgressComponent,
     durationMs: null,
     width: 'fixed',
+    tone: 'translucent',
   };
 
   it('raises the persistent pill the moment a run starts, before any report arrives', () => {

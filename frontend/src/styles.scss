@@ -39,3 +39,12 @@
 .cdk-overlay-pane.app-toast--fixed {
   width: min(100% - 2 * var(--space-4), 22rem);
 }
+
+// A readout that reports on work while the reader carries on reading sits over
+// the list rather than replacing part of it, so it lets a little of that list
+// through. The blur keeps the text legible over whatever passes underneath;
+// without it, translucency alone would put rows behind the numbers.
+.cdk-overlay-pane.app-toast--translucent .toast {
+  background: color-mix(in srgb, var(--surface-2) 88%, transparent);
+  backdrop-filter: blur(8px);
+}

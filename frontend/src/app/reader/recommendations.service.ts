@@ -242,6 +242,9 @@ export class RecommendationsService {
       content: ForYouProgressComponent,
       durationMs: null,
       width: 'fixed',
+      // It reports on a run the reader is not waiting for; letting the list
+      // show through says so, where an opaque card would read as an interrupt.
+      tone: 'translucent',
     });
   }
 
