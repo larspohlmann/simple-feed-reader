@@ -41,6 +41,26 @@ final class RecordedCall implements CompletionStreamObserver
      */
     private ?string $finishReason = null;
 
+    /**
+     * The provider's own accounting for this call, held like $finishReason
+     * and banked when the call settles (#409). Sticky: it arrives in one late
+     * message, so a later report without it must not erase it.
+     */
+    private ?CompletionUsage $usage = null;
+
+    /**
+     * One provider call is billed once. Every settle path — a verdict, a
+     * transport abort, a wave that aborts a call the round already settled —
+     * runs through bankUsage(), and without this flag a call reachable by two
+     * of them would double its own spend. Per-instance on purpose: a retry and
+     * the discarded sibling of an aborted wave are separate RecordedCalls, and
+     * the provider billed each of them (#344). Only set once bankUsage()
+     * actually writes: a settle that finds no usage yet (a transport failure
+     * before the provider's usage message arrived) leaves this false, so a
+     * later settle path on the same instance still gets to bank it.
+     */
+    private bool $usageBanked = false;
+
     public function __construct(
         private readonly Connection $connection,
         private readonly ClockInterface $clock,
@@ -57,6 +77,7 @@ final class RecordedCall implements CompletionStreamObserver
     {
         $this->wireBytes = $progress->wireBytes;
         $this->finishReason = $progress->finishReason ?? $this->finishReason;
+        $this->usage = $progress->usage ?? $this->usage;
 
         $now = $this->clock->now();
         if ($now->getTimestamp() - $this->lastCheckpointAt->getTimestamp() < self::CHECKPOINT_SECONDS) {
@@ -120,6 +141,7 @@ final class RecordedCall implements CompletionStreamObserver
     public function abortAfterTransportFailure(?string $errorDetail): void
     {
         $this->resetLiveness();
+        $this->bankUsage();
 
         if (null === $this->logId) {
             return;
@@ -137,6 +159,7 @@ final class RecordedCall implements CompletionStreamObserver
     private function finish(string $content, string $verdict): void
     {
         $this->resetLiveness();
+        $this->bankUsage();
 
         if (null === $this->logId) {
             return;
@@ -154,5 +177,65 @@ final class RecordedCall implements CompletionStreamObserver
     private function resetLiveness(): void
     {
         $this->connection->update('recommendation_run', ['streamed_chars' => 0], ['id' => $this->runId]);
+    }
+
+    /**
+     * Adds this call's consumption to the run's own totals — with SQL
+     * arithmetic, not read-modify-write: a #344 wave settles several calls
+     * against one run, and two PHP-side increments would silently lose one of
+     * them. Through DBAL rather than the EntityManager for the reason every
+     * write in this class is: the advancer holds other work dirty mid-tick,
+     * and flushing it here would commit that too.
+     *
+     * Runs before the debug guard in both callers on purpose. The RecordedCall
+     * exists whether or not the debug switch is on, and a spending record that
+     * only exists with debug on is the defect #409 was filed about.
+     */
+    private function bankUsage(): void
+    {
+        $usage = $this->usage;
+
+        if (null === $usage || $this->usageBanked) {
+            return;
+        }
+        $this->usageBanked = true;
+
+        $this->connection->executeStatement(
+            'UPDATE recommendation_run SET'
+            . ' prompt_tokens = prompt_tokens + :promptTokens,'
+            . ' completion_tokens = completion_tokens + :completionTokens,'
+            . ' reasoning_tokens = reasoning_tokens + :reasoningTokens,'
+            . ' cached_tokens = cached_tokens + :cachedTokens'
+            . ' WHERE id = :runId',
+            [
+                'promptTokens' => $usage->promptTokens,
+                'completionTokens' => $usage->completionTokens,
+                'reasoningTokens' => $usage->reasoningTokens,
+                'cachedTokens' => $usage->cachedTokens,
+                'runId' => $this->runId,
+            ],
+        );
+
+        $this->bankCost($usage->costNanoCredits);
+    }
+
+    /**
+     * The price, kept out of the token statement so an unpriced call leaves
+     * the column NULL rather than coercing it to 0 — null means "no provider
+     * reported a price", and 0 would claim the run was free. COALESCE is what
+     * makes the first priced call of a run initialise the column.
+     */
+    private function bankCost(?int $costNanoCredits): void
+    {
+        if (null === $costNanoCredits) {
+            return;
+        }
+
+        $this->connection->executeStatement(
+            'UPDATE recommendation_run'
+            . ' SET cost_nano_credits = COALESCE(cost_nano_credits, 0) + :costNanoCredits'
+            . ' WHERE id = :runId',
+            ['costNanoCredits' => $costNanoCredits, 'runId' => $this->runId],
+        );
     }
 }

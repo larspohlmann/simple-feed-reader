@@ -1,0 +1,465 @@
+@use '../theme/breakpoints' as bp;
+
+/* One month of the spending record (#409). Each `&__row` is a 6-column,
+   2-row grid: row 1 carries `when | status | time | tokens in | tokens out |
+   cost`, row 2 is the provider cell alone, spanning the full width. Moved
+   there in a follow-up to this month's first render, where the provider
+   shared row 1 as a `1fr` column and was too narrow for a real model id --
+   `overflow-wrap: anywhere` was breaking `openrouter.ai ·
+   deepseek/deepseek-v4-pro` into four lines mid-word. The header strip above
+   the list only ever names row 1; there is no PROVIDER header any more, so
+   the provider cell relies entirely on its own `&__cell-label`. The header is
+   projected into `app-disclosure`'s `[summary]` slot, whose `summary.is-row`
+   rule already carries `--row-pad-comfy-y/x` -- adding the same padding here
+   would double it, so `&__header` stays unpadded and only the body content
+   below it (`&__wrap`, `&__loading`, `&__more`) insets itself to match.
+
+   One layout at every width, not two: the header strip stays visible and the
+   row stays a grid all the way down to a phone. No cell ever shows a visible
+   label of its own (`&__cell-label` is `visually-hidden` unconditionally,
+   below) -- the header names the column for sighted readers at any size, and
+   a label repeated on every one of 52 rows would outweigh the data. The date
+   renders the same `Aug 16 07:21` at every width; a month-dropped short form
+   was tried and rejected, since users read this value on its own while
+   scanning, not only inside its section's heading.
+
+   Two boundaries, not one, and they answer different questions:
+    - `bp.$bp-md` (720px) decides the *form* of the status cell -- icon
+      (`&__status-icon`) below it, the spelled-out word (`&__status-word`)
+      above it -- and, in the parent card's stylesheet, whether the legend
+      that decodes the icons is shown at all. 720px is the first width at
+      which the row can actually afford the word: `COMPLETED`/`CANCELLED`
+      need roughly 6rem, the icon needs roughly 2rem, and below 720px that
+      4rem is not there to spend.
+    - `bp.$bp-sm` (560px) decides how hard the *other* five tracks and the
+      row's own gap/padding are squeezed -- the icon/word form does not
+      change here, only how much slack the layout still has.
+   Do not merge these back into one breakpoint: that was tried, and it put
+   the word's ~6rem demand and the desktop-to-compressed track jump at the
+   same instant, which is what spilled the card at ~620px in the first
+   place. */
+:host {
+  display: block;
+}
+
+/* The one hidden state `&__cell-label` (visible-to-everyone-but-sighted-
+   users, at every width) and `&__status-word` (hidden only below
+   `bp.$bp-md`, once the status icon takes its place) both need. See
+   `.sr-only` in theme/_utilities.scss for why this exact shape (a near-zero
+   box, not `display: none`, which would drop the node from the accessibility
+   tree in some browsers) and why it stays local to this file rather than
+   reusing that shared class: `&__status-word` has to leave this state from
+   inside a media query below, and overriding a shared class from here would
+   make that override easy to miss from either end. `rem`, not `.sr-only`'s
+   `px`: Stylelint bans ad-hoc `px` spacing outside `theme/`, and at this
+   near-zero size the unit makes no visible difference either way.
+
+   A mixin rather than a `%placeholder`: `&__status-word` extends it from
+   inside a media query, and Sass refuses to `@extend` a placeholder across a
+   media-query boundary ("You may not @extend selectors across media
+   queries") -- which fails the Angular build outright while `npm run check`
+   still passes, because that script lints and tests but never compiles the
+   bundle. A mixin has no such restriction. */
+@mixin visually-hidden {
+  position: absolute;
+  width: 0.0625rem;
+  height: 0.0625rem;
+  padding: 0;
+  margin: -0.0625rem;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.run-history-month {
+  &__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+    width: 100%;
+  }
+
+  &__label {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  &__meta {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__loading {
+    margin: 0 var(--row-pad-comfy-x) var(--row-pad-comfy-y);
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+  }
+
+  /* Same inset as the loading line it replaces, in the danger colour: this is
+     the only body an open month has when its first page could not be fetched,
+     so it has to read as a fault rather than as an empty month. */
+  &__failed {
+    margin: 0 var(--row-pad-comfy-x) var(--row-pad-comfy-y);
+    color: var(--danger);
+    font-size: var(--fs-xs);
+  }
+
+  &__wrap {
+    padding: 0 var(--row-pad-comfy-x) var(--row-pad-comfy-y);
+    overflow-x: auto;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+
+    /* Derived from `&__row`'s own grid, not eyeballed: the five fixed tracks
+       (6 + 3 + 6 + 7 + 5 = 27rem) plus five `column-gap`s (5 x --space-2 =
+       2.5rem) plus the row's own left+right padding (2 x --space-3 = 1.5rem)
+       = 31rem. `1fr` (the `when` column) contributes nothing fixed here -- it
+       is the one track meant to flex, which is also why it carries
+       `white-space: nowrap` below rather than being left to wrap into the
+       slack it absorbs. Re-derive this the same way after touching any track
+       width, the row padding, or the column gap. This is the widest-viewport
+       figure; the two media queries below re-derive it for their own,
+       narrower track lists, and the three numbers describe three different
+       track lists that must not be conflated. */
+    min-width: 31rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__row {
+    display: grid;
+
+    /* `tokens-in`/`tokens-out` are 6rem/7rem, not a matched pair -- "TOKENS
+       OUT" is a character longer than "TOKENS IN" and was wrapping onto two
+       lines against an earlier, narrower, equal-width guess for both. Fixed
+       `rem` tracks, not `minmax()`: above `bp.$bp-md` this is the one grid
+       this file promises not to change (approved as-is), and the row's own
+       `&__wrap` already scrolls horizontally if a card is ever narrower than
+       this needs, rather than this rule reaching for a floor it does not
+       need at that width. */
+    grid-template-columns: 1fr 6rem 3rem 6rem 7rem 5rem;
+    align-items: center;
+    column-gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-0);
+  }
+
+  /* Shares `&__row`'s grid-template-columns, column-gap and display by
+     construction (both classes sit on the same element), so the header
+     cannot drift out of alignment with row 1 of the data rows the way two
+     independently-maintained width lists could -- at any width, including
+     the narrower tracks below, since those overrides also land on `&__row`
+     and so are shared the same way. There is no seventh cell here to
+     overflow into an implicit second row -- the provider column has no
+     header of its own (see the file banner). Column chrome that belongs to a
+     value, not its label -- the status pill, the cost's bold weight -- is
+     reset back to plain text; text alignment is left alone so right-aligned
+     figures still sit under a right-aligned header. Padding is the one
+     property this rule does *not* share with `&__row` automatically (a
+     shorthand fully replaces, it does not merge), so the media queries below
+     carry their own matching overrides for it, to keep the two edges
+     aligned there too. */
+  &__row--header {
+    padding: 0 var(--space-3) var(--space-1);
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+
+    .run-history-month__status,
+    .run-history-month__cost {
+      padding: 0;
+      border-radius: 0;
+      background: none;
+      color: inherit;
+      font-weight: inherit;
+    }
+  }
+
+  /* Unconditional, not just above some breakpoint: no cell ever shows a
+     visible label (see the file banner) -- the header strip above names the
+     column at every width now, so this is the only state `&__cell-label`
+     has, not one of two toggled by a media query. */
+  &__cell-label {
+    @include visually-hidden;
+  }
+
+  &__provider {
+    /* Row 2: the full grid width, not one of row 1's six tracks -- see the
+       file banner. Grid auto-placement (default `grid-auto-flow: row`)
+       already starts a new implicit row once row 1's six cells have filled
+       the explicit columns; this only widens what lands in it. Unchanged at
+       every width, including the media queries below: it is already the one
+       column that is not a narrow fixed track. */
+    grid-column: 1 / -1;
+
+    /* Not `text-overflow: ellipsis` -- the provider stamp exists so the
+       billed model is still readable years later, and hiding half of it
+       defeats that. A model id is one unbroken token past the "·", so a plain
+       word wrap would still run it off the track; `anywhere` lets a long
+       token itself break rather than overflow. Freed of the `1fr` track it
+       used to share with the rest of row 1, this is now cosmetic headroom
+       rather than the thing forcing a four-line wrap. */
+    overflow-wrap: anywhere;
+    font-weight: 600;
+  }
+
+  &__when,
+  &__duration,
+  &__tokens-in,
+  &__tokens-out,
+  &__cost {
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__when {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    white-space: nowrap;
+  }
+
+  &__status {
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--surface-1);
+    color: var(--text-secondary);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    text-align: center;
+    text-transform: uppercase;
+
+    /* However tight the track, a status word must never break -- the fixed
+       width alone got `COMPLETED` down to a hairline wrap onto "D" before the
+       track widened; this is the guarantee, the width is only the headroom. */
+    white-space: nowrap;
+
+    &--completed {
+      background: var(--bg-success);
+      color: var(--success);
+    }
+
+    &--failed,
+    &--cancelled {
+      background: var(--bg-danger);
+      color: var(--danger);
+    }
+  }
+
+  /* Above `bp.$bp-md` the raw word renders (see `&__status`'s comment on the
+     #309 convention) and the icon has nothing to do, so it stays out of the
+     flow until the media query at the end of this file turns it on.
+     Decorative either way -- `<app-icon>` marks its own glyph `aria-hidden`,
+     and the word carries the real semantics on both sides of the boundary.
+     Colour is inherited from `&__status`'s own modifier classes, so it never
+     needs one of its own.
+     This rule (and `&__status`'s own pill chrome above) must stay textually
+     *before* the media queries below, not after: media scoping adds no
+     specificity, so an unconditioned rule of equal specificity declared
+     later in the file always wins over an earlier `@media`-scoped one, at
+     any viewport. Declared after the media block instead, this exact rule
+     once kept the mobile icon permanently hidden regardless of width. */
+  &__status-icon {
+    display: none;
+  }
+
+  &__duration,
+  &__tokens-in,
+  &__tokens-out {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    text-align: right;
+  }
+
+  /* The header word for these two, above `bp.$bp-md` -- `&__col-short`
+     ("IN"/"OUT") takes over below it. Same two-span technique as
+     `&__status-word`/`&__status-icon`: both live in the DOM always (the
+     whole header strip is `aria-hidden`, so there is no assistive-tech
+     duplication to worry about either way), and a media query decides which
+     is visible. */
+  &__col-short {
+    display: none;
+  }
+
+  &__cost {
+    font-weight: 600;
+    text-align: right;
+  }
+
+  &__more {
+    margin: 0 var(--row-pad-comfy-x) var(--row-pad-comfy-y);
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+    color: var(--text-secondary);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover {
+      border-color: var(--accent);
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.6;
+    }
+  }
+
+  /* Status becomes an icon here (`&__status-icon`/`&__status-word` below),
+     which is what makes the rest of this rule possible: the status track's
+     floor only has to fit the header word "Status", not the pill value, so
+     it can shrink well below the fixed 6rem the word needed above this
+     boundary. The two token columns keep their numeric data width but trade
+     "TOKENS IN"/"TOKENS OUT" for "IN"/"OUT" in the header (`&__col-short`)
+     for the same reason: the header word, not the number beneath it, was
+     what did not fit.
+
+     Every track is `minmax(<floor>, 1fr)`, not one `1fr` track and five
+     fixed ones, and not a second, differently-shaped layout the way a
+     stacked or labelled-line design would have been -- the header stays
+     visible and aligned because this is still one grid, just one with room
+     to compress. `fr` is safe to use on more than one track across the
+     header strip and each row's *separate* grid containers: `fr` resolves
+     from the container's own width by ratio, and the header and every row
+     are all full width of the same wrapper, so many `fr` tracks stay
+     aligned exactly as one does. What is genuinely unsafe across separate
+     containers is *content*-dependent sizing (`auto`, `min-content`,
+     `max-content`), which resolves per container from what is inside it --
+     that is why the fixed half of every `minmax()` here is a `rem` figure,
+     never one of those keywords. (An earlier version of this file used the
+     single-`1fr` shape and warned against more; that warning does not hold
+     and should not be re-derived from old comments elsewhere in this repo.)
+
+     `minmax(floor, 1fr)` also spreads free space evenly across every track,
+     where a single `1fr` `when` column once took all of it -- which read as
+     an absurd gap between the date and the status column while the numeric
+     tracks, pinned to a width too narrow for their own values, wrapped
+     `237099` into `23709`/`9`. No track here can be narrower than the floor
+     its own widest realistic value needs: a six-digit token count, the
+     header word "Status" once the pill is gone, `$ 0.31871`.
+
+     On the narrowest phones the six floors plus gap plus padding can still
+     exceed the viewport -- that is `&__wrap`'s `overflow-x: auto` and
+     `&__list`'s own `min-width` to handle (both already in place, above),
+     scrolling the row horizontally rather than squeezing any value narrower
+     than its floor and wrapping it, which is the defect this rule exists to
+     prevent. */
+  @media (width <= bp.$bp-md) {
+    /* Derived the same way as the desktop figure above, from this rule's own
+       floors: `when` 4.75rem (`Aug 16 07:21`, nowrap, unchanged at every
+       width) + `status` 3rem (the header word "Status" -- the icon itself
+       needs far less) + `time` 2.25rem (`62:03`) + `tokens-in`/`tokens-out`
+       3.25rem each (a six-digit count, with headroom for a seventh) + `cost`
+       3.5rem (`$ 0.31871`) = 20rem, plus five `column-gap`s (5 x --space-2 =
+       2.5rem, unchanged from the desktop rule -- only `bp.$bp-sm` below
+       narrows this further), plus the row's own left+right padding
+       (unchanged, 2 x --space-3 = 1.5rem) = 24rem. Every one of these six
+       figures is a real floor (the `minmax()` minimum below), not a lower
+       bound `when` was left to absorb the shortfall from -- unlike the
+       desktop figure above, this total already accounts for every track. */
+    &__list {
+      min-width: 24rem;
+    }
+
+    &__row {
+      grid-template-columns:
+        minmax(4.75rem, 1fr) minmax(3rem, 1fr) minmax(2.25rem, 1fr) minmax(3.25rem, 1fr)
+        minmax(3.25rem, 1fr) minmax(3.5rem, 1fr);
+    }
+
+    /* Status drops its pill chrome entirely here -- no background, no
+       padding, no rounding, no forced caps -- because the value in this
+       track is now an icon (`&__status-icon` below), not the spelled-out
+       word the chrome was built for; the track itself is sized for the
+       header word "Status" alone. `&--completed`/`&--failed`/
+       `&--cancelled` above still set `color`, untouched here, which the
+       icon inherits. */
+    &__status {
+      padding: 0;
+      background: none;
+      border-radius: 0;
+      text-transform: none;
+    }
+
+    /* The reset above is for the value pill, which is not wanted around an
+       icon -- but it also reaches the header cell, which never was a pill,
+       leaving the column reading "Status" among WHEN / TIME / IN / OUT /
+       COST. Put the header's own casing back here rather than narrowing the
+       reset, so the value keeps exactly the chrome the icon needs. This must
+       live in *this* block, not the `bp-sm` one below: the icon band runs to
+       `bp-md`, so at 620px only this block applies. */
+    &__row--header .run-history-month__status {
+      text-transform: uppercase;
+    }
+
+    /* The icon takes over as the visible form of the status here (#409: "use
+       icons on mobile"); the word gives way to it but must not leave the DOM
+       -- a phone reader still has to hear "Status completed", not just see a
+       green check. */
+    &__status-word {
+      @include visually-hidden;
+    }
+
+    &__status-icon {
+      display: inline-flex;
+    }
+
+    &__cost {
+      /* Inherited as `--fs-sm` from the parent card otherwise (nothing in
+         this file sets it, so every other track's own `--fs-xs` does not
+         reach it) -- one more character width this track does not have to
+         spare once the row is compressible. */
+      font-size: var(--fs-xs);
+    }
+
+    &__col-full {
+      display: none;
+    }
+
+    &__col-short {
+      display: inline;
+    }
+  }
+
+  /* Only the gap and the row's own padding narrow further here -- the six
+     track floors above already hold at every width down to this one, so
+     redeclaring `grid-template-columns` with the same numbers again would
+     only be a second copy to keep in sync. On a genuinely narrow phone this
+     buys a little extra room before `&__wrap`'s horizontal scroll has to be
+     the answer, not the track list itself. */
+  @media (width <= bp.$bp-sm) {
+    /* Same six floors as `bp.$bp-md` above (20rem), plus five `column-gap`s
+       now narrowed to `--space-1` (5 x --space-1 = 1.25rem), plus the row's
+       own left+right padding, also narrowed here (2 x --space-2 = 1rem) =
+       22.25rem. */
+    &__list {
+      min-width: 22.25rem;
+    }
+
+    &__row {
+      column-gap: var(--space-1);
+      padding: var(--space-2);
+    }
+
+    /* Matches `&__row`'s own narrower padding above, on the horizontal axis
+       only -- see that rule's own comment on why this one needs its own
+       copy rather than inheriting the change. */
+    &__row--header {
+      padding: 0 var(--space-2) var(--space-1);
+    }
+  }
+}

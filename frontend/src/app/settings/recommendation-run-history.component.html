@@ -1,0 +1,50 @@
+@if (sections().length > 0) {
+  <app-settings-card
+    class="run-history"
+    [heading]="'settings.ai.recommendations.historyTitle' | transloco"
+    [description]="'settings.ai.recommendations.historyHint' | transloco"
+  >
+    <p class="run-history__total">
+      <span class="run-history__total-label">
+        {{ 'settings.ai.recommendations.historyTotal' | transloco }}
+      </span>
+      <span class="run-history__total-value">{{ cost(totalCostNanoCredits()) }}</span>
+    </p>
+
+    <ul class="run-history__months">
+      @for (section of sections(); track section.month) {
+        <li class="run-history__month">
+          <app-recommendation-run-history-month
+            [month]="section.month"
+            [runCount]="section.runCount"
+            [costNanoCredits]="section.costNanoCredits"
+            [runs]="section.runs"
+            [nextCursor]="section.nextCursor"
+            [loading]="section.loading"
+            [failed]="section.failed"
+            (opened)="onOpened(section.month)"
+            (showMore)="onShowMore(section.month)"
+          />
+        </li>
+      }
+    </ul>
+
+    <!-- Explains the mobile row's icon-only status column (#409: "add a
+         legend"). Desktop already spells the status word out, so this would
+         explain nothing there -- hidden above the breakpoint in the
+         stylesheet. -->
+    <div class="run-history__legend">
+      <p class="run-history__legend-heading">
+        {{ 'settings.ai.recommendations.historyLegend' | transloco }}
+      </p>
+      <ul class="run-history__legend-list">
+        @for (status of legendStatuses; track status) {
+          <li class="run-history__legend-item run-history__legend-item--{{ status }}">
+            <app-icon [name]="statusIcon(status)" size="sm" />
+            <span>{{ status }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+  </app-settings-card>
+}

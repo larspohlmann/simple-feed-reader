@@ -1,7 +1,10 @@
 // format.spec.ts
 import {
   bytesToKb,
+  formatCost,
   formatDateOr,
+  formatDayInMonth,
+  formatDuration,
   formatLongDate,
   formatTime,
   relativeTime,
@@ -61,6 +64,25 @@ describe('formatDateOr', () => {
   });
 });
 
+describe('formatDayInMonth', () => {
+  it('renders the day and a short month, without a year', () => {
+    const rendered = formatDayInMonth('2026-08-16T09:12:00Z', 'en');
+    expect(rendered).toContain('16');
+    expect(rendered).toContain('Aug');
+    expect(rendered).not.toContain('2026');
+  });
+
+  it('renders in German, day-first and unlike the English rendering', () => {
+    const rendered = formatDayInMonth('2026-08-16T09:12:00Z', 'de');
+    expect(rendered).toBe('16. Aug.');
+    expect(rendered).not.toBe(formatDayInMonth('2026-08-16T09:12:00Z', 'en'));
+  });
+
+  it('empties on bad input', () => {
+    expect(formatDayInMonth('nope', 'en')).toBe('');
+  });
+});
+
 describe('trialExpired', () => {
   const now = new Date('2026-07-22T12:00:00Z').getTime();
 
@@ -100,6 +122,59 @@ describe('trialDaysRemaining', () => {
   it('reads exactly one day left as 1, not 0', () => {
     const endsAt = new Date(now + 86_400_000).toISOString();
     expect(trialDaysRemaining(endsAt, now)).toBe(1);
+  });
+});
+
+describe('formatCost', () => {
+  it('renders a price the way the provider writes it in its own logs', () => {
+    expect(formatCost(1_370_000, 'en')).toBe('$ 0.00137');
+  });
+
+  it('renders an em dash when the provider reported no price at all', () => {
+    expect(formatCost(null, 'en')).toBe('—');
+  });
+
+  it('renders a cost of zero as zero rather than as unpriced', () => {
+    expect(formatCost(0, 'en')).toBe('$ 0.00000');
+  });
+
+  it('keeps the symbol leading but the separator local', () => {
+    expect(formatCost(1_370_000, 'de')).toBe('$ 0,00137');
+  });
+
+  it('rounds a sub-cent remainder to the nearest five-decimal figure', () => {
+    expect(formatCost(1_374_700, 'en')).toBe('$ 0.00137');
+    expect(formatCost(1_375_100, 'en')).toBe('$ 0.00138');
+  });
+
+  it('renders a large total without losing the fixed precision', () => {
+    expect(formatCost(918_200_000, 'en')).toBe('$ 0.91820');
+  });
+});
+
+describe('formatDuration', () => {
+  it('pads the seconds so the column reads as a duration', () => {
+    expect(formatDuration(47)).toBe('0:47');
+  });
+
+  it('rolls a full minute over', () => {
+    expect(formatDuration(60)).toBe('1:00');
+  });
+
+  it('pads a single-digit seconds remainder', () => {
+    expect(formatDuration(127)).toBe('2:07');
+  });
+
+  it('renders a run that took no measurable time as zero', () => {
+    expect(formatDuration(0)).toBe('0:00');
+  });
+
+  it('keeps counting in minutes rather than rolling into hours', () => {
+    expect(formatDuration(3_723)).toBe('62:03');
+  });
+
+  it('never renders a negative duration', () => {
+    expect(formatDuration(-5)).toBe('0:00');
   });
 });
 

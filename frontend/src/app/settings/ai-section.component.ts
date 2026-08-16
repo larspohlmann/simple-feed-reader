@@ -27,6 +27,7 @@ import { SettingsCardComponent } from '../shared/settings-card/settings-card.com
 import { AiFailure, SERVER_TEXT_KINDS } from './ai-failure';
 import { AiConfig, AiSettingsService } from './ai-settings.service';
 import { RecommendationDebugLogComponent } from './recommendation-debug-log.component';
+import { RecommendationRunHistoryComponent } from './recommendation-run-history.component';
 import { RecommendationSettingsCardComponent } from './recommendation-settings-card.component';
 
 /**
@@ -49,6 +50,7 @@ import { RecommendationSettingsCardComponent } from './recommendation-settings-c
     FieldComponent,
     InfoTipComponent,
     RecommendationDebugLogComponent,
+    RecommendationRunHistoryComponent,
     RecommendationSettingsCardComponent,
     SearchableSelectComponent,
     SettingsCardComponent,

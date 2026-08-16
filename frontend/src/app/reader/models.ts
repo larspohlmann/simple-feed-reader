@@ -317,3 +317,57 @@ export interface DebugLogDetail {
    *  the answer, `stop` on a natural end. Null until the provider stamps it. */
   finishReason: string | null;
 }
+
+/** One finished (or in-flight) for-you run, as the history card shows it. The
+ *  provider and model are the ones the run actually called, copied onto the run
+ *  when it started -- not the account's current configuration, which is
+ *  editable and would otherwise rename last month's runs. */
+export interface RunHistoryRow {
+  id: number;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  /** Null on runs that predate the column, and on one that failed before it
+   *  was ever stamped. */
+  providerHost: string | null;
+  model: string | null;
+  createdAt: string;
+  completedAt: string | null;
+  /** Computed server-side -- the client never subtracts timestamps across
+   *  machines. Null while the run has not finished. */
+  durationSeconds: number | null;
+  promptTokens: number;
+  completionTokens: number;
+  reasoningTokens: number;
+  cachedTokens: number;
+  /** What the run cost, in nano-credits (1 credit = 1e9). Null means no call
+   *  of the run reported a price -- a local model, say -- which is a different
+   *  statement from a cost of zero. */
+  costNanoCredits: number | null;
+}
+
+/** One month of an account's run history, as its section header shows it.
+ *  `costNanoCredits` is null when no run of the month reported a price -- the
+ *  same distinction a row and the all-time total already make. Counts and
+ *  totals are computed over the whole month, not over the rows on screen, so
+ *  a capped section never shows a wrong number. */
+export interface RunHistoryMonth {
+  month: string;
+  runCount: number;
+  costNanoCredits: number | null;
+}
+
+/** One page of one month's runs. `nextCursor` is the id to pass as `before`
+ *  for the next page, or null when the month is exhausted. */
+export interface RunHistoryMonthPage {
+  month: string;
+  runs: RunHistoryRow[];
+  nextCursor: number | null;
+}
+
+/** What the history route answers with: every month the account has runs in,
+ *  the newest month's first page so the card paints in one round trip, and the
+ *  account's all-time total. `latest` is null when the account has never run. */
+export interface RunHistoryOverview {
+  totalCostNanoCredits: number | null;
+  months: RunHistoryMonth[];
+  latest: RunHistoryMonthPage | null;
+}

@@ -156,6 +156,10 @@ final class OpenAiCompatibleChatClientTest extends TestCase
                 ],
             ],
             'stream' => true,
+            // Asks the provider to include its usage report in the stream
+            // (#409) — see OpenAiCompatibleChatClient::completionPayload()
+            // for why this is unconditional.
+            'stream_options' => ['include_usage' => true],
             'max_tokens' => 2048,
         ], $decodedBody);
     }
@@ -566,6 +570,29 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $body = $this->captureRequestBody($this->request());
 
         self::assertArrayNotHasKey('reasoning', $body);
+    }
+
+    public function testAsksTheProviderToIncludeUsageInTheStream(): void
+    {
+        $body = $this->captureRequestBody($this->request());
+
+        self::assertSame(['include_usage' => true], $body['stream_options']);
+    }
+
+    public function testReportsTheProvidersUsageToTheObserver(): void
+    {
+        $client = $this->clientAnswering(new MockResponse([
+            "data: {\"choices\":[{\"delta\":{\"content\":\"{}\"}}]}\n\n",
+            "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":11,\"completion_tokens\":4,\"cost\":0.002}}\n\n",
+            "data: [DONE]\n\n",
+        ]));
+        $seen = $this->recordingObserver();
+
+        $client->complete($this->credentials(), $this->request(), $seen);
+
+        $lastReport = $seen->reports[\count($seen->reports) - 1];
+        self::assertSame(11, $lastReport->usage?->promptTokens);
+        self::assertSame(2_000_000, $lastReport->usage->costNanoCredits);
     }
 
     public function testCompleteManyReturnsAnswersAlignedByIndex(): void

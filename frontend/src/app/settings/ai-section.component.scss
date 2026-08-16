@@ -1,3 +1,17 @@
+/* This component's host is a flex item of `settings-shell`'s `.content`
+   (a `flex-direction: column` container) -- and a flex item's `min-width`
+   defaults to `auto`, which refuses to shrink the item below its content's
+   own intrinsic width. `.content` already carries `min-width: 0` on itself,
+   but that only clamps `.content` against *its* parent, not this host
+   against `.content`; without this rule too, a wide descendant (the #409
+   run-history row grid, in particular) can widen this whole host past the
+   viewport instead of clipping and scrolling the way its own `overflow-x:
+   auto` intends (#409). */
+:host {
+  display: block;
+  min-width: 0;
+}
+
 .group {
   display: flex;
   flex-direction: column;

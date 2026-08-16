@@ -20,7 +20,7 @@ final class CompletionBodyDecoderTest extends TestCase
     {
         $body = '{"choices":[{"message":{"content":"plain answer"}}]}';
 
-        self::assertSame('plain answer', $this->decoder->envelopeContent($body));
+        self::assertSame('plain answer', $this->decoder->envelope($body)['content']);
     }
 
     public function testAStreamEventCarriesItsAnswerUnderDelta(): void
@@ -37,7 +37,7 @@ final class CompletionBodyDecoderTest extends TestCase
      */
     public function testNeitherShapeAcceptsTheOthersKey(): void
     {
-        self::assertNull($this->decoder->envelopeContent('{"choices":[{"delta":{"content":"x"}}]}'));
+        self::assertNull($this->decoder->envelope('{"choices":[{"delta":{"content":"x"}}]}')['content']);
         self::assertNull($this->decoder->deltaContent('{"choices":[{"message":{"content":"x"}}]}'));
     }
 
@@ -59,12 +59,12 @@ final class CompletionBodyDecoderTest extends TestCase
 
     public function testAnEnvelopeWithoutContentIsNull(): void
     {
-        self::assertNull($this->decoder->envelopeContent('{"choices":[]}'));
+        self::assertNull($this->decoder->envelope('{"choices":[]}')['content']);
     }
 
     public function testMalformedJsonIsNullRatherThanFatal(): void
     {
-        self::assertNull($this->decoder->envelopeContent('not json'));
+        self::assertNull($this->decoder->envelope('not json')['content']);
         self::assertNull($this->decoder->deltaContent('not json at all'));
     }
 
@@ -75,7 +75,7 @@ final class CompletionBodyDecoderTest extends TestCase
     public function testANonStringContentIsNull(): void
     {
         self::assertNull($this->decoder->deltaContent('{"choices":[{"delta":{"content":42}}]}'));
-        self::assertNull($this->decoder->envelopeContent('{"choices":"nope"}'));
+        self::assertNull($this->decoder->envelope('{"choices":"nope"}')['content']);
     }
 
     /**
@@ -132,7 +132,7 @@ final class CompletionBodyDecoderTest extends TestCase
     public function testAStreamEventOfMalformedJsonIsAllNulls(): void
     {
         self::assertSame(
-            ['content' => null, 'reasoning' => null, 'finishReason' => null],
+            ['content' => null, 'reasoning' => null, 'finishReason' => null, 'usage' => null],
             $this->decoder->streamEvent('not json'),
         );
     }
@@ -199,17 +199,195 @@ final class CompletionBodyDecoderTest extends TestCase
     {
         self::assertSame(
             '{"a":1}',
-            $this->decoder->envelopeReasoning('{"choices":[{"message":{"reasoning_content":"{\"a\":1}"}}]}'),
+            $this->decoder->envelope('{"choices":[{"message":{"reasoning_content":"{\"a\":1}"}}]}')['reasoning'],
         );
         self::assertSame(
             'thinking',
-            $this->decoder->envelopeReasoning('{"choices":[{"message":{"reasoning":"thinking"}}]}'),
+            $this->decoder->envelope('{"choices":[{"message":{"reasoning":"thinking"}}]}')['reasoning'],
         );
     }
 
     public function testAnEnvelopeWithoutReasoningHasNullReasoning(): void
     {
-        self::assertNull($this->decoder->envelopeReasoning('{"choices":[{"message":{"content":"x"}}]}'));
-        self::assertNull($this->decoder->envelopeReasoning('not json'));
+        self::assertNull($this->decoder->envelope('{"choices":[{"message":{"content":"x"}}]}')['reasoning']);
+        self::assertNull($this->decoder->envelope('not json')['reasoning']);
+    }
+
+    public function testReadsTheUsageObjectOfTheFinalStreamMessage(): void
+    {
+        $usage = $this->decoder->envelope(
+            '{"choices":[],"usage":{"prompt_tokens":118432,"completion_tokens":2216,'
+            . '"cost":0.04123,"prompt_tokens_details":{"cached_tokens":117000},'
+            . '"completion_tokens_details":{"reasoning_tokens":880}}}',
+        )['usage'];
+
+        self::assertNotNull($usage);
+        self::assertSame(118432, $usage->promptTokens);
+        self::assertSame(2216, $usage->completionTokens);
+        self::assertSame(880, $usage->reasoningTokens);
+        self::assertSame(117000, $usage->cachedTokens);
+        self::assertSame(41_230_000, $usage->costNanoCredits);
+    }
+
+    public function testReadsUsageWithoutACostAsUnpriced(): void
+    {
+        $usage = $this->decoder->envelope('{"choices":[],"usage":{"prompt_tokens":40,"completion_tokens":9}}')['usage'];
+
+        self::assertNotNull($usage);
+        self::assertSame(40, $usage->promptTokens);
+        self::assertSame(9, $usage->completionTokens);
+        self::assertSame(0, $usage->reasoningTokens);
+        self::assertSame(0, $usage->cachedTokens);
+        self::assertNull($usage->costNanoCredits);
+    }
+
+    public function testReadsAnIntegerCostTheSameWayAsAFloatOne(): void
+    {
+        $usage = $this->decoder->envelope('{"usage":{"prompt_tokens":1,"completion_tokens":1,"cost":2}}')['usage'];
+
+        self::assertNotNull($usage);
+        self::assertSame(2_000_000_000, $usage->costNanoCredits);
+    }
+
+    public function testHasNoUsageWhenTheProviderSentNone(): void
+    {
+        self::assertNull($this->decoder->envelope('{"choices":[{"delta":{"content":"hi"}}]}')['usage']);
+    }
+
+    public function testHasNoUsageWhenTheMemberIsNotAnObject(): void
+    {
+        self::assertNull($this->decoder->envelope('{"usage":"none"}')['usage']);
+    }
+
+    public function testHasNoUsageWhenThePayloadIsNotJson(): void
+    {
+        self::assertNull($this->decoder->envelope('not json')['usage']);
+    }
+
+    public function testIgnoresNonNumericProviderFields(): void
+    {
+        $usage = $this->decoder->envelope(
+            '{"usage":{"prompt_tokens":"lots","completion_tokens":3,"cost":"free"}}',
+        )['usage'];
+
+        self::assertNotNull($usage);
+        self::assertSame(0, $usage->promptTokens);
+        self::assertSame(3, $usage->completionTokens);
+        self::assertNull($usage->costNanoCredits);
+    }
+
+    /**
+     * The counters are banked onto a running per-run total with SQL
+     * arithmetic, so a negative one would subtract from calls that really
+     * happened. It reads as the absent counter it may as well be.
+     */
+    public function testANegativeTokenCountReadsAsZero(): void
+    {
+        $usage = $this->decoder->envelope(
+            '{"usage":{"prompt_tokens":-500,"completion_tokens":3,'
+            . '"completion_tokens_details":{"reasoning_tokens":-1},'
+            . '"prompt_tokens_details":{"cached_tokens":-1}}}',
+        )['usage'];
+
+        self::assertNotNull($usage);
+        self::assertSame(0, $usage->promptTokens);
+        self::assertSame(3, $usage->completionTokens);
+        self::assertSame(0, $usage->reasoningTokens);
+        self::assertSame(0, $usage->cachedTokens);
+    }
+
+    /**
+     * A refund is not something a completion call reports, and the account's
+     * all-time spend is a SUM with no floor under it.
+     */
+    public function testANegativeCostIsUnpricedRatherThanACredit(): void
+    {
+        $usage = $this->decoder->envelope('{"usage":{"prompt_tokens":1,"cost":-5}}')['usage'];
+
+        self::assertNotNull($usage);
+        self::assertNull($usage->costNanoCredits);
+    }
+
+    /**
+     * JSON has no NAN literal, so INF — which `1e999` decodes to — is the only
+     * non-finite value a provider can actually send; both leave through the
+     * same guard.
+     */
+    public function testANonFiniteCostIsUnpriced(): void
+    {
+        self::assertNull($this->decoder->envelope('{"usage":{"cost":1e999}}')['usage']?->costNanoCredits);
+        self::assertNull($this->decoder->envelope('{"usage":{"cost":-1e999}}')['usage']?->costNanoCredits);
+    }
+
+    /**
+     * Casting an out-of-range float to int is undefined in PHP, so the cast
+     * has to be unreachable rather than merely unlikely: one garbage value
+     * corrupts the account's total, and the next one makes BIGINT reject the
+     * write from inside the tick.
+     */
+    public function testACostTooLargeForTheNanoCreditIntegerIsUnpriced(): void
+    {
+        self::assertNull($this->decoder->envelope('{"usage":{"cost":1e30}}')['usage']?->costNanoCredits);
+    }
+
+    /**
+     * The refusal above is a ceiling on the *nano* value, not a distrust of
+     * large prices: a cost that still fits stays exact. The ceiling sits one
+     * past the largest integer there is, so a cost landing exactly on it is
+     * refused too — that is the value whose (int) cast wraps to the smallest.
+     */
+    public function testTheCeilingIsTheFirstNanoValueNoIntegerCanHold(): void
+    {
+        self::assertSame(
+            9_000_000_000_000_000_000,
+            $this->decoder->envelope('{"usage":{"cost":9000000000}}')['usage']?->costNanoCredits,
+        );
+        self::assertNull(
+            $this->decoder->envelope('{"usage":{"cost":9223372036.854775808}}')['usage']?->costNanoCredits,
+        );
+    }
+
+    /**
+     * A price the provider states as free is priced at zero, which is a claim
+     * — as against the null that means it stated nothing at all.
+     */
+    public function testACostOfZeroIsPricedAtZeroRatherThanUnpriced(): void
+    {
+        self::assertSame(0, $this->decoder->envelope('{"usage":{"cost":0}}')['usage']?->costNanoCredits);
+    }
+
+    /**
+     * Nano-credits are the smallest unit the column holds, so the sub-nano
+     * remainder of a float price is rounded to the nearest one rather than
+     * always given to the provider or always to the account.
+     */
+    public function testASubNanoRemainderIsRoundedToTheNearestNanoCredit(): void
+    {
+        self::assertSame(
+            123_456_790,
+            $this->decoder->envelope('{"usage":{"cost":0.123456789987}}')['usage']?->costNanoCredits,
+        );
+        self::assertSame(
+            123_456_789,
+            $this->decoder->envelope('{"usage":{"cost":0.123456789123}}')['usage']?->costNanoCredits,
+        );
+    }
+
+    public function testStreamEventCarriesTheUsageAlongsideTheAnswerFields(): void
+    {
+        $event = $this->decoder->streamEvent('{"choices":[],"usage":{"prompt_tokens":7,"completion_tokens":2}}');
+
+        self::assertNull($event['content']);
+        self::assertNull($event['finishReason']);
+        self::assertNotNull($event['usage']);
+        self::assertSame(7, $event['usage']->promptTokens);
+    }
+
+    public function testStreamEventHasNoUsageOnAnOrdinaryDelta(): void
+    {
+        $event = $this->decoder->streamEvent('{"choices":[{"delta":{"content":"hi"}}]}');
+
+        self::assertSame('hi', $event['content']);
+        self::assertNull($event['usage']);
     }
 }

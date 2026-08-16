@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation;
 
+use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Repository\RecommendationItemRepository;
 use App\Repository\RecommendationRunRepository;
@@ -23,7 +24,7 @@ final readonly class RecommendationForYouSummaryProvider
 
     public function forUser(User $user): RecommendationForYouSummary
     {
-        $newestCompletedRun = $this->runs->newestCompletedRun($user);
+        $newestCompletedRun = $this->runs->findLatestForUser($user, RecommendationRun::STATUS_COMPLETED);
 
         return new RecommendationForYouSummary(
             $this->items->countForYou((int) $user->getId()),

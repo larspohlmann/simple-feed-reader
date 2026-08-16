@@ -61,6 +61,7 @@ final readonly class RecommendationRunStarter
         }
 
         $run = new RecommendationRun($user, $this->clock->now());
+        $this->stampProvider($run, $user);
         $this->entityManager->persist($run);
         $this->entityManager->flush();
 
@@ -111,10 +112,36 @@ final readonly class RecommendationRunStarter
         }
 
         $latest->resume();
+        // Re-stamped, not left as it was: an account that switched model
+        // between the failure and the resume calls the new one, and a history
+        // row naming the old one would be a lie about what was billed (#409).
+        $this->stampProvider($latest, $user);
         $this->entityManager->flush();
 
         $this->drainSpawner->spawnIfNoWorker();
 
         return RecommendationRunReport::fromRun($latest);
+    }
+
+    /**
+     * Copies the provider this run is about to call onto the run itself
+     * (#409). Copied rather than read back through the account later: the
+     * configuration is editable, and a history that renames last month's runs
+     * when the model changes is not a history.
+     *
+     * The host only. A base URL the account saved but that has no host at all
+     * stamps null rather than a fragment of one — a history row is worth less
+     * with a wrong provider in it than with an empty one. `parse_url()`
+     * returns `false` on a malformed URL and `null` when there is no host
+     * component; both collapse to null. A genuine host of `'0'` must not:
+     * it is a valid (if unusual) hostname, and PHP's `?:` treats the string
+     * `'0'` as falsy, so a plain truthiness check would swallow it too.
+     */
+    private function stampProvider(RecommendationRun $run, User $user): void
+    {
+        $settings = $this->configurator->settingsFor($user);
+        $host = parse_url($settings?->getBaseUrl() ?? '', \PHP_URL_HOST);
+
+        $run->stampProvider(\is_string($host) ? $host : null, $settings?->getModel());
     }
 }

@@ -14,24 +14,33 @@ namespace App\Service\Recommendation;
  */
 final readonly class CompletionBodyDecoder
 {
-    public function envelopeContent(string $body): ?string
+    /**
+     * Every field of one blocking envelope from a single decode: the answer,
+     * the reasoning channel a model may have routed the answer into instead
+     * (#323), and the provider's own usage report.
+     *
+     * The mirror of streamEvent() below, and for the same reason. A provider
+     * that ignores `stream: true` has its whole buffer re-read on every chunk
+     * that arrives, so reading three fields off it has to cost one decode, not
+     * three.
+     *
+     * @return array{content: ?string, reasoning: ?string, usage: ?CompletionUsage}
+     */
+    public function envelope(string $body): array
     {
-        return $this->contentOf($this->firstChoice($body), 'message');
+        $root = $this->decodeRoot($body);
+        $choice = $this->firstChoiceIn($root);
+
+        return [
+            'content' => $this->contentOf($choice, 'message'),
+            'reasoning' => $this->reasoningOf($choice, 'message'),
+            'usage' => $this->usageIn($root),
+        ];
     }
 
     public function deltaContent(string $payload): ?string
     {
         return $this->contentOf($this->firstChoice($payload), 'delta');
-    }
-
-    /**
-     * The reasoning channel of one blocking envelope: a reasoning model under
-     * LM Studio that ignores `stream: true` puts its whole answer under
-     * `message.reasoning_content` and leaves `content` empty (#323).
-     */
-    public function envelopeReasoning(string $body): ?string
-    {
-        return $this->reasoningOf($this->firstChoice($body), 'message');
     }
 
     /**
@@ -46,38 +55,71 @@ final readonly class CompletionBodyDecoder
     }
 
     /**
-     * Both fields of one stream event from a single decode. The reader reads
-     * an event's answer fragment and its finish reason together, so decoding
-     * once here — rather than once per field — halves the parse work over a
-     * reasoning model's thousands of thinking events (#327).
+     * Every field of one stream event from a single decode. The reader reads
+     * an event's answer fragment, its finish reason and the provider's usage
+     * report together, so decoding once here — rather than once per field —
+     * halves the parse work over a reasoning model's thousands of thinking
+     * events (#327).
      *
-     * @return array{content: ?string, reasoning: ?string, finishReason: ?string}
+     * `usage` is the provider's own accounting for the call, which
+     * OpenAI-compatible endpoints send in the last message of a streamed reply
+     * — the message whose `choices` is empty, which is why nothing here read it
+     * before (#409).
+     *
+     * @return array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsage}
      */
     public function streamEvent(string $payload): array
     {
-        $choice = $this->firstChoice($payload);
+        $root = $this->decodeRoot($payload);
+        $choice = $this->firstChoiceIn($root);
 
         return [
             'content' => $this->contentOf($choice, 'delta'),
             'reasoning' => $this->reasoningOf($choice, 'delta'),
             'finishReason' => $this->finishReasonOf($choice),
+            'usage' => $this->usageIn($root),
         ];
+    }
+
+    /**
+     * The payload as an array, or null when it is not JSON at all. Decoded once
+     * per payload and shared: `streamEvent()` reads the choice fields and the
+     * root-level usage object off the same decode, and a second decode per
+     * event is exactly the parse cost #327 removed.
+     *
+     * @return array<mixed>|null
+     */
+    private function decodeRoot(string $json): ?array
+    {
+        $decoded = json_decode($json, true);
+
+        return \is_array($decoded) ? $decoded : null;
     }
 
     /**
      * The first choice as an array, or null when the shape is wrong. Every
      * step is guarded because the provider is untrusted — any of them can be
-     * absent or the wrong type. Shared so the decode-and-walk exists once.
+     * absent or the wrong type. The final usage message of a stream carries
+     * `choices: []`, so null here is routine, not a fault.
      *
+     * @param array<mixed>|null $root
+     *
+     * @return array<mixed>|null
+     */
+    private function firstChoiceIn(?array $root): ?array
+    {
+        $choices = null === $root ? null : ($root['choices'] ?? null);
+        $firstChoice = \is_array($choices) ? ($choices[0] ?? null) : null;
+
+        return \is_array($firstChoice) ? $firstChoice : null;
+    }
+
+    /**
      * @return array<mixed>|null
      */
     private function firstChoice(string $json): ?array
     {
-        $decoded = json_decode($json, true);
-        $choices = \is_array($decoded) ? ($decoded['choices'] ?? null) : null;
-        $firstChoice = \is_array($choices) ? ($choices[0] ?? null) : null;
-
-        return \is_array($firstChoice) ? $firstChoice : null;
+        return $this->firstChoiceIn($this->decodeRoot($json));
     }
 
     /**
@@ -139,5 +181,94 @@ final readonly class CompletionBodyDecoder
         $reason = null === $choice ? null : ($choice['finish_reason'] ?? null);
 
         return \is_string($reason) ? $reason : null;
+    }
+
+    /**
+     * @param array<mixed>|null $root
+     */
+    private function usageIn(?array $root): ?CompletionUsage
+    {
+        $usage = null === $root ? null : ($root['usage'] ?? null);
+
+        if (!\is_array($usage)) {
+            return null;
+        }
+
+        return new CompletionUsage(
+            $this->intField($usage, 'prompt_tokens'),
+            $this->intField($usage, 'completion_tokens'),
+            $this->intField($this->detailsOf($usage, 'completion_tokens_details'), 'reasoning_tokens'),
+            $this->intField($this->detailsOf($usage, 'prompt_tokens_details'), 'cached_tokens'),
+            $this->nanoCreditsIn($usage),
+        );
+    }
+
+    /**
+     * A nested detail object of the usage report, or an empty array when the
+     * provider sent none — the two detail objects are optional, and a provider
+     * that omits them reports zero of what they count, not an unknown.
+     *
+     * @param array<mixed> $usage
+     *
+     * @return array<mixed>
+     */
+    private function detailsOf(array $usage, string $key): array
+    {
+        $details = $usage[$key] ?? null;
+
+        return \is_array($details) ? $details : [];
+    }
+
+    /**
+     * One counter of the usage report. Absent, non-numeric or negative reads
+     * 0: the provider is untrusted, and a token count it did not send is one
+     * it did not spend as far as anything here can tell. A negative one is
+     * read the same way rather than passed on, because these counters are
+     * banked with SQL arithmetic onto a running per-run total — a below-zero
+     * reading would subtract from calls that really happened, and nothing
+     * downstream could tell that apart from a cheaper run.
+     *
+     * @param array<mixed> $fields
+     */
+    private function intField(array $fields, string $key): int
+    {
+        $value = $fields[$key] ?? null;
+
+        return \is_int($value) && $value >= 0 ? $value : 0;
+    }
+
+    /**
+     * The price, converted from the provider's float credits to the integer
+     * nano-credits everything downstream stores. Null — not zero — when the
+     * provider reported no price: zero claims the call was free, which is a
+     * different statement from unpriced (a local model, say).
+     *
+     * A number the provider cannot have meant is refused rather than clamped
+     * into range, for the same reason: an unbelievable price is not a very
+     * cheap or a very expensive call, it is no reading at all, and null is
+     * already this method's word for that. A negative price would be
+     * subtracted from the account's all-time spend, and a huge one overflows
+     * the (int) cast — undefined for an out-of-range float — into a number
+     * that corrupts the total once and makes BIGINT reject the next write.
+     *
+     * @param array<mixed> $usage
+     */
+    private function nanoCreditsIn(array $usage): ?int
+    {
+        $cost = $usage['cost'] ?? null;
+
+        if (!\is_float($cost) && !\is_int($cost)) {
+            return null;
+        }
+
+        if ($cost < 0 || !is_finite((float) $cost)) {
+            return null;
+        }
+
+        $nanoCredits = round((float) $cost * 1_000_000_000);
+
+        // Compared as a float, and with >=, because (float) PHP_INT_MAX rounds
+        // up to 2**63 — one past the largest int there is.
+        return $nanoCredits >= (float) \PHP_INT_MAX ? null : (int) $nanoCredits;
     }
 }

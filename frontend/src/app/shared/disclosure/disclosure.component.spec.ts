@@ -33,6 +33,30 @@ class ProjectedSummaryHostComponent {}
 })
 class RowAppearanceHostComponent {}
 
+@Component({
+  imports: [DisclosureComponent],
+  template: `
+    <app-disclosure [label]="'Show fixed prompt'" (opened)="openedCount = openedCount + 1">
+      <p class="projected">body</p>
+    </app-disclosure>
+  `,
+})
+class OpenedListenerHostComponent {
+  openedCount = 0;
+}
+
+@Component({
+  imports: [DisclosureComponent],
+  template: `
+    <app-disclosure [label]="'Show fixed prompt'" [startOpen]="startOpen">
+      <p class="projected">body</p>
+    </app-disclosure>
+  `,
+})
+class StartOpenHostComponent {
+  startOpen = true;
+}
+
 describe('DisclosureComponent', () => {
   async function render() {
     await TestBed.configureTestingModule({ imports: [HostComponent] }).compileComponents();
@@ -57,6 +81,24 @@ describe('DisclosureComponent', () => {
     const fixture = TestBed.createComponent(RowAppearanceHostComponent);
     fixture.detectChanges();
     return { el: fixture.nativeElement as HTMLElement, fixture };
+  }
+
+  async function renderWithOpenedListener() {
+    await TestBed.configureTestingModule({
+      imports: [OpenedListenerHostComponent],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(OpenedListenerHostComponent);
+    fixture.detectChanges();
+    return { el: fixture.nativeElement as HTMLElement, fixture, host: fixture.componentInstance };
+  }
+
+  async function renderStartOpen() {
+    await TestBed.configureTestingModule({
+      imports: [StartOpenHostComponent],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(StartOpenHostComponent);
+    fixture.detectChanges();
+    return { el: fixture.nativeElement as HTMLElement, fixture, host: fixture.componentInstance };
   }
 
   it('renders the label in the summary', async () => {
@@ -108,5 +150,48 @@ describe('DisclosureComponent', () => {
     const summary = el.querySelector('summary') as HTMLElement;
 
     expect(summary.classList.contains('is-row')).toBe(false);
+  });
+
+  it('announces when it is opened', async () => {
+    const { el, host } = await renderWithOpenedListener();
+    const details = el.querySelector('details') as HTMLDetailsElement;
+
+    details.open = true;
+    details.dispatchEvent(new Event('toggle'));
+
+    expect(host.openedCount).toBe(1);
+  });
+
+  it('stays quiet when it is closed again', async () => {
+    const { el, host } = await renderWithOpenedListener();
+    const details = el.querySelector('details') as HTMLDetailsElement;
+
+    details.open = true;
+    details.dispatchEvent(new Event('toggle'));
+    details.open = false;
+    details.dispatchEvent(new Event('toggle'));
+
+    expect(host.openedCount).toBe(1);
+  });
+
+  it('starts open when startOpen is true', async () => {
+    const { el } = await renderStartOpen();
+    const details = el.querySelector('details') as HTMLDetailsElement;
+
+    expect(details.open).toBe(true);
+  });
+
+  it('does not force a reader-closed details back open on a later change detection', async () => {
+    const { el, fixture } = await renderStartOpen();
+    const details = el.querySelector('details') as HTMLDetailsElement;
+
+    details.open = false;
+    details.dispatchEvent(new Event('toggle'));
+    // `startOpen` itself never changes value, so Angular's property binding
+    // has nothing new to write -- a later change detection pass must not
+    // re-assert `open` and fight the reader's own close.
+    fixture.detectChanges();
+
+    expect(details.open).toBe(false);
   });
 });

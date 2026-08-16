@@ -37,6 +37,19 @@ export function formatDateOr(iso: string | null, locale: string, fallback: strin
 }
 
 /**
+ * A short localised day-in-month (e.g. "Aug 16" / "16. Aug"). For a row that
+ * already sits inside a month-headed section, the year and full month name
+ * `formatLongDate` renders are noise -- but the month stays, short rather
+ * than dropped, so a row screenshotted out of its section still reads as a
+ * date on its own.
+ */
+export function formatDayInMonth(iso: string, locale = 'en'): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(d);
+}
+
+/**
  * A zero-padded 24-hour `HH:MM` clock time in the browser's own timezone.
  * `hourCycle: 'h23'` is forced regardless of locale -- the debug log's run
  * summary and row times read as a timeline (`start → end`), and a 12-hour
@@ -81,4 +94,62 @@ export function trialDaysRemaining(iso: string | null, now: number = Date.now())
  */
 export function bytesToKb(bytes: number): number {
   return Math.max(1, Math.round(bytes / 1024));
+}
+
+/** Nano-credits per credit. The API stores money as an integer -- floats do
+ *  not hold money -- and this is the one place it becomes a human figure. */
+const NANO_PER_CREDIT = 1_000_000_000;
+
+/** How many decimals a price is worth reading at. Five is what the provider's
+ *  own logs show, and it is fine enough that a single cheap run does not
+ *  collapse to zero. */
+const COST_FRACTION_DIGITS = 5;
+
+/** What no reported price renders as. The provider said nothing about cost (a
+ *  local model, or a run older than the column), which is a different
+ *  statement from a cost of zero -- so it must not render as one, and it must
+ *  not carry a currency symbol either. */
+const NO_PRICE = '—';
+
+/**
+ * A price in nano-credits as the provider's own logs write it: `$ 0.00137`.
+ *
+ * The symbol always leads, the way the provider renders it. The number does
+ * not: it goes through `Intl` on the active UI language, because `toFixed`
+ * always writes a `.` and a German card showing `22. Juli 2026` beside
+ * `0.00137` is two locales in one line. So German reads `$ 0,00137`.
+ *
+ * Shared rather than owned by the history card: the card renders the account
+ * total and each month section renders its own, and a second copy of the
+ * rounding would drift.
+ */
+export function formatCost(nanoCredits: number | null, locale: string): string {
+  if (nanoCredits === null) return NO_PRICE;
+  const credits = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: COST_FRACTION_DIGITS,
+    maximumFractionDigits: COST_FRACTION_DIGITS,
+  }).format(nanoCredits / NANO_PER_CREDIT);
+  return `$ ${credits}`;
+}
+
+/**
+ * A duration as `m:ss` -- `0:47`, `2:07`, `62:03`.
+ *
+ * Deliberately not translated. The seconds-only rendering this replaces
+ * needed a dictionary key in every language just to carry the letter `s`,
+ * where a padded `m:ss` reads as a duration on its own -- and it keeps the
+ * column aligned, which a value that switches between `47 s` and `2 min 7 s`
+ * cannot.
+ *
+ * Minutes do not roll into hours. A recommendation run is bounded by a 600 s
+ * per-call timeout over a handful of calls, so an hours field would be a
+ * column that is always zero.
+ *
+ * Clamped at zero: the server already refuses to report a negative duration,
+ * and this must not be the place that starts.
+ */
+export function formatDuration(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(total / 60);
+  return `${minutes}:${String(total % 60).padStart(2, '0')}`;
 }

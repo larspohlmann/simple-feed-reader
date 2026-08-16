@@ -429,6 +429,11 @@ describe('AiSectionComponent', () => {
     // below.
     http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
     http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
+    // `tz` is a query param now, so an exact-string match no longer finds the
+    // request -- `req.url` excludes the query string, unlike `urlWithParams`.
+    http
+      .expectOne((req) => req.url === '/api/recommendations/runs/history')
+      .flush({ totalCostNanoCredits: null, months: [], latest: null });
 
     (row(fixture, 0).querySelector('summary') as HTMLElement).click();
     (row(fixture, 1).querySelector('summary') as HTMLElement).click();
@@ -701,6 +706,11 @@ describe('AiSectionComponent', () => {
 
     http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
     http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
+    // `tz` is a query param now, so an exact-string match no longer finds the
+    // request -- `req.url` excludes the query string, unlike `urlWithParams`.
+    http
+      .expectOne((req) => req.url === '/api/recommendations/runs/history')
+      .flush({ totalCostNanoCredits: null, months: [], latest: null });
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('app-recommendation-settings-card')).not.toBeNull();

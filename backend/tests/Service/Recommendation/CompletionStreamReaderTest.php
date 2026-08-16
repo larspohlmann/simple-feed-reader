@@ -383,4 +383,71 @@ final class CompletionStreamReaderTest extends TestCase
         self::assertNull($reader->assistantContent());
         self::assertSame('{"recommendations":[]}', $reader->reasoningContent());
     }
+
+    public function testKeepsTheUsageOfTheFinalStreamMessage(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume("data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}]}\n\n");
+        $reader->consume(
+            "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":12,\"completion_tokens\":3,\"cost\":0.000001}}\n\n",
+        );
+        $reader->consume("data: [DONE]\n\n");
+
+        $usage = $reader->usage();
+        self::assertNotNull($usage);
+        self::assertSame(12, $usage->promptTokens);
+        self::assertSame(1000, $usage->costNanoCredits);
+    }
+
+    public function testAnEventWithoutUsageNeverErasesTheUsageAlreadySeen(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume("data: {\"choices\":[],\"usage\":{\"prompt_tokens\":5,\"completion_tokens\":1}}\n\n");
+        $reader->consume("data: {\"choices\":[{\"delta\":{\"content\":\"tail\"}}]}\n\n");
+
+        self::assertSame(5, $reader->usage()?->promptTokens);
+    }
+
+    public function testReadsTheUsageOfABlockingEnvelope(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume(
+            '{"choices":[{"message":{"content":"hi"}}],"usage":{"prompt_tokens":8,"completion_tokens":2}}',
+        );
+
+        self::assertSame(8, $reader->usage()?->promptTokens);
+    }
+
+    /**
+     * The client asks a reader for its answer and its usage on every chunk it
+     * feeds in, so on the blocking shape both land first on a half-arrived
+     * body and then on the finished one. The decode those two fields share
+     * has to follow the buffer rather than keep answering with what it saw
+     * the first time.
+     */
+    public function testABlockingEnvelopeReadWhileStillArrivingAnswersWithTheFinishedBody(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume('{"choices":[{"message":{"content":"half');
+        self::assertNull($reader->assistantContent());
+        self::assertNull($reader->usage());
+
+        $reader->consume(' and half"}}],"usage":{"prompt_tokens":8,"completion_tokens":2}}');
+
+        self::assertSame('half and half', $reader->assistantContent());
+        self::assertSame(8, $reader->usage()?->promptTokens);
+    }
+
+    public function testHasNoUsageWhenTheProviderNeverSentOne(): void
+    {
+        $reader = $this->reader();
+
+        $reader->consume("data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}]}\n\n");
+
+        self::assertNull($reader->usage());
+    }
 }
