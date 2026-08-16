@@ -328,6 +328,17 @@
   </div>
 }
 
+@if (entries().length > 0) {
+  <!-- Held in the DOM rather than switched in, so the fade plays on the way out
+       too — a structural @if would cut it off the frame the rows arrive.
+       Decorative: the rows already carry aria-busy, and a second announcement
+       of the same wait is noise. -->
+  <div class="reload-veil" [class.shown]="reloadSpinner()" aria-hidden="true">
+    <span class="label">{{ 'common.loading' | transloco }}</span>
+    <app-spinner [size]="48" [decorative]="true" />
+  </div>
+}
+
 @if (showToTop()) {
   <app-to-top-button (activate)="scrollToTop()" />
 }

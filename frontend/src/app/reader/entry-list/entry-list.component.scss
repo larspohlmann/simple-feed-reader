@@ -383,6 +383,45 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   background: var(--surface-0);
 }
 
+/* Sits over the dimmed outgoing rows, below the list header so the bar stays
+   readable while it is up. Starts under the header rather than at the top of
+   the host, so "centred" means centred in the rows the reader is looking at. */
+.reload-veil {
+  position: absolute;
+  inset: $header-clear 0 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+
+  /* The rows underneath are already inert; this must not intercept anything
+     either, least of all during its fade-out. */
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+
+  /* Visibility flips only after the fade has finished, so the veil is never
+     hit-tested while it is still on screen. */
+  transition:
+    opacity 0.2s ease,
+    visibility 0s linear 0.2s;
+}
+
+.reload-veil.shown {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.2s ease,
+    visibility 0s;
+}
+
+.reload-veil .label {
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
 .foot {
   display: flex;
   justify-content: center;
@@ -405,6 +444,11 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 
   .skeleton {
     animation: none;
+  }
+
+  .reload-veil,
+  .reload-veil.shown {
+    transition: none;
   }
 
   .refresh.spinning app-icon {
