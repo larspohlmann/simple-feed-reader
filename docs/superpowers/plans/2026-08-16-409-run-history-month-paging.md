@@ -1481,3 +1481,151 @@ with `$month`/`$startUtc`/`$endUtc` matches its consumer in Task 3.
 the `RunHistoryMonth` interface in Task 7. `HISTORY_LIMIT + 1` is read in Task 3
 and truncated in Task 5, in one place. `formatCost(nanoCredits, locale)` from
 Task 1 is called by both components in Task 7.
+
+---
+
+### Task 1b: Runtime reads as minutes and seconds
+
+Added mid-run at the user's request, after Task 1 and before the backend work,
+so the month section Task 7 extracts already carries the final rendering.
+
+**Files:**
+- Modify: `frontend/src/app/reader/format.ts`
+- Test: `frontend/src/app/reader/format.spec.ts`
+- Modify: `frontend/src/app/settings/recommendation-run-history.component.ts`
+- Modify: `frontend/src/app/settings/recommendation-run-history.component.html`
+- Modify: `frontend/src/app/settings/recommendation-run-history.component.spec.ts`
+- Modify: `frontend/public/i18n/en.json`, `frontend/public/i18n/de.json`
+
+**Interfaces:**
+- Consumes: nothing.
+- Produces: `formatDuration(seconds: number): string` exported from `src/app/reader/format.ts`.
+
+**The format is `m:ss`** — `0:47`, `2:07`, `12:03`. Minutes are not padded,
+seconds always are. Chosen over `2 min 7 s` because it needs no translation at
+all: the `historyDuration` key exists in two dictionaries today purely to carry
+the letter `s`, and a numeric duration carries its own meaning in every
+language this app ships. Minutes do not roll into hours — a recommendation run
+is bounded by a 600 s per-call timeout and a handful of calls, so `90:00` is
+already past anything reachable and an hours field would be a column that is
+always zero.
+
+Only the run history card changes. The #309 debug log has its own
+`debugDuration` key for per-call timings and is out of scope.
+
+- [ ] **Step 1: Write the failing tests**
+
+Append to `frontend/src/app/reader/format.spec.ts`:
+
+```ts
+describe('formatDuration', () => {
+  it('pads the seconds so the column reads as a duration', () => {
+    expect(formatDuration(47)).toBe('0:47');
+  });
+
+  it('rolls a full minute over', () => {
+    expect(formatDuration(60)).toBe('1:00');
+  });
+
+  it('pads a single-digit seconds remainder', () => {
+    expect(formatDuration(127)).toBe('2:07');
+  });
+
+  it('renders a run that took no measurable time as zero', () => {
+    expect(formatDuration(0)).toBe('0:00');
+  });
+
+  it('keeps counting in minutes rather than rolling into hours', () => {
+    expect(formatDuration(3_723)).toBe('62:03');
+  });
+
+  it('never renders a negative duration', () => {
+    expect(formatDuration(-5)).toBe('0:00');
+  });
+});
+```
+
+Add `formatDuration` to the file's existing import from `./format`.
+
+- [ ] **Step 2: Run to verify it fails**
+
+```bash
+cd frontend && npx jest src/app/reader/format.spec.ts
+```
+
+Expected: FAIL — `formatDuration is not a function`.
+
+- [ ] **Step 3: Implement**
+
+Append to `frontend/src/app/reader/format.ts`:
+
+```ts
+/**
+ * A duration as `m:ss` -- `0:47`, `2:07`, `62:03`.
+ *
+ * Deliberately not translated. The seconds-only rendering this replaces
+ * needed a dictionary key in every language just to carry the letter `s`,
+ * where a padded `m:ss` reads as a duration on its own -- and it keeps the
+ * column aligned, which a value that switches between `47 s` and `2 min 7 s`
+ * cannot.
+ *
+ * Minutes do not roll into hours. A recommendation run is bounded by a 600 s
+ * per-call timeout over a handful of calls, so an hours field would be a
+ * column that is always zero.
+ *
+ * Clamped at zero: the server already refuses to report a negative duration,
+ * and this must not be the place that starts.
+ */
+export function formatDuration(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(total / 60);
+  return `${minutes}:${String(total % 60).padStart(2, '0')}`;
+}
+```
+
+- [ ] **Step 4: Run to verify it passes**
+
+```bash
+cd frontend && npx jest src/app/reader/format.spec.ts
+```
+
+Expected: PASS.
+
+- [ ] **Step 5: Swap the card over**
+
+In `recommendation-run-history.component.ts`, add a method beside `cost()`:
+
+```ts
+  /** How long the run took, as `m:ss`. Null while it has not finished -- the
+   *  template renders nothing rather than a zero that would read as instant. */
+  duration(run: RunHistoryRow): string | null {
+    return run.durationSeconds === null ? null : formatDuration(run.durationSeconds);
+  }
+```
+
+Import `formatDuration` alongside `formatCost`.
+
+In `recommendation-run-history.component.html`, replace the transloco call
+inside `.run-history__duration` with `{{ duration(run) }}`, keeping the
+surrounding `@if (run.durationSeconds !== null)` guard.
+
+Delete `historyDuration` from **both** `frontend/public/i18n/en.json` and
+`frontend/public/i18n/de.json`. Leave the debug log's `debugDuration` alone.
+
+Update the duration assertions in
+`recommendation-run-history.component.spec.ts`; add one asserting a run whose
+`durationSeconds` is null renders an empty duration cell.
+
+- [ ] **Step 6: Run the gate and commit**
+
+```bash
+cd frontend && npm run check
+```
+
+Expected: exit 0. Then grep `frontend/src` and both dictionaries for
+`historyDuration` and confirm nothing is left.
+
+```bash
+git add frontend/src frontend/public/i18n
+git commit -m "feat(#409): render run duration as minutes and seconds"
+```
