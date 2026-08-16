@@ -1,5 +1,4 @@
 :host {
-  position: relative;
   display: block;
   margin-bottom: var(--space-4);
 }
@@ -8,9 +7,18 @@ label {
   display: block;
 }
 
-.lbl {
-  display: block;
+/* Holds the label text and, when there is one, the info tip's trigger. It
+   wraps because the tip's panel claims a full line: the explanation then
+   opens between the label row and the control, directly under the ⓘ that was
+   clicked (#433). */
+.lbl-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   margin-bottom: var(--space-1);
+}
+
+.lbl {
   color: var(--text-secondary);
   font-size: var(--fs-sm);
 }
@@ -31,18 +39,4 @@ label {
 
 .error {
   color: var(--danger);
-}
-
-/* The info tip's trigger is anchored to this host's top-right corner and grows
-   to a full tap target on coarse pointers. The label row is shorter than that,
-   so without this reservation the 44px hit box hangs 20px down over the
-   control and swallows taps meant for it (#372). Reserve the height, and the
-   width the ⓘ occupies, so the trigger stays inside the label row. */
-@media (pointer: coarse) {
-  :host(.has-info) .lbl {
-    display: flex;
-    align-items: center;
-    min-height: var(--tap-target);
-    padding-right: var(--tap-target);
-  }
 }

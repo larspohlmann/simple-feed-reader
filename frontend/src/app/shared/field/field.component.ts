@@ -17,17 +17,15 @@ import { InfoTipComponent } from '../info-tip/info-tip.component';
   imports: [InfoTipComponent],
   templateUrl: './field.component.html',
   styleUrl: './field.component.scss',
-  host: { '[class.has-info]': 'info() !== null' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FieldComponent {
   readonly label = input.required<string>();
   readonly error = input<string | null>(null);
   readonly hint = input<string | null>(null);
-  /** Already-translated explanation; renders an `<app-info-tip>` whose
-   *  trigger sits at the top-right of the label row (#372). The host carries
-   *  `.has-info` while it is set, which is what lets the styles reserve a
-   *  label row tall enough for the tip's coarse-pointer tap target. */
+  /** Already-translated explanation; renders an `<app-info-tip>` at the end of
+   *  the label row (#372). Its panel opens on the next line, between the label
+   *  row and the control (#433). */
   readonly info = input<string | null>(null);
   readonly required = input(false);
 }

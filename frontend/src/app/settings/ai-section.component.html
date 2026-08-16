@@ -166,11 +166,12 @@
                     {{ 'settings.ai.configs.delete' | transloco }}
                   </app-button>
                 </div>
-                <app-info-tip
-                  class="acts-info"
-                  [text]="'settings.ai.info.rowActions' | transloco"
-                  [label]="'settings.ai.info.actionsLabel' | transloco"
-                />
+                <div class="acts-info">
+                  <app-info-tip
+                    [text]="'settings.ai.info.rowActions' | transloco"
+                    [label]="'settings.ai.info.actionsLabel' | transloco"
+                  />
+                </div>
               }
 
               @if (rowFailure(config.id); as message) {

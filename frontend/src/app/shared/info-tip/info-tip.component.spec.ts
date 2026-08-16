@@ -10,13 +10,12 @@ class HostComponent {}
 
 @Component({
   imports: [InfoTipComponent],
-  template: `
-    <app-info-tip corner [text]="'A.'" [label]="'Static'" />
-    <app-info-tip [corner]="true" [text]="'B.'" [label]="'Bound'" />
-    <app-info-tip [text]="'C.'" [label]="'Plain'" />
-  `,
+  template: `<label class="row"
+    ><input type="checkbox" /><span>Ask</span
+    ><app-info-tip [text]="'The explanation.'" [label]="'Ask'"
+  /></label>`,
 })
-class CornerHostComponent {}
+class LabelRowHostComponent {}
 
 describe('InfoTipComponent', () => {
   function mount(): ComponentFixture<HostComponent> {
@@ -51,19 +50,44 @@ describe('InfoTipComponent', () => {
   });
 
   /**
-   * The corner anchoring keys on a host class the component binds, so both
-   * spellings of the input work. It used to key on the `corner` attribute,
-   * which the bound form never writes — that anchored nothing, silently.
+   * The panel is laid out by the consumer's own row rather than by a box of
+   * the tip's, so it can take a line of its own below that row; a wrapper with
+   * a box made it one squeezed flex item beside the label it was explaining
+   * (#433). Two elements stand between the row and these two — the host and
+   * `.wrap` — and both are `display: contents`. jsdom resolves no stylesheet,
+   * so this pins only the structure that arrangement rests on: the trigger and
+   * the panel are siblings, with nothing else in between. The geometry is
+   * verified in a real browser.
    */
-  it('marks corner mode on the host for the static and the bound input alike', () => {
-    const fixture = TestBed.createComponent(CornerHostComponent);
+  it('keeps the panel a sibling of the trigger, with nothing boxed between them', () => {
+    const fixture = mount();
+
+    trigger(fixture).click();
     fixture.detectChanges();
 
-    const tips = Array.from(
-      fixture.nativeElement.querySelectorAll('app-info-tip'),
-    ) as HTMLElement[];
+    const wrap = trigger(fixture).parentElement!;
+    expect(panel(fixture)!.parentElement).toBe(wrap);
+    expect(wrap.parentElement).toBe(fixture.nativeElement.querySelector('app-info-tip'));
+  });
 
-    expect(tips.map((tip) => tip.classList.contains('corner'))).toEqual([true, true, false]);
+  /**
+   * The panel now sits inside the row it explains, and `app-field` puts one
+   * inside a wrapping `<label>`. A click that reached the label would activate
+   * the control the tip is explaining, so the panel swallows it — the same
+   * guard the trigger has always had, for the same reason.
+   */
+  it('swallows a click on the panel, so a wrapping label cannot toggle its control', () => {
+    const fixture = TestBed.createComponent(LabelRowHostComponent);
+    fixture.detectChanges();
+    const row = fixture.nativeElement.querySelector('label.row') as HTMLLabelElement;
+    const reached = jest.fn();
+    row.addEventListener('click', reached);
+
+    (fixture.nativeElement.querySelector('button.trigger') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('.panel') as HTMLElement).click();
+
+    expect(reached).not.toHaveBeenCalled();
   });
 
   it('opens on click and wires the panel to the trigger', () => {
