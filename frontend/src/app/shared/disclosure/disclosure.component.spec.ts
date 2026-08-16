@@ -33,6 +33,18 @@ class ProjectedSummaryHostComponent {}
 })
 class RowAppearanceHostComponent {}
 
+@Component({
+  imports: [DisclosureComponent],
+  template: `
+    <app-disclosure [label]="'Show fixed prompt'" (opened)="openedCount = openedCount + 1">
+      <p class="projected">body</p>
+    </app-disclosure>
+  `,
+})
+class OpenedListenerHostComponent {
+  openedCount = 0;
+}
+
 describe('DisclosureComponent', () => {
   async function render() {
     await TestBed.configureTestingModule({ imports: [HostComponent] }).compileComponents();
@@ -57,6 +69,15 @@ describe('DisclosureComponent', () => {
     const fixture = TestBed.createComponent(RowAppearanceHostComponent);
     fixture.detectChanges();
     return { el: fixture.nativeElement as HTMLElement, fixture };
+  }
+
+  async function renderWithOpenedListener() {
+    await TestBed.configureTestingModule({
+      imports: [OpenedListenerHostComponent],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(OpenedListenerHostComponent);
+    fixture.detectChanges();
+    return { el: fixture.nativeElement as HTMLElement, fixture, host: fixture.componentInstance };
   }
 
   it('renders the label in the summary', async () => {
@@ -108,5 +129,27 @@ describe('DisclosureComponent', () => {
     const summary = el.querySelector('summary') as HTMLElement;
 
     expect(summary.classList.contains('is-row')).toBe(false);
+  });
+
+  it('announces when it is opened', async () => {
+    const { el, host } = await renderWithOpenedListener();
+    const details = el.querySelector('details') as HTMLDetailsElement;
+
+    details.open = true;
+    details.dispatchEvent(new Event('toggle'));
+
+    expect(host.openedCount).toBe(1);
+  });
+
+  it('stays quiet when it is closed again', async () => {
+    const { el, host } = await renderWithOpenedListener();
+    const details = el.querySelector('details') as HTMLDetailsElement;
+
+    details.open = true;
+    details.dispatchEvent(new Event('toggle'));
+    details.open = false;
+    details.dispatchEvent(new Event('toggle'));
+
+    expect(host.openedCount).toBe(1);
   });
 });

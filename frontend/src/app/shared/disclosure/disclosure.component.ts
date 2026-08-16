@@ -1,5 +1,5 @@
 // src/app/shared/disclosure/disclosure.component.ts
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 /**
  * The one wrapper for a native `<details>`/`<summary>` collapsed-content
@@ -32,4 +32,16 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 export class DisclosureComponent {
   readonly label = input<string>('');
   readonly appearance = input<'pill' | 'row' | 'card-header'>('pill');
+
+  /**
+   * Announced when the body is revealed, and only then. A caller that loads
+   * its content lazily needs this because `<details>`'s own `toggle` event
+   * does not bubble, so it cannot be listened for on this component's host.
+   * Closing is deliberately silent: nobody has to undo a fetch.
+   */
+  readonly opened = output<void>();
+
+  onToggle(details: HTMLDetailsElement): void {
+    if (details.open) this.opened.emit();
+  }
 }
