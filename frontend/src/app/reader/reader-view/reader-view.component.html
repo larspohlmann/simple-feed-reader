@@ -152,6 +152,21 @@
         }
         @if (leadImage(); as img) {
           <img class="lead-image" [src]="img" alt="" />
+        } @else if (visibleFeedHero(); as hero) {
+          <!-- Width and height carry the aspect ratio, so the article does not
+               jump when a slow hero lands. `height: auto` in the stylesheet
+               keeps the declared size from overriding the fluid layout. -->
+          <img
+            class="lead-image"
+            [src]="hero.url"
+            [attr.width]="hero.width"
+            [attr.height]="hero.height"
+            (error)="heroError.set(true)"
+            alt=""
+            loading="lazy"
+            decoding="async"
+            referrerpolicy="no-referrer"
+          />
         }
         <div #content class="content" [innerHTML]="displayHtml()"></div>
       }

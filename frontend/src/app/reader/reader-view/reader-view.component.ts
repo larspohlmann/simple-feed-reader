@@ -29,6 +29,7 @@ import { ReaderModeService } from '../reader-mode.service';
 import { LanguageService } from '../../core/language.service';
 import { ListScrollMemory } from '../list-scroll-memory';
 import { nextHeaderHidden } from '../header-scroll';
+import { feedHeroImage } from '../feed-hero-image';
 import { focusOpacityForSpan, needsReadingTail, readingBlocks } from '../reading-focus';
 import { articleOverflowsViewport, readingProgress } from '../reading-progress';
 import {
@@ -224,6 +225,20 @@ export class ReaderViewComponent {
     this.mode() === 'reader' ? (this.article()?.leadImage ?? null) : null,
   );
 
+  /** A broken hero URL hides the image rather than leaving a torn placeholder. */
+  protected readonly heroError = signal(false);
+
+  /**
+   * The feed's own picture, shown when neither the extractor nor the rendered
+   * body supplies one. It covers the two cases the scraped lead image cannot:
+   * the Original view, and a failed extraction — where the feed's picture is
+   * the only one there is.
+   */
+  readonly feedHero = computed(() =>
+    this.leadImage() ? null : feedHeroImage(this.entry(), this.displayHtml()),
+  );
+  readonly visibleFeedHero = computed(() => (this.heroError() ? null : this.feedHero()));
+
   /** Estimated minutes to read the displayed text; null hides the meta chip. */
   readonly readingMinutes = computed(() => estimateReadingMinutes(this.displayHtml()));
 
@@ -255,6 +270,7 @@ export class ReaderViewComponent {
       // next one headless.
       this.toc.set([]);
       this.tocOpen.set(false);
+      this.heroError.set(false);
       this.showToTop.set(false);
       this.toolbarHidden.set(false);
       this.lastToolbarScrollTop = 0;
