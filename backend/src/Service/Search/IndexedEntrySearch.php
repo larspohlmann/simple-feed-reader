@@ -44,7 +44,7 @@ final readonly class IndexedEntrySearch implements EntrySearchInterface
         }
 
         $matches = $this->index->find(new IndexSearch(
-            terms: $query->terms->terms,
+            terms: $query->terms,
             feedIds: $feedIds,
             cursor: $query->cursor,
             limit: $query->limit,

@@ -84,8 +84,37 @@ final class IndexedEntrySearchTest extends DbTestCase
         ));
 
         self::assertNotNull($reader->received);
-        self::assertSame(['angular', 'signals'], $reader->received->terms);
+        self::assertSame(['angular', 'signals'], $reader->received->terms->terms);
         self::assertSame(10, $reader->received->limit);
+    }
+
+    public function testTheWholeWordModeReachesTheReaderWithTheTermsItQualifies(): void
+    {
+        // The mode used to be left behind here — IndexedEntrySearch unpacked
+        // the terms and passed the list alone, so every index search ran as a
+        // substring search however the user typed it (#450).
+        $reader = new FakeSearchIndexReader();
+
+        $this->search($reader, new EntrySearchQuery(
+            userId: $this->user->getId() ?? 0,
+            terms: SearchTerms::fromInput('angular '),
+        ));
+
+        self::assertNotNull($reader->received);
+        self::assertTrue($reader->received->terms->isWholeWord);
+    }
+
+    public function testASubstringSearchReachesTheReaderAsOne(): void
+    {
+        $reader = new FakeSearchIndexReader();
+
+        $this->search($reader, new EntrySearchQuery(
+            userId: $this->user->getId() ?? 0,
+            terms: SearchTerms::fromInput('angular'),
+        ));
+
+        self::assertNotNull($reader->received);
+        self::assertFalse($reader->received->terms->isWholeWord);
     }
 
     public function testTheCallersSubscribedFeedIdsReachTheReader(): void
