@@ -7,6 +7,7 @@ namespace App\Service\Recommendation;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Lock\Exception\ExceptionInterface as LockExceptionInterface;
+use Symfony\Component\Lock\Exception\LockConflictedException;
 use Symfony\Component\Lock\LockInterface;
 
 /**
@@ -42,12 +43,13 @@ use Symfony\Component\Lock\LockInterface;
  *
  * A refresh lost to LockConflictedException means a second process has
  * already re-acquired the lock -- the double-bank is not a risk at that
- * point, it is underway. beat() only logs it, deliberately: throwing into
- * the streaming loop is the failure this class exists to avoid, and the tick
- * is mid-HTTP-call with nowhere safe to unwind to. Task 9's advancer must
- * still notice: the tick should stop at its next
- * RecommendationCancellationCheckpoint rather than keep banking against a
- * lock it has already lost. That reaction belongs there, not here.
+ * point, it is underway. beat() never throws it on, deliberately: throwing
+ * into the streaming loop is the failure this class exists to avoid, and the
+ * tick is mid-HTTP-call with nowhere safe to unwind to. It records the loss
+ * instead, and RecommendationCancellationCheckpoint reads it: the tick stops
+ * at its next checkpoint rather than keep banking against a lock it has
+ * already lost. Deciding what to do about it stays there; all this class
+ * knows is that the store said the lock is somebody else's.
  *
  * Not readonly: the held lock is the point.
  */
@@ -60,6 +62,8 @@ final class TickLockKeepalive implements CompletionStreamHeartbeat
     private ?string $resource = null;
 
     private ?\DateTimeImmutable $lastRefreshAt = null;
+
+    private bool $lockLost = false;
 
     public function __construct(
         private readonly ClockInterface $clock,
@@ -76,12 +80,15 @@ final class TickLockKeepalive implements CompletionStreamHeartbeat
      * resets with the arming: a fresh tick must never inherit the previous
      * tick's beat clock, or the new lock goes unrefreshed for up to
      * MINIMUM_INTERVAL_SECONDS for a reason that has nothing to do with it.
+     * A recorded loss resets with it for the same reason: one instance serves
+     * every tick a worker runs, and the tick that lost its lock is over.
      */
     public function hold(LockInterface $lock, string $resource): void
     {
         $this->held = $lock;
         $this->resource = $resource;
         $this->lastRefreshAt = null;
+        $this->lockLost = false;
     }
 
     /**
@@ -94,6 +101,24 @@ final class TickLockKeepalive implements CompletionStreamHeartbeat
         $this->held = null;
         $this->resource = null;
         $this->lastRefreshAt = null;
+    }
+
+    /**
+     * Whether the store has told this tick that its lock is somebody else's.
+     *
+     * RecommendationCancellationCheckpoint asks, and stops the tick there.
+     * The fact travels as a field rather than as an exception because beat()
+     * fires from inside the streaming loop, where the tick has nowhere safe
+     * to unwind to.
+     *
+     * Cleared in exactly one place, hold(), because the loss belongs to the
+     * tick that suffered it and hold() is where the next tick begins.
+     * release() leaves it alone: nothing consults a disarmed keepalive, so a
+     * second clearing point would only be a second thing to keep in step.
+     */
+    public function hasLostTheLock(): bool
+    {
+        return $this->lockLost;
     }
 
     public function beat(): void
@@ -111,15 +136,25 @@ final class TickLockKeepalive implements CompletionStreamHeartbeat
 
         try {
             $this->held->refresh();
+        } catch (LockConflictedException $conflict) {
+            // Not the store failing -- the store answering plainly that this
+            // lock is another process's now. The tick must stop, but not
+            // here: see the class docblock.
+            $this->lockLost = true;
+            $this->report($conflict);
         } catch (LockExceptionInterface $failure) {
-            // The tick is still working and its own release still runs. This
-            // class only records the loss -- see the class docblock for why
-            // reacting to it belongs to the advancer, not here.
-            $this->logger->warning(
-                'Could not refresh the recommendation tick lock',
-                ['resource' => $this->resource, 'exception' => $failure],
-            );
+            // A store that could not answer says nothing about who owns the
+            // lock, and the tick is still working, so it keeps going.
+            $this->report($failure);
         }
+    }
+
+    private function report(LockExceptionInterface $failure): void
+    {
+        $this->logger->warning(
+            'Could not refresh the recommendation tick lock',
+            ['resource' => $this->resource, 'exception' => $failure],
+        );
     }
 
     private function isDue(\DateTimeImmutable $now): bool

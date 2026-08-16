@@ -33,6 +33,7 @@ use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationSettingsResolver;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Recommendation\RecommendationWinnerRanker;
+use App\Service\Recommendation\TickLockKeepalive;
 use App\Service\Worker\Handler\AdvanceRecommendationRunsHandler;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
 use App\Service\Worker\RecommendationDriverKind;
@@ -516,6 +517,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             self::getContainer()->get(RecommendationCancellationCheckpoint::class),
             self::getContainer()->get(RecommendationBatchWave::class),
             self::getContainer()->get(RecommendationCompletionRequestFactory::class),
+            self::getContainer()->get(TickLockKeepalive::class),
         );
     }
 

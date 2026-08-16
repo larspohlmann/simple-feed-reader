@@ -143,6 +143,78 @@ final class TickLockKeepaliveTest extends TestCase
         );
     }
 
+    /**
+     * A refresh the store rejects because someone else holds the lock is the
+     * one failure that is not a store problem: the double-bank is underway.
+     * beat() still may not throw -- it runs inside the streaming loop -- so
+     * the loss is recorded here for the tick's cancellation checkpoint to
+     * find at the next safe place to stop.
+     */
+    public function testARefreshRejectedByAnotherOwnerRecordsTheLockAsLost(): void
+    {
+        $clock = new MockClock('2026-08-16 12:00:00');
+        $logSpy = new TestHandler();
+        $keepalive = new TickLockKeepalive($clock, new Logger('test', [$logSpy]));
+        $lock = new RefreshCountingLock();
+        $lock->conflictOnNextRefresh();
+        $keepalive->hold($lock, self::LOCK_RESOURCE);
+
+        $keepalive->beat();
+
+        self::assertTrue($keepalive->hasLostTheLock());
+        self::assertCount(
+            1,
+            $logSpy->getRecords(),
+            'A stolen lock must be logged too: it is how a reader finds out afterwards.',
+        );
+    }
+
+    /**
+     * A store that failed to answer says nothing about who owns the lock, and
+     * the holder most likely still does. Stopping the tick on it would throw
+     * away a paid-for provider call over a blip.
+     */
+    public function testAStoreFailureIsNotRecordedAsALostLock(): void
+    {
+        $clock = new MockClock('2026-08-16 12:00:00');
+        $keepalive = new TickLockKeepalive($clock, new Logger('test'));
+        $lock = new RefreshCountingLock();
+        $lock->throwOnNextRefresh();
+        $keepalive->hold($lock, self::LOCK_RESOURCE);
+
+        $keepalive->beat();
+
+        self::assertFalse($keepalive->hasLostTheLock());
+    }
+
+    public function testNothingIsLostBeforeAnyBeat(): void
+    {
+        $keepalive = new TickLockKeepalive(new MockClock('2026-08-16 12:00:00'), new Logger('test'));
+        $keepalive->hold(new RefreshCountingLock(), self::LOCK_RESOURCE);
+
+        self::assertFalse($keepalive->hasLostTheLock());
+    }
+
+    /**
+     * The keepalive outlives a single tick -- a worker holds one instance for
+     * every run it advances -- so a loss that belonged to a finished tick
+     * must not stop the next one before it has done anything.
+     */
+    public function testHoldClearsTheLossOfThePreviousTick(): void
+    {
+        $clock = new MockClock('2026-08-16 12:00:00');
+        $keepalive = new TickLockKeepalive($clock, new Logger('test'));
+        $lostLock = new RefreshCountingLock();
+        $lostLock->conflictOnNextRefresh();
+        $keepalive->hold($lostLock, self::LOCK_RESOURCE);
+        $keepalive->beat();
+        $keepalive->release();
+
+        $keepalive->hold(new RefreshCountingLock(), 'recommendation-run-2');
+
+        self::assertFalse($keepalive->hasLostTheLock());
+    }
+
     public function testALockExceptionFromRefreshDoesNotEscapeBeatAndIsLoggedWithTheResource(): void
     {
         $clock = new MockClock('2026-08-16 12:00:00');

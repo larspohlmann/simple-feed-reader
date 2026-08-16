@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use Symfony\Component\Lock\Exception\LockAcquiringException;
+use Symfony\Component\Lock\Exception\LockConflictedException;
 use Symfony\Component\Lock\LockInterface;
 
 /**
@@ -19,6 +20,8 @@ final class RefreshCountingLock implements LockInterface
 
     private bool $nextRefreshThrows = false;
 
+    private bool $nextRefreshConflicts = false;
+
     public function acquire(bool $blocking = false): bool
     {
         return true;
@@ -32,6 +35,12 @@ final class RefreshCountingLock implements LockInterface
             $this->nextRefreshThrows = false;
 
             throw new LockAcquiringException('Simulated: the store rejected the refresh.');
+        }
+
+        if ($this->nextRefreshConflicts) {
+            $this->nextRefreshConflicts = false;
+
+            throw new LockConflictedException('Simulated: another process holds this lock now.');
         }
     }
 
@@ -59,8 +68,15 @@ final class RefreshCountingLock implements LockInterface
         return $this->refreshCount;
     }
 
+    /** A store that failed to answer: the holder may well still own the lock. */
     public function throwOnNextRefresh(): void
     {
         $this->nextRefreshThrows = true;
+    }
+
+    /** A store that answered plainly: someone else owns the lock now. */
+    public function conflictOnNextRefresh(): void
+    {
+        $this->nextRefreshConflicts = true;
     }
 }

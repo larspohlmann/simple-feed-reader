@@ -21,6 +21,7 @@ use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Recommendation\CompletionStreamHeartbeat;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\OpenAiCompatibleChatClient;
 use App\Service\Recommendation\RecommendationPromptBuilder;
@@ -39,6 +40,8 @@ use App\Tests\Support\StubChatClient;
 use App\Tests\Support\TtlRecordingLockFactory;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\SharedLockInterface;
+use Symfony\Component\Lock\Store\DoctrineDbalStore;
 use Symfony\Component\Lock\Store\InMemoryStore;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -52,6 +55,14 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     private const int MULTI_BATCH_ENTRY_COUNT = 20;
     private const int SINGLE_BATCH_ENTRY_COUNT = 5;
     private const int MULTI_BATCH_CONTEXT_WINDOW = 2500;
+
+    /**
+     * What Strato kills a web request at. The poll driver runs there, so a
+     * tick that dies before it ever streams a chunk is bounded by this, and
+     * the lock TTL has to outlast it or the next tick starts while the killed
+     * one may still be finishing.
+     */
+    private const float STRATO_REQUEST_CAP_SECONDS = 240.0;
 
     private User $user;
     private Feed $feed;
@@ -305,23 +316,38 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * Pins the invariant lockTtlFor()'s doc comment declares: the lock must
-     * outlive the longest possible tick, which is RecommendationRun::MAX_ATTEMPTS
-     * sequential in-tick retry rounds (#344), each bounded by one provider
-     * call's wall clock. A change that lets the TTL fall below that bound
-     * reopens the mid-tick lock-steal race the comment describes -- this test
-     * fails loudly instead of that race resurfacing silently in production.
+     * Pins the invariant lockTtlFor()'s doc comment declares since #444: a
+     * live holder refreshes its lock at least every
+     * TickLockKeepalive::MINIMUM_INTERVAL_SECONDS, so the TTL only has to
+     * outlive the longest *silence* such a holder can produce. That silence
+     * is one first-byte wait: a beat fires per streamed chunk, and a provider
+     * that has not answered yet yields no chunk until the stream's idle
+     * timeout. A TTL below it would expire under a holder that is alive and
+     * waiting for its first token, and a second process could take the lock
+     * mid-call -- the double-bank the keepalive exists to prevent.
+     *
+     * The TTL must also clear Strato's 240 s cap on a web request. A poll
+     * tick killed at that cap can die before any chunk arrives, so it may
+     * never have beaten at all and the TTL is the only thing bounding that
+     * stall.
+     *
+     * And it must stay below the wall-clock-sized number it replaced: that
+     * formula is what stranded a run for three hours five minutes behind a
+     * worker that no longer existed (#439), and a change that restores it
+     * brings the stall straight back.
      *
      * Driven through advance() rather than read off a constant, because since
      * #433 the TTL is decided per tick from the connection it is about to
      * call. Both profiles are asserted: the standard one must not be sized for
-     * the slow ceiling (that would triple every account's post-crash stall),
+     * the slow ceiling (that would multiply every account's post-crash stall),
      * and the slow one must not keep the standard TTL (that would expire the
-     * lock in the middle of a call it was told to expect).
+     * lock while a call it was told to expect is still silent).
      */
     #[DataProvider('timeoutProfiles')]
-    public function testLockTtlOutlivesTheWorstCaseMultiRoundTick(bool $slowModel, float $wallClockSeconds): void
-    {
+    public function testLockTtlClearsTheLongestSilenceALiveHolderCanProduce(
+        bool $slowModel,
+        float $firstByteSeconds,
+    ): void {
         $this->fixtures->seedReadyAiSettings($this->user);
         $this->markConnectionSlow($slowModel);
         $lockFactory = $this->recordLockTtls();
@@ -330,13 +356,18 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $profile = $slowModel ? ProviderTimeouts::forSlowModel() : ProviderTimeouts::standard();
         self::assertSame(
-            $wallClockSeconds,
-            $profile->wallClockSeconds,
+            $firstByteSeconds,
+            $profile->firstByteSeconds,
             'The profile under test must be the one the connection resolves to.',
         );
-        self::assertGreaterThanOrEqual(
-            RecommendationRun::MAX_ATTEMPTS * $wallClockSeconds,
-            $lockFactory->lastTtlFor('ai-recommendations-' . $this->user->getId()),
+
+        $ttl = $lockFactory->lastTtlFor('ai-recommendations-' . $this->user->getId());
+        self::assertGreaterThanOrEqual($firstByteSeconds, $ttl);
+        self::assertGreaterThanOrEqual(self::STRATO_REQUEST_CAP_SECONDS, $ttl);
+        self::assertLessThan(
+            RecommendationRun::MAX_ATTEMPTS * $profile->wallClockSeconds,
+            $ttl,
+            'A TTL still sized for the longest legal call keeps the multi-hour stall of #439.',
         );
     }
 
@@ -345,8 +376,154 @@ final class RecommendationRunAdvancerTest extends DbTestCase
      */
     public static function timeoutProfiles(): iterable
     {
-        yield 'standard' => [false, 600.0];
-        yield 'slow model' => [true, 3600.0];
+        yield 'standard' => [false, 180.0];
+        yield 'slow model' => [true, 900.0];
+    }
+
+    /**
+     * A chunk arriving mid-call is the only evidence the tick is alive, and
+     * the keepalive turns it into a refresh. Without the arming in advance(),
+     * the beat reaches a keepalive holding nothing and the lock expires under
+     * a working tick.
+     *
+     * The lifetimes are read from inside the provider call on purpose: that
+     * is the only moment the lock is both held and observable, and after
+     * advance() returns it is released.
+     */
+    public function testATickThatStreamsRefreshesItsLock(): void
+    {
+        $lockFactory = $this->recordLocksOverTheRealStore();
+        $this->seedMultiBatchFixture();
+        $run = $this->startAndSnapshot();
+        $firstBatch = $run->getCandidateBatches()[0];
+
+        /** @var list<?float> $lifetimes */
+        $lifetimes = [];
+        $this->stubChatClient()->duringNextCall(function () use ($lockFactory, &$lifetimes): void {
+            $lock = $this->tickLock($lockFactory);
+            $lifetimes[] = $lock->getRemainingLifetime();
+            $this->streamHeartbeat()->beat();
+            $lifetimes[] = $lock->getRemainingLifetime();
+        });
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'r1']],
+        ], \JSON_THROW_ON_ERROR));
+
+        $this->advancer()->advance($this->user);
+
+        self::assertGreaterThan(
+            $lifetimes[0],
+            $lifetimes[1],
+            'A chunk arriving mid-call must push the tick lock expiry back.',
+        );
+    }
+
+    /**
+     * The mirror image: once the tick is over, its lock is released and a
+     * beat must not touch it. A keepalive left armed would refresh a lock
+     * this process no longer owns -- or, once another process has taken the
+     * name, keep a stranger's lock alive.
+     */
+    public function testTheKeepaliveIsReleasedAfterATick(): void
+    {
+        $lockFactory = $this->recordLocksOverTheRealStore();
+        $this->seedMultiBatchFixture();
+        $this->startAndSnapshot();
+
+        $lock = $this->tickLock($lockFactory);
+        $lifetimeAfterTheTick = $lock->getRemainingLifetime();
+        $this->streamHeartbeat()->beat();
+
+        self::assertLessThanOrEqual(
+            $lifetimeAfterTheTick,
+            $lock->getRemainingLifetime(),
+            'A beat after the tick refreshed the lock the tick had already released.',
+        );
+    }
+
+    /**
+     * The other half of #444: a refresh the store rejects because another
+     * process now holds the name means the double-bank has already begun. The
+     * keepalive cannot throw -- it beats from inside the streaming loop, with
+     * nowhere safe to unwind to -- so the tick has to stop at its next
+     * cancellation checkpoint instead, before it banks a single winner
+     * against a lock it no longer owns.
+     *
+     * The theft happens during the provider call because that is the one
+     * window long enough for another process to get in, and the reply is
+     * queued as a perfectly usable one: without the stop, this run banks it.
+     */
+    public function testATickThatLostItsLockStopsBeforeBankingItsWinners(): void
+    {
+        $this->recordLocksOverTheRealStore();
+        $this->seedMultiBatchFixture();
+        $run = $this->startAndSnapshot();
+        $firstBatch = $run->getCandidateBatches()[0];
+        $runId = $run->getId() ?? 0;
+
+        $thief = null;
+        $this->stubChatClient()->duringNextCall(function () use (&$thief): void {
+            $thief = $this->stealTheTickLock();
+            $this->streamHeartbeat()->beat();
+        });
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'r1']],
+        ], \JSON_THROW_ON_ERROR));
+
+        try {
+            $report = $this->advancer()->advance($this->user);
+
+            self::assertSame('running', $report->status);
+
+            $this->em->clear();
+            $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
+            self::assertNotNull($persisted);
+            self::assertSame(0, $persisted->progress()->batchesDone);
+            self::assertSame([], $persisted->getWinners());
+        } finally {
+            $thief?->release();
+        }
+    }
+
+    /**
+     * Takes the running tick's lock name for a second process. The store
+     * keeps one row per name and the tick owns it, so the name only becomes
+     * free once that row is gone -- an eviction or an expiry, from the tick's
+     * side. Clearing it here is the shortest way to the state the tick has to
+     * survive: someone else holds its lock.
+     */
+    private function stealTheTickLock(): SharedLockInterface
+    {
+        $this->em->getConnection()->executeStatement('DELETE FROM lock_keys');
+
+        $thief = (new LockFactory(new DoctrineDbalStore($this->em->getConnection())))
+            ->createLock('ai-recommendations-' . $this->user->getId(), 60.0);
+        self::assertTrue($thief->acquire(), 'The second process must be able to take the freed name.');
+
+        return $thief;
+    }
+
+    /**
+     * The lock the last tick created for this account, as the advancer's own
+     * factory handed it out.
+     */
+    private function tickLock(TtlRecordingLockFactory $lockFactory): SharedLockInterface
+    {
+        $lock = $lockFactory->lastLockFor('ai-recommendations-' . $this->user->getId());
+        self::assertNotNull($lock, 'The tick must have created its per-user lock.');
+
+        return $lock;
+    }
+
+    /**
+     * What the transport pings once per streamed chunk.
+     */
+    private function streamHeartbeat(): CompletionStreamHeartbeat
+    {
+        /** @var CompletionStreamHeartbeat $heartbeat */
+        $heartbeat = self::getContainer()->get(CompletionStreamHeartbeat::class);
+
+        return $heartbeat;
     }
 
     /**
@@ -356,6 +533,21 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     private function recordLockTtls(): TtlRecordingLockFactory
     {
         $factory = new TtlRecordingLockFactory(new InMemoryStore());
+        self::getContainer()->set(LockFactory::class, $factory);
+
+        return $factory;
+    }
+
+    /**
+     * The same recording factory over the real store, for the tests that
+     * watch a lock's remaining lifetime rather than the TTL it was asked for:
+     * InMemoryStore never gives a key a lifetime at all -- its
+     * putOffExpiration is documented as a no-op, memory locks forever -- so a
+     * refresh through it leaves nothing to observe.
+     */
+    private function recordLocksOverTheRealStore(): TtlRecordingLockFactory
+    {
+        $factory = new TtlRecordingLockFactory(new DoctrineDbalStore($this->em->getConnection()));
         self::getContainer()->set(LockFactory::class, $factory);
 
         return $factory;

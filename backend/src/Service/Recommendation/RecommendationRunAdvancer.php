@@ -20,6 +20,7 @@ use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ProviderConnectionFactory;
 use App\Service\Ai\ProviderTimeouts;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
+use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Lock\LockFactory;
@@ -67,8 +68,14 @@ final class RecommendationRunAdvancer
     private const string LOCK_NAME_PREFIX = 'ai-recommendations-';
 
     /**
-     * Headroom over the longest possible tick, for the bookkeeping around the
-     * provider calls themselves.
+     * Headroom over the longest silence a live holder can produce, for the
+     * stretches of a tick that stream nothing and so beat nothing: candidate
+     * loading and prompt assembly before the first request, and the ranking,
+     * banking and recording between calls and waves.
+     *
+     * It also has to clear Strato's 240 s cap on a web request. A poll tick
+     * killed at that cap may have died before its first chunk, so it never
+     * beat at all and this margin is the whole of its floor.
      */
     private const float LOCK_TTL_MARGIN_SECONDS = 300.0;
 
@@ -99,25 +106,24 @@ final class RecommendationRunAdvancer
         private readonly RecommendationCancellationCheckpoint $cancellation,
         private readonly RecommendationBatchWave $batchWave,
         private readonly RecommendationCompletionRequestFactory $requestFactory,
+        private readonly TickLockKeepalive $keepalive,
     ) {
     }
 
     public function advance(User $user, TickDriver $driver = TickDriver::Poll): RecommendationRunReport
     {
-        $lock = $this->lockFactory->createLock(
-            self::LOCK_NAME_PREFIX . ($user->getId() ?? 0),
-            $this->lockTtlFor($user),
-        );
+        $lockName = self::LOCK_NAME_PREFIX . ($user->getId() ?? 0);
+        $lock = $this->lockFactory->createLock($lockName, $this->lockTtlFor($user));
 
         if (!$lock->acquire()) {
             return RecommendationRunReport::busy();
         }
 
-        // A hard request-time kill -- Strato caps a web request at 240s, far
-        // below the lock TTL -- never reaches the finally below, so without
-        // this the lock would sit held for its full TTL (35 min on the
-        // standard profile, over three hours on the slow one) and freeze the
-        // run until it expired. A shutdown hook releases it on that path.
+        // A hard request-time kill -- Strato caps a web request at 240s, below
+        // the lock TTL -- never reaches the finally below, so without this the
+        // lock would sit held for its full TTL (8 min on the standard profile,
+        // 20 on the slow one) and freeze the run until it expired. A shutdown
+        // hook releases it on that path.
         // The store's delete is token-scoped, so on the normal path (the
         // finally has already released) or once another process has re-acquired
         // the same name, the hook is a harmless no-op -- it can never free a
@@ -132,9 +138,18 @@ final class RecommendationRunAdvancer
             }
         });
 
+        // From here the lock is refreshed for as long as the tick keeps
+        // streaming, which is what lets lockTtlFor() size the TTL against one
+        // silence instead of the whole tick (#444).
+        $this->keepalive->hold($lock, $lockName);
+
         try {
             return $this->tick($user, $driver);
         } finally {
+            // Disarmed before the release, never after: a beat between the
+            // two would refresh a lock that is on its way out, and once the
+            // name is free another process may already hold it.
+            $this->keepalive->release();
             $lock->release();
         }
     }
@@ -142,35 +157,38 @@ final class RecommendationRunAdvancer
     /**
      * How long this account's tick may hold its lock.
      *
-     * A tick can span up to RecommendationRun::MAX_ATTEMPTS sequential in-tick
-     * retry rounds (#344), each bounded by one provider call's wall clock. The
-     * lock must outlive the longest possible tick, or it becomes stealable
-     * mid-tick: a second process (the worker sweep or another poll) could then
-     * start a concurrent tick for the same run. RecommendationRun carries no
-     * optimistic-version guard, so two concurrent ticks could double-bank
-     * winners or double-bill provider spend.
+     * The lock must outlive every silence a *live* holder can produce, or it
+     * becomes stealable mid-tick: a second process (the worker sweep or
+     * another poll) would start a concurrent tick for the same run, and
+     * RecommendationRun carries no optimistic-version guard, so the two could
+     * double-bank winners and double-bill provider spend.
      *
-     * Invariant: the TTL is at least MAX_ATTEMPTS x the wall clock of the
-     * connection this tick will actually call. Derived rather than a bare
-     * number, so a change to either input cannot silently reopen the race --
-     * RecommendationRunAdvancerTest drives advance() and pins it.
+     * Invariant since #444: a live holder refreshes the lock at least every
+     * TickLockKeepalive::MINIMUM_INTERVAL_SECONDS, so the TTL only has to
+     * clear the longest gap between two refreshes -- not the longest tick.
+     * That gap is one first-byte wait: a beat rides on a streamed chunk, and
+     * a provider that has not started answering yields none until the stream
+     * idle timeout fires. Sizing it from the throttle instead would let a
+     * live holder's lock lapse mid-call.
      *
      * Read from the connection rather than from a constant since #433: a
-     * connection the account marked slow answers under an hour-long wall
-     * clock, and a TTL sized for the standard profile would expire in the
-     * middle of one of its calls. Only that connection pays the long TTL --
-     * pinning every account to the slow ceiling would triple the stall after
-     * a crash for everyone, and a leaked lock already costs a full TTL.
+     * connection the account marked slow waits a quarter of an hour for a
+     * first byte where the standard profile waits three minutes, and a TTL
+     * sized for the standard profile would expire under one of its calls.
+     * Only that connection pays the longer TTL -- pinning every account to
+     * the slow ceiling would stretch every stall behind a dead holder.
      *
      * The read happens just outside the lock, so an account that flips the
      * setting in the same instant a tick starts gets one tick sized to the
      * previous profile. The window is a single statement wide and the next
      * tick corrects it; both racers read the same row, so they agree.
      *
-     * Accepted tradeoff: a process that crashes mid-tick holds the lock for
-     * the full TTL before another process can resume the run. That is a long
-     * wait, but this is a personal-scale app and a crash mid-tick is rare;
-     * correctness under concurrent ticks matters more than a fast failover.
+     * What this replaced was MAX_ATTEMPTS x the wall clock of the longest
+     * call the tick could legally make: 2100 s here, 11 100 s on the slow
+     * profile. Nothing refreshed the lock then, so it had to cover the whole
+     * tick -- and a worker that died mid-tick stranded the run for that full
+     * span while its replacement logged "already acquired" against a holder
+     * that no longer existed, twice in production (#439).
      */
     private function lockTtlFor(User $user): float
     {
@@ -179,7 +197,7 @@ final class RecommendationRunAdvancer
             ? ProviderTimeouts::standard()
             : $this->connections->timeoutsFor($settings);
 
-        return RecommendationRun::MAX_ATTEMPTS * $timeouts->wallClockSeconds + self::LOCK_TTL_MARGIN_SECONDS;
+        return $timeouts->firstByteSeconds + self::LOCK_TTL_MARGIN_SECONDS;
     }
 
     private function tick(User $user, TickDriver $driver): RecommendationRunReport
@@ -194,13 +212,16 @@ final class RecommendationRunAdvancer
 
         try {
             return $this->tickActiveRun($run, $user, $driver);
-        } catch (RecommendationRunCancelledException) {
-            // Stopped mid-call. refresh() throws away everything this tick
-            // computed and re-reads the row the canceller wrote, so the
-            // caller is told the run is over rather than handed the progress
-            // of a run nobody is waiting for. Nothing is flushed: the guard
-            // fires before any run mutation, so there is no half-written
-            // checkpoint to undo.
+        } catch (RecommendationRunCancelledException | RecommendationTickLockLostException) {
+            // Stopped mid-call, for one of the two reasons a tick may not
+            // keep writing: the user cancelled the run, or another process
+            // took the per-user lock this tick was working under (#444).
+            // refresh() throws away everything this tick computed and
+            // re-reads the row whoever owns the run now wrote, so the caller
+            // is told the run's real state rather than handed the progress of
+            // a run nobody is waiting for -- or of one somebody else is
+            // advancing. Nothing is flushed: the guard fires before any run
+            // mutation, so there is no half-written checkpoint to undo.
             $this->entityManager->refresh($run);
 
             return RecommendationRunReport::fromRun($run);
