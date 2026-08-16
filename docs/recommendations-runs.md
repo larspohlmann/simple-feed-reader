@@ -63,7 +63,8 @@ lot of time has passed, starting fresh gives more current recommendations.
 How the fast path is provided depends on the deployment:
 
 - **Docker installs** run a persistent worker container that drives every
-  run; nothing else is needed.
+  run; nothing else is needed. (Operators: watching and restarting the worker
+  is covered in [docker-production.md](docker-production.md) §9.)
 - **Worker-less installs** (for example, shared hosting such as Strato)
   rely on an on-demand drainer process that the server starts when your run
   begins, backed by a scheduled maintenance ping as the safety net. If the

@@ -17,6 +17,17 @@ password reset all depend on real delivery (issue #65). The production stack
 therefore *requires* a real mail transport before it starts, and Mailpit is
 unreachable from it by construction.
 
+**Contents:**
+[1 Install](#1-install) ·
+[2 TLS](#2-tls) ·
+[3 First admin](#3-first-admin) ·
+[4 Verify mail delivery](#4-verify-mail-delivery) ·
+[5 Running without mail](#5-running-without-mail) ·
+[6 Update](#6-update) ·
+[7 Reconfigure](#7-reconfigure) ·
+[8 Backup](#8-backup) ·
+[9 Troubleshooting](#9-troubleshooting)
+
 ---
 
 ## 1. Install

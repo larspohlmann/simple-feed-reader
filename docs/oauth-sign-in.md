@@ -1,4 +1,4 @@
-# OAuth Sign-In (Google and Apple)
+# OAuth sign-in (Google and Apple)
 
 Two audiences: an **operator** setting up provider credentials, and a
 **frontend developer** implementing the SPA side of the flow. Read the section
@@ -6,6 +6,16 @@ you need; they do not depend on each other.
 
 Assumed knowledge: none of this code. Assumed access, for the operator part: a
 Google Cloud project and an Apple Developer Program membership.
+
+**Contents:**
+[1 What the flow actually does](#1-what-the-flow-actually-does) —
+operator: [2 Google](#2-operator-setting-up-google) ·
+[3 Apple](#3-operator-setting-up-apple) ·
+[4 URLs, cookies and CORS](#4-operator-app_backend_url-must-match-byte-for-byte) ·
+[5 Disabling a provider](#5-operator-disabling-a-provider) ·
+[6 The admin queue](#6-operator-what-an-oauth-account-looks-like-in-the-admin-queue) —
+frontend: [7 The SPA contract](#7-frontend-the-spa-contract) —
+developer: [8 Adding a third provider](#8-developer-adding-a-third-provider)
 
 ---
 

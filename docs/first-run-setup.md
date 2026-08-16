@@ -5,6 +5,10 @@ the instance shows a one-time setup screen instead of login. Create the first
 admin one of two ways. Both refuse to create a second bootstrap admin once one
 exists.
 
+**Installed with the Docker production stack?** The setup screen is already
+prepared for you: `prod-start.sh` printed the secret in its summary. Go
+straight to [Option 2](#option-2--the-web-setup-screen).
+
 ## Why it is gated
 
 The first-admin path is the one moment an instance can be hijacked: whoever
