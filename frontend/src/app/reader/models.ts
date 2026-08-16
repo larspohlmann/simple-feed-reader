@@ -344,10 +344,30 @@ export interface RunHistoryRow {
   costNanoCredits: number | null;
 }
 
-/** What the history route answers with: the newest runs and the account's
- *  all-time total. The total is a database sum over every run, not over the
- *  rows above it. */
-export interface RunHistoryPayload {
+/** One month of an account's run history, as its section header shows it.
+ *  `costNanoCredits` is null when no run of the month reported a price -- the
+ *  same distinction a row and the all-time total already make. Counts and
+ *  totals are computed over the whole month, not over the rows on screen, so
+ *  a capped section never shows a wrong number. */
+export interface RunHistoryMonth {
+  month: string;
+  runCount: number;
+  costNanoCredits: number | null;
+}
+
+/** One page of one month's runs. `nextCursor` is the id to pass as `before`
+ *  for the next page, or null when the month is exhausted. */
+export interface RunHistoryMonthPage {
+  month: string;
   runs: RunHistoryRow[];
+  nextCursor: number | null;
+}
+
+/** What the history route answers with: every month the account has runs in,
+ *  the newest month's first page so the card paints in one round trip, and the
+ *  account's all-time total. `latest` is null when the account has never run. */
+export interface RunHistoryOverview {
   totalCostNanoCredits: number | null;
+  months: RunHistoryMonth[];
+  latest: RunHistoryMonthPage | null;
 }

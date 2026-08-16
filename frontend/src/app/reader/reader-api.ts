@@ -18,7 +18,8 @@ import {
   ReaderContent,
   RecommendationRunReport,
   RefreshReport,
-  RunHistoryPayload,
+  RunHistoryMonthPage,
+  RunHistoryOverview,
   SubscribeResult,
   SubscriptionDto,
   SubscriptionsResponse,
@@ -207,11 +208,30 @@ export class ReaderApi {
     return this.http.get<DebugLogDetail>(`${this.base}/api/recommendations/runs/debug-log/${id}`);
   }
 
-  /** Every for-you run this account has made, newest first, with what each one
-   *  cost -- plus the all-time total. Independent of the debug switch: the run
-   *  totals are banked whether or not the call log is being kept. */
-  runHistory(): Observable<RunHistoryPayload> {
-    return this.http.get<RunHistoryPayload>(`${this.base}/api/recommendations/runs/history`);
+  /** Every month this account has run in, with that month's own run count and
+   *  spend, plus the newest month's first page and the all-time total. One
+   *  call, because the card's first paint needs all of it and each request
+   *  costs a PHP boot. `timeZone` is an IANA identifier; the server buckets
+   *  the months in it and falls back to UTC when it does not know it. */
+  runHistory(timeZone: string): Observable<RunHistoryOverview> {
+    return this.http.get<RunHistoryOverview>(`${this.base}/api/recommendations/runs/history`, {
+      params: { tz: timeZone },
+    });
+  }
+
+  /** One month's runs, newest first. Without `before` this is the month's
+   *  first page; with it, the next page after that cursor. */
+  runHistoryMonth(
+    month: string,
+    timeZone: string,
+    before?: number,
+  ): Observable<RunHistoryMonthPage> {
+    const params: Record<string, string | number> = { tz: timeZone };
+    if (before !== undefined) params['before'] = before;
+    return this.http.get<RunHistoryMonthPage>(
+      `${this.base}/api/recommendations/runs/history/${month}`,
+      { params },
+    );
   }
 
   /** Deletes every persisted for-you recommendation. Refuses with a 409

@@ -1,0 +1,159 @@
+@use '../theme/breakpoints' as bp;
+
+/* One month of the spending record (#409). The row grid -- `when | provider ·
+   model | status | duration | tokens | cost` -- moved here wholesale from the
+   flat card this replaced; the header line and the "show more" control are
+   new. A closed month (no `app-disclosure` summary padding to match) gets the
+   same row padding by hand, so the expanded and collapsed headers line up. */
+:host {
+  display: block;
+}
+
+.run-history-month {
+  &__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+    width: 100%;
+    padding: var(--row-pad-comfy-y) var(--row-pad-comfy-x);
+  }
+
+  &__label {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  &__meta {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__loading {
+    margin: 0 var(--row-pad-comfy-x) var(--row-pad-comfy-y);
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+  }
+
+  &__wrap {
+    padding: 0 var(--row-pad-comfy-x) var(--row-pad-comfy-y);
+    overflow-x: auto;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 34rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: 8rem 1fr 5rem 4rem 8rem 5rem;
+    align-items: center;
+    column-gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-0);
+  }
+
+  /* On a phone the six fixed columns are wider than the viewport, so the card
+     would overflow the page the way the debug panel's grid once did. Release
+     the floor and let the row reflow to a wrapping line. */
+  @media (width <= bp.$bp-sm) {
+    &__list {
+      min-width: 0;
+    }
+
+    &__row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      row-gap: var(--space-1);
+    }
+
+    &__provider {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+  }
+
+  &__when,
+  &__duration,
+  &__tokens,
+  &__cost {
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__when {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+  }
+
+  &__provider {
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__status {
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--surface-1);
+    color: var(--text-secondary);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    text-align: center;
+    text-transform: uppercase;
+
+    &--completed {
+      background: var(--bg-success);
+      color: var(--success);
+    }
+
+    &--failed,
+    &--cancelled {
+      background: var(--bg-danger);
+      color: var(--danger);
+    }
+  }
+
+  &__duration,
+  &__tokens {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    text-align: right;
+  }
+
+  &__cost {
+    font-weight: 600;
+    text-align: right;
+  }
+
+  &__more {
+    margin: 0 var(--row-pad-comfy-x) var(--row-pad-comfy-y);
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+    color: var(--text-secondary);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover {
+      border-color: var(--accent);
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.6;
+    }
+  }
+}
