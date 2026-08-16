@@ -27,10 +27,16 @@ import { EntryDto, ReaderArticle, SubscriptionTagDto } from '../models';
 import { ReaderContentService } from '../reader-content.service';
 import { ReaderModeService } from '../reader-mode.service';
 import { LanguageService } from '../../core/language.service';
+import { LayoutService } from '../layout.service';
 import { ListScrollMemory } from '../list-scroll-memory';
 import { nextHeaderHidden } from '../header-scroll';
 import { feedHeroImage } from '../feed-hero-image';
-import { focusOpacityForSpan, needsReadingTail, readingBlocks } from '../reading-focus';
+import {
+  ARTICLE_FOCUS_CURVE,
+  focusOpacityForSpan,
+  needsReadingTail,
+  readingBlocks,
+} from '../reading-focus';
 import { articleOverflowsViewport, readingProgress } from '../reading-progress';
 import {
   AXIS_LOCK_MIN,
@@ -120,6 +126,7 @@ export class ReaderViewComponent {
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
   private readonly scroll = inject(ListScrollMemory);
+  private readonly screen = inject(LayoutService);
   private readonly destroyRef = inject(DestroyRef);
 
   // Article scroll restore: a browser resume-reload reopens the entry from the URL
@@ -570,10 +577,20 @@ export class ReaderViewComponent {
     });
   }
 
-  /** Dim each article block by its distance from the scroll viewport's centre. */
+  /** Dim each article block by its distance from the scroll viewport's centre.
+   *  Only active below the split-pane layout — a desktop reader sits back from
+   *  a stationary column, where dimming the text around the centre reads as
+   *  interference rather than as focus (#435). Any inline opacities a resize
+   *  left behind are cleared there. */
   private applyFocus(): void {
     const content = this.content()?.nativeElement;
     if (!content) return;
+    if (this.screen.isWide()) {
+      for (const block of readingBlocks(content)) {
+        block.style.opacity = '';
+      }
+      return;
+    }
     const scroller = this.host.nativeElement;
     const viewport = scroller.clientHeight;
     const hostTop = scroller.getBoundingClientRect().top;
@@ -583,7 +600,9 @@ export class ReaderViewComponent {
       // Fade by the block's span, not its centre, so a block taller than the
       // viewport — a wide table, a code listing, a long paragraph — stays bright
       // while it fills the screen instead of dimming from its off-screen centre.
-      block.style.opacity = String(focusOpacityForSpan(top, top + rect.height, viewport));
+      block.style.opacity = String(
+        focusOpacityForSpan(top, top + rect.height, viewport, ARTICLE_FOCUS_CURVE),
+      );
     }
   }
 

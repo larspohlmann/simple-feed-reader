@@ -3,8 +3,28 @@
 
 import { articleOverflowsViewport } from './reading-progress';
 
-/** Opacity of a block sitting a half-viewport or more from the reading center. */
-export const FOCUS_MIN_OPACITY = 0.2;
+/** How steeply a surface's reading focus falls away from the reading centre. */
+export interface FocusCurve {
+  /**
+   * Fraction of the viewport height, on each side of the centre, that stays
+   * fully opaque before the fade starts. Zero fades straight off the centre
+   * line.
+   */
+  plateau: number;
+  /** Opacity of a block sitting a half-viewport or more from the centre. */
+  min: number;
+}
+
+/** The entry list's curve: a fade off the centre line, down to a strong dim. */
+export const LIST_FOCUS_CURVE: FocusCurve = { plateau: 0, min: 0.2 };
+
+/**
+ * The article's curve. A band around the centre holds full opacity, so a
+ * paragraph does not start dimming the instant it leaves the exact middle, and
+ * the floor is far higher: in a body of running text the effect should point
+ * the eye, not push the rest of the page away (#435).
+ */
+export const ARTICLE_FOCUS_CURVE: FocusCurve = { plateau: 0.2, min: 0.55 };
 
 /** Generic containers we descend through to reach the real reading blocks. */
 const WRAPPER_TAGS = new Set(['DIV', 'SECTION', 'ARTICLE', 'MAIN', 'ASIDE', 'HEADER', 'FOOTER']);
@@ -95,21 +115,28 @@ export function needsReadingTail(contentBottom: number, viewportHeight: number):
  * The fade is measured from the block's nearest edge to the reading centre, not
  * from its geometric centre: a block whose span covers the centre line is fully
  * opaque however tall it is, and a block clear of the centre fades linearly to
- * `min` by the edge that faces it, reaching `min` a half-viewport away. So the
- * block you are reading stands out, and a source group of many entries stays
- * bright while it fills the screen instead of dimming because its off-screen
- * centre is a viewport away (#213). For a short block, top and bottom coincide
- * and this is a plain distance-from-centre fade.
+ * `curve.min` by the edge that faces it, reaching `curve.min` a half-viewport
+ * away. So the block you are reading stands out, and a source group of many
+ * entries stays bright while it fills the screen instead of dimming because its
+ * off-screen centre is a viewport away (#213). For a short block, top and bottom
+ * coincide and this is a plain distance-from-centre fade.
+ *
+ * `curve.plateau` widens the fully opaque middle and compresses the fade into
+ * what is left of the half-viewport; a plateau at or beyond the half-viewport
+ * leaves the whole surface opaque.
  */
 export function focusOpacityForSpan(
   blockTop: number,
   blockBottom: number,
   viewportHeight: number,
-  min = FOCUS_MIN_OPACITY,
+  curve: FocusCurve = LIST_FOCUS_CURVE,
 ): number {
   if (viewportHeight <= 0) return 1;
   const center = viewportHeight / 2;
   const distanceFromCenter = Math.max(blockTop - center, center - blockBottom, 0);
-  const ratio = Math.min(distanceFromCenter / center, 1);
-  return +(1 - ratio * (1 - min)).toFixed(3);
+  const plateau = viewportHeight * curve.plateau;
+  const fadeSpan = center - plateau;
+  if (distanceFromCenter <= plateau || fadeSpan <= 0) return 1;
+  const ratio = Math.min((distanceFromCenter - plateau) / fadeSpan, 1);
+  return +(1 - ratio * (1 - curve.min)).toFixed(3);
 }

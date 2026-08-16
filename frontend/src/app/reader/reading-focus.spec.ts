@@ -1,5 +1,6 @@
 import {
-  FOCUS_MIN_OPACITY,
+  ARTICLE_FOCUS_CURVE,
+  LIST_FOCUS_CURVE,
   focusOpacityForSpan,
   needsReadingTail,
   readingBlocks,
@@ -29,8 +30,8 @@ describe('focusOpacityForSpan', () => {
     });
 
     it('fades to the minimum a half-viewport away from the centre', () => {
-      expect(focusOpacityForSpan(0, 0, 1000)).toBe(FOCUS_MIN_OPACITY);
-      expect(focusOpacityForSpan(1000, 1000, 1000)).toBe(FOCUS_MIN_OPACITY);
+      expect(focusOpacityForSpan(0, 0, 1000)).toBe(LIST_FOCUS_CURVE.min);
+      expect(focusOpacityForSpan(1000, 1000, 1000)).toBe(LIST_FOCUS_CURVE.min);
     });
 
     it('fades symmetrically and monotonically with distance from the centre', () => {
@@ -42,8 +43,8 @@ describe('focusOpacityForSpan', () => {
     });
 
     it('clamps blocks beyond a half-viewport to the minimum, never below', () => {
-      expect(focusOpacityForSpan(-500, -500, 1000)).toBe(FOCUS_MIN_OPACITY);
-      expect(focusOpacityForSpan(5000, 5000, 1000)).toBe(FOCUS_MIN_OPACITY);
+      expect(focusOpacityForSpan(-500, -500, 1000)).toBe(LIST_FOCUS_CURVE.min);
+      expect(focusOpacityForSpan(5000, 5000, 1000)).toBe(LIST_FOCUS_CURVE.min);
     });
   });
 
@@ -63,8 +64,8 @@ describe('focusOpacityForSpan', () => {
   });
 
   it('fades to the minimum once the nearest edge is a half-viewport away', () => {
-    expect(focusOpacityForSpan(1000, 2000, 1000)).toBe(FOCUS_MIN_OPACITY); // top at centre+half
-    expect(focusOpacityForSpan(-2000, 0, 1000)).toBe(FOCUS_MIN_OPACITY); // bottom at centre-half
+    expect(focusOpacityForSpan(1000, 2000, 1000)).toBe(LIST_FOCUS_CURVE.min); // top at centre+half
+    expect(focusOpacityForSpan(-2000, 0, 1000)).toBe(LIST_FOCUS_CURVE.min); // bottom at centre-half
   });
 
   it('degrades to fully opaque when the viewport has no measured height', () => {
@@ -134,5 +135,42 @@ describe('readingBlocks', () => {
     const deep = '<div>'.repeat(40) + '<p>bottom</p>' + '</div>'.repeat(40);
     const blocks = readingBlocks(root(deep));
     expect(blocks.length).toBeGreaterThan(0); // terminates, and returns something to fade
+  });
+});
+
+describe('the article focus curve', () => {
+  // Viewport 1000 => centre at 500, a plateau reaching 200px either side of it,
+  // and the remaining 300px carrying the whole fade.
+  it('holds full opacity across the plateau, to its very edge', () => {
+    expect(focusOpacityForSpan(500, 500, 1000, ARTICLE_FOCUS_CURVE)).toBe(1);
+    expect(focusOpacityForSpan(700, 700, 1000, ARTICLE_FOCUS_CURVE)).toBe(1);
+    expect(focusOpacityForSpan(300, 300, 1000, ARTICLE_FOCUS_CURVE)).toBe(1);
+  });
+
+  it('fades over what is left of the half-viewport, not over all of it', () => {
+    expect(focusOpacityForSpan(850, 850, 1000, ARTICLE_FOCUS_CURVE)).toBeCloseTo(0.775, 3);
+    expect(focusOpacityForSpan(150, 150, 1000, ARTICLE_FOCUS_CURVE)).toBeCloseTo(0.775, 3);
+  });
+
+  it('reaches its floor a half-viewport away, and never goes below it', () => {
+    expect(focusOpacityForSpan(1000, 1000, 1000, ARTICLE_FOCUS_CURVE)).toBe(
+      ARTICLE_FOCUS_CURVE.min,
+    );
+    expect(focusOpacityForSpan(9000, 9000, 1000, ARTICLE_FOCUS_CURVE)).toBe(
+      ARTICLE_FOCUS_CURVE.min,
+    );
+  });
+
+  it('is gentler than the list curve everywhere off the centre', () => {
+    for (const top of [700, 800, 900, 1000]) {
+      expect(focusOpacityForSpan(top, top, 1000, ARTICLE_FOCUS_CURVE)).toBeGreaterThan(
+        focusOpacityForSpan(top, top, 1000, LIST_FOCUS_CURVE),
+      );
+    }
+  });
+
+  it('leaves everything opaque when a plateau swallows the half-viewport', () => {
+    expect(focusOpacityForSpan(0, 0, 1000, { plateau: 0.5, min: 0.2 })).toBe(1);
+    expect(focusOpacityForSpan(0, 0, 1000, { plateau: 0.9, min: 0.2 })).toBe(1);
   });
 });
