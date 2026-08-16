@@ -19,8 +19,9 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  *
  * Every write Meilisearch accepts answers 202 with an enqueued task and does
  * the actual indexing afterwards (confirmed by probe, see
- * docs/superpowers/plans/2026-08-16-432-meilisearch-search.md) — this class
- * deliberately does NOT poll `GET /tasks/{taskUid}` for any of them.
+ * `.superpowers/sdd/2026-08-16-432-meilisearch-search/task-2-report.md` and
+ * its `wire-format-addendum.md`) — this class deliberately does NOT poll
+ * `GET /tasks/{taskUid}` for any of them.
  * SearchIndexWriter's methods return void precisely because nothing here
  * reports back whether the write has actually landed: an ingest-time call
  * (EntryIndexer, Task 6) is a side effect of storing an entry that must never
@@ -61,10 +62,23 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
     private const string HIGHLIGHT_END = '[[/sfr:hl]]';
 
     /**
-     * The exact shape probed in Task 2 (see the plan's "Probed wire format"
-     * section): searchable is title/summary only — content is stored on the
-     * document (see documentOf()) but not searched, kept in reserve for a
-     * later widening that would not need a document-shape migration — and
+     * The wire shape measured against the running engine — see
+     * `.superpowers/sdd/2026-08-16-432-meilisearch-search/task-2-report.md`
+     * and its `wire-format-addendum.md` for the probed requests and
+     * responses this is built from.
+     *
+     * `searchableAttributes` covers every field #432 asks to be searchable —
+     * title, summary, the plain-text content, and the feed title — which is
+     * the ticket's full-content-matching goal: a word appearing only in an
+     * article body must find something, not nothing.
+     *
+     * The ORDER of that list is a behavioural contract, not cosmetic:
+     * Meilisearch's attribute ranking rule ranks a hit by which attribute in
+     * this list it matched, in the order declared here. Title before summary
+     * before content before feed title is deliberate — a match in the
+     * headline should outrank the same word buried in the body or riding in
+     * on the feed's own name.
+     *
      * filterable/sortable list precisely the fields IndexSearch's cursor and
      * feed scoping use.
      *
@@ -75,7 +89,7 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
      * }
      */
     private const array SETTINGS = [
-        'searchableAttributes' => ['title', 'summary'],
+        'searchableAttributes' => ['title', 'summary', 'content', 'feedTitle'],
         'filterableAttributes' => ['feedId', 'effectiveDate', 'id'],
         'sortableAttributes' => ['effectiveDate', 'id'],
     ];

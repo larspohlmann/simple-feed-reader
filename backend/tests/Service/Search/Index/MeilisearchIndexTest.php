@@ -261,7 +261,13 @@ final class MeilisearchIndexTest extends TestCase
         self::assertSame(self::BASE_URL . '/indexes/entries/settings', $this->capturedRequest['url']);
 
         $decoded = $this->capturedJsonObject();
-        self::assertSame(['title', 'summary'], $decoded['searchableAttributes']);
+        // Order is a behavioural contract, not cosmetic: Meilisearch's
+        // attribute ranking rule ranks a hit by which attribute in this list
+        // it matched, in the order declared here — title outranks summary
+        // outranks content outranks feedTitle. A reordering silently changes
+        // relevance without changing which entries are found, so this test
+        // pins the sequence, not just the membership.
+        self::assertSame(['title', 'summary', 'content', 'feedTitle'], $decoded['searchableAttributes']);
         self::assertSame(['feedId', 'effectiveDate', 'id'], $decoded['filterableAttributes']);
         self::assertSame(['effectiveDate', 'id'], $decoded['sortableAttributes']);
     }
