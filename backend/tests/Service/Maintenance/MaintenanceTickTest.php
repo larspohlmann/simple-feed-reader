@@ -10,7 +10,6 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryRepository;
 use App\Repository\FeedRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\EntryIngestor;
 use App\Service\EntryPruner;
 use App\Service\EntrySanitizer;
@@ -19,20 +18,13 @@ use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Maintenance\MaintenanceTick;
 use App\Service\OrphanedFeedReclaimer;
-use App\Service\Process\DetachedProcessLauncherInterface;
 use App\Service\Recommendation\ForYouSweep;
-use App\Service\Recommendation\RecommendationDrainSpawner;
-use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\RefreshRunner;
 use App\Service\Search\EntryIndexer;
-use App\Service\Worker\WorkerPresence;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
-use App\Tests\Support\RecommendationRunFixtures;
-use App\Tests\Support\RecordingProcessLauncher;
 use App\Tests\Support\StubFeedFetcher;
-use App\Tests\Support\UserFactory;
 use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
@@ -40,7 +32,6 @@ use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\Store\InMemoryStore;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class MaintenanceTickTest extends DbTestCase
 {
@@ -141,8 +132,7 @@ final class MaintenanceTickTest extends DbTestCase
         $forYouSweep = self::getContainer()->get(ForYouSweep::class);
         self::assertInstanceOf(ForYouSweep::class, $forYouSweep);
 
-        $launcher = new RecordingProcessLauncher();
-        $tick = new MaintenanceTick($refreshRunner, $forYouSweep, $this->spawnerWith($launcher));
+        $tick = new MaintenanceTick($refreshRunner, $forYouSweep);
 
         $report = $tick->run()->toArray();
 
@@ -156,95 +146,5 @@ final class MaintenanceTickTest extends DbTestCase
             ],
             $report['recommendations'],
         );
-        // The aborted path must not spawn either: the shared EntityManager is
-        // unusable this tick, so even the spawner's heartbeat read is off-limits.
-        self::assertSame([], $launcher->launches);
-    }
-
-    public function testTickWithARemainingActiveRunSpawnsTheDrainerAsRespawnNet(): void
-    {
-        $user = $this->userWithReadyAiSettings('tick-respawn-net@example.test');
-        // A candidate entry, so the pending run's snapshot step freezes a real
-        // batch plan instead of completing immediately on an empty pool -- the
-        // run must still be active for the respawn net to have anything to see.
-        $feed = new Feed('https://tick-respawn-net.example.test/feed.xml');
-        // The tick refreshes every due feed, and a fresh Feed is due at once:
-        // without this the real ConcurrentFeedFetcher tries to resolve a
-        // .test host over the network on every run of this test.
-        $feed->setNextFetchAt(new \DateTimeImmutable('+1 year'));
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-08-08T00:00:00Z')));
-        $this->em->flush();
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        (new RecommendationRunFixtures($this->em, $cipher))->entry($feed, 'tick-respawn-net-entry', 30);
-
-        $starter = self::getContainer()->get(RecommendationRunStarter::class);
-        self::assertInstanceOf(RecommendationRunStarter::class, $starter);
-        $starter->start($user);
-
-        $launcher = new RecordingProcessLauncher();
-        $tick = new MaintenanceTick(
-            $this->containerRefreshRunner(),
-            $this->containerForYouSweep(),
-            $this->spawnerWith($launcher),
-        );
-
-        $tick->run();
-
-        // The sweep advanced the run one step (snapshot), it is still active,
-        // and no worker heartbeat is fresh -- so the respawn net must fire.
-        self::assertSame([['app:recommendations:drain', '--detach']], $launcher->launches);
-    }
-
-    public function testTickWithNoActiveRunsDoesNotSpawn(): void
-    {
-        $launcher = new RecordingProcessLauncher();
-        $tick = new MaintenanceTick(
-            $this->containerRefreshRunner(),
-            $this->containerForYouSweep(),
-            $this->spawnerWith($launcher),
-        );
-
-        $tick->run();
-
-        self::assertSame([], $launcher->launches);
-    }
-
-    private function spawnerWith(DetachedProcessLauncherInterface $launcher): RecommendationDrainSpawner
-    {
-        $presence = self::getContainer()->get(WorkerPresence::class);
-        self::assertInstanceOf(WorkerPresence::class, $presence);
-
-        return new RecommendationDrainSpawner($presence, $launcher);
-    }
-
-    private function containerRefreshRunner(): RefreshRunner
-    {
-        $runner = self::getContainer()->get(RefreshRunner::class);
-        self::assertInstanceOf(RefreshRunner::class, $runner);
-
-        return $runner;
-    }
-
-    private function containerForYouSweep(): ForYouSweep
-    {
-        $sweep = self::getContainer()->get(ForYouSweep::class);
-        self::assertInstanceOf(ForYouSweep::class, $sweep);
-
-        return $sweep;
-    }
-
-    private function userWithReadyAiSettings(string $email): User
-    {
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $user = (new UserFactory($this->em, $hasher))->create($email);
-
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        (new RecommendationRunFixtures($this->em, $cipher))->seedReadyAiSettings($user);
-
-        return $user;
     }
 }

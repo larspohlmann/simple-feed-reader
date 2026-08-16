@@ -16,8 +16,10 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Process\DetachedProcessLauncherInterface;
 use App\Service\Worker\RecommendationDriverKind;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\RecordingProcessLauncher;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -405,6 +407,30 @@ final class RecommendationRunControllerTest extends WebTestCase
         $report = $this->payload($client->getResponse());
         self::assertSame('running', $report['status']);
         self::assertFalse($report['background']);
+    }
+
+    /**
+     * #393's stated new behaviour: a tick on an active run whose drainer has
+     * gone quiet spawns a replacement instead of waiting for the next cron
+     * pass. The run is seeded directly through the fixtures rather than via
+     * start(), so nothing but this request's own kernel termination can
+     * produce a launch -- proving RecommendationDrainOnTerminateListener,
+     * not a side effect of starting the run.
+     */
+    public function testATickOnAnActiveRunWithNoFreshHeartbeatSpawnsAReplacementDrainer(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->authWithReadyAi('tick-spawns-drainer@example.test');
+        $this->seedOneCandidateEntry($user);
+        $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-16T09:00:00Z'));
+
+        $launcher = new RecordingProcessLauncher();
+        self::getContainer()->set(DetachedProcessLauncherInterface::class, $launcher);
+
+        $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame([['app:recommendations:drain', '--detach']], $launcher->launches);
     }
 
     /**

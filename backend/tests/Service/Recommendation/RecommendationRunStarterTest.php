@@ -10,19 +10,12 @@ use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiNotConfiguredException;
-use App\Service\Process\DetachedProcessLauncherInterface;
 use App\Service\Recommendation\Exception\NoResumableRecommendationRunException;
-use App\Service\Recommendation\RecommendationDrainSpawner;
 use App\Service\Recommendation\RecommendationRunStarter;
-use App\Service\Worker\RecommendationDriverKind;
-use App\Service\Worker\WorkerPresence;
 use App\Tests\DbTestCase;
-use App\Tests\Support\RecordingProcessLauncher;
 use App\Tests\Support\UserFactory;
-use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
@@ -264,106 +257,6 @@ final class RecommendationRunStarterTest extends DbTestCase
         // The wipe is bulk DQL when it runs, so clear before asserting survival.
         $this->em->clear();
         self::assertCount(1, $this->logRowsOfLatestRun());
-    }
-
-    public function testStartSpawnsTheDrainerWhenNoWorkerIsAlive(): void
-    {
-        $this->seedReadyAiSettings($this->user);
-        $launcher = new RecordingProcessLauncher();
-
-        $this->starterWith($launcher)->start($this->user);
-
-        self::assertSame([['app:recommendations:drain', '--detach']], $launcher->launches);
-    }
-
-    /**
-     * A second start() in the same process must NOT fork a second drainer:
-     * the first launch is still the one that drains this run, and every extra
-     * fork boots a full Symfony kernel only to lose the drain lock and exit
-     * (#371 final review, Finding 3). This is the caller-side proof of the
-     * spawner's one-launch-per-process guard -- a repeated click, and, through
-     * the same code path, a maintenance tick that starts several due runs.
-     */
-    public function testASecondStartInTheSameProcessDoesNotSpawnAgain(): void
-    {
-        $this->seedReadyAiSettings($this->user);
-        $launcher = new RecordingProcessLauncher();
-        $starter = $this->starterWith($launcher);
-
-        $starter->start($this->user);
-        $starter->start($this->user);
-
-        self::assertSame([['app:recommendations:drain', '--detach']], $launcher->launches);
-    }
-
-    /**
-     * The other half of that guard: it is per process, not per run. A later
-     * request that finds the run already active is exactly the moment a
-     * respawn helps -- the drainer that started it may be long dead -- so a
-     * fresh starter, standing in for that fresh request, must still spawn even
-     * though it opens no new run.
-     */
-    public function testStartInALaterRequestSpawnsForAnAlreadyActiveRun(): void
-    {
-        $this->seedReadyAiSettings($this->user);
-        $this->starterWith(new RecordingProcessLauncher())->start($this->user);
-
-        $laterRequest = new RecordingProcessLauncher();
-        $this->starterWith($laterRequest)->start($this->user);
-
-        self::assertSame([['app:recommendations:drain', '--detach']], $laterRequest->launches);
-    }
-
-    public function testStartDoesNotSpawnNextToAFreshWorkerHeartbeat(): void
-    {
-        $this->seedReadyAiSettings($this->user);
-        $launcher = new RecordingProcessLauncher();
-        $this->presence()->mark(RecommendationDriverKind::PersistentWorker);
-
-        $this->starterWith($launcher)->start($this->user);
-
-        self::assertSame([], $launcher->launches);
-    }
-
-    public function testResumeSpawnsTheDrainer(): void
-    {
-        $this->seedReadyAiSettings($this->user);
-        $this->failedRunFor($this->user);
-        $launcher = new RecordingProcessLauncher();
-
-        $this->starterWith($launcher)->resume($this->user);
-
-        self::assertSame([['app:recommendations:drain', '--detach']], $launcher->launches);
-    }
-
-    /**
-     * Built by hand so only the launcher is a stub: every other collaborator is
-     * the container's real instance, and the spawner's presence read is a real
-     * repository query.
-     */
-    private function starterWith(DetachedProcessLauncherInterface $launcher): RecommendationRunStarter
-    {
-        /** @var AiProviderConfigurator $configurator */
-        $configurator = self::getContainer()->get(AiProviderConfigurator::class);
-        /** @var ClockInterface $clock */
-        $clock = self::getContainer()->get(ClockInterface::class);
-
-        return new RecommendationRunStarter(
-            $this->runs(),
-            $configurator,
-            $this->em,
-            $clock,
-            $this->runLogs(),
-            new RecommendationDrainSpawner($this->presence(), $launcher),
-        );
-    }
-
-    private function presence(): WorkerPresence
-    {
-        /** @var WorkerPresence $presence */
-        $presence = self::getContainer()->get(WorkerPresence::class);
-
-        return $presence;
     }
 
     /**

@@ -18,10 +18,10 @@ use Symfony\Component\HttpKernel\Event\TerminateEvent;
  * the wire costs the request nothing, where forking inline used to add a
  * full Symfony boot to every request that started or resumed a run.
  *
- * A listener fires once per request or console command, which is what lets
- * RecommendationDrainSpawner's own `$launched` flag do its job here without
- * this class remembering anything of its own -- see that class's doc for why
- * the flag is process-scoped rather than removed outright.
+ * A listener fires once per request or console command, which is exactly the
+ * scope the old inline call sites needed a `$launched` flag to fake: with the
+ * spawn moved here, "at most once per process" is structural, and
+ * RecommendationDrainSpawner itself remembers nothing (#393).
  */
 #[AsEventListener(event: TerminateEvent::class, method: 'onKernelTerminate')]
 #[AsEventListener(event: ConsoleTerminateEvent::class, method: 'onConsoleTerminate')]
