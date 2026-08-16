@@ -10,6 +10,7 @@ use App\Service\Search\Index\IndexedEntry;
 use App\Service\Search\Index\IndexSearch;
 use App\Service\Search\Index\MeilisearchIndex;
 use App\Service\Search\SearchEngineCapability;
+use App\Service\Search\SearchTerms;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -30,7 +31,7 @@ final class MeilisearchIndexTest extends TestCase
 
     private function search(): IndexSearch
     {
-        return new IndexSearch(['widgets', 'gizmos'], [1, 2], null, 20);
+        return new IndexSearch(SearchTerms::fromInput('widgets gizmos'), [1, 2], null, 20);
     }
 
     /**
@@ -88,10 +89,47 @@ final class MeilisearchIndexTest extends TestCase
         self::assertSame('widgets gizmos', $decoded['q']);
     }
 
+    public function testAWholeWordSearchSendsEveryTermAsItsOwnQuotedPhrase(): void
+    {
+        $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
+        // The trailing space is the whole-word signal (SearchTerms::fromInput).
+        $this->index($client)->find(
+            new IndexSearch(SearchTerms::fromInput('widgets gizmos '), [1, 2], null, 20),
+        );
+
+        // A phrase matches the word exactly; a bare term also matches by prefix
+        // and by typo, which is how a search for "punk " answered with
+        // "Pünktlichkeit" (#450, probed against Meilisearch v1.13).
+        self::assertSame('"widgets" "gizmos"', $this->capturedJsonObject()['q']);
+    }
+
+    public function testADoubleQuoteInsideATermBecomesAWordBoundaryRatherThanAPhraseDelimiter(): void
+    {
+        $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
+        $this->index($client)->find(
+            new IndexSearch(SearchTerms::fromInput('wid"gets '), [1], null, 20),
+        );
+
+        // Left as typed it would close the phrase early and leave one hanging
+        // open; as a space it reads the way the LIKE engine already reads a
+        // quote — as a word boundary.
+        self::assertSame('"wid gets"', $this->capturedJsonObject()['q']);
+    }
+
+    public function testADoubleQuoteInASubstringSearchIsNeutralizedToo(): void
+    {
+        $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
+        $this->index($client)->find(
+            new IndexSearch(SearchTerms::fromInput('wid"gets'), [1], null, 20),
+        );
+
+        self::assertSame('wid gets', $this->capturedJsonObject()['q']);
+    }
+
     public function testFindSendsTheFeedIdFilter(): void
     {
         $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
-        $this->index($client)->find(new IndexSearch(['widgets'], [3, 7], null, 20));
+        $this->index($client)->find(new IndexSearch(SearchTerms::fromInput('widgets'), [3, 7], null, 20));
 
         self::assertSame('feedId IN [3,7]', $this->capturedJsonObject()['filter']);
     }
@@ -100,7 +138,7 @@ final class MeilisearchIndexTest extends TestCase
     {
         $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
         $cursor = new EntryCursor(new \DateTimeImmutable('@100'), 5);
-        $this->index($client)->find(new IndexSearch(['widgets'], [1, 2], $cursor, 20));
+        $this->index($client)->find(new IndexSearch(SearchTerms::fromInput('widgets'), [1, 2], $cursor, 20));
 
         self::assertSame(
             'feedId IN [1,2] AND (effectiveDate < 100 OR (effectiveDate = 100 AND id < 5))',
@@ -111,7 +149,7 @@ final class MeilisearchIndexTest extends TestCase
     public function testNoCursorAddsNoCursorPredicate(): void
     {
         $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
-        $this->index($client)->find(new IndexSearch(['widgets'], [1, 2], null, 20));
+        $this->index($client)->find(new IndexSearch(SearchTerms::fromInput('widgets'), [1, 2], null, 20));
 
         $filter = $this->capturedJsonObject()['filter'];
         self::assertSame('feedId IN [1,2]', $filter);
@@ -140,7 +178,7 @@ final class MeilisearchIndexTest extends TestCase
     public function testFindSendsTheLimit(): void
     {
         $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
-        $this->index($client)->find(new IndexSearch(['widgets'], [1], null, 7));
+        $this->index($client)->find(new IndexSearch(SearchTerms::fromInput('widgets'), [1], null, 7));
 
         self::assertSame(7, $this->capturedJsonObject()['limit']);
     }

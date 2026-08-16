@@ -6,6 +6,7 @@ namespace App\Service\Search\Index;
 
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\SearchEngineCapability;
+use App\Service\Search\SearchTerms;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -154,7 +155,7 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
     private function searchPayload(IndexSearch $search): array
     {
         return [
-            'q' => implode(' ', $search->terms),
+            'q' => $this->queryStringFor($search->terms),
             'filter' => $this->filterFor($search),
             // Newest first, ties broken by id — the same order EntryRepository
             // uses for every other list, so a page hydrated from these ids
@@ -176,6 +177,39 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
             'highlightPreTag' => self::HIGHLIGHT_START,
             'highlightPostTag' => self::HIGHLIGHT_END,
         ];
+    }
+
+    /**
+     * The `q` string for one search. A whole-word search — the trailing space
+     * the user typed, carried here as SearchTerms::$isWholeWord — becomes one
+     * quoted phrase per term: a phrase in Meilisearch's query language matches
+     * the word exactly, where a bare term also matches by prefix and by typo.
+     * That is why a whole-word search for "punk" was answering with
+     * "Pünktlichkeit" until #450; probed against v1.13, which narrowed that
+     * same search from 82 hits to 16.
+     */
+    private function queryStringFor(SearchTerms $terms): string
+    {
+        $words = array_map(self::withoutPhraseDelimiters(...), $terms->terms);
+
+        if (!$terms->isWholeWord) {
+            return implode(' ', $words);
+        }
+
+        return implode(' ', array_map(static fn (string $word): string => '"' . $word . '"', $words));
+    }
+
+    /**
+     * A double quote opens or closes a phrase in Meilisearch's query language,
+     * so one arriving inside a term would close a whole-word phrase early and
+     * leave the next one hanging open. It becomes a space — which is what the
+     * LIKE engine's WordBoundaries already does with it, so a quote inside a
+     * term reads as a word boundary on both engines rather than as a character
+     * to match.
+     */
+    private static function withoutPhraseDelimiters(string $term): string
+    {
+        return str_replace('"', ' ', $term);
     }
 
     private function filterFor(IndexSearch $search): string
