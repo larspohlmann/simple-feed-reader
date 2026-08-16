@@ -197,6 +197,10 @@ export class AiSectionComponent {
     this.ai.setReasoning(config.id, (event.target as HTMLInputElement).checked);
   }
 
+  toggleSlowModel(config: AiConfig, event: Event): void {
+    this.ai.setSlowModel(config.id, (event.target as HTMLInputElement).checked);
+  }
+
   setBatchConcurrency(config: AiConfig, event: Event): void {
     const value = Number((event.target as HTMLSelectElement).value);
     this.ai.setBatchConcurrency(config.id, value);

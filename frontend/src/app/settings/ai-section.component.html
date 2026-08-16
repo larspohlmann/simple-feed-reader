@@ -88,6 +88,21 @@
                       [label]="'settings.ai.configs.reasoning' | transloco"
                     />
                   </span>
+                  <span class="reasoning-toggle-row">
+                    <label class="reasoning-check">
+                      <input
+                        type="checkbox"
+                        [checked]="config.slowModel"
+                        [disabled]="ai.busy()"
+                        (change)="toggleSlowModel(config, $event)"
+                      />
+                      <span>{{ 'settings.ai.configs.slowModel' | transloco }}</span>
+                    </label>
+                    <app-info-tip
+                      [text]="'settings.ai.info.slowModel' | transloco"
+                      [label]="'settings.ai.configs.slowModel' | transloco"
+                    />
+                  </span>
                 </div>
                 <app-field
                   [label]="'settings.ai.configs.batchConcurrency' | transloco"

@@ -22,6 +22,7 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   active: false,
   suppressReasoning: true,
   batchConcurrency: 1,
+  slowModel: false,
   ...over,
 });
 
@@ -161,6 +162,19 @@ describe('AiSettingsService', () => {
     request.flush(config({ id: 5, suppressReasoning: false }));
 
     expect(svc.configs()[0].suppressReasoning).toBe(false);
+  });
+
+  it('sets the slow-model preference in place', () => {
+    svc.load();
+    ctrl.expectOne(`${base}/api/me/ai`).flush({ configs: [config({ id: 5 })], activeId: null });
+
+    svc.setSlowModel(5, true);
+    const request = ctrl.expectOne(`${base}/api/me/ai/configs/5/slow-model`);
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ slowModel: true });
+    request.flush(config({ id: 5, slowModel: true }));
+
+    expect(svc.configs()[0].slowModel).toBe(true);
   });
 
   it('posts batch concurrency and upserts the returned config', () => {

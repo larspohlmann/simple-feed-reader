@@ -21,6 +21,7 @@ export interface AiConfig {
   readonly active: boolean;
   readonly suppressReasoning: boolean;
   readonly batchConcurrency: number;
+  readonly slowModel: boolean;
 }
 
 export interface AiConfigList {
@@ -142,6 +143,16 @@ export class AiSettingsService {
       { action: 'row', configId: id },
       this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/reasoning`, {
         suppressReasoning,
+      }),
+      (config) => this.upsert(config),
+    );
+  }
+
+  setSlowModel(id: number, slowModel: boolean): void {
+    this.run(
+      { action: 'row', configId: id },
+      this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/slow-model`, {
+        slowModel,
       }),
       (config) => this.upsert(config),
     );
