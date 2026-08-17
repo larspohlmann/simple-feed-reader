@@ -2,11 +2,12 @@
 
 The production stack is the production PHP image, nginx serving the compiled
 app with `/api` handled same-origin, the `worker` container that drives
-background recommendation runs and the scheduled feed refresh (#311), and —
-unless you choose SQLite (§1) — a MySQL container beside them, defined
-in [`docker-compose.prod.yml`](../docker-compose.prod.yml). An optional
-Meilisearch container joins them when you enable full-content search (§1);
-the app answers searches from the database whenever it is absent. It is completely
+background recommendation runs and the scheduled feed refresh (#311), and — for
+the M and L packages (§1) — a MySQL container beside them, defined
+in [`docker-compose.prod.yml`](../docker-compose.prod.yml). A Meilisearch
+container joins them for the L package, or for a C install that enables
+full-content search (§1); the app answers searches from the database whenever
+it is absent. It is completely
 separate from the [development stack](local-docker.md): its own compose file,
 its own project name (`simple-feed-reader-prod`), its own volumes. Both can
 run on the same machine.
@@ -55,6 +56,30 @@ The installer clones the project, checks out the latest release, generates
 every secret it can (database passwords, signing keys), and asks for the few
 values only you know:
 
+- **Which package** — the first question, and the one that decides both the
+  database and the search engine, because together they are what the stack
+  costs in memory. **S** is SQLite in a file, with no container beside the
+  app's own three, about 250 MB. **M** adds a MySQL container (about 1 GB).
+  **L** adds MySQL and a Meilisearch container (about 2.5 GB). Every package
+  runs the same application, with every feature, and **search works in all
+  three**: S and M answer it from the database, which matches titles and
+  summaries, and L matches the full text of every article as well. The packages
+  and their measured figures are in the
+  [README](../README.md#which-package); the installer prints the same lines.
+
+  Two more keys decide how much you are asked. **Q**, **the default**, is the
+  quick install: the S stack, and no other question at all — it answers the
+  rest for you, `http://localhost:3333` and no account mail, so pressing return
+  here brings the instance up. Both are changeable afterwards with
+  `./scripts/prod-configure.sh` (§7). **C** is the opposite: choose everything
+  yourself. S, M and L still ask the origin and mail-transport questions below;
+  C adds the database and the search-engine ones to them — the only way to reach a
+  combination the three packages do not cover, such as SQLite with a search
+  engine.
+
+  Without a terminal (`curl | bash` piped into a script) the installer applies
+  the **S** package, not Q: there is no question to skip, so it writes
+  `.env.prod` and stops for the mail transport exactly as it always has.
 - **How users reach the instance** — three questions, because this is three
   decisions:
   1. Plain HTTP, direct (the default); HTTPS with a certificate this stack
@@ -71,21 +96,24 @@ values only you know:
 
   Together these become `PUBLIC_URL` and the published container ports. For
   OAuth sign-in, and for Safari, use a real HTTPS origin.
-- **Which database** — **MySQL by default**, in a container beside the app.
-  Answer SQLite for a personal instance: the whole database is then one file
-  inside the `php-var` volume, and no database container starts at all. The
-  schema, the migrations and every feature are the same either way; MySQL
-  handles several people writing at once better, SQLite costs an instance with
-  one or two users nothing.
+- **Which database** — asked for package **C** only, and **SQLite by default**
+  there, so that pressing return through the installer lands on the same stack
+  package S installs. Answer MySQL for a container beside the app; SQLite keeps
+  the whole database in one file inside the `php-var` volume and starts no
+  database container at all. The schema, the migrations and every feature are
+  the same either way; MySQL handles several people writing at once better,
+  SQLite costs an instance with one or two users nothing.
 
   Answer it **once**, at install time. Switching afterwards points the app at
   an empty database — moving the rows from one engine to the other is a manual
   job, so `./scripts/prod-configure.sh` deliberately never re-asks this
   question. In `.env.prod` the answer is `DATABASE_URL`: empty means the
   bundled MySQL.
-- **Whether to run a search engine** — **Meilisearch by default**, in a
-  container beside the app, indexing the full text of every entry. Answer no
-  and search runs against the database instead, which always works. Unlike
+- **Whether to run a search engine** — asked for package **C** only, and **no
+  by default** there, for the same reason as the database question. Answer yes
+  to run Meilisearch in a container beside the app, indexing the full text of
+  every entry; declining leaves search running against the database, which
+  always works. Unlike
   the database question, this one is safe to change later with
   `./scripts/prod-configure.sh` (§7) — but enabling the engine on an install
   that already has entries leaves the index empty until you run it once:

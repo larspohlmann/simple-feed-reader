@@ -1174,28 +1174,272 @@ generate_prod_certificate() {
       "$1" )
 }
 
-# --- which database the instance runs on ------------------------------------
-# Asked by the installer, once. Switching afterwards means moving the data from
-# one engine to the other, which nothing here does -- so prod-configure.sh, the
-# script that re-asks the questions of an existing install, deliberately does
-# not ask this one.
+# --- which package the instance installs -------------------------------------
+# The first question of a fresh install (#453). The database and the search
+# engine used to be two questions, asked apart and neither saying what its
+# answer costs -- so an operator had to answer two of them to settle the one
+# thing they actually wanted to decide: how big this install is going to be.
+# This question settles it once, and prints the measured memory figure of every
+# combination.
 #
-# MySQL is the default: it is what every install ran on before this question
-# existed, and pressing return has to keep meaning that.
+# It is not a second code path. Each package selects between the appliers the
+# two sub-questions already use, so the reason those write their value rather
+# than leaving the file alone (see use_bundled_mysql_database and
+# use_bundled_search_engine) holds here unchanged.
+#
+# Five keys, three of them stacks: S, M and L are what runs. Q and C are how
+# much the operator wants to be asked -- Q nothing at all, C every question the
+# installer has. Only C adds the database and the search-engine questions to
+# the origin and mail ones every package asks, which makes it the only way to
+# reach a combination the three stacks do not cover (SQLite with a search
+# engine).
+#
+# prod-configure.sh does not ask it. A package implies a database, and
+# switching databases needs a manual data move -- the same reason
+# configure_database is never re-asked there.
+
+# What pressing return selects: Q, the quick install -- the S stack with every
+# remaining question answered from its own default. It is the answer the
+# largest group of operators wants, it starts no container nobody asked for,
+# and it is the only package that can promise a first start without a single
+# further decision.
+PACKAGE_DEFAULT='Q'
+
+# What no terminal applies, which is deliberately NOT Q. Q's promise is about
+# questions, and without a terminal there are none to skip: the installer
+# writes .env.prod and stops for the values only a human knows (the mail
+# transport), exactly as it documents. So the headless package is S -- the same
+# stack Q installs, through the same appliers, without Q's promise that nothing
+# else will be asked.
+PACKAGE_HEADLESS='S'
+
+# Which package the last configure_package round selected: S, M, L, Q or C.
+# install.sh reads it through custom_package_chosen and quick_package_chosen.
+CONFIGURED_PACKAGE=''
+
+configure_package() {
+  local choice
+  if ! can_prompt; then
+    apply_package "${PACKAGE_HEADLESS}"
+    return 0
+  fi
+  say 'Which package should this instance install?'
+  tell ''
+  package_question_line S
+  package_question_line M
+  package_question_line L
+  tell ''
+  package_question_line Q
+  package_question_line C
+  package_question_follow_up
+  while :; do
+    choice=$(prompt_with_default 'Package' "${PACKAGE_DEFAULT}")
+    case "${choice}" in
+      [sS]) apply_package S ; return 0 ;;
+      [mM]) apply_package M ; return 0 ;;
+      [lL]) apply_package L ; return 0 ;;
+      [qQ]) apply_package Q ; return 0 ;;
+      [cC]) apply_package C ; return 0 ;;
+    esac
+    # Five keys are not a y/n question: apply_search_engine_choice can read
+    # every non-'n' answer as yes, but here a typo would install a stack the
+    # operator did not choose. So ask again instead.
+    tell 'Answer S, M, L, Q or C.'
+  done
+}
+
+# The one-line description of each package. Kept as data because README.md
+# carries the same three lines -- an operator chooses the package while reading
+# the README and answers it in the terminal, so the two texts must not
+# disagree. scripts/test/configure-package.test.sh compares them.
+package_description() {
+  case "$1" in
+    S) printf '%s' 'a personal instance. SQLite, title and summary search.' ;;
+    M) printf '%s' 'several users. MySQL, title and summary search.' ;;
+    L) printf '%s' 'like M, plus Meilisearch for full-content search.' ;;
+    Q) printf '%s' 'quick: the S package, and nothing else to answer.' ;;
+    C) printf '%s' 'choose everything yourself, database and engine included.' ;;
+  esac
+}
+
+# The second line a package gets, where one line cannot carry it. Only the
+# default has one: it is the answer most operators press return on, so what it
+# decides on their behalf has to be on the screen before they do -- an install
+# that silently picks an origin and a mail setting is the one thing a default
+# must not be.
+package_note() {
+  case "$1" in
+    Q) printf '%s' 'It picks http://localhost:3333, and no mail until you add a relay.' ;;
+  esac
+}
+
+# What is still open after the answer. The five lines above say what runs; this
+# says what the operator will get to decide, which is the other half of the
+# choice and the reason C exists at all. It names the mail transport rather
+# than "mail", because that question asks for an SMTP relay's host, port, user
+# and password -- work an operator wants to see coming -- and says what having
+# no transport costs, since "none" is the mail question's own default.
+#
+# Printed once rather than per line: it is the same sentence for the three
+# stacks, and the two keys that differ are the ones it names. Q is not in it --
+# its own note above says what it decides instead of asking.
+#
+# Dimmed, and dimmed per line rather than once around the block: it is
+# supporting text, so the five keys stay the first thing the eye lands on, and
+# an attribute left open across a tell() would leak into whatever printed
+# next.
+package_question_follow_up() {
+  tell ''
+  tell "  ${_c_dim}Next: S, M and L ask for the public URL, and for a mail transport -- an${_c_reset}"
+  tell "  ${_c_dim}SMTP relay, or this machine's own MTA. Without one the app sends no${_c_reset}"
+  tell "  ${_c_dim}verification, password-reset or approval mail. C asks for those two as${_c_reset}"
+  tell "  ${_c_dim}well, plus the database and the search engine.${_c_reset}"
+}
+
+# What the stack needs, measured and not estimated: read from an idle, healthy
+# install carrying a real account of 107 feeds and 17,427 entries, with the
+# kernel high-water mark of boot, restore, refresh and reindex as the upper
+# bound (the figures are in issue #453). One figure for the whole stack rather
+# than a per-container table, because php, worker and web cost the same 75-90
+# MiB in all three packages -- only mysql and meilisearch separate them. C has
+# no figure: it has no fixed set of containers. Q repeats S's, because Q runs
+# S's containers and the line pressing return selects has to say what it costs
+# without being read together with another one.
+package_memory() {
+  case "$1" in
+    S | Q) printf '%s' 'needs about 250 MB' ;;
+    M) printf '%s' 'needs about 1 GB' ;;
+    L) printf '%s' 'needs about 2.5 GB' ;;
+  esac
+}
+
+# One line of the question. The key is bold cyan -- the colour every string
+# these scripts want typed or opened already uses -- and the sentence is bold
+# on the default package and dim on the other four, so the line pressing
+# return selects is visible without reading them all.
+#
+# The colour comes from the script's own _c_* variables, which are empty unless
+# stdout is a terminal, while tell() writes to /dev/tty. An install whose
+# stdout is redirected therefore asks this question in plain text on the
+# terminal. That is accepted rather than gated on /dev/tty separately: colour
+# follows stdout everywhere else in these scripts, one mechanism keeps NO_COLOR
+# working for free, and a test that greps this text never has to strip an
+# escape.
+package_question_line() {
+  local key=$1 text style memory note
+  style=${_c_dim}
+  if [ "${key}" = "${PACKAGE_DEFAULT}" ]; then
+    style=${_c_bold}
+  fi
+  text=$(package_description "${key}")
+  memory=$(package_memory "${key}")
+  if [ -n "${memory}" ]; then
+    printf -v text '%-*s  %s' "$(package_description_column)" "${text}" "${memory}"
+  fi
+  tell "  ${_c_bold}${_c_cyan}${key}${_c_reset}${style}) ${text}${_c_reset}"
+  note=$(package_note "${key}")
+  if [ -n "${note}" ]; then
+    tell "     ${style}${note}${_c_reset}"
+  fi
+}
+
+# The column the memory figures start in: one past the longest description that
+# carries a figure. Measured, not a constant, so an edited sentence cannot
+# leave the column behind -- and the point of the column is that the four
+# figures are compared by looking down it, not by reading four sentences.
+package_description_column() {
+  local key width=0 description
+  for key in S M L Q C; do
+    [ -n "$(package_memory "${key}")" ] || continue
+    description=$(package_description "${key}")
+    [ "${#description}" -le "${width}" ] || width=${#description}
+  done
+  printf '%s' "${width}"
+}
+
+# The package applied, shared by the question above and by the headless
+# default: one documented default, one place that applies it.
+#
+# C writes nothing on purpose. It means "ask me the two questions", and a value
+# written here would answer them before they are asked -- SQLite plus a search
+# engine is a valid install, and C is the only way to reach it.
+apply_package() {
+  CONFIGURED_PACKAGE=$1
+  case "$1" in
+    S | Q) use_sqlite_database ; use_database_search ;;
+    M) use_bundled_mysql_database ; use_database_search ;;
+    L) use_bundled_mysql_database ; use_bundled_search_engine ;;
+  esac
+}
+
+# Whether the operator asked to answer the database and search-engine questions
+# themselves. Only install.sh calls it: the four other packages have applied
+# both answers already, so asking again would overwrite the package.
+custom_package_chosen() {
+  [ "${CONFIGURED_PACKAGE}" = 'C' ]
+}
+
+# Whether the operator asked to be asked nothing more. Q is a promise about the
+# questions, not a fifth stack: it installs S, and install.sh then applies the
+# default of every remaining question instead of putting it on the screen.
+#
+# Those defaults are APPLIED, never skipped, for the reason the whole of #453
+# turns on: .env.prod's empty state is not its documented default, and a
+# question that is not asked still has to leave the file complete -- nothing
+# else is going to write it.
+quick_package_chosen() {
+  [ "${CONFIGURED_PACKAGE}" = 'Q' ]
+}
+
+# The public origin the three origin questions would have offered, applied
+# without asking: the topology .env.prod already describes (plain HTTP, as
+# shipped), the hostname it already carries (localhost, as shipped), and the
+# default port for that topology. Read from the same helpers the prompts
+# default from, so a changed default reaches both paths.
+apply_default_public_origin() {
+  local topology hostname
+  topology=$(current_topology)
+  hostname=$(host_from_url "$(env_prod_get PUBLIC_URL)")
+  apply_public_origin "${topology}" "${hostname:-localhost}" "$(default_port_for "${topology}")"
+}
+
+# --- which database the instance runs on ------------------------------------
+# Asked by the installer, once, and only for package C -- every other package
+# answers it through the same appliers below. Switching afterwards
+# means moving the data from one engine to the other, which nothing here does
+# -- so prod-configure.sh, the script that re-asks the questions of an existing
+# install, deliberately does not ask this one.
+#
+# SQLite is the default. It was MySQL while this was the first thing an install
+# decided, because that is what every install ran on before the question
+# existed; since #453 the package question decides it instead, and its default
+# (S, a personal instance) is the smallest stack that starts no container the
+# operator did not ask for. Pressing return through the installer has to land
+# in the same place whichever path leads here, so this default follows it.
+#
+# The numbering does not follow the default: 1 stays MySQL and 2 stays SQLite.
+# Both lines are printed directly above the prompt, so nobody types a number
+# from memory, and configure_mail already defaults to its last choice (4) --
+# while renumbering would turn a copy of an older instruction into the other
+# engine without a word.
 configure_database() {
   local choice
   if ! can_prompt; then
+    # Not an early return: an empty DATABASE_URL means MySQL, so doing nothing
+    # here lands on the opposite of the documented default. Apply it explicitly
+    # instead, the way configure_search_engine applies the caller's.
+    use_sqlite_database
     return 0
   fi
   say 'Which database should this instance use?'
   tell '  1) MySQL: a database container beside the app (best for several users)'
   tell '  2) SQLite: a single file, no database container (fine for a personal instance)'
-  choice=$(prompt_with_default 'Choice' '1')
-  if [ "${choice}" = '2' ]; then
-    use_sqlite_database
+  choice=$(prompt_with_default 'Choice' '2')
+  if [ "${choice}" = '1' ]; then
+    use_bundled_mysql_database
     return 0
   fi
-  use_bundled_mysql_database
+  use_sqlite_database
 }
 
 use_sqlite_database() {
@@ -1213,11 +1457,17 @@ use_bundled_mysql_database() {
 }
 
 # --- whether the instance runs the bundled search engine ---------------------
-# Asked by the installer, defaulting to YES: full-content search over article
-# bodies is materially better than the database's title/summary LIKE fallback,
-# and it is the answer that keeps every existing install's behaviour (a
-# freshly written .env.prod, not an upgrade) working the same way the
-# out-of-the-box dev stack does.
+# Asked by the installer for package C only -- S, M and L answer it through the
+# appliers below -- and asked again by prod-configure.sh on every run.
+#
+# install.sh defaults it to NO. It defaulted to yes while this was one of the
+# first questions a fresh install met, on the argument that full-content search
+# over article bodies is materially better than the database's title/summary
+# LIKE fallback. It is -- but that is an argument for choosing package L, not
+# for adding a container to an install whose operator has not yet said how much
+# memory the machine has. Since #453 the package question makes that decision,
+# its default is S, and pressing return through the installer has to land on
+# the same stack whichever path leads here (#453).
 #
 # Unlike configure_database, this is safe to re-ask. Turning the engine on (or
 # off) later moves no data by hand: enabling it needs a URL, a key, and
@@ -1226,14 +1476,15 @@ use_bundled_mysql_database() {
 # stops reading it). So prod-configure.sh asks this question again on every
 # run, the same as configure_mail -- see the call site there.
 #
-# prompt_confirm cannot be used here: its default is no, and a FRESH install
-# has to default to yes.
+# prompt_confirm cannot be used here: its default is always no, and a re-ask of
+# an install that runs the engine has to default to yes.
 #
-# But a re-ask is a different question with a different right default, so the
-# default is a parameter rather than a hardcoded 'y'. install.sh always passes
-# 'y': a brand-new .env.prod has an empty MEILISEARCH_URL no matter what the
-# operator is about to choose, so that emptiness cannot be read back as "the
-# operator already said no" the way it safely can be for an existing install.
+# A re-ask is a different question with a different right default, so the
+# default stays a parameter rather than a hardcoded key. install.sh passes the
+# literal 'n': a brand-new .env.prod has an empty MEILISEARCH_URL no matter what
+# the operator is about to choose, so that emptiness cannot be read back as
+# "the operator already said no" the way it safely can be for an existing
+# install -- the value has to come from the caller either way.
 # prod-configure.sh passes back current_search_engine_choice, which reads the
 # stored value -- so pressing return through an unrelated question (a new
 # public URL, a new mail transport) can never flip a decision the operator
@@ -1243,16 +1494,14 @@ use_bundled_mysql_database() {
 configure_search_engine() {
   local default=$1 choice
   if ! can_prompt; then
-    # Unlike configure_database (whose default IS the empty/do-nothing state),
-    # a silent no-op here always lands on "no": an empty MEILISEARCH_URL is
-    # indistinguishable from a decline. install.sh's own header promises a
-    # default of yes, and the piped two-step install (write .env.prod, stop
-    # for the mail question, finish later in a real terminal) must land there
-    # too -- so apply the caller's default explicitly instead of doing
-    # nothing. It is still just the default being applied, so a re-ask
-    # (prod-configure.sh, default = current_search_engine_choice) still
-    # cannot flip a stored decision: it only ever re-applies what is already
-    # configured.
+    # A silent no-op here always lands on "no": an empty MEILISEARCH_URL is
+    # indistinguishable from a decline. So apply the caller's default
+    # explicitly instead of doing nothing -- configure_database now does the
+    # same for the same reason, its own empty state meaning MySQL rather than
+    # the SQLite it defaults to. It is still just the default being applied, so
+    # a re-ask (prod-configure.sh, default = current_search_engine_choice)
+    # still cannot flip a stored decision: it only ever re-applies what is
+    # already configured.
     apply_search_engine_choice "${default}"
     return 0
   fi
@@ -1282,7 +1531,7 @@ apply_search_engine_choice() {
 # The default configure_search_engine offers on a re-ask: whatever this
 # instance is already configured to run. Only prod-configure.sh calls this --
 # a fresh install has no decision on file yet to read back, which is exactly
-# why install.sh passes the literal 'y' instead.
+# why install.sh passes a literal instead ('n', the package default's answer).
 current_search_engine_choice() {
   if prod_uses_search_engine; then
     printf 'y'
@@ -1310,6 +1559,26 @@ use_bundled_search_engine() {
 # branches and the no-mail placeholder derive MAIL_FROM from.
 mail_host_from_public_url() {
   host_from_url "$(env_prod_get PUBLIC_URL)"
+}
+
+# The mail question's own default, applied: no outgoing mail, in the open.
+# Called by the question's fourth branch and by the quick install (package Q),
+# which reaches the same answer without printing the question.
+#
+# MAIL_FROM is set because docker-compose.prod.yml refuses to start without it,
+# even when nothing is ever sent -- an instance that says "no mail" has to be a
+# complete instance, not one more thing to fill in.
+use_no_mail() {
+  local mail_host
+  env_prod_set MAIL_DISABLED 1
+  env_prod_set MAILER_DSN 'null://null'
+  if [ -z "$(env_prod_get MAIL_FROM)" ]; then
+    mail_host=$(mail_host_from_public_url)
+    env_prod_set MAIL_FROM "simple-feed-reader@${mail_host}"
+    say "Mail is disabled -- set a placeholder From address (never sent): simple-feed-reader@${mail_host}"
+  fi
+  say 'Running without mail. Email confirmation and password-reset email are off.'
+  say 'Recover a password with: docker compose ... exec php bin/console app:user:reset-password <email> --generate'
 }
 
 # Which transport the last configure_mail round set: 1 relay, 2 host MTA,
@@ -1359,15 +1628,7 @@ configure_mail() {
       say '(SPF, DKIM, reverse DNS) -- watch the first real mail.'
       ;;
     4)
-      env_prod_set MAIL_DISABLED 1
-      env_prod_set MAILER_DSN 'null://null'
-      if [ -z "$(env_prod_get MAIL_FROM)" ]; then
-        mail_host=$(mail_host_from_public_url)
-        env_prod_set MAIL_FROM "simple-feed-reader@${mail_host}"
-        say "Mail is disabled -- set a placeholder From address (never sent): simple-feed-reader@${mail_host}"
-      fi
-      say 'Running without mail. Email confirmation and password-reset email are off.'
-      say 'Recover a password with: docker compose ... exec php bin/console app:user:reset-password <email> --generate'
+      use_no_mail
       ;;
     *)
       : # keep the current transport

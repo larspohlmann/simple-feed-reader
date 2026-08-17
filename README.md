@@ -91,16 +91,53 @@ curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/mai
 
 The installer clones the project into `./simple-feed-reader`, checks out the
 latest release, generates the secrets it can, asks for the things only you
-know (how users reach the instance — plain HTTP, your own certificate, or a
-reverse proxy — under which hostname and port, how to send mail, and whether
-to run a full-text search engine alongside the app), and starts the
-production stack. The search engine defaults to yes; answer no, or run
-outside Docker, and search runs against the database instead. The full guide
-— TLS, reverse proxies, mail verification, backups —
+know (which package to install, how users reach the instance — plain HTTP,
+your own certificate, or a reverse proxy — under which hostname and port, and
+how to send mail), and starts the production stack. The full guide — TLS,
+reverse proxies, mail verification, backups —
 is [docs/docker-production.md](docs/docker-production.md).
 
 > **Read before you pipe to bash.** You can inspect exactly what runs at
 > [scripts/install.sh](scripts/install.sh). The installer never deletes data.
+
+### Which package
+
+The first question the installer asks is which package to install. It decides
+the database and the search engine together, because the two of them are what
+the stack costs in memory:
+
+| Package | What you get | Containers | RAM |
+|---|---|---|---|
+| **S** | a personal instance. SQLite, title and summary search. | php, worker, web | needs about 250 MB |
+| **M** | several users. MySQL, title and summary search. | php, worker, web, mysql | needs about 1 GB |
+| **L** | like M, plus Meilisearch for full-content search. | php, worker, web, mysql, meilisearch | needs about 2.5 GB |
+
+Every package runs the same application, with every feature: they differ in
+the containers beside it, not in what the reader can do. **Search works in all
+three.** S and M answer it from the database, which matches titles and
+summaries; L adds a Meilisearch container that matches the full text of every
+article as well.
+
+Two more keys decide how much you are asked, rather than what runs:
+
+- **Q** — the quick install, and **the default**. It runs the S stack and asks
+  nothing else, which is what the question itself says under it:
+  *It picks http://localhost:3333, and no mail until you add a relay.*
+  Press return at the first question and the instance comes up. The public URL
+  and mail are changeable afterwards with `./scripts/prod-configure.sh`; the
+  database is not.
+- **C** — choose everything yourself, database and engine included. S, M and L
+  ask for the public URL and for the mail transport anyway — an SMTP relay
+  (host, port, user, password) or the MTA on this machine, which the app needs
+  before it can send verification, password-reset and approval mail. Without
+  one it sends none, which is the default and a complete answer for a private
+  instance. C adds the database and the search-engine questions to those,
+  which makes it the only way to reach a combination the three packages do not
+  cover, such as SQLite with a search engine.
+
+The figures are measured on an idle, healthy stack holding a real account of
+107 feeds and 17,427 articles. S and M do not grow with the number of
+articles; L adds roughly 45 MB per 1,000 articles on top of its base.
 
 Both installers take a target directory and `--ref <branch-or-tag>`, which
 installs something other than the latest release — how a change is tried on a

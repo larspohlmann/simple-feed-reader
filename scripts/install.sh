@@ -6,11 +6,23 @@ set -euo pipefail
 #   curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/main/scripts/install.sh | bash
 #
 # It clones the repository, checks out the latest release, writes .env.prod
-# with freshly generated secrets, asks for the few values only you know (the
-# public origin, which database, whether to run a search engine, and how to
-# send mail), and starts the production stack: the production PHP image,
-# nginx serving the built app, MySQL unless you answer SQLite, and Meilisearch
-# unless you decline it (search then runs against the database instead).
+# with freshly generated secrets, asks for the few values only you know (which
+# package to install, the public origin, and how to send mail), and starts the
+# production stack: the production PHP image, nginx serving the built app, the
+# worker, and whatever the package adds beside them.
+#
+# The package is the first question, and the only one that says what the answer
+# costs: S, M and L each print what they run and how much memory the stack
+# needs. S is SQLite in a file, with no container besides the app's own three;
+# M adds MySQL; L adds MySQL and a Meilisearch container. Search works in all
+# three -- S and M answer it from the database, matching titles and summaries,
+# and L matches the full text of every article as well.
+#
+# Two more keys decide how much you are asked. Q -- the default -- is the quick
+# install: the S stack, and no other question at all, because it answers the
+# rest (http://localhost:3333, and no account mail; both changeable later with
+# ./scripts/prod-configure.sh). C is the opposite: every question, the database
+# and the search engine included.
 #
 # It deletes data in exactly one case, and only after you say yes to it: an
 # earlier production install whose Docker volumes are still on this machine.
@@ -149,14 +161,31 @@ env_prod_set MYSQL_ROOT_PASSWORD "$(generate_secret)"
 env_prod_set MYSQL_PASSWORD "$(generate_secret)"
 
 # --- 6. the values only the operator knows ----------------------------------
-configure_public_url
-configure_database
-# A fresh .env.prod has no engine decision on file yet -- an empty
-# MEILISEARCH_URL here means "nobody has been asked", not "declined" -- so
-# this is the one caller allowed to hardcode the default. See
-# configure_search_engine's own comment for the prod-configure.sh contrast.
-configure_search_engine 'y'
-configure_mail
+# The package comes first: it decides the database and the search engine
+# together, and prints what each combination costs in memory. What follows it
+# is the package's own answer to "how much do you want to be asked" -- nothing
+# more for Q, the origin and mail for S, M and L, and all four questions for C.
+configure_package
+if quick_package_chosen; then
+  # Q asked to be asked nothing more, so the two remaining questions are not
+  # printed -- but their defaults are still WRITTEN, because a question nobody
+  # asks leaves nobody to fill the value in, and the stack refuses to start
+  # without it.
+  apply_default_public_origin
+  use_no_mail
+else
+  configure_public_url
+  if custom_package_chosen; then
+    configure_database
+    # 'n', so that pressing return through the C path lands where the default
+    # package S does. A fresh .env.prod has no engine decision on file to read
+    # back -- an empty MEILISEARCH_URL here means "nobody has been asked", not
+    # "declined" -- which is why this caller passes a literal at all. See
+    # configure_search_engine's own comment for the prod-configure.sh contrast.
+    configure_search_engine 'n'
+  fi
+  configure_mail
+fi
 
 # --- 7. start, or explain how to --------------------------------------------
 missing=$(env_prod_missing)

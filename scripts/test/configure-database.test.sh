@@ -4,13 +4,22 @@ set -euo pipefail
 # Unit test for the installer's database question in lib.sh (#277), and for
 # what the answer makes the rest of the scripts do.
 #
-# Two things have to hold. Pressing return must still mean MySQL, because that
-# is what every install ran on before the question existed and an .env.prod
-# written by an older installer must keep its database. And the answer has to
-# reach docker: the mysql service sits behind a compose profile, so an install
-# that says SQLite but still enables the profile starts a database container it
+# Three things have to hold. Pressing return must mean SQLite: since #453 the
+# package question decides the database, its default is S (a personal
+# instance), and this question -- now asked for package C only -- has to land
+# in the same place, or the two paths through the installer disagree about what
+# return means. Without a terminal the same default must be WRITTEN, not
+# skipped: an empty DATABASE_URL is what selects MySQL, so a no-op here lands
+# on the opposite of the documented default. And the answer has to reach
+# docker: the mysql service sits behind a compose profile, so an install that
+# says SQLite but still enables the profile starts a database container it
 # never talks to, while the opposite leaves a MySQL install with no database at
 # all.
+#
+# The choice NUMBERS are deliberately not the flipped default: 1 is still
+# MySQL, 2 is still SQLite. Both lines print directly above the prompt, so
+# nobody types a number from memory -- while renumbering would silently turn a
+# copy of an older instruction into the other engine.
 #
 # The real prompts read /dev/tty. They are replaced here with a canned answer
 # queue, where an empty answer means "press return".
@@ -58,13 +67,16 @@ answer_with() {
   configure_database > /dev/null 2>&1
 }
 
-# --- 1. pressing return keeps MySQL -----------------------------------------
-# An empty DATABASE_URL is what docker-compose.prod.yml falls back to, so this
-# is also the value every .env.prod written before this question holds.
+# --- 1. pressing return selects SQLite ---------------------------------------
+# The package question's default is S, so this one's has to be SQLite too: an
+# operator who answers C and then presses return through the rest must not end
+# up with a database container the S path would never have started.
 answer_with ''
-assert_env DATABASE_URL ''
-assert_profiles mysql
-prod_uses_bundled_mysql || fail 'the default answer must run the bundled MySQL'
+assert_env DATABASE_URL 'sqlite:///%kernel.project_dir%/var/data.db'
+assert_profiles ''
+if prod_uses_bundled_mysql; then
+  fail 'the default answer must not run the bundled MySQL'
+fi
 
 # --- 2. answering SQLite writes the file DSN and drops the container ---------
 answer_with 2
@@ -83,12 +95,16 @@ configure_database > /dev/null 2>&1
 assert_env DATABASE_URL ''
 assert_profiles mysql
 
-# --- 4. an unreadable terminal changes nothing -------------------------------
-# The piped, question-less install stops before starting anyway; it must not
-# invent a database choice on the way.
+# --- 4. an unreadable terminal WRITES the default ---------------------------
+# It used to return without writing, which was correct only while the default
+# was the do-nothing state. Now the do-nothing state (an empty DATABASE_URL,
+# i.e. the bundled MySQL) is the opposite of the default, so the default has to
+# be applied explicitly -- the same thing configure_search_engine does with the
+# default it is passed, and for the same reason.
 can_prompt() { return 1; }
-printf 'DATABASE_URL=sqlite:///%%kernel.project_dir%%/var/data.db\n' > "${ENV_PROD_FILE}"
+printf 'DATABASE_URL=\n' > "${ENV_PROD_FILE}"
 configure_database > /dev/null 2>&1
 assert_env DATABASE_URL 'sqlite:///%kernel.project_dir%/var/data.db'
+assert_profiles ''
 
 printf 'ok: configure_database\n'

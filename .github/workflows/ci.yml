@@ -254,6 +254,14 @@ jobs:
       - name: piped-installer-not-truncated
         run: scripts/test/piped-installer-not-truncated.test.sh
 
+      # The package question (#453) -- the first thing a fresh install asks,
+      # and the one that decides the two questions below at once. It also
+      # prints the measured memory figure of each package, so the test compares
+      # those figures against the ones README.md states: an operator who reads
+      # both must not find two different numbers.
+      - name: configure_package
+        run: scripts/test/configure-package.test.sh
+
       # The database question (#277). Its answer decides which compose profile
       # the stack runs with, so a wrong mapping either starts a MySQL container
       # nobody talks to or leaves a MySQL install without a database.
