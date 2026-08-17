@@ -610,11 +610,27 @@ final class RecommendationRunAdvancer
         }
     }
 
+    /**
+     * Guarded like every banking write, and for the same reason: the counter
+     * and the fail() the ceiling triggers are the run's own state, and a tick
+     * that may no longer write must write none of it (#439). The entity cannot
+     * refuse it -- RecommendationRun::recordTransportFailure() judges the
+     * status this tick read before the call, so a run another process has
+     * since completed is failed straight over the top of it.
+     *
+     * Nothing is swallowed while the lock is held and the run is live, which
+     * is every ordinary transport failure: the guard cannot throw there, and
+     * the caller's re-throw carries the provider's error out as before. When
+     * it does throw, this tick has stopped owning the run, and tick() answers
+     * with the state its real owner wrote.
+     */
     private function recordTransportFailure(
         RecommendationRun $run,
         AiProviderSettings $settings,
         string $failureDetail,
     ): void {
+        $this->checkpoint->guard($run);
+
         $ceilingReached = $run->recordTransportFailure();
         if ($ceilingReached) {
             // The real per-call detail, not a hardcoded "could not be reached":

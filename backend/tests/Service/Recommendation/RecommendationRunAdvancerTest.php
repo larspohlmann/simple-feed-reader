@@ -583,6 +583,46 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
+     * Losing the lock and hitting a transport failure in the same round is a
+     * reachable pair -- the beat that notices the loss fires per chunk, and
+     * the wave's failure is raised once the round resolves -- and the failure
+     * path used to write where the banking path was stopped: a counter
+     * increment, and the run failed outright once the ceiling was reached,
+     * over whatever the lock's new owner had made of the run meanwhile (#439).
+     *
+     * The counter is read from the row rather than from the entity, because
+     * the entity is exactly the unwritten in-memory copy under test.
+     */
+    public function testATickThatLostItsLockRecordsNoTransportFailureAgainstTheRun(): void
+    {
+        $this->recordLocksOverTheRealStore();
+        $this->seedMultiBatchFixture();
+        $run = $this->startAndSnapshot();
+        $runId = $run->getId() ?? 0;
+
+        $thief = null;
+        $this->stubChatClient()->duringNextCall(function () use (&$thief): void {
+            $thief = $this->stealTheTickLock();
+            $this->streamHeartbeat()->beat();
+        });
+        $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down'));
+
+        try {
+            $report = $this->advancer()->advance($this->user);
+
+            self::assertSame('running', $report->status);
+
+            $this->em->clear();
+            $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
+            self::assertNotNull($persisted);
+            self::assertSame(0, $this->persistedTransportFailures($persisted));
+            self::assertSame(RecommendationRun::STATUS_RUNNING, $persisted->getStatus());
+        } finally {
+            $thief?->release();
+        }
+    }
+
+    /**
      * The same stop at the other checkpoint. The batch phase guards inside
      * RecommendationBatchWave; the dedup phase guards in the advancer itself,
      * and what it protects is bigger — the next statement after it finalizes
