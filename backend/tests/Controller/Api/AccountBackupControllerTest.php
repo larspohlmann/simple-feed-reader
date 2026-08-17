@@ -47,9 +47,11 @@ final class AccountBackupControllerTest extends WebTestCase
         $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $em->flush();
 
-        ob_start();
         $client->request('GET', '/api/account/backup', server: $headers);
-        ob_get_clean();
+
+        // Symfony's BrowserKit captures StreamedResponse's echoed content into the internal response
+        $internalResponse = $client->getInternalResponse();
+        $streamed = $internalResponse->getContent();
 
         self::assertResponseIsSuccessful();
         self::assertSame('application/gzip', $client->getResponse()->headers->get('Content-Type'));
@@ -58,11 +60,6 @@ final class AccountBackupControllerTest extends WebTestCase
             'attachment; filename="account-backup-',
             (string) $client->getResponse()->headers->get('Content-Disposition'),
         );
-
-        // Get the streamed content from the server variable (set by the factory for testing)
-        $content = $_SERVER['BACKUP_DOWNLOAD_CONTENT'] ?? '';
-        self::assertIsString($content);
-        $streamed = $content;
 
         $ndjson = gzdecode($streamed);
         self::assertIsString($ndjson);

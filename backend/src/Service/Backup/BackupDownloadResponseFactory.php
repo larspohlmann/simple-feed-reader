@@ -26,27 +26,21 @@ final readonly class BackupDownloadResponseFactory
     {
         $filename = sprintf('account-backup-%s.json.gz', $this->clock->now()->format('Y-m-d'));
 
-        // Collect all lines and gzip them incrementally
-        $gzipOutput = '';
-        $gzip = deflate_init(\ZLIB_ENCODING_GZIP);
-        if (false === $gzip) {
-            throw new \RuntimeException('Cannot initialise gzip compression.');
-        }
-        foreach ($lines as $line) {
-            $gzipOutput .= deflate_add($gzip, $line . "\n", \ZLIB_NO_FLUSH);
-        }
-        $gzipOutput .= deflate_add($gzip, '', \ZLIB_FINISH);
-
-        // Store the output for testing purposes (in test environments, output buffering
-        // may not work reliably with StreamedResponse)
-        $_SERVER['BACKUP_DOWNLOAD_CONTENT'] = $gzipOutput;
-
-        return (new StreamedResponse(
-            null,
+        return new StreamedResponse(
+            static function () use ($lines): void {
+                $gzip = deflate_init(\ZLIB_ENCODING_GZIP);
+                if (false === $gzip) {
+                    throw new \RuntimeException('Cannot initialise gzip compression.');
+                }
+                foreach ($lines as $line) {
+                    echo deflate_add($gzip, $line . "\n", \ZLIB_NO_FLUSH);
+                }
+                echo deflate_add($gzip, '', \ZLIB_FINISH);
+            },
             headers: [
                 'Content-Type' => 'application/gzip',
                 'Content-Disposition' => sprintf('attachment; filename="%s"', $filename),
             ],
-        ))->setChunks([$gzipOutput]);
+        );
     }
 }
