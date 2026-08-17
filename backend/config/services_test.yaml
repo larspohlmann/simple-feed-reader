@@ -517,3 +517,17 @@ services:
     App\Service\Backup\EntryBatchInserter:
         autowire: true
         public: true
+
+    # AccountRestorerTest drives restore() directly against the real
+    # inspector/fit-check/reset/loader graph — the round trip the spec demands
+    # only means anything through the same wiring production will use. The
+    # restore endpoint arrives in a later task, so until then the compiler
+    # would inline both away and the test container could not fetch them. Same
+    # `autowire` caveat as the entries above.
+    App\Service\Backup\AccountRestorer:
+        autowire: true
+        public: true
+
+    App\Service\Backup\RestoreLoader:
+        autowire: true
+        public: true

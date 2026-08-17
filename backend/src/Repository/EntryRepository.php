@@ -145,4 +145,31 @@ class EntryRepository extends ServiceEntityRepository
 
         return $byHash;
     }
+
+    /**
+     * The feed's whole guid hash ⇒ entry id map, as scalars. The restore uses
+     * it twice: to drop the file's entries the feed already holds, and to
+     * attach the file's entry states to rows whose ids the source instance
+     * never knew. Ids and hashes only — hydrating the entities would put a
+     * feed's entire back catalogue in memory for a two-column lookup.
+     *
+     * @return array<string, int>
+     */
+    public function guidHashToIdMapForFeed(int $feedId): array
+    {
+        /** @var list<array{guidHash: string, id: int}> $rows */
+        $rows = $this->createQueryBuilder('e')
+            ->select('e.guidHash AS guidHash', 'e.id AS id')
+            ->andWhere('e.feed = :feed')
+            ->setParameter('feed', $feedId)
+            ->getQuery()
+            ->getResult();
+
+        $idsByHash = [];
+        foreach ($rows as $row) {
+            $idsByHash[$row['guidHash']] = $row['id'];
+        }
+
+        return $idsByHash;
+    }
 }

@@ -94,6 +94,30 @@ class FeedRepository extends ServiceEntityRepository
         return array_map(static fn (array $row): int => (int) $row['id'], $rows);
     }
 
+    /**
+     * Whether any account OTHER than this one reads the feed. A feed row is
+     * shared, and the restore asks this before it writes: one other subscriber
+     * makes the feed's entries a stranger's unread list, so the restore
+     * references the row and adds nothing to it.
+     *
+     * A question about the feed, answered here rather than on
+     * SubscriptionRepository, and as a yes/no rather than a count — no caller
+     * has any business with "how many strangers", and a bare number invites
+     * exactly that.
+     */
+    public function isReadByAnotherUser(int $feedId, int $excludedUserId): bool
+    {
+        $others = (int) $this->createQueryBuilder('f')
+            ->select('COUNT(s.id)')
+            ->join(Subscription::class, 's', 'ON', 's.feed = f')
+            ->andWhere('f.id = :feedId')->setParameter('feedId', $feedId)
+            ->andWhere('s.user <> :userId')->setParameter('userId', $excludedUserId)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return $others > 0;
+    }
+
     private function dueQueryBuilder(DueFeedCriteria $criteria): QueryBuilder
     {
         $qb = $this->createQueryBuilder('f');
