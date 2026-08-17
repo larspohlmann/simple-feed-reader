@@ -46,7 +46,15 @@ final readonly class BackupFilename
         return self::sanitised(str_replace('.', '_', $unprefixed));
     }
 
-    /** "ada.lovelace+tag@fastmail.com" -> "ada-lovelace-tag-at-fastmail". */
+    /**
+     * "ada.lovelace+tag@fastmail.com" -> "ada-lovelace-tag-at-fastmail". The
+     * assembled "{local}-at-{domain}" string is sanitised again as a whole:
+     * an address with no "@", an empty local part, or an empty domain leaves
+     * one half of the join blank, which would otherwise surface as a
+     * doubled, leading, or trailing separator. Nothing upstream validates
+     * email *format* (only non-emptiness), so this is reachable in
+     * production, not merely theoretical.
+     */
     private function normalisedAccount(): string
     {
         $parts = explode('@', $this->accountEmail, 2);
@@ -54,11 +62,11 @@ final readonly class BackupFilename
         $domain = $parts[1] ?? '';
         $firstDomainLabel = explode('.', $domain)[0];
 
-        return sprintf(
+        return self::sanitised(sprintf(
             '%s-at-%s',
             self::sanitised(str_replace('.', '-', $localPart)),
             self::sanitised($firstDomainLabel),
-        );
+        ));
     }
 
     /**

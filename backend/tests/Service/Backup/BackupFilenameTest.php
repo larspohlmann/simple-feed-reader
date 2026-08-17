@@ -85,4 +85,61 @@ final class BackupFilenameTest extends TestCase
         self::assertMatchesRegularExpression('/^[a-z0-9_-]+\.json\.gz$/', $filename->value());
         self::assertStringContainsString('-l', $filename->value());
     }
+
+    /**
+     * No upstream validator enforces email *format* (only non-emptiness:
+     * CreateAdminCommand, E2eSeedAdminCommand, BootstrapAdminProvisioner and
+     * OAuthAccountLinker all accept a raw string), so a value with no "@" is
+     * reachable, not just theoretical. It must not leave a trailing "-at-"
+     * on the account field.
+     */
+    public function testHandlesAnAddressWithNoAtSignWithoutADoubledOrTrailingSeparator(): void
+    {
+        $filename = new BackupFilename('notanemail', 'v0.6.2', $this->exportedAt());
+
+        self::assertSame(
+            'simplefeedreader-0_6_2-notanemail-at-20260817.json.gz',
+            $filename->value(),
+        );
+    }
+
+    public function testHandlesAnEmptyLocalPartWithoutALeadingSeparator(): void
+    {
+        $filename = new BackupFilename('@fastmail.com', 'v0.6.2', $this->exportedAt());
+
+        self::assertSame(
+            'simplefeedreader-0_6_2-at-fastmail-20260817.json.gz',
+            $filename->value(),
+        );
+    }
+
+    public function testHandlesAnEmptyDomainWithoutATrailingSeparator(): void
+    {
+        $filename = new BackupFilename('user@', 'v0.6.2', $this->exportedAt());
+
+        self::assertSame(
+            'simplefeedreader-0_6_2-user-at-20260817.json.gz',
+            $filename->value(),
+        );
+    }
+
+    public function testHandlesASingleLabelDomainNormally(): void
+    {
+        $filename = new BackupFilename('user@localhost', 'v0.6.2', $this->exportedAt());
+
+        self::assertSame(
+            'simplefeedreader-0_6_2-user-at-localhost-20260817.json.gz',
+            $filename->value(),
+        );
+    }
+
+    public function testHandlesABareAtSignWithoutAnEmptyAccountField(): void
+    {
+        $filename = new BackupFilename('@', 'v0.6.2', $this->exportedAt());
+
+        self::assertSame(
+            'simplefeedreader-0_6_2-at-20260817.json.gz',
+            $filename->value(),
+        );
+    }
 }
