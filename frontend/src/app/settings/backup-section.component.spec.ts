@@ -45,6 +45,9 @@ describe('BackupSectionComponent', () => {
   beforeEach(() => {
     load.mockReset();
     run.mockReset();
+    // jsdom lacks these:
+    (URL as unknown as { createObjectURL: unknown }).createObjectURL = jest.fn(() => 'blob:x');
+    (URL as unknown as { revokeObjectURL: unknown }).revokeObjectURL = jest.fn();
   });
   afterEach(() => ctrl.verify());
 
@@ -153,5 +156,53 @@ describe('BackupSectionComponent', () => {
     expect((f.nativeElement as HTMLElement).textContent ?? '').toContain(
       'This backup is for a different plan.',
     );
+  });
+
+  it('renders the "—" fallback when the backup has no source email', () => {
+    const f = mount();
+    chooseFile(f);
+    ctrl.expectOne('https://api.test/api/account/restore/preview').flush({
+      ...previewResponse,
+      backup: { ...previewResponse.backup, sourceEmail: null },
+    });
+    f.detectChanges();
+
+    const text = (f.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('—');
+    expect(text).not.toContain('null');
+  });
+
+  it('downloads the safety-net OPML export through the shared saveAs helper', () => {
+    const f = mount();
+    chooseFile(f);
+    ctrl.expectOne('https://api.test/api/account/restore/preview').flush(previewResponse);
+    f.detectChanges();
+
+    const c = f.componentInstance;
+    c.exportSafetyNetOpml();
+    const req = ctrl.expectOne('https://api.test/api/opml/export');
+    expect(req.request.method).toBe('GET');
+    req.flush('<opml/>');
+
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    expect(c.safetyNetExporting()).toBe(false);
+  });
+
+  it('shows an error rather than failing silently when the safety-net export fails', () => {
+    const f = mount();
+    chooseFile(f);
+    ctrl.expectOne('https://api.test/api/account/restore/preview').flush(previewResponse);
+    f.detectChanges();
+
+    const c = f.componentInstance;
+    c.exportSafetyNetOpml();
+    ctrl
+      .expectOne('https://api.test/api/opml/export')
+      .flush('server error', { status: 500, statusText: 'Server Error' });
+    f.detectChanges();
+
+    expect(c.safetyNetExporting()).toBe(false);
+    expect(c.safetyNetError()).not.toBeNull();
+    expect((f.nativeElement as HTMLElement).querySelectorAll('app-error-banner').length).toBe(1);
   });
 });

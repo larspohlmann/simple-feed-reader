@@ -31,6 +31,9 @@ export class BackupSectionComponent {
   readonly exporting = signal(false);
   readonly exportError = signal<Problem | null>(null);
 
+  readonly safetyNetExporting = signal(false);
+  readonly safetyNetError = signal<Problem | null>(null);
+
   readonly file = signal<File | null>(null);
   readonly previewing = signal(false);
   readonly preview = signal<RestorePreview | null>(null);
@@ -67,8 +70,17 @@ export class BackupSectionComponent {
   }
 
   exportSafetyNetOpml(): void {
-    this.api.exportOpml().subscribe((xml) => {
-      saveAs(new Blob([xml], { type: 'text/x-opml' }), 'feeds.opml');
+    this.safetyNetExporting.set(true);
+    this.safetyNetError.set(null);
+    this.api.exportOpml().subscribe({
+      next: (xml) => {
+        this.safetyNetExporting.set(false);
+        saveAs(new Blob([xml], { type: 'text/x-opml' }), 'feeds.opml');
+      },
+      error: (e: HttpErrorResponse) => {
+        this.safetyNetExporting.set(false);
+        this.safetyNetError.set(parseProblem(e));
+      },
     });
   }
 

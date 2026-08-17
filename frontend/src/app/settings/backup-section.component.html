@@ -61,9 +61,19 @@
         <p class="warning">{{ 'settings.backup.ageWarning' | transloco }}</p>
 
         <div class="confirm">
-          <app-button variant="ghost" (click)="exportSafetyNetOpml()">
-            {{ 'settings.backup.safetyNet' | transloco }}
+          <app-button
+            variant="ghost"
+            [disabled]="safetyNetExporting()"
+            (click)="exportSafetyNetOpml()"
+          >
+            {{
+              (safetyNetExporting() ? 'settings.backup.preparing' : 'settings.backup.safetyNet')
+                | transloco
+            }}
           </app-button>
+          @if (safetyNetError(); as problem) {
+            <app-error-banner [message]="problem.detail || problem.title" />
+          }
           <label class="confirmLabel">
             {{ 'settings.backup.typeToConfirm' | transloco }}
             <input
