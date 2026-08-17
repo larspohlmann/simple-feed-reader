@@ -214,4 +214,31 @@ final class BackupReaderTest extends TestCase
 
         iterator_to_array(new BackupReader()->read($gzip), false);
     }
+
+    public function testRefusesAFileMissingItsAccountLine(): void
+    {
+        $gzip = self::gzipOf([self::header(), self::footer()]);
+
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessageMatches('/account/i');
+
+        iterator_to_array(new BackupReader()->read($gzip), false);
+    }
+
+    public function testRefusesAnEmptyDateStringInsteadOfDefaultingToNow(): void
+    {
+        $gzip = self::gzipOf([
+            self::header(),
+            self::account(),
+            ['kind' => 'feed', 'url' => 'https://f.example/feed.xml', 'siteUrl' => null, 'title' => null,
+                'description' => null, 'faviconUrl' => null, 'sourceFormat' => 'xml'],
+            ['kind' => 'subscription', 'feedUrl' => 'https://f.example/feed.xml', 'customTitle' => null,
+                'position' => 0, 'markedReadUntil' => null, 'createdAt' => '', 'tags' => []],
+        ]);
+
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessageMatches('/createdAt/');
+
+        iterator_to_array(new BackupReader()->read($gzip), false);
+    }
 }

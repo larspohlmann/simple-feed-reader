@@ -93,9 +93,13 @@ final class LineField
      */
     public static function date(array $line, string $key): \DateTimeImmutable
     {
+        $value = self::string($line, $key);
+        if ('' === trim($value)) {
+            throw new InvalidBackupException(sprintf('Field "%s" is not a valid date.', $key));
+        }
+
         try {
-            return (new \DateTimeImmutable(self::string($line, $key)))
-                ->setTimezone(new \DateTimeZone('UTC'));
+            return (new \DateTimeImmutable($value))->setTimezone(new \DateTimeZone('UTC'));
         } catch (\DateMalformedStringException) {
             throw new InvalidBackupException(sprintf('Field "%s" is not a valid date.', $key));
         }

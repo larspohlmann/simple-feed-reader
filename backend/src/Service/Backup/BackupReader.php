@@ -62,6 +62,7 @@ final readonly class BackupReader
         $lineNumber = 0;
         $currentRank = -1;
         $counts = array_fill_keys(self::COUNTED_KINDS, 0);
+        $accountSeen = false;
         $footerSeen = false;
 
         foreach (GzipLineReader::lines($gzipBytes) as $line) {
@@ -80,9 +81,14 @@ final readonly class BackupReader
             $currentRank = $this->assertOrdered($kind, -1 === $currentRank, $currentRank, $lineNumber);
 
             if (BackupSchema::KIND_FOOTER === $kind) {
+                $this->assertAccountSeen($accountSeen);
                 $this->verifyFooter(FooterLine::fromLine($decoded), $counts);
                 $footerSeen = true;
                 continue;
+            }
+
+            if (BackupSchema::KIND_ACCOUNT === $kind) {
+                $accountSeen = true;
             }
 
             if (\in_array($kind, self::COUNTED_KINDS, true)) {
@@ -94,6 +100,13 @@ final readonly class BackupReader
 
         if (!$footerSeen) {
             throw new InvalidBackupException('The file is truncated — the closing footer line is missing.');
+        }
+    }
+
+    private function assertAccountSeen(bool $accountSeen): void
+    {
+        if (!$accountSeen) {
+            throw new InvalidBackupException('The backup is missing its account line.');
         }
     }
 
