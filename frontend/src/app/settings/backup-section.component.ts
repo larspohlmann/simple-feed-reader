@@ -22,10 +22,14 @@ const CONFIRM_PHRASE = 'REPLACE';
  *  large -- is refused before a single row is deleted. */
 const POST_WIPE_PROBLEM = 'backup_load_failed';
 
-/** A request that never reached an answer: the wipe may or may not have run,
- *  and only here is "the account may be partly loaded" the honest report. */
-function outcomeIsUnknown(problem: Problem): boolean {
-  return problem.status === 0;
+/** A request whose outcome is not provable from the response: a dropped
+ *  connection (status 0) leaves the wipe's fate unknown, and a 5xx --
+ *  gateway timeout, an OOM-killed worker, any throwable that is not the
+ *  typed BackupLoadFailedException -- can just as well be a post-wipe crash
+ *  that never reached the typed exception. Only here is "the account may be
+ *  partly loaded" the honest report. */
+function outcomeIsUnproven(problem: Problem): boolean {
+  return problem.status === 0 || problem.status >= 500;
 }
 
 @Component({
@@ -145,7 +149,7 @@ export class BackupSectionComponent {
         const problem = parseProblem(e);
         this.restoring.set(false);
         this.error.set(problem);
-        if (problem.type === POST_WIPE_PROBLEM || outcomeIsUnknown(problem)) {
+        if (problem.type === POST_WIPE_PROBLEM || outcomeIsUnproven(problem)) {
           this.failedOnce.set(true);
         }
       },

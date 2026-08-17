@@ -194,6 +194,23 @@ describe('BackupSectionComponent', () => {
     expect(c.failedOnce()).toBe(true);
   });
 
+  /** A gateway timeout after the wipe has no typed exception behind it --
+   *  nginx or php-fpm died first -- so it must not read as a clean refusal. */
+  it('keeps the data-loss banner for a 504 after the wipe', () => {
+    const f = mount();
+    chooseFile(f);
+    ctrl.expectOne('https://api.test/api/account/restore/preview').flush(previewResponse);
+    f.detectChanges();
+
+    const c = f.componentInstance;
+    c.typed.set('REPLACE');
+    c.restore();
+
+    failTheRestore(f, { type: 'about:blank', title: 'Gateway Timeout', status: 504 }, 504);
+
+    expect(c.failedOnce()).toBe(true);
+  });
+
   it('shows the preview problem detail and clears any stale preview', () => {
     const f = mount();
     chooseFile(f);
