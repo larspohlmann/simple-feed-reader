@@ -82,6 +82,12 @@ final class RecommendationRunRepository extends ServiceEntityRepository
      * Whether any run anywhere still needs driving. A count, not a fetch: the
      * terminate listener asks this on every request and must not pay for
      * hydration to learn the answer is no.
+     *
+     * The count itself is a scan, not an index seek: the only index on the
+     * table leads with `user_id`, and this filters on `status` alone. That is
+     * the right trade at this table's size -- one run row per generation, per
+     * account -- and it is why the answer is not cached and why no index was
+     * added for it.
      */
     public function hasActiveRun(): bool
     {

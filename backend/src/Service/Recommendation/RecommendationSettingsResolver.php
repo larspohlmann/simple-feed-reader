@@ -55,12 +55,13 @@ final readonly class RecommendationSettingsResolver
     }
 
     /**
-     * How many candidates one batch may carry. A property of the endpoint, not
-     * of the account's taste, so it is read off the connection rather than
-     * offered as a recommendation setting: how long a list a model holds in
-     * order is a property of its size and training (#437). No claim means the
-     * default stands. Split off `slow_model` in #445, which now governs
-     * timeouts alone.
+     * How many candidates one batch may carry. Read off the connection rather
+     * than offered as a recommendation setting, because it describes what the
+     * endpoint can be trusted with, not what the account likes (#437). It is
+     * the connection as configured that carries it, not the model behind it:
+     * the column survives a model change untouched. No claim means the default
+     * stands. Split off `slow_model` in #445, which now governs timeouts
+     * alone.
      */
     private static function batchCeilingFor(?AiProviderSettings $provider): int
     {

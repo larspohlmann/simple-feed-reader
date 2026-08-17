@@ -199,8 +199,8 @@ anything but timeouts.
 
 It asks the cheap question first:
 
-1. Is any run active? A new `RecommendationRunRepository::hasActiveRun()`, an
-   indexed existence read that normally answers no.
+1. Is any run active? A new `RecommendationRunRepository::hasActiveRun()`, a
+   count over a small table that normally answers no.
 2. Only then, `RecommendationDrainSpawner::spawnIfNoWorker()`.
 
 `RecommendationDrainSpawner::$launched` is deleted and the class becomes

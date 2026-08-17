@@ -62,8 +62,13 @@ class RunTuning
     /**
      * How many candidates one batch of this connection's run may carry, or null
      * to take the default. Split off `slow_model` in #445: how fast an endpoint
-     * answers and how long a list its model holds in order are different
+     * answers and how long a list it can be trusted with are different
      * properties, and one flag could not express a large model on slow hardware.
+     *
+     * The cap belongs to the connection as the account configured it, not to
+     * the model identifier: AiProviderSettings::chooseModel() refreshes
+     * `modelContextWindow` when the model changes and deliberately leaves this
+     * column alone, so a cap set here stands until the account changes it.
      *
      * The cap is not free either way. #437 watched a 4B local model given 45
      * entries answer eight batches correctly and fall into a repetition loop on

@@ -31,7 +31,7 @@
 
 | File | Responsibility |
 |---|---|
-| `backend/src/Repository/RecommendationRunRepository.php` (modify) | Add `hasActiveRun(): bool` — one indexed existence read |
+| `backend/src/Repository/RecommendationRunRepository.php` (modify) | Add `hasActiveRun(): bool` — one count, no hydration |
 | `backend/src/EventListener/RecommendationDrainOnTerminateListener.php` (create) | Decide and launch, once per request or command, after the response |
 | `backend/src/Service/Recommendation/RecommendationDrainSpawner.php` (modify) | Loses `$launched`, becomes `final readonly` |
 | `backend/src/Service/Recommendation/RecommendationRunStarter.php` (modify) | Loses the spawner dependency |
