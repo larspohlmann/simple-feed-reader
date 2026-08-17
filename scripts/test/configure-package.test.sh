@@ -131,8 +131,48 @@ if custom_package_chosen; then
   fail 'L must not run the sub-questions it already answered'
 fi
 
-# --- 5. an empty answer selects S -------------------------------------------
+# --- 4b. Q installs S's stack and answers everything else with its default ---
+# "Quick" is a promise about the QUESTIONS, not about the containers: it runs
+# the same stack as S, and the rest of the installer stops asking.
+answer_with Q
+assert_env DATABASE_URL 'sqlite:///%kernel.project_dir%/var/data.db'
+assert_env MEILISEARCH_URL ''
+assert_profiles ''
+quick_package_chosen || fail 'Q must stop the installer asking'
+if custom_package_chosen; then
+  fail 'Q must not run the two sub-questions'
+fi
+answer_with S
+if quick_package_chosen; then
+  fail 'S is a stack, not a promise to stop asking'
+fi
+
+# --- 4c. and the file it leaves behind is complete ---------------------------
+# The whole point of Q: nothing more to answer. So every value
+# docker-compose.prod.yml refuses to start without has to be filled in by the
+# time the question returns -- with the two remaining questions never asked,
+# nothing else is going to write them.
+cp "${_dir}/../../.env.prod.example" "${ENV_PROD_FILE}"
+for secret in APP_SECRET ALTCHA_HMAC_KEY JWT_PASSPHRASE MYSQL_ROOT_PASSWORD MYSQL_PASSWORD; do
+  env_prod_set "${secret}" 'generated-by-install-sh'
+done
+printf 'Q\n' > "${queue}"
+: > "${screen}"
+configure_package
+apply_default_public_origin
+use_no_mail
+missing=$(env_prod_missing)
+[ -z "${missing}" ] || fail "a quick install must leave nothing to fill in, but: ${missing}"
+assert_env PUBLIC_URL 'http://localhost:3333'
+assert_env MAIL_DISABLED '1'
+
+# --- 5. an empty answer selects Q -------------------------------------------
+# Pressing return installs the quick package: S's stack, and no further
+# question. What it decides on the operator's behalf is printed with it --
+# asserted in section 9 -- because a default that silently picks an origin and
+# a mail setting is the one thing a default must not be.
 answer_with ''
+quick_package_chosen || fail 'pressing return must select the quick install'
 assert_env DATABASE_URL 'sqlite:///%kernel.project_dir%/var/data.db'
 assert_env MEILISEARCH_URL ''
 
@@ -144,6 +184,8 @@ assert_env DATABASE_URL ''
 assert_env MEILISEARCH_URL ''
 answer_with l
 assert_env MEILISEARCH_URL 'http://meilisearch:7700'
+answer_with q
+quick_package_chosen || fail 'lower case q must select the quick install'
 printf 'DATABASE_URL=c-must-not-touch-this\n' > "${ENV_PROD_FILE}"
 printf 'c\n' > "${queue}"
 configure_package
@@ -159,15 +201,21 @@ printf 'x\nyes please\nC\n' > "${queue}"
 configure_package
 assert_env DATABASE_URL 'nothing-may-write-here'
 assert_env MEILISEARCH_URL 'nothing-may-write-here'
-[ "$(grep -c 'Answer S, M, L or C' "${screen}")" = '2' ] \
+[ "$(grep -c 'Answer S, M, L, Q or C' "${screen}")" = '2' ] \
   || fail 'each unrecognised key must be told what to type'
 
-# --- 8. no terminal lands on S ----------------------------------------------
+# --- 8. no terminal lands on S, not on Q ------------------------------------
 # The headless install (curl | bash without a terminal) writes .env.prod and
-# stops for the mail question. It must land on the documented default here,
+# stops for the mail question. It must land on the documented stack here,
 # applied through the same appliers -- not leave the file alone, where an empty
 # DATABASE_URL means MySQL and an empty MEILISEARCH_URL is indistinguishable
 # from a decline nobody made.
+#
+# S, not the question's own default Q: Q additionally promises that nothing
+# else will be asked, and without a terminal nothing can be asked in the first
+# place. Taking it would make the installer invent a public origin and a mail
+# setting for a machine it could not ask about, and start a stack instead of
+# stopping with the two-step instructions it documents.
 can_prompt() { return 1; }
 printf 'DATABASE_URL=\nMEILISEARCH_URL=\nMEILISEARCH_KEY=\n' > "${ENV_PROD_FILE}"
 : > "${screen}"
@@ -177,6 +225,9 @@ assert_env MEILISEARCH_URL ''
 assert_profiles ''
 if custom_package_chosen; then
   fail 'a headless install must not wait for questions it cannot ask'
+fi
+if quick_package_chosen; then
+  fail 'a headless install must keep the two-step flow, not skip past it'
 fi
 # It still says what it applied -- that goes to stdout, which a piped install
 # shows -- but it must not print a question nobody can answer.
@@ -191,12 +242,16 @@ can_prompt() { return 0; }
 # find two different numbers.
 answer_with S
 question=$(cat "${screen}")
-for key in S M L C; do
+for key in S M L Q C; do
   assert_contains "$(package_description "${key}")" "${question}" "the ${key} line"
 done
-for key in S M L; do
+for key in S M L Q; do
   assert_contains "$(package_memory "${key}")" "${question}" "the ${key} memory figure"
 done
+# And the default says what it decides for the operator, before they press
+# return on it: the origin and the mail setting it picks without asking.
+assert_contains "$(package_note Q)" "${question}" "the default's own note"
+assert_contains 'http://localhost:3333' "${question}" 'the origin the default picks'
 
 # --- 10. README.md states the same words and the same figures ---------------
 # The operator chooses the package while reading README.md, and answers it in
@@ -207,6 +262,10 @@ for key in S M L; do
   assert_contains "$(package_description "${key}")" "${readme}" "README.md's ${key} row"
   assert_contains "$(package_memory "${key}")" "${readme}" "README.md's ${key} memory figure"
 done
+# Q is not a row -- it runs S's containers, so a row would repeat S's numbers
+# -- but the reader still has to meet the default before the terminal does,
+# with what it decides on their behalf spelled out the same way.
+assert_contains "$(package_note Q)" "${readme}" "README.md's note on the default"
 
 # --- 11. the default line is emphasised, every key is -----------------------
 # The operator has to see which line pressing return selects, so the default
@@ -214,17 +273,21 @@ done
 # whenever stdout is not a terminal, which is every CI run.
 _c_bold=$'\033[1m' _c_dim=$'\033[2m' _c_cyan=$'\033[36m' _c_reset=$'\033[0m'
 : > "${screen}"
+package_question_line Q
 package_question_line S
-package_question_line M
 default_line=$(sed -n 1p "${screen}")
-other_line=$(sed -n 2p "${screen}")
+# Line 2 is the default's own note, so the dimmed line to compare against is
+# the one after it.
+other_line=$(sed -n 3p "${screen}")
 assert_contains "${_c_bold}" "${default_line}" "the default package's line is bold"
 assert_contains "${_c_dim}" "${other_line}" 'the other packages are dimmed'
 case "${default_line}" in
   *"${_c_dim}"*) fail 'the default package must not be dimmed' ;;
 esac
-assert_contains "S${_c_reset}" "${default_line}" 'the default key stands out from its line'
+assert_contains "Q${_c_reset}" "${default_line}" 'the default key stands out from its line'
 assert_contains "${_c_cyan}" "${other_line}" 'the key to type is emphasised in every line'
+# The note belongs to the line above it, so it carries that line's emphasis.
+assert_contains "${_c_bold}" "$(sed -n 2p "${screen}")" "the default's note is emphasised with it"
 
 # --- 12. cleared colour variables leave the text plain ----------------------
 # What keeps NO_COLOR working: the question borrows the script's own _c_*
@@ -232,7 +295,7 @@ assert_contains "${_c_cyan}" "${other_line}" 'the key to type is emphasised in e
 # has to strip one.
 _c_bold='' _c_dim='' _c_cyan='' _c_reset=''
 : > "${screen}"
-package_question_line S
+package_question_line Q
 package_question_line C
 case "$(cat "${screen}")" in
   *$'\033'*) fail 'with the colour variables cleared the question must be plain text' ;;
@@ -249,5 +312,11 @@ assert_contains "configure_search_engine 'n'" "${installer}" \
   "install.sh's search-engine default is now no"
 assert_contains 'custom_package_chosen' "${installer}" \
   'the two sub-questions run for C only'
+assert_contains 'quick_package_chosen' "${installer}" \
+  'the quick install skips the remaining questions'
+assert_contains 'apply_default_public_origin' "${installer}" \
+  'the quick install still applies the origin it skipped asking about'
+assert_contains 'use_no_mail' "${installer}" \
+  'the quick install still applies the mail default it skipped asking about'
 
 printf 'ok: configure_package\n'

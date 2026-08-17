@@ -58,18 +58,26 @@ values only you know:
 
 - **Which package** — the first question, and the one that decides both the
   database and the search engine, because together they are what the stack
-  costs in memory. **S** is the default: SQLite, no search engine, no container
-  beside the app's own three, about 250 MB. **M** adds a MySQL container (about
-  1 GB). **L** adds MySQL and Meilisearch (about 2.5 GB), which indexes the
-  full text of every article instead of matching titles and summaries in the
-  database. The packages and their measured figures are in the
-  [README](../README.md#which-package); the installer prints the same lines.
+  costs in memory. **S** is SQLite, no search engine, no container beside the
+  app's own three, about 250 MB. **M** adds a MySQL container (about 1 GB).
+  **L** adds MySQL and Meilisearch (about 2.5 GB), which indexes the full text
+  of every article instead of matching titles and summaries in the database.
+  Every package runs the same application, with every feature. The packages and
+  their measured figures are in the [README](../README.md#which-package); the
+  installer prints the same lines.
 
-  Every package runs the same application, with every feature. Answer **C** to
-  choose the database and the search engine yourself, one question each — the
-  two bullets below are then asked in order, and it is the only way to reach a
-  combination the three packages do not cover, such as SQLite with a search
-  engine.
+  Two more keys decide how much you are asked. **Q**, **the default**, is the
+  quick install: the S stack, and no other question at all — it answers the
+  rest for you, `http://localhost:3333` and no mail, so pressing return at this
+  question brings the instance up. Both are changeable afterwards with
+  `./scripts/prod-configure.sh` (§7). **C** asks for the database and the
+  search engine one question each — the two bullets below, in order, and the
+  only way to reach a combination the three packages do not cover, such as
+  SQLite with a search engine.
+
+  Without a terminal (`curl | bash` piped into a script) the installer applies
+  the **S** package, not Q: there is no question to skip, so it writes
+  `.env.prod` and stops for the mail transport exactly as it always has.
 - **How users reach the instance** — three questions, because this is three
   decisions:
   1. Plain HTTP, direct (the default); HTTPS with a certificate this stack

@@ -13,9 +13,13 @@ set -euo pipefail
 #
 # The package is the first question, and the only one that says what the answer
 # costs: S, M and L each print what they run and how much memory the stack
-# needs. The default is S -- SQLite in a file, search against the database, no
-# container besides the app's own three. M adds MySQL, L adds MySQL and
-# Meilisearch. Answer C to decide the database and the search engine yourself,
+# needs. S is SQLite in a file, search against the database, no container
+# besides the app's own three; M adds MySQL; L adds MySQL and Meilisearch.
+#
+# Two more keys decide how much you are asked. Q -- the default -- is the quick
+# install: the S stack, and no other question at all, because it answers the
+# rest for you (http://localhost:3333, and no mail; both changeable later with
+# ./scripts/prod-configure.sh). C asks for the database and the search engine
 # one question each.
 #
 # It deletes data in exactly one case, and only after you say yes to it: an
@@ -160,17 +164,26 @@ env_prod_set MYSQL_PASSWORD "$(generate_secret)"
 # questions below run only for the operator who answered C and wants to decide
 # them one at a time.
 configure_package
-configure_public_url
-if custom_package_chosen; then
-  configure_database
-  # 'n', so that pressing return through the C path lands where the default
-  # package S does. A fresh .env.prod has no engine decision on file to read
-  # back -- an empty MEILISEARCH_URL here means "nobody has been asked", not
-  # "declined" -- which is why this caller passes a literal at all. See
-  # configure_search_engine's own comment for the prod-configure.sh contrast.
-  configure_search_engine 'n'
+if quick_package_chosen; then
+  # Q asked to be asked nothing more, so the two remaining questions are not
+  # printed -- but their defaults are still WRITTEN, because a question nobody
+  # asks leaves nobody to fill the value in, and the stack refuses to start
+  # without it.
+  apply_default_public_origin
+  use_no_mail
+else
+  configure_public_url
+  if custom_package_chosen; then
+    configure_database
+    # 'n', so that pressing return through the C path lands where the default
+    # package S does. A fresh .env.prod has no engine decision on file to read
+    # back -- an empty MEILISEARCH_URL here means "nobody has been asked", not
+    # "declined" -- which is why this caller passes a literal at all. See
+    # configure_search_engine's own comment for the prod-configure.sh contrast.
+    configure_search_engine 'n'
+  fi
+  configure_mail
 fi
-configure_mail
 
 # --- 7. start, or explain how to --------------------------------------------
 missing=$(env_prod_missing)

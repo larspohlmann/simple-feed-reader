@@ -1182,30 +1182,50 @@ generate_prod_certificate() {
 # This question settles it once, and prints the measured memory figure of every
 # combination.
 #
-# It is not a fourth code path. Each package selects between the appliers the
+# It is not a second code path. Each package selects between the appliers the
 # two sub-questions already use, so the reason those write their value rather
 # than leaving the file alone (see use_bundled_mysql_database and
 # use_bundled_search_engine) holds here unchanged.
 #
+# Five keys, three of them stacks: S, M and L are what runs. Q and C are how
+# much the operator wants to be asked -- Q nothing at all, C both questions,
+# which is the only way to reach a combination the three stacks do not cover
+# (SQLite with a search engine).
+#
 # prod-configure.sh does not ask it. A package implies a database, and
 # switching databases needs a manual data move -- the same reason
 # configure_database is never re-asked there.
-PACKAGE_DEFAULT='S'
 
-# Which package the last configure_package round selected: S, M, L or C.
-# install.sh reads it through custom_package_chosen.
+# What pressing return selects: Q, the quick install -- the S stack with every
+# remaining question answered from its own default. It is the answer the
+# largest group of operators wants, it starts no container nobody asked for,
+# and it is the only package that can promise a first start without a single
+# further decision.
+PACKAGE_DEFAULT='Q'
+
+# What no terminal applies, which is deliberately NOT Q. Q's promise is about
+# questions, and without a terminal there are none to skip: the installer
+# writes .env.prod and stops for the values only a human knows (the mail
+# transport), exactly as it documents. So the headless package is S -- the same
+# stack Q installs, through the same appliers, without Q's promise that nothing
+# else will be asked.
+PACKAGE_HEADLESS='S'
+
+# Which package the last configure_package round selected: S, M, L, Q or C.
+# install.sh reads it through custom_package_chosen and quick_package_chosen.
 CONFIGURED_PACKAGE=''
 
 configure_package() {
   local choice
   if ! can_prompt; then
-    apply_package "${PACKAGE_DEFAULT}"
+    apply_package "${PACKAGE_HEADLESS}"
     return 0
   fi
   say 'Which package should this instance install?'
   package_question_line S
   package_question_line M
   package_question_line L
+  package_question_line Q
   package_question_line C
   while :; do
     choice=$(prompt_with_default 'Package' "${PACKAGE_DEFAULT}")
@@ -1213,12 +1233,13 @@ configure_package() {
       [sS]) apply_package S ; return 0 ;;
       [mM]) apply_package M ; return 0 ;;
       [lL]) apply_package L ; return 0 ;;
+      [qQ]) apply_package Q ; return 0 ;;
       [cC]) apply_package C ; return 0 ;;
     esac
-    # Four keys are not a y/n question: apply_search_engine_choice can read
+    # Five keys are not a y/n question: apply_search_engine_choice can read
     # every non-'n' answer as yes, but here a typo would install a stack the
     # operator did not choose. So ask again instead.
-    tell 'Answer S, M, L or C.'
+    tell 'Answer S, M, L, Q or C.'
   done
 }
 
@@ -1231,7 +1252,19 @@ package_description() {
     S) printf '%s' 'a personal instance. SQLite, no search engine.' ;;
     M) printf '%s' 'several users. MySQL, search over titles and summaries.' ;;
     L) printf '%s' 'like M, plus full-content search over article bodies.' ;;
+    Q) printf '%s' 'quick: the S package, and nothing else to answer.' ;;
     C) printf '%s' 'choose the database and the search engine yourself.' ;;
+  esac
+}
+
+# The second line a package gets, where one line cannot carry it. Only the
+# default has one: it is the answer most operators press return on, so what it
+# decides on their behalf has to be on the screen before they do -- an install
+# that silently picks an origin and a mail setting is the one thing a default
+# must not be.
+package_note() {
+  case "$1" in
+    Q) printf '%s' 'It answers the rest for you: http://localhost:3333, and no mail.' ;;
   esac
 }
 
@@ -1241,10 +1274,12 @@ package_description() {
 # bound (the figures are in issue #453). One figure for the whole stack rather
 # than a per-container table, because php, worker and web cost the same 75-90
 # MiB in all three packages -- only mysql and meilisearch separate them. C has
-# no figure: it has no fixed set of containers.
+# no figure: it has no fixed set of containers. Q repeats S's, because Q runs
+# S's containers and the line pressing return selects has to say what it costs
+# without being read together with another one.
 package_memory() {
   case "$1" in
-    S) printf '%s' 'Needs about 250 MB' ;;
+    S | Q) printf '%s' 'Needs about 250 MB' ;;
     M) printf '%s' 'Needs about 1 GB' ;;
     L) printf '%s' 'Needs about 2.5 GB' ;;
   esac
@@ -1263,7 +1298,7 @@ package_memory() {
 # working for free, and a test that greps this text never has to strip an
 # escape.
 package_question_line() {
-  local key=$1 text style memory
+  local key=$1 text style memory note
   style=${_c_dim}
   if [ "${key}" = "${PACKAGE_DEFAULT}" ]; then
     style=${_c_bold}
@@ -1274,6 +1309,10 @@ package_question_line() {
     text="${text} ${memory}."
   fi
   tell "  ${_c_bold}${_c_cyan}${key}${_c_reset}${style}) ${text}${_c_reset}"
+  note=$(package_note "${key}")
+  if [ -n "${note}" ]; then
+    tell "     ${style}${note}${_c_reset}"
+  fi
 }
 
 # The package applied, shared by the question above and by the headless
@@ -1285,17 +1324,41 @@ package_question_line() {
 apply_package() {
   CONFIGURED_PACKAGE=$1
   case "$1" in
-    S) use_sqlite_database ; use_database_search ;;
+    S | Q) use_sqlite_database ; use_database_search ;;
     M) use_bundled_mysql_database ; use_database_search ;;
     L) use_bundled_mysql_database ; use_bundled_search_engine ;;
   esac
 }
 
 # Whether the operator asked to answer the database and search-engine questions
-# themselves. Only install.sh calls it: the three fixed packages have applied
+# themselves. Only install.sh calls it: the four other packages have applied
 # both answers already, so asking again would overwrite the package.
 custom_package_chosen() {
   [ "${CONFIGURED_PACKAGE}" = 'C' ]
+}
+
+# Whether the operator asked to be asked nothing more. Q is a promise about the
+# questions, not a fifth stack: it installs S, and install.sh then applies the
+# default of every remaining question instead of putting it on the screen.
+#
+# Those defaults are APPLIED, never skipped, for the reason the whole of #453
+# turns on: .env.prod's empty state is not its documented default, and a
+# question that is not asked still has to leave the file complete -- nothing
+# else is going to write it.
+quick_package_chosen() {
+  [ "${CONFIGURED_PACKAGE}" = 'Q' ]
+}
+
+# The public origin the three origin questions would have offered, applied
+# without asking: the topology .env.prod already describes (plain HTTP, as
+# shipped), the hostname it already carries (localhost, as shipped), and the
+# default port for that topology. Read from the same helpers the prompts
+# default from, so a changed default reaches both paths.
+apply_default_public_origin() {
+  local topology hostname
+  topology=$(current_topology)
+  hostname=$(host_from_url "$(env_prod_get PUBLIC_URL)")
+  apply_public_origin "${topology}" "${hostname:-localhost}" "$(default_port_for "${topology}")"
 }
 
 # --- which database the instance runs on ------------------------------------
@@ -1456,6 +1519,26 @@ mail_host_from_public_url() {
   host_from_url "$(env_prod_get PUBLIC_URL)"
 }
 
+# The mail question's own default, applied: no outgoing mail, in the open.
+# Called by the question's fourth branch and by the quick install (package Q),
+# which reaches the same answer without printing the question.
+#
+# MAIL_FROM is set because docker-compose.prod.yml refuses to start without it,
+# even when nothing is ever sent -- an instance that says "no mail" has to be a
+# complete instance, not one more thing to fill in.
+use_no_mail() {
+  local mail_host
+  env_prod_set MAIL_DISABLED 1
+  env_prod_set MAILER_DSN 'null://null'
+  if [ -z "$(env_prod_get MAIL_FROM)" ]; then
+    mail_host=$(mail_host_from_public_url)
+    env_prod_set MAIL_FROM "simple-feed-reader@${mail_host}"
+    say "Mail is disabled -- set a placeholder From address (never sent): simple-feed-reader@${mail_host}"
+  fi
+  say 'Running without mail. Email confirmation and password-reset email are off.'
+  say 'Recover a password with: docker compose ... exec php bin/console app:user:reset-password <email> --generate'
+}
+
 # Which transport the last configure_mail round set: 1 relay, 2 host MTA,
 # empty = left as it was. offer_mail_check reads it.
 CONFIGURED_MAIL_CHOICE=''
@@ -1503,15 +1586,7 @@ configure_mail() {
       say '(SPF, DKIM, reverse DNS) -- watch the first real mail.'
       ;;
     4)
-      env_prod_set MAIL_DISABLED 1
-      env_prod_set MAILER_DSN 'null://null'
-      if [ -z "$(env_prod_get MAIL_FROM)" ]; then
-        mail_host=$(mail_host_from_public_url)
-        env_prod_set MAIL_FROM "simple-feed-reader@${mail_host}"
-        say "Mail is disabled -- set a placeholder From address (never sent): simple-feed-reader@${mail_host}"
-      fi
-      say 'Running without mail. Email confirmation and password-reset email are off.'
-      say 'Recover a password with: docker compose ... exec php bin/console app:user:reset-password <email> --generate'
+      use_no_mail
       ;;
     *)
       : # keep the current transport

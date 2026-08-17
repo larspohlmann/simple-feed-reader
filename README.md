@@ -108,7 +108,7 @@ the stack costs in memory:
 
 | Package | What you get | Containers | RAM |
 |---|---|---|---|
-| **S** (the default) | a personal instance. SQLite, no search engine. | php, worker, web | Needs about 250 MB |
+| **S** | a personal instance. SQLite, no search engine. | php, worker, web | Needs about 250 MB |
 | **M** | several users. MySQL, search over titles and summaries. | php, worker, web, mysql | Needs about 1 GB |
 | **L** | like M, plus full-content search over article bodies. | php, worker, web, mysql, meilisearch | Needs about 2.5 GB |
 
@@ -117,9 +117,17 @@ differ in the containers beside it, not in what the reader can do. Search
 works in all three — S and M match titles and summaries in the database, L
 matches the full text of every article.
 
-Answer **C** to choose the database and the search engine yourself, one
-question each — the way to reach a combination the three packages do not
-cover, such as SQLite with a search engine.
+Two more keys decide how much you are asked, rather than what runs:
+
+- **Q** — the quick install, and **the default**. It runs the S stack and asks
+  nothing else, which is what the question itself says under it:
+  *It answers the rest for you: http://localhost:3333, and no mail.*
+  Press return at the first question and the instance comes up. The public URL
+  and mail are changeable afterwards with `./scripts/prod-configure.sh`; the
+  database is not.
+- **C** — choose the database and the search engine yourself, one question
+  each. This is the way to reach a combination the three packages do not
+  cover, such as SQLite with a search engine.
 
 The figures are measured on an idle, healthy stack holding a real account of
 107 feeds and 17,427 articles. S and M do not grow with the number of
