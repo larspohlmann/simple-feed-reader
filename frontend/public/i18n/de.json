@@ -58,6 +58,27 @@
       "importing": "Wird importiert…",
       "result": "{{imported}} importiert, {{already}} bereits abonniert, {{invalid}} ungültig, {{skipped}} wegen Limit übersprungen. Neue Feeds werden bei der nächsten Aktualisierung gefüllt."
     },
+    "backup": {
+      "title": "Konto-Backup",
+      "lead": "Lade alles herunter, was diesem Konto gehört, in einer Datei, oder ersetze dieses Konto durch ein Backup von einer anderen Instanz.",
+      "export": "Backup herunterladen",
+      "preparing": "Wird vorbereitet…",
+      "restoreLead": "Die Wiederherstellung ersetzt die Feeds, Tags, Artikel und Einstellungen dieses Kontos durch das Backup. Login, Passwort und KI-Verbindungen bleiben erhalten.",
+      "chooseFile": "Backup-Datei auswählen",
+      "previewing": "Datei wird geprüft…",
+      "reportTitle": "Diese Wiederherstellung wird:",
+      "reportDelete": "Löschen: {{subscriptions}} Abonnements, {{tags}} Tags, {{entryStates}} Artikelstatus, {{recommendationRuns}} Empfehlungsläufe.",
+      "reportLoad": "Laden: {{subscriptions}} Abonnements, {{tags}} Tags, {{feeds}} neue Feeds, {{entries}} Artikel, {{entryStates}} Artikelstatus.",
+      "reportSource": "Backup von {{email}}, erstellt am {{date}}.",
+      "ageWarning": "Ein altes Backup verliert beim ersten Refresh nach der Wiederherstellung Artikel: Artikel außerhalb des Aufbewahrungszeitraums werden entfernt.",
+      "safetyNet": "Zuerst ein OPML der aktuellen Abonnements herunterladen",
+      "typeToConfirm": "Gib REPLACE ein, um zu bestätigen.",
+      "restore": "Dieses Konto ersetzen",
+      "restoring": "Wird wiederhergestellt…",
+      "done": "Wiederherstellung abgeschlossen: {{subscriptions}} Abonnements, {{entries}} Artikel.",
+      "failed": "Die Wiederherstellung ist fehlgeschlagen, das Konto ist möglicherweise nur teilweise geladen. Starte die Wiederherstellung erneut mit derselben Datei — das Löschen beginnt sauber von vorn.",
+      "emailMismatchNote": "Die Konto-E-Mail-Adresse im Backup muss nicht mit diesem Konto übereinstimmen."
+    },
     "account": {
       "title": "Konto",
       "email": "E-Mail",

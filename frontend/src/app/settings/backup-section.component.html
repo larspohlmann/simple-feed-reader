@@ -1,0 +1,100 @@
+<app-settings-card [heading]="'settings.backup.title' | transloco">
+  <div class="group">
+    <p class="lead">{{ 'settings.backup.lead' | transloco }}</p>
+    <app-button [disabled]="exporting()" (click)="downloadBackup()">
+      {{ (exporting() ? 'settings.backup.preparing' : 'settings.backup.export') | transloco }}
+    </app-button>
+    @if (exportError(); as problem) {
+      <app-error-banner [message]="problem.detail || problem.title" />
+    }
+  </div>
+
+  <div class="group">
+    <p class="lead">{{ 'settings.backup.restoreLead' | transloco }}</p>
+    <input
+      type="file"
+      accept=".gz,application/gzip"
+      [attr.aria-label]="'settings.backup.chooseFile' | transloco"
+      (change)="onFileSelected($event)"
+    />
+
+    @if (previewing()) {
+      <p class="status">{{ 'settings.backup.previewing' | transloco }}</p>
+    }
+
+    @if (preview(); as p) {
+      <div class="report">
+        <p class="reportTitle">{{ 'settings.backup.reportTitle' | transloco }}</p>
+        <p>
+          {{
+            'settings.backup.reportDelete'
+              | transloco
+                : {
+                    subscriptions: p.toDelete.subscriptions,
+                    tags: p.toDelete.tags,
+                    entryStates: p.toDelete.entryStates,
+                    recommendationRuns: p.toDelete.recommendationRuns,
+                  }
+          }}
+        </p>
+        <p>
+          {{
+            'settings.backup.reportLoad'
+              | transloco
+                : {
+                    subscriptions: p.toLoad.subscriptions,
+                    tags: p.toLoad.tags,
+                    feeds: p.toLoad.feeds,
+                    entries: p.toLoad.entries,
+                    entryStates: p.toLoad.entryStates,
+                  }
+          }}
+        </p>
+        <p>
+          {{
+            'settings.backup.reportSource'
+              | transloco
+                : { email: p.backup.sourceEmail ?? '—', date: createdAt(p.backup.createdAt) }
+          }}
+        </p>
+        <p class="note">{{ 'settings.backup.emailMismatchNote' | transloco }}</p>
+        <p class="warning">{{ 'settings.backup.ageWarning' | transloco }}</p>
+
+        <div class="confirm">
+          <app-button variant="ghost" (click)="exportSafetyNetOpml()">
+            {{ 'settings.backup.safetyNet' | transloco }}
+          </app-button>
+          <label class="confirmLabel">
+            {{ 'settings.backup.typeToConfirm' | transloco }}
+            <input
+              type="text"
+              class="confirmInput"
+              [value]="typed()"
+              (input)="typed.set($any($event.target).value)"
+            />
+          </label>
+          <app-button variant="danger" [disabled]="!canRestore()" (click)="restore()">
+            {{
+              (restoring() ? 'settings.backup.restoring' : 'settings.backup.restore') | transloco
+            }}
+          </app-button>
+        </div>
+      </div>
+    }
+
+    @if (error(); as problem) {
+      <app-error-banner [message]="problem.detail || problem.title" />
+    }
+    @if (failedOnce()) {
+      <app-error-banner [message]="'settings.backup.failed' | transloco" />
+    }
+    @if (result(); as r) {
+      <p class="result">
+        {{
+          'settings.backup.done'
+            | transloco: { subscriptions: r.loaded.subscriptions, entries: r.loaded.entries }
+        }}
+      </p>
+    }
+  </div>
+</app-settings-card>

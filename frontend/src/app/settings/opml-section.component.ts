@@ -8,13 +8,20 @@ import { ReaderApi } from '../reader/reader-api';
 import { RefreshService } from '../reader/refresh.service';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { OpmlImportResult } from '../reader/models';
+import { BackupSectionComponent } from './backup-section.component';
 import { ButtonComponent } from '../shared/button/button.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
 
 @Component({
   selector: 'app-opml-section',
-  imports: [ButtonComponent, ErrorBannerComponent, SettingsCardComponent, TranslocoPipe],
+  imports: [
+    BackupSectionComponent,
+    ButtonComponent,
+    ErrorBannerComponent,
+    SettingsCardComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './opml-section.component.html',
   styleUrl: './opml-section.component.scss',
 })

@@ -58,6 +58,27 @@
       "importing": "Importing…",
       "result": "Imported {{imported}}, already subscribed {{already}}, invalid {{invalid}}, skipped over limit {{skipped}}. New feeds fill in on the next refresh."
     },
+    "backup": {
+      "title": "Account backup",
+      "lead": "Download everything this account owns as one file, or replace this account with a backup from another instance.",
+      "export": "Download backup",
+      "preparing": "Preparing…",
+      "restoreLead": "Restoring replaces this account's feeds, tags, articles and settings with the backup. Your login, password and AI connections stay.",
+      "chooseFile": "Choose a backup file",
+      "previewing": "Checking the file…",
+      "reportTitle": "This restore will:",
+      "reportDelete": "Delete: {{subscriptions}} subscriptions, {{tags}} tags, {{entryStates}} article states, {{recommendationRuns}} recommendation runs.",
+      "reportLoad": "Load: {{subscriptions}} subscriptions, {{tags}} tags, {{feeds}} new feeds, {{entries}} articles, {{entryStates}} article states.",
+      "reportSource": "Backup of {{email}}, created {{date}}.",
+      "ageWarning": "An old backup file loses articles on the first refresh after restoring: articles beyond the retention window are pruned.",
+      "safetyNet": "Download an OPML of the current subscriptions first",
+      "typeToConfirm": "Type REPLACE to confirm.",
+      "restore": "Replace this account",
+      "restoring": "Restoring…",
+      "done": "Restore complete: {{subscriptions}} subscriptions, {{entries}} articles.",
+      "failed": "The restore failed and the account may be partly loaded. Run the restore again with the same file — the wipe restarts cleanly.",
+      "emailMismatchNote": "The backup's account email does not need to match this account."
+    },
     "account": {
       "title": "Account",
       "email": "Email",
