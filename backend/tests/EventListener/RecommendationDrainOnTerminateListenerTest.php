@@ -14,6 +14,7 @@ use App\Service\Worker\WorkerPresence;
 use App\Tests\Support\RecordingProcessLauncher;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\ConsoleEvents;
@@ -26,11 +27,10 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
  * The spawn is only safe to move behind terminate if the listener genuinely
- * fires on both exits and genuinely waits for them. So, like
+ * fires on that exit and genuinely waits for it. So, like
  * DeferredMailFlushListenerTest, this drives the real kernel rather than
  * calling the listener's methods directly: handle() alone must never launch,
- * and only terminate() (kernel.terminate for HTTP, console.terminate for the
- * CLI) may.
+ * and only terminate() may. A console exit never may at all.
  *
  * The real container's DetachedProcessLauncherInterface is swapped for a
  * RecordingProcessLauncher (config/services_test.yaml) so the launch this
@@ -105,52 +105,40 @@ final class RecommendationDrainOnTerminateListenerTest extends KernelTestCase
     }
 
     /**
-     * The drainer surrenders its own liveness key before it exits (see
-     * WorkerPresence::forget()), so at the moment its own console.terminate
-     * fires it looks exactly like "nobody is driving the runs" to the
-     * presence read. Without this exclusion every drain run would fork its
-     * own successor on its way out.
+     * No console command forks a drainer, whatever it is (#393 review).
+     * `app:e2e:purge-users` is the case that proved the point: docs/local-
+     * docker.md has you stop the worker before the e2e suites, so its
+     * heartbeat ages out, and the purge command that runs at the head of
+     * `composer e2e` then forked a drainer that drove runs against the dev
+     * database for the length of the suite. The drain command is here too
+     * because it surrenders its liveness key before terminating, so it looks
+     * like "nobody is driving" to the presence read and would fork its own
+     * successor on its way out.
+     *
+     * A run is active and no heartbeat is marked, so anything that reached
+     * spawnIfNoWorker() at all would launch -- the empty list is the listener
+     * not being on this event, not a presence read that happened to say no.
+     *
+     * @param non-empty-string $commandName
      */
-    public function testConsoleTerminateForTheDrainCommandItselfSpawnsNothing(): void
+    #[DataProvider('consoleCommands')]
+    public function testNoConsoleCommandSpawnsADrainer(string $commandName): void
     {
         $this->persistActiveRun();
 
-        $this->dispatchConsoleTerminate(RecommendationDrainSpawner::DRAIN_COMMAND);
+        $this->dispatchConsoleTerminate($commandName);
 
         self::assertSame([], $this->launcher->launches);
     }
 
-    public function testConsoleTerminateForAnyOtherCommandSpawns(): void
-    {
-        $this->persistActiveRun();
-
-        $this->dispatchConsoleTerminate('app:feeds:refresh');
-
-        self::assertSame([[RecommendationDrainSpawner::DRAIN_COMMAND, '--detach']], $this->launcher->launches);
-    }
-
     /**
-     * ConsoleEvent::getCommand() is typed ?Command because some console
-     * events genuinely carry no command (a lookup that failed before one
-     * resolved); ConsoleTerminateEvent's own constructor never actually
-     * accepts null, so nothing in this app can produce that case through the
-     * public API. The null-safe call guards the wider contract anyway --
-     * forcing the property directly is the only way to prove that guard
-     * still does its job instead of a hard TypeError.
+     * @return iterable<string, array{non-empty-string}>
      */
-    public function testConsoleTerminateWithNoResolvedCommandStillSpawns(): void
+    public static function consoleCommands(): iterable
     {
-        $this->persistActiveRun();
-
-        $event = new ConsoleTerminateEvent(new Command('placeholder'), new ArrayInput([]), new NullOutput(), 0);
-        $commandProperty = new \ReflectionProperty($event, 'command');
-        $commandProperty->setValue($event, null);
-
-        /** @var EventDispatcherInterface $dispatcher */
-        $dispatcher = self::getContainer()->get(EventDispatcherInterface::class);
-        $dispatcher->dispatch($event, ConsoleEvents::TERMINATE);
-
-        self::assertSame([[RecommendationDrainSpawner::DRAIN_COMMAND, '--detach']], $this->launcher->launches);
+        yield 'the drainer itself' => [RecommendationDrainSpawner::DRAIN_COMMAND];
+        yield 'the e2e purge that runs beside a stopped worker' => ['app:e2e:purge-users'];
+        yield 'an unrelated command' => ['app:feeds:refresh'];
     }
 
     /**

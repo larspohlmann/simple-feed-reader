@@ -43,9 +43,9 @@ The response is JSON: `{ "startedRuns": n, "advancedRuns": m, "activeRuns": k }`
 ## The on-demand drainer
 
 Worker-less installs do not depend on the cron cadence for interactive
-runs. A `kernel.terminate`/`console.terminate` listener
-(`RecommendationDrainOnTerminateListener`) fires once after every request or
-console command and, whenever the database still shows an active run, spawns
+runs. A `kernel.terminate` listener
+(`RecommendationDrainOnTerminateListener`) fires once after every request
+and, whenever the database still shows an active run, spawns
 a short-lived, detached CLI process (`app:recommendations:drain`) that
 advances every active run at full worker concurrency until none is left,
 then exits. The spawn lives on that one listener, not on any individual call
@@ -54,19 +54,26 @@ and the poll endpoint all get the same respawn net for free if a drainer
 died mid-run, none of them has to ask for it. Firing on the terminate event
 rather than inline means the fork happens after the response is already on
 the wire, so it costs the request nothing. The spawn only happens while
-nothing is already driving the runs, at most one spawn is issued per request
-or command, and a global `recommendation-drain` lock guarantees at most one
+nothing is already driving the runs, at most one spawn is issued per request,
+and a global `recommendation-drain` lock guarantees at most one
 drainer. A drainer marks a liveness key of its **own** while it sweeps and
 clears it again on its way out, so the poll and cron paths resume the moment
 it exits instead of waiting out the freshness window.
 
-The two keys are read for two different questions. "Is anybody driving the
-runs right now?" counts both the persistent worker and a live drainer — the
-poll tick reports instead of driving, and no second drainer is spawned.
+No console command spawns a drainer. Every way a run comes to need driving
+arrives over HTTP, the drain command *is* the drainer, and the worker's
+`messenger:consume` is the driver for as long as it lives — so a console
+listener could only misfire, which it did: with the worker stopped for the
+e2e suites, `app:e2e:purge-users` forked a drainer against the dev database.
+
+The keys are read for two different questions. "Is anybody driving the
+runs right now?" counts every driver kind — the persistent worker, a live
+drainer, and the cron sweep for as long as one is advancing runs — so the
+poll tick reports instead of driving and no second drainer is spawned.
 "Does this install run a persistent worker?" counts the worker only; that is
-what the settings card's worker hint reads, because a drainer advances runs
-that exist but never starts a due one, so scheduled auto-generation still
-needs the cron entry. If the host cannot spawn processes (`exec` disabled, no CLI
+what the settings card's worker hint reads, because neither a drainer nor
+the cron sweep itself is a reason to drop the cron entry that starts due
+runs. If the host cannot spawn processes (`exec` disabled, no CLI
 binary configured), the launch silently no-ops and the cron sweep above
 carries the runs exactly as before.
 
