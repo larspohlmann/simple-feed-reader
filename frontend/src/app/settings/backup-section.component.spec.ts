@@ -147,6 +147,36 @@ describe('BackupSectionComponent', () => {
     expect(text).toContain('Run the restore again with the same file');
   });
 
+  /**
+   * The web server refuses an oversized body itself, so what comes back is its
+   * HTML page rather than problem+json -- the generic fallback used to render
+   * "Something went wrong", which names neither the cause nor the remedy. The
+   * request never reached the app, so nothing was wiped either (#458).
+   */
+  it('names the size limit when the web server refuses the upload as too large', () => {
+    const f = mount();
+    chooseFile(f);
+    ctrl.expectOne('https://api.test/api/account/restore/preview').flush(previewResponse);
+    f.detectChanges();
+
+    const c = f.componentInstance;
+    c.typed.set('REPLACE');
+    c.restore();
+
+    ctrl
+      .expectOne('https://api.test/api/account/restore?confirm=REPLACE')
+      .flush('<html><title>413 Request Entity Too Large</title></html>', {
+        status: 413,
+        statusText: 'Request Entity Too Large',
+      });
+    f.detectChanges();
+
+    const text = (f.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('larger than this server accepts');
+    expect(text).not.toContain('Something went wrong');
+    expect(c.failedOnce()).toBe(false);
+  });
+
   /** A 409 is refused before the wipe, so the data-loss banner would be a lie. */
   it('reports a refusal that cost nothing without the data-loss banner', () => {
     const f = mount();

@@ -5,7 +5,7 @@
       {{ (exporting() ? 'settings.backup.preparing' : 'settings.backup.export') | transloco }}
     </app-button>
     @if (exportError(); as problem) {
-      <app-error-banner [message]="problem.detail || problem.title" />
+      <app-error-banner [message]="messageFor(problem)" />
     }
   </div>
 
@@ -75,7 +75,7 @@
             }}
           </app-button>
           @if (safetyNetError(); as problem) {
-            <app-error-banner [message]="problem.detail || problem.title" />
+            <app-error-banner [message]="messageFor(problem)" />
           }
           <label class="confirmLabel">
             {{ 'settings.backup.typeToConfirm' | transloco }}
@@ -96,7 +96,7 @@
     }
 
     @if (error(); as problem) {
-      <app-error-banner [message]="problem.detail || problem.title" />
+      <app-error-banner [message]="messageFor(problem)" />
     }
     @if (failedOnce()) {
       <app-error-banner [message]="'settings.backup.failed' | transloco" />
