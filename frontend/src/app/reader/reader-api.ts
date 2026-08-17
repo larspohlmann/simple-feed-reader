@@ -18,6 +18,8 @@ import {
   ReaderContent,
   RecommendationRunReport,
   RefreshReport,
+  RestorePreview,
+  RestoreResult,
   RunHistoryMonthPage,
   RunHistoryOverview,
   SubscribeResult,
@@ -146,6 +148,24 @@ export class ReaderApi {
     return this.http.post<OpmlImportResult>(`${this.base}/api/opml/import`, xml, {
       headers: { 'Content-Type': 'text/xml' },
     });
+  }
+
+  downloadAccountBackup(): Observable<Blob> {
+    return this.http.get(`${this.base}/api/account/backup`, { responseType: 'blob' });
+  }
+
+  previewAccountRestore(backup: Blob): Observable<RestorePreview> {
+    return this.http.post<RestorePreview>(`${this.base}/api/account/restore/preview`, backup, {
+      headers: { 'Content-Type': 'application/gzip' },
+    });
+  }
+
+  restoreAccount(backup: Blob): Observable<RestoreResult> {
+    return this.http.post<RestoreResult>(
+      `${this.base}/api/account/restore?confirm=REPLACE`,
+      backup,
+      { headers: { 'Content-Type': 'application/gzip' } },
+    );
   }
 
   /** Preview a candidate feed's contents before subscribing. */

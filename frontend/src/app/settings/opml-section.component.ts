@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
+import { saveAs } from '../core/save-as';
 import { ReaderApi } from '../reader/reader-api';
 import { RefreshService } from '../reader/refresh.service';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
@@ -40,7 +41,7 @@ export class OpmlSectionComponent {
     this.api.exportOpml().subscribe({
       next: (xml) => {
         this.exporting.set(false);
-        this.download(xml);
+        saveAs(new Blob([xml], { type: 'text/x-opml' }), 'feeds.opml');
       },
       error: (e: HttpErrorResponse) => {
         this.exporting.set(false);
@@ -84,20 +85,5 @@ export class OpmlSectionComponent {
         this.importError.set(parseProblem(e));
       },
     });
-  }
-
-  private download(xml: string): void {
-    const url = URL.createObjectURL(new Blob([xml], { type: 'text/x-opml' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'feeds.opml';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    // Revoke on the next tick: Firefox/Safari queue the download asynchronously
-    // and read the blob after click() returns, so revoking synchronously can
-    // yield an empty file.
-    setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 }
