@@ -130,6 +130,30 @@ final class RecommendationDrainOnTerminateListenerTest extends KernelTestCase
     }
 
     /**
+     * ConsoleEvent::getCommand() is typed ?Command because some console
+     * events genuinely carry no command (a lookup that failed before one
+     * resolved); ConsoleTerminateEvent's own constructor never actually
+     * accepts null, so nothing in this app can produce that case through the
+     * public API. The null-safe call guards the wider contract anyway --
+     * forcing the property directly is the only way to prove that guard
+     * still does its job instead of a hard TypeError.
+     */
+    public function testConsoleTerminateWithNoResolvedCommandStillSpawns(): void
+    {
+        $this->persistActiveRun();
+
+        $event = new ConsoleTerminateEvent(new Command('placeholder'), new ArrayInput([]), new NullOutput(), 0);
+        $commandProperty = new \ReflectionProperty($event, 'command');
+        $commandProperty->setValue($event, null);
+
+        /** @var EventDispatcherInterface $dispatcher */
+        $dispatcher = self::getContainer()->get(EventDispatcherInterface::class);
+        $dispatcher->dispatch($event, ConsoleEvents::TERMINATE);
+
+        self::assertSame([[RecommendationDrainSpawner::DRAIN_COMMAND, '--detach']], $this->launcher->launches);
+    }
+
+    /**
      * Reproduces MaintenanceTick's aborted-refresh scenario from the other
      * side: a closed EntityManager must not turn a listener that runs after
      * every response into a fatal. Persisting the run happens first, while
