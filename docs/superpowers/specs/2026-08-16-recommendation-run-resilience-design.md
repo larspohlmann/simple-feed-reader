@@ -294,3 +294,32 @@ Docker, `composer infection:diff`, and `npm run check` in `frontend/`.
 Parts 2 and 3 are independent. Part 1 shares `RecommendationRunAdvancerTest` with
 nothing else, but its TTL test reads `ProviderTimeouts`, which Part 2 does not
 change.
+
+---
+
+## Correction — 2026-08-17: Part 3 ships HTTP-only (#393)
+
+The Part 3 shape above specifies `RecommendationDrainOnTerminateListener` with
+both `#[AsEventListener(event: TerminateEvent::class)]` and
+`#[AsEventListener(event: ConsoleTerminateEvent::class)]`, and says the class
+becomes stateless "because the listener fires once per request or command". Only
+the HTTP registration shipped; the console one was dropped during review and the
+listener now fires once per HTTP request and on no console exit.
+
+Why: on console.terminate every command became a spawn trigger. `docs/local-
+docker.md` has you stop the worker before the e2e suites, so its heartbeat ages
+out, and `app:e2e:purge-users` — which runs at the head of `composer e2e` — then
+forked a drainer that drove runs against the dev database for the length of the
+suite. The design already knew the drain command itself had to be skipped by
+name; the wider problem is that no console command needs a fork of its own. Every
+way a run comes to need driving arrives over HTTP (a reader starts or resumes
+one, or the cron sweep does through `/maintenance/tick`), the worker's
+`messenger:consume` is the driver for as long as it lives, and the drain command
+IS the drainer. Skipping by name would have been a list that grows with every new
+command.
+
+`RecommendationDrainOnTerminateListenerTest` keeps the console cases as absence
+assertions, plus a positive control that proves `ConsoleEvents::TERMINATE` really
+does reach the listeners registered on it.
+
+The rest of Part 3 shipped as designed.
