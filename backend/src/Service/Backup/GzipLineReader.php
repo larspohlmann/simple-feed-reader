@@ -44,11 +44,37 @@ final readonly class GzipLineReader
             // window 15+32: accept a gzip (or zlib) header, matching gzdecode().
             stream_filter_append($stream, 'zlib.inflate', \STREAM_FILTER_READ, ['window' => 15 + 32]);
 
-            while (false !== ($line = fgets($stream))) {
+            while (false !== ($line = self::readLine($stream))) {
                 yield rtrim($line, "\n");
             }
         } finally {
             fclose($stream);
+        }
+    }
+
+    /**
+     * Valid magic bytes are no promise that the rest of the body inflates: a
+     * partially downloaded or bit-flipped file raises "zlib: data error" as a
+     * PHP diagnostic, which Symfony's ErrorHandler turns into an
+     * ErrorException — not an ApiException, so the listener would answer 500
+     * with a stack trace instead of the 422 this refusal is. The handler is
+     * installed around the fgets call alone, never across the yield, so it
+     * cannot leak into the code consuming the generator.
+     *
+     * @param resource $stream
+     *
+     * @throws InvalidBackupException
+     */
+    private static function readLine($stream): string|false
+    {
+        set_error_handler(static function (): never {
+            throw new InvalidBackupException('The file is not readable as gzip — it is corrupt or truncated.');
+        });
+
+        try {
+            return fgets($stream);
+        } finally {
+            restore_error_handler();
         }
     }
 }

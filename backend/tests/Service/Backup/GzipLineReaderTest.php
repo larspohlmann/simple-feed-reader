@@ -6,6 +6,7 @@ namespace App\Tests\Service\Backup;
 
 use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\GzipLineReader;
+use App\Tests\Support\CorruptGzip;
 use PHPUnit\Framework\TestCase;
 
 final class GzipLineReaderTest extends TestCase
@@ -39,6 +40,18 @@ final class GzipLineReaderTest extends TestCase
         $this->expectException(InvalidBackupException::class);
 
         iterator_to_array(GzipLineReader::lines('this is not gzip'), false);
+    }
+
+    /**
+     * A partially downloaded file keeps its magic bytes, so the header guard
+     * waves it through and zlib only fails deep inside the inflate — the most
+     * likely real-world corruption of a 4 MiB body.
+     */
+    public function testABodyWithValidMagicButCorruptPayloadIsRefused(): void
+    {
+        $this->expectException(InvalidBackupException::class);
+
+        iterator_to_array(GzipLineReader::lines(CorruptGzip::bytes()), false);
     }
 
     public function testEmptyInputIsRefused(): void
