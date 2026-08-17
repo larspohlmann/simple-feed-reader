@@ -1,0 +1,55 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Backup\Dto;
+
+/**
+ * One of the account's subscriptions to a feed, with its tag assignments.
+ *
+ * @SuppressWarnings("PHPMD.ExcessiveParameterList") pure data carrier that
+ * mirrors the row 1:1, not a behavioural method.
+ */
+final readonly class SubscriptionLine
+{
+    /**
+     * @param list<SubscriptionTagRef> $tags
+     */
+    public function __construct(
+        public string $feedUrl,
+        public ?string $customTitle,
+        public int $position,
+        public ?\DateTimeImmutable $markedReadUntil,
+        public \DateTimeImmutable $createdAt,
+        public array $tags,
+    ) {
+    }
+
+    /**
+     * @param array<string, mixed> $line
+     */
+    public static function fromLine(array $line): self
+    {
+        return new self(
+            feedUrl: LineField::string($line, 'feedUrl'),
+            customTitle: LineField::stringOrNull($line, 'customTitle'),
+            position: LineField::int($line, 'position'),
+            markedReadUntil: LineField::dateOrNull($line, 'markedReadUntil'),
+            createdAt: LineField::date($line, 'createdAt'),
+            tags: self::tagsFromLine($line),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $line
+     *
+     * @return list<SubscriptionTagRef>
+     */
+    private static function tagsFromLine(array $line): array
+    {
+        return array_map(
+            SubscriptionTagRef::fromLine(...),
+            LineField::objectList($line, 'tags'),
+        );
+    }
+}
