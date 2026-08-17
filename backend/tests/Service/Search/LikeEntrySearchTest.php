@@ -8,7 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Repository\EntryRepository;
+use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
 use App\Service\Search\LikeEntrySearch;
 use App\Service\Search\SearchTerms;
@@ -45,8 +45,8 @@ final class LikeEntrySearchTest extends DbTestCase
         $this->em->persist($entry);
         $this->em->flush();
 
-        $repository = $this->em->getRepository(Entry::class);
-        self::assertInstanceOf(EntryRepository::class, $repository);
+        $repository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repository);
         $search = new LikeEntrySearch($repository);
 
         $result = $search->search(new EntrySearchQuery(

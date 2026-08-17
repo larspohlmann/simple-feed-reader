@@ -9,7 +9,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Http\EntryCursor;
-use App\Repository\EntryRepository;
+use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
 use App\Service\Search\SearchTerms;
 use App\Tests\DbTestCase;
@@ -64,10 +64,10 @@ final class EntrySearchTest extends DbTestCase
         return $entry;
     }
 
-    private function repo(): EntryRepository
+    private function repo(): EntryListRepository
     {
-        $repo = $this->em->getRepository(Entry::class);
-        self::assertInstanceOf(EntryRepository::class, $repo);
+        $repo = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repo);
 
         return $repo;
     }

@@ -13,8 +13,8 @@ use App\Http\EntryJson;
 use App\Http\EntryPage;
 use App\Http\EntryStateJson;
 use App\Http\ReaderJson;
+use App\Repository\EntryListRepository;
 use App\Repository\EntryQuery;
-use App\Repository\EntryRepository;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Reader\ArticleExtractorInterface;
 use App\Service\Reader\EntryStateResolver;
@@ -36,7 +36,7 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 final readonly class EntryController
 {
     public function __construct(
-        private EntryRepository $entries,
+        private EntryListRepository $entryList,
         private EntryStateResolver $entryStates,
         private EntityManagerInterface $em,
         private ClockInterface $clock,
@@ -88,7 +88,7 @@ final readonly class EntryController
             limit: $limit,
         );
 
-        return new JsonResponse(EntryPage::of($this->entries->listForUser($query), $query->limit));
+        return new JsonResponse(EntryPage::of($this->entryList->listForUser($query), $query->limit));
     }
 
     #[Route('/{id}', name: 'api_entries_get', methods: ['GET'], requirements: ['id' => '\d+'])]
@@ -96,7 +96,7 @@ final readonly class EntryController
         int $id,
         #[CurrentUser] User $user,
     ): JsonResponse {
-        $row = $this->entries->oneRowForUser($id, (int) $user->getId())
+        $row = $this->entryList->oneRowForUser($id, (int) $user->getId())
             ?? throw new NotFoundHttpException('No such entry.');
 
         return new JsonResponse(['entry' => EntryJson::one($row)]);
@@ -118,7 +118,7 @@ final readonly class EntryController
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateEntryStateRequest $request,
     ): JsonResponse {
-        $row = $this->entries->oneRowForUser($id, (int) $user->getId())
+        $row = $this->entryList->oneRowForUser($id, (int) $user->getId())
             ?? throw new NotFoundHttpException('No such entry.');
 
         $state = $this->entryStates->resolve($user, $row);
@@ -149,7 +149,7 @@ final readonly class EntryController
     ): JsonResponse {
         // Ownership is checked BEFORE the limiter so an unowned id 404s without
         // spending the caller's reader budget.
-        $entry = $this->entries->findOneSubscribedByUser($id, (int) $user->getId())
+        $entry = $this->entryList->findOneSubscribedByUser($id, (int) $user->getId())
             ?? throw new NotFoundHttpException('No such entry.');
 
         $this->rateLimitGuard->enforceForUser($this->readerLimiter, $user);

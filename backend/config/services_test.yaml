@@ -458,3 +458,84 @@ services:
     App\Service\Recommendation\CompletionStreamHeartbeat:
         alias: App\Service\Recommendation\CompositeCompletionStreamHeartbeat
         public: true
+
+    # EntryListTest, EntryRowsByIdsTest, EntrySearchTest and IndexedEntrySearch
+    # Test fetch this directly to drive the list/search projection through the
+    # real query graph rather than a fake. It has production callers
+    # (EntryController, LikeEntrySearch, IndexedEntrySearch) and would survive
+    # compilation on its own — `public: true` here is only so the test
+    # container's `self::getContainer()->get(...)` can fetch it, which the
+    # container refuses on a private service. It is not bound as Entry's
+    # `#[ORM\Entity(repositoryClass:)]`, so `$em->getRepository(Entry::class)`
+    # — the trick the rest of this file avoids needing — resolves to
+    # EntryRepository, not this class.
+    App\Repository\EntryListRepository:
+        autowire: true
+        public: true
+
+    # AccountBackupExporterTest drives lines() directly against the real
+    # repository/entity-manager graph to prove the keyset batching and the
+    # NDJSON shape, and both the controller and restorer tests build their
+    # fixture files with it. It has a production caller
+    # (AccountBackupController) and would survive compilation on its own —
+    # `public: true` here is only so `self::getContainer()->get(...)` can
+    # fetch it, which the container refuses on a private service. Same
+    # `autowire` caveat as the entries above.
+    App\Service\Backup\AccountBackupExporter:
+        autowire: true
+        public: true
+
+    # AccountResetTest drives reset() directly against the real
+    # entity-manager graph to prove the bulk-DQL wipe and the rows it leaves
+    # alone. It has a production caller (AccountRestorer) and would survive
+    # compilation on its own — `public: true` here is only so
+    # `self::getContainer()->get(...)` can fetch it, which the container
+    # refuses on a private service. Same `autowire` caveat as the entries
+    # above.
+    App\Service\Account\AccountReset:
+        autowire: true
+        public: true
+
+    # RestorePreviewerTest drives BackupFitCheck and RestorePreviewer through
+    # the container to prove their real wiring (SubscriptionLimitResolver, the
+    # four count repositories) rather than a hand-assembled graph. Both have
+    # production callers (AccountBackupController, AccountRestorer) and would
+    # survive compilation on their own — `public: true` here is only so
+    # `self::getContainer()->get(...)` can fetch them, which the container
+    # refuses on a private service. Same `autowire` caveat as the entries
+    # above.
+    App\Service\Backup\BackupFitCheck:
+        autowire: true
+        public: true
+
+    App\Service\Backup\RestorePreviewer:
+        autowire: true
+        public: true
+
+    # EntryBatchInserterTest drives insert() directly against the real
+    # entity-manager graph to prove the multi-row INSERT batching and the
+    # round-trip field preservation, and AccountRestorerTest borrows it to
+    # assemble a loader with a recording search index. It has a production
+    # caller (RestoreLoader) and would survive compilation on its own —
+    # `public: true` here is only so `self::getContainer()->get(...)` can
+    # fetch it, which the container refuses on a private service. Same
+    # `autowire` caveat as the entries above.
+    App\Service\Backup\EntryBatchInserter:
+        autowire: true
+        public: true
+
+    # AccountRestorerTest drives restore() directly against the real
+    # inspector/fit-check/reset/loader graph — the round trip the spec demands
+    # only means anything through the same wiring production will use. It has
+    # a production caller (AccountBackupController) and would survive
+    # compilation on its own — `public: true` here is only so
+    # `self::getContainer()->get(...)` can fetch it, which the container
+    # refuses on a private service. Same `autowire` caveat as the entries
+    # above.
+    #
+    # RestoreLoader needs no entry of its own: the restore endpoint injects
+    # it, and the one test that varies its search indexer constructs it by
+    # hand.
+    App\Service\Backup\AccountRestorer:
+        autowire: true
+        public: true

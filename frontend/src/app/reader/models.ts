@@ -384,3 +384,26 @@ export interface RunHistoryOverview {
   months: RunHistoryMonth[];
   latest: RunHistoryMonthPage | null;
 }
+
+export interface RestoreCounts {
+  tags: number;
+  feeds: number;
+  subscriptions: number;
+  entries: number;
+  entryStates: number;
+}
+
+export interface RestorePreview {
+  backup: { createdAt: string; sourceUrl: string | null; sourceEmail: string | null };
+  toLoad: RestoreCounts;
+  toDelete: {
+    tags: number;
+    subscriptions: number;
+    entryStates: number;
+    recommendationRuns: number;
+  };
+}
+
+export interface RestoreResult {
+  loaded: RestoreCounts;
+}

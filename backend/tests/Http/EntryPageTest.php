@@ -26,7 +26,7 @@ final class EntryPageTest extends TestCase
     {
         $newerDate = new \DateTimeImmutable('2026-07-12T00:00:00Z');
         $olderDate = new \DateTimeImmutable('2026-07-10T00:00:00Z');
-        // Rows arrive newest-first, the order EntryRepository::listForUser
+        // Rows arrive newest-first, the order EntryListRepository::listForUser
         // returns them in; the cursor must key off the OLDEST (last) row so a
         // client asking for "what comes after this page" gets older entries.
         $newer = $this->rowForEntry(3, $newerDate);

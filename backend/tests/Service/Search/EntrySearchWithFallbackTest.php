@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Search;
 
-use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Repository\EntryRepository;
+use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
 use App\Repository\FeedRepository;
 use App\Service\Search\EntrySearchWithFallback;
@@ -64,15 +63,15 @@ final class EntrySearchWithFallbackTest extends DbTestCase
         LoggerInterface $logger,
         string $engineUrl,
     ): EntrySearchWithFallback {
-        $entryRepository = $this->em->getRepository(Entry::class);
-        self::assertInstanceOf(EntryRepository::class, $entryRepository);
+        $entryListRepository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $entryListRepository);
 
         /** @var FeedRepository $feedRepository */
         $feedRepository = self::getContainer()->get(FeedRepository::class);
 
         return new EntrySearchWithFallback(
-            new IndexedEntrySearch($reader, $feedRepository, $entryRepository),
-            new LikeEntrySearch($entryRepository),
+            new IndexedEntrySearch($reader, $feedRepository, $entryListRepository),
+            new LikeEntrySearch($entryListRepository),
             $logger,
             new SearchEngineCapability($engineUrl, ''),
         );

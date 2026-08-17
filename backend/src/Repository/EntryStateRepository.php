@@ -21,6 +21,20 @@ class EntryStateRepository extends ServiceEntityRepository
         parent::__construct($registry, EntryState::class);
     }
 
+    /**
+     * How many state rows the user owns. EntryState has no scalar id — its
+     * primary key is the (user, entry) pair — so the count goes through the
+     * entry association rather than an id column.
+     */
+    public function countForUser(int $userId): int
+    {
+        return (int) $this->createQueryBuilder('s')
+            ->select('COUNT(s.entry)')
+            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
     public function findOneForUserEntry(int $userId, int $entryId): ?EntryState
     {
         /** @var EntryState|null $row */
@@ -31,6 +45,42 @@ class EntryStateRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
 
         return $row;
+    }
+
+    /**
+     * One user's states in ascending entry-id slices — the backup's keyset walk.
+     * Entry and feed ride along eagerly: the serialiser needs guidHash and the
+     * feed URL for every row, and a lazy load here would cost two queries per
+     * state.
+     *
+     * Scoped to feeds the user still subscribes to — the same subscription
+     * gate favoriteAndKeptCountsForUser() applies. A state left behind by an
+     * unsubscribe (SubscriptionService::unsubscribe removes the subscription
+     * without touching entry_state) names a feed and entry the export's feed
+     * and entry lines never emit for this account, so including it here would
+     * leave the restore an entryState line it cannot attach to anything and a
+     * footer count higher than what is restorable.
+     *
+     * @return list<EntryState>
+     */
+    public function forUserAfterEntryId(int $userId, int $afterEntryId, int $limit): array
+    {
+        /** @var list<EntryState> $states */
+        $states = $this->createQueryBuilder('s')
+            ->addSelect('e', 'f')
+            ->join('s.entry', 'e')
+            ->join('e.feed', 'f')
+            ->join(Subscription::class, 'sub', 'ON', 'sub.feed = e.feed AND sub.user = :userId')
+            ->andWhere('s.user = :userId')
+            ->andWhere('e.id > :afterEntryId')
+            ->setParameter('userId', $userId)
+            ->setParameter('afterEntryId', $afterEntryId)
+            ->orderBy('e.id', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return $states;
     }
 
     /**

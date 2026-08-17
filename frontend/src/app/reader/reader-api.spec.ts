@@ -249,6 +249,20 @@ describe('ReaderApi', () => {
       expect(req.request.body).toBe('<opml/>');
       req.flush({ imported: 1, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0 });
     });
+
+    it('GETs the account backup as a blob, observing the full response for its headers', () => {
+      let filename: string | null = null;
+      api.downloadAccountBackup().subscribe((response) => {
+        filename = response.headers.get('Content-Disposition');
+      });
+      const req = ctrl.expectOne('https://api.test/api/account/backup');
+      expect(req.request.method).toBe('GET');
+      expect(req.request.responseType).toBe('blob');
+      req.flush(new Blob(['gzipped']), {
+        headers: { 'Content-Disposition': 'attachment; filename="account.json.gz"' },
+      });
+      expect(filename).toBe('attachment; filename="account.json.gz"');
+    });
   });
 
   it('GETs reader content for an entry', () => {

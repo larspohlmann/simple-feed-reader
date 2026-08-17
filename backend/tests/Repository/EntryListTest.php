@@ -11,8 +11,8 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Http\EntryCursor;
+use App\Repository\EntryListRepository;
 use App\Repository\EntryQuery;
-use App\Repository\EntryRepository;
 use App\Tests\DbTestCase;
 
 final class EntryListTest extends DbTestCase
@@ -77,10 +77,10 @@ final class EntryListTest extends DbTestCase
         return $e;
     }
 
-    private function repo(): EntryRepository
+    private function repo(): EntryListRepository
     {
-        $repo = $this->em->getRepository(Entry::class);
-        self::assertInstanceOf(EntryRepository::class, $repo);
+        $repo = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repo);
 
         return $repo;
     }

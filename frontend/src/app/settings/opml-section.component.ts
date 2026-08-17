@@ -3,17 +3,25 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
+import { downloadOpmlExport } from '../core/opml-export';
 import { ReaderApi } from '../reader/reader-api';
 import { RefreshService } from '../reader/refresh.service';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { OpmlImportResult } from '../reader/models';
+import { BackupSectionComponent } from './backup-section.component';
 import { ButtonComponent } from '../shared/button/button.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
 
 @Component({
   selector: 'app-opml-section',
-  imports: [ButtonComponent, ErrorBannerComponent, SettingsCardComponent, TranslocoPipe],
+  imports: [
+    BackupSectionComponent,
+    ButtonComponent,
+    ErrorBannerComponent,
+    SettingsCardComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './opml-section.component.html',
   styleUrl: './opml-section.component.scss',
 })
@@ -35,18 +43,7 @@ export class OpmlSectionComponent {
   }
 
   exportOpml(): void {
-    this.exporting.set(true);
-    this.exportError.set(null);
-    this.api.exportOpml().subscribe({
-      next: (xml) => {
-        this.exporting.set(false);
-        this.download(xml);
-      },
-      error: (e: HttpErrorResponse) => {
-        this.exporting.set(false);
-        this.exportError.set(parseProblem(e));
-      },
-    });
+    downloadOpmlExport(this.api, this.exporting, this.exportError);
   }
 
   onFile(e: Event): void {
@@ -84,20 +81,5 @@ export class OpmlSectionComponent {
         this.importError.set(parseProblem(e));
       },
     });
-  }
-
-  private download(xml: string): void {
-    const url = URL.createObjectURL(new Blob([xml], { type: 'text/x-opml' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'feeds.opml';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    // Revoke on the next tick: Firefox/Safari queue the download asynchronously
-    // and read the blob after click() returns, so revoking synchronously can
-    // yield an empty file.
-    setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 }

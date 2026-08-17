@@ -9,7 +9,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Http\EntryCursor;
-use App\Repository\EntryRepository;
+use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
 use App\Repository\FeedRepository;
 use App\Service\Search\EntrySearchResult;
@@ -19,7 +19,7 @@ use App\Tests\DbTestCase;
 
 /**
  * IndexedEntrySearch: asks the index for entry ids, then hydrates them
- * through EntryRepository::rowsByIdsForUser. The reader itself is faked, so
+ * through EntryListRepository::rowsByIdsForUser. The reader itself is faked, so
  * this covers only what IndexedEntrySearch does with it — the hydration and
  * security behaviour of rowsByIdsForUser is EntryRowsByIdsTest's job.
  */
@@ -64,13 +64,13 @@ final class IndexedEntrySearchTest extends DbTestCase
 
     private function search(FakeSearchIndexReader $reader, EntrySearchQuery $query): EntrySearchResult
     {
-        $entryRepository = $this->em->getRepository(Entry::class);
-        self::assertInstanceOf(EntryRepository::class, $entryRepository);
+        $entryListRepository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $entryListRepository);
 
         /** @var FeedRepository $feedRepository */
         $feedRepository = self::getContainer()->get(FeedRepository::class);
 
-        return (new IndexedEntrySearch($reader, $feedRepository, $entryRepository))->search($query);
+        return (new IndexedEntrySearch($reader, $feedRepository, $entryListRepository))->search($query);
     }
 
     public function testTheQueryTermsAndLimitReachTheReader(): void

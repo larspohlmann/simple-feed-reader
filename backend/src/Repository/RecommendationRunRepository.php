@@ -58,6 +58,15 @@ final class RecommendationRunRepository extends ServiceEntityRepository
         return $run;
     }
 
+    public function countForUser(int $userId): int
+    {
+        return (int) $this->createQueryBuilder('r')
+            ->select('COUNT(r.id)')
+            ->andWhere('r.user = :userId')->setParameter('userId', $userId)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
     /**
      * The run's status as the database holds it right now, deliberately read
      * as a scalar so the identity map cannot answer with the copy the caller

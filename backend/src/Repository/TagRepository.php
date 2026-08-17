@@ -122,6 +122,15 @@ class TagRepository extends ServiceEntityRepository
         return $tag;
     }
 
+    public function countForUser(int $userId): int
+    {
+        return (int) $this->createQueryBuilder('t')
+            ->select('COUNT(t.id)')
+            ->andWhere('t.user = :userId')->setParameter('userId', $userId)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
     /**
      * How many tags each of the given users owns, in ONE query. A user with no
      * tags is absent from the result, not zero-valued — callers default a miss

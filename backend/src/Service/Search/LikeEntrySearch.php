@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Search;
 
-use App\Repository\EntryRepository;
+use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
 
 /**
@@ -14,7 +14,7 @@ use App\Repository\EntrySearchQuery;
  */
 final readonly class LikeEntrySearch implements EntrySearchInterface
 {
-    public function __construct(private EntryRepository $entries)
+    public function __construct(private EntryListRepository $entries)
     {
     }
 
