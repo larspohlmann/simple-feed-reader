@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Backup;
 
+use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
@@ -11,12 +13,12 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Backup\BackupFitCheck;
 use App\Service\Backup\BackupInventory;
-use App\Service\Backup\Dto\AccountLine;
 use App\Service\Backup\Dto\BackupHeader;
 use App\Service\Backup\Exception\BackupDoesNotFitException;
 use App\Service\Backup\RestorePreviewer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class RestorePreviewerTest extends DbTestCase
@@ -74,6 +76,24 @@ final class RestorePreviewerTest extends DbTestCase
     }
 
     /** @return array<string, mixed> */
+    private static function entry(string $feedUrl, string $guidHash): array
+    {
+        return ['kind' => 'entry', 'feedUrl' => $feedUrl, 'guid' => 'guid-' . $guidHash,
+            'guidHash' => $guidHash, 'url' => null, 'title' => 'One', 'author' => null,
+            'summary' => null, 'contentHtml' => null, 'imageUrl' => null, 'imageWidth' => null,
+            'imageHeight' => null, 'publishedAt' => null,
+            'createdAt' => '2026-08-01T00:00:00+00:00', 'effectiveDate' => '2026-08-01T00:00:00+00:00'];
+    }
+
+    /** @return array<string, mixed> */
+    private static function entryState(string $feedUrl, string $guidHash): array
+    {
+        return ['kind' => 'entryState', 'feedUrl' => $feedUrl, 'guidHash' => $guidHash,
+            'isRead' => true, 'isFavorite' => false, 'isKept' => false, 'readAt' => null,
+            'isViewed' => false, 'viewedAt' => null];
+    }
+
+    /** @return array<string, mixed> */
     private static function subscription(string $feedUrl): array
     {
         return ['kind' => 'subscription', 'feedUrl' => $feedUrl, 'customTitle' => null,
@@ -103,11 +123,6 @@ final class RestorePreviewerTest extends DbTestCase
         );
     }
 
-    private static function someAccount(): AccountLine
-    {
-        return new AccountLine(locale: 'en', scrapeFallbackEnabled: false, recommendationSettings: null);
-    }
-
     private function fitCheck(): BackupFitCheck
     {
         /** @var BackupFitCheck $fitCheck */
@@ -129,21 +144,63 @@ final class RestorePreviewerTest extends DbTestCase
         return $this->users->create($email, maxSubscriptions: $maxSubscriptions);
     }
 
-    public function testRefusesMoreEntriesThanTheSanityCeiling(): void
+    /**
+     * A hand-built inventory rather than a generated file: the ceilings sit in
+     * the millions of lines, and the point under test is the guard, not the
+     * reader's ability to count that far.
+     *
+     * @param array<string, int> $counts
+     */
+    private static function inventoryOf(array $counts): BackupInventory
     {
-        $inventory = new BackupInventory(
+        return new BackupInventory(
             header: self::someHeader(),
-            account: self::someAccount(),
-            tags: 0,
-            feeds: 1,
-            subscriptions: 1,
-            entries: 500_001,
-            entryStates: 0,
+            tags: $counts['tags'] ?? 0,
+            feeds: $counts['feeds'] ?? 1,
+            subscriptions: $counts['subscriptions'] ?? 1,
+            entries: $counts['entries'] ?? 0,
+            entryStates: $counts['entryStates'] ?? 0,
         );
+    }
+
+    /**
+     * Every counted dimension is bounded, not only the two that dominate the
+     * load's runtime: tags, feeds and subscriptions all accumulate as managed
+     * entities until the entry phase flushes, so an unbounded one would run a
+     * WIPED account out of memory — and a fatal cannot be reported at all.
+     *
+     * @return iterable<string, array{array<string, int>}>
+     */
+    public static function inventoriesAboveACeiling(): iterable
+    {
+        yield 'tags' => [['tags' => 5_001]];
+        yield 'feeds' => [['feeds' => 20_001]];
+        yield 'entries' => [['entries' => 500_001]];
+        yield 'entry states' => [['entryStates' => 500_001]];
+    }
+
+    /**
+     * @param array<string, int> $counts
+     */
+    #[DataProvider('inventoriesAboveACeiling')]
+    public function testRefusesAnyDimensionAboveItsSanityCeiling(array $counts): void
+    {
+        $email = str_replace(' ', '-', (string) array_key_first($counts)) . '-ceiling@example.com';
 
         $this->expectException(BackupDoesNotFitException::class);
 
-        $this->fitCheck()->assertFits($inventory, $this->makeUser('fit-ceiling@example.com'));
+        $this->fitCheck()->assertFits(self::inventoryOf($counts), $this->makeUser($email));
+    }
+
+    public function testAnInventoryOnEveryCeilingIsAccepted(): void
+    {
+        $onTheLine = self::inventoryOf([
+            'tags' => 5_000, 'feeds' => 20_000, 'entries' => 500_000, 'entryStates' => 500_000,
+        ]);
+
+        $this->fitCheck()->assertFits($onTheLine, $this->makeUser('on-the-ceiling@example.com'));
+
+        self::assertSame(500_000, $onTheLine->entries);
     }
 
     public function testPreviewRefusesMoreSubscriptionsThanTheAccountAllows(): void
@@ -188,5 +245,44 @@ final class RestorePreviewerTest extends DbTestCase
         self::assertSame(1, $preview->currentTags);
         self::assertSame(0, $preview->currentEntryStates);
         self::assertSame(1, $preview->currentRecommendationRuns);
+    }
+
+    /**
+     * The four numbers the user reads immediately before an irreversible wipe.
+     * Every other case here leaves entries and states at zero, which a broken
+     * count would satisfy just as well — COUNT(s.entry) over EntryState's
+     * composite key in particular has no scalar id to fall back on.
+     */
+    public function testTheEntryAndStateCountsAreReportedNonZero(): void
+    {
+        $user = $this->makeUser('non-zero-counts@example.com');
+        $feed = new Feed('https://counted.example/feed.xml');
+        $this->em->persist($feed);
+        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
+        $when = new \DateTimeImmutable('2026-08-01 00:00:00');
+        foreach (['counted-a', 'counted-b'] as $guid) {
+            $entry = new Entry($feed, $guid, 'https://counted.example/' . $guid, $guid, $when, $when);
+            $this->em->persist($entry);
+            $this->em->persist(new EntryState($user, $entry));
+        }
+        $this->em->flush();
+
+        $gzip = self::gzipOf([
+            self::header(), self::account(),
+            self::feed('https://a.example/feed.xml'),
+            self::subscription('https://a.example/feed.xml'),
+            self::entry('https://a.example/feed.xml', 'hash-a'),
+            self::entry('https://a.example/feed.xml', 'hash-b'),
+            self::entry('https://a.example/feed.xml', 'hash-c'),
+            self::entryState('https://a.example/feed.xml', 'hash-a'),
+            self::entryState('https://a.example/feed.xml', 'hash-b'),
+            self::footer(['feed' => 1, 'subscription' => 1, 'entry' => 3, 'entryState' => 2]),
+        ]);
+
+        $preview = $this->previewer()->preview($user, $gzip);
+
+        self::assertSame(3, $preview->toLoad->entries);
+        self::assertSame(2, $preview->toLoad->entryStates);
+        self::assertSame(2, $preview->currentEntryStates);
     }
 }

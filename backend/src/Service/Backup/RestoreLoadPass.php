@@ -18,7 +18,6 @@ use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
 use App\Service\Backup\Exception\BackupLoadFailedException;
-use App\Service\Backup\Exception\InvalidBackupException;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -150,7 +149,7 @@ final class RestoreLoadPass
 
     private function loadSubscription(SubscriptionLine $line): void
     {
-        $feed = $this->feedsByUrl[$line->feedUrl] ?? throw new InvalidBackupException(sprintf(
+        $feed = $this->feedsByUrl[$line->feedUrl] ?? throw BackupLoadFailedException::danglingReference(sprintf(
             'Subscription to "%s" has no matching feed line.',
             $line->feedUrl,
         ));
@@ -168,9 +167,14 @@ final class RestoreLoadPass
         ++$this->counts['subscriptions'];
     }
 
+    /**
+     * A backstop: BackupInspector refuses an undeclared tag reference in pass
+     * 1, while the account is still whole. Reaching this means the wipe has
+     * already run, so the user must be told the account is empty.
+     */
     private function tagNamed(string $name): Tag
     {
-        return $this->tagsByName[$name] ?? throw new InvalidBackupException(sprintf(
+        return $this->tagsByName[$name] ?? throw BackupLoadFailedException::danglingReference(sprintf(
             'A subscription names tag "%s", which the backup never declares.',
             $name,
         ));

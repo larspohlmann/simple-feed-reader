@@ -10,8 +10,8 @@ use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\Dto\EntryStateLine;
 use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Dto\FooterLine;
-use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\LineField;
+use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
 use App\Service\Backup\Exception\InvalidBackupException;
 
@@ -181,7 +181,10 @@ final readonly class BackupReader
             BackupSchema::KIND_SUBSCRIPTION => SubscriptionLine::fromLine($decoded),
             BackupSchema::KIND_ENTRY => EntryLine::fromLine($decoded),
             BackupSchema::KIND_ENTRY_STATE => EntryStateLine::fromLine($decoded),
-            default => throw new InvalidBackupException(sprintf('Unhandled kind "%s".', $kind)),
+            // Unreachable: assertOrdered has already refused every kind absent
+            // from KIND_RANK, and KIND_RANK and this match list the same set.
+            // It stays only so the match is exhaustive over `string`.
+            default => throw new \LogicException(sprintf('assertOrdered accepted unknown kind "%s".', $kind)),
         };
     }
 

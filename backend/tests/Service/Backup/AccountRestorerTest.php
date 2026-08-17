@@ -25,6 +25,7 @@ use App\Service\Backup\BackupReader;
 use App\Service\Backup\EntryBatchInserter;
 use App\Service\Backup\Exception\BackupDoesNotFitException;
 use App\Service\Backup\Exception\BackupLoadFailedException;
+use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\RestoreLoader;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Search\EntryIndexer;
@@ -530,28 +531,33 @@ final class AccountRestorerTest extends DbTestCase
 
     /**
      * The load runs after the wipe, so a file the DATABASE refuses — as
-     * opposed to one the grammar refuses, which never gets this far — is the
-     * one failure that can hit an already-empty account. It must arrive as a
-     * typed, reportable error carrying the "run it again" remedy, never as an
-     * opaque 500 from a driver.
+     * opposed to one the grammar or the inspector refuses, which never gets
+     * this far — is the one failure that can hit an already-empty account. It
+     * must arrive as a typed, reportable error carrying the "run it again"
+     * remedy, never as an opaque 500 from a driver.
      */
     public function testAFileTheDatabaseRejectsFailsAsATypedBackupError(): void
     {
         $user = $this->seededUser('rejected@example.com');
         $userId = (int) $user->getId();
-        $gzip = $this->withDuplicatedTagLine($this->backupOf($user));
+        $gzip = $this->withDuplicatedLine('subscription', $this->backupOf($user));
 
         $this->expectException(BackupLoadFailedException::class);
         $this->restorer()->restore($this->reloadUser($userId), $gzip, 'REPLACE');
     }
 
     /**
-     * Two tag lines with the same name: every field is the right type, so
-     * BackupReader passes the file, and the unique (user_id, name) index is
-     * what refuses it — on both engines. The footer count is corrected, or
-     * the reader would reject the file for the wrong reason.
+     * Repeats the first line of $kind. Every field is the right type and every
+     * reference resolves, so neither BackupReader nor BackupInspector has
+     * anything to object to — a unique index is what refuses it, on both
+     * engines. The footer count is corrected, or the reader would reject the
+     * file for the wrong reason.
+     *
+     * Deliberately NOT a duplicated tag line any more: the inspector now
+     * refuses that in pass 1, before the wipe, which is the point of #412's
+     * final review — so it can no longer stage a post-wipe failure.
      */
-    private function withDuplicatedTagLine(string $gzip): string
+    private function withDuplicatedLine(string $kind, string $gzip): string
     {
         $lines = [];
         $duplicated = false;
@@ -562,33 +568,103 @@ final class AccountRestorerTest extends DbTestCase
             $decoded = json_decode($line, true, flags: \JSON_THROW_ON_ERROR);
             self::assertIsArray($decoded);
             /** @var array<string, mixed> $decoded */
-            $kind = $decoded['kind'] ?? null;
-            if ('footer' === $kind) {
-                $decoded['counts'] = $this->withOneMoreTag($decoded['counts']);
+            $lineKind = $decoded['kind'] ?? null;
+            if ('footer' === $lineKind) {
+                $decoded['counts'] = $this->withCountShiftedBy($kind, 1, $decoded['counts']);
             }
             $lines[] = json_encode($decoded, \JSON_THROW_ON_ERROR);
-            if (!$duplicated && 'tag' === $kind) {
+            if (!$duplicated && $kind === $lineKind) {
                 $lines[] = $lines[\count($lines) - 1];
                 $duplicated = true;
             }
         }
-        self::assertTrue($duplicated, 'the fixture account must carry at least one tag');
+        self::assertTrue($duplicated, 'the fixture account must carry at least one ' . $kind);
 
         return (string) gzencode(implode("\n", $lines) . "\n");
     }
 
     /** @return array<string, int> */
-    private function withOneMoreTag(mixed $counts): array
+    private function withCountShiftedBy(string $kind, int $delta, mixed $counts): array
     {
         self::assertIsArray($counts);
         $corrected = [];
-        foreach ($counts as $kind => $count) {
-            self::assertIsString($kind);
-            $corrected[$kind] = self::asInt($count);
+        foreach ($counts as $countedKind => $count) {
+            self::assertIsString($countedKind);
+            $corrected[$countedKind] = self::asInt($count);
         }
-        ++$corrected['tag'];
+        $corrected[$kind] += $delta;
 
         return $corrected;
+    }
+
+    /**
+     * The headline property of the whole feature: a file that cannot be fully
+     * accepted costs the account nothing. A dangling reference used to be
+     * found only during the load, with the wipe already behind it.
+     */
+    public function testAReferentialRefusalLeavesEveryRowInPlace(): void
+    {
+        $user = $this->seededUser('dangling@example.com');
+        $userId = (int) $user->getId();
+        $gzip = $this->withoutTheFirstFeedLine($this->backupOf($user));
+
+        try {
+            $this->restorer()->restore($this->reloadUser($userId), $gzip, 'REPLACE');
+            self::fail('The restore accepted a subscription whose feed the file never declares.');
+        } catch (InvalidBackupException) {
+            // Expected — and nothing may have been deleted by now.
+        }
+
+        $this->assertTheSeededAccountSurvived($userId);
+    }
+
+    private function assertTheSeededAccountSurvived(int $userId): void
+    {
+        $this->em->clear();
+        self::assertSame(2, $this->scalarInt('SELECT COUNT(*) FROM tag WHERE user_id = ?', [$userId]));
+        self::assertSame(2, $this->scalarInt('SELECT COUNT(*) FROM subscription WHERE user_id = ?', [$userId]));
+        self::assertSame(2, $this->scalarInt('SELECT COUNT(*) FROM entry_state WHERE user_id = ?', [$userId]));
+    }
+
+    /**
+     * Drops one feed line and corrects the footer, so the file's grammar is
+     * intact and only its subscriptions are left pointing at nothing.
+     */
+    private function withoutTheFirstFeedLine(string $gzip): string
+    {
+        $lines = [];
+        $dropped = false;
+        foreach ($this->decodedLinesOf($gzip) as $decoded) {
+            $kind = $decoded['kind'] ?? null;
+            if (!$dropped && 'feed' === $kind) {
+                $dropped = true;
+                continue;
+            }
+            if ('footer' === $kind) {
+                $decoded['counts'] = $this->withCountShiftedBy('feed', -1, $decoded['counts']);
+            }
+            $lines[] = json_encode($decoded, \JSON_THROW_ON_ERROR);
+        }
+        self::assertTrue($dropped, 'the fixture account must carry at least one feed');
+
+        return (string) gzencode(implode("\n", $lines) . "\n");
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function decodedLinesOf(string $gzip): array
+    {
+        $decodedLines = [];
+        foreach (explode("\n", (string) gzdecode($gzip)) as $line) {
+            if ('' === $line) {
+                continue;
+            }
+            $decoded = json_decode($line, true, flags: \JSON_THROW_ON_ERROR);
+            self::assertIsArray($decoded);
+            /** @var array<string, mixed> $decoded */
+            $decodedLines[] = $decoded;
+        }
+
+        return $decodedLines;
     }
 
     public function testRestoredEntriesReachTheSearchIndex(): void
@@ -651,7 +727,7 @@ final class AccountRestorerTest extends DbTestCase
             new MockClock('2026-08-17 12:00:00'),
         );
 
-        return new AccountRestorer($this->em, new BackupInspector(), $fitCheck, $reset, $loader);
+        return new AccountRestorer($this->em, new BackupInspector(new BackupReader()), $fitCheck, $reset, $loader);
     }
 
     /** One tag, one subscription and one entry state, so the refusal has something to protect. */

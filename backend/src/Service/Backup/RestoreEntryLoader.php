@@ -11,7 +11,6 @@ use App\Repository\EntryRepository;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\Dto\EntryStateLine;
 use App\Service\Backup\Exception\BackupLoadFailedException;
-use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Search\EntryIndexer;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
@@ -140,9 +139,14 @@ final class RestoreEntryLoader
         return $state;
     }
 
+    /**
+     * A backstop: BackupInspector refuses rows for an unsubscribed feed in
+     * pass 1, while the account is still whole. Reaching this means the wipe
+     * has already run, so the user must be told the account is empty.
+     */
     private function target(string $feedUrl): RestoreFeedTarget
     {
-        return $this->targets[$feedUrl] ?? throw new InvalidBackupException(sprintf(
+        return $this->targets[$feedUrl] ?? throw BackupLoadFailedException::danglingReference(sprintf(
             'The backup carries rows for feed "%s", which none of its subscriptions names.',
             $feedUrl,
         ));
