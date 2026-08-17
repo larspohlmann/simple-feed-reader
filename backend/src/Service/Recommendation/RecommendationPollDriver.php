@@ -7,6 +7,7 @@ namespace App\Service\Recommendation;
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Worker\WorkerPresence;
+use Psr\Log\LoggerInterface;
 
 /**
  * The poll driver's side of #311's arbitration: while somebody else drives
@@ -23,7 +24,9 @@ use App\Service\Worker\WorkerPresence;
  * any more, though (#439): a busy result reached only because the presence
  * check above already found nobody driving means the lock and the heartbeat
  * disagree, and that case alone also carries waitingForLock, so the client
- * can tell "a worker owns this" from "this may be stuck".
+ * can tell "a worker owns this" from "this may be stuck". That same case is
+ * the one worth a warning in the log, and the reason the advancer's own
+ * failed acquire stays silent: down there a held lock is ordinary.
  */
 final readonly class RecommendationPollDriver
 {
@@ -31,6 +34,7 @@ final readonly class RecommendationPollDriver
         private RecommendationRunAdvancer $advancer,
         private RecommendationRunRepository $runs,
         private WorkerPresence $presence,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -56,9 +60,13 @@ final readonly class RecommendationPollDriver
         // is not answering to any known driver kind (#439). waitingForLock
         // names that gap for the client instead of leaving it to read the
         // same as a healthy background run.
-        return RecommendationRunReport::STATUS_BUSY === $report->status
-            ? $this->latestReport($user)->inBackground()->waitingForLock()
-            : $report;
+        if (RecommendationRunReport::STATUS_BUSY !== $report->status) {
+            return $report;
+        }
+
+        $this->logStall($user);
+
+        return $this->latestReport($user)->inBackground()->waitingForLock();
     }
 
     public function current(User $user): RecommendationRunReport
@@ -66,6 +74,22 @@ final readonly class RecommendationPollDriver
         $report = $this->latestReport($user);
 
         return $this->presence->isAnybodyDrivingRecommendationRuns() ? $report->inBackground() : $report;
+    }
+
+    /**
+     * Logged every time, with no debounce: this is the disagreement, not the
+     * contention. A lock held by a driver that says it is alive never reaches
+     * here -- the presence check answers that case first -- so what is left is
+     * rare by construction, and #439 was diagnosed from exactly this state
+     * going unrecorded. The lock name is the operator's handle on it: it is
+     * the row to inspect, and the one to delete once its holder is provably
+     * dead.
+     */
+    private function logStall(User $user): void
+    {
+        $this->logger->warning('Recommendation run lock is held with no driver behind it', [
+            'lock' => RecommendationRunAdvancer::lockNameFor($user),
+        ]);
     }
 
     private function latestReport(User $user): RecommendationRunReport

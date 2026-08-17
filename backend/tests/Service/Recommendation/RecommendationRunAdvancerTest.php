@@ -42,7 +42,6 @@ use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\TtlRecordingLockFactory;
 use App\Tests\Support\UserFactory;
-use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\SharedLockInterface;
 use Symfony\Component\Lock\Store\DoctrineDbalStore;
@@ -237,31 +236,23 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             $lock->release();
         }
 
-        // #439 was diagnosed from a silent stall, so the failed acquire must
-        // leave a trace -- with enough to find the account (the lock name)
-        // and which driver hit it.
-        $records = $logSpy->getRecords();
-        self::assertCount(1, $records);
-        self::assertSame('WARNING', $records[0]->level->getName());
-        self::assertSame('Recommendation tick found its lock already held', $records[0]->message);
-        self::assertSame('ai-recommendations-' . $userId, $records[0]->context['lock']);
-        self::assertSame('Poll', $records[0]->context['driver']);
+        // A held lock is the healthy, frequent case down here: the advancer
+        // cannot tell it from a stall, because it never reads whether any
+        // driver claims to be alive. Warning on it flooded dev.log with the
+        // non-event and buried #439's real one, so the decision -- and the
+        // log line -- belongs to RecommendationPollDriver, which knows both
+        // halves (RecommendationRunControllerTest pins it there).
+        self::assertSame([], $logSpy->getRecords());
     }
 
     /**
-     * A poll tab retries every few seconds while its run stays busy, so
-     * logging every failed acquire would flood dev.log with the very stall
-     * this warning exists to surface. Two attempts back to back -- the
-     * closest a test can get to "immediately repeated" without depending on
-     * wall-clock timing -- must collapse to one log line.
-     *
-     * The second `busy` result is asserted too, not just the log count:
-     * that pins the property review Important 1 turned on -- a suppressed
-     * (debounced) log must never change what advance() returns, so a
-     * failure inside the debounce can never be the thing standing between a
-     * healthy busy answer and a 500.
+     * Repeating the failed acquire must stay silent too, not merely be
+     * debounced: it is the second half of the same non-event, and a poll tab
+     * produces it every few seconds for as long as somebody else drives the
+     * run. The second `busy` result is asserted as well, so a busy answer
+     * stays a busy answer however often it is asked for.
      */
-    public function testARepeatedLockContentionWithinTheDebounceWindowLogsOnce(): void
+    public function testARepeatedLockContentionStaysSilentToo(): void
     {
         $userId = $this->user->getId();
         self::assertNotNull($userId);
@@ -278,40 +269,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         }
 
         self::assertSame('busy', $second->status);
-        self::assertCount(1, $logSpy->getRecords());
-    }
-
-    /**
-     * The recommendation_lock_stall_log rate limiter is keyed on the full
-     * lock name ("ai-recommendations-<id>"), not on a shared config key: a
-     * limiter keyed on the shared key alone would silence every account's
-     * stall after the first one anywhere consumed its single-per-minute
-     * allowance, which is worse than the flood #439 already suffered from --
-     * a real stall on one account going unlogged because a different
-     * account's stall consumed the shared allowance a moment earlier. Two
-     * different accounts contending at once, one saved (a real id) and one
-     * not (the ?? 0 fallback also pinned by
-     * testLockNameFallsBackToZeroForAnUnsavedUser), must both be logged.
-     */
-    public function testLockContentionOnADifferentAccountLogsIndependently(): void
-    {
-        $logSpy = $this->replaceLoggerWithASpy();
-        $unsavedUser = new User('unsaved-stall@example.test', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-
-        $lock = $this->lockFactory()->createLock('ai-recommendations-' . $this->user->getId());
-        $otherLock = $this->lockFactory()->createLock('ai-recommendations-0');
-        self::assertTrue($lock->acquire());
-        self::assertTrue($otherLock->acquire());
-
-        try {
-            $this->advancer()->advance($this->user);
-            $this->advancer()->advance($unsavedUser);
-        } finally {
-            $lock->release();
-            $otherLock->release();
-        }
-
-        self::assertCount(2, $logSpy->getRecords());
+        self::assertSame([], $logSpy->getRecords());
     }
 
     private function replaceLoggerWithASpy(): TestHandler
@@ -323,16 +281,6 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // be swapped before the advancer -- or anything else that resolves
         // it -- is first built this test.
         self::getContainer()->set('monolog.logger', new Logger('test', [$logSpy]));
-
-        // recommendationLockStallLogLimiter's cache_pool is cache.rate_limiter,
-        // a FilesystemAdapter that outlives one test method -- a prior case's
-        // "ai-recommendations-<this user's id>" entry would otherwise still be
-        // within its own window and silently suppress the very warning this
-        // test means to observe. Same guard RecommendationRunControllerTest's
-        // setUp() applies for the same reason.
-        $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
-        self::assertInstanceOf(CacheItemPoolInterface::class, $rateLimiterCache);
-        $rateLimiterCache->clear();
 
         return $logSpy;
     }

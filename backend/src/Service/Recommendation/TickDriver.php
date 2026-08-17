@@ -8,10 +8,7 @@ namespace App\Service\Recommendation;
  * Which driver is ticking the run, so the advancer can size a wave to the
  * regime it runs in (#344): the worker owns its process and may send the full
  * per-connection concurrency; a poll tick is a web request, so it clamps to
- * POLL_MAX_CONCURRENCY to keep one request bounded. Also names the driver on
- * RecommendationRunAdvancer's #439 "lock already held" warning, so dev.log
- * says who actually hit the contention instead of leaving every non-Worker
- * caller to read as a poll.
+ * POLL_MAX_CONCURRENCY to keep one request bounded.
  *
  * Sweep is the maintenance cron's ForYouSweep::sweepOnce() call: like a poll
  * tick it runs inside a bounded web request (the cron hits /maintenance/tick

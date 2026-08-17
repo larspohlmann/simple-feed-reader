@@ -22,10 +22,8 @@ use App\Service\Ai\ProviderTimeouts;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
 use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Lock\LockFactory;
-use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 /**
  * The driver-agnostic tick: #311's worker will call this exact method with no
@@ -125,19 +123,31 @@ final class RecommendationRunAdvancer
         private readonly RecommendationBatchWave $batchWave,
         private readonly RecommendationCompletionRequestFactory $requestFactory,
         private readonly TickLockKeepalive $keepalive,
-        private readonly LoggerInterface $logger,
-        private readonly RateLimiterFactoryInterface $recommendationLockStallLogLimiter,
     ) {
+    }
+
+    /**
+     * The one place the per-user lock's name is formed, so a caller that has
+     * to name it in a log line -- RecommendationPollDriver, reporting a lock
+     * held with nobody behind it (#439) -- names the very lock this method
+     * takes rather than a second copy of the convention.
+     */
+    public static function lockNameFor(User $user): string
+    {
+        return self::LOCK_NAME_PREFIX . ($user->getId() ?? 0);
     }
 
     public function advance(User $user, TickDriver $driver = TickDriver::Poll): RecommendationRunReport
     {
-        $lockName = self::LOCK_NAME_PREFIX . ($user->getId() ?? 0);
+        $lockName = self::lockNameFor($user);
         $lock = $this->lockFactory->createLock($lockName, $this->lockTtlFor($user));
 
         if (!$lock->acquire()) {
-            $this->logLockContention($lockName, $driver);
-
+            // Deliberately silent: a failed acquire is the healthy, frequent
+            // case -- somebody else is advancing this run and the caller is
+            // told so. Only the caller can tell that apart from a stall,
+            // because only it knows whether any driver claims to be alive
+            // (#439); RecommendationPollDriver logs the warning there.
             return RecommendationRunReport::busy();
         }
 
@@ -173,48 +183,6 @@ final class RecommendationRunAdvancer
             // name is free another process may already hold it.
             $this->keepalive->release();
             $lock->release();
-        }
-    }
-
-    /**
-     * Debounced through recommendationLockStallLogLimiter (config/packages/
-     * rate_limiter.yaml) rather than an in-memory timestamp: a poll tick
-     * gets a fresh RecommendationRunAdvancer on every HTTP request, so
-     * nothing held on $this would survive between one poll and the next,
-     * and the flood #439 warns about is made of exactly those repeated poll
-     * and sweep requests. The rate limiter's filesystem cache pool is
-     * shared across processes the way an instance property never could.
-     *
-     * An earlier version of this debounced through a second
-     * DoctrineDbalStore lock, mirroring the run lock's own mechanism. Review
-     * caught two problems with that: every failed acquire against it was
-     * three DB round trips on the path that fires on every busy poll, and
-     * Symfony's own Lock component logs its *own* conflict on the "lock"
-     * Monolog channel -- so a debounce built out of a second lock added a
-     * second log line (to a different channel the debounce's own test
-     * couldn't see) for every one it suppressed, making dev.log *longer*
-     * instead of shorter. The rate limiter's cache-backed storage does
-     * neither: no DB round trip, and no lock component logging a conflict
-     * of its own.
-     *
-     * Wrapped in a catch-all: whatever backs the limiter, a failure in this
-     * debounce -- or in the log call itself -- must never turn a legitimate
-     * `busy` answer into a 500 for the request that only wanted to know
-     * whether its run is somebody else's work.
-     */
-    private function logLockContention(string $lockName, TickDriver $driver): void
-    {
-        try {
-            if (!$this->recommendationLockStallLogLimiter->create($lockName)->consume()->isAccepted()) {
-                return;
-            }
-
-            $this->logger->warning(
-                'Recommendation tick found its lock already held',
-                ['lock' => $lockName, 'driver' => $driver->name],
-            );
-        } catch (\Throwable) {
-            // Best-effort, see the docblock above.
         }
     }
 
