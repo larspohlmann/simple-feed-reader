@@ -33,15 +33,16 @@ export function parseProblem(err: HttpErrorResponse): Problem {
         typeof b['accountStatus'] === 'string' ? (b['accountStatus'] as string) : undefined,
     };
   }
+  if (err.status === 413) {
+    return {
+      type: REQUEST_TOO_LARGE,
+      title: 'The file is too large for this server to accept',
+      status: err.status,
+    };
+  }
   return {
-    type: err.status === 413 ? REQUEST_TOO_LARGE : 'about:blank',
-    title: fallbackTitle(err.status),
+    type: 'about:blank',
+    title: err.status === 0 ? 'Could not reach the server' : 'Something went wrong',
     status: err.status,
   };
-}
-
-function fallbackTitle(status: number): string {
-  if (status === 0) return 'Could not reach the server';
-  if (status === 413) return 'The file is too large for this server to accept';
-  return 'Something went wrong';
 }

@@ -76,11 +76,21 @@ export class BackupSectionComponent {
     () => this.typed() === CONFIRM_PHRASE && !!this.file() && !this.restoring(),
   );
 
-  /** The banner text for a failed request. A body the web server refused as
-   *  oversized never reaches the app, so it carries no translated detail of
-   *  its own -- and it is the one failure here the user can act on, so it gets
-   *  wording that names the file size instead of the generic fallback (#458). */
-  messageFor(problem: Problem): string {
+  /** Banner texts, memoised the way the other settings cards do it
+   *  (ai-section's `listFailure`, recommendation-settings-card's
+   *  `failureMessage`) -- this component is not OnPush, so a method called
+   *  straight from the template would re-translate on every change-detection
+   *  tick for as long as a banner is up. */
+  readonly exportErrorMessage = computed(() => this.messageFor(this.exportError()));
+  readonly safetyNetErrorMessage = computed(() => this.messageFor(this.safetyNetError()));
+  readonly errorMessage = computed(() => this.messageFor(this.error()));
+
+  /** A body the web server refused as oversized never reaches the app, so it
+   *  carries no translated detail of its own -- and it is the one failure here
+   *  the user can act on, so it gets wording that names the upload limit
+   *  instead of the generic fallback (#458). */
+  private messageFor(problem: Problem | null): string | null {
+    if (problem === null) return null;
     if (problem.type === REQUEST_TOO_LARGE) {
       return this.transloco.translate('settings.backup.tooLarge');
     }
