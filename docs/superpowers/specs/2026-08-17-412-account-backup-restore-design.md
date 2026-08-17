@@ -163,7 +163,18 @@ whole backup fits.
 
 500,000 is a sanity ceiling, not a tuned limit: the 240 s budget permits roughly
 two million entries, and the largest real corpus measured is 102,060. A file above
-it is corrupt or hostile, not a large account.
+it is corrupt or hostile, not a large account. The same reasoning bounds the other
+counted kinds — **5,000 tags**, **20,000 feeds**, **500,000 entry states** — because
+tags, feeds and subscriptions accumulate as managed entities until the entry phase
+flushes, so an unbounded one would exhaust memory on an already-wiped account, and
+a fatal cannot be reported at all.
+
+**Refuses before any deletion**, likewise, a file whose cross-references do not
+resolve inside itself: a subscription naming a feed the file never declares, a
+subscription naming an undeclared tag, an entry or entry state naming a feed no
+subscription names, or the same tag name twice. All of these are decided in pass 1,
+by `BackupInspector`. The load keeps its own checks as a backstop, but raises
+`BackupLoadFailedException` there — reaching one means the wipe has already run.
 
 **Refuses** a backup whose `schemaVersion` is newer than the running instance.
 
