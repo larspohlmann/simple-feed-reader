@@ -7,6 +7,7 @@ namespace App\Tests\EventListener;
 use App\EventListener\ApiExceptionListener;
 use App\Exception\RateLimitedException;
 use App\Exception\ValidationException;
+use App\Service\Backup\Exception\BackupLoadFailedException;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\EventDispatcher\EventDispatcher;
@@ -75,6 +76,28 @@ final class ApiExceptionListenerTest extends TestCase
             'detail' => 'One or more fields are invalid.',
             'errors' => ['email' => ['Bad.']],
         ], $this->payloadOf($response));
+    }
+
+    /**
+     * Carried in from the Task 8 review: BackupLoadFailedException is raised
+     * AFTER AccountReset has already wiped the account, so this is the one
+     * error the client must see as recoverable rather than catastrophic —
+     * and the driver's own message (which may carry column names or values)
+     * must never reach the response body, only the log.
+     */
+    public function testBackupLoadFailedBecomes422WithoutLeakingTheDriverMessage(): void
+    {
+        $cause = new \RuntimeException('SQLSTATE[22001]: String data, right truncated: secret-column-value');
+        $event = $this->event('/api/account/restore', BackupLoadFailedException::from($cause));
+        $this->listener()->onKernelException($event);
+
+        $response = $event->getResponse();
+        self::assertNotNull($response);
+        self::assertSame(422, $response->getStatusCode());
+        self::assertSame('application/problem+json', $response->headers->get('Content-Type'));
+        $payload = $this->payloadOf($response);
+        self::assertSame('backup_load_failed', $payload['type']);
+        self::assertStringNotContainsString('secret-column-value', (string) $response->getContent());
     }
 
     public function testRateLimitedCarriesRetryAfterHeader(): void
