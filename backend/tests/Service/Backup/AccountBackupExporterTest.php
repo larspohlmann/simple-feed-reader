@@ -142,6 +142,70 @@ final class AccountBackupExporterTest extends DbTestCase
         self::assertArrayNotHasKey('entryState', $kinds);
     }
 
+    public function testEntryStateForAnUnsubscribedFeedIsNotExported(): void
+    {
+        $user = $this->makeUser('export-orphan@example.com');
+
+        $subscribedFeed = new Feed('https://subscribed.example/feed.xml');
+        $this->em->persist($subscribedFeed);
+        $this->em->persist(
+            new Subscription($user, $subscribedFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
+        $subscribedEntry = new Entry(
+            $subscribedFeed,
+            'kept-guid',
+            null,
+            'Kept',
+            new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+            new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+        );
+        $this->em->persist($subscribedEntry);
+        $subscribedState = new EntryState($user, $subscribedEntry);
+        $subscribedState->setIsFavorite(true);
+        $this->em->persist($subscribedState);
+
+        // No Subscription row exists for this feed — exactly the state
+        // SubscriptionService::unsubscribe leaves behind, since it removes the
+        // subscription without touching entry_state (see
+        // EntryStateRepository::favoriteAndKeptCountsForUser's own docblock).
+        $orphanFeed = new Feed('https://unsubscribed.example/feed.xml');
+        $this->em->persist($orphanFeed);
+        $orphanEntry = new Entry(
+            $orphanFeed,
+            'orphan-guid',
+            null,
+            'Orphan',
+            new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+            new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+        );
+        $this->em->persist($orphanEntry);
+        $orphanState = new EntryState($user, $orphanEntry);
+        $orphanState->setIsFavorite(true);
+        $this->em->persist($orphanState);
+
+        $this->em->flush();
+
+        $lines = $this->decodedLines($user);
+
+        /** @var list<string> $kindList */
+        $kindList = array_column($lines, 'kind');
+        $kinds = array_count_values($kindList);
+        self::assertSame(1, $kinds['feed']);
+        self::assertSame(1, $kinds['subscription']);
+        self::assertSame(1, $kinds['entry']);
+        self::assertSame(1, $kinds['entryState']);
+
+        $entryStateLines = array_values(
+            array_filter($lines, static fn (array $line): bool => 'entryState' === $line['kind']),
+        );
+        self::assertSame(hash('sha256', 'kept-guid'), $entryStateLines[0]['guidHash']);
+
+        $footer = $lines[\count($lines) - 1];
+        /** @var array<string, int> $footerCounts */
+        $footerCounts = $footer['counts'];
+        self::assertSame(1, $footerCounts['entryState']);
+    }
+
     public function testEntryReadingStaysBatchedNotBuffered(): void
     {
         $user = $this->makeUser('export-streams@example.com');

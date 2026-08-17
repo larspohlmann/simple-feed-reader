@@ -39,6 +39,14 @@ class EntryStateRepository extends ServiceEntityRepository
      * feed URL for every row, and a lazy load here would cost two queries per
      * state.
      *
+     * Scoped to feeds the user still subscribes to — the same subscription
+     * gate favoriteAndKeptCountsForUser() applies. A state left behind by an
+     * unsubscribe (SubscriptionService::unsubscribe removes the subscription
+     * without touching entry_state) names a feed and entry the export's feed
+     * and entry lines never emit for this account, so including it here would
+     * leave the restore an entryState line it cannot attach to anything and a
+     * footer count higher than what is restorable.
+     *
      * @return list<EntryState>
      */
     public function forUserAfterEntryId(int $userId, int $afterEntryId, int $limit): array
@@ -48,6 +56,7 @@ class EntryStateRepository extends ServiceEntityRepository
             ->addSelect('e', 'f')
             ->join('s.entry', 'e')
             ->join('e.feed', 'f')
+            ->join(Subscription::class, 'sub', 'ON', 'sub.feed = e.feed AND sub.user = :userId')
             ->andWhere('s.user = :userId')
             ->andWhere('e.id > :afterEntryId')
             ->setParameter('userId', $userId)
