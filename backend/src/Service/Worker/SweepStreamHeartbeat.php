@@ -22,10 +22,12 @@ use Symfony\Component\Clock\ClockInterface;
  * only every MINIMUM_INTERVAL_SECONDS — a streamed answer delivers deltas many
  * times a second, and each one is a row update.
  *
- * It answers only while a sweep is running. Nothing arms it in a web request,
- * so a poll tick's provider call pings a no-op: a web request is not a worker
- * and must never claim to be one, which is the whole distinction the poll
- * driver reads.
+ * It answers only while a sweep is running, and only a sweep arms it. A
+ * browser poll tick's provider call therefore pings a no-op: it advances the
+ * run of the account watching it and must never claim to be a worker, which is
+ * the whole distinction the poll driver reads. The cron sweep does arm it
+ * (#439) -- it runs in a web request too, but it drives every account's run on
+ * the install's behalf, which is what a driver kind means here.
  */
 final class SweepStreamHeartbeat implements CompletionStreamHeartbeat
 {

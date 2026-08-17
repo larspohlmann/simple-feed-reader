@@ -22,8 +22,10 @@ use Psr\Log\LoggerInterface;
  * by the worker's ten-second AdvanceRecommendationRuns firing and the
  * on-demand drain command -- both ARE the worker regime, which is why
  * liveness is marked here. ForYouSweep::sweepOnce() is NOT a third copy of
- * this: the cron/poll sweep runs the Poll regime and marks no liveness at all
- * -- it is not a background worker.
+ * this: the cron sweep advances at TickDriver::Sweep, which is clamped like a
+ * poll because it runs inside a bounded web request. It marks liveness of its
+ * own kind while it drives (#439) and surrenders it on the way out, so the two
+ * classes agree on what a driver is and still disagree on the regime.
  *
  * Which regime is sweeping is the caller's business, not this class's, so the
  * caller names its own RecommendationDriverKind rather than this class

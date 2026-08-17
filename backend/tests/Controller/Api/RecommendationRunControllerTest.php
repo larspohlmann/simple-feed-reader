@@ -490,7 +490,10 @@ final class RecommendationRunControllerTest extends WebTestCase
         $records = $logSpy->getRecords();
         self::assertCount(1, $records);
         self::assertSame('WARNING', $records[0]->level->getName());
-        self::assertSame('Recommendation run lock is held with no driver behind it', $records[0]->message);
+        self::assertSame(
+            'Recommendation run lock is held with no driver heartbeat behind it',
+            $records[0]->message,
+        );
         self::assertSame('ai-recommendations-' . $user->getId(), $records[0]->context['lock']);
     }
 

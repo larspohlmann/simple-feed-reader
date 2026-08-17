@@ -14,8 +14,10 @@ use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\ForYouSweep;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Recommendation\RecommendationSettingsWriter;
+use App\Service\Worker\WorkerPresence;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -126,5 +128,60 @@ final class ForYouSweepTest extends DbTestCase
         $run = $this->runs()->findActiveForUser($user);
         self::assertNotNull($run);
         self::assertSame(RecommendationRun::STATUS_RUNNING, $run->getStatus());
+    }
+
+    /**
+     * While the cron sweep advances runs it IS the install's driver, and the
+     * browser polling the very account it is working on must be able to read
+     * that (#439). The sweep used to mark no liveness at all, so that poll
+     * found a held lock with nothing vouching for it and told the user their
+     * healthy run had stalled.
+     *
+     * The provider call is the observation window: it is the one point that
+     * is unambiguously inside a sweep. The same window answers the second
+     * question WorkerPresence is asked -- a cron sweep must never read as a
+     * persistent worker, or the settings card would tell the operator to drop
+     * the very cron entry that is driving this run.
+     */
+    public function testTheSweepClaimsDriverLivenessWhileItAdvancesARun(): void
+    {
+        $this->seedDueUserWithCandidates('sweep-presence@example.test');
+        $this->sweep()->sweepOnce(); // starts the run and snapshots it; no provider call yet
+        $this->em->clear();
+
+        // Well-formed and empty: this test is about who is driving, not about
+        // what the model ranks.
+        $this->chatClient()->queueContent('{"recommendations":[]}');
+        $duringTheCall = [];
+        $this->chatClient()->duringNextCall(function () use (&$duringTheCall): void {
+            $duringTheCall = [
+                'driving' => $this->presence()->isAnybodyDrivingRecommendationRuns(),
+                'persistentWorker' => $this->presence()->hasPersistentRecommendationWorker(),
+            ];
+        });
+
+        $this->sweep()->sweepOnce();
+
+        self::assertSame(['driving' => true, 'persistentWorker' => false], $duringTheCall);
+        self::assertFalse(
+            $this->presence()->isAnybodyDrivingRecommendationRuns(),
+            'The sweep must surrender its key on the way out, or the next poll tick would stop driving.',
+        );
+    }
+
+    private function chatClient(): StubChatClient
+    {
+        $client = self::getContainer()->get(StubChatClient::class);
+        self::assertInstanceOf(StubChatClient::class, $client);
+
+        return $client;
+    }
+
+    private function presence(): WorkerPresence
+    {
+        $presence = self::getContainer()->get(WorkerPresence::class);
+        self::assertInstanceOf(WorkerPresence::class, $presence);
+
+        return $presence;
     }
 }

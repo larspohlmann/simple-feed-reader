@@ -22,11 +22,22 @@ use Psr\Log\LoggerInterface;
  * running, background true, the client keeps watching -- because both mean
  * somebody else owns execution right now. They are not answered identically
  * any more, though (#439): a busy result reached only because the presence
- * check above already found nobody driving means the lock and the heartbeat
- * disagree, and that case alone also carries waitingForLock, so the client
- * can tell "a worker owns this" from "this may be stuck". That same case is
- * the one worth a warning in the log, and the reason the advancer's own
- * failed acquire stays silent: down there a held lock is ordinary.
+ * check above already found nobody driving means the lock is held with no
+ * driver heartbeat behind it, and that case alone also carries
+ * waitingForLock, so the client can tell "a worker owns this" from "nothing
+ * is claiming to move this". That same case is the one worth a warning in the
+ * log, and the reason the advancer's own failed acquire stays silent: down
+ * there a held lock is ordinary.
+ *
+ * The flag says exactly that much and no more -- not that the holder is dead.
+ * Every regime that drives somebody else's runs marks liveness, so the known
+ * false positive is a second tab of the same account: a poll tick is
+ * deliberately not a driver kind (#433), it advances the run of the account
+ * watching it, so two tabs of one account alternate and the loser reports a
+ * lock nobody has vouched for. A live holder is distinguishable from a dead
+ * one only by a second liveness subsystem, and one tab's spurious warning is
+ * not worth that; the flag and the log line are worded so neither lies when
+ * it happens.
  */
 final readonly class RecommendationPollDriver
 {
@@ -56,15 +67,14 @@ final readonly class RecommendationPollDriver
         //
         // The presence check above already came back "nobody driving" or
         // this line would never run, so a busy report here is the one case
-        // where the lock and the heartbeat disagree: something holds it that
-        // is not answering to any known driver kind (#439). waitingForLock
-        // names that gap for the client instead of leaving it to read the
-        // same as a healthy background run.
+        // where the lock is held and no driver kind has vouched for it
+        // (#439). waitingForLock names that gap for the client instead of
+        // leaving it to read the same as a healthy background run.
         if (RecommendationRunReport::STATUS_BUSY !== $report->status) {
             return $report;
         }
 
-        $this->logStall($user);
+        $this->logLockWithNoHeartbeatBehindIt($user);
 
         return $this->latestReport($user)->inBackground()->waitingForLock();
     }
@@ -77,17 +87,19 @@ final readonly class RecommendationPollDriver
     }
 
     /**
-     * Logged every time, with no debounce: this is the disagreement, not the
-     * contention. A lock held by a driver that says it is alive never reaches
-     * here -- the presence check answers that case first -- so what is left is
-     * rare by construction, and #439 was diagnosed from exactly this state
-     * going unrecorded. The lock name is the operator's handle on it: it is
-     * the row to inspect, and the one to delete once its holder is provably
-     * dead.
+     * Logged every time, with no debounce: a lock held by a driver that says
+     * it is alive never reaches here -- the presence check answers that case
+     * first -- so what is left is a poll tick of this same account, or a
+     * holder that is gone. #439 was diagnosed from the second going
+     * unrecorded. The line stops at what is known, because the first is a
+     * second tab of the same account and is entirely healthy.
+     *
+     * The lock name is the operator's handle on it: it is the row to inspect,
+     * and the one to delete once its holder is provably dead.
      */
-    private function logStall(User $user): void
+    private function logLockWithNoHeartbeatBehindIt(User $user): void
     {
-        $this->logger->warning('Recommendation run lock is held with no driver behind it', [
+        $this->logger->warning('Recommendation run lock is held with no driver heartbeat behind it', [
             'lock' => RecommendationRunAdvancer::lockNameFor($user),
         ]);
     }
