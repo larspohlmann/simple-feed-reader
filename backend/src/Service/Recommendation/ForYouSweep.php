@@ -36,8 +36,9 @@ use Psr\Log\LoggerInterface;
  * none: a browser polling the account the sweep was working on then read a
  * held lock with no driver behind it and was told its healthy run had stalled.
  * The key is surrendered the moment the sweep is over, exactly as the drain
- * command surrenders its own -- a poll tick between two cron passes must go on
- * driving the run itself, which is the whole point of a worker-less install.
+ * command surrenders its own, and on the killed request too -- a poll tick
+ * between two cron passes must go on driving the run itself, which is the whole
+ * point of a worker-less install.
  */
 final readonly class ForYouSweep
 {
@@ -90,14 +91,22 @@ final readonly class ForYouSweep
      * provider timeout; beating mid-call as well, because a single streamed
      * call can outlast WorkerPresence::FRESH_SECONDS on its own (#433).
      *
-     * The key is surrendered in `finally`, so the pass owns it for exactly as
-     * long as it is driving. A request the gateway kills never gets here and
-     * leaves the key to age out instead -- the same exposure the drain command
-     * accepts, and shorter than the wait for the next cron pass.
+     * The key is surrendered twice over, because the pass owns it for exactly
+     * as long as it is driving and there are two ways for it to stop driving.
+     * `finally` covers every ending that unwinds the stack. It does NOT cover
+     * the gateway killing the request, which on this install is a routine
+     * ending rather than an exotic one -- Strato caps a web request at 240 s
+     * and /maintenance/tick is what the cron calls -- so a shutdown hook covers
+     * that one. Both are needed: a kill mid-advanceOne() has already written
+     * the key, and leaving it fresh for the rest of
+     * WorkerPresence::FRESH_SECONDS suppresses the very paths that recover the
+     * run, the poll tick (which demotes to a status read) and the drain
+     * spawner (which declines to fork), for sixteen minutes.
      */
     private function advanceEveryActiveRunAsTheDriver(): int
     {
         $advancedRuns = 0;
+        $this->surrenderTheCronSweepKeyIfTheRequestIsKilled();
         $this->heartbeat->sweepStarted(RecommendationDriverKind::CronSweep);
 
         try {
@@ -107,10 +116,52 @@ final readonly class ForYouSweep
             }
         } finally {
             $this->heartbeat->sweepEnded();
-            $this->presence->forget(RecommendationDriverKind::CronSweep);
+            $this->surrenderTheCronSweepKey();
         }
 
         return $advancedRuns;
+    }
+
+    /**
+     * Registered before the first mark, so there is no instant in which the key
+     * can exist without something registered to take it back. This is the same
+     * net RecommendationRunAdvancer puts under its per-user lock and
+     * RecommendationDrainCommand under its own liveness key, for the same
+     * ending.
+     *
+     * Deliberately unguarded against running twice: on every ordinary pass both
+     * this and the `finally` surrender the key, and forgetting a name that is
+     * already forgotten is a documented no-op
+     * ({@see \App\Repository\WorkerHeartbeatRepository::forget()}). The flag
+     * RecommendationDrainCommand carries buys nothing here, because its hook
+     * also releases a lock.
+     *
+     * What still defeats it: a kill that skips PHP's shutdown handlers -- a
+     * SIGKILL, an OOM kill, a crashing extension. The key then ages out over
+     * FRESH_SECONDS, which is the behaviour this hook exists to stop being the
+     * normal case.
+     */
+    private function surrenderTheCronSweepKeyIfTheRequestIsKilled(): void
+    {
+        register_shutdown_function(function (): void {
+            $this->surrenderTheCronSweepKey();
+        });
+    }
+
+    /**
+     * Best-effort, and for a different reason in each caller: thrown from the
+     * `finally` it would REPLACE the failure that ended the pass, and thrown
+     * from the shutdown hook it would pile a second fatal on whatever ended the
+     * request. A surrender that fails simply leaves the old behaviour, a key
+     * that ages out.
+     */
+    private function surrenderTheCronSweepKey(): void
+    {
+        try {
+            $this->presence->forget(RecommendationDriverKind::CronSweep);
+        } catch (\Throwable) {
+            // Deliberately silent: see this method's doc comment.
+        }
     }
 
     private function advanceOne(RecommendationRun $run): int

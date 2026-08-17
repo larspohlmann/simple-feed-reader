@@ -258,6 +258,38 @@ final class ForYouSweepTest extends DbTestCase
     }
 
     /**
+     * `finally` is only half the cover, because the ending this sweep is most
+     * exposed to does not unwind the stack: the gateway kills the request the
+     * cron made, and a shutdown hook is what surrenders the key then. On every
+     * ordinary pass that hook therefore fires on top of a `finally` that has
+     * already surrendered, and it carries no has-it-been-cleaned-up flag --
+     * unlike RecommendationDrainCommand's, whose hook also releases a lock. The
+     * assumption that buys is exactly what this pins: forgetting a name that is
+     * already forgotten changes nothing and raises nothing. Break it in
+     * WorkerHeartbeatRepository and the hook needs a guard.
+     *
+     * What no in-process test can reach is the hook FIRING -- that is PHP's own
+     * contract for a request the gateway cuts off, and the reason the two
+     * shutdown hooks already in this tree (RecommendationRunAdvancer,
+     * RecommendationDrainCommand) are covered no further than this either.
+     */
+    public function testTheCleanupTheShutdownHookRepeatsIsSafeToRunTwice(): void
+    {
+        $this->seedDueUserWithCandidates('sweep-double-surrender@example.test');
+
+        $this->sweep()->sweepOnce();
+        // Byte for byte what the hook does after the `finally` has done it.
+        $this->presence()->forget(RecommendationDriverKind::CronSweep);
+
+        $this->em->clear();
+        self::assertNull(
+            $this->em->getRepository(WorkerHeartbeat::class)
+                ->find(RecommendationDriverKind::CronSweep->heartbeatName()),
+        );
+        self::assertFalse($this->presence()->isAnybodyDrivingRecommendationRuns());
+    }
+
+    /**
      * The container's sweep with its liveness bookkeeping swapped for one on
      * the given clock, so a test can decide when marking fails. Everything
      * else is the wiring the container built.
