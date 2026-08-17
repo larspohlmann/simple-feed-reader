@@ -30,14 +30,22 @@ use Psr\Log\LoggerInterface;
  * there a held lock is ordinary.
  *
  * The flag says exactly that much and no more -- not that the holder is dead.
- * Every regime that drives somebody else's runs marks liveness, so the known
- * false positive is a second tab of the same account: a poll tick is
- * deliberately not a driver kind (#433), it advances the run of the account
- * watching it, so two tabs of one account alternate and the loser reports a
- * lock nobody has vouched for. A live holder is distinguishable from a dead
- * one only by a second liveness subsystem, and one tab's spurious warning is
- * not worth that; the flag and the log line are worded so neither lies when
- * it happens.
+ * Every regime that drives somebody else's runs marks liveness, so two known
+ * false positives are left, both of them healthy:
+ *
+ * - A second tab of the same account. A poll tick is deliberately not a driver
+ *   kind (#433): it advances the run of the account watching it, so two tabs of
+ *   one account alternate and the loser reports a lock nobody has vouched for.
+ * - Two cron passes at once. /maintenance/tick takes no lock over its sweep
+ *   half, so overlapping passes drive under the one CronSweep key, and the
+ *   first to finish surrenders it while the other is still driving. Until the
+ *   survivor's next mark -- between runs, or a chunk arriving mid-call -- writes
+ *   the key back, a poll that lands in that gap finds its lock held with
+ *   nothing behind it.
+ *
+ * A live holder is distinguishable from a dead one only by a second liveness
+ * subsystem, and neither spurious warning is worth that; the flag and the log
+ * line are worded so neither lies when it happens.
  */
 final readonly class RecommendationPollDriver
 {
@@ -89,10 +97,10 @@ final readonly class RecommendationPollDriver
     /**
      * Logged every time, with no debounce: a lock held by a driver that says
      * it is alive never reaches here -- the presence check answers that case
-     * first -- so what is left is a poll tick of this same account, or a
-     * holder that is gone. #439 was diagnosed from the second going
-     * unrecorded. The line stops at what is known, because the first is a
-     * second tab of the same account and is entirely healthy.
+     * first -- so what is left is one of the two healthy races the class doc
+     * enumerates, or a holder that is gone. #439 was diagnosed from the last
+     * going unrecorded. The line stops at what is known, because the races are
+     * indistinguishable from it here.
      *
      * The lock name is the operator's handle on it: it is the row to inspect,
      * and the one to delete once its holder is provably dead.
