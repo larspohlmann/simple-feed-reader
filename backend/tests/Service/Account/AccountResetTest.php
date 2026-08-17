@@ -8,7 +8,9 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Preferences;
+use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
+use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
@@ -39,9 +41,9 @@ final class AccountResetTest extends DbTestCase
     }
 
     /**
-     * Seeds one full account and returns [user, feed, entry].
+     * Seeds one full account and returns [user, feed, entry, run].
      *
-     * @return array{0: User, 1: Feed, 2: Entry}
+     * @return array{0: User, 1: Feed, 2: Entry, 3: RecommendationRun}
      */
     private function seedAccount(string $email): array
     {
@@ -78,16 +80,27 @@ final class AccountResetTest extends DbTestCase
             debugEnabled: false,
         ));
         $this->em->persist($settings);
-        $this->em->persist(new RecommendationRun($user, new \DateTimeImmutable('2026-08-05T00:00:00Z')));
+        $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-05T00:00:00Z'));
+        $this->em->persist($run);
+        $this->em->persist(new RecommendationItem($run, $entry, 0, 'because'));
+        $this->em->persist(new RecommendationRunLog(
+            $run,
+            RecommendationRunLog::PHASE_BATCH,
+            0,
+            1,
+            '{}',
+            new \DateTimeImmutable('2026-08-05T00:00:00Z'),
+        ));
         $this->em->flush();
 
-        return [$user, $feed, $entry];
+        return [$user, $feed, $entry, $run];
     }
 
     public function testWipesEverythingTheUserOwns(): void
     {
-        [$user] = $this->seedAccount('reset-wipes@example.com');
+        [$user, , , $run] = $this->seedAccount('reset-wipes@example.com');
         $userId = (int) $user->getId();
+        $runId = (int) $run->getId();
 
         $this->reset()->reset($user);
 
@@ -99,6 +112,8 @@ final class AccountResetTest extends DbTestCase
         self::assertSame([], $this->em->getRepository(EntryState::class)->findBy(['user' => $userId]));
         self::assertSame([], $this->em->getRepository(RecommendationRun::class)->findBy(['user' => $userId]));
         self::assertSame([], $this->em->getRepository(RecommendationSettings::class)->findBy(['user' => $userId]));
+        self::assertSame([], $this->em->getRepository(RecommendationItem::class)->findBy(['run' => $runId]));
+        self::assertSame([], $this->em->getRepository(RecommendationRunLog::class)->findBy(['run' => $runId]));
         $subscriptionTags = $this->em->getRepository(SubscriptionTag::class)->findAll();
         self::assertSame([], $subscriptionTags);
         $preferences = $this->em->getRepository(Preferences::class)->findOneBy(['user' => $userId]);
@@ -126,27 +141,51 @@ final class AccountResetTest extends DbTestCase
     public function testDoesNotTouchAnotherUsersRows(): void
     {
         [$victim] = $this->seedAccount('reset-target@example.com');
-        [$bystander] = $this->seedAccount('reset-bystander@example.com');
+        [, , , $bystanderRun] = $this->seedAccount('reset-bystander@example.com');
+        $bystander = $bystanderRun->getUser();
         $bystanderId = (int) $bystander->getId();
+        $bystanderRunId = (int) $bystanderRun->getId();
 
         $this->reset()->reset($victim);
 
         $this->em->clear();
-        self::assertCount(1, $this->em->getRepository(Subscription::class)->findBy(['user' => $bystanderId]));
+        $bystanderSubscriptions = $this->em->getRepository(Subscription::class)->findBy(['user' => $bystanderId]);
+        self::assertCount(1, $bystanderSubscriptions);
         self::assertCount(1, $this->em->getRepository(Tag::class)->findBy(['user' => $bystanderId]));
         self::assertCount(1, $this->em->getRepository(EntryState::class)->findBy(['user' => $bystanderId]));
+        // The one place an over-broad cascade from the victim's wipe would
+        // surface: the bystander's own subscription/tag join row.
+        self::assertCount(
+            1,
+            $this->em->getRepository(SubscriptionTag::class)->findBy(['subscription' => $bystanderSubscriptions[0]]),
+        );
+        // Proves the recommendation-child subquery correlates by the RIGHT
+        // user: the bystander's run is untouched, so nothing here is masked
+        // by the victim's own run-delete cascade — unlike the "gone" side of
+        // this statement, this assertion cannot pass by accident.
+        self::assertCount(1, $this->em->getRepository(RecommendationItem::class)->findBy(['run' => $bystanderRunId]));
+        self::assertCount(
+            1,
+            $this->em->getRepository(RecommendationRunLog::class)->findBy(['run' => $bystanderRunId]),
+        );
     }
 
     public function testASecondResetIsANoOp(): void
     {
         [$user] = $this->seedAccount('reset-idempotent@example.com');
+        $userId = (int) $user->getId();
 
         $this->reset()->reset($user);
-        $freshUser = $this->em->find(User::class, $user->getId());
+        $freshUser = $this->em->find(User::class, $userId);
         self::assertInstanceOf(User::class, $freshUser);
         $this->reset()->reset($freshUser);
 
         $this->em->clear();
-        self::assertInstanceOf(User::class, $this->em->find(User::class, $user->getId()));
+        self::assertInstanceOf(User::class, $this->em->find(User::class, $userId));
+        self::assertSame([], $this->em->getRepository(Subscription::class)->findBy(['user' => $userId]));
+        self::assertSame([], $this->em->getRepository(Tag::class)->findBy(['user' => $userId]));
+        self::assertSame([], $this->em->getRepository(EntryState::class)->findBy(['user' => $userId]));
+        self::assertSame([], $this->em->getRepository(RecommendationRun::class)->findBy(['user' => $userId]));
+        self::assertSame([], $this->em->getRepository(RecommendationSettings::class)->findBy(['user' => $userId]));
     }
 }

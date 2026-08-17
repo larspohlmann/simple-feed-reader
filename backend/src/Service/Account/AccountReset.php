@@ -30,6 +30,11 @@ use Doctrine\ORM\EntityManagerInterface;
  * re-subscribes the same feeds moments later, and reclaiming in between
  * would delete entries only to re-insert them from the file. A caller that
  * wipes WITHOUT reloading owns that decision itself.
+ *
+ * Not transactional, deliberately: a mid-wipe crash leaves a partially
+ * emptied account, and the recovery is re-running the same backup file
+ * through the restore, not rolling back (spec §8). A future caller must not
+ * assume reset() is all-or-nothing.
  */
 final readonly class AccountReset
 {
@@ -48,7 +53,10 @@ final readonly class AccountReset
 
     private function deleteRecommendationData(User $user): void
     {
-        // Children first; their run FK would otherwise block the run delete.
+        // The run's FK on both children already carries ON DELETE CASCADE, so
+        // the DB would clear these either way — deleting them explicitly is
+        // deliberate redundancy: it keeps the wipe's scope readable in one
+        // place, independent of the mapping.
         foreach ([RecommendationItem::class, RecommendationRunLog::class] as $childClass) {
             $this->em->createQuery(sprintf(
                 'DELETE FROM %s c WHERE IDENTITY(c.run) IN (SELECT r.id FROM %s r WHERE r.user = :user)',
