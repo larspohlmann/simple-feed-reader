@@ -1188,9 +1188,11 @@ generate_prod_certificate() {
 # use_bundled_search_engine) holds here unchanged.
 #
 # Five keys, three of them stacks: S, M and L are what runs. Q and C are how
-# much the operator wants to be asked -- Q nothing at all, C both questions,
-# which is the only way to reach a combination the three stacks do not cover
-# (SQLite with a search engine).
+# much the operator wants to be asked -- Q nothing at all, C every question the
+# installer has. Only C adds the database and the search-engine questions to
+# the origin and mail ones every package asks, which makes it the only way to
+# reach a combination the three stacks do not cover (SQLite with a search
+# engine).
 #
 # prod-configure.sh does not ask it. A package implies a database, and
 # switching databases needs a manual data move -- the same reason
@@ -1227,6 +1229,7 @@ configure_package() {
   package_question_line L
   package_question_line Q
   package_question_line C
+  package_question_follow_up
   while :; do
     choice=$(prompt_with_default 'Package' "${PACKAGE_DEFAULT}")
     case "${choice}" in
@@ -1253,7 +1256,7 @@ package_description() {
     M) printf '%s' 'several users. MySQL, title and summary search.' ;;
     L) printf '%s' 'like M, plus Meilisearch for full-content search.' ;;
     Q) printf '%s' 'quick: the S package, and nothing else to answer.' ;;
-    C) printf '%s' 'choose the database and the search engine yourself.' ;;
+    C) printf '%s' 'choose everything yourself, database and engine included.' ;;
   esac
 }
 
@@ -1266,6 +1269,19 @@ package_note() {
   case "$1" in
     Q) printf '%s' 'It answers the rest for you: http://localhost:3333, and no mail.' ;;
   esac
+}
+
+# What is still open after the answer. The five lines above say what runs; this
+# says what the operator will get to decide, which is the other half of the
+# choice and the reason C exists at all.
+#
+# Printed once rather than per line: it is the same sentence for the three
+# stacks, and the two keys that differ are the ones it names. Q is not in it --
+# its own note above says what it decides instead of asking.
+package_question_follow_up() {
+  tell ''
+  tell '  S, M and L ask for the public URL and for mail next.'
+  tell '  C asks for those two as well, plus the database and the search engine.'
 }
 
 # What the stack needs, measured and not estimated: read from an idle, healthy

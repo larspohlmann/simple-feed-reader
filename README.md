@@ -126,9 +126,11 @@ Two more keys decide how much you are asked, rather than what runs:
   Press return at the first question and the instance comes up. The public URL
   and mail are changeable afterwards with `./scripts/prod-configure.sh`; the
   database is not.
-- **C** — choose the database and the search engine yourself, one question
-  each. This is the way to reach a combination the three packages do not
-  cover, such as SQLite with a search engine.
+- **C** — choose everything yourself, database and engine included. S, M and L
+  still ask for the public URL and for mail; C adds the database and the
+  search-engine questions to those, which makes it the only way to reach a
+  combination the three packages do not cover, such as SQLite with a search
+  engine.
 
 The figures are measured on an idle, healthy stack holding a real account of
 107 feeds and 17,427 articles. S and M do not grow with the number of

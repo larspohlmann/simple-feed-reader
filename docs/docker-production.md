@@ -71,10 +71,11 @@ values only you know:
   quick install: the S stack, and no other question at all — it answers the
   rest for you, `http://localhost:3333` and no mail, so pressing return at this
   question brings the instance up. Both are changeable afterwards with
-  `./scripts/prod-configure.sh` (§7). **C** asks for the database and the
-  search engine one question each — the two bullets below, in order, and the
-  only way to reach a combination the three packages do not cover, such as
-  SQLite with a search engine.
+  `./scripts/prod-configure.sh` (§7). **C** is the opposite: choose everything
+  yourself. S, M and L still ask the origin and mail questions below; C adds
+  the database and the search-engine ones to them — the only way to reach a
+  combination the three packages do not cover, such as SQLite with a search
+  engine.
 
   Without a terminal (`curl | bash` piped into a script) the installer applies
   the **S** package, not Q: there is no question to skip, so it writes

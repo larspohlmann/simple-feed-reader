@@ -21,8 +21,8 @@ set -euo pipefail
 # Two more keys decide how much you are asked. Q -- the default -- is the quick
 # install: the S stack, and no other question at all, because it answers the
 # rest for you (http://localhost:3333, and no mail; both changeable later with
-# ./scripts/prod-configure.sh). C asks for the database and the search engine
-# one question each.
+# ./scripts/prod-configure.sh). C is the opposite: every question, the database
+# and the search engine included.
 #
 # It deletes data in exactly one case, and only after you say yes to it: an
 # earlier production install whose Docker volumes are still on this machine.

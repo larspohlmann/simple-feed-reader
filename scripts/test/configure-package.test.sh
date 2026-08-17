@@ -252,6 +252,12 @@ done
 # return on it: the origin and the mail setting it picks without asking.
 assert_contains "$(package_note Q)" "${question}" "the default's own note"
 assert_contains 'http://localhost:3333' "${question}" 'the origin the default picks'
+# And every answer says what it still leaves open, which is the other half of
+# the choice: what runs, and what the operator gets to decide.
+assert_contains 'S, M and L ask for the public URL and for mail next.' "${question}" \
+  'what the three stacks still ask'
+assert_contains 'plus the database and the search engine' "${question}" \
+  'what C additionally asks'
 
 # --- 10. README.md states the same words and the same figures ---------------
 # The operator chooses the package while reading README.md, and answers it in
