@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Search;
 
-use App\Repository\EntryRepository;
+use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
 use App\Repository\FeedRepository;
 use App\Service\Search\Index\IndexSearch;
@@ -16,7 +16,7 @@ use App\Service\Search\Index\SearchIndexReader;
  * projection every other list uses. That hydration step is what makes
  * per-user read state and the subscription access check behave identically
  * to the rest of the app — the engine's own filter is never the last word on
- * what a caller may see, EntryRepository::rowsByIdsForUser is.
+ * what a caller may see, EntryListRepository::rowsByIdsForUser is.
  *
  * FeedRepository::idsSubscribedByUser already answers "which feeds may this
  * user see" for AccountDeleter; reusing it here rather than adding an
@@ -32,7 +32,7 @@ final readonly class IndexedEntrySearch implements EntrySearchInterface
     public function __construct(
         private SearchIndexReader $index,
         private FeedRepository $feeds,
-        private EntryRepository $entries,
+        private EntryListRepository $entries,
     ) {
     }
 

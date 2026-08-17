@@ -458,3 +458,27 @@ services:
     App\Service\Recommendation\CompletionStreamHeartbeat:
         alias: App\Service\Recommendation\CompositeCompletionStreamHeartbeat
         public: true
+
+    # EntryListTest, EntryRowsByIdsTest, EntrySearchTest and IndexedEntrySearch
+    # Test fetch this directly to drive the list/search projection through the
+    # real query graph rather than a fake. It has production callers
+    # (EntryController, LikeEntrySearch, IndexedEntrySearch) and would survive
+    # compilation on its own — `public: true` here is only so the test
+    # container's `self::getContainer()->get(...)` can fetch it, which the
+    # container refuses on a private service. It is not bound as Entry's
+    # `#[ORM\Entity(repositoryClass:)]`, so `$em->getRepository(Entry::class)`
+    # — the trick the rest of this file avoids needing — resolves to
+    # EntryRepository, not this class.
+    App\Repository\EntryListRepository:
+        autowire: true
+        public: true
+
+    # AccountBackupExporterTest drives lines() directly against the real
+    # repository/entity-manager graph to prove the keyset batching and the
+    # NDJSON shape. Its only production caller arrives with the backup export
+    # endpoint in a later task, so until then the compiler would inline it
+    # away and the test container could not fetch it. Same `autowire` caveat
+    # as the entries above.
+    App\Service\Backup\AccountBackupExporter:
+        autowire: true
+        public: true

@@ -34,6 +34,33 @@ class EntryStateRepository extends ServiceEntityRepository
     }
 
     /**
+     * One user's states in ascending entry-id slices — the backup's keyset walk.
+     * Entry and feed ride along eagerly: the serialiser needs guidHash and the
+     * feed URL for every row, and a lazy load here would cost two queries per
+     * state.
+     *
+     * @return list<EntryState>
+     */
+    public function forUserAfterEntryId(int $userId, int $afterEntryId, int $limit): array
+    {
+        /** @var list<EntryState> $states */
+        $states = $this->createQueryBuilder('s')
+            ->addSelect('e', 'f')
+            ->join('s.entry', 'e')
+            ->join('e.feed', 'f')
+            ->andWhere('s.user = :userId')
+            ->andWhere('e.id > :afterEntryId')
+            ->setParameter('userId', $userId)
+            ->setParameter('afterEntryId', $afterEntryId)
+            ->orderBy('e.id', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return $states;
+    }
+
+    /**
      * Total favourite and kept entries for the user, counting only entries whose
      * feed the user still subscribes to — the same subscription gate the
      * Favorites/Kept lists apply, so the sidebar badges match their lists (an

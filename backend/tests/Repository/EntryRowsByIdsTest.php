@@ -8,7 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Repository\EntryRepository;
+use App\Repository\EntryListRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 
@@ -16,7 +16,7 @@ use App\Tests\Support\QueryRecorder;
  * rowsByIdsForUser: the hydration step IndexedEntrySearch uses to turn a
  * search index's entry ids back into full list rows. It reuses the entry
  * list's own projection and subscription join, which is the point — see the
- * method's docblock on EntryRepository.
+ * method's docblock on EntryListRepository.
  */
 final class EntryRowsByIdsTest extends DbTestCase
 {
@@ -57,10 +57,10 @@ final class EntryRowsByIdsTest extends DbTestCase
         return $entry;
     }
 
-    private function repo(): EntryRepository
+    private function repo(): EntryListRepository
     {
-        $repo = $this->em->getRepository(Entry::class);
-        self::assertInstanceOf(EntryRepository::class, $repo);
+        $repo = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repo);
 
         return $repo;
     }
