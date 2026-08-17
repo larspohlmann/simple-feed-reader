@@ -57,6 +57,9 @@
                 : { email: p.backup.sourceEmail ?? '—', date: createdAt(p.backup.createdAt) }
           }}
         </p>
+        @if (p.backup.sourceUrl; as url) {
+          <p>{{ 'settings.backup.reportOrigin' | transloco: { url } }}</p>
+        }
         <p class="note">{{ 'settings.backup.emailMismatchNote' | transloco }}</p>
         <p class="warning">{{ 'settings.backup.ageWarning' | transloco }}</p>
 
