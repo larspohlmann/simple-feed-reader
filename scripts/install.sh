@@ -13,8 +13,10 @@ set -euo pipefail
 #
 # The package is the first question, and the only one that says what the answer
 # costs: S, M and L each print what they run and how much memory the stack
-# needs. S is SQLite in a file, search against the database, no container
-# besides the app's own three; M adds MySQL; L adds MySQL and Meilisearch.
+# needs. S is SQLite in a file, with no container besides the app's own three;
+# M adds MySQL; L adds MySQL and a Meilisearch container. Search works in all
+# three -- S and M answer it from the database, matching titles and summaries,
+# and L matches the full text of every article as well.
 #
 # Two more keys decide how much you are asked. Q -- the default -- is the quick
 # install: the S stack, and no other question at all, because it answers the

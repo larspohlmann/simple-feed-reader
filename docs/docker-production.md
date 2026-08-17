@@ -58,13 +58,14 @@ values only you know:
 
 - **Which package** — the first question, and the one that decides both the
   database and the search engine, because together they are what the stack
-  costs in memory. **S** is SQLite, no search engine, no container beside the
+  costs in memory. **S** is SQLite in a file, with no container beside the
   app's own three, about 250 MB. **M** adds a MySQL container (about 1 GB).
-  **L** adds MySQL and Meilisearch (about 2.5 GB), which indexes the full text
-  of every article instead of matching titles and summaries in the database.
-  Every package runs the same application, with every feature. The packages and
-  their measured figures are in the [README](../README.md#which-package); the
-  installer prints the same lines.
+  **L** adds MySQL and a Meilisearch container (about 2.5 GB). Every package
+  runs the same application, with every feature, and **search works in all
+  three**: S and M answer it from the database, which matches titles and
+  summaries, and L matches the full text of every article as well. The packages
+  and their measured figures are in the
+  [README](../README.md#which-package); the installer prints the same lines.
 
   Two more keys decide how much you are asked. **Q**, **the default**, is the
   quick install: the S stack, and no other question at all — it answers the

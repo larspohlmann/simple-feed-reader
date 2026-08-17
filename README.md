@@ -108,14 +108,15 @@ the stack costs in memory:
 
 | Package | What you get | Containers | RAM |
 |---|---|---|---|
-| **S** | a personal instance. SQLite, no search engine. | php, worker, web | Needs about 250 MB |
-| **M** | several users. MySQL, search over titles and summaries. | php, worker, web, mysql | Needs about 1 GB |
-| **L** | like M, plus full-content search over article bodies. | php, worker, web, mysql, meilisearch | Needs about 2.5 GB |
+| **S** | a personal instance. SQLite, title and summary search. | php, worker, web | Needs about 250 MB |
+| **M** | several users. MySQL, title and summary search. | php, worker, web, mysql | Needs about 1 GB |
+| **L** | like M, plus Meilisearch for full-content search. | php, worker, web, mysql, meilisearch | Needs about 2.5 GB |
 
-Every package runs the same application, with every feature: the packages
-differ in the containers beside it, not in what the reader can do. Search
-works in all three — S and M match titles and summaries in the database, L
-matches the full text of every article.
+Every package runs the same application, with every feature: they differ in
+the containers beside it, not in what the reader can do. **Search works in all
+three.** S and M answer it from the database, which matches titles and
+summaries; L adds a Meilisearch container that matches the full text of every
+article as well.
 
 Two more keys decide how much you are asked, rather than what runs:
 

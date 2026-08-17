@@ -1249,9 +1249,9 @@ configure_package() {
 # disagree. scripts/test/configure-package.test.sh compares them.
 package_description() {
   case "$1" in
-    S) printf '%s' 'a personal instance. SQLite, no search engine.' ;;
-    M) printf '%s' 'several users. MySQL, search over titles and summaries.' ;;
-    L) printf '%s' 'like M, plus full-content search over article bodies.' ;;
+    S) printf '%s' 'a personal instance. SQLite, title and summary search.' ;;
+    M) printf '%s' 'several users. MySQL, title and summary search.' ;;
+    L) printf '%s' 'like M, plus Meilisearch for full-content search.' ;;
     Q) printf '%s' 'quick: the S package, and nothing else to answer.' ;;
     C) printf '%s' 'choose the database and the search engine yourself.' ;;
   esac
