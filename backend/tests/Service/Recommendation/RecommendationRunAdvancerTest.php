@@ -282,15 +282,16 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The debounce lock's name has to fold in the account's own lock name,
-     * not just a shared suffix: a debounce keyed on the suffix alone would
-     * silence every account's stall after the first one anywhere logged,
-     * which is worse than the flood #439 already suffered from -- a real
-     * stall on one account going unlogged because a different account's
-     * stall was logged a moment earlier. Two different accounts contending
-     * at once, one saved (a real id) and one not (the ?? 0 fallback also
-     * pinned by testLockNameFallsBackToZeroForAnUnsavedUser), must both be
-     * logged.
+     * The recommendation_lock_stall_log rate limiter is keyed on the full
+     * lock name ("ai-recommendations-<id>"), not on a shared config key: a
+     * limiter keyed on the shared key alone would silence every account's
+     * stall after the first one anywhere consumed its single-per-minute
+     * allowance, which is worse than the flood #439 already suffered from --
+     * a real stall on one account going unlogged because a different
+     * account's stall consumed the shared allowance a moment earlier. Two
+     * different accounts contending at once, one saved (a real id) and one
+     * not (the ?? 0 fallback also pinned by
+     * testLockNameFallsBackToZeroForAnUnsavedUser), must both be logged.
      */
     public function testLockContentionOnADifferentAccountLogsIndependently(): void
     {
