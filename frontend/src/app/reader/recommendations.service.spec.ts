@@ -624,6 +624,42 @@ describe('RecommendationsService', () => {
         jest.useRealTimers();
       }
     });
+
+    /** The reload case: the run is already stalled when the page comes up, so
+     *  `resume()` applies the report -- freezing the bar -- and only then
+     *  marks the run live. Marking it live used to start the ticker outright,
+     *  which undid that freeze: the bar crept toward its cap off a
+     *  `currentBatchStart` set to this instant while the label read "waiting
+     *  for lock", until the next poll landed (#439). */
+    it('leaves the bar frozen when resume() picks up a run already waiting for its lock', fakeAsync(() => {
+      jest.useFakeTimers();
+      nowMs = 0;
+      svc.resume();
+      ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush(
+        report({
+          status: 'running',
+          batchesTotal: 4,
+          batchesDone: 1,
+          elapsedSeconds: 20,
+          waitingForLock: true,
+        }),
+      );
+      expect(svc.running()).toBe(true);
+      expect(svc.etaState()).toBe('lockHeld');
+      const frozen = svc.progress();
+
+      nowMs = 60000; // a whole batch's worth of time, and the bar must not move
+      jest.advanceTimersByTime(200);
+      expect(svc.progress()).toBeCloseTo(frozen);
+
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs/tick')
+        .flush(
+          report({ status: 'completed', batchesTotal: 4, batchesDone: 4, elapsedSeconds: 80 }),
+        );
+      discardPeriodicTasks();
+      jest.useRealTimers();
+    }));
   });
 
   describe('background regime', () => {
