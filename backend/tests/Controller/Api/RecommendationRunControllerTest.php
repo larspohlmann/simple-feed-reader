@@ -16,12 +16,17 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Process\DetachedProcessLauncherInterface;
 use App\Service\Worker\RecommendationDriverKind;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\RecordingProcessLauncher;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Monolog\Handler\TestHandler;
+use Monolog\Level;
+use Monolog\Logger;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Clock\ClockInterface;
@@ -235,6 +240,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'batchesDone' => 0,
                 'error' => null,
                 'background' => false,
+                'waitingForLock' => false,
                 'streamedChars' => 0,
                 'forYou' => ['itemCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
             ],
@@ -332,6 +338,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'batchesDone' => 0,
                 'error' => null,
                 'background' => false,
+                'waitingForLock' => false,
                 'streamedChars' => 0,
                 'elapsedSeconds' => null,
                 'forYou' => ['itemCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
@@ -343,7 +350,10 @@ final class RecommendationRunControllerTest extends WebTestCase
     /**
      * #311's arbitration: with a fresh worker heartbeat in place, a tick
      * becomes a pure status read instead of doing the worker's job — the run
-     * stays pending and the provider is never called.
+     * stays pending and the provider is never called. A worker owning the
+     * run is not a stall (#439): the fresh-heartbeat branch never even
+     * attempts the lock, so waitingForLock stays false here regardless of
+     * whether the worker actually holds it right now.
      */
     public function testTickDefersToAFreshWorkerHeartbeat(): void
     {
@@ -360,6 +370,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         $report = $this->payload($client->getResponse());
         self::assertSame('pending', $report['status']);
         self::assertTrue($report['background']);
+        self::assertFalse($report['waitingForLock']);
         self::assertSame([], $this->stubChatClient()->calls());
     }
 
@@ -390,6 +401,9 @@ final class RecommendationRunControllerTest extends WebTestCase
     /**
      * Without a fresh heartbeat, the #308 poll behaviour applies untouched:
      * the tick snapshots the run itself and reports it as foreground work.
+     * Nothing else was contending for the lock either, so this is the
+     * baseline #439 flags against: no contention at all reports
+     * waitingForLock false, same as background.
      */
     public function testTickAdvancesWhenTheHeartbeatIsStale(): void
     {
@@ -405,6 +419,31 @@ final class RecommendationRunControllerTest extends WebTestCase
         $report = $this->payload($client->getResponse());
         self::assertSame('running', $report['status']);
         self::assertFalse($report['background']);
+        self::assertFalse($report['waitingForLock']);
+    }
+
+    /**
+     * #393's stated new behaviour: a tick on an active run whose drainer has
+     * gone quiet spawns a replacement instead of waiting for the next cron
+     * pass. The run is seeded directly through the fixtures rather than via
+     * start(), so nothing but this request's own kernel termination can
+     * produce a launch -- proving RecommendationDrainOnTerminateListener,
+     * not a side effect of starting the run.
+     */
+    public function testATickOnAnActiveRunWithNoFreshHeartbeatSpawnsAReplacementDrainer(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->authWithReadyAi('tick-spawns-drainer@example.test');
+        $this->seedOneCandidateEntry($user);
+        $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-16T09:00:00Z'));
+
+        $launcher = new RecordingProcessLauncher();
+        self::getContainer()->set(DetachedProcessLauncherInterface::class, $launcher);
+
+        $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame([['app:recommendations:drain', '--detach']], $launcher->launches);
     }
 
     /**
@@ -423,6 +462,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         $this->seedOneCandidateEntry($user);
         $this->startRun($client, $headers);
 
+        $logSpy = $this->attachALogSpy();
         $lock = $this->holdTheRunLockFor($user);
 
         try {
@@ -436,7 +476,75 @@ final class RecommendationRunControllerTest extends WebTestCase
         self::assertNotSame('busy', $report['status']);
         self::assertSame('pending', $report['status']);
         self::assertTrue($report['background']);
+        // The presence check just above found no fresh heartbeat either, so
+        // the lock and the heartbeat disagree: something holds it that no
+        // known driver kind is answering for -- #439's stall, distinct from
+        // a healthy worker background run (see the fresh-heartbeat case
+        // above, which never sets this).
+        self::assertTrue($report['waitingForLock']);
         self::assertSame([], $this->stubChatClient()->calls());
+
+        // #439 was diagnosed from a stall that left no trace, so this one
+        // case -- and only this one -- must reach dev.log, naming the lock
+        // row an operator has to inspect.
+        $records = $logSpy->getRecords();
+        self::assertCount(1, $records);
+        self::assertSame('WARNING', $records[0]->level->getName());
+        self::assertSame(
+            'Recommendation run lock is held with no driver heartbeat behind it',
+            $records[0]->message,
+        );
+        self::assertSame('ai-recommendations-' . $user->getId(), $records[0]->context['lock']);
+    }
+
+    /**
+     * The healthy half of the same pair (#439): a live worker holds the lock
+     * while it advances the run, which is ordinary and frequent. Warning on
+     * it once flooded dev.log and buried the stall above, so the presence
+     * check answers this case before the lock is ever attempted and nothing
+     * is logged at all.
+     */
+    public function testATickDeferringToALiveWorkerHoldingTheLockLogsNothing(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers, $user] = $this->authWithReadyAi('healthy-contention@example.test');
+        $this->seedOneCandidateEntry($user);
+        $this->startRun($client, $headers);
+        $this->touchWorkerHeartbeatNow();
+
+        $logSpy = $this->attachALogSpy();
+        $lock = $this->holdTheRunLockFor($user);
+
+        try {
+            $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
+        } finally {
+            $lock->release();
+        }
+
+        self::assertResponseIsSuccessful();
+        $report = $this->payload($client->getResponse());
+        self::assertTrue($report['background']);
+        self::assertFalse($report['waitingForLock']);
+        self::assertSame([], $logSpy->getRecords());
+    }
+
+    /**
+     * Pushed onto the default channel logger rather than replacing it: the
+     * requests these cases make before the one under test have already
+     * resolved that service, and the test container refuses to swap an
+     * initialised one. The spy takes WARNING and above, which is the level
+     * the stall is reported at and keeps an unrelated info line from
+     * reading as one.
+     */
+    private function attachALogSpy(): TestHandler
+    {
+        $logSpy = new TestHandler(Level::Warning);
+        $logger = self::getContainer()->get('monolog.logger');
+        self::assertInstanceOf(Logger::class, $logger);
+        $logger->pushHandler($logSpy);
+
+        return $logSpy;
     }
 
     private function holdTheRunLockFor(User $user): LockInterface
@@ -666,6 +774,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'batchesDone' => 0,
                 'error' => null,
                 'background' => false,
+                'waitingForLock' => false,
                 'streamedChars' => 0,
                 'elapsedSeconds' => null,
                 'forYou' => ['itemCount' => 0, 'generatedAt' => null, 'newestRunId' => null],

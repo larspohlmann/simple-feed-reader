@@ -8,6 +8,7 @@ use App\Dto\Ai\AddConfigurationRequest;
 use App\Dto\Ai\RenameConfigurationRequest;
 use App\Dto\Ai\SaveModelRequest;
 use App\Dto\Ai\SetBatchConcurrencyRequest;
+use App\Dto\Ai\SetMaxBatchSizeRequest;
 use App\Dto\Ai\SetReasoningRequest;
 use App\Dto\Ai\SetSlowModelRequest;
 use App\Entity\User;
@@ -32,6 +33,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 /**
@@ -230,6 +232,41 @@ final readonly class AiSettingsController
         }
 
         $this->editor->setBatchConcurrency($configuration, $request->batchConcurrency);
+
+        return new JsonResponse(
+            AiSettingsJson::configuration($configuration, $this->configurator->settingsFor($user)?->getId()),
+        );
+    }
+
+    #[Route(
+        '/configs/{id}/max-batch-size',
+        name: 'api_me_ai_set_max_batch_size',
+        requirements: ['id' => '\d+'],
+        methods: ['PUT'],
+    )]
+    /**
+     * The one payload here whose property is nullable, so the one that needs
+     * REQUIRE_ALL_PROPERTIES: without it the serializer fills a missing
+     * `maxBatchSize` with null, and a body that never mentioned the cap --
+     * `{}`, or a misspelt key, which is simply ignored -- would clear a cap
+     * the account had set and quietly raise its effective batch size again
+     * (#445). Clearing stays possible; it just has to be asked for, as an
+     * explicit `{"maxBatchSize": null}`. The neighbouring endpoints get this
+     * for free from their non-nullable properties.
+     */
+    public function setMaxBatchSize(
+        #[CurrentUser] User $user,
+        int $id,
+        #[MapRequestPayload(serializationContext: [AbstractNormalizer::REQUIRE_ALL_PROPERTIES => true])]
+        SetMaxBatchSizeRequest $request,
+    ): JsonResponse {
+        try {
+            $configuration = $this->configuration->require($user, $id);
+        } catch (ConfigurationNotFoundException $e) {
+            throw new AiConfigurationNotFoundApiException($e);
+        }
+
+        $this->editor->setMaxBatchSize($configuration, $request->maxBatchSize);
 
         return new JsonResponse(
             AiSettingsJson::configuration($configuration, $this->configurator->settingsFor($user)?->getId()),

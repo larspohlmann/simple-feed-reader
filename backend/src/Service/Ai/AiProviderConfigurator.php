@@ -141,8 +141,7 @@ final readonly class AiProviderConfigurator
             $source->getVerifiedAt() ?? $this->clock->now(),
         );
         $copy->setSuppressReasoning($source->suppressesReasoning());
-        $copy->setBatchConcurrency($source->batchConcurrency());
-        $copy->setSlowModel($source->isSlowModel());
+        $copy->copyRunTuningFrom($source);
 
         $this->entityManager->persist($copy);
         $this->entityManager->flush();

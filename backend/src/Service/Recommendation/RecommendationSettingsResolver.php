@@ -55,19 +55,16 @@ final readonly class RecommendationSettingsResolver
     }
 
     /**
-     * How many candidates one batch may carry. A property of the endpoint, not
-     * of the account's taste, so it is read off the connection rather than
-     * offered as a setting: a small local model holds a shorter list in order
-     * than a hosted one, and the account already says which it has by marking
-     * the connection slow (#437). No configuration means no claim either way,
-     * and the default stands.
+     * How many candidates one batch may carry. Read off the connection rather
+     * than offered as a recommendation setting, because it describes what the
+     * endpoint can be trusted with, not what the account likes (#437). It is
+     * the connection as configured that carries it, not the model behind it:
+     * the column survives a model change untouched. No claim means the default
+     * stands. Split off `slow_model` in #445, which now governs timeouts
+     * alone.
      */
     private static function batchCeilingFor(?AiProviderSettings $provider): int
     {
-        if ($provider?->isSlowModel() ?? false) {
-            return RecommendationPackingSettings::SLOW_MODEL_MAXIMUM_BATCH_SIZE;
-        }
-
-        return RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE;
+        return $provider?->maxBatchSize() ?? RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE;
     }
 }

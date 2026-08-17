@@ -343,6 +343,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
         $added->configuration->setBatchConcurrency(3);
         $added->configuration->setSuppressReasoning(false);
         $added->configuration->setSlowModel(true);
+        $added->configuration->setMaxBatchSize(25);
 
         $copy = $configurator->duplicateConfiguration($added->configuration);
 
@@ -356,6 +357,9 @@ final class AiProviderConfiguratorTest extends DbTestCase
         // A copy of a local endpoint is still that local endpoint: it answers
         // just as slowly, so the profile travels with it (#433).
         self::assertTrue($copy->isSlowModel());
+        // Same reasoning as slowModel above: a copy left at NULL would silently
+        // raise its ceiling to the default and reintroduce #437 (#445).
+        self::assertSame(25, $copy->maxBatchSize());
         self::assertNotSame($copy, $user->getActiveAiProviderSettings());
         // The re-sealed key opens back to the same plaintext under the copy's own row.
         self::assertSame('sk-abcdef1234', $configurator->credentials($copy)->apiKey);

@@ -9,8 +9,9 @@ use App\Service\Process\DetachedProcessLauncherInterface;
 /**
  * Records every detached launch instead of forking one, so a test can assert
  * both the command line a caller asked for and how many times it asked. The
- * count is load-bearing: RecommendationDrainSpawner launches at most once per
- * process, and only a recorded list can tell one launch from six (#371).
+ * count is load-bearing: RecommendationDrainOnTerminateListener fires at most
+ * once per request or console command, and only a recorded list can tell one
+ * launch from six (#371, #393).
  */
 final class RecordingProcessLauncher implements DetachedProcessLauncherInterface
 {

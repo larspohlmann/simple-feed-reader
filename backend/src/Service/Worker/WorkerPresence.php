@@ -21,7 +21,8 @@ use Symfony\Component\Clock\ClockInterface;
  *   runs that already exist and never starts due ones
  *   (ForYouSweep::startDueRuns() is no part of WorkerRunSweep), so the cron
  *   is still genuinely required. One shared key answered "you need no cron"
- *   to anyone who opened Settings during a drain.
+ *   to anyone who opened Settings during a drain. The cron sweep's own key
+ *   must not count either, for the plainer reason that it IS the cron.
  *
  * Hence one key per RecommendationDriverKind. The per-user run lock is still
  * what actually stops a double run if either signal is ever wrong (#311).

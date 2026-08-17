@@ -43,4 +43,10 @@ final readonly class AiConfigurationEditor
         $settings->setSlowModel($slowModel);
         $this->entityManager->flush();
     }
+
+    public function setMaxBatchSize(AiProviderSettings $settings, ?int $maxBatchSize): void
+    {
+        $settings->setMaxBatchSize($maxBatchSize);
+        $this->entityManager->flush();
+    }
 }

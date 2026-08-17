@@ -429,3 +429,32 @@ services:
     App\Service\Worker\Handler\PurgeFailedMessagesHandler:
         autowire: true
         public: true
+
+    # RecommendationDrainOnTerminateListenerTest swaps the real launcher for a
+    # RecordingProcessLauncher via `self::getContainer()->set(...)`, which the
+    # container only allows on public services. The listener is wired
+    # entirely through #[AsEventListener] with no injection point a test can
+    # reach directly, so this is the only seam that lets a kernel-level test
+    # observe whether the terminate hook actually spawned. Test environment
+    # only — production keeps this alias private.
+    App\Service\Process\DetachedProcessLauncherInterface:
+        alias: App\Service\Process\DetachedProcessLauncher
+        public: true
+
+    # CompletionStreamHeartbeatWiringTest arms each composite member by class
+    # name and beats it through the CompletionStreamHeartbeat alias, to prove
+    # the container hands the advancer and the sweep the SAME instances the
+    # composite fans out to. `self::getContainer()->get(...)` refuses a
+    # private service, so all three need the same public override as the
+    # entries above. Test environment only — production keeps them private.
+    App\Service\Recommendation\TickLockKeepalive:
+        autowire: true
+        public: true
+
+    App\Service\Worker\SweepStreamHeartbeat:
+        autowire: true
+        public: true
+
+    App\Service\Recommendation\CompletionStreamHeartbeat:
+        alias: App\Service\Recommendation\CompositeCompletionStreamHeartbeat
+        public: true

@@ -8,9 +8,52 @@ use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Tests\DbTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 final class RecommendationRunRepositoryTest extends DbTestCase
 {
+    public function testHasActiveRunIsFalseOnAnEmptyTable(): void
+    {
+        self::assertFalse($this->runs()->hasActiveRun());
+    }
+
+    #[DataProvider('activeStatuses')]
+    public function testHasActiveRunIsTrueWhileARunIsActive(string $status): void
+    {
+        $user = $this->persistUser('active@example.com');
+        $this->persistRun($user, $status);
+
+        self::assertTrue($this->runs()->hasActiveRun());
+    }
+
+    #[DataProvider('terminalStatuses')]
+    public function testHasActiveRunIsFalseOnceTheOnlyRunHasEnded(string $status): void
+    {
+        $user = $this->persistUser('terminal@example.com');
+        $this->persistRun($user, $status);
+
+        self::assertFalse($this->runs()->hasActiveRun());
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function activeStatuses(): iterable
+    {
+        yield 'pending' => [RecommendationRun::STATUS_PENDING];
+        yield 'running' => [RecommendationRun::STATUS_RUNNING];
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function terminalStatuses(): iterable
+    {
+        yield 'completed' => [RecommendationRun::STATUS_COMPLETED];
+        yield 'cancelled' => [RecommendationRun::STATUS_CANCELLED];
+        yield 'failed' => [RecommendationRun::STATUS_FAILED];
+    }
+
     public function testFindActiveForUserReturnsTheRunningRun(): void
     {
         $userA = $this->persistUser('a@example.com');
@@ -97,6 +140,10 @@ final class RecommendationRunRepositoryTest extends DbTestCase
 
         if ($status === RecommendationRun::STATUS_FAILED) {
             $run->fail('boom', new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+        }
+
+        if ($status === RecommendationRun::STATUS_CANCELLED) {
+            $run->cancel(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         }
 
         $this->em->persist($run);

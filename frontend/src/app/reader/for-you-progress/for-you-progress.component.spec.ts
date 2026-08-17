@@ -10,7 +10,7 @@ describe('ForYouProgressComponent', () => {
   const report = signal<RecommendationRunReport | null>(null);
   const progress = signal(0);
   const etaSeconds = signal<number | null>(null);
-  const etaState = signal<'hidden' | 'starting' | 'waiting' | 'eta'>('starting');
+  const etaState = signal<'hidden' | 'starting' | 'waiting' | 'lockHeld' | 'eta'>('starting');
 
   const makeReport = (over: Partial<RecommendationRunReport>): RecommendationRunReport => ({
     status: 'running',
@@ -73,6 +73,12 @@ describe('ForYouProgressComponent', () => {
     etaState.set('waiting');
     const el = build().nativeElement as HTMLElement;
     expect(el.querySelector('.eta')!.textContent).toContain('Waiting');
+  });
+
+  it('shows the lock-held phrase while waiting on another process', () => {
+    etaState.set('lockHeld');
+    const el = build().nativeElement as HTMLElement;
+    expect(el.querySelector('.eta')!.textContent).toContain('another process');
   });
 
   it('renders nothing when no run is in flight', () => {

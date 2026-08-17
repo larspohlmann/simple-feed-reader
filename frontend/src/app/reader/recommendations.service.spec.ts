@@ -557,6 +557,111 @@ describe('RecommendationsService', () => {
     });
   });
 
+  describe('lock contention (waitingForLock)', () => {
+    it('reports the lockHeld state when the report carries waitingForLock: true', () => {
+      svc.start();
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs')
+        .flush(report({ status: 'pending', waitingForLock: true }));
+
+      expect(svc.etaState()).toBe('lockHeld');
+
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs/tick')
+        .flush(report({ status: 'completed' }));
+    });
+
+    it('does not report lockHeld when waitingForLock is false', () => {
+      svc.start();
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs')
+        .flush(report({ status: 'pending', waitingForLock: false }));
+
+      expect(svc.etaState()).not.toBe('lockHeld');
+
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs/tick')
+        .flush(report({ status: 'completed' }));
+    });
+
+    it('does not report lockHeld when waitingForLock is absent, as from an older backend', () => {
+      svc.start();
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs')
+        .flush(report({ status: 'pending' }));
+
+      expect(svc.etaState()).not.toBe('lockHeld');
+
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs/tick')
+        .flush(report({ status: 'completed' }));
+    });
+
+    it('keeps the rate-limited state ahead of the lock state when both are set', () => {
+      jest.useFakeTimers();
+      try {
+        svc.start();
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs')
+          .flush(report({ status: 'pending', waitingForLock: true }));
+        expect(svc.etaState()).toBe('lockHeld');
+
+        // The last known report still carries waitingForLock: true -- only
+        // the fresh 429 changes here -- and the rate limit must still win.
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/tick')
+          .flush(
+            { type: 'rate_limited', title: 'Too many requests', status: 429 },
+            { status: 429, statusText: 'Too Many Requests' },
+          );
+        expect(svc.etaState()).toBe('waiting');
+
+        jest.advanceTimersByTime(15000);
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/tick')
+          .flush(report({ status: 'completed' }));
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    /** The reload case: the run is already stalled when the page comes up, so
+     *  `resume()` applies the report -- freezing the bar -- and only then
+     *  marks the run live. Marking it live used to start the ticker outright,
+     *  which undid that freeze: the bar crept toward its cap off a
+     *  `currentBatchStart` set to this instant while the label read "waiting
+     *  for lock", until the next poll landed (#439). */
+    it('leaves the bar frozen when resume() picks up a run already waiting for its lock', fakeAsync(() => {
+      jest.useFakeTimers();
+      nowMs = 0;
+      svc.resume();
+      ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush(
+        report({
+          status: 'running',
+          batchesTotal: 4,
+          batchesDone: 1,
+          elapsedSeconds: 20,
+          waitingForLock: true,
+        }),
+      );
+      expect(svc.running()).toBe(true);
+      expect(svc.etaState()).toBe('lockHeld');
+      const frozen = svc.progress();
+
+      nowMs = 60000; // a whole batch's worth of time, and the bar must not move
+      jest.advanceTimersByTime(200);
+      expect(svc.progress()).toBeCloseTo(frozen);
+
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs/tick')
+        .flush(
+          report({ status: 'completed', batchesTotal: 4, batchesDone: 4, elapsedSeconds: 80 }),
+        );
+      discardPeriodicTasks();
+      jest.useRealTimers();
+    }));
+  });
+
   describe('background regime', () => {
     it('slows the poll to BACKGROUND_POLL_MS when a worker owns execution', () => {
       jest.useFakeTimers();
@@ -760,6 +865,57 @@ describe('RecommendationsService', () => {
     ctrl
       .expectOne('https://api.test/api/recommendations/runs/tick')
       .flush(report({ status: 'completed', batchesTotal: 4, batchesDone: 4, elapsedSeconds: 100 }));
+    discardPeriodicTasks();
+    jest.useRealTimers();
+  }));
+
+  it('freezes the bar and reports the lockHeld state while a lock is held, and resumes when it clears', fakeAsync(() => {
+    jest.useFakeTimers();
+    nowMs = 0;
+    svc.start();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs')
+      .flush(report({ status: 'pending' }));
+    nowMs = 20000;
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'running', batchesTotal: 4, batchesDone: 1, elapsedSeconds: 20 }));
+    nowMs = 30000;
+    jest.advanceTimersByTime(200);
+    const beforeLock = svc.progress();
+
+    ctrl.expectOne('https://api.test/api/recommendations/runs/tick').flush(
+      report({
+        status: 'running',
+        batchesTotal: 4,
+        batchesDone: 1,
+        elapsedSeconds: 20,
+        waitingForLock: true,
+      }),
+    );
+    expect(svc.etaState()).toBe('lockHeld');
+    // The incoming report is itself a signal write, so it invalidates the
+    // computed regardless of the ticker; read it once here, still at the
+    // same instant the lock report arrived, so this settles to the frozen
+    // value rather than to whatever `now()` is at the *next* read.
+    expect(svc.progress()).toBeCloseTo(beforeLock);
+
+    nowMs = 90000; // time marches on, but the bar must not move
+    jest.advanceTimersByTime(200);
+    expect(svc.progress()).toBeCloseTo(beforeLock);
+
+    // The lock clears: the next report carries no waitingForLock, and the
+    // bar resumes creeping from where it was frozen.
+    nowMs = 95000;
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'running', batchesTotal: 4, batchesDone: 1, elapsedSeconds: 20 }));
+    expect(svc.etaState()).not.toBe('lockHeld');
+    nowMs = 100000;
+    jest.advanceTimersByTime(200);
+    expect(svc.progress()).toBeGreaterThan(beforeLock);
+
+    drainTrailingTick();
     discardPeriodicTasks();
     jest.useRealTimers();
   }));

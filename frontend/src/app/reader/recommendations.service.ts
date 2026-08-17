@@ -165,10 +165,15 @@ export class RecommendationsService {
   });
 
   /** Drives the Task 6 label: hidden outside a run, starting before the first
-   *  average exists, waiting during a 429 backoff, eta otherwise. */
-  readonly etaState = computed<'hidden' | 'starting' | 'waiting' | 'eta'>(() => {
+   *  average exists, waiting during a 429 backoff, lockHeld while a stalled
+   *  lock blocks the run rather than a live worker, eta otherwise. The 429
+   *  check stays first: it is the more actionable message -- it tells the
+   *  user to wait for their own quota -- whereas a held lock only tells them
+   *  another process is ahead of them, so it must never displace it. */
+  readonly etaState = computed<'hidden' | 'starting' | 'waiting' | 'lockHeld' | 'eta'>(() => {
     if (!this.running()) return 'hidden';
     if (this.rateLimited()) return 'waiting';
+    if (this.report()?.waitingForLock) return 'lockHeld';
     if (this.etaSeconds() === null) return 'starting';
     return 'eta';
   });
@@ -255,9 +260,12 @@ export class RecommendationsService {
    *  loop. The two differ only in which endpoint opens the run. */
   private beginRun(source: Observable<RecommendationRunReport>): void {
     if (this.running()) return;
-    this.markRunning();
-    this.stopping.set(false);
+    // Cleared before the run is marked live, not after: `markRunning()` reads
+    // the report to decide whether the bar may move, and the previous run's
+    // last report is no evidence about this one.
     this.report.set(null);
+    this.stopping.set(false);
+    this.markRunning();
     source.subscribe({
       next: (r) => this.onReport(r),
       error: (e: HttpErrorResponse) => this.stopWithHttpError(e),
@@ -271,9 +279,24 @@ export class RecommendationsService {
    *  the reader (#398). */
   private markRunning(): void {
     this.running.set(true);
-    this.startTicker();
+    this.syncBarWithLockWait();
     this.failure.set(null);
     this.showRunPill();
+  }
+
+  /** The bar moves while the run does. A run waiting for its lock is not
+   *  progressing, so the ticker stops and `progress()` holds its last value
+   *  rather than creeping toward `CREEP_CAP` while the label says the run is
+   *  stalled. Both halves live here so no caller can apply one without the
+   *  other: `resume()` picks up a stalled run by applying its report and then
+   *  marking the run live, and a `startTicker()` of its own at the second step
+   *  used to undo the freeze of the first until the next poll landed (#439). */
+  private syncBarWithLockWait(): void {
+    if (this.report()?.waitingForLock) {
+      this.stopTicker();
+      return;
+    }
+    this.startTicker();
   }
 
   /** Raises the run's pill. Public because the user can close it from anywhere
@@ -382,11 +405,15 @@ export class RecommendationsService {
       );
       this.currentBatchStart.set(this.now());
     }
+    // Stored before the bar is synced, because the sync reads the report.
+    this.report.set(next);
     if (next.status === 'running' || next.status === 'pending') {
       this.rateLimited.set(false);
-      this.startTicker(); // resume the bar if a rate-limit backoff had paused it
+      // A lock wait freezes the bar the same way `backOffWhileRateLimited`
+      // does for a 429; anything else resumes it, in case such a backoff had
+      // paused it.
+      this.syncBarWithLockWait();
     }
-    this.report.set(next);
   }
 
   private onReport(r: RecommendationRunReport): void {

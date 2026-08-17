@@ -29,6 +29,7 @@ final readonly class RecommendationRunReport
         public int $batchesDone,
         public ?string $error,
         public bool $background = false,
+        public bool $waitingForLock = false,
         public int $streamedChars = 0,
         public ?\DateTimeImmutable $startedAt = null,
     ) {
@@ -70,6 +71,30 @@ final readonly class RecommendationRunReport
             $this->batchesDone,
             $this->error,
             background: true,
+            waitingForLock: $this->waitingForLock,
+            streamedChars: $this->streamedChars,
+            startedAt: $this->startedAt,
+        );
+    }
+
+    /**
+     * The #439 marker that the per-user lock is held with nobody's heartbeat
+     * fresh: the poll driver sets this only on a `busy` advance() whose
+     * presence read already came back "nobody driving" -- a lock a live
+     * holder is refreshing would have made that read come back fresh
+     * instead. `inBackground()` alone cannot carry the distinction, because
+     * a busy report is stamped background either way; the client needs both
+     * to tell "a worker owns this" from "this may be stuck".
+     */
+    public function waitingForLock(): self
+    {
+        return new self(
+            $this->status,
+            $this->batchesTotal,
+            $this->batchesDone,
+            $this->error,
+            background: $this->background,
+            waitingForLock: true,
             streamedChars: $this->streamedChars,
             startedAt: $this->startedAt,
         );
@@ -77,7 +102,7 @@ final readonly class RecommendationRunReport
 
     /**
      * @return array{status: string, batchesTotal: ?int, batchesDone: int, error: ?string, background: bool,
-     *     streamedChars: int}
+     *     waitingForLock: bool, streamedChars: int}
      */
     public function toArray(): array
     {
@@ -87,6 +112,7 @@ final readonly class RecommendationRunReport
             'batchesDone' => $this->batchesDone,
             'error' => $this->error,
             'background' => $this->background,
+            'waitingForLock' => $this->waitingForLock,
             'streamedChars' => $this->streamedChars,
         ];
     }

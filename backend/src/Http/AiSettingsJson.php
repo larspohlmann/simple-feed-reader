@@ -37,6 +37,7 @@ final class AiSettingsJson
             'suppressReasoning' => $settings->suppressesReasoning(),
             'batchConcurrency' => $settings->batchConcurrency(),
             'slowModel' => $settings->isSlowModel(),
+            'maxBatchSize' => $settings->maxBatchSize(),
             'ready' => self::isReady($settings),
             'active' => $settings->getId() === $activeId,
         ];

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Maintenance;
 
 use App\Service\Recommendation\ForYouSweep;
-use App\Service\Recommendation\RecommendationDrainSpawner;
 use App\Service\Refresh\RefreshRequest;
 use App\Service\Refresh\RefreshRunner;
 
@@ -25,9 +24,10 @@ use App\Service\Refresh\RefreshRunner;
  * on a fresh request with a fresh EM.
  *
  * This is the worker-less install's single cron entry point; the granular
- * /maintenance routes stay for a caller that wants one job only. It also
- * carries the detached drainer's respawn net (#371): when the sweep leaves
- * runs still active, this tick spawns a drainer if no worker is alive.
+ * /maintenance routes stay for a caller that wants one job only. Keeping an
+ * on-demand drainer alive for whatever the sweep leaves active is
+ * RecommendationDrainOnTerminateListener's job now (#393), off this class's
+ * own termination rather than threaded through here.
  */
 final readonly class MaintenanceTick
 {
@@ -36,7 +36,6 @@ final readonly class MaintenanceTick
     public function __construct(
         private RefreshRunner $refreshRunner,
         private ForYouSweep $forYouSweep,
-        private RecommendationDrainSpawner $drainSpawner,
     ) {
     }
 
@@ -48,13 +47,6 @@ final readonly class MaintenanceTick
         }
 
         $recommendations = $this->forYouSweep->sweepOnce();
-        if ($recommendations->activeRuns > 0) {
-            // The respawn net (#371): a drainer that died leaves its runs to
-            // this cron path; once the heartbeat is stale again, the next tick
-            // brings a fresh drainer up rather than crawling at one step per
-            // minute. Runs just started by this very sweep are covered too.
-            $this->drainSpawner->spawnIfNoWorker();
-        }
 
         return new MaintenanceTickReport($refresh->toArray(), $recommendations->toArray());
     }

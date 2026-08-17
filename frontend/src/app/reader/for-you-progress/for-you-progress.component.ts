@@ -35,14 +35,16 @@ export class ForYouProgressComponent {
   });
 
   /** The ETA/status phrase appended after the count, or null when there is
-   *  nothing to add. `starting` and `waiting` are fixed phrases; `eta` formats
-   *  the remaining seconds; `hidden` (no run) adds nothing. */
+   *  nothing to add. `starting`, `waiting` and `lockHeld` are fixed phrases;
+   *  `eta` formats the remaining seconds; `hidden` (no run) adds nothing. */
   protected readonly eta = computed<Phrase | null>(() => {
     switch (this.recs.etaState()) {
       case 'starting':
         return { key: 'reader.eta.starting' };
       case 'waiting':
         return { key: 'reader.eta.rateLimited' };
+      case 'lockHeld':
+        return { key: 'reader.eta.lockHeld' };
       case 'eta': {
         const seconds = this.recs.etaSeconds();
         if (seconds === null) return null;

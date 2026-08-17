@@ -84,6 +84,13 @@ export class AiSectionComponent {
    *  is no invalid value the handler needs to guard against. */
   readonly concurrencyOptions: readonly number[] = [1, 2, 3, 4];
 
+  /** Shown as the batch-cap field's placeholder when a connection makes no
+   *  claim — the ceiling the backend applies on its behalf
+   *  (`RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE`). A string,
+   *  since `placeholder` is a string attribute and strict template checking
+   *  rejects a number there. */
+  readonly defaultMaxBatchSize = '45';
+
   readonly modelOptions = computed<SelectOption[]>(() =>
     this.ai.models().map((model) => ({ value: model, label: model })),
   );
@@ -199,6 +206,12 @@ export class AiSectionComponent {
 
   toggleSlowModel(config: AiConfig, event: Event): void {
     this.ai.setSlowModel(config.id, (event.target as HTMLInputElement).checked);
+  }
+
+  /** An empty field means "no claim, the default stands" — never `NaN`. */
+  setMaxBatchSize(config: AiConfig, event: Event): void {
+    const raw = (event.target as HTMLInputElement).value;
+    this.ai.setMaxBatchSize(config.id, raw === '' ? null : Number(raw));
   }
 
   setBatchConcurrency(config: AiConfig, event: Event): void {

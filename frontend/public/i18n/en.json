@@ -97,6 +97,7 @@
         "add": "Add configuration",
         "reasoning": "Ask the model not to reason",
         "slowModel": "Slow or local model",
+        "maxBatchSize": "Maximum batch size",
         "batchConcurrency": "Parallel requests",
         "saved": "Saved"
       },
@@ -119,6 +120,7 @@
         "rowActions": "“Use this one” makes this configuration the active one — the Active badge marks it, and AI features always use the active configuration. “Change model” fetches the model list from the endpoint so you can pick one. “Duplicate” copies the configuration together with its stored key — useful for trying a second model side by side. “Rename” changes the label shown in this list. “Delete” removes the endpoint, the stored key and the model; AI features stop if it was the active configuration.",
         "reasoning": "Asks the model to answer without a separate reasoning phase, which saves time and tokens. Leave it on for most providers. Turn it off only if the endpoint rejects the request (for example a direct OpenAI URL).",
         "slowModel": "Gives this connection much longer to answer: an hour for a whole reply, and fifteen minutes before the first token. Turn it on for a local model server that thinks for minutes before it answers. Leave it off for a hosted provider, where a long silence means the connection is dead and should fail quickly. The long limits only apply when a worker runs the recommendation ticks — a web request is cut off by the web server long before them.",
+        "maxBatchSize": "The most articles one request may ask the model to score. A shorter list is easier for a small model to keep in order, and it limits what one runaway reply can cost — a 4B local model given 45 articles per batch answered eight batches correctly, then lost its place on the ninth and kept inventing ids until it ran out of room to reply. The taste history is re-sent with every batch, though, so a lower cap also means more requests and more prompt tokens over the whole run. Leave it empty to use the default of 45.",
         "batchConcurrency": "How many batch requests one run sends at the same time (1–4). A hosted provider usually copes with 3–4 and finishes a run faster; a local model server is often best at 1. Lower it if the provider rate-limits you.",
         "modelPicker": "The list is fetched live from this configuration's endpoint. Pick the model AI features should use — the configuration is ready once a model is saved.",
         "name": "A free label for this configuration, shown only in this list. Leave it empty to show the endpoint's host instead.",
@@ -584,6 +586,7 @@
     "eta": {
       "starting": "Starting…",
       "rateLimited": "Waiting — rate limited",
+      "lockHeld": "Waiting — held by another process",
       "seconds": "~{{count}} s left",
       "minutes": "~{{count}} min left"
     }

@@ -22,23 +22,6 @@ final class RecommendationDrainSpawnerTest extends DbTestCase
     }
 
     /**
-     * One launch per process, however many trigger sites fire in it. A single
-     * maintenance tick asks once per due run it starts and once more for its
-     * own respawn net, and every extra fork boots a full Symfony kernel only
-     * to lose the drain lock and exit (#371 final review, Finding 3).
-     */
-    public function testASecondSpawnInTheSameProcessDoesNotLaunchAgain(): void
-    {
-        $launcher = new RecordingProcessLauncher();
-        $spawner = new RecommendationDrainSpawner($this->presence(), $launcher);
-
-        $spawner->spawnIfNoWorker();
-        $spawner->spawnIfNoWorker();
-
-        self::assertSame([['app:recommendations:drain', '--detach']], $launcher->launches);
-    }
-
-    /**
      * The Docker install's real worker keeps the heartbeat fresh, which is
      * exactly what must make the web request never spawn a second driver --
      * the feature self-disables where it is not needed (#371).
