@@ -44,8 +44,15 @@ final readonly class RecommendationPollDriver
         // healthy run (#311 final review, Critical 2). The honest answer is
         // where the run actually stands, flagged as somebody else's work so
         // the client keeps watching instead of driving.
+        //
+        // The presence check above already came back "nobody driving" or
+        // this line would never run, so a busy report here is the one case
+        // where the lock and the heartbeat disagree: something holds it that
+        // is not answering to any known driver kind (#439). waitingForLock
+        // names that gap for the client instead of leaving it to read the
+        // same as a healthy background run.
         return RecommendationRunReport::STATUS_BUSY === $report->status
-            ? $this->latestReport($user)->inBackground()
+            ? $this->latestReport($user)->inBackground()->waitingForLock()
             : $report;
     }
 

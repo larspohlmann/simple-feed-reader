@@ -33,6 +33,8 @@ use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Recommendation\TickDriver;
 use App\Tests\DbTestCase;
+use Monolog\Handler\TestHandler;
+use Monolog\Logger;
 use PHPUnit\Framework\Attributes\DataProvider;
 use App\Tests\Support\AiSettingsRowMover;
 use App\Tests\Support\BeatDuringReleaseLockFactory;
@@ -219,6 +221,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $userId = $this->user->getId();
         self::assertNotNull($userId);
 
+        $logSpy = $this->replaceLoggerWithASpy();
         $lock = $this->lockFactory()->createLock('ai-recommendations-' . $userId);
         self::assertTrue($lock->acquire());
 
@@ -232,6 +235,87 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         } finally {
             $lock->release();
         }
+
+        // #439 was diagnosed from a silent stall, so the failed acquire must
+        // leave a trace -- with enough to find the account (the lock name)
+        // and which driver hit it.
+        $records = $logSpy->getRecords();
+        self::assertCount(1, $records);
+        self::assertSame('WARNING', $records[0]->level->getName());
+        self::assertSame('Recommendation tick found its lock already held', $records[0]->message);
+        self::assertSame('ai-recommendations-' . $userId, $records[0]->context['lock']);
+        self::assertSame('Poll', $records[0]->context['driver']);
+    }
+
+    /**
+     * A poll tab retries every few seconds while its run stays busy, so
+     * logging every failed acquire would flood dev.log with the very stall
+     * this warning exists to surface. Two attempts back to back -- the
+     * closest a test can get to "immediately repeated" without depending on
+     * wall-clock timing -- must collapse to one log line.
+     */
+    public function testARepeatedLockContentionWithinTheDebounceWindowLogsOnce(): void
+    {
+        $userId = $this->user->getId();
+        self::assertNotNull($userId);
+
+        $logSpy = $this->replaceLoggerWithASpy();
+        $lock = $this->lockFactory()->createLock('ai-recommendations-' . $userId);
+        self::assertTrue($lock->acquire());
+
+        try {
+            $this->advancer()->advance($this->user);
+            $this->advancer()->advance($this->user);
+        } finally {
+            $lock->release();
+        }
+
+        self::assertCount(1, $logSpy->getRecords());
+    }
+
+    /**
+     * The debounce lock's name has to fold in the account's own lock name,
+     * not just a shared suffix: a debounce keyed on the suffix alone would
+     * silence every account's stall after the first one anywhere logged,
+     * which is worse than the flood #439 already suffered from -- a real
+     * stall on one account going unlogged because a different account's
+     * stall was logged a moment earlier. Two different accounts contending
+     * at once, one saved (a real id) and one not (the ?? 0 fallback also
+     * pinned by testLockNameFallsBackToZeroForAnUnsavedUser), must both be
+     * logged.
+     */
+    public function testLockContentionOnADifferentAccountLogsIndependently(): void
+    {
+        $logSpy = $this->replaceLoggerWithASpy();
+        $unsavedUser = new User('unsaved-stall@example.test', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+
+        $lock = $this->lockFactory()->createLock('ai-recommendations-' . $this->user->getId());
+        $otherLock = $this->lockFactory()->createLock('ai-recommendations-0');
+        self::assertTrue($lock->acquire());
+        self::assertTrue($otherLock->acquire());
+
+        try {
+            $this->advancer()->advance($this->user);
+            $this->advancer()->advance($unsavedUser);
+        } finally {
+            $lock->release();
+            $otherLock->release();
+        }
+
+        self::assertCount(2, $logSpy->getRecords());
+    }
+
+    private function replaceLoggerWithASpy(): TestHandler
+    {
+        $logSpy = new TestHandler();
+        // The default channel logger is the one everything but
+        // TickLockKeepalive's own explicit wiring autowires (config/
+        // packages/monolog.yaml declares no per-class channel), and it must
+        // be swapped before the advancer -- or anything else that resolves
+        // it -- is first built this test.
+        self::getContainer()->set('monolog.logger', new Logger('test', [$logSpy]));
+
+        return $logSpy;
     }
 
     /**

@@ -518,6 +518,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             self::getContainer()->get(RecommendationBatchWave::class),
             self::getContainer()->get(RecommendationCompletionRequestFactory::class),
             self::getContainer()->get(TickLockKeepalive::class),
+            self::getContainer()->get(LoggerInterface::class),
         );
     }
 

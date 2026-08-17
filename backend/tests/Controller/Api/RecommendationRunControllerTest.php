@@ -237,6 +237,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'batchesDone' => 0,
                 'error' => null,
                 'background' => false,
+                'waitingForLock' => false,
                 'streamedChars' => 0,
                 'forYou' => ['itemCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
             ],
@@ -334,6 +335,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'batchesDone' => 0,
                 'error' => null,
                 'background' => false,
+                'waitingForLock' => false,
                 'streamedChars' => 0,
                 'elapsedSeconds' => null,
                 'forYou' => ['itemCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
@@ -345,7 +347,10 @@ final class RecommendationRunControllerTest extends WebTestCase
     /**
      * #311's arbitration: with a fresh worker heartbeat in place, a tick
      * becomes a pure status read instead of doing the worker's job — the run
-     * stays pending and the provider is never called.
+     * stays pending and the provider is never called. A worker owning the
+     * run is not a stall (#439): the fresh-heartbeat branch never even
+     * attempts the lock, so waitingForLock stays false here regardless of
+     * whether the worker actually holds it right now.
      */
     public function testTickDefersToAFreshWorkerHeartbeat(): void
     {
@@ -362,6 +367,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         $report = $this->payload($client->getResponse());
         self::assertSame('pending', $report['status']);
         self::assertTrue($report['background']);
+        self::assertFalse($report['waitingForLock']);
         self::assertSame([], $this->stubChatClient()->calls());
     }
 
@@ -392,6 +398,9 @@ final class RecommendationRunControllerTest extends WebTestCase
     /**
      * Without a fresh heartbeat, the #308 poll behaviour applies untouched:
      * the tick snapshots the run itself and reports it as foreground work.
+     * Nothing else was contending for the lock either, so this is the
+     * baseline #439 flags against: no contention at all reports
+     * waitingForLock false, same as background.
      */
     public function testTickAdvancesWhenTheHeartbeatIsStale(): void
     {
@@ -407,6 +416,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         $report = $this->payload($client->getResponse());
         self::assertSame('running', $report['status']);
         self::assertFalse($report['background']);
+        self::assertFalse($report['waitingForLock']);
     }
 
     /**
@@ -462,6 +472,12 @@ final class RecommendationRunControllerTest extends WebTestCase
         self::assertNotSame('busy', $report['status']);
         self::assertSame('pending', $report['status']);
         self::assertTrue($report['background']);
+        // The presence check just above found no fresh heartbeat either, so
+        // the lock and the heartbeat disagree: something holds it that no
+        // known driver kind is answering for -- #439's stall, distinct from
+        // a healthy worker background run (see the fresh-heartbeat case
+        // above, which never sets this).
+        self::assertTrue($report['waitingForLock']);
         self::assertSame([], $this->stubChatClient()->calls());
     }
 
@@ -692,6 +708,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'batchesDone' => 0,
                 'error' => null,
                 'background' => false,
+                'waitingForLock' => false,
                 'streamedChars' => 0,
                 'elapsedSeconds' => null,
                 'forYou' => ['itemCount' => 0, 'generatedAt' => null, 'newestRunId' => null],

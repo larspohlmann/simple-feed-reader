@@ -22,6 +22,7 @@ use App\Service\Ai\ProviderTimeouts;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
 use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Lock\LockFactory;
 
@@ -103,6 +104,26 @@ final class RecommendationRunAdvancer
      */
     public const int POLL_MAX_CONCURRENCY = 2;
 
+    /**
+     * How often a failed acquire may repeat the warning below for one
+     * account (#439). A poll tab retries every few seconds while its run
+     * stays busy and a worker sweep retries every ten, so logging every
+     * attempt would flood dev.log with the very stall this line exists to
+     * surface -- the failure mode it was added to diagnose. A minute is
+     * frequent enough that a real stall still leaves a trail while it is
+     * happening, and coarse enough that scanning the log for it stays
+     * practical.
+     */
+    private const float STALL_LOG_INTERVAL_SECONDS = 60.0;
+
+    /**
+     * Suffixed onto the run's own lock name, never reused for anything else:
+     * the debounce lock in logLockContention() only ever needs to answer
+     * "has this account's stall already been logged recently", so its name
+     * has no other job to stay distinct from.
+     */
+    private const string STALL_LOG_LOCK_SUFFIX = '-stall-log';
+
     public function __construct(
         private readonly RecommendationRunRepository $runs,
         private readonly EntryRepository $entries,
@@ -123,6 +144,7 @@ final class RecommendationRunAdvancer
         private readonly RecommendationBatchWave $batchWave,
         private readonly RecommendationCompletionRequestFactory $requestFactory,
         private readonly TickLockKeepalive $keepalive,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -132,6 +154,8 @@ final class RecommendationRunAdvancer
         $lock = $this->lockFactory->createLock($lockName, $this->lockTtlFor($user));
 
         if (!$lock->acquire()) {
+            $this->logLockContention($lockName, $driver);
+
             return RecommendationRunReport::busy();
         }
 
@@ -168,6 +192,37 @@ final class RecommendationRunAdvancer
             $this->keepalive->release();
             $lock->release();
         }
+    }
+
+    /**
+     * Debounced through a second, short-lived lock rather than an in-memory
+     * timestamp: a poll tick gets a fresh RecommendationRunAdvancer on every
+     * HTTP request, so nothing held on $this would survive between one poll
+     * and the next, and the flood #439 warns about is made of exactly those
+     * repeated poll and sweep requests. The lock store is the one thing
+     * every driver already shares, so a debounce lock in it throttles across
+     * processes the way an instance property never could.
+     *
+     * autoRelease is off on purpose: the point of this lock is to keep
+     * blocking re-acquisition for the whole of its own TTL, not to free up
+     * the moment this request ends.
+     */
+    private function logLockContention(string $lockName, TickDriver $driver): void
+    {
+        $debounce = $this->lockFactory->createLock(
+            $lockName . self::STALL_LOG_LOCK_SUFFIX,
+            self::STALL_LOG_INTERVAL_SECONDS,
+            autoRelease: false,
+        );
+
+        if (!$debounce->acquire()) {
+            return;
+        }
+
+        $this->logger->warning(
+            'Recommendation tick found its lock already held',
+            ['lock' => $lockName, 'driver' => $driver->name],
+        );
     }
 
     /**
