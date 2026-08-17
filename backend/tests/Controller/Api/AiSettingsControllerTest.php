@@ -371,6 +371,37 @@ final class AiSettingsControllerTest extends ApiTestCase
         self::assertNull($this->payload($client)['maxBatchSize']);
     }
 
+    /**
+     * Clearing the cap is a deliberate feature, so it has to be asked for
+     * rather than fallen into. A body that never names the key -- `{}`, or the
+     * misspelling below, since unknown keys are ignored -- is a mistake, and
+     * answering 200 to it dropped a cap the account had set and raised its
+     * effective batch size back to the packer's default (#445). The stored
+     * value is re-read afterwards because the silent reset was the damage, not
+     * the status code.
+     */
+    public function testSettingMaxBatchSizeRejectsABodyThatOmitsTheKey(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-max-batch-size-omitted@example.test');
+        $id = $this->addConfiguration($client)['id'];
+        self::assertIsInt($id);
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/max-batch-size', $id), '{"maxBatchSize":30}');
+        self::assertResponseIsSuccessful();
+
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/max-batch-size', $id), '{}');
+        self::assertResponseStatusCodeSame(422);
+
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/max-batch-size', $id), '{"maxBatchSze":30}');
+        self::assertResponseStatusCodeSame(422);
+
+        $client->request('GET', '/api/me/ai');
+        $payload = $this->payload($client);
+        self::assertIsArray($payload['configs']);
+        self::assertIsArray($payload['configs'][0]);
+        self::assertSame(30, $payload['configs'][0]['maxBatchSize']);
+    }
+
     public function testSettingMaxBatchSizeRejectsOutOfRange(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);

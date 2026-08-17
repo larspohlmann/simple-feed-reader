@@ -33,6 +33,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 /**
@@ -243,10 +244,21 @@ final readonly class AiSettingsController
         requirements: ['id' => '\d+'],
         methods: ['PUT'],
     )]
+    /**
+     * The one payload here whose property is nullable, so the one that needs
+     * REQUIRE_ALL_PROPERTIES: without it the serializer fills a missing
+     * `maxBatchSize` with null, and a body that never mentioned the cap --
+     * `{}`, or a misspelt key, which is simply ignored -- would clear a cap
+     * the account had set and quietly raise its effective batch size again
+     * (#445). Clearing stays possible; it just has to be asked for, as an
+     * explicit `{"maxBatchSize": null}`. The neighbouring endpoints get this
+     * for free from their non-nullable properties.
+     */
     public function setMaxBatchSize(
         #[CurrentUser] User $user,
         int $id,
-        #[MapRequestPayload] SetMaxBatchSizeRequest $request,
+        #[MapRequestPayload(serializationContext: [AbstractNormalizer::REQUIRE_ALL_PROPERTIES => true])]
+        SetMaxBatchSizeRequest $request,
     ): JsonResponse {
         try {
             $configuration = $this->configuration->require($user, $id);
