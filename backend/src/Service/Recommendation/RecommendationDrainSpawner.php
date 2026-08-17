@@ -11,9 +11,10 @@ use App\Service\Worker\WorkerPresence;
  * The one spawn policy for the on-demand drainer (#371): every trigger site
  * goes through this method, so "only when nobody is already driving the
  * runs" is decided in exactly one place. Since #393 the only caller is
- * RecommendationDrainOnTerminateListener, which fires once per request or
- * console command -- that is what keeps a single web request or cron tick
- * from forking more than once, with no memory needed here.
+ * RecommendationDrainOnTerminateListener, which fires once per HTTP request
+ * and on no console exit at all -- that is what keeps a single web request or
+ * cron tick from forking more than once, with no memory needed here. Why the
+ * console half was dropped is written out on the listener.
  *
  * A stale read here is harmless -- the drain command's own global lock and
  * the per-user run lock are the real guards against double work; this check
