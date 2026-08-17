@@ -12,6 +12,13 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(CompositeCompletionStreamHeartbeat::class)]
 final class CompositeCompletionStreamHeartbeatTest extends TestCase
 {
+    /**
+     * The keepalive beats before the liveness marker, and the order is the
+     * composite's own: a member that throws skips the rest of the chunk, and
+     * a missed lock refresh costs far more than a missed liveness mark. Which
+     * container service fills each slot is CompletionStreamHeartbeatWiringTest's
+     * question, not this one's.
+     */
     public function testBeatingTheCompositeBeatsEveryMemberExactlyOnceInOrder(): void
     {
         /** @var list<string> $order */
@@ -27,7 +34,7 @@ final class CompositeCompletionStreamHeartbeatTest extends TestCase
             $order[] = 'second';
         });
 
-        $composite = new CompositeCompletionStreamHeartbeat([$first, $second]);
+        $composite = new CompositeCompletionStreamHeartbeat($first, $second);
 
         $composite->beat();
 

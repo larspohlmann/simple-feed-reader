@@ -97,17 +97,13 @@ services:
     # then a no-op. Both stay injectable by their own class name too, because
     # their arming methods (hold()/release(), sweepStarted()/sweepEnded()) are
     # called by name from the advancer and from the sweep, not through the
-    # interface. Order matters: the composite is not transactional, so a
-    # member that throws skips the rest for that one chunk. TickLockKeepalive
-    # goes first because it guards the stronger invariant -- a missed lock
-    # refresh risks a stolen lock and a double-banked run, a missed liveness
-    # mark only delays a UI hint by one beat.
+    # interface. Which of the two beats first is the composite's own rule and
+    # lives in its beat() -- these arguments only say which member is which.
     App\Service\Recommendation\CompletionStreamHeartbeat: '@App\Service\Recommendation\CompositeCompletionStreamHeartbeat'
     App\Service\Recommendation\CompositeCompletionStreamHeartbeat:
         arguments:
-            $heartbeats:
-                - '@App\Service\Recommendation\TickLockKeepalive'
-                - '@App\Service\Worker\SweepStreamHeartbeat'
+            $lockKeepalive: '@App\Service\Recommendation\TickLockKeepalive'
+            $workerLiveness: '@App\Service\Worker\SweepStreamHeartbeat'
     App\Service\Process\ShellCommandRunnerInterface: '@App\Service\Process\ExecShellCommandRunner'
     App\Service\Process\DetachedProcessLauncherInterface: '@App\Service\Process\DetachedProcessLauncher'
 
