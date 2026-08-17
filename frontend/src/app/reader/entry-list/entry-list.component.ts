@@ -393,8 +393,21 @@ export class EntryListComponent implements OnDestroy {
     this.lastScrollTop = 0;
   });
 
+  /**
+   * Re-seat the reading focus whenever the rows change, not only when the
+   * breakpoint does. The pass writes an inline opacity per row, so every row the
+   * component has never measured renders undimmed — and the only other triggers
+   * are a scroll event and a resize. A list that lands while the frame scheduled
+   * at mount has already passed therefore had no fade at all until the user
+   * scrolled (#462). Depending on `entries()` covers a finished load and a
+   * load-more append; depending on `rows()` covers the scroller element itself
+   * being replaced, which the skeleton -> list and list <-> magazine swaps do.
+   * `scheduleFocus()` coalesces to one frame, so the extra runs cost nothing.
+   */
   private readonly _rescheduleFocus = effect(() => {
     this.screen.isWide();
+    this.entries();
+    this.rows();
     this.scheduleFocus();
   });
 
