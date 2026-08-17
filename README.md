@@ -91,16 +91,39 @@ curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/mai
 
 The installer clones the project into `./simple-feed-reader`, checks out the
 latest release, generates the secrets it can, asks for the things only you
-know (how users reach the instance — plain HTTP, your own certificate, or a
-reverse proxy — under which hostname and port, how to send mail, and whether
-to run a full-text search engine alongside the app), and starts the
-production stack. The search engine defaults to yes; answer no, or run
-outside Docker, and search runs against the database instead. The full guide
-— TLS, reverse proxies, mail verification, backups —
+know (which package to install, how users reach the instance — plain HTTP,
+your own certificate, or a reverse proxy — under which hostname and port, and
+how to send mail), and starts the production stack. The full guide — TLS,
+reverse proxies, mail verification, backups —
 is [docs/docker-production.md](docs/docker-production.md).
 
 > **Read before you pipe to bash.** You can inspect exactly what runs at
 > [scripts/install.sh](scripts/install.sh). The installer never deletes data.
+
+### Which package
+
+The first question the installer asks is which package to install. It decides
+the database and the search engine together, because the two of them are what
+the stack costs in memory:
+
+| Package | What you get | Containers | RAM |
+|---|---|---|---|
+| **S** (the default) | a personal instance. SQLite, no search engine. | php, worker, web | Needs about 250 MB |
+| **M** | several users. MySQL, search over titles and summaries. | php, worker, web, mysql | Needs about 1 GB |
+| **L** | like M, plus full-content search over article bodies. | php, worker, web, mysql, meilisearch | Needs about 2.5 GB |
+
+Every package runs the same application, with every feature: the packages
+differ in the containers beside it, not in what the reader can do. Search
+works in all three — S and M match titles and summaries in the database, L
+matches the full text of every article.
+
+Answer **C** to choose the database and the search engine yourself, one
+question each — the way to reach a combination the three packages do not
+cover, such as SQLite with a search engine.
+
+The figures are measured on an idle, healthy stack holding a real account of
+107 feeds and 17,427 articles. S and M do not grow with the number of
+articles; L adds roughly 45 MB per 1,000 articles on top of its base.
 
 Both installers take a target directory and `--ref <branch-or-tag>`, which
 installs something other than the latest release — how a change is tried on a

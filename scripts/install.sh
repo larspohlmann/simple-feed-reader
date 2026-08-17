@@ -6,11 +6,17 @@ set -euo pipefail
 #   curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/main/scripts/install.sh | bash
 #
 # It clones the repository, checks out the latest release, writes .env.prod
-# with freshly generated secrets, asks for the few values only you know (the
-# public origin, which database, whether to run a search engine, and how to
-# send mail), and starts the production stack: the production PHP image,
-# nginx serving the built app, MySQL unless you answer SQLite, and Meilisearch
-# unless you decline it (search then runs against the database instead).
+# with freshly generated secrets, asks for the few values only you know (which
+# package to install, the public origin, and how to send mail), and starts the
+# production stack: the production PHP image, nginx serving the built app, the
+# worker, and whatever the package adds beside them.
+#
+# The package is the first question, and the only one that says what the answer
+# costs: S, M and L each print what they run and how much memory the stack
+# needs. The default is S -- SQLite in a file, search against the database, no
+# container besides the app's own three. M adds MySQL, L adds MySQL and
+# Meilisearch. Answer C to decide the database and the search engine yourself,
+# one question each.
 #
 # It deletes data in exactly one case, and only after you say yes to it: an
 # earlier production install whose Docker volumes are still on this machine.
@@ -149,13 +155,21 @@ env_prod_set MYSQL_ROOT_PASSWORD "$(generate_secret)"
 env_prod_set MYSQL_PASSWORD "$(generate_secret)"
 
 # --- 6. the values only the operator knows ----------------------------------
+# The package comes first: it decides the database and the search engine
+# together, and prints what each combination costs in memory. So the two
+# questions below run only for the operator who answered C and wants to decide
+# them one at a time.
+configure_package
 configure_public_url
-configure_database
-# A fresh .env.prod has no engine decision on file yet -- an empty
-# MEILISEARCH_URL here means "nobody has been asked", not "declined" -- so
-# this is the one caller allowed to hardcode the default. See
-# configure_search_engine's own comment for the prod-configure.sh contrast.
-configure_search_engine 'y'
+if custom_package_chosen; then
+  configure_database
+  # 'n', so that pressing return through the C path lands where the default
+  # package S does. A fresh .env.prod has no engine decision on file to read
+  # back -- an empty MEILISEARCH_URL here means "nobody has been asked", not
+  # "declined" -- which is why this caller passes a literal at all. See
+  # configure_search_engine's own comment for the prod-configure.sh contrast.
+  configure_search_engine 'n'
+fi
 configure_mail
 
 # --- 7. start, or explain how to --------------------------------------------

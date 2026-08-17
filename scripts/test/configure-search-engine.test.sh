@@ -4,10 +4,14 @@ set -euo pipefail
 # Unit test for the installer's search engine question in lib.sh (#432), and
 # for what the answer makes the rest of the scripts do.
 #
-# Three things have to hold. A FRESH install must default to yes on return,
-# because full-content search over article bodies is materially better than
-# the database's title/summary LIKE fallback, and the installer's own
-# docstring promises it. A RE-ASK (scripts/prod-configure.sh, on an install
+# Three things have to hold. A FRESH install must default to NO on return:
+# since #453 the package question decides the search engine, its default is S
+# (a personal instance, no engine container), and this question -- now asked
+# for package C only -- has to land in the same place. Full-content search over
+# article bodies is still materially better than the database's title/summary
+# LIKE fallback; that is the argument for choosing package L, not for adding a
+# container to an install whose operator has not said how much memory the
+# machine has. A RE-ASK (scripts/prod-configure.sh, on an install
 # that already answered this question once) must default to whatever is
 # already configured, so pressing return through an unrelated question (a new
 # public URL, a new mail transport) can never reverse a decision the operator
@@ -18,19 +22,20 @@ set -euo pipefail
 # container nobody talks to or leaves a configured install without it.
 #
 # configure_search_engine takes its default as a parameter for exactly this
-# reason: install.sh always passes the literal 'y' (a fresh .env.prod has no
-# decision on file to read back), prod-configure.sh always passes
-# current_search_engine_choice (whatever MEILISEARCH_URL already says).
+# reason: install.sh passes a literal (a fresh .env.prod has no decision on
+# file to read back), prod-configure.sh always passes
+# current_search_engine_choice (whatever MEILISEARCH_URL already says). Which
+# literal install.sh passes is asserted here as well -- the two defaults it
+# selects between have to agree, and #453 flipped both at once.
 #
 # A fourth thing has to hold since the code-review fix for issue #432: a
-# TERMINAL-LESS run must not silently no-op onto "no". install.sh's own
-# header promises a default of yes, and the documented two-step flow (write
-# .env.prod, stop for the mail question, finish later in a real terminal) has
-# no terminal for this very question either -- so without a terminal the
-# function must actively apply the default it was given, the same default a
-# terminal would have offered. That keeps the re-ask guarantee too: applying
-# a default can never invent a decision, so a headless re-ask still cannot
-# turn on an engine the operator declined.
+# TERMINAL-LESS run must not silently no-op. The documented two-step flow
+# (write .env.prod, stop for the mail question, finish later in a real
+# terminal) has no terminal for this very question either -- so without a
+# terminal the function must actively apply the default it was given, the same
+# default a terminal would have offered. That keeps the re-ask guarantee too:
+# applying a default can never invent a decision, so a headless re-ask still
+# cannot turn on an engine the operator declined.
 #
 # A fifth and separate thing, unrelated to prompting: prod_uses_search_engine
 # must agree with the backend's SearchEngineCapability::isConfigured() about
@@ -78,11 +83,13 @@ assert_profiles() {
   [ "${got}" = "${want}" ] || fail "compose profiles: want '${want}', got '${got}'"
 }
 
-# Simulates install.sh: a fresh .env.prod, always defaulting to 'y'.
+# Simulates install.sh: a fresh .env.prod, and the default it hands over.
 fresh_install_answer_with() {
+  local default=$1
+  shift
   printf 'DATABASE_URL=\nMEILISEARCH_URL=\nMEILISEARCH_KEY=\n' > "${ENV_PROD_FILE}"
   printf '%s\n' "$@" > "${queue}"
-  configure_search_engine 'y' > /dev/null 2>&1
+  configure_search_engine "${default}" > /dev/null 2>&1
 }
 
 # Simulates prod-configure.sh: seeds the file with whatever the instance is
@@ -96,23 +103,41 @@ reask_with() {
   configure_search_engine "$(current_search_engine_choice)" > /dev/null 2>&1
 }
 
-# --- 1. fresh install: pressing return enables the engine and generates a key
-fresh_install_answer_with ''
+# --- 1. the default is applied on return, whichever one the caller passes ----
+# 'y' first: this is what a re-ask of an install that runs the engine offers,
+# and what install.sh passed until #453 -- the branch has to keep working, or
+# prod-configure.sh can no longer keep a decision.
+fresh_install_answer_with 'y' ''
 assert_env MEILISEARCH_URL 'http://meilisearch:7700'
 [ -n "$(env_prod_get MEILISEARCH_KEY)" ] || fail 'the default answer must generate MEILISEARCH_KEY'
-prod_uses_search_engine || fail 'the default answer must enable the search engine'
+prod_uses_search_engine || fail 'a default of yes must enable the search engine'
 # The fixture leaves DATABASE_URL empty, i.e. the bundled MySQL -- so both
 # profiles are on here; section 4 below isolates each combination.
 assert_profiles 'mysql,meilisearch'
 
-# --- 2. fresh install: answering no leaves the URL empty, generates nothing -
-fresh_install_answer_with n
+# 'n' second: what install.sh passes since #453, so pressing return through the
+# C path lands on the same stack the default package S installs.
+fresh_install_answer_with 'n' ''
+assert_env MEILISEARCH_URL ''
+assert_env MEILISEARCH_KEY ''
+if prod_uses_search_engine; then
+  fail 'a default of no must not enable the search engine'
+fi
+assert_profiles 'mysql'
+
+# --- 2. an explicit answer beats the default in both directions --------------
+fresh_install_answer_with 'y' n
 assert_env MEILISEARCH_URL ''
 assert_env MEILISEARCH_KEY ''
 if prod_uses_search_engine; then
   fail 'answering no must not enable the search engine'
 fi
 assert_profiles 'mysql'
+
+fresh_install_answer_with 'n' y
+assert_env MEILISEARCH_URL 'http://meilisearch:7700'
+prod_uses_search_engine || fail 'answering yes must enable the search engine'
+assert_profiles 'mysql,meilisearch'
 
 # --- 3. re-ask: pressing return never reverses the stored decision ----------
 # This is the regression the default-as-parameter fix exists for: a naive
@@ -153,31 +178,48 @@ assert_env MEILISEARCH_KEY 'existing-key'
 assert_env MEILISEARCH_URL 'http://meilisearch:7700'
 
 # --- 6. an unreadable terminal REAPPLIES the current decision, changing ----
-# nothing when the caller's default already matches it. Distinct from
-# configure_database: there, doing nothing and choosing the default are the
-# same outcome, so an early return is correct. Here they are not, so the
-# headless path must actively apply the default -- this case only proves that
-# applying an unchanged decision is itself a no-op.
+# nothing when the caller's default already matches it. Doing nothing and
+# applying the default are not the same outcome here -- an empty
+# MEILISEARCH_URL reads as a decline -- so the headless path must actively
+# apply what it was given. This case only proves that applying an unchanged
+# decision is itself a no-op.
 can_prompt() { return 1; }
 printf 'DATABASE_URL=\nMEILISEARCH_URL=http://meilisearch:7700\nMEILISEARCH_KEY=existing-key\n' > "${ENV_PROD_FILE}"
 configure_search_engine 'y' > /dev/null 2>&1
 assert_env MEILISEARCH_URL 'http://meilisearch:7700'
 assert_env MEILISEARCH_KEY 'existing-key'
 
-# --- 7. headless install.sh lands on the promised default -------------------
+# --- 7. a headless run applies the default it was given, either way ---------
 # The documented two-step flow: a piped install writes .env.prod, then stops
-# because mail needs a human. Before this fix, configure_search_engine's early
-# return left MEILISEARCH_URL empty here too -- indistinguishable from a
-# decline -- so the LATER prod-configure.sh run (in a real terminal) offered
-# the question defaulted to no, contradicting install.sh's own "default yes"
-# header. install.sh always passes the literal 'y' for exactly this case (see
-# its own call site), so a fresh, empty .env.prod must come out configured.
+# because mail needs a human. An early return left MEILISEARCH_URL empty here
+# -- indistinguishable from a decline -- so the LATER prod-configure.sh run (in
+# a real terminal) offered the question defaulted to no, whatever the installer
+# had promised. Both defaults must therefore reach the file: 'y' configures it,
+# 'n' writes the decline rather than leaving the question open.
 can_prompt() { return 1; }
 printf 'DATABASE_URL=\nMEILISEARCH_URL=\nMEILISEARCH_KEY=\n' > "${ENV_PROD_FILE}"
 configure_search_engine 'y' > /dev/null 2>&1
 assert_env MEILISEARCH_URL 'http://meilisearch:7700'
-[ -n "$(env_prod_get MEILISEARCH_KEY)" ] || fail 'a headless install must land on the promised default and generate a key'
-prod_uses_search_engine || fail 'a headless install must land on the promised default (enabled)'
+[ -n "$(env_prod_get MEILISEARCH_KEY)" ] || fail 'a headless default of yes must generate a key'
+prod_uses_search_engine || fail 'a headless default of yes must enable the engine'
+
+can_prompt() { return 1; }
+printf 'DATABASE_URL=\nMEILISEARCH_URL=\nMEILISEARCH_KEY=\n' > "${ENV_PROD_FILE}"
+configure_search_engine 'n' > /dev/null 2>&1
+assert_env MEILISEARCH_URL ''
+assert_env MEILISEARCH_KEY ''
+
+# --- 7b. and install.sh is the caller that passes 'n' -----------------------
+# The default this question offers and the default package the installer offers
+# have to agree: pressing return through the whole installer lands on SQLite
+# with no search engine, whichever path the operator takes to get there. A flip
+# back to 'y' here would make the C path install a container the S path never
+# starts, and nothing else would notice.
+grep -q "configure_search_engine 'n'" "${_dir}/../install.sh" \
+  || fail "install.sh must pass 'n' as the search-engine default"
+if grep -q "configure_search_engine 'y'" "${_dir}/../install.sh"; then
+  fail "install.sh must not pass 'y' as the search-engine default any more"
+fi
 
 # --- 8. headless re-configure still cannot flip a stored "no" to "yes" ------
 # prod-configure.sh itself refuses to run without a terminal (it dies), so
