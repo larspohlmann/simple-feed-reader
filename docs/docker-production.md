@@ -69,8 +69,8 @@ values only you know:
 
   Two more keys decide how much you are asked. **Q**, **the default**, is the
   quick install: the S stack, and no other question at all — it answers the
-  rest for you, `http://localhost:3333` and no mail, so pressing return at this
-  question brings the instance up. Both are changeable afterwards with
+  rest for you, `http://localhost:3333` and no account mail, so pressing return
+  here brings the instance up. Both are changeable afterwards with
   `./scripts/prod-configure.sh` (§7). **C** is the opposite: choose everything
   yourself. S, M and L still ask the origin and mail questions below; C adds
   the database and the search-engine ones to them — the only way to reach a

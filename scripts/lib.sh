@@ -1267,7 +1267,7 @@ package_description() {
 # must not be.
 package_note() {
   case "$1" in
-    Q) printf '%s' 'It answers the rest for you: http://localhost:3333, and no mail.' ;;
+    Q) printf '%s' 'It answers the rest: http://localhost:3333, and no account mail.' ;;
   esac
 }
 
@@ -1280,8 +1280,9 @@ package_note() {
 # its own note above says what it decides instead of asking.
 package_question_follow_up() {
   tell ''
-  tell '  S, M and L ask for the public URL and for mail next.'
-  tell '  C asks for those two as well, plus the database and the search engine.'
+  tell '  S, M and L ask next for the public URL and for account mail'
+  tell '  (verification, password reset, admin approval). C asks those two as'
+  tell '  well, plus the database and the search engine.'
 }
 
 # What the stack needs, measured and not estimated: read from an idle, healthy

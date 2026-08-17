@@ -20,7 +20,7 @@ set -euo pipefail
 #
 # Two more keys decide how much you are asked. Q -- the default -- is the quick
 # install: the S stack, and no other question at all, because it answers the
-# rest for you (http://localhost:3333, and no mail; both changeable later with
+# rest (http://localhost:3333, and no account mail; both changeable later with
 # ./scripts/prod-configure.sh). C is the opposite: every question, the database
 # and the search engine included.
 #
