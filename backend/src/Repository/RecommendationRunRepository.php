@@ -8,6 +8,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\AbstractQuery;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -16,9 +17,9 @@ use Doctrine\Persistence\ManagerRegistry;
 final class RecommendationRunRepository extends ServiceEntityRepository
 {
     /**
-     * What "active" means for a recommendation run, in one place: neither
-     * query below may drift from the other about which statuses still need
-     * ticking.
+     * What "active" means for a recommendation run, in one place: no query
+     * below may drift from the others about which statuses still need
+     * ticking. activeStatusQuery() carries it to all three.
      *
      * @var list<string>
      */
@@ -33,14 +34,24 @@ final class RecommendationRunRepository extends ServiceEntityRepository
     }
 
     /**
+     * Every reading of "still needs ticking" starts here, so the filter is
+     * written once and each caller adds only what makes it its own question:
+     * one account's run, a count, or the sweep's ordered window.
+     */
+    private function activeStatusQuery(): QueryBuilder
+    {
+        return $this->createQueryBuilder('r')
+            ->andWhere('r.status IN (:active)')->setParameter('active', self::ACTIVE_STATUSES);
+    }
+
+    /**
      * The run a poll-driven tick should keep advancing, if any.
      */
     public function findActiveForUser(User $user): ?RecommendationRun
     {
         /** @var RecommendationRun|null $run */
-        $run = $this->createQueryBuilder('r')
+        $run = $this->activeStatusQuery()
             ->andWhere('r.user = :user')->setParameter('user', $user)
-            ->andWhere('r.status IN (:active)')->setParameter('active', self::ACTIVE_STATUSES)
             ->getQuery()
             ->getOneOrNullResult();
 
@@ -74,9 +85,8 @@ final class RecommendationRunRepository extends ServiceEntityRepository
      */
     public function hasActiveRun(): bool
     {
-        $activeRunCount = $this->createQueryBuilder('r')
+        $activeRunCount = $this->activeStatusQuery()
             ->select('COUNT(r.id)')
-            ->andWhere('r.status IN (:active)')->setParameter('active', self::ACTIVE_STATUSES)
             ->getQuery()
             ->getSingleScalarResult();
 
@@ -130,8 +140,7 @@ final class RecommendationRunRepository extends ServiceEntityRepository
     public function findAllActive(): array
     {
         /** @var list<RecommendationRun> $runs */
-        $runs = $this->createQueryBuilder('r')
-            ->andWhere('r.status IN (:active)')->setParameter('active', self::ACTIVE_STATUSES)
+        $runs = $this->activeStatusQuery()
             ->orderBy('r.id', 'ASC')
             ->setMaxResults(self::MAXIMUM_RUNS_PER_SWEEP)
             ->getQuery()
