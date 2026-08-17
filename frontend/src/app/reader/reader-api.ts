@@ -1,5 +1,5 @@
 // src/app/reader/reader-api.ts
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
@@ -150,8 +150,11 @@ export class ReaderApi {
     });
   }
 
-  downloadAccountBackup(): Observable<Blob> {
-    return this.http.get(`${this.base}/api/account/backup`, { responseType: 'blob' });
+  downloadAccountBackup(): Observable<HttpResponse<Blob>> {
+    return this.http.get(`${this.base}/api/account/backup`, {
+      responseType: 'blob',
+      observe: 'response',
+    });
   }
 
   previewAccountRestore(backup: Blob): Observable<RestorePreview> {

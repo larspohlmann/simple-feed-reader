@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
-import { saveAs } from '../core/save-as';
+import { filenameFromContentDisposition, saveAs } from '../core/save-as';
 import { downloadOpmlExport } from '../core/opml-export';
 import { LanguageService } from '../core/language.service';
 import { formatLongDate } from '../reader/format';
@@ -16,6 +16,11 @@ import { ErrorBannerComponent } from '../shared/error-banner/error-banner.compon
 import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
 
 const CONFIRM_PHRASE = 'REPLACE';
+
+/** Used only if the server's Content-Disposition header is missing or
+ *  unparseable -- normal responses carry the app-slug/version/account/date
+ *  name the backend builds (BackupFilename). */
+const FALLBACK_BACKUP_FILENAME = 'account-backup.json.gz';
 
 /** The one problem type the backend raises from an already-wiped account
  *  (BackupLoadFailedException). Every other restore failure -- the file does
@@ -78,9 +83,14 @@ export class BackupSectionComponent {
     this.exporting.set(true);
     this.exportError.set(null);
     this.api.downloadAccountBackup().subscribe({
-      next: (blob) => {
+      next: (response) => {
         this.exporting.set(false);
-        saveAs(blob, 'account-backup.json.gz');
+        if (!response.body) return;
+        const filename = filenameFromContentDisposition(
+          response.headers.get('Content-Disposition'),
+          FALLBACK_BACKUP_FILENAME,
+        );
+        saveAs(response.body, filename);
       },
       error: (e: HttpErrorResponse) => {
         this.exporting.set(false);

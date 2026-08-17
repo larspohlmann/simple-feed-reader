@@ -31,7 +31,10 @@ final readonly class AccountBackupController
     #[Route('/backup', name: 'api_account_backup', methods: ['GET'])]
     public function backup(#[CurrentUser] User $user, Request $request): StreamedResponse
     {
-        return $this->downloads->stream($this->exporter->lines($user, $request->getSchemeAndHttpHost()));
+        return $this->downloads->stream(
+            $user->getEmail(),
+            $this->exporter->lines($user, $request->getSchemeAndHttpHost()),
+        );
     }
 
     #[Route('/restore/preview', name: 'api_account_restore_preview', methods: ['POST'])]

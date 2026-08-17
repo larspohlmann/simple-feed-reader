@@ -248,6 +248,58 @@ describe('BackupSectionComponent', () => {
     expect(text).not.toContain('null');
   });
 
+  it('downloads the backup blob under the filename the server names in Content-Disposition', () => {
+    const f = mount();
+    const appendSpy = jest.spyOn(document.body, 'appendChild');
+
+    const c = f.componentInstance;
+    c.downloadBackup();
+    const req = ctrl.expectOne('https://api.test/api/account/backup');
+    expect(req.request.method).toBe('GET');
+    expect(req.request.responseType).toBe('blob');
+    req.flush(new Blob(['gzipped']), {
+      headers: {
+        'Content-Disposition':
+          'attachment; filename="simplefeedreader-dev-them-at-x-20260817.json.gz"',
+      },
+    });
+
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    const anchor = appendSpy.mock.calls[0][0] as HTMLAnchorElement;
+    expect(anchor.download).toBe('simplefeedreader-dev-them-at-x-20260817.json.gz');
+    expect(c.exporting()).toBe(false);
+    appendSpy.mockRestore();
+  });
+
+  it('falls back to a static filename when Content-Disposition is missing', () => {
+    const f = mount();
+    const appendSpy = jest.spyOn(document.body, 'appendChild');
+
+    const c = f.componentInstance;
+    c.downloadBackup();
+    const req = ctrl.expectOne('https://api.test/api/account/backup');
+    req.flush(new Blob(['gzipped']));
+
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    const anchor = appendSpy.mock.calls[0][0] as HTMLAnchorElement;
+    expect(anchor.download).toBe('account-backup.json.gz');
+    appendSpy.mockRestore();
+  });
+
+  it('shows an error rather than failing silently when the backup download fails', () => {
+    const f = mount();
+
+    const c = f.componentInstance;
+    c.downloadBackup();
+    ctrl
+      .expectOne('https://api.test/api/account/backup')
+      .flush(new Blob(['server error']), { status: 500, statusText: 'Server Error' });
+    f.detectChanges();
+
+    expect(c.exporting()).toBe(false);
+    expect(c.exportError()).not.toBeNull();
+  });
+
   it('downloads the safety-net OPML export through the shared saveAs helper', () => {
     const f = mount();
     chooseFile(f);

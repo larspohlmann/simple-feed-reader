@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Backup;
 
+use App\Service\Version\ReleaseVersionReader;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -17,14 +18,20 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 final readonly class BackupDownloadResponseFactory
 {
-    public function __construct(private ClockInterface $clock)
-    {
+    public function __construct(
+        private ClockInterface $clock,
+        private ReleaseVersionReader $versionReader,
+    ) {
     }
 
     /** @param \Generator<int, string> $lines */
-    public function stream(\Generator $lines): StreamedResponse
+    public function stream(string $accountEmail, \Generator $lines): StreamedResponse
     {
-        $filename = sprintf('account-backup-%s.json.gz', $this->clock->now()->format('Y-m-d'));
+        $filename = (new BackupFilename(
+            $accountEmail,
+            $this->versionReader->read()->version,
+            $this->clock->now(),
+        ))->value();
 
         return new StreamedResponse(
             static function () use ($lines): void {

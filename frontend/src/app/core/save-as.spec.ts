@@ -1,5 +1,32 @@
 // src/app/core/save-as.spec.ts
-import { saveAs } from './save-as';
+import { filenameFromContentDisposition, saveAs } from './save-as';
+
+describe('filenameFromContentDisposition', () => {
+  it('extracts a quoted filename', () => {
+    expect(
+      filenameFromContentDisposition(
+        'attachment; filename="simplefeedreader-0_6_2-lars-pohlmann-at-googlemail-20260817.json.gz"',
+        'fallback.json.gz',
+      ),
+    ).toBe('simplefeedreader-0_6_2-lars-pohlmann-at-googlemail-20260817.json.gz');
+  });
+
+  it('extracts an unquoted filename', () => {
+    expect(
+      filenameFromContentDisposition('attachment; filename=plain.json.gz', 'fallback.json.gz'),
+    ).toBe('plain.json.gz');
+  });
+
+  it('falls back when the header is null', () => {
+    expect(filenameFromContentDisposition(null, 'fallback.json.gz')).toBe('fallback.json.gz');
+  });
+
+  it('falls back when the header carries no filename', () => {
+    expect(filenameFromContentDisposition('attachment', 'fallback.json.gz')).toBe(
+      'fallback.json.gz',
+    );
+  });
+});
 
 describe('saveAs', () => {
   let createObjectURL: jest.Mock;

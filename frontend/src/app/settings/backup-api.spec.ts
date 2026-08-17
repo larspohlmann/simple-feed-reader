@@ -25,8 +25,8 @@ describe('ReaderApi account backup/restore', () => {
   afterEach(() => ctrl.verify());
 
   it('GETs the account backup as a blob', () => {
-    let received: Blob | undefined;
-    api.downloadAccountBackup().subscribe((b) => (received = b));
+    let received: Blob | null | undefined;
+    api.downloadAccountBackup().subscribe((response) => (received = response.body));
 
     const req = ctrl.expectOne('https://api.test/api/account/backup');
     expect(req.request.method).toBe('GET');
