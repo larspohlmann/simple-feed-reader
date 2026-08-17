@@ -11,6 +11,7 @@
         "ext-iconv": "*",
         "ext-libxml": "*",
         "ext-sodium": "*",
+        "ext-zlib": "*",
         "doctrine/doctrine-bundle": "^2.18.3",
         "doctrine/doctrine-migrations-bundle": "^3.7",
         "doctrine/orm": "^3.6.7",
