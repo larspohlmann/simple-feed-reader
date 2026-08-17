@@ -154,3 +154,34 @@ framework:
             limit: 90
             interval: '5 minutes'
             cache_pool: 'cache.rate_limiter'
+
+        # Not an abuse control like its neighbours above: this debounces
+        # RecommendationRunAdvancer::logLockContention()'s "lock already
+        # held" warning (#439), keyed on the account's own lock name, so a
+        # poll tab retrying every few seconds or a worker sweep retrying
+        # every ten collapses to roughly one log line a minute instead of
+        # one per attempt.
+        #
+        # fixed_window, not sliding_window: the neighbours above chose
+        # sliding specifically to stop an attacker doubling their budget
+        # across a window boundary. There is no budget here to double —
+        # letting two log lines through in a short burst near a boundary
+        # instead of one is a non-event for a log-volume control, not a
+        # security lapse, so the cheaper policy is the right one.
+        #
+        # lock_factory is explicitly OFF, unlike every limiter above (which
+        # inherit the framework default of 'lock.factory', the same
+        # DB-backed store RecommendationRunAdvancer's own run lock uses).
+        # That default exists so a rate limit cannot be raced past; a log
+        # debounce has no such requirement; an occasional extra line from a
+        # lost race is harmless, and turning it on here would put a
+        # database round trip and a Lock exception back on the hot path
+        # this exists to keep cheap and non-throwing (#439 review,
+        # Important 1 and 3) — exactly what replacing the original
+        # DoctrineDbalStore-backed debounce lock with this limiter was for.
+        recommendation_lock_stall_log:
+            policy: 'fixed_window'
+            limit: 1
+            interval: '1 minute'
+            cache_pool: 'cache.rate_limiter'
+            lock_factory: ~

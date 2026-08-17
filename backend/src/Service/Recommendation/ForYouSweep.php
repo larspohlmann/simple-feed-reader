@@ -20,11 +20,13 @@ use Psr\Log\LoggerInterface;
  * half: a worker-less install has no advance sweep, so one call both starts
  * due runs and advances every active run once. It advances one tick per run,
  * and each tick now sends a bounded wave of concurrent provider calls rather
- * than a single one (#344) — this caller never passes a driver, so it runs on
- * the Poll clamp (`min(cap, POLL_MAX_CONCURRENCY)`, i.e. `min(cap, 2)`), the
- * same regime a browser poll tick uses. The advancer flushes once the wave
- * resolves, so a request the gateway kills still leaves committed progress
- * and the next call resumes.
+ * than a single one (#344) — advanceOne() passes TickDriver::Sweep, which
+ * RecommendationRunAdvancer::effectiveCap() clamps exactly like a poll tick
+ * (`min(cap, POLL_MAX_CONCURRENCY)`, i.e. `min(cap, 2)`): this call, like a
+ * browser poll, runs inside a bounded web request (the maintenance cron hits
+ * this over HTTP), not inside a worker's own long-lived process. The advancer
+ * flushes once the wave resolves, so a request the gateway kills still leaves
+ * committed progress and the next call resumes.
  */
 final readonly class ForYouSweep
 {
@@ -75,7 +77,7 @@ final readonly class ForYouSweep
     private function advanceOne(RecommendationRun $run): int
     {
         try {
-            $this->advancer->advance($run->getUser());
+            $this->advancer->advance($run->getUser(), TickDriver::Sweep);
 
             return 1;
         } catch (\Throwable $exception) {

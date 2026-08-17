@@ -25,6 +25,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 /**
  * The driver-agnostic tick: #311's worker will call this exact method with no
@@ -104,26 +105,6 @@ final class RecommendationRunAdvancer
      */
     public const int POLL_MAX_CONCURRENCY = 2;
 
-    /**
-     * How often a failed acquire may repeat the warning below for one
-     * account (#439). A poll tab retries every few seconds while its run
-     * stays busy and a worker sweep retries every ten, so logging every
-     * attempt would flood dev.log with the very stall this line exists to
-     * surface -- the failure mode it was added to diagnose. A minute is
-     * frequent enough that a real stall still leaves a trail while it is
-     * happening, and coarse enough that scanning the log for it stays
-     * practical.
-     */
-    private const float STALL_LOG_INTERVAL_SECONDS = 60.0;
-
-    /**
-     * Suffixed onto the run's own lock name, never reused for anything else:
-     * the debounce lock in logLockContention() only ever needs to answer
-     * "has this account's stall already been logged recently", so its name
-     * has no other job to stay distinct from.
-     */
-    private const string STALL_LOG_LOCK_SUFFIX = '-stall-log';
-
     public function __construct(
         private readonly RecommendationRunRepository $runs,
         private readonly EntryRepository $entries,
@@ -145,6 +126,7 @@ final class RecommendationRunAdvancer
         private readonly RecommendationCompletionRequestFactory $requestFactory,
         private readonly TickLockKeepalive $keepalive,
         private readonly LoggerInterface $logger,
+        private readonly RateLimiterFactoryInterface $recommendationLockStallLogLimiter,
     ) {
     }
 
@@ -195,34 +177,45 @@ final class RecommendationRunAdvancer
     }
 
     /**
-     * Debounced through a second, short-lived lock rather than an in-memory
-     * timestamp: a poll tick gets a fresh RecommendationRunAdvancer on every
-     * HTTP request, so nothing held on $this would survive between one poll
-     * and the next, and the flood #439 warns about is made of exactly those
-     * repeated poll and sweep requests. The lock store is the one thing
-     * every driver already shares, so a debounce lock in it throttles across
-     * processes the way an instance property never could.
+     * Debounced through recommendationLockStallLogLimiter (config/packages/
+     * rate_limiter.yaml) rather than an in-memory timestamp: a poll tick
+     * gets a fresh RecommendationRunAdvancer on every HTTP request, so
+     * nothing held on $this would survive between one poll and the next,
+     * and the flood #439 warns about is made of exactly those repeated poll
+     * and sweep requests. The rate limiter's filesystem cache pool is
+     * shared across processes the way an instance property never could.
      *
-     * autoRelease is off on purpose: the point of this lock is to keep
-     * blocking re-acquisition for the whole of its own TTL, not to free up
-     * the moment this request ends.
+     * An earlier version of this debounced through a second
+     * DoctrineDbalStore lock, mirroring the run lock's own mechanism. Review
+     * caught two problems with that: every failed acquire against it was
+     * three DB round trips on the path that fires on every busy poll, and
+     * Symfony's own Lock component logs its *own* conflict on the "lock"
+     * Monolog channel -- so a debounce built out of a second lock added a
+     * second log line (to a different channel the debounce's own test
+     * couldn't see) for every one it suppressed, making dev.log *longer*
+     * instead of shorter. The rate limiter's cache-backed storage does
+     * neither: no DB round trip, and no lock component logging a conflict
+     * of its own.
+     *
+     * Wrapped in a catch-all: whatever backs the limiter, a failure in this
+     * debounce -- or in the log call itself -- must never turn a legitimate
+     * `busy` answer into a 500 for the request that only wanted to know
+     * whether its run is somebody else's work.
      */
     private function logLockContention(string $lockName, TickDriver $driver): void
     {
-        $debounce = $this->lockFactory->createLock(
-            $lockName . self::STALL_LOG_LOCK_SUFFIX,
-            self::STALL_LOG_INTERVAL_SECONDS,
-            autoRelease: false,
-        );
+        try {
+            if (!$this->recommendationLockStallLogLimiter->create($lockName)->consume()->isAccepted()) {
+                return;
+            }
 
-        if (!$debounce->acquire()) {
-            return;
+            $this->logger->warning(
+                'Recommendation tick found its lock already held',
+                ['lock' => $lockName, 'driver' => $driver->name],
+            );
+        } catch (\Throwable) {
+            // Best-effort, see the docblock above.
         }
-
-        $this->logger->warning(
-            'Recommendation tick found its lock already held',
-            ['lock' => $lockName, 'driver' => $driver->name],
-        );
     }
 
     /**
@@ -440,11 +433,19 @@ final class RecommendationRunAdvancer
         return min($this->effectiveCap($settings, $driver), $batchesRemaining);
     }
 
+    /**
+     * Worker is the one driver that owns its own process rather than running
+     * inside a bounded web request, so it is the branch named explicitly here
+     * -- every other driver (Poll, and Sweep's cron-triggered web request)
+     * gets the same POLL_MAX_CONCURRENCY clamp by falling through the `else`,
+     * without this method needing to know about each one by name. See
+     * TickDriver's docblock for why Sweep belongs on this side.
+     */
     private function effectiveCap(AiProviderSettings $settings, TickDriver $driver): int
     {
-        $cap = TickDriver::Poll === $driver
-            ? min($settings->batchConcurrency(), self::POLL_MAX_CONCURRENCY)
-            : $settings->batchConcurrency();
+        $cap = TickDriver::Worker === $driver
+            ? $settings->batchConcurrency()
+            : min($settings->batchConcurrency(), self::POLL_MAX_CONCURRENCY);
 
         return max(1, min($cap, AiProviderSettings::MAX_BATCH_CONCURRENCY));
     }

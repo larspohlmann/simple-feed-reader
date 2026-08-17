@@ -17,8 +17,13 @@ use App\Service\Worker\WorkerPresence;
  * is automatic in both directions, with no config switch.
  *
  * The heartbeat is a hint, the per-user lock is the truth: an advance that
- * comes back busy is answered the same way a fresh heartbeat is, because
- * both mean the same thing -- somebody else owns execution right now.
+ * comes back busy is answered the same way a fresh heartbeat is -- pending or
+ * running, background true, the client keeps watching -- because both mean
+ * somebody else owns execution right now. They are not answered identically
+ * any more, though (#439): a busy result reached only because the presence
+ * check above already found nobody driving means the lock and the heartbeat
+ * disagree, and that case alone also carries waitingForLock, so the client
+ * can tell "a worker owns this" from "this may be stuck".
  */
 final readonly class RecommendationPollDriver
 {

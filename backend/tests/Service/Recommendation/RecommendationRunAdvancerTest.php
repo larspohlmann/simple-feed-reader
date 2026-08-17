@@ -42,6 +42,7 @@ use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\TtlRecordingLockFactory;
 use App\Tests\Support\UserFactory;
+use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\SharedLockInterface;
 use Symfony\Component\Lock\Store\DoctrineDbalStore;
@@ -253,6 +254,12 @@ final class RecommendationRunAdvancerTest extends DbTestCase
      * this warning exists to surface. Two attempts back to back -- the
      * closest a test can get to "immediately repeated" without depending on
      * wall-clock timing -- must collapse to one log line.
+     *
+     * The second `busy` result is asserted too, not just the log count:
+     * that pins the property review Important 1 turned on -- a suppressed
+     * (debounced) log must never change what advance() returns, so a
+     * failure inside the debounce can never be the thing standing between a
+     * healthy busy answer and a 500.
      */
     public function testARepeatedLockContentionWithinTheDebounceWindowLogsOnce(): void
     {
@@ -265,11 +272,12 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         try {
             $this->advancer()->advance($this->user);
-            $this->advancer()->advance($this->user);
+            $second = $this->advancer()->advance($this->user);
         } finally {
             $lock->release();
         }
 
+        self::assertSame('busy', $second->status);
         self::assertCount(1, $logSpy->getRecords());
     }
 
@@ -314,6 +322,16 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // be swapped before the advancer -- or anything else that resolves
         // it -- is first built this test.
         self::getContainer()->set('monolog.logger', new Logger('test', [$logSpy]));
+
+        // recommendationLockStallLogLimiter's cache_pool is cache.rate_limiter,
+        // a FilesystemAdapter that outlives one test method -- a prior case's
+        // "ai-recommendations-<this user's id>" entry would otherwise still be
+        // within its own window and silently suppress the very warning this
+        // test means to observe. Same guard RecommendationRunControllerTest's
+        // setUp() applies for the same reason.
+        $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
+        self::assertInstanceOf(CacheItemPoolInterface::class, $rateLimiterCache);
+        $rateLimiterCache->clear();
 
         return $logSpy;
     }
@@ -1024,6 +1042,37 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
 
         $report = $this->advancer()->advance($this->user, TickDriver::Poll);
+
+        self::assertSame(2, $report->batchesDone);
+        self::assertCount(2, $this->stubChatClient()->calls());
+        self::assertFalse($this->activeRun()->progress()->isDedupPhase);
+    }
+
+    /**
+     * ForYouSweep's cron-triggered call passes TickDriver::Sweep rather than
+     * relying on the Poll default, so the #439 stall log names it accurately
+     * (see TickDriver's docblock). That rename must not smuggle in a
+     * concurrency change: Sweep runs inside a bounded web request exactly
+     * like a poll tick, so it has to hit the very same clamp -- pinned here
+     * the same way testPollDriverClampsConcurrencyToTwo pins Poll's.
+     */
+    public function testSweepDriverClampsConcurrencyToTwo(): void
+    {
+        $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
+        $this->setBatchConcurrency(4);
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user, TickDriver::Sweep);
+        $batches = $this->activeRun()->getCandidateBatches();
+        self::assertCount(4, $batches);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'a']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[1][0], 'score' => 90, 'reason' => 'b']],
+        ], \JSON_THROW_ON_ERROR));
+
+        $report = $this->advancer()->advance($this->user, TickDriver::Sweep);
 
         self::assertSame(2, $report->batchesDone);
         self::assertCount(2, $this->stubChatClient()->calls());

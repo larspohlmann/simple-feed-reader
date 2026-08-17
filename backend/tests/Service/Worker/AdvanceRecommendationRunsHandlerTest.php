@@ -41,6 +41,7 @@ use App\Service\Worker\WorkerPresence;
 use App\Service\Worker\WorkerRunSweep;
 use App\Service\Worker\SweepStreamHeartbeat;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiSettingsRowMover;
 use App\Tests\Support\ClearTrackingEntityManager;
@@ -519,7 +520,23 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             self::getContainer()->get(RecommendationCompletionRequestFactory::class),
             self::getContainer()->get(TickLockKeepalive::class),
             self::getContainer()->get(LoggerInterface::class),
+            $this->stallLogLimiter(),
         );
+    }
+
+    /**
+     * Fetched by its own service id, not by RateLimiterFactoryInterface::class:
+     * the container defines several rate limiters, so the bare interface is
+     * ambiguous and only the per-argument autowiring alias RecommendationRun
+     * Advancer itself uses (`$recommendationLockStallLogLimiter`) resolves it
+     * -- which is exactly the constructor argument being stood in for here.
+     */
+    private function stallLogLimiter(): RateLimiterFactoryInterface
+    {
+        /** @var RateLimiterFactoryInterface $limiter */
+        $limiter = self::getContainer()->get('limiter.recommendation_lock_stall_log');
+
+        return $limiter;
     }
 
     /**
