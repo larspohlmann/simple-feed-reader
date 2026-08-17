@@ -147,6 +147,56 @@ describe('BackupSectionComponent', () => {
     expect(text).toContain('Run the restore again with the same file');
   });
 
+  const nginxTooLargePage = '<html><title>413 Request Entity Too Large</title></html>';
+  const tooLarge = { status: 413, statusText: 'Request Entity Too Large' };
+
+  /**
+   * The reachable path: choosing a file POSTs it to the preview route first,
+   * so an oversized file is refused there and the restore button is never
+   * offered. The web server answers that refusal itself, with an HTML page
+   * rather than problem+json -- which the generic fallback rendered as
+   * "Something went wrong", naming neither the cause nor the remedy (#458).
+   */
+  it('names the size limit when the preview upload is refused as too large', () => {
+    const f = mount();
+    chooseFile(f);
+
+    ctrl
+      .expectOne('https://api.test/api/account/restore/preview')
+      .flush(nginxTooLargePage, tooLarge);
+    f.detectChanges();
+
+    const c = f.componentInstance;
+    const text = (f.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('larger than this server accepts');
+    expect(text).not.toContain('Something went wrong');
+    expect(c.preview()).toBeNull();
+    expect(c.failedOnce()).toBe(false);
+  });
+
+  /** The same refusal on the restore call itself -- reachable when the cap
+   *  changes between the two requests, and the case that must NOT raise the
+   *  data-loss banner, since the body never reached the app. */
+  it('reports a refused restore upload without the data-loss banner', () => {
+    const f = mount();
+    chooseFile(f);
+    ctrl.expectOne('https://api.test/api/account/restore/preview').flush(previewResponse);
+    f.detectChanges();
+
+    const c = f.componentInstance;
+    c.typed.set('REPLACE');
+    c.restore();
+
+    ctrl
+      .expectOne('https://api.test/api/account/restore?confirm=REPLACE')
+      .flush(nginxTooLargePage, tooLarge);
+    f.detectChanges();
+
+    const text = (f.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('larger than this server accepts');
+    expect(c.failedOnce()).toBe(false);
+  });
+
   /** A 409 is refused before the wipe, so the data-loss banner would be a lie. */
   it('reports a refusal that cost nothing without the data-loss banner', () => {
     const f = mount();

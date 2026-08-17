@@ -1,8 +1,8 @@
 // src/app/settings/backup-section.component.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
-import { Problem, parseProblem } from '../core/problem';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { Problem, REQUEST_TOO_LARGE, parseProblem } from '../core/problem';
 import { filenameFromContentDisposition, saveAs } from '../core/save-as';
 import { downloadOpmlExport } from '../core/opml-export';
 import { LanguageService } from '../core/language.service';
@@ -49,6 +49,7 @@ export class BackupSectionComponent {
   private readonly subs = inject(SubscriptionsStore);
   private readonly refresh = inject(RefreshService);
   private readonly language = inject(LanguageService);
+  private readonly transloco = inject(TranslocoService);
 
   readonly exporting = signal(false);
   readonly exportError = signal<Problem | null>(null);
@@ -74,6 +75,28 @@ export class BackupSectionComponent {
   readonly canRestore = computed(
     () => this.typed() === CONFIRM_PHRASE && !!this.file() && !this.restoring(),
   );
+
+  /** Banner texts, memoised the way the other settings cards do it
+   *  (ai-section's `listFailure`, recommendation-settings-card's
+   *  `failureMessage`) -- this component is not OnPush, so a method called
+   *  straight from the template would re-translate on every change-detection
+   *  tick for as long as a banner is up. */
+  readonly exportErrorMessage = computed(() => this.messageFor(this.exportError()));
+  readonly safetyNetErrorMessage = computed(() => this.messageFor(this.safetyNetError()));
+  readonly errorMessage = computed(() => this.messageFor(this.error()));
+
+  /** A body the web server refused as oversized never reaches the app, so it
+   *  carries no translated detail of its own -- and it is the one failure here
+   *  the user can act on, so it gets wording that names the upload limit
+   *  instead of the generic fallback (#458). */
+  private messageFor(problem: Problem | null): string | null {
+    if (problem === null) return null;
+    if (problem.type === REQUEST_TOO_LARGE) {
+      return this.transloco.translate('settings.backup.tooLarge');
+    }
+
+    return problem.detail || problem.title;
+  }
 
   createdAt(iso: string): string {
     return formatLongDate(iso, this.language.lang());

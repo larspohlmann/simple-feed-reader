@@ -78,6 +78,7 @@
       "restoring": "Restoring…",
       "done": "Restore complete: {{subscriptions}} subscriptions, {{entries}} articles created. Feeds and articles this instance already holds are reused, so these numbers can be lower than what the file holds.",
       "failed": "The restore failed and the account may be partly loaded. Run the restore again with the same file — the wipe restarts cleanly.",
+      "tooLarge": "This backup file is larger than this server accepts. The server refused it before the app saw it — an operator can raise the upload limit (client_max_body_size and post_max_size).",
       "emailMismatchNote": "The backup's account email does not need to match this account."
     },
     "account": {

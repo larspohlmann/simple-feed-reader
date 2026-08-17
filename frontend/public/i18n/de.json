@@ -78,6 +78,7 @@
       "restoring": "Wird wiederhergestellt…",
       "done": "Wiederherstellung abgeschlossen: {{subscriptions}} Abonnements, {{entries}} Artikel angelegt. Feeds und Artikel, die diese Instanz bereits hat, werden weiterverwendet, daher können diese Zahlen niedriger sein als der Inhalt der Datei.",
       "failed": "Die Wiederherstellung ist fehlgeschlagen, das Konto ist möglicherweise nur teilweise geladen. Starte die Wiederherstellung erneut mit derselben Datei — das Löschen beginnt sauber von vorn.",
+      "tooLarge": "Diese Backup-Datei ist größer als das Upload-Limit dieses Servers. Der Server hat sie abgelehnt, bevor die App sie gesehen hat — ein Betreiber kann das Limit erhöhen (client_max_body_size und post_max_size).",
       "emailMismatchNote": "Die Konto-E-Mail-Adresse im Backup muss nicht mit diesem Konto übereinstimmen."
     },
     "account": {
