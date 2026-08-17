@@ -256,10 +256,10 @@ assert_contains "$(package_note Q)" "${question}" "the default's own note"
 assert_contains 'http://localhost:3333' "${question}" 'the origin the default picks'
 # And every answer says what it still leaves open, which is the other half of
 # the choice: what runs, and what the operator gets to decide.
-assert_contains 'S, M and L ask next for the public URL and for account mail' "${question}" \
+assert_contains 'S, M and L ask next for the public URL, and for the mail transport' "${question}" \
   'what the three stacks still ask'
-assert_contains '(verification, password reset, admin approval)' "${question}" \
-  'what account mail means here'
+assert_contains 'an SMTP relay' "${question}" \
+  'what answering the mail question means'
 
 # --- 10. README.md states the same words and the same figures ---------------
 # The operator chooses the package while reading README.md, and answers it in

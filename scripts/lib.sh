@@ -1273,16 +1273,19 @@ package_note() {
 
 # What is still open after the answer. The five lines above say what runs; this
 # says what the operator will get to decide, which is the other half of the
-# choice and the reason C exists at all.
+# choice and the reason C exists at all. It names the mail transport rather
+# than "mail", because that question asks for an SMTP relay's host, port, user
+# and password -- work an operator wants to see coming.
 #
 # Printed once rather than per line: it is the same sentence for the three
 # stacks, and the two keys that differ are the ones it names. Q is not in it --
 # its own note above says what it decides instead of asking.
 package_question_follow_up() {
   tell ''
-  tell '  S, M and L ask next for the public URL and for account mail'
-  tell '  (verification, password reset, admin approval). C asks those two as'
-  tell '  well, plus the database and the search engine.'
+  tell '  S, M and L ask next for the public URL, and for the mail transport'
+  tell '  (an SMTP relay, the MTA on this machine, or none) that sends'
+  tell '  verification, password reset and approval mail.'
+  tell '  C asks those two as well, plus the database and the search engine.'
 }
 
 # What the stack needs, measured and not estimated: read from an idle, healthy

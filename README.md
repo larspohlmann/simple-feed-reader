@@ -127,10 +127,12 @@ Two more keys decide how much you are asked, rather than what runs:
   and mail are changeable afterwards with `./scripts/prod-configure.sh`; the
   database is not.
 - **C** — choose everything yourself, database and engine included. S, M and L
-  ask for the public URL and for account mail (verification, password reset,
-  admin approval) anyway; C adds the database and the search-engine questions
-  to those, which makes it the only way to reach a combination the three
-  packages do not cover, such as SQLite with a search engine.
+  ask for the public URL and for the mail transport anyway — an SMTP relay
+  (host, port, user, password), the MTA on this machine, or none — which is
+  what decides whether verification, password-reset and approval mail can be
+  sent at all. C adds the database and the search-engine questions to those,
+  which makes it the only way to reach a combination the three packages do not
+  cover, such as SQLite with a search engine.
 
 The figures are measured on an idle, healthy stack holding a real account of
 107 feeds and 17,427 articles. S and M do not grow with the number of

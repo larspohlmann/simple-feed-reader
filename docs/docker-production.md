@@ -72,8 +72,8 @@ values only you know:
   rest for you, `http://localhost:3333` and no account mail, so pressing return
   here brings the instance up. Both are changeable afterwards with
   `./scripts/prod-configure.sh` (§7). **C** is the opposite: choose everything
-  yourself. S, M and L still ask the origin and mail questions below; C adds
-  the database and the search-engine ones to them — the only way to reach a
+  yourself. S, M and L still ask the origin and mail-transport questions below;
+  C adds the database and the search-engine ones to them — the only way to reach a
   combination the three packages do not cover, such as SQLite with a search
   engine.
 
