@@ -301,6 +301,83 @@ final class AccountBackupControllerTest extends WebTestCase
     }
 
     /**
+     * A feed url declared twice would otherwise make RestoreLoadPass::loadFeed
+     * persist two rows for it and violate feed.url's unique index — but only
+     * once the wipe has already run, because loadFeed re-queries per line and
+     * never sees its own unflushed Feed. A url the account already carried
+     * before the restore would not reproduce that: the pre-existing row would
+     * absorb both lines. This fixture declares a url the account has never
+     * seen, twice, so the tally has to catch it in pass 1, before deleting
+     * anything.
+     */
+    public function testADuplicateFeedUrlIs422AndDeletesNothing(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('restore-duplicate-feed@example.com');
+        $userId = (int) $user->getId();
+        $gzip = $this->withANewFeedUrlDeclaredTwice($this->seededBackupFor($user));
+
+        $client->request(
+            'POST',
+            '/api/account/restore?confirm=REPLACE',
+            server: $headers + ['CONTENT_TYPE' => 'application/gzip'],
+            content: $gzip,
+        );
+
+        self::assertResponseStatusCodeSame(422);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('invalid_backup', $body['type']);
+
+        $this->assertAccountRowsSurvived($userId);
+    }
+
+    /**
+     * Adds two feed lines for a url the fixture never otherwise declares, and
+     * keeps the footer's feed count in step, so the failure this proves is
+     * the duplicate-url refusal and not an unrelated miscounted-footer one.
+     */
+    private function withANewFeedUrlDeclaredTwice(string $gzip): string
+    {
+        $newFeedLine = json_encode([
+            'kind' => 'feed',
+            'url' => 'https://restore-fixture-duplicate.example/feed.xml',
+            'siteUrl' => null,
+            'title' => null,
+            'description' => null,
+            'faviconUrl' => null,
+            'sourceFormat' => 'xml',
+        ], \JSON_THROW_ON_ERROR);
+
+        $lines = [];
+        foreach (explode("\n", (string) gzdecode($gzip)) as $line) {
+            if ('' === $line) {
+                continue;
+            }
+            $decoded = json_decode($line, true, flags: \JSON_THROW_ON_ERROR);
+            self::assertIsArray($decoded);
+            if ('feed' === ($decoded['kind'] ?? null)) {
+                $lines[] = $line;
+                $lines[] = $newFeedLine;
+                $lines[] = $newFeedLine;
+
+                continue;
+            }
+            if ('footer' === ($decoded['kind'] ?? null)) {
+                $counts = $decoded['counts'];
+                self::assertIsArray($counts);
+                self::assertIsInt($counts['feed']);
+                $counts['feed'] = $counts['feed'] + 2;
+                $decoded['counts'] = $counts;
+                $line = json_encode($decoded, \JSON_THROW_ON_ERROR);
+            }
+            $lines[] = $line;
+        }
+
+        return (string) gzencode(implode("\n", $lines) . "\n");
+    }
+
+    /**
      * Read through the connection after an explicit clear(): AccountReset
      * deletes with bulk DQL, so a stale identity map would let these pass
      * even on an emptied account.

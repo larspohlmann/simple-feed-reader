@@ -85,17 +85,36 @@ final class BackupTally
         ++$this->counts['tags'];
     }
 
+    /**
+     * A repeated feed url is refused here rather than left to the unique
+     * feed.url index, which would only speak up after the wipe.
+     */
     private function acceptFeed(FeedLine $line): void
     {
+        if (isset($this->feedUrls[$line->url])) {
+            throw new InvalidBackupException(sprintf('The backup declares feed "%s" twice.', $line->url));
+        }
+
         $this->feedUrls[$line->url] = true;
         ++$this->counts['feeds'];
     }
 
+    /**
+     * A repeated subscription is refused here rather than left to the unique
+     * (user_id, feed_id) index, which would only speak up after the wipe.
+     */
     private function acceptSubscription(SubscriptionLine $line): void
     {
         if (!isset($this->feedUrls[$line->feedUrl])) {
             throw new InvalidBackupException(sprintf(
                 'Subscription to "%s" has no matching feed line.',
+                $line->feedUrl,
+            ));
+        }
+
+        if (isset($this->subscribedFeedUrls[$line->feedUrl])) {
+            throw new InvalidBackupException(sprintf(
+                'The backup subscribes to feed "%s" twice.',
                 $line->feedUrl,
             ));
         }

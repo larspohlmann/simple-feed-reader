@@ -168,6 +168,20 @@ final class BackupInspectorTest extends TestCase
             [self::tag('A'), self::tag('A')],
             ['tag' => 2],
         ];
+
+        yield 'the same feed url twice' => [
+            [self::feed(self::FEED_URL), self::feed(self::FEED_URL)],
+            ['feed' => 2],
+        ];
+
+        yield 'the same subscription feed url twice' => [
+            [
+                self::feed(self::FEED_URL),
+                self::subscription(self::FEED_URL),
+                self::subscription(self::FEED_URL),
+            ],
+            ['feed' => 1, 'subscription' => 2],
+        ];
     }
 
     /**
