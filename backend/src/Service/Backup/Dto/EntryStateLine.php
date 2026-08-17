@@ -8,9 +8,6 @@ namespace App\Service\Backup\Dto;
  * The account's per-entry state: read/favourite/kept/viewed flags and their
  * timestamps, matched to a restored entry by (feed, guidHash) — never by
  * guid, since hashing it outside the Entry constructor is forbidden.
- *
- * @SuppressWarnings("PHPMD.ExcessiveParameterList") pure data carrier that
- * mirrors the row 1:1, not a behavioural method.
  */
 final readonly class EntryStateLine
 {

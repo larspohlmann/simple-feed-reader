@@ -6,9 +6,6 @@ namespace App\Service\Backup\Dto;
 
 /**
  * One of the account's subscriptions to a feed, with its tag assignments.
- *
- * @SuppressWarnings("PHPMD.ExcessiveParameterList") pure data carrier that
- * mirrors the row 1:1, not a behavioural method.
  */
 final readonly class SubscriptionLine
 {
