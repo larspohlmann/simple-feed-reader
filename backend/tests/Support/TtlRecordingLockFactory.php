@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\PersistingStoreInterface;
 use Symfony\Component\Lock\SharedLockInterface;
 
@@ -22,11 +21,8 @@ use Symfony\Component\Lock\SharedLockInterface;
  * refreshes a lock the tick created internally, and the remaining lifetime of
  * that very object is the only place a refresh shows up.
  */
-final class TtlRecordingLockFactory extends LockFactory
+final class TtlRecordingLockFactory extends RecordingLockFactory
 {
-    /** @var list<array{resource: string, ttl: ?float, lock: SharedLockInterface}> */
-    private array $created = [];
-
     public function __construct(PersistingStoreInterface $store)
     {
         parent::__construct($store);
@@ -34,10 +30,7 @@ final class TtlRecordingLockFactory extends LockFactory
 
     public function createLock(string $resource, ?float $ttl = 300.0, bool $autoRelease = true): SharedLockInterface
     {
-        $lock = parent::createLock($resource, $ttl, $autoRelease);
-        $this->created[] = ['resource' => $resource, 'ttl' => $ttl, 'lock' => $lock];
-
-        return $lock;
+        return $this->record($resource, $ttl, parent::createLock($resource, $ttl, $autoRelease));
     }
 
     /**
@@ -54,19 +47,5 @@ final class TtlRecordingLockFactory extends LockFactory
     public function lastLockFor(string $resource): ?SharedLockInterface
     {
         return $this->lastFor($resource)['lock'] ?? null;
-    }
-
-    /**
-     * @return array{resource: string, ttl: ?float, lock: SharedLockInterface}|null
-     */
-    private function lastFor(string $resource): ?array
-    {
-        foreach (array_reverse($this->created) as $created) {
-            if ($created['resource'] === $resource) {
-                return $created;
-            }
-        }
-
-        return null;
     }
 }
