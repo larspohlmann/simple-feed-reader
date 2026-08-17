@@ -492,3 +492,18 @@ services:
     App\Service\Account\AccountReset:
         autowire: true
         public: true
+
+    # BackupInspectorTest instantiates BackupInspector directly (no
+    # dependencies), but RestorePreviewerTest drives BackupFitCheck and
+    # RestorePreviewer through the container to prove their real wiring
+    # (SubscriptionLimitResolver, the four count repositories). Their only
+    # production caller arrives with the restore endpoint in a later task, so
+    # until then the compiler would inline them away and the test container
+    # could not fetch them. Same `autowire` caveat as the entries above.
+    App\Service\Backup\BackupFitCheck:
+        autowire: true
+        public: true
+
+    App\Service\Backup\RestorePreviewer:
+        autowire: true
+        public: true

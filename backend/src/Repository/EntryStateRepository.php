@@ -21,6 +21,20 @@ class EntryStateRepository extends ServiceEntityRepository
         parent::__construct($registry, EntryState::class);
     }
 
+    /**
+     * How many state rows the user owns. EntryState has no scalar id — its
+     * primary key is the (user, entry) pair — so the count goes through the
+     * entry association rather than an id column.
+     */
+    public function countForUser(int $userId): int
+    {
+        return (int) $this->createQueryBuilder('s')
+            ->select('COUNT(s.entry)')
+            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
     public function findOneForUserEntry(int $userId, int $entryId): ?EntryState
     {
         /** @var EntryState|null $row */
