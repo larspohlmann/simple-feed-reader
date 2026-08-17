@@ -833,6 +833,57 @@ describe('RecommendationsService', () => {
     jest.useRealTimers();
   }));
 
+  it('freezes the bar and reports the lockHeld state while a lock is held, and resumes when it clears', fakeAsync(() => {
+    jest.useFakeTimers();
+    nowMs = 0;
+    svc.start();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs')
+      .flush(report({ status: 'pending' }));
+    nowMs = 20000;
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'running', batchesTotal: 4, batchesDone: 1, elapsedSeconds: 20 }));
+    nowMs = 30000;
+    jest.advanceTimersByTime(200);
+    const beforeLock = svc.progress();
+
+    ctrl.expectOne('https://api.test/api/recommendations/runs/tick').flush(
+      report({
+        status: 'running',
+        batchesTotal: 4,
+        batchesDone: 1,
+        elapsedSeconds: 20,
+        waitingForLock: true,
+      }),
+    );
+    expect(svc.etaState()).toBe('lockHeld');
+    // The incoming report is itself a signal write, so it invalidates the
+    // computed regardless of the ticker; read it once here, still at the
+    // same instant the lock report arrived, so this settles to the frozen
+    // value rather than to whatever `now()` is at the *next* read.
+    expect(svc.progress()).toBeCloseTo(beforeLock);
+
+    nowMs = 90000; // time marches on, but the bar must not move
+    jest.advanceTimersByTime(200);
+    expect(svc.progress()).toBeCloseTo(beforeLock);
+
+    // The lock clears: the next report carries no waitingForLock, and the
+    // bar resumes creeping from where it was frozen.
+    nowMs = 95000;
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'running', batchesTotal: 4, batchesDone: 1, elapsedSeconds: 20 }));
+    expect(svc.etaState()).not.toBe('lockHeld');
+    nowMs = 100000;
+    jest.advanceTimersByTime(200);
+    expect(svc.progress()).toBeGreaterThan(beforeLock);
+
+    drainTrailingTick();
+    discardPeriodicTasks();
+    jest.useRealTimers();
+  }));
+
   it('stops the ticker when the run ends', fakeAsync(() => {
     jest.useFakeTimers();
     svc.start();

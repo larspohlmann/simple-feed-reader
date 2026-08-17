@@ -389,7 +389,13 @@ export class RecommendationsService {
     }
     if (next.status === 'running' || next.status === 'pending') {
       this.rateLimited.set(false);
-      this.startTicker(); // resume the bar if a rate-limit backoff had paused it
+      // A lock wait is not progress either, so it freezes the bar the same
+      // way `backOffWhileRateLimited` does for a 429: without this,
+      // `progress()`'s creep keeps advancing off a stale `currentBatchStart`
+      // toward CREEP_CAP while the label correctly reads "waiting for lock",
+      // one contradicting the other.
+      if (next.waitingForLock) this.stopTicker();
+      else this.startTicker(); // resume the bar if a rate-limit or lock-wait backoff had paused it
     }
     this.report.set(next);
   }
