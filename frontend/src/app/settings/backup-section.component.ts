@@ -4,6 +4,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
 import { saveAs } from '../core/save-as';
+import { downloadOpmlExport } from '../core/opml-export';
 import { LanguageService } from '../core/language.service';
 import { formatLongDate } from '../reader/format';
 import { RestorePreview, RestoreResult } from '../reader/models';
@@ -89,18 +90,7 @@ export class BackupSectionComponent {
   }
 
   exportSafetyNetOpml(): void {
-    this.safetyNetExporting.set(true);
-    this.safetyNetError.set(null);
-    this.api.exportOpml().subscribe({
-      next: (xml) => {
-        this.safetyNetExporting.set(false);
-        saveAs(new Blob([xml], { type: 'text/x-opml' }), 'feeds.opml');
-      },
-      error: (e: HttpErrorResponse) => {
-        this.safetyNetExporting.set(false);
-        this.safetyNetError.set(parseProblem(e));
-      },
-    });
+    downloadOpmlExport(this.api, this.safetyNetExporting, this.safetyNetError);
   }
 
   onFileSelected(e: Event): void {

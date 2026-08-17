@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
-import { saveAs } from '../core/save-as';
+import { downloadOpmlExport } from '../core/opml-export';
 import { ReaderApi } from '../reader/reader-api';
 import { RefreshService } from '../reader/refresh.service';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
@@ -43,18 +43,7 @@ export class OpmlSectionComponent {
   }
 
   exportOpml(): void {
-    this.exporting.set(true);
-    this.exportError.set(null);
-    this.api.exportOpml().subscribe({
-      next: (xml) => {
-        this.exporting.set(false);
-        saveAs(new Blob([xml], { type: 'text/x-opml' }), 'feeds.opml');
-      },
-      error: (e: HttpErrorResponse) => {
-        this.exporting.set(false);
-        this.exportError.set(parseProblem(e));
-      },
-    });
+    downloadOpmlExport(this.api, this.exporting, this.exportError);
   }
 
   onFile(e: Event): void {
