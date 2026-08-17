@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Repository\SubscriptionRepository;
 use App\Service\Backup\AccountBackupExporter;
+use App\Tests\Support\CorruptGzip;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -48,14 +50,18 @@ final class AccountBackupControllerTest extends WebTestCase
         $em->persist(new Tag($user, 'Restore Tag'));
         $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $now = new \DateTimeImmutable('2026-07-01T00:00:00Z');
-        $em->persist(new Entry(
+        $entry = new Entry(
             $feed,
             'restore-fixture-guid-1',
             'https://restore-fixture.example/1',
             'Entry One',
             $now,
             $now,
-        ));
+        );
+        $em->persist($entry);
+        $state = new EntryState($user, $entry);
+        $state->setIsRead(true);
+        $em->persist($state);
         $em->flush();
 
         $exporter = self::getContainer()->get(AccountBackupExporter::class);
@@ -228,5 +234,116 @@ final class AccountBackupControllerTest extends WebTestCase
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
         self::assertSame('invalid_backup', $body['type']);
+    }
+
+    public function testRestorePreviewRequiresAuth(): void
+    {
+        $client = self::createClient();
+        $client->request('POST', '/api/account/restore/preview');
+        self::assertResponseStatusCodeSame(401);
+    }
+
+    /**
+     * The one endpoint on this instance that deletes an account's contents.
+     * A firewall or route-attribute regression here is the worst one there
+     * is, and nothing else in the suite would notice it.
+     */
+    public function testRestoreRequiresAuth(): void
+    {
+        $client = self::createClient();
+        $client->request('POST', '/api/account/restore?confirm=REPLACE');
+        self::assertResponseStatusCodeSame(401);
+    }
+
+    public function testACorruptGzipBodyIs422InvalidBackupRatherThan500(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('restore-corrupt@example.com');
+
+        $client->request(
+            'POST',
+            '/api/account/restore/preview',
+            server: $headers + ['CONTENT_TYPE' => 'application/gzip'],
+            content: CorruptGzip::bytes(),
+        );
+
+        self::assertResponseStatusCodeSame(422);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('invalid_backup', $body['type']);
+    }
+
+    /**
+     * The grammar refusal has to protect the account exactly as the fit
+     * refusal does: a footer whose counts disagree with the lines above it is
+     * the truncation guard, and it fires before anything is deleted.
+     */
+    public function testAMiscountedFooterIs422AndDeletesNothing(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('restore-bad-footer@example.com');
+        $userId = (int) $user->getId();
+        $gzip = $this->withAMiscountedFooter($this->seededBackupFor($user));
+
+        $client->request(
+            'POST',
+            '/api/account/restore?confirm=REPLACE',
+            server: $headers + ['CONTENT_TYPE' => 'application/gzip'],
+            content: $gzip,
+        );
+
+        self::assertResponseStatusCodeSame(422);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('invalid_backup', $body['type']);
+
+        $this->assertAccountRowsSurvived($userId);
+    }
+
+    /**
+     * Read through the connection after an explicit clear(): AccountReset
+     * deletes with bulk DQL, so a stale identity map would let these pass
+     * even on an emptied account.
+     */
+    private function assertAccountRowsSurvived(int $userId): void
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $em->clear();
+        foreach (['tag', 'subscription', 'entry_state'] as $table) {
+            $counted = $em->getConnection()->fetchOne(
+                sprintf('SELECT COUNT(*) FROM %s WHERE user_id = ?', $table),
+                [$userId],
+            );
+            self::assertIsNumeric($counted);
+            self::assertSame(
+                1,
+                (int) $counted,
+                sprintf('the refusal deleted the account\'s %s rows', $table),
+            );
+        }
+    }
+
+    /** Claims one more entry than the file carries — a truncated download's signature. */
+    private function withAMiscountedFooter(string $gzip): string
+    {
+        $lines = [];
+        foreach (explode("\n", (string) gzdecode($gzip)) as $line) {
+            if ('' === $line) {
+                continue;
+            }
+            $decoded = json_decode($line, true, flags: \JSON_THROW_ON_ERROR);
+            self::assertIsArray($decoded);
+            if ('footer' === ($decoded['kind'] ?? null)) {
+                $counts = $decoded['counts'];
+                self::assertIsArray($counts);
+                self::assertIsInt($counts['entry']);
+                $counts['entry'] = $counts['entry'] + 1;
+                $decoded['counts'] = $counts;
+            }
+            $lines[] = json_encode($decoded, \JSON_THROW_ON_ERROR);
+        }
+
+        return (string) gzencode(implode("\n", $lines) . "\n");
     }
 }
