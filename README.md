@@ -108,9 +108,9 @@ the stack costs in memory:
 
 | Package | What you get | Containers | RAM |
 |---|---|---|---|
-| **S** | a personal instance. SQLite, title and summary search. | php, worker, web | Needs about 250 MB |
-| **M** | several users. MySQL, title and summary search. | php, worker, web, mysql | Needs about 1 GB |
-| **L** | like M, plus Meilisearch for full-content search. | php, worker, web, mysql, meilisearch | Needs about 2.5 GB |
+| **S** | a personal instance. SQLite, title and summary search. | php, worker, web | needs about 250 MB |
+| **M** | several users. MySQL, title and summary search. | php, worker, web, mysql | needs about 1 GB |
+| **L** | like M, plus Meilisearch for full-content search. | php, worker, web, mysql, meilisearch | needs about 2.5 GB |
 
 Every package runs the same application, with every feature: they differ in
 the containers beside it, not in what the reader can do. **Search works in all
@@ -122,15 +122,16 @@ Two more keys decide how much you are asked, rather than what runs:
 
 - **Q** — the quick install, and **the default**. It runs the S stack and asks
   nothing else, which is what the question itself says under it:
-  *It answers the rest: http://localhost:3333, and no account mail.*
+  *It picks http://localhost:3333, and no mail until you add a relay.*
   Press return at the first question and the instance comes up. The public URL
   and mail are changeable afterwards with `./scripts/prod-configure.sh`; the
   database is not.
 - **C** — choose everything yourself, database and engine included. S, M and L
   ask for the public URL and for the mail transport anyway — an SMTP relay
-  (host, port, user, password), the MTA on this machine, or none — which is
-  what decides whether verification, password-reset and approval mail can be
-  sent at all. C adds the database and the search-engine questions to those,
+  (host, port, user, password) or the MTA on this machine, which the app needs
+  before it can send verification, password-reset and approval mail. Without
+  one it sends none, which is the default and a complete answer for a private
+  instance. C adds the database and the search-engine questions to those,
   which makes it the only way to reach a combination the three packages do not
   cover, such as SQLite with a search engine.
 

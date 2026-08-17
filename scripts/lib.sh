@@ -1224,9 +1224,11 @@ configure_package() {
     return 0
   fi
   say 'Which package should this instance install?'
+  tell ''
   package_question_line S
   package_question_line M
   package_question_line L
+  tell ''
   package_question_line Q
   package_question_line C
   package_question_follow_up
@@ -1267,7 +1269,7 @@ package_description() {
 # must not be.
 package_note() {
   case "$1" in
-    Q) printf '%s' 'It answers the rest: http://localhost:3333, and no account mail.' ;;
+    Q) printf '%s' 'It picks http://localhost:3333, and no mail until you add a relay.' ;;
   esac
 }
 
@@ -1275,17 +1277,23 @@ package_note() {
 # says what the operator will get to decide, which is the other half of the
 # choice and the reason C exists at all. It names the mail transport rather
 # than "mail", because that question asks for an SMTP relay's host, port, user
-# and password -- work an operator wants to see coming.
+# and password -- work an operator wants to see coming -- and says what having
+# no transport costs, since "none" is the mail question's own default.
 #
 # Printed once rather than per line: it is the same sentence for the three
 # stacks, and the two keys that differ are the ones it names. Q is not in it --
 # its own note above says what it decides instead of asking.
+#
+# Dimmed, and dimmed per line rather than once around the block: it is
+# supporting text, so the five keys stay the first thing the eye lands on, and
+# an attribute left open across a tell() would leak into whatever printed
+# next.
 package_question_follow_up() {
   tell ''
-  tell '  S, M and L ask next for the public URL, and for the mail transport'
-  tell '  (an SMTP relay, the MTA on this machine, or none) that sends'
-  tell '  verification, password reset and approval mail.'
-  tell '  C asks those two as well, plus the database and the search engine.'
+  tell "  ${_c_dim}Next: S, M and L ask for the public URL, and for a mail transport -- an${_c_reset}"
+  tell "  ${_c_dim}SMTP relay, or this machine's own MTA. Without one the app sends no${_c_reset}"
+  tell "  ${_c_dim}verification, password-reset or approval mail. C asks for those two as${_c_reset}"
+  tell "  ${_c_dim}well, plus the database and the search engine.${_c_reset}"
 }
 
 # What the stack needs, measured and not estimated: read from an idle, healthy
@@ -1299,9 +1307,9 @@ package_question_follow_up() {
 # without being read together with another one.
 package_memory() {
   case "$1" in
-    S | Q) printf '%s' 'Needs about 250 MB' ;;
-    M) printf '%s' 'Needs about 1 GB' ;;
-    L) printf '%s' 'Needs about 2.5 GB' ;;
+    S | Q) printf '%s' 'needs about 250 MB' ;;
+    M) printf '%s' 'needs about 1 GB' ;;
+    L) printf '%s' 'needs about 2.5 GB' ;;
   esac
 }
 
@@ -1326,13 +1334,27 @@ package_question_line() {
   text=$(package_description "${key}")
   memory=$(package_memory "${key}")
   if [ -n "${memory}" ]; then
-    text="${text} ${memory}."
+    printf -v text '%-*s  %s' "$(package_description_column)" "${text}" "${memory}"
   fi
   tell "  ${_c_bold}${_c_cyan}${key}${_c_reset}${style}) ${text}${_c_reset}"
   note=$(package_note "${key}")
   if [ -n "${note}" ]; then
     tell "     ${style}${note}${_c_reset}"
   fi
+}
+
+# The column the memory figures start in: one past the longest description that
+# carries a figure. Measured, not a constant, so an edited sentence cannot
+# leave the column behind -- and the point of the column is that the four
+# figures are compared by looking down it, not by reading four sentences.
+package_description_column() {
+  local key width=0 description
+  for key in S M L Q C; do
+    [ -n "$(package_memory "${key}")" ] || continue
+    description=$(package_description "${key}")
+    [ "${#description}" -le "${width}" ] || width=${#description}
+  done
+  printf '%s' "${width}"
 }
 
 # The package applied, shared by the question above and by the headless
