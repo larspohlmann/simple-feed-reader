@@ -85,11 +85,11 @@
 
 Read `findAllActive()` in the same repository first and reuse whatever it treats as "active" — do not restate the status list from memory. The new method answers the same question without hydrating entities.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Three cases: an empty table is false; a run in each active status is true; a run in each terminal status (`completed`, `cancelled`, `failed`) is false. Follow the repository test conventions already in `backend/tests/Repository/`.
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 ```bash
 cd backend && php bin/phpunit tests/Repository/RecommendationRunRepositoryTest.php
@@ -97,7 +97,7 @@ cd backend && php bin/phpunit tests/Repository/RecommendationRunRepositoryTest.p
 
 Expected: fail on an undefined method.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```php
 /**
@@ -111,9 +111,9 @@ public function hasActiveRun(): bool
 }
 ```
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/Repository/RecommendationRunRepository.php backend/tests/Repository/RecommendationRunRepositoryTest.php
@@ -134,7 +134,7 @@ git commit -m "feat(#393): ask whether any run is active without hydrating one"
 
 Read `backend/src/EventListener/DeferredMailFlushListener.php` and `backend/tests/EventListener/DeferredMailFlushListenerTest.php` first. This is the same shape, and the test asserts against the real kernel: `handle()` must not spawn, `terminate()` must.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Cases, each against the real kernel with a `RecordingProcessLauncher` swapped in:
 
@@ -145,13 +145,13 @@ Cases, each against the real kernel with a `RecordingProcessLauncher` swapped in
 5. A `ConsoleTerminateEvent` for any other command with an active run spawns.
 6. A closed entity manager is survived: no exception escapes, nothing is launched.
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 ```bash
 cd backend && php bin/phpunit tests/EventListener/RecommendationDrainOnTerminateListenerTest.php
 ```
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```php
 #[AsEventListener(event: TerminateEvent::class, method: 'onKernelTerminate')]
@@ -209,9 +209,9 @@ final readonly class RecommendationDrainOnTerminateListener
 
 Watch `ThinControllerRule` does not apply here, but the Clean Code rules do: `spawnIfRunsNeedDriving()` is one thing at one level of abstraction.
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/EventListener/RecommendationDrainOnTerminateListener.php backend/tests/EventListener/RecommendationDrainOnTerminateListenerTest.php
@@ -235,17 +235,17 @@ git commit -m "feat(#393): spawn the drainer from a terminate listener"
 - Consumes: the listener from Task 2
 - Produces: `final readonly class RecommendationDrainSpawner` whose `spawnIfNoWorker()` has no memory
 
-- [ ] **Step 1: Delete the tests that no longer describe the code**
+- [x] **Step 1: Delete the tests that no longer describe the code**
 
 From `RecommendationRunStarterTest`, remove the four spawn tests and the `starterWith()` / launcher plumbing; the starter no longer launches anything. From `MaintenanceTickTest`, remove `spawnerWith()` and the three launch assertions. From `RecommendationDrainSpawnerTest`, remove the once-per-process test — the class no longer remembers.
 
-- [ ] **Step 2: Add the test that pins the new behaviour**
+- [x] **Step 2: Add the test that pins the new behaviour**
 
 In `RecommendationRunControllerTest`, a functional test: with an active run and no fresh heartbeat, `POST /api/recommendations/runs/tick` followed by kernel termination launches exactly one drainer. This is #393's stated new behaviour and must not regress.
 
-- [ ] **Step 3: Run and watch the new test fail**
+- [x] **Step 3: Run and watch the new test fail**
 
-- [ ] **Step 4: Strip the spawner out**
+- [x] **Step 4: Strip the spawner out**
 
 `RecommendationDrainSpawner`: delete `private bool $launched`, delete the early return that reads it, mark the class `final readonly`, and rewrite the class docblock — it currently justifies the flag, and that justification is now the listener's.
 
@@ -253,13 +253,13 @@ In `RecommendationRunControllerTest`, a functional test: with an active run and 
 
 `MaintenanceTick::run()`: drop the constructor argument and the `activeRuns > 0` spawn branch. The aborted-refresh early return stays — it exists for the report shape, not only for the spawn.
 
-- [ ] **Step 5: Run the full backend suite**
+- [x] **Step 5: Run the full backend suite**
 
 ```bash
 cd backend && php bin/phpunit
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A backend/src backend/tests
@@ -282,7 +282,7 @@ git commit -m "refactor(#393): return the run starter and the tick to their sing
 
 Note the accessor is `maxBatchSize()` with no `get` prefix, matching the sibling `batchConcurrency()`.
 
-- [ ] **Step 1: Add the property**
+- [x] **Step 1: Add the property**
 
 ```php
 /**
@@ -304,7 +304,7 @@ private ?int $maxBatchSize = null;
 
 Add `MINIMUM_BATCH_SIZE` and `MAXIMUM_BATCH_SIZE` constants beside `MAX_BATCH_CONCURRENCY`, with a docblock recording that 200 is a sanity bound against a typo, not a quality bound — the token budget remains the real guard.
 
-- [ ] **Step 2: Write the migration**
+- [x] **Step 2: Write the migration**
 
 Copy the shape of `backend/migrations/Version20260816160000.php` exactly: `isTransactional(): false`, the `hasColumn()` idempotence guard, and the private `mysql()` helper that aborts on any other platform.
 
@@ -325,7 +325,7 @@ UPDATE user_ai_settings SET max_batch_size = 30 WHERE slow_model = 1
 
 The literal 30 belongs in the migration, not a constant reference: a migration records what the schema was on that day and must not move when the code does.
 
-- [ ] **Step 3: Verify the migration on a scratch database, never the dev one**
+- [x] **Step 3: Verify the migration on a scratch database, never the dev one**
 
 ```bash
 cd backend && php bin/console doctrine:migrations:migrate --no-interaction && php bin/console doctrine:schema:validate
@@ -333,7 +333,7 @@ cd backend && php bin/console doctrine:migrations:migrate --no-interaction && ph
 
 Then confirm the same on MySQL through Docker.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/src/Entity/AiProviderSettings.php backend/migrations
@@ -354,7 +354,7 @@ git commit -m "feat(#445): give a connection its own batch cap"
 **Interfaces:**
 - Consumes: `AiProviderSettings::maxBatchSize()`
 
-- [ ] **Step 1: Rewrite the resolver tests**
+- [x] **Step 1: Rewrite the resolver tests**
 
 `testAConnectionMarkedSlowPacksShorterBatches` no longer describes the code — marking a connection slow changes timeouts only. Replace the three existing cases with four:
 
@@ -365,9 +365,9 @@ git commit -m "feat(#445): give a connection its own batch cap"
 
 Update the `seedAiSettingsWithModel()` helper: it currently takes `bool $slowModel`. A boolean flag parameter plus a new int parameter is the wrong shape — give the helper a `?int $maxBatchSize` and let the two tests that genuinely need `slow_model` set it on the returned entity themselves.
 
-- [ ] **Step 2: Run and watch case 4 fail**
+- [x] **Step 2: Run and watch case 4 fail**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```php
 /**
@@ -386,13 +386,13 @@ private static function batchCeilingFor(?AiProviderSettings $provider): int
 
 Delete `RecommendationPackingSettings::SLOW_MODEL_MAXIMUM_BATCH_SIZE`. Fold what its docblock recorded into the entity property docblock from Task 4 and into the frontend help text in Task 7, so nothing is lost. Grep for remaining references before deleting.
 
-- [ ] **Step 4: Run the recommendation test group**
+- [x] **Step 4: Run the recommendation test group**
 
 ```bash
 cd backend && php bin/phpunit tests/Service/Recommendation
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A backend/src backend/tests
@@ -418,7 +418,7 @@ git commit -m "feat(#445): pack batches from the connection's own cap"
 
 Read `SetBatchConcurrencyRequest` and the `PUT /configs/{id}/batch-concurrency` action first — that pair is the closest existing precedent, and it carries a real `Range` where the slow-model one does not.
 
-- [ ] **Step 1: Write the failing controller tests**
+- [x] **Step 1: Write the failing controller tests**
 
 1. Default is null in `GET /api/me/ai`.
 2. `PUT` with `{"maxBatchSize": 30}` returns 200 with the new value, and a follow-up `GET` agrees.
@@ -428,9 +428,9 @@ Read `SetBatchConcurrencyRequest` and the `PUT /configs/{id}/batch-concurrency` 
 
 In `AiProviderConfiguratorTest`, extend the duplicate test to assert the cap is carried.
 
-- [ ] **Step 2: Run and watch them fail**
+- [x] **Step 2: Run and watch them fail**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```php
 final readonly class SetMaxBatchSizeRequest
@@ -448,13 +448,13 @@ final readonly class SetMaxBatchSizeRequest
 
 `Assert\Range` ignores null, so clearing stays legal without a second constraint. The controller action mirrors the slow-model one exactly: resolve through `$this->configuration->require($user, $id)`, map `ConfigurationNotFoundException` to `AiConfigurationNotFoundApiException`, call the editor, re-serialise with `AiSettingsJson::configuration(...)`. No private helpers on the controller.
 
-- [ ] **Step 4: Run and watch them pass, then run the frontend contract check**
+- [x] **Step 4: Run and watch them pass, then run the frontend contract check**
 
 ```bash
 cd backend && php bin/phpunit tests/Controller/Api/AiSettingsControllerTest.php tests/Service/Ai
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A backend/src backend/tests
@@ -478,17 +478,17 @@ git commit -m "feat(#445): let an account set a connection's batch cap"
 - Consumes: `PUT /api/me/ai/configs/{id}/max-batch-size` from Task 6
 - Produces: `AiConfig.maxBatchSize: number | null`, `AiSettingsService.setMaxBatchSize(id: number, maxBatchSize: number | null): void`
 
-- [ ] **Step 1: Write the failing Jest tests**
+- [x] **Step 1: Write the failing Jest tests**
 
 In `ai-settings.service.spec.ts`, assert the PUT URL and the body `{ maxBatchSize: 30 }`, and that the returned config is upserted into the signal. In `ai-section.component.spec.ts`, assert the input renders the stored value, shows the default as its placeholder when the value is null, and calls through on change.
 
-- [ ] **Step 2: Run and watch them fail**
+- [x] **Step 2: Run and watch them fail**
 
 ```bash
 cd frontend && npx jest src/app/settings
 ```
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Add `readonly maxBatchSize: number | null;` to `AiConfig`. Add `setMaxBatchSize()` in the shape of the neighbouring `setSlowModel()` — same `run({ action: 'row', configId: id }, ...)` wrapper and `upsert` callback.
 
@@ -496,19 +496,19 @@ In the template, place a number input in the row that holds the slow toggle, wit
 
 Any new spacing in the `.scss` uses the design tokens; a raw `px` or a hex colour fails `npm run check`.
 
-- [ ] **Step 4: Add the i18n keys to both locales**
+- [x] **Step 4: Add the i18n keys to both locales**
 
 `settings.ai.configs.maxBatchSize` — the label. `settings.ai.info.maxBatchSize` — the help text, which must carry the trade the deleted `SLOW_MODEL_MAXIMUM_BATCH_SIZE` docblock recorded: a shorter list is easier for a small model to hold in order and bounds what a runaway costs, but the history is re-sent with every batch, so smaller batches mean more calls and more prompt tokens.
 
 Correct `settings.ai.info.slowModel` in both locales: it must claim timeouts only, and no longer imply it affects batch size.
 
-- [ ] **Step 5: Run the frontend gate**
+- [x] **Step 5: Run the frontend gate**
 
 ```bash
 cd frontend && npm run check
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A frontend/src frontend/public
@@ -534,7 +534,7 @@ git commit -m "feat(#445): offer the batch cap beside the slow-model toggle"
 
 Read `backend/src/Service/Worker/SweepStreamHeartbeat.php` and its test first. The keepalive is the same shape with a different effect, down to the injected `ClockInterface` and the `isDue()` throttle, and its test can follow `SweepStreamHeartbeatTest`'s `MockClock` cases exactly.
 
-- [ ] **Step 1: Write the failing keepalive tests**
+- [x] **Step 1: Write the failing keepalive tests**
 
 Using a `MockClock` and a lock double that counts refreshes:
 
@@ -546,17 +546,17 @@ Using a `MockClock` and a lock double that counts refreshes:
 6. `hold()` on a second lock resets the throttle, so the new lock is refreshed at once — a fresh tick must never inherit the previous tick's beat clock.
 7. A `LockException` from `refresh()` does not escape `beat()`, and is logged.
 
-- [ ] **Step 2: Write the failing composite test**
+- [x] **Step 2: Write the failing composite test**
 
 Beating the composite beats every member exactly once, in the order given.
 
-- [ ] **Step 3: Run both and watch them fail**
+- [x] **Step 3: Run both and watch them fail**
 
 ```bash
 cd backend && php bin/phpunit tests/Service/Recommendation/TickLockKeepaliveTest.php tests/Service/Recommendation/CompositeCompletionStreamHeartbeatTest.php
 ```
 
-- [ ] **Step 4: Implement**
+- [x] **Step 4: Implement**
 
 ```php
 /**
@@ -647,13 +647,13 @@ In `config/services.yaml`, replace the line that aliases `CompletionStreamHeartb
 
 Both `SweepStreamHeartbeat` and `TickLockKeepalive` must stay injectable by their own class name, because their arming methods are called by name from the sweep and from the advancer.
 
-- [ ] **Step 5: Run both and watch them pass, then warm the cache and check the container**
+- [x] **Step 5: Run both and watch them pass, then warm the cache and check the container**
 
 ```bash
 cd backend && php bin/console cache:warmup && php bin/phpunit tests/Service/Recommendation tests/Service/Worker
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A backend/src backend/tests backend/config
@@ -671,15 +671,15 @@ git commit -m "feat(#444): let a streaming tick hold its own lock alive"
 **Interfaces:**
 - Consumes: `TickLockKeepalive::hold()` / `release()`
 
-- [ ] **Step 1: Rewrite the TTL test**
+- [x] **Step 1: Rewrite the TTL test**
 
 `testLockTtlOutlivesTheWorstCaseMultiRoundTick` asserts the old invariant and must go. Replace it with `testLockTtlClearsTheLongestSilenceALiveHolderCanProduce`, over the same `TtlRecordingLockFactory` and the same `timeoutProfiles` data provider, but with the cases changed to `firstByteSeconds` — `[false, 180.0]` and `[true, 900.0]` — asserting the recorded TTL is at least that, and additionally at least the 240 s Strato request cap.
 
 Add `testATickThatStreamsRefreshesItsLock`: drive `advance()` with a stubbed provider call that beats the container's `CompletionStreamHeartbeat`, and assert the lock's remaining lifetime moved. Add `testTheKeepaliveIsReleasedAfterATick`: after `advance()` returns, a beat refreshes nothing.
 
-- [ ] **Step 2: Run and watch them fail**
+- [x] **Step 2: Run and watch them fail**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `advance()`, arm around the tick and release in the `finally` beside the lock release:
 
@@ -700,7 +700,7 @@ In `lockTtlFor()`, return `$timeouts->firstByteSeconds + self::LOCK_TTL_MARGIN_S
 
 `RecommendationRun::MAX_ATTEMPTS` leaves the formula. Check whether the `use` for it is still needed.
 
-- [ ] **Step 4: Run the advancer tests and the whole recommendation group**
+- [x] **Step 4: Run the advancer tests and the whole recommendation group**
 
 ```bash
 cd backend && php bin/phpunit tests/Service/Recommendation tests/Controller/Api/RecommendationRunControllerTest.php tests/Command/RecommendationDrainCommandTest.php
@@ -708,7 +708,7 @@ cd backend && php bin/phpunit tests/Service/Recommendation tests/Controller/Api/
 
 `RecommendationDrainCommandTest` asserts the drain lock TTL against `MAX_ATTEMPTS * ProviderTimeouts::standard()->wallClockSeconds`. That is the drain command's own lock, which this task does not change — if it breaks, the cause is a shared helper, not the intended change.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A backend/src backend/tests
@@ -731,7 +731,7 @@ git commit -m "fix(#444): size the tick lock against silence, not against patien
 
 Read `RecommendationPollDriver::poll()` first. It already distinguishes the two cases — a fresh worker heartbeat at the top, and a `busy` from `advance()` below — and this task only has to carry the difference outward.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `RecommendationRunControllerTest`:
 
@@ -739,9 +739,9 @@ In `RecommendationRunControllerTest`:
 2. `testTickDefersToAFreshWorkerHeartbeat` asserts `waitingForLock: false` — a worker owning the run is not a stall.
 3. A run with no contention at all reports `false`.
 
-- [ ] **Step 2: Run and watch them fail**
+- [x] **Step 2: Run and watch them fail**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Add the field to `RecommendationRunReport` and its `toArray()`, and to `RecommendationRunStatusJson`. Keep `RecommendationRunReport` immutable — follow whatever `inBackground()` already does to produce a modified copy rather than adding a setter.
 
@@ -749,9 +749,9 @@ Set it in the poll driver only on the `busy` branch, and only when the presence 
 
 In the advancer, log the failed acquire at warning with the lock name and the driver, so the stall leaves a trace in `dev.log`. Do not attempt to log an expiry: `Lock::getRemainingLifetime()` is populated from the key only after a successful acquire, so a process that failed to acquire cannot read the holder's.
 
-- [ ] **Step 4: Run and watch them pass**
+- [x] **Step 4: Run and watch them pass**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A backend/src backend/tests
@@ -773,33 +773,33 @@ git commit -m "feat(#439): tell the client a lock is held with nobody behind it"
 **Interfaces:**
 - Consumes: `waitingForLock` from Task 10
 
-- [ ] **Step 1: Write the failing Jest tests**
+- [x] **Step 1: Write the failing Jest tests**
 
 `etaState` returns the new state when the report carries `waitingForLock: true`, and does not when it is false or absent. The rate-limit `'waiting'` state keeps precedence over it if both are set — a 429 is the more actionable message.
 
 `ForYouProgressComponent` renders the new phrase for that state.
 
-- [ ] **Step 2: Run and watch them fail**
+- [x] **Step 2: Run and watch them fail**
 
 ```bash
 cd frontend && npx jest src/app/reader
 ```
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Add `readonly waitingForLock?: boolean;` to the report interface — optional, so a cached response from an older backend does not break the type. Add the state to `etaState`'s union and map it in `ForYouProgressComponent`'s existing switch.
 
-- [ ] **Step 4: Add `reader.eta.lockHeld` to both locales**
+- [x] **Step 4: Add `reader.eta.lockHeld` to both locales**
 
 English: say that another process holds the run and this one is waiting, in the voice of the neighbouring `reader.eta` phrases. German likewise.
 
-- [ ] **Step 5: Run the frontend gate**
+- [x] **Step 5: Run the frontend gate**
 
 ```bash
 cd frontend && npm run check
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A frontend/src frontend/public
@@ -814,11 +814,11 @@ git commit -m "feat(#439): name the stall instead of showing a run that is not m
 - Modify: `docs/` — grep for `slow_model`, `slowModel`, `SLOW_MODEL_MAXIMUM_BATCH_SIZE` and the drainer spawn, and correct every page that now describes something untrue. `docs/architecture.md` and the AI settings page docs are the likely hits.
 - Modify: `docs/superpowers/plans/2026-08-16-recommendation-run-resilience.md` — tick the boxes.
 
-- [ ] **Step 1: Correct the docs**
+- [x] **Step 1: Correct the docs**
 
 Anything that says `slow_model` changes batch size is now wrong. Anything that describes the drainer spawn as happening inside the run starter is now wrong. Anything that quotes the old lock TTL is now wrong.
 
-- [ ] **Step 2: Run every gate**
+- [x] **Step 2: Run every gate**
 
 ```bash
 cd backend && composer check && composer md && php bin/phpunit
@@ -838,11 +838,11 @@ cd backend && composer infection:diff
 
 Scan `backend/var/log/dev.log` for deprecations and swallowed errors after the backend runs.
 
-- [ ] **Step 3: Verify the migration leg on both platforms from empty**
+- [x] **Step 3: Verify the migration leg on both platforms from empty**
 
 The suite builds its schema from ORM metadata, so no test ever executes the migration. Migrate from empty on SQLite and on MySQL, then `doctrine:schema:validate` on both.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add -A docs
