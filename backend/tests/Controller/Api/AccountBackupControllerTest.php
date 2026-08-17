@@ -274,6 +274,34 @@ final class AccountBackupControllerTest extends WebTestCase
     }
 
     /**
+     * The preview test above proves a corrupt gzip is refused; it never
+     * touches the destructive route. Pass 1 runs before the wipe on either
+     * route, so this is low risk -- but nothing else proves it for the one
+     * route where getting it wrong deletes the account.
+     */
+    public function testACorruptGzipBodyToTheDestructiveRouteIs422AndDeletesNothing(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('restore-corrupt-destructive@example.com');
+        $userId = (int) $user->getId();
+        $this->seededBackupFor($user);
+
+        $client->request(
+            'POST',
+            '/api/account/restore?confirm=REPLACE',
+            server: $headers + ['CONTENT_TYPE' => 'application/gzip'],
+            content: CorruptGzip::bytes(),
+        );
+
+        self::assertResponseStatusCodeSame(422);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('invalid_backup', $body['type']);
+
+        $this->assertAccountRowsSurvived($userId);
+    }
+
+    /**
      * The grammar refusal has to protect the account exactly as the fit
      * refusal does: a footer whose counts disagree with the lines above it is
      * the truncation guard, and it fires before anything is deleted.
