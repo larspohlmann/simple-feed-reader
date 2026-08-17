@@ -557,6 +557,75 @@ describe('RecommendationsService', () => {
     });
   });
 
+  describe('lock contention (waitingForLock)', () => {
+    it('reports the lockHeld state when the report carries waitingForLock: true', () => {
+      svc.start();
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs')
+        .flush(report({ status: 'pending', waitingForLock: true }));
+
+      expect(svc.etaState()).toBe('lockHeld');
+
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs/tick')
+        .flush(report({ status: 'completed' }));
+    });
+
+    it('does not report lockHeld when waitingForLock is false', () => {
+      svc.start();
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs')
+        .flush(report({ status: 'pending', waitingForLock: false }));
+
+      expect(svc.etaState()).not.toBe('lockHeld');
+
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs/tick')
+        .flush(report({ status: 'completed' }));
+    });
+
+    it('does not report lockHeld when waitingForLock is absent, as from an older backend', () => {
+      svc.start();
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs')
+        .flush(report({ status: 'pending' }));
+
+      expect(svc.etaState()).not.toBe('lockHeld');
+
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs/tick')
+        .flush(report({ status: 'completed' }));
+    });
+
+    it('keeps the rate-limited state ahead of the lock state when both are set', () => {
+      jest.useFakeTimers();
+      try {
+        svc.start();
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs')
+          .flush(report({ status: 'pending', waitingForLock: true }));
+        expect(svc.etaState()).toBe('lockHeld');
+
+        // The last known report still carries waitingForLock: true -- only
+        // the fresh 429 changes here -- and the rate limit must still win.
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/tick')
+          .flush(
+            { type: 'rate_limited', title: 'Too many requests', status: 429 },
+            { status: 429, statusText: 'Too Many Requests' },
+          );
+        expect(svc.etaState()).toBe('waiting');
+
+        jest.advanceTimersByTime(15000);
+        ctrl
+          .expectOne('https://api.test/api/recommendations/runs/tick')
+          .flush(report({ status: 'completed' }));
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+  });
+
   describe('background regime', () => {
     it('slows the poll to BACKGROUND_POLL_MS when a worker owns execution', () => {
       jest.useFakeTimers();

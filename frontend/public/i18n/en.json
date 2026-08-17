@@ -586,6 +586,7 @@
     "eta": {
       "starting": "Starting…",
       "rateLimited": "Waiting — rate limited",
+      "lockHeld": "Waiting — held by another process",
       "seconds": "~{{count}} s left",
       "minutes": "~{{count}} min left"
     }

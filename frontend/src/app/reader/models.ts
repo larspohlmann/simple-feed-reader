@@ -239,6 +239,11 @@ export interface RecommendationRunReport {
   /** True when a live worker owns execution and a tick is a pure status read;
    *  false when the client's own poll loop is doing the work (#308 regime). */
   background: boolean;
+  /** True only when an advance came back busy and the worker-presence read
+   *  was stale: a lock held with nobody beating, rather than a live worker
+   *  doing the work. Optional so a response cached from an older backend
+   *  does not break the type; treat an absent value as false (#439). */
+  readonly waitingForLock?: boolean;
   /** Bytes of the in-flight provider answer received so far this call; 0
    *  between calls, since the server resets the counter when a call ends. */
   streamedChars: number;

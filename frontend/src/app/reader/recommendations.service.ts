@@ -165,10 +165,15 @@ export class RecommendationsService {
   });
 
   /** Drives the Task 6 label: hidden outside a run, starting before the first
-   *  average exists, waiting during a 429 backoff, eta otherwise. */
-  readonly etaState = computed<'hidden' | 'starting' | 'waiting' | 'eta'>(() => {
+   *  average exists, waiting during a 429 backoff, lockHeld while a stalled
+   *  lock blocks the run rather than a live worker, eta otherwise. The 429
+   *  check stays first: it is the more actionable message -- it tells the
+   *  user to wait for their own quota -- whereas a held lock only tells them
+   *  another process is ahead of them, so it must never displace it. */
+  readonly etaState = computed<'hidden' | 'starting' | 'waiting' | 'lockHeld' | 'eta'>(() => {
     if (!this.running()) return 'hidden';
     if (this.rateLimited()) return 'waiting';
+    if (this.report()?.waitingForLock) return 'lockHeld';
     if (this.etaSeconds() === null) return 'starting';
     return 'eta';
   });

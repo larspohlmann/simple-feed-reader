@@ -586,6 +586,7 @@
     "eta": {
       "starting": "Wird gestartet…",
       "rateLimited": "Wartet — Ratenlimit",
+      "lockHeld": "Wartet — von einem anderen Prozess belegt",
       "seconds": "~{{count}} Sek. übrig",
       "minutes": "~{{count}} Min. übrig"
     }
