@@ -8,6 +8,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Kernel;
 use App\Service\Process\DetachedProcessLauncherInterface;
+use App\Service\Mail\DeferredMailer;
 use App\Service\Recommendation\RecommendationDrainSpawner;
 use App\Service\Worker\RecommendationDriverKind;
 use App\Service\Worker\WorkerPresence;
@@ -22,6 +23,9 @@ use Symfony\Component\Console\Event\ConsoleTerminateEvent;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\NullOutput;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Mailer\Envelope;
+use Symfony\Component\Mime\Address;
+use Symfony\Component\Mime\RawMessage;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
@@ -132,6 +136,39 @@ final class RecommendationDrainOnTerminateListenerTest extends KernelTestCase
     }
 
     /**
+     * The control for the three cases above. Each of them proves a listener is
+     * absent from ConsoleEvents::TERMINATE by dispatching it and finding
+     * nothing launched -- which a dispatch that reached no listener at all
+     * would satisfy just as well, and would go on satisfying if the helper or
+     * the event name ever went wrong. The HTTP case is no control for it: it
+     * proves the fixture over a different channel.
+     *
+     * DeferredMailFlushListener is the proof, and a container-registered one
+     * rather than a listener this test adds: it carries
+     * #[AsEventListener(ConsoleTerminateEvent::class)] for exactly the reason
+     * the drain spawner no longer does -- console exits send no response, so
+     * without it a command's mail would sit in a queue nothing drains. Its
+     * flush is observable, so the same dispatch the absence cases use is shown
+     * to arrive.
+     */
+    public function testTheConsoleTerminateDispatchReachesTheListenersThatAreOnIt(): void
+    {
+        $mailer = $this->deferredMailer();
+        $mailer->send(new RawMessage('positive control'), new Envelope(
+            new Address('control@example.test'),
+            [new Address('drain-terminate@example.test')],
+        ));
+        self::assertTrue($mailer->hasQueuedMail());
+
+        $this->dispatchConsoleTerminate('app:feeds:refresh');
+
+        self::assertFalse(
+            $mailer->hasQueuedMail(),
+            'console.terminate must reach the listeners registered on it, or the absence cases prove nothing',
+        );
+    }
+
+    /**
      * @return iterable<string, array{non-empty-string}>
      */
     public static function consoleCommands(): iterable
@@ -179,6 +216,14 @@ final class RecommendationDrainOnTerminateListenerTest extends KernelTestCase
 
         $event = new ConsoleTerminateEvent(new Command($commandName), new ArrayInput([]), new NullOutput(), 0);
         $dispatcher->dispatch($event, ConsoleEvents::TERMINATE);
+    }
+
+    private function deferredMailer(): DeferredMailer
+    {
+        /** @var DeferredMailer $mailer */
+        $mailer = self::getContainer()->get(DeferredMailer::class);
+
+        return $mailer;
     }
 
     private function presence(): WorkerPresence
