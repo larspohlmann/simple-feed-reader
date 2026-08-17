@@ -43,16 +43,22 @@ The response is JSON: `{ "startedRuns": n, "advancedRuns": m, "activeRuns": k }`
 ## The on-demand drainer
 
 Worker-less installs do not depend on the cron cadence for interactive
-runs. Starting or resuming a run from the web spawns a short-lived,
-detached CLI process (`app:recommendations:drain`) that advances every
-active run at full worker concurrency until none is left, then exits. The
-spawn only happens while nothing is already driving the runs, at most one
-spawn is issued per web request or cron tick, a global `recommendation-drain`
-lock guarantees at most one drainer, and the maintenance tick respawns a
-drainer as a safety net if one died with runs still active. A drainer marks a
-liveness key of its **own** while it sweeps and clears it again on its way
-out, so the poll and cron paths resume the moment it exits instead of waiting
-out the freshness window.
+runs. A `kernel.terminate`/`console.terminate` listener
+(`RecommendationDrainOnTerminateListener`) fires once after every request or
+console command and, whenever the database still shows an active run, spawns
+a short-lived, detached CLI process (`app:recommendations:drain`) that
+advances every active run at full worker concurrency until none is left,
+then exits. The spawn lives on that one listener, not on any individual call
+site — starting or resuming a run, the maintenance tick, the sweep endpoint
+and the poll endpoint all get the same respawn net for free if a drainer
+died mid-run, none of them has to ask for it. Firing on the terminate event
+rather than inline means the fork happens after the response is already on
+the wire, so it costs the request nothing. The spawn only happens while
+nothing is already driving the runs, at most one spawn is issued per request
+or command, and a global `recommendation-drain` lock guarantees at most one
+drainer. A drainer marks a liveness key of its **own** while it sweeps and
+clears it again on its way out, so the poll and cron paths resume the moment
+it exits instead of waiting out the freshness window.
 
 The two keys are read for two different questions. "Is anybody driving the
 runs right now?" counts both the persistent worker and a live drainer — the
