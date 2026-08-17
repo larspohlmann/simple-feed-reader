@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, TemplateRef, ViewChild, signal } from '@angular/core';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { provideRouter } from '@angular/router';
@@ -82,6 +82,22 @@ function topBlockTemplate(): TemplateRef<unknown> {
   const f = TestBed.createComponent(TemplateHost);
   f.detectChanges();
   return f.componentInstance.tb;
+}
+
+/** Drain the animation frames the component schedules, the way the browser does
+ *  between two renders. Two deep because the focus pass can be scheduled from
+ *  inside a frame. */
+const frames = (): Promise<void> =>
+  new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+
+/** The inline opacity the reading-focus pass writes on each row. jsdom measures
+ *  no layout, so every visible row scores 1 — an EMPTY string is the signal
+ *  under test: it means the pass never touched that row (#462). */
+function rowOpacities(f: ComponentFixture<EntryListComponent>): string[] {
+  const rows = (f.nativeElement as HTMLElement).querySelector('.rows')!;
+  return (Array.from(rows.children) as HTMLElement[])
+    .filter((child) => !child.classList.contains('foot'))
+    .map((child) => child.style.opacity);
 }
 
 describe('EntryListComponent', () => {
@@ -1152,6 +1168,52 @@ describe('EntryListComponent', () => {
         layout: 'magazine',
       });
       expect(f.componentInstance.blocks().some((b) => b.kind === 'group')).toBe(false);
+    });
+  });
+
+  // The focus pass used to run only off a scroll event, a resize, and one frame
+  // scheduled at mount. Rows that appeared after that frame therefore stayed
+  // undimmed until the user scrolled — rarely, because a remembered offset makes
+  // the restore write scrollTop, and that write sends the scroll event that
+  // covered the gap (#462).
+  describe('reading focus', () => {
+    const loaded = [entry(1), entry(2), entry(3)];
+
+    it('fades the rows that arrive after the load finishes', async () => {
+      const f = mount({ loading: true, entries: [] });
+      // Let the frame scheduled at mount drain while the request is still in
+      // flight, which is where the skeleton has no rows to fade.
+      await frames();
+      f.componentRef.setInput('loading', false);
+      f.componentRef.setInput('entries', loaded);
+      f.detectChanges();
+      await frames();
+      expect(rowOpacities(f)).not.toContain('');
+    });
+
+    it('fades the incoming rows when both lists sit at the top', async () => {
+      const f = mount({ entries: loaded });
+      await frames();
+      // A view switch keeps the outgoing rows on screen until the new page lands
+      // (#254). Neither list has a remembered offset, so no scroll event fires.
+      f.componentRef.setInput('selection', { kind: 'tag', id: 7, unread: true });
+      f.componentRef.setInput('loading', true);
+      f.detectChanges();
+      await frames();
+      f.componentRef.setInput('loading', false);
+      f.componentRef.setInput('entries', [entry(11), entry(12), entry(13)]);
+      f.detectChanges();
+      await frames();
+      expect(rowOpacities(f)).not.toContain('');
+    });
+
+    it('fades the rows appended by load-more', async () => {
+      const f = mount({ entries: loaded, hasMore: true });
+      await frames();
+      f.componentRef.setInput('entries', [...loaded, entry(4), entry(5)]);
+      f.detectChanges();
+      await frames();
+      expect(rowOpacities(f)).not.toContain('');
     });
   });
 });
