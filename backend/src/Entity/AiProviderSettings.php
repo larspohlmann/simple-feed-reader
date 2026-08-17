@@ -21,7 +21,16 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'user_ai_settings')]
 class AiProviderSettings
 {
-    public const int MAX_BATCH_CONCURRENCY = 4;
+    /**
+     * The hard ceiling on one tick's wave of provider calls. Raised from 4 to
+     * 8: a hosted provider answers a wave of that width without complaint and
+     * a long run finishes in half the ticks. A local model server stays at its
+     * own useful value, which is usually 1 — this is a ceiling, not a target,
+     * and the default remains 1. A poll tick never reaches it anyway
+     * (RecommendationRunAdvancer::POLL_MAX_CONCURRENCY), so the width only
+     * applies where a process owns its own time: the worker.
+     */
+    public const int MAX_BATCH_CONCURRENCY = 8;
 
     /**
      * Does not collide with RecommendationPromptBuilder::MINIMUM_BATCH_SIZE

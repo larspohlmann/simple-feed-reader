@@ -163,9 +163,9 @@ final class AiProviderSettingsTest extends TestCase
         self::assertSame(3, $settings->batchConcurrency());
     }
 
-    public function testMaxBatchConcurrencyIsFour(): void
+    public function testMaxBatchConcurrencyIsEight(): void
     {
-        self::assertSame(4, AiProviderSettings::MAX_BATCH_CONCURRENCY);
+        self::assertSame(8, AiProviderSettings::MAX_BATCH_CONCURRENCY);
     }
 
     public function testReplacingTheConnectionKeepsTheBatchConcurrency(): void

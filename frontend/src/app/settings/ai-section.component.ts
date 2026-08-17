@@ -80,9 +80,9 @@ export class AiSectionComponent {
     computation: () => null,
   });
 
-  /** The dropdown's fixed choices — the server's own `Range(1..4)`, so there
+  /** The dropdown's fixed choices — the server's own `Range(1..8)`, so there
    *  is no invalid value the handler needs to guard against. */
-  readonly concurrencyOptions: readonly number[] = [1, 2, 3, 4];
+  readonly concurrencyOptions: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8];
 
   /** Shown as the batch-cap field's placeholder when a connection makes no
    *  claim — the ceiling the backend applies on its behalf

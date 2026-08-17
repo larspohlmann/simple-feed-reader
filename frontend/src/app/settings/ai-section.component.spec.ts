@@ -473,7 +473,7 @@ describe('AiSectionComponent', () => {
     expect(boxes.map((box) => box.checked)).toEqual([false, true]);
   });
 
-  it('changes the batch concurrency for a row via a 1-4 dropdown', () => {
+  it('changes the batch concurrency for a row via a 1-8 dropdown', () => {
     const fixture = mount();
     const setBatchConcurrency = jest
       .spyOn(ai, 'setBatchConcurrency')
@@ -485,7 +485,16 @@ describe('AiSectionComponent', () => {
 
     const select = row(fixture, 0).querySelector('app-field select') as HTMLSelectElement;
     expect(select).not.toBeNull();
-    expect(Array.from(select.options).map((option) => option.value)).toEqual(['1', '2', '3', '4']);
+    expect(Array.from(select.options).map((option) => option.value)).toEqual([
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+      '7',
+      '8',
+    ]);
     expect(select.value).toBe('1');
     const concurrencyTip = row(fixture, 0).querySelector(
       'app-field app-info-tip button.trigger',

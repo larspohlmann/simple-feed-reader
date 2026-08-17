@@ -314,7 +314,7 @@ final class AiSettingsControllerTest extends ApiTestCase
         $id = $this->addConfiguration($client)['id'];
         self::assertIsInt($id);
 
-        $this->putJson($client, sprintf('/api/me/ai/configs/%d/batch-concurrency', $id), '{"batchConcurrency":5}');
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/batch-concurrency', $id), '{"batchConcurrency":9}');
 
         self::assertResponseStatusCodeSame(422);
     }
