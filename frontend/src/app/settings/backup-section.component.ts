@@ -16,6 +16,18 @@ import { SettingsCardComponent } from '../shared/settings-card/settings-card.com
 
 const CONFIRM_PHRASE = 'REPLACE';
 
+/** The one problem type the backend raises from an already-wiped account
+ *  (BackupLoadFailedException). Every other restore failure -- the file does
+ *  not fit, the file is invalid, the confirmation is missing, the body is too
+ *  large -- is refused before a single row is deleted. */
+const POST_WIPE_PROBLEM = 'backup_load_failed';
+
+/** A request that never reached an answer: the wipe may or may not have run,
+ *  and only here is "the account may be partly loaded" the honest report. */
+function outcomeIsUnknown(problem: Problem): boolean {
+  return problem.status === 0;
+}
+
 @Component({
   selector: 'app-backup-section',
   imports: [ButtonComponent, ErrorBannerComponent, SettingsCardComponent, TranslocoPipe],
@@ -41,9 +53,12 @@ export class BackupSectionComponent {
   readonly restoring = signal(false);
   readonly result = signal<RestoreResult | null>(null);
   readonly error = signal<Problem | null>(null);
-  /** Set once a restore attempt fails, and never cleared -- the wipe already
-   *  happened, so the recovery banner has to stay up even after the user
-   *  picks a fresh file for the retry. */
+  /** Set once a restore fails AFTER the wipe, and never cleared -- the rows
+   *  are already gone, so the recovery banner has to stay up even after the
+   *  user picks a fresh file for the retry. A refusal that cost the account
+   *  nothing must never set this: telling a user their account may be
+   *  half-wiped when it was not touched is the worst false alarm this
+   *  feature can raise. */
   readonly failedOnce = signal(false);
 
   readonly canRestore = computed(
@@ -127,9 +142,12 @@ export class BackupSectionComponent {
         this.refresh.run(() => this.subs.load());
       },
       error: (e: HttpErrorResponse) => {
+        const problem = parseProblem(e);
         this.restoring.set(false);
-        this.failedOnce.set(true);
-        this.error.set(parseProblem(e));
+        this.error.set(problem);
+        if (problem.type === POST_WIPE_PROBLEM || outcomeIsUnknown(problem)) {
+          this.failedOnce.set(true);
+        }
       },
     });
   }

@@ -13,7 +13,11 @@ describe('BackupSectionComponent', () => {
   const run = jest.fn();
 
   const previewResponse = {
-    backup: { createdAt: '2026-01-01T00:00:00Z', sourceUrl: null, sourceEmail: 'them@x.test' },
+    backup: {
+      createdAt: '2026-01-01T00:00:00Z',
+      sourceUrl: 'https://old.example',
+      sourceEmail: 'them@x.test',
+    },
     toLoad: { tags: 2, feeds: 3, subscriptions: 3, entries: 40, entryStates: 40 },
     toDelete: { tags: 1, subscriptions: 1, entryStates: 5, recommendationRuns: 0 },
   };
@@ -63,6 +67,7 @@ describe('BackupSectionComponent', () => {
     expect(text).toContain('3');
     expect(text).toContain('40');
     expect(text).toContain('them@x.test');
+    expect(text).toContain('https://old.example');
   });
 
   it('keeps the restore button disabled until REPLACE is typed exactly', () => {
@@ -108,7 +113,14 @@ describe('BackupSectionComponent', () => {
     expect(run).toHaveBeenCalled();
   });
 
-  it('shows the re-run message and keeps the file selected after a failed restore', () => {
+  function failTheRestore(f: ReturnType<typeof mount>, body: object, status: number): void {
+    ctrl
+      .expectOne('https://api.test/api/account/restore?confirm=REPLACE')
+      .flush(body, { status, statusText: 'Failed' });
+    f.detectChanges();
+  }
+
+  it('shows the re-run message and keeps the file selected after a post-wipe failure', () => {
     const f = mount();
     const file = chooseFile(f);
     ctrl.expectOne('https://api.test/api/account/restore/preview').flush(previewResponse);
@@ -118,21 +130,68 @@ describe('BackupSectionComponent', () => {
     c.typed.set('REPLACE');
     c.restore();
 
-    ctrl.expectOne('https://api.test/api/account/restore?confirm=REPLACE').flush(
+    failTheRestore(
+      f,
       {
-        type: 'about:blank',
-        title: 'Storage failure',
-        detail: 'Could not write the restored data.',
+        type: 'backup_load_failed',
+        title: 'The backup could not be loaded',
+        detail: 'The account is now empty.',
         status: 422,
       },
-      { status: 422, statusText: 'Unprocessable Entity' },
+      422,
     );
-    f.detectChanges();
 
     expect(c.failedOnce()).toBe(true);
     expect(c.file()).toBe(file);
     const text = (f.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Run the restore again with the same file');
+  });
+
+  /** A 409 is refused before the wipe, so the data-loss banner would be a lie. */
+  it('reports a refusal that cost nothing without the data-loss banner', () => {
+    const f = mount();
+    chooseFile(f);
+    ctrl.expectOne('https://api.test/api/account/restore/preview').flush(previewResponse);
+    f.detectChanges();
+
+    const c = f.componentInstance;
+    c.typed.set('REPLACE');
+    c.restore();
+
+    failTheRestore(
+      f,
+      {
+        type: 'backup_does_not_fit',
+        title: 'The backup does not fit this account',
+        detail: 'The backup holds 300 subscriptions; this account allows 200.',
+        status: 409,
+      },
+      409,
+    );
+
+    expect(c.failedOnce()).toBe(false);
+    const text = (f.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('this account allows 200');
+    expect(text).not.toContain('Run the restore again with the same file');
+  });
+
+  /** A dropped connection is the one case where nobody knows what happened. */
+  it('keeps the data-loss banner for a request that never got an answer', () => {
+    const f = mount();
+    chooseFile(f);
+    ctrl.expectOne('https://api.test/api/account/restore/preview').flush(previewResponse);
+    f.detectChanges();
+
+    const c = f.componentInstance;
+    c.typed.set('REPLACE');
+    c.restore();
+
+    ctrl
+      .expectOne('https://api.test/api/account/restore?confirm=REPLACE')
+      .error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
+    f.detectChanges();
+
+    expect(c.failedOnce()).toBe(true);
   });
 
   it('shows the preview problem detail and clears any stale preview', () => {
