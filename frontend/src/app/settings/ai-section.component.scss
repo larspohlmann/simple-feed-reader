@@ -128,11 +128,16 @@ app-searchable-select {
   gap: var(--space-2);
 }
 
-/* A four-digit ceiling never needs the full row width the other controls
+/* A three-digit ceiling never needs the full row width the other controls
    claim; a fixed character count keeps it from stretching across the row
-   like a text field would. */
+   like a text field would. The count has to pay for the control's own
+   chrome, though: the box is border-box, so `--space-3` of padding on each
+   side and the number input's stepper come out of it — a bare `5ch` left
+   part of one digit visible (measured: 45px of client width against 66px of
+   content). The padding is added back by name, and 6ch buys the three digits
+   plus the stepper. */
 .batch-cap-input {
-  width: 5ch;
+  width: calc(6ch + 2 * var(--space-3));
 }
 
 .saved {
