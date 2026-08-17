@@ -162,9 +162,9 @@ env_prod_set MYSQL_PASSWORD "$(generate_secret)"
 
 # --- 6. the values only the operator knows ----------------------------------
 # The package comes first: it decides the database and the search engine
-# together, and prints what each combination costs in memory. So the two
-# questions below run only for the operator who answered C and wants to decide
-# them one at a time.
+# together, and prints what each combination costs in memory. What follows it
+# is the package's own answer to "how much do you want to be asked" -- nothing
+# more for Q, the origin and mail for S, M and L, and all four questions for C.
 configure_package
 if quick_package_chosen; then
   # Q asked to be asked nothing more, so the two remaining questions are not

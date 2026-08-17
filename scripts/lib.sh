@@ -1303,8 +1303,8 @@ package_memory() {
 
 # One line of the question. The key is bold cyan -- the colour every string
 # these scripts want typed or opened already uses -- and the sentence is bold
-# on the default package and dim on the other three, so the line pressing
-# return selects is visible without reading all four.
+# on the default package and dim on the other four, so the line pressing
+# return selects is visible without reading them all.
 #
 # The colour comes from the script's own _c_* variables, which are empty unless
 # stdout is a terminal, while tell() writes to /dev/tty. An install whose
@@ -1378,8 +1378,8 @@ apply_default_public_origin() {
 }
 
 # --- which database the instance runs on ------------------------------------
-# Asked by the installer, once, and only for package C -- the three fixed
-# packages answer it through the same appliers below. Switching afterwards
+# Asked by the installer, once, and only for package C -- every other package
+# answers it through the same appliers below. Switching afterwards
 # means moving the data from one engine to the other, which nothing here does
 # -- so prod-configure.sh, the script that re-asks the questions of an existing
 # install, deliberately does not ask this one.

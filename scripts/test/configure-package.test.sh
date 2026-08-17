@@ -5,24 +5,26 @@ set -euo pipefail
 # question a fresh production install asks, and the one that decides how much
 # memory the stack needs.
 #
-# Four things have to hold. The three fixed packages must select the container
-# set the question promises: S no database container at all, M a MySQL one, L
-# MySQL plus Meilisearch. Pressing return must land on S, whether there is a
-# terminal or not -- S is the documented default, and the two sub-questions it
-# selects between now default the same way, so no path through the installer
-# may end up anywhere else. C must write nothing, because C means "let the two
-# existing questions decide" and a value written here would answer them before
-# they are asked. And an unrecognised key must re-ask instead of installing
-# something: four keys are not a y/n question, where every non-'n' answer can
-# safely mean yes.
+# Five things have to hold. The three stacks must select the container set the
+# question promises: S no database container at all, M a MySQL one, L MySQL
+# plus Meilisearch. Pressing return must select Q, the quick install, which
+# runs S's containers and leaves .env.prod COMPLETE -- it is the one answer
+# after which nothing else is asked, so anything it does not write, nobody
+# writes. Without a terminal the package is S instead, because Q's promise is
+# about questions and there are none to skip; the documented two-step flow has
+# to survive. C must write nothing, because C means "ask me those two
+# questions" and a value written here would answer them first. And an
+# unrecognised key must re-ask instead of installing something: five keys are
+# not a y/n question, where every non-'n' answer can safely mean yes.
 #
-# The question's own text is tested too, for two reasons the ticket names. The
+# The question's own text is tested too, for the reasons the ticket names. The
 # figures it prints are measured numbers that must not drift away from the ones
 # README.md states -- so the assertions below read README.md and compare. And
-# the operator has to SEE which of the four lines pressing return selects, so
-# the default line is bold where the others are dim, with the key emphasised
-# in every line. All of it flows through the _c_* variables, which is what
-# keeps NO_COLOR working and keeps these greps free of escape stripping.
+# the operator has to SEE which line pressing return selects, and what that
+# line decides on their behalf, so the default is bold where the others are
+# dim, with the key emphasised in every line. All of it flows through the _c_*
+# variables, which is what keeps NO_COLOR working and keeps these greps free of
+# escape stripping.
 #
 # The real prompts read /dev/tty. They are replaced here with a canned answer
 # queue, where an empty answer means "press return", and the two output
