@@ -66,12 +66,14 @@ final class EntryBatchInserterTest extends DbTestCase
         $entry = $this->em->getRepository(Entry::class)->findOneBy(['guidHash' => hash('sha256', 'one-guid')]);
         self::assertInstanceOf(Entry::class, $entry);
         self::assertSame('one-guid', $entry->getGuid());
+        self::assertSame('https://batch.example/one-guid', $entry->getUrl());
         self::assertSame('One', $entry->getTitle());
         self::assertSame('Ann Author', $entry->getAuthor());
         self::assertSame('sum', $entry->getSummary());
         self::assertSame('<p>body</p>', $entry->getContentHtml());
         self::assertNull($entry->getImageUrl());
         self::assertSame(640, $entry->getImageWidth());
+        self::assertNull($entry->getImageHeight());
         self::assertSame('2026-08-01 10:00:00', $entry->getPublishedAt()?->format('Y-m-d H:i:s'));
         self::assertSame('2026-08-02 00:00:00', $entry->getCreatedAt()->format('Y-m-d H:i:s'));
         self::assertSame('2026-08-01 10:00:00', $entry->getEffectiveDate()->format('Y-m-d H:i:s'));
