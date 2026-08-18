@@ -4,7 +4,7 @@
 
 **Goal:** Stop the reader extracting publisher chrome instead of the article body (#476) by extracting each page both with and without the wrapper-chain collapse and keeping the richer result.
 
-**Architecture:** `FetchedPageNormalizer` splits into two operations: `normalize()` (score-neutral repairs, always applied) and `collapseWrapperChains()` (the #235 wrapper collapse, applied only to build a second candidate). `ArticleExtractor` runs readability on both candidates and keeps the one with the longer `textContent`. This strictly dominates today's always-collapse behaviour: it differs only on pages where the collapse shortens the result — the #476 failure mode — and leaves every page the current pipeline handles well unchanged.
+**Architecture:** `FetchedPageNormalizer` splits into two operations: `normalize()` (score-neutral repairs, always applied) and `collapseWrapperChains()` (the #235 wrapper collapse, applied only to build a second candidate). `ArticleExtractor` runs readability on both candidates and keeps the one with the longer `textContent`. This dominates today's always-collapse behaviour on every observed fixture: it differs only on pages where the collapse shortens the result — the #476 failure mode — and leaves every page the current pipeline handles well unchanged. The residual risk is the symmetric case (a page the collapse *correctly* shortens); "longer = better" is a heuristic, unobserved to fail, and the metric is where to revisit if it ever does.
 
 **Tech Stack:** PHP 8.4, Symfony 7.4, `fivefilters/readability.php` v4.0.0, PHPUnit.
 

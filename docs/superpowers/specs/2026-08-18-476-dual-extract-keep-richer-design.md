@@ -54,10 +54,18 @@ Unwrap **helps** by making a poorly-extracted page *richer* (BBC 568 → 1384) a
 fix is to stop guessing which pages need it: extract **both** ways and keep the
 richer (longer `textContent`) result.
 
-This **strictly dominates** today's always-unwrap behaviour. It differs from
-current behaviour *only* on pages where unwrap shortens the result — exactly the
-ankerherz failure mode. Pages the current pipeline handles well (unwrap
-longer-or-equal) are unchanged, so it cannot newly break a page that works today.
+This **dominates** today's always-unwrap behaviour on every observed fixture. It
+differs from current behaviour *only* on pages where unwrap shortens the result —
+exactly the ankerherz failure mode. Pages the current pipeline handles well
+(unwrap longer-or-equal) are unchanged.
+
+The one residual risk is the symmetric case: a page where the collapse *correctly*
+shortens the body by excluding chrome the conservative candidate swallows. There,
+"longer" would pick the worse candidate. "Longer text = better article" is a
+heuristic, not a theorem — no fixture exhibits the inverse case, and the observed
+collapse failure mode is shorten-and-break (ankerherz), not shorten-and-fix, so the
+risk is unobserved and judged low. If such a page appears, the metric is where to
+revisit (e.g. weight structure, not raw length).
 
 ## Design
 
