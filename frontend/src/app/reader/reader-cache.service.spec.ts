@@ -45,4 +45,15 @@ describe('ReaderCacheService', () => {
     expect(await cache.get(1)).toBeNull();
     expect(await cache.get(ReaderCacheService.MAX_ENTRIES + 1)).not.toBeNull();
   });
+
+  it('deletes a cached entry, leaving a later get a miss', async () => {
+    await cache.put(1, article('https://x/1'));
+    expect(await cache.get(1)).not.toBeNull();
+    await cache.delete(1);
+    expect(await cache.get(1)).toBeNull();
+  });
+
+  it('treats deleting an absent entry as a no-op', async () => {
+    await expect(cache.delete(999)).resolves.toBeUndefined();
+  });
 });
