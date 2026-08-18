@@ -491,8 +491,8 @@ describe('ReaderViewComponent', () => {
   });
 
   describe('article refresh', () => {
-    it('shows the refresh button in both layouts and while extraction failed', () => {
-      // Default loadMock resolves failed, so this also covers the failed case.
+    it('shows the refresh button in reader mode in both layouts', () => {
+      loadMock.mockReturnValue(of<ReaderContent>(okContent()));
       const pane = mount(entry()).nativeElement as HTMLElement;
       expect(pane.querySelector('.bar [aria-label="Reload article"]')).not.toBeNull();
 
@@ -504,6 +504,23 @@ describe('ReaderViewComponent', () => {
         (f.nativeElement as HTMLElement).querySelector('.bar [aria-label="Reload article"]'),
       ).not.toBeNull();
       f.destroy();
+    });
+
+    it('hides the refresh button once the reader switches to original', () => {
+      loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+      const f = mount(entry());
+      const el = f.nativeElement as HTMLElement;
+      expect(el.querySelector('.bar [aria-label="Reload article"]')).not.toBeNull();
+
+      f.componentInstance.toggleMode(); // reader -> original
+      f.detectChanges();
+      expect(el.querySelector('.bar [aria-label="Reload article"]')).toBeNull();
+    });
+
+    it('hides the refresh button when extraction failed (original fallback)', () => {
+      // Default loadMock resolves failed, so the view falls back to original.
+      const el = mount(entry()).nativeElement as HTMLElement;
+      expect(el.querySelector('.bar [aria-label="Reload article"]')).toBeNull();
     });
 
     it('refetches past the cache and shows the loading state', () => {
@@ -525,16 +542,16 @@ describe('ReaderViewComponent', () => {
       expect(el.querySelector('.content')!.innerHTML).toContain('FRESH');
     });
 
-    it('preserves the reader/original mode across a refresh', () => {
+    it('refreshArticle does not reset the reader/original mode', () => {
+      // The button is reader-only, but the method must leave the mode alone —
+      // only a genuine entry change resets it.
       loadMock.mockReturnValue(of<ReaderContent>(okContent()));
       reloadMock.mockReturnValue(of<ReaderContent>(okContent()));
       const f = mount(entry());
       f.componentInstance.toggleMode(); // reader -> original
       expect(f.componentInstance.mode()).toBe('original');
 
-      (f.nativeElement as HTMLElement)
-        .querySelector<HTMLButtonElement>('.bar [aria-label="Reload article"]')!
-        .click();
+      f.componentInstance.refreshArticle();
       f.detectChanges();
       expect(f.componentInstance.mode()).toBe('original');
     });

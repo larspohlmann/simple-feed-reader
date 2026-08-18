@@ -67,13 +67,15 @@
         >
           <app-icon name="bookmark" size="md" />
         </button>
-        <button
-          type="button"
-          [attr.aria-label]="'reader.refreshArticle' | transloco"
-          (click)="refreshArticle()"
-        >
-          <app-icon name="refresh" size="md" />
-        </button>
+        @if (mode() === 'reader') {
+          <button
+            type="button"
+            [attr.aria-label]="'reader.refreshArticle' | transloco"
+            (click)="refreshArticle()"
+          >
+            <app-icon name="refresh" size="md" />
+          </button>
+        }
         @if (readerMode.canToggle()) {
           <button
             class="mode"
