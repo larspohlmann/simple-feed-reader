@@ -3,6 +3,14 @@
 Issue: [#482](https://github.com/larspohlmann/simple-feed-reader/issues/482).
 Branch: `feature/482-viewed-hidden-model`.
 
+> **Scope split (2026-08-18).** #482 delivers the **behaviour only** and keeps the
+> existing field name `isRead`. The `isRead → isHidden` rename (field, DB column,
+> DTO/JSON, frontend, backup, version bump) is deferred to **#483**. Read every
+> `isHidden` / `hiddenAt` below as the current `isRead` / `readAt` until #483 lands;
+> "green circle = hidden" is "green circle = read". The invariant, the listener,
+> the tick/circle mapping, `clearViewed`, and the data reconciliation all belong to
+> #482. The backup change and the schema-rename migration belong to #483.
+
 ## Motivation
 
 The green tick and the "Recently read" view are driven by two different flags,
