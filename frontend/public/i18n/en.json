@@ -575,7 +575,6 @@
     "openOriginal": "Open original",
     "refreshArticle": "Reload article",
     "readingTime": "≈ {{minutes}} min",
-    "loadingReader": "Loading reader view…",
     "readerFallback": "Couldn't load the full article — showing the feed's summary.",
     "selectArticle": "Select an article to read.",
     "layout": {

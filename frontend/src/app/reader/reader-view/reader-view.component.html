@@ -92,7 +92,7 @@
         }
       </div>
     </div>
-    <article>
+    <article [attr.aria-busy]="loading() ? 'true' : null">
       <div class="title-row">
         <h1 class="title" #titleHeading tabindex="-1">{{ e.title }}</h1>
       </div>
@@ -174,9 +174,7 @@
           }
         </nav>
       }
-      @if (loading()) {
-        <div class="loading" role="status">{{ 'reader.loadingReader' | transloco }}</div>
-      } @else {
+      @if (!loading()) {
         @if (failed() && mode() === 'original') {
           <p class="reader-note">{{ 'reader.readerFallback' | transloco }}</p>
         }
@@ -201,6 +199,9 @@
         <div #content class="content" [innerHTML]="displayHtml()"></div>
       }
     </article>
+    <!-- Laid over the whole pane while an article loads or refetches, in place
+         of a line of text — the same overlay the feed list raises on reload. -->
+    <app-loading-overlay [shown]="loading()" [label]="'common.loading' | transloco" />
     @if (fullscreen() && pulling()) {
       <div class="pull-back" [class.armed]="pullArmed()" aria-hidden="true">
         <app-spinner [size]="22" />

@@ -1,0 +1,56 @@
+:host {
+  position: absolute;
+  inset: var(--loading-overlay-inset, 0);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+
+  /* The content underneath is already inert; the veil must not intercept
+     anything either, least of all during its fade-out. */
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+
+  /* Visibility flips only after the fade has finished, so the veil is never
+     hit-tested while it is still on screen. */
+  transition:
+    opacity 0.2s ease,
+    visibility 0s linear 0.2s;
+}
+
+:host(.shown) {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.2s ease,
+    visibility 0s;
+}
+
+/* The spinner and its caption sit on a near-opaque card of their own, so the
+   label stays legible over whatever content the veil covers (#254). */
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-7);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--surface-1) 96%, transparent);
+  box-shadow: var(--shadow-1, 0 1px 4px rgb(0 0 0 / 15%));
+}
+
+.label {
+  color: var(--text-secondary);
+  font-size: var(--fs-lg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host,
+  :host(.shown) {
+    transition: none;
+  }
+}

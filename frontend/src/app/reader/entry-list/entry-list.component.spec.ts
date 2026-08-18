@@ -366,25 +366,29 @@ describe('EntryListComponent', () => {
       expect(el.querySelector('.rows')!.getAttribute('aria-busy')).toBe('true');
     });
 
-    it('never raises the reload veil, however long the search runs', () => {
+    it('never raises the loading overlay, however long the search runs', () => {
       jest.useFakeTimers();
       try {
         const f = mount(typing);
         jest.advanceTimersByTime(5000);
         f.detectChanges();
-        expect((f.nativeElement as HTMLElement).querySelector('.reload-veil.shown')).toBeNull();
+        expect(
+          (f.nativeElement as HTMLElement).querySelector('app-loading-overlay.shown'),
+        ).toBeNull();
       } finally {
         jest.useRealTimers();
       }
     });
 
-    it('still raises the veil for a reload outside a search', () => {
+    it('still raises the loading overlay for a reload outside a search', () => {
       jest.useFakeTimers();
       try {
         const f = mount({ loading: true, entries: [entry(1), entry(2)], layout: 'list' });
         jest.advanceTimersByTime(5000);
         f.detectChanges();
-        expect((f.nativeElement as HTMLElement).querySelector('.reload-veil.shown')).not.toBeNull();
+        expect(
+          (f.nativeElement as HTMLElement).querySelector('app-loading-overlay.shown'),
+        ).not.toBeNull();
       } finally {
         jest.useRealTimers();
       }

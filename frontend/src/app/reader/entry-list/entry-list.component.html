@@ -340,12 +340,7 @@
        too — a structural @if would cut it off the frame the rows arrive.
        Decorative: the rows already carry aria-busy, and a second announcement
        of the same wait is noise. -->
-  <div class="reload-veil" [class.shown]="reloadSpinner()" aria-hidden="true">
-    <div class="card">
-      <span class="label">{{ 'common.loading' | transloco }}</span>
-      <app-spinner [size]="96" [decorative]="true" />
-    </div>
-  </div>
+  <app-loading-overlay [shown]="reloadSpinner()" [label]="'common.loading' | transloco" />
 }
 
 @if (showToTop()) {

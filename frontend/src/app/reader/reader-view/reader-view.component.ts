@@ -18,6 +18,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
+import { LoadingOverlayComponent } from '../../shared/loading-overlay/loading-overlay.component';
 import {
   BACK_TO_TOP_AFTER_PX,
   ToTopButtonComponent,
@@ -90,6 +91,7 @@ function slugify(text: string): string {
     IconComponent,
     FaviconComponent,
     SpinnerComponent,
+    LoadingOverlayComponent,
     SourceTagsComponent,
     ToTopButtonComponent,
     RouterLink,

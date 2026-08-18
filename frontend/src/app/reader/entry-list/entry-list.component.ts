@@ -19,6 +19,7 @@ import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
+import { LoadingOverlayComponent } from '../../shared/loading-overlay/loading-overlay.component';
 import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import {
   BACK_TO_TOP_AFTER_PX,
@@ -94,6 +95,7 @@ type ListBlock = MagazineBlock | RunHeaderBlock;
     TranslocoPipe,
     IconComponent,
     SpinnerComponent,
+    LoadingOverlayComponent,
     TagGlyphComponent,
     EntryRowComponent,
     RecommendationStripComponent,

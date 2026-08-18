@@ -533,12 +533,12 @@ describe('ReaderViewComponent', () => {
       (el.querySelector('.bar [aria-label="Reload article"]') as HTMLButtonElement).click();
       f.detectChanges();
       expect(reloadMock).toHaveBeenCalledWith(1);
-      expect(el.querySelector('.loading')).not.toBeNull();
+      expect(el.querySelector('app-loading-overlay.shown')).not.toBeNull();
 
       subject.next(okContent({ contentHtml: '<p>FRESH</p>' }));
       subject.complete();
       f.detectChanges();
-      expect(el.querySelector('.loading')).toBeNull();
+      expect(el.querySelector('app-loading-overlay.shown')).toBeNull();
       expect(el.querySelector('.content')!.innerHTML).toContain('FRESH');
     });
 
@@ -588,8 +588,10 @@ describe('ReaderViewComponent', () => {
   it('shows a loading indicator while extraction is pending', () => {
     loadMock.mockReturnValue(new Subject<ReaderContent>());
     const el = mount(entry()).nativeElement as HTMLElement;
-    expect(el.querySelector('.loading')).not.toBeNull();
+    expect(el.querySelector('app-loading-overlay.shown')).not.toBeNull();
     expect(el.querySelector('.content')).toBeNull();
+    // The overlay is decorative, so the article carries the busy state instead.
+    expect(el.querySelector('article')!.getAttribute('aria-busy')).toBe('true');
   });
 
   it('does not reload or reset the toggle when the same entry changes by reference', () => {
