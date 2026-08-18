@@ -115,7 +115,7 @@
           (refresh)="onScopedRefresh()"
           (favorite)="onFavorite($event)"
           (keep)="onKeep($event)"
-          (read)="onToggleRead($event)"
+          (read)="onToggleViewed($event)"
           (open)="onOpen($event)"
         />
       </section>
@@ -125,7 +125,7 @@
           [tags]="openEntryTags()"
           (favorite)="withOpen(onFavorite)"
           (keep)="withOpen(onKeep)"
-          (read)="withOpen(onToggleRead)"
+          (read)="withOpen(onToggleViewed)"
           (openOriginal)="withOpen(onOpenOriginal)"
           (close)="onCloseReader()"
         />
@@ -162,7 +162,7 @@
           (refresh)="onScopedRefresh()"
           (favorite)="onFavorite($event)"
           (keep)="onKeep($event)"
-          (read)="onToggleRead($event)"
+          (read)="onToggleViewed($event)"
           (open)="onOpen($event)"
         />
       </section>
@@ -178,7 +178,7 @@
             [fullscreen]="!screen.isWide()"
             (favorite)="withOpen(onFavorite)"
             (keep)="withOpen(onKeep)"
-            (read)="withOpen(onToggleRead)"
+            (read)="withOpen(onToggleViewed)"
             (openOriginal)="withOpen(onOpenOriginal)"
             (close)="onCloseReader()"
           />

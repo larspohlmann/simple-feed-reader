@@ -53,9 +53,9 @@ describe('EntryKickerLineComponent', () => {
     expect(el.querySelector('.when')!.textContent).toContain('5');
   });
 
-  it('marks the dot unread only while the entry is unread', () => {
-    expect(mount(entry()).querySelector('.dot')!.classList).toContain('on');
-    expect(mount(entry({ isRead: true })).querySelector('.dot')!.classList).not.toContain('on');
+  it('fills the dot only once the entry is read', () => {
+    expect(mount(entry()).querySelector('.dot')!.classList).not.toContain('on');
+    expect(mount(entry({ isRead: true })).querySelector('.dot')!.classList).toContain('on');
   });
 
   it('times an entry by its published date, falling back to when we ingested it', () => {

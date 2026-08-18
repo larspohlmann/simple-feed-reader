@@ -145,8 +145,8 @@
         <button
           type="button"
           [attr.aria-label]="'reader.toggleRead' | transloco"
-          [class.on]="e.isRead"
-          [attr.aria-pressed]="e.isRead"
+          [class.on]="e.isViewed"
+          [attr.aria-pressed]="e.isViewed"
           (click)="read.emit()"
         >
           <app-icon name="check" size="md" />

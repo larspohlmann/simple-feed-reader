@@ -315,7 +315,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.i18n.translate(key, { term, count });
   }
 
-  private readonly markedOnOpen = new Set<number>();
   private readonly viewedOnOpen = new Set<number>();
 
   /** Ids of entries removed from the saved view on screen. The entry list
@@ -340,24 +339,16 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       this.selection();
       untracked(() => this.sidebarOpen.set(false));
     });
-    // Mark the opened entry read and viewed, each exactly once per session —
-    // even if the PATCH fails and the flags roll back, we never re-fire. One
-    // combined request: the endpoint is a partial update, and both flags
-    // change at the same moment (the open).
+    // Mark the opened entry viewed exactly once per session — even if the PATCH
+    // fails and the flag rolls back, we never re-fire. Opening sends the viewed
+    // flag alone; the backend reads it too (ViewedImpliesReadListener) and
+    // localStatePatch mirrors that here, so one flag on the wire moves both.
     effect(() => {
       const e = this.openEntry();
       if (!e) return;
-      const patch: EntryStatePatch = {};
-      if (!e.isRead && !this.markedOnOpen.has(e.id)) {
-        this.markedOnOpen.add(e.id);
-        patch.isRead = true;
-      }
-      if (!e.isViewed && !this.viewedOnOpen.has(e.id)) {
-        this.viewedOnOpen.add(e.id);
-        patch.isViewed = true;
-      }
-      if (Object.keys(patch).length === 0) return;
-      untracked(() => this.applyOpenedPatch(e, patch));
+      if (e.isViewed || this.viewedOnOpen.has(e.id)) return;
+      this.viewedOnOpen.add(e.id);
+      untracked(() => this.applyOpenedPatch(e, { isViewed: true }));
     });
     // Deep link to an entry the current list page doesn't hold: fetch it by id so
     // it still opens. Tracks only entryId; the list copy takes over once loaded.
@@ -613,7 +604,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     this.subs.bumpKept(delta);
     this.patchInList(e, { isKept: !e.isKept }, () => this.subs.bumpKept(-delta));
   };
-  onToggleRead = (e: EntryDto): void => this.setRead(e, !e.isRead);
+  onToggleViewed = (e: EntryDto): void => this.setViewed(e, !e.isViewed);
 
   /** Reader-view outputs are payload-less; apply them to the currently open entry. */
   withOpen(fn: (e: EntryDto) => void): void {
@@ -621,24 +612,20 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     if (e) fn(e);
   }
 
-  private setRead(e: EntryDto, read: boolean): void {
-    // Apply the unread-count change optimistically and revert it if the PATCH
-    // fails, so the sidebar count never desyncs from the entry's rolled-back flag.
-    if (read) this.subs.decrementUnread(e.subscriptionId);
-    else this.subs.incrementUnread(e.subscriptionId);
-    // Unread also clears "opened" (mirrors EntryState::markUnread): drop the
-    // Recently-read badge and let a later reopen re-mark it. The row itself
-    // leaves through patchInList, the one place that owns saved-view removal.
-    const leftOpened = !read && e.isViewed;
-    if (leftOpened) {
-      this.subs.bumpViewed(-1);
-      this.viewedOnOpen.delete(e.id);
-      this.markedOnOpen.delete(e.id);
-    }
-    this.patchInList(e, { isRead: read }, () => {
-      if (read) this.subs.incrementUnread(e.subscriptionId);
-      else this.subs.decrementUnread(e.subscriptionId);
-      if (leftOpened) this.subs.bumpViewed(1);
+  /** The tick toggles "viewed" (#482). Activating it also reads the entry (the
+   *  subset invariant), so an unread entry leaves the unread list and its badge
+   *  drops; deactivating only un-ticks, leaving the entry read, so the unread
+   *  badge is unchanged. The Recently-read badge follows the viewed flag both
+   *  ways, and the row leaves that view through patchInList. */
+  private setViewed(e: EntryDto, viewed: boolean): void {
+    const alsoReads = viewed && !e.isRead;
+    this.subs.bumpViewed(viewed ? 1 : -1);
+    if (alsoReads) this.subs.decrementUnread(e.subscriptionId);
+    // Let a later reopen re-mark a now-un-ticked entry.
+    if (!viewed) this.viewedOnOpen.delete(e.id);
+    this.patchInList(e, { isViewed: viewed }, () => {
+      this.subs.bumpViewed(viewed ? -1 : 1);
+      if (alsoReads) this.subs.incrementUnread(e.subscriptionId);
     });
   }
 
@@ -688,15 +675,16 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  /** The on-open patch: read + viewed in one request. Both sidebar badges are
-   *  kept in sync optimistically and reverted together if the PATCH fails — the
-   *  unread count down for the read flag, the Recently-read count up for the
-   *  viewed flag. */
+  /** The on-open patch: viewed in one request, which the backend also reads
+   *  (#482). Both sidebar badges are kept in sync optimistically and reverted
+   *  together if the PATCH fails — the Recently-read count up for the viewed
+   *  flag, and the unread count down when opening also reads a still-unread entry. */
   private applyOpenedPatch(e: EntryDto, patch: EntryStatePatch): void {
-    if (patch.isRead) this.subs.decrementUnread(e.subscriptionId);
+    const alsoReads = patch.isViewed === true && !e.isRead;
+    if (alsoReads) this.subs.decrementUnread(e.subscriptionId);
     if (patch.isViewed) this.subs.bumpViewed(1);
     this.patchOpen(e, patch, () => {
-      if (patch.isRead) this.subs.incrementUnread(e.subscriptionId);
+      if (alsoReads) this.subs.incrementUnread(e.subscriptionId);
       if (patch.isViewed) this.subs.bumpViewed(-1);
     });
   }

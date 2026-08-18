@@ -8,7 +8,7 @@
   (keydown.enter)="open.emit(entry())"
   (keydown.space)="$event.preventDefault(); open.emit(entry())"
 >
-  <span class="dot" [class.on]="!entry().isRead" aria-hidden="true"></span>
+  <span class="dot" [class.on]="entry().isRead" aria-hidden="true"></span>
   <div class="body">
     <h3 class="title">
       @if (marking()) {
@@ -50,8 +50,8 @@
       <button
         type="button"
         [attr.aria-label]="'reader.toggleRead' | transloco"
-        [class.on]="entry().isRead"
-        [attr.aria-pressed]="entry().isRead"
+        [class.on]="entry().isViewed"
+        [attr.aria-pressed]="entry().isViewed"
         (click)="$event.stopPropagation(); read.emit(entry())"
       >
         <app-icon name="check" size="md" />
