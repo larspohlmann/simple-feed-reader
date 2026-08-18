@@ -19,8 +19,8 @@ namespace App\Service\Reader;
  *  - Every paragraph, heading and image sits in its own deep chain of
  *    single-child <div> wrappers. The depth dilutes readability's score
  *    propagation so far that subheadings, figures and even paragraphs fall
- *    under the sibling-join threshold and are dropped. Collapsing the chains
- *    lets the scores reach the real article container.
+ *    under the sibling-join threshold and are dropped. collapseWrapperChains()
+ *    collapses the chains so the scores reach the real article container.
  *  - Icon-font glyphs sit in a Private Use Area code point selected by a CSS
  *    class. The sanitizer strips the class, so the glyph loses its font and the
  *    browser paints a tofu box (taz's pull-quote mark is the case, U+E80F).
@@ -32,6 +32,10 @@ namespace App\Service\Reader;
  *    as text, past the reach of the sanitizer's element-level script removal.
  *    <script> and <style> blocks are stripped from the raw source first, where
  *    the real </script> still bounds them.
+ *
+ * The wrapper collapse is a separate public method, not a step of normalize():
+ * normalize() is the score-neutral pass, and callers decide whether to also
+ * run collapseWrapperChains().
  *
  * Never throws: a page this step cannot process is returned unchanged, and
  * extraction proceeds exactly as it would have without normalization.
@@ -71,11 +75,34 @@ final readonly class FetchedPageNormalizer
         $this->lazyImages->resolveIn($document);
         $this->removeScreenReaderOnlyElements($document);
         $this->removeOrphanIconGlyphs($document);
-        $this->unwrapSingleChildDivs($document);
 
         $normalized = $document->saveHTML();
 
         return $normalized === false ? $html : $normalized;
+    }
+
+    /**
+     * Collapse chains of single-child <div> wrappers so readability's score
+     * propagation reaches the real article container (#235). Kept separate from
+     * normalize() because the same collapse can flip a well-structured page to
+     * the wrong block (#476): ArticleExtractor extracts with and without it and
+     * keeps the richer result. The input is returned unchanged when there is no
+     * chain to collapse, so an unaffected page costs no second extraction.
+     */
+    public function collapseWrapperChains(string $html): string
+    {
+        $document = $this->parse($html);
+        if ($document === null) {
+            return $html;
+        }
+
+        if ($this->unwrapSingleChildDivs($document) === 0) {
+            return $html;
+        }
+
+        $collapsed = $document->saveHTML();
+
+        return $collapsed === false ? $html : $collapsed;
     }
 
     private function removeScriptAndStyleBlocks(string $html): string
@@ -173,17 +200,21 @@ final readonly class FetchedPageNormalizer
         return false;
     }
 
-    private function unwrapSingleChildDivs(\DOMDocument $document): void
+    private function unwrapSingleChildDivs(\DOMDocument $document): int
     {
         $divs = iterator_to_array($document->getElementsByTagName('div'));
         // Reverse document order visits descendants before their ancestors, so
         // one pass collapses a whole wrapper chain from the inside out.
+        $collapsed = 0;
         foreach (array_reverse($divs) as $div) {
             $child = $this->soleDivChild($div);
             if ($child !== null && $div->parentNode !== null) {
                 $div->parentNode->replaceChild($child, $div);
+                ++$collapsed;
             }
         }
+
+        return $collapsed;
     }
 
     private function soleDivChild(\DOMElement $div): ?\DOMElement

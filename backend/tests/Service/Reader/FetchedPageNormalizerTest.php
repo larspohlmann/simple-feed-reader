@@ -24,7 +24,7 @@ final class FetchedPageNormalizerTest extends TestCase
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div class="a"><div class="b"><div class="c"><p>Text</p></div></div></div></body></html>';
 
-        $normalized = $this->normalizer->normalize($html);
+        $normalized = $this->normalizer->collapseWrapperChains($html);
 
         // The two outer wrappers are gone; the innermost div (whose child is a
         // <p>, not a <div>) survives as the direct parent of the paragraph.
@@ -40,7 +40,7 @@ final class FetchedPageNormalizerTest extends TestCase
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div class="keep"><div>one</div><div>two</div></div></body></html>';
 
-        $normalized = $this->normalizer->normalize($html);
+        $normalized = $this->normalizer->collapseWrapperChains($html);
 
         self::assertStringContainsString('class="keep"', $normalized);
     }
@@ -52,7 +52,7 @@ final class FetchedPageNormalizerTest extends TestCase
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div class="keep">intro <div>nested</div></div></body></html>';
 
-        $normalized = $this->normalizer->normalize($html);
+        $normalized = $this->normalizer->collapseWrapperChains($html);
 
         self::assertStringContainsString('class="keep"', $normalized);
     }
@@ -64,9 +64,19 @@ final class FetchedPageNormalizerTest extends TestCase
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div><div><h2 id="s1">Section</h2></div></div></body></html>';
 
-        $normalized = $this->normalizer->normalize($html);
+        $normalized = $this->normalizer->collapseWrapperChains($html);
 
         self::assertStringContainsString('<h2 id="s1">Section</h2>', $normalized);
+    }
+
+    public function testCollapseReturnsInputUnchangedWhenNoWrapperChains(): void
+    {
+        // A page with no single-child <div> chain must come back byte-for-byte,
+        // so ArticleExtractor can skip the second extraction.
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><div class="keep"><p>One</p><p>Two</p></div></body></html>';
+
+        self::assertSame($html, $this->normalizer->collapseWrapperChains($html));
     }
 
     public function testRemovesScreenReaderOnlyElements(): void
