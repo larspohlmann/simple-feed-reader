@@ -11,8 +11,14 @@
    the provider cell relies entirely on its own `&__cell-label`. The header is
    projected into `app-disclosure`'s `[summary]` slot, whose `summary.is-row`
    rule already carries `--row-pad-comfy-y/x` -- adding the same padding here
-   would double it, so `&__header` stays unpadded and only the body content
-   below it (`&__wrap`, `&__loading`, `&__more`) insets itself to match.
+   would double it, so `&__header` stays unpadded. The body below it
+   (`&__wrap`, `&__loading`, `&__failed`, `&__more`) once carried a matching
+   horizontal inset and no longer does: it runs the full width of the card,
+   edge to edge with the "total spent" box above it, at every width (#465).
+   The month heading in the summary keeps its own inset, so the body starts
+   `--row-pad-comfy-x` to the left of it -- the table is the widest thing in
+   this card and the one that has to be, most of all on a phone, where those
+   32px are most of the margin the six columns have at all.
 
    One layout at every width, not two: the header strip stays visible and the
    row stays a grid all the way down to a phone. No cell ever shows a visible
@@ -24,10 +30,14 @@
    scanning, not only inside its section's heading.
 
    Two boundaries, not one, and they answer different questions:
-    - `bp.$bp-md` (720px) decides the *form* of the status cell -- icon
-      (`&__status-icon`) below it, the spelled-out word (`&__status-word`)
-      above it -- and, in the parent card's stylesheet, whether the legend
-      that decodes the icons is shown at all. 720px is the first width at
+    - `bp.$bp-md` (720px) decides the *form* of the status column, header
+      cell included -- icon below it (`&__status-icon` for the value,
+      `&__col-icon` for the header), the spelled-out words above it
+      (`&__status-word`, `&__col-full`) -- and, in the parent card's
+      stylesheet, whether the legend that decodes the icons is shown at all.
+      The header follows the value here because the header word was the wider
+      of the two and so was the one sizing the track (#465). 720px is the
+      first width at
       which the row can actually afford the word: `COMPLETED`/`CANCELLED`
       need roughly 6rem, the icon needs roughly 2rem, and below 720px that
       4rem is not there to spend.
@@ -93,7 +103,7 @@
   }
 
   &__loading {
-    margin: 0 var(--row-pad-comfy-x) var(--row-pad-comfy-y);
+    margin: 0 0 var(--row-pad-comfy-y);
     color: var(--text-muted);
     font-size: var(--fs-xs);
   }
@@ -102,13 +112,13 @@
      the only body an open month has when its first page could not be fetched,
      so it has to read as a fault rather than as an empty month. */
   &__failed {
-    margin: 0 var(--row-pad-comfy-x) var(--row-pad-comfy-y);
+    margin: 0 0 var(--row-pad-comfy-y);
     color: var(--danger);
     font-size: var(--fs-xs);
   }
 
   &__wrap {
-    padding: 0 var(--row-pad-comfy-x) var(--row-pad-comfy-y);
+    padding: 0 0 var(--row-pad-comfy-y);
     overflow-x: auto;
   }
 
@@ -277,6 +287,19 @@
 
   &__duration,
   &__tokens-in,
+  &__tokens-out,
+  &__cost {
+    /* The same guarantee `&__when` and `&__status` carry, for the same
+       reason: a figure that breaks across two lines stops being one figure.
+       `$ 0.02415` wrapping after the currency symbol is what a first pass at
+       #465 shipped when it left this off and trusted the track width alone.
+       The floors in the media queries below are the headroom; this is the
+       promise. */
+    white-space: nowrap;
+  }
+
+  &__duration,
+  &__tokens-in,
   &__tokens-out {
     color: var(--text-muted);
     font-size: var(--fs-xs);
@@ -293,13 +316,24 @@
     display: none;
   }
 
+  /* The status column's header glyph, the counterpart to `&__col-short` on the
+     token columns: it takes the place of the word `STATUS` below `bp.$bp-md`
+     (#465). `flag` rather than one of the five status glyphs -- it names the
+     column, so it must not read as any single status the column can hold.
+     Like `&__status-icon` above, this rule has to stay textually *before* the
+     media queries that turn it on; see that rule's comment for what happens
+     when it does not. */
+  &__col-icon {
+    display: none;
+  }
+
   &__cost {
     font-weight: 600;
     text-align: right;
   }
 
   &__more {
-    margin: 0 var(--row-pad-comfy-x) var(--row-pad-comfy-y);
+    margin: 0 0 var(--row-pad-comfy-y);
     padding: var(--space-1) var(--space-3);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius);
@@ -352,33 +386,46 @@
      its own widest realistic value needs: a six-digit token count, the
      header word "Status" once the pill is gone, `$ 0.31871`.
 
-     On the narrowest phones the six floors plus gap plus padding can still
-     exceed the viewport -- that is `&__wrap`'s `overflow-x: auto` and
-     `&__list`'s own `min-width` to handle (both already in place, above),
-     scrolling the row horizontally rather than squeezing any value narrower
-     than its floor and wrapping it, which is the defect this rule exists to
-     prevent. */
+     The floors below fit a 390px phone, and with `bp.$bp-sm`'s narrower inset
+     a 360px one, which the first version of this rule did not: it sized the
+     status track for the header word and left the row 56px wider than the
+     card at iPhone-12 width (#465). `&__wrap`'s `overflow-x: auto` and
+     `&__list`'s own `min-width` (both already in place, above) stay as the
+     backstop for anything narrower still, scrolling the row horizontally
+     rather than squeezing a value below its floor and wrapping it, which is
+     the defect this rule exists to prevent. */
   @media (width <= bp.$bp-md) {
     /* Derived the same way as the desktop figure above, from this rule's own
        floors: `when` 4.75rem (`Aug 16 07:21`, nowrap, unchanged at every
-       width) + `status` 3rem (the header word "Status" -- the icon itself
-       needs far less) + `time` 2.25rem (`62:03`) + `tokens-in`/`tokens-out`
-       3.25rem each (a six-digit count, with headroom for a seventh) + `cost`
-       3.5rem (`$ 0.31871`) = 20rem, plus five `column-gap`s (5 x --space-2 =
-       2.5rem, unchanged from the desktop rule -- only `bp.$bp-sm` below
-       narrows this further), plus the row's own left+right padding
-       (unchanged, 2 x --space-3 = 1.5rem) = 24rem. Every one of these six
-       figures is a real floor (the `minmax()` minimum below), not a lower
-       bound `when` was left to absorb the shortfall from -- unlike the
-       desktop figure above, this total already accounts for every track. */
+       width -- 72px of text) + `status` 1.25rem (the header glyph
+       `&__col-icon`, which replaces the word here -- the word needed 3rem and
+       nothing in this column ever did) + `time` 2rem (`62:03`, wider than the
+       header word "TIME") + `tokens-in`/`tokens-out` 2.75rem each (a
+       six-digit count) + `cost` 3.25rem (`$ 0.3187`, at the four decimals
+       `formatCost` renders since #465 -- this is the track that wrapped when
+       it was guessed at 3.5rem against five) = 16.75rem, plus five `column-gap`s (5 x --space-2 = 2.5rem, unchanged
+       from the desktop rule -- only `bp.$bp-sm` below narrows this further),
+       plus the row's own left+right padding (unchanged, 2 x --space-3 =
+       1.5rem) = 20.75rem. Every one of these six figures is a real floor (the
+       `minmax()` minimum below), not a lower bound `when` was left to absorb
+       the shortfall from -- unlike the desktop figure above, this total
+       already accounts for every track.
+
+       Each figure is the *rendered* width of that column's widest realistic
+       value, read off the live DOM at `--fs-xs` and rounded up to the next
+       token step. Measure it that way again after any change here: a first
+       pass at #465 sized these tracks with `canvas.measureText`, whose font
+       shorthand silently failed to parse and fell back to a default face,
+       reporting every column about a third too narrow -- which is what put a
+       line break inside `$ 0.02415`. */
     &__list {
-      min-width: 24rem;
+      min-width: 20.75rem;
     }
 
     &__row {
       grid-template-columns:
-        minmax(4.75rem, 1fr) minmax(3rem, 1fr) minmax(2.25rem, 1fr) minmax(3.25rem, 1fr)
-        minmax(3.25rem, 1fr) minmax(3.5rem, 1fr);
+        minmax(4.75rem, 1fr) minmax(1.25rem, 1fr) minmax(2rem, 1fr) minmax(2.75rem, 1fr)
+        minmax(2.75rem, 1fr) minmax(3.25rem, 1fr);
     }
 
     /* Status drops its pill chrome entirely here -- no background, no
@@ -395,16 +442,10 @@
       text-transform: none;
     }
 
-    /* The reset above is for the value pill, which is not wanted around an
-       icon -- but it also reaches the header cell, which never was a pill,
-       leaving the column reading "Status" among WHEN / TIME / IN / OUT /
-       COST. Put the header's own casing back here rather than narrowing the
-       reset, so the value keeps exactly the chrome the icon needs. This must
-       live in *this* block, not the `bp-sm` one below: the icon band runs to
-       `bp-md`, so at 620px only this block applies. */
-    &__row--header .run-history-month__status {
-      text-transform: uppercase;
-    }
+    /* The header cell's own casing needs no repair here any more: the reset
+       above strips `text-transform` from both the value and the header, but
+       the header's word is hidden throughout this band now (`&__col-full`
+       below) and the glyph that replaces it has no casing to lose (#465). */
 
     /* The icon takes over as the visible form of the status here (#409: "use
        icons on mobile"); the word gives way to it but must not leave the DOM
@@ -433,6 +474,13 @@
     &__col-short {
       display: inline;
     }
+
+    /* Sized `sm` in the markup (16px), the same glyph size the status value
+       below it uses, so the column reads as one shape from header to last
+       row. `inline-flex`, not `inline`: `<app-icon>` centres its own glyph. */
+    &__col-icon {
+      display: inline-flex;
+    }
   }
 
   /* Only the gap and the row's own padding narrow further here -- the six
@@ -442,14 +490,27 @@
      buys a little extra room before `&__wrap`'s horizontal scroll has to be
      the answer, not the track list itself. */
   @media (width <= bp.$bp-sm) {
-    /* Same six floors as `bp.$bp-md` above (20rem), plus five `column-gap`s
-       now narrowed to `--space-1` (5 x --space-1 = 1.25rem), plus the row's
-       own left+right padding, also narrowed here (2 x --space-2 = 1rem) =
-       22.25rem. */
+    /* Same six floors as `bp.$bp-md` above (16.75rem), plus five
+       `column-gap`s now narrowed to `--space-1` (5 x --space-1 = 1.25rem),
+       plus the row's own left+right padding, also narrowed here (2 x
+       --space-2 = 1rem) = 19rem. This is the figure that has to clear the
+       card's own content width, which the body now takes in full: 304px
+       against the 334px an iPhone 12 (390px) leaves and the 304px a 360px
+       phone does -- the narrowest phone this fits, and it fits it exactly.
+       A seventh column, a wider date or a fifth decimal on the cost each cost
+       more than the margin left here, and the row is back to scrolling
+       sideways. */
     &__list {
-      min-width: 22.25rem;
+      min-width: 19rem;
     }
 
+    /* Only the column gap narrows to `--space-1`; the row's own padding stops
+       at `--space-2`. A step further was tried and reverted: it bought 8px
+       the layout no longer needs now that the body runs full width, and it
+       left the date and the price all but touching the row's border (#465).
+       Anything this rule still cannot fit is `&__wrap`'s horizontal scroll to
+       answer -- never a track floor, which is the width some real value
+       needs, and never this padding, which is what makes the row readable. */
     &__row {
       column-gap: var(--space-1);
       padding: var(--space-2);

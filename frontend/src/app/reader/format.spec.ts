@@ -126,8 +126,8 @@ describe('trialDaysRemaining', () => {
 });
 
 describe('formatCost', () => {
-  it('renders a price the way the provider writes it in its own logs', () => {
-    expect(formatCost(1_370_000, 'en')).toBe('$ 0.00137');
+  it('renders a price at the four decimals the card reads at', () => {
+    expect(formatCost(1_370_000, 'en')).toBe('$ 0.0014');
   });
 
   it('renders an em dash when the provider reported no price at all', () => {
@@ -135,20 +135,29 @@ describe('formatCost', () => {
   });
 
   it('renders a cost of zero as zero rather than as unpriced', () => {
-    expect(formatCost(0, 'en')).toBe('$ 0.00000');
+    expect(formatCost(0, 'en')).toBe('$ 0.0000');
   });
 
   it('keeps the symbol leading but the separator local', () => {
-    expect(formatCost(1_370_000, 'de')).toBe('$ 0,00137');
+    expect(formatCost(1_370_000, 'de')).toBe('$ 0,0014');
   });
 
-  it('rounds a sub-cent remainder to the nearest five-decimal figure', () => {
-    expect(formatCost(1_374_700, 'en')).toBe('$ 0.00137');
-    expect(formatCost(1_375_100, 'en')).toBe('$ 0.00138');
+  it('rounds a sub-cent remainder to the nearest four-decimal figure', () => {
+    expect(formatCost(1_374_000, 'en')).toBe('$ 0.0014');
+    expect(formatCost(1_351_000, 'en')).toBe('$ 0.0014');
+    expect(formatCost(1_449_000, 'en')).toBe('$ 0.0014');
+    expect(formatCost(1_451_000, 'en')).toBe('$ 0.0015');
   });
 
   it('renders a large total without losing the fixed precision', () => {
-    expect(formatCost(918_200_000, 'en')).toBe('$ 0.91820');
+    expect(formatCost(918_200_000, 'en')).toBe('$ 0.9182');
+  });
+
+  /* The cheapest run this card has recorded is around a hundredth of a
+     credit; four decimals still separate that from free. A figure small
+     enough to collapse to `$ 0.0000` was weighed and accepted in #465. */
+  it('still separates a cheap run from a free one', () => {
+    expect(formatCost(100_000, 'en')).toBe('$ 0.0001');
   });
 });
 

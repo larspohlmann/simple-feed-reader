@@ -100,10 +100,13 @@ export function bytesToKb(bytes: number): number {
  *  not hold money -- and this is the one place it becomes a human figure. */
 const NANO_PER_CREDIT = 1_000_000_000;
 
-/** How many decimals a price is worth reading at. Five is what the provider's
- *  own logs show, and it is fine enough that a single cheap run does not
- *  collapse to zero. */
-const COST_FRACTION_DIGITS = 5;
+/** How many decimals a price is worth reading at. Four, not the five the
+ *  provider's own logs show: the fifth decimal is a figure nobody reads, and
+ *  it cost the run-history row on a phone the width its other five columns
+ *  needed (#465). A run cheap enough to round to `$ 0.0000` at four decimals
+ *  would have to cost under a ten-thousandth of a credit, which no run this
+ *  card has ever recorded comes near. */
+const COST_FRACTION_DIGITS = 4;
 
 /** What no reported price renders as. The provider said nothing about cost (a
  *  local model, or a run older than the column), which is a different
@@ -112,12 +115,12 @@ const COST_FRACTION_DIGITS = 5;
 const NO_PRICE = '—';
 
 /**
- * A price in nano-credits as the provider's own logs write it: `$ 0.00137`.
+ * A price in nano-credits, at the precision this card reads at: `$ 0.0014`.
  *
  * The symbol always leads, the way the provider renders it. The number does
  * not: it goes through `Intl` on the active UI language, because `toFixed`
  * always writes a `.` and a German card showing `22. Juli 2026` beside
- * `0.00137` is two locales in one line. So German reads `$ 0,00137`.
+ * `0.0014` is two locales in one line. So German reads `$ 0,0014`.
  *
  * Shared rather than owned by the history card: the card renders the account
  * total and each month section renders its own, and a second copy of the
