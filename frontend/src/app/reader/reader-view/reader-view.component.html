@@ -49,26 +49,31 @@
         </span>
       }
       <div class="nav">
-        @if (!fullscreen()) {
-          <button
-            type="button"
-            [attr.aria-label]="'reader.favorite' | transloco"
-            [class.on]="e.isFavorite"
-            [attr.aria-pressed]="e.isFavorite"
-            (click)="favorite.emit()"
-          >
-            <app-icon name="star" size="md" />
-          </button>
-          <button
-            type="button"
-            [attr.aria-label]="'reader.keep' | transloco"
-            [class.on]="e.isKept"
-            [attr.aria-pressed]="e.isKept"
-            (click)="keep.emit()"
-          >
-            <app-icon name="bookmark" size="md" />
-          </button>
-        }
+        <button
+          type="button"
+          [attr.aria-label]="'reader.favorite' | transloco"
+          [class.on]="e.isFavorite"
+          [attr.aria-pressed]="e.isFavorite"
+          (click)="favorite.emit()"
+        >
+          <app-icon name="star" size="md" />
+        </button>
+        <button
+          type="button"
+          [attr.aria-label]="'reader.keep' | transloco"
+          [class.on]="e.isKept"
+          [attr.aria-pressed]="e.isKept"
+          (click)="keep.emit()"
+        >
+          <app-icon name="bookmark" size="md" />
+        </button>
+        <button
+          type="button"
+          [attr.aria-label]="'reader.refreshArticle' | transloco"
+          (click)="refreshArticle()"
+        >
+          <app-icon name="refresh" size="md" />
+        </button>
         @if (readerMode.canToggle()) {
           <button
             class="mode"

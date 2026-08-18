@@ -12,7 +12,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { Subscription, timeout } from 'rxjs';
+import { Observable, Subscription, timeout } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -23,7 +23,7 @@ import {
   ToTopButtonComponent,
 } from '../../shared/to-top-button/to-top-button.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
-import { EntryDto, ReaderArticle, SubscriptionTagDto } from '../models';
+import { EntryDto, ReaderArticle, ReaderContent, SubscriptionTagDto } from '../models';
 import { ReaderContentService } from '../reader-content.service';
 import { ReaderModeService } from '../reader-mode.service';
 import { LanguageService } from '../../core/language.service';
@@ -268,7 +268,6 @@ export class ReaderViewComponent {
       // load, re-fetch, or reset the mode toggle).
       if (id === this.loadedId) return;
       this.loadedId = id;
-      this.loadSub?.unsubscribe();
       this.readerMode.reset();
       this.cancelRestore();
       // A new article starts at the top, with a fresh, collapsed contents list
@@ -283,6 +282,7 @@ export class ReaderViewComponent {
       this.lastToolbarScrollTop = 0;
       this.scrollTop.set(0);
       if (!e) {
+        this.loadSub?.unsubscribe();
         this.pendingRestore = null;
         this.state.set({ status: 'idle' });
         return;
@@ -290,25 +290,7 @@ export class ReaderViewComponent {
       // Arm a scroll restore for this entry if we remember a position for it.
       const savedTop = this.scroll.readEntry(e.id);
       this.pendingRestore = savedTop > 0 ? { id: e.id, top: savedTop } : null;
-      this.state.set({ status: 'loading' });
-      this.loadSub = this.reader
-        .load(e.id)
-        .pipe(timeout({ first: READER_LOAD_TIMEOUT_MS }))
-        .subscribe({
-          next: (c) => {
-            if (c.status === 'ok') {
-              this.state.set({ status: 'ok', article: c });
-              this.readerMode.enableToggle();
-            } else {
-              this.state.set({ status: 'failed' });
-              this.readerMode.setOriginalOnly();
-            }
-          },
-          error: () => {
-            this.state.set({ status: 'failed' });
-            this.readerMode.setOriginalOnly();
-          },
-        });
+      this.runLoad(this.reader.load(e.id));
     });
     this.destroyRef.onDestroy(() => this.loadSub?.unsubscribe());
 
@@ -394,6 +376,30 @@ export class ReaderViewComponent {
       el.removeEventListener('wheel', abortRestore);
       this.cancelRestore();
       if (this.leaveTimer) clearTimeout(this.leaveTimer);
+    });
+  }
+
+  /** Subscribe to a content source (initial load or a cache-busting reload),
+   *  driving the shared loading → ok/failed lifecycle. The reader/original mode
+   *  is not touched here, so a reload keeps the mode the reader chose; only a
+   *  genuine entry change resets it (see the load effect above). */
+  private runLoad(source: Observable<ReaderContent>): void {
+    this.loadSub?.unsubscribe();
+    this.state.set({ status: 'loading' });
+    this.loadSub = source.pipe(timeout({ first: READER_LOAD_TIMEOUT_MS })).subscribe({
+      next: (c) => {
+        if (c.status === 'ok') {
+          this.state.set({ status: 'ok', article: c });
+          this.readerMode.enableToggle();
+        } else {
+          this.state.set({ status: 'failed' });
+          this.readerMode.setOriginalOnly();
+        }
+      },
+      error: () => {
+        this.state.set({ status: 'failed' });
+        this.readerMode.setOriginalOnly();
+      },
     });
   }
 
@@ -639,6 +645,13 @@ export class ReaderViewComponent {
 
   toggleMode(): void {
     this.readerMode.toggle();
+  }
+
+  /** Drop the open article from the browser cache and refetch it. */
+  refreshArticle(): void {
+    const e = this.entry();
+    if (!e) return;
+    this.runLoad(this.reader.reload(e.id));
   }
 
   when(e: EntryDto): string {
