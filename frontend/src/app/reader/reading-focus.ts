@@ -24,7 +24,7 @@ export const LIST_FOCUS_CURVE: FocusCurve = { plateau: 0, min: 0.2 };
  * the floor is far higher: in a body of running text the effect should point
  * the eye, not push the rest of the page away (#435).
  */
-export const ARTICLE_FOCUS_CURVE: FocusCurve = { plateau: 0.2, min: 0.55 };
+export const ARTICLE_FOCUS_CURVE: FocusCurve = { plateau: 0.03, min: 0.28 };
 
 /** Generic containers we descend through to reach the real reading blocks. */
 const WRAPPER_TAGS = new Set(['DIV', 'SECTION', 'ARTICLE', 'MAIN', 'ASIDE', 'HEADER', 'FOOTER']);

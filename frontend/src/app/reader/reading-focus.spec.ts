@@ -139,17 +139,17 @@ describe('readingBlocks', () => {
 });
 
 describe('the article focus curve', () => {
-  // Viewport 1000 => centre at 500, a plateau reaching 200px either side of it,
-  // and the remaining 300px carrying the whole fade.
+  // Viewport 1000 => centre at 500, a plateau reaching 30px either side of it,
+  // and the remaining 470px carrying the whole fade.
   it('holds full opacity across the plateau, to its very edge', () => {
     expect(focusOpacityForSpan(500, 500, 1000, ARTICLE_FOCUS_CURVE)).toBe(1);
-    expect(focusOpacityForSpan(700, 700, 1000, ARTICLE_FOCUS_CURVE)).toBe(1);
-    expect(focusOpacityForSpan(300, 300, 1000, ARTICLE_FOCUS_CURVE)).toBe(1);
+    expect(focusOpacityForSpan(530, 530, 1000, ARTICLE_FOCUS_CURVE)).toBe(1);
+    expect(focusOpacityForSpan(470, 470, 1000, ARTICLE_FOCUS_CURVE)).toBe(1);
   });
 
   it('fades over what is left of the half-viewport, not over all of it', () => {
-    expect(focusOpacityForSpan(850, 850, 1000, ARTICLE_FOCUS_CURVE)).toBeCloseTo(0.775, 3);
-    expect(focusOpacityForSpan(150, 150, 1000, ARTICLE_FOCUS_CURVE)).toBeCloseTo(0.775, 3);
+    expect(focusOpacityForSpan(850, 850, 1000, ARTICLE_FOCUS_CURVE)).toBeCloseTo(0.51, 3);
+    expect(focusOpacityForSpan(150, 150, 1000, ARTICLE_FOCUS_CURVE)).toBeCloseTo(0.51, 3);
   });
 
   it('reaches its floor a half-viewport away, and never goes below it', () => {
