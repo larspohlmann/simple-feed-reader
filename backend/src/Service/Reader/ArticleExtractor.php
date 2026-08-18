@@ -6,6 +6,7 @@ namespace App\Service\Reader;
 
 use App\Service\EntrySanitizer;
 use App\Service\Reader\Exception\PageFetchException;
+use fivefilters\Readability\Article;
 use fivefilters\Readability\Configuration;
 use fivefilters\Readability\ParseException;
 use fivefilters\Readability\Readability;
@@ -39,14 +40,8 @@ final class ArticleExtractor implements ArticleExtractorInterface
             return ExtractionResult::failed($url, 'fetch');
         }
 
-        $readability = new Readability(new Configuration(
-            fixRelativeURLs: true,
-            originalURL: $page->finalUrl,
-        ));
-
-        try {
-            $article = $readability->parse($this->normalizer->normalize($page->html));
-        } catch (ParseException) {
+        $article = $this->richestArticle($page);
+        if ($article === null) {
             return ExtractionResult::failed($url, 'unextractable');
         }
 
@@ -72,6 +67,60 @@ final class ArticleExtractor implements ArticleExtractorInterface
             excerpt: $article->excerpt,
             image: $this->leadImage($article->image, $clean),
         );
+    }
+
+    /**
+     * Extract the page twice — with the score-neutral repairs only, and with the
+     * wrapper-chain collapse (#235) as well — and keep the richer result. The
+     * collapse rescues block-component pages (#235) and breaks some
+     * well-structured ones (#476); the longer body is the better one in both
+     * directions. The second parse is skipped when the collapse changed nothing.
+     */
+    private function richestArticle(PageResponse $page): ?Article
+    {
+        $conservative = $this->normalizer->normalize($page->html);
+        $collapsed = $this->normalizer->collapseWrapperChains($conservative);
+
+        $fromConservative = $this->parse($conservative, $page->finalUrl);
+        $fromCollapsed = $collapsed === $conservative
+            ? null
+            : $this->parse($collapsed, $page->finalUrl);
+
+        return $this->richer($fromConservative, $fromCollapsed);
+    }
+
+    private function parse(string $html, string $finalUrl): ?Article
+    {
+        $readability = new Readability(new Configuration(
+            fixRelativeURLs: true,
+            originalURL: $finalUrl,
+        ));
+
+        try {
+            return $readability->parse($html);
+        } catch (ParseException) {
+            return null;
+        }
+    }
+
+    /** Keep the extraction with more readable text; a tie keeps the conservative one. */
+    private function richer(?Article $conservative, ?Article $collapsed): ?Article
+    {
+        if ($conservative === null) {
+            return $collapsed;
+        }
+        if ($collapsed === null) {
+            return $conservative;
+        }
+
+        return $this->textLength($collapsed) > $this->textLength($conservative)
+            ? $collapsed
+            : $conservative;
+    }
+
+    private function textLength(Article $article): int
+    {
+        return mb_strlen(trim((string) $article->textContent));
     }
 
     /**

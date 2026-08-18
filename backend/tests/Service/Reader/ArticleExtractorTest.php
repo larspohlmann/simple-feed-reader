@@ -169,4 +169,33 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringNotContainsString('Image source,', (string) $result->contentHtml);
         self::assertStringContainsString('A caption line', (string) $result->contentHtml);
     }
+
+    public function testKeepsTheArticleWhenCollapsingWouldElevatePublisherChrome(): void
+    {
+        // A real Shopify blog capture (#476, entry 466491). Readability extracts
+        // the article on the neutral candidate, but the wrapper-chain collapse
+        // flips the winner to the promo banner. Dual extraction keeps the richer
+        // (article) result.
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-shopify-promo.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post');
+
+        self::assertTrue($result->ok);
+        self::assertStringContainsString('Hand aufs Herz', (string) $result->contentHtml);
+        self::assertStringNotContainsString('DU MAGST DEN ANKERHERZ BLOG', (string) $result->contentHtml);
+    }
+
+    public function testExtractsAPageThatNeedsNoWrapperCollapse(): void
+    {
+        // article.html has no single-child <div> chain, so the collapsed
+        // candidate equals the conservative one and only one parse runs.
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post');
+
+        self::assertTrue($result->ok);
+        self::assertStringContainsString('First substantial paragraph', (string) $result->contentHtml);
+    }
 }

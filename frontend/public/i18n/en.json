@@ -173,10 +173,11 @@
         "connectionStep4": "Press “Add configuration”, then fetch the model list with “Change model” and save a model.",
         "connectionStep5": "Press “Use this one” to make the configuration active.",
         "recommendationsTitle": "Configure the recommendations",
-        "recommendationsStep1": "Check the active configuration: it shows a model, and the “Recommendations” card below says AI features are available.",
-        "recommendationsStep2": "Pick an auto-generate schedule, or keep “Only manually”. The schedule needs the background worker or the maintenance cron.",
-        "recommendationsStep3": "Optionally open “Expert settings” and adjust the history caps, the article and pick limits, and the guidance prompt.",
-        "recommendationsStep4": "Save. Turn on Debug mode to inspect the next run in the debug log."
+        "recommendationsStep1": "Confirm the active configuration is ready. It shows a model, and the “Recommendations” card below reports that AI features are available.",
+        "recommendationsStep2": "Choose a capable model. qwen3.7-flash is a good default — it gives a strong quality-to-price ratio. Set it on the active configuration with “Change model”.",
+        "recommendationsStep3": "Pick an auto-generate schedule, or keep “Only manually”. A schedule needs the background worker or the maintenance cron.",
+        "recommendationsStep4": "Optional: open “Expert settings” to adjust the history caps, the article and pick limits, and the guidance prompt.",
+        "recommendationsStep5": "Save. Turn on Debug mode to inspect the next run in the debug log."
       },
       "recommendations": {
         "title": "Recommendations",

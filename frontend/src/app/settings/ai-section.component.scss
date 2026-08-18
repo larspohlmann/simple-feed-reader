@@ -153,22 +153,47 @@ app-searchable-select {
   width: 100%;
 }
 
-.guide-intro {
-  margin: 0 0 var(--space-3);
-  color: var(--text-muted);
+.guide {
   font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+  color: var(--text-secondary);
 }
 
+.guide-intro {
+  margin: 0 0 var(--space-5);
+  color: var(--text-muted);
+}
+
+/* Each walkthrough opens with an uppercase eyebrow over a hairline so the two
+   lists read as separate sections rather than one continuous block. */
 .guide h3 {
-  margin: var(--space-3) 0 var(--space-1);
-  font-size: 1em;
+  margin: var(--space-5) 0 var(--space-3);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.guide h3:first-of-type {
+  margin-top: 0;
 }
 
 .guide ol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
   margin: 0;
-  padding-left: var(--space-4);
+  padding-left: var(--space-5);
 }
 
 .guide li {
-  margin-bottom: var(--space-1);
+  padding-left: var(--space-1);
+}
+
+.guide li::marker {
+  color: var(--accent);
+  font-weight: 600;
 }
