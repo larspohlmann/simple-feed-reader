@@ -117,7 +117,9 @@ export class EntriesStore {
     const before = this.entries().find((e) => e.id === entryId);
     if (!before) return;
     this.error.set(null);
-    this.entries.update((cur) => cur.map((e) => (e.id === entryId ? { ...e, ...patch } : e)));
+    this.entries.update((cur) =>
+      cur.map((e) => (e.id === entryId ? { ...e, ...localStatePatch(patch) } : e)),
+    );
     this.api.updateState(entryId, patch).subscribe({
       error: (err: HttpErrorResponse) => {
         this.entries.update((cur) => cur.map((e) => (e.id === entryId ? before : e)));
@@ -126,4 +128,14 @@ export class EntriesStore {
       },
     });
   }
+}
+
+/** The local view of a state patch, which can differ from what is sent to the
+ *  server: marking an entry unread clears "opened" too (the backend couples
+ *  them in EntryState::markUnread), but the API contract only ever accepts
+ *  isViewed=true, so the flag is mirrored here rather than put on the wire.
+ *  Exported so the one place that decides list membership after a patch reads
+ *  the same rule, never a second copy of it. */
+export function localStatePatch(patch: EntryStatePatch): EntryStatePatch {
+  return patch.isRead === false ? { ...patch, isViewed: false } : patch;
 }

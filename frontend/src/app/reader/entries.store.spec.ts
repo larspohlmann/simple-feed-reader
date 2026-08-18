@@ -198,6 +198,23 @@ describe('EntriesStore', () => {
     expect(store.entries()[0].isFavorite).toBe(false); // rolled back
   });
 
+  it('mirrors the unread-clears-viewed coupling locally without sending isViewed (#478)', () => {
+    store.load({ view: 'viewed' });
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [{ ...entry(1), isRead: true, isViewed: true }], nextCursor: null });
+
+    store.setState(1, { isRead: false });
+
+    // Local: marking unread also clears "opened", so the row leaves the view.
+    expect(store.entries()[0].isRead).toBe(false);
+    expect(store.entries()[0].isViewed).toBe(false);
+    // On the wire: only isRead — the API rejects isViewed=false (it is one-way in).
+    const req = ctrl.expectOne('https://api.test/api/entries/1/state');
+    expect(req.request.body).toEqual({ isRead: false });
+    req.flush({ state: {} });
+  });
+
   it('reverts only the target entry on error, preserving an appended page', () => {
     store.load({ view: 'all' });
     ctrl

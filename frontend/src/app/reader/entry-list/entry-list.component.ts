@@ -120,6 +120,19 @@ export class EntryListComponent implements OnDestroy {
    *  the same in both places; null for every other selection. */
   readonly titleTag = input<TagDto | null>(null);
   readonly entries = input.required<EntryDto[]>();
+  /** Ids of rows collapsed out of the list (un-favourited, un-kept, or marked
+   *  unread in their saved view). A leaving row fades then collapses in place;
+   *  it stays in `entries` so the magazine plan keeps its shape, and a reload
+   *  clears it. Empty in every other case. */
+  readonly leavingIds = input<ReadonlySet<number>>(new Set());
+
+  /** Rows the user can still see — the loaded set minus the ones collapsed out.
+   *  The empty state keys on this, not `entries().length`: collapsing the last
+   *  row must show "nothing here", even though the collapsed row lingers in the
+   *  data until the next reload. */
+  readonly visibleEntryCount = computed(
+    () => this.entries().filter((e) => !this.leavingIds().has(e.id)).length,
+  );
   readonly loading = input.required<boolean>();
   readonly loadingMore = input.required<boolean>();
   readonly error = input.required<Problem | null>();
@@ -317,7 +330,7 @@ export class EntryListComponent implements OnDestroy {
     host.addEventListener('touchmove', this.onUserScrollIntent, { passive: true, capture: true });
     host.style.setProperty('--refresh-reveal', `${REFRESH_REVEAL}px`);
 
-    const onResize = () => this.scheduleFocus();
+    const onResize = () => this.pulseFocus();
     window.addEventListener('resize', onResize, { passive: true });
     this.destroyRef.onDestroy(() => {
       window.removeEventListener('resize', onResize);
@@ -329,6 +342,15 @@ export class EntryListComponent implements OnDestroy {
   readonly collapsed = signal(false);
   private lastScrollTop = 0;
   private focusRaf = 0;
+
+  /** Bumped by every imperative event that can move the rows under the reading
+   *  centre without a signal changing — a scroll, a window resize, a row
+   *  collapsing out of a saved view. The reading-focus subscriber reads it
+   *  alongside the reactive sources, so all of them share one recompute. */
+  private readonly focusPulse = signal(0);
+  private pulseFocus(): void {
+    this.focusPulse.update((n) => n + 1);
+  }
   /** Drives the corner back-to-top button; set from the scroll handler. */
   readonly showToTop = signal(false);
 
@@ -396,20 +418,27 @@ export class EntryListComponent implements OnDestroy {
   });
 
   /**
-   * Re-seat the reading focus whenever the rows change, not only when the
-   * breakpoint does. The pass writes an inline opacity per row, so every row the
-   * component has never measured renders undimmed — and the only other triggers
-   * are a scroll event and a resize. A list that lands while the frame scheduled
-   * at mount has already passed therefore had no fade at all until the user
-   * scrolled (#462). Depending on `entries()` covers a finished load and a
-   * load-more append; depending on `rows()` covers the scroller element itself
-   * being replaced, which the skeleton -> list and list <-> magazine swaps do.
-   * `scheduleFocus()` coalesces to one frame, so the extra runs cost nothing.
+   * The one subscriber that keeps the reading focus fresh. It reads every source
+   * that can change which rows sit under the reading centre and recomputes once,
+   * coalesced to a frame — the pass writes an inline opacity per row, so a row it
+   * has never measured renders undimmed until something runs it.
+   *
+   * The sources, gathered here rather than wired up piecemeal so a new one is a
+   * single line and never a place to forget (each miss was its own bug):
+   *  - `screen.isWide()` — the breakpoint the fade is gated on.
+   *  - `entries()` — a finished load or a load-more append.
+   *  - `rows()` — the scroller element itself being replaced (skeleton -> list,
+   *     list <-> magazine).
+   *  - `selection()` — a view switch, whose retained outgoing list (#254) can
+   *     otherwise keep its stale fade until the new page lands (#462).
+   *  - `focusPulse()` — the imperative events: scroll, resize, row collapse.
    */
-  private readonly _rescheduleFocus = effect(() => {
+  private readonly _readingFocus = effect(() => {
     this.screen.isWide();
     this.entries();
     this.rows();
+    this.selection();
+    this.focusPulse();
     this.scheduleFocus();
   });
 
@@ -423,7 +452,7 @@ export class EntryListComponent implements OnDestroy {
     this.lastScrollTop = top;
     this.showToTop.set(top > BACK_TO_TOP_AFTER_PX);
     this.scrolled.emit(top);
-    this.scheduleFocus();
+    this.pulseFocus();
     // Remember where the user is so a browser resume-reload (iOS/Brave discard the
     // tab and reload it) can drop them back here rather than at the top.
     if (this.rowsBelongToSelection()) this.scroll.save(this.selection(), top);
@@ -439,13 +468,25 @@ export class EntryListComponent implements OnDestroy {
     return rendered === null || sameSelection(rendered, this.selection());
   }
 
-  /** Coalesce reading-focus recomputes to one per animation frame. */
+  /** The reading-focus recompute, coalesced to one pass per animation frame.
+   *  Called only by the `_readingFocus` subscriber — every source funnels
+   *  through that effect, so this stays the single place the work happens. */
   private scheduleFocus(): void {
     if (this.reduceMotion || this.focusRaf) return;
     this.focusRaf = requestAnimationFrame(() => {
       this.focusRaf = 0;
       this.applyFocus();
     });
+  }
+
+  /** A CSS animation inside the scroller finished. The only one that moves rows
+   *  is a saved-view row collapsing (#478): it slides the rows below it up but
+   *  fires no scroll, so without this the mobile dimming would hold its
+   *  pre-collapse values until the next scroll. Other animations are ignored.
+   *  `includes`, not `startsWith`: view encapsulation rewrites the keyframe name
+   *  to `_ngcontent-xxx_row-leave…`, so the marker sits in the middle. */
+  onContentSettled(event: AnimationEvent): void {
+    if (event.animationName.includes('row-leave')) this.pulseFocus();
   }
 
   /** Dim each list entry by its distance from the scroll viewport's centre.
@@ -538,6 +579,13 @@ export class EntryListComponent implements OnDestroy {
    *  (which carries several entries and no single reason to show). */
   strippableEntry(block: MagazineBlock): EntryDto | null {
     return block.kind === 'group' ? null : block.entry;
+  }
+
+  /** Whether a single-entry magazine block is animating out of the list. A group
+   *  block never leaves as a unit — one of its entries leaving just re-plans the
+   *  widget — so it is never marked leaving. */
+  isBlockLeaving(block: MagazineBlock): boolean {
+    return block.kind !== 'group' && this.leavingIds().has(block.entry.id);
   }
 
   side(block: MagazineBlock): 'left' | 'right' {

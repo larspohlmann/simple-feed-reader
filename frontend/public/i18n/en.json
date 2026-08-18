@@ -523,6 +523,7 @@
     "allItems": "All items",
     "favorites": "Favorites",
     "kept": "Kept",
+    "viewed": "Recently read",
     "forYou": "For you",
     "forYouGeneratedAt": "Generated {{ago}}",
     "tags": "Tags",

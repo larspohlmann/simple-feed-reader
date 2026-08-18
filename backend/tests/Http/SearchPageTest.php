@@ -118,6 +118,7 @@ final class SearchPageTest extends TestCase
             isFavorite: false,
             isKept: false,
             isViewed: false,
+            viewedAt: null,
             markedReadUntil: null,
         );
     }

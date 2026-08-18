@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Repository\EntryListRow;
+use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 
 /**
@@ -26,12 +27,15 @@ final readonly class EntryPage
      *                                  request value, or a page of MAX_LIMIT rows
      *                                  answered to `?limit=500` would look short
      *                                  and silently end the list
+     * @param EntryListSort      $sort  the order the rows came back in, so the
+     *                                  next cursor encodes the same instant the
+     *                                  keyset predicate will compare against
      *
      * @return array{entries: list<array<string, mixed>>, nextCursor: string|null}
      */
-    public static function of(array $rows, int $limit): array
+    public static function of(array $rows, int $limit, EntryListSort $sort): array
     {
-        return self::withMatchCount($rows, $limit, \count($rows));
+        return self::withMatchCount($rows, $limit, \count($rows), $sort);
     }
 
     /**
@@ -55,9 +59,9 @@ final readonly class EntryPage
      *
      * @return array{entries: list<array<string, mixed>>, nextCursor: string|null}
      */
-    public static function withMatchCount(array $rows, int $limit, int $matchCount): array
+    public static function withMatchCount(array $rows, int $limit, int $matchCount, EntryListSort $sort): array
     {
-        $nextCursor = $matchCount >= $limit ? self::cursorFromLastRow($rows) : null;
+        $nextCursor = $matchCount >= $limit ? self::cursorFromLastRow($rows, $sort) : null;
 
         return [
             'entries' => array_map(static fn ($r) => EntryJson::one($r), $rows),
@@ -66,7 +70,7 @@ final readonly class EntryPage
     }
 
     /** @param list<EntryListRow> $rows */
-    private static function cursorFromLastRow(array $rows): ?string
+    private static function cursorFromLastRow(array $rows, EntryListSort $sort): ?string
     {
         $last = $rows === [] ? null : $rows[array_key_last($rows)];
         // A full page of matches with every id dropped by hydration leaves no
@@ -78,11 +82,10 @@ final readonly class EntryPage
             return null;
         }
 
-        $entry = $last->entry;
-        $entryId = $entry->getId() ?? throw new \LogicException(
+        $entryId = $last->entry->getId() ?? throw new \LogicException(
             'An entry loaded from the database must have an id.',
         );
 
-        return EntryCursor::encode($entry->getEffectiveDate(), $entryId);
+        return EntryCursor::encode($sort->instantOf($last), $entryId);
     }
 }

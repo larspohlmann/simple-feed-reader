@@ -35,12 +35,12 @@ final readonly class EntryQuery
     public int $limit;
 
     /**
-     * @param int                                         $userId
-     * @param 'all'|'unread'|'favorites'|'kept'|'for-you' $view
-     * @param int|null                                    $subscriptionId
-     * @param int|null                                    $tagId
-     * @param EntryCursor|null                            $cursor
-     * @param int                                         $limit the size the client asked for
+     * @param int                                                  $userId
+     * @param 'all'|'unread'|'favorites'|'kept'|'viewed'|'for-you' $view
+     * @param int|null                                             $subscriptionId
+     * @param int|null                                             $tagId
+     * @param EntryCursor|null                                     $cursor
+     * @param int                                                  $limit the size the client asked for
      */
     public function __construct(
         public int $userId,

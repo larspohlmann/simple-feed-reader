@@ -43,12 +43,14 @@ export interface SubscriptionDto {
   unreadCount: number;
 }
 
-/** The sidebar bootstrap payload: the feed list plus the user-wide favourite and
- *  kept totals shown as badges on the Favorites/Kept nav items. */
+/** The sidebar bootstrap payload: the feed list plus the user-wide favourite,
+ *  kept and viewed totals shown as badges on the Favorites/Kept/Recently-read
+ *  nav items. */
 export interface SubscriptionsResponse {
   subscriptions: SubscriptionDto[];
   favoritesCount: number;
   keptCount: number;
+  viewedCount: number;
 }
 
 export interface EntryDto {
@@ -167,7 +169,7 @@ export type SubscribeResult =
   | { subscription: SubscriptionDto }
   | { candidates: FeedCandidate[]; scrapeFailureReason?: ScrapeFailureReason };
 
-export type EntryView = 'all' | 'unread' | 'favorites' | 'kept' | 'for-you';
+export type EntryView = 'all' | 'unread' | 'favorites' | 'kept' | 'viewed' | 'for-you';
 
 /** A resolved selection the entry list turns into query params. */
 export interface EntryQuery {

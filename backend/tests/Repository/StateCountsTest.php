@@ -12,7 +12,7 @@ use App\Entity\User;
 use App\Repository\EntryStateRepository;
 use App\Tests\DbTestCase;
 
-final class FavoriteKeptCountsTest extends DbTestCase
+final class StateCountsTest extends DbTestCase
 {
     private function repo(): EntryStateRepository
     {
@@ -31,7 +31,7 @@ final class FavoriteKeptCountsTest extends DbTestCase
         return $e;
     }
 
-    public function testCountsFavoriteAndKeptForSubscribedFeeds(): void
+    public function testCountsFavoriteKeptAndViewedForSubscribedFeeds(): void
     {
         $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $user = new User('u@example.com', $when);
@@ -53,16 +53,46 @@ final class FavoriteKeptCountsTest extends DbTestCase
         $both->setIsKept(true);
         $this->em->persist($both);
 
-        // Read-only state contributes to neither count.
+        // Opened, so it counts as viewed but neither favourite nor kept.
+        $viewed = new EntryState($user, $this->entry($feed, 'viewed'));
+        $viewed->markViewed($when);
+        $this->em->persist($viewed);
+
+        // Read-only state (a mark-all-read sweep, never opened) contributes to
+        // no count — least of all "viewed".
         $read = new EntryState($user, $this->entry($feed, 'read'));
-        $read->setIsRead(true);
+        $read->markRead($when);
         $this->em->persist($read);
 
         $this->em->flush();
 
-        $counts = $this->repo()->favoriteAndKeptCountsForUser((int) $user->getId());
+        $counts = $this->repo()->stateCountsForUser((int) $user->getId());
         self::assertSame(2, $counts['favorites']); // fav + both
         self::assertSame(2, $counts['kept']); // kept + both
+        self::assertSame(1, $counts['viewed']); // viewed only
+    }
+
+    public function testMarkingUnreadDropsAnEntryFromTheViewedCount(): void
+    {
+        $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        $user = new User('reader@example.com', $when);
+        $this->em->persist($user);
+        $feed = new Feed('https://example.com/f.xml');
+        $this->em->persist($feed);
+        $this->em->persist(new Subscription($user, $feed, $when));
+
+        $state = new EntryState($user, $this->entry($feed, 'opened'));
+        $state->markViewed($when);
+        $this->em->persist($state);
+        $this->em->flush();
+
+        self::assertSame(1, $this->repo()->stateCountsForUser((int) $user->getId())['viewed']);
+
+        // Unread clears "opened", so the viewed count falls back to zero.
+        $state->markUnread();
+        $this->em->flush();
+
+        self::assertSame(0, $this->repo()->stateCountsForUser((int) $user->getId())['viewed']);
     }
 
     public function testIgnoresStatesForFeedsTheUserNoLongerSubscribesTo(): void
@@ -78,12 +108,14 @@ final class FavoriteKeptCountsTest extends DbTestCase
         $orphan = new EntryState($user, $this->entry($feed, 'orphan'));
         $orphan->setIsFavorite(true);
         $orphan->setIsKept(true);
+        $orphan->markViewed($when);
         $this->em->persist($orphan);
         $this->em->flush();
 
-        $counts = $this->repo()->favoriteAndKeptCountsForUser((int) $user->getId());
+        $counts = $this->repo()->stateCountsForUser((int) $user->getId());
         self::assertSame(0, $counts['favorites']);
         self::assertSame(0, $counts['kept']);
+        self::assertSame(0, $counts['viewed']);
     }
 
     public function testCountsAreScopedToTheUser(): void
@@ -101,11 +133,13 @@ final class FavoriteKeptCountsTest extends DbTestCase
         $entry = $this->entry($feed, 'shared');
         $theirs = new EntryState($other, $entry);
         $theirs->setIsFavorite(true);
+        $theirs->markViewed($when);
         $this->em->persist($theirs);
         $this->em->flush();
 
-        $counts = $this->repo()->favoriteAndKeptCountsForUser((int) $mine->getId());
+        $counts = $this->repo()->stateCountsForUser((int) $mine->getId());
         self::assertSame(0, $counts['favorites']);
         self::assertSame(0, $counts['kept']);
+        self::assertSame(0, $counts['viewed']);
     }
 }

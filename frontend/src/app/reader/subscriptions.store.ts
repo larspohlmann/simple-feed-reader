@@ -1,6 +1,6 @@
 // src/app/reader/subscriptions.store.ts
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, WritableSignal, computed, inject, signal } from '@angular/core';
 import { Problem, parseProblem } from '../core/problem';
 import { ReaderApi } from './reader-api';
 import { TagsStore } from './tags.store';
@@ -81,6 +81,7 @@ export class SubscriptionsStore {
   readonly subscriptions = signal<SubscriptionDto[]>([]);
   readonly favoritesCount = signal(0);
   readonly keptCount = signal(0);
+  readonly viewedCount = signal(0);
   readonly loading = signal(false);
   readonly error = signal<Problem | null>(null);
 
@@ -101,6 +102,7 @@ export class SubscriptionsStore {
         this.subscriptions.set(r.subscriptions);
         this.favoritesCount.set(r.favoritesCount);
         this.keptCount.set(r.keptCount);
+        this.viewedCount.set(r.viewedCount);
         this.loading.set(false);
         this.resolved.set(true);
       },
@@ -115,11 +117,22 @@ export class SubscriptionsStore {
   /** Keep the sidebar favourite/kept badges live after a toggle without a reload;
    *  the next load() reconciles with the server. Clamped so it never goes negative. */
   bumpFavorites(by: number): void {
-    this.favoritesCount.update((n) => Math.max(0, n + by));
+    this.bumpCount(this.favoritesCount, by);
   }
 
   bumpKept(by: number): void {
-    this.keptCount.update((n) => Math.max(0, n + by));
+    this.bumpCount(this.keptCount, by);
+  }
+
+  /** Keep the Recently-read badge live after an article is opened, without a
+   *  reload; the next load() reconciles with the server. The viewed flag is
+   *  one-way, so this only ever grows, but it is clamped for symmetry. */
+  bumpViewed(by: number): void {
+    this.bumpCount(this.viewedCount, by);
+  }
+
+  private bumpCount(count: WritableSignal<number>, by: number): void {
+    count.update((n) => Math.max(0, n + by));
   }
 
   decrementUnread(subscriptionId: number, by = 1): void {

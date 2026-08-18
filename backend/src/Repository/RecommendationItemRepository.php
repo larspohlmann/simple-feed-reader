@@ -178,6 +178,9 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             isFavorite: (bool) ($row['esFavorite'] ?? false),
             isKept: (bool) ($row['esKept'] ?? false),
             isViewed: (bool) ($row['esViewed'] ?? false),
+            // The for-you feed ranks by score, never by view time, so its rows
+            // carry no viewedAt — nothing reads it on this path.
+            viewedAt: null,
             markedReadUntil: $markedReadUntil instanceof \DateTimeImmutable ? $markedReadUntil : null,
         );
 

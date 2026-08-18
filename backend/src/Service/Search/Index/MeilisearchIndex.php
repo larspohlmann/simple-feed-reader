@@ -224,7 +224,7 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
         // accepts verbatim as a plain filter string.
         return $filter . sprintf(
             ' AND (effectiveDate < %1$d OR (effectiveDate = %1$d AND id < %2$d))',
-            $search->cursor->effectiveDate->getTimestamp(),
+            $search->cursor->sortInstant->getTimestamp(),
             $search->cursor->id,
         );
     }

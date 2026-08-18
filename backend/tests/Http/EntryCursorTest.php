@@ -9,14 +9,14 @@ use PHPUnit\Framework\TestCase;
 
 final class EntryCursorTest extends TestCase
 {
-    public function testRoundTripsTheEffectiveDateAndId(): void
+    public function testRoundTripsTheSortInstantAndId(): void
     {
         $cursor = EntryCursor::decode(
             EntryCursor::encode(new \DateTimeImmutable('2026-08-14 12:00:00'), 42),
         );
 
         self::assertNotNull($cursor);
-        self::assertSame('2026-08-14 12:00:00', $cursor->effectiveDate->format('Y-m-d H:i:s'));
+        self::assertSame('2026-08-14 12:00:00', $cursor->sortInstant->format('Y-m-d H:i:s'));
         self::assertSame(42, $cursor->id);
     }
 

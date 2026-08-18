@@ -25,6 +25,7 @@ import { ReaderShellComponent } from './reader-shell.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
 import { ListScrollMemory } from './list-scroll-memory';
 import { EntryDto } from './models';
+import { SubscriptionsStore } from './subscriptions.store';
 import { Selection } from './query';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { headerHiddenAtRest } from './header-scroll';
@@ -1767,6 +1768,96 @@ describe('ReaderShellComponent', () => {
       f.componentInstance.sidebarOrganising.set(true);
       f.componentInstance.setSidebarOpen(false);
       expect(f.componentInstance.sidebarOrganising()).toBe(false);
+    });
+  });
+
+  describe('collapsing a row out of a saved view (#478)', () => {
+    // Boot the shell straight into a given view with one entry in a chosen state,
+    // draining the four requests every boot fires.
+    function bootInto(view: string, entryOverride: Partial<EntryDto>) {
+      qp.next(convertToParamMap({ view }));
+      const f = TestBed.createComponent(ReaderShellComponent);
+      f.detectChanges();
+      ctrl
+        .expectOne('https://api.test/api/subscriptions')
+        .flush({ ...subsBody, favoritesCount: 3, keptCount: 3, viewedCount: 3 });
+      ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [{ ...entry, ...entryOverride }], nextCursor: null });
+      ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
+        status: 'none',
+        batchesTotal: null,
+        batchesDone: 0,
+        error: null,
+        background: false,
+        streamedChars: 0,
+        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+      });
+      f.detectChanges();
+      return f;
+    }
+
+    function flushStatePatch() {
+      ctrl.expectOne((r) => r.url === 'https://api.test/api/entries/1/state').flush({ state: {} });
+    }
+
+    it('collapses an un-favourited row but keeps it in the data so the plan holds', () => {
+      const f = bootInto('favorites', { isFavorite: true });
+      f.componentInstance.onFavorite(f.componentInstance.entries.entries()[0]);
+      flushStatePatch();
+
+      expect(f.componentInstance.leavingIds().has(1)).toBe(true);
+      // Kept in entries() on purpose: dropping it would re-flow the magazine plan.
+      expect(f.componentInstance.entries.entries().some((e) => e.id === 1)).toBe(true);
+    });
+
+    it('does NOT collapse the row when the flag is toggled outside its saved view', () => {
+      const f = bootInto('all', { isFavorite: true });
+      f.componentInstance.onFavorite(f.componentInstance.entries.entries()[0]);
+      flushStatePatch();
+
+      expect(f.componentInstance.leavingIds().has(1)).toBe(false);
+    });
+
+    it('collapses a Recently-read row on unread and drops the viewed badge', () => {
+      const f = bootInto('viewed', { isRead: true, isViewed: true });
+      const subs = TestBed.inject(SubscriptionsStore);
+      expect(subs.viewedCount()).toBe(3);
+
+      f.componentInstance.onToggleRead(f.componentInstance.entries.entries()[0]);
+      flushStatePatch();
+
+      expect(f.componentInstance.leavingIds().has(1)).toBe(true);
+      expect(subs.viewedCount()).toBe(2);
+    });
+
+    it('un-collapses the row and restores the badge when the PATCH fails', () => {
+      const f = bootInto('viewed', { isRead: true, isViewed: true });
+      const subs = TestBed.inject(SubscriptionsStore);
+
+      f.componentInstance.onToggleRead(f.componentInstance.entries.entries()[0]);
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/1/state')
+        .error(new ProgressEvent('fail'));
+
+      expect(f.componentInstance.leavingIds().has(1)).toBe(false);
+      expect(subs.viewedCount()).toBe(3);
+    });
+
+    it('clears the collapsed set when the selection changes', () => {
+      const f = bootInto('favorites', { isFavorite: true });
+      f.componentInstance.onFavorite(f.componentInstance.entries.entries()[0]);
+      flushStatePatch();
+      expect(f.componentInstance.leavingIds().has(1)).toBe(true);
+
+      qp.next(convertToParamMap({ view: 'kept' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+
+      expect(f.componentInstance.leavingIds().size).toBe(0);
     });
   });
 });

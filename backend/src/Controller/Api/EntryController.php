@@ -14,6 +14,7 @@ use App\Http\EntryPage;
 use App\Http\EntryStateJson;
 use App\Http\ReaderJson;
 use App\Repository\EntryListRepository;
+use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Reader\ArticleExtractorInterface;
@@ -67,9 +68,10 @@ final readonly class EntryController
             'unread' => 'unread',
             'favorites' => 'favorites',
             'kept' => 'kept',
+            'viewed' => 'viewed',
             'for-you' => 'for-you',
             default => throw new ValidationException(
-                ['view' => ['Unknown view. Use one of: all, unread, favorites, kept, for-you.']],
+                ['view' => ['Unknown view. Use one of: all, unread, favorites, kept, viewed, for-you.']],
             ),
         };
 
@@ -88,7 +90,11 @@ final readonly class EntryController
             limit: $limit,
         );
 
-        return new JsonResponse(EntryPage::of($this->entryList->listForUser($query), $query->limit));
+        return new JsonResponse(EntryPage::of(
+            $this->entryList->listForUser($query),
+            $query->limit,
+            EntryListSort::forView($view),
+        ));
     }
 
     #[Route('/{id}', name: 'api_entries_get', methods: ['GET'], requirements: ['id' => '\d+'])]
@@ -124,8 +130,11 @@ final readonly class EntryController
         $state = $this->entryStates->resolve($user, $row);
 
         if ($request->isRead !== null) {
-            $state->setIsRead($request->isRead);
-            $state->setReadAt($request->isRead ? $this->clock->now() : null);
+            // Unread also clears "opened" (EntryState::markUnread, #478), so the
+            // rule reaches every client, not just the web app.
+            $request->isRead
+                ? $state->markRead($this->clock->now())
+                : $state->markUnread();
         }
         if ($request->isFavorite !== null) {
             $state->setIsFavorite($request->isFavorite);

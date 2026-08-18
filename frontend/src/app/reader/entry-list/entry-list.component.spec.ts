@@ -1219,5 +1219,55 @@ describe('EntryListComponent', () => {
       await frames();
       expect(rowOpacities(f)).not.toContain('');
     });
+
+    // The central subscriber (#478): a saved-view row collapses in place, which
+    // moves the rows below it but fires no scroll — so without a trigger the
+    // dimming would freeze. Blank the marks the first pass wrote, then prove the
+    // event re-touches every row.
+    function blankOpacities(f: ComponentFixture<EntryListComponent>): HTMLElement {
+      const rows = (f.nativeElement as HTMLElement).querySelector('.rows') as HTMLElement;
+      for (const child of Array.from(rows.children) as HTMLElement[]) child.style.opacity = '';
+      return rows;
+    }
+
+    // View encapsulation rewrites keyframe names to `_ngcontent-xxx_<name>`, so
+    // the real event never starts with the authored name — mirror that here so
+    // the handler's matching is tested the way the browser fires it.
+    function animationEnd(name: string): AnimationEvent {
+      const event = new Event('animationend') as AnimationEvent;
+      Object.defineProperty(event, 'animationName', { value: `_ngcontent-ng-c123_${name}` });
+      return event;
+    }
+
+    it('recomputes focus when a row-collapse animation settles', async () => {
+      const f = mount({ entries: loaded });
+      await frames();
+      const rows = blankOpacities(f);
+      rows.dispatchEvent(animationEnd('row-leave'));
+      f.detectChanges();
+      await frames();
+      expect(rowOpacities(f)).not.toContain('');
+    });
+
+    it('ignores an unrelated animation ending in the scroller', async () => {
+      const f = mount({ entries: loaded });
+      await frames();
+      const rows = blankOpacities(f);
+      rows.dispatchEvent(animationEnd('refresh-spin'));
+      f.detectChanges();
+      await frames();
+      // Untouched: the marks stay blank, so no needless pass ran.
+      expect(rowOpacities(f)).toContain('');
+    });
+
+    it('recomputes focus on a view change, before the new page lands (#462)', async () => {
+      const f = mount({ entries: loaded });
+      await frames();
+      blankOpacities(f);
+      f.componentRef.setInput('selection', { kind: 'favorites', id: null, unread: false });
+      f.detectChanges();
+      await frames();
+      expect(rowOpacities(f)).not.toContain('');
+    });
   });
 });

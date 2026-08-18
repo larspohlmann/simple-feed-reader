@@ -148,7 +148,7 @@
       <div class="skeleton"></div>
     }
   </div>
-} @else if (entries().length === 0) {
+} @else if (visibleEntryCount() === 0) {
   <div class="empty-wrap" [class.after-banner]="!!error()">
     @if (topBlock(); as block) {
       <ng-container [ngTemplateOutlet]="block" />
@@ -175,6 +175,7 @@
     [style.transform]="revealTransform()"
     #rows
     (scroll)="onRowsScroll($event)"
+    (animationend)="onContentSettled($event)"
   >
     @if (topBlock(); as block) {
       <ng-container [ngTemplateOutlet]="block" />
@@ -183,94 +184,100 @@
       @if (b.kind === 'run-header') {
         <app-run-header [generatedAt]="b.generatedAt" />
       } @else {
-        <app-recommendation-strip [entry]="strippableEntry(b)">
-          @switch (b.kind) {
-            @case ('hero') {
-              <app-entry-hero
-                [entry]="entryOf(b)"
-                [tags]="tagsFor(entryOf(b).subscriptionId)"
-                (favorite)="favorite.emit($event)"
-                (keep)="keep.emit($event)"
-                (read)="read.emit($event)"
-                (open)="open.emit($event)"
-              />
-            }
-            @case ('wide') {
-              <app-entry-wide
-                [entry]="entryOf(b)"
-                [tags]="tagsFor(entryOf(b).subscriptionId)"
-                (favorite)="favorite.emit($event)"
-                (keep)="keep.emit($event)"
-                (read)="read.emit($event)"
-                (open)="open.emit($event)"
-              />
-            }
-            @case ('quote') {
-              <app-entry-quote
-                [entry]="entryOf(b)"
-                [tags]="tagsFor(entryOf(b).subscriptionId)"
-                (favorite)="favorite.emit($event)"
-                (keep)="keep.emit($event)"
-                (read)="read.emit($event)"
-                (open)="open.emit($event)"
-              />
-            }
-            @case ('split') {
-              <app-entry-split
-                [entry]="entryOf(b)"
-                [imageSide]="side(b)"
-                [tags]="tagsFor(entryOf(b).subscriptionId)"
-                (favorite)="favorite.emit($event)"
-                (keep)="keep.emit($event)"
-                (read)="read.emit($event)"
-                (open)="open.emit($event)"
-              />
-            }
-            @case ('kicker') {
-              <app-entry-kicker
-                [entry]="entryOf(b)"
-                [tags]="tagsFor(entryOf(b).subscriptionId)"
-                (favorite)="favorite.emit($event)"
-                (keep)="keep.emit($event)"
-                (read)="read.emit($event)"
-                (open)="open.emit($event)"
-              />
-            }
-            @case ('thumb') {
-              <app-entry-thumb
-                [entry]="entryOf(b)"
-                [tags]="tagsFor(entryOf(b).subscriptionId)"
-                (favorite)="favorite.emit($event)"
-                (keep)="keep.emit($event)"
-                (read)="read.emit($event)"
-                (open)="open.emit($event)"
-              />
-            }
-            @case ('compact') {
-              <app-entry-compact
-                [entry]="entryOf(b)"
-                [tags]="tagsFor(entryOf(b).subscriptionId)"
-                (favorite)="favorite.emit($event)"
-                (keep)="keep.emit($event)"
-                (read)="read.emit($event)"
-                (open)="open.emit($event)"
-              />
-            }
-            @case ('group') {
-              <app-source-group
-                [source]="grp(b).source"
-                [subscriptionId]="grp(b).subscriptionId"
-                [entries]="grp(b).entries"
-                [previewCount]="grp(b).previewCount"
-                [tags]="tagsFor(grp(b).subscriptionId)"
-                (favorite)="favorite.emit($event)"
-                (keep)="keep.emit($event)"
-                (read)="read.emit($event)"
-                (open)="open.emit($event)"
-              />
-            }
-          }
-        </app-recommendation-strip>
+        <!-- Same leave animation as the list layout: the slot collapses the
+             block's height once its content has faded, closing the gap (#478). -->
+        <div class="row-slot magazine-slot" [class.leaving]="isBlockLeaving(b)">
+          <div class="row-slot-inner">
+            <app-recommendation-strip [entry]="strippableEntry(b)">
+              @switch (b.kind) {
+                @case ('hero') {
+                  <app-entry-hero
+                    [entry]="entryOf(b)"
+                    [tags]="tagsFor(entryOf(b).subscriptionId)"
+                    (favorite)="favorite.emit($event)"
+                    (keep)="keep.emit($event)"
+                    (read)="read.emit($event)"
+                    (open)="open.emit($event)"
+                  />
+                }
+                @case ('wide') {
+                  <app-entry-wide
+                    [entry]="entryOf(b)"
+                    [tags]="tagsFor(entryOf(b).subscriptionId)"
+                    (favorite)="favorite.emit($event)"
+                    (keep)="keep.emit($event)"
+                    (read)="read.emit($event)"
+                    (open)="open.emit($event)"
+                  />
+                }
+                @case ('quote') {
+                  <app-entry-quote
+                    [entry]="entryOf(b)"
+                    [tags]="tagsFor(entryOf(b).subscriptionId)"
+                    (favorite)="favorite.emit($event)"
+                    (keep)="keep.emit($event)"
+                    (read)="read.emit($event)"
+                    (open)="open.emit($event)"
+                  />
+                }
+                @case ('split') {
+                  <app-entry-split
+                    [entry]="entryOf(b)"
+                    [imageSide]="side(b)"
+                    [tags]="tagsFor(entryOf(b).subscriptionId)"
+                    (favorite)="favorite.emit($event)"
+                    (keep)="keep.emit($event)"
+                    (read)="read.emit($event)"
+                    (open)="open.emit($event)"
+                  />
+                }
+                @case ('kicker') {
+                  <app-entry-kicker
+                    [entry]="entryOf(b)"
+                    [tags]="tagsFor(entryOf(b).subscriptionId)"
+                    (favorite)="favorite.emit($event)"
+                    (keep)="keep.emit($event)"
+                    (read)="read.emit($event)"
+                    (open)="open.emit($event)"
+                  />
+                }
+                @case ('thumb') {
+                  <app-entry-thumb
+                    [entry]="entryOf(b)"
+                    [tags]="tagsFor(entryOf(b).subscriptionId)"
+                    (favorite)="favorite.emit($event)"
+                    (keep)="keep.emit($event)"
+                    (read)="read.emit($event)"
+                    (open)="open.emit($event)"
+                  />
+                }
+                @case ('compact') {
+                  <app-entry-compact
+                    [entry]="entryOf(b)"
+                    [tags]="tagsFor(entryOf(b).subscriptionId)"
+                    (favorite)="favorite.emit($event)"
+                    (keep)="keep.emit($event)"
+                    (read)="read.emit($event)"
+                    (open)="open.emit($event)"
+                  />
+                }
+                @case ('group') {
+                  <app-source-group
+                    [source]="grp(b).source"
+                    [subscriptionId]="grp(b).subscriptionId"
+                    [entries]="grp(b).entries"
+                    [previewCount]="grp(b).previewCount"
+                    [tags]="tagsFor(grp(b).subscriptionId)"
+                    (favorite)="favorite.emit($event)"
+                    (keep)="keep.emit($event)"
+                    (read)="read.emit($event)"
+                    (open)="open.emit($event)"
+                  />
+                }
+              }
+            </app-recommendation-strip>
+          </div>
+        </div>
       }
     }
     @if (hasMore()) {
@@ -297,6 +304,7 @@
     [style.transform]="revealTransform()"
     #rows
     (scroll)="onRowsScroll($event)"
+    (animationend)="onContentSettled($event)"
   >
     @if (topBlock(); as block) {
       <ng-container [ngTemplateOutlet]="block" />
@@ -306,18 +314,24 @@
         <app-run-header [generatedAt]="group.generatedAt!" />
       }
       @for (e of group.entries; track e.id) {
-        <app-recommendation-strip [entry]="e">
-          <app-entry-row
-            [entry]="e"
-            [tags]="tagsFor(e.subscriptionId)"
-            [terms]="searchTerms()"
-            [class.open]="openEntryId() === e.id"
-            (favorite)="favorite.emit($event)"
-            (keep)="keep.emit($event)"
-            (read)="read.emit($event)"
-            (open)="open.emit($event)"
-          />
-        </app-recommendation-strip>
+        <!-- The slot collapses the gap when a row leaves; the inner box clips the
+             fading content so the collapse reads as the row closing up (#478). -->
+        <div class="row-slot" [class.leaving]="leavingIds().has(e.id)">
+          <div class="row-slot-inner">
+            <app-recommendation-strip [entry]="e">
+              <app-entry-row
+                [entry]="e"
+                [tags]="tagsFor(e.subscriptionId)"
+                [terms]="searchTerms()"
+                [class.open]="openEntryId() === e.id"
+                (favorite)="favorite.emit($event)"
+                (keep)="keep.emit($event)"
+                (read)="read.emit($event)"
+                (open)="open.emit($event)"
+              />
+            </app-recommendation-strip>
+          </div>
+        </div>
       }
     }
     @if (hasMore()) {

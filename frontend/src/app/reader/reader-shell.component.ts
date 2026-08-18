@@ -20,7 +20,7 @@ import { AuthService } from '../core/auth.service';
 import { ReaderApi } from './reader-api';
 import { SubscriptionsStore } from './subscriptions.store';
 import { TagsStore } from './tags.store';
-import { EntriesStore } from './entries.store';
+import { EntriesStore, localStatePatch } from './entries.store';
 import { RefreshService } from './refresh.service';
 import { RecommendationsService } from './recommendations.service';
 import { refreshFailureKey } from './refresh-message';
@@ -29,6 +29,7 @@ import { ReadingLayoutService } from './reading-layout.service';
 import { LayoutService } from './layout.service';
 import {
   RefreshScope,
+  Selection,
   markReadTarget,
   queryFromSelection,
   sameSelection,
@@ -284,6 +285,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     const s = this.selection();
     if (s.kind === 'favorites') return 'Favorites';
     if (s.kind === 'kept') return 'Kept';
+    if (s.kind === 'viewed') return 'Recently read';
     if (s.kind === 'for-you') return 'For you';
     if (s.kind === 'all') return 'All items';
     if (s.kind === 'tag') return this.selectedTag()?.name ?? 'Tag';
@@ -316,11 +318,22 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly markedOnOpen = new Set<number>();
   private readonly viewedOnOpen = new Set<number>();
 
+  /** Ids of entries removed from the saved view on screen. The entry list
+   *  renders these with the leaving class: the row fades, then its slot
+   *  collapses in place. The entry stays in the list data so the magazine plan
+   *  never re-flows around the hole (#478) — a reload drops it for real. */
+  readonly leavingIds = signal<ReadonlySet<number>>(new Set());
+
   constructor() {
-    // Reload the list whenever the selection (not the open entry) changes.
+    // Reload the list whenever the selection (not the open entry) changes. A new
+    // list has no removed rows, so clear the collapsed set with it — otherwise a
+    // recycled id would render an incoming row already collapsed.
     effect(() => {
       const q = queryFromSelection(this.selection());
-      untracked(() => this.entries.load(q));
+      untracked(() => {
+        this.leavingIds.set(new Set());
+        this.entries.load(q);
+      });
     });
     // Dismiss the mobile drawer once a new selection is chosen from it.
     effect(() => {
@@ -589,15 +602,16 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // Toggle favourite/kept and keep the sidebar badge in sync optimistically,
   // reverting the count if the PATCH fails (mirrors the unread-count handling).
+  // In the matching saved view the row also leaves — patchInList owns that.
   onFavorite = (e: EntryDto): void => {
     const delta = e.isFavorite ? -1 : 1;
     this.subs.bumpFavorites(delta);
-    this.patchOpen(e, { isFavorite: !e.isFavorite }, () => this.subs.bumpFavorites(-delta));
+    this.patchInList(e, { isFavorite: !e.isFavorite }, () => this.subs.bumpFavorites(-delta));
   };
   onKeep = (e: EntryDto): void => {
     const delta = e.isKept ? -1 : 1;
     this.subs.bumpKept(delta);
-    this.patchOpen(e, { isKept: !e.isKept }, () => this.subs.bumpKept(-delta));
+    this.patchInList(e, { isKept: !e.isKept }, () => this.subs.bumpKept(-delta));
   };
   onToggleRead = (e: EntryDto): void => this.setRead(e, !e.isRead);
 
@@ -612,19 +626,78 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     // fails, so the sidebar count never desyncs from the entry's rolled-back flag.
     if (read) this.subs.decrementUnread(e.subscriptionId);
     else this.subs.incrementUnread(e.subscriptionId);
-    this.patchOpen(e, { isRead: read }, () => {
+    // Unread also clears "opened" (mirrors EntryState::markUnread): drop the
+    // Recently-read badge and let a later reopen re-mark it. The row itself
+    // leaves through patchInList, the one place that owns saved-view removal.
+    const leftOpened = !read && e.isViewed;
+    if (leftOpened) {
+      this.subs.bumpViewed(-1);
+      this.viewedOnOpen.delete(e.id);
+      this.markedOnOpen.delete(e.id);
+    }
+    this.patchInList(e, { isRead: read }, () => {
       if (read) this.subs.incrementUnread(e.subscriptionId);
       else this.subs.decrementUnread(e.subscriptionId);
+      if (leftOpened) this.subs.bumpViewed(1);
     });
   }
 
-  /** The on-open patch: read + viewed in one request, with the unread badge
-   *  kept in sync (and reverted on failure) only for the read part — viewed
-   *  has no badge. */
+  /** patchOpen plus the single saved-view rule shared by Favorites, Kept and
+   *  Recently-read: when the patch removes the entry from the list on screen,
+   *  fade the row out and drop it, restoring it if the PATCH fails. `onError`
+   *  runs the caller's own badge revert first, then the row comes back. */
+  private patchInList(e: EntryDto, patch: EntryStatePatch, onError: () => void): void {
+    // leaveExcludedRow only flags the row as leaving (it stays in the list data),
+    // so patchOpen still finds it whichever runs first; onError fires only async,
+    // long after revertLeave is bound.
+    const revertLeave = this.leaveExcludedRow(e, patch);
+    this.patchOpen(e, patch, () => {
+      onError();
+      revertLeave();
+    });
+  }
+
+  /** If `patch` drops `e` out of the saved view on screen, play the leave
+   *  animation and remove the row; otherwise a no-op. Reads list membership
+   *  through the same coupling the store applies, so the two never disagree. */
+  private leaveExcludedRow(e: EntryDto, patch: EntryStatePatch): () => void {
+    const flag = savedViewMembership(this.selection().kind);
+    if (flag === null) return () => undefined;
+    const after = localStatePatch(patch);
+    const stillMember = (after[flag] ?? e[flag]) === true;
+    if (stillMember) return () => undefined;
+    return this.leaveList(e);
+  }
+
+  /** Collapse a row out of the list (entry-list `.row-slot.leaving`): the row
+   *  fades, then its slot collapses in place. The entry is kept in the list data
+   *  on purpose — dropping it would re-flow the magazine plan around the gap —
+   *  so a reload is what finally clears it. Returns a revert that un-collapses
+   *  the row if the PATCH fails. */
+  private leaveList(e: EntryDto): () => void {
+    this.markLeaving(e.id, true);
+    return () => this.markLeaving(e.id, false);
+  }
+
+  private markLeaving(id: number, leaving: boolean): void {
+    this.leavingIds.update((cur) => {
+      const next = new Set(cur);
+      if (leaving) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  /** The on-open patch: read + viewed in one request. Both sidebar badges are
+   *  kept in sync optimistically and reverted together if the PATCH fails — the
+   *  unread count down for the read flag, the Recently-read count up for the
+   *  viewed flag. */
   private applyOpenedPatch(e: EntryDto, patch: EntryStatePatch): void {
     if (patch.isRead) this.subs.decrementUnread(e.subscriptionId);
+    if (patch.isViewed) this.subs.bumpViewed(1);
     this.patchOpen(e, patch, () => {
       if (patch.isRead) this.subs.incrementUnread(e.subscriptionId);
+      if (patch.isViewed) this.subs.bumpViewed(-1);
     });
   }
 
@@ -632,7 +705,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  entry was opened before; the flag is one-way, so an already-viewed
    *  entry is a no-op (this fires only after an on-open PATCH rolled back). */
   onOpenOriginal = (e: EntryDto): void => {
-    if (!e.isViewed) this.patchOpen(e, { isViewed: true });
+    if (e.isViewed) return;
+    this.subs.bumpViewed(1);
+    this.patchOpen(e, { isViewed: true }, () => this.subs.bumpViewed(-1));
   };
 
   /** Apply an entry-state change. Entries in the loaded list go through the
@@ -811,5 +886,22 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         { feedId: sub.feedId },
       );
     });
+  }
+}
+
+/** The entry flag a saved view filters on, or null for a list that shows every
+ *  entry regardless of state (All items, a tag, a feed, For you, search). When a
+ *  patch sets that flag false, the entry no longer belongs in the view and the
+ *  row leaves — one rule for Favorites, Kept and Recently-read alike. */
+function savedViewMembership(kind: Selection['kind']): 'isFavorite' | 'isKept' | 'isViewed' | null {
+  switch (kind) {
+    case 'favorites':
+      return 'isFavorite';
+    case 'kept':
+      return 'isKept';
+    case 'viewed':
+      return 'isViewed';
+    default:
+      return null;
   }
 }
