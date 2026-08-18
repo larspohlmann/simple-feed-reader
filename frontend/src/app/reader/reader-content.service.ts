@@ -16,15 +16,20 @@ export class ReaderContentService {
 
   load(entryId: number): Observable<ReaderContent> {
     return from(this.cache.get(entryId)).pipe(
-      switchMap((cached) =>
-        cached
-          ? of<ReaderContent>(cached)
-          : this.api.readerContent(entryId).pipe(
-              tap((c) => {
-                if (c.status === 'ok') void this.cache.put(entryId, c);
-              }),
-            ),
-      ),
+      switchMap((cached) => (cached ? of<ReaderContent>(cached) : this.fetchAndCache(entryId))),
+    );
+  }
+
+  /** Drop this entry's cached copy, then fetch and re-cache a fresh one. */
+  reload(entryId: number): Observable<ReaderContent> {
+    return from(this.cache.delete(entryId)).pipe(switchMap(() => this.fetchAndCache(entryId)));
+  }
+
+  private fetchAndCache(entryId: number): Observable<ReaderContent> {
+    return this.api.readerContent(entryId).pipe(
+      tap((c) => {
+        if (c.status === 'ok') void this.cache.put(entryId, c);
+      }),
     );
   }
 }
