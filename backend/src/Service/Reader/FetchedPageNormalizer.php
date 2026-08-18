@@ -21,6 +21,17 @@ namespace App\Service\Reader;
  *    propagation so far that subheadings, figures and even paragraphs fall
  *    under the sibling-join threshold and are dropped. Collapsing the chains
  *    lets the scores reach the real article container.
+ *  - Icon-font glyphs sit in a Private Use Area code point selected by a CSS
+ *    class. The sanitizer strips the class, so the glyph loses its font and the
+ *    browser paints a tofu box (taz's pull-quote mark is the case, U+E80F).
+ *    The dead code points are removed here, along with the now-empty element
+ *    that held them.
+ *  - An inline <script> whose JavaScript builds an HTML string ('<div>…</div>',
+ *    a paywall or banner injector) breaks libxml's HTML parser: it ends the
+ *    script at the embedded tag and spills the rest of the code into the body
+ *    as text, past the reach of the sanitizer's element-level script removal.
+ *    <script> and <style> blocks are stripped from the raw source first, where
+ *    the real </script> still bounds them.
  *
  * Never throws: a page this step cannot process is returned unchanged, and
  * extraction proceeds exactly as it would have without normalization.
@@ -30,12 +41,28 @@ final readonly class FetchedPageNormalizer
     /** Class-name fragments that mark an element as visible to screen readers only. */
     private const string HIDDEN_CLASS_PATTERN = '/visually-?hidden|sr-only|screen-reader/i';
 
+    /** Whole <script>/<style> blocks — matched to the first real close tag, the
+     *  same boundary a browser uses, so an HTML string inside the code goes too. */
+    private const string SCRIPT_OR_STYLE_PATTERN = '#<(script|style)\b[^>]*>.*?</\1\s*>#is';
+
+    /**
+     * Private Use Area code points across the three planes — icon-font glyphs
+     * with no meaning of their own once the selecting class is gone.
+     */
+    private const string PRIVATE_USE_PATTERN = '/[\x{E000}-\x{F8FF}\x{F0000}-\x{FFFFD}\x{100000}-\x{10FFFD}]/u';
+
+    /** Elements that carry content without text, so an empty one still counts. */
+    private const array EMBEDDED_TAGS = [
+        'img', 'picture', 'source', 'svg', 'video', 'audio', 'iframe', 'br', 'hr', 'input',
+    ];
+
     public function __construct(private LazyImageSources $lazyImages)
     {
     }
 
     public function normalize(string $html): string
     {
+        $html = $this->removeScriptAndStyleBlocks($html);
         $document = $this->parse($html);
         if ($document === null) {
             return $html;
@@ -43,11 +70,17 @@ final readonly class FetchedPageNormalizer
 
         $this->lazyImages->resolveIn($document);
         $this->removeScreenReaderOnlyElements($document);
+        $this->removeOrphanIconGlyphs($document);
         $this->unwrapSingleChildDivs($document);
 
         $normalized = $document->saveHTML();
 
         return $normalized === false ? $html : $normalized;
+    }
+
+    private function removeScriptAndStyleBlocks(string $html): string
+    {
+        return preg_replace(self::SCRIPT_OR_STYLE_PATTERN, '', $html) ?? $html;
     }
 
     private function parse(string $html): ?\DOMDocument
@@ -80,6 +113,64 @@ final readonly class FetchedPageNormalizer
                 $element->parentNode->removeChild($element);
             }
         }
+    }
+
+    private function removeOrphanIconGlyphs(\DOMDocument $document): void
+    {
+        $xpath = new \DOMXPath($document);
+        $emptiedHolders = [];
+        foreach (iterator_to_array($xpath->query('//text()') ?: []) as $node) {
+            if (!$node instanceof \DOMText) {
+                continue;
+            }
+            $text = $node->nodeValue;
+            if ($text === null) {
+                continue;
+            }
+            $withoutGlyphs = preg_replace(self::PRIVATE_USE_PATTERN, '', $text);
+            if ($withoutGlyphs === null || $withoutGlyphs === $text) {
+                continue;
+            }
+            $node->nodeValue = $withoutGlyphs;
+            if ($node->parentNode instanceof \DOMElement) {
+                $emptiedHolders[] = $node->parentNode;
+            }
+        }
+        foreach ($emptiedHolders as $holder) {
+            $this->pruneWhileEmpty($holder);
+        }
+    }
+
+    /**
+     * Drop an element the glyph strip left empty, then walk up dropping each
+     * ancestor the removal in turn empties — a pull-quote's icon <span> and the
+     * <p> that held nothing else both go.
+     */
+    private function pruneWhileEmpty(\DOMElement $element): void
+    {
+        while (
+            $element->parentNode !== null
+            && trim($element->textContent) === ''
+            && !$this->holdsEmbeddedContent($element)
+        ) {
+            $parent = $element->parentNode;
+            $parent->removeChild($element);
+            if (!$parent instanceof \DOMElement) {
+                return;
+            }
+            $element = $parent;
+        }
+    }
+
+    private function holdsEmbeddedContent(\DOMElement $element): bool
+    {
+        foreach ($element->getElementsByTagName('*') as $descendant) {
+            if (in_array($descendant->nodeName, self::EMBEDDED_TAGS, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function unwrapSingleChildDivs(\DOMDocument $document): void

@@ -48,6 +48,7 @@ import {
 } from '../reader-gestures';
 import { relativeTime } from '../format';
 import { markLeadParagraph } from '../lead-paragraph';
+import { markInsetCards } from '../reader-cards';
 import { estimateReadingMinutes } from '../reading-time';
 import { selectionQueryParams } from '../query';
 
@@ -319,6 +320,7 @@ export class ReaderViewComponent {
           }
         }
         markLeadParagraph(host);
+        markInsetCards(host);
         this.buildToc(host);
         this.scheduleFocus();
         this.measureScrollRange();

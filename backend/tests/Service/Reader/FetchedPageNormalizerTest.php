@@ -109,6 +109,87 @@ final class FetchedPageNormalizerTest extends TestCase
         self::assertStringContainsString('Grüße from Köln', html_entity_decode($normalized));
     }
 
+    public function testRemovesAnOrphanIconGlyphAndPrunesTheHoldersItEmpties(): void
+    {
+        // U+E80F is an icon-font glyph the sanitizer's class strip would orphan.
+        // It sits in a <span>, in a <p>, in a <div> that holds nothing else:
+        // stripping it empties all three, which are pruned from the inside out.
+        // A plain paragraph precedes the glyph, so a scan that stopped at the
+        // first glyph-free node (rather than skipping it) would leave the glyph
+        // behind. The <p> keeps whitespace around the glyph span, so an
+        // untrimmed emptiness check would leave the blank <p> in place. The
+        // surrounding paragraphs must stay.
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><section><p>Intro paragraph.</p>'
+            . "<div><p> <span>\u{E80F}</span> </p></div>"
+            . '<p>Quote body</p></section></body></html>';
+
+        $normalized = $this->normalizer->normalize($html);
+
+        self::assertStringNotContainsString("\u{E80F}", $normalized);
+        self::assertStringNotContainsString('<span>', $normalized);
+        self::assertStringNotContainsString('<div>', $normalized);
+        self::assertDoesNotMatchRegularExpression('/<p>\s*<\/p>/', $normalized);
+        self::assertStringContainsString('Intro paragraph.', $normalized);
+        self::assertStringContainsString('Quote body', $normalized);
+    }
+
+    public function testKeepsAnEmptiedHolderThatStillCarriesAnImage(): void
+    {
+        // Stripping the glyph empties the <span> of text, but its <img> makes it
+        // meaningful, so the holder must survive.
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = "<html><body><span>\u{E80F}"
+            . '<img src="https://images.example.com/a.png" alt=""></span></body></html>';
+
+        $normalized = $this->normalizer->normalize($html);
+
+        self::assertStringNotContainsString("\u{E80F}", $normalized);
+        self::assertStringContainsString('images.example.com/a.png', $normalized);
+        self::assertStringContainsString('<img', $normalized);
+    }
+
+    public function testStripsAGlyphButKeepsTheTextAroundIt(): void
+    {
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = "<html><body><p>Before\u{E80F}After</p></body></html>";
+
+        $normalized = $this->normalizer->normalize($html);
+
+        self::assertStringNotContainsString("\u{E80F}", $normalized);
+        self::assertStringContainsString('BeforeAfter', html_entity_decode($normalized));
+    }
+
+    public function testStripsAnInlineScriptThatBuildsAnHtmlString(): void
+    {
+        // libxml splits this script at the <div> inside the JS string and spills
+        // the tail into the body as visible text (#472 follow-up). Removed from
+        // the raw source — bounded by the real </script> — it cannot leak.
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><p>Real body.</p>'
+            . '<script>var banner = \'<div class="ad">Buy now</div>\';'
+            . ' document.currentScript.insertAdjacentHTML("beforebegin", banner);</script>'
+            . '</body></html>';
+
+        $normalized = $this->normalizer->normalize($html);
+
+        self::assertStringNotContainsString('currentScript', $normalized);
+        self::assertStringNotContainsString('insertAdjacentHTML', $normalized);
+        self::assertStringNotContainsString('Buy now', $normalized);
+        self::assertStringContainsString('Real body.', $normalized);
+    }
+
+    public function testStripsAStyleBlock(): void
+    {
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><style>.ad{color:red}</style><p>Body</p></body></html>';
+
+        $normalized = $this->normalizer->normalize($html);
+
+        self::assertStringNotContainsString('color:red', $normalized);
+        self::assertStringContainsString('Body', $normalized);
+    }
+
     public function testRestoresTheSourceOfALazyLoadedImage(): void
     {
         // The fixture is the input under test, so it keeps its `lang`-less

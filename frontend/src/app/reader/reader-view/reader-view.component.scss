@@ -538,6 +538,28 @@ article {
   margin-bottom: 0;
 }
 
+/* Publisher inserts — a series teaser, a support appeal, a side note — that the
+   source page boxes off from the running text. Detected in the post-render pass
+   (reader-cards.ts) and given the same quiet-card surface as a blockquote, so an
+   aside reads as an aside and not as the next paragraph. */
+.content ::ng-deep .reader-card {
+  margin: var(--space-5) 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+
+/* The card supplies the outer rhythm; its first and last blocks must not add
+   their own, or the padding looks lopsided. */
+.content ::ng-deep .reader-card > :first-child {
+  margin-top: 0;
+}
+
+.content ::ng-deep .reader-card > :last-child {
+  margin-bottom: 0;
+}
+
 /* Tables arrive unstyled from the sanitizer; give them the article's rhythm
    and let a wide one scroll inside the column instead of stretching it. */
 .content ::ng-deep table {
