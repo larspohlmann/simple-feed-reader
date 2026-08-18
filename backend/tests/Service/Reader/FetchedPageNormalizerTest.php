@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\FetchedPageNormalizer;
+use App\Service\Reader\LazyImageSources;
 use PHPUnit\Framework\TestCase;
 
 final class FetchedPageNormalizerTest extends TestCase
@@ -13,7 +14,7 @@ final class FetchedPageNormalizerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->normalizer = new FetchedPageNormalizer();
+        $this->normalizer = new FetchedPageNormalizer(new LazyImageSources());
     }
 
     public function testCollapsesSingleChildDivChains(): void
@@ -106,5 +107,19 @@ final class FetchedPageNormalizerTest extends TestCase
         // The DOM round-trip encodes non-ASCII as entities; the decoded text
         // must be intact. html_entity_decode covers both representations.
         self::assertStringContainsString('Grüße from Köln', html_entity_decode($normalized));
+    }
+
+    public function testRestoresTheSourceOfALazyLoadedImage(): void
+    {
+        // The fixture is the input under test, so it keeps its `lang`-less
+        // <html> instead of being edited to please the IDE.
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><figure><img src="data:image/gif;base64,R0lGOD"'
+            . ' data-lazy-src="https://images.example.com/photo.jpg"></figure></body></html>';
+
+        $normalized = $this->normalizer->normalize($html);
+
+        self::assertStringContainsString('<img src="https://images.example.com/photo.jpg"', $normalized);
+        self::assertStringNotContainsString('data:image', $normalized);
     }
 }
