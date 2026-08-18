@@ -232,7 +232,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertSame('validation_error', $body['type']); // uniform with every other invalid field
         self::assertIsArray($body['errors']);
         self::assertSame(
-            ['view' => ['Unknown view. Use one of: all, unread, favorites, kept, for-you.']],
+            ['view' => ['Unknown view. Use one of: all, unread, favorites, kept, viewed, for-you.']],
             $body['errors'],
         );
     }
@@ -243,10 +243,50 @@ final class EntryControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('e-view-all@example.com');
         $this->seedFeedWithEntries($user, 1);
 
-        foreach (['all', 'unread', 'favorites', 'kept', 'for-you'] as $view) {
+        foreach (['all', 'unread', 'favorites', 'kept', 'viewed', 'for-you'] as $view) {
             $client->request('GET', "/api/entries?view=$view", server: $headers);
             self::assertResponseIsSuccessful("view=$view should be accepted");
         }
+    }
+
+    public function testMarkingAnEntryUnreadClearsItsViewedFlag(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-unview@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed(), 'guid' => 'g1']);
+        self::assertInstanceOf(Entry::class, $entry);
+        $id = $entry->getId();
+
+        // Opening the entry marks it read and viewed.
+        $client->request(
+            'PATCH',
+            "/api/entries/$id/state",
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['isRead' => true, 'isViewed' => true], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseIsSuccessful();
+        $client->request('GET', '/api/entries?view=viewed', server: $headers);
+        $viewed = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($viewed);
+        self::assertIsArray($viewed['entries']);
+        self::assertCount(1, $viewed['entries'], 'The opened entry belongs in the viewed list.');
+
+        // Marking it unread must drop it back out of the viewed list.
+        $client->request(
+            'PATCH',
+            "/api/entries/$id/state",
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['isRead' => false], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseIsSuccessful();
+        $client->request('GET', '/api/entries?view=viewed', server: $headers);
+        $afterUnread = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($afterUnread);
+        self::assertIsArray($afterUnread['entries']);
+        self::assertCount(0, $afterUnread['entries'], 'Marking unread clears the viewed flag (#478).');
     }
 
     public function testForYouViewOmitsBothDebugAnnotationsWhenDebugIsOff(): void

@@ -37,18 +37,19 @@ class EntryListRepository extends ServiceEntityRepository
     }
 
     /**
-     * Entries in feeds the caller subscribes to, sorted by effectiveDate DESC
-     * (the entry's list-sort instant — see EntryEffectiveDate), then id DESC
-     * as the tiebreaker a whole refresh run's worth of tied dates needs.
-     * Keyset-paginated on (effectiveDate, id). LEFT JOINs the caller's
-     * EntryState and folds Subscription.markedReadUntil into an effective
-     * isRead. `view` narrows to unread/favorites/kept.
+     * Entries in feeds the caller subscribes to, sorted newest first and
+     * keyset-paginated on (sortInstant, id) — the sort instant is the entry's
+     * effectiveDate for every view but "viewed", which is a reading history and
+     * orders by EntryState.viewedAt instead (see EntryListSort). LEFT JOINs the
+     * caller's EntryState and folds Subscription.markedReadUntil into an
+     * effective isRead. `view` narrows to unread/favorites/kept/viewed.
      *
      * @return list<EntryListRow>
      */
     public function listForUser(EntryQuery $query): array
     {
-        $qb = $this->newestFirst($this->rowQueryBuilder($query->userId))
+        $sort = EntryListSort::forView($query->view);
+        $qb = $this->orderedBy($this->rowQueryBuilder($query->userId), $sort)
             ->setMaxResults($query->limit);
 
         if ($query->subscriptionId !== null) {
@@ -64,7 +65,7 @@ class EntryListRepository extends ServiceEntityRepository
         }
 
         $this->applyView($qb, $query->view);
-        $this->applyCursor($qb, $query->cursor);
+        $this->applyCursor($qb, $query->cursor, $sort);
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();
@@ -86,7 +87,9 @@ class EntryListRepository extends ServiceEntityRepository
             ->setMaxResults($query->limit);
 
         $this->applyTerms($qb, $query->terms);
-        $this->applyCursor($qb, $query->cursor);
+        // Search ranks by publish instant like the default list, never by view
+        // time, so its cursor predicate is the effectiveDate one.
+        $this->applyCursor($qb, $query->cursor, EntryListSort::PublishedDate);
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();
@@ -162,16 +165,26 @@ class EntryListRepository extends ServiceEntityRepository
     }
 
     /**
-     * The newest-first order every entry list shares: effectiveDate DESC,
-     * then id DESC as the tiebreaker a whole refresh run's worth of tied
-     * dates needs. This is the tiebreak the keyset cursor in applyCursor()
-     * depends on — changing it here would silently desync every caller's
-     * pagination from its own cursor predicate.
+     * The publish-date order every list but the "viewed" history shares. Kept
+     * as its own name because search, the by-ids hydrator and the single-row
+     * lookup never reorder — only listForUser does, through orderedBy().
      */
     private function newestFirst(QueryBuilder $qb): QueryBuilder
     {
+        return $this->orderedBy($qb, EntryListSort::PublishedDate);
+    }
+
+    /**
+     * The sort's instant column DESC, then id DESC as the tiebreaker a whole
+     * refresh run's worth of tied instants needs. This is the tiebreak the
+     * keyset cursor in applyCursor() depends on — the two read the same
+     * EntryListSort, so the ORDER BY and the cursor predicate cannot name
+     * different columns and desync a caller's pagination from its own cursor.
+     */
+    private function orderedBy(QueryBuilder $qb, EntryListSort $sort): QueryBuilder
+    {
         return $qb
-            ->orderBy('e.effectiveDate', 'DESC')
+            ->orderBy($sort->orderColumn(), 'DESC')
             ->addOrderBy('e.id', 'DESC');
     }
 
@@ -196,6 +209,7 @@ class EntryListRepository extends ServiceEntityRepository
             ->addSelect('es.isFavorite AS esFavorite')
             ->addSelect('es.isKept AS esKept')
             ->addSelect('es.isViewed AS esViewed')
+            ->addSelect('es.viewedAt AS esViewedAt')
             ->addSelect('s.markedReadUntil AS markedReadUntil')
             ->setParameter('user', $userId);
     }
@@ -211,6 +225,9 @@ class EntryListRepository extends ServiceEntityRepository
                 break;
             case 'kept':
                 $qb->andWhere('es.isKept = :flag')->setParameter('flag', true, Types::BOOLEAN);
+                break;
+            case 'viewed':
+                $qb->andWhere('es.isViewed = :flag')->setParameter('flag', true, Types::BOOLEAN);
                 break;
             default:
                 // 'all' — no state filter.
@@ -309,19 +326,21 @@ class EntryListRepository extends ServiceEntityRepository
         );
     }
 
-    private function applyCursor(QueryBuilder $qb, ?EntryCursor $cursor): void
+    private function applyCursor(QueryBuilder $qb, ?EntryCursor $cursor, EntryListSort $sort): void
     {
         if ($cursor === null) {
             return;
         }
 
-        // Keyset "before" predicate for (effectiveDate, id) DESC: strictly
-        // earlier dates, or the same date with a strictly smaller id.
+        // Keyset "before" predicate for (sortInstant, id) DESC: strictly
+        // earlier instants, or the same instant with a strictly smaller id.
+        // The instant column is the one the ORDER BY uses, taken from the same
+        // EntryListSort, so the two can never disagree.
+        $column = $sort->orderColumn();
         $qb->andWhere(
-            '(e.effectiveDate < :curEffectiveDate '
-            . 'OR (e.effectiveDate = :curEffectiveDate AND e.id < :curId))',
+            \sprintf('(%1$s < :curInstant OR (%1$s = :curInstant AND e.id < :curId))', $column),
         )
-            ->setParameter('curEffectiveDate', $cursor->effectiveDate, Types::DATETIME_IMMUTABLE)
+            ->setParameter('curInstant', $cursor->sortInstant, Types::DATETIME_IMMUTABLE)
             ->setParameter('curId', $cursor->id);
     }
 
@@ -341,6 +360,9 @@ class EntryListRepository extends ServiceEntityRepository
             isFavorite: (bool) ($row['esFavorite'] ?? false),
             isKept: (bool) ($row['esKept'] ?? false),
             isViewed: (bool) ($row['esViewed'] ?? false),
+            viewedAt: $row['esViewedAt'] instanceof \DateTimeImmutable
+                ? $row['esViewedAt']
+                : null,
             markedReadUntil: $row['markedReadUntil'] instanceof \DateTimeImmutable
                 ? $row['markedReadUntil']
                 : null,

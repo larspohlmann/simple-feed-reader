@@ -343,6 +343,79 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   padding-top: 0;
 }
 
+/* One row's slot, in both layouts. In the flow it is transparent — a single-track
+   grid that holds the row. When the row leaves its saved view (un-favourited,
+   un-kept, or marked unread), `.leaving` runs `row-leave`: the content fades,
+   then the track collapses 1fr -> 0fr so the rows below slide up to close the
+   gap. Collapsing the grid track, not a max-height, needs no guess at the row's
+   height. `forwards` holds the collapsed state — the row stays in the data (so
+   the magazine plan keeps its shape), just at zero height, until a reload. */
+.row-slot {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.row-slot-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.row-slot.leaving {
+  pointer-events: none;
+  animation: row-leave 0.26s ease forwards;
+}
+
+@keyframes row-leave {
+  0% {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+
+  46% {
+    grid-template-rows: 1fr;
+    opacity: 0;
+  }
+
+  100% {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
+/* The magazine column spaces its rows with a flex `gap`, which a collapsed row
+   cannot shrink — the gaps above and below it would leave a double gap where it
+   was. Pulling the collapsed slot up by one gap closes it, so the neighbours
+   meet at a single normal gap. The list layout has no such gap (its rows carry
+   their own border), so it keeps the plain `row-leave`. */
+.magazine-slot.leaving {
+  animation:
+    row-leave 0.26s ease forwards,
+    magazine-gap-close 0.26s ease forwards;
+}
+
+/* The magazine variant reuses `row-leave` for the collapse and fade, and only
+   adds the gap close on top — held until the collapse starts (46%), so the two
+   move together. */
+@keyframes magazine-gap-close {
+  0%,
+  46% {
+    margin-top: 0;
+  }
+
+  100% {
+    margin-top: calc(-1 * var(--space-3));
+  }
+}
+
+/* Honour a reduced-motion preference: collapse to the removed state with no
+   fade or slide. `forwards` still holds it collapsed. */
+@media (prefers-reduced-motion: reduce) {
+  .row-slot.leaving,
+  .magazine-slot.leaving {
+    animation-duration: 1ms;
+  }
+}
+
 .rows.magazine {
   padding: var(--space-3);
   padding-top: $header-clear;

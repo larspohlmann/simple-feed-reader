@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Repository\EntryListSort;
 use App\Service\Search\EntrySearchResult;
 
 /**
@@ -25,7 +26,14 @@ final readonly class SearchPage
         // count($result->rows) once hydration has dropped an id the caller
         // may not see. Deciding "is there a next page" from the row count
         // would then read a full page of matches as a short one.
-        $page = EntryPage::withMatchCount($result->rows, $limit, $result->matchCount);
+        // Search always ranks by publish instant — it never reorders by view
+        // time — so its next cursor encodes the entry's effectiveDate.
+        $page = EntryPage::withMatchCount(
+            $result->rows,
+            $limit,
+            $result->matchCount,
+            EntryListSort::PublishedDate,
+        );
 
         return [...$page, 'matchedWords' => $result->matchedWords];
     }

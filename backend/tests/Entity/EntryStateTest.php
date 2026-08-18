@@ -44,6 +44,34 @@ final class EntryStateTest extends TestCase
         self::assertSame($firstOpen, $state->getViewedAt());
     }
 
+    public function testMarkUnreadClearsBothReadAndViewed(): void
+    {
+        $state = $this->makeState();
+        $when = new \DateTimeImmutable('2026-08-07T10:00:00Z');
+        $state->markRead($when);
+        $state->markViewed($when);
+
+        $state->markUnread();
+
+        self::assertFalse($state->isRead());
+        self::assertNull($state->getReadAt());
+        self::assertFalse($state->isViewed());
+        self::assertNull($state->getViewedAt());
+    }
+
+    public function testMarkReadSetsFlagAndTimestampWithoutTouchingViewed(): void
+    {
+        $state = $this->makeState();
+        $when = new \DateTimeImmutable('2026-08-07T10:00:00Z');
+
+        $state->markRead($when);
+
+        self::assertTrue($state->isRead());
+        self::assertSame($when, $state->getReadAt());
+        // A bare read (a mark-all-read sweep) never counts as "opened".
+        self::assertFalse($state->isViewed());
+    }
+
     private function makeState(): EntryState
     {
         $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));

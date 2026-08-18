@@ -66,6 +66,18 @@
         <span class="count">{{ keptCount() }}</span>
       }
     </a>
+    <a
+      class="nav"
+      [class.active]="selection().kind === 'viewed'"
+      [routerLink]="[]"
+      [queryParams]="selectionQueryParams({ view: 'viewed' })"
+      queryParamsHandling="merge"
+    >
+      <app-icon name="history" size="sm" /><span>{{ 'reader.viewed' | transloco }}</span>
+      @if (viewedCount() > 0) {
+        <span class="count">{{ viewedCount() }}</span>
+      }
+    </a>
     @if (ai.ready()) {
       <a
         class="nav for-you"

@@ -23,6 +23,14 @@ final readonly class EntryListRow
         public bool $isKept,
         public bool $isViewed,
         /**
+         * When the caller opened this entry in the reader, or null if never.
+         * The "viewed" list orders by it (see EntryListSort::ViewedAt); every
+         * other list ignores it. Non-null on every row the "viewed" view
+         * returns, because that view filters on `es.isViewed = true` and
+         * markViewed() stamps both together.
+         */
+        public ?\DateTimeImmutable $viewedAt,
+        /**
          * The subscription's mark-all-read watermark, already selected by the
          * row projection. `isRead` above has it folded in; it is carried
          * separately only so a row materialised from this projection can record

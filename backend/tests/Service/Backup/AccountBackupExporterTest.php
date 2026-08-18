@@ -167,7 +167,7 @@ final class AccountBackupExporterTest extends DbTestCase
         // No Subscription row exists for this feed — exactly the state
         // SubscriptionService::unsubscribe leaves behind, since it removes the
         // subscription without touching entry_state (see
-        // EntryStateRepository::favoriteAndKeptCountsForUser's own docblock).
+        // EntryStateRepository::stateCountsForUser's own docblock).
         $orphanFeed = new Feed('https://unsubscribed.example/feed.xml');
         $this->em->persist($orphanFeed);
         $orphanEntry = new Entry(

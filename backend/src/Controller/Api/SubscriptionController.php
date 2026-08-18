@@ -45,7 +45,7 @@ final readonly class SubscriptionController
     {
         $rows = $this->subscriptionRepo->findForUserWithTags((int) $user->getId());
         $counts = $this->entryStates->unreadCountsForUser((int) $user->getId());
-        $flags = $this->entryStates->favoriteAndKeptCountsForUser((int) $user->getId());
+        $flags = $this->entryStates->stateCountsForUser((int) $user->getId());
 
         return new JsonResponse([
             'subscriptions' => array_map(
@@ -54,6 +54,7 @@ final readonly class SubscriptionController
             ),
             'favoritesCount' => $flags['favorites'],
             'keptCount' => $flags['kept'],
+            'viewedCount' => $flags['viewed'],
         ]);
     }
 

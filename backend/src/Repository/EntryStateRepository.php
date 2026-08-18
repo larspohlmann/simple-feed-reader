@@ -54,7 +54,7 @@ class EntryStateRepository extends ServiceEntityRepository
      * state.
      *
      * Scoped to feeds the user still subscribes to — the same subscription
-     * gate favoriteAndKeptCountsForUser() applies. A state left behind by an
+     * gate stateCountsForUser() applies. A state left behind by an
      * unsubscribe (SubscriptionService::unsubscribe removes the subscription
      * without touching entry_state) names a feed and entry the export's feed
      * and entry lines never emit for this account, so including it here would
@@ -84,19 +84,21 @@ class EntryStateRepository extends ServiceEntityRepository
     }
 
     /**
-     * Total favourite and kept entries for the user, counting only entries whose
-     * feed the user still subscribes to — the same subscription gate the
-     * Favorites/Kept lists apply, so the sidebar badges match their lists (an
-     * orphaned state left behind by an unsubscribe is not counted).
+     * Total favourite, kept and viewed entries for the user, counting only
+     * entries whose feed the user still subscribes to — the same subscription
+     * gate the Favorites/Kept/Recently-read lists apply, so the sidebar badges
+     * match their lists (an orphaned state left behind by an unsubscribe is not
+     * counted).
      *
-     * @return array{favorites: int, kept: int}
+     * @return array{favorites: int, kept: int, viewed: int}
      */
-    public function favoriteAndKeptCountsForUser(int $userId): array
+    public function stateCountsForUser(int $userId): array
     {
-        /** @var array{favorites: int|string, kept: int|string} $row */
+        /** @var array{favorites: int|string, kept: int|string, viewed: int|string} $row */
         $row = $this->createQueryBuilder('es')
             ->select('SUM(CASE WHEN es.isFavorite = :true THEN 1 ELSE 0 END) AS favorites')
             ->addSelect('SUM(CASE WHEN es.isKept = :true THEN 1 ELSE 0 END) AS kept')
+            ->addSelect('SUM(CASE WHEN es.isViewed = :true THEN 1 ELSE 0 END) AS viewed')
             ->join('es.entry', 'e')
             ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
             ->andWhere('IDENTITY(es.user) = :user')
@@ -108,6 +110,7 @@ class EntryStateRepository extends ServiceEntityRepository
         return [
             'favorites' => (int) $row['favorites'],
             'kept' => (int) $row['kept'],
+            'viewed' => (int) $row['viewed'],
         ];
     }
 
@@ -120,7 +123,7 @@ class EntryStateRepository extends ServiceEntityRepository
      * Lives here rather than on SubscriptionRepository because its subject is
      * read state, not the subscription itself — it happens to be rooted on
      * Subscription with EntryState LEFT JOINed in (the opposite shape from
-     * favoriteAndKeptCountsForUser() above, which is why it cannot be built
+     * stateCountsForUser() above, which is why it cannot be built
      * with $this->createQueryBuilder() the way that method is).
      *
      * @return array<int, int>

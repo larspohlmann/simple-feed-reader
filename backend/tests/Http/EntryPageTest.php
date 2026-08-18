@@ -9,6 +9,7 @@ use App\Entity\Feed;
 use App\Http\EntryCursor;
 use App\Http\EntryPage;
 use App\Repository\EntryListRow;
+use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 use PHPUnit\Framework\TestCase;
 
@@ -16,7 +17,7 @@ final class EntryPageTest extends TestCase
 {
     public function testAShortPageOffersNoNextCursor(): void
     {
-        $page = EntryPage::of([], 50);
+        $page = EntryPage::of([], 50, EntryListSort::PublishedDate);
 
         self::assertSame([], $page['entries']);
         self::assertNull($page['nextCursor']);
@@ -32,13 +33,13 @@ final class EntryPageTest extends TestCase
         $newer = $this->rowForEntry(3, $newerDate);
         $older = $this->rowForEntry(1, $olderDate);
 
-        $page = EntryPage::of([$newer, $older], 2);
+        $page = EntryPage::of([$newer, $older], 2, EntryListSort::PublishedDate);
 
         self::assertNotNull($page['nextCursor']);
         $cursor = EntryCursor::decode($page['nextCursor']);
         self::assertNotNull($cursor);
-        $expectedEffectiveDate = $olderDate->format(\DateTimeInterface::ATOM);
-        self::assertSame($expectedEffectiveDate, $cursor->effectiveDate->format(\DateTimeInterface::ATOM));
+        $expectedSortInstant = $olderDate->format(\DateTimeInterface::ATOM);
+        self::assertSame($expectedSortInstant, $cursor->sortInstant->format(\DateTimeInterface::ATOM));
         self::assertSame(1, $cursor->id);
         // Pins the cursor to the LAST row specifically: a regression that swaps
         // array_key_last() for array_key_first() in EntryPage would produce the
@@ -53,7 +54,7 @@ final class EntryPageTest extends TestCase
         // row look like a short page and drop the cursor.
         $row = $this->rowForEntry(9, new \DateTimeImmutable('2026-07-12T00:00:00Z'));
 
-        $page = EntryPage::of([$row], 1);
+        $page = EntryPage::of([$row], 1, EntryListSort::PublishedDate);
 
         self::assertNotNull($page['nextCursor']);
         $cursor = EntryCursor::decode($page['nextCursor']);
@@ -78,7 +79,7 @@ final class EntryPageTest extends TestCase
             $rows[] = $this->rowForEntry($id, new \DateTimeImmutable('2026-07-12T00:00:00Z'));
         }
 
-        $page = EntryPage::of($rows, $query->limit);
+        $page = EntryPage::of($rows, $query->limit, EntryListSort::PublishedDate);
 
         self::assertNotNull(
             $page['nextCursor'],
@@ -96,7 +97,7 @@ final class EntryPageTest extends TestCase
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('An entry loaded from the database must have an id.');
 
-        EntryPage::of([$row], 1);
+        EntryPage::of([$row], 1, EntryListSort::PublishedDate);
     }
 
     /**
@@ -111,7 +112,7 @@ final class EntryPageTest extends TestCase
         $row = $this->rowForEntry(9, new \DateTimeImmutable('2026-07-12T00:00:00Z'));
 
         // The engine matched 2 ids (matchCount: 2) but only 1 hydrated.
-        $page = EntryPage::withMatchCount([$row], 2, 2);
+        $page = EntryPage::withMatchCount([$row], 2, 2, EntryListSort::PublishedDate);
 
         self::assertNotNull(
             $page['nextCursor'],
@@ -131,7 +132,7 @@ final class EntryPageTest extends TestCase
     {
         $row = $this->rowForEntry(9, new \DateTimeImmutable('2026-07-12T00:00:00Z'));
 
-        $page = EntryPage::withMatchCount([$row], 2, 1);
+        $page = EntryPage::withMatchCount([$row], 2, 1, EntryListSort::PublishedDate);
 
         self::assertNull($page['nextCursor']);
     }
@@ -144,7 +145,7 @@ final class EntryPageTest extends TestCase
      */
     public function testAFullMatchCountWithNoSurvivingRowsOffersNoNextCursor(): void
     {
-        $page = EntryPage::withMatchCount([], 2, 2);
+        $page = EntryPage::withMatchCount([], 2, 2, EntryListSort::PublishedDate);
 
         self::assertSame([], $page['entries']);
         self::assertNull($page['nextCursor']);
@@ -160,14 +161,49 @@ final class EntryPageTest extends TestCase
         $row = $this->rowForEntry(9, new \DateTimeImmutable('2026-07-12T00:00:00Z'));
 
         self::assertSame(
-            EntryPage::of([$row], 1),
-            EntryPage::withMatchCount([$row], 1, 1),
+            EntryPage::of([$row], 1, EntryListSort::PublishedDate),
+            EntryPage::withMatchCount([$row], 1, 1, EntryListSort::PublishedDate),
         );
     }
 
-    private function rowForEntry(int $id, \DateTimeImmutable $effectiveDate): EntryListRow
+    public function testTheViewedSortEncodesTheViewedInstantNotThePublishDate(): void
     {
-        $row = $this->rowForEntryWithoutId($effectiveDate);
+        // The Recently-read list orders by when the entry was opened, so its
+        // cursor must carry viewedAt — not the (older, unrelated) publish date.
+        $publishedAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        $viewedAt = new \DateTimeImmutable('2026-07-20T09:30:00Z');
+        $row = $this->rowForEntry(7, $publishedAt, $viewedAt);
+
+        $page = EntryPage::of([$row], 1, EntryListSort::ViewedAt);
+
+        self::assertNotNull($page['nextCursor']);
+        $cursor = EntryCursor::decode($page['nextCursor']);
+        self::assertNotNull($cursor);
+        self::assertSame(
+            $viewedAt->format(\DateTimeInterface::ATOM),
+            $cursor->sortInstant->format(\DateTimeInterface::ATOM),
+        );
+        self::assertSame(7, $cursor->id);
+    }
+
+    public function testTheViewedSortRejectsARowWithoutAViewedInstant(): void
+    {
+        // A row in the viewed list always carries viewedAt; a null here means the
+        // projection and the isViewed filter disagree, which must fail loudly.
+        $row = $this->rowForEntry(7, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('A viewed entry list row must carry a viewedAt instant.');
+
+        EntryPage::of([$row], 1, EntryListSort::ViewedAt);
+    }
+
+    private function rowForEntry(
+        int $id,
+        \DateTimeImmutable $effectiveDate,
+        ?\DateTimeImmutable $viewedAt = null,
+    ): EntryListRow {
+        $row = $this->rowForEntryWithoutId($effectiveDate, $viewedAt);
         // Entry has no id setter: the id only exists once Doctrine assigns it,
         // and this test builds the row by hand without booting the kernel.
         $reflection = new \ReflectionProperty(Entry::class, 'id');
@@ -176,8 +212,10 @@ final class EntryPageTest extends TestCase
         return $row;
     }
 
-    private function rowForEntryWithoutId(\DateTimeImmutable $effectiveDate): EntryListRow
-    {
+    private function rowForEntryWithoutId(
+        \DateTimeImmutable $effectiveDate,
+        ?\DateTimeImmutable $viewedAt = null,
+    ): EntryListRow {
         $entry = new Entry(
             new Feed('https://example.com/feed.xml'),
             'guid-no-id',
@@ -194,7 +232,8 @@ final class EntryPageTest extends TestCase
             isRead: false,
             isFavorite: false,
             isKept: false,
-            isViewed: false,
+            isViewed: $viewedAt !== null,
+            viewedAt: $viewedAt,
             markedReadUntil: null,
         );
     }

@@ -111,9 +111,12 @@ class EntryState
     }
 
     /**
-     * One-way by design (#307): "viewed" records that the user actively opened
-     * the entry at least once, so there is no setter and no way to clear it,
-     * and a repeat open keeps the first open's timestamp.
+     * "viewed" records that the user actively opened the entry (#307), so a
+     * repeat open keeps the first open's timestamp. Only opening sets it —
+     * never a mark-all-read sweep or a bare read toggle — which is what lets the
+     * recommender treat it as genuine engagement. markUnread() is the one way
+     * out again (#478): marking an entry unread means the user has not dealt
+     * with it, which contradicts having opened it.
      */
     public function markViewed(\DateTimeImmutable $when): void
     {
@@ -122,5 +125,26 @@ class EntryState
         }
         $this->isViewed = true;
         $this->viewedAt = $when;
+    }
+
+    public function markRead(\DateTimeImmutable $when): void
+    {
+        $this->isRead = true;
+        $this->readAt = $when;
+    }
+
+    /**
+     * Marking an entry unread also clears "opened": the two describe the same
+     * act from the user's side (#478), so unread returns the entry to the
+     * recommender's candidate pool and drops it from the "Recently read" list.
+     * A bare read toggle never set "opened" in the first place, so an entry the
+     * user only marked read — never opened — simply has nothing to clear here.
+     */
+    public function markUnread(): void
+    {
+        $this->isRead = false;
+        $this->readAt = null;
+        $this->isViewed = false;
+        $this->viewedAt = null;
     }
 }

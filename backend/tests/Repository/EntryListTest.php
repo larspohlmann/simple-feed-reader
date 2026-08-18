@@ -216,6 +216,65 @@ final class EntryListTest extends DbTestCase
         self::assertSame('kept', $kepts[0]->entry->getGuid());
     }
 
+    public function testViewedViewOrdersByViewTimeNotPublishDate(): void
+    {
+        // 'early' was published FIRST but opened LAST; 'late' the other way round.
+        // A publish-date sort would put 'late' on top — the viewed history must
+        // put 'early' on top, because that is the more recently opened one.
+        $early = $this->entryAt('early', '2026-07-01T00:00:00Z', '2026-07-10T00:00:00Z');
+        $late = $this->entryAt('late', '2026-07-01T00:00:00Z', '2026-07-20T00:00:00Z');
+        // 'plain' is never opened, so it must not appear in the viewed list.
+        $this->entryAt('plain', '2026-07-01T00:00:00Z', '2026-07-30T00:00:00Z');
+
+        $earlyState = new EntryState($this->user, $early);
+        $earlyState->markViewed(new \DateTimeImmutable('2026-08-05T09:00:00Z'));
+        $lateState = new EntryState($this->user, $late);
+        $lateState->markViewed(new \DateTimeImmutable('2026-08-01T09:00:00Z'));
+        $this->em->persist($earlyState);
+        $this->em->persist($lateState);
+        $this->em->flush();
+
+        $rows = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0, view: 'viewed'));
+
+        self::assertSame(['early', 'late'], array_map(
+            static fn ($row) => $row->entry->getGuid(),
+            $rows,
+        ));
+        self::assertEquals(new \DateTimeImmutable('2026-08-05T09:00:00Z'), $rows[0]->viewedAt);
+    }
+
+    public function testViewedViewKeysetPaginatesByViewTime(): void
+    {
+        $first = $this->entryAt('first', '2026-07-01T00:00:00Z', '2026-07-10T00:00:00Z');
+        $second = $this->entryAt('second', '2026-07-01T00:00:00Z', '2026-07-20T00:00:00Z');
+
+        $firstState = new EntryState($this->user, $first);
+        $firstState->markViewed(new \DateTimeImmutable('2026-08-05T09:00:00Z'));
+        $secondState = new EntryState($this->user, $second);
+        $secondState->markViewed(new \DateTimeImmutable('2026-08-01T09:00:00Z'));
+        $this->em->persist($firstState);
+        $this->em->persist($secondState);
+        $this->em->flush();
+
+        $page1 = $this->repo()->listForUser(
+            new EntryQuery($this->user->getId() ?? 0, view: 'viewed', limit: 1),
+        );
+        self::assertCount(1, $page1);
+        self::assertSame('first', $page1[0]->entry->getGuid());
+
+        // The cursor carries the last row's viewedAt — the instant the viewed
+        // view keyset compares against, not the entry's effectiveDate.
+        $cursor = new EntryCursor(
+            $page1[0]->viewedAt ?? throw new \LogicException('A viewed row must carry a viewedAt.'),
+            $page1[0]->entry->getId() ?? throw new \LogicException('A persisted entry must have an id.'),
+        );
+        $page2 = $this->repo()->listForUser(
+            new EntryQuery($this->user->getId() ?? 0, view: 'viewed', cursor: $cursor, limit: 1),
+        );
+        self::assertCount(1, $page2);
+        self::assertSame('second', $page2[0]->entry->getGuid());
+    }
+
     public function testTagFilter(): void
     {
         $otherFeed = new Feed('https://other.example.com/feed.xml');

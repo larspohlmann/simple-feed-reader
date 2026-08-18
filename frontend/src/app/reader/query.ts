@@ -4,7 +4,7 @@ import { EntryQuery, MarkReadScope } from './models';
 import { entryIdFromParam } from './slug';
 
 export interface Selection {
-  kind: 'all' | 'tag' | 'subscription' | 'favorites' | 'kept' | 'for-you' | 'search';
+  kind: 'all' | 'tag' | 'subscription' | 'favorites' | 'kept' | 'viewed' | 'for-you' | 'search';
   id: number | null;
   unread: boolean;
   /** Only a search carries one. Part of the list's identity, so it belongs to
@@ -213,7 +213,7 @@ export function selectionFromParams(p: ParamMap): {
   }
 
   let selection: Selection;
-  if (view === 'favorites' || view === 'kept' || view === 'for-you') {
+  if (view === 'favorites' || view === 'kept' || view === 'viewed' || view === 'for-you') {
     selection = { kind: view, id: null, unread: false };
   } else if (subscription != null) {
     selection = { kind: 'subscription', id: subscription, unread };
@@ -231,6 +231,8 @@ export function queryFromSelection(s: Selection): EntryQuery {
       return { view: 'favorites' };
     case 'kept':
       return { view: 'kept' };
+    case 'viewed':
+      return { view: 'viewed' };
     case 'for-you':
       return { view: 'for-you' };
     case 'tag':

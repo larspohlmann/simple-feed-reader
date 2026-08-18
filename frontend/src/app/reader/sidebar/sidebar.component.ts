@@ -73,6 +73,7 @@ export class SidebarComponent {
   readonly totalUnread = input.required<number>();
   readonly favoritesCount = input(0);
   readonly keptCount = input(0);
+  readonly viewedCount = input(0);
   readonly selection = input.required<Selection>();
   readonly loading = input(false);
   /** A search request is in flight — distinct from `loading` above, which is
