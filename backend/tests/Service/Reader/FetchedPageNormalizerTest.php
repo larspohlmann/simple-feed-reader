@@ -160,6 +160,36 @@ final class FetchedPageNormalizerTest extends TestCase
         self::assertStringContainsString('BeforeAfter', html_entity_decode($normalized));
     }
 
+    public function testStripsAnInlineScriptThatBuildsAnHtmlString(): void
+    {
+        // libxml splits this script at the <div> inside the JS string and spills
+        // the tail into the body as visible text (#472 follow-up). Removed from
+        // the raw source — bounded by the real </script> — it cannot leak.
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><p>Real body.</p>'
+            . '<script>var banner = \'<div class="ad">Buy now</div>\';'
+            . ' document.currentScript.insertAdjacentHTML("beforebegin", banner);</script>'
+            . '</body></html>';
+
+        $normalized = $this->normalizer->normalize($html);
+
+        self::assertStringNotContainsString('currentScript', $normalized);
+        self::assertStringNotContainsString('insertAdjacentHTML', $normalized);
+        self::assertStringNotContainsString('Buy now', $normalized);
+        self::assertStringContainsString('Real body.', $normalized);
+    }
+
+    public function testStripsAStyleBlock(): void
+    {
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><style>.ad{color:red}</style><p>Body</p></body></html>';
+
+        $normalized = $this->normalizer->normalize($html);
+
+        self::assertStringNotContainsString('color:red', $normalized);
+        self::assertStringContainsString('Body', $normalized);
+    }
+
     public function testRestoresTheSourceOfALazyLoadedImage(): void
     {
         // The fixture is the input under test, so it keeps its `lang`-less
