@@ -12,6 +12,10 @@ namespace App\Service\Reader;
  *    CSS classes. The sanitizer strips classes later, so once extracted the
  *    labels would render as visible text. They are removed here, while the
  *    class names still identify them.
+ *  - Lazy-loaded images carry a blank `data:` placeholder in `src` and the
+ *    real URL in a `data-*` attribute. Both are gone by the time the sanitizer
+ *    is done, so the reader showed an empty frame (#467). LazyImageSources
+ *    restores the source while the data attribute is still there.
  *  - Every paragraph, heading and image sits in its own deep chain of
  *    single-child <div> wrappers. The depth dilutes readability's score
  *    propagation so far that subheadings, figures and even paragraphs fall
@@ -26,6 +30,10 @@ final readonly class FetchedPageNormalizer
     /** Class-name fragments that mark an element as visible to screen readers only. */
     private const string HIDDEN_CLASS_PATTERN = '/visually-?hidden|sr-only|screen-reader/i';
 
+    public function __construct(private LazyImageSources $lazyImages)
+    {
+    }
+
     public function normalize(string $html): string
     {
         $document = $this->parse($html);
@@ -33,6 +41,7 @@ final readonly class FetchedPageNormalizer
             return $html;
         }
 
+        $this->lazyImages->resolveIn($document);
         $this->removeScreenReaderOnlyElements($document);
         $this->unwrapSingleChildDivs($document);
 

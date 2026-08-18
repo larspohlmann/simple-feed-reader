@@ -12,6 +12,7 @@ use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\ArticleExtractor;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
+use App\Service\Reader\LazyImageSources;
 use App\Service\Reader\LeadingTitleRemover;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -47,7 +48,7 @@ final class ArticleExtractorTest extends TestCase
 
         return new ArticleExtractor(
             $fetcher,
-            new FetchedPageNormalizer(),
+            new FetchedPageNormalizer(new LazyImageSources()),
             new LeadingTitleRemover(),
             new EntrySanitizer(),
         );
@@ -68,6 +69,23 @@ final class ArticleExtractorTest extends TestCase
         // The body already carries its own image, so no separate lead image is
         // emitted (it would duplicate the inline figure).
         self::assertNull($result->image);
+    }
+
+    public function testRestoresLazyLoadedImagesInsteadOfLeavingEmptyFrames(): void
+    {
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-lazy-images.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post');
+
+        self::assertTrue($result->ok);
+        // The lazy source is promoted, absolutised, and survives the sanitizer —
+        // the blank placeholder never reaches the client.
+        self::assertStringContainsString(
+            '<img src="https://site.test/img/photo.jpg"',
+            (string) $result->contentHtml,
+        );
+        self::assertStringNotContainsString('data:image', (string) $result->contentHtml);
     }
 
     public function testEmitsLeadImageWhenBodyHasNoImage(): void
@@ -112,7 +130,7 @@ final class ArticleExtractorTest extends TestCase
         );
         $extractor = new ArticleExtractor(
             $fetcher,
-            new FetchedPageNormalizer(),
+            new FetchedPageNormalizer(new LazyImageSources()),
             new LeadingTitleRemover(),
             new EntrySanitizer(),
         );
