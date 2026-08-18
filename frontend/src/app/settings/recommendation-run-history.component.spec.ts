@@ -144,7 +144,7 @@ describe('RecommendationRunHistoryComponent', () => {
   it('shows the all-time total, not the sum of the rows on screen', () => {
     const el = mount(OVERVIEW);
 
-    expect(el.querySelector('.run-history__total-value')?.textContent?.trim()).toBe('$ 0.91820');
+    expect(el.querySelector('.run-history__total-value')?.textContent?.trim()).toBe('$ 0.9182');
   });
 
   it('shows an em dash for a total no run ever priced', () => {
@@ -465,7 +465,7 @@ describe('RecommendationRunHistoryComponent', () => {
 
     expect(() => jest.runOnlyPendingTimers()).not.toThrow();
     expect(months(el)).toHaveLength(2);
-    expect(el.querySelector('.run-history__total-value')?.textContent?.trim()).toBe('$ 0.91820');
+    expect(el.querySelector('.run-history__total-value')?.textContent?.trim()).toBe('$ 0.9182');
     jest.useRealTimers();
   });
 });

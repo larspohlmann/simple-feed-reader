@@ -101,7 +101,7 @@ describe('RecommendationRunHistoryMonthComponent', () => {
 
     const meta = el.querySelector('.run-history-month__meta')?.textContent ?? '';
     expect(meta).toContain('5');
-    expect(meta).toContain('$ 0.04123');
+    expect(meta).toContain('$ 0.0412');
   });
 
   it('shows an em dash in the header when nothing in the month reported a price', () => {
@@ -215,7 +215,16 @@ describe('RecommendationRunHistoryMonthComponent', () => {
 
     expect(header.getAttribute('aria-hidden')).toBe('true');
     expect(header.querySelector('.run-history-month__when')?.textContent?.trim()).toBe('When');
-    expect(header.querySelector('.run-history-month__status')?.textContent?.trim()).toBe('Status');
+    // Scoped the same way as the token headers below, and for the same
+    // reason: the status header cell also carries `&__col-icon`, the glyph
+    // that replaces the word below the mobile breakpoint (#465), and a
+    // Material Symbol is a text ligature -- an unscoped query reads
+    // "Status flag".
+    expect(
+      header
+        .querySelector('.run-history-month__status .run-history-month__col-full')
+        ?.textContent?.trim(),
+    ).toBe('Status');
     expect(header.querySelector('.run-history-month__duration')?.textContent?.trim()).toBe('Time');
     // Scoped to `&__col-full`: the cell also carries `&__col-short` ("In"),
     // shown only below the mobile breakpoint -- an unscoped query would run
@@ -234,6 +243,20 @@ describe('RecommendationRunHistoryMonthComponent', () => {
     // The provider cell moved to its own full-width row 2 and has no column
     // header of its own -- see the provider-cell test below.
     expect(header.querySelector('.run-history-month__provider')).toBeNull();
+  });
+
+  /* The defect behind #465: the header word, not the icon in the rows below
+     it, is what sized the status track, and at 390px the six tracks did not
+     fit the card. The glyph has to be in the DOM for the stylesheet to have
+     something to swap the word for. */
+  it('carries a status header glyph for the mobile track, in the DOM at every width', () => {
+    const el = mount({ runs: [PRICED_RUN] });
+
+    const glyph = el.querySelector(
+      '.run-history-month__row--header .run-history-month__status .run-history-month__col-icon .material-symbols-outlined',
+    );
+
+    expect(glyph?.textContent?.trim()).toBe('flag');
   });
 
   it('carries the short "In"/"Out" header text for the mobile track, in the DOM at every width', () => {

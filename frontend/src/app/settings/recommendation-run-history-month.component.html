@@ -20,8 +20,17 @@
         <span class="run-history-month__when">
           {{ 'settings.ai.recommendations.historyColWhen' | transloco }}
         </span>
+        <!-- The header word is what sized this track, not the icon beneath it
+             (#465): `STATUS` needs ~44px, the icon ~20px, and those 24px are
+             what a 390px phone did not have. Same two-span technique as
+             `&__col-full`/`&__col-short` on the token columns below, reusing
+             that same `&__col-full` class so the word's hiding rule is
+             already written -- only the icon half is new. -->
         <span class="run-history-month__status">
-          {{ 'settings.ai.recommendations.historyColStatus' | transloco }}
+          <span class="run-history-month__col-full">
+            {{ 'settings.ai.recommendations.historyColStatus' | transloco }}
+          </span>
+          <app-icon class="run-history-month__col-icon" name="flag" size="sm" />
         </span>
         <span class="run-history-month__duration">
           {{ 'settings.ai.recommendations.historyColDuration' | transloco }}
