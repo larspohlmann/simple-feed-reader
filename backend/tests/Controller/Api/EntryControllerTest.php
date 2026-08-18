@@ -514,10 +514,11 @@ final class EntryControllerTest extends WebTestCase
         self::assertIsArray($body['state']);
         self::assertTrue($body['state']['isViewed']);
         self::assertNotNull($body['state']['viewedAt']);
-        self::assertFalse($body['state']['isRead']);
+        // Viewing reads the entry (#482 subset invariant, enforced on flush).
+        self::assertTrue($body['state']['isRead']);
     }
 
-    public function testPatchStateRejectsUnviewing(): void
+    public function testPatchStateUnviewingKeepsTheEntryRead(): void
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-unview@example.com');
@@ -527,21 +528,25 @@ final class EntryControllerTest extends WebTestCase
         $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
         self::assertNotNull($entryId);
 
+        // Viewing reads the entry (the subset invariant).
+        $viewed = $this->markViewed($client, $headers, (int) $entryId);
+        self::assertTrue($viewed['isViewed']);
+        self::assertTrue($viewed['isRead']);
+
+        // Un-ticking (#482) clears viewed but leaves the entry read — hiding from
+        // the unread list is sticky.
         $client->request(
             'PATCH',
             "/api/entries/$entryId/state",
             server: $headers + ['CONTENT_TYPE' => 'application/json'],
             content: '{"isViewed":false}',
         );
-
-        // The client type-switches on the problem type and the offending field,
-        // so a bare 422 is not the contract.
-        self::assertResponseStatusCodeSame(422);
+        self::assertResponseIsSuccessful();
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
-        self::assertSame('validation_error', $body['type']);
-        self::assertIsArray($body['errors']);
-        self::assertArrayHasKey('isViewed', $body['errors']);
+        self::assertIsArray($body['state']);
+        self::assertFalse($body['state']['isViewed']);
+        self::assertTrue($body['state']['isRead']);
     }
 
     public function testMarkingViewedKeepsAWatermarkReadEntryRead(): void
@@ -591,7 +596,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertSame(0, $this->unreadCountOf($client, $headers, (int) $sub->getId()));
     }
 
-    public function testMarkingViewedSeedsReadOnlyUpToTheWatermark(): void
+    public function testMarkingViewedReadsTheEntryEvenAboveTheWatermark(): void
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-viewed-boundary@example.com');
@@ -612,9 +617,11 @@ final class EntryControllerTest extends WebTestCase
 
         self::assertTrue($this->markViewed($client, $headers, $onTheWatermark)['isRead']);
 
+        // Above the watermark the sweep left it unread, but viewing reads it now
+        // (#482 subset invariant): viewed can never be true while read is false.
         $above = $this->markViewed($client, $headers, $aboveTheWatermark);
-        self::assertFalse($above['isRead']);
-        self::assertNull($above['readAt']);
+        self::assertTrue($above['isRead']);
+        self::assertNotNull($above['readAt']);
     }
 
     private function entryIdOf(Subscription $subscription, string $guid): int

@@ -1,6 +1,6 @@
 <p class="kicker">
   @if (showDot()) {
-    <span class="dot" [class.on]="!entry().isRead" aria-hidden="true"></span>
+    <span class="dot" [class.on]="entry().isRead" aria-hidden="true"></span>
   }
   @if (showSource()) {
     <app-favicon [url]="entry().faviconUrl" [size]="faviconSize()" />

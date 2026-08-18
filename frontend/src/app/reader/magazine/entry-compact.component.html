@@ -8,7 +8,7 @@
   (keydown.enter)="open.emit(entry())"
   (keydown.space)="$event.preventDefault(); open.emit(entry())"
 >
-  <span class="dot" [class.on]="!entry().isRead" aria-hidden="true"></span>
+  <span class="dot" [class.on]="entry().isRead" aria-hidden="true"></span>
   <div class="body">
     <app-entry-kicker-line [entry]="entry()" [showDot]="false" [showSource]="showSource()">
       <app-entry-actions

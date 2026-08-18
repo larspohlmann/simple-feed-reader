@@ -142,8 +142,12 @@ final readonly class EntryController
         if ($request->isKept !== null) {
             $state->setIsKept($request->isKept);
         }
-        if ($request->isViewed === true) {
-            $state->markViewed($this->clock->now());
+        if ($request->isViewed !== null) {
+            // markViewed sets only the viewed flag; ViewedImpliesReadListener
+            // adds the read flag on flush. clearViewed leaves the entry read.
+            $request->isViewed
+                ? $state->markViewed($this->clock->now())
+                : $state->clearViewed();
         }
 
         $this->em->flush();

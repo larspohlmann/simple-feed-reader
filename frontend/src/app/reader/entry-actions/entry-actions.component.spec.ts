@@ -102,13 +102,14 @@ describe('EntryActionsComponent', () => {
   });
 
   it('reports each action state through aria-pressed', () => {
-    const f = mount(entry({ isFavorite: true, isKept: false, isRead: true }));
+    // The third toggle is the tick: it reflects "viewed", not "read" (#482).
+    const f = mount(entry({ isFavorite: true, isKept: false, isViewed: true }));
     const pressed = buttons(f).map((b) => b.getAttribute('aria-pressed'));
     expect(pressed).toEqual(['true', 'false', 'true']);
   });
 
-  it('marks every active toggle the same way, the read one included', () => {
-    const f = mount(entry({ isFavorite: true, isKept: true, isRead: true }));
+  it('marks every active toggle the same way, the tick one included', () => {
+    const f = mount(entry({ isFavorite: true, isKept: true, isViewed: true }));
     const on = buttons(f).map((b) => b.classList.contains('on'));
     expect(on).toEqual([true, true, true]);
   });

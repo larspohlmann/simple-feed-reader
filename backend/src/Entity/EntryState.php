@@ -111,12 +111,11 @@ class EntryState
     }
 
     /**
-     * "viewed" records that the user actively opened the entry (#307), so a
-     * repeat open keeps the first open's timestamp. Only opening sets it —
-     * never a mark-all-read sweep or a bare read toggle — which is what lets the
-     * recommender treat it as genuine engagement. markUnread() is the one way
-     * out again (#478): marking an entry unread means the user has not dealt
-     * with it, which contradicts having opened it.
+     * "viewed" records that the user actively opened and read the entry (#307),
+     * so a repeat open keeps the first open's timestamp. Only opening or the tick
+     * sets it — never a mark-all-read sweep. It sets the viewed flag alone; the
+     * subset invariant (viewed ⇒ read) is enforced centrally on flush by
+     * ViewedImpliesReadListener (#482), so no caller has to remember the coupling.
      */
     public function markViewed(\DateTimeImmutable $when): void
     {
@@ -125,6 +124,18 @@ class EntryState
         }
         $this->isViewed = true;
         $this->viewedAt = $when;
+    }
+
+    /**
+     * Un-tick (#482): the user is no longer counted as having read the article,
+     * so it drops out of "Recently read" and returns to the recommender pool. The
+     * read flag stays — being read is sticky, so the entry does not come back to
+     * the unread list.
+     */
+    public function clearViewed(): void
+    {
+        $this->isViewed = false;
+        $this->viewedAt = null;
     }
 
     public function markRead(\DateTimeImmutable $when): void

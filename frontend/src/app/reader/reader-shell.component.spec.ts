@@ -557,7 +557,7 @@ describe('ReaderShellComponent', () => {
     qp.next(convertToParamMap({ entry: '1' }));
     f.detectChanges();
     const req = ctrl.expectOne('https://api.test/api/entries/1/state');
-    expect(req.request.body).toEqual({ isRead: true, isViewed: true });
+    expect(req.request.body).toEqual({ isViewed: true });
     req.flush({
       state: {
         entryId: 1,
@@ -577,7 +577,7 @@ describe('ReaderShellComponent', () => {
     qp.next(convertToParamMap({ entry: '1' }));
     f.detectChanges();
     const req = ctrl.expectOne('https://api.test/api/entries/1/state');
-    expect(req.request.body).toEqual({ isRead: true, isViewed: true });
+    expect(req.request.body).toEqual({ isViewed: true });
     req.flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
     f.detectChanges();
     // The entry is still unread/unviewed (rollback), but the effect must NOT
@@ -1820,12 +1820,12 @@ describe('ReaderShellComponent', () => {
       expect(f.componentInstance.leavingIds().has(1)).toBe(false);
     });
 
-    it('collapses a Recently-read row on unread and drops the viewed badge', () => {
+    it('collapses a Recently-read row on un-tick and drops the viewed badge', () => {
       const f = bootInto('viewed', { isRead: true, isViewed: true });
       const subs = TestBed.inject(SubscriptionsStore);
       expect(subs.viewedCount()).toBe(3);
 
-      f.componentInstance.onToggleRead(f.componentInstance.entries.entries()[0]);
+      f.componentInstance.onToggleViewed(f.componentInstance.entries.entries()[0]);
       flushStatePatch();
 
       expect(f.componentInstance.leavingIds().has(1)).toBe(true);
@@ -1836,7 +1836,7 @@ describe('ReaderShellComponent', () => {
       const f = bootInto('viewed', { isRead: true, isViewed: true });
       const subs = TestBed.inject(SubscriptionsStore);
 
-      f.componentInstance.onToggleRead(f.componentInstance.entries.entries()[0]);
+      f.componentInstance.onToggleViewed(f.componentInstance.entries.entries()[0]);
       ctrl
         .expectOne((r) => r.url === 'https://api.test/api/entries/1/state')
         .error(new ProgressEvent('fail'));

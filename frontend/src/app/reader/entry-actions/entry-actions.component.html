@@ -23,8 +23,8 @@
 <button
   type="button"
   [attr.aria-label]="'reader.toggleRead' | transloco"
-  [class.on]="entry().isRead"
-  [attr.aria-pressed]="entry().isRead"
+  [class.on]="entry().isViewed"
+  [attr.aria-pressed]="entry().isViewed"
   (click)="$event.stopPropagation(); read.emit(entry())"
   (keydown.enter)="$event.stopPropagation()"
   (keydown.space)="$event.stopPropagation()"
