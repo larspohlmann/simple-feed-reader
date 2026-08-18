@@ -855,7 +855,7 @@ describe('AiSectionComponent', () => {
     expect(details.open).toBe(false);
 
     const steps = firstCard.querySelectorAll('.guide ol li');
-    expect(steps.length).toBe(9);
+    expect(steps.length).toBe(10);
   });
 
   it('explains the row actions with one tip and each connection checkbox with its own', () => {

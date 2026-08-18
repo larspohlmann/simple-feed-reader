@@ -173,10 +173,11 @@
         "connectionStep4": "Drücke „Konfiguration hinzufügen“, lade dann mit „Modell ändern“ die Modellliste und speichere ein Modell.",
         "connectionStep5": "Drücke „Diesen verwenden“, um die Konfiguration zu aktivieren.",
         "recommendationsTitle": "Empfehlungen einstellen",
-        "recommendationsStep1": "Prüfe die aktive Konfiguration: Sie zeigt ein Modell, und die Karte „Empfehlungen“ unten meldet, dass KI-Funktionen verfügbar sind.",
-        "recommendationsStep2": "Wähle einen Zeitplan für „Für dich“ oder belasse es bei „Nur manuell“. Der Zeitplan braucht den Hintergrund-Worker oder den Wartungs-Cron.",
-        "recommendationsStep3": "Öffne bei Bedarf die „Experteneinstellungen“ und passe Historien-Limits, Artikel- und Auswahl-Grenzen sowie den Leitprompt an.",
-        "recommendationsStep4": "Speichern. Schalte den Debug-Modus ein, um den nächsten Lauf im Debug-Protokoll zu untersuchen."
+        "recommendationsStep1": "Prüfe, ob die aktive Konfiguration bereit ist. Sie zeigt ein Modell, und die Karte „Empfehlungen“ unten meldet, dass KI-Funktionen verfügbar sind.",
+        "recommendationsStep2": "Wähle ein leistungsfähiges Modell. qwen3.7-flash ist eine gute Voreinstellung — es bietet ein starkes Verhältnis von Qualität zu Preis. Stelle es mit „Modell ändern“ auf der aktiven Konfiguration ein.",
+        "recommendationsStep3": "Wähle einen Zeitplan für „Für dich“ oder belasse es bei „Nur manuell“. Ein Zeitplan braucht den Hintergrund-Worker oder den Wartungs-Cron.",
+        "recommendationsStep4": "Optional: Öffne die „Experteneinstellungen“, um Historien-Limits, Artikel- und Auswahl-Grenzen sowie den Leitprompt anzupassen.",
+        "recommendationsStep5": "Speichern. Schalte den Debug-Modus ein, um den nächsten Lauf im Debug-Protokoll zu untersuchen."
       },
       "recommendations": {
         "title": "Empfehlungen",
