@@ -32,7 +32,10 @@ describe('ReaderContentService', () => {
       providers: [
         ReaderContentService,
         { provide: ReaderApi, useValue: { readerContent: apiGet } },
-        { provide: ReaderCacheService, useValue: { get: cacheGet, put: cachePut, delete: cacheDelete } },
+        {
+          provide: ReaderCacheService,
+          useValue: { get: cacheGet, put: cachePut, delete: cacheDelete },
+        },
       ],
     });
   });
@@ -64,7 +67,6 @@ describe('ReaderContentService', () => {
   });
 
   it('reload deletes the cache then fetches from the API even on a prior hit', async () => {
-    cacheGet.mockResolvedValue(ARTICLE);
     apiGet.mockReturnValue(of(ARTICLE));
     const svc = TestBed.inject(ReaderContentService);
     const result = await firstValueFrom(svc.reload(1));
