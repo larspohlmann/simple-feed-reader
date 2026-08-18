@@ -72,6 +72,22 @@ final class EntryStateTest extends TestCase
         self::assertFalse($state->isViewed());
     }
 
+    public function testClearViewedLeavesTheEntryRead(): void
+    {
+        $state = $this->makeState();
+        $when = new \DateTimeImmutable('2026-08-07T10:00:00Z');
+        $state->markRead($when);
+        $state->markViewed($when);
+
+        $state->clearViewed();
+
+        // Un-ticking (#482) drops "Recently read" but keeps the entry read.
+        self::assertFalse($state->isViewed());
+        self::assertNull($state->getViewedAt());
+        self::assertTrue($state->isRead());
+        self::assertSame($when, $state->getReadAt());
+    }
+
     private function makeState(): EntryState
     {
         $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
