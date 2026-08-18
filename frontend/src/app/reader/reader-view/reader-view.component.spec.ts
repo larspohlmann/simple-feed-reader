@@ -31,6 +31,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
 });
 
 let loadMock: jest.Mock;
+let reloadMock: jest.Mock;
 
 function mount(e: EntryDto | null) {
   const f = TestBed.createComponent(ReaderViewComponent);
@@ -57,11 +58,12 @@ describe('ReaderViewComponent', () => {
     // Default: extraction fails so the existing presentational tests keep
     // asserting against the feed's own content. Reader-specific tests override.
     loadMock = jest.fn(() => of<ReaderContent>({ status: 'failed', reason: 'fetch', url: null }));
+    reloadMock = jest.fn(() => of<ReaderContent>(okContent()));
     TestBed.configureTestingModule({
       imports: [ReaderViewComponent, provideTranslocoTesting()],
       providers: [
         provideRouter([]),
-        { provide: ReaderContentService, useValue: { load: loadMock } },
+        { provide: ReaderContentService, useValue: { load: loadMock, reload: reloadMock } },
       ],
     });
   });
@@ -473,18 +475,85 @@ describe('ReaderViewComponent', () => {
       expect(keepEmits).toHaveBeenCalled();
     });
 
-    it('leaves the full-screen toolbar to the back button and the mode toggle', () => {
-      // The strip already names the article there, and a retracting toolbar is
-      // no place for the actions — the article's own row carries them.
+    it('offers favourite and keep in the full-screen toolbar too', () => {
       const f = TestBed.createComponent(ReaderViewComponent);
       f.componentRef.setInput('entry', entry());
       f.componentRef.setInput('fullscreen', true);
       f.detectChanges();
 
       const el = f.nativeElement as HTMLElement;
+      // The nameplate still rides the .mini strip in full screen, not the bar.
       expect(el.querySelector('.bar .bar-title')).toBeNull();
-      expect(el.querySelector('.bar [aria-label="Favorite"]')).toBeNull();
+      expect(el.querySelector('.bar [aria-label="Favorite"]')).not.toBeNull();
+      expect(el.querySelector('.bar [aria-label="Keep"]')).not.toBeNull();
       f.destroy();
+    });
+  });
+
+  describe('article refresh', () => {
+    it('shows the refresh button in reader mode in both layouts', () => {
+      loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+      const pane = mount(entry()).nativeElement as HTMLElement;
+      expect(pane.querySelector('.bar [aria-label="Reload article"]')).not.toBeNull();
+
+      const f = TestBed.createComponent(ReaderViewComponent);
+      f.componentRef.setInput('entry', entry());
+      f.componentRef.setInput('fullscreen', true);
+      f.detectChanges();
+      expect(
+        (f.nativeElement as HTMLElement).querySelector('.bar [aria-label="Reload article"]'),
+      ).not.toBeNull();
+      f.destroy();
+    });
+
+    it('hides the refresh button once the reader switches to original', () => {
+      loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+      const f = mount(entry());
+      const el = f.nativeElement as HTMLElement;
+      expect(el.querySelector('.bar [aria-label="Reload article"]')).not.toBeNull();
+
+      f.componentInstance.toggleMode(); // reader -> original
+      f.detectChanges();
+      expect(el.querySelector('.bar [aria-label="Reload article"]')).toBeNull();
+    });
+
+    it('hides the refresh button when extraction failed (original fallback)', () => {
+      // Default loadMock resolves failed, so the view falls back to original.
+      const el = mount(entry()).nativeElement as HTMLElement;
+      expect(el.querySelector('.bar [aria-label="Reload article"]')).toBeNull();
+    });
+
+    it('refetches past the cache and shows the loading state', () => {
+      loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+      const subject = new Subject<ReaderContent>();
+      reloadMock.mockReturnValue(subject.asObservable());
+      const f = mount(entry());
+      const el = f.nativeElement as HTMLElement;
+
+      (el.querySelector('.bar [aria-label="Reload article"]') as HTMLButtonElement).click();
+      f.detectChanges();
+      expect(reloadMock).toHaveBeenCalledWith(1);
+      expect(el.querySelector('app-loading-overlay.shown')).not.toBeNull();
+
+      subject.next(okContent({ contentHtml: '<p>FRESH</p>' }));
+      subject.complete();
+      f.detectChanges();
+      expect(el.querySelector('app-loading-overlay.shown')).toBeNull();
+      expect(el.querySelector('.content')!.innerHTML).toContain('FRESH');
+    });
+
+    it('refreshArticle does not reset the reader/original mode', () => {
+      // The button is reader-only, but the method must leave the mode alone —
+      // only a genuine entry change resets it.
+      loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+      reloadMock.mockReturnValue(of<ReaderContent>(okContent()));
+      const f = mount(entry());
+      f.componentInstance.toggleMode(); // reader -> original
+      expect(f.componentInstance.mode()).toBe('original');
+
+      f.componentInstance.refreshArticle();
+      f.detectChanges();
+      expect(f.componentInstance.mode()).toBe('original');
     });
   });
 
@@ -519,8 +588,10 @@ describe('ReaderViewComponent', () => {
   it('shows a loading indicator while extraction is pending', () => {
     loadMock.mockReturnValue(new Subject<ReaderContent>());
     const el = mount(entry()).nativeElement as HTMLElement;
-    expect(el.querySelector('.loading')).not.toBeNull();
+    expect(el.querySelector('app-loading-overlay.shown')).not.toBeNull();
     expect(el.querySelector('.content')).toBeNull();
+    // The overlay is decorative, so the article carries the busy state instead.
+    expect(el.querySelector('article')!.getAttribute('aria-busy')).toBe('true');
   });
 
   it('does not reload or reset the toggle when the same entry changes by reference', () => {

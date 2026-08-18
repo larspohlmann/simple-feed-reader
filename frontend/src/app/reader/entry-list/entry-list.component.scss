@@ -399,59 +399,11 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   background: var(--surface-0);
 }
 
-/* Sits over the dimmed outgoing rows, below the list header so the bar stays
-   readable while it is up. Starts under the header rather than at the top of
-   the host, so "centred" means centred in the rows the reader is looking at. */
-.reload-veil {
-  position: absolute;
-  inset: $header-clear 0 0;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-
-  /* The rows underneath are already inert; this must not intercept anything
-     either, least of all during its fade-out. */
-  pointer-events: none;
-  opacity: 0;
-  visibility: hidden;
-
-  /* Visibility flips only after the fade has finished, so the veil is never
-     hit-tested while it is still on screen. */
-  transition:
-    opacity 0.2s ease,
-    visibility 0s linear 0.2s;
-}
-
-.reload-veil.shown {
-  opacity: 1;
-  visibility: visible;
-  transition:
-    opacity 0.2s ease,
-    visibility 0s;
-}
-
-/* The spinner and its word sit on a card of their own. Over bare rows the
-   label competed with the headlines behind it, and dimming those further would
-   have hidden the list this is meant to keep on screen (#254). Nearly opaque
-   for the same reason the pull-to-refresh pill is: it has to be read. */
-.reload-veil .card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-7);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--surface-1) 96%, transparent);
-  box-shadow: var(--shadow-1, 0 1px 4px rgb(0 0 0 / 15%));
-}
-
-.reload-veil .label {
-  color: var(--text-secondary);
-  font-size: var(--fs-lg);
+/* The shared overlay sits over the dimmed outgoing rows. Inset below the list
+   header so the bar stays readable while it is up, and so "centred" means
+   centred in the rows the reader is looking at rather than in the whole host. */
+app-loading-overlay {
+  --loading-overlay-inset: #{$header-clear} 0 0;
 }
 
 .foot {
@@ -476,11 +428,6 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 
   .skeleton {
     animation: none;
-  }
-
-  .reload-veil,
-  .reload-veil.shown {
-    transition: none;
   }
 
   .refresh.spinning app-icon {

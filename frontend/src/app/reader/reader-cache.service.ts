@@ -53,6 +53,17 @@ export class ReaderCacheService {
     await this.evict(db);
   }
 
+  async delete(entryId: number): Promise<void> {
+    const db = await this.open();
+    if (!db) return;
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction(ReaderCacheService.STORE, 'readwrite');
+      tx.objectStore(ReaderCacheService.STORE).delete(entryId);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  }
+
   private async evict(db: IDBDatabase): Promise<void> {
     await new Promise<void>((resolve) => {
       const tx = db.transaction(ReaderCacheService.STORE, 'readwrite');
