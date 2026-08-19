@@ -16,4 +16,9 @@
 .favicon {
   border-radius: var(--radius-sm);
   object-fit: contain;
+
+  /* A light chip behind the icon, transparent in light mode. It rescues
+     dark-ink favicons on a transparent background, which otherwise vanish
+     against the dark surface. Full-bleed opaque favicons simply cover it. */
+  background: var(--favicon-backdrop);
 }

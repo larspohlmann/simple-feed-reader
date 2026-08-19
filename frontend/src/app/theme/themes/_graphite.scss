@@ -19,6 +19,9 @@
   --bg-danger: #f7e9e8;
   --success: #3f7a52;
   --bg-success: #e9f1ec;
+
+  // Favicons already sit on a light surface here, so no chip is needed.
+  --favicon-backdrop: transparent;
 }
 
 @mixin dark {
@@ -37,4 +40,8 @@
   --bg-danger: #2a1e1d;
   --success: #7faf8c;
   --bg-success: #1c2620;
+
+  // A soft near-white chip behind favicons so dark-ink logos on a transparent
+  // background (e.g. Die Zeit) stay legible against the dark surface.
+  --favicon-backdrop: #e8e8e6;
 }
