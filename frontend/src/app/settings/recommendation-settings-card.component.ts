@@ -19,6 +19,8 @@ import { ErrorBannerComponent } from '../shared/error-banner/error-banner.compon
 import { FieldComponent } from '../shared/field/field.component';
 import { InfoTipComponent } from '../shared/info-tip/info-tip.component';
 import { ToggleComponent } from '../shared/toggle/toggle.component';
+import { LanguageService } from '../core/language.service';
+import { formatInteger } from '../reader/format';
 import { RecommendationSettingsService } from './recommendation-settings.service';
 
 /**
@@ -54,6 +56,7 @@ export class RecommendationSettingsCardComponent {
   readonly svc = inject(RecommendationSettingsService);
   private readonly dialog = inject(Dialog);
   private readonly i18n = inject(TranslocoService);
+  private readonly language = inject(LanguageService);
 
   readonly guidance = linkedSignal<string>(() => this.svc.state()?.guidancePrompt ?? '');
   readonly favoritesCap = linkedSignal<number>(() => this.svc.state()?.favoritesCap ?? 0);
@@ -94,6 +97,13 @@ export class RecommendationSettingsCardComponent {
     { value: 6, key: 'settings.ai.recommendations.lookback6' },
     { value: 7, key: 'settings.ai.recommendations.lookback7' },
   ];
+
+  /** The effective context window, grouped for the hint line ("Reported by your
+   *  provider: 8,192 tokens"). The `contextWindowFromProvider` string carries the
+   *  `{{value}}` slot; the other two source strings ignore the param. */
+  readonly reportedContextWindow = computed(() =>
+    formatInteger(this.svc.state()?.contextWindow ?? 0, this.language.lang()),
+  );
 
   /** The key for the hint line, decided by where the effective value came from. */
   readonly contextWindowSourceKey = computed(() => {

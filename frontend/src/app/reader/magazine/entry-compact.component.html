@@ -3,24 +3,19 @@
   role="button"
   tabindex="0"
   [class.read]="entry().isRead"
-  [class.no-source]="!showSource()"
   (click)="open.emit(entry())"
   (keydown.enter)="open.emit(entry())"
   (keydown.space)="$event.preventDefault(); open.emit(entry())"
 >
-  <span class="dot" [class.on]="entry().isRead" aria-hidden="true"></span>
   <div class="body">
-    <app-entry-kicker-line [entry]="entry()" [showDot]="false" [showSource]="showSource()">
-      <app-entry-actions
-        [entry]="entry()"
-        (favorite)="favorite.emit($event)"
-        (keep)="keep.emit($event)"
-        (read)="read.emit($event)"
-      />
-    </app-entry-kicker-line>
+    <app-entry-kicker-line [entry]="entry()" [showSource]="showSource()" />
     <p class="title">{{ entry().title }}</p>
-    @if (showSource()) {
-      <app-source-tags [tags]="tags()" />
-    }
+    <app-entry-meta
+      [entry]="entry()"
+      [tags]="showSource() ? tags() : noTags"
+      (favorite)="favorite.emit($event)"
+      (keep)="keep.emit($event)"
+      (read)="read.emit($event)"
+    />
   </div>
 </article>

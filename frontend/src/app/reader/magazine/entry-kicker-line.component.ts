@@ -24,8 +24,6 @@ export class EntryKickerLineComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
 
   readonly entry = input.required<EntryDto>();
-  /** Off for a block that draws its own dot outside the line (compact). */
-  readonly showDot = input(true);
   /** Off inside a source group, whose header already names the source. */
   readonly showSource = input(true);
   /** The hero's larger type carries a larger mark. */

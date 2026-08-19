@@ -259,18 +259,22 @@ describe('ReaderHeaderComponent', () => {
       expect(el.querySelector('app-search-field')).not.toBeNull();
     });
 
-    it('keeps the tag row rendered while the bar is open', () => {
+    it('hides the tag row while the bar is open (#486)', () => {
       const f = create();
       f.componentRef.setInput('tags', [
         { id: 1, name: 'News', color: null, icon: null, position: 0 },
       ]);
       f.detectChanges();
       const el = f.nativeElement as HTMLElement;
+      // The row is there before the search opens…
+      expect(el.querySelector('.tagrow')).not.toBeNull();
 
       (el.querySelector('[aria-label="Search"]') as HTMLButtonElement).click();
       f.detectChanges();
 
-      expect(el.querySelector('.tagrow')).not.toBeNull();
+      // …and gone once it does: the pinned search bar stands alone rather than
+      // sharing the top with a tag-filter row that duplicates a different axis.
+      expect(el.querySelector('.tagrow')).toBeNull();
     });
 
     it('forwards the settled term from the field as its own search output', () => {
@@ -316,7 +320,7 @@ describe('ReaderHeaderComponent', () => {
       expect(el.querySelector('[aria-haspopup="menu"]')).not.toBeNull();
     });
 
-    it('closes on a click outside the bar', () => {
+    it('stays open on a pointerdown outside the bar, so scrolling the results does not dismiss it (#486)', () => {
       const f = create();
       const el = f.nativeElement as HTMLElement;
 
@@ -324,10 +328,13 @@ describe('ReaderHeaderComponent', () => {
       f.detectChanges();
       expect(f.componentInstance.searchOpen()).toBe(true);
 
+      // On a phone the results list is "outside" the bar; a scroll touch on it
+      // fires pointerdown. The bar must survive that — it closes only on its own
+      // ✕ or on the two-step Escape (both covered below).
       document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
       f.detectChanges();
 
-      expect(f.componentInstance.searchOpen()).toBe(false);
+      expect(f.componentInstance.searchOpen()).toBe(true);
     });
 
     it('clears without closing on a first Escape over a non-empty field', () => {

@@ -8,32 +8,37 @@
   (keydown.enter)="open.emit(entry())"
   (keydown.space)="$event.preventDefault(); open.emit(entry())"
 >
-  @if (showImage()) {
-    <img
-      class="img"
-      [src]="image()!.url"
-      [style.aspect-ratio]="aspect()"
-      [attr.width]="image()!.width"
-      [attr.height]="image()!.height"
-      alt=""
-      loading="lazy"
-      decoding="async"
-      referrerpolicy="no-referrer"
-      (error)="imgError.set(true)"
-    />
-  }
-  <div class="body">
-    <app-entry-kicker-line [entry]="entry()" />
-    <p class="title">{{ entry().title }}</p>
-    @if (snippet()) {
-      <p class="dek">{{ snippet() }}</p>
+  <div class="top">
+    @if (showImage()) {
+      <img
+        class="img"
+        [src]="image()!.url"
+        [style.aspect-ratio]="aspect()"
+        [attr.width]="image()!.width"
+        [attr.height]="image()!.height"
+        alt=""
+        loading="lazy"
+        decoding="async"
+        referrerpolicy="no-referrer"
+        (error)="imgError.set(true)"
+      />
     }
-    <app-entry-meta
-      [entry]="entry()"
-      [tags]="tags()"
-      (favorite)="favorite.emit($event)"
-      (keep)="keep.emit($event)"
-      (read)="read.emit($event)"
-    />
+    <div class="body">
+      <app-entry-kicker-line [entry]="entry()" />
+      <p class="title">{{ entry().title }}</p>
+      @if (snippet()) {
+        <p class="dek">{{ snippet() }}</p>
+      }
+    </div>
   </div>
+  <!-- Full-width row under the image+text, so the actions right-align to the
+       card's edge rather than to the text column's — which lands mid-card when
+       the image is on the right (#486). -->
+  <app-entry-meta
+    [entry]="entry()"
+    [tags]="tags()"
+    (favorite)="favorite.emit($event)"
+    (keep)="keep.emit($event)"
+    (read)="read.emit($event)"
+  />
 </article>

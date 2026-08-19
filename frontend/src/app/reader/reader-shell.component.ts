@@ -39,7 +39,14 @@ import {
 } from './query';
 import { ListScrollReset } from './list-scroll-reset';
 import { entryParam } from './slug';
-import { EntryDto, EntryStatePatch, SubscriptionDto, SubscriptionTagDto, TagDto } from './models';
+import {
+  EntryDto,
+  EntryStatePatch,
+  MarkReadScope,
+  SubscriptionDto,
+  SubscriptionTagDto,
+  TagDto,
+} from './models';
 import { headerHiddenAtRest, nextHeaderHidden } from './header-scroll';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
@@ -733,13 +740,35 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
   onMarkAllRead(): void {
-    const t = markReadTarget(this.selection());
-    if (!t) return;
+    const target = markReadTarget(this.selection());
+    if (!target) return;
+    // A confirm gate, because the action is a bulk, one-click state change over
+    // a whole list (or every list) that a misplaced tap used to fire silently.
+    const data: ConfirmData = {
+      title: this.i18n.translate('reader.markAllReadConfirm'),
+      message: this.i18n.translate('reader.markAllReadConfirmMessage'),
+      confirmLabel: this.i18n.translate('reader.markAllRead'),
+    };
+    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
+      data,
+      role: 'alertdialog',
+      panelClass: 'app-dialog',
+    });
+    ref.closed.subscribe((confirmed) => {
+      if (confirmed) this.markReadNow(target);
+    });
+  }
+
+  private markReadNow(target: { scope: MarkReadScope; id?: number }): void {
     const until = this.entries.loadedAt() || new Date().toISOString();
-    this.api.markRead(t.scope, until, t.id).subscribe({
+    this.api.markRead(target.scope, until, target.id).subscribe({
       next: () => {
         this.subs.zeroUnread(
-          t.scope === 'all' ? 'all' : t.scope === 'tag' ? { tag: t.id! } : { subscription: t.id! },
+          target.scope === 'all'
+            ? 'all'
+            : target.scope === 'tag'
+              ? { tag: target.id! }
+              : { subscription: target.id! },
         );
         this.entries.load(queryFromSelection(this.selection()));
       },

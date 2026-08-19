@@ -96,6 +96,16 @@ export function bytesToKb(bytes: number): number {
   return Math.max(1, Math.round(bytes / 1024));
 }
 
+/**
+ * A whole number with the active language's grouping separators -- `8,192` in
+ * English, `8.192` in German. Goes through `Intl` on the active UI language for
+ * the same reason `formatCost` does: `LOCALE_ID` is fixed here, so a raw number
+ * beside a `22. Juli 2026` would be two locales in one line.
+ */
+export function formatInteger(value: number, locale: string): string {
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
+}
+
 /** Nano-credits per credit. The API stores money as an integer -- floats do
  *  not hold money -- and this is the one place it becomes a human figure. */
 const NANO_PER_CREDIT = 1_000_000_000;

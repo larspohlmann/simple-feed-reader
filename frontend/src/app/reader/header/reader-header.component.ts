@@ -1,5 +1,6 @@
 // src/app/reader/header/reader-header.component.ts
 import {
+  ChangeDetectorRef,
   Component,
   ElementRef,
   afterRenderEffect,
@@ -79,6 +80,7 @@ export class ReaderHeaderComponent {
   readonly auth = inject(AuthService);
   readonly refreshSvc = inject(RefreshService);
   readonly screen = inject(LayoutService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
   readonly menuOpen = signal(false);
   /** Whether the mobile bar covers the header. The shell reads this to force
    *  the header on-screen (see reader-shell.component.ts) — the bar holds the
@@ -142,6 +144,24 @@ export class ReaderHeaderComponent {
       }
       this.searchTrigger()?.nativeElement.focus();
     });
+  }
+
+  /**
+   * Opens the mobile search bar and puts the cursor in the field within the tap
+   * itself. The trailing `afterRenderEffect` above also focuses on open, but it
+   * runs a tick later — outside the gesture — and iOS/Android only raise the
+   * soft keyboard for a `focus()` that happens inside the user gesture. So the
+   * field is rendered synchronously here (`detectChanges`, which materialises
+   * the `@else` branch that holds it) and focused in the same call stack, which
+   * is what actually opens the keyboard on a phone (#486).
+   */
+  openSearch(): void {
+    this.searchOpen.set(true);
+    // `detectChanges()` refreshes the view query, so `searchFieldHost` now
+    // resolves to the just-rendered field — the same handle the focus effect
+    // above uses on open.
+    this.changeDetector.detectChanges();
+    this.searchFieldHost()?.nativeElement.querySelector('input')?.focus();
   }
 
   closeSearch(): void {

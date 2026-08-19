@@ -10,12 +10,15 @@
   background: var(--surface-0);
 }
 
+/* The read indicator sits inline at the end of the meta line, just after the
+   timestamp, rather than at the row's leading edge. */
 .dot {
+  display: inline-block;
   width: var(--space-2);
   height: var(--space-2);
+  margin-left: var(--space-2);
   border-radius: 50%;
-  margin-top: var(--space-2);
-  flex: 0 0 auto;
+  vertical-align: middle;
   border: 1px solid var(--border-strong);
 }
 
@@ -62,9 +65,24 @@
   overflow: hidden;
 }
 
+/* Tag pills and the action icons share one line, the icons sitting just to the
+   right of the pills (not pushed to the row's far edge). `min-width: 0` keeps
+   the truncation chain so a long tag name shrinks rather than shoving the icons
+   off the row. */
+.tagline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.tagline app-source-tags {
+  min-width: 0;
+}
+
 .actions {
   display: flex;
   gap: var(--space-3);
+  flex: 0 0 auto;
 }
 
 .actions button {

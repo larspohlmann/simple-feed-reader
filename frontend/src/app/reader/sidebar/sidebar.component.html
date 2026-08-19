@@ -150,20 +150,6 @@
                 <app-icon name="more_horiz" size="sm" />
               </button>
             } @else {
-              @if (!screen.isCoarse()) {
-                <button
-                  class="expand"
-                  type="button"
-                  [attr.aria-expanded]="expanded().has(node.tag.id)"
-                  [attr.aria-label]="'reader.toggleTag' | transloco: { name: node.tag.name }"
-                  (click)="toggle(node.tag.id)"
-                >
-                  <app-icon
-                    [name]="expanded().has(node.tag.id) ? 'expand_more' : 'chevron_right'"
-                    size="sm"
-                  />
-                </button>
-              }
               <a
                 class="nav grow"
                 [class.active]="selection().kind === 'tag' && selection().id === node.tag.id"
@@ -179,20 +165,7 @@
                   <span class="count">{{ node.unreadCount }}</span>
                 }
               </a>
-              @if (screen.isCoarse()) {
-                <button
-                  class="chevzone"
-                  type="button"
-                  [attr.aria-expanded]="expanded().has(node.tag.id)"
-                  [attr.aria-label]="'reader.toggleTag' | transloco: { name: node.tag.name }"
-                  (click)="toggle(node.tag.id)"
-                >
-                  <app-icon
-                    [name]="expanded().has(node.tag.id) ? 'expand_more' : 'chevron_right'"
-                    size="sm"
-                  />
-                </button>
-              } @else {
+              @if (!screen.isCoarse()) {
                 @let tagMenuKey = 'tag-' + node.tag.id;
                 <div
                   class="rowmenu"
@@ -219,6 +192,21 @@
                   }
                 </div>
               }
+              <!-- One chevron for both pointer types: the coarse tap target and
+                   the border geometry are handled entirely in SCSS. Only the
+                   edit/delete menu above is desktop-only. -->
+              <button
+                class="chevzone"
+                type="button"
+                [attr.aria-expanded]="expanded().has(node.tag.id)"
+                [attr.aria-label]="'reader.toggleTag' | transloco: { name: node.tag.name }"
+                (click)="toggle(node.tag.id)"
+              >
+                <app-icon
+                  [name]="expanded().has(node.tag.id) ? 'expand_more' : 'chevron_right'"
+                  size="sm"
+                />
+              </button>
             }
           </div>
         </div>

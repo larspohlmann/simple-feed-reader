@@ -8,6 +8,17 @@
       >
         <app-icon name="menu" size="md" />
       </button>
+      @if (screen.isNarrow()) {
+        <button
+          #searchTrigger
+          class="search-btn"
+          type="button"
+          [attr.aria-label]="'reader.search' | transloco"
+          (click)="openSearch()"
+        >
+          <app-icon name="search" size="md" />
+        </button>
+      }
       <a
         class="brand"
         [routerLink]="[]"
@@ -46,17 +57,6 @@
       ></button>
     }
     <div class="right">
-      @if (screen.isNarrow()) {
-        <button
-          #searchTrigger
-          class="search-btn"
-          type="button"
-          [attr.aria-label]="'reader.search' | transloco"
-          (click)="searchOpen.set(true)"
-        >
-          <app-icon name="search" size="md" />
-        </button>
-      }
       <div class="account" [appDismissOnOutside]="menuOpen()" (dismiss)="menuOpen.set(false)">
         <button
           aria-haspopup="menu"
@@ -91,7 +91,12 @@
       </div>
     </div>
   } @else {
-    <div class="search-bar" [appDismissOnOutside]="searchOpen()" (dismiss)="closeSearch()">
+    <!-- No dismiss-on-outside here: on a phone the results list is "outside", so
+         a scroll touch on it would fire pointerdown and collapse the bar the
+         moment the user scrolls the very results they searched for (#486). The
+         bar closes on its own ✕, or on Escape once the field is empty
+         (`escapedWhileEmpty`). -->
+    <div class="search-bar">
       <app-search-field
         #searchField
         [term]="searchTerm()"
@@ -111,7 +116,7 @@
   }
 </header>
 
-@if (tags().length) {
+@if (tags().length && !searchOpen()) {
   <nav class="tagrow" [attr.aria-label]="'reader.tags' | transloco">
     <!-- Clears the tag filter — the row's counterpart to the sidebar's All Items
          entry, which is otherwise two taps away behind the drawer. Label only:
