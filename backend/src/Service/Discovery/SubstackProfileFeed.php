@@ -20,6 +20,13 @@ namespace App\Service\Discovery;
  * discovery falls through exactly as if this had said nothing. The rewrite can
  * therefore only ever turn a dead end into a subscription, never a good URL
  * into a wrong one.
+ *
+ * Planned refactoring: this is deliberately one platform-specific class, wired
+ * as a single line at the top of FeedDiscovery::discover(). The moment a SECOND
+ * platform needs a host-level URL rewrite before discovery (Medium, Bluesky,
+ * …), do not add a second one-off — extract a small keyed rule interface
+ * (`feedUrl(string): ?string` per rule) that discovery consults, and move
+ * Substack into the first rule. Generalize on the second case, not the third.
  */
 final readonly class SubstackProfileFeed
 {
