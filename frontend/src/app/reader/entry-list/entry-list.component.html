@@ -15,6 +15,14 @@
                13px the heading drops to. -->
           <app-tag-glyph [name]="tag.icon" [color]="tag.color" [size]="collapsed() ? 'xs' : 'md'" />
         }
+        @if (selection().kind === 'subscription') {
+          <!-- The feed's own favicon, the same icon the sidebar row shows, so
+               the heading and the row that led here read as the same feed. It
+               sits inside the ellipsised h2 for the same reason the tag glyph
+               does: the clip runs from the end, so the icon stays put however
+               long the name is. -->
+          <app-favicon [url]="titleFaviconUrl()" [size]="collapsed() ? 16 : 20" />
+        }
         <span>{{ title() }}</span>
         @if (showWholeWordBadge()) {
           <!-- Carries the mode into the heading's own accessible name, so a

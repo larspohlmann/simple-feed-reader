@@ -93,6 +93,14 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   transform: translateY(-0.1em);
 }
 
+/* The feed favicon, inline before its name, spaced to match the tag glyph so
+   the two heading leads sit identically. It keeps its own `vertical-align:
+   middle`; an image box centres cleanly there, so it needs none of the glyph's
+   baseline nudge above. */
+.list-header h2 app-favicon {
+  margin-right: var(--space-2);
+}
+
 .list-header h2 {
   margin: 0;
   font-size: var(--fs-lg);

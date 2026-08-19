@@ -19,6 +19,7 @@ import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
+import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { LoadingOverlayComponent } from '../../shared/loading-overlay/loading-overlay.component';
 import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import {
@@ -97,6 +98,7 @@ type ListBlock = MagazineBlock | RunHeaderBlock;
     SpinnerComponent,
     LoadingOverlayComponent,
     TagGlyphComponent,
+    FaviconComponent,
     EntryRowComponent,
     RecommendationStripComponent,
     RunHeaderComponent,
@@ -119,6 +121,11 @@ export class EntryListComponent implements OnDestroy {
    *  glyph and the colour the sidebar row already shows, so the same tag reads
    *  the same in both places; null for every other selection. */
   readonly titleTag = input<TagDto | null>(null);
+  /** The favicon of the feed the heading names, when the list is scoped to one
+   *  subscription. It mirrors the icon the sidebar row shows, so the heading and
+   *  the row that led here read as the same feed; null for every other
+   *  selection, where the favicon is not rendered at all. */
+  readonly titleFaviconUrl = input<string | null>(null);
   readonly entries = input.required<EntryDto[]>();
   /** Ids of rows collapsed out of the list (un-favourited, un-kept, or marked
    *  unread in their saved view). A leaving row fades then collapses in place;
