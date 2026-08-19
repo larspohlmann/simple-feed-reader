@@ -8,7 +8,6 @@
   (keydown.enter)="open.emit(entry())"
   (keydown.space)="$event.preventDefault(); open.emit(entry())"
 >
-  <span class="dot" [class.on]="entry().isRead" aria-hidden="true"></span>
   <div class="body">
     <h3 class="title">
       @if (marking()) {
@@ -19,6 +18,7 @@
     </h3>
     <p class="meta">
       <app-favicon [url]="entry().faviconUrl" [size]="14" />{{ entry().source }} · {{ when() }}
+      <span class="dot" [class.on]="entry().isRead" aria-hidden="true"></span>
     </p>
     <p class="snippet">
       @if (marking()) {
@@ -27,35 +27,37 @@
         {{ snippet() }}
       }
     </p>
-    <app-source-tags [tags]="tags()" />
-    <div class="actions">
-      <button
-        type="button"
-        [attr.aria-label]="'reader.favorite' | transloco"
-        [class.on]="entry().isFavorite"
-        [attr.aria-pressed]="entry().isFavorite"
-        (click)="$event.stopPropagation(); favorite.emit(entry())"
-      >
-        <app-icon name="star" size="md" />
-      </button>
-      <button
-        type="button"
-        [attr.aria-label]="'reader.keep' | transloco"
-        [class.on]="entry().isKept"
-        [attr.aria-pressed]="entry().isKept"
-        (click)="$event.stopPropagation(); keep.emit(entry())"
-      >
-        <app-icon name="bookmark" size="md" />
-      </button>
-      <button
-        type="button"
-        [attr.aria-label]="'reader.toggleRead' | transloco"
-        [class.on]="entry().isViewed"
-        [attr.aria-pressed]="entry().isViewed"
-        (click)="$event.stopPropagation(); read.emit(entry())"
-      >
-        <app-icon name="check" size="md" />
-      </button>
+    <div class="tagline">
+      <app-source-tags [tags]="tags()" />
+      <div class="actions">
+        <button
+          type="button"
+          [attr.aria-label]="'reader.favorite' | transloco"
+          [class.on]="entry().isFavorite"
+          [attr.aria-pressed]="entry().isFavorite"
+          (click)="$event.stopPropagation(); favorite.emit(entry())"
+        >
+          <app-icon name="star" size="md" />
+        </button>
+        <button
+          type="button"
+          [attr.aria-label]="'reader.keep' | transloco"
+          [class.on]="entry().isKept"
+          [attr.aria-pressed]="entry().isKept"
+          (click)="$event.stopPropagation(); keep.emit(entry())"
+        >
+          <app-icon name="bookmark" size="md" />
+        </button>
+        <button
+          type="button"
+          [attr.aria-label]="'reader.toggleRead' | transloco"
+          [class.on]="entry().isViewed"
+          [attr.aria-pressed]="entry().isViewed"
+          (click)="$event.stopPropagation(); read.emit(entry())"
+        >
+          <app-icon name="check" size="md" />
+        </button>
+      </div>
     </div>
   </div>
   @if (image() && !imgError()) {

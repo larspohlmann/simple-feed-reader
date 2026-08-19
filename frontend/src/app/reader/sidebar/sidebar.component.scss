@@ -236,16 +236,6 @@
   align-items: center;
 }
 
-.tag .expand {
-  display: inline-flex;
-  align-items: center;
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: var(--space-2) 0 var(--space-2) var(--space-1);
-}
-
 /* `min-width: 0` is what lets the name actually truncate. Without it this flex
          item keeps its automatic minimum size — its min-content width — so it refuses
          to shrink, the ellipsis rule on the name span never gets squeezed, and a long
@@ -313,18 +303,38 @@
   text-overflow: ellipsis;
 }
 
-/* Coarse navigation: the dedicated expand zone at the row's trailing edge. */
+/* The trailing expand/collapse chevron, one button for both pointer types. */
 .chevzone {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--tap-target);
-  height: var(--tap-target);
+  padding: 0;
   background: none;
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
+  margin: var(--space-1);
+}
+
+/* The muted outline is drawn on a small box around the glyph, not the button —
+   so on touch the button can grow to a full 44px tap target (below) without the
+   border ballooning with it, and the same box reads identically on desktop. */
+.chevzone app-icon {
+  display: inline-flex;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+/* Touch: the whole button becomes a 44px tap target, its spare room the margin
+   around the glyph box. The button's own margin gives way to that centring. */
+@media (pointer: coarse) {
+  .chevzone {
+    width: var(--tap-target);
+    height: var(--tap-target);
+    margin: 0;
+  }
 }
 
 /* Organise-mode tagged feeds indent to sit under the tag name, visualising

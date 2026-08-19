@@ -131,7 +131,7 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
 
     <app-field
       [label]="'settings.ai.recommendations.contextWindow' | transloco"
-      [hint]="contextWindowSourceKey() | transloco"
+      [hint]="contextWindowSourceKey() | transloco: { value: reportedContextWindow() }"
       [info]="'settings.ai.info.contextWindow' | transloco"
     >
       <input
@@ -143,18 +143,18 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
       />
     </app-field>
 
-    <app-disclosure [label]="'settings.ai.recommendations.fixedShow' | transloco">
-      <pre class="fixed"
-        >{{ state.fixedPrompt.role }}
-
-{{ state.fixedPrompt.outputContract }}</pre>
-    </app-disclosure>
     <div class="fixed-info">
       <app-info-tip
         [text]="'settings.ai.info.fixedPrompt' | transloco"
         [label]="'settings.ai.recommendations.fixedShow' | transloco"
       />
     </div>
+    <app-disclosure [label]="'settings.ai.recommendations.fixedShow' | transloco">
+      <pre class="fixed"
+        >{{ state.fixedPrompt.role }}
+
+{{ state.fixedPrompt.outputContract }}</pre>
+    </app-disclosure>
 
     <div class="debug-row">
       <span class="debug-text">

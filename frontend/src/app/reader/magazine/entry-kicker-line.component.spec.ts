@@ -73,8 +73,12 @@ describe('EntryKickerLineComponent', () => {
     expect(el.querySelector('.when')!.textContent).not.toBe('');
   });
 
-  it('drops the dot when the caller renders its own outside the line', () => {
-    expect(mount(entry(), { showDot: false }).querySelector('.dot')).toBeNull();
+  it('renders the read-indicator dot after the time (#486)', () => {
+    const el = mount(entry());
+    const when = el.querySelector('.when')!;
+    const dot = el.querySelector('.dot');
+    expect(dot).not.toBeNull();
+    expect(when.compareDocumentPosition(dot!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('sizes the favicon at 12px by default and honours the hero override', () => {

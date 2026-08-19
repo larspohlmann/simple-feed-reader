@@ -151,7 +151,7 @@ describe('SidebarComponent', () => {
     expect(el.querySelector('.tag')!.textContent).toContain('Tech');
     expect(el.querySelector('.tag')!.textContent).toContain('9');
     expect(el.querySelectorAll('.tag-sub').length).toBe(0);
-    (el.querySelector('.tag .expand') as HTMLButtonElement).click();
+    (el.querySelector('.tag .chevzone') as HTMLButtonElement).click();
     f.detectChanges();
     expect(el.querySelectorAll('.tag-sub').length).toBe(2);
   });
@@ -246,7 +246,7 @@ describe('SidebarComponent', () => {
       ],
     });
     const el = f.nativeElement as HTMLElement;
-    el.querySelectorAll<HTMLButtonElement>('.tag .expand').forEach((b) => b.click());
+    el.querySelectorAll<HTMLButtonElement>('.tag .chevzone').forEach((b) => b.click());
     f.detectChanges();
 
     const dots = el.querySelectorAll<HTMLButtonElement>('.feedrow .dots');
@@ -635,10 +635,10 @@ describe('organise mode', () => {
     expect(el.textContent).toContain('Feeds');
   });
 
-  it('coarse navigation trades the leading chevron for a 44px trailing zone', () => {
+  it('coarse navigation shows the trailing chevron and no inline menu', () => {
     const el = mount({ coarse: true, tagTree: tree }).nativeElement as HTMLElement;
-    expect(el.querySelector('.expand')).toBeNull();
     const zone = el.querySelector('.chevzone')!;
+    expect(zone).not.toBeNull();
     expect(zone.getAttribute('aria-expanded')).toBe('false');
     expect(el.querySelector('.tag .nav.grow')).not.toBeNull();
     expect(el.querySelector('.dots')).toBeNull();
@@ -786,7 +786,7 @@ describe('organise mode', () => {
     // leave the organise DOM with no way out — the component resets instead.
     expect(f.componentInstance.organising()).toBe(false);
     expect((f.nativeElement as HTMLElement).querySelector('.tag .handle')).toBeNull();
-    expect((f.nativeElement as HTMLElement).querySelector('.expand')).not.toBeNull();
+    expect((f.nativeElement as HTMLElement).querySelector('.chevzone')).not.toBeNull();
   });
 
   it('locks dragging in coarse navigation mode and frees it while organising', () => {
@@ -832,10 +832,9 @@ describe('organise mode', () => {
     expect(desktop.componentInstance.dragDelay()).toEqual({ touch: 180, mouse: 0 });
   });
 
-  it('desktop keeps the leading chevron, inline menu and popover', () => {
+  it('desktop shows the trailing chevron, inline menu and popover', () => {
     const el = mount({ tagTree: tree }).nativeElement as HTMLElement;
-    expect(el.querySelector('.expand')).not.toBeNull();
-    expect(el.querySelector('.chevzone')).toBeNull();
+    expect(el.querySelector('.chevzone')).not.toBeNull();
     expect(el.querySelector('.handle')).toBeNull();
     expect(el.querySelector('.rowmenu .dots')).not.toBeNull();
   });

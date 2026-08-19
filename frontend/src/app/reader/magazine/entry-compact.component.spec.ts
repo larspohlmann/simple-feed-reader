@@ -97,22 +97,24 @@ describe('EntryCompactComponent', () => {
     expect(open).toHaveBeenCalledTimes(2);
   });
 
-  it('hangs the actions on the kicker line, not on a row of their own', () => {
+  it('drops the actions onto their own bottom meta row, not the kicker line (#486)', () => {
     const el = mount().nativeElement as HTMLElement;
     const actions = el.querySelector('app-entry-actions');
     expect(actions).not.toBeNull();
-    // Proves the actions render inside the kicker's own <p>, not as a sibling
-    // block below it — which is what would drop the icons onto a second line.
-    expect(actions!.closest('p.kicker')).not.toBeNull();
-    expect(el.querySelector('app-entry-meta')).toBeNull();
+    // The actions now ride the shared meta row (tags + actions, right-aligned at
+    // the card's bottom), not the kicker's own <p>.
+    expect(actions!.closest('p.kicker')).toBeNull();
+    expect(actions!.closest('app-entry-meta')).not.toBeNull();
   });
 
-  it('renders the three actions with showSource false and no tags to sit beside', () => {
+  it('renders the three actions with showSource false and no tag pills to sit beside', () => {
     const f = mount();
     f.componentRef.setInput('showSource', false);
     f.detectChanges();
     const el = f.nativeElement as HTMLElement;
-    expect(el.querySelector('app-source-tags')).toBeNull();
+    // The meta row still renders (for the actions), but with no tags passed it
+    // shows no pills.
+    expect(el.querySelector('app-source-tags .pill')).toBeNull();
     expect(el.querySelectorAll('app-entry-actions button').length).toBe(3);
   });
 

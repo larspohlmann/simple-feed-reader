@@ -4,12 +4,8 @@
 
 .split {
   display: flex;
+  flex-direction: column;
   gap: var(--space-3);
-
-  /* Stretch, so the text column fills a taller image's height and the meta row
-     can drop to the bottom of the card. The image is pinned back to the top
-     below — stretching it would override its bound aspect-ratio. */
-  align-items: stretch;
   padding: var(--space-3);
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -21,7 +17,15 @@
   border-color: var(--border-strong);
 }
 
-.split.img-left {
+/* Image beside text. The meta row is a sibling below, so its actions align to
+   the whole card's edge, not this row's. */
+.top {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.split.img-left .top {
   flex-direction: row-reverse;
 }
 
