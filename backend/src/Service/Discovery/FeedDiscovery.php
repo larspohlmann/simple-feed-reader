@@ -44,11 +44,16 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         private FeedLinkScanner $links,
         private WellKnownFeedProbe $wellKnownFeeds,
         private BotChallengePage $botChallenge,
+        private SubstackProfileFeed $substackProfile,
     ) {
     }
 
     public function discover(string $url, ScrapeFallback $fallback): FeedDiscoveryResult
     {
+        // A Substack profile-share URL names its feed on another host; rewrite
+        // it before the fetch so the direct-feed path below can parse-verify it.
+        $url = $this->substackProfile->feedUrl($url) ?? $url;
+
         try {
             $response = $this->fetcher->fetch($url);
         } catch (FeedThrottledException) {

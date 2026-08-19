@@ -27,6 +27,12 @@
         // sees no connection.
         UnwrapFinally: { ignore: ['App\\Service\\Parser\\FeedParser::parse'] },
         BitwiseOr: { ignore: ['App\\Service\\Parser\\FeedParser::parse'] },
+        // CastString in SubstackProfileFeed::feedUrl(): parse_url returns null
+        // for a URL with no path (e.g. https://substack.com), and (string) null
+        // is '' — but the profile regex refuses both null and '' identically, so
+        // the cast changes nothing the method can do. Equivalent mutant, ignored
+        // by name and method; a real mutant in the same method still fails.
+        CastString: { ignore: ['App\\Service\\Discovery\\SubstackProfileFeed::feedUrl'] },
     },
     phpUnit: {
         configDir: '.',

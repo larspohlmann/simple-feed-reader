@@ -8,6 +8,7 @@ use App\Enum\ScrapeFallback;
 use App\Service\Discovery\BotChallengePage;
 use App\Service\Discovery\FeedDiscovery;
 use App\Service\Discovery\FeedLinkScanner;
+use App\Service\Discovery\SubstackProfileFeed;
 use App\Service\Discovery\WellKnownFeedProbe;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
@@ -37,6 +38,7 @@ final class FeedDiscoveryTest extends KernelTestCase
             new FeedLinkScanner(),
             new WellKnownFeedProbe($fetcher, $parser),
             new BotChallengePage(),
+            new SubstackProfileFeed(),
         );
     }
 
@@ -178,6 +180,59 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         self::assertNotNull($result->feed);
         self::assertSame('https://www.heise.de/.rss', $result->feed->url);
+    }
+
+    /**
+     * "Copy link to profile" gives `substack.com/@handle`, whose feed lives on
+     * `handle.substack.com` — a host the same-origin probe cannot reach. The
+     * rewrite gets there, and the share URL's tracking query is dropped.
+     */
+    public function testASubstackProfileUrlSubscribesThePublicationFeed(): void
+    {
+        $xml = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
+        self::assertIsString($xml);
+
+        $fetcher = $this->fetcherReturning(
+            'https://rushkoff.substack.com/feed',
+            'https://rushkoff.substack.com/feed',
+            $xml,
+        );
+
+        $result = $this->discovery($fetcher)->discover(
+            'https://substack.com/@rushkoff?r=260csv&utm_medium=ios',
+            ScrapeFallback::Enabled,
+        );
+
+        self::assertNotNull($result->feed);
+        self::assertSame('https://rushkoff.substack.com/feed', $result->feed->url);
+        self::assertNull($result->scrapeFailureReason);
+    }
+
+    /**
+     * A handle that is not a real publication subdomain gets bounced by Substack
+     * back to the profile HTML. That page is not a feed, so the rewrite must not
+     * fabricate a subscription — discovery falls through to its usual no-feed
+     * outcome, exactly as if the URL had never been rewritten.
+     */
+    public function testAnUnknownSubstackHandleFallsThroughInsteadOfSubscribingHtml(): void
+    {
+        // @lang TEXT: the profile HTML Substack bounces an unknown handle back to.
+        $profileHtml = /** @lang TEXT */ '<!doctype html><html><head><title>Profile</title>'
+            . '</head><body>No feed here.</body></html>';
+
+        $fetcher = $this->fetcherReturning(
+            'https://ghost-handle.substack.com/feed',
+            'https://substack.com/@ghost-handle',
+            $profileHtml,
+        );
+
+        $result = $this->discovery($fetcher)->discover(
+            'https://substack.com/@ghost-handle',
+            ScrapeFallback::Enabled,
+        );
+
+        self::assertNull($result->feed);
+        self::assertSame([], $result->candidates);
     }
 
     public function testAccessDeniedStatusReportsBlockedWhenNoConventionalPathServesAFeed(): void
