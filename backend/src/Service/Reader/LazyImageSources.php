@@ -14,6 +14,11 @@ namespace App\Service\Reader;
  * Promoting the candidate here means the sanitizer sees an ordinary image and
  * keeps its scheme guard intact.
  *
+ * A responsive <picture> hides its URL the same way without being lazy at all:
+ * the <img> carries no `src` and the candidates sit on sibling <source srcset>
+ * elements (#498: ZDFheute). The last resort therefore looks one level out,
+ * into the picture the image belongs to.
+ *
  * An image with no usable candidate is removed: an <img> the client cannot load
  * is a broken frame, and leaving it also fools ArticleExtractor::leadImage()
  * into suppressing the hero.
@@ -62,8 +67,31 @@ final readonly class LazyImageSources
         }
 
         foreach (self::SRCSET_ATTRIBUTES as $attribute) {
-            $candidate = $this->firstOfSrcset($image->getAttribute($attribute));
-            if ($candidate !== null && $this->isUsable($candidate)) {
+            $candidate = $this->usableSrcsetHead($image->getAttribute($attribute));
+            if ($candidate !== null) {
+                return $candidate;
+            }
+        }
+
+        return $this->candidateFromEnclosingPicture($image);
+    }
+
+    /**
+     * A responsive <picture> may leave its <img> bare and carry the URL on a
+     * sibling <source srcset> (ZDFheute is the case, #498). The <img> is the
+     * element the browser renders, so it has to survive with a source of its
+     * own — removing it drops the picture and the figure built around it.
+     */
+    private function candidateFromEnclosingPicture(\DOMElement $image): ?string
+    {
+        $picture = $this->enclosingPicture($image);
+        if ($picture === null) {
+            return null;
+        }
+
+        foreach ($picture->getElementsByTagName('source') as $source) {
+            $candidate = $this->usableSrcsetHead($source->getAttribute('srcset'));
+            if ($candidate !== null) {
                 return $candidate;
             }
         }
@@ -80,12 +108,30 @@ final readonly class LazyImageSources
         return $url !== '' && preg_match(self::FOREIGN_SCHEME, $url) !== 1;
     }
 
-    private function firstOfSrcset(string $srcset): ?string
+    /**
+     * The <picture> an image belongs to. libxml carries no HTML5 void-element
+     * table, so an unclosed <source> swallows everything after it: each one
+     * nests inside the last and the <img> ends up buried under the chain. A
+     * self-closed <source> leaves them siblings instead. Publishers ship both
+     * spellings, so the walk climbs out of however many sources it finds.
+     */
+    private function enclosingPicture(\DOMElement $image): ?\DOMElement
+    {
+        $ancestor = $image->parentNode;
+        while ($ancestor instanceof \DOMElement && $ancestor->nodeName === 'source') {
+            $ancestor = $ancestor->parentNode;
+        }
+
+        return $ancestor instanceof \DOMElement && $ancestor->nodeName === 'picture' ? $ancestor : null;
+    }
+
+    /** The first candidate of a srcset list, or null when it yields nothing usable. */
+    private function usableSrcsetHead(string $srcset): ?string
     {
         if (preg_match('/\S+/', explode(',', $srcset)[0], $matches) !== 1) {
             return null;
         }
 
-        return $matches[0];
+        return $this->isUsable($matches[0]) ? $matches[0] : null;
     }
 }

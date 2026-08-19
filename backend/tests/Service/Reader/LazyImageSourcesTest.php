@@ -75,6 +75,65 @@ final class LazyImageSourcesTest extends TestCase
         self::assertStringNotContainsString('<img', $html);
     }
 
+    public function testPromotesTheSourceOfTheEnclosingPicture(): void
+    {
+        $source = $this->resolvedSource(
+            '<picture><source srcset="https://images.example.com/small.jpg 384w,'
+            . ' https://images.example.com/large.jpg 768w"><img alt="A"></picture>'
+        );
+
+        self::assertSame('https://images.example.com/small.jpg', $source);
+    }
+
+    public function testPromotesTheSourceOfAPictureThatSelfClosesIt(): void
+    {
+        $source = $this->resolvedSource(
+            '<picture><source srcset="https://images.example.com/small.jpg 384w"/>'
+            . '<img alt="A"></picture>'
+        );
+
+        self::assertSame('https://images.example.com/small.jpg', $source);
+    }
+
+    public function testPrefersTheImagesOwnCandidateOverThePictureSource(): void
+    {
+        $source = $this->resolvedSource(
+            '<picture><source srcset="https://images.example.com/from-source.jpg 384w">'
+            . '<img data-src="https://images.example.com/from-image.jpg" alt="A"></picture>'
+        );
+
+        self::assertSame('https://images.example.com/from-image.jpg', $source);
+    }
+
+    public function testSkipsAPictureSourceThatCarriesNoCandidate(): void
+    {
+        $source = $this->resolvedSource(
+            '<picture><source media="(min-width: 40em)"><source type="image/webp"'
+            . ' srcset="https://images.example.com/photo.webp 384w"><img alt="A"></picture>'
+        );
+
+        self::assertSame('https://images.example.com/photo.webp', $source);
+    }
+
+    public function testRemovesAPictureImageWhoseSourceHasAnUnsafeScheme(): void
+    {
+        $html = $this->resolvedHtml(
+            '<picture><source srcset="javascript:alert(1) 384w"><img alt="A"></picture>'
+        );
+
+        self::assertStringNotContainsString('<img', $html);
+    }
+
+    public function testRemovesASourcelessImageThatNoPictureEncloses(): void
+    {
+        $html = $this->resolvedHtml(
+            '<figure><source srcset="https://images.example.com/photo.jpg 384w">'
+            . '<img alt="A"></figure>'
+        );
+
+        self::assertStringNotContainsString('<img', $html);
+    }
+
     public function testRemovesAnImageWithNoUsableCandidate(): void
     {
         $html = $this->resolvedHtml(
