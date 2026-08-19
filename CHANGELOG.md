@@ -12,6 +12,32 @@ lives in the git log and the merged pull requests.
 
 ## [v0.6.0] - 2026-08-19
 
+### Highlights
+
+**AI recommendations (For You).** A per-account "For You" feed that ranks your
+unread entries with an AI provider of your choice. Save one or more provider
+profiles and switch between them, run a ranking on demand or on a per-user
+schedule, and follow it with a live run view, an ETA, and cost bounds. A
+background worker and a detached drainer carry long runs to completion, and
+results are scored so the strongest articles surface first.
+
+**Full-text search.** Search across your entries, backed by Meilisearch with a
+permanent database fallback so search keeps working even when the index is
+unavailable. You choose whether to include Meilisearch at install time — the
+database fallback covers the rest. Whole-word matching is supported, and results
+reload in place without blanking the list.
+
+**Account backup and restore.** Export a whole account — feeds, tags, read
+state, and your kept and favorited articles — and restore it into another
+instance. A self-hosted install accepts a real account backup, so you can move
+between instances or keep an off-site copy.
+
+**Simplified install and update.** The production installer sets up the full
+stack from a single package question and survives a second run, and
+`scripts/update.sh` moves an existing install to the latest release. Both
+resolve the latest release straight from git, with no dependency on the GitHub
+Release object.
+
 ## What's Changed
 * Per-account AI provider configuration (groundwork) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/306
 * Record actively opened entries as viewed (#307) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/313
