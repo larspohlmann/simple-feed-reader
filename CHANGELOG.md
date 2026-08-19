@@ -10,6 +10,91 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v0.6.0] - 2026-08-19
+
+## What's Changed
+* Per-account AI provider configuration (groundwork) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/306
+* Record actively opened entries as viewed (#307) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/313
+* feat(#308): AI-powered For you recommendation feed by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/314
+* feat(#311): background worker container for recommendation runs, feed refresh and housekeeping by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/315
+* Score-based recommendation ranking (#316) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/317
+* Stream provider responses in the AI client for early stall detection by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/318
+* Realtime debug view for recommendation runs (#309) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/319
+* Stop charging reasoning tokens to the answer's budget (#320) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/322
+* For-you polish: layout, controls, cost bounds (#321) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/324
+* Move the For You run trigger into the list title bar by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/326
+* fix(#327): reasoning models fail ranking — max_tokens starves the answer by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/328
+* fix(#329): LM Studio json_schema, real transport errors, batch degrade, resume-or-fresh choice by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/330
+* For You: show the recommendation strip in every reading layout (#331) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/332
+* feat(#333): scheduled auto-generation of For You (per-user cadence + external-cron endpoint) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/335
+* Save multiple AI provider configurations and switch the active one (#334) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/337
+* fix(#323): recover the recommendation answer from reasoning_content when content is empty by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/339
+* For-You run: ETA + anticipatory progress bar (#336) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/340
+* feat(#323): per-config toggle to ask the provider not to reason by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/341
+* fix(#342): mobile layout regressions + settings polish by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/343
+* Parallel recommendation batch calls + recommendation-quality tuning (#344) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/345
+* feat(#346): single /maintenance/tick endpoint (refresh + recommendations) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/349
+* feat: duplicate an AI provider configuration + collapsible AI settings UI (#347) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/350
+* For You: run-boundary headers between recommendation runs (#348) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/351
+* refactor: collapsible settings-card composes app-disclosure (#352) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/353
+* fix(#354): pin every resolved IP so the fetch client can fall back across families by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/355
+* fix(#356): cross-family fetch failover on a dead-route reset by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/357
+* fix(#358): cross-family failover on a route-specific error status (taz.de) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/359
+* fix(#360): force a fresh connection on a failover retry (taz.de) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/361
+* fix(#362): exclude the worker from the e2e stack boot by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/363
+* fix(#364): tighten adaptive refresh bounds (floor 5 min, ceiling 6 h) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/365
+* feat(#366): sort entry list by refresh run, not article publication time by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/367
+* fix(#368): read Atom <dc:date> so tagesschau & NDR entries get a published date by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/369
+* fix(e2e): let the seeded admin accept a scraped candidate by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/377
+* refactor: give the page URL a home in the scraper and discovery by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/375
+* build: gate the backend on phptramp by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/379
+* build: run the gate against phptramp's latest develop by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/381
+* fix(security): php_codesniffer 3.13.6 closes CVE-2026-67434 by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/383
+* fix(#388): follow phptramp to Packagist by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/389
+* fix(#384): sort on a clamped effective date, purge by fetch date by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/387
+* feat(#386): recommendation look-back window (1-7 days, default 2) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/391
+* Spawn a detached CLI drainer to drive recommendation runs to completion (#371) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/392
+* feat(#372): in-page documentation for the AI settings by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/395
+* fix(#396): reject a dedup reply that names most of the list by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/397
+* fix(#399): stop the batch prompt asking for candidates to be left out by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/400
+* feat(#401): keep the debug log of the last ten runs by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/402
+* feat(#403): score on 0-1000, and ask for exact values by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/404
+* feat(#406): dedup lines carry the description, not the reason by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/407
+* Search entries by title and summary by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/413
+* Show the entry actions on every magazine card by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/418
+* fix(#415): report a rejected AI configuration where it happened, with the server's reason by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/420
+* feat(#398): show For-You progress in the app-wide pill, not only the reader header by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/421
+* fix(#423): parse feeds that start after the XML declaration by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/425
+* fix(#424): report a bot gate as a refusal, not as a missing feed by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/426
+* docs(#428): target the README at end users, polish the operator guides by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/429
+* feat(#430): print the setup information last, and default to port 3333 by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/431
+* feat(#409): record what each recommendation run costs, and show a month-paged run history by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/427
+* Per-connection AI timeout profile, and the info tip that opened in the wrong place by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/434
+* Design polish sweep by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/436
+* fix(#437): bound a runaway completion where the runaway is by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/438
+* fix(#441): clean up the #437 runaway bounds, and close what review found by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/442
+* Meilisearch-backed entry search with a permanent database fallback (#432) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/446
+* fix(#448): let a search reload the list without dimming or veiling it by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/449
+* fix(#450): carry the whole-word mode into the search index query by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/451
+* Bound a stranded recommendation run to minutes, split slow_model, move the drainer spawn by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/452
+* docs(#432): move Meilisearch wire-format evidence out of scratch by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/447
+* Back up and restore a whole account between instances (#412) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/457
+* fix(#458): let a self-hosted install accept a real account backup by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/459
+* fix(#462): fade a list's rows as soon as they render by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/463
+* feat(#453): one package question, with the memory each one needs by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/464
+* fix(#465): fit the run-history row on a phone by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/466
+* fix(#467): keep the image when a page lazy-loads it by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/469
+* Reader header: kept/favorite on mobile, per-article refresh, shared loading overlay (#470) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/471
+* Box publisher inserts as cards, strip orphaned icon glyphs (#472) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/474
+* fix(#468): halve the article reading-focus change from #435 by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/477
+* feat(#478): add "Recently read" saved view by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/479
+* fix(#476): reader extracts the wrong block — extract both ways, keep the richer by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/481
+* feat(#482): tick=viewed, circle=read; enforce viewed⊆read by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/485
+* Visual refinements: AI settings hint, mobile search, sidebar chevrons, entry rows (#486) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/487
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v0.5.6...v0.6.0
+
 ## [v0.5.6] - 2026-08-06
 
 ## What's Changed
