@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <title>Two Different Pictures — Site</title>
+  <meta property="og:image" content="https://site.test/4943510.jpg?imageId=4943510">
+</head>
+<body>
+  <header>
+    <img src="https://site.test/4943510.jpg?imageId=4943510" alt="Topical hero in the page header">
+  </header>
+  <nav><a href="/">Home</a></nav>
+  <article>
+    <h1>Two Different Pictures</h1>
+    <p>This article keeps a photo in its body that is not the same picture as the
+       page hero, so the extractor scores this block as the real content and keeps
+       the inline figure while the topical hero stays up in the page header, well
+       outside the scored region, exactly the pattern that used to lose the first
+       image of the story for the reader.</p>
+    <figure><img src="https://site.test/4943526.jpg?imageId=4943526" alt="A later body photo"></figure>
+    <p>A second paragraph continues with more ordinary sentences and clauses, so
+       the body is unambiguously the main content of the document and clears the
+       character threshold comfortably while the hero and the body photo remain two
+       genuinely different pictures with two different CDN image ids.</p>
+  </article>
+</body></html>
