@@ -5,87 +5,17 @@ declare(strict_types=1);
 namespace App\Tests\Service\Discovery;
 
 use App\Enum\ScrapeFallback;
-use App\Service\Discovery\BotChallengePage;
-use App\Service\Discovery\FeedDiscovery;
-use App\Service\Discovery\FeedLinkScanner;
-use App\Service\Discovery\SubstackProfileFeed;
-use App\Service\Discovery\WellKnownFeedProbe;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Service\Fetch\FetchResponse;
-use App\Service\Parser\FeedParser;
-use App\Service\Scraper\HtmlItemExtractor;
 use App\Tests\Service\Scraper\ScrapedFixtures;
-use App\Tests\Support\StubFeedFetcher;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class FeedDiscoveryTest extends KernelTestCase
 {
+    use BuildsFeedDiscovery;
     use ScrapedFixtures;
-
-    private function discovery(StubFeedFetcher $fetcher): FeedDiscovery
-    {
-        $parser = self::getContainer()->get(FeedParser::class);
-        self::assertInstanceOf(FeedParser::class, $parser);
-        $extractor = self::getContainer()->get(HtmlItemExtractor::class);
-        self::assertInstanceOf(HtmlItemExtractor::class, $extractor);
-
-        return new FeedDiscovery(
-            $fetcher,
-            $parser,
-            $extractor,
-            new FeedLinkScanner(),
-            new WellKnownFeedProbe($fetcher, $parser),
-            new BotChallengePage(),
-            new SubstackProfileFeed($fetcher),
-        );
-    }
-
-    /**
-     * A site that serves nothing but the URLs a test stubs. Discovery guesses
-     * feed addresses now, so a test cannot list every URL it will ask for
-     * without re-deriving the code under test; it says "nothing else is out
-     * there" once instead.
-     */
-    private function fetcher(): StubFeedFetcher
-    {
-        $fetcher = new StubFeedFetcher();
-        $fetcher->willThrowForEverythingElse(new FeedUnreachableException('x: HTTP 404', 404));
-
-        return $fetcher;
-    }
-
-    private function fetcherReturning(string $url, string $finalUrl, string $body): StubFeedFetcher
-    {
-        $fetcher = $this->fetcher();
-        $fetcher->willReturn(
-            $url,
-            FetchResponse::fetched($finalUrl, permanentRedirect: false, body: $body, etag: null, lastModified: null),
-        );
-
-        return $fetcher;
-    }
-
-    /** Makes the profile API answer for $handle with a primary publication on $subdomain. */
-    private function stubProfileApi(StubFeedFetcher $fetcher, string $handle, string $subdomain): void
-    {
-        $this->stubProfileApiRaw(
-            $fetcher,
-            $handle,
-            (string) json_encode(['primaryPublication' => ['subdomain' => $subdomain]], JSON_THROW_ON_ERROR),
-        );
-    }
-
-    /** Makes the profile API answer for $handle with a verbatim body. */
-    private function stubProfileApiRaw(StubFeedFetcher $fetcher, string $handle, string $body): void
-    {
-        $apiUrl = sprintf('https://substack.com/api/v1/user/%s/public_profile', $handle);
-        $fetcher->willReturn(
-            $apiUrl,
-            FetchResponse::fetched($apiUrl, permanentRedirect: false, body: $body, etag: null, lastModified: null),
-        );
-    }
 
     public function testDirectFeedUrlReturnsCanonicalFinalUrl(): void
     {
@@ -200,54 +130,6 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         self::assertNotNull($result->feed);
         self::assertSame('https://www.heise.de/.rss', $result->feed->url);
-    }
-
-    /**
-     * "Copy link to profile" gives `substack.com/@handle`, whose feed lives on
-     * a host the same-origin probe cannot reach — and whose subdomain need not
-     * be the handle. `@abbeyheffer` publishes at `theopenbookshelf`; discovery
-     * reads that from the profile API, subscribes it, and drops the share URL's
-     * tracking query.
-     */
-    public function testASubstackProfileSubscribesThePublicationApiResolvesForIt(): void
-    {
-        $xml = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
-        self::assertIsString($xml);
-
-        $fetcher = $this->fetcherReturning(
-            'https://theopenbookshelf.substack.com/feed',
-            'https://theopenbookshelf.substack.com/feed',
-            $xml,
-        );
-        $this->stubProfileApi($fetcher, 'abbeyheffer', 'theopenbookshelf');
-
-        $result = $this->discovery($fetcher)->discover(
-            'https://substack.com/@abbeyheffer?r=260csv&utm_medium=ios',
-            ScrapeFallback::Enabled,
-        );
-
-        self::assertNotNull($result->feed);
-        self::assertSame('https://theopenbookshelf.substack.com/feed', $result->feed->url);
-        self::assertNull($result->scrapeFailureReason);
-    }
-
-    /**
-     * A handle whose profile names no publication cannot be resolved. The
-     * rewrite must not fabricate a subscription — discovery falls through to its
-     * usual no-feed outcome, exactly as if the URL had never been a profile.
-     */
-    public function testAnUnresolvableSubstackProfileFallsThroughInsteadOfSubscribing(): void
-    {
-        $fetcher = $this->fetcher();
-        $this->stubProfileApiRaw($fetcher, 'ghost-handle', '{"handle":"ghost-handle"}');
-
-        $result = $this->discovery($fetcher)->discover(
-            'https://substack.com/@ghost-handle',
-            ScrapeFallback::Enabled,
-        );
-
-        self::assertNull($result->feed);
-        self::assertSame([], $result->candidates);
     }
 
     public function testAccessDeniedStatusReportsBlockedWhenNoConventionalPathServesAFeed(): void
