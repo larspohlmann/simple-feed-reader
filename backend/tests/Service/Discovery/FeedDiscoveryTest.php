@@ -38,7 +38,7 @@ final class FeedDiscoveryTest extends KernelTestCase
             new FeedLinkScanner(),
             new WellKnownFeedProbe($fetcher, $parser),
             new BotChallengePage(),
-            new SubstackProfileFeed(),
+            new SubstackProfileFeed($fetcher),
         );
     }
 
@@ -65,6 +65,26 @@ final class FeedDiscoveryTest extends KernelTestCase
         );
 
         return $fetcher;
+    }
+
+    /** Makes the profile API answer for $handle with a primary publication on $subdomain. */
+    private function stubProfileApi(StubFeedFetcher $fetcher, string $handle, string $subdomain): void
+    {
+        $this->stubProfileApiRaw(
+            $fetcher,
+            $handle,
+            (string) json_encode(['primaryPublication' => ['subdomain' => $subdomain]], JSON_THROW_ON_ERROR),
+        );
+    }
+
+    /** Makes the profile API answer for $handle with a verbatim body. */
+    private function stubProfileApiRaw(StubFeedFetcher $fetcher, string $handle, string $body): void
+    {
+        $apiUrl = sprintf('https://substack.com/api/v1/user/%s/public_profile', $handle);
+        $fetcher->willReturn(
+            $apiUrl,
+            FetchResponse::fetched($apiUrl, permanentRedirect: false, body: $body, etag: null, lastModified: null),
+        );
     }
 
     public function testDirectFeedUrlReturnsCanonicalFinalUrl(): void
@@ -184,47 +204,42 @@ final class FeedDiscoveryTest extends KernelTestCase
 
     /**
      * "Copy link to profile" gives `substack.com/@handle`, whose feed lives on
-     * `handle.substack.com` — a host the same-origin probe cannot reach. The
-     * rewrite gets there, and the share URL's tracking query is dropped.
+     * a host the same-origin probe cannot reach — and whose subdomain need not
+     * be the handle. `@abbeyheffer` publishes at `theopenbookshelf`; discovery
+     * reads that from the profile API, subscribes it, and drops the share URL's
+     * tracking query.
      */
-    public function testASubstackProfileUrlSubscribesThePublicationFeed(): void
+    public function testASubstackProfileSubscribesThePublicationApiResolvesForIt(): void
     {
         $xml = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
         self::assertIsString($xml);
 
         $fetcher = $this->fetcherReturning(
-            'https://rushkoff.substack.com/feed',
-            'https://rushkoff.substack.com/feed',
+            'https://theopenbookshelf.substack.com/feed',
+            'https://theopenbookshelf.substack.com/feed',
             $xml,
         );
+        $this->stubProfileApi($fetcher, 'abbeyheffer', 'theopenbookshelf');
 
         $result = $this->discovery($fetcher)->discover(
-            'https://substack.com/@rushkoff?r=260csv&utm_medium=ios',
+            'https://substack.com/@abbeyheffer?r=260csv&utm_medium=ios',
             ScrapeFallback::Enabled,
         );
 
         self::assertNotNull($result->feed);
-        self::assertSame('https://rushkoff.substack.com/feed', $result->feed->url);
+        self::assertSame('https://theopenbookshelf.substack.com/feed', $result->feed->url);
         self::assertNull($result->scrapeFailureReason);
     }
 
     /**
-     * A handle that is not a real publication subdomain gets bounced by Substack
-     * back to the profile HTML. That page is not a feed, so the rewrite must not
-     * fabricate a subscription — discovery falls through to its usual no-feed
-     * outcome, exactly as if the URL had never been rewritten.
+     * A handle whose profile names no publication cannot be resolved. The
+     * rewrite must not fabricate a subscription — discovery falls through to its
+     * usual no-feed outcome, exactly as if the URL had never been a profile.
      */
-    public function testAnUnknownSubstackHandleFallsThroughInsteadOfSubscribingHtml(): void
+    public function testAnUnresolvableSubstackProfileFallsThroughInsteadOfSubscribing(): void
     {
-        // @lang TEXT: the profile HTML Substack bounces an unknown handle back to.
-        $profileHtml = /** @lang TEXT */ '<!doctype html><html><head><title>Profile</title>'
-            . '</head><body>No feed here.</body></html>';
-
-        $fetcher = $this->fetcherReturning(
-            'https://ghost-handle.substack.com/feed',
-            'https://substack.com/@ghost-handle',
-            $profileHtml,
-        );
+        $fetcher = $this->fetcher();
+        $this->stubProfileApiRaw($fetcher, 'ghost-handle', '{"handle":"ghost-handle"}');
 
         $result = $this->discovery($fetcher)->discover(
             'https://substack.com/@ghost-handle',
