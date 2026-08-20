@@ -101,7 +101,7 @@
         "cs": "phpcs",
         "cs:fix": "phpcbf",
         "stan": "phpstan analyse --memory-limit=512M",
-        "md": "phpmd src text phpmd.xml.dist",
+        "md": "@php -d error_reporting=\"E_ALL & ~E_DEPRECATED\" vendor/bin/phpmd src text phpmd.xml.dist",
         "tramp": "phptramp",
         "tramp:update": "composer update phptramp/phptramp --no-interaction --no-progress --no-scripts",
         "check": ["@cs", "@stan", "@tramp"],
