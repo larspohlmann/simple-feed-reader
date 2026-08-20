@@ -9,7 +9,7 @@ use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Repository\SubscriptionDisplayTitle;
 use App\Repository\UnreadDql;
-use App\Service\PlainText;
+use App\Service\Text\PlainText;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;

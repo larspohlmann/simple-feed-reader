@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Admin;
 
-use App\Entity\User;
 use App\Enum\UserStatus;
 use App\Service\Admin\UserLimits;
 use App\Tests\DbTestCase;

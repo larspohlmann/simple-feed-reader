@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Service\Retention;
 
 /**
  * The fetch-order position of one feed's `keep`-th newest entry: `createdAt`

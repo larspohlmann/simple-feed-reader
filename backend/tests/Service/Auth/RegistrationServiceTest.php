@@ -19,7 +19,6 @@ use App\Service\Mail\AccountMailerInterface;
 use App\Service\Mail\MailCapability;
 use App\Service\Settings\InstanceSettings;
 use App\Tests\DbTestCase;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;

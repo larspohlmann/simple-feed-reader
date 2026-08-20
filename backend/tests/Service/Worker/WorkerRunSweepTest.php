@@ -13,18 +13,18 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Worker\RecommendationDriverKind;
+use App\Service\Worker\SweepStreamHeartbeat;
 use App\Service\Worker\WorkerPresence;
 use App\Service\Worker\WorkerRunSweep;
-use App\Service\Worker\SweepStreamHeartbeat;
-use Symfony\Component\Clock\MockClock;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ClearTrackingEntityManager;
 use App\Tests\Support\RecommendationRunFixtures;
-use App\Tests\Support\ThrowingClock;
 use App\Tests\Support\StubChatClient;
+use App\Tests\Support\ThrowingClock;
 use App\Tests\Support\TickingClock;
 use App\Tests\Support\UserFactory;
 use Psr\Log\NullLogger;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**

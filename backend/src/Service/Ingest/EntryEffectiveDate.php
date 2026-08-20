@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Service\Ingest;
 
 /**
  * The instant an entry takes its place in the reader's list.

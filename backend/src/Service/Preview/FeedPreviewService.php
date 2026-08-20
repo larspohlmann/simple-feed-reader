@@ -13,8 +13,8 @@ use App\Service\Fetch\FeedFetcherInterface;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
 use App\Service\Parser\ParsedEntry;
-use App\Service\PlainText;
 use App\Service\Scraper\HtmlItemExtractor;
+use App\Service\Text\PlainText;
 
 /**
  * Fetches a feed URL and summarizes its content shape — how many items it has,

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service;
+namespace App\Tests\Service\Sanitize;
 
-use App\Service\TrailingBlankRemover;
+use App\Service\Sanitize\TrailingBlankRemover;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

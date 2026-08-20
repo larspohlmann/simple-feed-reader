@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Service\Retention;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;

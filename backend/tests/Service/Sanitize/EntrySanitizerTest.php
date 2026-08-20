@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service;
+namespace App\Tests\Service\Sanitize;
 
-use App\Service\EntrySanitizer;
+use App\Service\Sanitize\EntrySanitizer;
 use PHPUnit\Framework\TestCase;
 
 final class EntrySanitizerTest extends TestCase

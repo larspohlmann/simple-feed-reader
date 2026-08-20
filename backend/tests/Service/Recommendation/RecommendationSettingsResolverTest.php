@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation;
 
 use App\Entity\AiProviderSettings;
-use App\Entity\User;
 use App\Entity\RecommendationSettings;
+use App\Entity\User;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationPackingSettings;
