@@ -413,6 +413,21 @@ prod_compose() {
            --env-file .env.prod "$@" ) < /dev/null
 }
 
+# Derive the checked-out tree's release version and export it as the build args
+# the prod images bake in: the SPA carries it in version.ts, the backend in
+# version.json, and both would otherwise report the 'dev' placeholder on a
+# Docker install (issue #500). scripts/stamp-version.sh is the single source of
+# truth for how the three values are computed -- the Strato release build reads
+# it the same way. Called before `prod_compose up -d --build`; docker compose
+# interpolates the exported values into docker-compose.prod.yml's build args.
+export_build_version_args() {
+  { IFS= read -r APP_VERSION
+    IFS= read -r APP_COMMIT
+    IFS= read -r APP_BUILT_AT
+  } < <("${REPO_ROOT}/scripts/stamp-version.sh" derive)
+  export APP_VERSION APP_COMMIT APP_BUILT_AT
+}
+
 # `docker compose up -d` only STARTS services that are in the active
 # profiles -- it never stops one that has just fallen OUT of them, and
 # nothing else in this flow calls `down` or `rm`. Without this, declining the

@@ -130,6 +130,14 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
       target: prod
+      # The release version baked into version.json. scripts/prod-start.sh
+      # derives and exports these; empty otherwise, so a bare `compose build`
+      # leaves the app on its development-build fallback (issue #500). php and
+      # worker share the same three args so both bake the identical image.
+      args: &version-build-args
+        APP_VERSION: ${APP_VERSION:-}
+        APP_COMMIT: ${APP_COMMIT:-}
+        APP_BUILT_AT: ${APP_BUILT_AT:-}
     restart: unless-stopped
     environment: *app-environment
     extra_hosts:
@@ -157,6 +165,7 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
       target: prod
+      args: *version-build-args
     # --memory-limit raised from 128M in #437: one recommendation wave reads
     # several answer streams at once, and 128M cut a live run short at 201 MB.
     command: ["php", "bin/console", "messenger:consume", "scheduler_worker", "--time-limit=3600", "--memory-limit=512M"]
@@ -189,6 +198,8 @@ services:
     build:
       context: .
       dockerfile: docker/web/Dockerfile
+      # The same release version, baked into the SPA bundle's version.ts.
+      args: *version-build-args
     restart: unless-stopped
     environment:
       WEB_MODE: ${WEB_MODE:-auto}
