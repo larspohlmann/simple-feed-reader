@@ -56,7 +56,7 @@ app-reader-header.hidden {
 .sidebar {
   /* stylelint-disable-next-line declaration-property-unit-allowed-list --
      tuned sidebar measure, not a spacing value. */
-  width: 260px;
+  width: 288px;
   flex: 0 0 auto;
   border-right: 1px solid var(--border);
   background: var(--surface-1);
@@ -263,7 +263,7 @@ app-reader-header.hidden {
 
   /* stylelint-disable-next-line declaration-property-unit-allowed-list --
      tuned drawer measure, not a spacing value. */
-  width: 260px;
+  width: 288px;
   max-width: 82vw;
   transform: translateX(-100%);
   transition: transform 0.2s ease;
