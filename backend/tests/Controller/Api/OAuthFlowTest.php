@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Controller\Api\OAuthController;
 use App\Dto\OAuth\OAuthIdentity;
 use App\Entity\User;
 use App\Entity\UserIdentity;
@@ -12,7 +13,6 @@ use App\Repository\UserRepository;
 use App\Service\OAuth\OAuthProviderRegistry;
 use App\Tests\Support\FakeOAuthProvider;
 use App\Tests\Support\UserFactory;
-use App\Controller\Api\OAuthController;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;

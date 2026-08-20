@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Doctrine;
 
 use App\Service\Search\WordBoundaries;
-use Doctrine\ORM\Query\AST\Node;
 use Doctrine\ORM\Query\AST\Functions\FunctionNode;
+use Doctrine\ORM\Query\AST\Node;
 use Doctrine\ORM\Query\Parser;
 use Doctrine\ORM\Query\SqlWalker;
 use Doctrine\ORM\Query\TokenType;

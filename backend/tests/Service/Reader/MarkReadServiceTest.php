@@ -10,8 +10,8 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Reader\MarkReadService;
 use App\Exception\ValidationException;
+use App\Service\Reader\MarkReadService;
 use App\Tests\DbTestCase;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 

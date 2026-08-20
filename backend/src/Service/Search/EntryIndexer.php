@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Search;
 
 use App\Entity\Entry;
-use App\Service\Text\PlainText;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Index\IndexedEntry;
 use App\Service\Search\Index\SearchIndexWriter;
+use App\Service\Text\PlainText;
 use Psr\Log\LoggerInterface;
 
 /**

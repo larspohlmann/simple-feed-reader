@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
-use App\Service\Fetch\FetchAttempt;
 use App\Service\Fetch\FetchQueue;
 use App\Service\Fetch\FetchTicket;
 use PHPUnit\Framework\TestCase;

@@ -8,8 +8,8 @@ use App\Entity\CatalogFeed;
 use App\Entity\User;
 use App\Repository\CatalogFeedRepository;
 use App\Service\Subscription\BulkSubscribeItem;
-use App\Service\Subscription\BulkSubscribeResult;
 use App\Service\Subscription\BulkSubscriber;
+use App\Service\Subscription\BulkSubscribeResult;
 use App\Service\Subscription\TagStyle;
 
 /**

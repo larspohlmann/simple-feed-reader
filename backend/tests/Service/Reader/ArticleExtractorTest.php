@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
-use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
@@ -15,6 +14,7 @@ use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LazyImageSources;
 use App\Service\Reader\LeadImageSelector;
 use App\Service\Reader\LeadingTitleRemover;
+use App\Service\Sanitize\EntrySanitizer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;

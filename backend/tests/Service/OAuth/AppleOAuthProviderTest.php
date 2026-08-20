@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth;
 
-use App\Tests\Support\AppleTestKey;
 use App\Service\OAuth\AbstractOidcProvider;
 use App\Service\OAuth\AppleClientSecretFactory;
 use App\Service\OAuth\AppleOAuthProvider;
+use App\Tests\Support\AppleTestKey;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;

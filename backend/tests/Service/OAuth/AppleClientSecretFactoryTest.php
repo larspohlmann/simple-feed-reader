@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth;
 
-use App\Tests\Support\AppleTestKey;
 use App\Exception\OAuth\OAuthFailedException;
 use App\Service\OAuth\AppleClientSecretFactory;
+use App\Tests\Support\AppleTestKey;
 use Lcobucci\JWT\Encoding\JoseEncoder;
 use Lcobucci\JWT\Signer\Ecdsa\Sha256;
 use Lcobucci\JWT\Signer\Key\InMemory;
