@@ -62,6 +62,10 @@ if ! check_ports_free "${http_port}" "${tls_port}"; then
   warn 'Both ports are published regardless of mode, so docker will fail to publish them while busy.'
 fi
 
+# Stamp the real release version into the images this build produces, so the
+# sidebar and /api/version report it instead of the 'dev' placeholder (#500).
+export_build_version_args
+
 run_step 'Building and starting the production stack (the first build takes a few minutes)' \
   prod_compose up -d --build
 

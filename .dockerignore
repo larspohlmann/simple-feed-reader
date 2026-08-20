@@ -9,6 +9,9 @@ docs
 deploy
 scripts
 .github
+# ...except the one build helper both image builds run to stamp the release
+# version into the SPA's version.ts and the backend's version.json (issue #500).
+!scripts/stamp-version.sh
 
 # Local TLS material and operator secrets must never enter an image.
 docker/certs

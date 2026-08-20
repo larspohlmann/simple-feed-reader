@@ -49,6 +49,20 @@ RUN composer install --no-dev --no-interaction --no-progress --no-scripts --no-a
 COPY backend/ ./
 RUN composer dump-autoload --optimize --classmap-authoritative --no-dev
 
+# The release version /api/version reports, passed by scripts/prod-start.sh
+# (empty on a plain `docker build`, which then leaves no version.json and the
+# backend falls back to the development build). Declared after the source copy
+# and autoloader dump so a version change never busts those layers. The same
+# build helper the web image and the Strato build use writes version.json at
+# the project root -- outside public/, so it is never web-served (issue #500).
+ARG APP_VERSION=
+ARG APP_COMMIT=
+ARG APP_BUILT_AT=
+COPY scripts/stamp-version.sh /usr/local/bin/stamp-version.sh
+RUN sh /usr/local/bin/stamp-version.sh apply \
+      --version "$APP_VERSION" --commit "$APP_COMMIT" --built-at "$APP_BUILT_AT" \
+      --version-json version.json
+
 # Real env vars beat the committed .env, so the baked APP_ENV=dev is inert.
 ENV APP_ENV=prod APP_DEBUG=0
 

@@ -81,36 +81,31 @@ composer install \
     --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts
 
 echo "==> Deriving the release version"
-# GITHUB_REF_NAME holds the tag on a tag push -- but on a workflow_dispatch it
-# holds a BRANCH name, and reading it unguarded would ship a bundle proudly
-# labelled `develop`. Accept only something tag-shaped; anything else falls
-# through to git, which describes the commit honestly as N commits past the last
-# tag. The workflow's `fetch-depth: 0` is what gives describe its tags.
-VERSION="${GITHUB_REF_NAME:-}"
-case "${VERSION}" in
-    v[0-9]*) ;;
-    *) VERSION="$(git -C "${ROOT}" describe --tags --always 2>/dev/null || echo dev)" ;;
-esac
-COMMIT="$(git -C "${ROOT}" rev-parse --short HEAD 2>/dev/null || echo unknown)"
-BUILT_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+# scripts/stamp-version.sh is the single source of truth for how a build names
+# itself; the Docker image builds derive and stamp it the same way (issue #500).
+# It reads GITHUB_REF_NAME here: a tag push leaves the tag in it, while a
+# workflow_dispatch leaves a BRANCH name that would ship a bundle labelled
+# `develop`, so the helper accepts only a tag-shaped value and otherwise falls
+# through to `git describe` (the workflow's fetch-depth: 0 gives describe its
+# tags).
+{ IFS= read -r VERSION
+  IFS= read -r COMMIT
+  IFS= read -r BUILT_AT
+} < <("${ROOT}/scripts/stamp-version.sh" derive "${GITHUB_REF_NAME:-}")
 echo "==> ${VERSION} (${COMMIT}, built ${BUILT_AT})"
 
 # The SPA carries its version baked in rather than asking the API for it. A
 # cached bundle that displayed the *server's* version would report the one thing
 # it cannot know -- that it is itself out of date. version.ts is committed with
 # placeholders so a fresh clone builds, serves and tests with no generation step;
-# here it gets the real values, and outside CI the EXIT trap puts it back.
+# here the shared helper writes the real values in, and outside CI the EXIT trap
+# puts the file back.
 VERSION_SOURCE_FILE="${ROOT}/frontend/src/environments/version.ts"
 VERSION_FILE_BACKUP="${VERSION_SOURCE_FILE}.orig"
 cp "${VERSION_SOURCE_FILE}" "${VERSION_FILE_BACKUP}"
-sed -e "s|^  version: '.*',$|  version: '${VERSION}',|" \
-    -e "s|^  commit: '.*',$|  commit: '${COMMIT}',|" \
-    -e "s|^  builtAt: '.*',$|  builtAt: '${BUILT_AT}',|" \
-    "${VERSION_FILE_BACKUP}" > "${VERSION_SOURCE_FILE}"
-# A silent no-match here would ship placeholders that look like a working build,
-# so the substitution is verified rather than assumed.
-grep -qF "version: '${VERSION}'" "${VERSION_SOURCE_FILE}" \
-    || die "could not write the version into ${VERSION_SOURCE_FILE}: its shape changed"
+"${ROOT}/scripts/stamp-version.sh" apply \
+    --version "${VERSION}" --commit "${COMMIT}" --built-at "${BUILT_AT}" \
+    --version-ts "${VERSION_SOURCE_FILE}"
 
 echo "==> Frontend bundle (/reader base href)"
 # `production` is not optional. `strato` alone still produces a working,
@@ -151,16 +146,13 @@ echo "==> Copying the built SPA into public/"
 cp -R "${ROOT}/frontend/dist/frontend/browser/." "${OUT}/public/"
 
 echo "==> Recording the release version"
-# At the release root, which is %kernel.project_dir% on the server -- and NOT
-# under public/, so the file itself is never web-served. Only /api/version
-# exposes what it holds, and that route is authenticated.
-cat > "${OUT}/version.json" <<JSON
-{
-  "version": "${VERSION}",
-  "commit": "${COMMIT}",
-  "builtAt": "${BUILT_AT}"
-}
-JSON
+# The same helper writes version.json at the release root, which is
+# %kernel.project_dir% on the server -- and NOT under public/, so the file
+# itself is never web-served. Only /api/version exposes what it holds, and that
+# route is authenticated.
+"${ROOT}/scripts/stamp-version.sh" apply \
+    --version "${VERSION}" --commit "${COMMIT}" --built-at "${BUILT_AT}" \
+    --version-json "${OUT}/version.json"
 
 echo "==> Installing .htaccess"
 cp "${ROOT}/deploy/strato/.htaccess" "${OUT}/public/.htaccess"

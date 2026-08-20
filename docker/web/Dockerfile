@@ -14,6 +14,19 @@ COPY frontend/package.json frontend/package-lock.json ./
 # mis-resolves a transitive dep -- chokidar -- and rejects the lock). Pin npm 11.
 RUN npm i -g npm@11 && npm ci --no-audit --no-fund
 COPY frontend/ ./
+# The release version the SPA reports, passed by scripts/prod-start.sh (empty
+# on a plain `docker build`, which then keeps the committed 'dev' placeholder).
+# Declared here, after npm ci, so a version change never busts the dependency
+# layer -- but before `ng build`, which bakes version.ts into the bundle.
+ARG APP_VERSION=
+ARG APP_COMMIT=
+ARG APP_BUILT_AT=
+# One build helper, shared with the Strato release build, rewrites the
+# committed version.ts placeholder in place (issue #500).
+COPY scripts/stamp-version.sh /usr/local/bin/stamp-version.sh
+RUN sh /usr/local/bin/stamp-version.sh apply \
+      --version "$APP_VERSION" --commit "$APP_COMMIT" --built-at "$APP_BUILT_AT" \
+      --version-ts src/environments/version.ts
 # Default configuration is production (environment.ts -> apiBaseUrl '').
 RUN npx ng build
 
