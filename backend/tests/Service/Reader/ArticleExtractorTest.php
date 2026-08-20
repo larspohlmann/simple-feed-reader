@@ -13,6 +13,7 @@ use App\Service\Reader\ArticleExtractor;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LazyImageSources;
+use App\Service\Reader\LeadImageSelector;
 use App\Service\Reader\LeadingTitleRemover;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -51,6 +52,7 @@ final class ArticleExtractorTest extends TestCase
             new FetchedPageNormalizer(new LazyImageSources()),
             new LeadingTitleRemover(),
             new EntrySanitizer(),
+            new LeadImageSelector(),
         );
     }
 
@@ -66,8 +68,7 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('substantial paragraph', (string) $result->contentHtml);
         self::assertStringContainsString('https://site.test/img/photo.jpg', (string) $result->contentHtml);
         self::assertStringNotContainsString('About', (string) $result->contentHtml);
-        // The body already carries its own image, so no separate lead image is
-        // emitted (it would duplicate the inline figure).
+        // This page declares no og:image, so there is no hero to lead with.
         self::assertNull($result->image);
     }
 
@@ -102,6 +103,22 @@ final class ArticleExtractorTest extends TestCase
         self::assertSame('https://site.test/hero.jpg', $result->image);
     }
 
+    public function testEmitsLeadImageWhenTheBodyShowsADifferentPicture(): void
+    {
+        // #505: the og:image hero sits in the page header (a different CDN image
+        // id than the body photo). The reader used to drop it because the body
+        // held *some* image; it must now show the hero because it is not that one.
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-distinct-hero.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post');
+
+        self::assertTrue($result->ok);
+        self::assertStringContainsString('4943526', (string) $result->contentHtml);
+        self::assertStringNotContainsString('4943510', (string) $result->contentHtml);
+        self::assertSame('https://site.test/4943510.jpg?imageId=4943510', $result->image);
+    }
+
     public function testStripsDangerousMarkup(): void
     {
         $body = '<html lang="en"><body><article><h1>Hi</h1>'
@@ -133,6 +150,7 @@ final class ArticleExtractorTest extends TestCase
             new FetchedPageNormalizer(new LazyImageSources()),
             new LeadingTitleRemover(),
             new EntrySanitizer(),
+            new LeadImageSelector(),
         );
 
         $result = $extractor->extract('http://169.254.169.254/');

@@ -34,14 +34,24 @@ describe('feedHeroImage', () => {
     });
   });
 
-  it('stands down when the body already shows a picture', () => {
-    expect(feedHeroImage(entry(), '<p>a</p><img src="https://cdn.test/inline.jpg">')).toBeNull();
+  it('stands down when the body already shows the same picture', () => {
+    expect(feedHeroImage(entry(), '<p>a</p><img src="https://cdn.test/hero.jpg">')).toBeNull();
   });
 
-  it('recognises an image tag whatever its case or closing', () => {
-    expect(feedHeroImage(entry(), '<IMG SRC="https://x.test/a.jpg">')).toBeNull();
-    expect(feedHeroImage(entry(), '<img/>')).toBeNull();
-    expect(feedHeroImage(entry(), '<img>')).toBeNull();
+  it('stands down when the body shows the same picture under a size-variant URL', () => {
+    expect(feedHeroImage(entry(), '<img src="https://cdn.test/hero.webp?width=960">')).toBeNull();
+  });
+
+  it('still leads when the body picture is a different one (the #505 case)', () => {
+    expect(feedHeroImage(entry(), '<p>a</p><img src="https://cdn.test/inline.jpg">')).toEqual({
+      url: 'https://cdn.test/hero.jpg',
+      width: 800,
+      height: 450,
+    });
+  });
+
+  it('matches the same picture whatever the tag case or closing', () => {
+    expect(feedHeroImage(entry(), '<IMG SRC="https://cdn.test/hero.jpg"/>')).toBeNull();
   });
 
   it('is not fooled by a word that merely starts with img', () => {

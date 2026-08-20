@@ -29,6 +29,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         private readonly FetchedPageNormalizer $normalizer,
         private readonly LeadingTitleRemover $titleRemover,
         private readonly EntrySanitizer $sanitizer,
+        private readonly LeadImageSelector $leadImageSelector,
     ) {
     }
 
@@ -65,7 +66,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
             siteName: $article->siteName,
             contentHtml: $clean,
             excerpt: $article->excerpt,
-            image: $this->leadImage($article->image, $clean),
+            image: $this->leadImageSelector->select($article->image, $clean),
         );
     }
 
@@ -121,20 +122,5 @@ final class ArticleExtractor implements ArticleExtractorInterface
     private function textLength(Article $article): int
     {
         return mb_strlen(trim((string) $article->textContent));
-    }
-
-    /**
-     * The article's main image, to render as a hero — but only when the extracted
-     * body has none of its own (readability often drops a hero that sits outside
-     * the scored content). Guarded to http(s) so a javascript:/data: URL from the
-     * page can never reach the client's <img src>.
-     */
-    private function leadImage(?string $image, string $content): ?string
-    {
-        if ($image === null || preg_match('#^https?://#i', $image) !== 1) {
-            return null;
-        }
-
-        return str_contains($content, '<img') ? null : $image;
     }
 }
