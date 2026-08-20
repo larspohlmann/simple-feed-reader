@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Service\Text;
 
 /**
  * Reduces a possibly-HTML string to display-ready plain text: strips markup and

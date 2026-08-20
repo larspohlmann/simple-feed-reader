@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Parser;
 
 use App\Service\Parser\Exception\FeedParseException;
-use App\Service\PlainText;
+use App\Service\Text\PlainText;
 
 /**
  * Shared parsing for the Atom dialects. Everything but the namespace and a
