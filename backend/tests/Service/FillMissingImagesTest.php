@@ -6,8 +6,8 @@ namespace App\Tests\Service;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Service\EntryIngestor;
-use App\Service\FeedIngestContext;
+use App\Service\Ingest\EntryIngestor;
+use App\Service\Ingest\FeedIngestContext;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
 use App\Service\Parser\ParsedImage;

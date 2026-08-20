@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Service\Ingest;
+
+use App\Service\PlainText;
 
 /**
  * Produces PLAIN TEXT, not HTML, from an entry body.

@@ -11,7 +11,7 @@ use App\Entity\User;
 use App\Enum\FeedStatus;
 use App\Repository\EntryRepository;
 use App\Repository\FeedRepository;
-use App\Service\EntryIngestor;
+use App\Service\Ingest\EntryIngestor;
 use App\Service\EntryPruner;
 use App\Service\EntrySanitizer;
 use App\Service\FeedScheduler;

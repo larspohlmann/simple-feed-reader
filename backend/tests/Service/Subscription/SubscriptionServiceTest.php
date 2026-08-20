@@ -21,7 +21,7 @@ use App\Service\Discovery\FeedDiscoveryResult;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\OrphanedFeedReclaimer;
 use App\Service\Subscription\SubscriptionLimitResolver;
-use App\Service\EntryIngestor;
+use App\Service\Ingest\EntryIngestor;
 use App\Service\EntrySanitizer;
 use App\Service\FeedScheduler;
 use App\Service\Parser\ParsedEntry;

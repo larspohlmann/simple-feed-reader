@@ -6,8 +6,8 @@ namespace App\Service\Subscription;
 
 use App\Entity\Feed;
 use App\Service\Discovery\DiscoveredFeed;
-use App\Service\EntryIngestor;
-use App\Service\FeedIngestContext;
+use App\Service\Ingest\EntryIngestor;
+use App\Service\Ingest\FeedIngestContext;
 use App\Service\FeedScheduler;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;

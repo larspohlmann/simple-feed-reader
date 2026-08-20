@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Service\Ingest;
 
 /**
  * What one ingest pass knows about the fetch it is storing: when the run
