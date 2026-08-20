@@ -8,7 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Repository\EntryRepository;
 use App\Service\Ingest\EntryIngestor;
-use App\Service\EntrySanitizer;
+use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Ingest\FeedIngestContext;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;

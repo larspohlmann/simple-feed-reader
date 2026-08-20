@@ -22,7 +22,7 @@ use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\OrphanedFeedReclaimer;
 use App\Service\Subscription\SubscriptionLimitResolver;
 use App\Service\Ingest\EntryIngestor;
-use App\Service\EntrySanitizer;
+use App\Service\Sanitize\EntrySanitizer;
 use App\Service\FeedScheduler;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;

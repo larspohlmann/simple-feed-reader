@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-use App\Service\EntrySanitizer;
+use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Reader\Exception\PageFetchException;
 use fivefilters\Readability\Article;
 use fivefilters\Readability\Configuration;

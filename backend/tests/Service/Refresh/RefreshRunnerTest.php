@@ -13,7 +13,7 @@ use App\Repository\EntryRepository;
 use App\Repository\FeedRepository;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Retention\EntryPruner;
-use App\Service\EntrySanitizer;
+use App\Service\Sanitize\EntrySanitizer;
 use App\Service\FeedScheduler;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;

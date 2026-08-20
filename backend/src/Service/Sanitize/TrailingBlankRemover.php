@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Service\Sanitize;
 
 /**
  * Removes the blank tail a feed leaves on an article: trailing whitespace and
