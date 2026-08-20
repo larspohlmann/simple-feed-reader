@@ -10,6 +10,18 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v0.6.1] - 2026-08-20
+
+## What's Changed
+* docs: v0.6.0 changelog highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/491
+* feat: autodiscover Substack profile URLs by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/503
+* fix: stamp the release version into the Docker install (#500) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/507
+* fix: resolve Substack profiles via the public-profile API (#504) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/508
+* fix: keep the article hero when the body shows a different image by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/509
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v0.6.0...v0.6.1
+
 ## [v0.6.0] - 2026-08-19
 
 ### Highlights
