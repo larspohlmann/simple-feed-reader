@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service;
+namespace App\Tests\Service\Retention;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
@@ -10,7 +10,7 @@ use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
-use App\Service\EntryPruner;
+use App\Service\Retention\EntryPruner;
 use App\Service\Search\EntryIndexer;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Tests\DbTestCase;

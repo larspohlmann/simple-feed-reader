@@ -8,7 +8,7 @@ use App\Entity\Feed;
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
 use App\Service\Ingest\EntryIngestor;
-use App\Service\EntryPruner;
+use App\Service\Retention\EntryPruner;
 use App\Service\Ingest\FeedIngestContext;
 use App\Service\FeedScheduler;
 use App\Service\Fetch\BatchFeedFetcherInterface;
