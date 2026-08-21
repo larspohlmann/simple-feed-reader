@@ -800,6 +800,9 @@ describe('ReaderShellComponent', () => {
             keptCount: 0,
           }),
         );
+      // Tags must NOT reload on a partial slice — a refresh never touches them,
+      // so they reload once at the finish, not once per sweep slice (#502).
+      expect(ctrl.match((r) => r.url === 'https://api.test/api/tags').length).toBe(0);
 
       // Second slice: the sweep's poll loop re-fires /api/refresh on its own;
       // finishing it reloads again — proof the first reload was not the only one.
@@ -813,6 +816,8 @@ describe('ReaderShellComponent', () => {
       // reload was not the only one.
       const finishReloads = ctrl.match(() => true);
       expect(finishReloads.some((req) => req.request.url.endsWith('/api/entries'))).toBe(true);
+      // Tags reload exactly once, here at the finish — never on the partial slice above.
+      expect(finishReloads.filter((req) => req.request.url.endsWith('/api/tags')).length).toBe(1);
       finishReloads.forEach((req) =>
         req.flush({
           entries: [],
