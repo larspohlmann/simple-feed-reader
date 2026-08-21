@@ -9,6 +9,7 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ModelCatalog;
 use App\Service\Ai\ProviderCredentials;
+use App\Service\Recommendation\RecommendationPackingSettings;
 use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StubModelCatalog;
@@ -133,6 +134,10 @@ final class AiSettingsControllerTest extends ApiTestCase
         $payload = $this->payload($client);
         self::assertSame([], $payload['configs']);
         self::assertNull($payload['activeId']);
+        self::assertSame(
+            RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
+            $payload['defaultMaxBatchSize'],
+        );
     }
 
     public function testTheListEndpointRefusesAnAnonymousCaller(): void

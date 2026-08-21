@@ -85,11 +85,15 @@ export class AiSectionComponent {
   readonly concurrencyOptions: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8];
 
   /** Shown as the batch-cap field's placeholder when a connection makes no
-   *  claim — the ceiling the backend applies on its behalf
-   *  (`RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE`). A string,
-   *  since `placeholder` is a string attribute and strict template checking
-   *  rejects a number there. */
-  readonly defaultMaxBatchSize = '45';
+   *  claim — the ceiling the backend applies on its behalf, read from the list
+   *  response so `RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE`
+   *  stays its one definition. A string, since `placeholder` is a string
+   *  attribute and strict template checking rejects a number there; empty
+   *  until the list has loaded. */
+  readonly defaultMaxBatchSize = computed(() => {
+    const value = this.ai.defaultMaxBatchSize();
+    return value === null ? '' : String(value);
+  });
 
   readonly modelOptions = computed<SelectOption[]>(() =>
     this.ai.models().map((model) => ({ value: model, label: model })),

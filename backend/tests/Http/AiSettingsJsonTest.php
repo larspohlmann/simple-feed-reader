@@ -8,6 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Http\AiSettingsJson;
 use App\Service\Ai\Crypto\SealedApiKey;
+use App\Service\Recommendation\RecommendationPackingSettings;
 use PHPUnit\Framework\TestCase;
 
 final class AiSettingsJsonTest extends TestCase
@@ -145,6 +146,10 @@ final class AiSettingsJsonTest extends TestCase
         self::assertSame('Second', $shape['configs'][1]['name']);
         self::assertFalse($shape['configs'][1]['active']);
         self::assertSame(1, $shape['activeId']);
+        self::assertSame(
+            RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
+            $shape['defaultMaxBatchSize'],
+        );
     }
 
     public function testListReportsANullActiveIdWhenNothingIsActive(): void
