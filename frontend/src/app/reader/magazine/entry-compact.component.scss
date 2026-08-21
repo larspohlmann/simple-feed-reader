@@ -36,3 +36,22 @@
 .compact.read .title {
   color: var(--text-secondary);
 }
+
+/* One line of dek — the smallest hint of description this tile can carry.
+   Other blocks clamp to 2–3 lines; compact is the demotion floor, so it takes
+   a single line and truncates. The template's `@if (snippet())` keeps a
+   headline-only feed title-only, so this element never renders empty. */
+.dek {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.compact.read .dek {
+  color: var(--text-muted);
+}
