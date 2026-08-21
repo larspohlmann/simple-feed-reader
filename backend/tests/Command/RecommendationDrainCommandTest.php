@@ -62,20 +62,25 @@ final class RecommendationDrainCommandTest extends DbTestCase
     /**
      * The whole point of the drainer: it does not advance once and exit, it
      * loops until nothing is active. batchConcurrency defaults to 1, so a
-     * snapshotted two-batch run needs three sweeps to complete -- one
-     * provider tick per batch, then one dedup tick -- and a fourth sweep to
-     * observe that nothing is left; a one-shot `if` instead of the `while`
-     * would leave this run running forever, one sweep short. Completion
-     * proves the loop really looped, not just that it fired once.
+     * snapshotted two-batch run needs four sweeps to complete -- one
+     * distillation tick, one provider tick per batch, then one consolidation
+     * tick (#493) -- and a fifth sweep to observe that nothing is left; a
+     * one-shot `if` instead of the `while` would leave this run running
+     * forever, one sweep short. Completion proves the loop really looped, not
+     * just that it fired once.
      */
     public function testDrainsAnActiveRunToCompletionAndReleasesTheLock(): void
     {
         $user = $this->user('drain-to-completion@example.test');
         $this->seedTwoBatchFixture($user);
         $run = $this->startAndSnapshot($user);
+        $this->queueDistillReply();
         $this->queueBatchReply($run->getCandidateBatches()[0]);
         $this->queueBatchReply($run->getCandidateBatches()[1]);
-        $this->queueCleanDedupReply();
+        $this->queueCleanConsolidationReply(array_merge(
+            $run->getCandidateBatches()[0],
+            $run->getCandidateBatches()[1],
+        ));
 
         $exitCode = $this->execute($this->command());
 
@@ -152,8 +157,8 @@ final class RecommendationDrainCommandTest extends DbTestCase
     {
         $user = $this->user('drain-lost-lock@example.test');
         $this->seedTwoBatchFixture($user);
-        $run = $this->startAndSnapshot($user);
-        $this->queueBatchReply($run->getCandidateBatches()[0]);
+        $this->startAndSnapshot($user);
+        $this->queueDistillReply();
 
         $command = $this->commandWithLockStore(
             new LockLostAfterFirstRefreshStore(new DoctrineDbalStore($this->em->getConnection())),
@@ -178,9 +183,13 @@ final class RecommendationDrainCommandTest extends DbTestCase
         $user = $this->user('drain-lock-expired@example.test');
         $this->seedTwoBatchFixture($user);
         $run = $this->startAndSnapshot($user);
+        $this->queueDistillReply();
         $this->queueBatchReply($run->getCandidateBatches()[0]);
         $this->queueBatchReply($run->getCandidateBatches()[1]);
-        $this->queueCleanDedupReply();
+        $this->queueCleanConsolidationReply(array_merge(
+            $run->getCandidateBatches()[0],
+            $run->getCandidateBatches()[1],
+        ));
 
         $command = $this->commandWithLockStore(
             new LockKeyExpiringBeforeEveryRefreshStore(new DoctrineDbalStore($this->em->getConnection())),
@@ -368,11 +377,35 @@ final class RecommendationDrainCommandTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
     }
 
-    private function queueCleanDedupReply(): void
+    private function queueDistillReply(): void
     {
         /** @var StubChatClient $client */
         $client = self::getContainer()->get(StubChatClient::class);
-        $client->queueContent(json_encode(['duplicates' => []], \JSON_THROW_ON_ERROR));
+        $client->queueContent(json_encode(['profile' => 'a distilled profile'], \JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * @param list<int> $batchIds
+     */
+    private function queueCleanConsolidationReply(array $batchIds): void
+    {
+        /** @var StubChatClient $client */
+        $client = self::getContainer()->get(StubChatClient::class);
+        $client->queueContent(json_encode(
+            [
+                'recommendations' => array_map(
+                    static fn (int $id, int $index): array => [
+                        'id' => $id,
+                        'score' => 100 - $index,
+                        'reason' => 'irrelevant',
+                    ],
+                    $batchIds,
+                    array_keys($batchIds),
+                ),
+                'duplicates' => [],
+            ],
+            \JSON_THROW_ON_ERROR,
+        ));
     }
 
     /**

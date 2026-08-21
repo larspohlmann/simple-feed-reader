@@ -21,8 +21,9 @@ use App\Service\Ai\ProviderConnectionFactory;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationBatchWave;
 use App\Service\Recommendation\RecommendationCandidateLoader;
-use App\Service\Recommendation\RecommendationDedupResolver;
+use App\Service\Recommendation\RecommendationConsolidationResolver;
 use App\Service\Recommendation\RecommendationHistoryLoader;
+use App\Service\Recommendation\RecommendationProfileDistiller;
 use App\Service\Recommendation\RecommendationPromptBuilder;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunFinalizer;
@@ -30,7 +31,7 @@ use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Recommendation\RecommendationSettingsResolver;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Recommendation\RecommendationTickCheckpoint;
-use App\Service\Recommendation\RecommendationWinnerRanker;
+use App\Service\Recommendation\TickDriver;
 use App\Service\Recommendation\TickLockKeepalive;
 use App\Service\Worker\Handler\AdvanceRecommendationRunsHandler;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
@@ -130,10 +131,21 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $batch = $run->getCandidateBatches()[0] ?? [];
         self::assertNotSame([], $batch);
 
+        $this->queueDistillReply();
+
+        // Distillation firing: spends the profile call that now precedes
+        // every batch (#493).
+        $this->handler()->__invoke(new AdvanceRecommendationRuns());
+
         $this->requeueCleanReplyFor($batch);
 
-        // Batch firing: the single batch finalizes the run directly, with no
-        // merge call needed.
+        // Batch firing: banks the single batch's winners and checkpoints for
+        // the consolidation phase every plan reaches now, one batch or many.
+        $this->handler()->__invoke(new AdvanceRecommendationRuns());
+
+        $this->queueConsolidationReplyFor($batch);
+
+        // Consolidation firing: finalizes the run.
         $this->handler()->__invoke(new AdvanceRecommendationRuns());
 
         $this->em->clear();
@@ -161,6 +173,12 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $this->handler()->__invoke(new AdvanceRecommendationRuns());
         $run = $this->activeRun($user);
         self::assertCount(3, $run->getCandidateBatches());
+
+        $this->queueDistillReply();
+
+        // Distillation firing precedes every batch now (#493).
+        $this->handler()->__invoke(new AdvanceRecommendationRuns());
+
         foreach ($run->getCandidateBatches() as $batch) {
             $this->requeueCleanReplyFor($batch);
         }
@@ -171,7 +189,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $this->em->clear();
         $persisted = $this->activeRun($user);
         self::assertSame(3, $persisted->progress()->batchesDone);
-        self::assertTrue($persisted->progress()->isDedupPhase);
+        self::assertTrue($persisted->progress()->isConsolidationPhase);
     }
 
     /**
@@ -189,9 +207,10 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $healthyRun = $this->startAndSnapshot($healthyUser);
 
         // Runs are processed oldest-first, so the failure the struggling
-        // user's run queues is consumed before the healthy user's reply.
+        // user's own distillation call queues is consumed before the healthy
+        // user's own distill reply.
         $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down'));
-        $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
+        $this->queueDistillReply();
 
         $logSpy = new TestHandler();
         $this->handlerWithLogger(new Logger('test', [$logSpy]))->__invoke(new AdvanceRecommendationRuns());
@@ -200,6 +219,22 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $stillActive = $this->runs()->findActiveForUser($strugglingUser);
         self::assertNotNull($stillActive);
         self::assertSame(RecommendationRun::STATUS_RUNNING, $stillActive->getStatus());
+
+        // The healthy run's own tick was not blocked by the struggling one's
+        // failure in the same firing: its distillation phase went through.
+        $advancedAfterDistill = $this->activeRun($healthyUser);
+        self::assertFalse($advancedAfterDistill->progress()->distillPending);
+
+        // The fairness this test is about is already proven above, in the one
+        // firing both runs shared; driving the healthy run the rest of the
+        // way to completion goes straight through its own advancer rather
+        // than through more shared firings, which would otherwise re-tick the
+        // still-active struggling run with no queued reply left for it.
+        $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
+        $this->advancer()->advance($healthyUser, TickDriver::Worker);
+
+        $this->queueConsolidationReplyFor($healthyRun->getCandidateBatches()[0]);
+        $this->advancer()->advance($healthyUser, TickDriver::Worker);
 
         $advanced = $this->runs()->findLatestForUser($healthyUser);
         self::assertNotNull($advanced);
@@ -368,7 +403,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $healthyUser = $this->user('healthy-after-pending-failure@example.test');
         $this->fixtures->seedSingleBatchFixture($healthyUser);
         $healthyRun = $this->startAndSnapshot($healthyUser);
-        $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
+        $this->queueDistillReply();
 
         $this->handler()->__invoke(new AdvanceRecommendationRuns());
 
@@ -376,6 +411,19 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $failed = $this->runs()->findLatestForUser($strugglingUser);
         self::assertNotNull($failed);
         self::assertSame(RecommendationRun::STATUS_FAILED, $failed->getStatus());
+
+        // The fairness this test is about is already proven above: the
+        // healthy run's own distillation tick went through in the very same
+        // firing the struggling run's pending failure landed in. Driving it
+        // the rest of the way to completion goes straight through its own
+        // advancer, now that the struggling run is done and gone.
+        self::assertFalse($this->activeRun($healthyUser)->progress()->distillPending);
+
+        $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
+        $this->advancer()->advance($healthyUser, TickDriver::Worker);
+
+        $this->queueConsolidationReplyFor($healthyRun->getCandidateBatches()[0]);
+        $this->advancer()->advance($healthyUser, TickDriver::Worker);
 
         $advanced = $this->runs()->findLatestForUser($healthyUser);
         self::assertNotNull($advanced);
@@ -411,7 +459,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $healthyUser = $this->user('flush-failure-healthy@example.test');
         $this->fixtures->seedSingleBatchFixture($healthyUser);
         $healthyRun = $this->startAndSnapshot($healthyUser);
-        $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
+        $this->queueDistillReply();
 
         $logSpy = new TestHandler();
         $this->handlerWithFlushFailingEntityManager(new Logger('test', [$logSpy]))
@@ -426,11 +474,24 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         // the FAILED write actually reaches the database anyway, carried by
         // the next successful flush in this firing. The one thing this test
         // exists to prove is the part that is NOT incidental: the failing
-        // flush() itself never aborted the loop, so the healthy run's flush
-        // still happened at all in the same firing.
+        // flush() itself never aborted the loop, so the healthy run's own
+        // distillation flush still happened at all in the same firing.
         $struggling = $this->runs()->findLatestForUser($strugglingUser);
         self::assertNotNull($struggling);
         self::assertSame(RecommendationRun::STATUS_FAILED, $struggling->getStatus());
+
+        self::assertFalse($this->activeRun($healthyUser)->progress()->distillPending);
+
+        // Driving the healthy run the rest of the way to completion goes
+        // straight through its own advancer over the real, un-poisoned
+        // EntityManager, now that the struggling run is done and gone --
+        // the flush-resilience this test exists to prove is already pinned
+        // above, in the one firing both runs shared.
+        $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
+        $this->advancer()->advance($healthyUser, TickDriver::Worker);
+
+        $this->queueConsolidationReplyFor($healthyRun->getCandidateBatches()[0]);
+        $this->advancer()->advance($healthyUser, TickDriver::Worker);
 
         $advanced = $this->runs()->findLatestForUser($healthyUser);
         self::assertNotNull($advanced);
@@ -515,10 +576,10 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             self::getContainer()->get(RecommendationHistoryLoader::class),
             self::getContainer()->get(RecommendationPromptBuilder::class),
             $entityManager,
-            self::getContainer()->get(RecommendationWinnerRanker::class),
             self::getContainer()->get(RecommendationTickCheckpoint::class),
+            self::getContainer()->get(RecommendationProfileDistiller::class),
             self::getContainer()->get(RecommendationBatchWave::class),
-            self::getContainer()->get(RecommendationDedupResolver::class),
+            self::getContainer()->get(RecommendationConsolidationResolver::class),
             new RecommendationRunFinalizer(
                 self::getContainer()->get(EntryRepository::class),
                 $entityManager,
@@ -622,6 +683,45 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
                 array_keys($batchIds),
             ),
         ], \JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * The canned distill reply most tests neither read nor care about the
+     * content of -- only that the distillation phase spends exactly one
+     * provider call before the batches begin (#493).
+     */
+    private function queueDistillReply(): void
+    {
+        $this->stubChatClient()->queueContent(json_encode(
+            ['profile' => 'a distilled profile'],
+            \JSON_THROW_ON_ERROR,
+        ));
+    }
+
+    /**
+     * The consolidation phase's reply shape (#493): a usable
+     * recommendation for every id the batch phase banked, naming no
+     * duplicates.
+     *
+     * @param list<int> $batchIds
+     */
+    private function queueConsolidationReplyFor(array $batchIds): void
+    {
+        $this->stubChatClient()->queueContent(json_encode(
+            [
+                'recommendations' => array_map(
+                    static fn (int $id, int $index): array => [
+                        'id' => $id,
+                        'score' => 100 - $index,
+                        'reason' => 'irrelevant',
+                    ],
+                    $batchIds,
+                    array_keys($batchIds),
+                ),
+                'duplicates' => [],
+            ],
+            \JSON_THROW_ON_ERROR,
+        ));
     }
 
     /**
