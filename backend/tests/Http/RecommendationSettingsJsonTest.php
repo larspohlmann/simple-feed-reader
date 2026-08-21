@@ -7,6 +7,7 @@ namespace App\Tests\Http;
 use App\Http\RecommendationSettingsJson;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationPackingSettings;
+use App\Service\Recommendation\RecommendationPromptText;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationSettingsJsonTest extends TestCase
@@ -18,6 +19,36 @@ final class RecommendationSettingsJsonTest extends TestCase
         $state = RecommendationSettingsJson::state($effective, workerAlive: true);
 
         self::assertSame('Likes Rust and homelab posts.', $state['profileText']);
+    }
+
+    /**
+     * The settings card must show the prompt the batch call actually sends,
+     * not the superseded rank-then-dedup prompt (#493 Task 13, Ruling F).
+     * `RecommendationPromptText::SYSTEM_ROLE`/`OUTPUT_CONTRACT` no longer
+     * exist, so this pins the emitted strings directly to
+     * `BATCH_SYSTEM_ROLE`/`BATCH_OUTPUT_CONTRACT` -- an assertion that fails
+     * outright if `fixedPrompt` is ever repointed away from the live batch
+     * prompt again.
+     */
+    public function testFixedPromptIsTheBatchPromptTheRunnerActuallySends(): void
+    {
+        $state = RecommendationSettingsJson::state($this->effectiveSettings(), workerAlive: true);
+
+        /** @var array{role: string, outputContract: string} $fixedPrompt */
+        $fixedPrompt = $state['fixedPrompt'];
+
+        self::assertSame(RecommendationPromptText::BATCH_SYSTEM_ROLE, $fixedPrompt['role']);
+        self::assertSame(RecommendationPromptText::BATCH_OUTPUT_CONTRACT, $fixedPrompt['outputContract']);
+
+        // Content-level proof, independent of which constant the mapper reads:
+        // phrasing unique to the live batch prompt is present, and phrasing
+        // unique to the deleted rank-then-dedup prompt is gone.
+        self::assertStringContainsString(
+            'Return the id and the score only; do not write a reason.',
+            $fixedPrompt['role'],
+        );
+        self::assertStringNotContainsString('four sections', $fixedPrompt['role']);
+        self::assertStringNotContainsString('"reason"', $fixedPrompt['outputContract']);
     }
 
     public function testStateEmitsNullProfileTextWhenAbsent(): void
