@@ -30,6 +30,7 @@ use App\Service\Subscription\FirstFetchRecorder;
 use App\Service\Subscription\SubscriptionCreator;
 use App\Service\Subscription\SubscriptionLimitResolver;
 use App\Service\Subscription\SubscriptionService;
+use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\UserFactory;
@@ -102,6 +103,7 @@ final class SubscriptionServiceTest extends DbTestCase
                     $this->em,
                     $this->em->getRepository(Entry::class),
                     new EntrySanitizer(),
+                    new UrlNormalizer(),
                 ),
                 new FeedScheduler($clock),
                 $this->em,

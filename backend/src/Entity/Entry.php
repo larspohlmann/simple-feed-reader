@@ -31,6 +31,15 @@ class Entry
     #[ORM\Column(length: 64)]
     private string $guidHash;
 
+    /**
+     * sha256 of the normalized article URL, the stable identity a feed keeps
+     * across a volatile GUID (BBC's revision counter). Null when the item has
+     * no URL — those still dedupe on guidHash — and on every row created before
+     * #484 added the column; the ingest dedup treats a null as "no URL match".
+     */
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $urlHash;
+
     #[ORM\Column(length: 2048, nullable: true)]
     private ?string $url;
 
@@ -46,15 +55,8 @@ class Entry
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $contentHtml = null;
 
-    #[ORM\Column(length: 2048, nullable: true)]
-    private ?string $imageUrl = null;
-
-    /** As DECLARED by the feed. Null means unknown, not "no image". */
-    #[ORM\Column(nullable: true)]
-    private ?int $imageWidth = null;
-
-    #[ORM\Column(nullable: true)]
-    private ?int $imageHeight = null;
+    #[ORM\Embedded(class: EntryImage::class, columnPrefix: false)]
+    private EntryImage $image;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $publishedAt = null;
@@ -82,14 +84,17 @@ class Entry
         string $title,
         \DateTimeImmutable $createdAt,
         \DateTimeImmutable $effectiveDate,
+        ?string $urlHash = null,
     ) {
         $this->feed = $feed;
         $this->guid = $guid;
         $this->guidHash = hash('sha256', $guid);
+        $this->urlHash = $urlHash;
         $this->url = $url;
         $this->title = $title;
         $this->createdAt = $createdAt;
         $this->effectiveDate = $effectiveDate;
+        $this->image = new EntryImage();
     }
 
     public function getId(): ?int
@@ -110,6 +115,11 @@ class Entry
     public function getGuidHash(): string
     {
         return $this->guidHash;
+    }
+
+    public function getUrlHash(): ?string
+    {
+        return $this->urlHash;
     }
 
     public function getUrl(): ?string
@@ -159,24 +169,22 @@ class Entry
 
     public function getImageUrl(): ?string
     {
-        return $this->imageUrl;
+        return $this->image->getUrl();
     }
 
     public function getImageWidth(): ?int
     {
-        return $this->imageWidth;
+        return $this->image->getWidth();
     }
 
     public function getImageHeight(): ?int
     {
-        return $this->imageHeight;
+        return $this->image->getHeight();
     }
 
     public function setImage(?string $url, ?int $width, ?int $height): void
     {
-        $this->imageUrl = $url;
-        $this->imageWidth = $width;
-        $this->imageHeight = $height;
+        $this->image->set($url, $width, $height);
     }
 
     public function getPublishedAt(): ?\DateTimeImmutable

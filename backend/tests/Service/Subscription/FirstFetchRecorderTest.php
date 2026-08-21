@@ -14,6 +14,7 @@ use App\Service\Parser\ParsedFeed;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Search\EntryIndexer;
 use App\Service\Subscription\FirstFetchRecorder;
+use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use Psr\Log\NullLogger;
@@ -35,6 +36,7 @@ final class FirstFetchRecorderTest extends DbTestCase
                 $this->em,
                 $this->em->getRepository(Entry::class),
                 new EntrySanitizer(),
+                new UrlNormalizer(),
             ),
             new FeedScheduler($clock),
             $this->em,

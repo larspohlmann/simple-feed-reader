@@ -44,6 +44,32 @@ class EntryRepository extends ServiceEntityRepository
     }
 
     /**
+     * @param list<string> $urlHashes
+     *
+     * @return list<string> the subset of url hashes that already exist for this
+     *                      feed — the stable-URL half of the ingest dedup, which
+     *                      catches an article whose GUID changed between fetches
+     */
+    public function findExistingUrlHashes(Feed $feed, array $urlHashes): array
+    {
+        if ($urlHashes === []) {
+            return [];
+        }
+
+        /** @var list<string> $existing */
+        $existing = $this->createQueryBuilder('e')
+            ->select('e.urlHash')
+            ->andWhere('e.feed = :feed')
+            ->andWhere('e.urlHash IN (:hashes)')
+            ->setParameter('feed', $feed)
+            ->setParameter('hashes', $urlHashes)
+            ->getQuery()
+            ->getSingleColumnResult();
+
+        return $existing;
+    }
+
+    /**
      * @param list<int> $entryIds
      *
      * @return list<int> the subset of ids that still exist — a caller holding
