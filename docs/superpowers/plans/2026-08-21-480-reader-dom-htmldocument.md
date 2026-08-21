@@ -37,7 +37,9 @@ These were confirmed with runnable probes before planning — the port depends o
 - `backend/src/Service/Reader/ArticleExtractor.php` — `richestArticle()` passes documents (not strings) to a `parse(?\Dom\HTMLDocument, string)` that early-returns `null`.
 - `backend/tests/Service/Reader/LazyImageSourcesTest.php` — build the document with `createFromString`; serialize with `saveHtml()`.
 - `backend/tests/Service/Reader/FetchedPageNormalizerTest.php` — serialize the returned document; adapt the no-collapse / empty-input cases to the `null` contract; add a whitespace-indented-chain test.
+- `backend/src/Service/Reader/LeadingTitleRemover.php` — port `loadDocument()` to `createFromString`; find the first heading with `querySelector('h1, h2, h3')` (an element-named XPath does **not** match under lexbor's XHTML namespace); drop the now-dead `saveHTML()===false` fallback and the always-attached `parentNode` guard.
 - `backend/tests/Service/Reader/ArticleExtractorTest.php` — **no change**; this is the fixture-corpus regression harness and must stay green untouched.
+- `backend/tests/Service/Reader/LeadingTitleRemoverTest.php` — **no change**; the existing tests already cover the ported code (Infection confirms 0 new escaped mutants).
 
 ## Interface contract (locked across tasks)
 
@@ -283,7 +285,43 @@ git commit -m "refactor(reader): pass the normalized \Dom\HTMLDocument straight 
 
 ---
 
-### Task 4: Full verification and quality gates
+### Task 4: Port `LeadingTitleRemover` (last libxml collaborator in `Service/Reader`)
+
+**Files:**
+- Modify: `backend/src/Service/Reader/LeadingTitleRemover.php`
+- Test (unchanged, already covers the port): `backend/tests/Service/Reader/LeadingTitleRemoverTest.php`
+
+**Interfaces:**
+- Public `remove(string $contentHtml, array $titleCandidates): string` is unchanged — this collaborator works on readability's *output* fragment (string in, string out) and shares no document with the rest of the pipeline.
+
+- [ ] **Step 1: Confirm the tests are green before the change**
+
+Run: `php bin/phpunit tests/Service/Reader/LeadingTitleRemoverTest.php`
+Expected: PASS — the behavioral baseline.
+
+- [ ] **Step 2: Port the class**
+
+Add `use Dom\Element; use Dom\HTMLDocument;`. Then:
+- `loadDocument(string $contentHtml): ?HTMLDocument` — `try { return HTMLDocument::createFromString($contentHtml, \LIBXML_NOERROR); } catch (\Throwable) { return null; }`. Drop the `mb_encode_numericentity`/`libxml_*` juggling.
+- `findFirstHeading(HTMLDocument $document): ?Element` — `return $document->querySelector('h1, h2, h3');` with a comment: an element-named XPath (`//h1`) would not match under the HTML5 parser's XHTML namespace, so read the tree with a CSS selector. **This is the trap** — a naive `(//h1|//h2|//h3)[1]` XPath port silently finds nothing and no title is ever removed.
+- `repeatsTitle(Element $heading, array $normalizedTitles): bool` — drop the always-false `$heading->parentNode === null` guard (a `querySelector` hit is always attached); cast `(string) $heading->textContent`.
+- Inline the heading removal into `remove()`: `$firstHeading->remove(); return $document->saveHtml();`. `saveHtml()` never returns `false`, so the old `removeHeading()` helper and its `$fallback` param are dead — delete them.
+
+- [ ] **Step 3: Run the tests to verify they still pass**
+
+Run: `php bin/phpunit tests/Service/Reader/LeadingTitleRemoverTest.php tests/Service/Reader/ArticleExtractorTest.php`
+Expected: PASS — the public behavior is identical; the corpus still drops duplicated headlines.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add backend/src/Service/Reader/LeadingTitleRemover.php
+git commit -m "refactor(reader): port LeadingTitleRemover to \Dom\HTMLDocument"
+```
+
+---
+
+### Task 5: Full verification and quality gates
 
 **Files:** none (verification only).
 
