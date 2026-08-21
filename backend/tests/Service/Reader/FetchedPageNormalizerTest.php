@@ -6,7 +6,6 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\LazyImageSources;
-use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class FetchedPageNormalizerTest extends TestCase
@@ -60,7 +59,7 @@ final class FetchedPageNormalizerTest extends TestCase
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div class="keep">intro <div>nested</div></div></body></html>';
 
-        self::assertNull($this->collapseOf($html));
+        self::assertNull($this->normalizer->collapseWrapperChains($html));
     }
 
     public function testHeadingSurvivesWrapperCollapse(): void
@@ -81,7 +80,7 @@ final class FetchedPageNormalizerTest extends TestCase
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div class="keep"><p>One</p><p>Two</p></div></body></html>';
 
-        self::assertNull($this->collapseOf($html));
+        self::assertNull($this->normalizer->collapseWrapperChains($html));
     }
 
     public function testRemovesScreenReaderOnlyElements(): void
@@ -228,19 +227,10 @@ final class FetchedPageNormalizerTest extends TestCase
         return $document->saveHtml();
     }
 
-    /** The collapse variant of a page, or null when there is no chain to collapse. */
-    private function collapseOf(string $html): ?HTMLDocument
-    {
-        $normalized = $this->normalizer->normalize($html);
-        self::assertNotNull($normalized);
-
-        return $this->normalizer->collapseWrapperChains($normalized);
-    }
-
     /** collapseWrapperChains() then serialize; used only where a chain collapses. */
     private function collapsed(string $html): string
     {
-        $document = $this->collapseOf($html);
+        $document = $this->normalizer->collapseWrapperChains($html);
         self::assertNotNull($document);
 
         return $document->saveHtml();

@@ -78,6 +78,34 @@ final readonly class FetchedPageNormalizer
      */
     public function normalize(string $html): ?HTMLDocument
     {
+        return $this->repair($html);
+    }
+
+    /**
+     * The document with single-child <div> wrapper chains collapsed (#235), or
+     * null when there is no chain to collapse — the caller then skips the second
+     * extraction. Kept separate from normalize() because the same collapse can
+     * flip a well-structured page to the wrong block (#476): ArticleExtractor
+     * extracts with and without it and keeps the richer result.
+     *
+     * Parses the raw HTML afresh rather than sharing normalize()'s document: the
+     * conservative and collapsed variants must be independent objects because
+     * readability consumes (mutates) each document it parses. A clone of the
+     * normalized document would save this parse, but the parse is a few ms
+     * against a readability pass of tens of ms, so the plain re-parse is kept.
+     */
+    public function collapseWrapperChains(string $html): ?HTMLDocument
+    {
+        $document = $this->repair($html);
+        if ($document === null || $this->unwrapSingleChildDivs($document) === 0) {
+            return null;
+        }
+
+        return $document;
+    }
+
+    private function repair(string $html): ?HTMLDocument
+    {
         $document = $this->parse($this->removeScriptAndStyleBlocks($html));
         if ($document === null) {
             return null;
@@ -88,23 +116,6 @@ final readonly class FetchedPageNormalizer
         $this->removeOrphanIconGlyphs($document);
 
         return $document;
-    }
-
-    /**
-     * A clone of the normalized document with single-child <div> wrapper chains
-     * collapsed (#235), or null when there is no chain to collapse — the caller
-     * then skips the second extraction. The collapse runs on a clone so the
-     * caller's conservative extraction still sees the un-collapsed tree
-     * (readability consumes each document it parses). Kept separate from
-     * normalize() because the same collapse can flip a well-structured page to
-     * the wrong block (#476): ArticleExtractor extracts with and without it and
-     * keeps the richer result.
-     */
-    public function collapseWrapperChains(HTMLDocument $document): ?HTMLDocument
-    {
-        $collapsed = clone $document;
-
-        return $this->unwrapSingleChildDivs($collapsed) === 0 ? null : $collapsed;
     }
 
     private function removeScriptAndStyleBlocks(string $html): string
