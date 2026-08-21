@@ -280,6 +280,54 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertSame(range(1, $candidateCount), $ids);
     }
 
+    public function testConsolidationInputSizeFillsToTheCeilingOnALargeContext(): void
+    {
+        $history = new RecommendationHistory(
+            favorites: [self::line(1, 'Fav', 10)],
+            kept: [],
+            viewed: [],
+        );
+
+        // A 1M-token context easily holds 6 × picksLimit lines plus the reply,
+        // so the ceiling (CONSOLIDATION_MAX_INPUT_FACTOR × picksLimit) binds.
+        $size = $this->builder
+            ->consolidationInputSize(1_000_000, $history, 'A profile.', 50, suppressesReasoning: true);
+
+        self::assertSame(300, $size);
+    }
+
+    public function testConsolidationInputSizeFloorsOnATightContext(): void
+    {
+        $history = new RecommendationHistory(
+            favorites: [self::line(1, 'Fav', 10)],
+            kept: [],
+            viewed: [],
+        );
+
+        // At a 32k context the full 32k reasoning headroom alone overruns the
+        // window for any shortlist above the floor, so the call falls back to
+        // the floor (CONSOLIDATION_MIN_INPUT_FACTOR × picksLimit) — a small
+        // connection is never handed a consolidation call it cannot answer.
+        $size = $this->builder
+            ->consolidationInputSize(32768, $history, 'A profile.', 50, suppressesReasoning: false);
+
+        self::assertSame(100, $size);
+    }
+
+    public function testConsolidationInputSizeGrowsWithTheContextWindow(): void
+    {
+        $history = new RecommendationHistory(favorites: [self::line(1, 'Fav', 10)], kept: [], viewed: []);
+
+        $small = $this->builder
+            ->consolidationInputSize(60000, $history, 'A profile.', 50, suppressesReasoning: true);
+        $large = $this->builder
+            ->consolidationInputSize(1_000_000, $history, 'A profile.', 50, suppressesReasoning: true);
+
+        self::assertGreaterThan($small, $large);
+        self::assertGreaterThanOrEqual(100, $small);
+        self::assertLessThanOrEqual(300, $large);
+    }
+
     public function testAnExplicitBatchCountReplacesTheDefaultCapUnderAHugeBudget(): void
     {
         // A huge window means the token budget never binds, so an explicit

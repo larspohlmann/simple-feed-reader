@@ -135,10 +135,19 @@ final readonly class RecommendationAnswerBudget
         RecommendationResponseSchema $schema,
         bool $suppressesReasoning,
     ): int {
-        $headroom = $suppressesReasoning
+        return self::answerBoundTokens($replyItemCount, $schema)
+            + self::reasoningHeadroomTokens($suppressesReasoning);
+    }
+
+    /**
+     * The reasoning headroom `outputBoundTokens()` adds — a fixed cost that does
+     * not scale with the reply's item count. Exposed so the consolidation sizer
+     * can reserve the same room against the context window it must fit within.
+     */
+    public static function reasoningHeadroomTokens(bool $suppressesReasoning): int
+    {
+        return $suppressesReasoning
             ? self::SUPPRESSED_REASONING_HEADROOM_TOKENS
             : self::REASONING_HEADROOM_TOKENS;
-
-        return self::answerBoundTokens($replyItemCount, $schema) + $headroom;
     }
 }

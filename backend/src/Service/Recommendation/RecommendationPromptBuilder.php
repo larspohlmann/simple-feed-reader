@@ -34,6 +34,27 @@ final class RecommendationPromptBuilder
     private const int ESTIMATED_PROFILE_TOKENS = 700;
 
     /**
+     * The consolidation call re-scores, reasons, and dedups its input in one
+     * pass, so its size is bounded at both ends. The floor is the old fixed
+     * cut -- twice the final list -- so dedup keeps its backfill slack. The
+     * ceiling caps the false-negative recovery the wider cut buys against the
+     * reasoning the call writes for entries it later drops: six times the final
+     * list is generous without letting consolidation quietly become the whole
+     * pipeline. Between them, the connection's context window decides
+     * (consolidationInputSize).
+     */
+    private const int CONSOLIDATION_MIN_INPUT_FACTOR = 2;
+    private const int CONSOLIDATION_MAX_INPUT_FACTOR = 6;
+
+    /**
+     * The non-description characters a candidate line carries — its id in
+     * brackets, the title, the feed, the date, and the separators between them.
+     * A rough constant is enough: consolidationInputSize only needs a per-line
+     * estimate to size the shortlist against the context window.
+     */
+    private const int CANDIDATE_LINE_FRAME_CHARS = 90;
+
+    /**
      * How much room over the estimate the provider is actually given.
      *
      * The estimate is a mean; a reply that runs long is not a runaway and must
@@ -129,6 +150,48 @@ final class RecommendationPromptBuilder
         }
 
         return $batches;
+    }
+
+    /**
+     * How many of the ranked winners the consolidation call takes — the largest
+     * shortlist whose whole call (profile + FAVORITES + the candidate lines,
+     * plus the reply and its reasoning headroom) fits the connection's context
+     * window, clamped between the floor and ceiling factors. A large-context
+     * connection recovers more of the good candidates the noisy batch filter
+     * under-scored; a small one is never handed a call it cannot answer.
+     */
+    public function consolidationInputSize(
+        int $contextWindow,
+        RecommendationHistory $history,
+        ?string $profile,
+        int $picksLimit,
+        bool $suppressesReasoning,
+    ): int {
+        $descriptionLength = $this->descriptionLength($contextWindow);
+        $favoritesSection = $this->historySection('FAVORITES (newest first):', $history->favorites, $descriptionLength);
+        $fixedInputTokens = self::FIXED_OVERHEAD_TOKENS
+            + $this->tokens((string) $profile)
+            + $this->tokens($favoritesSection);
+        $lineChars = $descriptionLength + self::CANDIDATE_LINE_FRAME_CHARS;
+        $perCandidateInputTokens = intdiv($lineChars, self::CHARS_PER_TOKEN) + 1;
+
+        $floor = self::CONSOLIDATION_MIN_INPUT_FACTOR * $picksLimit;
+        $ceiling = self::CONSOLIDATION_MAX_INPUT_FACTOR * $picksLimit;
+
+        for ($size = $ceiling; $size > $floor; --$size) {
+            $callTokens = $fixedInputTokens
+                + $size * $perCandidateInputTokens
+                + RecommendationAnswerBudget::outputBoundTokens(
+                    $size,
+                    RecommendationResponseSchema::Consolidation,
+                    $suppressesReasoning,
+                );
+            if ($callTokens <= $contextWindow) {
+                return $size;
+            }
+        }
+
+        return $floor;
     }
 
     /**

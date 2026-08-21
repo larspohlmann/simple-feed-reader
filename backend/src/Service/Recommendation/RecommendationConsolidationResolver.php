@@ -57,7 +57,15 @@ final readonly class RecommendationConsolidationResolver
         int $picksLimit,
         EffectiveRecommendationSettings $effectiveSettings,
     ): ConsolidationOutcome {
-        $pool = $this->ranker->cutForDedup($this->ranker->ranked($run->getWinners()), $picksLimit);
+        $history = $this->historyLoader->load($userId, $effectiveSettings);
+        $inputSize = $this->promptBuilder->consolidationInputSize(
+            $effectiveSettings->packing->contextWindow,
+            $history,
+            $run->getProfileText(),
+            $picksLimit,
+            $settings->suppressesReasoning(),
+        );
+        $pool = $this->ranker->cutForConsolidation($this->ranker->ranked($run->getWinners()), $inputSize);
         $linesById = $this->candidateLoader->linesForIds($userId, array_column($pool, 'id'));
         $pool = self::stillPresent($pool, $linesById);
 
@@ -67,8 +75,6 @@ final readonly class RecommendationConsolidationResolver
             // mirrors RecommendationBatchWave's own all-pruned short-circuit.
             return ConsolidationOutcome::finalizeWith([]);
         }
-
-        $history = $this->historyLoader->load($userId, $effectiveSettings);
 
         $messages = $this->promptBuilder->messagesWithCorrectiveTail(
             $this->promptBuilder->consolidationMessages(
