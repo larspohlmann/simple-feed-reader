@@ -742,6 +742,96 @@ describe('ReaderShellComponent', () => {
     req.flush(refreshDone);
   });
 
+  describe('one scoped refresh reloads the list once (#502)', () => {
+    it('fires exactly one entries reload and one tags reload after the run finishes', () => {
+      const f = boot();
+
+      f.componentInstance.onScopedRefresh();
+
+      // The refresh sweep itself.
+      ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
+      f.detectChanges();
+
+      // Exactly one reload of each list-backing resource — the double reload
+      // (slice effect + onDone) would make entries match twice here.
+      // ctrl.match() removes what it finds from the open-request queue, so the
+      // counts are captured once and reused below to drain them — matching
+      // again would find nothing and throw.
+      const entriesReloads = ctrl.match((r) => r.url === 'https://api.test/api/entries');
+      const tagsReloads = ctrl.match((r) => r.url === 'https://api.test/api/tags');
+      const subsReloads = ctrl.match((r) => r.url === 'https://api.test/api/subscriptions');
+      expect(entriesReloads.length).toBe(1);
+      expect(tagsReloads.length).toBe(1);
+      expect(subsReloads.length).toBe(1);
+
+      // Drain the reload requests so verify() is clean.
+      entriesReloads[0].flush({ entries: [], nextCursor: null });
+      tagsReloads[0].flush({ tags: [] });
+      subsReloads[0].flush(subsBody);
+      ctrl.verify();
+    });
+  });
+
+  describe('onboarding sweep still fills progressively (#502)', () => {
+    it('reloads the list on each landing slice, not only at the end', () => {
+      // All subscriptions never fetched → awaitingFirstFetch() is true → the shell
+      // fires the post-onboarding sweep itself (sweeping() is true for its span).
+      const f = bootWith([{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: null }]);
+
+      // The sweep's own refresh request.
+      const refresh = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+
+      // First slice: partial, more feeds still due → the list must reload now.
+      // RefreshService.step() re-fires the next /api/refresh synchronously from
+      // inside this flush, so it is already queued below alongside the reload.
+      refresh.flush({ ...refreshDone, status: 'partial', total: 2, fetched: 1, remaining: 1 });
+      f.detectChanges();
+      const firstSliceEntries = ctrl.match((r) => r.url === 'https://api.test/api/entries');
+      expect(firstSliceEntries.length).toBe(1);
+      firstSliceEntries[0].flush({ entries: [], nextCursor: null });
+      // subs reload per slice; tags do not (they reload once at finish), so only
+      // the subscriptions request is drained here.
+      ctrl
+        .match((r) => r.url === 'https://api.test/api/subscriptions')
+        .forEach((req) =>
+          req.flush({
+            subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: null }],
+            favoritesCount: 0,
+            keptCount: 0,
+          }),
+        );
+      // Tags must NOT reload on a partial slice — a refresh never touches them,
+      // so they reload once at the finish, not once per sweep slice (#502).
+      expect(ctrl.match((r) => r.url === 'https://api.test/api/tags').length).toBe(0);
+
+      // Second slice: the sweep's poll loop re-fires /api/refresh on its own;
+      // finishing it reloads again — proof the first reload was not the only one.
+      const next = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+      next.flush({ ...refreshDone, total: 2, fetched: 2 });
+      f.detectChanges();
+
+      // The finishing slice reloads once more (entries + subs + tags). match()
+      // consumes the open queue, so it is called once and the same array is
+      // flushed; an entries request being among them proves the first slice's
+      // reload was not the only one.
+      const finishReloads = ctrl.match(() => true);
+      expect(finishReloads.some((req) => req.request.url.endsWith('/api/entries'))).toBe(true);
+      // Tags reload exactly once, here at the finish — never on the partial slice above.
+      expect(finishReloads.filter((req) => req.request.url.endsWith('/api/tags')).length).toBe(1);
+      finishReloads.forEach((req) =>
+        req.flush({
+          entries: [],
+          nextCursor: null,
+          subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: '2026-08-21T00:00:00Z' }],
+          favoritesCount: 0,
+          keptCount: 0,
+          tags: [],
+        }),
+      );
+      ctrl.verify();
+    });
+  });
+
   it('scopes a tag refresh to the tag id', () => {
     const f = boot();
     qp.next(convertToParamMap({ tag: '3' }));

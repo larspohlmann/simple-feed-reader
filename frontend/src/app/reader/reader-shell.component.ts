@@ -440,13 +440,27 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     });
 
-    // Repopulate as slices land, not only when the sweep ends. Landing in a
-    // reader that stays empty for two minutes is the bad first impression this
-    // whole feature exists to remove.
+    // The single authority that reloads the list after a refresh (#502). Two
+    // intents, one place:
+    //   - the onboarding sweep (sweeping()) fills progressively, so each
+    //     landing slice reloads — a new user must not stare at an empty list
+    //     for the whole sweep (#127);
+    //   - every user-initiated refresh (mobile pull, header/sidebar Refresh,
+    //     add-feed) reloads once, when the run finishes, so a scoped refresh
+    //     never flickers or reorders mid-sweep.
+    // A second reload used to live in each run()'s onDone callback (#61), so one
+    // scoped refresh loaded the list twice. That reload now lives here alone.
     effect(() => {
-      if (this.refreshSvc.slice() === 0) return;
+      const slice = this.refreshSvc.slice();
+      const running = this.refreshSvc.running();
       untracked(() => {
+        if (slice === 0) return; // nothing has reported yet
+        if (!this.sweeping() && running) return; // manual refresh: wait for finish
         this.subs.load();
+        // A refresh never touches tags, so reload them once when the run
+        // finishes rather than on every onboarding slice (onDone reloaded them;
+        // the old slice effect did not reload them at all).
+        if (!running) this.tags.load();
         this.entries.load(queryFromSelection(this.selection()));
       });
     });
@@ -785,12 +799,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  /** The global refresh: sweep every due feed. The single reload authority
+   *  (#502) reloads the list once the run finishes. */
   onRefresh(): void {
-    this.refreshSvc.run(() => {
-      this.subs.load();
-      this.tags.load();
-      this.entries.load(queryFromSelection(this.selection()));
-    });
+    this.refreshSvc.run();
   }
 
   /** Map the current selection to a refresh scope, or null where a scoped
@@ -813,15 +825,12 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /** The list-scoped refresh (header button + mobile pull): sweep only the feeds
-   *  behind the current selection, then reload the list once it lands. */
+   *  behind the current selection. The single reload authority (#502) reloads the
+   *  list once the run finishes — this path no longer reloads it itself. */
   onScopedRefresh(): void {
     const scope = this.refreshScope();
     if (!scope) return;
-    this.refreshSvc.run(() => {
-      this.subs.load();
-      this.tags.load();
-      this.entries.load(queryFromSelection(this.selection()));
-    }, scope);
+    this.refreshSvc.run(undefined, scope);
   }
 
   /** The header button's start path: a for-you run is long and spends provider
@@ -895,13 +904,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         this.entries.load(queryFromSelection(this.selection()));
         return;
       }
-      this.refreshSvc.run(
-        () => {
-          this.subs.load();
-          this.entries.load(queryFromSelection(this.selection()));
-        },
-        { feedId: sub.feedId },
-      );
+      // The single reload authority (#502) reloads the list once the feed's
+      // first fetch finishes — this path no longer reloads it itself.
+      this.refreshSvc.run(undefined, { feedId: sub.feedId });
     });
   }
 }
