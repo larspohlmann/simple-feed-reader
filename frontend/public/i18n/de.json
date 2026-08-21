@@ -207,6 +207,7 @@
         "candidatePool": "Max. Artikel",
         "picksLimit": "Maximale Auswahl",
         "batchCount": "Batches (leer = automatisch)",
+        "profileLabel": "Aktuelles Präferenzprofil",
         "contextWindow": "Kontextfenster (Token)",
         "contextWindowFromProvider": "Vom Provider gemeldet: {{value}} Tokens",
         "contextWindowFallback": "Eingebauter Standard",
