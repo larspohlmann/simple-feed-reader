@@ -18,16 +18,14 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ProviderConnectionFactory;
-use App\Service\Recommendation\ChatCompletionClient;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationBatchWave;
-use App\Service\Recommendation\RecommendationCallRecorder;
 use App\Service\Recommendation\RecommendationCandidateLoader;
-use App\Service\Recommendation\RecommendationCompletionRequestFactory;
-use App\Service\Recommendation\RecommendationDuplicateParser;
+use App\Service\Recommendation\RecommendationDedupResolver;
 use App\Service\Recommendation\RecommendationHistoryLoader;
 use App\Service\Recommendation\RecommendationPromptBuilder;
 use App\Service\Recommendation\RecommendationRunAdvancer;
+use App\Service\Recommendation\RecommendationRunFinalizer;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Recommendation\RecommendationSettingsResolver;
 use App\Service\Recommendation\RecommendationSettingsValues;
@@ -498,9 +496,16 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
      */
     private function advancerWithFlushFailingEntityManager(): RecommendationRunAdvancer
     {
+        // The finalizer shares this one decorator with the advancer, so the
+        // single first-flush failure lands on whichever run flushes first --
+        // the struggling run's fail()-recording write -- and the healthy run's
+        // later finalize flush (now inside RecommendationRunFinalizer) still
+        // reaches the real EntityManager, exactly as it did before #338 lifted
+        // finalize out of the advancer.
+        $entityManager = new FlushFailingEntityManager($this->em);
+
         return new RecommendationRunAdvancer(
             $this->runs(),
-            self::getContainer()->get(EntryRepository::class),
             self::getContainer()->get(LockFactory::class),
             self::getContainer()->get(AiProviderConfigurator::class),
             $this->connectionFactory(),
@@ -509,14 +514,17 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             self::getContainer()->get(RecommendationCandidateLoader::class),
             self::getContainer()->get(RecommendationHistoryLoader::class),
             self::getContainer()->get(RecommendationPromptBuilder::class),
-            self::getContainer()->get(ChatCompletionClient::class),
-            new FlushFailingEntityManager($this->em),
+            $entityManager,
             self::getContainer()->get(RecommendationWinnerRanker::class),
-            self::getContainer()->get(RecommendationDuplicateParser::class),
-            self::getContainer()->get(RecommendationCallRecorder::class),
             self::getContainer()->get(RecommendationTickCheckpoint::class),
             self::getContainer()->get(RecommendationBatchWave::class),
-            self::getContainer()->get(RecommendationCompletionRequestFactory::class),
+            self::getContainer()->get(RecommendationDedupResolver::class),
+            new RecommendationRunFinalizer(
+                self::getContainer()->get(EntryRepository::class),
+                $entityManager,
+                self::getContainer()->get(RecommendationSettingsResolver::class),
+                self::getContainer()->get(ClockInterface::class),
+            ),
             self::getContainer()->get(TickLockKeepalive::class),
         );
     }
