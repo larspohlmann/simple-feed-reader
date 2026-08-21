@@ -27,6 +27,14 @@ final readonly class RecommendationSettingsValues
         public ?int $batchCount,
         public bool $debugEnabled,
         public ?int $autoGenerateIntervalHours = null,
+        /**
+         * The reader's inferred preference profile (#493): read-only through
+         * this value object's usual callers, written only by
+         * RecommendationSettingsWriter::storeProfile(). Defaulted to null,
+         * unlike guidancePrompt beside it, so the many callers that predate
+         * #493 keep compiling unchanged.
+         */
+        public ?string $profileText = null,
     ) {
     }
 }

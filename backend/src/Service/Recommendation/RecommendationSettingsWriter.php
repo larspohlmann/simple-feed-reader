@@ -14,6 +14,11 @@ use Doctrine\ORM\EntityManagerInterface;
  * guidance prompt normalises to null here, not in the DTO or the controller,
  * because null is the domain meaning "use the default" that
  * RecommendationSettingsResolver already understands.
+ *
+ * `storeProfile()` is a second, narrower entry point (#493): the distiller
+ * that produces the reader's preference profile calls it directly, without
+ * routing through the settings form's full `RecommendationSettingsValues`,
+ * so it can never carry a stale copy of fields it knows nothing about.
  */
 final readonly class RecommendationSettingsWriter
 {
@@ -25,16 +30,30 @@ final readonly class RecommendationSettingsWriter
 
     public function save(User $user, RecommendationSettingsValues $values): void
     {
-        $normalised = $this->withNormalisedGuidance($values);
+        $settings = $this->loadOrCreate($user);
+        $settings->update($this->withNormalisedGuidance($values));
+        $this->entityManager->flush();
+    }
+
+    public function storeProfile(User $user, ?string $profileText): void
+    {
+        $settings = $this->loadOrCreate($user);
+        $settings->update($this->withReplacedProfileText($settings->values(), $profileText));
+        $this->entityManager->flush();
+    }
+
+    private function loadOrCreate(User $user): RecommendationSettings
+    {
         $settings = $this->repository->findForUser($user);
 
-        if (null === $settings) {
-            $settings = new RecommendationSettings($user);
-            $this->entityManager->persist($settings);
+        if (null !== $settings) {
+            return $settings;
         }
 
-        $settings->update($normalised);
-        $this->entityManager->flush();
+        $settings = new RecommendationSettings($user);
+        $this->entityManager->persist($settings);
+
+        return $settings;
     }
 
     private function withNormalisedGuidance(RecommendationSettingsValues $values): RecommendationSettingsValues
@@ -57,6 +76,27 @@ final readonly class RecommendationSettingsWriter
             batchCount: $values->batchCount,
             debugEnabled: $values->debugEnabled,
             autoGenerateIntervalHours: $values->autoGenerateIntervalHours,
+            profileText: $values->profileText,
+        );
+    }
+
+    private function withReplacedProfileText(
+        RecommendationSettingsValues $values,
+        ?string $profileText,
+    ): RecommendationSettingsValues {
+        return new RecommendationSettingsValues(
+            guidancePrompt: $values->guidancePrompt,
+            favoritesCap: $values->favoritesCap,
+            keptCap: $values->keptCap,
+            viewedCap: $values->viewedCap,
+            candidatePoolSize: $values->candidatePoolSize,
+            lookbackDays: $values->lookbackDays,
+            picksLimit: $values->picksLimit,
+            contextWindow: $values->contextWindow,
+            batchCount: $values->batchCount,
+            debugEnabled: $values->debugEnabled,
+            autoGenerateIntervalHours: $values->autoGenerateIntervalHours,
+            profileText: $profileText,
         );
     }
 }

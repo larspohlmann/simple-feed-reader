@@ -153,6 +153,53 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         );
     }
 
+    public function testProfileTextDefaultsToNullWhenNoRowExists(): void
+    {
+        $settings = $this->resolver()->forUser($this->userWithoutSettingsRow());
+
+        self::assertNull($settings->profileText);
+    }
+
+    public function testProfileTextIsReadFromTheSettingsRow(): void
+    {
+        $this->settingsRowFor($this->user, profileText: 'Likes self-hosted home automation.');
+
+        $settings = $this->resolver()->forUser($this->user);
+
+        self::assertSame('Likes self-hosted home automation.', $settings->profileText);
+    }
+
+    /**
+     * A fresh user out of setUp() never had a settings row created for it;
+     * this name exists to make that precondition explicit at the call site.
+     */
+    private function userWithoutSettingsRow(): User
+    {
+        return $this->user;
+    }
+
+    private function settingsRowFor(User $user, ?string $profileText = null): RecommendationSettings
+    {
+        $row = new RecommendationSettings($user);
+        $row->update(new RecommendationSettingsValues(
+            guidancePrompt: null,
+            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
+            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
+            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
+            candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+            contextWindow: null,
+            batchCount: null,
+            debugEnabled: false,
+            profileText: $profileText,
+        ));
+        $this->em->persist($row);
+        $this->em->flush();
+
+        return $row;
+    }
+
     private function seedAiSettingsWithModel(User $user, int $contextWindow, ?int $maxBatchSize = null): void
     {
         /** @var ApiKeyCipher $cipher */

@@ -27,6 +27,7 @@ final class RecommendationSettingsJson
     {
         return [
             'guidancePrompt' => $effective->guidancePrompt,
+            'profileText' => $effective->profileText,
             'defaultGuidancePrompt' => RecommendationPromptText::DEFAULT_GUIDANCE,
             'fixedPrompt' => [
                 'role' => RecommendationPromptText::SYSTEM_ROLE,

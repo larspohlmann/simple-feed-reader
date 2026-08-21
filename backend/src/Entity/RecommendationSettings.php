@@ -31,6 +31,15 @@ class RecommendationSettings
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $guidancePrompt = null;
 
+    /**
+     * The reader's inferred preference profile (#493): distilled by a later
+     * pipeline phase, not by this settings row's own writer path. Read-only
+     * from the settings API; only RecommendationSettingsWriter::storeProfile()
+     * sets it.
+     */
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $profileText = null;
+
     #[ORM\Column(options: ['default' => EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP])]
     private int $favoritesCap = EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP;
 
@@ -82,6 +91,7 @@ class RecommendationSettings
     public function update(RecommendationSettingsValues $values): void
     {
         $this->guidancePrompt = $values->guidancePrompt;
+        $this->profileText = $values->profileText;
         $this->favoritesCap = $values->favoritesCap;
         $this->keptCap = $values->keptCap;
         $this->viewedCap = $values->viewedCap;
@@ -98,6 +108,7 @@ class RecommendationSettings
     {
         return new RecommendationSettingsValues(
             guidancePrompt: $this->guidancePrompt,
+            profileText: $this->profileText,
             favoritesCap: $this->favoritesCap,
             keptCap: $this->keptCap,
             viewedCap: $this->viewedCap,

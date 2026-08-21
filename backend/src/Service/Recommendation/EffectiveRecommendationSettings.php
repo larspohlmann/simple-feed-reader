@@ -36,6 +36,14 @@ final readonly class EffectiveRecommendationSettings
         public RecommendationPackingSettings $packing,
         public bool $debugEnabled,
         public ?int $autoGenerateIntervalHours = null,
+        /**
+         * The reader's inferred preference profile (#493), resolved
+         * straight from the row with no default of its own — like
+         * guidancePrompt, absence just means "none yet". Defaulted to null
+         * here (unlike guidancePrompt) only so the many callers that predate
+         * #493 keep compiling unchanged.
+         */
+        public ?string $profileText = null,
     ) {
     }
 }
