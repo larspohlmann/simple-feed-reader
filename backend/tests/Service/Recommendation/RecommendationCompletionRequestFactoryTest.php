@@ -7,20 +7,18 @@ namespace App\Tests\Service\Recommendation;
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Service\Ai\Crypto\SealedApiKey;
+use App\Service\Recommendation\RecommendationAnswerBudget;
 use App\Service\Recommendation\RecommendationCompletionRequestFactory;
-use App\Service\Recommendation\RecommendationPromptBuilder;
 use App\Service\Recommendation\RecommendationResponseSchema;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationCompletionRequestFactoryTest extends TestCase
 {
     private RecommendationCompletionRequestFactory $factory;
-    private RecommendationPromptBuilder $promptBuilder;
 
     protected function setUp(): void
     {
-        $this->promptBuilder = new RecommendationPromptBuilder();
-        $this->factory = new RecommendationCompletionRequestFactory($this->promptBuilder);
+        $this->factory = new RecommendationCompletionRequestFactory();
     }
 
     /**
@@ -39,7 +37,7 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
         );
 
         self::assertSame(
-            $this->promptBuilder->answerBoundTokens(45, RecommendationResponseSchema::Ranking),
+            RecommendationAnswerBudget::answerBoundTokens(45, RecommendationResponseSchema::Ranking),
             $request->maxAnswerTokens,
         );
     }
@@ -59,7 +57,7 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
         );
 
         self::assertSame(
-            $this->promptBuilder->outputTokenReserve(45, RecommendationResponseSchema::Ranking),
+            RecommendationAnswerBudget::outputTokenReserve(45, RecommendationResponseSchema::Ranking),
             $request->maxAnswerTokens,
         );
     }

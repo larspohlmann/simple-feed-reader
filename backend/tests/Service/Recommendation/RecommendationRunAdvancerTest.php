@@ -24,7 +24,7 @@ use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ProviderTimeouts;
 use App\Service\Recommendation\CompletionStreamHeartbeat;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
-use App\Service\Recommendation\RecommendationPromptBuilder;
+use App\Service\Recommendation\RecommendationAnswerBudget;
 use App\Service\Recommendation\RecommendationPromptText;
 use App\Service\Recommendation\RecommendationResponseSchema;
 use App\Service\Recommendation\RecommendationRunAdvancer;
@@ -796,7 +796,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // (#327) — RecommendationCompletionRequestFactoryTest holds both halves.
         self::assertTrue($calls[0]['suppressReasoning']);
         self::assertSame(
-            $this->promptBuilder()->answerBoundTokens(
+            RecommendationAnswerBudget::answerBoundTokens(
                 \count($firstBatch),
                 RecommendationResponseSchema::BatchScore,
             ),
@@ -2623,14 +2623,6 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $runs = self::getContainer()->get(RecommendationRunRepository::class);
 
         return $runs;
-    }
-
-    private function promptBuilder(): RecommendationPromptBuilder
-    {
-        /** @var RecommendationPromptBuilder $builder */
-        $builder = self::getContainer()->get(RecommendationPromptBuilder::class);
-
-        return $builder;
     }
 
     private function lockFactory(): LockFactory

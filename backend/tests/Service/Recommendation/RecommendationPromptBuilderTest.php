@@ -11,7 +11,6 @@ use App\Service\Recommendation\RecommendationHistory;
 use App\Service\Recommendation\RecommendationPackingSettings;
 use App\Service\Recommendation\RecommendationPromptBuilder;
 use App\Service\Recommendation\RecommendationPromptText;
-use App\Service\Recommendation\RecommendationResponseSchema;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationPromptBuilderTest extends TestCase
@@ -28,73 +27,6 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertSame(120, $this->builder->descriptionLength(8192));
         self::assertSame(239, $this->builder->descriptionLength(32768));
         self::assertSame(480, $this->builder->descriptionLength(200000));
-    }
-
-    /**
-     * The reserve scales with the batch, because the batch is what the model
-     * must answer about. A flat cap cannot be right for both: the default
-     * pool packs to 45 items, but `batchCount` lets an account ask for one
-     * batch of thousands, and a constant sized for the first silently
-     * truncates the second.
-     */
-    public function testTheAnswerReserveScalesWithTheItemsBeingAnswered(): void
-    {
-        self::assertSame(3150, $this->builder->answerTokenReserve(45));
-        self::assertSame(35000, $this->builder->answerTokenReserve(500));
-    }
-
-    /**
-     * The packing estimate and the provider ceiling are different numbers.
-     *
-     * They were briefly the same one, and the packer read the ceiling's slack
-     * as a real cost: at a 13000-token window the same pool went from 12
-     * batches of 45 to 50 of 10, quadrupling the calls and the history re-sent
-     * with each of them. The reserve must stay the honest estimate.
-     */
-    public function testTheProviderCeilingIsLooserThanThePackingEstimate(): void
-    {
-        $estimate = $this->builder->answerTokenReserve(45);
-        $ceiling = $this->builder->answerBoundTokens(45, RecommendationResponseSchema::Ranking);
-
-        self::assertGreaterThan($estimate, $ceiling);
-        self::assertGreaterThanOrEqual(3017, $estimate, 'the estimate still covers the largest reply on record');
-    }
-
-    /**
-     * A dedup reply is `{"duplicates":[…]}` — bare integers, no score and no
-     * prose. Charging it the pick rate gave a reply that cannot legitimately
-     * pass a few hundred tokens a ceiling of ten thousand, which is the
-     * unbounded generation of #437 reintroduced on the dedup call.
-     */
-    public function testADedupReplyIsBoundedFarBelowARankingReply(): void
-    {
-        $dedup = $this->builder->answerBoundTokens(100, RecommendationResponseSchema::Duplicates);
-        $ranking = $this->builder->answerBoundTokens(100, RecommendationResponseSchema::Ranking);
-
-        self::assertLessThan(intdiv($ranking, 4), $dedup);
-    }
-
-    /**
-     * A score-only batch reply is `{"id":123,"score":843}` — no `reason` — so
-     * it is charged a fifth of the reason-bearing pick rate. Distillation
-     * answers one profile string, so it is charged a fixed reserve regardless
-     * of how many items informed it. Consolidation still writes a `reason` per
-     * pick, so it keeps the full pick rate (#493).
-     */
-    public function testAnswerBoundIsSchemaAware(): void
-    {
-        self::assertSame(
-            intdiv(max(1024, 100 * 15) * 150, 100),
-            $this->builder->answerBoundTokens(100, RecommendationResponseSchema::BatchScore),
-        );
-        self::assertSame(
-            intdiv(max(1024, 100 * 70) * 150, 100),
-            $this->builder->answerBoundTokens(100, RecommendationResponseSchema::Consolidation),
-        );
-        self::assertSame(
-            intdiv(max(1024, 1200) * 150, 100),
-            $this->builder->answerBoundTokens(1, RecommendationResponseSchema::Distillation),
-        );
     }
 
     /**
@@ -204,48 +136,6 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertStringStartsWith(str_repeat('a', 2000), $tail[0]['content']);
         self::assertStringContainsString('truncated', $tail[0]['content']);
         self::assertStringNotContainsString(str_repeat('a', 2001), $tail[0]['content']);
-    }
-
-    /**
-     * The reserve is now the whole bound on a connection that suppresses
-     * reasoning (#437), so it has to cover a real reply rather than a
-     * conservative guess at one. The largest reply this feature has produced
-     * for a full batch ran to 12068 characters — roughly 3017 tokens, or 70
-     * per item, because each pick carries a prose `reason`. At 40 tokens a
-     * pick the reserve was under half of that, which the reasoning headroom
-     * used to hide.
-     */
-    public function testTheAnswerReserveCoversTheLargestReplyAFullBatchHasProduced(): void
-    {
-        self::assertGreaterThanOrEqual(3017, $this->builder->answerTokenReserve(45));
-    }
-
-    /**
-     * Below the floor the per-item estimate under-counts: one pick's worth of
-     * tokens does not cover a single item plus the JSON envelope around it.
-     */
-    public function testTheAnswerReserveNeverFallsBelowItsFloor(): void
-    {
-        self::assertSame(1024, $this->builder->answerTokenReserve(1));
-        self::assertSame(1024, $this->builder->answerTokenReserve(0));
-    }
-
-    /**
-     * A reasoning model bills reasoning against the same `max_tokens` as its
-     * answer, so the provider budget adds a reasoning headroom on top of the
-     * answer reserve. Without it a 45-item batch capped at 1800 tokens spent
-     * its whole budget thinking and its JSON answer was truncated.
-     */
-    public function testTheProviderOutputReserveAddsReasoningHeadroomOnTopOfTheAnswer(): void
-    {
-        self::assertSame(
-            $this->builder->answerBoundTokens(45, RecommendationResponseSchema::Ranking) + 32000,
-            $this->builder->outputTokenReserve(45, RecommendationResponseSchema::Ranking),
-        );
-        self::assertSame(
-            $this->builder->answerBoundTokens(1, RecommendationResponseSchema::Ranking) + 32000,
-            $this->builder->outputTokenReserve(1, RecommendationResponseSchema::Ranking),
-        );
     }
 
     /**
@@ -908,6 +798,69 @@ final class RecommendationPromptBuilderTest extends TestCase
         $this->expectExceptionMessage('The dedup phase requires at least one ranked winner.');
 
         $this->builder->dedupMessages([], []);
+    }
+
+    /**
+     * The distillation call is the one place the model sees the full,
+     * three-section history: the batch and consolidation calls only ever see
+     * the not-yet-distilled PROFILE plus FAVORITES (#493).
+     */
+    public function testDistillMessagesCarryAllThreeHistorySections(): void
+    {
+        $history = new RecommendationHistory(
+            favorites: [self::line(1, 'Fav one', 10), self::line(2, 'Fav two', 10)],
+            kept: [self::line(3, 'Kept one', 10), self::line(4, 'Kept two', 10)],
+            viewed: [self::line(5, 'Viewed one', 10), self::line(6, 'Viewed two', 10)],
+        );
+
+        $messages = $this->builder->distillMessages($history, $this->settings(32768, 100));
+
+        self::assertStringContainsString('FAVORITES', $messages[1]['content']);
+        self::assertStringContainsString('KEPT', $messages[1]['content']);
+        self::assertStringContainsString('VIEWED', $messages[1]['content']);
+        self::assertStringContainsString('"profile"', $messages[0]['content']);
+    }
+
+    /**
+     * The consolidation call sees the same profile+FAVORITES fidelity as the
+     * batch call, not the full history — KEPT and VIEWED never reach it — plus
+     * the ranked shortlist rendered candidate-style so each line carries its id
+     * (#493, Q6 correction).
+     */
+    public function testConsolidationMessagesCarryProfileFavouritesAndShortlist(): void
+    {
+        $pool = [['id' => 5, 'score' => 900, 'reason' => '']];
+        $lines = [5 => self::line(5, 'Rust 2.0 released', 10)];
+        $history = new RecommendationHistory(
+            favorites: [self::line(1, 'Fav one', 10)],
+            kept: [self::line(2, 'Kept one', 10)],
+            viewed: [self::line(3, 'Viewed one', 10)],
+        );
+
+        $messages = $this->builder->consolidationMessages(
+            $pool,
+            $lines,
+            $history,
+            $this->settings(32768, 100),
+            'Likes Rust.',
+        );
+
+        self::assertStringContainsString('PROFILE', $messages[1]['content']);
+        self::assertStringContainsString('Likes Rust.', $messages[1]['content']);
+        self::assertStringContainsString('FAVORITES', $messages[1]['content']);
+        self::assertStringNotContainsString('KEPT', $messages[1]['content']);
+        self::assertStringNotContainsString('VIEWED', $messages[1]['content']);
+        self::assertStringContainsString('[5]', $messages[1]['content']);
+        self::assertStringContainsString('Rust 2.0 released', $messages[1]['content']);
+        self::assertStringContainsString('duplicates', $messages[0]['content']);
+    }
+
+    public function testConsolidationMessagesRejectsAnEmptyPool(): void
+    {
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('The consolidation phase requires at least one ranked winner.');
+
+        $this->builder->consolidationMessages([], [], $this->emptyHistory(), $this->settings(32768, 100), null);
     }
 
     private static function line(int $id, string $title, int $descriptionChars): PromptLine
