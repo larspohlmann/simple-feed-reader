@@ -19,9 +19,91 @@ final class LeadImageSelectorTest extends TestCase
     public function testShowsHeroWhenTheBodyImageIsADifferentPicture(): void
     {
         // The mopo entry 470210 case: the og:image hero (image id 4943510) is not
-        // in the extracted body, which only shows a later photo (4943526).
+        // in the extracted body, which leads with text and only shows a later
+        // photo (4943526) further down, so the hero still leads.
         $hero = 'https://image.mopo.de/4943510.jpg?imageId=4943510&width=1200';
         $body = '<p>Lead.</p><figure><img src="https://image.mopo.de/4943526.jpg?imageId=4943526" alt=""></figure>';
+
+        self::assertSame($hero, $this->selector->select($hero, $body));
+    }
+
+    public function testSuppressesHeroWhenTheBodyLeadsWithADifferentPhoto(): void
+    {
+        // The core #520 invariant: a hero must never stack on top of a body that
+        // already opens with a picture, even a genuinely different one.
+        $hero = 'https://cdn.test/hero.jpg';
+        $body = '<figure><img src="https://cdn.test/different.jpg" alt="">'
+            . '<figcaption>Credit</figcaption></figure><p>Body.</p>';
+
+        self::assertNull($this->selector->select($hero, $body));
+    }
+
+    public function testSuppressesHeroWhenALinkedImageLeadsTheBody(): void
+    {
+        // The leading image is wrapped in a link; it still opens the body.
+        $hero = 'https://cdn.test/hero.jpg';
+        $body = '<a href="https://cdn.test/full"><img src="https://cdn.test/different.jpg" alt=""></a><p>Body.</p>';
+
+        self::assertNull($this->selector->select($hero, $body));
+    }
+
+    public function testShowsHeroWhenTextPrecedesAnInlineImageInTheFirstBlock(): void
+    {
+        // Text renders before the image, so the two never stack at the top.
+        $hero = 'https://cdn.test/hero.jpg';
+        $body = '<p>An intro sentence <img src="https://cdn.test/different.jpg" alt=""> mid paragraph.</p>';
+
+        self::assertSame($hero, $this->selector->select($hero, $body));
+    }
+
+    public function testShowsHeroWhenANonBreakingSpaceLeadsBeforeTheImage(): void
+    {
+        // A non-breaking space is visible text, not layout whitespace, so it
+        // counts as a text lead and the hero stays. Both ends agree on this.
+        $hero = 'https://cdn.test/hero.jpg';
+        $body = "<p>\u{00A0}</p><figure><img src=\"https://cdn.test/different.jpg\" alt=\"\"></figure>";
+
+        self::assertSame($hero, $this->selector->select($hero, $body));
+    }
+
+    public function testSuppressesHeroWhenTheBodyRepeatsTheHeroLowerDownUnderATextLead(): void
+    {
+        // The #505 dedup, retained by the union rule: the body leads with text,
+        // so the lead-position rule does not fire, but it repeats the hero photo
+        // (a size variant) lower down, so a second copy would be redundant.
+        $hero = 'https://cdn.test/4943510.jpg?width=1200';
+        $body = '<p>Intro.</p><figure><img src="https://cdn.test/4943510.webp?width=960" alt=""></figure>';
+
+        self::assertNull($this->selector->select($hero, $body));
+    }
+
+    public function testSuppressesHeroWhenLayoutWhitespacePrecedesTheLeadingImage(): void
+    {
+        // Pretty-printed HTML puts newlines and spaces before the first <img>;
+        // that layout whitespace is not a text lead, so the image still leads.
+        $hero = 'https://cdn.test/hero.jpg';
+        $body = "<figure>\n    <img src=\"https://cdn.test/different.jpg\" alt=\"\">\n</figure>";
+
+        self::assertNull($this->selector->select($hero, $body));
+    }
+
+    public function testSuppressesHeroWhenTheHeroPhotoIsNotTheFirstBodyImage(): void
+    {
+        // The body leads with text and a different photo, then repeats the hero
+        // photo further down; the hero would still be a redundant second copy.
+        $hero = 'https://cdn.test/4943510.jpg?width=1200';
+        $body = '<p>Intro.</p><img src="https://cdn.test/other.jpg" alt="">'
+            . '<img src="https://cdn.test/4943510.webp?width=960" alt="">';
+
+        self::assertNull($this->selector->select($hero, $body));
+    }
+
+    public function testIgnoresABodyImageThatHasNoSource(): void
+    {
+        // An <img> without a usable src is not a picture the reader shows, so it
+        // neither leads the body nor counts as a repeat of the hero.
+        $hero = 'https://cdn.test/hero.jpg';
+        $body = '<p>Intro.</p><img alt="decorative, no source">';
 
         self::assertSame($hero, $this->selector->select($hero, $body));
     }
@@ -79,9 +161,11 @@ final class LeadImageSelectorTest extends TestCase
     public function testShowsTheHeroWhenItHasNoPathBasename(): void
     {
         // parse_url returns no path for a bare host; the hero keeps its whole
-        // form as its identity and still leads over a different body image.
+        // form as its identity, so it does not match the different body image.
+        // The body leads with text, so the lead-position rule does not fire
+        // either, and the hero still leads.
         $hero = 'https://cdn.test';
-        $body = '<img src="https://cdn.test/photo.jpg" alt="">';
+        $body = '<p>Intro.</p><img src="https://cdn.test/photo.jpg" alt="">';
 
         self::assertSame($hero, $this->selector->select($hero, $body));
     }
