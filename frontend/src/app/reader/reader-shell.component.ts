@@ -901,13 +901,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         this.entries.load(queryFromSelection(this.selection()));
         return;
       }
-      this.refreshSvc.run(
-        () => {
-          this.subs.load();
-          this.entries.load(queryFromSelection(this.selection()));
-        },
-        { feedId: sub.feedId },
-      );
+      // The single reload authority (#502) reloads the list once the feed's
+      // first fetch finishes — this path no longer reloads it itself.
+      this.refreshSvc.run(undefined, { feedId: sub.feedId });
     });
   }
 }
