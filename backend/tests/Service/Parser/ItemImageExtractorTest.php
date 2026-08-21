@@ -165,4 +165,92 @@ final class ItemImageExtractorTest extends TestCase
         self::assertSame('https://i/inline.jpg', $image->url);
         self::assertNull($image->width);
     }
+
+    public function testReadsACustomImageElementWithItsDeclaredDimensions(): void
+    {
+        $image = ItemImageExtractor::fromCustomImageElement($this->item(
+            '<image url="https://images.utopia.de/x/w:194/h:126/pic.jpg" width="194" height="126"/>',
+        ));
+
+        self::assertNotNull($image);
+        self::assertSame('https://images.utopia.de/x/w:194/h:126/pic.jpg', $image->url);
+        self::assertSame(194, $image->width);
+        self::assertSame(126, $image->height);
+    }
+
+    public function testPrefersTheLargerImageBigVariantOverImage(): void
+    {
+        $image = ItemImageExtractor::fromCustomImageElement($this->item(
+            '<image url="https://images.utopia.de/x/w:194/h:126/small.jpg" width="194" height="126"/>'
+            . '<image_big url="https://images.utopia.de/x/w:640/h:300/big.jpg" width="640" height="300"/>',
+        ));
+
+        self::assertNotNull($image);
+        self::assertSame('https://images.utopia.de/x/w:640/h:300/big.jpg', $image->url);
+        self::assertSame(640, $image->width);
+        self::assertSame(300, $image->height);
+    }
+
+    public function testFallsBackToImageWhenNoImageBigIsPresent(): void
+    {
+        $image = ItemImageExtractor::fromCustomImageElement($this->item(
+            '<image url="https://images.utopia.de/x/w:194/h:126/only.jpg" width="194" height="126"/>',
+        ));
+
+        self::assertNotNull($image);
+        self::assertSame('https://images.utopia.de/x/w:194/h:126/only.jpg', $image->url);
+    }
+
+    /**
+     * The standard channel-level <image> nests a <url> child element rather
+     * than declaring a `url` attribute. Requiring the attribute keeps this
+     * source from colliding with it, so an item carrying that shape yields
+     * nothing here.
+     */
+    public function testIgnoresAStandardImageElementThatNestsAUrlChild(): void
+    {
+        self::assertNull(ItemImageExtractor::fromCustomImageElement($this->item(
+            '<image><url>https://example.com/logo.png</url><title>Logo</title></image>',
+        )));
+    }
+
+    public function testYieldsNothingWhenNoCustomImageElementIsPresent(): void
+    {
+        self::assertNull(ItemImageExtractor::fromCustomImageElement($this->item(
+            '<description>No picture here.</description>',
+        )));
+    }
+
+    /**
+     * A url-bearing element that is not <image>/<image_big> — here an
+     * <enclosure> — must not be mistaken for a custom image element.
+     */
+    public function testIgnoresAUrlBearingElementThatIsNotACustomImageElement(): void
+    {
+        self::assertNull(ItemImageExtractor::fromCustomImageElement($this->item(
+            '<enclosure url="https://i/e.jpg" type="image/jpeg"/>',
+        )));
+    }
+
+    public function testTrimsSurroundingWhitespaceFromACustomImageUrl(): void
+    {
+        $image = ItemImageExtractor::fromCustomImageElement($this->item(
+            '<image_big url="  https://i/padded.jpg  " width="640"/>',
+        ));
+
+        self::assertNotNull($image);
+        self::assertSame('https://i/padded.jpg', $image->url);
+    }
+
+    public function testPicksTheWidestAmongSeveralImageBigVariants(): void
+    {
+        $image = ItemImageExtractor::fromCustomImageElement($this->item(
+            '<image_big url="https://i/narrow.jpg" width="200"/>'
+            . '<image_big url="https://i/wide.jpg" width="800"/>',
+        ));
+
+        self::assertNotNull($image);
+        self::assertSame('https://i/wide.jpg', $image->url);
+        self::assertSame(800, $image->width);
+    }
 }

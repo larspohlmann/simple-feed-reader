@@ -63,6 +63,98 @@ final class Rss1ParserTest extends TestCase
         self::assertNull($feed->entries[2]->image);
     }
 
+    public function testReadsACustomImageBigElementWhenTheItemHasNoStandardImage(): void
+    {
+        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
+        // starts with whitespace and it wrongly flags the declaration. The
+        // closing marker strips that indentation before the parser sees it.
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                     xmlns="http://purl.org/rss/1.0/">
+              <channel rdf:about="https://rss1.example.com/">
+                <title>RSS 1.0 Example</title>
+                <link>https://rss1.example.com/</link>
+                <description>An RDF site summary</description>
+              </channel>
+              <item rdf:about="https://e/custom">
+                <title>Custom image item</title>
+                <link>https://e/custom</link>
+                <description>desc, no inline image</description>
+                <image url="https://images.example.de/small.jpg" width="194" height="126"/>
+                <image_big url="https://images.example.de/big.jpg" width="640" height="300"/>
+              </item>
+            </rdf:RDF>
+            XML;
+
+        $feed = (new Rss1Parser())->parse($this->document($xml));
+
+        self::assertCount(1, $feed->entries);
+        $image = $feed->entries[0]->image;
+        self::assertNotNull($image);
+        self::assertSame('https://images.example.de/big.jpg', $image->url);
+        self::assertSame(640, $image->width);
+    }
+
+    public function testMediaImageWinsOverACustomImageElement(): void
+    {
+        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
+        // starts with whitespace and it wrongly flags the declaration. The
+        // closing marker strips that indentation before the parser sees it.
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                     xmlns="http://purl.org/rss/1.0/"
+                     xmlns:media="http://search.yahoo.com/mrss/">
+              <channel rdf:about="https://rss1.example.com/">
+                <title>RSS 1.0 Example</title>
+                <link>https://rss1.example.com/</link>
+                <description>An RDF site summary</description>
+              </channel>
+              <item rdf:about="https://e/both">
+                <title>Both kinds item</title>
+                <link>https://e/both</link>
+                <description>desc</description>
+                <media:content url="https://e/media.jpg" medium="image" width="800"/>
+                <image_big url="https://e/custom.jpg" width="640"/>
+              </item>
+            </rdf:RDF>
+            XML;
+
+        $feed = (new Rss1Parser())->parse($this->document($xml));
+
+        self::assertSame('https://e/media.jpg', $feed->entries[0]->image?->url);
+    }
+
+    public function testCustomImageElementWinsOverAnInlineImg(): void
+    {
+        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
+        // starts with whitespace and it wrongly flags the declaration. The
+        // closing marker strips that indentation before the parser sees it.
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                     xmlns="http://purl.org/rss/1.0/"
+                     xmlns:content="http://purl.org/rss/1.0/modules/content/">
+              <channel rdf:about="https://rss1.example.com/">
+                <title>RSS 1.0 Example</title>
+                <link>https://rss1.example.com/</link>
+                <description>An RDF site summary</description>
+              </channel>
+              <item rdf:about="https://e/custom-over-inline">
+                <title>Custom over inline</title>
+                <link>https://e/custom-over-inline</link>
+                <content:encoded>&lt;p&gt;&lt;img src="https://e/inline.jpg"&gt;&lt;/p&gt;</content:encoded>
+                <image_big url="https://e/custom.jpg" width="640"/>
+              </item>
+            </rdf:RDF>
+            XML;
+
+        $feed = (new Rss1Parser())->parse($this->document($xml));
+
+        self::assertSame('https://e/custom.jpg', $feed->entries[0]->image?->url);
+    }
+
     public function testTitlesAreReducedToPlainText(): void
     {
         // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
