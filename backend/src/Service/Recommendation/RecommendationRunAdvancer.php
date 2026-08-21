@@ -398,6 +398,17 @@ final class RecommendationRunAdvancer
      */
     private function waveSize(RecommendationRun $run, AiProviderSettings $settings, TickDriver $driver): int
     {
+        // The run's first batch wave goes out as a single call, whatever the
+        // configured concurrency, so that call writes the provider's prompt-
+        // prefix cache before the concurrent fan-out races for it (#495). Every
+        // batch of a run shares a byte-identical prefix -- system role, profile,
+        // favourites, pool frame -- so warming it once turns that prefix nearly
+        // free on cache-capable providers, at the cost of one extra serial call.
+        // A resumed run (cursor already past the first batch) never re-warms.
+        if (0 === $run->progress()->nextBatchIndex) {
+            return 1;
+        }
+
         $batchesRemaining = \count($run->getCandidateBatches()) - $run->progress()->nextBatchIndex;
 
         return min($this->effectiveCap($settings, $driver), $batchesRemaining);
