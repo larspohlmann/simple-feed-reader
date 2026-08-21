@@ -381,6 +381,9 @@ final class RecommendationPromptBuilder
         $perItem = match ($schema) {
             RecommendationResponseSchema::Ranking => self::TOKENS_PER_PICK,
             RecommendationResponseSchema::Duplicates => self::TOKENS_PER_DUPLICATE_ID,
+            RecommendationResponseSchema::Distillation => self::TOKENS_PER_PICK,
+            RecommendationResponseSchema::BatchScore => self::TOKENS_PER_PICK,
+            RecommendationResponseSchema::Consolidation => self::TOKENS_PER_PICK,
         };
 
         $expected = max(self::MINIMUM_ANSWER_TOKENS, $replyItemCount * $perItem);
