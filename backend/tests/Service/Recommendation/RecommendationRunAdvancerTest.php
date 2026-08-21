@@ -798,7 +798,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame(
             $this->promptBuilder()->answerBoundTokens(
                 \count($firstBatch),
-                RecommendationResponseSchema::Ranking,
+                RecommendationResponseSchema::BatchScore,
             ),
             $calls[0]['maxAnswerTokens'],
         );

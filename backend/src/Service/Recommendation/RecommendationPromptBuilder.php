@@ -178,15 +178,21 @@ final class RecommendationPromptBuilder
         RecommendationHistory $history,
         array $candidateLines,
         EffectiveRecommendationSettings $settings,
+        ?string $profile,
         ?CandidatePoolSummary $poolSummary = null,
     ): array {
         $descriptionLength = $this->descriptionLength($settings->packing->contextWindow);
-
         $guidance = $settings->guidancePrompt ?? RecommendationPromptText::DEFAULT_GUIDANCE;
-        $contract = RecommendationPromptText::OUTPUT_CONTRACT;
-        $system = implode("\n\n", [RecommendationPromptText::SYSTEM_ROLE, $guidance, $contract]);
+        $system = implode("\n\n", [
+            RecommendationPromptText::BATCH_SYSTEM_ROLE,
+            $guidance,
+            RecommendationPromptText::BATCH_OUTPUT_CONTRACT,
+        ]);
 
-        $user = implode("\n\n", $this->userSections($history, $candidateLines, $descriptionLength, $poolSummary));
+        $user = implode(
+            "\n\n",
+            $this->batchUserSections($history, $candidateLines, $descriptionLength, $profile, $poolSummary),
+        );
 
         return [
             ['role' => 'system', 'content' => $system],
@@ -195,22 +201,29 @@ final class RecommendationPromptBuilder
     }
 
     /**
-     * The user message: the history, then the global pool frame when one is
-     * present (#344 shuffles the pool into random batches, so each batch names
-     * the whole set's size and date span before its own local sample), then the
-     * candidate lines.
+     * The batch user message: the not-yet-distilled PROFILE (when one is
+     * available), then FAVORITES only -- KEPT and VIEWED inform the profile
+     * the distillation phase writes, but the batch call itself never sees them
+     * -- then the global pool frame when one is present (#344 shuffles the
+     * pool into random batches, so each batch names the whole set's size and
+     * date span before its own local sample), then the candidate lines (#493).
      *
      * @param list<PromptLine> $candidateLines
      *
      * @return list<string>
      */
-    private function userSections(
+    private function batchUserSections(
         RecommendationHistory $history,
         array $candidateLines,
         int $descriptionLength,
+        ?string $profile,
         ?CandidatePoolSummary $poolSummary,
     ): array {
-        $sections = [$this->historySections($history, $descriptionLength)];
+        $sections = [];
+        if (null !== $profile && '' !== trim($profile)) {
+            $sections[] = "PROFILE:\n" . $profile;
+        }
+        $sections[] = $this->historySection('FAVORITES (newest first):', $history->favorites, $descriptionLength);
         $poolFrame = $this->poolFrameLine($poolSummary);
         if (null !== $poolFrame) {
             $sections[] = $poolFrame;
@@ -438,15 +451,6 @@ final class RecommendationPromptBuilder
         }
 
         return max(1, (int) ceil($candidateCount / $settings->packing->batchCount));
-    }
-
-    private function historySections(RecommendationHistory $history, int $descriptionLength): string
-    {
-        return implode("\n\n", [
-            $this->historySection('FAVORITES (newest first):', $history->favorites, $descriptionLength),
-            $this->historySection('KEPT (newest first):', $history->kept, $descriptionLength),
-            $this->historySection('VIEWED (newest first):', $history->viewed, $descriptionLength),
-        ]);
     }
 
     /**

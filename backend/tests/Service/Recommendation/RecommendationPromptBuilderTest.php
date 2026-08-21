@@ -466,11 +466,16 @@ final class RecommendationPromptBuilderTest extends TestCase
         $candidateLines = [self::line(7, 'Candidate seven', 10)];
 
         $settingsWithGuidance = $this->settings(32768, 100, 'Focus on cats.');
-        $withGuidance = $this->builder->batchMessages($history, $candidateLines, $settingsWithGuidance);
-        $withoutGuidance = $this->builder->batchMessages($history, $candidateLines, $this->settings(32768, 100));
+        $withGuidance = $this->builder->batchMessages($history, $candidateLines, $settingsWithGuidance, null);
+        $withoutGuidance = $this->builder->batchMessages(
+            $history,
+            $candidateLines,
+            $this->settings(32768, 100),
+            null,
+        );
 
         $system = $withGuidance[0]['content'];
-        self::assertStringContainsString(RecommendationPromptText::SYSTEM_ROLE, $system);
+        self::assertStringContainsString(RecommendationPromptText::BATCH_SYSTEM_ROLE, $system);
         self::assertStringContainsString('Focus on cats.', $system);
         self::assertStringContainsString('Return one object for every candidate line', $system);
 
@@ -478,7 +483,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $user = $withGuidance[1]['content'];
         self::assertStringContainsString('FAVORITES (newest first):', $user);
-        self::assertStringContainsString("KEPT (newest first):\n- none", $user);
+        self::assertStringNotContainsString('KEPT', $user);
         self::assertStringContainsString('- [7] ', $user);
     }
 
@@ -494,34 +499,13 @@ final class RecommendationPromptBuilderTest extends TestCase
             $this->emptyHistory(),
             [self::line(7, 'Candidate seven', 10)],
             $this->settings(32768, 100),
+            null,
         )[0]['content'];
 
         self::assertStringContainsString('from 0 to 1000', $system);
         self::assertStringContainsString('Do not round to multiples of ten', $system);
         self::assertStringContainsString('"score": <0-1000>', $system);
         self::assertStringNotContainsString('0 to 100 ', $system);
-    }
-
-    /**
-     * A single viewed post became "a fascination for sports events" and scored
-     * 920, and 13 of that run's 50 picks came out as sports. The prompt held
-     * VIEWED down with an ordering and no number behind it, which a small model
-     * drops as soon as the topical match is good. The ceiling is a number now,
-     * inside the band the rubric already reserves for a weak link (#440).
-     */
-    public function testAViewedOnlyMatchIsGivenANumericCeiling(): void
-    {
-        $system = $this->builder->batchMessages(
-            $this->emptyHistory(),
-            [self::line(7, 'Candidate seven', 10)],
-            $this->settings(32768, 100),
-        )[0]['content'];
-
-        self::assertStringContainsString(
-            "A candidate whose only support in the reader's history is a VIEWED post scores below 400",
-            $system,
-        );
-        self::assertStringContainsString('opening a post is not liking it', $system);
     }
 
     /**
@@ -538,6 +522,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             $this->emptyHistory(),
             [self::line(7, 'Candidate seven', 10)],
             $this->settings(32768, 100),
+            null,
         )[0]['content'];
 
         self::assertStringContainsString('never leave a candidate out', $system);
@@ -560,6 +545,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             $this->emptyHistory(),
             $candidateLines,
             $this->settings(32768, 100),
+            null,
         )[1]['content'];
 
         self::assertStringContainsString('CANDIDATES (17 posts — return 17 objects, one per line):', $user);
@@ -574,6 +560,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             $this->emptyHistory(),
             $candidateLines,
             $this->settings(32768, 100),
+            null,
             $summary,
         );
 
@@ -593,9 +580,65 @@ final class RecommendationPromptBuilderTest extends TestCase
             $this->emptyHistory(),
             [self::line(7, 'Candidate seven', 10)],
             $this->settings(32768, 100),
+            null,
         );
 
         self::assertStringNotContainsString('The full candidate set has', $messages[1]['content']);
+    }
+
+    /**
+     * The batch call sees a not-yet-distilled PROFILE plus FAVORITES only —
+     * KEPT and VIEWED stay in the history the distillation phase reads, but
+     * never reach the batch prompt itself (#493). The reply is score-only:
+     * the contract asks for "score" and not "reason".
+     */
+    public function testBatchMessagesCarryProfileAndFavouritesOnly(): void
+    {
+        $history = new RecommendationHistory(
+            favorites: [self::line(1, 'Fav one', 10), self::line(2, 'Fav two', 10), self::line(3, 'Fav three', 10)],
+            kept: [self::line(4, 'Kept one', 10), self::line(5, 'Kept two', 10), self::line(6, 'Kept three', 10)],
+            viewed: [
+                self::line(7, 'Viewed one', 10),
+                self::line(8, 'Viewed two', 10),
+                self::line(9, 'Viewed three', 10),
+            ],
+        );
+        $candidateLines = [self::line(10, 'Candidate A', 10), self::line(11, 'Candidate B', 10)];
+
+        $messages = $this->builder->batchMessages(
+            $history,
+            $candidateLines,
+            $this->settings(32768, 100),
+            'Likes homelab and Rust.',
+        );
+
+        $user = $messages[1]['content'];
+        self::assertStringContainsString('PROFILE', $user);
+        self::assertStringContainsString('Likes homelab and Rust.', $user);
+        self::assertStringContainsString('FAVORITES', $user);
+        self::assertStringNotContainsString('KEPT', $user);
+        self::assertStringNotContainsString('VIEWED', $user);
+        self::assertStringContainsString('"score"', $messages[0]['content']);
+        self::assertStringNotContainsString('"reason"', $messages[0]['content']);
+    }
+
+    public function testBatchMessagesOmitProfileBlockWhenProfileIsNull(): void
+    {
+        $history = new RecommendationHistory(
+            favorites: [self::line(1, 'Fav one', 10), self::line(2, 'Fav two', 10)],
+            kept: [],
+            viewed: [],
+        );
+
+        $messages = $this->builder->batchMessages(
+            $history,
+            [self::line(3, 'Candidate', 10)],
+            $this->settings(32768, 100),
+            null,
+        );
+
+        self::assertStringNotContainsString('PROFILE', $messages[1]['content']);
+        self::assertStringContainsString('FAVORITES', $messages[1]['content']);
     }
 
     public function testCorrectiveTailEchoesTheInvalidReply(): void
@@ -647,8 +690,8 @@ final class RecommendationPromptBuilderTest extends TestCase
     {
         $history = new RecommendationHistory(
             favorites: [new PromptLine(null, 'Fav Title', 'Feed A', '2026-01-01', 'fav desc')],
-            kept: [],
-            viewed: [new PromptLine(null, 'View Title', 'Feed B', '2026-01-02', null)],
+            kept: [new PromptLine(null, 'Kept Title', 'Feed B', '2026-01-02', null)],
+            viewed: [new PromptLine(null, 'View Title', 'Feed C', '2026-01-02', null)],
         );
         $candidateLines = [
             new PromptLine(5, 'Cand Title', 'Feed C', '2026-01-03', 'cand desc'),
@@ -656,17 +699,16 @@ final class RecommendationPromptBuilderTest extends TestCase
         ];
         $settings = $this->settings(32768, 3);
 
-        $messages = $this->builder->batchMessages($history, $candidateLines, $settings);
+        $messages = $this->builder->batchMessages($history, $candidateLines, $settings, 'Likes homelab.');
 
         $expectedSystem = implode("\n\n", [
-            RecommendationPromptText::SYSTEM_ROLE,
+            RecommendationPromptText::BATCH_SYSTEM_ROLE,
             RecommendationPromptText::DEFAULT_GUIDANCE,
-            RecommendationPromptText::OUTPUT_CONTRACT,
+            RecommendationPromptText::BATCH_OUTPUT_CONTRACT,
         ]);
         $expectedUser = implode("\n\n", [
+            "PROFILE:\nLikes homelab.",
             "FAVORITES (newest first):\n- Fav Title — Feed A — 2026-01-01 — fav desc",
-            "KEPT (newest first):\n- none",
-            "VIEWED (newest first):\n- View Title — Feed B — 2026-01-02",
             "CANDIDATES (2 posts — return 2 objects, one per line):\n"
                 . "- [5] Cand Title — Feed C — 2026-01-03 — cand desc\n"
                 . '- [0] No Id — Feed D — 2026-01-04',
@@ -691,7 +733,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         $messages = $this->builder->batchMessages($this->emptyHistory(), [
             new PromptLine(1, 'Boundary120', 'F', 'D', $exactly120),
             new PromptLine(2, 'Boundary121', 'F', 'D', $exactly121),
-        ], $this->settings(8192, 10));
+        ], $this->settings(8192, 10), null);
 
         $user = $messages[1]['content'];
         self::assertStringContainsString("- [1] Boundary120 — F — D — {$exactly120}\n", $user);
@@ -713,6 +755,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             $this->emptyHistory(),
             [new PromptLine(9, 'Varying', 'F', 'D', $description)],
             $this->settings(8192, 10),
+            null,
         );
 
         self::assertStringContainsString("- [9] Varying — F — D — {$expectedTruncated}", $messages[1]['content']);

@@ -135,6 +135,21 @@ final class RecommendationPickParserTest extends TestCase
         self::assertSame([42], array_map(static fn ($pick) => $pick->entryId, $result->picks));
     }
 
+    /**
+     * The same parser serves the score-only batch reply and the reason-bearing
+     * consolidation reply: a row that never carries a "reason" key at all (not
+     * merely a blank one) must still salvage, with an empty-string reason (#493).
+     */
+    public function testParsesScoreOnlyPicksWithoutAReason(): void
+    {
+        $result = $this->parser->parse('{"recommendations":[{"id":7,"score":800}]}', [7]);
+
+        self::assertTrue($result->usable);
+        self::assertSame(7, $result->picks[0]->entryId);
+        self::assertSame(800, $result->picks[0]->score);
+        self::assertSame('', $result->picks[0]->reason);
+    }
+
     public function testMissingReasonSalvagesAsEmptyString(): void
     {
         $content = self::encode([

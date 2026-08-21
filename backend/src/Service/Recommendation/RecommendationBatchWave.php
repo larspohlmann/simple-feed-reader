@@ -235,7 +235,7 @@ final readonly class RecommendationBatchWave
                     $settings,
                     $messages,
                     \count($waveBatch->validIds()),
-                    RecommendationResponseSchema::Ranking,
+                    RecommendationResponseSchema::BatchScore,
                 ),
                 $recordedCall,
             );
@@ -369,10 +369,14 @@ final readonly class RecommendationBatchWave
         ?CandidatePoolSummary $poolSummary,
     ): array {
         $candidateLines = $this->linesInSnapshotOrder($waveBatch->ids, $waveBatch->linesById);
+        // TODO(#493 Task 12): thread $run->getProfileText() through here once the
+        // advancer runs the distillation phase ahead of the batch wave. Until
+        // then every batch call goes out with no PROFILE block.
         $messages = $this->promptBuilder->batchMessages(
             $history,
             $candidateLines,
             $effectiveSettings,
+            null,
             $poolSummary,
         );
 
