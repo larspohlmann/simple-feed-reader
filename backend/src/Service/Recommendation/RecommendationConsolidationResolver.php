@@ -109,7 +109,7 @@ final readonly class RecommendationConsolidationResolver
             return ConsolidationOutcome::unusable($content, $pool);
         }
 
-        return ConsolidationOutcome::finalizeWith(self::rankedFromReply($pool, $result));
+        return ConsolidationOutcome::finalizeWith(self::rankedFromReply($result));
     }
 
     /**
@@ -157,29 +157,22 @@ final readonly class RecommendationConsolidationResolver
     }
 
     /**
-     * The pool's surviving entries -- duplicates dropped -- re-scored and
-     * re-reasoned from the reply's picks, best score first. A survivor the
-     * reply named neither a pick nor a duplicate for keeps its batch score
-     * and empty reason rather than vanishing: the reply is trusted for what
-     * it says, never for what it leaves unsaid.
-     *
-     * @param non-empty-list<array{id: int, score: int, reason: string}> $pool
+     * The final list: exactly the entries the reply scored and reasoned, minus
+     * the ones it named as duplicates, best score first. A pool entry the reply
+     * left unmentioned is dropped, not carried at its batch score -- the
+     * consolidation call is the sole authority on the final feed, and every
+     * recommendation it yields therefore has a real score and a real reason.
+     * A wholly unusable reply is handled upstream by the degrade path, which
+     * keeps the batch pool; this shapes only a usable reply's picks.
      *
      * @return list<array{id: int, score: int, reason: string}>
      */
-    private static function rankedFromReply(array $pool, ConsolidationParseResult $result): array
+    private static function rankedFromReply(ConsolidationParseResult $result): array
     {
-        $picksById = self::picksById($result->picks);
-
         $ranked = array_values(array_filter(
-            $pool,
-            static fn (array $winner): bool => !\in_array($winner['id'], $result->duplicateIds, true),
+            self::picksById($result->picks),
+            static fn (array $pick): bool => !\in_array($pick['id'], $result->duplicateIds, true),
         ));
-
-        $ranked = array_map(
-            static fn (array $winner): array => $picksById[$winner['id']] ?? $winner,
-            $ranked,
-        );
 
         usort($ranked, static fn (array $left, array $right): int => $right['score'] <=> $left['score']);
 

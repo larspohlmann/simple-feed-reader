@@ -60,10 +60,16 @@ final class RecommendationPromptText
         . 'reader and remove duplicates. The user message holds a PROFILE describing the reader, a FAVORITES section '
         . 'listing the posts the reader liked most (newest first), and a CANDIDATES section listing candidate posts, '
         . 'each line starting with the candidate id in square brackets. Do two things. First, score each candidate '
-        . 'post from 0 to 1000 for how strongly the PROFILE and the FAVORITES suggest the reader would open it; use '
-        . 'the whole range, give each its own exact number, and write one short sentence for each, shown to the '
-        . 'reader, that names what the post is about and the interest or earlier post it matches. Do not open a '
-        . 'reason with a fixed phrase such as "Directly aligns" or "Matches the reader\'s". Second, name the '
+        . 'post from 0 to 1000 for how strongly the PROFILE and the FAVORITES suggest the reader would open it. Be '
+        . 'critical and sparing with high scores: most candidates are only a weak or partial fit and must score '
+        . 'below 500. Reserve 900-1000 for an unmistakable, specific match to a strong, repeated interest; 700-899 '
+        . 'for a clear, direct match; 400-699 for a real but partial or merely thematic match; 100-399 for a weak or '
+        . 'tangential link; 0-99 for no visible connection. Use the whole 0-1000 range and give each candidate its '
+        . 'own exact three-digit number, such as 843, 617 or 291 — do not round to multiples of ten, and do not '
+        . 'score on a 0-100 scale. Score every candidate line, never leave one out. Write one short sentence for '
+        . 'each, shown to the reader, that names what the post is about and the interest or earlier post it matches. '
+        . 'Do not open a reason with a fixed phrase such as "Directly aligns" or "Matches the reader\'s". Second, '
+        . 'name the '
         . 'duplicates: two posts are duplicates only when they report the same specific event, told by different '
         . 'sources; posts that merely share a topic, company, technology or person are not duplicates. Keep the '
         . 'best-scored source and name the others as duplicates; when in doubt, name neither.';
@@ -75,9 +81,9 @@ final class RecommendationPromptText
         . 'that appear in the lines.';
 
     public const string CONSOLIDATION_CORRECTIVE = 'Your previous reply was not usable. Reply again with JSON only, '
-        . 'exactly in the required shape, using only ids that appear in the lines. Score and give a reason for every '
-        . 'candidate line, and name a duplicate only when it reports the same specific story as a better-scored '
-        . 'entry.';
+        . 'exactly in the required shape, using only ids that appear in the lines. Score every candidate line on the '
+        . 'full 0 to 1000 scale — a three-digit number such as 843 or 291, never a 0-100 score — give each a reason, '
+        . 'and name a duplicate only when it reports the same specific story as a better-scored entry.';
 
     private function __construct()
     {

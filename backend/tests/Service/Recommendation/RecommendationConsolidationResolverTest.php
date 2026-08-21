@@ -121,7 +121,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
      * It must survive the fallback to its own batch score and empty reason
      * rather than silently vanishing.
      */
-    public function testUsableReplyKeepsASurvivorTheReplyDidNotMentionAtItsBatchScore(): void
+    public function testUsableReplyDropsASurvivorTheReplyDidNotMention(): void
     {
         [$firstEntry, $secondEntry, $thirdEntry] = $this->fixtures->seedFeedWithEntries($this->user, 3);
         $firstId = $this->idOf($firstEntry);
@@ -135,7 +135,9 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         ]);
 
         // The reply scores only the first two and names no duplicates: the
-        // third pool entry is left unmentioned entirely.
+        // third pool entry is left unmentioned, so it is dropped -- only
+        // entries the consolidation actually scored and reasoned survive, so
+        // every recommendation shown to the reader carries a real reason.
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [
                 ['id' => $firstId, 'score' => 900, 'reason' => 'Great fit.'],
@@ -147,9 +149,12 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         $outcome = $this->resolveConsolidation($run);
 
         self::assertTrue($outcome->usable);
-        $survivor = self::findPick($outcome->ranked, $thirdId);
-        self::assertSame(300, $survivor['score']);
-        self::assertSame('', $survivor['reason']);
+        $ids = array_map(static fn (array $pick): int => $pick['id'], $outcome->ranked);
+        self::assertSame([$firstId, $secondId], $ids);
+        self::assertNotContains($thirdId, $ids);
+        foreach ($outcome->ranked as $pick) {
+            self::assertNotSame('', $pick['reason']);
+        }
     }
 
     public function testUnusableReplyFallsBackToBatchScorePoolWithEmptyReasons(): void
@@ -338,22 +343,6 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
     private function idOf(Entry $entry): int
     {
         return $entry->getId() ?? throw new \LogicException('Entry was never saved.');
-    }
-
-    /**
-     * @param list<array{id: int, score: int, reason: string}> $ranked
-     *
-     * @return array{id: int, score: int, reason: string}
-     */
-    private static function findPick(array $ranked, int $id): array
-    {
-        foreach ($ranked as $pick) {
-            if ($pick['id'] === $id) {
-                return $pick;
-            }
-        }
-
-        self::fail(\sprintf('Expected id %d in the ranked list.', $id));
     }
 
     private function activeAiSettings(): AiProviderSettings

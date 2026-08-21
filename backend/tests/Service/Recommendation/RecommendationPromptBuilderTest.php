@@ -842,6 +842,12 @@ final class RecommendationPromptBuilderTest extends TestCase
         // pins the OUTPUT_CONTRACT half specifically — a mutant that drops it
         // from the concatenation must not pass on the ROLE text alone.
         self::assertStringContainsString('Reply with JSON only, no prose', $messages[0]['content']);
+        // The 0-1000 calibration must survive: the local model scores on a
+        // 0-100 scale without the explicit bands + three-digit anchor + the
+        // anti-0-100 guard, which stored every reason at a tenth of its value.
+        self::assertStringContainsString('900-1000', $messages[0]['content']);
+        self::assertStringContainsString('do not score on a 0-100 scale', $messages[0]['content']);
+        self::assertStringContainsString('Score every candidate line, never leave one out', $messages[0]['content']);
     }
 
     public function testConsolidationMessagesReturnsTheExactRoleContentStructure(): void
