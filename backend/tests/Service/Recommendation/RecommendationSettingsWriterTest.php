@@ -93,6 +93,37 @@ final class RecommendationSettingsWriterTest extends DbTestCase
     }
 
     /**
+     * The regression case: save() is the settings-form path, and the form
+     * never carries profileText (it is read-only there), so
+     * SaveRecommendationSettingsRequest::values() always hands save() a
+     * RecommendationSettingsValues with profileText null. save() must not
+     * take that null at face value -- it has to preserve whatever
+     * storeProfile() already wrote.
+     */
+    public function testSavingSettingsDoesNotWipeAnExistingProfile(): void
+    {
+        $this->writer->storeProfile($this->user, 'Likes long-form essays on typography.');
+
+        $this->writer->save($this->user, new RecommendationSettingsValues(
+            guidancePrompt: 'Only cats.',
+            favoritesCap: 10,
+            keptCap: 20,
+            viewedCap: 30,
+            candidatePoolSize: 500,
+            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+            picksLimit: 50,
+            contextWindow: 65536,
+            batchCount: 12,
+            debugEnabled: true,
+        ));
+
+        $reloaded = $this->settingsRepository->findForUser($this->user);
+        self::assertNotNull($reloaded);
+        self::assertSame('Likes long-form essays on typography.', $reloaded->values()->profileText);
+        self::assertSame('Only cats.', $reloaded->values()->guidancePrompt);
+    }
+
+    /**
      * A fresh user out of setUp() never had a settings row created for it;
      * this name exists to make that precondition explicit at the call site.
      */

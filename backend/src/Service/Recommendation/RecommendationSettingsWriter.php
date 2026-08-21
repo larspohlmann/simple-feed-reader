@@ -19,6 +19,13 @@ use Doctrine\ORM\EntityManagerInterface;
  * that produces the reader's preference profile calls it directly, without
  * routing through the settings form's full `RecommendationSettingsValues`,
  * so it can never carry a stale copy of fields it knows nothing about.
+ *
+ * The settings form is read-only on profileText (#493), so the
+ * RecommendationSettingsValues a `save()` caller supplies always carries
+ * `profileText: null` -- it has no way to know the current value. `save()`
+ * therefore never trusts that field on the incoming values; it re-reads the
+ * persisted profile off the row itself and carries that forward untouched,
+ * so a settings-form save can never undo what storeProfile() wrote.
  */
 final readonly class RecommendationSettingsWriter
 {
@@ -31,7 +38,8 @@ final readonly class RecommendationSettingsWriter
     public function save(User $user, RecommendationSettingsValues $values): void
     {
         $settings = $this->loadOrCreate($user);
-        $settings->update($this->withNormalisedGuidance($values));
+        $requested = $this->withNormalisedGuidance($values);
+        $settings->update($this->withReplacedProfileText($requested, $settings->values()->profileText));
         $this->entityManager->flush();
     }
 
@@ -76,7 +84,6 @@ final readonly class RecommendationSettingsWriter
             batchCount: $values->batchCount,
             debugEnabled: $values->debugEnabled,
             autoGenerateIntervalHours: $values->autoGenerateIntervalHours,
-            profileText: $values->profileText,
         );
     }
 
