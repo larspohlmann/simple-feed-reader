@@ -6,6 +6,7 @@ namespace App\Tests\Service\Recommendation;
 
 use App\Service\Recommendation\ModelReplyJsonDecoder;
 use App\Service\Recommendation\RecommendationConsolidationParser;
+use App\Service\Recommendation\RecommendationPickSalvager;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationConsolidationParserTest extends TestCase
@@ -14,7 +15,10 @@ final class RecommendationConsolidationParserTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->parser = new RecommendationConsolidationParser(new ModelReplyJsonDecoder());
+        $this->parser = new RecommendationConsolidationParser(
+            new ModelReplyJsonDecoder(),
+            new RecommendationPickSalvager(),
+        );
     }
 
     public function testParsesPicksAndDuplicates(): void

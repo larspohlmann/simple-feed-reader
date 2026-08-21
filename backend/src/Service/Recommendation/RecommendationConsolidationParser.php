@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 /**
- * Turns one raw consolidation reply into validated picks and duplicate ids —
- * the pick-salvaging boundary RecommendationPickParser is, combined with the
- * same duplicate-share guard PlausibleDuplicateShare enforces, into one
- * parser because the consolidation call answers both questions in a single
- * reply.
+ * Turns one raw consolidation reply into validated picks and duplicate ids.
+ * The consolidation call answers both questions in a single reply, so this
+ * parser reads both: it salvages the picks through the shared
+ * RecommendationPickSalvager the batch parser also uses, then layers on the
+ * duplicate-id list and the duplicate-share guard PlausibleDuplicateShare
+ * enforces.
  *
  * A reply that parses keeps its valid picks even when some ids are invalid,
  * duplicated, or scoreless: partial credit is still credit, exactly as it is
@@ -21,14 +22,10 @@ namespace App\Service\Recommendation;
  */
 final readonly class RecommendationConsolidationParser
 {
-    /**
-     * The top of the scale the prompt asks for, matching
-     * RecommendationPickParser's own scale (#403).
-     */
-    private const float MAXIMUM_SCORE = 1000.0;
-
-    public function __construct(private ModelReplyJsonDecoder $decoder)
-    {
+    public function __construct(
+        private ModelReplyJsonDecoder $decoder,
+        private RecommendationPickSalvager $salvager,
+    ) {
     }
 
     /** @param list<int> $shownIds */
@@ -46,7 +43,7 @@ final readonly class RecommendationConsolidationParser
             return ConsolidationParseResult::unusable();
         }
 
-        $picks = $this->salvagePicks($entries, $shownIds);
+        $picks = $this->salvager->salvage($entries, $shownIds);
 
         if ([] === $picks) {
             return ConsolidationParseResult::unusable();
@@ -59,92 +56,6 @@ final readonly class RecommendationConsolidationParser
         }
 
         return ConsolidationParseResult::usable($picks, $duplicateIds);
-    }
-
-    /**
-     * @param array<mixed> $entries
-     * @param list<int>    $shownIds
-     *
-     * @return list<RecommendationPick>
-     */
-    private function salvagePicks(array $entries, array $shownIds): array
-    {
-        $picks = [];
-        $seenIds = [];
-
-        foreach ($entries as $entry) {
-            $pick = $this->salvagePick($entry, $shownIds, $seenIds);
-
-            if (null === $pick) {
-                continue;
-            }
-
-            $seenIds[$pick->entryId] = true;
-            $picks[] = $pick;
-        }
-
-        return $picks;
-    }
-
-    /**
-     * @param list<int>         $shownIds
-     * @param array<int, true>  $seenIds
-     */
-    private function salvagePick(mixed $entry, array $shownIds, array $seenIds): ?RecommendationPick
-    {
-        if (!\is_array($entry)) {
-            return null;
-        }
-
-        $entryId = $this->salvageEntryId($entry['id'] ?? null, $shownIds);
-
-        if (null === $entryId || isset($seenIds[$entryId])) {
-            return null;
-        }
-
-        $score = $this->salvageScore($entry['score'] ?? null);
-
-        if (null === $score) {
-            return null;
-        }
-
-        return new RecommendationPick($entryId, $score, $this->salvageReason($entry['reason'] ?? null));
-    }
-
-    private function salvageScore(mixed $score): ?int
-    {
-        if (\is_int($score) || \is_float($score)) {
-            $numeric = (float) $score;
-        } elseif (\is_string($score) && is_numeric($score)) {
-            $numeric = (float) $score;
-        } else {
-            return null;
-        }
-
-        return (int) min(self::MAXIMUM_SCORE, max(0.0, round($numeric)));
-    }
-
-    /** @param list<int> $shownIds */
-    private function salvageEntryId(mixed $id, array $shownIds): ?int
-    {
-        if (\is_int($id)) {
-            $candidate = $id;
-        } elseif (\is_string($id) && ctype_digit($id)) {
-            $candidate = (int) $id;
-        } else {
-            return null;
-        }
-
-        return \in_array($candidate, $shownIds, true) ? $candidate : null;
-    }
-
-    private function salvageReason(mixed $reason): string
-    {
-        if (!\is_string($reason)) {
-            return '';
-        }
-
-        return '' === trim($reason) ? '' : $reason;
     }
 
     /**

@@ -6,6 +6,7 @@ namespace App\Tests\Service\Recommendation;
 
 use App\Service\Recommendation\ModelReplyJsonDecoder;
 use App\Service\Recommendation\RecommendationPickParser;
+use App\Service\Recommendation\RecommendationPickSalvager;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationPickParserTest extends TestCase
@@ -14,7 +15,7 @@ final class RecommendationPickParserTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->parser = new RecommendationPickParser(new ModelReplyJsonDecoder());
+        $this->parser = new RecommendationPickParser(new ModelReplyJsonDecoder(), new RecommendationPickSalvager());
     }
 
     public function testCleanReplyIsUsableWithOrderAndReasonsPreserved(): void

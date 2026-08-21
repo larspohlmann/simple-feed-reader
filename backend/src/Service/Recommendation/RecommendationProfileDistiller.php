@@ -7,7 +7,6 @@ namespace App\Service\Recommendation;
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
-use App\Service\Ai\ProviderConnectionFactory;
 
 /**
  * The distillation phase's single provider call (#493). Once a run starts,
@@ -29,8 +28,6 @@ use App\Service\Ai\ProviderConnectionFactory;
  * the batch-scored pool, so a degraded run simply proceeds without one. A
  * transport failure throws, exactly as the consolidation resolver does, and
  * the advancer folds it into the run's ceiling.
- *
- * @SuppressWarnings("PHPMD.ExcessiveParameterList")
  */
 final readonly class RecommendationProfileDistiller
 {
@@ -39,8 +36,7 @@ final readonly class RecommendationProfileDistiller
         private RecommendationPromptBuilder $promptBuilder,
         private RecommendationCallRecorder $callRecorder,
         private RecommendationCompletionRequestFactory $requestFactory,
-        private ChatCompletionClient $chat,
-        private ProviderConnectionFactory $connections,
+        private RecommendationProviderCall $providerCall,
         private RecommendationProfileParser $profileParser,
         private RecommendationTickCheckpoint $checkpoint,
         private RecommendationSettingsWriter $settingsWriter,
@@ -69,7 +65,7 @@ final readonly class RecommendationProfileDistiller
             $settings->getModel() ?? '',
         );
 
-        $content = $this->callProvider(
+        $content = $this->providerCall->complete(
             $settings,
             $this->requestFactory->create($settings, $messages, 1, RecommendationResponseSchema::Distillation),
             $recordedCall,
@@ -88,35 +84,5 @@ final readonly class RecommendationProfileDistiller
         $this->settingsWriter->storeProfile($run->getUser(), $profile);
 
         return ProfileDistillationOutcome::usable($profile);
-    }
-
-    /**
-     * The distillation phase's single provider call, recorded for the debug
-     * view from the moment the request goes out (#309), mirroring
-     * RecommendationConsolidationResolver::callProvider(). Any failure settles the
-     * debug row before unwinding: begin() has already persisted it, and a
-     * verdict left null reads to the debug panel as "still streaming"
-     * forever. The exception is always re-thrown unchanged, so the advancer
-     * still tells a transport failure (which touches the run's ceiling) apart
-     * from an unreadable key (which fails the run permanently) purely by its
-     * type -- credentials() decrypting the stored key runs inside this same
-     * try, so an unreadable key never leaves the row stuck either.
-     */
-    private function callProvider(
-        AiProviderSettings $settings,
-        CompletionRequest $request,
-        RecordedCall $recordedCall,
-    ): string {
-        try {
-            return $this->chat->complete(
-                $this->connections->forSettings($settings),
-                $request,
-                $recordedCall,
-            );
-        } catch (\Throwable $e) {
-            $recordedCall->abortAfterTransportFailure($e->getMessage());
-
-            throw $e;
-        }
     }
 }

@@ -7,7 +7,6 @@ namespace App\Service\Recommendation;
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
-use App\Service\Ai\ProviderConnectionFactory;
 
 /**
  * The consolidation phase's single provider call (#493). It replaces the
@@ -31,8 +30,6 @@ use App\Service\Ai\ProviderConnectionFactory;
  * pool once attempts run out. A transport failure throws, exactly as the
  * distillation resolver does, and the advancer folds it into the run's
  * ceiling.
- *
- * @SuppressWarnings("PHPMD.ExcessiveParameterList")
  */
 final readonly class RecommendationConsolidationResolver
 {
@@ -43,8 +40,7 @@ final readonly class RecommendationConsolidationResolver
         private RecommendationPromptBuilder $promptBuilder,
         private RecommendationCallRecorder $callRecorder,
         private RecommendationCompletionRequestFactory $requestFactory,
-        private ChatCompletionClient $chat,
-        private ProviderConnectionFactory $connections,
+        private RecommendationProviderCall $providerCall,
         private RecommendationConsolidationParser $consolidationParser,
         private RecommendationTickCheckpoint $checkpoint,
     ) {
@@ -96,7 +92,7 @@ final readonly class RecommendationConsolidationResolver
             $settings->getModel() ?? '',
         );
 
-        $content = $this->callProvider(
+        $content = $this->providerCall->complete(
             $settings,
             $this->requestFactory->create(
                 $settings,
@@ -116,36 +112,6 @@ final readonly class RecommendationConsolidationResolver
         }
 
         return ConsolidationOutcome::finalizeWith(self::rankedFromReply($result));
-    }
-
-    /**
-     * The consolidation phase's single provider call, recorded for the debug
-     * view from the moment the request goes out (#309), mirroring
-     * RecommendationProfileDistiller::callProvider(). Any failure settles the
-     * debug row before unwinding: begin() has already persisted it, and a
-     * verdict left null reads to the debug panel as "still streaming"
-     * forever. The exception is always re-thrown unchanged, so the advancer
-     * still tells a transport failure (which touches the run's ceiling) apart
-     * from an unreadable key (which fails the run permanently) purely by its
-     * type -- credentials() decrypting the stored key runs inside this same
-     * try, so an unreadable key never leaves the row stuck either.
-     */
-    private function callProvider(
-        AiProviderSettings $settings,
-        CompletionRequest $request,
-        RecordedCall $recordedCall,
-    ): string {
-        try {
-            return $this->chat->complete(
-                $this->connections->forSettings($settings),
-                $request,
-                $recordedCall,
-            );
-        } catch (\Throwable $e) {
-            $recordedCall->abortAfterTransportFailure($e->getMessage());
-
-            throw $e;
-        }
     }
 
     /**
