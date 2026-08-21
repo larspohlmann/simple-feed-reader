@@ -244,8 +244,8 @@ final class RecommendationPromptBuilderTest extends TestCase
     {
         // A huge window and short lines mean the token budget never binds —
         // every candidate would fit in one batch on budget alone. Only the
-        // MAXIMUM_BATCH_SIZE cap can be splitting these into 45/45/10.
-        $candidateCount = 100;
+        // MAXIMUM_BATCH_SIZE cap (150) can be splitting these into 150/150/50.
+        $candidateCount = 350;
         $candidates = array_map(
             static fn (int $id): PromptLine => new PromptLine($id, "C$id", 'F', 'D', null),
             range(1, $candidateCount),
@@ -253,18 +253,17 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(1_000_000, 10));
 
-        self::assertSame([45, 45, 10], array_map('count', $batches));
+        self::assertSame([150, 150, 50], array_map('count', $batches));
 
         $ids = array_merge(...$batches);
         self::assertSame(range(1, $candidateCount), $ids);
     }
 
-    public function testPackingFiveHundredCandidatesIntoTwelveBatchesUnderNewDefaults(): void
+    public function testPackingFiveHundredCandidatesIntoFourBatchesUnderTheDefaultCap(): void
     {
-        // With MAXIMUM_BATCH_SIZE raised to 45 in #321, the default 500-candidate
-        // pool packs into 12 batches (11 × 45 + 1 × 5) under a huge budget.
-        // The 12 packing calls plus one dedup call make 13 total provider calls —
-        // half the 26 needed under the old 40-candidate cap.
+        // With MAXIMUM_BATCH_SIZE raised to 150 in #493 (score-only batches), the
+        // default 500-candidate pool packs into 4 batches (3 × 150 + 1 × 50) under
+        // a huge budget — a third of the 12 it took at the old reason-bearing cap.
         $candidateCount = 500;
         $candidates = array_map(
             static fn (int $id): PromptLine => new PromptLine($id, "C$id", 'F', 'D', null),
@@ -273,9 +272,9 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(1_000_000, 50));
 
-        self::assertCount(12, $batches);
+        self::assertCount(4, $batches);
         $batchSizes = array_map('count', $batches);
-        self::assertSame([45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 5], $batchSizes);
+        self::assertSame([150, 150, 150, 50], $batchSizes);
 
         $ids = array_merge(...$batches);
         self::assertSame(range(1, $candidateCount), $ids);
