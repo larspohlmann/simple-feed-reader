@@ -772,6 +772,85 @@ describe('ReaderShellComponent', () => {
     });
   });
 
+  describe('onboarding sweep still fills progressively (#502)', () => {
+    it('reloads the list on each landing slice, not only at the end', () => {
+      // All subscriptions never fetched → awaitingFirstFetch() is true → the shell
+      // fires the post-onboarding sweep itself (sweeping() is true for its span).
+      const f = bootWith([{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: null }]);
+
+      // The sweep's own refresh request.
+      const refresh = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+
+      // First slice: partial, more feeds still due → the list must reload now.
+      // RefreshService.step() re-fires the next /api/refresh synchronously from
+      // inside this flush, so it is already queued below alongside the reload.
+      refresh.flush({
+        status: 'partial',
+        total: 2,
+        fetched: 1,
+        notModified: 0,
+        failed: 0,
+        skippedForBudget: 0,
+        remaining: 1,
+        pruned: 0,
+      });
+      f.detectChanges();
+      const firstSliceEntries = ctrl.match((r) => r.url === 'https://api.test/api/entries');
+      expect(firstSliceEntries.length).toBe(1);
+      firstSliceEntries[0].flush({ entries: [], nextCursor: null });
+      ctrl
+        .match((r) => r.url === 'https://api.test/api/subscriptions')
+        .forEach((req) =>
+          req.flush({
+            subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: null }],
+            favoritesCount: 0,
+            keptCount: 0,
+          }),
+        );
+      ctrl
+        .match((r) => r.url === 'https://api.test/api/tags')
+        .forEach((req) => req.flush({ tags: [] }));
+
+      // Second slice: the sweep's poll loop re-fires /api/refresh on its own;
+      // finishing it reloads again — proof the first reload was not the only one.
+      const next = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+      next.flush({
+        status: 'completed',
+        total: 2,
+        fetched: 2,
+        notModified: 0,
+        failed: 0,
+        skippedForBudget: 0,
+        remaining: 0,
+        pruned: 0,
+      });
+      f.detectChanges();
+      expect(
+        ctrl.match((r) => r.url === 'https://api.test/api/entries').length,
+      ).toBeGreaterThanOrEqual(1);
+
+      // Drain whatever the completing slice queued.
+      ctrl
+        .match(() => true)
+        .forEach((req) => {
+          if (req.request.url.endsWith('/api/entries')) {
+            req.flush({ entries: [], nextCursor: null });
+          } else if (req.request.url.endsWith('/api/subscriptions')) {
+            req.flush({
+              subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: '2026-08-21T00:00:00Z' }],
+              favoritesCount: 0,
+              keptCount: 0,
+            });
+          } else if (req.request.url.endsWith('/api/tags')) {
+            req.flush({ tags: [] });
+          } else {
+            req.flush({});
+          }
+        });
+      ctrl.verify();
+    });
+  });
+
   it('scopes a tag refresh to the tag id', () => {
     const f = boot();
     qp.next(convertToParamMap({ tag: '3' }));
