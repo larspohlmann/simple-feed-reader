@@ -22,12 +22,14 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
     }
 
     /**
-     * The reasoning headroom is what a thinking phase spends before the answer
-     * begins. A connection that suppresses reasoning has no thinking phase, so
-     * paying for one only licenses a looping model to generate for an hour
-     * before `max_tokens` stops it (#437).
+     * A suppressed connection still keeps the reasoning headroom in max_tokens.
+     * suppressReasoning sends `reasoning: {effort: none}` as a hint, but a local
+     * reasoning model routinely thinks anyway; with no headroom its answer was
+     * guillotined at finish_reason: length once batches grew past ~45 items
+     * (#493 follow-up). The headroom is a ceiling, not a reservation: a model
+     * that honours the hint stops early and pays nothing for the unused room.
      */
-    public function testAConnectionThatSuppressesReasoningPaysNoReasoningHeadroom(): void
+    public function testASuppressedConnectionStillKeepsReasoningHeadroom(): void
     {
         $request = $this->factory->create(
             $this->settings(suppressReasoning: true),
@@ -37,15 +39,15 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
         );
 
         self::assertSame(
-            RecommendationAnswerBudget::answerBoundTokens(45, RecommendationResponseSchema::Consolidation),
+            RecommendationAnswerBudget::outputBoundTokens(45, RecommendationResponseSchema::Consolidation),
             $request->maxAnswerTokens,
         );
     }
 
     /**
-     * The other half of the same decision: a connection that may reason still
-     * needs room to think before it answers, or its answer is truncated
-     * (#327).
+     * A connection that may reason gets the same budget: the reasoning headroom
+     * is now independent of the suppress hint, so both paths need room to think
+     * before answering or the answer is truncated (#327, #493).
      */
     public function testAConnectionThatMayReasonKeepsItsReasoningHeadroom(): void
     {
@@ -57,7 +59,7 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
         );
 
         self::assertSame(
-            RecommendationAnswerBudget::outputBoundTokens(45, RecommendationResponseSchema::Consolidation, false),
+            RecommendationAnswerBudget::outputBoundTokens(45, RecommendationResponseSchema::Consolidation),
             $request->maxAnswerTokens,
         );
     }

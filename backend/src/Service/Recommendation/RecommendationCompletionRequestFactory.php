@@ -28,11 +28,7 @@ final readonly class RecommendationCompletionRequestFactory
         return new CompletionRequest(
             $settings->getModel() ?? '',
             $messages,
-            RecommendationAnswerBudget::outputBoundTokens(
-                $replyItemCount,
-                $responseSchema,
-                $settings->suppressesReasoning(),
-            ),
+            RecommendationAnswerBudget::outputBoundTokens($replyItemCount, $responseSchema),
             $responseSchema->toJsonSchema(),
             $settings->suppressesReasoning(),
         );

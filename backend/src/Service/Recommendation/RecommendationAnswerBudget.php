@@ -105,27 +105,25 @@ final readonly class RecommendationAnswerBudget
     }
 
     /**
-     * What the provider may spend on the whole output, for a connection that
-     * does or does not suppress reasoning.
+     * What the provider may spend on the whole output: the answer reserve plus
+     * a reasoning headroom, always -- independent of whether the connection
+     * suppresses reasoning.
      *
-     * The reasoning headroom pays for a thinking phase, and a connection that
-     * suppresses reasoning has none. Paying for one anyway is not free: it is
-     * the only bound that stops a model which has started to repeat itself, so
-     * a 45-item batch that needs 1800 tokens was licensed to emit 33800, and a
-     * 4B model looping on invented ids spent an hour reaching that ceiling
-     * before the wall clock cut it (#437).
-     *
-     * RecommendationCompletionRequestFactory calls this directly rather than
-     * branching on `suppressesReasoning()` itself, so the choice between the
-     * two reserves lives beside the reserves it chooses between (#493).
+     * suppressReasoning sends `reasoning: {effort: none}` to the provider as a
+     * hint, but a local reasoning model routinely thinks regardless, and a
+     * suppressed connection used to get the answer reserve alone: once the
+     * score-only batch cap rose to 150 (#493), a full answer already filled
+     * ~92% of that reserve, so the model's unbidden thinking guillotined the
+     * answer at finish_reason: length. The headroom is a ceiling, not a
+     * reservation: a model that honours the hint emits only the answer and
+     * stops early (finish_reason: stop), spending nothing on the unused room --
+     * so keeping it costs a compliant connection nothing while a non-compliant
+     * one no longer truncates. The 32000 ceiling remains the runaway bound,
+     * with the wall clock and wire cap behind it (supersedes the #437 cut,
+     * which starved local models that ignore the hint).
      */
-    public static function outputBoundTokens(
-        int $replyItemCount,
-        RecommendationResponseSchema $schema,
-        bool $suppressesReasoning,
-    ): int {
-        $answerBound = self::answerBoundTokens($replyItemCount, $schema);
-
-        return $suppressesReasoning ? $answerBound : $answerBound + self::REASONING_HEADROOM_TOKENS;
+    public static function outputBoundTokens(int $replyItemCount, RecommendationResponseSchema $schema): int
+    {
+        return self::answerBoundTokens($replyItemCount, $schema) + self::REASONING_HEADROOM_TOKENS;
     }
 }
