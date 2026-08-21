@@ -21,4 +21,7 @@ final class SourceFormat
 
     /** Feeds synthesized from a plain HTML page by the item extractor. */
     public const string SCRAPED = 'scraped';
+
+    /** WordPress REST posts endpoint (wp/v2/posts?_embed) — full-content JSON. */
+    public const string WP_JSON = 'wp-json';
 }
