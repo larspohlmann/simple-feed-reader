@@ -27,6 +27,12 @@ const MIN_VIEW_SOURCES = 3;
  *  same fixed LEADING_WINDOW, for prefix-stability. */
 const IMAGE_RICH_SHARE = 0.35;
 const TEXT_RICH_SHARE = 0.4;
+/** Below this share of entries carrying ANY usable image, the view has so few
+ *  pictures that the image family's slots would all collapse to text. Such a feed
+ *  is laid out with the text family whatever its copy length — well under the
+ *  IMAGE_RICH threshold, so a view with a useful minority of images (a link/dev
+ *  blog, ~a quarter) still keeps the image family to surface them. */
+const IMAGE_POOR_SHARE = 0.15;
 /** A same-source run collapses once it reaches this many entries in a row.
  *  Single foreign posts embedded in the run are bridged — see `detectRun`. */
 const RUN_MIN = 8;
@@ -64,7 +70,10 @@ export function planMagazine(input: MagazinePlanInput): MagazineBlock[] {
   const blocks: MagazineBlock[] = [];
   const sample = entries.slice(0, LEADING_WINDOW);
   const collapseEnabled = grouping && activeSourceCount(entries) >= MIN_VIEW_SOURCES;
-  const useTextFamily = !isImageRich(sample) && isTextRich(sample);
+  // An image-poor view always goes text-forward — with almost no pictures, every
+  // image slot would collapse anyway. Otherwise the text family is worth it only
+  // when the copy is long enough to fill its quotes (isTextRich).
+  const useTextFamily = isImagePoor(sample) || (!isImageRich(sample) && isTextRich(sample));
   const templates = useTextFamily ? TEXT_TEMPLATES : IMAGE_TEMPLATES;
   // Land the reader on a picture: the image family pulls the nearest image entry
   // to the front when the newest are image-less. The text family opens on a
@@ -216,6 +225,18 @@ function isTextRich(entries: EntryDto[]): boolean {
   return withLongText / entries.length >= TEXT_RICH_SHARE;
 }
 
+/** Whether the view has almost no images at all — even the image family's
+ *  adaptive `thumb` fillers would find nothing, so every image slot would settle
+ *  to a text block and the page would read as a wall of collapsed slots. Any
+ *  usable image counts (`entryImage` covers the persisted field and inline
+ *  markup): the question is only whether pictures exist to lay out at all. An
+ *  empty view is not image-poor — it keeps the default image family. */
+function isImagePoor(entries: EntryDto[]): boolean {
+  if (entries.length === 0) return false;
+  const withImage = entries.filter((entry) => entryImage(entry) !== null).length;
+  return withImage / entries.length < IMAGE_POOR_SHARE;
+}
+
 /** If the newest entry has no usable image but one sits within LEAD_IMAGE_REACH
  *  behind it, move that entry to the front so the opener leads on a picture. A
  *  single bounded move: the head stops being strictly newest-first, the tail
@@ -355,6 +376,17 @@ function assign(kinds: EntryKind[], slice: EntryDto[]): EntryKind[] {
 }
 
 function settle(kind: EntryKind, entry: EntryDto): EntryKind {
+  const settled = demoteUntilFit(kind, entry);
+  // An image-less entry that still carries a summary must keep its dek: the
+  // image ladder's floor is the dek-less `compact`, so lift it to the text-forward
+  // `kicker`, which renders the summary. This is the single #514/#516 rule —
+  // applied wherever an entry lands, so both template families honour it, and an
+  // authored `compact` slot holding such an entry is corrected too. A bare entry
+  // (no image, no summary) has nothing to show and stays `compact`.
+  return settled === 'compact' && hasSummaryButNoImage(entry) ? 'kicker' : settled;
+}
+
+function demoteUntilFit(kind: EntryKind, entry: EntryDto): EntryKind {
   let current = kind;
   while (!fits(current, entry)) {
     const next = DEMOTION[current];
@@ -362,6 +394,13 @@ function settle(kind: EntryKind, entry: EntryDto): EntryKind {
     current = next;
   }
   return current;
+}
+
+/** An entry with no image but a usable summary — the case the `compact` floor
+ *  would strip of its copy. `entryImage` covers both the persisted field and an
+ *  inline `<img>`, so an entry that can fill any image block is excluded. */
+function hasSummaryButNoImage(entry: EntryDto): boolean {
+  return entryImage(entry) === null && textSnippet(entry.summary || entry.contentHtml).length > 0;
 }
 
 function fits(kind: EntryKind, entry: EntryDto): boolean {

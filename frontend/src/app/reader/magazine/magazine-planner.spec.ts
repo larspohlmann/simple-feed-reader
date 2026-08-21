@@ -1,6 +1,7 @@
 import { planMagazine } from './magazine-planner';
 import { MagazineBlock } from './magazine-block';
 import { EntryDto } from '../models';
+import { entryImage } from '../preview-image';
 
 const NOW = '2026-07-29T12:00:00.000Z';
 /** An ISO instant `hoursAgo` before NOW, for exercising the 24h activity window. */
@@ -445,6 +446,60 @@ describe('planMagazine', () => {
     ];
     const blocks = planMagazine({ entries, grouping: true, complete: true });
     expect(blocks.some((b) => b.kind === 'group')).toBe(true);
+  });
+
+  it('keeps the dek for an image-less entry with a summary — never a bare compact (image family)', () => {
+    // A dev/link blog: a quarter of posts carry a large image (which holds the
+    // IMAGE family), the rest are image-less but have a summary. The image-less
+    // ones used to ride the image ladder down to a title-only `compact`, dropping
+    // their dek. They must settle on `kicker`, which renders the summary.
+    const entries = many(80, (i) =>
+      i % 4 === 0 ? big(i, { subscriptionId: (i % 6) + 1 }) : e(i, { subscriptionId: (i % 6) + 1 }),
+    );
+    const blocks = planMagazine({ entries, grouping: false, complete: true });
+    const imagelessKinds = blocks
+      .filter((b) => b.kind !== 'group' && entryImage(b.entry) === null)
+      .map((b) => b.kind);
+    expect(imagelessKinds.length).toBeGreaterThan(0);
+    expect(imagelessKinds).not.toContain('compact');
+  });
+
+  it('lays out a short-summary, image-less feed with text-forward blocks that keep the dek', () => {
+    // The utopia.de shape: every item ships a short plain-text description
+    // (~150 chars, below the 300-char quote bar) and no image. It is neither
+    // image-rich nor text-rich, so the old gate pushed it into the IMAGE family,
+    // where every slot collapsed to a dek-less `compact`. It must use the text
+    // family and show its deks.
+    const summary =
+      'A short plain-text feed description, the kind a wire RSS item ships in its body.';
+    const entries = many(80, (i) => e(i, { subscriptionId: (i % 6) + 1, summary }));
+    const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
+    expect(ks).not.toContain('hero');
+    expect(ks).not.toContain('wide');
+    expect(ks).not.toContain('split');
+    expect(ks).not.toContain('thumb');
+    expect(ks).toContain('kicker');
+    expect(ks).not.toContain('compact');
+  });
+
+  it('still collapses a genuinely bare entry — no image, no summary — to compact', () => {
+    // The floor lift is gated on HAVING a summary: an entry with neither an image
+    // nor any copy has nothing to put in a dek, so it stays a title-only compact
+    // rather than an empty kicker.
+    const entries = many(80, (i) =>
+      e(i, { subscriptionId: (i % 6) + 1, summary: null, contentHtml: null }),
+    );
+    const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
+    expect(ks).toContain('compact');
+  });
+
+  it('is prefix-stable for a short-summary, image-less feed', () => {
+    const summary =
+      'A short plain-text feed description, the kind a wire RSS item ships in its body.';
+    const entries = many(120, (i) => e(i, { subscriptionId: (i % 6) + 1, summary }));
+    const first = planMagazine({ entries: entries.slice(0, 60), grouping: true, complete: false });
+    const full = planMagazine({ entries, grouping: true, complete: true });
+    expect(kinds(full).slice(0, first.length)).toEqual(kinds(first));
   });
 
   it('collapses back-to-back bursts that a positional trailing guard would have blocked', () => {
