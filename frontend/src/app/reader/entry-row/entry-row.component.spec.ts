@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { EntryRowComponent } from './entry-row.component';
+import { EntryActionsComponent } from '../entry-actions/entry-actions.component';
 import { EntryDto } from '../models';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
@@ -30,6 +32,29 @@ function mount(e: EntryDto) {
   f.componentRef.setInput('entry', e);
   f.detectChanges();
   return f;
+}
+
+/** Reproduces what a real browser does with a focused `<button>`, which jsdom
+ *  does not simulate on its own: Enter fires `click` as part of the keydown's
+ *  default action, Space defers it to the keyup's default action — and either
+ *  is skipped once its governing keydown (and, for Space, keyup too) had
+ *  `preventDefault()` called on it. */
+function pressEnter(target: HTMLElement): void {
+  const keydown = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+  target.dispatchEvent(keydown);
+  if (!keydown.defaultPrevented) {
+    target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  }
+}
+
+function pressSpace(target: HTMLElement): void {
+  const keydown = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+  target.dispatchEvent(keydown);
+  const keyup = new KeyboardEvent('keyup', { key: ' ', bubbles: true, cancelable: true });
+  target.dispatchEvent(keyup);
+  if (!keydown.defaultPrevented && !keyup.defaultPrevented) {
+    target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  }
 }
 
 describe('EntryRowComponent', () => {
@@ -72,5 +97,34 @@ describe('EntryRowComponent', () => {
     (el.querySelector('[aria-label="Toggle read"]') as HTMLButtonElement).click();
     (el.querySelector('.row') as HTMLElement).click();
     expect(out).toEqual({ favorite: 1, keep: 1, read: 1, open: 1 });
+  });
+
+  it('keeps the list its larger md action glyphs', () => {
+    const actions = mount(entry()).debugElement.query(By.directive(EntryActionsComponent));
+    expect(actions.componentInstance.size()).toBe('md');
+  });
+
+  it('favorites exactly once on Enter over an action, and does not open the entry', () => {
+    const f = mount(entry());
+    const out = { favorite: 0, open: 0 };
+    f.componentInstance.favorite.subscribe(() => out.favorite++);
+    f.componentInstance.open.subscribe(() => out.open++);
+
+    pressEnter(f.nativeElement.querySelector('[aria-label="Favorite"]') as HTMLElement);
+    f.detectChanges();
+
+    expect(out).toEqual({ favorite: 1, open: 0 });
+  });
+
+  it('favorites exactly once on Space over an action, and does not open the entry', () => {
+    const f = mount(entry());
+    const out = { favorite: 0, open: 0 };
+    f.componentInstance.favorite.subscribe(() => out.favorite++);
+    f.componentInstance.open.subscribe(() => out.open++);
+
+    pressSpace(f.nativeElement.querySelector('[aria-label="Favorite"]') as HTMLElement);
+    f.detectChanges();
+
+    expect(out).toEqual({ favorite: 1, open: 0 });
   });
 });

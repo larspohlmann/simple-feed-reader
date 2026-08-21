@@ -79,24 +79,6 @@
   min-width: 0;
 }
 
-.actions {
-  display: flex;
-  gap: var(--space-3);
-  flex: 0 0 auto;
-}
-
-.actions button {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: var(--space-0);
-}
-
-.actions button.on {
-  color: var(--accent);
-}
-
 .thumb {
   /* stylelint-disable-next-line declaration-property-unit-allowed-list --
      tuned thumbnail box (4:3), not a spacing value. */

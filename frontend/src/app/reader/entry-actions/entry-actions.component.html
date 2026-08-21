@@ -7,7 +7,7 @@
   (keydown.enter)="$event.stopPropagation()"
   (keydown.space)="$event.stopPropagation()"
 >
-  <app-icon name="star" size="sm" />
+  <app-icon name="star" [size]="size()" />
 </button>
 <button
   type="button"
@@ -18,7 +18,7 @@
   (keydown.enter)="$event.stopPropagation()"
   (keydown.space)="$event.stopPropagation()"
 >
-  <app-icon name="bookmark" size="sm" />
+  <app-icon name="bookmark" [size]="size()" />
 </button>
 <button
   type="button"
@@ -29,5 +29,5 @@
   (keydown.enter)="$event.stopPropagation()"
   (keydown.space)="$event.stopPropagation()"
 >
-  <app-icon name="check" size="sm" />
+  <app-icon name="check" [size]="size()" />
 </button>

@@ -29,35 +29,13 @@
     </p>
     <div class="tagline">
       <app-source-tags [tags]="tags()" />
-      <div class="actions">
-        <button
-          type="button"
-          [attr.aria-label]="'reader.favorite' | transloco"
-          [class.on]="entry().isFavorite"
-          [attr.aria-pressed]="entry().isFavorite"
-          (click)="$event.stopPropagation(); favorite.emit(entry())"
-        >
-          <app-icon name="star" size="md" />
-        </button>
-        <button
-          type="button"
-          [attr.aria-label]="'reader.keep' | transloco"
-          [class.on]="entry().isKept"
-          [attr.aria-pressed]="entry().isKept"
-          (click)="$event.stopPropagation(); keep.emit(entry())"
-        >
-          <app-icon name="bookmark" size="md" />
-        </button>
-        <button
-          type="button"
-          [attr.aria-label]="'reader.toggleRead' | transloco"
-          [class.on]="entry().isViewed"
-          [attr.aria-pressed]="entry().isViewed"
-          (click)="$event.stopPropagation(); read.emit(entry())"
-        >
-          <app-icon name="check" size="md" />
-        </button>
-      </div>
+      <app-entry-actions
+        [entry]="entry()"
+        size="md"
+        (favorite)="favorite.emit($event)"
+        (keep)="keep.emit($event)"
+        (read)="read.emit($event)"
+      />
     </div>
   </div>
   @if (image() && !imgError()) {

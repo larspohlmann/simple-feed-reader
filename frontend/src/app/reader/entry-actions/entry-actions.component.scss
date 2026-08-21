@@ -7,6 +7,15 @@
   align-items: center;
   gap: var(--space-3);
   flex: none;
+
+  /* The glyph size the coarse-pointer tap-target math sizes against. It has to
+     track the actual icon size so the hit box lands on exactly --tap-target for
+     either density; the `md` list overrides it below. */
+  --tap-glyph: var(--icon-sm);
+}
+
+:host(.glyph-md) {
+  --tap-glyph: var(--icon-md);
 }
 
 button {
@@ -37,20 +46,22 @@ button.on {
 
 /* Touch density is a pointer decision, applied locally.
    Vertical: full padding to reach --tap-target, fully cancelled by a negative
-   margin, so a card never gets taller on a phone.
+   margin, so a card never gets taller on a phone. It derives from --tap-glyph,
+   not a fixed icon token, so both the sm cards and the md list reach exactly
+   --tap-target.
    Horizontal: --space-2 of padding against a --space-4 gap — exactly twice the
-   padding — so the hit boxes tile edge to edge. Deriving both from the scale is
-   what keeps that exact: a symmetric 44px box needs 14px of inline padding and
-   overlaps its neighbour by 16px, and since the later button paints on top, a
-   tap on the star's right half toggles keep instead. */
+   padding — so the hit boxes tile edge to edge. This one needs no glyph term:
+   box width and centre-to-centre spacing both grow by the glyph size, so they
+   stay equal at either density. Skew it and, since the later button paints on
+   top, a tap on the star's right half would toggle keep instead. */
 @media (pointer: coarse) {
   :host {
     gap: var(--space-4);
   }
 
   button {
-    padding-block: calc((var(--tap-target) - var(--icon-sm)) / 2);
-    margin-block: calc((var(--tap-target) - var(--icon-sm)) / -2);
+    padding-block: calc((var(--tap-target) - var(--tap-glyph)) / 2);
+    margin-block: calc((var(--tap-target) - var(--tap-glyph)) / -2);
     padding-inline: var(--space-2);
     margin-inline: calc(var(--space-2) * -1);
   }
