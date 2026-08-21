@@ -82,8 +82,12 @@ Per post → `ParsedEntry`:
 `siteUrl`/`description` `null`, `entries` the mapped list.
 
 Robustness: every key access is defensive against a missing or mistyped value.
-A body that does not decode to a non-empty array of objects throws
-`FeedParseException`. This unit carries the mutation-testing weight.
+A body that does not decode to a JSON **array** throws `FeedParseException`; an
+empty array `[]` is a valid feed with zero entries (a site whose posts were all
+removed is empty, not broken — same as an empty RSS channel). Non-array items
+inside the list are skipped. The probe (discovery) separately requires a
+**non-empty** array before it offers a candidate. This unit carries the
+mutation-testing weight.
 
 #### 3. `Service/Refresh/WpJsonBodyParser`
 Implements `FeedBodyParserInterface`; `format()` returns `SourceFormat::WP_JSON`;
