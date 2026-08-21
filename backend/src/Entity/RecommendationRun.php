@@ -195,7 +195,12 @@ class RecommendationRun
 
     public function progress(): RecommendationRunProgress
     {
-        return RecommendationRunProgress::forBatchPlan($this->candidateBatches, $this->batchesDone, $this->attempts);
+        return RecommendationRunProgress::forBatchPlan(
+            $this->candidateBatches,
+            $this->batchesDone,
+            $this->attempts,
+            $this->isDistilled(),
+        );
     }
 
     /**

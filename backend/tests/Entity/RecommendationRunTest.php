@@ -33,7 +33,7 @@ final class RecommendationRunTest extends TestCase
 
         self::assertSame(RecommendationRun::STATUS_RUNNING, $run->getStatus());
         self::assertSame([[1, 2], [3]], $run->getCandidateBatches());
-        self::assertSame(3, $run->progress()->batchesTotal); // 2 batches + 1 merge
+        self::assertSame(4, $run->progress()->batchesTotal); // 2 batches + distill + consolidate
         self::assertTrue($run->progress()->needsDedup);
     }
 
@@ -42,7 +42,7 @@ final class RecommendationRunTest extends TestCase
         $run = $this->makeRun();
         $run->snapshot([[1, 2, 3]]);
 
-        self::assertSame(1, $run->progress()->batchesTotal);
+        self::assertSame(3, $run->progress()->batchesTotal); // 1 batch + distill + consolidate
         self::assertFalse($run->progress()->needsDedup);
     }
 
@@ -259,7 +259,7 @@ final class RecommendationRunTest extends TestCase
 
         self::assertSame(RecommendationRun::STATUS_COMPLETED, $run->getStatus());
         self::assertSame($when, $run->getCompletedAt());
-        self::assertSame(3, $run->progress()->batchesDone);
+        self::assertSame(4, $run->progress()->batchesDone);
     }
 
     public function testSnapshotAgainAfterAlreadyRunningThrows(): void

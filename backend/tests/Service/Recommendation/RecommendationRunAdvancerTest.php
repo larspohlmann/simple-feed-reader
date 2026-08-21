@@ -111,7 +111,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $report = $this->advancer()->advance($this->user);
 
         self::assertSame('running', $report->status);
-        self::assertSame(1, $report->batchesTotal);
+        self::assertSame(3, $report->batchesTotal); // 1 batch + distill + consolidate
         self::assertSame(0, $report->batchesDone);
         self::assertSame([], $this->stubChatClient()->calls());
 
@@ -134,7 +134,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $report = $this->advancer()->advance($this->user);
 
         self::assertSame('completed', $report->status);
-        self::assertSame(0, $report->batchesTotal);
+        // No candidates means no batch plan was ever frozen, so there is no
+        // distill/consolidate phase to count either.
+        self::assertNull($report->batchesTotal);
 
         // Proves complete() was actually flushed, not just set on the
         // in-memory entity the report happens to read from.
@@ -172,7 +174,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // Not a failure: an empty window freezes an empty plan, exactly like
         // an account with no unread entries at all.
         self::assertSame('completed', $report->status);
-        self::assertSame(0, $report->batchesTotal);
+        self::assertNull($report->batchesTotal);
     }
 
     /**
@@ -1514,7 +1516,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user);
         $run = $this->activeRun();
-        self::assertSame(1, $run->progress()->batchesTotal);
+        self::assertSame(3, $run->progress()->batchesTotal); // 1 batch + distill + consolidate
 
         foreach ($run->getCandidateBatches()[0] as $entryId) {
             $entry = $this->em->getRepository(Entry::class)->find($entryId);
@@ -1663,7 +1665,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user);
         $run = $this->activeRun();
-        self::assertSame(1, $run->progress()->batchesTotal);
+        self::assertSame(3, $run->progress()->batchesTotal); // 1 batch + distill + consolidate
         $batch = $run->getCandidateBatches()[0];
 
         $this->stubChatClient()->queueContent(json_encode([
@@ -1961,7 +1963,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user);
         $run = $this->activeRun();
-        self::assertSame(1, $run->progress()->batchesTotal);
+        self::assertSame(3, $run->progress()->batchesTotal); // 1 batch + distill + consolidate
         $batch = $run->getCandidateBatches()[0];
 
         $this->stubChatClient()->queueContent(json_encode([
@@ -2469,7 +2471,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->advancer()->advance($this->user);
         $run = $this->activeRun();
 
-        self::assertSame(3, $run->progress()->batchesTotal);
+        self::assertSame(4, $run->progress()->batchesTotal); // 2 batches + distill + consolidate
         self::assertCount(2, $run->getCandidateBatches());
         self::assertCount(10, $run->getCandidateBatches()[0]);
         self::assertCount(10, $run->getCandidateBatches()[1]);
