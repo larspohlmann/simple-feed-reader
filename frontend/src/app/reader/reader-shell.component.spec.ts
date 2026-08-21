@@ -209,11 +209,15 @@ describe('ReaderShellComponent', () => {
     expect(el.querySelector('app-reader-header')).not.toBeNull();
     expect(el.querySelector('app-sidebar')!.textContent).toContain('heise');
     // The shell's default layout is 'magazine'; the single loaded entry renders
-    // as some magazine block (the first entry leads as a hero). Assert the list
-    // mounted and rendered a block rather than pinning the exact tier, which is
-    // planner-tuning-dependent.
+    // as some magazine block. Assert the list mounted and rendered a block rather
+    // than pinning the exact tier, which is planner-tuning-dependent.
     expect(el.querySelector('app-entry-list')).not.toBeNull();
-    expect(el.querySelector('app-entry-hero, app-entry-compact, app-entry-row')).not.toBeNull();
+    expect(
+      el.querySelector(
+        'app-entry-hero, app-entry-wide, app-entry-quote, app-entry-split, ' +
+          'app-entry-kicker, app-entry-thumb, app-entry-compact',
+      ),
+    ).not.toBeNull();
   });
 
   // #87: the header used to be pulled out of view with a negative margin-top,
