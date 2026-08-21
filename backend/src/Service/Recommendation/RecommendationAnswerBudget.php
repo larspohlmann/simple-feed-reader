@@ -81,6 +81,19 @@ final readonly class RecommendationAnswerBudget
     private const int REASONING_HEADROOM_TOKENS = 32000;
 
     /**
+     * The reasoning headroom a connection that suppresses reasoning still keeps.
+     *
+     * suppressReasoning sends `reasoning: {effort: none}` as a hint, but a local
+     * reasoning model routinely thinks anyway — qwen3.7-flash spent ~1900 tokens
+     * on hidden reasoning_content on some batches (#493). Giving it none of the
+     * headroom guillotined the answer at finish_reason: length once batches grew;
+     * giving it the full 32000 made suppress meaningless for the budget. This is
+     * the middle: room for the thinking that slips through, at a quarter of the
+     * full ceiling, so suppress still meaningfully bounds the spend.
+     */
+    private const int SUPPRESSED_REASONING_HEADROOM_TOKENS = 8000;
+
+    /**
      * What the provider may spend answering — the expected size plus slack,
      * for the phase whose reply shape `$schema` describes.
      *
@@ -106,24 +119,26 @@ final readonly class RecommendationAnswerBudget
 
     /**
      * What the provider may spend on the whole output: the answer reserve plus
-     * a reasoning headroom, always -- independent of whether the connection
+     * a reasoning headroom whose size depends on whether the connection
      * suppresses reasoning.
      *
-     * suppressReasoning sends `reasoning: {effort: none}` to the provider as a
-     * hint, but a local reasoning model routinely thinks regardless, and a
-     * suppressed connection used to get the answer reserve alone: once the
-     * score-only batch cap rose to 150 (#493), a full answer already filled
-     * ~92% of that reserve, so the model's unbidden thinking guillotined the
-     * answer at finish_reason: length. The headroom is a ceiling, not a
-     * reservation: a model that honours the hint emits only the answer and
-     * stops early (finish_reason: stop), spending nothing on the unused room --
-     * so keeping it costs a compliant connection nothing while a non-compliant
-     * one no longer truncates. The 32000 ceiling remains the runaway bound,
-     * with the wall clock and wire cap behind it (supersedes the #437 cut,
-     * which starved local models that ignore the hint).
+     * A connection that may reason gets the full headroom (#327). A suppressed
+     * one still gets a reduced headroom, not none: the hint does not stop a
+     * local model from thinking, and the answer reserve alone truncated it at
+     * finish_reason: length once batches grew (#493). The headroom is a ceiling,
+     * not a reservation, so a model that honours the hint emits only its answer
+     * and stops early, spending nothing on the unused room. Both ceilings, plus
+     * the wall clock and wire cap behind them, still stop a runaway.
      */
-    public static function outputBoundTokens(int $replyItemCount, RecommendationResponseSchema $schema): int
-    {
-        return self::answerBoundTokens($replyItemCount, $schema) + self::REASONING_HEADROOM_TOKENS;
+    public static function outputBoundTokens(
+        int $replyItemCount,
+        RecommendationResponseSchema $schema,
+        bool $suppressesReasoning,
+    ): int {
+        $headroom = $suppressesReasoning
+            ? self::SUPPRESSED_REASONING_HEADROOM_TOKENS
+            : self::REASONING_HEADROOM_TOKENS;
+
+        return self::answerBoundTokens($replyItemCount, $schema) + $headroom;
     }
 }

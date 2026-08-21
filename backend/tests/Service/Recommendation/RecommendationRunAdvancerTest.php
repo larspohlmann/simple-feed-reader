@@ -793,10 +793,10 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // hardcoded, so the assertion still holds if the batch size changes for
         // unrelated reasons.
         //
-        // This fixture suppresses reasoning, yet the bound still carries the
-        // reasoning headroom: suppressReasoning is only a hint, and a local
-        // model that thinks anyway would otherwise truncate a large batch's
-        // answer at finish_reason: length (#493). The headroom is a ceiling a
+        // This fixture suppresses reasoning, so the bound is the answer reserve
+        // plus a REDUCED reasoning headroom, not none: the hint does not stop a
+        // local model from thinking, and a large batch's answer was otherwise
+        // truncated at finish_reason: length (#493). The headroom is a ceiling a
         // compliant model never spends — RecommendationCompletionRequestFactoryTest
         // holds both halves.
         self::assertTrue($batchCall['suppressReasoning']);
@@ -804,6 +804,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             RecommendationAnswerBudget::outputBoundTokens(
                 \count($firstBatch),
                 RecommendationResponseSchema::BatchScore,
+                suppressesReasoning: true,
             ),
             $batchCall['maxAnswerTokens'],
         );

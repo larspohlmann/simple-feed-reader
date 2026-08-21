@@ -29,7 +29,7 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
      * (#493 follow-up). The headroom is a ceiling, not a reservation: a model
      * that honours the hint stops early and pays nothing for the unused room.
      */
-    public function testASuppressedConnectionStillKeepsReasoningHeadroom(): void
+    public function testASuppressedConnectionKeepsAReducedReasoningHeadroom(): void
     {
         $request = $this->factory->create(
             $this->settings(suppressReasoning: true),
@@ -39,17 +39,21 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
         );
 
         self::assertSame(
-            RecommendationAnswerBudget::outputBoundTokens(45, RecommendationResponseSchema::Consolidation),
+            RecommendationAnswerBudget::outputBoundTokens(
+                45,
+                RecommendationResponseSchema::Consolidation,
+                suppressesReasoning: true,
+            ),
             $request->maxAnswerTokens,
         );
     }
 
     /**
-     * A connection that may reason gets the same budget: the reasoning headroom
-     * is now independent of the suppress hint, so both paths need room to think
-     * before answering or the answer is truncated (#327, #493).
+     * The other half: a connection that may reason gets the full headroom, so
+     * the suppress hint is a real, meaningful reduction of the budget (#327,
+     * #493) — the suppressed bound is strictly smaller.
      */
-    public function testAConnectionThatMayReasonKeepsItsReasoningHeadroom(): void
+    public function testAConnectionThatMayReasonKeepsTheFullReasoningHeadroom(): void
     {
         $request = $this->factory->create(
             $this->settings(suppressReasoning: false),
@@ -58,9 +62,19 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
             RecommendationResponseSchema::Consolidation,
         );
 
-        self::assertSame(
-            RecommendationAnswerBudget::outputBoundTokens(45, RecommendationResponseSchema::Consolidation),
-            $request->maxAnswerTokens,
+        $full = RecommendationAnswerBudget::outputBoundTokens(
+            45,
+            RecommendationResponseSchema::Consolidation,
+            suppressesReasoning: false,
+        );
+        self::assertSame($full, $request->maxAnswerTokens);
+        self::assertGreaterThan(
+            RecommendationAnswerBudget::outputBoundTokens(
+                45,
+                RecommendationResponseSchema::Consolidation,
+                suppressesReasoning: true,
+            ),
+            $full,
         );
     }
 

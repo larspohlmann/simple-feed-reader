@@ -24,16 +24,19 @@ final readonly class RecommendationPackingSettings
      * budget cannot be the only guard. It was 40 → 45 (#321) while a batch
      * reply carried a prose reason per pick.
      *
-     * Raised 45 → 150 in #493: the batch phase is now a score-only coarse
+     * Raised 45 → 100 in #493: the batch phase is now a score-only coarse
      * filter, so a reply is `{id, score}` per pick — roughly a fifth of the
      * reason-bearing reply the old cap was measured against, and generated far
      * faster, which relaxes both the reply-size and the generation-time
-     * pressure that held the cap at 45. 150 packs the default 500-candidate
-     * pool into 4 batch calls (and a 1500 pool into 10) instead of tens of
-     * them. Still finite and well under the 339 that timed out: the model
-     * must read and score every line in the batch, so the ceiling stays.
+     * pressure that held the cap at 45. 100 packs the default 500-candidate
+     * pool into 5 batch calls (and a 1500 pool into 15) instead of tens of
+     * them. A brief trial at 150 packed a 150-item answer too tight against a
+     * suppressed connection's reduced token budget, so 100 keeps each reply
+     * comfortably clear while still cutting the call count hard. Finite on
+     * purpose and well under the 339 that once timed out: the model must read
+     * and score every line in the batch, so the ceiling stays.
      */
-    public const int DEFAULT_MAXIMUM_BATCH_SIZE = 150;
+    public const int DEFAULT_MAXIMUM_BATCH_SIZE = 100;
 
     public function __construct(
         public int $contextWindow,
