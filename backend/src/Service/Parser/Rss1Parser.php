@@ -54,6 +54,7 @@ final class Rss1Parser implements FeedFormatParserInterface
         $description = XmlHelper::childText($item, 'description', self::RSS1_NS);
         $contentEncoded = XmlHelper::childText($item, 'encoded', self::CONTENT_NS);
         $image = ItemImageExtractor::fromMedia($item)
+            ?? ItemImageExtractor::fromCustomImageElement($item)
             ?? ItemImageExtractor::fromHtml($contentEncoded ?? $description);
 
         return new ParsedEntry(

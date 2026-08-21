@@ -53,6 +53,7 @@ final class Rss2Parser implements FeedFormatParserInterface
 
         $image = ItemImageExtractor::fromMedia($item)
             ?? ItemImageExtractor::fromRssEnclosure($item)
+            ?? ItemImageExtractor::fromCustomImageElement($item)
             ?? ItemImageExtractor::fromHtml($contentEncoded ?? $description);
 
         return new ParsedEntry(

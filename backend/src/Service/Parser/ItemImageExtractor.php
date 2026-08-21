@@ -80,6 +80,20 @@ final class ItemImageExtractor
         return null;
     }
 
+    /**
+     * Non-standard item-level <image>/<image_big> elements that carry the URL
+     * as a `url` attribute — the shape utopia.de and feeds like it use, which
+     * is neither Media RSS, nor an enclosure, nor an inline <img>. The larger
+     * <image_big> variant wins when present; within one variant the widest
+     * declared candidate wins. The `url` attribute is required, so the standard
+     * channel-level <image> (which nests a <url> child) never matches here.
+     */
+    public static function fromCustomImageElement(\DOMElement $item): ?ParsedImage
+    {
+        return self::widest(self::customImageCandidates($item, 'image_big'))
+            ?? self::widest(self::customImageCandidates($item, 'image'));
+    }
+
     /** First <img src="…"> in a fragment of HTML. Dimensions are never trusted here. */
     public static function fromHtml(?string $html): ?ParsedImage
     {
@@ -108,6 +122,23 @@ final class ItemImageExtractor
                 continue;
             }
             $candidates[] = self::imageFrom($child, $url);
+        }
+
+        return $candidates;
+    }
+
+    /** @return list<ParsedImage> */
+    private static function customImageCandidates(\DOMElement $item, string $localName): array
+    {
+        $candidates = [];
+        foreach ($item->childNodes as $child) {
+            if (!$child instanceof \DOMElement || $child->localName !== $localName) {
+                continue;
+            }
+            $url = trim($child->getAttribute('url'));
+            if ($url !== '') {
+                $candidates[] = self::imageFrom($child, $url);
+            }
         }
 
         return $candidates;
