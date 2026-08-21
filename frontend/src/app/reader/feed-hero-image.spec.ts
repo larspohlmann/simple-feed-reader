@@ -50,6 +50,46 @@ describe('feedHeroImage', () => {
     });
   });
 
+  it('stands down when the body leads with a different photo (the #520 invariant)', () => {
+    expect(
+      feedHeroImage(
+        entry(),
+        '<figure><img src="https://cdn.test/inline.jpg"><figcaption>c</figcaption></figure>',
+      ),
+    ).toBeNull();
+  });
+
+  it('stands down when a linked image leads the body', () => {
+    expect(
+      feedHeroImage(
+        entry(),
+        '<a href="https://cdn.test/x"><img src="https://cdn.test/inline.jpg"></a>',
+      ),
+    ).toBeNull();
+  });
+
+  it('still leads when text precedes an inline image in the first block', () => {
+    expect(
+      feedHeroImage(entry(), '<p>An intro <img src="https://cdn.test/inline.jpg"> mid line.</p>'),
+    ).toEqual({
+      url: 'https://cdn.test/hero.jpg',
+      width: 800,
+      height: 450,
+    });
+  });
+
+  it('treats layout whitespace before the leading image as no text lead', () => {
+    expect(
+      feedHeroImage(entry(), '<figure>\n  <img src="https://cdn.test/inline.jpg">\n</figure>'),
+    ).toBeNull();
+  });
+
+  it('stands down when the hero photo is not the first body image', () => {
+    const body =
+      '<p>a</p><img src="https://cdn.test/other.jpg"><img src="https://cdn.test/hero.webp?width=960">';
+    expect(feedHeroImage(entry(), body)).toBeNull();
+  });
+
   it('matches the same picture whatever the tag case or closing', () => {
     expect(feedHeroImage(entry(), '<IMG SRC="https://cdn.test/hero.jpg"/>')).toBeNull();
   });

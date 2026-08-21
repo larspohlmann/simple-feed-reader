@@ -4,22 +4,29 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use Dom\Element;
+use Dom\HTMLDocument;
+use Dom\Node;
+use Dom\Text;
+
 /**
  * Decides whether an article's og:image should lead the reader as a hero.
  *
- * Readability often drops a hero that sits in the page header, outside the
- * scored content, while keeping a *different* photo from the body. The hero is
- * shown unless the extracted body already carries that same image — matched by
- * CDN image identity, so a size or format variant of the one photo counts as a
- * duplicate but a genuinely different picture does not.
+ * A hero exists only to give a lead picture to an article whose body does not
+ * already open with one. So the hero is suppressed when the extracted body
+ * already *leads* with an image — the first rendered thing is a picture,
+ * regardless of which photo it is — because a hero on top would then stack two
+ * images at the article head. It is also suppressed when the body repeats the
+ * hero photo further down (matched by CDN image identity), so an illustrated
+ * article never shows the same picture twice.
  *
  * The candidate is guarded to http(s) so a javascript:/data: URL from the page
  * can never reach the client's <img src>.
  */
 final class LeadImageSelector
 {
-    /** Captures the src of every <img>, whatever quote style the sanitizer used. */
-    private const string IMG_SRC = '/<img\b[^>]*?\bsrc\s*=\s*(["\'])(.*?)\1/i';
+    /** Standard layout whitespace, excluding U+00A0 which is visible text. */
+    private const string LAYOUT_WHITESPACE = " \t\n\r\f\v\0";
 
     public function select(?string $candidate, string $bodyHtml): ?string
     {
@@ -27,21 +34,90 @@ final class LeadImageSelector
             return null;
         }
 
+        $body = $this->parseBody($bodyHtml);
+        if ($body === null) {
+            return $candidate;
+        }
+        if ($this->bodyLeadsWithImage($body) || $this->bodyRepeatsImage($body, $candidate)) {
+            return null;
+        }
+
+        return $candidate;
+    }
+
+    /**
+     * The parsed <body>, or null when the html is unparsable. The parser wraps
+     * a bare fragment in <html><body> on its own, so no scaffolding is needed;
+     * an empty or whitespace body parses to an empty <body> and leads the hero.
+     */
+    private function parseBody(string $bodyHtml): ?Element
+    {
+        try {
+            return HTMLDocument::createFromString($bodyHtml, LIBXML_NOERROR)->body;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /** Whether the first rendered node in the body is an image. */
+    private function bodyLeadsWithImage(Element $body): bool
+    {
+        foreach ($this->nodesInRenderOrder($body) as $node) {
+            if ($node instanceof Element && $node->localName === 'img') {
+                return true;
+            }
+            if ($node instanceof Text && $this->isVisibleText($node->data)) {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    /** Whether the body shows the same photo as the candidate somewhere. */
+    private function bodyRepeatsImage(Element $body, string $candidate): bool
+    {
         $candidateIdentity = $this->imageIdentity($candidate);
-        $bodyShowsSameImage = array_any(
-            $this->bodyImageUrls($bodyHtml),
+
+        return array_any(
+            $this->bodyImageUrls($body),
             fn (string $bodyImageUrl): bool => $this->imageIdentity($bodyImageUrl) === $candidateIdentity,
         );
-
-        return $bodyShowsSameImage ? null : $candidate;
     }
 
     /** @return list<string> every src the body's <img> tags point at */
-    private function bodyImageUrls(string $bodyHtml): array
+    private function bodyImageUrls(Element $body): array
     {
-        preg_match_all(self::IMG_SRC, $bodyHtml, $matches, PREG_SET_ORDER);
+        $urls = [];
+        foreach ($this->nodesInRenderOrder($body) as $node) {
+            if (!($node instanceof Element) || $node->localName !== 'img') {
+                continue;
+            }
+            $source = $node->getAttribute('src');
+            if ($source !== null && $source !== '') {
+                $urls[] = $source;
+            }
+        }
 
-        return array_map(static fn (array $match): string => $match[2], $matches);
+        return $urls;
+    }
+
+    /**
+     * Every node under a root, depth-first, in document order.
+     *
+     * @return iterable<Node>
+     */
+    private function nodesInRenderOrder(Node $root): iterable
+    {
+        foreach ($root->childNodes as $child) {
+            yield $child;
+            yield from $this->nodesInRenderOrder($child);
+        }
+    }
+
+    private function isVisibleText(string $text): bool
+    {
+        return trim($text, self::LAYOUT_WHITESPACE) !== '';
     }
 
     /**
