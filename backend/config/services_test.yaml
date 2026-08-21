@@ -539,3 +539,14 @@ services:
     App\Service\Backup\AccountRestorer:
         autowire: true
         public: true
+
+    # RecommendationProfileDistillerTest drives distill() directly against the
+    # real history loader, prompt builder, call recorder and settings writer,
+    # the same "no mocks" stance as RecommendationDedupResolver's own callers
+    # take. Its only production caller (the advancer's distillTick) arrives in
+    # a later task, so until then the compiler would inline it away and the
+    # test container could not fetch it. Same `autowire` caveat as the entries
+    # above.
+    App\Service\Recommendation\RecommendationProfileDistiller:
+        autowire: true
+        public: true
