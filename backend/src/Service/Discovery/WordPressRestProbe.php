@@ -9,6 +9,7 @@ use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcherInterface;
 use App\Service\Fetch\PageUrls;
 use App\Service\Html\HtmlDocumentParser;
+use App\Service\Scraper\TextNormalizer;
 use Dom\HTMLDocument;
 
 /**
@@ -55,8 +56,7 @@ final readonly class WordPressRestProbe
         }
 
         $pageUrls = new PageUrls($pageUrl);
-        $root = $this->restRoot($document, $pageUrls, $body);
-        $postsUrl = null === $root ? null : $this->postsUrl($root);
+        $postsUrl = $this->postsUrl($this->restRoot($document, $pageUrls, $body));
         if (null === $postsUrl || !$this->hasPosts($postsUrl)) {
             return null;
         }
@@ -101,9 +101,9 @@ final readonly class WordPressRestProbe
      * a query, so appending a path and a second query cannot form a valid URL —
      * that install is left to its RSS feed.
      */
-    private function postsUrl(string $root): ?string
+    private function postsUrl(?string $root): ?string
     {
-        if (str_contains($root, '?')) {
+        if (null === $root || str_contains($root, '?')) {
             return null;
         }
 
@@ -126,7 +126,7 @@ final readonly class WordPressRestProbe
 
     private function pageTitle(HTMLDocument $document): ?string
     {
-        $title = trim($document->querySelector('title')->textContent ?? '');
+        $title = TextNormalizer::normalize($document->querySelector('title')->textContent ?? '');
 
         return '' === $title ? null : $title;
     }

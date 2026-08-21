@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Parser;
 
 use App\Service\Parser\Exception\FeedParseException;
+use App\Service\Text\PlainText;
 
 /**
  * Turns a WordPress `wp/v2/posts` JSON array (`_fields`-pruned, no `_embed`)
@@ -44,7 +45,7 @@ final readonly class WordPressJsonParser
         return new ParsedEntry(
             guid: $this->guid($post),
             url: $this->stringOrNull($post['link'] ?? null),
-            title: $this->plainTitle($this->rendered($post, 'title')),
+            title: PlainText::from($this->rendered($post, 'title')) ?? '(untitled)',
             // No author NAME without _embed (only an id), and _embed is too
             // heavy to request; bylines usually live in content.rendered anyway.
             author: null,
@@ -58,7 +59,7 @@ final readonly class WordPressJsonParser
     /** @param array<string, mixed> $post */
     private function guid(array $post): string
     {
-        $guid = $this->stringOrNull($this->rendered($post, 'guid'))
+        $guid = $this->rendered($post, 'guid')
             ?? $this->stringOrNull($post['id'] ?? null)
             ?? $this->stringOrNull($post['link'] ?? null);
 
@@ -79,15 +80,6 @@ final readonly class WordPressJsonParser
         $value = $post[$field] ?? null;
 
         return \is_array($value) ? $this->stringOrNull($value['rendered'] ?? null) : null;
-    }
-
-    private function plainTitle(?string $rendered): string
-    {
-        if (null === $rendered) {
-            return '';
-        }
-
-        return trim(html_entity_decode(strip_tags($rendered), \ENT_QUOTES | \ENT_HTML5, 'UTF-8'));
     }
 
     /** @param array<string, mixed> $post */

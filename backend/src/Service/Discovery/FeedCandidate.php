@@ -12,9 +12,10 @@ final readonly class FeedCandidate
      *   documents, whose type attribute names the dialect; 'feed' for a link
      *   FeedLinkScanner merely recognized as feed-shaped, where nothing has
      *   read the document yet; 'scraped' for the fallback candidate that
-     *   synthesizes a feed from the HTML page itself. An open string rather
-     *   than a fixed enum, so the next extraction strategy can add its value
-     *   without touching this class.
+     *   synthesizes a feed from the HTML page itself; 'wp-json' for the
+     *   WordPress REST posts endpoint. An open string rather than a fixed
+     *   enum, so the next extraction strategy can add its value without
+     *   touching this class.
      */
     public function __construct(public string $url, public ?string $title, public string $format)
     {
