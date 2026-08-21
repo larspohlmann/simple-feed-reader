@@ -83,10 +83,12 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
             return null;
         }
 
-        $contentHtml = $this->contentHtml($entry, $ns);
+        $contentHtml = $this->elementMarkup($entry, $ns, 'content');
         $image = ItemImageExtractor::fromMedia($entry)
             ?? ItemImageExtractor::fromAtomEnclosure($entry, $ns)
-            ?? ItemImageExtractor::fromHtml($contentHtml);
+            ?? ItemImageExtractor::fromCustomImageElement($entry)
+            ?? ItemImageExtractor::fromHtml($contentHtml)
+            ?? ItemImageExtractor::fromHtml($this->elementMarkup($entry, $ns, 'summary'));
 
         return new ParsedEntry(
             guid: GuidFallback::for(XmlHelper::childText($entry, 'id', $ns), $link, $title),
@@ -159,12 +161,19 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
         return null;
     }
 
-    private function contentHtml(\DOMElement $entry, string $ns): ?string
+    /**
+     * The markup of an Atom text construct (<content> or <summary>). A
+     * type="xhtml" construct carries its markup as real child elements that
+     * must be serialized; every other type carries it as text. Returning it in
+     * both forms lets an <img> be found in a summary-only entry, not just in
+     * <content>.
+     */
+    private function elementMarkup(\DOMElement $entry, string $ns, string $localName): ?string
     {
         foreach ($entry->childNodes as $child) {
             if (
                 !$child instanceof \DOMElement
-                || $child->localName !== 'content'
+                || $child->localName !== $localName
                 || $child->namespaceURI !== $ns
             ) {
                 continue;
