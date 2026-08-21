@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use Dom\Element;
+use Dom\HTMLDocument;
+
 /**
  * Drops the first heading of extracted content when it repeats the article's
  * title. The reader view renders the title itself, so a kept headline shows
@@ -37,7 +40,9 @@ final readonly class LeadingTitleRemover
             return $contentHtml;
         }
 
-        return $this->removeHeading($document, $firstHeading, $contentHtml);
+        $firstHeading->remove();
+
+        return $document->saveHtml();
     }
 
     /**
@@ -54,44 +59,29 @@ final readonly class LeadingTitleRemover
         return array_values(array_map($this->normalize(...), $nonEmptyCandidates));
     }
 
-    private function loadDocument(string $contentHtml): ?\DOMDocument
+    private function loadDocument(string $contentHtml): ?HTMLDocument
     {
-        $document = new \DOMDocument();
-        $useInternalErrors = libxml_use_internal_errors(true);
         try {
-            $encoded = mb_encode_numericentity($contentHtml, [0x80, 0x10FFFF, 0, ~0], 'UTF-8');
-
-            return $document->loadHTML($encoded) ? $document : null;
-        } finally {
-            libxml_clear_errors();
-            libxml_use_internal_errors($useInternalErrors);
+            return HTMLDocument::createFromString($contentHtml, \LIBXML_NOERROR);
+        } catch (\Throwable) {
+            return null;
         }
     }
 
-    private function findFirstHeading(\DOMDocument $document): ?\DOMElement
+    /**
+     * The first h1/h2/h3 in document order. An element-named XPath expression
+     * would not match — the HTML5 parser puts elements in the XHTML namespace,
+     * which `//h1` does not select — so this reads the tree with a CSS selector.
+     */
+    private function findFirstHeading(HTMLDocument $document): ?Element
     {
-        $matches = (new \DOMXPath($document))->query('(//h1|//h2|//h3)[1]');
-        $firstNode = $matches instanceof \DOMNodeList ? $matches->item(0) : null;
-
-        return $firstNode instanceof \DOMElement ? $firstNode : null;
+        return $document->querySelector('h1, h2, h3');
     }
 
     /** @param list<string> $normalizedTitles */
-    private function repeatsTitle(\DOMElement $heading, array $normalizedTitles): bool
+    private function repeatsTitle(Element $heading, array $normalizedTitles): bool
     {
-        if ($heading->parentNode === null) {
-            return false;
-        }
-
-        return \in_array($this->normalize($heading->textContent), $normalizedTitles, true);
-    }
-
-    private function removeHeading(\DOMDocument $document, \DOMElement $heading, string $fallback): string
-    {
-        $heading->parentNode?->removeChild($heading);
-        $withoutTitle = $document->saveHTML();
-
-        return $withoutTitle === false ? $fallback : $withoutTitle;
+        return \in_array($this->normalize((string) $heading->textContent), $normalizedTitles, true);
     }
 
     private function normalize(string $text): string
