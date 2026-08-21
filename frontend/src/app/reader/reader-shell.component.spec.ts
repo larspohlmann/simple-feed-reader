@@ -742,6 +742,44 @@ describe('ReaderShellComponent', () => {
     req.flush(refreshDone);
   });
 
+  describe('one scoped refresh reloads the list once (#502)', () => {
+    it('fires exactly one entries reload and one tags reload after the run finishes', () => {
+      const f = boot();
+
+      f.componentInstance.onScopedRefresh();
+
+      // The refresh sweep itself.
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/refresh')
+        .flush(refreshDone);
+      f.detectChanges();
+
+      // Exactly one reload of each list-backing resource — the double reload
+      // (slice effect + onDone) would make entries match twice here.
+      expect(
+        ctrl.match((r) => r.url === 'https://api.test/api/entries').length,
+      ).toBe(1);
+      expect(ctrl.match((r) => r.url === 'https://api.test/api/tags').length).toBe(
+        1,
+      );
+      expect(
+        ctrl.match((r) => r.url === 'https://api.test/api/subscriptions').length,
+      ).toBe(1);
+
+      // Drain the reload requests so verify() is clean.
+      ctrl
+        .match((r) => r.url === 'https://api.test/api/entries')[0]
+        .flush({ entries: [], nextCursor: null });
+      ctrl
+        .match((r) => r.url === 'https://api.test/api/tags')[0]
+        .flush({ tags: [] });
+      ctrl
+        .match((r) => r.url === 'https://api.test/api/subscriptions')[0]
+        .flush(subsBody);
+      ctrl.verify();
+    });
+  });
+
   it('scopes a tag refresh to the tag id', () => {
     const f = boot();
     qp.next(convertToParamMap({ tag: '3' }));
