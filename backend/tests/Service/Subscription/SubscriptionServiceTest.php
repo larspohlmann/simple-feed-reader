@@ -354,6 +354,36 @@ final class SubscriptionServiceTest extends DbTestCase
         self::assertNotNull($outcome->subscription);
     }
 
+    public function testWpJsonSubscribeStoresTheFormatVerbatimWithoutDiscovery(): void
+    {
+        $user = $this->factory()->create('wpjson@example.com');
+        // Discovery must NOT run: hand it a result that would fail the assertion if used.
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResult::candidates([])));
+
+        $url = 'https://wp.example/wp-json/wp/v2/posts?per_page=50&_embed';
+        $outcome = $service->subscribe($user, $url, SourceFormat::WP_JSON);
+
+        self::assertNotNull($outcome->subscription);
+        self::assertSame($url, $outcome->subscription->getFeed()->getUrl());
+        self::assertSame(SourceFormat::WP_JSON, $outcome->subscription->getFeed()->getSourceFormat());
+    }
+
+    public function testWpJsonSubscribeNeedsNoScrapingPermission(): void
+    {
+        // A user with scraping disabled (the default) must still be able to
+        // subscribe a wp-json candidate — the scrape gate is scraped-only.
+        $user = $this->factory()->create('wpjson-nopref@example.com');
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResult::candidates([])));
+
+        $outcome = $service->subscribe(
+            $user,
+            'https://wp.example/wp-json/wp/v2/posts?per_page=50&_embed',
+            SourceFormat::WP_JSON,
+        );
+
+        self::assertNotNull($outcome->subscription);
+    }
+
     /**
      * A newly tagged feed appends to the END of that tag's list: its join
      * position is one past the tag's current maximum, not a fixed 0 that would

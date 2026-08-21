@@ -43,8 +43,8 @@ final readonly class SubscriptionCreator
      * come through here, so the cap, the shared-feed lookup and the duplicate
      * check cannot diverge between them.
      *
-     * @param 'xml'|'scraped' $sourceFormat
-     * @param list<Tag>       $tags
+     * @param 'xml'|'scraped'|'wp-json' $sourceFormat
+     * @param list<Tag>                 $tags
      */
     public function create(User $user, string $feedUrl, string $sourceFormat, array $tags): Subscription
     {
