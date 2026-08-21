@@ -34,6 +34,7 @@ use App\Service\Retention\EntryPruner;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Scraper\HtmlItemExtractor;
 use App\Service\Search\EntryIndexer;
+use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Scraper\ScrapedFixtures;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
@@ -95,7 +96,7 @@ final class RefreshRunnerTest extends DbTestCase
             $runnerEm ?? $this->em,
             $this->fetcher,
             $this->bodyParser(),
-            new EntryIngestor($this->em, $entryRepository, new EntrySanitizer()),
+            new EntryIngestor($this->em, $entryRepository, new EntrySanitizer(), new UrlNormalizer()),
             new FaviconResolver($this->faviconFetcher, new NullLogger()),
             new FeedScheduler($this->clock),
             new EntryPruner($this->em, $this->clock, $this->indexer()),

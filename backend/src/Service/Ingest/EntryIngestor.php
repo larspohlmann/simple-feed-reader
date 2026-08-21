@@ -11,12 +11,14 @@ use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
 use App\Service\Parser\ParsedImage;
 use App\Service\Sanitize\EntrySanitizer;
+use App\Service\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Turns a ParsedFeed into persisted Entry rows: dedupes against existing
- * guidHashes (and within the batch), sanitizes content, truncates to column
- * limits, and refreshes feed metadata. Caller flushes.
+ * Turns a ParsedFeed into persisted Entry rows: dedupes against the feed's
+ * existing entries on stable URL (falling back to GUID hash), sanitizes
+ * content, truncates to column limits, and refreshes feed metadata. Caller
+ * flushes.
  */
 final class EntryIngestor
 {
@@ -29,6 +31,7 @@ final class EntryIngestor
         private readonly EntityManagerInterface $em,
         private readonly EntryRepository $entryRepository,
         private readonly EntrySanitizer $sanitizer,
+        private readonly UrlNormalizer $urlNormalizer,
     ) {
     }
 
@@ -48,16 +51,19 @@ final class EntryIngestor
             return [];
         }
 
-        $hashes = $this->guidHashesOf($parsed->entries);
-        $seen = array_fill_keys($this->entryRepository->findExistingGuidHashes($feed, $hashes), true);
+        $deduplicator = new EntryDeduplicator(
+            $this->entryRepository->findExistingGuidHashes($feed, $this->guidHashesOf($parsed->entries)),
+            $this->entryRepository->findExistingUrlHashes($feed, $this->urlHashesOf($parsed->entries)),
+        );
 
         $created = [];
         foreach ($parsed->entries as $parsedEntry) {
-            $hash = self::guidHash($parsedEntry->guid);
-            if (isset($seen[$hash])) {
+            $guidHash = self::guidHash($parsedEntry->guid);
+            $urlHash = $this->urlHash($parsedEntry->url);
+            if ($deduplicator->isDuplicate($guidHash, $urlHash)) {
                 continue;
             }
-            $seen[$hash] = true;
+            $deduplicator->remember($guidHash, $urlHash);
 
             $entry = new Entry(
                 $feed,
@@ -66,6 +72,7 @@ final class EntryIngestor
                 mb_substr($parsedEntry->title, 0, self::TITLE_MAX),
                 $context->fetchedAt,
                 EntryEffectiveDate::for($parsedEntry->publishedAt, $context),
+                $urlHash,
             );
             $entry->setAuthor(
                 $parsedEntry->author === null ? null : mb_substr($parsedEntry->author, 0, self::AUTHOR_MAX),
@@ -194,6 +201,33 @@ final class EntryIngestor
     private function guidHashesOf(array $entries): array
     {
         return array_map(static fn (ParsedEntry $entry): string => self::guidHash($entry->guid), $entries);
+    }
+
+    /**
+     * @param list<ParsedEntry> $entries
+     *
+     * @return list<string> the url hashes of the entries that have a URL —
+     *                      url-less items dedupe on GUID alone, so they add no
+     *                      hash here
+     */
+    private function urlHashesOf(array $entries): array
+    {
+        $hashes = [];
+        foreach ($entries as $entry) {
+            $urlHash = $this->urlHash($entry->url);
+            if ($urlHash !== null) {
+                $hashes[] = $urlHash;
+            }
+        }
+
+        return $hashes;
+    }
+
+    private function urlHash(?string $url): ?string
+    {
+        $normalized = $this->urlNormalizer->normalize($url);
+
+        return $normalized === null ? null : hash('sha256', $normalized);
     }
 
     private static function guidHash(string $guid): string

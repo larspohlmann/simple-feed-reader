@@ -13,6 +13,7 @@ use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
 use App\Service\Parser\ParsedImage;
 use App\Service\Sanitize\EntrySanitizer;
+use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 
 final class EntryIngestorTest extends DbTestCase
@@ -28,7 +29,135 @@ final class EntryIngestorTest extends DbTestCase
             $this->em,
             $entryRepository,
             new EntrySanitizer(),
+            new UrlNormalizer(),
         );
+    }
+
+    private function parsedEntryAt(string $guid, string $url): ParsedEntry
+    {
+        return new ParsedEntry(
+            guid: $guid,
+            url: $url,
+            title: 'Title',
+            author: null,
+            summary: null,
+            contentHtml: '<p>body</p>',
+            publishedAt: null,
+        );
+    }
+
+    /**
+     * BBC appends a revision counter to its GUID (`…#0`, `…#1`, …) while the
+     * article URL stays stable, so a re-fetch of the same article carries a new
+     * GUID hash. Keying dedup on the stable URL is what stops the second row.
+     */
+    public function testARevisedGuidWithTheSameUrlDoesNotCreateASecondRow(): void
+    {
+        $feed = $this->feed();
+        $url = 'https://www.bbc.com/news/articles/ckg4424zd7go';
+
+        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [
+            $this->parsedEntryAt('https://www.bbc.com/news/articles/ckg4424zd7go#0', $url),
+        ]), self::context());
+        $this->em->flush();
+
+        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [
+            $this->parsedEntryAt('https://www.bbc.com/news/articles/ckg4424zd7go#1', $url),
+        ]), self::context());
+        $this->em->flush();
+
+        self::assertCount(0, $created);
+        self::assertCount(1, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
+    }
+
+    public function testTrackingParametersThatVaryPerFetchDoNotDefeatDedup(): void
+    {
+        $feed = $this->feed();
+
+        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [
+            $this->parsedEntryAt('guid-a', 'https://www.bbc.com/news/x?at_medium=RSS&at_campaign=rss'),
+        ]), self::context());
+        $this->em->flush();
+
+        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [
+            $this->parsedEntryAt('guid-b', 'https://www.bbc.com/news/x?at_medium=email'),
+        ]), self::context());
+        $this->em->flush();
+
+        self::assertCount(0, $created);
+        self::assertCount(1, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
+    }
+
+    /**
+     * A whole feed refreshes at once: several already-stored articles come back
+     * in one fetch, each with a bumped revision GUID. Every one of them must be
+     * recognized by its stable URL, not just the first — the dedup preloads and
+     * matches the batch's full set of URL hashes.
+     */
+    public function testRefetchingSeveralStoredArticlesWithRevisedGuidsCreatesNoNewRows(): void
+    {
+        $feed = $this->feed();
+        $first = 'https://www.bbc.com/news/articles/aaa';
+        $second = 'https://www.bbc.com/news/articles/bbb';
+
+        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [
+            $this->parsedEntryAt('aaa#0', $first),
+            $this->parsedEntryAt('bbb#0', $second),
+        ]), self::context());
+        $this->em->flush();
+
+        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [
+            $this->parsedEntryAt('aaa#1', $first),
+            $this->parsedEntryAt('bbb#1', $second),
+        ]), self::context());
+        $this->em->flush();
+
+        self::assertCount(0, $created);
+        self::assertCount(2, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
+    }
+
+    public function testTwoItemsWithTheSameUrlInOneBatchCreateOnlyOneRow(): void
+    {
+        $feed = $this->feed();
+        $url = 'https://www.bbc.com/news/articles/abc';
+
+        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [
+            $this->parsedEntryAt('abc#0', $url),
+            $this->parsedEntryAt('abc#1', $url),
+        ]), self::context());
+        $this->em->flush();
+
+        self::assertCount(1, $created);
+        self::assertCount(1, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
+    }
+
+    public function testDifferentUrlsWithDifferentGuidsRemainSeparate(): void
+    {
+        $feed = $this->feed();
+
+        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [
+            $this->parsedEntryAt('g1', 'https://example.com/story?id=42'),
+            $this->parsedEntryAt('g2', 'https://example.com/story?id=43'),
+        ]), self::context());
+        $this->em->flush();
+
+        self::assertCount(2, $created);
+        self::assertCount(2, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
+    }
+
+    public function testUrlLessEntriesStillDedupeByGuid(): void
+    {
+        $feed = $this->feed();
+        $item = new ParsedEntry('only-guid', null, 'Title', null, null, '<p>body</p>', null);
+
+        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [$item]), self::context());
+        $this->em->flush();
+
+        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [$item]), self::context());
+        $this->em->flush();
+
+        self::assertCount(0, $created);
+        self::assertCount(1, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
     }
 
     private function feed(): Feed

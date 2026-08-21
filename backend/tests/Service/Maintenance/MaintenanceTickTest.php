@@ -22,6 +22,7 @@ use App\Service\Refresh\RefreshRunner;
 use App\Service\Retention\EntryPruner;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Search\EntryIndexer;
+use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\StubFeedFetcher;
@@ -118,7 +119,7 @@ final class MaintenanceTickTest extends DbTestCase
             $failingEm,
             $fetcher,
             $bodyParser,
-            new EntryIngestor($this->em, $entryRepository, new EntrySanitizer()),
+            new EntryIngestor($this->em, $entryRepository, new EntrySanitizer(), new UrlNormalizer()),
             new FaviconResolver($fetcher, new NullLogger()),
             new FeedScheduler($clock),
             new EntryPruner($this->em, $clock, $indexer),
