@@ -42,6 +42,21 @@ final class RecommendationPromptBuilder
      */
     private const int TOKENS_PER_DUPLICATE_ID = 8;
 
+    /** What one score-only pick costs in a batch reply: `{"id":123,"score":843}` — an id and an
+     *  integer, no prose. About a fifth of a reason-bearing pick, which is the whole point of the
+     *  coarse-filter batch: the answer reserve shrinks, so packBatches fits more candidates per
+     *  batch and the run makes fewer calls (#493). */
+    private const int TOKENS_PER_SCORE_PICK = 15;
+
+    /** The answer reserve for the distillation reply. One `{"profile": "..."}` string of at most
+     *  ~300 words; sized generously so a reasoning model still finishes the JSON (#493). */
+    private const int PROFILE_ANSWER_TOKENS = 1200;
+
+    /** What packBatches assumes the not-yet-distilled profile block will cost, so it can budget the
+     *  batch prompt before the distillation phase has run. An estimate on purpose — the real profile
+     *  is bounded to roughly this by DISTILL_ROLE's word cap (#493). */
+    private const int ESTIMATED_PROFILE_TOKENS = 700;
+
     /**
      * How much room over the estimate the provider is actually given.
      *
@@ -115,11 +130,19 @@ final class RecommendationPromptBuilder
         EffectiveRecommendationSettings $settings,
     ): array {
         $descriptionLength = $this->descriptionLength($settings->packing->contextWindow);
-        $historyTokens = $this->tokens($this->historySections($history, $descriptionLength));
+        // The batch call sees the not-yet-distilled profile plus FAVORITES only
+        // (RecommendationRunAdvancer builds the distillation profile from the
+        // full three-section history before the batch phase ever runs), so the
+        // packer budgets for that shape rather than the full history (#493).
+        $favoritesSection = $this->historySection('FAVORITES (newest first):', $history->favorites, $descriptionLength);
+        $historyTokens = self::ESTIMATED_PROFILE_TOKENS + $this->tokens($favoritesSection);
         $cap = $this->batchCap(\count($candidates), $settings);
         // The reply scores one line per candidate, so its size is bounded by
-        // the batch cap, not by the final list size.
-        $responseReserve = $this->answerTokenReserve($cap);
+        // the batch cap, not by the final list size. The batch reply is
+        // score-only (id + score, no reason), so it is charged the score-only
+        // rate rather than the reason-bearing pick rate (#493).
+        $responseReserve = intdiv($cap * self::TOKENS_PER_SCORE_PICK * self::ANSWER_BOUND_PERCENT, 100);
+        $responseReserve = max(self::MINIMUM_ANSWER_TOKENS, $responseReserve);
         $budget = $settings->packing->contextWindow - self::FIXED_OVERHEAD_TOKENS - $responseReserve - $historyTokens;
 
         $batches = [];
@@ -378,17 +401,17 @@ final class RecommendationPromptBuilder
      */
     public function answerBoundTokens(int $replyItemCount, RecommendationResponseSchema $schema): int
     {
-        $perItem = match ($schema) {
-            RecommendationResponseSchema::Ranking => self::TOKENS_PER_PICK,
-            RecommendationResponseSchema::Duplicates => self::TOKENS_PER_DUPLICATE_ID,
-            RecommendationResponseSchema::Distillation => self::TOKENS_PER_PICK,
-            RecommendationResponseSchema::BatchScore => self::TOKENS_PER_PICK,
-            RecommendationResponseSchema::Consolidation => self::TOKENS_PER_PICK,
+        $expected = match ($schema) {
+            RecommendationResponseSchema::Ranking => $replyItemCount * self::TOKENS_PER_PICK,
+            RecommendationResponseSchema::Duplicates => $replyItemCount * self::TOKENS_PER_DUPLICATE_ID,
+            RecommendationResponseSchema::Distillation => self::PROFILE_ANSWER_TOKENS,
+            RecommendationResponseSchema::BatchScore => $replyItemCount * self::TOKENS_PER_SCORE_PICK,
+            RecommendationResponseSchema::Consolidation => $replyItemCount * self::TOKENS_PER_PICK,
         };
 
-        $expected = max(self::MINIMUM_ANSWER_TOKENS, $replyItemCount * $perItem);
+        $bounded = max(self::MINIMUM_ANSWER_TOKENS, $expected);
 
-        return intdiv($expected * self::ANSWER_BOUND_PERCENT, 100);
+        return intdiv($bounded * self::ANSWER_BOUND_PERCENT, 100);
     }
 
     /**

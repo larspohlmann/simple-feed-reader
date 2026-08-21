@@ -75,6 +75,29 @@ final class RecommendationPromptBuilderTest extends TestCase
     }
 
     /**
+     * A score-only batch reply is `{"id":123,"score":843}` — no `reason` — so
+     * it is charged a fifth of the reason-bearing pick rate. Distillation
+     * answers one profile string, so it is charged a fixed reserve regardless
+     * of how many items informed it. Consolidation still writes a `reason` per
+     * pick, so it keeps the full pick rate (#493).
+     */
+    public function testAnswerBoundIsSchemaAware(): void
+    {
+        self::assertSame(
+            intdiv(max(1024, 100 * 15) * 150, 100),
+            $this->builder->answerBoundTokens(100, RecommendationResponseSchema::BatchScore),
+        );
+        self::assertSame(
+            intdiv(max(1024, 100 * 70) * 150, 100),
+            $this->builder->answerBoundTokens(100, RecommendationResponseSchema::Consolidation),
+        );
+        self::assertSame(
+            intdiv(max(1024, 1200) * 150, 100),
+            $this->builder->answerBoundTokens(1, RecommendationResponseSchema::Distillation),
+        );
+    }
+
+    /**
      * The quote goes into a JSON request body. `substr` would cut a multi-byte
      * sequence in half and make `json_encode` fail, costing the retry the clip
      * exists to enable — and this reader's feeds are German.
@@ -223,6 +246,32 @@ final class RecommendationPromptBuilderTest extends TestCase
             $this->builder->answerBoundTokens(1, RecommendationResponseSchema::Ranking) + 32000,
             $this->builder->outputTokenReserve(1, RecommendationResponseSchema::Ranking),
         );
+    }
+
+    /**
+     * The batch call only ever asks for a score, not a reason, and its history
+     * budget is the not-yet-distilled profile plus FAVORITES rather than the
+     * full three-section history — both reserves are far smaller than the old
+     * reason-bearing, three-section formula, so a 200-candidate pool that used
+     * to need many small batches now packs into a handful of full ones (#493).
+     */
+    public function testScoreOnlyBatchesPackLargerThanReasonBearingWouldHave(): void
+    {
+        $candidates = array_map(
+            static fn (int $id): PromptLine => self::line($id, "Candidate $id", 100),
+            range(1, 200),
+        );
+        $history = new RecommendationHistory(
+            favorites: array_map(static fn (int $id): PromptLine => self::line($id, "Favorite $id", 100), range(1, 40)),
+            kept: array_map(static fn (int $id): PromptLine => self::line($id, "Kept $id", 100), range(1, 40)),
+            viewed: array_map(static fn (int $id): PromptLine => self::line($id, "Viewed $id", 100), range(1, 80)),
+        );
+        $settings = $this->settings(32768, 50);
+
+        $batches = $this->builder->packBatches($candidates, $history, $settings);
+
+        // score-only reply (15/pick) + favorites-only history budget => far fewer, fuller batches
+        self::assertLessThanOrEqual(5, \count($batches));
     }
 
     public function testEverythingFitsInOneBatchWhenSmall(): void
