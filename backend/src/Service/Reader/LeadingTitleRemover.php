@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Html\HtmlDocumentParser;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -30,7 +31,7 @@ final readonly class LeadingTitleRemover
             return $contentHtml;
         }
 
-        $document = $this->loadDocument($contentHtml);
+        $document = HtmlDocumentParser::parseOrNull($contentHtml);
         if ($document === null) {
             return $contentHtml;
         }
@@ -57,15 +58,6 @@ final readonly class LeadingTitleRemover
         );
 
         return array_values(array_map($this->normalize(...), $nonEmptyCandidates));
-    }
-
-    private function loadDocument(string $contentHtml): ?HTMLDocument
-    {
-        try {
-            return HTMLDocument::createFromString($contentHtml, \LIBXML_NOERROR);
-        } catch (\Throwable) {
-            return null;
-        }
     }
 
     /**

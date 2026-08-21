@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Html\HtmlDocumentParser;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Text;
@@ -106,7 +107,7 @@ final readonly class FetchedPageNormalizer
 
     private function repair(string $html): ?HTMLDocument
     {
-        $document = $this->parse($this->removeScriptAndStyleBlocks($html));
+        $document = HtmlDocumentParser::parseOrNull($this->removeScriptAndStyleBlocks($html));
         if ($document === null) {
             return null;
         }
@@ -121,19 +122,6 @@ final readonly class FetchedPageNormalizer
     private function removeScriptAndStyleBlocks(string $html): string
     {
         return preg_replace(self::SCRIPT_OR_STYLE_PATTERN, '', $html) ?? $html;
-    }
-
-    private function parse(string $html): ?HTMLDocument
-    {
-        if (trim($html) === '') {
-            return null;
-        }
-
-        try {
-            return HTMLDocument::createFromString($html, \LIBXML_NOERROR);
-        } catch (\Throwable) {
-            return null;
-        }
     }
 
     private function removeScreenReaderOnlyElements(HTMLDocument $document): void
