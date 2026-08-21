@@ -796,12 +796,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  /** The global refresh: sweep every due feed. The single reload authority
+   *  (#502) reloads the list once the run finishes. */
   onRefresh(): void {
-    this.refreshSvc.run(() => {
-      this.subs.load();
-      this.tags.load();
-      this.entries.load(queryFromSelection(this.selection()));
-    });
+    this.refreshSvc.run();
   }
 
   /** Map the current selection to a refresh scope, or null where a scoped
