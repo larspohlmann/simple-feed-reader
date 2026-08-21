@@ -10,6 +10,9 @@
   <div class="body">
     <app-entry-kicker-line [entry]="entry()" [showSource]="showSource()" />
     <p class="title">{{ entry().title }}</p>
+    @if (snippet()) {
+      <p class="dek">{{ snippet() }}</p>
+    }
     <app-entry-meta
       [entry]="entry()"
       [tags]="showSource() ? tags() : noTags"

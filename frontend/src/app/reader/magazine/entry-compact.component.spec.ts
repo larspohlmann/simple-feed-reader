@@ -51,6 +51,26 @@ describe('EntryCompactComponent', () => {
     expect(el.textContent).toContain('Golem');
   });
 
+  it('shows a one-line dek when the entry has a summary (#515)', () => {
+    TestBed.configureTestingModule({
+      imports: [EntryCompactComponent, provideTranslocoTesting()],
+      providers: [provideRouter([])],
+    });
+    const f = TestBed.createComponent(EntryCompactComponent);
+    f.componentRef.setInput('entry', { ...entry, summary: 'A short description.' });
+    f.detectChanges();
+    const dek = (f.nativeElement as HTMLElement).querySelector('.dek');
+    expect(dek).not.toBeNull();
+    expect(dek!.textContent).toContain('A short description.');
+  });
+
+  it('stays title-only for a headline-only entry — no empty dek (#515)', () => {
+    // The fixture carries summary: null and contentHtml: null, so snippet() is
+    // empty and the @if must render no dek element at all.
+    const el = mount().nativeElement as HTMLElement;
+    expect(el.querySelector('.dek')).toBeNull();
+  });
+
   it('hides the source when showSource is false', () => {
     TestBed.configureTestingModule({ imports: [EntryCompactComponent, provideTranslocoTesting()] });
     const f = TestBed.createComponent(EntryCompactComponent);
