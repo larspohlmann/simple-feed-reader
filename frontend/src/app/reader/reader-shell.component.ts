@@ -457,7 +457,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         if (slice === 0) return; // nothing has reported yet
         if (!this.sweeping() && running) return; // manual refresh: wait for finish
         this.subs.load();
-        this.tags.load(); // onDone reloaded tags; the old slice effect did not
+        // A refresh never touches tags, so reload them once when the run
+        // finishes rather than on every onboarding slice (onDone reloaded them;
+        // the old slice effect did not reload them at all).
+        if (!running) this.tags.load();
         this.entries.load(queryFromSelection(this.selection()));
       });
     });

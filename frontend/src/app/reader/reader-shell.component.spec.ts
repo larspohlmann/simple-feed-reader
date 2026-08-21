@@ -784,20 +784,13 @@ describe('ReaderShellComponent', () => {
       // First slice: partial, more feeds still due → the list must reload now.
       // RefreshService.step() re-fires the next /api/refresh synchronously from
       // inside this flush, so it is already queued below alongside the reload.
-      refresh.flush({
-        status: 'partial',
-        total: 2,
-        fetched: 1,
-        notModified: 0,
-        failed: 0,
-        skippedForBudget: 0,
-        remaining: 1,
-        pruned: 0,
-      });
+      refresh.flush({ ...refreshDone, status: 'partial', total: 2, fetched: 1, remaining: 1 });
       f.detectChanges();
       const firstSliceEntries = ctrl.match((r) => r.url === 'https://api.test/api/entries');
       expect(firstSliceEntries.length).toBe(1);
       firstSliceEntries[0].flush({ entries: [], nextCursor: null });
+      // subs reload per slice; tags do not (they reload once at finish), so only
+      // the subscriptions request is drained here.
       ctrl
         .match((r) => r.url === 'https://api.test/api/subscriptions')
         .forEach((req) =>
@@ -807,46 +800,29 @@ describe('ReaderShellComponent', () => {
             keptCount: 0,
           }),
         );
-      ctrl
-        .match((r) => r.url === 'https://api.test/api/tags')
-        .forEach((req) => req.flush({ tags: [] }));
 
       // Second slice: the sweep's poll loop re-fires /api/refresh on its own;
       // finishing it reloads again — proof the first reload was not the only one.
       const next = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
-      next.flush({
-        status: 'completed',
-        total: 2,
-        fetched: 2,
-        notModified: 0,
-        failed: 0,
-        skippedForBudget: 0,
-        remaining: 0,
-        pruned: 0,
-      });
+      next.flush({ ...refreshDone, total: 2, fetched: 2 });
       f.detectChanges();
-      expect(
-        ctrl.match((r) => r.url === 'https://api.test/api/entries').length,
-      ).toBeGreaterThanOrEqual(1);
 
-      // Drain whatever the completing slice queued.
-      ctrl
-        .match(() => true)
-        .forEach((req) => {
-          if (req.request.url.endsWith('/api/entries')) {
-            req.flush({ entries: [], nextCursor: null });
-          } else if (req.request.url.endsWith('/api/subscriptions')) {
-            req.flush({
-              subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: '2026-08-21T00:00:00Z' }],
-              favoritesCount: 0,
-              keptCount: 0,
-            });
-          } else if (req.request.url.endsWith('/api/tags')) {
-            req.flush({ tags: [] });
-          } else {
-            req.flush({});
-          }
-        });
+      // The finishing slice reloads once more (entries + subs + tags). match()
+      // consumes the open queue, so it is called once and the same array is
+      // flushed; an entries request being among them proves the first slice's
+      // reload was not the only one.
+      const finishReloads = ctrl.match(() => true);
+      expect(finishReloads.some((req) => req.request.url.endsWith('/api/entries'))).toBe(true);
+      finishReloads.forEach((req) =>
+        req.flush({
+          entries: [],
+          nextCursor: null,
+          subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: '2026-08-21T00:00:00Z' }],
+          favoritesCount: 0,
+          keptCount: 0,
+          tags: [],
+        }),
+      );
       ctrl.verify();
     });
   });
