@@ -355,10 +355,41 @@ final class RecommendationRunTest extends TestCase
         self::assertSame('bonsai-27b', $run->getModel());
     }
 
+    public function testRecordProfileStoresTextAndMarksDistilled(): void
+    {
+        $run = $this->runInRunningState();
+        $run->recordProfile('Likes Rust.');
+
+        self::assertTrue($run->isDistilled());
+        self::assertSame('Likes Rust.', $run->getProfileText());
+    }
+
+    public function testRecordProfileWithNullMarksDistilledButKeepsNoProfile(): void
+    {
+        $run = $this->runInRunningState();
+        $run->recordProfile(null);
+
+        self::assertTrue($run->isDistilled());
+        self::assertNull($run->getProfileText());
+    }
+
+    public function testFreshRunIsNotDistilled(): void
+    {
+        self::assertFalse($this->runInRunningState()->isDistilled());
+    }
+
     private function makeRun(): RecommendationRun
     {
         $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
 
         return new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
+    }
+
+    private function runInRunningState(): RecommendationRun
+    {
+        $run = $this->makeRun();
+        $run->snapshot([[1]]);
+
+        return $run;
     }
 }
