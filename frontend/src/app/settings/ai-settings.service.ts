@@ -28,6 +28,9 @@ export interface AiConfig {
 export interface AiConfigList {
   readonly configs: AiConfig[];
   readonly activeId: number | null;
+  /** The batch-cap the packer applies when a connection leaves its own empty,
+   *  from the backend's single definition so the form never hardcodes it. */
+  readonly defaultMaxBatchSize: number;
 }
 
 /**
@@ -70,6 +73,9 @@ export class AiSettingsService {
     () => this.configs().find((each) => each.active)?.id ?? null,
   );
   readonly models = signal<readonly string[]>([]);
+  /** The default batch-cap the backend reports, shown as the empty field's
+   *  placeholder. Null until the list has loaded. */
+  readonly defaultMaxBatchSize = signal<number | null>(null);
   readonly choosingModelFor = signal<number | null>(null);
   readonly busy = signal(false);
   readonly failure = signal<ScopedAiFailure | null>(null);
@@ -85,6 +91,7 @@ export class AiSettingsService {
   load(): void {
     this.run({ action: 'load' }, this.http.get<AiConfigList>(`${this.base}/api/me/ai`), (list) => {
       this.configs.set(list.configs);
+      this.defaultMaxBatchSize.set(list.defaultMaxBatchSize);
       this.applyAvailability();
     });
   }

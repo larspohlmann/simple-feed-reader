@@ -16,6 +16,7 @@ interface AiSettingsStub {
   configs: WritableSignal<readonly AiConfig[]>;
   activeId: WritableSignal<number | null>;
   models: WritableSignal<readonly string[]>;
+  defaultMaxBatchSize: WritableSignal<number | null>;
   choosingModelFor: WritableSignal<number | null>;
   busy: WritableSignal<boolean>;
   failure: WritableSignal<ScopedAiFailure | null>;
@@ -70,6 +71,7 @@ function createStub(): AiSettingsStub {
     configs: signal<readonly AiConfig[]>([]),
     activeId: signal<number | null>(null),
     models: signal<readonly string[]>([]),
+    defaultMaxBatchSize: signal<number | null>(null),
     choosingModelFor: signal<number | null>(null),
     busy: signal(false),
     failure: signal<ScopedAiFailure | null>(null),
@@ -413,16 +415,17 @@ describe('AiSectionComponent', () => {
     expect(input.value).toBe('30');
   });
 
-  it('shows the default as the placeholder when the batch cap is null', () => {
+  it('shows the backend default as the placeholder when the batch cap is null', () => {
     const fixture = mount();
     ai.configs.set([config({ id: 7, maxBatchSize: null })]);
+    ai.defaultMaxBatchSize.set(140);
     fixture.detectChanges();
 
     expandRow(fixture, 0);
 
     const input = row(fixture, 0).querySelector('input[type="number"]') as HTMLInputElement;
     expect(input.value).toBe('');
-    expect(input.placeholder).toBe('45');
+    expect(input.placeholder).toBe('140');
   });
 
   it('sends the entered batch cap on change', () => {

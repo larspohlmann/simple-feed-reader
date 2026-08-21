@@ -59,18 +59,22 @@ describe('AiSettingsService', () => {
     const list: AiConfigList = {
       configs: [config({ id: 1 }), config({ id: 2, active: true, ready: true, model: 'gpt-4o' })],
       activeId: 2,
+      defaultMaxBatchSize: 140,
     };
     request.flush(list);
 
     expect(svc.configs()).toEqual(list.configs);
     expect(svc.activeId()).toBe(2);
+    expect(svc.defaultMaxBatchSize()).toBe(140);
     expect(availability.ready()).toBe(true);
     expect(availability.model()).toBe('gpt-4o');
   });
 
   it('reports no availability when nothing is active', () => {
     svc.load();
-    ctrl.expectOne(`${base}/api/me/ai`).flush({ configs: [config()], activeId: null });
+    ctrl
+      .expectOne(`${base}/api/me/ai`)
+      .flush({ configs: [config()], activeId: null, defaultMaxBatchSize: 100 });
 
     expect(availability.ready()).toBe(false);
     expect(availability.model()).toBeNull();

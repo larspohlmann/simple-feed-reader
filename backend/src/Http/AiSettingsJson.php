@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\AiProviderSettings;
+use App\Service\Recommendation\RecommendationPackingSettings;
 
 /**
  * The client's view of the account's AI provider configurations, and the ONE
@@ -56,6 +57,10 @@ final class AiSettingsJson
                 $configurations,
             ),
             'activeId' => $activeId,
+            // The ceiling the packer applies when a connection leaves its cap
+            // empty. Sent so the settings form shows the same number the run
+            // would use, from its one definition rather than a copy that drifts.
+            'defaultMaxBatchSize' => RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
         ];
     }
 
