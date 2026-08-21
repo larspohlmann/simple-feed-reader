@@ -1068,7 +1068,40 @@ git commit -m "feat(#518): label and route the WordPress REST candidate in the a
 
 ---
 
-### Task 8: Full-gate verification
+### Task 8: Document the WordPress REST option in the README
+
+**Files:**
+- Modify: `README.md` (the "Feeds" feature list)
+
+**Interfaces:** none — user-facing documentation only.
+
+- [ ] **Step 1: Add the feature bullet**
+
+In `README.md`, in the **Feeds** section, immediately AFTER the existing scrape bullet ("For sites without any feed, an opt-in experimental mode scrapes the article list into a pseudo-feed."), add:
+
+```markdown
+- When a WordPress site's feed carries only summaries, the app detects its
+  REST API while finding the feed and offers it as a richer alternative —
+  full article text, chosen in the same subscribe dialog.
+```
+
+Match the surrounding voice: plain, user-facing, benefit-first. Do not add a new heading; it is one bullet in the existing list. Touch nothing else.
+
+- [ ] **Step 2: Verify the render**
+
+Run: `git diff README.md`
+Expected: exactly one added bullet in the Feeds list, correct Markdown, no reflow of neighbouring bullets.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add README.md
+git commit -m "docs(#518): note the WordPress REST full-content option in the README"
+```
+
+---
+
+### Task 9: Full-gate verification
 
 **Files:** none (verification only).
 
@@ -1130,8 +1163,9 @@ Expected: no new deprecations or errors from the discovery/preview/refresh paths
 - `FeedPreviewService` wp-json branch, no scrape gate → Task 5. ✓
 - `SubscriptionService` verbatim wp-json subscribe, no permission gate, DRY helper → Task 6. ✓
 - Frontend badge "WordPress" + format pass-through, spec owns its stubbed route → Task 7. ✓
+- README documents the wp-json source format → Task 8. ✓
 - SSRF boundary via shared fetcher → Tasks 3/4 (probe) and existing refresh path. ✓
-- Testing + mutation gate → Task 8. ✓
+- Testing + mutation gate → Task 9. ✓
 
 **Placeholder scan:** No TBD/TODO; every code step carries full code.
 
