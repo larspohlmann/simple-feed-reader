@@ -35,7 +35,14 @@ richer source in the existing subscribe dialog.
 - **Ordering:** when a page offers both, the REST candidate is presented
   **first**, then the RSS/Atom candidates.
 - **Badge label:** the REST candidate's format badge reads **"WordPress"**.
-- **Page size:** the probe requests `per_page=50`.
+- **Page size + payload:** the probe requests `per_page=20`. It does **not**
+  use `_embed`: on large sites (TechCrunch) `_embed` inflates the response by
+  ~1.3 MB *per post*, which never completes inside the fetcher's 10s/20s timeout
+  and blows the 5 MB size cap, so the candidate would be silently dropped.
+  Instead it prunes with `_fields` to only what the parser reads. Full article
+  text (`content.rendered`) is present **without** `_embed`. (Empirically
+  verified: `per_page=50&_embed` never completes on TechCrunch; the same page
+  without `_embed` is ~0.4 MB in ~1 s.)
 - **Card title:** the candidate carries the page `<title>` as its title, so the
   card has a readable name (the posts endpoint carries no site name).
 - **Non-pretty root:** a `?rest_route=/` REST root (permalinks off) is left
@@ -74,9 +81,12 @@ Per post → `ParsedEntry`:
 | `date_gmt` | `publishedAt` | **parsed explicitly as UTC**; never `date`. Naive-UTC gotcha: a wrong offset makes every entry show up as "now". |
 | `content.rendered` | `contentHtml` | raw; `EntryIngestor` sanitizes downstream, same as any feed HTML |
 | `excerpt.rendered` | `summary` | nullable |
-| `_embedded.author[0].name` | `author` | nullable |
-| `_embedded['wp:featuredmedia'][0]` | `image` (`ParsedImage`) | `source_url` + `media_details` width/height (both independently nullable) |
+| `jetpack_featured_media_url` | `image` (`ParsedImage`) | a plain top-level image URL (no `_embed` needed); nullable, width/height unknown. Absent on non-Jetpack sites → `null`, and the reader still extracts the lead image from `content.rendered`. |
 | `guid.rendered` else `(string) id` | `guid` | stable id |
+
+`author` is **not** mapped: the post carries only an author **id** without
+`_embed`, and `_embed` is too heavy to request (see Page size above). Article
+bylines usually live inside `content.rendered` anyway.
 
 `ParsedFeed`: `title` is `null` (the posts endpoint carries no site name),
 `siteUrl`/`description` `null`, `entries` the mapped list.
@@ -109,9 +119,11 @@ body and the page's final URL it returns a `?FeedCandidate`:
      root is the default `{origin}/wp-json/`, derived from the page's final URL.
    - Neither → `null`, silent — the ordinary case, exactly like
      `WellKnownFeedProbe` returning `null`. No probe request is made.
-2. Build the posts URL: `{root}wp/v2/posts?per_page=50&_embed`. Guard: only a
-   pretty-permalink root (no `?`) is supported; a `?rest_route=` root → `null`.
-   Ensure a single trailing slash on the root before appending.
+2. Build the posts URL:
+   `{root}wp/v2/posts?per_page=20&_fields=id,date_gmt,link,guid,title,content,excerpt,jetpack_featured_media_url`.
+   No `_embed` (see Page size). Guard: only a pretty-permalink root (no `?`) is
+   supported; a `?rest_route=` root → `null`. Ensure a single trailing slash on
+   the root before appending.
 3. Probe once through the **SSRF-guarded fetcher** (`FeedFetcherInterface`).
    Any `FetchException` (includes 401/403), an empty body, or a body that does
    not decode to a non-empty JSON array → `null` ("no alternative"). This is
@@ -203,8 +215,9 @@ content: the feed shows 0 unread until the first scheduled refresh populates it.
 ## Testing
 
 - **Unit — `WordPressJsonParser`** (mutation-critical): `date_gmt` parsed as
-  UTC; missing/mistyped keys; embedded author and featured media; entity/tag
-  handling in the title; empty or non-array body → `FeedParseException`.
+  UTC; missing/mistyped keys; `jetpack_featured_media_url` → image (and its
+  absence → `null` image); entity/tag handling in the title; empty or non-array
+  body → `FeedParseException`.
 - **Unit — `WordPressRestProbe`**: head-link read; fingerprint-gated fallback
   to the default `/wp-json/` root when the link is absent but a
   `wp-content`/`wp-includes`/generator hint is present; no link **and** no
