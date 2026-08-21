@@ -149,24 +149,20 @@ final class LazyImageSourcesTest extends TestCase
     {
         $image = $this->resolvedDocument($bodyHtml)->getElementsByTagName('img')->item(0);
 
-        return $image instanceof \DOMElement ? $image->getAttribute('src') : null;
+        return $image instanceof \Dom\Element ? $image->getAttribute('src') : null;
     }
 
     private function resolvedHtml(string $bodyHtml): string
     {
-        return (string) $this->resolvedDocument($bodyHtml)->saveHTML();
+        return $this->resolvedDocument($bodyHtml)->saveHtml();
     }
 
-    private function resolvedDocument(string $bodyHtml): \DOMDocument
+    private function resolvedDocument(string $bodyHtml): \Dom\HTMLDocument
     {
-        $document = new \DOMDocument();
-        $useInternalErrors = libxml_use_internal_errors(true);
-        try {
-            $document->loadHTML('<html lang="en"><body>' . $bodyHtml . '</body></html>');
-        } finally {
-            libxml_clear_errors();
-            libxml_use_internal_errors($useInternalErrors);
-        }
+        $document = \Dom\HTMLDocument::createFromString(
+            '<html lang="en"><body>' . $bodyHtml . '</body></html>',
+            LIBXML_NOERROR,
+        );
 
         $this->lazyImages->resolveIn($document);
 

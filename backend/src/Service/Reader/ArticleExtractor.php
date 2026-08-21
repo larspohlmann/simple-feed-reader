@@ -6,6 +6,7 @@ namespace App\Service\Reader;
 
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Sanitize\EntrySanitizer;
+use Dom\HTMLDocument;
 use fivefilters\Readability\Article;
 use fivefilters\Readability\Configuration;
 use fivefilters\Readability\ParseException;
@@ -75,30 +76,30 @@ final class ArticleExtractor implements ArticleExtractorInterface
      * wrapper-chain collapse (#235) as well — and keep the richer result. The
      * collapse rescues block-component pages (#235) and breaks some
      * well-structured ones (#476); the longer body is the better one in both
-     * directions. The second parse is skipped when the collapse changed nothing.
+     * directions. collapseWrapperChains() returns null when there is no chain to
+     * collapse, so the second extraction is skipped.
      */
     private function richestArticle(PageResponse $page): ?Article
     {
-        $conservative = $this->normalizer->normalize($page->html);
-        $collapsed = $this->normalizer->collapseWrapperChains($conservative);
+        $conservative = $this->parse($this->normalizer->normalize($page->html), $page->finalUrl);
+        $collapsed = $this->parse($this->normalizer->collapseWrapperChains($page->html), $page->finalUrl);
 
-        $fromConservative = $this->parse($conservative, $page->finalUrl);
-        $fromCollapsed = $collapsed === $conservative
-            ? null
-            : $this->parse($collapsed, $page->finalUrl);
-
-        return $this->richer($fromConservative, $fromCollapsed);
+        return $this->richer($conservative, $collapsed);
     }
 
-    private function parse(string $html, string $finalUrl): ?Article
+    private function parse(?HTMLDocument $document, string $finalUrl): ?Article
     {
+        if ($document === null) {
+            return null;
+        }
+
         $readability = new Readability(new Configuration(
             fixRelativeURLs: true,
             originalURL: $finalUrl,
         ));
 
         try {
-            return $readability->parse($html);
+            return $readability->parse($document);
         } catch (ParseException) {
             return null;
         }

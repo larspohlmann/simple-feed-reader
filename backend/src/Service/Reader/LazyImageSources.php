@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use Dom\Element;
+use Dom\HTMLDocument;
+
 /**
  * Restores the real source of a lazy-loaded <img> before readability sees it.
  *
@@ -34,14 +37,14 @@ final readonly class LazyImageSources
     /** A URL carrying a scheme that is neither http nor https — never promoted. */
     private const string FOREIGN_SCHEME = '#^(?!https?://)[a-z][a-z0-9+.\-]*:#i';
 
-    public function resolveIn(\DOMDocument $document): void
+    public function resolveIn(HTMLDocument $document): void
     {
         foreach (iterator_to_array($document->getElementsByTagName('img')) as $image) {
             $this->resolveImage($image);
         }
     }
 
-    private function resolveImage(\DOMElement $image): void
+    private function resolveImage(Element $image): void
     {
         if ($this->isUsable($image->getAttribute('src'))) {
             return;
@@ -57,17 +60,17 @@ final readonly class LazyImageSources
         $image->setAttribute('src', $candidate);
     }
 
-    private function candidateFor(\DOMElement $image): ?string
+    private function candidateFor(Element $image): ?string
     {
         foreach (self::URL_ATTRIBUTES as $attribute) {
-            $candidate = trim($image->getAttribute($attribute));
+            $candidate = trim($image->getAttribute($attribute) ?? '');
             if ($this->isUsable($candidate)) {
                 return $candidate;
             }
         }
 
         foreach (self::SRCSET_ATTRIBUTES as $attribute) {
-            $candidate = $this->usableSrcsetHead($image->getAttribute($attribute));
+            $candidate = $this->usableSrcsetHead($image->getAttribute($attribute) ?? '');
             if ($candidate !== null) {
                 return $candidate;
             }
@@ -82,7 +85,7 @@ final readonly class LazyImageSources
      * element the browser renders, so it has to survive with a source of its
      * own — removing it drops the picture and the figure built around it.
      */
-    private function candidateFromEnclosingPicture(\DOMElement $image): ?string
+    private function candidateFromEnclosingPicture(Element $image): ?string
     {
         $picture = $this->enclosingPicture($image);
         if ($picture === null) {
@@ -90,7 +93,7 @@ final readonly class LazyImageSources
         }
 
         foreach ($picture->getElementsByTagName('source') as $source) {
-            $candidate = $this->usableSrcsetHead($source->getAttribute('srcset'));
+            $candidate = $this->usableSrcsetHead($source->getAttribute('srcset') ?? '');
             if ($candidate !== null) {
                 return $candidate;
             }
@@ -103,26 +106,22 @@ final readonly class LazyImageSources
      * A relative URL stays a candidate: readability resolves it against the
      * page's final URL right after this step.
      */
-    private function isUsable(string $url): bool
+    private function isUsable(?string $url): bool
     {
-        return $url !== '' && preg_match(self::FOREIGN_SCHEME, $url) !== 1;
+        return $url !== null && $url !== '' && preg_match(self::FOREIGN_SCHEME, $url) !== 1;
     }
 
     /**
-     * The <picture> an image belongs to. libxml carries no HTML5 void-element
-     * table, so an unclosed <source> swallows everything after it: each one
-     * nests inside the last and the <img> ends up buried under the chain. A
-     * self-closed <source> leaves them siblings instead. Publishers ship both
-     * spellings, so the walk climbs out of however many sources it finds.
+     * The <picture> an image belongs to. The HTML5 parser treats <source> as a
+     * void element, so the candidates and the <img> stay siblings under the
+     * <picture> however the page spells its source tags — the image is the
+     * picture's direct child.
      */
-    private function enclosingPicture(\DOMElement $image): ?\DOMElement
+    private function enclosingPicture(Element $image): ?Element
     {
-        $ancestor = $image->parentNode;
-        while ($ancestor instanceof \DOMElement && $ancestor->nodeName === 'source') {
-            $ancestor = $ancestor->parentNode;
-        }
+        $parent = $image->parentNode;
 
-        return $ancestor instanceof \DOMElement && $ancestor->nodeName === 'picture' ? $ancestor : null;
+        return $parent instanceof Element && $parent->localName === 'picture' ? $parent : null;
     }
 
     /** The first candidate of a srcset list, or null when it yields nothing usable. */
