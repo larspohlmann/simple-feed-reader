@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Discovery;
 
 use App\Service\Fetch\PageUrls;
+use App\Service\Html\HtmlDocumentParser;
 use App\Service\Scraper\TextNormalizer;
 use Dom\Element;
 use Dom\HTMLDocument;
@@ -66,7 +67,7 @@ final readonly class FeedLinkScanner
     /** @return list<FeedCandidate> */
     public function scan(string $html, string $baseUrl): array
     {
-        $document = $this->parse($html);
+        $document = HtmlDocumentParser::parseOrNull($html);
         if (null === $document) {
             return [];
         }
@@ -75,23 +76,6 @@ final readonly class FeedLinkScanner
         $advertised = $this->advertisedFeeds($document, $pageUrls);
 
         return [] !== $advertised ? $advertised : $this->feedShapedLinks($document, $pageUrls);
-    }
-
-    private function parse(string $html): ?HTMLDocument
-    {
-        if ('' === trim($html)) {
-            return null;
-        }
-
-        try {
-            // The HTML parser resolves no entities and opens no connections, so
-            // it needs no LIBXML_NONET — which it rejects as an invalid flag.
-            return HTMLDocument::createFromString($html, \LIBXML_NOERROR);
-        } catch (\Throwable) {
-            // A page too broken to parse advertises nothing, which is an answer
-            // discovery can work with — the scrape fallback runs next.
-            return null;
-        }
     }
 
     /** @return list<FeedCandidate> */

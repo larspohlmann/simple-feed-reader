@@ -4,9 +4,18 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Html\HtmlDocumentParser;
+use Dom\Element;
+use Dom\HTMLDocument;
+use Dom\Text;
+use Dom\XPath;
+
 /**
- * Normalizes a fetched page's HTML before readability parses it. Two defects
- * of block-component sites (BBC News is the canonical case, #235) are repaired:
+ * Normalizes a fetched page's HTML before readability parses it. The document
+ * is parsed once, with the same HTML5 parser readability uses
+ * (`\Dom\HTMLDocument`), and handed on as an object — no serialize-and-re-parse
+ * round-trip. Two defects of block-component sites (BBC News is the canonical
+ * case, #235) are repaired:
  *
  *  - Screen-reader-only labels ("Image source, …") are styled invisible via
  *    CSS classes. The sanitizer strips classes later, so once extracted the
@@ -26,19 +35,19 @@ namespace App\Service\Reader;
  *    browser paints a tofu box (taz's pull-quote mark is the case, U+E80F).
  *    The dead code points are removed here, along with the now-empty element
  *    that held them.
- *  - An inline <script> whose JavaScript builds an HTML string ('<div>…</div>',
- *    a paywall or banner injector) breaks libxml's HTML parser: it ends the
- *    script at the embedded tag and spills the rest of the code into the body
- *    as text, past the reach of the sanitizer's element-level script removal.
- *    <script> and <style> blocks are stripped from the raw source first, where
- *    the real </script> still bounds them.
+ *  - <script> and <style> blocks are stripped from the raw source, bounded by
+ *    the real close tag. This keeps their text out of the extraction — the
+ *    same content readability's own script removal drops — and does it before
+ *    the parse, so a JSON-LD block never reaches readability either. It stays a
+ *    raw-source strip, not a DOM `querySelectorAll('script, style')` removal,
+ *    to keep the output byte-identical to the pipeline this migration replaced;
+ *    a <script>/<style> element is raw-text, so the regex matches the same
+ *    close-tag boundary the tokenizer would. Moving it into the DOM pass is a
+ *    reasonable follow-up.
  *
  * The wrapper collapse is a separate public method, not a step of normalize():
  * normalize() is the score-neutral pass, and callers decide whether to also
  * run collapseWrapperChains().
- *
- * Never throws: a page this step cannot process is returned unchanged, and
- * extraction proceeds exactly as it would have without normalization.
  */
 final readonly class FetchedPageNormalizer
 {
@@ -64,45 +73,50 @@ final readonly class FetchedPageNormalizer
     {
     }
 
-    public function normalize(string $html): string
+    /**
+     * The score-neutral document, ready to hand to readability, or null when the
+     * page is empty or cannot be parsed — the caller then extracts nothing.
+     */
+    public function normalize(string $html): ?HTMLDocument
     {
-        $html = $this->removeScriptAndStyleBlocks($html);
-        $document = $this->parse($html);
+        return $this->repair($html);
+    }
+
+    /**
+     * The document with single-child <div> wrapper chains collapsed (#235), or
+     * null when there is no chain to collapse — the caller then skips the second
+     * extraction. Kept separate from normalize() because the same collapse can
+     * flip a well-structured page to the wrong block (#476): ArticleExtractor
+     * extracts with and without it and keeps the richer result.
+     *
+     * Parses the raw HTML afresh rather than sharing normalize()'s document: the
+     * conservative and collapsed variants must be independent objects because
+     * readability consumes (mutates) each document it parses. A clone of the
+     * normalized document would save this parse, but the parse is a few ms
+     * against a readability pass of tens of ms, so the plain re-parse is kept.
+     */
+    public function collapseWrapperChains(string $html): ?HTMLDocument
+    {
+        $document = $this->repair($html);
+        if ($document === null || $this->unwrapSingleChildDivs($document) === 0) {
+            return null;
+        }
+
+        return $document;
+    }
+
+    private function repair(string $html): ?HTMLDocument
+    {
+        $document = HtmlDocumentParser::parseOrNull($this->removeScriptAndStyleBlocks($html));
         if ($document === null) {
-            return $html;
+            return null;
         }
 
         $this->lazyImages->resolveIn($document);
         $this->removeScreenReaderOnlyElements($document);
         $this->removeOrphanIconGlyphs($document);
 
-        $normalized = $document->saveHTML();
-
-        return $normalized === false ? $html : $normalized;
-    }
-
-    /**
-     * Collapse chains of single-child <div> wrappers so readability's score
-     * propagation reaches the real article container (#235). Kept separate from
-     * normalize() because the same collapse can flip a well-structured page to
-     * the wrong block (#476): ArticleExtractor extracts with and without it and
-     * keeps the richer result. The input is returned unchanged when there is no
-     * chain to collapse, so an unaffected page costs no second extraction.
-     */
-    public function collapseWrapperChains(string $html): string
-    {
-        $document = $this->parse($html);
-        if ($document === null) {
-            return $html;
-        }
-
-        if ($this->unwrapSingleChildDivs($document) === 0) {
-            return $html;
-        }
-
-        $collapsed = $document->saveHTML();
-
-        return $collapsed === false ? $html : $collapsed;
+        return $document;
     }
 
     private function removeScriptAndStyleBlocks(string $html): string
@@ -110,44 +124,24 @@ final readonly class FetchedPageNormalizer
         return preg_replace(self::SCRIPT_OR_STYLE_PATTERN, '', $html) ?? $html;
     }
 
-    private function parse(string $html): ?\DOMDocument
+    private function removeScreenReaderOnlyElements(HTMLDocument $document): void
     {
-        if (trim($html) === '') {
-            return null;
-        }
-
-        $document = new \DOMDocument();
-        $useInternalErrors = libxml_use_internal_errors(true);
-        try {
-            $encoded = mb_encode_numericentity($html, [0x80, 0x10FFFF, 0, ~0], 'UTF-8');
-
-            return $document->loadHTML($encoded) ? $document : null;
-        } finally {
-            libxml_clear_errors();
-            libxml_use_internal_errors($useInternalErrors);
-        }
-    }
-
-    private function removeScreenReaderOnlyElements(\DOMDocument $document): void
-    {
-        $xpath = new \DOMXPath($document);
-        foreach (iterator_to_array($xpath->query('//*[@class]') ?: []) as $element) {
+        foreach ($this->query($document, '//*[@class]') as $element) {
             if (
-                $element instanceof \DOMElement
+                $element instanceof Element
                 && $element->parentNode !== null
-                && preg_match(self::HIDDEN_CLASS_PATTERN, $element->getAttribute('class')) === 1
+                && preg_match(self::HIDDEN_CLASS_PATTERN, $element->getAttribute('class') ?? '') === 1
             ) {
                 $element->parentNode->removeChild($element);
             }
         }
     }
 
-    private function removeOrphanIconGlyphs(\DOMDocument $document): void
+    private function removeOrphanIconGlyphs(HTMLDocument $document): void
     {
-        $xpath = new \DOMXPath($document);
         $emptiedHolders = [];
-        foreach (iterator_to_array($xpath->query('//text()') ?: []) as $node) {
-            if (!$node instanceof \DOMText) {
+        foreach ($this->query($document, '//text()') as $node) {
+            if (!$node instanceof Text) {
                 continue;
             }
             $text = $node->nodeValue;
@@ -159,7 +153,7 @@ final readonly class FetchedPageNormalizer
                 continue;
             }
             $node->nodeValue = $withoutGlyphs;
-            if ($node->parentNode instanceof \DOMElement) {
+            if ($node->parentNode instanceof Element) {
                 $emptiedHolders[] = $node->parentNode;
             }
         }
@@ -173,26 +167,26 @@ final readonly class FetchedPageNormalizer
      * ancestor the removal in turn empties — a pull-quote's icon <span> and the
      * <p> that held nothing else both go.
      */
-    private function pruneWhileEmpty(\DOMElement $element): void
+    private function pruneWhileEmpty(Element $element): void
     {
         while (
             $element->parentNode !== null
-            && trim($element->textContent) === ''
+            && trim((string) $element->textContent) === ''
             && !$this->holdsEmbeddedContent($element)
         ) {
             $parent = $element->parentNode;
             $parent->removeChild($element);
-            if (!$parent instanceof \DOMElement) {
+            if (!$parent instanceof Element) {
                 return;
             }
             $element = $parent;
         }
     }
 
-    private function holdsEmbeddedContent(\DOMElement $element): bool
+    private function holdsEmbeddedContent(Element $element): bool
     {
         foreach ($element->getElementsByTagName('*') as $descendant) {
-            if (in_array($descendant->nodeName, self::EMBEDDED_TAGS, true)) {
+            if (in_array($descendant->localName, self::EMBEDDED_TAGS, true)) {
                 return true;
             }
         }
@@ -200,7 +194,7 @@ final readonly class FetchedPageNormalizer
         return false;
     }
 
-    private function unwrapSingleChildDivs(\DOMDocument $document): int
+    private function unwrapSingleChildDivs(HTMLDocument $document): int
     {
         $divs = iterator_to_array($document->getElementsByTagName('div'));
         // Reverse document order visits descendants before their ancestors, so
@@ -217,20 +211,31 @@ final readonly class FetchedPageNormalizer
         return $collapsed;
     }
 
-    private function soleDivChild(\DOMElement $div): ?\DOMElement
+    private function soleDivChild(Element $div): ?Element
     {
         $soleElement = null;
         foreach ($div->childNodes as $child) {
-            if ($child instanceof \DOMElement) {
+            if ($child instanceof Element) {
                 if ($soleElement !== null) {
                     return null;
                 }
                 $soleElement = $child;
-            } elseif ($child instanceof \DOMText && trim($child->textContent) !== '') {
+            } elseif ($child instanceof Text && trim((string) $child->textContent) !== '') {
                 return null;
             }
         }
 
-        return $soleElement instanceof \DOMElement && $soleElement->nodeName === 'div' ? $soleElement : null;
+        return $soleElement instanceof Element && $soleElement->localName === 'div' ? $soleElement : null;
+    }
+
+    /**
+     * The nodes an XPath expression selects, as an array so the tree can be
+     * mutated while the result is walked.
+     *
+     * @return list<\Dom\Node>
+     */
+    private function query(HTMLDocument $document, string $expression): array
+    {
+        return iterator_to_array((new XPath($document))->query($expression), false);
     }
 }

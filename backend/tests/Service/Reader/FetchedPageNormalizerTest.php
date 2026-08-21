@@ -24,37 +24,42 @@ final class FetchedPageNormalizerTest extends TestCase
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div class="a"><div class="b"><div class="c"><p>Text</p></div></div></div></body></html>';
 
-        $normalized = $this->normalizer->collapseWrapperChains($html);
+        $collapsed = $this->collapsed($html);
 
         // The two outer wrappers are gone; the innermost div (whose child is a
         // <p>, not a <div>) survives as the direct parent of the paragraph.
-        self::assertStringNotContainsString('class="a"', $normalized);
-        self::assertStringNotContainsString('class="b"', $normalized);
-        self::assertStringContainsString('<div class="c"><p>Text</p></div>', $normalized);
+        self::assertStringNotContainsString('class="a"', $collapsed);
+        self::assertStringNotContainsString('class="b"', $collapsed);
+        self::assertStringContainsString('<div class="c"><p>Text</p></div>', $collapsed);
     }
 
-    public function testKeepsDivWithMultipleElementChildren(): void
+    public function testCollapsesWrapperChainsIndentedWithWhitespace(): void
     {
-        // The fixture is the input under test, so it keeps its `lang`-less
-        // <html> instead of being edited to please the IDE.
+        // Real block-component markup indents its wrappers, so whitespace text
+        // sits between each <div> and its single child. That whitespace is not
+        // the wrapper's own content; without trimming it, the chain would never
+        // collapse.
         /** @noinspection HtmlRequiredLangAttribute */
-        $html = '<html><body><div class="keep"><div>one</div><div>two</div></div></body></html>';
+        $html = "<html><body><div class=\"a\">\n<div class=\"b\">\n"
+            . "<div class=\"c\">\n<p>Text</p>\n</div>\n</div>\n</div></body></html>";
 
-        $normalized = $this->normalizer->collapseWrapperChains($html);
+        $collapsed = $this->collapsed($html);
 
-        self::assertStringContainsString('class="keep"', $normalized);
+        self::assertStringNotContainsString('class="a"', $collapsed);
+        self::assertStringNotContainsString('class="b"', $collapsed);
+        self::assertStringContainsString('<p>Text</p>', $collapsed);
     }
 
     public function testKeepsDivWithOwnText(): void
     {
-        // The fixture is the input under test, so it keeps its `lang`-less
-        // <html> instead of being edited to please the IDE.
+        // The div carries its own text, so it is content and not a wrapper: no
+        // chain to collapse. (A div with several element children is covered by
+        // testCollapseReturnsNullWhenNoWrapperChains — the same "not a single-
+        // child wrapper" branch, so it is not duplicated here.)
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div class="keep">intro <div>nested</div></div></body></html>';
 
-        $normalized = $this->normalizer->collapseWrapperChains($html);
-
-        self::assertStringContainsString('class="keep"', $normalized);
+        self::assertNull($this->normalizer->collapseWrapperChains($html));
     }
 
     public function testHeadingSurvivesWrapperCollapse(): void
@@ -64,19 +69,18 @@ final class FetchedPageNormalizerTest extends TestCase
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div><div><h2 id="s1">Section</h2></div></div></body></html>';
 
-        $normalized = $this->normalizer->collapseWrapperChains($html);
-
-        self::assertStringContainsString('<h2 id="s1">Section</h2>', $normalized);
+        self::assertStringContainsString('<h2 id="s1">Section</h2>', $this->collapsed($html));
     }
 
-    public function testCollapseReturnsInputUnchangedWhenNoWrapperChains(): void
+    public function testCollapseReturnsNullWhenNoWrapperChains(): void
     {
-        // A page with no single-child <div> chain must come back byte-for-byte,
-        // so ArticleExtractor can skip the second extraction.
+        // A div with several element children is a real container, not a
+        // single-child wrapper, so there is no chain to collapse: the method
+        // returns null and ArticleExtractor skips the second extraction.
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div class="keep"><p>One</p><p>Two</p></div></body></html>';
 
-        self::assertSame($html, $this->normalizer->collapseWrapperChains($html));
+        self::assertNull($this->normalizer->collapseWrapperChains($html));
     }
 
     public function testRemovesScreenReaderOnlyElements(): void
@@ -91,7 +95,7 @@ final class FetchedPageNormalizerTest extends TestCase
             . '<p class="visible">Body</p>'
             . '</body></html>';
 
-        $normalized = $this->normalizer->normalize($html);
+        $normalized = $this->normalized($html);
 
         self::assertStringNotContainsString('Image source,', $normalized);
         self::assertStringNotContainsString('Image caption,', $normalized);
@@ -99,10 +103,10 @@ final class FetchedPageNormalizerTest extends TestCase
         self::assertStringContainsString('Body', $normalized);
     }
 
-    public function testEmptyInputIsReturnedUnchanged(): void
+    public function testEmptyInputYieldsNull(): void
     {
-        self::assertSame('', $this->normalizer->normalize(''));
-        self::assertSame('   ', $this->normalizer->normalize('   '));
+        self::assertNull($this->normalizer->normalize(''));
+        self::assertNull($this->normalizer->normalize('   '));
     }
 
     public function testUmlautsSurviveNormalization(): void
@@ -112,10 +116,10 @@ final class FetchedPageNormalizerTest extends TestCase
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div><div><p>Grüße from Köln</p></div></div></body></html>';
 
-        $normalized = $this->normalizer->normalize($html);
+        $normalized = $this->normalized($html);
 
-        // The DOM round-trip encodes non-ASCII as entities; the decoded text
-        // must be intact. html_entity_decode covers both representations.
+        // The HTML5 serializer keeps non-ASCII as UTF-8; html_entity_decode is a
+        // harmless no-op that also covers an entity-encoding serializer.
         self::assertStringContainsString('Grüße from Köln', html_entity_decode($normalized));
     }
 
@@ -134,7 +138,7 @@ final class FetchedPageNormalizerTest extends TestCase
             . "<div><p> <span>\u{E80F}</span> </p></div>"
             . '<p>Quote body</p></section></body></html>';
 
-        $normalized = $this->normalizer->normalize($html);
+        $normalized = $this->normalized($html);
 
         self::assertStringNotContainsString("\u{E80F}", $normalized);
         self::assertStringNotContainsString('<span>', $normalized);
@@ -152,7 +156,7 @@ final class FetchedPageNormalizerTest extends TestCase
         $html = "<html><body><span>\u{E80F}"
             . '<img src="https://images.example.com/a.png" alt=""></span></body></html>';
 
-        $normalized = $this->normalizer->normalize($html);
+        $normalized = $this->normalized($html);
 
         self::assertStringNotContainsString("\u{E80F}", $normalized);
         self::assertStringContainsString('images.example.com/a.png', $normalized);
@@ -164,7 +168,7 @@ final class FetchedPageNormalizerTest extends TestCase
         /** @noinspection HtmlRequiredLangAttribute */
         $html = "<html><body><p>Before\u{E80F}After</p></body></html>";
 
-        $normalized = $this->normalizer->normalize($html);
+        $normalized = $this->normalized($html);
 
         self::assertStringNotContainsString("\u{E80F}", $normalized);
         self::assertStringContainsString('BeforeAfter', html_entity_decode($normalized));
@@ -172,16 +176,16 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testStripsAnInlineScriptThatBuildsAnHtmlString(): void
     {
-        // libxml splits this script at the <div> inside the JS string and spills
-        // the tail into the body as visible text (#472 follow-up). Removed from
-        // the raw source — bounded by the real </script> — it cannot leak.
+        // The script's JavaScript builds an HTML string ('<div>…</div>', a
+        // paywall or banner injector). Removed from the raw source — bounded by
+        // the real </script> — none of it can reach the extraction.
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><p>Real body.</p>'
             . '<script>var banner = \'<div class="ad">Buy now</div>\';'
             . ' document.currentScript.insertAdjacentHTML("beforebegin", banner);</script>'
             . '</body></html>';
 
-        $normalized = $this->normalizer->normalize($html);
+        $normalized = $this->normalized($html);
 
         self::assertStringNotContainsString('currentScript', $normalized);
         self::assertStringNotContainsString('insertAdjacentHTML', $normalized);
@@ -194,7 +198,7 @@ final class FetchedPageNormalizerTest extends TestCase
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><style>.ad{color:red}</style><p>Body</p></body></html>';
 
-        $normalized = $this->normalizer->normalize($html);
+        $normalized = $this->normalized($html);
 
         self::assertStringNotContainsString('color:red', $normalized);
         self::assertStringContainsString('Body', $normalized);
@@ -208,9 +212,27 @@ final class FetchedPageNormalizerTest extends TestCase
         $html = '<html><body><figure><img src="data:image/gif;base64,R0lGOD"'
             . ' data-lazy-src="https://images.example.com/photo.jpg"></figure></body></html>';
 
-        $normalized = $this->normalizer->normalize($html);
+        $normalized = $this->normalized($html);
 
         self::assertStringContainsString('<img src="https://images.example.com/photo.jpg"', $normalized);
         self::assertStringNotContainsString('data:image', $normalized);
+    }
+
+    /** normalize() then serialize; the fixtures under test always parse. */
+    private function normalized(string $html): string
+    {
+        $document = $this->normalizer->normalize($html);
+        self::assertNotNull($document);
+
+        return $document->saveHtml();
+    }
+
+    /** collapseWrapperChains() then serialize; used only where a chain collapses. */
+    private function collapsed(string $html): string
+    {
+        $document = $this->normalizer->collapseWrapperChains($html);
+        self::assertNotNull($document);
+
+        return $document->saveHtml();
     }
 }
