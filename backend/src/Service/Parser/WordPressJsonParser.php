@@ -124,8 +124,10 @@ final readonly class WordPressJsonParser
 
     private function stringOrNull(mixed $value): ?string
     {
-        if (\is_string($value) && '' !== trim($value)) {
-            return $value;
+        if (\is_string($value)) {
+            $trimmed = trim($value);
+
+            return '' === $trimmed ? null : $trimmed;
         }
 
         return \is_int($value) ? (string) $value : null;

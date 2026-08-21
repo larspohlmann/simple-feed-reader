@@ -12,7 +12,7 @@ namespace App\Enum;
  * FeedBodyParserInterface), and a row may carry a value this deployment does
  * not know (written by a newer version, or by a strategy since removed).
  * Exhaustive enum matching would defeat that seam; these consts just make
- * sure the two known values are written once.
+ * sure the known values are written once.
  */
 final class SourceFormat
 {

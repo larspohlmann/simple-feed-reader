@@ -122,4 +122,100 @@ final class WordPressRestProbeTest extends TestCase
         self::assertStringContainsString('per_page=20', $candidate->url);
         self::assertStringContainsString('_fields=', $candidate->url);
     }
+
+    public function testAPageWithNoTitleYieldsANullTitleCandidate(): void
+    {
+        $fetcher = $this->fetcher();
+        $fetcher->willReturn(self::POSTS, $this->postsResponse('[{"id":1}]'));
+
+        // The fingerprint-fallback page has no <title> element at all.
+        $body = '<!doctype html><html><head></head>'
+            . '<body><img src="https://site.example/wp-content/uploads/x.jpg"></body></html>';
+
+        $candidate = (new WordPressRestProbe($fetcher))->offer($body, 'https://site.example/');
+
+        self::assertNotNull($candidate);
+        self::assertNull($candidate->title);
+    }
+
+    public function testTheHeadLinkRelIsMatchedCaseAndWhitespaceInsensitively(): void
+    {
+        $fetcher = $this->fetcher();
+        $fetcher->willReturn(self::POSTS, $this->postsResponse('[{"id":1}]'));
+
+        $body = '<!doctype html><html><head><title>Loud</title>'
+            . '<link rel="  HTTPS://API.W.ORG/  " href="https://site.example/wp-json/">'
+            . '</head><body>Hi</body></html>';
+
+        $candidate = (new WordPressRestProbe($fetcher))->offer($body, 'https://site.example/');
+
+        self::assertNotNull($candidate);
+        self::assertSame(self::POSTS, $candidate->url);
+    }
+
+    public function testTheHeadLinkHrefIsTrimmedBeforeResolution(): void
+    {
+        $fetcher = $this->fetcher();
+        $fetcher->willReturn(self::POSTS, $this->postsResponse('[{"id":1}]'));
+
+        $body = '<!doctype html><html><head><title>Padded</title>'
+            . '<link rel="https://api.w.org/" href="  https://site.example/wp-json/  ">'
+            . '</head><body>Hi</body></html>';
+
+        $candidate = (new WordPressRestProbe($fetcher))->offer($body, 'https://site.example/');
+
+        self::assertNotNull($candidate);
+        self::assertSame(self::POSTS, $candidate->url);
+    }
+
+    public function testAWpIncludesFingerprintDrivesTheFallback(): void
+    {
+        $fetcher = $this->fetcher();
+        $fetcher->willReturn(self::POSTS, $this->postsResponse('[{"id":1}]'));
+
+        $body = '<!doctype html><html><head><title>Fp</title></head>'
+            . '<body><script src="https://site.example/wp-includes/js/x.js"></script></body></html>';
+
+        $candidate = (new WordPressRestProbe($fetcher))->offer($body, 'https://site.example/');
+
+        self::assertNotNull($candidate);
+        self::assertSame(self::POSTS, $candidate->url);
+    }
+
+    public function testAGeneratorMetaFingerprintDrivesTheFallback(): void
+    {
+        $fetcher = $this->fetcher();
+        $fetcher->willReturn(self::POSTS, $this->postsResponse('[{"id":1}]'));
+
+        $body = '<!doctype html><html><head><title>Fp</title>'
+            . '<meta name="generator" content="WordPress 6.5"></head><body>Hi</body></html>';
+
+        $candidate = (new WordPressRestProbe($fetcher))->offer($body, 'https://site.example/');
+
+        self::assertNotNull($candidate);
+        self::assertSame(self::POSTS, $candidate->url);
+    }
+
+    public function testANonListPostsBodyYieldsNoCandidate(): void
+    {
+        $fetcher = $this->fetcher();
+        $fetcher->willReturn(self::POSTS, $this->postsResponse('{"code":"rest_no_route"}'));
+
+        self::assertNull((new WordPressRestProbe($fetcher))->offer($this->headLinkPage(), 'https://site.example/'));
+    }
+
+    public function testThePageTitleIsTrimmed(): void
+    {
+        $fetcher = $this->fetcher();
+        $fetcher->willReturn(self::POSTS, $this->postsResponse('[{"id":1}]'));
+
+        $body = '<!doctype html><html><head><title>  Padded Title  </title>'
+            . '<link rel="https://api.w.org/" href="https://site.example/wp-json/">'
+            . '</head><body>Hi</body></html>';
+
+        $candidate = (new WordPressRestProbe($fetcher))->offer($body, 'https://site.example/');
+
+        self::assertNotNull($candidate);
+        self::assertSame('Padded Title', $candidate->title);
+    }
 }

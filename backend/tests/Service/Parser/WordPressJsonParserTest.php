@@ -94,4 +94,52 @@ final class WordPressJsonParserTest extends TestCase
         $this->expectException(FeedParseException::class);
         $this->parse('   ');
     }
+
+    public function testWhitespacePaddedBodyStillParses(): void
+    {
+        // A vertical tab is not JSON-insignificant whitespace, so json_decode()
+        // alone rejects it; only the explicit trim() strips it before decoding.
+        $entry = $this->parse("\x0B" . self::POST . "\x0B")->entries[0];
+
+        self::assertSame('https://site.example/?p=101', $entry->guid);
+    }
+
+    public function testTitleEntityDecodingUsesEntQuotesAndTrimsWhitespace(): void
+    {
+        // The whitespace sits INSIDE the tag boundary, so it only surfaces once
+        // strip_tags() removes the <em> — stringOrNull()'s own trim on the raw
+        // "rendered" string cannot touch it, isolating plainTitle()'s own trim.
+        $body = '[{"id":1,"link":"https://x.example/1",'
+            . '"title":{"rendered":"<em>  Ben &#039;s pick  </em>"}}]';
+
+        self::assertSame("Ben 's pick", $this->parse($body)->entries[0]->title);
+    }
+
+    public function testAWhitespaceOnlyGuidFallsBackToId(): void
+    {
+        $body = '[{"id":42,"link":"https://x.example/42",'
+            . '"guid":{"rendered":"   "},"title":{"rendered":"T"}}]';
+
+        self::assertSame('42', $this->parse($body)->entries[0]->guid);
+    }
+
+    public function testAPostWithNeitherGuidNorIdFallsBackToLink(): void
+    {
+        $body = '[{"link":"https://x.example/only-link","title":{"rendered":"T"}}]';
+
+        self::assertSame('https://x.example/only-link', $this->parse($body)->entries[0]->guid);
+    }
+
+    public function testNonArrayItemsInTheListAreSkipped(): void
+    {
+        $body = '[{"id":1,"link":"https://x.example/1","title":{"rendered":"One"}},'
+            . '"junk",42,'
+            . '{"id":2,"link":"https://x.example/2","title":{"rendered":"Two"}}]';
+
+        $entries = $this->parse($body)->entries;
+
+        self::assertCount(2, $entries);
+        self::assertSame('1', $entries[0]->guid);
+        self::assertSame('2', $entries[1]->guid);
+    }
 }
