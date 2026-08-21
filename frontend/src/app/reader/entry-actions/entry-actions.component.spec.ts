@@ -1,7 +1,9 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { EntryActionsComponent } from './entry-actions.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import { EntryDto } from '../models';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
@@ -44,6 +46,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   >
     <app-entry-actions
       [entry]="entry"
+      [size]="size"
       (favorite)="favoriteCount = favoriteCount + 1"
       (keep)="kept = $event"
       (read)="marked = $event"
@@ -52,6 +55,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
 })
 class HostComponent {
   entry: EntryDto = entry();
+  size: 'sm' | 'md' = 'sm';
   cardOpened = false;
   favoriteCount = 0;
   kept: EntryDto | null = null;
@@ -90,6 +94,9 @@ function mount(e: EntryDto = entry()) {
 
 const buttons = (f: { nativeElement: HTMLElement }) =>
   Array.from(f.nativeElement.querySelectorAll('button'));
+
+const iconSizes = (f: ReturnType<typeof mount>) =>
+  f.debugElement.queryAll(By.directive(IconComponent)).map((d) => d.componentInstance.size());
 
 describe('EntryActionsComponent', () => {
   beforeEach(() => {
@@ -165,5 +172,20 @@ describe('EntryActionsComponent', () => {
 
     expect(f.componentInstance.favoriteCount).toBe(1);
     expect(f.componentInstance.cardOpened).toBe(false);
+  });
+
+  it('renders sm glyphs by default, so the magazine cards are unchanged', () => {
+    const f = mount();
+    expect(iconSizes(f)).toEqual(['sm', 'sm', 'sm']);
+    expect(f.nativeElement.querySelector('app-entry-actions')!.classList).not.toContain('glyph-md');
+  });
+
+  it('renders md glyphs on request, and advertises it for the tap-target math', () => {
+    const f = mount();
+    f.componentInstance.size = 'md';
+    f.detectChanges();
+
+    expect(iconSizes(f)).toEqual(['md', 'md', 'md']);
+    expect(f.nativeElement.querySelector('app-entry-actions')!.classList).toContain('glyph-md');
   });
 });

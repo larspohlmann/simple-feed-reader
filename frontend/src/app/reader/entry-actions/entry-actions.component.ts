@@ -1,6 +1,6 @@
 import { Component, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { IconComponent } from '../../shared/icon/icon.component';
+import { IconComponent, IconSize } from '../../shared/icon/icon.component';
 import { EntryDto } from '../models';
 
 /**
@@ -23,9 +23,15 @@ import { EntryDto } from '../models';
   imports: [IconComponent, TranslocoPipe],
   templateUrl: './entry-actions.component.html',
   styleUrl: './entry-actions.component.scss',
+  host: { '[class.glyph-md]': "size() === 'md'" },
 })
 export class EntryActionsComponent {
   readonly entry = input.required<EntryDto>();
+  /** Glyph size for the three icons. The standard list (`entry-row`) renders
+   *  `md`; every magazine block keeps the default `sm`. Only these two steps
+   *  are offered, because the cluster's coarse-pointer tap-target math is
+   *  defined for both (see the `glyph-md` branch in the stylesheet). */
+  readonly size = input<Extract<IconSize, 'sm' | 'md'>>('sm');
   readonly favorite = output<EntryDto>();
   readonly keep = output<EntryDto>();
   readonly read = output<EntryDto>();
