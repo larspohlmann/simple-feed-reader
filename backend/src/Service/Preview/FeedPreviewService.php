@@ -13,6 +13,7 @@ use App\Service\Fetch\FeedFetcherInterface;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
 use App\Service\Parser\ParsedEntry;
+use App\Service\Parser\WordPressJsonParser;
 use App\Service\Scraper\HtmlItemExtractor;
 use App\Service\Text\PlainText;
 
@@ -35,6 +36,7 @@ final readonly class FeedPreviewService
         private FeedParser $parser,
         private HtmlItemExtractor $extractor,
         private ScrapeFallbackPolicy $scrapeFallbackPolicy,
+        private WordPressJsonParser $wordPressJsonParser,
     ) {
     }
 
@@ -62,10 +64,12 @@ final readonly class FeedPreviewService
             // A 'scraped' preview extracts the page's article list — same
             // synthesis the refresh pipeline will run — so the dialog shows
             // what subscribing to the page actually buys. One catch covers
-            // both branches: HtmlExtractionException IS a FeedParseException.
-            $feed = $format === SourceFormat::SCRAPED
-                ? $this->extractor->extract($body, $response->finalUrl)
-                : $this->parser->parse($body);
+            // all branches: HtmlExtractionException IS a FeedParseException.
+            $feed = match ($format) {
+                SourceFormat::SCRAPED => $this->extractor->extract($body, $response->finalUrl),
+                SourceFormat::WP_JSON => $this->wordPressJsonParser->parse($body),
+                default => $this->parser->parse($body),
+            };
         } catch (FeedParseException $e) {
             // The generic wording fits a feed-document mismatch; a scraped
             // preview keeps the extractor's own message ("No article list was
