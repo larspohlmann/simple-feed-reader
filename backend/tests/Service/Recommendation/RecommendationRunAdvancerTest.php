@@ -1814,6 +1814,52 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
+     * The distillation phase's own transport failure. Unlike the batch wave
+     * -- which folds a failed call into an empty winner set and keeps going
+     * -- the distill call throws out of RecommendationProfileDistiller, and
+     * the advancer records it as one increment against the run's
+     * transport-failure ceiling, keeps the run RUNNING, and re-throws so the
+     * caller still sees the error this tick. The run is not failed until the
+     * ceiling is reached; the next tick retries the distill call from the
+     * unchanged distillation phase.
+     *
+     * distillTick is new with #493 and, unlike every other phase's transport
+     * catch, had no advancer-level regression guard of its own before this:
+     * RecommendationProfileDistillerTest only proves distill() itself throws,
+     * never that the advancer's own catch (recordTransportFailure + rethrow)
+     * actually wraps that call the same way resolveWave() and consolidateTick
+     * do.
+     */
+    #[DataProvider('transportFailureArms')]
+    public function testTransportFailureDuringDistillCallCountsTheCeilingAndKeepsRunRunning(
+        \RuntimeException $transportFailure,
+    ): void {
+        $this->seedMultiBatchFixture();
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user); // snapshot tick, no provider call yet
+        self::assertTrue($this->activeRun()->progress()->distillPending);
+
+        $this->stubChatClient()->queueFailure($transportFailure);
+
+        try {
+            $this->advancer()->advance($this->user);
+            self::fail('The distillation transport failure must propagate.');
+        } catch (ProviderUnreachableException | CredentialsRejectedException) {
+            // expected -- the caller still sees the error this tick
+        }
+
+        $this->em->clear();
+        $persisted = $this->activeRun();
+        self::assertSame(RecommendationRun::STATUS_RUNNING, $persisted->getStatus());
+        self::assertSame(1, $persisted->getTransportFailures());
+        self::assertTrue(
+            $persisted->progress()->distillPending,
+            'A failed distillation call leaves the phase to retry.',
+        );
+        self::assertSame([], $this->recommendationItems($persisted));
+    }
+
+    /**
      * The consolidation phase's own transport failure. Unlike the batch wave
      * -- which folds a failed call into an empty winner set and keeps going
      * -- the consolidation call throws out of RecommendationConsolidationResolver,
@@ -1829,7 +1875,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
      * nothing else in the suite drives a consolidation-phase provider failure
      * -- the wave tests only cover the batch phase.
      */
-    #[DataProvider('consolidationTransportFailures')]
+    #[DataProvider('transportFailureArms')]
     public function testTransportFailureDuringConsolidateCallCountsTheCeilingAndKeepsRunRunning(
         \RuntimeException $transportFailure,
     ): void {
@@ -1871,13 +1917,16 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     /**
      * Both arms of the resolver's transport failure, exactly as the batch wave
      * pair does: a rejected key never produced a reply either, so it must count
-     * against the same ceiling and not slip past the catch uncounted.
+     * against the same ceiling and not slip past the catch uncounted. Shared by
+     * the distillation and consolidation phase transport-failure tests -- both
+     * catches are the identical shape, so one data provider names both arms
+     * once rather than each test naming them again.
      *
      * @return iterable<string, array{0: \RuntimeException}>
      */
-    public static function consolidationTransportFailures(): iterable
+    public static function transportFailureArms(): iterable
     {
-        yield 'provider unreachable' => [new ProviderUnreachableException('consolidate down')];
+        yield 'provider unreachable' => [new ProviderUnreachableException('provider down')];
         yield 'credentials rejected' => [new CredentialsRejectedException('bad key')];
     }
 
