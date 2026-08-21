@@ -297,12 +297,32 @@ final class RecommendationRunControllerTest extends WebTestCase
             ->getRepository(Entry::class)
             ->findOneBy(['guid' => 'g1']);
         self::assertInstanceOf(Entry::class, $entry);
+
+        $this->stubChatClient()->queueContent(json_encode(['profile' => 'a distilled profile'], \JSON_THROW_ON_ERROR));
+
+        // The distillation tick spends the one queued profile reply, ahead of
+        // any batch call (#493).
+        $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
+        self::assertResponseIsSuccessful();
+        self::assertSame('running', $this->payload($client->getResponse())['status']);
+
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $entry->getId(), 'score' => 90, 'reason' => 'a good read']],
         ], \JSON_THROW_ON_ERROR));
 
-        // The provider tick spends the one queued reply and finalizes the
-        // single-batch run.
+        // The batch tick spends the one queued reply and checkpoints for the
+        // consolidation phase every plan reaches now, one batch or many.
+        $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
+        self::assertResponseIsSuccessful();
+        self::assertSame('running', $this->payload($client->getResponse())['status']);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $entry->getId(), 'score' => 95, 'reason' => 'a good read']],
+            'duplicates' => [],
+        ], \JSON_THROW_ON_ERROR));
+
+        // The consolidation tick spends the final queued reply and finalizes
+        // the run.
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
         self::assertResponseIsSuccessful();
         self::assertSame('completed', $this->payload($client->getResponse())['status']);
@@ -797,10 +817,22 @@ final class RecommendationRunControllerTest extends WebTestCase
             ->getRepository(Entry::class)
             ->findOneBy(['guid' => 'g1']);
         self::assertInstanceOf(Entry::class, $entry);
+
+        $this->stubChatClient()->queueContent(json_encode(['profile' => 'a distilled profile'], \JSON_THROW_ON_ERROR));
+        $client->request('POST', '/api/recommendations/runs/tick', server: $headers); // distillation tick
+        self::assertResponseIsSuccessful();
+
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $entry->getId(), 'score' => 90, 'reason' => 'a good read']],
         ], \JSON_THROW_ON_ERROR));
-        $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
+        $client->request('POST', '/api/recommendations/runs/tick', server: $headers); // batch tick
+        self::assertResponseIsSuccessful();
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $entry->getId(), 'score' => 95, 'reason' => 'a good read']],
+            'duplicates' => [],
+        ], \JSON_THROW_ON_ERROR));
+        $client->request('POST', '/api/recommendations/runs/tick', server: $headers); // consolidation tick
         self::assertResponseIsSuccessful();
         self::assertSame('completed', $this->payload($client->getResponse())['status']);
 

@@ -20,14 +20,15 @@ use Doctrine\ORM\Mapping as ORM;
  * The public surface sits over PHPMD's ten-method ceiling, which the
  * suppression below accepts: every state transition of the run is its own
  * named method (snapshot, recordBatchWinners, recordInvalidReply,
- * recordTransportFailure, complete, fail, cancel, resume), and beside them
- * stand the queries that read the checkpoint back and stampProvider(), which
- * RecommendationRunStarter calls at start and again at resume (#409). None of
- * them is a duplicate a merge could remove, and none can be renamed to match
- * the rule's get/set ignore pattern without lying about what it does. The
- * seven usage columns are already off this class as a ProviderUsage
- * embeddable, which is the fix the field-count half of this same finding was
- * pointing at.
+ * recordTransportFailure, recordProfile, complete, fail, cancel, resume), and
+ * beside them stand the queries that read the checkpoint back and
+ * stampProvider(), which RecommendationRunStarter calls at start and again at
+ * resume (#409). None of them is a duplicate a merge could remove, and none
+ * can be renamed to match the rule's get/set ignore pattern without lying
+ * about what it does. The seven usage columns are already off this class as
+ * a ProviderUsage embeddable, and profileText/distilled are a RunProfile
+ * embeddable for the same reason (#493) — both are the fix the field-count
+ * half of this same finding was pointing at.
  *
  * @SuppressWarnings("PHPMD.TooManyPublicMethods")
  */
@@ -117,6 +118,9 @@ class RecommendationRun
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $lastInvalidReply = null;
 
+    #[ORM\Embedded(class: RunProfile::class, columnPrefix: false)]
+    private RunProfile $runProfile;
+
     /**
      * Raw SSE bytes received so far by the provider call currently in
      * flight, checkpointed every ~2 s by RecordedCall via direct DBAL
@@ -137,6 +141,7 @@ class RecommendationRun
         $this->user = $user;
         $this->createdAt = $createdAt;
         $this->providerUsage = new ProviderUsage();
+        $this->runProfile = new RunProfile();
     }
 
     public function getId(): ?int
@@ -190,7 +195,12 @@ class RecommendationRun
 
     public function progress(): RecommendationRunProgress
     {
-        return RecommendationRunProgress::forBatchPlan($this->candidateBatches, $this->batchesDone, $this->attempts);
+        return RecommendationRunProgress::forBatchPlan(
+            $this->candidateBatches,
+            $this->batchesDone,
+            $this->attempts,
+            $this->isDistilled(),
+        );
     }
 
     /**
@@ -258,6 +268,31 @@ class RecommendationRun
     public function getLastInvalidReply(): ?string
     {
         return $this->lastInvalidReply;
+    }
+
+    /**
+     * Records the profile distilled for this run and freezes it: later reads
+     * of getProfileText() see exactly what this run produced, even a null
+     * from a degraded distillation, never a stale profile from a prior run.
+     */
+    public function recordProfile(?string $profileText): void
+    {
+        $this->guardStatus(self::STATUS_RUNNING, 'recordProfile');
+
+        $this->runProfile->record($profileText);
+        $this->attempts = 0;
+        $this->transportFailures = 0;
+        $this->lastInvalidReply = null;
+    }
+
+    public function getProfileText(): ?string
+    {
+        return $this->runProfile->getProfileText();
+    }
+
+    public function isDistilled(): bool
+    {
+        return $this->runProfile->isDistilled();
     }
 
     public function getAttempts(): int

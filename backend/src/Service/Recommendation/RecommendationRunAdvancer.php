@@ -40,14 +40,17 @@ use Symfony\Component\Lock\LockFactory;
  * and re-runs the whole wave next tick from the unmoved cursor. Ranking is
  * code's job, not the model's: the
  * batches score every candidate against a shared rubric, and the ranker
- * orders the pooled scores globally. Once every batch call is done, a run
- * with more than one batch enters the dedup phase: one more provider call
- * receives the score-ordered cut of the pool and names the entries that
- * duplicate a better-ranked story. That reply retries with a corrective
- * message too, but a dedup reply that stays unusable degrades instead of
- * failing — the run completes with the undeduped top list. A single-batch
- * run has nothing to dedup, so it finalizes straight from its ranked pool
- * instead. Every ending funnels through RecommendationRunFinalizer, which
+ * orders the pooled scores globally. Before any batch call, the distillation
+ * phase spends one provider call turning the reader's weighted history into a
+ * short preference profile every later phase reads instead of that history
+ * (#493); an unusable reply retries, then degrades to no profile at all
+ * rather than failing the run. Once every batch call is done, every run --
+ * one batch or many -- enters the consolidation phase: one more provider call
+ * receives the score-ordered cut of the pool and re-scores, re-reasons and
+ * dedupes it in a single pass. That reply retries with a corrective message
+ * too, but a consolidation reply that stays unusable degrades instead of
+ * failing — the run completes with the undeduped, unreasoned batch-score
+ * list. Every ending funnels through RecommendationRunFinalizer, which
  * re-checks that each winning entry still exists — the pool can be pruned
  * mid-run — and writes the survivors as RecommendationItems at dense positions
  * before marking the run completed.
@@ -55,9 +58,9 @@ use Symfony\Component\Lock\LockFactory;
  * The many constructor collaborators are deliberate: the advancer is the
  * recommendation pipeline's composition root (lock, run persistence, AI
  * configuration, settings resolution, candidate/history loading, prompt
- * packing, the batch wave, the dedup resolver and the run finalizer), and each
- * is a seam the tests swap or drive independently — see RefreshRunner for the
- * same shape.
+ * packing, the profile distiller, the batch wave, the consolidation resolver
+ * and the run finalizer), and each is a seam the tests swap or drive
+ * independently — see RefreshRunner for the same shape.
  *
  * @SuppressWarnings("PHPMD.ExcessiveParameterList")
  */
@@ -112,10 +115,10 @@ final class RecommendationRunAdvancer
         private readonly RecommendationHistoryLoader $historyLoader,
         private readonly RecommendationPromptBuilder $promptBuilder,
         private readonly EntityManagerInterface $entityManager,
-        private readonly RecommendationWinnerRanker $ranker,
         private readonly RecommendationTickCheckpoint $checkpoint,
+        private readonly RecommendationProfileDistiller $distiller,
         private readonly RecommendationBatchWave $batchWave,
-        private readonly RecommendationDedupResolver $dedupResolver,
+        private readonly RecommendationConsolidationResolver $consolidationResolver,
         private readonly RecommendationRunFinalizer $finalizer,
         private readonly TickLockKeepalive $keepalive,
     ) {
@@ -282,8 +285,12 @@ final class RecommendationRunAdvancer
             return $this->snapshotTick($run, $user);
         }
 
-        if ($run->progress()->isDedupPhase) {
-            return $this->dedupTick($run, $user, $settings);
+        if ($run->progress()->distillPending) {
+            return $this->distillTick($run, $user, $settings);
+        }
+
+        if ($run->progress()->isConsolidationPhase) {
+            return $this->consolidateTick($run, $user, $settings);
         }
 
         return $this->providerTick($run, $user, $settings, $driver);
@@ -415,10 +422,10 @@ final class RecommendationRunAdvancer
 
     /**
      * Banks every resolved batch of the wave in plan order -- so batchesDone
-     * advances by the wave size and the winner list stays batch-ordered -- then
-     * takes the plan's ending once: a single-batch run finalizes straight from
-     * its ranked pool, a multi-batch run checkpoints (its next tick runs the
-     * remaining batches, or the dedup barrier once every batch is done).
+     * advances by the wave size and the winner list stays batch-ordered --
+     * then checkpoints: its next tick either runs the remaining batches, or,
+     * once every batch is done, the consolidation phase that now follows
+     * every plan regardless of batch count (#493).
      *
      * @param list<list<array{id: int, score: int, reason: string}>> $winnersPerBatch
      */
@@ -428,34 +435,34 @@ final class RecommendationRunAdvancer
             $run->recordBatchWinners($winners);
         }
 
-        if (!$run->progress()->needsDedup) {
-            return $this->finalizer->finalize($run, $this->ranker->ranked($run->getWinners()));
-        }
-
         $this->entityManager->flush();
 
         return RecommendationRunReport::fromRun($run);
     }
 
     /**
-     * Delegates the dedup phase's single provider call to
-     * RecommendationDedupResolver and writes what it hands back. A transport
-     * failure throws out of resolve() -- exactly as the batch wave's does --
-     * and is folded into the run's own accounting here (one ceiling increment,
-     * then re-thrown), the same envelope resolveWave() gives the batch phase.
-     * An unusable reply is retried across ticks or degraded to the undeduped
-     * list; a usable one, or an all-pruned pool, finalizes.
+     * Delegates the distillation phase's single provider call to
+     * RecommendationProfileDistiller and writes what it hands back. A
+     * transport failure throws out of distill() -- exactly as the batch
+     * wave's does -- and is folded into the run's own accounting here (one
+     * ceiling increment, then re-thrown), the same envelope resolveWave()
+     * gives the batch phase. An unusable reply is retried across ticks or
+     * degraded to no profile at all -- the distillation prompt has no pool of
+     * its own to fall back to, unlike the consolidation phase's undeduped
+     * list -- and either ending records the run's profile (possibly null) and
+     * checkpoints, so the very next tick reads distillPending false and moves
+     * on to the batches.
      */
-    private function dedupTick(
+    private function distillTick(
         RecommendationRun $run,
         User $user,
         AiProviderSettings $settings,
     ): RecommendationRunReport {
         $userId = $this->requireUserId($user);
-        $picksLimit = $this->settingsResolver->forUser($user)->picksLimit;
+        $effectiveSettings = $this->settingsResolver->forUser($user);
 
         try {
-            $outcome = $this->dedupResolver->resolve($run, $settings, $userId, $picksLimit);
+            $outcome = $this->distiller->distill($run, $settings, $userId, $effectiveSettings);
         } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
             $this->recordTransportFailure($run, $settings, $e->getMessage());
 
@@ -466,7 +473,65 @@ final class RecommendationRunAdvancer
             return $this->retryOrDegrade(
                 $run,
                 $outcome->requireUnusableReply(),
-                fn (): RecommendationRunReport => $this->finalizer->finalize($run, $outcome->ranked),
+                fn (): RecommendationRunReport => $this->recordProfileAndCheckpoint($run, null),
+            );
+        }
+
+        return $this->recordProfileAndCheckpoint($run, $outcome->profileText);
+    }
+
+    /**
+     * The write both distillTick endings share: freeze the run's profile --
+     * a usable outcome's text or a degraded null -- and checkpoint, so the
+     * caller and every future tick see distillPending false.
+     */
+    private function recordProfileAndCheckpoint(RecommendationRun $run, ?string $profileText): RecommendationRunReport
+    {
+        $run->recordProfile($profileText);
+        $this->entityManager->flush();
+
+        return RecommendationRunReport::fromRun($run);
+    }
+
+    /**
+     * Delegates the consolidation phase's single provider call to
+     * RecommendationConsolidationResolver and writes what it hands back. A
+     * transport failure throws out of resolve() -- exactly as the batch
+     * wave's does -- and is folded into the run's own accounting here (one
+     * ceiling increment, then re-thrown), the same envelope resolveWave()
+     * gives the batch phase. An unusable reply is retried across ticks or
+     * degraded to the undeduped, unreasoned batch-score list; a usable one,
+     * or an all-pruned pool, finalizes. Every plan reaches this phase now,
+     * one batch or many (#493) -- there is no single-batch shortcut left.
+     */
+    private function consolidateTick(
+        RecommendationRun $run,
+        User $user,
+        AiProviderSettings $settings,
+    ): RecommendationRunReport {
+        $userId = $this->requireUserId($user);
+        $effectiveSettings = $this->settingsResolver->forUser($user);
+        $picksLimit = $effectiveSettings->picksLimit;
+
+        try {
+            $outcome = $this->consolidationResolver->resolve(
+                $run,
+                $settings,
+                $userId,
+                $picksLimit,
+                $effectiveSettings,
+            );
+        } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
+            $this->recordTransportFailure($run, $settings, $e->getMessage());
+
+            throw $e;
+        }
+
+        if (!$outcome->usable) {
+            return $this->retryOrDegrade(
+                $run,
+                $outcome->requireUnusableReply(),
+                fn (): RecommendationRunReport => $this->finalizer->finalize($run, $outcome->requireFallbackPool()),
             );
         }
 
@@ -510,12 +575,13 @@ final class RecommendationRunAdvancer
     }
 
     /**
-     * The retry envelope the dedup phase uses: record the invalid reply, and
-     * once attempts are exhausted hand off to the degraded ending -- an
-     * undeduped list -- rather than failing the run; otherwise checkpoint and
-     * wait for the corrective retry on the next tick. The batch phase no longer
-     * comes here: its retries happen in-tick within the wave, so it never
-     * writes the run's cross-tick attempt state (#344).
+     * The retry envelope the distillation and consolidation phases share:
+     * record the invalid reply, and once attempts are exhausted hand off to
+     * the degraded ending -- no profile, or an undeduped list -- rather than
+     * failing the run; otherwise checkpoint and wait for the corrective retry
+     * on the next tick. The batch phase no longer comes here: its retries
+     * happen in-tick within the wave, so it never writes the run's cross-tick
+     * attempt state (#344).
      *
      * @param callable(): RecommendationRunReport $onAttemptsExhausted
      */

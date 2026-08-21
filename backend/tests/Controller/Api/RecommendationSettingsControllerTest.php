@@ -114,6 +114,10 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         // The score range, not the picks limit: the contract shown to the
         // reader is what the model is asked to produce per candidate.
         self::assertStringContainsString('"score": <0-1000>', $payload['fixedPrompt']['outputContract']);
+        // Pins the card to the live batch prompt over the deleted
+        // rank-then-dedup one (#493 Task 13, Ruling F): the old contract's
+        // template carried a "reason" field the batch call never asks for.
+        self::assertStringNotContainsString('"reason"', $payload['fixedPrompt']['outputContract']);
         self::assertSame(40, $payload['favoritesCap']);
         self::assertSame(40, $payload['keptCap']);
         self::assertSame(80, $payload['viewedCap']);

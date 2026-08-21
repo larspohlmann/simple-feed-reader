@@ -15,12 +15,6 @@ namespace App\Service\Recommendation;
 final readonly class RecommendationWinnerRanker
 {
     /**
-     * Twice the final list size goes to the dedup call, so an entry dropped
-     * as a duplicate backfills from a line the dedup call has also checked.
-     */
-    private const int DEDUP_INPUT_FACTOR = 2;
-
-    /**
      * @param list<list<array{id: int, score: int, reason: string}>> $batchWinners
      *
      * @return list<array{id: int, score: int, reason: string}>
@@ -35,12 +29,19 @@ final readonly class RecommendationWinnerRanker
     }
 
     /**
+     * The best-ranked entries the consolidation call will re-score, reason, and
+     * dedup. How many is not a fixed multiple of the final list: it is what the
+     * connection's context window can hold (RecommendationPromptBuilder::
+     * consolidationInputSize), so a large-context model recovers more of the
+     * good candidates the noisy batch filter under-scored while a small one is
+     * not handed a call it cannot answer.
+     *
      * @param list<array{id: int, score: int, reason: string}> $ranked
      *
      * @return list<array{id: int, score: int, reason: string}>
      */
-    public function cutForDedup(array $ranked, int $picksLimit): array
+    public function cutForConsolidation(array $ranked, int $inputSize): array
     {
-        return \array_slice($ranked, 0, self::DEDUP_INPUT_FACTOR * $picksLimit);
+        return \array_slice($ranked, 0, $inputSize);
     }
 }

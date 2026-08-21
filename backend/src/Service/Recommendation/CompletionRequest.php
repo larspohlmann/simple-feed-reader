@@ -18,7 +18,7 @@ final readonly class CompletionRequest
     /**
      * @param list<array{role: string, content: string}> $messages
      * @param int                                        $maxAnswerTokens what the provider may spend answering, from
-     *                                                                    RecommendationPromptBuilder::answerTokenReserve()
+     *                                                                    RecommendationAnswerBudget::outputBoundTokens()
      * @param JsonSchema                                 $responseSchema  the structured-output shape the answer must
      *                                                                    take, sent as a json_schema response format
      */

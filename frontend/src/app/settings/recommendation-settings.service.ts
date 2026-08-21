@@ -36,6 +36,9 @@ export interface RecommendationSettingsState {
   /** Whether a background worker heartbeat is fresh; false hides the schedule's
    *  external-cron help note. */
   readonly workerAlive: boolean;
+  /** The persisted, distilled preference profile the pipeline writes; read-only
+   *  here, null until a run has generated one. */
+  readonly profileText: string | null;
 }
 
 /** The eleven writable fields of the PUT body. */

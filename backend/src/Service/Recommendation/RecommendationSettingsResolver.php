@@ -35,6 +35,7 @@ final readonly class RecommendationSettingsResolver
 
         return new EffectiveRecommendationSettings(
             guidancePrompt: $row?->values()->guidancePrompt,
+            profileText: $row?->values()->profileText,
             favoritesCap: $row?->values()->favoritesCap ?? EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
             keptCap: $row?->values()->keptCap ?? EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
             viewedCap: $row?->values()->viewedCap ?? EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,

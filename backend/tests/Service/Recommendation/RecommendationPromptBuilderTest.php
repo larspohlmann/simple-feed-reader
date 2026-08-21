@@ -11,7 +11,6 @@ use App\Service\Recommendation\RecommendationHistory;
 use App\Service\Recommendation\RecommendationPackingSettings;
 use App\Service\Recommendation\RecommendationPromptBuilder;
 use App\Service\Recommendation\RecommendationPromptText;
-use App\Service\Recommendation\RecommendationResponseSchema;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationPromptBuilderTest extends TestCase
@@ -28,50 +27,6 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertSame(120, $this->builder->descriptionLength(8192));
         self::assertSame(239, $this->builder->descriptionLength(32768));
         self::assertSame(480, $this->builder->descriptionLength(200000));
-    }
-
-    /**
-     * The reserve scales with the batch, because the batch is what the model
-     * must answer about. A flat cap cannot be right for both: the default
-     * pool packs to 45 items, but `batchCount` lets an account ask for one
-     * batch of thousands, and a constant sized for the first silently
-     * truncates the second.
-     */
-    public function testTheAnswerReserveScalesWithTheItemsBeingAnswered(): void
-    {
-        self::assertSame(3150, $this->builder->answerTokenReserve(45));
-        self::assertSame(35000, $this->builder->answerTokenReserve(500));
-    }
-
-    /**
-     * The packing estimate and the provider ceiling are different numbers.
-     *
-     * They were briefly the same one, and the packer read the ceiling's slack
-     * as a real cost: at a 13000-token window the same pool went from 12
-     * batches of 45 to 50 of 10, quadrupling the calls and the history re-sent
-     * with each of them. The reserve must stay the honest estimate.
-     */
-    public function testTheProviderCeilingIsLooserThanThePackingEstimate(): void
-    {
-        $estimate = $this->builder->answerTokenReserve(45);
-        $ceiling = $this->builder->answerBoundTokens(45, RecommendationResponseSchema::Ranking);
-
-        self::assertGreaterThan($estimate, $ceiling);
-        self::assertGreaterThanOrEqual(3017, $estimate, 'the estimate still covers the largest reply on record');
-    }
-
-    /**
-     * A dedup reply is `{"duplicates":[…]}` — bare integers, no score and no
-     * prose. Charging it the pick rate gave a reply that cannot legitimately
-     * pass a few hundred tokens a ceiling of ten thousand, which is the
-     * unbounded generation of #437 reintroduced on the dedup call.
-     */
-    public function testADedupReplyIsBoundedFarBelowARankingReply(): void
-    {
-        $dedup = $this->builder->answerBoundTokens(100, RecommendationResponseSchema::Duplicates);
-        $ranking = $this->builder->answerBoundTokens(100, RecommendationResponseSchema::Ranking);
-
-        self::assertLessThan(intdiv($ranking, 4), $dedup);
     }
 
     /**
@@ -184,45 +139,62 @@ final class RecommendationPromptBuilderTest extends TestCase
     }
 
     /**
-     * The reserve is now the whole bound on a connection that suppresses
-     * reasoning (#437), so it has to cover a real reply rather than a
-     * conservative guess at one. The largest reply this feature has produced
-     * for a full batch ran to 12068 characters — roughly 3017 tokens, or 70
-     * per item, because each pick carries a prose `reason`. At 40 tokens a
-     * pick the reserve was under half of that, which the reasoning headroom
-     * used to hide.
+     * A sanity check for the ordinary, cap-bound case: at a generous context
+     * window the batch cap (the default maximumBatchSize of 45) binds before
+     * either the old or the new token formula does, so a 200-candidate pool
+     * packs into the minimum the cap allows either way. This does not exercise
+     * the reserve/history-budget swap — see
+     * testScoreOnlyBatchesPackLargerThanReasonBearingWouldHave for that.
      */
-    public function testTheAnswerReserveCoversTheLargestReplyAFullBatchHasProduced(): void
+    public function testScoreOnlyBatchesFitTheCapBoundBatchCountAtAGenerousWindow(): void
     {
-        self::assertGreaterThanOrEqual(3017, $this->builder->answerTokenReserve(45));
+        $candidates = array_map(
+            static fn (int $id): PromptLine => self::line($id, "Candidate $id", 100),
+            range(1, 200),
+        );
+        $history = new RecommendationHistory(
+            favorites: array_map(static fn (int $id): PromptLine => self::line($id, "Favorite $id", 100), range(1, 40)),
+            kept: array_map(static fn (int $id): PromptLine => self::line($id, "Kept $id", 100), range(1, 40)),
+            viewed: array_map(static fn (int $id): PromptLine => self::line($id, "Viewed $id", 100), range(1, 80)),
+        );
+        $settings = $this->settings(32768, 50);
+
+        $batches = $this->builder->packBatches($candidates, $history, $settings);
+
+        self::assertLessThanOrEqual(5, \count($batches));
     }
 
     /**
-     * Below the floor the per-item estimate under-counts: one pick's worth of
-     * tokens does not cover a single item plus the JSON envelope around it.
+     * The batch call only ever asks for a score, not a reason, and its history
+     * budget is the not-yet-distilled profile plus FAVORITES rather than the
+     * full three-section history — both reserves are far smaller than the old
+     * reason-bearing, three-section formula. An explicit batchCount of 1 keeps
+     * the cap out of the way (ceil(200/1) = 200, same technique as
+     * testAnExplicitBatchCountStillSplitsOnTheTokenBudget), so the token
+     * budget alone decides the split here. At this window the old formula's
+     * budget goes negative — a 70-token-per-pick reserve plus the full
+     * three-section history outweighs it — so the packer falls back to
+     * MINIMUM_BATCH_SIZE-sized batches, about 20 of them for 200 candidates.
+     * The new formula's smaller score-only reserve and profile+FAVORITES-only
+     * history budget stay positive, so the same pool packs into 5 near-full
+     * batches instead (#493).
      */
-    public function testTheAnswerReserveNeverFallsBelowItsFloor(): void
+    public function testScoreOnlyBatchesPackLargerThanReasonBearingWouldHave(): void
     {
-        self::assertSame(1024, $this->builder->answerTokenReserve(1));
-        self::assertSame(1024, $this->builder->answerTokenReserve(0));
-    }
+        $candidates = array_map(
+            static fn (int $id): PromptLine => self::line($id, "Candidate $id", 100),
+            range(1, 200),
+        );
+        $history = new RecommendationHistory(
+            favorites: array_map(static fn (int $id): PromptLine => self::line($id, "Favorite $id", 100), range(1, 40)),
+            kept: array_map(static fn (int $id): PromptLine => self::line($id, "Kept $id", 100), range(1, 40)),
+            viewed: array_map(static fn (int $id): PromptLine => self::line($id, "Viewed $id", 100), range(1, 80)),
+        );
+        $settings = $this->settings(10000, 50, batchCount: 1);
 
-    /**
-     * A reasoning model bills reasoning against the same `max_tokens` as its
-     * answer, so the provider budget adds a reasoning headroom on top of the
-     * answer reserve. Without it a 45-item batch capped at 1800 tokens spent
-     * its whole budget thinking and its JSON answer was truncated.
-     */
-    public function testTheProviderOutputReserveAddsReasoningHeadroomOnTopOfTheAnswer(): void
-    {
-        self::assertSame(
-            $this->builder->answerBoundTokens(45, RecommendationResponseSchema::Ranking) + 32000,
-            $this->builder->outputTokenReserve(45, RecommendationResponseSchema::Ranking),
-        );
-        self::assertSame(
-            $this->builder->answerBoundTokens(1, RecommendationResponseSchema::Ranking) + 32000,
-            $this->builder->outputTokenReserve(1, RecommendationResponseSchema::Ranking),
-        );
+        $batches = $this->builder->packBatches($candidates, $history, $settings);
+
+        self::assertLessThanOrEqual(5, \count($batches));
     }
 
     public function testEverythingFitsInOneBatchWhenSmall(): void
@@ -272,8 +244,8 @@ final class RecommendationPromptBuilderTest extends TestCase
     {
         // A huge window and short lines mean the token budget never binds —
         // every candidate would fit in one batch on budget alone. Only the
-        // MAXIMUM_BATCH_SIZE cap can be splitting these into 45/45/10.
-        $candidateCount = 100;
+        // MAXIMUM_BATCH_SIZE cap (100) can be splitting these into 100/100/50.
+        $candidateCount = 250;
         $candidates = array_map(
             static fn (int $id): PromptLine => new PromptLine($id, "C$id", 'F', 'D', null),
             range(1, $candidateCount),
@@ -281,18 +253,17 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(1_000_000, 10));
 
-        self::assertSame([45, 45, 10], array_map('count', $batches));
+        self::assertSame([100, 100, 50], array_map('count', $batches));
 
         $ids = array_merge(...$batches);
         self::assertSame(range(1, $candidateCount), $ids);
     }
 
-    public function testPackingFiveHundredCandidatesIntoTwelveBatchesUnderNewDefaults(): void
+    public function testPackingFiveHundredCandidatesIntoFiveBatchesUnderTheDefaultCap(): void
     {
-        // With MAXIMUM_BATCH_SIZE raised to 45 in #321, the default 500-candidate
-        // pool packs into 12 batches (11 × 45 + 1 × 5) under a huge budget.
-        // The 12 packing calls plus one dedup call make 13 total provider calls —
-        // half the 26 needed under the old 40-candidate cap.
+        // With MAXIMUM_BATCH_SIZE raised to 100 in #493 (score-only batches), the
+        // default 500-candidate pool packs into 5 batches of 100 under a huge
+        // budget — under half the 12 it took at the old reason-bearing cap.
         $candidateCount = 500;
         $candidates = array_map(
             static fn (int $id): PromptLine => new PromptLine($id, "C$id", 'F', 'D', null),
@@ -301,12 +272,60 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(1_000_000, 50));
 
-        self::assertCount(12, $batches);
+        self::assertCount(5, $batches);
         $batchSizes = array_map('count', $batches);
-        self::assertSame([45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 5], $batchSizes);
+        self::assertSame([100, 100, 100, 100, 100], $batchSizes);
 
         $ids = array_merge(...$batches);
         self::assertSame(range(1, $candidateCount), $ids);
+    }
+
+    public function testConsolidationInputSizeFillsToTheCeilingOnALargeContext(): void
+    {
+        $history = new RecommendationHistory(
+            favorites: [self::line(1, 'Fav', 10)],
+            kept: [],
+            viewed: [],
+        );
+
+        // A 1M-token context easily holds 6 × picksLimit lines plus the reply,
+        // so the ceiling (CONSOLIDATION_MAX_INPUT_FACTOR × picksLimit) binds.
+        $size = $this->builder
+            ->consolidationInputSize(1_000_000, $history, 'A profile.', 50, suppressesReasoning: true);
+
+        self::assertSame(300, $size);
+    }
+
+    public function testConsolidationInputSizeFloorsOnATightContext(): void
+    {
+        $history = new RecommendationHistory(
+            favorites: [self::line(1, 'Fav', 10)],
+            kept: [],
+            viewed: [],
+        );
+
+        // At a 32k context the full 32k reasoning headroom alone overruns the
+        // window for any shortlist above the floor, so the call falls back to
+        // the floor (CONSOLIDATION_MIN_INPUT_FACTOR × picksLimit) — a small
+        // connection is never handed a consolidation call it cannot answer.
+        $size = $this->builder
+            ->consolidationInputSize(32768, $history, 'A profile.', 50, suppressesReasoning: false);
+
+        self::assertSame(100, $size);
+    }
+
+    public function testConsolidationInputSizeGrowsWithTheContextWindow(): void
+    {
+        $history = new RecommendationHistory(favorites: [self::line(1, 'Fav', 10)], kept: [], viewed: []);
+
+        $small = $this->builder
+            ->consolidationInputSize(60000, $history, 'A profile.', 50, suppressesReasoning: true);
+        $large = $this->builder
+            ->consolidationInputSize(1_000_000, $history, 'A profile.', 50, suppressesReasoning: true);
+
+        self::assertGreaterThan($small, $large);
+        self::assertGreaterThanOrEqual(100, $small);
+        self::assertLessThanOrEqual(300, $large);
     }
 
     public function testAnExplicitBatchCountReplacesTheDefaultCapUnderAHugeBudget(): void
@@ -384,11 +403,16 @@ final class RecommendationPromptBuilderTest extends TestCase
         $candidateLines = [self::line(7, 'Candidate seven', 10)];
 
         $settingsWithGuidance = $this->settings(32768, 100, 'Focus on cats.');
-        $withGuidance = $this->builder->batchMessages($history, $candidateLines, $settingsWithGuidance);
-        $withoutGuidance = $this->builder->batchMessages($history, $candidateLines, $this->settings(32768, 100));
+        $withGuidance = $this->builder->batchMessages($history, $candidateLines, $settingsWithGuidance, null);
+        $withoutGuidance = $this->builder->batchMessages(
+            $history,
+            $candidateLines,
+            $this->settings(32768, 100),
+            null,
+        );
 
         $system = $withGuidance[0]['content'];
-        self::assertStringContainsString(RecommendationPromptText::SYSTEM_ROLE, $system);
+        self::assertStringContainsString(RecommendationPromptText::BATCH_SYSTEM_ROLE, $system);
         self::assertStringContainsString('Focus on cats.', $system);
         self::assertStringContainsString('Return one object for every candidate line', $system);
 
@@ -396,7 +420,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $user = $withGuidance[1]['content'];
         self::assertStringContainsString('FAVORITES (newest first):', $user);
-        self::assertStringContainsString("KEPT (newest first):\n- none", $user);
+        self::assertStringNotContainsString('KEPT', $user);
         self::assertStringContainsString('- [7] ', $user);
     }
 
@@ -412,34 +436,13 @@ final class RecommendationPromptBuilderTest extends TestCase
             $this->emptyHistory(),
             [self::line(7, 'Candidate seven', 10)],
             $this->settings(32768, 100),
+            null,
         )[0]['content'];
 
         self::assertStringContainsString('from 0 to 1000', $system);
         self::assertStringContainsString('Do not round to multiples of ten', $system);
         self::assertStringContainsString('"score": <0-1000>', $system);
         self::assertStringNotContainsString('0 to 100 ', $system);
-    }
-
-    /**
-     * A single viewed post became "a fascination for sports events" and scored
-     * 920, and 13 of that run's 50 picks came out as sports. The prompt held
-     * VIEWED down with an ordering and no number behind it, which a small model
-     * drops as soon as the topical match is good. The ceiling is a number now,
-     * inside the band the rubric already reserves for a weak link (#440).
-     */
-    public function testAViewedOnlyMatchIsGivenANumericCeiling(): void
-    {
-        $system = $this->builder->batchMessages(
-            $this->emptyHistory(),
-            [self::line(7, 'Candidate seven', 10)],
-            $this->settings(32768, 100),
-        )[0]['content'];
-
-        self::assertStringContainsString(
-            "A candidate whose only support in the reader's history is a VIEWED post scores below 400",
-            $system,
-        );
-        self::assertStringContainsString('opening a post is not liking it', $system);
     }
 
     /**
@@ -456,6 +459,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             $this->emptyHistory(),
             [self::line(7, 'Candidate seven', 10)],
             $this->settings(32768, 100),
+            null,
         )[0]['content'];
 
         self::assertStringContainsString('never leave a candidate out', $system);
@@ -478,6 +482,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             $this->emptyHistory(),
             $candidateLines,
             $this->settings(32768, 100),
+            null,
         )[1]['content'];
 
         self::assertStringContainsString('CANDIDATES (17 posts — return 17 objects, one per line):', $user);
@@ -492,6 +497,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             $this->emptyHistory(),
             $candidateLines,
             $this->settings(32768, 100),
+            null,
             $summary,
         );
 
@@ -511,9 +517,65 @@ final class RecommendationPromptBuilderTest extends TestCase
             $this->emptyHistory(),
             [self::line(7, 'Candidate seven', 10)],
             $this->settings(32768, 100),
+            null,
         );
 
         self::assertStringNotContainsString('The full candidate set has', $messages[1]['content']);
+    }
+
+    /**
+     * The batch call sees a not-yet-distilled PROFILE plus FAVORITES only —
+     * KEPT and VIEWED stay in the history the distillation phase reads, but
+     * never reach the batch prompt itself (#493). The reply is score-only:
+     * the contract asks for "score" and not "reason".
+     */
+    public function testBatchMessagesCarryProfileAndFavouritesOnly(): void
+    {
+        $history = new RecommendationHistory(
+            favorites: [self::line(1, 'Fav one', 10), self::line(2, 'Fav two', 10), self::line(3, 'Fav three', 10)],
+            kept: [self::line(4, 'Kept one', 10), self::line(5, 'Kept two', 10), self::line(6, 'Kept three', 10)],
+            viewed: [
+                self::line(7, 'Viewed one', 10),
+                self::line(8, 'Viewed two', 10),
+                self::line(9, 'Viewed three', 10),
+            ],
+        );
+        $candidateLines = [self::line(10, 'Candidate A', 10), self::line(11, 'Candidate B', 10)];
+
+        $messages = $this->builder->batchMessages(
+            $history,
+            $candidateLines,
+            $this->settings(32768, 100),
+            'Likes homelab and Rust.',
+        );
+
+        $user = $messages[1]['content'];
+        self::assertStringContainsString('PROFILE', $user);
+        self::assertStringContainsString('Likes homelab and Rust.', $user);
+        self::assertStringContainsString('FAVORITES', $user);
+        self::assertStringNotContainsString('KEPT', $user);
+        self::assertStringNotContainsString('VIEWED', $user);
+        self::assertStringContainsString('"score"', $messages[0]['content']);
+        self::assertStringNotContainsString('"reason"', $messages[0]['content']);
+    }
+
+    public function testBatchMessagesOmitProfileBlockWhenProfileIsNull(): void
+    {
+        $history = new RecommendationHistory(
+            favorites: [self::line(1, 'Fav one', 10), self::line(2, 'Fav two', 10)],
+            kept: [],
+            viewed: [],
+        );
+
+        $messages = $this->builder->batchMessages(
+            $history,
+            [self::line(3, 'Candidate', 10)],
+            $this->settings(32768, 100),
+            null,
+        );
+
+        self::assertStringNotContainsString('PROFILE', $messages[1]['content']);
+        self::assertStringContainsString('FAVORITES', $messages[1]['content']);
     }
 
     public function testCorrectiveTailEchoesTheInvalidReply(): void
@@ -529,16 +591,16 @@ final class RecommendationPromptBuilderTest extends TestCase
         );
     }
 
-    /** The caller names the correction, so the dedup phase can ask for its own thing back (#396). */
+    /** The caller names the correction, so the consolidation phase can ask for its own thing back (#396). */
     public function testTheCorrectionIsTheOnePassedIn(): void
     {
         $messages = $this->builder->messagesWithCorrectiveTail(
             [['role' => 'system', 'content' => 'role']],
             '{"duplicates": [1]}',
-            RecommendationPromptText::DEDUP_CORRECTIVE,
+            RecommendationPromptText::CONSOLIDATION_CORRECTIVE,
         );
 
-        self::assertSame(RecommendationPromptText::DEDUP_CORRECTIVE, $messages[2]['content']);
+        self::assertSame(RecommendationPromptText::CONSOLIDATION_CORRECTIVE, $messages[2]['content']);
     }
 
     public function testNoCorrectiveTailIsAppendedWithoutAnInvalidReply(): void
@@ -546,7 +608,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         $messages = $this->builder->messagesWithCorrectiveTail(
             [['role' => 'system', 'content' => 'role']],
             null,
-            RecommendationPromptText::DEDUP_CORRECTIVE,
+            RecommendationPromptText::CONSOLIDATION_CORRECTIVE,
         );
 
         self::assertCount(1, $messages);
@@ -565,8 +627,8 @@ final class RecommendationPromptBuilderTest extends TestCase
     {
         $history = new RecommendationHistory(
             favorites: [new PromptLine(null, 'Fav Title', 'Feed A', '2026-01-01', 'fav desc')],
-            kept: [],
-            viewed: [new PromptLine(null, 'View Title', 'Feed B', '2026-01-02', null)],
+            kept: [new PromptLine(null, 'Kept Title', 'Feed B', '2026-01-02', null)],
+            viewed: [new PromptLine(null, 'View Title', 'Feed C', '2026-01-02', null)],
         );
         $candidateLines = [
             new PromptLine(5, 'Cand Title', 'Feed C', '2026-01-03', 'cand desc'),
@@ -574,17 +636,16 @@ final class RecommendationPromptBuilderTest extends TestCase
         ];
         $settings = $this->settings(32768, 3);
 
-        $messages = $this->builder->batchMessages($history, $candidateLines, $settings);
+        $messages = $this->builder->batchMessages($history, $candidateLines, $settings, 'Likes homelab.');
 
         $expectedSystem = implode("\n\n", [
-            RecommendationPromptText::SYSTEM_ROLE,
+            RecommendationPromptText::BATCH_SYSTEM_ROLE,
             RecommendationPromptText::DEFAULT_GUIDANCE,
-            RecommendationPromptText::OUTPUT_CONTRACT,
+            RecommendationPromptText::BATCH_OUTPUT_CONTRACT,
         ]);
         $expectedUser = implode("\n\n", [
+            "PROFILE:\nLikes homelab.",
             "FAVORITES (newest first):\n- Fav Title — Feed A — 2026-01-01 — fav desc",
-            "KEPT (newest first):\n- none",
-            "VIEWED (newest first):\n- View Title — Feed B — 2026-01-02",
             "CANDIDATES (2 posts — return 2 objects, one per line):\n"
                 . "- [5] Cand Title — Feed C — 2026-01-03 — cand desc\n"
                 . '- [0] No Id — Feed D — 2026-01-04',
@@ -609,7 +670,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         $messages = $this->builder->batchMessages($this->emptyHistory(), [
             new PromptLine(1, 'Boundary120', 'F', 'D', $exactly120),
             new PromptLine(2, 'Boundary121', 'F', 'D', $exactly121),
-        ], $this->settings(8192, 10));
+        ], $this->settings(8192, 10), null);
 
         $user = $messages[1]['content'];
         self::assertStringContainsString("- [1] Boundary120 — F — D — {$exactly120}\n", $user);
@@ -631,6 +692,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             $this->emptyHistory(),
             [new PromptLine(9, 'Varying', 'F', 'D', $description)],
             $this->settings(8192, 10),
+            null,
         );
 
         self::assertStringContainsString("- [9] Varying — F — D — {$expectedTruncated}", $messages[1]['content']);
@@ -686,103 +748,227 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertSame([range(100, 109), range(110, 119)], $batches);
     }
 
-    public function testDedupMessagesReturnsTheExactRoleContentStructureWithoutGuidance(): void
+    /**
+     * An empty FAVORITES section is too small to make the sign of
+     * ESTIMATED_PROFILE_TOKENS + tokens($favoritesSection) matter --
+     * testPackingBudgetIsSensitiveToEveryTermInItsFormula's near-zero history
+     * leaves a `+` and a `-` indistinguishable there. A real, sizeable
+     * FAVORITES section makes the two diverge by thousands of tokens: a `-`
+     * would inflate the budget instead of spending it, fitting every
+     * candidate in one batch instead of two.
+     */
+    public function testHistoryTokensAreAddedToTheBudgetNotSubtracted(): void
     {
-        $rankedPool = [
-            ['id' => 2, 'score' => 90, 'reason' => 'Strong match'],
-            ['id' => 1, 'score' => 40, 'reason' => 'Loose match'],
-        ];
-        $linesById = [
-            1 => new PromptLine(1, 'Title One', 'Feed A', '2026-01-05', 'One opens like this'),
-            2 => new PromptLine(2, 'Title Two', 'Feed B', '2026-01-06', null),
-        ];
+        $favorites = array_map(
+            static fn (int $id): PromptLine => new PromptLine(
+                $id,
+                "Fav $id",
+                'Feed',
+                '2026-01-01',
+                str_repeat('x', 200),
+            ),
+            range(1, 30),
+        );
+        $history = new RecommendationHistory(favorites: $favorites, kept: [], viewed: []);
+        $candidates = array_map(
+            static fn (int $id): PromptLine => new PromptLine($id, 'T', 'F', 'D', null),
+            range(100, 119),
+        );
 
-        $messages = $this->builder->dedupMessages($rankedPool, $linesById);
+        $batches = $this->builder->packBatches($candidates, $history, $this->settings(4000, 1));
+
+        self::assertSame([range(100, 109), range(110, 119)], $batches);
+    }
+
+    /**
+     * With the default 45-candidate cap, responseReserve's `intdiv(..., 100)`
+     * is pinned at the MINIMUM_ANSWER_TOKENS floor regardless of the exact
+     * divisor, masking an off-by-one there. A larger cap (200, via
+     * maximumBatchSize) pushes the raw quotient well above the floor, so a
+     * 100 -> 101 or 100 -> 99 divisor shifts responseReserve enough to move
+     * the batch boundary at this window.
+     */
+    public function testResponseReserveDivisorIsExactlyOneHundred(): void
+    {
+        $candidates = array_map(
+            static fn (int $id): PromptLine => new PromptLine($id, 'T', 'F', 'D', null),
+            range(100, 199),
+        );
+
+        $batches = $this->builder->packBatches(
+            $candidates,
+            $this->emptyHistory(),
+            $this->settings(6850, 1, maximumBatchSize: 200),
+        );
+
+        self::assertSame([23, 23, 23, 23, 8], array_map('count', $batches));
+    }
+
+    /**
+     * The distillation call is the one place the model sees the full,
+     * three-section history: the batch and consolidation calls only ever see
+     * the not-yet-distilled PROFILE plus FAVORITES (#493).
+     */
+    public function testDistillMessagesCarryAllThreeHistorySections(): void
+    {
+        $history = new RecommendationHistory(
+            favorites: [self::line(1, 'Fav one', 10), self::line(2, 'Fav two', 10)],
+            kept: [self::line(3, 'Kept one', 10), self::line(4, 'Kept two', 10)],
+            viewed: [self::line(5, 'Viewed one', 10), self::line(6, 'Viewed two', 10)],
+        );
+
+        $messages = $this->builder->distillMessages($history, $this->settings(32768, 100));
+
+        self::assertStringContainsString('FAVORITES', $messages[1]['content']);
+        self::assertStringContainsString('KEPT', $messages[1]['content']);
+        self::assertStringContainsString('VIEWED', $messages[1]['content']);
+        self::assertStringContainsString('"profile"', $messages[0]['content']);
+    }
+
+    public function testDistillMessagesReturnsTheExactRoleContentStructure(): void
+    {
+        $history = new RecommendationHistory(
+            favorites: [self::line(1, 'Fav one', 10)],
+            kept: [self::line(2, 'Kept one', 10)],
+            viewed: [self::line(3, 'Viewed one', 10)],
+        );
+
+        $messages = $this->builder->distillMessages($history, $this->settings(32768, 100));
+
+        $expectedSystem = RecommendationPromptText::DISTILL_ROLE
+            . "\n\n" . RecommendationPromptText::DISTILL_OUTPUT_CONTRACT;
+        $expectedUser = implode("\n\n", [
+            "FAVORITES (newest first):\n- Fav one — Example Feed — 2026-08-01 — " . str_repeat('x', 10),
+            "KEPT (newest first):\n- Kept one — Example Feed — 2026-08-01 — " . str_repeat('x', 10),
+            "VIEWED (newest first):\n- Viewed one — Example Feed — 2026-08-01 — " . str_repeat('x', 10),
+        ]);
 
         self::assertSame(
             [
-                [
-                    'role' => 'system',
-                    'content' => RecommendationPromptText::DEDUP_ROLE
-                        . "\n\n" . RecommendationPromptText::DEDUP_OUTPUT_CONTRACT,
-                ],
-                [
-                    'role' => 'user',
-                    'content' => 'This list holds 2 entries. Most lists hold few duplicates and many hold none, '
-                        . 'so expect to name none or a handful. Never name more than 1 of them: a reply naming '
-                        . 'more is discarded whole, and the reader is then shown the list with its real '
-                        . "duplicates still in it.\n\n"
-                        . "RANKED (best first):\n"
-                        . "- [2] Title Two — 2026-01-06\n"
-                        . '- [1] Title One — 2026-01-05 — One opens like this',
-                ],
+                ['role' => 'system', 'content' => $expectedSystem],
+                ['role' => 'user', 'content' => $expectedUser],
             ],
             $messages,
         );
     }
 
     /**
-     * The ceiling the prompt names is the one the parser enforces, and it
-     * counts the lines the model actually sees -- a pool entry whose line has
-     * gone missing is not in the list and must not raise the number (#396).
+     * The consolidation call sees the same profile+FAVORITES fidelity as the
+     * batch call, not the full history — KEPT and VIEWED never reach it — plus
+     * the ranked shortlist rendered candidate-style so each line carries its id
+     * (#493, Q6 correction).
      */
-    public function testTheDedupFrameNamesTheCeilingTheParserEnforces(): void
+    public function testConsolidationMessagesCarryProfileFavouritesAndShortlist(): void
     {
-        $rankedPool = array_map(
-            static fn (int $id): array => ['id' => $id, 'score' => 50, 'reason' => 'match'],
-            range(1, 21),
+        $pool = [['id' => 5, 'score' => 900, 'reason' => '']];
+        $lines = [5 => self::line(5, 'Rust 2.0 released', 10)];
+        $history = new RecommendationHistory(
+            favorites: [self::line(1, 'Fav one', 10)],
+            kept: [self::line(2, 'Kept one', 10)],
+            viewed: [self::line(3, 'Viewed one', 10)],
         );
-        $linesById = [];
-        foreach (range(1, 20) as $id) {
-            $linesById[$id] = new PromptLine($id, 'Title ' . $id, 'Feed', '2026-01-05', null);
-        }
 
-        $user = $this->builder->dedupMessages($rankedPool, $linesById)[1]['content'];
+        $messages = $this->builder->consolidationMessages(
+            $pool,
+            $lines,
+            $history,
+            $this->settings(32768, 100),
+            'Likes Rust.',
+        );
 
-        self::assertStringContainsString('This list holds 20 entries.', $user);
-        self::assertStringContainsString('Never name more than 10 of them', $user);
+        // Anchored to "PROFILE:\n" + the text, not merely both present, so a
+        // mutant that reverses the concatenation order still fails this.
+        self::assertStringContainsString("PROFILE:\nLikes Rust.", $messages[1]['content']);
+        self::assertStringContainsString('FAVORITES', $messages[1]['content']);
+        self::assertStringNotContainsString('KEPT', $messages[1]['content']);
+        self::assertStringNotContainsString('VIEWED', $messages[1]['content']);
+        self::assertStringContainsString('[5]', $messages[1]['content']);
+        self::assertStringContainsString('Rust 2.0 released', $messages[1]['content']);
+        self::assertStringContainsString('duplicates', $messages[0]['content']);
+        // CONSOLIDATION_ROLE also mentions "duplicates" on its own, so this
+        // pins the OUTPUT_CONTRACT half specifically — a mutant that drops it
+        // from the concatenation must not pass on the ROLE text alone.
+        self::assertStringContainsString('Reply with JSON only, no prose', $messages[0]['content']);
+        // The 0-1000 calibration must survive: the local model scores on a
+        // 0-100 scale without the explicit bands + three-digit anchor + the
+        // anti-0-100 guard, which stored every reason at a tenth of its value.
+        self::assertStringContainsString('900-1000', $messages[0]['content']);
+        self::assertStringContainsString('do not score on a 0-100 scale', $messages[0]['content']);
+        self::assertStringContainsString('Score every candidate line, never leave one out', $messages[0]['content']);
+    }
+
+    public function testConsolidationMessagesReturnsTheExactRoleContentStructure(): void
+    {
+        $pool = [['id' => 5, 'score' => 900, 'reason' => '']];
+        $lines = [5 => self::line(5, 'Rust 2.0 released', 10)];
+        $history = new RecommendationHistory(
+            favorites: [self::line(1, 'Fav one', 10)],
+            kept: [self::line(2, 'Kept one', 10)],
+            viewed: [self::line(3, 'Viewed one', 10)],
+        );
+
+        $messages = $this->builder->consolidationMessages(
+            $pool,
+            $lines,
+            $history,
+            $this->settings(32768, 100),
+            'Likes Rust.',
+        );
+
+        $expectedSystem = RecommendationPromptText::CONSOLIDATION_ROLE
+            . "\n\n" . RecommendationPromptText::CONSOLIDATION_OUTPUT_CONTRACT;
+        $expectedUser = implode("\n\n", [
+            "PROFILE:\nLikes Rust.",
+            "FAVORITES (newest first):\n- Fav one — Example Feed — 2026-08-01 — " . str_repeat('x', 10),
+            "CANDIDATES (1 posts — return 1 objects, one per line):\n"
+                . '- [5] Rust 2.0 released — Example Feed — 2026-08-01 — ' . str_repeat('x', 10),
+        ]);
+
+        self::assertSame(
+            [
+                ['role' => 'system', 'content' => $expectedSystem],
+                ['role' => 'user', 'content' => $expectedUser],
+            ],
+            $messages,
+        );
     }
 
     /**
-     * The dedup call renders every line into one prompt, so a per-line
-     * description budget multiplies straight into it. 250 characters is
-     * enough to tell one event from another and is fixed rather than scaled
-     * to the context window (#406).
+     * A pool entry whose line has since been pruned (id absent from
+     * $linesById) must be dropped from the rendered shortlist, not carried
+     * through as a null — candidateLine() is typed to PromptLine and would
+     * fatal on one.
      */
-    public function testDedupLinesCarryTheDescriptionCutToAFixedLength(): void
+    public function testConsolidationMessagesDropsAPrunedPoolEntryFromTheShortlist(): void
     {
-        $description = str_repeat('x', 400);
-        $messages = $this->builder->dedupMessages(
-            [['id' => 1, 'score' => 90, 'reason' => 'unused here']],
-            [1 => new PromptLine(1, 'Title One', 'Feed A', '2026-01-05', $description)],
+        $pool = [
+            ['id' => 5, 'score' => 900, 'reason' => ''],
+            ['id' => 6, 'score' => 500, 'reason' => ''],
+        ];
+        $lines = [5 => self::line(5, 'Rust 2.0 released', 10)]; // 6 pruned since its batch ran
+
+        $messages = $this->builder->consolidationMessages(
+            $pool,
+            $lines,
+            $this->emptyHistory(),
+            $this->settings(32768, 100),
+            null,
         );
 
-        $user = $messages[1]['content'];
-        self::assertStringContainsString('- [1] Title One — 2026-01-05 — ' . str_repeat('x', 250) . '…', $user);
-        self::assertStringNotContainsString('unused here', $user);
-        self::assertStringNotContainsString('Feed A', $user);
+        self::assertStringContainsString(
+            'CANDIDATES (1 posts — return 1 objects, one per line):',
+            $messages[1]['content'],
+        );
+        self::assertStringContainsString('[5]', $messages[1]['content']);
+        self::assertStringNotContainsString('[6]', $messages[1]['content']);
     }
 
-    public function testDedupMessagesSkipsAPoolEntryWhoseLineIsMissing(): void
-    {
-        $rankedPool = [
-            ['id' => 1, 'score' => 90, 'reason' => 'Present'],
-            ['id' => 2, 'score' => 80, 'reason' => 'Pruned'],
-        ];
-        $linesById = [1 => new PromptLine(1, 'Title One', 'Feed A', '2026-01-05', null)];
-
-        $messages = $this->builder->dedupMessages($rankedPool, $linesById);
-
-        self::assertStringContainsString('- [1] ', $messages[1]['content']);
-        self::assertStringNotContainsString('- [2] ', $messages[1]['content']);
-    }
-
-    public function testDedupMessagesRejectsAnEmptyPool(): void
+    public function testConsolidationMessagesRejectsAnEmptyPool(): void
     {
         $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage('The dedup phase requires at least one ranked winner.');
+        $this->expectExceptionMessage('The consolidation phase requires at least one ranked winner.');
 
-        $this->builder->dedupMessages([], []);
+        $this->builder->consolidationMessages([], [], $this->emptyHistory(), $this->settings(32768, 100), null);
     }
 
     private static function line(int $id, string $title, int $descriptionChars): PromptLine

@@ -127,6 +127,15 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
           (input)="batchCount.set(nullableNumberValue($event))"
         />
       </app-field>
+
+      @if (state.profileText; as profile) {
+        <div class="expert-row" data-testid="recommendation-profile">
+          <span class="expert-label">{{
+            'settings.ai.recommendations.profileLabel' | transloco
+          }}</span>
+          <p class="expert-profile-text">{{ profile }}</p>
+        </div>
+      }
     </div>
 
     <app-field

@@ -25,7 +25,8 @@ use Doctrine\ORM\Mapping as ORM;
 class RecommendationRunLog
 {
     public const string PHASE_BATCH = 'batch';
-    public const string PHASE_DEDUP = 'dedup';
+    public const string PHASE_DISTILL = 'distill';
+    public const string PHASE_CONSOLIDATE = 'consolidate';
 
     public const string VERDICT_USABLE = 'usable';
     public const string VERDICT_UNUSABLE = 'unusable';

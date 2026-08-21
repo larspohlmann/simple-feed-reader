@@ -14,22 +14,22 @@ namespace App\Service\Recommendation;
  * well-formed, and answered in one go -- and the run completed with four
  * recommendations and no error (#396).
  *
- * The rule lives here rather than in either of its two users because both
- * must say the same number: the prompt tells the model the bound, and the
- * parser holds the model to it. A bound the model is never told is a trap,
- * and two numbers that drift apart are worse than none.
+ * The rule lives in its own class, named, rather than as a bare comparison
+ * inside the consolidation parser: it is one decision -- how much of a pool is
+ * plausibly duplicate -- and giving it a name keeps the parser reading as
+ * what it does, not how the bound is computed.
  */
 final readonly class PlausibleDuplicateShare
 {
     private const int PERCENT = 50;
 
-    public static function maximumFor(int $shownCount): int
-    {
-        return intdiv($shownCount * self::PERCENT, 100);
-    }
-
     public static function exceededBy(int $namedCount, int $shownCount): bool
     {
         return $namedCount > self::maximumFor($shownCount);
+    }
+
+    private static function maximumFor(int $shownCount): int
+    {
+        return intdiv($shownCount * self::PERCENT, 100);
     }
 }

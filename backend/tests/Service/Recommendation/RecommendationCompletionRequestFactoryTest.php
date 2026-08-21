@@ -7,60 +7,74 @@ namespace App\Tests\Service\Recommendation;
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Service\Ai\Crypto\SealedApiKey;
+use App\Service\Recommendation\RecommendationAnswerBudget;
 use App\Service\Recommendation\RecommendationCompletionRequestFactory;
-use App\Service\Recommendation\RecommendationPromptBuilder;
 use App\Service\Recommendation\RecommendationResponseSchema;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationCompletionRequestFactoryTest extends TestCase
 {
     private RecommendationCompletionRequestFactory $factory;
-    private RecommendationPromptBuilder $promptBuilder;
 
     protected function setUp(): void
     {
-        $this->promptBuilder = new RecommendationPromptBuilder();
-        $this->factory = new RecommendationCompletionRequestFactory($this->promptBuilder);
+        $this->factory = new RecommendationCompletionRequestFactory();
     }
 
     /**
-     * The reasoning headroom is what a thinking phase spends before the answer
-     * begins. A connection that suppresses reasoning has no thinking phase, so
-     * paying for one only licenses a looping model to generate for an hour
-     * before `max_tokens` stops it (#437).
+     * A suppressed connection still keeps the reasoning headroom in max_tokens.
+     * suppressReasoning sends `reasoning: {effort: none}` as a hint, but a local
+     * reasoning model routinely thinks anyway; with no headroom its answer was
+     * guillotined at finish_reason: length once batches grew past ~45 items
+     * (#493 follow-up). The headroom is a ceiling, not a reservation: a model
+     * that honours the hint stops early and pays nothing for the unused room.
      */
-    public function testAConnectionThatSuppressesReasoningPaysNoReasoningHeadroom(): void
+    public function testASuppressedConnectionKeepsAReducedReasoningHeadroom(): void
     {
         $request = $this->factory->create(
             $this->settings(suppressReasoning: true),
             [['role' => 'user', 'content' => 'rank these']],
             45,
-            RecommendationResponseSchema::Ranking,
+            RecommendationResponseSchema::Consolidation,
         );
 
         self::assertSame(
-            $this->promptBuilder->answerBoundTokens(45, RecommendationResponseSchema::Ranking),
+            RecommendationAnswerBudget::outputBoundTokens(
+                45,
+                RecommendationResponseSchema::Consolidation,
+                suppressesReasoning: true,
+            ),
             $request->maxAnswerTokens,
         );
     }
 
     /**
-     * The other half of the same decision: a connection that may reason still
-     * needs room to think before it answers, or its answer is truncated
-     * (#327).
+     * The other half: a connection that may reason gets the full headroom, so
+     * the suppress hint is a real, meaningful reduction of the budget (#327,
+     * #493) — the suppressed bound is strictly smaller.
      */
-    public function testAConnectionThatMayReasonKeepsItsReasoningHeadroom(): void
+    public function testAConnectionThatMayReasonKeepsTheFullReasoningHeadroom(): void
     {
         $request = $this->factory->create(
             $this->settings(suppressReasoning: false),
             [['role' => 'user', 'content' => 'rank these']],
             45,
-            RecommendationResponseSchema::Ranking,
+            RecommendationResponseSchema::Consolidation,
         );
 
-        self::assertSame(
-            $this->promptBuilder->outputTokenReserve(45, RecommendationResponseSchema::Ranking),
-            $request->maxAnswerTokens,
+        $full = RecommendationAnswerBudget::outputBoundTokens(
+            45,
+            RecommendationResponseSchema::Consolidation,
+            suppressesReasoning: false,
+        );
+        self::assertSame($full, $request->maxAnswerTokens);
+        self::assertGreaterThan(
+            RecommendationAnswerBudget::outputBoundTokens(
+                45,
+                RecommendationResponseSchema::Consolidation,
+                suppressesReasoning: true,
+            ),
+            $full,
         );
     }
 

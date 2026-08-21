@@ -61,22 +61,22 @@ final class RecommendationWinnerRankerTest extends TestCase
         self::assertSame([], $this->ranker->ranked([[], []]));
     }
 
-    public function testCutForDedupKeepsTwiceThePicksLimit(): void
+    public function testCutForConsolidationKeepsTheBestNEntries(): void
     {
         $ranked = [];
-        for ($id = 1; $id <= 10; ++$id) {
+        for ($id = 1; $id <= 20; ++$id) {
             $ranked[] = ['id' => $id, 'score' => 100 - $id, 'reason' => 'r'];
         }
 
-        $cut = $this->ranker->cutForDedup($ranked, 3);
+        $cut = $this->ranker->cutForConsolidation($ranked, 6);
 
         self::assertSame([1, 2, 3, 4, 5, 6], array_column($cut, 'id'));
     }
 
-    public function testCutForDedupLeavesAShortPoolUntouched(): void
+    public function testCutForConsolidationLeavesAShortPoolUntouched(): void
     {
         $ranked = [['id' => 1, 'score' => 5, 'reason' => 'r']];
 
-        self::assertSame($ranked, $this->ranker->cutForDedup($ranked, 100));
+        self::assertSame($ranked, $this->ranker->cutForConsolidation($ranked, 100));
     }
 }

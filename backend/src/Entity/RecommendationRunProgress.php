@@ -19,8 +19,8 @@ final readonly class RecommendationRunProgress
     public function __construct(
         public int $batchesDone,
         public ?int $batchesTotal,
-        public bool $needsDedup,
-        public bool $isDedupPhase,
+        public bool $distillPending,
+        public bool $isConsolidationPhase,
         public bool $allBatchCallsDone,
         public int $nextBatchIndex,
         public bool $attemptsExhausted,
@@ -31,35 +31,26 @@ final readonly class RecommendationRunProgress
      * @param list<list<int>>|null $candidateBatches null while the run is
      *     still pending, i.e. before {@see RecommendationRun::snapshot()}
      * @param int                  $attempts         unusable replies for the call now in progress
+     * @param bool                 $distilled        whether {@see RecommendationRun::recordProfile()} has run
      */
-    public static function forBatchPlan(?array $candidateBatches, int $batchesDone, int $attempts): self
-    {
+    public static function forBatchPlan(
+        ?array $candidateBatches,
+        int $batchesDone,
+        int $attempts,
+        bool $distilled,
+    ): self {
         $batchCount = $candidateBatches === null ? 0 : count($candidateBatches);
-        $needsDedup = $batchCount > 1;
+        $hasPlan = $candidateBatches !== null && $batchCount > 0;
         $allBatchCallsDone = $batchesDone === $batchCount;
 
         return new self(
             batchesDone: $batchesDone,
-            batchesTotal: self::batchesTotal($candidateBatches, $batchCount),
-            needsDedup: $needsDedup,
-            isDedupPhase: $allBatchCallsDone && $needsDedup,
+            batchesTotal: $hasPlan ? $batchCount + 2 : null,
+            distillPending: $hasPlan && !$distilled,
+            isConsolidationPhase: $hasPlan && $distilled && $allBatchCallsDone,
             allBatchCallsDone: $allBatchCallsDone,
             nextBatchIndex: $batchesDone,
             attemptsExhausted: $attempts >= RecommendationRun::MAX_ATTEMPTS,
         );
-    }
-
-    /**
-     * The dedup call counts as one extra batch for progress purposes.
-     *
-     * @param list<list<int>>|null $candidateBatches
-     */
-    private static function batchesTotal(?array $candidateBatches, int $batchCount): ?int
-    {
-        if ($candidateBatches === null) {
-            return null;
-        }
-
-        return $batchCount + ($batchCount > 1 ? 1 : 0);
     }
 }

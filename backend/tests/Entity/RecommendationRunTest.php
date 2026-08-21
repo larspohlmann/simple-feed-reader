@@ -18,8 +18,6 @@ final class RecommendationRunTest extends TestCase
 
         self::assertSame(0, $progress->batchesDone);
         self::assertNull($progress->batchesTotal);
-        self::assertFalse($progress->needsDedup);
-        self::assertFalse($progress->isDedupPhase);
         // Trivially true: zero batches planned, zero batches done.
         self::assertTrue($progress->allBatchCallsDone);
         self::assertSame(0, $progress->nextBatchIndex);
@@ -33,17 +31,15 @@ final class RecommendationRunTest extends TestCase
 
         self::assertSame(RecommendationRun::STATUS_RUNNING, $run->getStatus());
         self::assertSame([[1, 2], [3]], $run->getCandidateBatches());
-        self::assertSame(3, $run->progress()->batchesTotal); // 2 batches + 1 merge
-        self::assertTrue($run->progress()->needsDedup);
+        self::assertSame(4, $run->progress()->batchesTotal); // 2 batches + distill + consolidate
     }
 
-    public function testASingleBatchNeedsNoMerge(): void
+    public function testASingleBatchPlanTotalsThreeStages(): void
     {
         $run = $this->makeRun();
         $run->snapshot([[1, 2, 3]]);
 
-        self::assertSame(1, $run->progress()->batchesTotal);
-        self::assertFalse($run->progress()->needsDedup);
+        self::assertSame(3, $run->progress()->batchesTotal); // 1 batch + distill + consolidate
     }
 
     public function testRecordingWinnersAdvancesAndClearsRetryState(): void
@@ -59,7 +55,6 @@ final class RecommendationRunTest extends TestCase
         self::assertNull($run->getLastInvalidReply());
         self::assertFalse($run->progress()->attemptsExhausted);
         self::assertSame(1, $run->progress()->nextBatchIndex);
-        self::assertFalse($run->progress()->isDedupPhase);
     }
 
     /**
@@ -93,16 +88,6 @@ final class RecommendationRunTest extends TestCase
 
         self::assertTrue($run->progress()->attemptsExhausted);
         self::assertSame('c', $run->getLastInvalidReply());
-    }
-
-    public function testMergePhaseAfterAllBatchCalls(): void
-    {
-        $run = $this->makeRun();
-        $run->snapshot([[1], [2]]);
-        $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
-        $run->recordBatchWinners([['id' => 2, 'score' => 50, 'reason' => 'r']]);
-
-        self::assertTrue($run->progress()->isDedupPhase);
     }
 
     public function testAllBatchCallsDoneIsFalseUntilEveryBatchReportedWinners(): void
@@ -259,7 +244,7 @@ final class RecommendationRunTest extends TestCase
 
         self::assertSame(RecommendationRun::STATUS_COMPLETED, $run->getStatus());
         self::assertSame($when, $run->getCompletedAt());
-        self::assertSame(3, $run->progress()->batchesDone);
+        self::assertSame(4, $run->progress()->batchesDone);
     }
 
     public function testSnapshotAgainAfterAlreadyRunningThrows(): void
@@ -355,10 +340,66 @@ final class RecommendationRunTest extends TestCase
         self::assertSame('bonsai-27b', $run->getModel());
     }
 
+    public function testRecordProfileStoresTextAndMarksDistilled(): void
+    {
+        $run = $this->runInRunningState();
+        $run->recordProfile('Likes Rust.');
+
+        self::assertTrue($run->isDistilled());
+        self::assertSame('Likes Rust.', $run->getProfileText());
+    }
+
+    public function testRecordProfileWithNullMarksDistilledButKeepsNoProfile(): void
+    {
+        $run = $this->runInRunningState();
+        $run->recordProfile(null);
+
+        self::assertTrue($run->isDistilled());
+        self::assertNull($run->getProfileText());
+    }
+
+    public function testFreshRunIsNotDistilled(): void
+    {
+        self::assertFalse($this->runInRunningState()->isDistilled());
+    }
+
+    public function testRecordProfileBeforeSnapshotThrows(): void
+    {
+        $run = $this->makeRun();
+
+        $this->expectException(\LogicException::class);
+        $run->recordProfile('Likes Rust.');
+    }
+
+    public function testRecordProfileResetsAttemptsToExactlyZero(): void
+    {
+        $run = $this->runInRunningState();
+        $run->recordInvalidReply('a');
+        $run->recordInvalidReply('b');
+
+        $run->recordProfile('Likes Rust.');
+
+        // Exactly MAX_ATTEMPTS (3) fresh invalid replies are needed to exhaust
+        // again — pins the reset at 0, not -1 or 1.
+        $run->recordInvalidReply('c');
+        $run->recordInvalidReply('d');
+        self::assertFalse($run->progress()->attemptsExhausted);
+        $run->recordInvalidReply('e');
+        self::assertTrue($run->progress()->attemptsExhausted);
+    }
+
     private function makeRun(): RecommendationRun
     {
         $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
 
         return new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
+    }
+
+    private function runInRunningState(): RecommendationRun
+    {
+        $run = $this->makeRun();
+        $run->snapshot([[1]]);
+
+        return $run;
     }
 }

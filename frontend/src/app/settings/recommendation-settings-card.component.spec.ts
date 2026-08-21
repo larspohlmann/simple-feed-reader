@@ -33,6 +33,7 @@ describe('RecommendationSettingsCardComponent', () => {
     autoGenerateIntervalHours: null,
     lookbackDays: 2,
     workerAlive: true,
+    profileText: null,
   };
 
   function mount(
@@ -467,5 +468,22 @@ describe('RecommendationSettingsCardComponent', () => {
     const row = fixture.nativeElement.querySelector('.debug-row') as HTMLElement;
     expect(row.querySelector('app-info-tip button.trigger')).not.toBeNull();
     expect(row.querySelector('#rec-debug-toggle')).not.toBeNull();
+  });
+
+  it('shows the persisted preference profile read-only when present', () => {
+    const fixture = mount({ ...STATE, profileText: 'Likes self-hosted tooling and Rust.' });
+
+    const el = fixture.nativeElement.querySelector('[data-testid="recommendation-profile"]');
+    expect(el?.textContent).toContain('Likes self-hosted tooling and Rust.');
+    // read-only: no input/textarea bound to it
+    expect(el?.querySelector('textarea')).toBeNull();
+  });
+
+  it('hides the profile block when no profile has been generated yet', () => {
+    const fixture = mount({ ...STATE, profileText: null });
+
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="recommendation-profile"]'),
+    ).toBeNull();
   });
 });

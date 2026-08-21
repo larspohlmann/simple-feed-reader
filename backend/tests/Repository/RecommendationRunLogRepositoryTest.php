@@ -55,7 +55,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
             'stop',
             new \DateTimeImmutable('2026-08-08T10:00:05Z'),
         );
-        $this->fixtures->log($run, RecommendationRunLog::PHASE_DEDUP, null, 1, 'req-body-longer');
+        $this->fixtures->log($run, RecommendationRunLog::PHASE_CONSOLIDATE, null, 1, 'req-body-longer');
         $this->em->flush();
 
         $rows = $this->logs->listForRun($this->user, $run->getId() ?? 0);
@@ -80,7 +80,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
                 [
                     'id' => $rows[1]['id'],
                     'runId' => $run->getId(),
-                    'phase' => 'dedup',
+                    'phase' => 'consolidate',
                     'batchNumber' => null,
                     'attempt' => 1,
                     'verdict' => null,
@@ -119,15 +119,15 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         );
     }
 
-    public function testCountAttemptsMatchesOnBatchNumberIsNullForTheDedupPhase(): void
+    public function testCountAttemptsMatchesOnBatchNumberIsNullForTheConsolidationPhase(): void
     {
         $run = $this->fixtures->createRun($this->user);
-        $this->fixtures->log($run, RecommendationRunLog::PHASE_DEDUP, null, 1, 'r');
-        $this->fixtures->log($run, RecommendationRunLog::PHASE_DEDUP, null, 2, 'r');
+        $this->fixtures->log($run, RecommendationRunLog::PHASE_CONSOLIDATE, null, 1, 'r');
+        $this->fixtures->log($run, RecommendationRunLog::PHASE_CONSOLIDATE, null, 2, 'r');
         $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
         $this->em->flush();
 
-        self::assertSame(2, $this->logs->countAttempts($run, RecommendationRunLog::PHASE_DEDUP, null));
+        self::assertSame(2, $this->logs->countAttempts($run, RecommendationRunLog::PHASE_CONSOLIDATE, null));
         self::assertSame(1, $this->logs->countAttempts($run, RecommendationRunLog::PHASE_BATCH, 1));
         self::assertSame(0, $this->logs->countAttempts($run, RecommendationRunLog::PHASE_BATCH, 2));
     }

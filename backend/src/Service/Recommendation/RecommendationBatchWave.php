@@ -63,6 +63,7 @@ final readonly class RecommendationBatchWave
         $waveBatches = $this->waveBatches($run, $userId, $waveSize);
         $poolSummary = $this->candidateLoader->summarize($userId, $this->allCandidateIds($run));
         $history = $this->historyLoader->load($userId, $effectiveSettings);
+        $profile = $run->getProfileText();
         $correctiveReply = [];
         [$winners, $pending] = $this->splitByPruned($waveBatches);
 
@@ -72,6 +73,7 @@ final readonly class RecommendationBatchWave
                 $settings,
                 $effectiveSettings,
                 $history,
+                $profile,
                 $waveBatches,
                 $pending,
                 $correctiveReply,
@@ -207,6 +209,7 @@ final readonly class RecommendationBatchWave
         AiProviderSettings $settings,
         EffectiveRecommendationSettings $effectiveSettings,
         RecommendationHistory $history,
+        ?string $profile,
         array $waveBatches,
         array $pending,
         array $correctiveReply,
@@ -220,6 +223,7 @@ final readonly class RecommendationBatchWave
                 $history,
                 $waveBatch,
                 $effectiveSettings,
+                $profile,
                 $correctiveReply[$position] ?? null,
                 $poolSummary,
             );
@@ -235,7 +239,7 @@ final readonly class RecommendationBatchWave
                     $settings,
                     $messages,
                     \count($waveBatch->validIds()),
-                    RecommendationResponseSchema::Ranking,
+                    RecommendationResponseSchema::BatchScore,
                 ),
                 $recordedCall,
             );
@@ -365,6 +369,7 @@ final readonly class RecommendationBatchWave
         RecommendationHistory $history,
         WaveBatch $waveBatch,
         EffectiveRecommendationSettings $effectiveSettings,
+        ?string $profile,
         ?string $lastInvalidReply,
         ?CandidatePoolSummary $poolSummary,
     ): array {
@@ -373,6 +378,7 @@ final readonly class RecommendationBatchWave
             $history,
             $candidateLines,
             $effectiveSettings,
+            $profile,
             $poolSummary,
         );
 

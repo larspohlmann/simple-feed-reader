@@ -15,10 +15,6 @@ use App\Entity\AiProviderSettings;
  */
 final readonly class RecommendationCompletionRequestFactory
 {
-    public function __construct(private RecommendationPromptBuilder $promptBuilder)
-    {
-    }
-
     /**
      * @param list<array{role: string, content: string}> $messages
      * @param int                                        $replyItemCount items the reply must cover
@@ -32,31 +28,13 @@ final readonly class RecommendationCompletionRequestFactory
         return new CompletionRequest(
             $settings->getModel() ?? '',
             $messages,
-            $this->outputBound($settings, $replyItemCount, $responseSchema),
+            RecommendationAnswerBudget::outputBoundTokens(
+                $replyItemCount,
+                $responseSchema,
+                $settings->suppressesReasoning(),
+            ),
             $responseSchema->toJsonSchema(),
             $settings->suppressesReasoning(),
         );
-    }
-
-    /**
-     * What the provider may spend on the whole output.
-     *
-     * The reasoning headroom pays for a thinking phase, and a connection that
-     * suppresses reasoning has none. Paying for one anyway is not free: it is
-     * the only bound that stops a model which has started to repeat itself, so
-     * a 45-item batch that needs 1800 tokens was licensed to emit 33800, and a
-     * 4B model looping on invented ids spent an hour reaching that ceiling
-     * before the wall clock cut it (#437).
-     */
-    private function outputBound(
-        AiProviderSettings $settings,
-        int $replyItemCount,
-        RecommendationResponseSchema $responseSchema,
-    ): int {
-        if ($settings->suppressesReasoning()) {
-            return $this->promptBuilder->answerBoundTokens($replyItemCount, $responseSchema);
-        }
-
-        return $this->promptBuilder->outputTokenReserve($replyItemCount, $responseSchema);
     }
 }
