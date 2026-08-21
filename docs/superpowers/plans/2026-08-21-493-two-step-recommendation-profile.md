@@ -4,7 +4,7 @@
 
 **Goal:** Restructure the recommendation pipeline into four LLM phases — distill a preference profile, score candidates in cheap score-only batches, consolidate the top-100 in one re-score + reason + dedup call, finalize — cutting tokens per run while keeping (or improving) result quality.
 
-**Architecture:** Insert a **distillation** phase after snapshot that writes a per-run preference `profileText` (also cached on the user's settings for display). Batches become a **coarse filter**: they carry `profile + FAVORITES` only, reply `{id, score}` only, and their sole job is to surface the top-100. A new **consolidation** phase replaces dedup: one call over the top-`2×picksLimit` carries the **full raw history**, re-scores for final sort order, writes the reader-facing `reason` text, and flags duplicates in one reply. The finalizer is unchanged. Every phase degrades rather than fails.
+**Architecture:** Insert a **distillation** phase after snapshot that writes a per-run preference `profileText` (also cached on the user's settings for display). Batches become a **coarse filter**: they carry `profile + FAVORITES` only, reply `{id, score}` only, and their sole job is to surface the top-100. A new **consolidation** phase replaces dedup: one call over the top-`2×picksLimit` carries the **same `profile + FAVORITES`** as the batches, re-scores for final sort order, writes the reader-facing `reason` text, and flags duplicates in one reply. Only the distillation call sees the full three-section history — every later call speaks through the profile. The finalizer is unchanged. Every phase degrades rather than fails.
 
 **Tech Stack:** Symfony 7.4 (PHP 8.4), Doctrine ORM, MySQL (prod/Docker) + SQLite (native tests), PHPUnit, Infection, Angular 20 (standalone + signals), Jest.
 
@@ -560,10 +560,10 @@ public const string DISTILL_CORRECTIVE = 'Your previous reply was not usable. Re
     . 'exactly in the required shape: {"profile": "<the preference profile>"}.';
 
 public const string CONSOLIDATION_ROLE = 'You rank a shortlist of unread posts for one reader of an RSS reader '
-    . 'and remove duplicates. The user message holds the reader\'s full history — FAVORITES, KEPT and VIEWED, '
-    . 'newest first, FAVORITES strongest — and a SHORTLIST of candidate posts, each line starting with the '
-    . 'candidate id in square brackets. Do two things. First, score each shortlisted post from 0 to 1000 for how '
-    . 'strongly the history — above all the FAVORITES — suggests the reader would open it; use the whole range, '
+    . 'and remove duplicates. The user message holds a PROFILE describing the reader, a FAVORITES section listing '
+    . 'the posts the reader liked most (newest first), and a SHORTLIST of candidate posts, each line starting '
+    . 'with the candidate id in square brackets. Do two things. First, score each shortlisted post from 0 to 1000 '
+    . 'for how strongly the PROFILE and the FAVORITES suggest the reader would open it; use the whole range, '
     . 'give each its own exact number, and write one short sentence for each, shown to the reader, that names '
     . 'what the post is about and the interest or earlier post it matches. Do not open a reason with a fixed '
     . 'phrase such as "Directly aligns" or "Matches the reader\'s". Second, name the duplicates: two posts are '
@@ -887,7 +887,7 @@ Adds the two remaining prompt shapes and the parsers for their replies. The cons
 **Interfaces:**
 - Produces:
   - `distillMessages(RecommendationHistory $history, EffectiveRecommendationSettings $settings): list<array{role:string,content:string}>`
-  - `consolidationMessages(array $rankedPool, array $linesById, RecommendationHistory $history, EffectiveRecommendationSettings $settings): list<array{role:string,content:string}>` where `$rankedPool` is `list<array{id:int,score:int,reason:string}>`, `$linesById` is `array<int,PromptLine>`
+  - `consolidationMessages(array $rankedPool, array $linesById, RecommendationHistory $history, EffectiveRecommendationSettings $settings, ?string $profile): list<array{role:string,content:string}>` where `$rankedPool` is `list<array{id:int,score:int,reason:string}>`, `$linesById` is `array<int,PromptLine>`. Renders `profile + FAVORITES` (not the full history) plus the shortlist.
   - `ProfileParseResult { public ?string $profile; public bool $usable; static usable(string): self; static unusable(): self; }`
   - `RecommendationProfileParser::parse(string $content): ProfileParseResult`
   - `ConsolidationParseResult { public array $picks; public array $duplicateIds; public bool $usable; }` (`picks` = `list<RecommendationPick>`)
@@ -914,7 +914,7 @@ public function testDistillMessagesCarryAllThreeHistorySections(): void
 - [ ] **Step 2: Write the failing consolidation-message test**
 
 ```php
-public function testConsolidationMessagesCarryFullHistoryAndShortlist(): void
+public function testConsolidationMessagesCarryProfileFavouritesAndShortlist(): void
 {
     $pool = [['id' => 5, 'score' => 900, 'reason' => '']];
     $lines = [5 => $this->promptLine(id: 5, title: 'Rust 2.0 released')];
@@ -924,11 +924,14 @@ public function testConsolidationMessagesCarryFullHistoryAndShortlist(): void
         $lines,
         $this->historyWith(favorites: 1, kept: 1, viewed: 1),
         $this->effectiveSettings(),
+        'Likes Rust.',
     );
 
+    self::assertStringContainsString('PROFILE', $messages[1]['content']);
+    self::assertStringContainsString('Likes Rust.', $messages[1]['content']);
     self::assertStringContainsString('FAVORITES', $messages[1]['content']);
-    self::assertStringContainsString('KEPT', $messages[1]['content']);
-    self::assertStringContainsString('VIEWED', $messages[1]['content']);
+    self::assertStringNotContainsString('KEPT', $messages[1]['content']);
+    self::assertStringNotContainsString('VIEWED', $messages[1]['content']);
     self::assertStringContainsString('[5]', $messages[1]['content']);
     self::assertStringContainsString('Rust 2.0 released', $messages[1]['content']);
     self::assertStringContainsString('duplicates', $messages[0]['content']);
@@ -960,7 +963,7 @@ public function distillMessages(RecommendationHistory $history, EffectiveRecomme
 }
 ```
 
-`consolidationMessages()` — full history, then the shortlist rendered with the candidate-style lines (id in brackets, title/feed/date/description). Reuse `candidateSection` by mapping the pool ids back to their `PromptLine`s in ranked order:
+`consolidationMessages()` — `profile + FAVORITES` (the same fidelity as the batches), then the shortlist rendered with the candidate-style lines (id in brackets, title/feed/date/description). Reuse `candidateSection` by mapping the pool ids back to their `PromptLine`s in ranked order:
 
 ```php
 public function consolidationMessages(
@@ -968,6 +971,7 @@ public function consolidationMessages(
     array $linesById,
     RecommendationHistory $history,
     EffectiveRecommendationSettings $settings,
+    ?string $profile,
 ): array {
     if ([] === $rankedPool) {
         throw new \LogicException('The consolidation phase requires at least one ranked winner.');
@@ -982,10 +986,13 @@ public function consolidationMessages(
         }
     }
 
-    $user = implode("\n\n", [
-        $this->historySections($history, $descriptionLength),
-        "SHORTLIST:\n" . $this->candidateSection($shortlistLines, $descriptionLength),
-    ]);
+    $sections = [];
+    if (null !== $profile && '' !== trim($profile)) {
+        $sections[] = "PROFILE:\n" . $profile;
+    }
+    $sections[] = $this->historySection('FAVORITES (newest first):', $history->favorites, $descriptionLength);
+    $sections[] = "SHORTLIST:\n" . $this->candidateSection($shortlistLines, $descriptionLength);
+    $user = implode("\n\n", $sections);
 
     return [
         [
@@ -1392,8 +1399,8 @@ Expected: FAIL — class absent.
 1. `$pool = $this->ranker->cutForDedup($this->ranker->ranked($run->getWinners()), $picksLimit);` — top 100.
 2. If `[] === $pool` → `ConsolidationOutcome::finalizeWith([])` (no call), mirroring the dedup all-pruned short-circuit.
 3. `$linesById = $this->candidateLoader->linesForIds($userId, array_map(fn($w) => $w['id'], $pool));` and drop pruned (`stillPresent`, as dedup does).
-4. `$history = $this->historyLoader->load($userId, $effectiveSettings);`
-5. `$messages = $this->promptBuilder->consolidationMessages($pool, $linesById, $history, $effectiveSettings);` with the corrective tail (`CONSOLIDATION_CORRECTIVE`) via `messagesWithCorrectiveTail($messages, $run->getLastInvalidReply(), ...)`.
+4. `$history = $this->historyLoader->load($userId, $effectiveSettings);` (only its FAVORITES section is rendered).
+5. `$messages = $this->promptBuilder->consolidationMessages($pool, $linesById, $history, $effectiveSettings, $run->getProfileText());` with the corrective tail (`CONSOLIDATION_CORRECTIVE`) via `messagesWithCorrectiveTail($messages, $run->getLastInvalidReply(), ...)`.
 6. record (`PHASE_CONSOLIDATE`, null batch), `requestFactory->create($settings, $messages, count($pool), RecommendationResponseSchema::Consolidation)`, call, `parser->parse($content, $shownIds)`, settle, `checkpoint->guard`.
 7. On usable: build `$ranked` = pool picks minus `duplicateIds`, replaced with the reply's `{id,score,reason}`, sorted by score desc (`usort`, stable). Return `finalizeWith($ranked)`.
 8. On unusable: return `unusable($content, $pool)` (pool carries `reason:''` from batch winners — the degrade path).
@@ -1635,7 +1642,7 @@ Create the PR into `develop` with body including `Closes #493` and a summary of 
 - Send profile per batch, drop KEPT/VIEWED → Task 6. ✅ (hybrid: profile + FAVORITES)
 - Fewer tokens per batch / larger batches → Task 5 (score-only reserve + favorites-only history budget). ✅
 - Score-only batch replies `{id,score}` → Tasks 3, 6. ✅
-- Consolidation over top-100 that re-scores, reasons, dedups (comment 2) → Tasks 7, 11, 12. ✅
+- Consolidation over top-100 that re-scores, reasons, dedups (comment 2) → Tasks 7, 11, 12. ✅ (carries `profile + FAVORITES`, the same fidelity as the batches — Q6 correction: every post-distillation call speaks through the profile; only distillation sees full history.)
 - `2 × picksLimit` cut kept → Task 11 (reuses `cutForDedup`). ✅
 - Consolidation runs unconditionally, even single-batch → Tasks 9, 12. ✅
 - Profile persisted per-user for settings/debug display, refreshed per run → Tasks 1, 2, 10. ✅
