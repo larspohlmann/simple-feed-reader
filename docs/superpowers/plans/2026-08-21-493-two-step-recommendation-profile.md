@@ -47,7 +47,7 @@
 - `backend/migrations/Version20260821140000.php` — `recommendation_run.profile_text` + `recommendation_run.distilled`.
 
 **Modified files (backend):**
-- `RecommendationResponseSchema.php` — replace `Ranking`/`Duplicates` cases with `Distillation`/`BatchScore`/`Consolidation`.
+- `RecommendationResponseSchema.php` — add `Distillation`/`BatchScore`/`Consolidation` cases (the old `Ranking`/`Duplicates` stay until the Task 13 cleanup removes their last callers).
 - `RecommendationPromptText.php` — add batch score-only, distillation, consolidation strings; retire dedup + reason-bearing batch strings.
 - `RecommendationPromptBuilder.php` — score-only token constants + packing; `batchMessages` gains a profile block and drops KEPT/VIEWED; new `distillMessages` and `consolidationMessages`; `answerBoundTokens` match arms.
 - `RecommendationPickParser.php` — tolerate a missing `reason` (default `''`) so it serves score-only batches.
@@ -410,9 +410,11 @@ public function testDistillationSchemaAsksForAProfileString(): void
 Run: `cd backend && php bin/phpunit --filter RecommendationResponseSchemaTest`
 Expected: FAIL — unknown enum cases.
 
-- [ ] **Step 3: Rewrite the enum**
+- [ ] **Step 3: Add the three new enum cases (keep the old two)**
 
-`RecommendationResponseSchema.php` — replace cases `Ranking`, `Duplicates` with `Distillation`, `BatchScore`, `Consolidation`. Replace the two schema constants with three:
+> **Ordering ruling (preflight A):** ADD `Distillation`, `BatchScore`, `Consolidation`; **keep** `Ranking` and `Duplicates`. The old pipeline (`RecommendationBatchWave` on `::Ranking`, `RecommendationDedupResolver` on `::Duplicates`) stays wired and green until Task 12 switches it over; the dead `Ranking`/`Duplicates` cases and their schema constants are removed in the Task 13 cleanup. Do **not** touch `RecommendationBatchWave` or `RecommendationDedupResolver` in this task.
+
+`RecommendationResponseSchema.php` — add cases `Distillation`, `BatchScore`, `Consolidation` beside `Ranking`, `Duplicates`. Add three schema constants beside the existing `RANKING_SCHEMA`/`DUPLICATES_SCHEMA`:
 
 ```php
 private const array DISTILLATION_SCHEMA = [
@@ -470,12 +472,14 @@ private const array CONSOLIDATION_SCHEMA = [
 ];
 ```
 
-`toJsonSchema()`:
+`toJsonSchema()` — add the three new arms, keep the two existing ones (match stays exhaustive over all five cases):
 
 ```php
 public function toJsonSchema(): JsonSchema
 {
     return match ($this) {
+        self::Ranking => new JsonSchema('recommendations', self::RANKING_SCHEMA),
+        self::Duplicates => new JsonSchema('duplicates', self::DUPLICATES_SCHEMA),
         self::Distillation => new JsonSchema('profile', self::DISTILLATION_SCHEMA),
         self::BatchScore => new JsonSchema('recommendations', self::BATCH_SCORE_SCHEMA),
         self::Consolidation => new JsonSchema('recommendations', self::CONSOLIDATION_SCHEMA),
@@ -483,19 +487,21 @@ public function toJsonSchema(): JsonSchema
 }
 ```
 
-- [ ] **Step 4: Update the one match site so the tree compiles**
+- [ ] **Step 4: Extend the one match site so the tree still compiles**
 
-`RecommendationPromptBuilder::answerBoundTokens()` — replace the `match ($schema)` arms (this reads token constants added in Task 5; for now, keep it compiling by referencing the existing `TOKENS_PER_PICK` / `TOKENS_PER_DUPLICATE_ID` and a placeholder that Task 5 finalizes):
+`RecommendationPromptBuilder::answerBoundTokens()` — add arms for the three new schemas, keep the existing `Ranking`/`Duplicates` arms (Task 5 replaces the interim values with the real per-phase constants and the distillation fixed-reserve path):
 
 ```php
 $perItem = match ($schema) {
+    RecommendationResponseSchema::Ranking => self::TOKENS_PER_PICK,
+    RecommendationResponseSchema::Duplicates => self::TOKENS_PER_DUPLICATE_ID,
     RecommendationResponseSchema::Distillation => self::TOKENS_PER_PICK,
     RecommendationResponseSchema::BatchScore => self::TOKENS_PER_PICK,
     RecommendationResponseSchema::Consolidation => self::TOKENS_PER_PICK,
 };
 ```
 
-(Task 5 replaces these with the real per-phase constants and the distillation fixed-reserve path. This interim keeps the enum swap a self-contained, compiling commit.) Also update `RecommendationBatchWave.php:238` and `RecommendationDedupResolver.php` references from `::Ranking` / `::Duplicates` to `::BatchScore` / `::Consolidation` respectively **only enough to compile** — the batch wave uses `::BatchScore`, and the dedup resolver (to be replaced in Task 11) temporarily uses `::Consolidation`.
+Do **not** touch `RecommendationBatchWave` or `RecommendationDedupResolver` in this task — they keep `::Ranking` / `::Duplicates` and stay green until Task 12 switches them over.
 
 - [ ] **Step 5: Run schema test + stan**
 
@@ -506,7 +512,7 @@ Expected: PASS, and PHPStan reports no non-exhaustive match.
 
 ```bash
 git add backend/src backend/tests
-git commit -m "feat(#493): replace ranking/dedup schemas with distillation, batch-score, consolidation"
+git commit -m "feat(#493): add distillation, batch-score, and consolidation response schemas"
 ```
 
 ---
@@ -667,12 +673,14 @@ private const int PROFILE_ANSWER_TOKENS = 1200;
 private const int ESTIMATED_PROFILE_TOKENS = 700;
 ```
 
-Rewrite `answerBoundTokens()`:
+Rewrite `answerBoundTokens()` — keep the `Ranking`/`Duplicates` arms (Ruling B: the old pipeline is still wired until Task 12; Task 13 removes these two arms):
 
 ```php
 public function answerBoundTokens(int $replyItemCount, RecommendationResponseSchema $schema): int
 {
     $expected = match ($schema) {
+        RecommendationResponseSchema::Ranking => $replyItemCount * self::TOKENS_PER_PICK,
+        RecommendationResponseSchema::Duplicates => $replyItemCount * self::TOKENS_PER_DUPLICATE_ID,
         RecommendationResponseSchema::Distillation => self::PROFILE_ANSWER_TOKENS,
         RecommendationResponseSchema::BatchScore => $replyItemCount * self::TOKENS_PER_SCORE_PICK,
         RecommendationResponseSchema::Consolidation => $replyItemCount * self::TOKENS_PER_PICK,
@@ -1234,20 +1242,25 @@ public function testTotalCountsDistillationAndConsolidation(): void
 Run: `cd backend && php bin/phpunit --filter RecommendationRunProgressTest`
 Expected: FAIL — signature/field mismatch.
 
-- [ ] **Step 3: Rewrite the VO**
+- [ ] **Step 3: Extend the VO (keep the old fields)**
 
-Replace the constructor field `isDedupPhase` with `isConsolidationPhase`; drop `needsDedup` (no caller after Task 12); add `distillPending`. Rewrite `forBatchPlan`:
+> **Ordering ruling (preflight C):** ADD `isConsolidationPhase` and `distillPending`; **keep** `needsDedup` and `isDedupPhase`. The advancer still reads `isDedupPhase` (line 285) and `needsDedup` (line 431) until Task 12 removes those usages — dropping the fields here would break the advancer's compile. Task 12 removes the usages; Task 13 drops the now-dead fields.
+
+Add the two new fields to the constructor; keep `needsDedup` and `isDedupPhase`. Add `distilled` as a fourth argument. Rewrite `forBatchPlan`:
 
 ```php
 public static function forBatchPlan(?array $candidateBatches, int $batchesDone, int $attempts, bool $distilled): self
 {
     $batchCount = $candidateBatches === null ? 0 : count($candidateBatches);
     $hasPlan = $candidateBatches !== null && $batchCount > 0;
+    $needsDedup = $batchCount > 1;
     $allBatchCallsDone = $batchesDone === $batchCount;
 
     return new self(
         batchesDone: $batchesDone,
         batchesTotal: $hasPlan ? $batchCount + 2 : null,
+        needsDedup: $needsDedup,
+        isDedupPhase: $allBatchCallsDone && $needsDedup,
         distillPending: $hasPlan && !$distilled,
         isConsolidationPhase: $hasPlan && $distilled && $allBatchCallsDone,
         allBatchCallsDone: $allBatchCallsDone,
@@ -1257,12 +1270,12 @@ public static function forBatchPlan(?array $candidateBatches, int $batchesDone, 
 }
 ```
 
-(`isConsolidationPhase` also gates on `$distilled` so the advancer never routes to consolidation before distillation ran. Update the promoted-property constructor to match the new field set. Remove `batchesTotal()`'s old `+ ($batchCount > 1 ? 1 : 0)` helper.)
+(`isConsolidationPhase` gates on `$distilled` so the advancer never routes to consolidation before distillation ran. Update the promoted-property constructor to add `needsDedup`/`isDedupPhase`'s siblings `distillPending` and `isConsolidationPhase`. Change `batchesTotal` to `$batchCount + 2`; the old `batchesTotal()` helper's `+ ($batchCount > 1 ? 1 : 0)` is replaced by the flat `+ 2`.)
 
 - [ ] **Step 4: Run to verify passes + stan**
 
 Run: `cd backend && php bin/phpunit --filter RecommendationRunProgressTest && composer stan`
-Expected: PASS. (PHPStan will flag `RecommendationRun::progress()` still calling the 3-arg `forBatchPlan` — fix that call to pass `$this->distilled` now.)
+Expected: PASS. (PHPStan will flag `RecommendationRun::progress()` still calling the 3-arg `forBatchPlan` — fix that call to pass `$this->distilled` now. Any pre-existing `RecommendationRunProgressTest` case asserting `batchesTotal` for a multi-batch run changes from `batchCount + 1` to `batchCount + 2` — update it, per Ruling D.)
 
 - [ ] **Step 5: Commit**
 
@@ -1552,10 +1565,12 @@ git commit -m "feat(#493): advance runs through distill, score-only batches, and
 
 Deletes what the new pipeline superseded and clears the now-unused prompt strings, constants, and helpers so `composer md` and PHPStan see no dead weight.
 
+This task also removes the transition scaffolding kept green by preflight Rulings A–C: the `Ranking`/`Duplicates` enum cases and their `RANKING_SCHEMA`/`DUPLICATES_SCHEMA` constants, `toJsonSchema()` arms, and `answerBoundTokens()` arms; and the `needsDedup`/`isDedupPhase` fields on `RecommendationRunProgress`. By this point (after Task 12) their last callers are gone — prove it in Step 1.
+
 **Files:**
 - Delete: `RecommendationDedupResolver.php`, `DedupOutcome.php`, `RecommendationDuplicateParser.php`, `DuplicateParseResult.php` (and their tests)
-- Modify: `RecommendationPromptText.php` (remove `SYSTEM_ROLE`, `OUTPUT_CONTRACT`, `CORRECTIVE`, `DEDUP_ROLE`, `DEDUP_OUTPUT_CONTRACT`, `DEDUP_CORRECTIVE` if unreferenced), `RecommendationPromptBuilder.php` (remove `dedupMessages`, `dedupSizeFrame`, `winnerLine` if consolidation reuses `candidateSection` instead, `answerTokenReserve`, `userSections`, `TOKENS_PER_PICK`/`TOKENS_PER_DUPLICATE_ID`/`DEDUP_DESCRIPTION_CHARS` if now unused), service wiring (`config/services.yaml` if the deleted services were declared explicitly)
-- Test: remove the dead tests; run the whole recommendation suite
+- Modify: `RecommendationResponseSchema.php` (remove `Ranking`/`Duplicates` cases, their two schema constants, and their `toJsonSchema()` arms), `RecommendationRunProgress.php` (remove `needsDedup` and `isDedupPhase` fields + constructor params + their `forBatchPlan` locals), `RecommendationPromptText.php` (remove `SYSTEM_ROLE`, `OUTPUT_CONTRACT`, `CORRECTIVE`, `DEDUP_ROLE`, `DEDUP_OUTPUT_CONTRACT`, `DEDUP_CORRECTIVE` if unreferenced), `RecommendationPromptBuilder.php` (remove the `Ranking`/`Duplicates` `answerBoundTokens` arms, `dedupMessages`, `dedupSizeFrame`, `winnerLine` if consolidation reuses `candidateSection` instead, `answerTokenReserve`, `userSections`, and `TOKENS_PER_DUPLICATE_ID`/`DEDUP_DESCRIPTION_CHARS` if now unused), service wiring (`config/services.yaml` if the deleted services were declared explicitly)
+- Test: remove the dead tests; update any `RecommendationResponseSchemaTest` case asserting the removed cases; run the whole recommendation suite
 
 **Interfaces:** none produced; this is subtraction. Verify each deletion has zero references first.
 
@@ -1564,14 +1579,14 @@ Deletes what the new pipeline superseded and clears the now-unused prompt string
 Run (for every symbol you intend to delete):
 
 ```bash
-cd backend && grep -rn "RecommendationDedupResolver\|DedupOutcome\|RecommendationDuplicateParser\|DuplicateParseResult\|dedupMessages\|answerTokenReserve\|DEDUP_ROLE\|::SYSTEM_ROLE\|::OUTPUT_CONTRACT\b" src tests config
+cd backend && grep -rn "RecommendationDedupResolver\|DedupOutcome\|RecommendationDuplicateParser\|DuplicateParseResult\|dedupMessages\|answerTokenReserve\|DEDUP_ROLE\|::Ranking\|::Duplicates\|needsDedup\|isDedupPhase\|::SYSTEM_ROLE\|::OUTPUT_CONTRACT\b" src tests config
 ```
 
-Expected: only definitions and their own tests remain (no live callers). Anything still referenced stays until its caller is gone.
+Expected: only definitions and their own tests remain (no live callers). Anything still referenced stays until its caller is gone. In particular `::Ranking`, `::Duplicates`, `needsDedup`, `isDedupPhase` must show no references outside their own definitions once Task 12 landed.
 
 - [ ] **Step 2: Delete the files and dead members**
 
-Remove the four files and their tests; delete the unreferenced constants/methods listed above. Keep `TOKENS_PER_PICK` (still used by consolidation's `answerBoundTokens` arm) — re-check with grep before removing any constant. Keep `PlausibleDuplicateShare` (consolidation parser uses it).
+Remove the four files and their tests; delete the unreferenced constants/methods/enum-cases/fields listed above. Keep `TOKENS_PER_PICK` (still used by consolidation's `answerBoundTokens` arm) — re-check with grep before removing any constant. Keep `PlausibleDuplicateShare` (consolidation parser uses it).
 
 - [ ] **Step 3: Run the full backend gate**
 
