@@ -360,7 +360,8 @@ final class SubscriptionServiceTest extends DbTestCase
         // Discovery must NOT run: hand it a result that would fail the assertion if used.
         $service = $this->service($this->discoveryReturning(FeedDiscoveryResult::candidates([])));
 
-        $url = 'https://wp.example/wp-json/wp/v2/posts?per_page=50&_embed';
+        $url = 'https://wp.example/wp-json/wp/v2/posts?per_page=20'
+            . '&_fields=id,date_gmt,link,guid,title,content,excerpt,jetpack_featured_media_url';
         $outcome = $service->subscribe($user, $url, SourceFormat::WP_JSON);
 
         self::assertNotNull($outcome->subscription);
@@ -377,7 +378,8 @@ final class SubscriptionServiceTest extends DbTestCase
 
         $outcome = $service->subscribe(
             $user,
-            'https://wp.example/wp-json/wp/v2/posts?per_page=50&_embed',
+            'https://wp.example/wp-json/wp/v2/posts?per_page=20'
+                . '&_fields=id,date_gmt,link,guid,title,content,excerpt,jetpack_featured_media_url',
             SourceFormat::WP_JSON,
         );
 

@@ -14,7 +14,7 @@ use PHPUnit\Framework\TestCase;
 final class WordPressRestProbeTest extends TestCase
 {
     private const POSTS = 'https://site.example/wp-json/wp/v2/posts'
-        . '?per_page=50&_embed';
+        . '?per_page=20&_fields=id,date_gmt,link,guid,title,content,excerpt,jetpack_featured_media_url';
 
     private function fetcher(): StubFeedFetcher
     {
@@ -108,5 +108,18 @@ final class WordPressRestProbeTest extends TestCase
 
         self::assertNull((new WordPressRestProbe($fetcher))->offer($body, 'https://site.example/'));
         self::assertSame([], $fetcher->fetchedUrls);
+    }
+
+    public function testTheProbeUrlDropsEmbedAndPrunesFields(): void
+    {
+        $fetcher = $this->fetcher();
+        $fetcher->willReturn(self::POSTS, $this->postsResponse('[{"id":1}]'));
+
+        $candidate = (new WordPressRestProbe($fetcher))->offer($this->headLinkPage(), 'https://site.example/');
+
+        self::assertNotNull($candidate);
+        self::assertStringNotContainsString('_embed', $candidate->url);
+        self::assertStringContainsString('per_page=20', $candidate->url);
+        self::assertStringContainsString('_fields=', $candidate->url);
     }
 }

@@ -32,7 +32,16 @@ final readonly class WordPressRestProbe
     /** Substrings that mark a page as WordPress when the head link is absent. */
     private const array FINGERPRINTS = ['wp-content', 'wp-includes', 'content="WordPress'];
 
-    private const int PER_PAGE = 50;
+    private const int PER_PAGE = 20;
+
+    /**
+     * Only the fields the parser reads. Crucially this drops `_embed`: on large
+     * sites (TechCrunch) `_embed` adds ~1.3 MB per post, so `per_page` posts
+     * never arrive inside the fetcher's timeout / size cap. `content.rendered`
+     * (the full article) is present without it; the featured image comes from
+     * the top-level `jetpack_featured_media_url` field instead of an embed.
+     */
+    private const string FIELDS = 'id,date_gmt,link,guid,title,content,excerpt,jetpack_featured_media_url';
 
     public function __construct(private FeedFetcherInterface $fetcher)
     {
@@ -98,7 +107,7 @@ final readonly class WordPressRestProbe
             return null;
         }
 
-        return rtrim($root, '/') . '/wp/v2/posts?per_page=' . self::PER_PAGE . '&_embed';
+        return rtrim($root, '/') . '/wp/v2/posts?per_page=' . self::PER_PAGE . '&_fields=' . self::FIELDS;
     }
 
     private function hasPosts(string $postsUrl): bool

@@ -74,11 +74,14 @@ final class FeedDiscoveryTest extends KernelTestCase
             </head><body>Hi</body></html>
             HTML;
 
+        $postsUrl = 'https://wp.example/wp-json/wp/v2/posts?per_page=20'
+            . '&_fields=id,date_gmt,link,guid,title,content,excerpt,jetpack_featured_media_url';
+
         $fetcher = $this->fetcherReturning('https://wp.example/', 'https://wp.example/', $html);
         $fetcher->willReturn(
-            'https://wp.example/wp-json/wp/v2/posts?per_page=50&_embed',
+            $postsUrl,
             FetchResponse::fetched(
-                'https://wp.example/wp-json/wp/v2/posts?per_page=50&_embed',
+                $postsUrl,
                 permanentRedirect: false,
                 body: '[{"id":1}]',
                 etag: null,

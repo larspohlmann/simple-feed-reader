@@ -20,13 +20,7 @@ final class WordPressJsonParserTest extends TestCase
             "title": { "rendered": "Hello &amp; <em>welcome</em>" },
             "content": { "rendered": "<p>Full body.</p>" },
             "excerpt": { "rendered": "<p>Short.</p>" },
-            "_embedded": {
-              "author": [ { "name": "Jane Doe" } ],
-              "wp:featuredmedia": [
-                { "source_url": "https://site.example/img.jpg",
-                  "media_details": { "width": 800, "height": 600 } }
-              ]
-            }
+            "jetpack_featured_media_url": "https://site.example/img.jpg"
           }
         ]
         JSON;
@@ -45,11 +39,11 @@ final class WordPressJsonParserTest extends TestCase
         self::assertSame('Hello & welcome', $entry->title);
         self::assertSame('<p>Full body.</p>', $entry->contentHtml);
         self::assertSame('<p>Short.</p>', $entry->summary);
-        self::assertSame('Jane Doe', $entry->author);
+        self::assertNull($entry->author);
         self::assertNotNull($entry->image);
         self::assertSame('https://site.example/img.jpg', $entry->image->url);
-        self::assertSame(800, $entry->image->width);
-        self::assertSame(600, $entry->image->height);
+        self::assertNull($entry->image->width);
+        self::assertNull($entry->image->height);
     }
 
     public function testParsesDateGmtAsUtc(): void
@@ -65,7 +59,7 @@ final class WordPressJsonParserTest extends TestCase
         self::assertNull($this->parse(self::POST)->title);
     }
 
-    public function testMissingEmbeddedLeavesAuthorAndImageNull(): void
+    public function testAPostWithoutJetpackImageHasNullImageAndAuthor(): void
     {
         $entry = $this->parse('[{"id":7,"link":"https://x.example/7","title":{"rendered":"T"}}]')
             ->entries[0];
@@ -74,6 +68,14 @@ final class WordPressJsonParserTest extends TestCase
         self::assertNull($entry->image);
         self::assertNull($entry->publishedAt);
         self::assertSame('7', $entry->guid);
+    }
+
+    public function testAnEmptyJetpackImageUrlIsNull(): void
+    {
+        $body = '[{"id":8,"link":"https://x.example/8","title":{"rendered":"T"},'
+            . '"jetpack_featured_media_url":""}]';
+
+        self::assertNull($this->parse($body)->entries[0]->image);
     }
 
     public function testEmptyArrayIsAZeroEntryFeed(): void

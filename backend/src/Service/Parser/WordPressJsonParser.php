@@ -7,10 +7,10 @@ namespace App\Service\Parser;
 use App\Service\Parser\Exception\FeedParseException;
 
 /**
- * Turns a WordPress `wp/v2/posts?_embed` JSON array into a ParsedFeed. The
- * reusable core shared by the refresh strategy (WpJsonBodyParser) and the
- * subscribe-dialog preview, mirroring how FeedParser and HtmlItemExtractor are
- * used directly by both pipelines.
+ * Turns a WordPress `wp/v2/posts` JSON array (`_fields`-pruned, no `_embed`)
+ * into a ParsedFeed. The reusable core shared by the refresh strategy
+ * (WpJsonBodyParser) and the subscribe-dialog preview, mirroring how
+ * FeedParser and HtmlItemExtractor are used directly by both pipelines.
  *
  * The posts endpoint carries no site name, so ParsedFeed::title is null; the
  * discovery candidate supplies a readable title from the page instead.
@@ -45,7 +45,9 @@ final readonly class WordPressJsonParser
             guid: $this->guid($post),
             url: $this->stringOrNull($post['link'] ?? null),
             title: $this->plainTitle($this->rendered($post, 'title')),
-            author: $this->author($post),
+            // No author NAME without _embed (only an id), and _embed is too
+            // heavy to request; bylines usually live in content.rendered anyway.
+            author: null,
             summary: $this->rendered($post, 'excerpt'),
             contentHtml: $this->rendered($post, 'content'),
             publishedAt: $this->publishedAt($post),
@@ -89,29 +91,6 @@ final readonly class WordPressJsonParser
     }
 
     /** @param array<string, mixed> $post */
-    private function author(array $post): ?string
-    {
-        $embedded = $post['_embedded'] ?? null;
-        if (!\is_array($embedded)) {
-            return null;
-        }
-
-        $authorList = $embedded['author'] ?? null;
-        if (!\is_array($authorList)) {
-            return null;
-        }
-
-        $firstAuthor = $authorList[0] ?? null;
-        if (!\is_array($firstAuthor)) {
-            return null;
-        }
-
-        $author = $firstAuthor['name'] ?? null;
-
-        return $this->stringOrNull($author);
-    }
-
-    /** @param array<string, mixed> $post */
     private function publishedAt(array $post): ?\DateTimeImmutable
     {
         $dateGmt = $this->stringOrNull($post['date_gmt'] ?? null);
@@ -128,35 +107,19 @@ final readonly class WordPressJsonParser
         }
     }
 
-    /** @param array<string, mixed> $post */
+    /**
+     * The featured image, taken from Jetpack's top-level convenience field so no
+     * `_embed` is needed. Absent on non-Jetpack sites → null (the reader then
+     * extracts the lead image from content.rendered). Dimensions are unknown
+     * from this field.
+     *
+     * @param array<string, mixed> $post
+     */
     private function image(array $post): ?ParsedImage
     {
-        $embedded = $post['_embedded'] ?? null;
-        if (!\is_array($embedded)) {
-            return null;
-        }
+        $url = $this->stringOrNull($post['jetpack_featured_media_url'] ?? null);
 
-        $mediaList = $embedded['wp:featuredmedia'] ?? null;
-        if (!\is_array($mediaList)) {
-            return null;
-        }
-
-        $media = $mediaList[0] ?? null;
-        if (!\is_array($media)) {
-            return null;
-        }
-
-        $url = $this->stringOrNull($media['source_url'] ?? null);
-        if (null === $url) {
-            return null;
-        }
-
-        $mediaDetails = $media['media_details'] ?? null;
-        $details = \is_array($mediaDetails) ? $mediaDetails : [];
-        $width = $this->intOrNull($details['width'] ?? null);
-        $height = $this->intOrNull($details['height'] ?? null);
-
-        return new ParsedImage($url, $width, $height);
+        return null === $url ? null : new ParsedImage($url);
     }
 
     private function stringOrNull(mixed $value): ?string
@@ -166,10 +129,5 @@ final readonly class WordPressJsonParser
         }
 
         return \is_int($value) ? (string) $value : null;
-    }
-
-    private function intOrNull(mixed $value): ?int
-    {
-        return \is_int($value) ? $value : null;
     }
 }
