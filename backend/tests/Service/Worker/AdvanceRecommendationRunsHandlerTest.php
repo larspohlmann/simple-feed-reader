@@ -157,38 +157,44 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 
     /**
      * The worker owns its process, so it passes TickDriver::Worker and sends
-     * the connection's full batchConcurrency -- not the poll clamp (#344). With
-     * three batches and concurrency three, one batch firing banks all three at
-     * once; under the poll clamp of two it would bank only two and still owe a
-     * batch. This is what proves the handler passes the worker regime.
+     * the connection's full batchConcurrency -- not the poll clamp (#344). The
+     * run's first wave is the warm-up of one (#495); the next worker firing then
+     * fans out all three remaining batches at once, where the poll clamp of two
+     * would bank only two and still owe a batch. That fan-out proves the handler
+     * passes the worker regime.
      */
     public function testAFiringSendsTheFullWorkerConcurrencyNotThePollClamp(): void
     {
         $user = $this->user('worker-wave@example.test');
-        $this->seedForcedBatchCountFixture($user, entryCount: 20, batchCount: 3);
+        $this->seedForcedBatchCountFixture($user, entryCount: 20, batchCount: 4);
         $this->setBatchConcurrency($user, 3);
         $this->starter()->start($user);
 
-        // Snapshot firing freezes the three-batch plan.
+        // Snapshot firing freezes the four-batch plan.
         $this->handler()->__invoke(new AdvanceRecommendationRuns());
         $run = $this->activeRun($user);
-        self::assertCount(3, $run->getCandidateBatches());
+        $batches = $run->getCandidateBatches();
+        self::assertCount(4, $batches);
 
         $this->queueDistillReply();
 
         // Distillation firing precedes every batch now (#493).
         $this->handler()->__invoke(new AdvanceRecommendationRuns());
 
-        foreach ($run->getCandidateBatches() as $batch) {
+        // Warm-up firing: batch 0 alone writes the prompt-cache (#495).
+        $this->requeueCleanReplyFor($batches[0]);
+        $this->handler()->__invoke(new AdvanceRecommendationRuns());
+        self::assertSame(1, $this->activeRun($user)->progress()->batchesDone);
+
+        // One worker firing then fans out all three remaining batches at once.
+        foreach ([$batches[1], $batches[2], $batches[3]] as $batch) {
             $this->requeueCleanReplyFor($batch);
         }
-
-        // One batch firing: the whole wave of three lands in this single tick.
         $this->handler()->__invoke(new AdvanceRecommendationRuns());
 
         $this->em->clear();
         $persisted = $this->activeRun($user);
-        self::assertSame(3, $persisted->progress()->batchesDone);
+        self::assertSame(4, $persisted->progress()->batchesDone);
         self::assertTrue($persisted->progress()->isConsolidationPhase);
     }
 
