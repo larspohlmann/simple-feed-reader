@@ -440,13 +440,24 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     });
 
-    // Repopulate as slices land, not only when the sweep ends. Landing in a
-    // reader that stays empty for two minutes is the bad first impression this
-    // whole feature exists to remove.
+    // The single authority that reloads the list after a refresh (#502). Two
+    // intents, one place:
+    //   - the onboarding sweep (sweeping()) fills progressively, so each
+    //     landing slice reloads — a new user must not stare at an empty list
+    //     for the whole sweep (#127);
+    //   - every user-initiated refresh (mobile pull, header/sidebar Refresh,
+    //     add-feed) reloads once, when the run finishes, so a scoped refresh
+    //     never flickers or reorders mid-sweep.
+    // A second reload used to live in each run()'s onDone callback (#61), so one
+    // scoped refresh loaded the list twice. That reload now lives here alone.
     effect(() => {
-      if (this.refreshSvc.slice() === 0) return;
+      const slice = this.refreshSvc.slice();
+      const running = this.refreshSvc.running();
       untracked(() => {
+        if (slice === 0) return; // nothing has reported yet
+        if (!this.sweeping() && running) return; // manual refresh: wait for finish
         this.subs.load();
+        this.tags.load(); // onDone reloaded tags; the old slice effect did not
         this.entries.load(queryFromSelection(this.selection()));
       });
     });
