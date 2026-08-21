@@ -249,13 +249,14 @@ final class RecommendationPromptBuilderTest extends TestCase
     }
 
     /**
-     * The batch call only ever asks for a score, not a reason, and its history
-     * budget is the not-yet-distilled profile plus FAVORITES rather than the
-     * full three-section history — both reserves are far smaller than the old
-     * reason-bearing, three-section formula, so a 200-candidate pool that used
-     * to need many small batches now packs into a handful of full ones (#493).
+     * A sanity check for the ordinary, cap-bound case: at a generous context
+     * window the batch cap (the default maximumBatchSize of 45) binds before
+     * either the old or the new token formula does, so a 200-candidate pool
+     * packs into the minimum the cap allows either way. This does not exercise
+     * the reserve/history-budget swap — see
+     * testScoreOnlyBatchesPackLargerThanReasonBearingWouldHave for that.
      */
-    public function testScoreOnlyBatchesPackLargerThanReasonBearingWouldHave(): void
+    public function testScoreOnlyBatchesFitTheCapBoundBatchCountAtAGenerousWindow(): void
     {
         $candidates = array_map(
             static fn (int $id): PromptLine => self::line($id, "Candidate $id", 100),
@@ -270,7 +271,39 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $batches = $this->builder->packBatches($candidates, $history, $settings);
 
-        // score-only reply (15/pick) + favorites-only history budget => far fewer, fuller batches
+        self::assertLessThanOrEqual(5, \count($batches));
+    }
+
+    /**
+     * The batch call only ever asks for a score, not a reason, and its history
+     * budget is the not-yet-distilled profile plus FAVORITES rather than the
+     * full three-section history — both reserves are far smaller than the old
+     * reason-bearing, three-section formula. An explicit batchCount of 1 keeps
+     * the cap out of the way (ceil(200/1) = 200, same technique as
+     * testAnExplicitBatchCountStillSplitsOnTheTokenBudget), so the token
+     * budget alone decides the split here. At this window the old formula's
+     * budget goes negative — a 70-token-per-pick reserve plus the full
+     * three-section history outweighs it — so the packer falls back to
+     * MINIMUM_BATCH_SIZE-sized batches, about 20 of them for 200 candidates.
+     * The new formula's smaller score-only reserve and profile+FAVORITES-only
+     * history budget stay positive, so the same pool packs into 5 near-full
+     * batches instead (#493).
+     */
+    public function testScoreOnlyBatchesPackLargerThanReasonBearingWouldHave(): void
+    {
+        $candidates = array_map(
+            static fn (int $id): PromptLine => self::line($id, "Candidate $id", 100),
+            range(1, 200),
+        );
+        $history = new RecommendationHistory(
+            favorites: array_map(static fn (int $id): PromptLine => self::line($id, "Favorite $id", 100), range(1, 40)),
+            kept: array_map(static fn (int $id): PromptLine => self::line($id, "Kept $id", 100), range(1, 40)),
+            viewed: array_map(static fn (int $id): PromptLine => self::line($id, "Viewed $id", 100), range(1, 80)),
+        );
+        $settings = $this->settings(10000, 50, batchCount: 1);
+
+        $batches = $this->builder->packBatches($candidates, $history, $settings);
+
         self::assertLessThanOrEqual(5, \count($batches));
     }
 
