@@ -550,3 +550,15 @@ services:
     App\Service\Recommendation\RecommendationProfileDistiller:
         autowire: true
         public: true
+
+    # RecommendationConsolidationResolverTest drives resolve() directly
+    # against the real winner ranker, candidate loader, history loader,
+    # prompt builder, call recorder and parser, the same "no mocks" stance as
+    # RecommendationProfileDistillerTest's own caller takes. Its only
+    # production caller (the advancer's consolidation phase) arrives in a
+    # later task (#493 Task 12), so until then the compiler would inline it
+    # away and the test container could not fetch it. Same `autowire` caveat
+    # as the entries above.
+    App\Service\Recommendation\RecommendationConsolidationResolver:
+        autowire: true
+        public: true
