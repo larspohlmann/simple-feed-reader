@@ -30,8 +30,8 @@ final class RecommendationSettingsJson
             'profileText' => $effective->profileText,
             'defaultGuidancePrompt' => RecommendationPromptText::DEFAULT_GUIDANCE,
             'fixedPrompt' => [
-                'role' => RecommendationPromptText::SYSTEM_ROLE,
-                'outputContract' => RecommendationPromptText::OUTPUT_CONTRACT,
+                'role' => RecommendationPromptText::BATCH_SYSTEM_ROLE,
+                'outputContract' => RecommendationPromptText::BATCH_OUTPUT_CONTRACT,
             ],
             'favoritesCap' => $effective->favoritesCap,
             'keptCap' => $effective->keptCap,

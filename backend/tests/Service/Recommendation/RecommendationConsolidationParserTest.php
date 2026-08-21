@@ -41,7 +41,7 @@ final class RecommendationConsolidationParserTest extends TestCase
         self::assertSame([], $result->duplicateIds); // 999 was never shown
     }
 
-    /** "No duplicates" is a legitimate answer, the same as RecommendationDuplicateParser. */
+    /** "No duplicates" is a legitimate answer, not a malformed one. */
     public function testAnEmptyDuplicatesArrayIsUsable(): void
     {
         $json = '{"recommendations":[{"id":5,"score":900,"reason":"x"}],"duplicates":[]}';
@@ -95,8 +95,8 @@ final class RecommendationConsolidationParserTest extends TestCase
 
     /**
      * A reply naming most of the shortlist as duplicates is rejected whole —
-     * including its otherwise-valid picks — mirroring
-     * RecommendationDuplicateParser's PlausibleDuplicateShare guard (#396).
+     * including its otherwise-valid picks — mirroring the PlausibleDuplicateShare
+     * guard (#396).
      */
     public function testRejectsTheWholeReplyWhenTheDuplicateShareIsImplausible(): void
     {

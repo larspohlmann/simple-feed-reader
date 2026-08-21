@@ -10,9 +10,9 @@ namespace App\Service\Recommendation;
  * pool with nothing left to consolidate -- carries the final ranked,
  * deduped, reasoned list to finalize; an unusable one carries the offending
  * reply and the batch-score pool to degrade to, so the advancer can run its
- * cross-tick retry-or-degrade envelope, mirroring DedupOutcome. Transport
- * failures never reach here: the resolver throws them, exactly as
- * RecommendationDedupResolver and RecommendationBatchWave do.
+ * cross-tick retry-or-degrade envelope, mirroring ProfileDistillationOutcome.
+ * Transport failures never reach here: the resolver throws them, exactly as
+ * RecommendationProfileDistiller and RecommendationBatchWave do.
  */
 final readonly class ConsolidationOutcome
 {

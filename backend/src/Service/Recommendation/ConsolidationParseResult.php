@@ -8,9 +8,8 @@ namespace App\Service\Recommendation;
  * The outcome of parsing one consolidation reply, which answers two questions
  * at once: which shortlisted posts to recommend, and which of those duplicate
  * a better-scored one. `usable` follows the picks alone -- an empty
- * `duplicateIds` is a legitimate "none of them", the same as
- * DuplicateParseResult, but zero surviving picks means the model recommended
- * nothing and the whole reply is unusable.
+ * `duplicateIds` is a legitimate "none of them", but zero surviving picks
+ * means the model recommended nothing and the whole reply is unusable.
  */
 final readonly class ConsolidationParseResult
 {

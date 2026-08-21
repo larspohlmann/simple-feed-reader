@@ -34,24 +34,10 @@ final class RecommendationAnswerBudgetTest extends TestCase
     public function testTheProviderCeilingIsLooserThanThePackingEstimate(): void
     {
         $estimate = RecommendationAnswerBudget::answerTokenReserve(45);
-        $ceiling = RecommendationAnswerBudget::answerBoundTokens(45, RecommendationResponseSchema::Ranking);
+        $ceiling = RecommendationAnswerBudget::answerBoundTokens(45, RecommendationResponseSchema::Consolidation);
 
         self::assertGreaterThan($estimate, $ceiling);
         self::assertGreaterThanOrEqual(3017, $estimate, 'the estimate still covers the largest reply on record');
-    }
-
-    /**
-     * A dedup reply is `{"duplicates":[…]}` — bare integers, no score and no
-     * prose. Charging it the pick rate gave a reply that cannot legitimately
-     * pass a few hundred tokens a ceiling of ten thousand, which is the
-     * unbounded generation of #437 reintroduced on the dedup call.
-     */
-    public function testADedupReplyIsBoundedFarBelowARankingReply(): void
-    {
-        $dedup = RecommendationAnswerBudget::answerBoundTokens(100, RecommendationResponseSchema::Duplicates);
-        $ranking = RecommendationAnswerBudget::answerBoundTokens(100, RecommendationResponseSchema::Ranking);
-
-        self::assertLessThan(intdiv($ranking, 4), $dedup);
     }
 
     /**
@@ -110,12 +96,12 @@ final class RecommendationAnswerBudgetTest extends TestCase
     public function testTheProviderOutputReserveAddsReasoningHeadroomOnTopOfTheAnswer(): void
     {
         self::assertSame(
-            RecommendationAnswerBudget::answerBoundTokens(45, RecommendationResponseSchema::Ranking) + 32000,
-            RecommendationAnswerBudget::outputTokenReserve(45, RecommendationResponseSchema::Ranking),
+            RecommendationAnswerBudget::answerBoundTokens(45, RecommendationResponseSchema::Consolidation) + 32000,
+            RecommendationAnswerBudget::outputTokenReserve(45, RecommendationResponseSchema::Consolidation),
         );
         self::assertSame(
-            RecommendationAnswerBudget::answerBoundTokens(1, RecommendationResponseSchema::Ranking) + 32000,
-            RecommendationAnswerBudget::outputTokenReserve(1, RecommendationResponseSchema::Ranking),
+            RecommendationAnswerBudget::answerBoundTokens(1, RecommendationResponseSchema::Consolidation) + 32000,
+            RecommendationAnswerBudget::outputTokenReserve(1, RecommendationResponseSchema::Consolidation),
         );
     }
 }

@@ -9,9 +9,9 @@ namespace App\Service\Recommendation;
  * back for the advancer's distillTick to write (#493). A usable reply
  * carries the profile text the resolver already cached on settings; an
  * unusable one carries the offending reply, so the advancer can run its
- * cross-tick retry-or-degrade envelope exactly as the dedup phase's
- * DedupOutcome does. Transport failures never reach here: the resolver
- * throws them, exactly as RecommendationDedupResolver does.
+ * cross-tick retry-or-degrade envelope exactly as ConsolidationOutcome does.
+ * Transport failures never reach here: the resolver throws them, exactly as
+ * RecommendationConsolidationResolver does.
  */
 final readonly class ProfileDistillationOutcome
 {

@@ -10,27 +10,27 @@ use App\Entity\RecommendationRunLog;
 use App\Service\Ai\ProviderConnectionFactory;
 
 /**
- * The consolidation phase's single provider call (#493). It replaces
- * RecommendationDedupResolver's role: instead of one call that only flags
- * duplicates against the batch phases' own scores, one call over the same
- * top-2x-picksLimit pool re-scores every entry against the reader's profile
- * and history, gives each a reason, and flags duplicates -- producing the
- * final ranked, deduped, reasoned list in a single pass. This class mirrors
- * RecommendationDedupResolver and RecommendationProfileDistiller: it loads
- * what the call needs, calls the provider, parses the reply and settles the
- * debug row it opened, then hands back a ConsolidationOutcome for the
- * advancer to write. It never touches the run's persisted progress and never
- * finalizes on its own.
+ * The consolidation phase's single provider call (#493). It replaces the
+ * earlier two-call rank-then-dedup pipeline's role: instead of one call that
+ * only flags duplicates against the batch phases' own scores, one call over
+ * the same top-2x-picksLimit pool re-scores every entry against the reader's
+ * profile and history, gives each a reason, and flags duplicates -- producing
+ * the final ranked, deduped, reasoned list in a single pass. This class
+ * mirrors RecommendationProfileDistiller: it loads what the call needs, calls
+ * the provider, parses the reply and settles the debug row it opened, then
+ * hands back a ConsolidationOutcome for the advancer to write. It never
+ * touches the run's persisted progress and never finalizes on its own.
  *
  * A pool emptied by mid-run pruning has nothing to consolidate, so it
  * resolves free to an empty finalize list with no provider call --
- * mirroring the dedup phase's own all-pruned short-circuit. A usable reply
- * resolves to the pool's picks re-scored and re-reasoned from the reply,
- * minus the named duplicates, sorted best first; an unusable one resolves to
- * the offending reply and the pool at its batch scores with empty reasons,
- * so the advancer can retry the call next tick or degrade to that pool once
- * attempts run out. A transport failure throws, exactly as the dedup
- * resolver does, and the advancer folds it into the run's ceiling.
+ * mirroring RecommendationBatchWave's own all-pruned short-circuit. A usable
+ * reply resolves to the pool's picks re-scored and re-reasoned from the
+ * reply, minus the named duplicates, sorted best first; an unusable one
+ * resolves to the offending reply and the pool at its batch scores with empty
+ * reasons, so the advancer can retry the call next tick or degrade to that
+ * pool once attempts run out. A transport failure throws, exactly as the
+ * distillation resolver does, and the advancer folds it into the run's
+ * ceiling.
  *
  * @SuppressWarnings("PHPMD.ExcessiveParameterList")
  */
@@ -64,7 +64,7 @@ final readonly class RecommendationConsolidationResolver
         if ([] === $pool) {
             // Every ranked entry was pruned since its batch ran: there is
             // nothing left to consolidate, so this is progress, not failure --
-            // mirrors the dedup phase's own all-pruned short-circuit.
+            // mirrors RecommendationBatchWave's own all-pruned short-circuit.
             return ConsolidationOutcome::finalizeWith([]);
         }
 
@@ -115,7 +115,7 @@ final readonly class RecommendationConsolidationResolver
     /**
      * The consolidation phase's single provider call, recorded for the debug
      * view from the moment the request goes out (#309), mirroring
-     * RecommendationDedupResolver::callProvider(). Any failure settles the
+     * RecommendationProfileDistiller::callProvider(). Any failure settles the
      * debug row before unwinding: begin() has already persisted it, and a
      * verdict left null reads to the debug panel as "still streaming"
      * forever. The exception is always re-thrown unchanged, so the advancer

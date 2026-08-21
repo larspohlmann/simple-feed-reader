@@ -54,15 +54,6 @@ final class RecommendationPromptBuilder
     private const int MINIMUM_BATCH_SIZE = 10;
 
     /**
-     * The description length a dedup line carries. Fixed rather than scaled
-     * to the context window like the candidate lines: whether two entries
-     * report the same event is visible in the opening sentences, and the
-     * dedup call renders every line at once, so a generous per-line budget
-     * multiplies straight into one prompt (#406).
-     */
-    private const int DEDUP_DESCRIPTION_CHARS = 250;
-
-    /**
      * How much of an unusable reply the corrective tail quotes back. Wide
      * enough that an ordinary rejected reply is shown whole, and far short of
      * a runaway's tens of kilobytes of repetition (#437).
@@ -219,63 +210,6 @@ final class RecommendationPromptBuilder
     }
 
     /**
-     * The dedup call carries no guidance prompt on purpose: guidance shapes
-     * what to recommend, and this call recommends nothing.
-     *
-     * @param list<array{id: int, score: int, reason: string}> $rankedPool
-     * @param array<int, PromptLine>                           $linesById
-     *
-     * @return list<array{role: string, content: string}>
-     *
-     * @throws \LogicException if called with an empty pool
-     */
-    public function dedupMessages(array $rankedPool, array $linesById): array
-    {
-        if ([] === $rankedPool) {
-            throw new \LogicException('The dedup phase requires at least one ranked winner.');
-        }
-
-        $lines = [];
-        foreach ($rankedPool as $winner) {
-            $line = $this->winnerLine($winner['id'], $linesById);
-            if (null !== $line) {
-                $lines[] = $line;
-            }
-        }
-
-        return [
-            [
-                'role' => 'system',
-                'content' => RecommendationPromptText::DEDUP_ROLE
-                    . "\n\n" . RecommendationPromptText::DEDUP_OUTPUT_CONTRACT,
-            ],
-            [
-                'role' => 'user',
-                'content' => $this->dedupSizeFrame(\count($lines))
-                    . "\n\nRANKED (best first):\n" . implode("\n", $lines),
-            ],
-        ];
-    }
-
-    /**
-     * Names the size of the list and the most duplicates it can hold, both as
-     * numbers. The model was previously asked for a judgement with no sense of
-     * scale, and answered that 98 of 100 entries were duplicates (#396); the
-     * ceiling is the same one PlausibleDuplicateShare enforces on the reply,
-     * so the model is held only to a rule it was given.
-     */
-    private function dedupSizeFrame(int $entryCount): string
-    {
-        return \sprintf(
-            'This list holds %d entries. Most lists hold few duplicates and many hold none, so expect to name '
-                . 'none or a handful. Never name more than %d of them: a reply naming more is discarded whole, '
-                . 'and the reader is then shown the list with its real duplicates still in it.',
-            $entryCount,
-            PlausibleDuplicateShare::maximumFor($entryCount),
-        );
-    }
-
-    /**
      * The distillation call is the one place the model sees the reader's full
      * history: FAVORITES, KEPT and VIEWED together, so it can write a profile
      * that draws on all three. Every later phase (batch, consolidation) sees
@@ -326,8 +260,7 @@ final class RecommendationPromptBuilder
         $descriptionLength = $this->descriptionLength($settings->packing->contextWindow);
 
         // The shortlist in ranked order, with any winner whose line has since
-        // been pruned dropped -- the same tolerance dedupMessages() gives its
-        // own ranked pool.
+        // been pruned simply dropped.
         $shortlistLines = array_values(array_filter(array_map(
             static fn (array $winner): ?PromptLine => $linesById[$winner['id']] ?? null,
             $rankedPool,
@@ -396,15 +329,16 @@ final class RecommendationPromptBuilder
 
     /**
      * Appends the corrective tail for a retry -- the model's own last invalid
-     * reply and the correction instruction -- when there is one. Both provider
-     * phases retry the same way; passing the reply in keeps the tail tied to
-     * the call being retried: the batch phase passes each batch's own local
-     * last invalid reply, the dedup phase the run's cross-tick one (#344).
+     * reply and the correction instruction -- when there is one. Every phase
+     * retries the same way; passing the reply in keeps the tail tied to the
+     * call being retried: the batch phase passes each batch's own local last
+     * invalid reply, the distillation and consolidation phases the run's
+     * cross-tick one (#344).
      *
-     * The correction comes in with it, because the two phases reject a reply
-     * for different reasons and must ask for different things back (#396):
-     * telling a dedup model to use "candidate ids" names a section it was
-     * never shown, and leaves the over-flagging it was rejected for unsaid.
+     * The correction comes in with it, because each phase rejects a reply for
+     * different reasons and must ask for different things back (#396): only
+     * the consolidation phase's reply carries duplicates, so only its
+     * correction can ask for them to be named correctly.
      *
      * @param list<array{role: string, content: string}> $messages
      *
@@ -494,8 +428,7 @@ final class RecommendationPromptBuilder
 
         // The count is the model's own check on "score every candidate": the
         // instruction alone is unverifiable from inside the reply, and 3.2% of
-        // candidates went unscored without it (#399). Same reason the dedup
-        // call is told the size of its list (#396).
+        // candidates went unscored without it (#399).
         $candidateCount = \count($candidateLines);
         $header = \sprintf(
             'CANDIDATES (%d posts — return %d objects, one per line):',
@@ -538,33 +471,6 @@ final class RecommendationPromptBuilder
         }
 
         return self::clipped($description, $length, '…');
-    }
-
-    /**
-     * The title, the date and the description -- what deciding whether two
-     * entries report the same event actually needs. It used to carry the feed
-     * name and the reason the scoring call wrote, and the reason is about the
-     * reader rather than about the article: two entries covering one story
-     * tend to earn similar reasons, which made the field worse than useless
-     * here (#406).
-     *
-     * Null when the entry was pruned since its batch ran, so the caller can
-     * simply drop it from the rendered list.
-     *
-     * @param array<int, PromptLine> $linesById
-     */
-    private function winnerLine(int $entryId, array $linesById): ?string
-    {
-        $line = $linesById[$entryId] ?? null;
-        if (null === $line) {
-            return null;
-        }
-
-        $description = $this->truncatedDescription($line->description, self::DEDUP_DESCRIPTION_CHARS);
-
-        return null === $description
-            ? \sprintf('- [%d] %s — %s', $entryId, $line->title, $line->date)
-            : \sprintf('- [%d] %s — %s — %s', $entryId, $line->title, $line->date, $description);
     }
 
     private function tokens(string $text): int

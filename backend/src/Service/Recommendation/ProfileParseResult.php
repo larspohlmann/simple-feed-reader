@@ -8,7 +8,7 @@ namespace App\Service\Recommendation;
  * The outcome of parsing one distillation reply. `usable` is what
  * RecommendationRunAdvancer branches on: a usable profile is carried into the
  * batch and consolidation phases; an unusable one triggers a retry with a
- * corrective message, mirroring PickParseResult and DuplicateParseResult.
+ * corrective message, mirroring PickParseResult and ConsolidationParseResult.
  */
 final readonly class ProfileParseResult
 {

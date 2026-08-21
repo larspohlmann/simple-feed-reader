@@ -7,8 +7,8 @@ namespace App\Service\Recommendation;
 /**
  * What the provider is allowed to spend answering, per phase — split out of
  * RecommendationPromptBuilder (#493) so that class stays under PHPMD's
- * method-count and complexity ceilings now that it renders five prompt
- * shapes (batch, dedup, distillation, consolidation) rather than two. These
+ * method-count and complexity ceilings now that it renders three prompt
+ * shapes (batch, distillation, consolidation) rather than two. These
  * three methods never shared packBatches()'s own inline packing-budget
  * arithmetic — they only shared three of its numeric constants, which are
  * duplicated here rather than made to depend on RecommendationPromptBuilder
@@ -35,14 +35,6 @@ final readonly class RecommendationAnswerBudget
      * The two numbers are separate because the two jobs are.
      */
     private const int TOKENS_PER_PICK = 70;
-
-    /**
-     * What one id costs in a dedup reply. That reply is `{"duplicates":[…]}`
-     * — bare integers, no score and no prose — so it is nothing like a pick,
-     * and charging it the pick rate put a 10000-token ceiling on a reply that
-     * cannot legitimately exceed a few hundred (#437 follow-up).
-     */
-    private const int TOKENS_PER_DUPLICATE_ID = 8;
 
     /**
      * Duplicated from RecommendationPromptBuilder's own copy on purpose: that
@@ -96,9 +88,9 @@ final readonly class RecommendationAnswerBudget
      * place in this number.
      *
      * An expectation, not a ceiling: what the provider is allowed to spend is
-     * answerBoundTokens(), which adds the slack this must not carry. Ranking
-     * rather than schema-aware because packing only ever splits ranking
-     * batches; the dedup phase sends one call over a pool it does not pack.
+     * answerBoundTokens(), which adds the slack this must not carry. Named for
+     * the batch phase because packing only ever splits batch calls; the other
+     * phases each send one call over a pool they do not pack.
      *
      * The floor covers the JSON envelope and the short replies where a
      * per-item estimate under-counts: at one item, a per-pick rate would not
@@ -113,17 +105,16 @@ final readonly class RecommendationAnswerBudget
      * What the provider may spend answering — the expected size plus slack,
      * for the phase whose reply shape `$schema` describes.
      *
-     * Schema-aware because the two phases answer in different currencies. A
-     * ranking pick carries prose; a dedup entry is a bare integer, and pricing
-     * it as a pick handed a reply that cannot legitimately pass a few hundred
-     * tokens a ceiling of ten thousand — reintroducing, on the dedup call, the
-     * unbounded generation #437 removed from the batch call.
+     * Schema-aware because each phase answers in a different currency. A
+     * batch-score entry is a bare id-and-score pair; a consolidation pick
+     * carries prose; distillation answers a single profile string regardless
+     * of how many items informed it. Pricing a batch reply at the
+     * reason-bearing rate would multiply its answer budget for nothing, the
+     * mistake #437 fixed for the batch call.
      */
     public static function answerBoundTokens(int $replyItemCount, RecommendationResponseSchema $schema): int
     {
         $expected = match ($schema) {
-            RecommendationResponseSchema::Ranking => $replyItemCount * self::TOKENS_PER_PICK,
-            RecommendationResponseSchema::Duplicates => $replyItemCount * self::TOKENS_PER_DUPLICATE_ID,
             RecommendationResponseSchema::Distillation => self::PROFILE_ANSWER_TOKENS,
             RecommendationResponseSchema::BatchScore => $replyItemCount * self::TOKENS_PER_SCORE_PICK,
             RecommendationResponseSchema::Consolidation => $replyItemCount * self::TOKENS_PER_PICK,

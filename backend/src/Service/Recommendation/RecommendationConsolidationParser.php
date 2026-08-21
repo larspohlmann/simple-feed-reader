@@ -6,8 +6,8 @@ namespace App\Service\Recommendation;
 
 /**
  * Turns one raw consolidation reply into validated picks and duplicate ids —
- * the pick-salvaging boundary RecommendationPickParser is, and the
- * duplicate-share guard RecommendationDuplicateParser is, combined into one
+ * the pick-salvaging boundary RecommendationPickParser is, combined with the
+ * same duplicate-share guard PlausibleDuplicateShare enforces, into one
  * parser because the consolidation call answers both questions in a single
  * reply.
  *

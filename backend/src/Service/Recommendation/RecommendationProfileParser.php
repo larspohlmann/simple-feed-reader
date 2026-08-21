@@ -7,7 +7,7 @@ namespace App\Service\Recommendation;
 /**
  * Turns one raw distillation reply into a validated preference profile — the
  * same defensive boundary RecommendationPickParser and
- * RecommendationDuplicateParser are for their own replies. A profile is
+ * RecommendationConsolidationParser are for their own replies. A profile is
  * unusable when the JSON does not parse, the shape is wrong, or the string it
  * carries is empty once trimmed: an empty profile tells the later phases
  * nothing they did not already know.

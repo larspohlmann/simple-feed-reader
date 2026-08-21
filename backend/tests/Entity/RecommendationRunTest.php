@@ -18,8 +18,6 @@ final class RecommendationRunTest extends TestCase
 
         self::assertSame(0, $progress->batchesDone);
         self::assertNull($progress->batchesTotal);
-        self::assertFalse($progress->needsDedup);
-        self::assertFalse($progress->isDedupPhase);
         // Trivially true: zero batches planned, zero batches done.
         self::assertTrue($progress->allBatchCallsDone);
         self::assertSame(0, $progress->nextBatchIndex);
@@ -34,16 +32,14 @@ final class RecommendationRunTest extends TestCase
         self::assertSame(RecommendationRun::STATUS_RUNNING, $run->getStatus());
         self::assertSame([[1, 2], [3]], $run->getCandidateBatches());
         self::assertSame(4, $run->progress()->batchesTotal); // 2 batches + distill + consolidate
-        self::assertTrue($run->progress()->needsDedup);
     }
 
-    public function testASingleBatchNeedsNoMerge(): void
+    public function testASingleBatchPlanTotalsThreeStages(): void
     {
         $run = $this->makeRun();
         $run->snapshot([[1, 2, 3]]);
 
         self::assertSame(3, $run->progress()->batchesTotal); // 1 batch + distill + consolidate
-        self::assertFalse($run->progress()->needsDedup);
     }
 
     public function testRecordingWinnersAdvancesAndClearsRetryState(): void
@@ -59,7 +55,6 @@ final class RecommendationRunTest extends TestCase
         self::assertNull($run->getLastInvalidReply());
         self::assertFalse($run->progress()->attemptsExhausted);
         self::assertSame(1, $run->progress()->nextBatchIndex);
-        self::assertFalse($run->progress()->isDedupPhase);
     }
 
     /**
@@ -93,16 +88,6 @@ final class RecommendationRunTest extends TestCase
 
         self::assertTrue($run->progress()->attemptsExhausted);
         self::assertSame('c', $run->getLastInvalidReply());
-    }
-
-    public function testMergePhaseAfterAllBatchCalls(): void
-    {
-        $run = $this->makeRun();
-        $run->snapshot([[1], [2]]);
-        $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
-        $run->recordBatchWinners([['id' => 2, 'score' => 50, 'reason' => 'r']]);
-
-        self::assertTrue($run->progress()->isDedupPhase);
     }
 
     public function testAllBatchCallsDoneIsFalseUntilEveryBatchReportedWinners(): void

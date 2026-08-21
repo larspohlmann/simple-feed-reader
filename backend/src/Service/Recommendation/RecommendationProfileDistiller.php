@@ -14,20 +14,21 @@ use App\Service\Ai\ProviderConnectionFactory;
  * before any batch is scored, one call over the reader's full weighted
  * history -- favorites, kept, viewed -- produces a short preference profile
  * that every later phase reads instead of that history. This class mirrors
- * RecommendationDedupResolver: it loads what the call needs, calls the
- * provider, parses the reply and settles the debug row it opened, then hands
- * back a ProfileDistillationOutcome for the advancer's distillTick to write.
- * It never touches the run's persisted progress and never retries on its own.
+ * RecommendationConsolidationResolver: it loads what the call needs, calls
+ * the provider, parses the reply and settles the debug row it opened, then
+ * hands back a ProfileDistillationOutcome for the advancer's distillTick to
+ * write. It never touches the run's persisted progress and never retries on
+ * its own.
  *
  * A usable reply is cached on RecommendationSettings here, not only handed
  * back: storeProfile() is what makes the profile survive past this run, for
  * an account that goes on to skip distillation on a later one (#493). An
  * unusable reply resolves to the offending reply so the advancer can retry
  * the call next tick or degrade once attempts run out -- the profile prompt
- * has no pool to fall back to the way dedup falls back to the undeduped list,
- * so a degraded run simply proceeds without one. A transport failure throws,
- * exactly as the dedup resolver does, and the advancer folds it into the
- * run's ceiling.
+ * has no pool to fall back to the way the consolidation phase falls back to
+ * the batch-scored pool, so a degraded run simply proceeds without one. A
+ * transport failure throws, exactly as the consolidation resolver does, and
+ * the advancer folds it into the run's ceiling.
  *
  * @SuppressWarnings("PHPMD.ExcessiveParameterList")
  */
@@ -92,7 +93,7 @@ final readonly class RecommendationProfileDistiller
     /**
      * The distillation phase's single provider call, recorded for the debug
      * view from the moment the request goes out (#309), mirroring
-     * RecommendationDedupResolver::callProvider(). Any failure settles the
+     * RecommendationConsolidationResolver::callProvider(). Any failure settles the
      * debug row before unwinding: begin() has already persisted it, and a
      * verdict left null reads to the debug panel as "still streaming"
      * forever. The exception is always re-thrown unchanged, so the advancer

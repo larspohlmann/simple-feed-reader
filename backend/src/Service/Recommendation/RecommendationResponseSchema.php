@@ -17,46 +17,9 @@ namespace App\Service\Recommendation;
  */
 enum RecommendationResponseSchema
 {
-    case Ranking;
-    case Duplicates;
     case Distillation;
     case BatchScore;
     case Consolidation;
-
-    /** @var array<string, mixed> */
-    private const array RANKING_SCHEMA = [
-        'type' => 'object',
-        'properties' => [
-            'recommendations' => [
-                'type' => 'array',
-                'items' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'id' => ['type' => 'integer'],
-                        'score' => ['type' => 'integer'],
-                        'reason' => ['type' => 'string'],
-                    ],
-                    'required' => ['id', 'score', 'reason'],
-                    'additionalProperties' => false,
-                ],
-            ],
-        ],
-        'required' => ['recommendations'],
-        'additionalProperties' => false,
-    ];
-
-    /** @var array<string, mixed> */
-    private const array DUPLICATES_SCHEMA = [
-        'type' => 'object',
-        'properties' => [
-            'duplicates' => [
-                'type' => 'array',
-                'items' => ['type' => 'integer'],
-            ],
-        ],
-        'required' => ['duplicates'],
-        'additionalProperties' => false,
-    ];
 
     /** @var array<string, mixed> */
     private const array DISTILLATION_SCHEMA = [
@@ -118,8 +81,6 @@ enum RecommendationResponseSchema
     public function toJsonSchema(): JsonSchema
     {
         return match ($this) {
-            self::Ranking => new JsonSchema('recommendations', self::RANKING_SCHEMA),
-            self::Duplicates => new JsonSchema('duplicates', self::DUPLICATES_SCHEMA),
             self::Distillation => new JsonSchema('profile', self::DISTILLATION_SCHEMA),
             self::BatchScore => new JsonSchema('recommendations', self::BATCH_SCORE_SCHEMA),
             self::Consolidation => new JsonSchema('recommendations', self::CONSOLIDATION_SCHEMA),

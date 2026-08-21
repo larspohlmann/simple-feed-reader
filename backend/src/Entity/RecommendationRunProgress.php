@@ -19,8 +19,6 @@ final readonly class RecommendationRunProgress
     public function __construct(
         public int $batchesDone,
         public ?int $batchesTotal,
-        public bool $needsDedup,
-        public bool $isDedupPhase,
         public bool $distillPending,
         public bool $isConsolidationPhase,
         public bool $allBatchCallsDone,
@@ -43,14 +41,11 @@ final readonly class RecommendationRunProgress
     ): self {
         $batchCount = $candidateBatches === null ? 0 : count($candidateBatches);
         $hasPlan = $candidateBatches !== null && $batchCount > 0;
-        $needsDedup = $batchCount > 1;
         $allBatchCallsDone = $batchesDone === $batchCount;
 
         return new self(
             batchesDone: $batchesDone,
             batchesTotal: $hasPlan ? $batchCount + 2 : null,
-            needsDedup: $needsDedup,
-            isDedupPhase: $allBatchCallsDone && $needsDedup,
             distillPending: $hasPlan && !$distilled,
             isConsolidationPhase: $hasPlan && $distilled && $allBatchCallsDone,
             allBatchCallsDone: $allBatchCallsDone,

@@ -33,11 +33,11 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
             $this->settings(suppressReasoning: true),
             [['role' => 'user', 'content' => 'rank these']],
             45,
-            RecommendationResponseSchema::Ranking,
+            RecommendationResponseSchema::Consolidation,
         );
 
         self::assertSame(
-            RecommendationAnswerBudget::answerBoundTokens(45, RecommendationResponseSchema::Ranking),
+            RecommendationAnswerBudget::answerBoundTokens(45, RecommendationResponseSchema::Consolidation),
             $request->maxAnswerTokens,
         );
     }
@@ -53,11 +53,11 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
             $this->settings(suppressReasoning: false),
             [['role' => 'user', 'content' => 'rank these']],
             45,
-            RecommendationResponseSchema::Ranking,
+            RecommendationResponseSchema::Consolidation,
         );
 
         self::assertSame(
-            RecommendationAnswerBudget::outputTokenReserve(45, RecommendationResponseSchema::Ranking),
+            RecommendationAnswerBudget::outputTokenReserve(45, RecommendationResponseSchema::Consolidation),
             $request->maxAnswerTokens,
         );
     }
