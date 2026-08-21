@@ -6,6 +6,16 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <!--
+      Document-wide no-referrer policy (#497). Article-body images are injected
+      with [innerHTML] and carry no referrerpolicy attribute — both Angular's
+      sanitizer allow-list and the backend EntrySanitizer strip a per-img one —
+      so they fall back to this default. Without it they leak the app origin in
+      a Referer header, and hotlink-protecting CDNs answer that with a 403.
+      Setting it here covers every image at once: app-rendered, feed-supplied,
+      and any surface added later. The backend never reads Referer.
+    -->
+    <meta name="referrer" content="no-referrer" />
+    <!--
       Order matters: Chromium picks the *last* icon candidate, so the vector mark
       goes last and the raster fallbacks ahead of it (#137).
     -->
