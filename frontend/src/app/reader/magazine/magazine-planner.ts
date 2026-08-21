@@ -400,7 +400,14 @@ function demoteUntilFit(kind: EntryKind, entry: EntryDto): EntryKind {
  *  would strip of its copy. `entryImage` covers both the persisted field and an
  *  inline `<img>`, so an entry that can fill any image block is excluded. */
 function hasSummaryButNoImage(entry: EntryDto): boolean {
-  return entryImage(entry) === null && textSnippet(entry.summary || entry.contentHtml).length > 0;
+  return entryImage(entry) === null && hasSummary(entry);
+}
+
+/** Whether the entry carries copy to show as a dek. Mirrors the `snippet` a block
+ *  renders (`EntryBlockBase`), so a `kicker` is only offered to an entry whose
+ *  dek will not render empty. */
+function hasSummary(entry: EntryDto): boolean {
+  return textSnippet(entry.summary || entry.contentHtml).length > 0;
 }
 
 function fits(kind: EntryKind, entry: EntryDto): boolean {
@@ -426,6 +433,9 @@ function fits(kind: EntryKind, entry: EntryDto): boolean {
     case 'quote':
       return textSnippet(entry.summary || entry.contentHtml).length >= QUOTE_MIN_TEXT;
     case 'kicker':
+      // A kicker shows a title AND a dek; with no dek it is only a taller
+      // compact, so a summary-less entry demotes past it to the `compact` floor.
+      return hasSummary(entry);
     case 'compact':
       return true;
   }

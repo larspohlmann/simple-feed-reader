@@ -493,6 +493,17 @@ describe('planMagazine', () => {
     expect(ks).toContain('compact');
   });
 
+  it('never renders a bare entry as a kicker — a dek-less kicker is only a taller compact', () => {
+    // A `kicker` shows a title AND a dek; with no summary the dek is empty, so a
+    // bare entry has no business in one. Every block collapses to `compact`, even
+    // from a quote/kicker slot that would otherwise demote to a dek-less kicker.
+    const entries = many(80, (i) =>
+      e(i, { subscriptionId: (i % 6) + 1, summary: null, contentHtml: null }),
+    );
+    const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
+    expect(ks.every((k) => k === 'compact')).toBe(true);
+  });
+
   it('is prefix-stable for a short-summary, image-less feed', () => {
     const summary =
       'A short plain-text feed description, the kind a wire RSS item ships in its body.';
