@@ -1,0 +1,266 @@
+# Offer the WordPress REST API as a richer feed alternative during discovery (#518)
+
+## Problem
+
+Many WordPress sites publish an RSS feed that carries only a truncated excerpt,
+while the same site exposes a far richer machine-readable post list over the
+WordPress REST API: full rendered content, UTC publish timestamps, author,
+featured media, and categories, up to 100 items per request. When a user
+subscribes to such a site we currently only ever offer the RSS/Atom feed. We
+want to detect the REST endpoint during discovery and offer it as an
+**alternative** candidate, never a replacement, so the user can choose the
+richer source in the existing subscribe dialog.
+
+## Locked decisions
+
+- **Detection signal (two tiers):**
+  1. Primary — the HTML head link `<link rel="https://api.w.org/" href="…">`,
+     which names the canonical REST root. The HTTP `Link` header is **not**
+     used: `FetchResponse` exposes only the body, and surfacing response
+     headers would mean a broader change to the shared SSRF-guarded fetcher.
+     Standard WordPress emits the head link through `wp_head`.
+  2. Fallback — when the head link is absent but the page body carries a
+     WordPress fingerprint (`wp-content`, `wp-includes`, or
+     `<meta name="generator" content="WordPress…">`), probe the **default**
+     root `{origin}/wp-json/`. This is a hint-gated path guess, not a blind
+     one: a page with neither the link nor a fingerprint is never probed, so
+     the "absence is silent" property holds. Measured against the owner's 99
+     subscribed sites, the fingerprint gate is lossless — it catches every
+     no-link WordPress site whose default endpoint is reachable (4 sites,
+     lifting coverage from 30 to 34) and never fires on the ~50 clearly
+     non-WordPress hosts.
+
+  Blind path-guessing on every no-link page stays out of scope: it would add a
+  wasted request to the majority of subscribes, which are not WordPress.
+- **Ordering:** when a page offers both, the REST candidate is presented
+  **first**, then the RSS/Atom candidates.
+- **Badge label:** the REST candidate's format badge reads **"WordPress"**.
+- **Page size + payload:** the probe requests `per_page=20`. It does **not**
+  use `_embed`: on large sites (TechCrunch) `_embed` inflates the response by
+  ~1.3 MB *per post*, which never completes inside the fetcher's 10s/20s timeout
+  and blows the 5 MB size cap, so the candidate would be silently dropped.
+  Instead it prunes with `_fields` to only what the parser reads. Full article
+  text (`content.rendered`) is present **without** `_embed`. (Empirically
+  verified: `per_page=50&_embed` never completes on TechCrunch; the same page
+  without `_embed` is ~0.4 MB in ~1 s.)
+- **Card title:** the candidate carries the page `<title>` as its title, so the
+  card has a readable name (the posts endpoint carries no site name).
+- **Non-pretty root:** a `?rest_route=/` REST root (permalinks off) is left
+  unsupported — detection returns "no alternative" for it.
+
+## Architecture
+
+The feature reuses three seams the codebase already has:
+
+1. `SourceFormat` is an **open constants holder**, so a new durable format is
+   one new constant.
+2. Refresh dispatches a stored body to the parser owning its `sourceFormat`
+   through the `app.feed_body_parser` keyed locator, so a new format is **one
+   new class** implementing `FeedBodyParserInterface` — no dispatcher edit.
+3. Discovery already parses the page body in `FeedLinkScanner` /
+   `WellKnownFeedProbe`, so REST detection is a sibling collaborator that reads
+   the same body.
+
+### Components
+
+#### 1. New source format
+`App\Enum\SourceFormat::WP_JSON = 'wp-json'`. No enum introduced; the value
+flows as a plain string exactly like `XML` and `SCRAPED`.
+
+#### 2. `Service/Parser/WordPressJsonParser` (the core unit)
+A standalone service that turns a decoded WordPress posts array into a
+`ParsedFeed`. It is the reusable core, mirroring how `FeedParser` and
+`HtmlItemExtractor` are used directly by both refresh and preview.
+
+Per post → `ParsedEntry`:
+
+| Source field | Target | Note |
+|---|---|---|
+| `title.rendered` | `title` | decode entities and strip tags — WordPress renders both |
+| `link` | `url` | absolute |
+| `date_gmt` | `publishedAt` | **parsed explicitly as UTC**; never `date`. Naive-UTC gotcha: a wrong offset makes every entry show up as "now". |
+| `content.rendered` | `contentHtml` | raw; `EntryIngestor` sanitizes downstream, same as any feed HTML |
+| `excerpt.rendered` | `summary` | nullable |
+| `jetpack_featured_media_url` | `image` (`ParsedImage`) | a plain top-level image URL (no `_embed` needed); nullable, width/height unknown. Absent on non-Jetpack sites → `null`, and the reader still extracts the lead image from `content.rendered`. |
+| `guid.rendered` else `(string) id` | `guid` | stable id |
+
+`author` is **not** mapped: the post carries only an author **id** without
+`_embed`, and `_embed` is too heavy to request (see Page size above). Article
+bylines usually live inside `content.rendered` anyway.
+
+`ParsedFeed`: `title` is `null` (the posts endpoint carries no site name),
+`siteUrl`/`description` `null`, `entries` the mapped list.
+
+Robustness: every key access is defensive against a missing or mistyped value.
+A body that does not decode to a JSON **array** throws `FeedParseException`; an
+empty array `[]` is a valid feed with zero entries (a site whose posts were all
+removed is empty, not broken — same as an empty RSS channel). Non-array items
+inside the list are skipped. The probe (discovery) separately requires a
+**non-empty** array before it offers a candidate. This unit carries the
+mutation-testing weight.
+
+#### 3. `Service/Refresh/WpJsonBodyParser`
+Implements `FeedBodyParserInterface`; `format()` returns `SourceFormat::WP_JSON`;
+`parse()` delegates to `WordPressJsonParser`. The exact shape of
+`XmlBodyParser` / `ScrapedBodyParser`. Auto-registered by the
+`app.feed_body_parser` tag — no dispatcher edit, no registration list. Refresh
+fetches the stored posts URL through the SSRF-guarded fetcher unchanged.
+
+#### 4. `Service/Discovery/WordPressRestProbe`
+A sibling of `WellKnownFeedProbe`, injected into `FeedDiscovery`. Given the page
+body and the page's final URL it returns a `?FeedCandidate`:
+
+1. Resolve the REST root from the body (via `HtmlDocumentParser`, as
+   `FeedLinkScanner` does), in two tiers:
+   - Head link `<link rel="https://api.w.org/" href="…">` present → its `href`
+     is the root.
+   - Else, if the body carries a WordPress fingerprint (`wp-content`,
+     `wp-includes`, or `<meta name="generator" content="WordPress…">`) → the
+     root is the default `{origin}/wp-json/`, derived from the page's final URL.
+   - Neither → `null`, silent — the ordinary case, exactly like
+     `WellKnownFeedProbe` returning `null`. No probe request is made.
+2. Build the posts URL:
+   `{root}wp/v2/posts?per_page=20&_fields=id,date_gmt,link,guid,title,content,excerpt,jetpack_featured_media_url`.
+   No `_embed` (see Page size). Guard: only a pretty-permalink root (no `?`) is
+   supported; a `?rest_route=` root → `null`. Ensure a single trailing slash on
+   the root before appending.
+3. Probe once through the **SSRF-guarded fetcher** (`FeedFetcherInterface`).
+   Any `FetchException` (includes 401/403), an empty body, or a body that does
+   not decode to a non-empty JSON array → `null` ("no alternative"). This is
+   also what makes the fingerprint fallback safe: a fingerprinted site whose
+   REST API is disabled or gated simply yields no candidate.
+4. On success → `new FeedCandidate($postsUrl, $pageTitle, SourceFormat::WP_JSON)`.
+
+The probe only validates the shape (non-empty array); it does not build a full
+`ParsedFeed`. The fingerprint check reads the raw body (a substring/`str_contains`
+test is enough) and does not need a second parse of the document.
+
+#### 5. `Service/Discovery/FeedDiscovery` change
+After the body proves not a feed and not a bot-challenge, compute the REST
+candidate and **prepend** it to `FeedLinkScanner::scan()`'s result (REST first):
+
+```
+$restCandidate = $this->wordPressRest->offer($body, $response->finalUrl);
+$scanned       = $this->links->scan($body, $response->finalUrl);
+$candidates    = array_values(array_filter([$restCandidate, ...$scanned]));
+
+return [] !== $candidates
+    ? FeedDiscoveryResult::candidates($candidates)
+    : $this->feedThePageNeverMentions($body, $response->finalUrl, $fallback);
+```
+
+The existing well-known / scrape fallback is unchanged and still runs only when
+nothing (REST or scanned) was found. `FeedDiscovery` gains one constructor
+collaborator (eight total; well under PHPMD's parameter/field thresholds and
+consistent with the existing coordinator shape).
+
+#### 6. `Service/Preview/FeedPreviewService` change
+Add a `wp-json` branch that parses through `WordPressJsonParser`, mirroring the
+existing direct use of `FeedParser` / `HtmlItemExtractor`. No permission gate —
+`assertMayScrape` stays scraped-only. A wrong or empty endpoint surfaces as an
+unavailable preview (`FeedPreviewException`), the same guarantee every candidate
+gets.
+
+#### 7. `Service/Subscription/SubscriptionService` change
+Add a `wp-json` branch that stores the URL **verbatim** with
+`SourceFormat::WP_JSON`, skipping re-discovery — the candidate URL is a JSON
+endpoint, so re-running discovery on it would fail. This is the same shortcut
+as `scraped` but with **no** `assertMayScrape`. The two verbatim branches share
+one small private helper to stay DRY. Like `scraped`, there is no first-fetch
+content: the feed shows 0 unread until the first scheduled refresh populates it.
+
+#### 8. Frontend `reader/add-feed/add-feed-dialog`
+- `formatLabel()`: `'wp-json'` → `'WordPress'`.
+- `pick()` and `loadPreviews()`: pass the candidate format through for
+  `wp-json` as they already do for `scraped`, so both subscribe and preview
+  carry it. (`SubscribeRequest.format` / `PreviewFeedRequest.format` are open
+  nullable strings, max 20 chars — `wp-json` fits and needs no validation
+  change.)
+- No new i18n keys: the badge is hardcoded like RSS/Atom.
+
+### Data flow (subscribe)
+
+1. User enters a site URL → `FeedDiscovery::discover()` → REST candidate (posts
+   URL, format `wp-json`) prepended → candidate list returned.
+2. Dialog previews each card: for the WordPress card,
+   `previewFeed(url, 'wp-json')` → `FeedPreviewService` → `WordPressJsonParser`
+   → the "full content" badge distinguishes it from the RSS card.
+3. User clicks Subscribe on the WordPress card → `subscribe(url, 'wp-json')` →
+   `SubscriptionService` stores `Feed(url = postsUrl, sourceFormat = wp-json)`
+   verbatim.
+4. Refresh fetches the posts URL through the guarded fetcher → `FeedBodyParser`
+   → `WpJsonBodyParser` → `WordPressJsonParser` → `ParsedFeed` → `EntryIngestor`
+   (sanitizes `content.rendered`).
+
+### Error handling
+
+- No head link and no WordPress fingerprint → silent, no candidate and no probe
+  request (ordinary case).
+- Probe fails (network / 401 / 403 / empty / non-array) → `null` → offer only
+  the RSS candidate.
+- Refresh parse failure later → `WordPressJsonParser` throws
+  `FeedParseException` → `RefreshRunner`'s existing `recordFailure` / backoff /
+  Erroring handling applies, same as any feed.
+- Preview parse failure → `FeedPreviewException` → dialog shows "preview
+  unavailable".
+
+### Constraints respected
+
+- **SSRF boundary:** the probe fetch and every refresh fetch go through
+  `FeedFetcherInterface`, which reguards every redirect hop. No new outbound
+  path bypasses the guard.
+- **Native iOS readiness:** JSON in, JSON out, Bearer auth; no browser-only
+  coupling.
+
+## Testing
+
+- **Unit — `WordPressJsonParser`** (mutation-critical): `date_gmt` parsed as
+  UTC; missing/mistyped keys; `jetpack_featured_media_url` → image (and its
+  absence → `null` image); entity/tag handling in the title; empty or non-array
+  body → `FeedParseException`.
+- **Unit — `WordPressRestProbe`**: head-link read; fingerprint-gated fallback
+  to the default `/wp-json/` root when the link is absent but a
+  `wp-content`/`wp-includes`/generator hint is present; no link **and** no
+  fingerprint → null with **no** probe request made; posts-URL build (trailing
+  slash, `?rest_route` → null); probe over a stubbed fetcher; 401/403/empty/
+  non-array → null (including a fingerprinted-but-gated site); success →
+  candidate with page title.
+- **Unit — `WpJsonBodyParser`**: `format()` and delegation.
+- **Integration — `FeedDiscovery`**: the REST candidate is prepended alongside
+  the RSS candidate (REST first).
+- **Integration — `FeedPreviewService`**: renders the REST candidate;
+  gated/empty endpoint → unavailable preview.
+- **Integration — `SubscriptionService`**: `wp-json` stores verbatim with
+  `SourceFormat::WP_JSON`, no re-discovery, no permission gate.
+- **Frontend spec** (`add-feed-dialog.component.spec.ts`): "WordPress" badge;
+  subscribe and preview pass the `wp-json` format.
+- **Discovery/e2e spec**: owns its data — stub the `wp-json` route rather than
+  reading whatever the seeded account holds.
+- **Mutation:** `composer infection:diff` gates the touched files.
+
+## Out of scope
+
+- Custom post types and non-default REST namespaces — `wp/v2/posts` only.
+- Sites that disable or gate the REST API (401/403/empty) — "no alternative".
+- Pagination beyond the first page — one request of `per_page` items, matching
+  how the RSS path behaves today.
+- The `?rest_route=/` non-pretty REST root.
+- **Blind path-guessing** on pages with neither the head link nor a WordPress
+  fingerprint — the default-root probe fires only behind the fingerprint gate.
+- A relocated (non-default) REST root on a no-link site — the fallback assumes
+  the default `{origin}/wp-json/`; a site that both hides the link and moves the
+  root is not caught.
+
+## Files touched
+
+- `backend/src/Enum/SourceFormat.php`
+- `backend/src/Service/Parser/WordPressJsonParser.php` (new)
+- `backend/src/Service/Refresh/WpJsonBodyParser.php` (new)
+- `backend/src/Service/Discovery/WordPressRestProbe.php` (new)
+- `backend/src/Service/Discovery/FeedDiscovery.php`
+- `backend/src/Service/Preview/FeedPreviewService.php`
+- `backend/src/Service/Subscription/SubscriptionService.php`
+- `frontend/src/app/reader/add-feed/add-feed-dialog.component.ts`
+- `frontend/src/app/reader/add-feed/add-feed-dialog.component.html`
+- `frontend/src/app/reader/add-feed/add-feed-dialog.component.spec.ts`
+- New backend tests mirroring the units above.

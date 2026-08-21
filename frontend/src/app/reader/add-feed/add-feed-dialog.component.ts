@@ -108,6 +108,7 @@ export class AddFeedDialogComponent implements OnInit {
   formatLabel(format: string): string {
     if (format === 'rss') return 'RSS';
     if (format === 'atom') return 'Atom';
+    if (format === 'wp-json') return 'WordPress';
     return format ? format.charAt(0).toUpperCase() + format.slice(1) : 'Feed';
   }
 
@@ -136,7 +137,14 @@ export class AddFeedDialogComponent implements OnInit {
   }
 
   pick(c: FeedCandidate): void {
-    this.subscribe(c.url, c.format === 'scraped' ? 'scraped' : undefined);
+    this.subscribe(c.url, this.storedFormat(c));
+  }
+
+  /** Formats the backend must persist verbatim (it cannot re-derive them by
+   *  parsing): scraped pages and WordPress REST endpoints. Others re-run
+   *  discovery, so they pass no format. */
+  private storedFormat(c: FeedCandidate): string | undefined {
+    return c.format === 'scraped' || c.format === 'wp-json' ? c.format : undefined;
   }
 
   private subscribe(url: string, format?: string): void {
@@ -174,7 +182,7 @@ export class AddFeedDialogComponent implements OnInit {
   private loadPreviews(candidates: FeedCandidate[]): void {
     this.previews.set(Object.fromEntries(candidates.map((c) => [c.url, { status: 'loading' }])));
     for (const c of candidates) {
-      this.api.previewFeed(c.url, c.format === 'scraped' ? 'scraped' : undefined).subscribe({
+      this.api.previewFeed(c.url, this.storedFormat(c)).subscribe({
         next: (r) =>
           this.previews.update((m) => ({ ...m, [c.url]: { status: 'ok', preview: r.feed } })),
         error: (e: HttpErrorResponse) =>

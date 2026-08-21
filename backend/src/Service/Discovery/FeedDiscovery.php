@@ -15,13 +15,15 @@ use App\Service\Parser\FeedParser;
 use App\Service\Scraper\HtmlItemExtractor;
 
 /**
- * Turns a user-entered URL into something to subscribe to, trying four sources
- * in decreasing order of certainty: the URL itself parsed as a feed; the feeds
- * the page points at (FeedLinkScanner, exact first and guessed second); a feed
- * under one of the conventional paths (WellKnownFeedProbe) — which is also the
- * only source left when the page never arrives, as on the sites that refuse
- * every non-browser client; and finally a synthetic 'scraped' candidate built
- * from the page's own article list.
+ * Turns a user-entered URL into something to subscribe to, trying five sources
+ * in decreasing order of certainty: the URL itself parsed as a feed; a
+ * WordPress REST posts endpoint (WordPressRestProbe, offered first alongside
+ * the page's advertised feeds) and the feeds the page points at (FeedLinkScanner,
+ * exact first and guessed second); a feed under one of the conventional paths
+ * (WellKnownFeedProbe) — which is also the only source left when the page
+ * never arrives, as on the sites that refuse every non-browser client; and
+ * finally a synthetic 'scraped' candidate built from the page's own article
+ * list.
  *
  * Discovery never throws for a bad address: failures come back as a
  * scrapeFailureReason so the subscribe endpoint can always answer with a
@@ -45,6 +47,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         private WellKnownFeedProbe $wellKnownFeeds,
         private BotChallengePage $botChallenge,
         private SubstackProfileFeed $substackProfile,
+        private WordPressRestProbe $wordPressRest,
     ) {
     }
 
@@ -92,7 +95,11 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
             return FeedDiscoveryResult::scrapeFailed('blocked');
         }
 
-        $candidates = $this->links->scan($body, $response->finalUrl);
+        $restCandidate = $this->wordPressRest->offer($body, $response->finalUrl);
+        $candidates = array_values(array_filter([
+            $restCandidate,
+            ...$this->links->scan($body, $response->finalUrl),
+        ]));
 
         return [] !== $candidates
             ? FeedDiscoveryResult::candidates($candidates)

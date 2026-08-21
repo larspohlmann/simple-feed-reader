@@ -12,6 +12,7 @@ use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Parser\FeedParser;
+use App\Service\Parser\WordPressJsonParser;
 use App\Service\Preview\FeedPreviewService;
 use App\Service\Scraper\HtmlItemExtractor;
 use App\Tests\Service\Scraper\ScrapedFixtures;
@@ -31,7 +32,13 @@ final class FeedPreviewServiceTest extends KernelTestCase
         $extractor = self::getContainer()->get(HtmlItemExtractor::class);
         self::assertInstanceOf(HtmlItemExtractor::class, $extractor);
 
-        return new FeedPreviewService($fetcher, $parser, $extractor, new ScrapeFallbackPolicy());
+        return new FeedPreviewService(
+            $fetcher,
+            $parser,
+            $extractor,
+            new ScrapeFallbackPolicy(),
+            new WordPressJsonParser(),
+        );
     }
 
     /** These tests never touch the database, so a User is built inline rather than through a factory. */
@@ -274,5 +281,18 @@ final class FeedPreviewServiceTest extends KernelTestCase
         $this->expectException(ScrapingDisabledException::class);
 
         $this->service(new StubFeedFetcher())->preview($user, 'https://example.com/blog', SourceFormat::SCRAPED);
+    }
+
+    public function testPreviewsAWpJsonCandidateAsFullContent(): void
+    {
+        $body = '[{"id":1,"link":"https://site.example/p","title":{"rendered":"Post"},'
+            . '"content":{"rendered":' . json_encode($this->longParagraph()) . '},'
+            . '"date_gmt":"2026-08-20T10:00:00"}]';
+        $fetcher = $this->fetcherWithBody($body);
+
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL, SourceFormat::WP_JSON);
+
+        self::assertSame(1, $preview->itemCount);
+        self::assertSame('full', $preview->content);
     }
 }

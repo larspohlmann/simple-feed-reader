@@ -35,6 +35,9 @@ several users. Free and open source (MIT).
   plain-language explanation.
 - For sites without any feed, an opt-in experimental mode scrapes the
   article list into a pseudo-feed.
+- When a WordPress site's feed carries only summaries, the app detects its
+  REST API while finding the feed and offers it as a richer alternative —
+  full article text, chosen in the same subscribe dialog.
 
 **Tags**
 

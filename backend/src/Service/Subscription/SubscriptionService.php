@@ -50,24 +50,24 @@ final readonly class SubscriptionService
      */
     public function subscribe(User $user, string $url, ?string $format = null, array $tags = []): SubscribeOutcome
     {
-        // A 'scraped' subscribe re-posts a candidate URL discovery itself just
-        // produced: the page IS the feed. Running discovery again would
-        // re-fetch and re-extract for nothing — or, worse, fail this time and
-        // block a subscribe the user was already offered. The URL is stored
-        // VERBATIM (no finalUrl canonicalization, unlike the discovery path):
-        // candidates round-trip the canonical URL discovery just emitted, and
-        // a hand-typed variant merely becomes its own row that counts against
-        // this user's cap and converges via applyPermanentRedirect on refresh.
+        // A 'scraped' or 'wp-json' subscribe re-posts a candidate URL discovery
+        // itself just produced: the URL IS the source. Running discovery again
+        // would re-fetch for nothing — or fail this time and block a subscribe
+        // the user was already offered. Both are stored VERBATIM.
         if (SourceFormat::SCRAPED === $format) {
             // Discovery never offers a scraped candidate to an account with the
             // preference off, so a request that reaches here with it off is a
             // hand-made one — refuse it rather than let this shortcut become
-            // the bypass discovery's own gate (Task 5) cannot see.
+            // the bypass discovery's own gate cannot see.
             $this->scrapeFallbackPolicy->assertMayScrape($user);
 
-            return SubscribeOutcome::subscribed(
-                $this->creator->create($user, $url, SourceFormat::SCRAPED, $tags),
-            );
+            return $this->subscribeVerbatim($user, $url, SourceFormat::SCRAPED, $tags);
+        }
+
+        if (SourceFormat::WP_JSON === $format) {
+            // No permission gate: unlike scraping, a REST endpoint is a real
+            // machine source the site publishes, not a synthesized page scrape.
+            return $this->subscribeVerbatim($user, $url, SourceFormat::WP_JSON, $tags);
         }
 
         $result = $this->discovery->discover($url, $this->scrapeFallbackPolicy->forUser($user));
@@ -81,5 +81,17 @@ final readonly class SubscriptionService
         $unread = $this->firstFetch->record($subscription->getFeed(), $discovered);
 
         return SubscribeOutcome::subscribed($subscription, $unread);
+    }
+
+    /**
+     * A candidate whose URL is the source itself (scraped page, REST endpoint):
+     * store it verbatim and skip re-discovery.
+     *
+     * @param 'scraped'|'wp-json' $format
+     * @param list<Tag>           $tags
+     */
+    private function subscribeVerbatim(User $user, string $url, string $format, array $tags): SubscribeOutcome
+    {
+        return SubscribeOutcome::subscribed($this->creator->create($user, $url, $format, $tags));
     }
 }

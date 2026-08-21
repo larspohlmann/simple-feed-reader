@@ -79,4 +79,18 @@ final class FeedBodyParserWiringTest extends KernelTestCase
         $this->expectExceptionMessageMatches('/^No parser for source format "jsonfeed"; tried xml: ./');
         $this->parser()->parse($feed, '{"version": "https://jsonfeed.org/version/1", "items": []}');
     }
+
+    public function testWpJsonFormatResolvesToTheWordPressParser(): void
+    {
+        $feed = new \App\Entity\Feed('https://site.example/wp-json/wp/v2/posts?per_page=50&_embed');
+        $feed->setSourceFormat(\App\Enum\SourceFormat::WP_JSON);
+
+        $body = '[{"id":1,"link":"https://site.example/p","title":{"rendered":"Post"},'
+            . '"content":{"rendered":"<p>Body.</p>"},"date_gmt":"2026-08-20T10:00:00"}]';
+
+        $parsed = $this->parser()->parse($feed, $body);
+
+        self::assertCount(1, $parsed->entries);
+        self::assertSame('Post', $parsed->entries[0]->title);
+    }
 }

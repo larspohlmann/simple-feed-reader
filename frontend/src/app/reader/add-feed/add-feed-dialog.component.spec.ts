@@ -208,6 +208,40 @@ describe('AddFeedDialogComponent', () => {
     expect(close).toHaveBeenCalledWith({ id: 7 });
   });
 
+  it('labels a wp-json candidate "WordPress" and passes the format to preview and subscribe', () => {
+    const f = create();
+    f.componentInstance.form.setValue({ url: 'https://wp.example/' });
+    f.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      candidates: [
+        { url: 'https://wp.example/wp-json/wp/v2/posts', title: 'WP', format: 'wp-json' },
+      ],
+    });
+    f.detectChanges();
+
+    const previewReq = ctrl.expectOne((r) => r.url.endsWith('/api/feeds/preview'));
+    expect(previewReq.request.body).toEqual({
+      url: 'https://wp.example/wp-json/wp/v2/posts',
+      format: 'wp-json',
+    });
+    previewReq.flush({
+      feed: { title: 'WP', itemCount: 5, content: 'full', hasImages: true, items: [] },
+    });
+    f.detectChanges();
+
+    const card = (f.nativeElement as HTMLElement).querySelector('.card')!;
+    expect(card.querySelector('.badge.format')?.textContent?.trim()).toBe('WordPress');
+
+    (card.querySelector('.subscribe') as HTMLButtonElement).click();
+    const subReq = ctrl.expectOne('https://api.test/api/subscriptions');
+    expect(subReq.request.body).toEqual({
+      url: 'https://wp.example/wp-json/wp/v2/posts',
+      format: 'wp-json',
+    });
+    subReq.flush({ subscription: { id: 8 } }, { status: 201, statusText: 'Created' });
+    expect(close).toHaveBeenCalledWith({ id: 8 });
+  });
+
   it('marks a scraped candidate as experimental', () => {
     const f = create();
     f.componentInstance.form.setValue({ url: 'https://page.example/' });
