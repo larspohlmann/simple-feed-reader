@@ -824,15 +824,12 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /** The list-scoped refresh (header button + mobile pull): sweep only the feeds
-   *  behind the current selection, then reload the list once it lands. */
+   *  behind the current selection. The single reload authority (#502) reloads the
+   *  list once the run finishes — this path no longer reloads it itself. */
   onScopedRefresh(): void {
     const scope = this.refreshScope();
     if (!scope) return;
-    this.refreshSvc.run(() => {
-      this.subs.load();
-      this.tags.load();
-      this.entries.load(queryFromSelection(this.selection()));
-    }, scope);
+    this.refreshSvc.run(undefined, scope);
   }
 
   /** The header button's start path: a for-you run is long and spends provider

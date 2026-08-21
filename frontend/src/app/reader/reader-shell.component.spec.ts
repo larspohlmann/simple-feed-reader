@@ -749,33 +749,25 @@ describe('ReaderShellComponent', () => {
       f.componentInstance.onScopedRefresh();
 
       // The refresh sweep itself.
-      ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/refresh')
-        .flush(refreshDone);
+      ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
       f.detectChanges();
 
       // Exactly one reload of each list-backing resource — the double reload
       // (slice effect + onDone) would make entries match twice here.
-      expect(
-        ctrl.match((r) => r.url === 'https://api.test/api/entries').length,
-      ).toBe(1);
-      expect(ctrl.match((r) => r.url === 'https://api.test/api/tags').length).toBe(
-        1,
-      );
-      expect(
-        ctrl.match((r) => r.url === 'https://api.test/api/subscriptions').length,
-      ).toBe(1);
+      // ctrl.match() removes what it finds from the open-request queue, so the
+      // counts are captured once and reused below to drain them — matching
+      // again would find nothing and throw.
+      const entriesReloads = ctrl.match((r) => r.url === 'https://api.test/api/entries');
+      const tagsReloads = ctrl.match((r) => r.url === 'https://api.test/api/tags');
+      const subsReloads = ctrl.match((r) => r.url === 'https://api.test/api/subscriptions');
+      expect(entriesReloads.length).toBe(1);
+      expect(tagsReloads.length).toBe(1);
+      expect(subsReloads.length).toBe(1);
 
       // Drain the reload requests so verify() is clean.
-      ctrl
-        .match((r) => r.url === 'https://api.test/api/entries')[0]
-        .flush({ entries: [], nextCursor: null });
-      ctrl
-        .match((r) => r.url === 'https://api.test/api/tags')[0]
-        .flush({ tags: [] });
-      ctrl
-        .match((r) => r.url === 'https://api.test/api/subscriptions')[0]
-        .flush(subsBody);
+      entriesReloads[0].flush({ entries: [], nextCursor: null });
+      tagsReloads[0].flush({ tags: [] });
+      subsReloads[0].flush(subsBody);
       ctrl.verify();
     });
   });
