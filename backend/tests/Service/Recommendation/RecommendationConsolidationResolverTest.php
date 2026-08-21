@@ -7,7 +7,9 @@ namespace App\Tests\Service\Recommendation;
 use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
 use App\Entity\RecommendationRun;
+use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Repository\RecommendationRunLogRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\ConsolidationOutcome;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
@@ -177,6 +179,62 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         ));
     }
 
+    /**
+     * A transport failure has to abort the log row it opened, not merely
+     * propagate — a verdict left null forever reads to the debug panel as
+     * "still streaming" (mirrors RecommendationRunAdvancerTest's own
+     * testATransportFailureStampsItsLogRow, but exercised here at the
+     * resolver's own catch rather than through the full advancer).
+     */
+    public function testTransportFailureAbortsTheOpenLogRow(): void
+    {
+        $this->fixtures->debugEnabledSettings($this->user);
+        [$entry] = $this->fixtures->seedFeedWithEntries($this->user, 1);
+        $id = $this->idOf($entry);
+        $run = $this->runWithWinners([['id' => $id, 'score' => 500, 'reason' => '']]);
+
+        $this->stubChatClient()->queueFailure(new \RuntimeException('gone'));
+
+        try {
+            $this->resolveConsolidation($run);
+            self::fail('The transport failure must propagate.');
+        } catch (\RuntimeException) {
+        }
+
+        /** @var RecommendationRunLogRepository $logs */
+        $logs = self::getContainer()->get(RecommendationRunLogRepository::class);
+        $rows = $logs->listForRun($this->user, $run->getId() ?? throw new \LogicException('Run was never saved.'));
+
+        self::assertSame(['transport-failed'], array_column($rows, 'verdict'));
+        self::assertSame('gone', $rows[0]['errorDetail']);
+    }
+
+    /**
+     * `$settings->getModel() ?? ''` only falls back to '' when the model is
+     * genuinely unset — a configured model must reach the recorded call
+     * unchanged, not be discarded in favour of the fallback.
+     */
+    public function testTheRecordedCallCarriesTheConfiguredModel(): void
+    {
+        $this->fixtures->debugEnabledSettings($this->user);
+        [$entry] = $this->fixtures->seedFeedWithEntries($this->user, 1);
+        $id = $this->idOf($entry);
+        $run = $this->runWithWinners([['id' => $id, 'score' => 500, 'reason' => '']]);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $id, 'score' => 600, 'reason' => 'Fits.']],
+            'duplicates' => [],
+        ], \JSON_THROW_ON_ERROR));
+
+        $this->resolveConsolidation($run);
+
+        $log = $this->em->getRepository(RecommendationRunLog::class)->findOneBy(['run' => $run]);
+        self::assertNotNull($log);
+        $decoded = json_decode($log->getRequestBody(), true, 512, \JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertSame('m', $decoded['model']);
+    }
+
     public function testConsolidationSendsTheConsolidationSchema(): void
     {
         [$entry] = $this->fixtures->seedFeedWithEntries($this->user, 1);
@@ -194,6 +252,44 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         $calls = $this->stubChatClient()->calls();
         self::assertCount(1, $calls);
         self::assertSame('recommendations', $calls[0]['responseSchemaName']);
+    }
+
+    /**
+     * stillPresent() must leave the pool a genuine list even when the entry
+     * it drops sits in the middle: array_filter() alone keeps the surviving
+     * keys as they were (0, 2), and an unusable reply exposes that raw pool
+     * as the fallback pool unrenormalized by anything downstream.
+     */
+    public function testUnusableReplyFallbackPoolStaysAListAfterAMiddleEntryIsPruned(): void
+    {
+        [$firstEntry, $secondEntry, $thirdEntry] = $this->fixtures->seedFeedWithEntries($this->user, 3);
+        $firstId = $this->idOf($firstEntry);
+        $secondId = $this->idOf($secondEntry);
+        $thirdId = $this->idOf($thirdEntry);
+
+        $run = $this->runWithWinners([
+            ['id' => $firstId, 'score' => 700, 'reason' => ''],
+            ['id' => $secondId, 'score' => 500, 'reason' => ''],
+            ['id' => $thirdId, 'score' => 300, 'reason' => ''],
+        ]);
+
+        $middle = $this->em->getRepository(Entry::class)->find($secondId);
+        self::assertNotNull($middle);
+        $this->em->remove($middle);
+        $this->em->flush();
+
+        $this->stubChatClient()->queueContent('not json');
+
+        $outcome = $this->resolveConsolidation($run);
+
+        self::assertFalse($outcome->usable);
+        // Keys, not merely values: array_filter() alone would leave (0, 2), a
+        // gap only array_values() closes.
+        self::assertSame([0, 1], array_keys($outcome->requireFallbackPool()));
+        self::assertSame(
+            [$firstId, $thirdId],
+            array_map(static fn (array $pick): int => $pick['id'], $outcome->requireFallbackPool()),
+        );
     }
 
     public function testAllWinnersPrunedFinalizesWithoutAProviderCall(): void

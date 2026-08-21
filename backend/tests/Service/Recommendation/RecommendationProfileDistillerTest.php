@@ -6,10 +6,13 @@ namespace App\Tests\Service\Recommendation;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
+use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationSettingsRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
+use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
 use App\Service\Recommendation\RecommendationProfileDistiller;
 use App\Service\Recommendation\RecommendationSettingsResolver;
 use App\Tests\DbTestCase;
@@ -76,6 +79,86 @@ final class RecommendationProfileDistillerTest extends DbTestCase
         self::assertNull($outcome->profileText);
         self::assertSame('not json', $outcome->requireUnusableReply());
         self::assertNull($this->storedProfileText());
+    }
+
+    /**
+     * A tick already inside the provider call cannot be interrupted, but the
+     * checkpoint after settle() must still stop it from writing a profile for
+     * a run the user cancelled while the call was in flight — otherwise a
+     * cancelled run keeps quietly advancing.
+     */
+    public function testACancellationDuringTheProviderCallStopsBeforeWritingTheProfile(): void
+    {
+        $run = $this->runInRunningState();
+        $this->stubChatClient()->duringNextCall(function () use ($run): void {
+            $run->cancel(new \DateTimeImmutable('2026-08-21T10:00:00Z'));
+            $this->em->flush();
+        });
+        $this->stubChatClient()->queueContent('{"profile":"Likes Rust and homelab."}');
+
+        $this->expectException(RecommendationRunCancelledException::class);
+        $this->distiller()->distill(
+            $run,
+            $this->activeAiSettings(),
+            $this->userId(),
+            $this->effectiveSettings(),
+        );
+    }
+
+    /**
+     * A transport failure has to abort the log row it opened, not merely
+     * propagate — a verdict left null forever reads to the debug panel as
+     * "still streaming" (mirrors RecommendationConsolidationResolverTest's own
+     * testTransportFailureAbortsTheOpenLogRow).
+     */
+    public function testTransportFailureAbortsTheOpenLogRow(): void
+    {
+        $this->fixtures->debugEnabledSettings($this->user);
+        $run = $this->runInRunningState();
+        $this->stubChatClient()->queueFailure(new \RuntimeException('gone'));
+
+        try {
+            $this->distiller()->distill(
+                $run,
+                $this->activeAiSettings(),
+                $this->userId(),
+                $this->effectiveSettings(),
+            );
+            self::fail('The transport failure must propagate.');
+        } catch (\RuntimeException) {
+        }
+
+        /** @var RecommendationRunLogRepository $logs */
+        $logs = self::getContainer()->get(RecommendationRunLogRepository::class);
+        $rows = $logs->listForRun($this->user, $run->getId() ?? throw new \LogicException('Run was never saved.'));
+
+        self::assertSame(['transport-failed'], array_column($rows, 'verdict'));
+        self::assertSame('gone', $rows[0]['errorDetail']);
+    }
+
+    /**
+     * `$settings->getModel() ?? ''` only falls back to '' when the model is
+     * genuinely unset — a configured model must reach the recorded call
+     * unchanged, not be discarded in favour of the fallback.
+     */
+    public function testTheRecordedCallCarriesTheConfiguredModel(): void
+    {
+        $this->fixtures->debugEnabledSettings($this->user);
+        $run = $this->runInRunningState();
+        $this->stubChatClient()->queueContent('{"profile":"Likes Rust and homelab."}');
+
+        $this->distiller()->distill(
+            $run,
+            $this->activeAiSettings(),
+            $this->userId(),
+            $this->effectiveSettings(),
+        );
+
+        $log = $this->em->getRepository(RecommendationRunLog::class)->findOneBy(['run' => $run]);
+        self::assertNotNull($log);
+        $decoded = json_decode($log->getRequestBody(), true, 512, \JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertSame('m', $decoded['model']);
     }
 
     public function testDistillSendsTheDistillationSchema(): void

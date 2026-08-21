@@ -23,6 +23,13 @@ final class RecommendationRunProgressTest extends TestCase
         self::assertFalse($progress->isConsolidationPhase);
     }
 
+    public function testConsolidationNeverStartsWithoutAPlanEvenIfDistilled(): void
+    {
+        $progress = RecommendationRunProgress::forBatchPlan(null, batchesDone: 0, attempts: 0, distilled: true);
+
+        self::assertFalse($progress->isConsolidationPhase);
+    }
+
     public function testDistillPendingUntilDistilled(): void
     {
         self::assertTrue(

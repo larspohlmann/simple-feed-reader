@@ -363,6 +363,31 @@ final class RecommendationRunTest extends TestCase
         self::assertFalse($this->runInRunningState()->isDistilled());
     }
 
+    public function testRecordProfileBeforeSnapshotThrows(): void
+    {
+        $run = $this->makeRun();
+
+        $this->expectException(\LogicException::class);
+        $run->recordProfile('Likes Rust.');
+    }
+
+    public function testRecordProfileResetsAttemptsToExactlyZero(): void
+    {
+        $run = $this->runInRunningState();
+        $run->recordInvalidReply('a');
+        $run->recordInvalidReply('b');
+
+        $run->recordProfile('Likes Rust.');
+
+        // Exactly MAX_ATTEMPTS (3) fresh invalid replies are needed to exhaust
+        // again — pins the reset at 0, not -1 or 1.
+        $run->recordInvalidReply('c');
+        $run->recordInvalidReply('d');
+        self::assertFalse($run->progress()->attemptsExhausted);
+        $run->recordInvalidReply('e');
+        self::assertTrue($run->progress()->attemptsExhausted);
+    }
+
     private function makeRun(): RecommendationRun
     {
         $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));

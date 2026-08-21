@@ -1860,6 +1860,35 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
+     * An unusable distillation reply must retry across ticks like every other
+     * phase's corrective envelope, not immediately degrade to no profile on
+     * its first miss -- that degrade path is reserved for attemptsExhausted.
+     * A run that recorded a profile (even a null one) after a single bad
+     * reply would read distillPending as false and race ahead into the
+     * batches on a phase that never actually finished.
+     */
+    public function testAnUnusableDistillReplyRetriesInsteadOfImmediatelyDegrading(): void
+    {
+        $this->seedMultiBatchFixture();
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user); // snapshot tick, no provider call yet
+        self::assertTrue($this->activeRun()->progress()->distillPending);
+
+        $this->stubChatClient()->queueContent('not json');
+
+        $this->advancer()->advance($this->user);
+
+        $this->em->clear();
+        $persisted = $this->activeRun();
+        self::assertSame(RecommendationRun::STATUS_RUNNING, $persisted->getStatus());
+        self::assertFalse($persisted->isDistilled());
+        self::assertTrue(
+            $persisted->progress()->distillPending,
+            'A single unusable distillation reply must retry, not immediately degrade to no profile.',
+        );
+    }
+
+    /**
      * The consolidation phase's own transport failure. Unlike the batch wave
      * -- which folds a failed call into an empty winner set and keeps going
      * -- the consolidation call throws out of RecommendationConsolidationResolver,

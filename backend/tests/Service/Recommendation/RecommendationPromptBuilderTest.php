@@ -702,6 +702,62 @@ final class RecommendationPromptBuilderTest extends TestCase
     }
 
     /**
+     * An empty FAVORITES section is too small to make the sign of
+     * ESTIMATED_PROFILE_TOKENS + tokens($favoritesSection) matter --
+     * testPackingBudgetIsSensitiveToEveryTermInItsFormula's near-zero history
+     * leaves a `+` and a `-` indistinguishable there. A real, sizeable
+     * FAVORITES section makes the two diverge by thousands of tokens: a `-`
+     * would inflate the budget instead of spending it, fitting every
+     * candidate in one batch instead of two.
+     */
+    public function testHistoryTokensAreAddedToTheBudgetNotSubtracted(): void
+    {
+        $favorites = array_map(
+            static fn (int $id): PromptLine => new PromptLine(
+                $id,
+                "Fav $id",
+                'Feed',
+                '2026-01-01',
+                str_repeat('x', 200),
+            ),
+            range(1, 30),
+        );
+        $history = new RecommendationHistory(favorites: $favorites, kept: [], viewed: []);
+        $candidates = array_map(
+            static fn (int $id): PromptLine => new PromptLine($id, 'T', 'F', 'D', null),
+            range(100, 119),
+        );
+
+        $batches = $this->builder->packBatches($candidates, $history, $this->settings(4000, 1));
+
+        self::assertSame([range(100, 109), range(110, 119)], $batches);
+    }
+
+    /**
+     * With the default 45-candidate cap, responseReserve's `intdiv(..., 100)`
+     * is pinned at the MINIMUM_ANSWER_TOKENS floor regardless of the exact
+     * divisor, masking an off-by-one there. A larger cap (200, via
+     * maximumBatchSize) pushes the raw quotient well above the floor, so a
+     * 100 -> 101 or 100 -> 99 divisor shifts responseReserve enough to move
+     * the batch boundary at this window.
+     */
+    public function testResponseReserveDivisorIsExactlyOneHundred(): void
+    {
+        $candidates = array_map(
+            static fn (int $id): PromptLine => new PromptLine($id, 'T', 'F', 'D', null),
+            range(100, 199),
+        );
+
+        $batches = $this->builder->packBatches(
+            $candidates,
+            $this->emptyHistory(),
+            $this->settings(6850, 1, maximumBatchSize: 200),
+        );
+
+        self::assertSame([23, 23, 23, 23, 8], array_map('count', $batches));
+    }
+
+    /**
      * The distillation call is the one place the model sees the full,
      * three-section history: the batch and consolidation calls only ever see
      * the not-yet-distilled PROFILE plus FAVORITES (#493).
@@ -720,6 +776,33 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertStringContainsString('KEPT', $messages[1]['content']);
         self::assertStringContainsString('VIEWED', $messages[1]['content']);
         self::assertStringContainsString('"profile"', $messages[0]['content']);
+    }
+
+    public function testDistillMessagesReturnsTheExactRoleContentStructure(): void
+    {
+        $history = new RecommendationHistory(
+            favorites: [self::line(1, 'Fav one', 10)],
+            kept: [self::line(2, 'Kept one', 10)],
+            viewed: [self::line(3, 'Viewed one', 10)],
+        );
+
+        $messages = $this->builder->distillMessages($history, $this->settings(32768, 100));
+
+        $expectedSystem = RecommendationPromptText::DISTILL_ROLE
+            . "\n\n" . RecommendationPromptText::DISTILL_OUTPUT_CONTRACT;
+        $expectedUser = implode("\n\n", [
+            "FAVORITES (newest first):\n- Fav one — Example Feed — 2026-08-01 — " . str_repeat('x', 10),
+            "KEPT (newest first):\n- Kept one — Example Feed — 2026-08-01 — " . str_repeat('x', 10),
+            "VIEWED (newest first):\n- Viewed one — Example Feed — 2026-08-01 — " . str_repeat('x', 10),
+        ]);
+
+        self::assertSame(
+            [
+                ['role' => 'system', 'content' => $expectedSystem],
+                ['role' => 'user', 'content' => $expectedUser],
+            ],
+            $messages,
+        );
     }
 
     /**
@@ -746,14 +829,85 @@ final class RecommendationPromptBuilderTest extends TestCase
             'Likes Rust.',
         );
 
-        self::assertStringContainsString('PROFILE', $messages[1]['content']);
-        self::assertStringContainsString('Likes Rust.', $messages[1]['content']);
+        // Anchored to "PROFILE:\n" + the text, not merely both present, so a
+        // mutant that reverses the concatenation order still fails this.
+        self::assertStringContainsString("PROFILE:\nLikes Rust.", $messages[1]['content']);
         self::assertStringContainsString('FAVORITES', $messages[1]['content']);
         self::assertStringNotContainsString('KEPT', $messages[1]['content']);
         self::assertStringNotContainsString('VIEWED', $messages[1]['content']);
         self::assertStringContainsString('[5]', $messages[1]['content']);
         self::assertStringContainsString('Rust 2.0 released', $messages[1]['content']);
         self::assertStringContainsString('duplicates', $messages[0]['content']);
+        // CONSOLIDATION_ROLE also mentions "duplicates" on its own, so this
+        // pins the OUTPUT_CONTRACT half specifically — a mutant that drops it
+        // from the concatenation must not pass on the ROLE text alone.
+        self::assertStringContainsString('Reply with JSON only, no prose', $messages[0]['content']);
+    }
+
+    public function testConsolidationMessagesReturnsTheExactRoleContentStructure(): void
+    {
+        $pool = [['id' => 5, 'score' => 900, 'reason' => '']];
+        $lines = [5 => self::line(5, 'Rust 2.0 released', 10)];
+        $history = new RecommendationHistory(
+            favorites: [self::line(1, 'Fav one', 10)],
+            kept: [self::line(2, 'Kept one', 10)],
+            viewed: [self::line(3, 'Viewed one', 10)],
+        );
+
+        $messages = $this->builder->consolidationMessages(
+            $pool,
+            $lines,
+            $history,
+            $this->settings(32768, 100),
+            'Likes Rust.',
+        );
+
+        $expectedSystem = RecommendationPromptText::CONSOLIDATION_ROLE
+            . "\n\n" . RecommendationPromptText::CONSOLIDATION_OUTPUT_CONTRACT;
+        $expectedUser = implode("\n\n", [
+            "PROFILE:\nLikes Rust.",
+            "FAVORITES (newest first):\n- Fav one — Example Feed — 2026-08-01 — " . str_repeat('x', 10),
+            "CANDIDATES (1 posts — return 1 objects, one per line):\n"
+                . '- [5] Rust 2.0 released — Example Feed — 2026-08-01 — ' . str_repeat('x', 10),
+        ]);
+
+        self::assertSame(
+            [
+                ['role' => 'system', 'content' => $expectedSystem],
+                ['role' => 'user', 'content' => $expectedUser],
+            ],
+            $messages,
+        );
+    }
+
+    /**
+     * A pool entry whose line has since been pruned (id absent from
+     * $linesById) must be dropped from the rendered shortlist, not carried
+     * through as a null — candidateLine() is typed to PromptLine and would
+     * fatal on one.
+     */
+    public function testConsolidationMessagesDropsAPrunedPoolEntryFromTheShortlist(): void
+    {
+        $pool = [
+            ['id' => 5, 'score' => 900, 'reason' => ''],
+            ['id' => 6, 'score' => 500, 'reason' => ''],
+        ];
+        $lines = [5 => self::line(5, 'Rust 2.0 released', 10)]; // 6 pruned since its batch ran
+
+        $messages = $this->builder->consolidationMessages(
+            $pool,
+            $lines,
+            $this->emptyHistory(),
+            $this->settings(32768, 100),
+            null,
+        );
+
+        self::assertStringContainsString(
+            'CANDIDATES (1 posts — return 1 objects, one per line):',
+            $messages[1]['content'],
+        );
+        self::assertStringContainsString('[5]', $messages[1]['content']);
+        self::assertStringNotContainsString('[6]', $messages[1]['content']);
     }
 
     public function testConsolidationMessagesRejectsAnEmptyPool(): void
