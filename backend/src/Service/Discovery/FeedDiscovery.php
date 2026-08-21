@@ -45,6 +45,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         private WellKnownFeedProbe $wellKnownFeeds,
         private BotChallengePage $botChallenge,
         private SubstackProfileFeed $substackProfile,
+        private WordPressRestProbe $wordPressRest,
     ) {
     }
 
@@ -92,7 +93,11 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
             return FeedDiscoveryResult::scrapeFailed('blocked');
         }
 
-        $candidates = $this->links->scan($body, $response->finalUrl);
+        $restCandidate = $this->wordPressRest->offer($body, $response->finalUrl);
+        $candidates = array_values(array_filter([
+            $restCandidate,
+            ...$this->links->scan($body, $response->finalUrl),
+        ]));
 
         return [] !== $candidates
             ? FeedDiscoveryResult::candidates($candidates)

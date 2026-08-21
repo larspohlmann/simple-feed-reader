@@ -64,6 +64,55 @@ final class FeedDiscoveryTest extends KernelTestCase
         }
     }
 
+    public function testOffersTheRestCandidateBeforeTheRssCandidate(): void
+    {
+        // @lang TEXT
+        $html = /** @lang TEXT */ <<<'HTML'
+            <!doctype html><html><head><title>WP Site</title>
+              <link rel="alternate" type="application/rss+xml" href="/feed/">
+              <link rel="https://api.w.org/" href="https://wp.example/wp-json/">
+            </head><body>Hi</body></html>
+            HTML;
+
+        $fetcher = $this->fetcherReturning('https://wp.example/', 'https://wp.example/', $html);
+        $fetcher->willReturn(
+            'https://wp.example/wp-json/wp/v2/posts?per_page=50&_embed',
+            FetchResponse::fetched(
+                'https://wp.example/wp-json/wp/v2/posts?per_page=50&_embed',
+                permanentRedirect: false,
+                body: '[{"id":1}]',
+                etag: null,
+                lastModified: null,
+            ),
+        );
+
+        $result = $this->discovery($fetcher)->discover('https://wp.example/', ScrapeFallback::Enabled);
+
+        self::assertCount(2, $result->candidates);
+        self::assertSame('wp-json', $result->candidates[0]->format);
+        self::assertSame('https://wp.example/feed/', $result->candidates[1]->url);
+        self::assertSame('rss', $result->candidates[1]->format);
+    }
+
+    public function testAGatedRestApiLeavesOnlyTheRssCandidate(): void
+    {
+        // @lang TEXT
+        $html = /** @lang TEXT */ <<<'HTML'
+            <!doctype html><html><head><title>WP Site</title>
+              <link rel="alternate" type="application/rss+xml" href="/feed/">
+              <link rel="https://api.w.org/" href="https://wp.example/wp-json/">
+            </head><body>Hi</body></html>
+            HTML;
+
+        // Everything-else throws 404, so the posts probe fails and no candidate is offered.
+        $fetcher = $this->fetcherReturning('https://wp.example/', 'https://wp.example/', $html);
+
+        $result = $this->discovery($fetcher)->discover('https://wp.example/', ScrapeFallback::Enabled);
+
+        self::assertCount(1, $result->candidates);
+        self::assertSame('rss', $result->candidates[0]->format);
+    }
+
     /**
      * The heise homepage snapshot advertises no feed autodiscovery links (its
      * rel="alternate" links are hreflang language alternates), but its article

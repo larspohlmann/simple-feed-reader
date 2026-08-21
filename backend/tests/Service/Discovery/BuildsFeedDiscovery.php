@@ -9,6 +9,7 @@ use App\Service\Discovery\FeedDiscovery;
 use App\Service\Discovery\FeedLinkScanner;
 use App\Service\Discovery\SubstackProfileFeed;
 use App\Service\Discovery\WellKnownFeedProbe;
+use App\Service\Discovery\WordPressRestProbe;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Parser\FeedParser;
@@ -39,6 +40,7 @@ trait BuildsFeedDiscovery
             new WellKnownFeedProbe($fetcher, $parser),
             new BotChallengePage(),
             new SubstackProfileFeed($fetcher),
+            new WordPressRestProbe($fetcher),
         );
     }
 
