@@ -56,27 +56,27 @@ final class RecommendationPromptText
     public const string DISTILL_CORRECTIVE = 'Your previous reply was not usable. Reply again with JSON only, '
         . 'exactly in the required shape: {"profile": "<the preference profile>"}.';
 
-    public const string CONSOLIDATION_ROLE = 'You rank a shortlist of unread posts for one reader of an RSS reader '
-        . 'and remove duplicates. The user message holds a PROFILE describing the reader, a FAVORITES section listing '
-        . 'the posts the reader liked most (newest first), and a SHORTLIST of candidate posts, each line starting '
-        . 'with the candidate id in square brackets. Do two things. First, score each shortlisted post from 0 to 1000 '
-        . 'for how strongly the PROFILE and the FAVORITES suggest the reader would open it; use the whole range, '
-        . 'give each its own exact number, and write one short sentence for each, shown to the reader, that names '
-        . 'what the post is about and the interest or earlier post it matches. Do not open a reason with a fixed '
-        . 'phrase such as "Directly aligns" or "Matches the reader\'s". Second, name the duplicates: two posts are '
-        . 'duplicates only when they report the same specific event, told by different sources; posts that merely '
-        . 'share a topic, company, technology or person are not duplicates. Keep the best-scored source and name the '
-        . 'others as duplicates; when in doubt, name neither.';
+    public const string CONSOLIDATION_ROLE = 'You rank a candidate list of unread posts for one reader of an RSS '
+        . 'reader and remove duplicates. The user message holds a PROFILE describing the reader, a FAVORITES section '
+        . 'listing the posts the reader liked most (newest first), and a CANDIDATES section listing candidate posts, '
+        . 'each line starting with the candidate id in square brackets. Do two things. First, score each candidate '
+        . 'post from 0 to 1000 for how strongly the PROFILE and the FAVORITES suggest the reader would open it; use '
+        . 'the whole range, give each its own exact number, and write one short sentence for each, shown to the '
+        . 'reader, that names what the post is about and the interest or earlier post it matches. Do not open a '
+        . 'reason with a fixed phrase such as "Directly aligns" or "Matches the reader\'s". Second, name the '
+        . 'duplicates: two posts are duplicates only when they report the same specific event, told by different '
+        . 'sources; posts that merely share a topic, company, technology or person are not duplicates. Keep the '
+        . 'best-scored source and name the others as duplicates; when in doubt, name neither.';
 
     public const string CONSOLIDATION_OUTPUT_CONTRACT = 'Reply with JSON only, no prose: {"recommendations": '
         . '[{"id": <id>, "score": <0-1000>, "reason": "<one short sentence>"}], "duplicates": [<id>, ...]}. Return '
-        . 'one recommendation object for every shortlist line, in the order the lines appear. List in "duplicates" '
+        . 'one recommendation object for every candidate line, in the order the lines appear. List in "duplicates" '
         . 'only ids that duplicate a better-scored post; if there are none, reply "duplicates": []. Use only ids '
         . 'that appear in the lines.';
 
     public const string CONSOLIDATION_CORRECTIVE = 'Your previous reply was not usable. Reply again with JSON only, '
         . 'exactly in the required shape, using only ids that appear in the lines. Score and give a reason for every '
-        . 'shortlist line, and name a duplicate only when it reports the same specific story as a better-scored '
+        . 'candidate line, and name a duplicate only when it reports the same specific story as a better-scored '
         . 'entry.';
 
     private function __construct()

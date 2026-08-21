@@ -9,7 +9,7 @@ namespace App\Service\Recommendation;
  * RecommendationPromptBuilder (#493) so that class stays under PHPMD's
  * method-count and complexity ceilings now that it renders three prompt
  * shapes (batch, distillation, consolidation) rather than two. These
- * three methods never shared packBatches()'s own inline packing-budget
+ * methods never shared packBatches()'s own inline packing-budget
  * arithmetic — they only shared three of its numeric constants, which are
  * duplicated here rather than made to depend on RecommendationPromptBuilder
  * for three integers.
@@ -81,27 +81,6 @@ final readonly class RecommendationAnswerBudget
     private const int REASONING_HEADROOM_TOKENS = 32000;
 
     /**
-     * How many tokens a ranking answer over `$replyItemCount` items is
-     * expected to need. packBatches() subtracts this from the context window
-     * so the prompt leaves the model room to answer — and the answer is all
-     * that competes with the prompt for the input context, so reasoning has no
-     * place in this number.
-     *
-     * An expectation, not a ceiling: what the provider is allowed to spend is
-     * answerBoundTokens(), which adds the slack this must not carry. Named for
-     * the batch phase because packing only ever splits batch calls; the other
-     * phases each send one call over a pool they do not pack.
-     *
-     * The floor covers the JSON envelope and the short replies where a
-     * per-item estimate under-counts: at one item, a per-pick rate would not
-     * fit the punctuation around it, let alone the item.
-     */
-    public static function answerTokenReserve(int $replyItemCount): int
-    {
-        return max(self::MINIMUM_ANSWER_TOKENS, $replyItemCount * self::TOKENS_PER_PICK);
-    }
-
-    /**
      * What the provider may spend answering — the expected size plus slack,
      * for the phase whose reply shape `$schema` describes.
      *
@@ -126,19 +105,6 @@ final readonly class RecommendationAnswerBudget
     }
 
     /**
-     * What the provider call sends as `max_tokens`, which caps total output —
-     * reasoning plus answer for a reasoning model, not the answer alone. It is
-     * the answer reserve plus a reasoning headroom, so a model that thinks
-     * before it answers still has room to finish the JSON. #321 sent the answer
-     * reserve here directly and starved reasoning models (#327); this is the
-     * one place the two budgets legitimately diverge.
-     */
-    public static function outputTokenReserve(int $replyItemCount, RecommendationResponseSchema $schema): int
-    {
-        return self::answerBoundTokens($replyItemCount, $schema) + self::REASONING_HEADROOM_TOKENS;
-    }
-
-    /**
      * What the provider may spend on the whole output, for a connection that
      * does or does not suppress reasoning.
      *
@@ -152,12 +118,6 @@ final readonly class RecommendationAnswerBudget
      * RecommendationCompletionRequestFactory calls this directly rather than
      * branching on `suppressesReasoning()` itself, so the choice between the
      * two reserves lives beside the reserves it chooses between (#493).
-     *
-     * Adds the headroom itself rather than delegating to outputTokenReserve():
-     * that method exists as its own tested unit, but forwarding through it
-     * here would tunnel $replyItemCount three calls deep for no reader beyond
-     * the last one, exactly the shape phptramp's tramp-data check exists to
-     * catch.
      */
     public static function outputBoundTokens(
         int $replyItemCount,

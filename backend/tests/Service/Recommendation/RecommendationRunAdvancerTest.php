@@ -1789,7 +1789,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $consolidateCall = $this->stubChatClient()->calls()[3]; // distill, batch one, batch two, consolidate
         self::assertStringContainsString(
-            'You rank a shortlist of unread posts',
+            'You rank a candidate list of unread posts',
             $consolidateCall['messages'][0]['content'],
         );
         $consolidateUserMessage = $consolidateCall['messages'][1]['content'];

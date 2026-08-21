@@ -57,7 +57,7 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
         );
 
         self::assertSame(
-            RecommendationAnswerBudget::outputTokenReserve(45, RecommendationResponseSchema::Consolidation),
+            RecommendationAnswerBudget::outputBoundTokens(45, RecommendationResponseSchema::Consolidation, false),
             $request->maxAnswerTokens,
         );
     }
