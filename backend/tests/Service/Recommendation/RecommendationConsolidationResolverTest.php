@@ -73,6 +73,83 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         self::assertSame(950, $outcome->ranked[0]['score']);
     }
 
+    /**
+     * Both survivors pass through untouched by duplicate-dropping (no
+     * `duplicates` named at all), so a mutant that flips the usort comparator
+     * or deletes the sort outright still passes every other test in this
+     * file -- only this one, with 2+ survivors whose reply scores invert
+     * their batch order, actually exercises the sort.
+     */
+    public function testUsableReplySortsSurvivorsByReplyScoreWhenOrderInverts(): void
+    {
+        [$firstEntry, $secondEntry] = $this->fixtures->seedFeedWithEntries($this->user, 2);
+        $firstId = $this->idOf($firstEntry);
+        $secondId = $this->idOf($secondEntry);
+
+        // Batch order ranks first ahead of second (700 > 400); the reply
+        // inverts that by scoring second higher than first.
+        $run = $this->runWithWinners([
+            ['id' => $firstId, 'score' => 700, 'reason' => ''],
+            ['id' => $secondId, 'score' => 400, 'reason' => ''],
+        ]);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [
+                ['id' => $firstId, 'score' => 200, 'reason' => 'Weaker than it looked.'],
+                ['id' => $secondId, 'score' => 800, 'reason' => 'Stronger than it looked.'],
+            ],
+            'duplicates' => [],
+        ], \JSON_THROW_ON_ERROR));
+
+        $outcome = $this->resolveConsolidation($run);
+
+        self::assertTrue($outcome->usable);
+        self::assertSame(
+            [$secondId, $firstId],
+            array_map(static fn (array $pick): int => $pick['id'], $outcome->ranked),
+        );
+        self::assertSame(800, $outcome->ranked[0]['score']);
+        self::assertSame(200, $outcome->ranked[1]['score']);
+    }
+
+    /**
+     * RecommendationConsolidationParser::salvagePicks() can legitimately
+     * return fewer picks than the pool it was shown, so a pool entry the
+     * reply neither scores nor names a duplicate is a real, reachable case.
+     * It must survive the fallback to its own batch score and empty reason
+     * rather than silently vanishing.
+     */
+    public function testUsableReplyKeepsASurvivorTheReplyDidNotMentionAtItsBatchScore(): void
+    {
+        [$firstEntry, $secondEntry, $thirdEntry] = $this->fixtures->seedFeedWithEntries($this->user, 3);
+        $firstId = $this->idOf($firstEntry);
+        $secondId = $this->idOf($secondEntry);
+        $thirdId = $this->idOf($thirdEntry);
+
+        $run = $this->runWithWinners([
+            ['id' => $firstId, 'score' => 700, 'reason' => ''],
+            ['id' => $secondId, 'score' => 500, 'reason' => ''],
+            ['id' => $thirdId, 'score' => 300, 'reason' => ''],
+        ]);
+
+        // The reply scores only the first two and names no duplicates: the
+        // third pool entry is left unmentioned entirely.
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [
+                ['id' => $firstId, 'score' => 900, 'reason' => 'Great fit.'],
+                ['id' => $secondId, 'score' => 100, 'reason' => 'Poor fit.'],
+            ],
+            'duplicates' => [],
+        ], \JSON_THROW_ON_ERROR));
+
+        $outcome = $this->resolveConsolidation($run);
+
+        self::assertTrue($outcome->usable);
+        $survivor = self::findPick($outcome->ranked, $thirdId);
+        self::assertSame(300, $survivor['score']);
+        self::assertSame('', $survivor['reason']);
+    }
+
     public function testUnusableReplyFallsBackToBatchScorePoolWithEmptyReasons(): void
     {
         [$firstEntry, $secondEntry] = $this->fixtures->seedFeedWithEntries($this->user, 2);
@@ -165,6 +242,22 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
     private function idOf(Entry $entry): int
     {
         return $entry->getId() ?? throw new \LogicException('Entry was never saved.');
+    }
+
+    /**
+     * @param list<array{id: int, score: int, reason: string}> $ranked
+     *
+     * @return array{id: int, score: int, reason: string}
+     */
+    private static function findPick(array $ranked, int $id): array
+    {
+        foreach ($ranked as $pick) {
+            if ($pick['id'] === $id) {
+                return $pick;
+            }
+        }
+
+        self::fail(\sprintf('Expected id %d in the ranked list.', $id));
     }
 
     private function activeAiSettings(): AiProviderSettings
