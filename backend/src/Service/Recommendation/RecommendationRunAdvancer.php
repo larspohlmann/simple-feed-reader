@@ -5,12 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 use App\Entity\AiProviderSettings;
-use App\Entity\Entry;
-use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
-use App\Entity\RecommendationRunLog;
 use App\Entity\User;
-use App\Repository\EntryRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
@@ -51,15 +47,17 @@ use Symfony\Component\Lock\LockFactory;
  * message too, but a dedup reply that stays unusable degrades instead of
  * failing — the run completes with the undeduped top list. A single-batch
  * run has nothing to dedup, so it finalizes straight from its ranked pool
- * instead. finalize() re-checks that each winning entry still exists — the
- * pool can be pruned mid-run — and writes the survivors as
- * RecommendationItems at dense positions before marking the run completed.
+ * instead. Every ending funnels through RecommendationRunFinalizer, which
+ * re-checks that each winning entry still exists — the pool can be pruned
+ * mid-run — and writes the survivors as RecommendationItems at dense positions
+ * before marking the run completed.
  *
  * The many constructor collaborators are deliberate: the advancer is the
  * recommendation pipeline's composition root (lock, run persistence, AI
  * configuration, settings resolution, candidate/history loading, prompt
- * packing, the batch wave and the dedup provider call), and each is a seam the
- * tests swap or drive independently — see RefreshRunner for the same shape.
+ * packing, the batch wave, the dedup resolver and the run finalizer), and each
+ * is a seam the tests swap or drive independently — see RefreshRunner for the
+ * same shape.
  *
  * @SuppressWarnings("PHPMD.ExcessiveParameterList")
  */
@@ -105,7 +103,6 @@ final class RecommendationRunAdvancer
 
     public function __construct(
         private readonly RecommendationRunRepository $runs,
-        private readonly EntryRepository $entries,
         private readonly LockFactory $lockFactory,
         private readonly AiProviderConfigurator $configurator,
         private readonly ProviderConnectionFactory $connections,
@@ -114,14 +111,12 @@ final class RecommendationRunAdvancer
         private readonly RecommendationCandidateLoader $candidateLoader,
         private readonly RecommendationHistoryLoader $historyLoader,
         private readonly RecommendationPromptBuilder $promptBuilder,
-        private readonly ChatCompletionClient $chat,
         private readonly EntityManagerInterface $entityManager,
         private readonly RecommendationWinnerRanker $ranker,
-        private readonly RecommendationDuplicateParser $duplicateParser,
-        private readonly RecommendationCallRecorder $callRecorder,
         private readonly RecommendationTickCheckpoint $checkpoint,
         private readonly RecommendationBatchWave $batchWave,
-        private readonly RecommendationCompletionRequestFactory $requestFactory,
+        private readonly RecommendationDedupResolver $dedupResolver,
+        private readonly RecommendationRunFinalizer $finalizer,
         private readonly TickLockKeepalive $keepalive,
     ) {
     }
@@ -434,7 +429,7 @@ final class RecommendationRunAdvancer
         }
 
         if (!$run->progress()->needsDedup) {
-            return $this->finalize($run, $this->ranker->ranked($run->getWinners()));
+            return $this->finalizer->finalize($run, $this->ranker->ranked($run->getWinners()));
         }
 
         $this->entityManager->flush();
@@ -442,6 +437,15 @@ final class RecommendationRunAdvancer
         return RecommendationRunReport::fromRun($run);
     }
 
+    /**
+     * Delegates the dedup phase's single provider call to
+     * RecommendationDedupResolver and writes what it hands back. A transport
+     * failure throws out of resolve() -- exactly as the batch wave's does --
+     * and is folded into the run's own accounting here (one ceiling increment,
+     * then re-thrown), the same envelope resolveWave() gives the batch phase.
+     * An unusable reply is retried across ticks or degraded to the undeduped
+     * list; a usable one, or an all-pruned pool, finalizes.
+     */
     private function dedupTick(
         RecommendationRun $run,
         User $user,
@@ -449,165 +453,24 @@ final class RecommendationRunAdvancer
     ): RecommendationRunReport {
         $userId = $this->requireUserId($user);
         $picksLimit = $this->settingsResolver->forUser($user)->picksLimit;
-        $pool = $this->ranker->cutForDedup($this->ranker->ranked($run->getWinners()), $picksLimit);
-        $linesById = $this->candidateLoader->linesForIds($userId, array_column($pool, 'id'));
-        $pool = self::stillPresent($pool, $linesById);
 
-        if ([] === $pool) {
-            // Every ranked entry was pruned since its batch ran: there is
-            // nothing left to dedup, so this is progress, not failure --
-            // mirrors providerTick's own all-pruned short-circuit.
-            return $this->finalize($run, []);
-        }
-
-        $messages = $this->promptBuilder->messagesWithCorrectiveTail(
-            $this->promptBuilder->dedupMessages($pool, $linesById),
-            $run->getLastInvalidReply(),
-            RecommendationPromptText::DEDUP_CORRECTIVE,
-        );
-
-        $recordedCall = $this->callRecorder->begin(
-            $run,
-            RecommendationRunLog::PHASE_DEDUP,
-            null,
-            $messages,
-            $settings->getModel() ?? '',
-        );
-
-        $content = $this->callProvider(
-            $run,
-            $settings,
-            $this->requestFactory->create(
-                $settings,
-                $messages,
-                \count($pool),
-                RecommendationResponseSchema::Duplicates,
-            ),
-            $recordedCall,
-        );
-
-        $result = $this->duplicateParser->parse($content, array_column($pool, 'id'));
-        $recordedCall->settle($content, $result->usable);
-        $this->checkpoint->guard($run);
-
-        if (!$result->usable) {
-            return $this->recordUnusableDedupReply($run, $content, $pool);
-        }
-
-        return $this->finalize($run, $this->withoutDuplicates($pool, $result->duplicateIds));
-    }
-
-    /**
-     * @param list<array{id: int, score: int, reason: string}> $pool
-     * @param array<int, PromptLine>                           $linesById entries pruned since their batch are absent
-     *
-     * @return list<array{id: int, score: int, reason: string}>
-     */
-    private static function stillPresent(array $pool, array $linesById): array
-    {
-        return array_values(array_filter(
-            $pool,
-            static fn (array $winner): bool => isset($linesById[$winner['id']]),
-        ));
-    }
-
-    /**
-     * A dedup reply that stays unusable after every retry degrades instead
-     * of failing: the batch calls' ranking work is already done, and an
-     * undeduped top list beats throwing the whole run away over a cosmetic
-     * cleanup. Transport failures keep failing the run -- an unreachable
-     * provider is not a degraded answer.
-     *
-     * @param list<array{id: int, score: int, reason: string}> $pool
-     */
-    private function recordUnusableDedupReply(
-        RecommendationRun $run,
-        string $content,
-        array $pool,
-    ): RecommendationRunReport {
-        return $this->retryOrDegrade(
-            $run,
-            $content,
-            fn (): RecommendationRunReport => $this->finalize($run, $pool),
-        );
-    }
-
-    /**
-     * Never reaches below the dedup cut for backfill: entries beyond it were
-     * never shown to the dedup call, so pulling them in could reintroduce
-     * unchecked duplicates. A final list shorter than the picks limit is the
-     * accepted cost.
-     *
-     * How much shorter is bounded at the parser, not here: a reply naming
-     * more than half of the entries it was shown never reaches this method,
-     * so at least half the pool always survives and a completed run always
-     * has recommendations in it. This used to be guarded here instead, by
-     * exempting the best-ranked entry -- it cannot duplicate a better-ranked
-     * one -- which kept the list off zero but let it be gutted down to one
-     * (#396).
-     *
-     * @param non-empty-list<array{id: int, score: int, reason: string}> $pool
-     * @param list<int>                                                  $duplicateIds
-     *
-     * @return list<array{id: int, score: int, reason: string}>
-     */
-    private function withoutDuplicates(array $pool, array $duplicateIds): array
-    {
-        return array_values(array_filter(
-            $pool,
-            static fn (array $winner): bool => !\in_array($winner['id'], $duplicateIds, true),
-        ));
-    }
-
-    /**
-     * The dedup phase's single provider call, recorded for the debug view from
-     * the moment the request goes out (#309). A transport failure -- the
-     * provider unreachable, or refusing the key -- never produced a reply for
-     * the parser to judge, so it must not consume an `attempts` retry the way
-     * an unusable reply does. It counts against its own ceiling instead, so a
-     * provider that is persistently broken still fails the run eventually
-     * (#308 final review, Important 2) rather than ticking forever; either
-     * way the exception is re-thrown so the controller still maps it to its
-     * problem type and the caller still sees the error on this tick. The batch
-     * phase reads its wave through RecommendationBatchWave::resolve() instead
-     * (#344), which delegates to completeMany -- that folds a per-call
-     * transport failure into that call's outcome rather than throwing.
-     *
-     * The generic \Throwable catch below exists only to settle the log row:
-     * begin() has already persisted it, and a verdict that stays null reads
-     * to the debug panel as "still streaming" forever (its one other
-     * producer, streamingTextForUser(), has no way to tell a genuinely
-     * abandoned call from a live one). credentials() -- decrypting the
-     * stored key -- runs inside this same try on purpose, because an
-     * unreadable key (ApiKeyUnreadableException, e.g. after a master-secret
-     * rotation) never produced a reply either; it is not classified as a
-     * transport failure and does not touch the ceiling, it just must not
-     * leave the row stuck. The exception is always re-thrown unchanged, so
-     * which exception reaches tick() -- and how the run ends -- is exactly
-     * as before.
-     */
-    private function callProvider(
-        RecommendationRun $run,
-        AiProviderSettings $settings,
-        CompletionRequest $request,
-        RecordedCall $recordedCall,
-    ): string {
         try {
-            return $this->chat->complete(
-                $this->connections->forSettings($settings),
-                $request,
-                $recordedCall,
-            );
+            $outcome = $this->dedupResolver->resolve($run, $settings, $userId, $picksLimit);
         } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
-            $recordedCall->abortAfterTransportFailure($e->getMessage());
             $this->recordTransportFailure($run, $settings, $e->getMessage());
 
             throw $e;
-        } catch (\Throwable $e) {
-            $recordedCall->abortAfterTransportFailure($e->getMessage());
-
-            throw $e;
         }
+
+        if (!$outcome->usable) {
+            return $this->retryOrDegrade(
+                $run,
+                $outcome->requireUnusableReply(),
+                fn (): RecommendationRunReport => $this->finalizer->finalize($run, $outcome->ranked),
+            );
+        }
+
+        return $this->finalizer->finalize($run, $outcome->ranked);
     }
 
     /**
@@ -665,45 +528,6 @@ final class RecommendationRunAdvancer
         if ($run->progress()->attemptsExhausted) {
             return $onAttemptsExhausted();
         }
-        $this->entityManager->flush();
-
-        return RecommendationRunReport::fromRun($run);
-    }
-
-    /**
-     * Cuts the ranked list to the reader's picks limit, re-checks that each
-     * surviving pick's entry still exists — the candidate pool can be pruned
-     * mid-run — and writes the survivors as RecommendationItems at dense
-     * positions in pick order before marking the run completed.
-     *
-     * Every ending funnels through here, so the cut lives here too: a new
-     * ending cannot ship an over-long list by forgetting to slice.
-     *
-     * @param list<array{id: int, score: int, reason: string}> $ranked
-     */
-    private function finalize(RecommendationRun $run, array $ranked): RecommendationRunReport
-    {
-        $picks = \array_slice($ranked, 0, $this->settingsResolver->forUser($run->getUser())->picksLimit);
-        $existingIds = $this->entries->findExistingIds(array_map(
-            static fn (array $pick): int => $pick['id'],
-            $picks,
-        ));
-
-        $position = 0;
-        foreach ($picks as $pick) {
-            if (!\in_array($pick['id'], $existingIds, true)) {
-                continue;
-            }
-
-            $position++;
-            $entryReference = $this->entityManager->getReference(Entry::class, $pick['id'])
-                ?? throw new \LogicException('Entry ' . $pick['id'] . ' was confirmed to exist a moment ago.');
-            $this->entityManager->persist(
-                new RecommendationItem($run, $entryReference, $position, $pick['reason'], $pick['score']),
-            );
-        }
-
-        $run->complete($this->clock->now());
         $this->entityManager->flush();
 
         return RecommendationRunReport::fromRun($run);

@@ -623,14 +623,16 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
     /**
      * The same stop at the other checkpoint. The batch phase guards inside
-     * RecommendationBatchWave; the dedup phase guards in the advancer itself,
-     * and what it protects is bigger — the next statement after it finalizes
-     * the run, writes its RecommendationItems and marks it completed. A tick
-     * that finalized against a lock it had lost would race the process that
-     * owns the run into the same ending.
+     * RecommendationBatchWave; the dedup phase guards inside
+     * RecommendationDedupResolver, after it settles its reply and before it
+     * hands the advancer an outcome to write — and what that guard protects is
+     * bigger, because the advancer's next statement finalizes the run, writes
+     * its RecommendationItems and marks it completed. A tick that finalized
+     * against a lock it had lost would race the process that owns the run into
+     * the same ending.
      *
-     * Guarded here rather than trusted from the batch-phase test because
-     * removing this one call leaves the whole suite green otherwise: the two
+     * Guarded there rather than trusted from the batch-phase test because
+     * removing that one call leaves the whole suite green otherwise: the two
      * checkpoints are separate statements and only their own tests hold them
      * in place.
      */
@@ -1746,6 +1748,70 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             static fn (RecommendationItem $item): string => $item->getReason(),
             $items,
         ));
+    }
+
+    /**
+     * The dedup phase's own transport failure. Unlike the batch wave -- which
+     * folds a failed call into an empty winner set and keeps going -- the dedup
+     * call throws out of RecommendationDedupResolver, and the advancer records
+     * it as one increment against the run's transport-failure ceiling, keeps
+     * the run RUNNING, and re-throws so the caller still sees the error this
+     * tick. The run is not failed until the ceiling is reached; the next tick
+     * retries the dedup call from the unchanged dedup phase.
+     *
+     * Regression guard for #338: this catch used to sit inside the advancer's
+     * own callProvider. Lifting the call into RecommendationDedupResolver moved
+     * the transport classification to the resolve() boundary, and nothing else
+     * in the suite drives a dedup-phase provider failure -- the wave tests only
+     * cover the batch phase.
+     */
+    #[DataProvider('dedupTransportFailures')]
+    public function testTransportFailureDuringDedupCallCountsTheCeilingAndKeepsRunRunning(
+        \RuntimeException $transportFailure,
+    ): void {
+        $this->seedMultiBatchFixture();
+        $run = $this->startAndSnapshot();
+        $firstBatch = $run->getCandidateBatches()[0];
+        $secondBatch = $run->getCandidateBatches()[1];
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 80, 'reason' => 'batch one']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $secondBatch[0], 'score' => 95, 'reason' => 'batch two']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+        self::assertTrue($this->activeRun()->progress()->isDedupPhase);
+
+        $this->stubChatClient()->queueFailure($transportFailure);
+
+        try {
+            $this->advancer()->advance($this->user);
+            self::fail('The dedup transport failure must propagate.');
+        } catch (ProviderUnreachableException | CredentialsRejectedException) {
+            // expected -- the caller still sees the error this tick
+        }
+
+        $this->em->clear();
+        $persisted = $this->activeRun();
+        self::assertSame(RecommendationRun::STATUS_RUNNING, $persisted->getStatus());
+        self::assertSame(1, $persisted->getTransportFailures());
+        self::assertTrue($persisted->progress()->isDedupPhase, 'A failed dedup call leaves the phase to retry.');
+        self::assertSame([], $this->recommendationItems($persisted));
+    }
+
+    /**
+     * Both arms of the resolver's transport failure, exactly as the batch wave
+     * pair does: a rejected key never produced a reply either, so it must count
+     * against the same ceiling and not slip past the catch uncounted.
+     *
+     * @return iterable<string, array{0: \RuntimeException}>
+     */
+    public static function dedupTransportFailures(): iterable
+    {
+        yield 'provider unreachable' => [new ProviderUnreachableException('dedup down')];
+        yield 'credentials rejected' => [new CredentialsRejectedException('bad key')];
     }
 
     /**
