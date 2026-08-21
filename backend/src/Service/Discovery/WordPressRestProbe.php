@@ -126,10 +126,7 @@ final readonly class WordPressRestProbe
 
     private function pageTitle(HTMLDocument $document): ?string
     {
-        // The lexbor stub types querySelector() as non-null, but it returns null
-        // when the page has no <title> (reachable via the fingerprint fallback).
-        // The null-safe read keeps dev.log warning-free.
-        $title = trim($document->querySelector('title')?->textContent ?? ''); // @phpstan-ignore nullsafe.neverNull
+        $title = trim($document->querySelector('title')->textContent ?? '');
 
         return '' === $title ? null : $title;
     }
