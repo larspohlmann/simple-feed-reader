@@ -37,9 +37,12 @@ use Dom\XPath;
  *  - <script> and <style> blocks are stripped from the raw source, bounded by
  *    the real close tag. This keeps their text out of the extraction — the
  *    same content readability's own script removal drops — and does it before
- *    the parse, so a JSON-LD block never reaches readability either. Removing
- *    it here rather than relying on readability keeps the extraction identical
- *    to the pipeline this migration replaced.
+ *    the parse, so a JSON-LD block never reaches readability either. It stays a
+ *    raw-source strip, not a DOM `querySelectorAll('script, style')` removal,
+ *    to keep the output byte-identical to the pipeline this migration replaced;
+ *    a <script>/<style> element is raw-text, so the regex matches the same
+ *    close-tag boundary the tokenizer would. Moving it into the DOM pass is a
+ *    reasonable follow-up.
  *
  * The wrapper collapse is a separate public method, not a step of normalize():
  * normalize() is the score-neutral pass, and callers decide whether to also
@@ -75,28 +78,6 @@ final readonly class FetchedPageNormalizer
      */
     public function normalize(string $html): ?HTMLDocument
     {
-        return $this->repair($html);
-    }
-
-    /**
-     * The document with single-child <div> wrapper chains collapsed (#235), or
-     * null when there is no chain to collapse — the caller then skips the second
-     * extraction. Kept separate from normalize() because the same collapse can
-     * flip a well-structured page to the wrong block (#476): ArticleExtractor
-     * extracts with and without it and keeps the richer result.
-     */
-    public function collapseWrapperChains(string $html): ?HTMLDocument
-    {
-        $document = $this->repair($html);
-        if ($document === null || $this->unwrapSingleChildDivs($document) === 0) {
-            return null;
-        }
-
-        return $document;
-    }
-
-    private function repair(string $html): ?HTMLDocument
-    {
         $document = $this->parse($this->removeScriptAndStyleBlocks($html));
         if ($document === null) {
             return null;
@@ -107,6 +88,23 @@ final readonly class FetchedPageNormalizer
         $this->removeOrphanIconGlyphs($document);
 
         return $document;
+    }
+
+    /**
+     * A clone of the normalized document with single-child <div> wrapper chains
+     * collapsed (#235), or null when there is no chain to collapse — the caller
+     * then skips the second extraction. The collapse runs on a clone so the
+     * caller's conservative extraction still sees the un-collapsed tree
+     * (readability consumes each document it parses). Kept separate from
+     * normalize() because the same collapse can flip a well-structured page to
+     * the wrong block (#476): ArticleExtractor extracts with and without it and
+     * keeps the richer result.
+     */
+    public function collapseWrapperChains(HTMLDocument $document): ?HTMLDocument
+    {
+        $collapsed = clone $document;
+
+        return $this->unwrapSingleChildDivs($collapsed) === 0 ? null : $collapsed;
     }
 
     private function removeScriptAndStyleBlocks(string $html): string

@@ -81,10 +81,19 @@ final class ArticleExtractor implements ArticleExtractorInterface
      */
     private function richestArticle(PageResponse $page): ?Article
     {
-        $conservative = $this->parse($this->normalizer->normalize($page->html), $page->finalUrl);
-        $collapsed = $this->parse($this->normalizer->collapseWrapperChains($page->html), $page->finalUrl);
+        $normalized = $this->normalizer->normalize($page->html);
+        if ($normalized === null) {
+            return null;
+        }
 
-        return $this->richer($conservative, $collapsed);
+        // Take the collapse variant (a clone) before readability consumes the
+        // normalized document below.
+        $collapsed = $this->normalizer->collapseWrapperChains($normalized);
+
+        return $this->richer(
+            $this->parse($normalized, $page->finalUrl),
+            $this->parse($collapsed, $page->finalUrl),
+        );
     }
 
     private function parse(?HTMLDocument $document, string $finalUrl): ?Article

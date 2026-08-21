@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\LazyImageSources;
+use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class FetchedPageNormalizerTest extends TestCase
@@ -50,24 +51,16 @@ final class FetchedPageNormalizerTest extends TestCase
         self::assertStringContainsString('<p>Text</p>', $collapsed);
     }
 
-    public function testKeepsDivWithMultipleElementChildren(): void
-    {
-        // Two element children mean the div is a real container, not a wrapper:
-        // there is no chain to collapse, so the caller gets null.
-        /** @noinspection HtmlRequiredLangAttribute */
-        $html = '<html><body><div class="keep"><div>one</div><div>two</div></div></body></html>';
-
-        self::assertNull($this->normalizer->collapseWrapperChains($html));
-    }
-
     public function testKeepsDivWithOwnText(): void
     {
         // The div carries its own text, so it is content and not a wrapper: no
-        // chain to collapse.
+        // chain to collapse. (A div with several element children is covered by
+        // testCollapseReturnsNullWhenNoWrapperChains — the same "not a single-
+        // child wrapper" branch, so it is not duplicated here.)
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div class="keep">intro <div>nested</div></div></body></html>';
 
-        self::assertNull($this->normalizer->collapseWrapperChains($html));
+        self::assertNull($this->collapseOf($html));
     }
 
     public function testHeadingSurvivesWrapperCollapse(): void
@@ -82,12 +75,13 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testCollapseReturnsNullWhenNoWrapperChains(): void
     {
-        // A page with no single-child <div> chain returns null, so
-        // ArticleExtractor skips the second extraction.
+        // A div with several element children is a real container, not a
+        // single-child wrapper, so there is no chain to collapse: the method
+        // returns null and ArticleExtractor skips the second extraction.
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div class="keep"><p>One</p><p>Two</p></div></body></html>';
 
-        self::assertNull($this->normalizer->collapseWrapperChains($html));
+        self::assertNull($this->collapseOf($html));
     }
 
     public function testRemovesScreenReaderOnlyElements(): void
@@ -234,10 +228,19 @@ final class FetchedPageNormalizerTest extends TestCase
         return $document->saveHtml();
     }
 
+    /** The collapse variant of a page, or null when there is no chain to collapse. */
+    private function collapseOf(string $html): ?HTMLDocument
+    {
+        $normalized = $this->normalizer->normalize($html);
+        self::assertNotNull($normalized);
+
+        return $this->normalizer->collapseWrapperChains($normalized);
+    }
+
     /** collapseWrapperChains() then serialize; used only where a chain collapses. */
     private function collapsed(string $html): string
     {
-        $document = $this->normalizer->collapseWrapperChains($html);
+        $document = $this->collapseOf($html);
         self::assertNotNull($document);
 
         return $document->saveHtml();
