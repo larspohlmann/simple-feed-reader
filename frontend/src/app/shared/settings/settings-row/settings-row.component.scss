@@ -1,0 +1,88 @@
+// src/app/shared/settings/settings-row/settings-row.component.scss
+// One settings row, ported from the Grouped mockup's `.row` rules. The row is a
+// flex line: `.row-main` (title + optional description) takes the free space,
+// `.row-control` holds the projected control at its natural size, both centred.
+@use '../../../theme/breakpoints' as bp;
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-4) var(--space-5);
+
+  // A comfortable, even row height so a toggle-only row is not shorter than one
+  // that also carries a description. No 60px token exists; compose it.
+  min-height: calc(var(--space-7) + var(--space-3));
+}
+
+.row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.row-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 550;
+  letter-spacing: -0.01em;
+}
+
+.row-desc {
+  margin-top: var(--space-0);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+
+.row-control {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+// The inset hairline divider is drawn between rows, so it belongs to the row
+// that is not the last one in its group. Chosen `:host(:not(:last-child))` over
+// `.row:not(:last-child)`: each row is one host element, so last-of-group is a
+// host-level fact -- a `.row`-level selector could not see its siblings across
+// component boundaries. The line is inset from the left to match the mockup.
+:host(:not(:last-child)) .row::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+// Narrow viewport: a stackable row wraps, and its select/number control fills
+// the width. A toggle projected into the same slot keeps its natural size.
+@media (width <= bp.$bp-sm) {
+  .row {
+    padding: var(--space-4);
+  }
+
+  :host(:not(:last-child)) .row::after {
+    left: var(--space-4);
+  }
+
+  .row.stackable {
+    flex-wrap: wrap;
+  }
+
+  .row.stackable .row-control {
+    width: 100%;
+  }
+
+  .row.stackable .row-control > select,
+  .row.stackable .row-control > input:not([type='checkbox']) {
+    width: 100%;
+  }
+}
